@@ -6,10 +6,12 @@ var memory: MemoryStore
 var tools: ToolRegistry
 var experience := ExperienceStore.new()
 var cognition := CognitionLayer.new()
+var dream_cycle := DreamCycle.new()
 var max_steps := 12
 var enable_planning := true
 var enable_self_check := true
 var enable_skill_learning := true
+var enable_dream_cycle := true
 
 func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRegistry) -> void:
 	ai = ai_client
@@ -19,7 +21,10 @@ func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRe
 		add_child(experience)
 	if cognition.get_parent() == null:
 		add_child(cognition)
+	if dream_cycle.get_parent() == null:
+		add_child(dream_cycle)
 	cognition.setup(ai)
+	dream_cycle.setup(ai)
 
 func run_task(task: String) -> String:
 	memory.remember("user_task", task)
@@ -84,6 +89,12 @@ func run_task(task: String) -> String:
 		if not skill.is_empty():
 			experience.save_skill(skill)
 			memory.remember("learned_skill", JSON.stringify(skill))
+
+	dream_cycle.note_completed_task()
+	if enable_dream_cycle and dream_cycle.should_reflect():
+		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(20))
+		if not ideas.is_empty():
+			memory.remember("improvement_ideas", JSON.stringify(ideas))
 
 	return final_answer
 
