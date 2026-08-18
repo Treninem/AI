@@ -16,6 +16,7 @@ var current_item: Dictionary = {}
 var _amplitude: Array = []
 var _amp_index := 0
 var _amp_timer := 0.0
+var _next_id := 1
 var volume := 0.86
 
 func _ready() -> void:
@@ -28,8 +29,19 @@ func setup(p_bridge: AuroraVoiceBridge) -> void:
 
 func enqueue(text: String, emotion := "neutral", intensity := 0.5, options: Dictionary = {}) -> void:
 	for chunk in _split_sentences(text):
-		items.append({"text": chunk, "emotion": emotion, "intensity": intensity, "options": options.duplicate(true)})
-	if not running: _pump()
+		items.append({
+			"id": _next_id,
+			"text": chunk,
+			"emotion": emotion,
+			"intensity": intensity,
+			"options": options.duplicate(true),
+			"prepared": false,
+			"preparing": false,
+			"result": {}
+		})
+		_next_id += 1
+	if not running:
+		_pump()
 
 func play() -> void:
 	paused = false
@@ -72,16 +84,21 @@ func _pump() -> void:
 	running = true
 	var my_generation := generation
 	current_item = items.pop_front()
-	var result := await bridge.synthesize(str(current_item.text), str(current_item.emotion), float(current_item.intensity), current_item.options)
-	if my_generation != generation: return
+	var result: Dictionary = current_item.get("result", {})
+	if not bool(current_item.get("prepared", false)):
+		result = await bridge.synthesize(str(current_item.text), str(current_item.emotion), float(current_item.intensity), current_item.options)
+	if my_generation != generation:
+		return
 	if not result.get("ok", false):
 		running = false
+		current_item = {}
 		_pump()
 		return
 	var path := str(result.get("path", ""))
 	var stream := AudioStreamWAV.load_from_file(path)
 	if stream == null:
 		running = false
+		current_item = {}
 		_pump()
 		return
 	current_item["meta"] = result
@@ -90,13 +107,29 @@ func _pump() -> void:
 	_amp_timer = 0.0
 	player.stream = stream
 	set_volume(volume)
-	bridge.set_tts_state(true)
+	bridge.set_tts_state(true, str(current_item.get("text", "")))
 	player.play()
 	speech_started.emit(current_item)
+	# Prepare the following sentence while this one is being spoken.
+	_prefetch_next(my_generation)
+
+func _prefetch_next(my_generation: int) -> void:
+	if items.is_empty() or my_generation != generation:
+		return
+	var next: Dictionary = items[0]
+	if bool(next.get("prepared", false)) or bool(next.get("preparing", false)):
+		return
+	next["preparing"] = true
+	var result := await bridge.synthesize(str(next.text), str(next.emotion), float(next.intensity), next.options)
+	if my_generation != generation:
+		return
+	next["result"] = result
+	next["prepared"] = result.get("ok", false)
+	next["preparing"] = false
 
 func _on_player_finished() -> void:
 	var finished := current_item
-	bridge.set_tts_state(false)
+	bridge.set_tts_state(false, str(finished.get("text", "")))
 	speech_amplitude.emit(0.0)
 	current_item = {}
 	running = false
