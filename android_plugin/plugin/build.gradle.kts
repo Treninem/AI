@@ -7,6 +7,7 @@ plugins {
 
 val pluginName = "AuroraFoxRuntime"
 val pluginPackageName = "com.aurorafox.runtime"
+val godotAddonDir = file("../../addons/$pluginName")
 
 android {
     namespace = pluginPackageName
@@ -53,4 +54,25 @@ android {
 
 dependencies {
     implementation("org.godotengine:godot:4.7.1.stable")
+}
+
+val copyDebugAar by tasks.registering(Copy::class) {
+    dependsOn("assembleDebug")
+    from(layout.buildDirectory.dir("outputs/aar"))
+    include("$pluginName-debug.aar")
+    into(file("$godotAddonDir/bin/debug"))
+}
+
+val copyReleaseAar by tasks.registering(Copy::class) {
+    dependsOn("assembleRelease")
+    from(layout.buildDirectory.dir("outputs/aar"))
+    include("$pluginName-release.aar")
+    into(file("$godotAddonDir/bin/release"))
+}
+
+tasks.register("installGodotPlugin") {
+    dependsOn(copyDebugAar, copyReleaseAar)
+    doLast {
+        println("AuroraFoxRuntime AARs copied to ${godotAddonDir.absolutePath}")
+    }
 }
