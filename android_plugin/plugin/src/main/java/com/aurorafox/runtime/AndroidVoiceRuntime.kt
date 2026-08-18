@@ -96,7 +96,7 @@ class AndroidVoiceRuntime(private val context: Context) {
         if (!isSttAvailable()) return error("Android Whisper assets are missing")
         return try {
             val r = ensureRecognizer(language)
-            val reader = WaveReader(audioFile.absolutePath)
+            val reader = WaveReader.readWave(audioFile.absolutePath)
             val stream = r.createStream()
             try {
                 stream.acceptWaveform(reader.samples, reader.sampleRate)
@@ -105,7 +105,7 @@ class AndroidVoiceRuntime(private val context: Context) {
                 JSONObject().apply {
                     put("ok", true)
                     put("text", result.text.trim())
-                    put("language", if (result.lang.isNullOrBlank()) language else result.lang)
+                    put("language", if (result.lang.isBlank()) language else result.lang)
                     put("engine", "sherpa-onnx-whisper-tiny")
                 }.toString()
             } finally {
