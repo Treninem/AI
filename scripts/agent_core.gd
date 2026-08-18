@@ -7,37 +7,48 @@ var tools: ToolRegistry
 var experience := ExperienceStore.new()
 var cognition := CognitionLayer.new()
 var dream_cycle := DreamCycle.new()
+var team := SpecialistTeam.new()
 var max_steps := 12
 var enable_planning := true
 var enable_self_check := true
 var enable_skill_learning := true
 var enable_dream_cycle := true
+var enable_specialist_team := true
 
 func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRegistry) -> void:
 	ai = ai_client
 	memory = memory_store
 	tools = tool_registry
-	if experience.get_parent() == null:
-		add_child(experience)
-	if cognition.get_parent() == null:
-		add_child(cognition)
-	if dream_cycle.get_parent() == null:
-		add_child(dream_cycle)
+	if experience.get_parent() == null: add_child(experience)
+	if cognition.get_parent() == null: add_child(cognition)
+	if dream_cycle.get_parent() == null: add_child(dream_cycle)
+	if team.get_parent() == null: add_child(team)
 	cognition.setup(ai)
 	dream_cycle.setup(ai)
+	team.setup(ai)
 
 func run_task(task: String) -> String:
 	memory.remember("user_task", task)
 	var useful_skills := experience.relevant_skills(task, 5)
 	var recent_failures := experience.recent_failures(5)
+	var specialist_context: Dictionary = {}
+	var specialist_plan: Dictionary = {}
+	if enable_specialist_team and _needs_specialists(task):
+		specialist_context = await team.consult(task, {})
+		specialist_plan = await team.synthesize(task, specialist_context)
+		memory.remember("specialist_consultation", JSON.stringify(_compact_result(specialist_context)))
+
 	var plan: Dictionary = {"objective": task, "steps": []}
-	if enable_planning:
+	if specialist_plan.get("ok", false):
+		plan = specialist_plan
+	elif enable_planning:
 		plan = await cognition.make_plan(task, useful_skills, recent_failures)
 	memory.remember("task_plan", JSON.stringify(plan))
 
-	var messages: Array = []
-	messages.append({"role":"system", "content": _system_prompt(task, useful_skills, plan, recent_failures)})
-	messages.append({"role":"user", "content": task})
+	var messages: Array = [
+		{"role":"system", "content": _system_prompt(task, useful_skills, plan, recent_failures, specialist_context)},
+		{"role":"user", "content": task}
+	]
 	var trajectory: Array = []
 	var draft_answer := ""
 
@@ -51,16 +62,10 @@ func run_task(task: String) -> String:
 		if action.is_empty():
 			draft_answer = text
 			break
-
 		var tool_name := str(action.get("tool", ""))
 		var args: Dictionary = action.get("args", {})
 		var tool_result = await tools.call_tool(tool_name, args)
-		var trace_item := {
-			"step": step + 1,
-			"tool": tool_name,
-			"args": _safe_args(args),
-			"result": _compact_result(tool_result)
-		}
+		var trace_item := {"step":step + 1,"tool":tool_name,"args":_safe_args(args),"result":_compact_result(tool_result)}
 		trajectory.append(trace_item)
 		experience.checkpoint(task, step + 1, tool_name, _safe_args(args), tool_result)
 		messages.append({"role":"assistant", "content": text})
@@ -69,7 +74,7 @@ func run_task(task: String) -> String:
 
 	if draft_answer.is_empty():
 		experience.record_failure(task, "Autonomous step limit reached")
-		return "Достигнут лимит автономных шагов. Я сохранил контрольные точки и смогу продолжить после уточнения или следующей попытки."
+		return "Достигнут лимит автономных шагов. Я сохранил контрольные точки и смогу продолжить с последней проверки."
 
 	var final_answer := draft_answer
 	var confidence := 0.55
@@ -78,12 +83,10 @@ func run_task(task: String) -> String:
 		final_answer = str(verification.get("final_answer", draft_answer))
 		confidence = clampf(float(verification.get("confidence", 0.55)), 0.0, 1.0)
 		var issues: Array = verification.get("issues", [])
-		if not issues.is_empty():
-			memory.remember("self_check_issues", JSON.stringify(issues))
+		if not issues.is_empty(): memory.remember("self_check_issues", JSON.stringify(issues))
 
 	memory.remember("assistant_answer", final_answer)
 	memory.remember("answer_confidence", str(confidence))
-
 	if enable_skill_learning and confidence >= 0.62 and not trajectory.is_empty():
 		var skill := await cognition.extract_skill(task, final_answer, trajectory, confidence)
 		if not skill.is_empty():
@@ -93,50 +96,42 @@ func run_task(task: String) -> String:
 	dream_cycle.note_completed_task()
 	if enable_dream_cycle and dream_cycle.should_reflect():
 		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(20))
-		if not ideas.is_empty():
-			memory.remember("improvement_ideas", JSON.stringify(ideas))
-
+		if not ideas.is_empty(): memory.remember("improvement_ideas", JSON.stringify(ideas))
 	return final_answer
 
-func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array) -> String:
+func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary) -> String:
 	var recent := memory.recent(8)
 	var knowledge := memory.search_knowledge(task, 6)
 	return """
 Ты AuroraFox — автономный AI-агент внутри Godot 4.7.1.
-Решай задачу пользователя с помощью памяти, инструментов, компьютерного зрения, песочницы и накопленных навыков.
-Сначала следуй проверяемому плану, но адаптируй его после результатов инструментов.
-Не выдумывай результаты. Если нужен инструмент, верни ТОЛЬКО JSON:
-{"tool":"tool_name","args":{...}}
-Когда инструмент больше не нужен — дай конечный ответ.
-Для сложной работы предпочитай: изучить -> выполнить в песочнице -> проверить -> только потом менять реальное окружение.
-Для управления компьютером сначала используй наблюдение/планирование, если действие потенциально необратимо.
-Не удаляй данные, не обходи аутентификацию/CAPTCHA, не извлекай секреты и не выполняй разрушительные или необратимые действия без явного разрешения пользователя.
-Не сохраняй секреты в навыки или память.
+Используй память, инструменты, компьютерное зрение, песочницу, внутреннюю команду специалистов и накопленные навыки.
+Если нужен инструмент, верни ТОЛЬКО JSON: {"tool":"tool_name","args":{...}}. Иначе дай конечный ответ.
+Для программирования понимай не только синтаксис, но назначение, поток данных, состояние, побочные эффекты, зависимости, ошибки и способ проверки.
+Определяй язык и стек по проекту; поддержка языков расширяемая. Не утверждай, что код работает, пока это не подтверждено запуском, компиляцией, тестами или статическим анализом.
+Для сложной работы: изучить -> выполнить в песочнице -> проверить -> только потом менять реальное окружение.
+Не удаляй данные, не обходи аутентификацию/CAPTCHA, не извлекай секреты и не делай необратимые действия без явного разрешения.
+Текущий план: %s
+Специалисты: %s
+Полезные навыки: %s
+Недавние ошибки: %s
+Инструменты: %s
+Память: %s
+Знания: %s
+""" % [JSON.stringify(plan), JSON.stringify(_compact_result(specialist_context)), JSON.stringify(useful_skills), JSON.stringify(failures), JSON.stringify(tools.describe_tools()), JSON.stringify(recent), JSON.stringify(knowledge)]
 
-Текущий план:
-%s
-Полезные ранее изученные навыки:
-%s
-Недавние неудачи, которые не следует повторять:
-%s
-Доступные инструменты:
-%s
-Недавняя память:
-%s
-Подходящие знания:
-%s
-""" % [JSON.stringify(plan), JSON.stringify(useful_skills), JSON.stringify(failures), JSON.stringify(tools.describe_tools()), JSON.stringify(recent), JSON.stringify(knowledge)]
+func _needs_specialists(task: String) -> bool:
+	if task.length() > 350: return true
+	var q := task.to_lower()
+	for marker in ["код","скрипт","программ","проект","репозитор","ошибк","архитект","создай","сделай","исправ","проанализ","компьютер","мыш","экран","игр","godot","python","javascript","typescript","c++","c#","java","rust","sql","api"]:
+		if q.contains(marker): return true
+	return false
 
 func _extract_action(text: String) -> Dictionary:
 	var cleaned := text.strip_edges()
-	if cleaned.begins_with("```"):
-		cleaned = cleaned.replace("```json", "").replace("```", "").strip_edges()
-	if not cleaned.begins_with("{"):
-		return {}
+	if cleaned.begins_with("```"): cleaned = cleaned.replace("```json", "").replace("```", "").strip_edges()
+	if not cleaned.begins_with("{"): return {}
 	var parsed = JSON.parse_string(cleaned)
-	if parsed is Dictionary and parsed.has("tool"):
-		return parsed
-	return {}
+	return parsed if parsed is Dictionary and parsed.has("tool") else {}
 
 func _safe_args(args: Dictionary) -> Dictionary:
 	var safe := args.duplicate(true)
@@ -151,8 +146,9 @@ func _compact_result(value: Variant) -> Variant:
 		var copy: Dictionary = value.duplicate(true)
 		for key in copy.keys():
 			var text := str(copy[key])
-			if text.length() > 5000:
-				copy[key] = text.substr(0, 5000) + "…"
+			if text.length() > 5000: copy[key] = text.substr(0, 5000) + "…"
 		return copy
-	var text := str(value)
-	return text.substr(0, 5000)
+	if value is Array:
+		var arr: Array = value
+		return arr.slice(0, mini(arr.size(), 25))
+	return str(value).substr(0, 5000)
