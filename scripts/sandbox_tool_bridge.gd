@@ -2,12 +2,24 @@ class_name SandboxToolBridge
 extends Node
 
 var manager := SandboxManager.new()
+var _registered := false
 
 func _ready() -> void:
 	if manager.get_parent() == null:
 		add_child(manager)
+	await get_tree().process_frame
+	_try_register_from_parent()
+
+func _try_register_from_parent() -> void:
+	if _registered or get_parent() == null:
+		return
+	var candidate = get_parent().get("tools")
+	if candidate is ToolRegistry:
+		register_into(candidate)
 
 func register_into(registry: ToolRegistry) -> void:
+	if _registered:
+		return
 	registry.register_tool("workspace_create", "Создать отдельную локальную рабочую среду для задачи. Делай это перед сложной работой с кодом/файлами.", {"task":"string","runtime":"string"}, Callable(self, "_create"))
 	registry.register_tool("workspace_status", "Показать активную песочницу и возможности текущей платформы.", {}, Callable(self, "_status"))
 	registry.register_tool("workspace_tree", "Показать дерево файлов активной песочницы.", {"area":"string"}, Callable(self, "_tree"))
@@ -17,6 +29,7 @@ func register_into(registry: ToolRegistry) -> void:
 	registry.register_tool("workspace_rollback", "Откатить рабочую область к ранее созданной контрольной точке.", {"snapshot":"string"}, Callable(self, "_rollback"))
 	registry.register_tool("workspace_exec", "Запустить команду в подходящей локальной песочнице. На Windows предпочитает контейнер при наличии; на Android использует встроенный runtime.", {"command":"array","cwd":"string","timeout":"int","mode":"string"}, Callable(self, "_exec"))
 	registry.register_tool("workspace_test", "Проверить результат в песочнице подходящим тестом/компиляцией для языка.", {"language":"string","cwd":"string"}, Callable(self, "_test"))
+	_registered = true
 
 func _create(args: Dictionary) -> Dictionary:
 	return manager.create_workspace(str(args.get("task", "task")), str(args.get("runtime", "auto")))
