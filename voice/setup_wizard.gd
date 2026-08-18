@@ -138,8 +138,12 @@ func _stage_title(stage: String) -> String:
 
 func _runtime_ready_on_disk() -> bool:
 	for root in _voice_roots():
-		if FileAccess.file_exists(root.path_join(".venv/Scripts/pythonw.exe")) and FileAccess.file_exists(root.path_join("python/aurora_voice_server.py")) and DirAccess.dir_exists_absolute(root.path_join("models/vosk-model-small-ru-0.22")):
-			return true
+		var portable := root.path_join("AuroraVoiceBackend/AuroraVoiceBackend.exe")
+		var python_runtime := root.path_join(".venv/Scripts/pythonw.exe")
+		var server := root.path_join("python/aurora_voice_server.py")
+		var wake := root.path_join("models/vosk-model-small-ru-0.22")
+		if FileAccess.file_exists(portable) and DirAccess.dir_exists_absolute(wake): return true
+		if FileAccess.file_exists(python_runtime) and FileAccess.file_exists(server) and DirAccess.dir_exists_absolute(wake): return true
 	return false
 
 func _installer_path() -> String:
