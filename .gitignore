@@ -1,0 +1,51 @@
+# Godot generated
+.godot/
+.android/
+
+# Local AI models and downloads
+*.gguf
+*.onnx
+*.bin
+*.pt
+*.pth
+*.safetensors
+*.download
+models/cache/
+voice/models/
+
+# Runtime data / sandboxes
+sandbox/
+workspace/
+generated/
+logs/
+
+# Python local environments
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Android native sources downloaded by setup_native.ps1
+android_plugin/plugin/src/main/cpp/third_party/
+android_plugin/.gradle/
+android_plugin/build/
+android_plugin/plugin/build/
+
+# Generated Godot Android build template
+android/
+
+# Exported binaries
+build/windows/
+build/android/
+*.apk
+*.aab
+*.exe
+*.pck
+
+# Generated AARs copied into the Godot addon
+addons/AuroraFoxRuntime/bin/
+
+# Local signing / SDK files
+*.keystore
+*.jks
+local.properties
