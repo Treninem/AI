@@ -75,11 +75,13 @@ func _start_backend_if_installed() -> void:
 	var packaged_root := exe_dir.path_join("voice")
 	var candidates: Array[Dictionary] = [
 		{
+			"root": packaged_root,
 			"pythonw": packaged_root.path_join(".venv/Scripts/pythonw.exe"),
 			"python": packaged_root.path_join(".venv/Scripts/python.exe"),
 			"server": packaged_root.path_join("python/aurora_voice_server.py")
 		},
 		{
+			"root": ProjectSettings.globalize_path("res://voice"),
 			"pythonw": ProjectSettings.globalize_path("res://voice/.venv/Scripts/pythonw.exe"),
 			"python": ProjectSettings.globalize_path("res://voice/.venv/Scripts/python.exe"),
 			"server": ProjectSettings.globalize_path("res://voice/python/aurora_voice_server.py")
@@ -92,9 +94,12 @@ func _start_backend_if_installed() -> void:
 		var python := str(candidate.python)
 		var executable := pythonw if FileAccess.file_exists(pythonw) else python
 		if not FileAccess.file_exists(executable): continue
+		var runtime_root := str(candidate.root)
+		OS.set_environment("HF_HOME", runtime_root.path_join("models/cache/huggingface"))
+		OS.set_environment("HUGGINGFACE_HUB_CACHE", runtime_root.path_join("models/cache/huggingface/hub"))
+		OS.set_environment("TORCH_HOME", runtime_root.path_join("models/cache/torch"))
 		backend_pid = OS.create_process(executable, PackedStringArray([server]), false)
-		if backend_pid > 0:
-			return
+		if backend_pid > 0: return
 
 func _connect_ws() -> void:
 	if socket.get_ready_state() in [WebSocketPeer.STATE_OPEN, WebSocketPeer.STATE_CONNECTING]: return
