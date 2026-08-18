@@ -11,6 +11,7 @@ var player := AudioStreamPlayer.new()
 var items: Array = []
 var running := false
 var paused := false
+var ducked := false
 var generation := 0
 var current_item: Dictionary = {}
 var _amplitude: Array = []
@@ -59,6 +60,7 @@ func stop() -> void:
 	items.clear()
 	player.stop()
 	player.pitch_scale = 1.0
+	ducked = false
 	running = false
 	current_item = {}
 	bridge.set_tts_state(false)
@@ -72,7 +74,15 @@ func interrupt() -> void:
 
 func set_volume(value: float) -> void:
 	volume = clampf(value, 0.0, 1.0)
-	player.volume_db = linear_to_db(maxf(volume, 0.001))
+	_apply_effective_volume()
+
+func set_ducked(value: bool) -> void:
+	ducked = value
+	_apply_effective_volume()
+
+func _apply_effective_volume() -> void:
+	var effective := volume * (0.18 if ducked else 1.0)
+	player.volume_db = linear_to_db(maxf(effective, 0.001))
 
 func is_speaking() -> bool:
 	return running and player.playing
@@ -84,13 +94,9 @@ func _pump() -> void:
 	running = true
 	var my_generation := generation
 	current_item = items.pop_front()
-
-	# If the prefetch coroutine is still running, wait for that exact result instead of
-	# launching a second synthesis request for the same sentence.
 	while bool(current_item.get("preparing", false)) and my_generation == generation:
 		await get_tree().process_frame
 	if my_generation != generation: return
-
 	var result: Dictionary = current_item.get("result", {})
 	if not bool(current_item.get("prepared", false)):
 		result = await bridge.synthesize(str(current_item.text), str(current_item.emotion), float(current_item.intensity), current_item.options)
@@ -113,7 +119,8 @@ func _pump() -> void:
 	_amp_timer = 0.0
 	player.stream = stream
 	player.pitch_scale = _playback_pitch(result, current_item.get("options", {}))
-	set_volume(volume)
+	ducked = false
+	_apply_effective_volume()
 	bridge.set_tts_state(true, str(current_item.get("text", "")))
 	player.play()
 	speech_started.emit(current_item)
@@ -122,8 +129,6 @@ func _pump() -> void:
 func _playback_pitch(result: Dictionary, options: Dictionary) -> float:
 	var engine := str(result.get("engine", ""))
 	if OS.get_name() == "Android" and engine.begins_with("sherpa-onnx-piper"):
-		# Android's license-safe Russian fallback is intentionally brightened a little.
-		# Keep the shift subtle so intelligibility and timing remain natural.
 		var requested := 1.0 + float(options.get("pitch", 0.0))
 		return clampf(requested * 1.055, 1.0, 1.14)
 	return 1.0
@@ -144,6 +149,7 @@ func _on_player_finished() -> void:
 	bridge.set_tts_state(false, str(finished.get("text", "")))
 	speech_amplitude.emit(0.0)
 	player.pitch_scale = 1.0
+	ducked = false
 	current_item = {}
 	running = false
 	speech_finished.emit(finished)
