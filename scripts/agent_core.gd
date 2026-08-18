@@ -37,6 +37,8 @@ func run_task(task: String) -> String:
 		specialist_context = await team.consult(task, {})
 		specialist_plan = await team.synthesize(task, specialist_context)
 		memory.remember("specialist_consultation", JSON.stringify(_compact_result(specialist_context)))
+		if specialist_plan.has("audit"):
+			memory.remember("specialist_plan_audit", JSON.stringify(_compact_result(specialist_plan.get("audit", {}))))
 
 	var plan: Dictionary = {"objective": task, "steps": []}
 	if specialist_plan.get("ok", false):
@@ -83,7 +85,24 @@ func run_task(task: String) -> String:
 		final_answer = str(verification.get("final_answer", draft_answer))
 		confidence = clampf(float(verification.get("confidence", 0.55)), 0.0, 1.0)
 		var issues: Array = verification.get("issues", [])
-		if not issues.is_empty(): memory.remember("self_check_issues", JSON.stringify(issues))
+		if not issues.is_empty():
+			memory.remember("self_check_issues", JSON.stringify(issues))
+
+	# Второй независимый контур: команда специалистов проверяет уже готовый ответ
+	# против фактической траектории инструментов. Это не скрытые рассуждения,
+	# а проверка наблюдаемых утверждений и условий задачи.
+	if enable_specialist_team and not specialist_context.is_empty():
+		var team_audit := await team.audit_answer(task, final_answer, trajectory, specialist_context)
+		if team_audit.get("ok", false):
+			var audit_confidence := clampf(float(team_audit.get("confidence", confidence)), 0.0, 1.0)
+			confidence = minf(confidence, audit_confidence)
+			var corrected := str(team_audit.get("corrected_answer", "")).strip_edges()
+			if not corrected.is_empty():
+				final_answer = corrected
+			var audit_issues: Array = team_audit.get("issues", [])
+			if not audit_issues.is_empty():
+				memory.remember("specialist_answer_issues", JSON.stringify(audit_issues))
+			memory.remember("specialist_answer_audit", JSON.stringify(_compact_result(team_audit)))
 
 	memory.remember("assistant_answer", final_answer)
 	memory.remember("answer_confidence", str(confidence))
@@ -96,7 +115,8 @@ func run_task(task: String) -> String:
 	dream_cycle.note_completed_task()
 	if enable_dream_cycle and dream_cycle.should_reflect():
 		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(20))
-		if not ideas.is_empty(): memory.remember("improvement_ideas", JSON.stringify(ideas))
+		if not ideas.is_empty():
+			memory.remember("improvement_ideas", JSON.stringify(ideas))
 	return final_answer
 
 func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary) -> String:
@@ -109,6 +129,7 @@ func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failur
 Для программирования понимай не только синтаксис, но назначение, поток данных, состояние, побочные эффекты, зависимости, ошибки и способ проверки.
 Определяй язык и стек по проекту; поддержка языков расширяемая. Не утверждай, что код работает, пока это не подтверждено запуском, компиляцией, тестами или статическим анализом.
 Для сложной работы: изучить -> выполнить в песочнице -> проверить -> только потом менять реальное окружение.
+При противоречии между специалистами предпочитай результат, который можно проверить инструментом или воспроизвести.
 Не удаляй данные, не обходи аутентификацию/CAPTCHA, не извлекай секреты и не делай необратимые действия без явного разрешения.
 Текущий план: %s
 Специалисты: %s
