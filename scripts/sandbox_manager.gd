@@ -24,7 +24,6 @@ func capabilities() -> Dictionary:
 		"workspace_files": true,
 		"snapshots": true,
 		"rollback": true,
-		"network": true,
 		"native_processes": false,
 		"container_runtime": false,
 		"embedded_runtime": false,
@@ -32,7 +31,7 @@ func capabilities() -> Dictionary:
 	}
 	if os_name == "Windows":
 		base.native_processes = true
-		base.container_runtime = _command_exists("docker") or _command_exists("podman")
+		base.container_runtime = _command_exists("podman") or _command_exists("docker")
 	elif os_name == "Android":
 		var android_caps := android_runtime.capabilities()
 		for key in android_caps.keys():
@@ -40,38 +39,47 @@ func capabilities() -> Dictionary:
 	return base
 
 func create_workspace(task: String, runtime_hint := "auto") -> Dictionary:
-	var id := "%d_%04d" % [Time.get_unix_time_from_system(), randi_range(0, 9999)]
-	var root := "%s/%s" % [ROOT_PATH, id]
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(root))
-	for name in ["input", "work", "output", "logs", "snapshots"]:
-		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(root + "/" + name))
+	var id := "%d_%04d" % [int(Time.get_unix_time_from_system()), randi_range(0, 9999)]
+	var meta_root := "%s/%s" % [ROOT_PATH, id]
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(meta_root))
 	var item := {
 		"id": id,
-		"root": root,
+		"root": meta_root,
+		"meta_root": meta_root,
 		"task": task,
 		"runtime_hint": runtime_hint,
 		"platform": OS.get_name(),
 		"created_at": Time.get_datetime_string_from_system(true),
-		"state": "ready",
-		"last_event": "created",
-		"events": []
+		"state": "creating",
+		"last_event": "creating",
+		"events": [],
+		"remote": OS.get_name() == "Windows"
 	}
+	if OS.get_name() == "Windows":
+		var created := await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/create", HTTPClient.METHOD_POST, {"id": id, "task": task})
+		if not created.get("ok", false): return created
+		item["service_workspace"] = id
+		item["service_root"] = str(created.get("workspace", {}).get("root", id))
+	else:
+		for name in ["input", "work", "output", "logs", "snapshots"]:
+			DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(meta_root + "/" + name))
+	item["state"] = "ready"
+	item["last_event"] = "created"
 	workspaces[id] = item
 	active_workspace_id = id
-	_write_json(root + "/manifest.json", item)
+	_write_json(meta_root + "/manifest.json", item)
 	_save_index()
-	workspace_created.emit(id, root)
+	workspace_created.emit(id, str(item.get("service_root", meta_root)))
 	return {"ok": true, "workspace": item, "capabilities": capabilities()}
 
 func set_active(id: String) -> Dictionary:
-	if not workspaces.has(id):
-		return {"ok": false, "error": "Unknown workspace"}
+	if not workspaces.has(id): return {"ok": false, "error": "Unknown workspace"}
 	active_workspace_id = id
+	_save_index()
 	return {"ok": true, "workspace": workspaces[id]}
 
 func get_active() -> Dictionary:
-	if active_workspace_id.is_empty() or not workspaces.has(active_workspace_id):
-		return {}
+	if active_workspace_id.is_empty() or not workspaces.has(active_workspace_id): return {}
 	return workspaces[active_workspace_id]
 
 func list_workspaces(limit := 30) -> Array:
@@ -81,37 +89,45 @@ func list_workspaces(limit := 30) -> Array:
 
 func write_file(relative_path: String, content: String, area := "work") -> Dictionary:
 	var ws := get_active()
-	if ws.is_empty():
-		return {"ok": false, "error": "No active workspace"}
+	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
 	var safe := _safe_relative(relative_path)
-	if safe.is_empty():
-		return {"ok": false, "error": "Invalid relative path"}
-	var path := "%s/%s/%s" % [ws.root, area, safe]
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
-	var f := FileAccess.open(path, FileAccess.WRITE)
-	if f == null:
-		return {"ok": false, "error": "Cannot write file"}
-	f.store_string(content)
-	_record("write", {"path": "%s/%s" % [area, safe], "bytes": content.to_utf8_buffer().size()})
-	return {"ok": true, "path": path}
+	if safe.is_empty() or area not in ["input", "work", "output", "logs"]: return {"ok": false, "error": "Invalid workspace path"}
+	var result: Dictionary
+	if OS.get_name() == "Windows":
+		result = await _http_json(WINDOWS_SERVICE + "/sandbox/write", HTTPClient.METHOD_POST, {"path": "%s/%s/%s" % [ws.id, area, safe], "content": content})
+	else:
+		var path := "%s/%s/%s" % [ws.root, area, safe]
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
+		var f := FileAccess.open(path, FileAccess.WRITE)
+		if f == null: return {"ok": false, "error": "Cannot write file"}
+		f.store_string(content)
+		result = {"ok": true, "path": path}
+	if result.get("ok", false): _record("write", {"path": "%s/%s" % [area, safe], "bytes": content.to_utf8_buffer().size()})
+	return result
 
 func read_file(relative_path: String, area := "work", max_chars := 300000) -> Dictionary:
 	var ws := get_active()
-	if ws.is_empty():
-		return {"ok": false, "error": "No active workspace"}
+	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
 	var safe := _safe_relative(relative_path)
-	if safe.is_empty():
-		return {"ok": false, "error": "Invalid relative path"}
+	if safe.is_empty() or area not in ["input", "work", "output", "logs"]: return {"ok": false, "error": "Invalid workspace path"}
+	if OS.get_name() == "Windows":
+		var result := await _http_json(WINDOWS_SERVICE + "/sandbox/read?path=" + ("%s/%s/%s" % [ws.id, area, safe]).uri_encode(), HTTPClient.METHOD_GET)
+		if result.has("text"): result["content"] = str(result.get("text", "")).substr(0, max_chars)
+		return result
 	var path := "%s/%s/%s" % [ws.root, area, safe]
 	var f := FileAccess.open(path, FileAccess.READ)
-	if f == null:
-		return {"ok": false, "error": "Cannot read file"}
+	if f == null: return {"ok": false, "error": "Cannot read file"}
 	return {"ok": true, "path": path, "content": f.get_as_text().substr(0, max_chars)}
 
 func tree(area := "work", max_items := 1000) -> Dictionary:
 	var ws := get_active()
-	if ws.is_empty():
-		return {"ok": false, "error": "No active workspace"}
+	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
+	if area not in ["input", "work", "output", "logs", "snapshots"]: return {"ok": false, "error": "Invalid workspace area"}
+	if OS.get_name() == "Windows":
+		var result := await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/tree?workspace=%s&area=%s" % [str(ws.id).uri_encode(), area.uri_encode()], HTTPClient.METHOD_GET)
+		var items: Array = result.get("items", [])
+		if items.size() > max_items: result["items"] = items.slice(0, max_items)
+		return result
 	var root := "%s/%s" % [ws.root, area]
 	var items: Array = []
 	_walk(root, "", items, max_items)
@@ -119,54 +135,60 @@ func tree(area := "work", max_items := 1000) -> Dictionary:
 
 func snapshot(label := "checkpoint") -> Dictionary:
 	var ws := get_active()
-	if ws.is_empty():
-		return {"ok": false, "error": "No active workspace"}
-	var stamp := "%d" % Time.get_unix_time_from_system()
-	var snapshot_dir := "%s/snapshots/%s_%s" % [ws.root, stamp, _slug(label)]
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(snapshot_dir))
-	var result := _copy_tree("%s/work" % ws.root, snapshot_dir)
-	if result.get("ok", false):
-		_record("snapshot", {"label": label, "path": snapshot_dir})
-	return result.merged({"snapshot": snapshot_dir}, true)
+	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
+	var result: Dictionary
+	if OS.get_name() == "Windows":
+		result = await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/snapshot", HTTPClient.METHOD_POST, {"workspace": ws.id, "label": label})
+	else:
+		var snapshot_id := "%d_checkpoint" % int(Time.get_unix_time_from_system())
+		var snapshot_dir := "%s/snapshots/%s" % [ws.root, snapshot_id]
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(snapshot_dir))
+		result = _copy_tree("%s/work" % ws.root, snapshot_dir)
+		if result.get("ok", false):
+			result["snapshot"] = snapshot_id
+			result["path"] = snapshot_dir
+	if result.get("ok", false): _record("snapshot", {"label": label, "snapshot": result.get("snapshot", "")})
+	return result
 
-func rollback(snapshot_path: String) -> Dictionary:
+func rollback(snapshot_ref: String) -> Dictionary:
 	var ws := get_active()
-	if ws.is_empty():
-		return {"ok": false, "error": "No active workspace"}
-	if not snapshot_path.begins_with(ws.root + "/snapshots/"):
-		return {"ok": false, "error": "Snapshot outside active workspace"}
-	var work_abs := ProjectSettings.globalize_path(ws.root + "/work")
-	_remove_children(work_abs)
-	var result := _copy_tree(snapshot_path, ws.root + "/work")
-	if result.get("ok", false):
-		_record("rollback", {"snapshot": snapshot_path})
+	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
+	if snapshot_ref.is_empty(): return {"ok": false, "error": "Missing snapshot"}
+	var result: Dictionary
+	if OS.get_name() == "Windows":
+		result = await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/rollback", HTTPClient.METHOD_POST, {"workspace": ws.id, "snapshot": snapshot_ref})
+	else:
+		var safe_snapshot := _safe_relative(snapshot_ref)
+		if safe_snapshot.is_empty(): return {"ok": false, "error": "Invalid snapshot"}
+		var snapshot_path := "%s/snapshots/%s" % [ws.root, safe_snapshot]
+		if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(snapshot_path)): return {"ok": false, "error": "Snapshot not found"}
+		var work_abs := ProjectSettings.globalize_path(ws.root + "/work")
+		_remove_children(work_abs)
+		result = _copy_tree(snapshot_path, ws.root + "/work")
+	if result.get("ok", false): _record("rollback", {"snapshot": snapshot_ref})
 	return result
 
 func execute(command: Array, cwd := ".", timeout := 120, mode := "auto") -> Dictionary:
 	var ws := get_active()
-	if ws.is_empty():
-		return {"ok": false, "error": "No active workspace"}
-	if command.is_empty():
-		return {"ok": false, "error": "Empty command"}
+	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
+	if command.is_empty(): return {"ok": false, "error": "Empty command"}
 	_record("exec_requested", {"command": _redact_command(command), "cwd": cwd, "mode": mode})
 	var result: Dictionary
 	if OS.get_name() == "Windows":
 		result = await _execute_windows(command, cwd, timeout, mode)
 	elif OS.get_name() == "Android":
-		result = await android_runtime.execute(ws.root + "/work", command, cwd, timeout, mode)
+		result = android_runtime.execute(ws.root + "/work", command, cwd, timeout, mode)
 	else:
 		result = {"ok": false, "error": "Platform runtime not implemented: " + OS.get_name()}
 	_record("exec_result", {"ok": result.get("ok", false), "code": result.get("code", -1), "summary": str(result.get("output", result.get("error", ""))).substr(0, 4000)})
 	return result
 
 func test(language := "auto", cwd := ".") -> Dictionary:
-	var commands := _test_commands(language)
 	var attempts: Array = []
-	for cmd in commands:
+	for cmd in _test_commands(language):
 		var result := await execute(cmd, cwd, 180, "auto")
 		attempts.append({"command": cmd, "result": result})
-		if result.get("ok", false):
-			return {"ok": true, "language": language, "attempts": attempts, "passed_by": cmd}
+		if result.get("ok", false): return {"ok": true, "language": language, "attempts": attempts, "passed_by": cmd}
 	return {"ok": false, "language": language, "attempts": attempts, "error": "No verification command passed"}
 
 func status() -> Dictionary:
@@ -176,25 +198,28 @@ func _execute_windows(command: Array, cwd: String, timeout: int, mode: String) -
 	var ws := get_active()
 	var rel_cwd := "%s/work" % ws.id
 	if cwd != "." and not cwd.is_empty():
-		rel_cwd += "/" + _safe_relative(cwd)
+		var safe_cwd := _safe_relative(cwd)
+		if safe_cwd.is_empty(): return {"ok": false, "error": "Invalid cwd"}
+		rel_cwd += "/" + safe_cwd
 	var payload := {"command": command, "cwd": rel_cwd, "timeout": clampi(timeout, 1, 600)}
 	if mode == "container" or (mode == "auto" and bool(capabilities().get("container_runtime", false))):
-		# Computer service may choose Docker/Podman when its container endpoint is available.
 		var container_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(timeout + 30))
-		if container_result.get("ok", false) or int(container_result.get("http", 0)) != 404:
-			return container_result
+		if container_result.get("ok", false) or int(container_result.get("http", 0)) != 404: return container_result
 	return await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, float(timeout + 30))
 
 func _test_commands(language: String) -> Array:
 	var l := language.to_lower()
+	if OS.get_name() == "Android": return [["wasm", "test.wasm"]]
 	if l in ["python", "py"]: return [["python", "-m", "pytest", "-q"], ["python", "-m", "compileall", "."]]
 	if l in ["godot", "gdscript"]: return [["godot", "--headless", "--path", ".", "--quit"]]
-	if l in ["javascript", "js", "typescript", "ts"]: return [["npm", "test", "--", "--runInBand"], ["npx", "tsc", "--noEmit"]]
+	if l in ["javascript", "js"]: return [["npm", "test", "--", "--runInBand"]]
+	if l in ["typescript", "ts"]: return [["npx", "tsc", "--noEmit"], ["npm", "test"]]
 	if l in ["rust", "rs"]: return [["cargo", "test", "--quiet"], ["cargo", "check", "--quiet"]]
 	if l in ["go", "golang"]: return [["go", "test", "./..."]]
 	if l in ["java", "kotlin"]: return [["gradlew.bat", "test"], ["gradle", "test"]]
 	if l in ["csharp", "c#", "dotnet"]: return [["dotnet", "test"], ["dotnet", "build", "--no-restore"]]
-	return [["python", "-m", "pytest", "-q"], ["godot", "--headless", "--path", ".", "--quit"], ["git", "diff", "--check"]]
+	if l in ["c", "cpp", "c++"]: return [["cmake", "--build", "build"], ["git", "diff", "--check"]]
+	return [["git", "diff", "--check"], ["python", "-m", "pytest", "-q"], ["godot", "--headless", "--path", ".", "--quit"]]
 
 func _record(kind: String, details: Dictionary) -> void:
 	if active_workspace_id.is_empty() or not workspaces.has(active_workspace_id): return
@@ -202,26 +227,17 @@ func _record(kind: String, details: Dictionary) -> void:
 	var events: Array = item.get("events", [])
 	events.append({"time": Time.get_datetime_string_from_system(true), "kind": kind, "details": details})
 	if events.size() > 300: events = events.slice(events.size() - 300)
-	item.events = events
-	item.last_event = kind
+	item["events"] = events
+	item["last_event"] = kind
 	workspaces[active_workspace_id] = item
-	_write_json(item.root + "/manifest.json", item)
+	_write_json(str(item.get("meta_root", item.get("root", ROOT_PATH))) + "/manifest.json", item)
 	_save_index()
 	workspace_event.emit(active_workspace_id, kind, details)
 
 func _safe_relative(path: String) -> String:
 	var p := path.replace("\\", "/").strip_edges().trim_prefix("/")
-	if p.is_empty() or p.contains("../") or p == ".." or p.contains(":"):
-		return ""
+	if p.is_empty() or p.contains("../") or p == ".." or p.contains(":"): return ""
 	return p
-
-func _slug(text: String) -> String:
-	var out := ""
-	for c in text.to_lower():
-		if c.is_valid_identifier() or c.is_valid_int(): out += c
-		elif c in ["-", "_"]: out += c
-		else: out += "_"
-	return out.substr(0, 48)
 
 func _walk(root: String, rel: String, out: Array, max_items: int) -> void:
 	if out.size() >= max_items: return
@@ -240,8 +256,8 @@ func _walk(root: String, rel: String, out: Array, max_items: int) -> void:
 	dir.list_dir_end()
 
 func _copy_tree(source: String, dest: String) -> Dictionary:
-	var src_abs := ProjectSettings.globalize_path(source)
-	var dst_abs := ProjectSettings.globalize_path(dest)
+	var src_abs := _global_path(source)
+	var dst_abs := _global_path(dest)
 	DirAccess.make_dir_recursive_absolute(dst_abs)
 	var dir := DirAccess.open(src_abs)
 	if dir == null: return {"ok": false, "error": "Cannot open source tree"}
@@ -277,6 +293,10 @@ func _remove_children(abs_path: String) -> void:
 		name = dir.get_next()
 	dir.list_dir_end()
 
+func _global_path(path: String) -> String:
+	if path.begins_with("user://") or path.begins_with("res://"): return ProjectSettings.globalize_path(path)
+	return path
+
 func _command_exists(name: String) -> bool:
 	if OS.get_name() != "Windows": return false
 	var output: Array = []
@@ -298,6 +318,7 @@ func _redact_command(command: Array) -> Array:
 	return out
 
 func _write_json(path: String, value: Variant) -> void:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f != null: f.store_string(JSON.stringify(value, "  "))
 
@@ -328,6 +349,5 @@ func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}
 	var raw: PackedByteArray = result[3]
 	var text := raw.get_string_from_utf8()
 	var parsed = JSON.parse_string(text)
-	if code < 200 or code >= 300:
-		return {"ok": false, "http": code, "error": text.substr(0, 4000)}
+	if code < 200 or code >= 300: return {"ok": false, "http": code, "error": text.substr(0, 4000)}
 	return parsed if parsed is Dictionary else {"ok": false, "error": "Invalid JSON response"}
