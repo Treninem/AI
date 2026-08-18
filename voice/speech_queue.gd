@@ -40,8 +40,7 @@ func enqueue(text: String, emotion := "neutral", intensity := 0.5, options: Dict
 			"result": {}
 		})
 		_next_id += 1
-	if not running:
-		_pump()
+	if not running: _pump()
 
 func play() -> void:
 	paused = false
@@ -59,6 +58,7 @@ func stop() -> void:
 	generation += 1
 	items.clear()
 	player.stop()
+	player.pitch_scale = 1.0
 	running = false
 	current_item = {}
 	bridge.set_tts_state(false)
@@ -84,11 +84,17 @@ func _pump() -> void:
 	running = true
 	var my_generation := generation
 	current_item = items.pop_front()
+
+	# If the prefetch coroutine is still running, wait for that exact result instead of
+	# launching a second synthesis request for the same sentence.
+	while bool(current_item.get("preparing", false)) and my_generation == generation:
+		await get_tree().process_frame
+	if my_generation != generation: return
+
 	var result: Dictionary = current_item.get("result", {})
 	if not bool(current_item.get("prepared", false)):
 		result = await bridge.synthesize(str(current_item.text), str(current_item.emotion), float(current_item.intensity), current_item.options)
-	if my_generation != generation:
-		return
+	if my_generation != generation: return
 	if not result.get("ok", false):
 		running = false
 		current_item = {}
@@ -106,23 +112,29 @@ func _pump() -> void:
 	_amp_index = 0
 	_amp_timer = 0.0
 	player.stream = stream
+	player.pitch_scale = _playback_pitch(result, current_item.get("options", {}))
 	set_volume(volume)
 	bridge.set_tts_state(true, str(current_item.get("text", "")))
 	player.play()
 	speech_started.emit(current_item)
-	# Prepare the following sentence while this one is being spoken.
 	_prefetch_next(my_generation)
 
+func _playback_pitch(result: Dictionary, options: Dictionary) -> float:
+	var engine := str(result.get("engine", ""))
+	if OS.get_name() == "Android" and engine.begins_with("sherpa-onnx-piper"):
+		# Android's license-safe Russian fallback is intentionally brightened a little.
+		# Keep the shift subtle so intelligibility and timing remain natural.
+		var requested := 1.0 + float(options.get("pitch", 0.0))
+		return clampf(requested * 1.055, 1.0, 1.14)
+	return 1.0
+
 func _prefetch_next(my_generation: int) -> void:
-	if items.is_empty() or my_generation != generation:
-		return
+	if items.is_empty() or my_generation != generation: return
 	var next: Dictionary = items[0]
-	if bool(next.get("prepared", false)) or bool(next.get("preparing", false)):
-		return
+	if bool(next.get("prepared", false)) or bool(next.get("preparing", false)): return
 	next["preparing"] = true
 	var result := await bridge.synthesize(str(next.text), str(next.emotion), float(next.intensity), next.options)
-	if my_generation != generation:
-		return
+	if my_generation != generation: return
 	next["result"] = result
 	next["prepared"] = result.get("ok", false)
 	next["preparing"] = false
@@ -131,6 +143,7 @@ func _on_player_finished() -> void:
 	var finished := current_item
 	bridge.set_tts_state(false, str(finished.get("text", "")))
 	speech_amplitude.emit(0.0)
+	player.pitch_scale = 1.0
 	current_item = {}
 	running = false
 	speech_finished.emit(finished)
