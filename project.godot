@@ -7,6 +7,9 @@ config/name="AuroraFox"
 run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7")
 
+[autoload]
+AuroraVoice="*res://voice/voice_manager.gd"
+
 [display]
 window/size/viewport_width=1440
 window/size/viewport_height=900
