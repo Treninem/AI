@@ -4,7 +4,7 @@ import base64
 import io
 import json
 import os
-import shlex
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -27,7 +27,8 @@ SANDBOX_ROOT.mkdir(parents=True, exist_ok=True)
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.12
 
-app = FastAPI(title="AuroraFox Computer Agent", version="0.1.0")
+app = FastAPI(title="AuroraFox Computer Agent", version="0.3.0")
+
 
 class Action(BaseModel):
     type: str
@@ -40,15 +41,18 @@ class Action(BaseModel):
     amount: int = 0
     seconds: float = 0.2
 
+
 class GoalRequest(BaseModel):
     goal: str = Field(min_length=1, max_length=8000)
     max_steps: int = Field(default=20, ge=1, le=100)
     auto_execute: bool = False
 
+
 class SandboxExecRequest(BaseModel):
     command: list[str]
     cwd: str = "."
     timeout: int = Field(default=60, ge=1, le=600)
+
 
 class SandboxWriteRequest(BaseModel):
     path: str
@@ -189,6 +193,44 @@ def _vision_plan(goal: str, history: list[dict[str, Any]]) -> dict[str, Any]:
         raise HTTPException(status_code=502, detail=f"Vision model returned invalid JSON: {content[:1500]}") from exc
 
 
+def _container_engine() -> str | None:
+    preferred = os.getenv("AURORAFOX_CONTAINER_ENGINE", "").strip()
+    if preferred and shutil.which(preferred):
+        return preferred
+    for name in ("docker", "podman"):
+        if shutil.which(name):
+            return name
+    return None
+
+
+def _container_profile(command: list[str]) -> tuple[str, list[str]]:
+    exe = Path(command[0]).name.lower()
+    image_map = {
+        "python": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"),
+        "python3": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"),
+        "pytest": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"),
+        "node": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"),
+        "npm": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"),
+        "npx": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"),
+        "go": os.getenv("AURORAFOX_IMAGE_GO", "golang:1-bookworm"),
+        "cargo": os.getenv("AURORAFOX_IMAGE_RUST", "rust:1-bookworm"),
+        "rustc": os.getenv("AURORAFOX_IMAGE_RUST", "rust:1-bookworm"),
+        "java": os.getenv("AURORAFOX_IMAGE_JAVA", "eclipse-temurin:21-jdk"),
+        "javac": os.getenv("AURORAFOX_IMAGE_JAVA", "eclipse-temurin:21-jdk"),
+        "gradle": os.getenv("AURORAFOX_IMAGE_GRADLE", "gradle:8-jdk21"),
+        "dotnet": os.getenv("AURORAFOX_IMAGE_DOTNET", "mcr.microsoft.com/dotnet/sdk:9.0"),
+        "gcc": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"),
+        "g++": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"),
+        "cmake": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"),
+        "ruby": os.getenv("AURORAFOX_IMAGE_RUBY", "ruby:3-slim"),
+        "php": os.getenv("AURORAFOX_IMAGE_PHP", "php:8-cli"),
+    }
+    image = image_map.get(exe)
+    if not image:
+        raise HTTPException(status_code=403, detail=f"No container profile for executable: {exe}")
+    return image, command
+
+
 @app.get("/health")
 def health():
     return {
@@ -198,23 +240,29 @@ def health():
         "screen": list(pyautogui.size()),
         "sandbox_root": str(SANDBOX_ROOT),
         "failsafe": True,
+        "container_engine": _container_engine(),
     }
+
 
 @app.get("/screen")
 def screen():
     return {"ok": True, "png_base64": _screen_b64(), "uia": _uia_snapshot()}
 
+
 @app.get("/windows")
 def windows():
     return {"ok": True, "items": _uia_snapshot()}
+
 
 @app.post("/action")
 def action(req: Action):
     return _execute(req)
 
+
 @app.post("/plan")
 def plan(req: GoalRequest):
     return {"ok": True, "step": _vision_plan(req.goal, [])}
+
 
 @app.post("/run")
 def run(req: GoalRequest):
@@ -234,6 +282,7 @@ def run(req: GoalRequest):
         time.sleep(0.25)
     return {"ok": True, "done": False, "history": history, "reason": "max_steps reached"}
 
+
 @app.get("/sandbox/list")
 def sandbox_list(path: str = "."):
     p = _safe_sandbox_path(path)
@@ -245,6 +294,7 @@ def sandbox_list(path: str = "."):
     for c in p.iterdir():
         items.append({"name": c.name, "dir": c.is_dir(), "size": c.stat().st_size if c.is_file() else 0})
     return {"ok": True, "items": items}
+
 
 @app.get("/sandbox/read")
 def sandbox_read(path: str):
@@ -259,12 +309,14 @@ def sandbox_read(path: str):
     except UnicodeDecodeError:
         return {"ok": True, "base64": base64.b64encode(data).decode("ascii")}
 
+
 @app.post("/sandbox/write")
 def sandbox_write(req: SandboxWriteRequest):
     p = _safe_sandbox_path(req.path)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(req.content, encoding="utf-8")
     return {"ok": True, "path": str(p.relative_to(SANDBOX_ROOT))}
+
 
 @app.post("/sandbox/exec")
 def sandbox_exec(req: SandboxExecRequest):
@@ -273,15 +325,66 @@ def sandbox_exec(req: SandboxExecRequest):
     cwd = _safe_sandbox_path(req.cwd)
     cwd.mkdir(parents=True, exist_ok=True)
     exe = Path(req.command[0]).name.lower()
-    allowed = {"python", "python.exe", "py", "git", "git.exe", "godot", "godot.exe", "godot4", "godot4.exe", "pytest", "pytest.exe"}
+    allowed = {
+        "python", "python.exe", "python3", "py", "pytest", "pytest.exe",
+        "git", "git.exe", "godot", "godot.exe", "godot4", "godot4.exe",
+        "node", "node.exe", "npm", "npm.cmd", "npx", "npx.cmd",
+        "go", "go.exe", "cargo", "cargo.exe", "rustc", "rustc.exe",
+        "dotnet", "dotnet.exe", "java", "java.exe", "javac", "javac.exe",
+        "gradle", "gradle.bat", "gradlew", "gradlew.bat",
+        "gcc", "gcc.exe", "g++", "g++.exe", "clang", "clang.exe", "cmake", "cmake.exe", "ninja", "ninja.exe",
+        "ruby", "ruby.exe", "php", "php.exe", "lua", "lua.exe",
+    }
     if exe not in allowed:
-        raise HTTPException(status_code=403, detail=f"Executable not allowed in sandbox: {exe}")
+        raise HTTPException(status_code=403, detail=f"Executable not allowed in local sandbox: {exe}")
     try:
         cp = subprocess.run(req.command, cwd=cwd, capture_output=True, text=True, timeout=req.timeout, shell=False)
         out = (cp.stdout or "") + (cp.stderr or "")
-        return {"ok": cp.returncode == 0, "code": cp.returncode, "output": out[:MAX_OUTPUT]}
+        return {"ok": cp.returncode == 0, "code": cp.returncode, "output": out[:MAX_OUTPUT], "mode": "local"}
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=f"Executable not installed: {exe}") from exc
     except subprocess.TimeoutExpired as exc:
         raise HTTPException(status_code=408, detail="Sandbox command timed out") from exc
+
+
+@app.post("/sandbox/container_exec")
+def sandbox_container_exec(req: SandboxExecRequest):
+    if not req.command:
+        raise HTTPException(status_code=400, detail="Empty command")
+    engine = _container_engine()
+    if not engine:
+        raise HTTPException(status_code=404, detail="Docker/Podman not installed")
+    cwd = _safe_sandbox_path(req.cwd)
+    cwd.mkdir(parents=True, exist_ok=True)
+    image, inner_command = _container_profile(req.command)
+    # Only the current task directory is writable. Network is disabled by default.
+    run_command = [
+        engine, "run", "--rm", "--network", "none", "--read-only",
+        "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"),
+        "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"),
+        "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"),
+        "--security-opt", "no-new-privileges",
+        "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m",
+        "-v", f"{cwd}:/workspace:rw",
+        "-w", "/workspace",
+        image,
+        *inner_command,
+    ]
+    try:
+        cp = subprocess.run(run_command, capture_output=True, text=True, timeout=req.timeout, shell=False)
+        out = (cp.stdout or "") + (cp.stderr or "")
+        return {
+            "ok": cp.returncode == 0,
+            "code": cp.returncode,
+            "output": out[:MAX_OUTPUT],
+            "mode": "container",
+            "engine": engine,
+            "image": image,
+            "network": "none",
+        }
+    except subprocess.TimeoutExpired as exc:
+        raise HTTPException(status_code=408, detail="Container command timed out") from exc
+
 
 if __name__ == "__main__":
     import uvicorn
