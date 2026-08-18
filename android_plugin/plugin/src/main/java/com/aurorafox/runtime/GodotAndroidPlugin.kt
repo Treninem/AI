@@ -6,7 +6,7 @@ import android.os.Build
 import android.os.StatFs
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
-import org.godengine.godot.plugin.UsedByGodot
+import org.godotengine.godot.plugin.UsedByGodot
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -74,7 +74,6 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun transcribeLocal(modelPath: String, audioPath: String, language: String): String {
         if (!isInsideAppStorage(audioPath)) return errorJson("Audio must be inside AuroraFox app storage")
-        // Prefer sherpa-onnx Whisper assets shipped with AuroraFox. Keep the older whisper.cpp route as fallback.
         try {
             if (voice.isSttAvailable()) return voice.transcribe(audioPath, language)
         } catch (_: Throwable) { }
