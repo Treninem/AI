@@ -14,6 +14,7 @@ var speak_button: Button
 var settings_popup: PopupPanel
 var avatar_view: AuroraFoxAvatarView
 var status_label: Label
+var mic_device_option: OptionButton
 
 func _ready() -> void:
 	await get_tree().process_frame
@@ -27,6 +28,7 @@ func _ready() -> void:
 	AuroraVoice.speech_started.connect(func(): status_label.text = "Говорю…")
 	AuroraVoice.speech_finished.connect(func(): status_label.text = "")
 	_refresh_buttons()
+	if AuroraVoice.backend_is_ready: _refresh_devices()
 
 func _atlas_texture(region: Rect2) -> AtlasTexture:
 	var texture := AtlasTexture.new()
@@ -102,7 +104,7 @@ func _build_overlay() -> void:
 	row.add_child(settings_button)
 
 	settings_popup = PopupPanel.new()
-	settings_popup.size = Vector2i(520, 650)
+	settings_popup.size = Vector2i(560, 720)
 	layer.add_child(settings_popup)
 	_build_settings(settings_popup)
 
@@ -112,9 +114,14 @@ func _build_settings(popup: PopupPanel) -> void:
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		margin.add_theme_constant_override(side, 18)
 	popup.add_child(margin)
+	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	margin.add_child(scroll)
 	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 8)
-	margin.add_child(box)
+	scroll.add_child(box)
 	var title := Label.new()
 	title.text = "Голос AuroraFox"
 	title.add_theme_font_size_override("font_size", 22)
@@ -131,7 +138,25 @@ func _build_settings(popup: PopupPanel) -> void:
 	box.add_child(_check("Системные звуки", "system_sounds"))
 	box.add_child(_check("Приветствие при запуске", "startup_greeting"))
 	box.add_child(_check("Останавливать речь, когда говорю я", "barge_in"))
-	box.add_child(_option("Микрофон", "mic_mode", ["off", "wake_word", "continuous", "push_to_talk"], ["Выкл.", "Fox / Лиса", "Постоянный диалог", "Push-to-talk"]))
+
+	var mic_title := Label.new()
+	mic_title.text = "Микрофон"
+	mic_title.add_theme_font_size_override("font_size", 19)
+	box.add_child(mic_title)
+	mic_device_option = OptionButton.new()
+	mic_device_option.add_item("Системный микрофон")
+	mic_device_option.set_item_metadata(0, -1)
+	mic_device_option.item_selected.connect(func(i): AuroraVoice.update_setting("mic_device", int(mic_device_option.get_item_metadata(i))))
+	box.add_child(mic_device_option)
+	var refresh := Button.new()
+	refresh.text = "Обновить список микрофонов"
+	refresh.pressed.connect(_refresh_devices)
+	_apply_button(refresh, true)
+	box.add_child(refresh)
+	box.add_child(_option("Режим", "mic_mode", ["off", "wake_word", "continuous", "push_to_talk"], ["Выкл.", "Fox / Лиса", "Постоянный диалог", "Push-to-talk"]))
+	box.add_child(_slider("Чувствительность", "mic_sensitivity", 0.0, 1.0, 0.01))
+	box.add_child(_check("Подавление фонового шума", "noise_suppression"))
+
 	var clear := Button.new()
 	clear.text = "Очистить голосовой кэш"
 	_apply_button(clear, false)
@@ -159,8 +184,7 @@ func _option(label_text: String, key: String, values: Array, labels: Array) -> V
 		o.add_item(str(labels[i]))
 		o.set_item_metadata(i, values[i])
 	for i in range(values.size()):
-		if str(values[i]) == str(AuroraVoice.settings.get(key, values[0])):
-			o.select(i)
+		if str(values[i]) == str(AuroraVoice.settings.get(key, values[0])): o.select(i)
 	o.item_selected.connect(func(i): AuroraVoice.update_setting(key, o.get_item_metadata(i)); _refresh_buttons())
 	box.add_child(o)
 	return box
@@ -190,8 +214,7 @@ func _setup_microphone() -> void:
 	AudioServer.set_bus_mute(bus_idx, true)
 	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
 		var effect := AudioServer.get_bus_effect(bus_idx, i)
-		if effect is AudioEffectRecord:
-			record_effect = effect
+		if effect is AudioEffectRecord: record_effect = effect
 	if record_effect == null:
 		record_effect = AudioEffectRecord.new()
 		AudioServer.add_bus_effect(bus_idx, record_effect)
@@ -201,12 +224,10 @@ func _setup_microphone() -> void:
 	add_child(mic_player)
 
 func _mic_pressed() -> void:
-	var mode := str(AuroraVoice.settings.mic_mode)
+	var mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
 	if mode == "push_to_talk":
-		if recording:
-			await _stop_ptt()
-		else:
-			_start_ptt()
+		if recording: await _stop_ptt()
+		else: _start_ptt()
 	elif mode == "off":
 		AuroraVoice.set_mic_mode("wake_word")
 	else:
@@ -235,8 +256,7 @@ func _stop_ptt() -> void:
 		_refresh_buttons()
 		return
 	var result := await AuroraVoice.bridge.transcribe_file(path)
-	if result.get("ok", false):
-		_submit_transcript(str(result.get("text", "")))
+	if result.get("ok", false): _submit_transcript(str(result.get("text", "")))
 	_refresh_buttons()
 
 func _submit_transcript(text: String) -> void:
@@ -246,21 +266,39 @@ func _submit_transcript(text: String) -> void:
 		main.call("submit_voice_text", text.strip_edges())
 
 func _toggle_speech() -> void:
-	AuroraVoice.set_auto_speak(not bool(AuroraVoice.settings.auto_speak))
+	AuroraVoice.set_auto_speak(not bool(AuroraVoice.settings.get("auto_speak", true)))
 	_refresh_buttons()
 
 func _open_settings() -> void:
 	settings_popup.popup_centered()
+	_refresh_devices()
 
 func _clear_cache() -> void:
 	var result := await AuroraVoice.clear_cache()
 	status_label.text = "Кэш очищен" if result.get("ok", false) else "Ошибка кэша"
 
+func _refresh_devices() -> void:
+	if mic_device_option == null: return
+	var result := await AuroraVoice.bridge.devices()
+	if not result.get("ok", false): return
+	var selected_id := int(AuroraVoice.settings.get("mic_device", -1))
+	mic_device_option.clear()
+	mic_device_option.add_item("Системный микрофон")
+	mic_device_option.set_item_metadata(0, -1)
+	var selected_index := 0
+	for device in result.get("devices", []):
+		var idx := mic_device_option.item_count
+		mic_device_option.add_item(str(device.get("name", "Микрофон")))
+		mic_device_option.set_item_metadata(idx, int(device.get("id", -1)))
+		if int(device.get("id", -1)) == selected_id: selected_index = idx
+	mic_device_option.select(selected_index)
+
 func _on_backend_status(ready: bool, _info: Dictionary) -> void:
 	status_label.text = "Голос готов" if ready else "Голос недоступен"
+	if ready: _refresh_devices()
 
 func _refresh_buttons() -> void:
 	if mic_button == null: return
-	var mode := str(AuroraVoice.settings.mic_mode)
+	var mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
 	mic_button.text = {"off":"🎙 Выкл.", "wake_word":"🎙 Fox / Лиса", "continuous":"🎙 Диалог", "push_to_talk":"🎙 Нажми"}.get(mode, "🎙")
-	speak_button.text = "🔊" if bool(AuroraVoice.settings.auto_speak) else "🔇"
+	speak_button.text = "🔊" if bool(AuroraVoice.settings.get("auto_speak", true)) else "🔇"
