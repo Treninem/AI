@@ -4,6 +4,7 @@ extends Node
 signal tool_called(name: String, args: Dictionary)
 
 var tools: Dictionary = {}
+var computer_base_url := "http://127.0.0.1:8766"
 
 func _ready() -> void:
 	register_tool("http_get", "Скачать текст или JSON по URL", {"url":"string"}, Callable(self, "_http_get"))
@@ -14,6 +15,12 @@ func _ready() -> void:
 	register_tool("git_status", "Проверить git status", {}, Callable(self, "_git_status"))
 	register_tool("git_diff", "Посмотреть git diff", {}, Callable(self, "_git_diff"))
 	register_tool("system_info", "Получить сведения о системе и Godot", {}, Callable(self, "_system_info"))
+	register_tool("computer_plan", "Посмотреть экран и предложить следующее действие мышью/клавиатурой без выполнения", {"goal":"string"}, Callable(self, "_computer_plan"))
+	register_tool("computer_goal", "Выполнить визуальную задачу на компьютере: видеть экран, управлять мышью, клавиатурой и окнами. Подходит для программ и локальных игр. Компьютерный сервис должен быть запущен.", {"goal":"string","max_steps":"int","auto_execute":"bool"}, Callable(self, "_computer_goal"))
+	register_tool("sandbox_exec", "Запустить Python/Git/Godot/pytest в изолированной рабочей папке AuroraFox", {"command":"array","cwd":"string","timeout":"int"}, Callable(self, "_sandbox_exec"))
+	register_tool("sandbox_write", "Создать текстовый файл внутри изолированной песочницы", {"path":"string","content":"string"}, Callable(self, "_sandbox_write"))
+	register_tool("sandbox_read", "Прочитать файл из изолированной песочницы", {"path":"string"}, Callable(self, "_sandbox_read"))
+	register_tool("screen_snapshot", "Получить описание текущих окон и элементов интерфейса Windows", {}, Callable(self, "_screen_snapshot"))
 
 func register_tool(name: String, description: String, schema: Dictionary, callable: Callable) -> void:
 	tools[name] = {"description": description, "schema": schema, "callable": callable}
@@ -38,6 +45,28 @@ func _path_allowed(path: String, writing := false) -> bool:
 		return not writing or path.begins_with("res://workspace/") or path.begins_with("res://generated/")
 	return false
 
+func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout := 240.0) -> Dictionary:
+	var req := HTTPRequest.new()
+	req.timeout = timeout
+	add_child(req)
+	var headers := PackedStringArray(["Content-Type: application/json"])
+	var body := "" if payload.is_empty() else JSON.stringify(payload)
+	var err := req.request(url, headers, method, body)
+	if err != OK:
+		req.queue_free()
+		return {"ok": false, "error": "HTTPRequest error %s" % err}
+	var result: Array = await req.request_completed
+	req.queue_free()
+	var code := int(result[1])
+	var raw: PackedByteArray = result[3]
+	var text := raw.get_string_from_utf8()
+	var parsed = JSON.parse_string(text)
+	if code < 200 or code >= 300:
+		return {"ok": false, "http": code, "error": text.substr(0, 4000)}
+	if parsed is Dictionary:
+		return parsed
+	return {"ok": false, "error": "Invalid JSON response"}
+
 func _http_get(args: Dictionary) -> Dictionary:
 	var url := str(args.get("url", ""))
 	if not (url.begins_with("http://") or url.begins_with("https://")):
@@ -45,7 +74,7 @@ func _http_get(args: Dictionary) -> Dictionary:
 	var req := HTTPRequest.new()
 	req.timeout = 30.0
 	add_child(req)
-	var err := req.request(url, PackedStringArray(["User-Agent: AutonomousAI-Godot/0.1"]))
+	var err := req.request(url, PackedStringArray(["User-Agent: AuroraFox/0.2"]))
 	if err != OK:
 		req.queue_free()
 		return {"ok": false, "error": "request error %s" % err}
@@ -108,3 +137,26 @@ func _git_diff(_args: Dictionary) -> Dictionary:
 
 func _system_info(_args: Dictionary) -> Dictionary:
 	return {"ok": true, "godot": Engine.get_version_info(), "os": OS.get_name(), "cpu_count": OS.get_processor_count(), "locale": OS.get_locale()}
+
+func _computer_plan(args: Dictionary) -> Dictionary:
+	return await _http_json(computer_base_url + "/plan", HTTPClient.METHOD_POST, {"goal": str(args.get("goal", "")), "max_steps": 1, "auto_execute": false})
+
+func _computer_goal(args: Dictionary) -> Dictionary:
+	var goal := str(args.get("goal", ""))
+	var max_steps := clampi(int(args.get("max_steps", 30)), 1, 100)
+	var auto_execute := bool(args.get("auto_execute", true))
+	return await _http_json(computer_base_url + "/run", HTTPClient.METHOD_POST, {"goal": goal, "max_steps": max_steps, "auto_execute": auto_execute}, 600.0)
+
+func _sandbox_exec(args: Dictionary) -> Dictionary:
+	return await _http_json(computer_base_url + "/sandbox/exec", HTTPClient.METHOD_POST, {"command": args.get("command", []), "cwd": str(args.get("cwd", ".")), "timeout": clampi(int(args.get("timeout", 60)), 1, 600)}, 620.0)
+
+func _sandbox_write(args: Dictionary) -> Dictionary:
+	return await _http_json(computer_base_url + "/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", ""))})
+
+func _sandbox_read(args: Dictionary) -> Dictionary:
+	var path := str(args.get("path", ""))
+	var encoded := path.uri_encode()
+	return await _http_json(computer_base_url + "/sandbox/read?path=" + encoded, HTTPClient.METHOD_GET)
+
+func _screen_snapshot(_args: Dictionary) -> Dictionary:
+	return await _http_json(computer_base_url + "/windows", HTTPClient.METHOD_GET)
