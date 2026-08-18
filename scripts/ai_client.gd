@@ -20,7 +20,7 @@ func configure_android_model(path: String) -> void:
 func chat(messages: Array, temperature: float = 0.2) -> Dictionary:
 	if OS.get_name() == "Android" and android_runtime.is_available():
 		var local_path := ProjectSettings.globalize_path(android_model_path)
-		return await android_runtime.chat(local_path, messages, {"temperature": temperature})
+		return android_runtime.chat(local_path, messages, {"temperature": temperature})
 	return await _chat_ollama(messages, temperature)
 
 func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
@@ -52,8 +52,7 @@ func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
 
 func is_available() -> bool:
 	if OS.get_name() == "Android":
-		if not android_runtime.is_available():
-			return false
+		if not android_runtime.is_available(): return false
 		var caps := android_runtime.capabilities()
 		return bool(caps.get("llama_cpp", false)) and FileAccess.file_exists(android_model_path)
 	var request_node := HTTPRequest.new()
