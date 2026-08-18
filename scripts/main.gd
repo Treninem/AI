@@ -20,6 +20,8 @@ var status: Label
 var file_dialog: FileDialog
 var pending_attachments: Array = []
 var attachment_bar: HBoxContainer
+var request_busy := false
+var queued_voice_text := ""
 
 const CHAT_BACKGROUND: Texture2D = preload("res://assets/chat_background.webp")
 const UI_ATLAS: Texture2D = preload("res://assets/ui_atlas.webp")
@@ -264,6 +266,7 @@ func _build_ui() -> void:
 	add_child(file_dialog)
 
 func _new_chat() -> void:
+	if request_busy: return
 	AuroraVoice.stop()
 	chats.create_chat()
 	pending_attachments.clear()
@@ -286,14 +289,24 @@ func _refresh_chat_list(query: String = "") -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_apply_neon_button(b, false)
 		var id := str(chat.get("id", ""))
-		b.pressed.connect(func(): chats.active_chat_id = id; chats.save_all(); _render_active_chat())
+		b.pressed.connect(func():
+			if request_busy: return
+			chats.active_chat_id = id
+			chats.save_all()
+			_render_active_chat()
+		)
 		row.add_child(b)
 		var del := Button.new()
 		del.text = "×"
 		del.tooltip_text = "Удалить чат"
 		del.custom_minimum_size = Vector2(42, 40)
 		_apply_neon_button(del, true)
-		del.pressed.connect(func(): chats.delete_chat(id); _refresh_chat_list(query); _render_active_chat())
+		del.pressed.connect(func():
+			if request_busy: return
+			chats.delete_chat(id)
+			_refresh_chat_list(query)
+			_render_active_chat()
+		)
 		row.add_child(del)
 		chat_list.add_child(row)
 
@@ -313,7 +326,7 @@ func _render_active_chat() -> void:
 		else: output.append_text("\n[color=#a66cff][b]AuroraFox[/b][/color]\n%s\n" % content)
 
 func _open_file_dialog() -> void:
-	file_dialog.popup_centered_ratio(0.72)
+	if not request_busy: file_dialog.popup_centered_ratio(0.72)
 
 func _on_files_selected(paths: PackedStringArray) -> void:
 	for path in paths:
@@ -338,13 +351,26 @@ func _on_input_gui(event: InputEvent) -> void:
 		_submit_current()
 
 func submit_voice_text(text: String) -> void:
-	if text.strip_edges().is_empty() or input == null: return
-	input.text = text.strip_edges()
+	var clean := text.strip_edges()
+	if clean.is_empty(): return
+	if request_busy:
+		queued_voice_text = clean
+		return
+	if input == null: return
+	input.text = clean
 	_submit_current()
 
+func _submit_queued_voice() -> void:
+	if request_busy or queued_voice_text.is_empty(): return
+	var next := queued_voice_text
+	queued_voice_text = ""
+	submit_voice_text(next)
+
 func _submit_current() -> void:
+	if request_busy: return
 	var text := input.text.strip_edges()
 	if text.is_empty() and pending_attachments.is_empty(): return
+	request_busy = true
 	AuroraVoice.stop()
 	input.clear()
 	var shown := text
@@ -370,6 +396,8 @@ func _submit_current() -> void:
 	status.text = "● готово   •   %d инструментов   •   память %d" % [tools.tools.size(), memory.memory.size()]
 	assistant_response_ready.emit(answer)
 	AuroraVoice.say(answer)
+	request_busy = false
+	if not queued_voice_text.is_empty(): call_deferred("_submit_queued_voice")
 
 func _show_tools_info() -> void:
 	output.append_text("\n[color=#a66cff][b]Инструменты AuroraFox[/b][/color]\nИнтернет, HTTP, файлы, Git, системная информация, память, база знаний, компьютерный агент, песочницы и локальный голос.\n")
