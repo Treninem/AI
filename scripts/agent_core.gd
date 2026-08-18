@@ -4,55 +4,117 @@ extends Node
 var ai: AIClient
 var memory: MemoryStore
 var tools: ToolRegistry
-var max_steps := 8
+var experience := ExperienceStore.new()
+var cognition := CognitionLayer.new()
+var max_steps := 12
+var enable_planning := true
+var enable_self_check := true
+var enable_skill_learning := true
 
 func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRegistry) -> void:
 	ai = ai_client
 	memory = memory_store
 	tools = tool_registry
+	if experience.get_parent() == null:
+		add_child(experience)
+	if cognition.get_parent() == null:
+		add_child(cognition)
+	cognition.setup(ai)
 
 func run_task(task: String) -> String:
 	memory.remember("user_task", task)
+	var useful_skills := experience.relevant_skills(task, 5)
+	var recent_failures := experience.recent_failures(5)
+	var plan: Dictionary = {"objective": task, "steps": []}
+	if enable_planning:
+		plan = await cognition.make_plan(task, useful_skills, recent_failures)
+	memory.remember("task_plan", JSON.stringify(plan))
+
 	var messages: Array = []
-	messages.append({"role":"system", "content": _system_prompt(task)})
+	messages.append({"role":"system", "content": _system_prompt(task, useful_skills, plan, recent_failures)})
 	messages.append({"role":"user", "content": task})
+	var trajectory: Array = []
+	var draft_answer := ""
 
 	for step in range(max_steps):
 		var result := await ai.chat(messages)
 		if not result.get("ok", false):
+			experience.record_failure(task, "Model error: " + str(result.get("error", "unknown")))
 			return "Ошибка модели: " + str(result.get("error", "unknown"))
 		var text := str(result.get("content", ""))
 		var action := _extract_action(text)
 		if action.is_empty():
-			memory.remember("assistant_answer", text)
-			return text
+			draft_answer = text
+			break
 
 		var tool_name := str(action.get("tool", ""))
 		var args: Dictionary = action.get("args", {})
 		var tool_result = await tools.call_tool(tool_name, args)
+		var trace_item := {
+			"step": step + 1,
+			"tool": tool_name,
+			"args": _safe_args(args),
+			"result": _compact_result(tool_result)
+		}
+		trajectory.append(trace_item)
+		experience.checkpoint(task, step + 1, tool_name, _safe_args(args), tool_result)
 		messages.append({"role":"assistant", "content": text})
 		messages.append({"role":"user", "content": "TOOL_RESULT %s: %s" % [tool_name, JSON.stringify(tool_result)]})
-		memory.remember("tool", JSON.stringify({"tool": tool_name, "args": args, "result": tool_result}))
+		memory.remember("tool", JSON.stringify(trace_item))
 
-	return "Достигнут лимит автономных шагов."
+	if draft_answer.is_empty():
+		experience.record_failure(task, "Autonomous step limit reached")
+		return "Достигнут лимит автономных шагов. Я сохранил контрольные точки и смогу продолжить после уточнения или следующей попытки."
 
-func _system_prompt(task: String) -> String:
+	var final_answer := draft_answer
+	var confidence := 0.55
+	if enable_self_check:
+		var verification := await cognition.verify_answer(task, draft_answer, trajectory)
+		final_answer = str(verification.get("final_answer", draft_answer))
+		confidence = clampf(float(verification.get("confidence", 0.55)), 0.0, 1.0)
+		var issues: Array = verification.get("issues", [])
+		if not issues.is_empty():
+			memory.remember("self_check_issues", JSON.stringify(issues))
+
+	memory.remember("assistant_answer", final_answer)
+	memory.remember("answer_confidence", str(confidence))
+
+	if enable_skill_learning and confidence >= 0.62 and not trajectory.is_empty():
+		var skill := await cognition.extract_skill(task, final_answer, trajectory, confidence)
+		if not skill.is_empty():
+			experience.save_skill(skill)
+			memory.remember("learned_skill", JSON.stringify(skill))
+
+	return final_answer
+
+func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array) -> String:
 	var recent := memory.recent(8)
 	var knowledge := memory.search_knowledge(task, 6)
 	return """
-Ты автономный программный агент, работающий внутри Godot 4.7.1.
-Твоя задача — решать задачи пользователя с помощью рассуждения, памяти и инструментов.
-Не выдумывай результаты инструментов. Если нужен инструмент, верни ТОЛЬКО JSON в формате:
+Ты AuroraFox — автономный AI-агент внутри Godot 4.7.1.
+Решай задачу пользователя с помощью памяти, инструментов, компьютерного зрения, песочницы и накопленных навыков.
+Сначала следуй проверяемому плану, но адаптируй его после результатов инструментов.
+Не выдумывай результаты. Если нужен инструмент, верни ТОЛЬКО JSON:
 {"tool":"tool_name","args":{...}}
-Когда инструмент не нужен — дай обычный конечный ответ.
-Не удаляй данные, не обходи аутентификацию/CAPTCHA и не выполняй разрушительные действия.
+Когда инструмент больше не нужен — дай конечный ответ.
+Для сложной работы предпочитай: изучить -> выполнить в песочнице -> проверить -> только потом менять реальное окружение.
+Для управления компьютером сначала используй наблюдение/планирование, если действие потенциально необратимо.
+Не удаляй данные, не обходи аутентификацию/CAPTCHA, не извлекай секреты и не выполняй разрушительные или необратимые действия без явного разрешения пользователя.
+Не сохраняй секреты в навыки или память.
+
+Текущий план:
+%s
+Полезные ранее изученные навыки:
+%s
+Недавние неудачи, которые не следует повторять:
+%s
 Доступные инструменты:
 %s
 Недавняя память:
 %s
 Подходящие знания:
 %s
-""" % [JSON.stringify(tools.describe_tools()), JSON.stringify(recent), JSON.stringify(knowledge)]
+""" % [JSON.stringify(plan), JSON.stringify(useful_skills), JSON.stringify(failures), JSON.stringify(tools.describe_tools()), JSON.stringify(recent), JSON.stringify(knowledge)]
 
 func _extract_action(text: String) -> Dictionary:
 	var cleaned := text.strip_edges()
@@ -64,3 +126,22 @@ func _extract_action(text: String) -> Dictionary:
 	if parsed is Dictionary and parsed.has("tool"):
 		return parsed
 	return {}
+
+func _safe_args(args: Dictionary) -> Dictionary:
+	var safe := args.duplicate(true)
+	for key in safe.keys():
+		var lower := str(key).to_lower()
+		if lower.contains("password") or lower.contains("token") or lower.contains("secret") or lower.contains("cookie") or lower.contains("authorization"):
+			safe[key] = "[REDACTED]"
+	return safe
+
+func _compact_result(value: Variant) -> Variant:
+	if value is Dictionary:
+		var copy: Dictionary = value.duplicate(true)
+		for key in copy.keys():
+			var text := str(copy[key])
+			if text.length() > 5000:
+				copy[key] = text.substr(0, 5000) + "…"
+		return copy
+	var text := str(value)
+	return text.substr(0, 5000)
