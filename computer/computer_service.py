@@ -7,6 +7,7 @@ import os
 import shutil
 import subprocess
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,7 @@ SANDBOX_ROOT.mkdir(parents=True, exist_ok=True)
 pyautogui.FAILSAFE = True
 pyautogui.PAUSE = 0.12
 
-app = FastAPI(title="AuroraFox Computer Agent", version="0.3.0")
+app = FastAPI(title="AuroraFox Computer Agent", version="0.4.0")
 
 
 class Action(BaseModel):
@@ -59,11 +60,33 @@ class SandboxWriteRequest(BaseModel):
     content: str
 
 
+class WorkspaceCreateRequest(BaseModel):
+    id: str = ""
+    task: str = ""
+
+
+class WorkspaceSnapshotRequest(BaseModel):
+    workspace: str
+    label: str = "checkpoint"
+
+
+class WorkspaceRollbackRequest(BaseModel):
+    workspace: str
+    snapshot: str
+
+
 def _safe_sandbox_path(relative: str) -> Path:
     target = (SANDBOX_ROOT / relative).resolve()
     if SANDBOX_ROOT != target and SANDBOX_ROOT not in target.parents:
         raise HTTPException(status_code=400, detail="Path escapes sandbox")
     return target
+
+
+def _safe_workspace_id(value: str) -> str:
+    cleaned = "".join(ch for ch in value if ch.isalnum() or ch in "_-.").strip(".")
+    if not cleaned or len(cleaned) > 96:
+        raise HTTPException(status_code=400, detail="Invalid workspace id")
+    return cleaned
 
 
 def _screen_png() -> bytes:
@@ -197,7 +220,7 @@ def _container_engine() -> str | None:
     preferred = os.getenv("AURORAFOX_CONTAINER_ENGINE", "").strip()
     if preferred and shutil.which(preferred):
         return preferred
-    for name in ("docker", "podman"):
+    for name in ("podman", "docker"):
         if shutil.which(name):
             return name
     return None
@@ -229,6 +252,24 @@ def _container_profile(command: list[str]) -> tuple[str, list[str]]:
     if not image:
         raise HTTPException(status_code=403, detail=f"No container profile for executable: {exe}")
     return image, command
+
+
+def _tree(root: Path, max_items: int = 2000) -> list[dict[str, Any]]:
+    items: list[dict[str, Any]] = []
+    if not root.exists():
+        return items
+    for path in root.rglob("*"):
+        if len(items) >= max_items:
+            break
+        try:
+            items.append({
+                "path": path.relative_to(root).as_posix(),
+                "dir": path.is_dir(),
+                "size": path.stat().st_size if path.is_file() else 0,
+            })
+        except OSError:
+            pass
+    return items
 
 
 @app.get("/health")
@@ -281,6 +322,61 @@ def run(req: GoalRequest):
             return {"ok": True, "done": True, "history": history}
         time.sleep(0.25)
     return {"ok": True, "done": False, "history": history, "reason": "max_steps reached"}
+
+
+@app.post("/sandbox/workspace/create")
+def workspace_create(req: WorkspaceCreateRequest):
+    workspace_id = _safe_workspace_id(req.id) if req.id else uuid.uuid4().hex[:16]
+    root = _safe_sandbox_path(workspace_id)
+    for name in ("input", "work", "output", "logs", "snapshots"):
+        (root / name).mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "id": workspace_id,
+        "task": req.task,
+        "created_at": int(time.time()),
+        "root": workspace_id,
+    }
+    (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"ok": True, "workspace": manifest}
+
+
+@app.get("/sandbox/workspace/tree")
+def workspace_tree(workspace: str, area: str = "work"):
+    wid = _safe_workspace_id(workspace)
+    if area not in {"input", "work", "output", "logs", "snapshots"}:
+        raise HTTPException(status_code=400, detail="Invalid workspace area")
+    root = _safe_sandbox_path(f"{wid}/{area}")
+    return {"ok": True, "workspace": wid, "area": area, "items": _tree(root)}
+
+
+@app.post("/sandbox/workspace/snapshot")
+def workspace_snapshot(req: WorkspaceSnapshotRequest):
+    wid = _safe_workspace_id(req.workspace)
+    work = _safe_sandbox_path(f"{wid}/work")
+    snapshots = _safe_sandbox_path(f"{wid}/snapshots")
+    snapshots.mkdir(parents=True, exist_ok=True)
+    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"
+    snapshot_id = f"{int(time.time())}_{safe_label}"
+    target = snapshots / snapshot_id
+    if target.exists():
+        snapshot_id += "_" + uuid.uuid4().hex[:6]
+        target = snapshots / snapshot_id
+    shutil.copytree(work, target)
+    return {"ok": True, "workspace": wid, "snapshot": snapshot_id, "path": f"{wid}/snapshots/{snapshot_id}"}
+
+
+@app.post("/sandbox/workspace/rollback")
+def workspace_rollback(req: WorkspaceRollbackRequest):
+    wid = _safe_workspace_id(req.workspace)
+    sid = _safe_workspace_id(req.snapshot)
+    work = _safe_sandbox_path(f"{wid}/work")
+    source = _safe_sandbox_path(f"{wid}/snapshots/{sid}")
+    if not source.is_dir():
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    if work.exists():
+        shutil.rmtree(work)
+    shutil.copytree(source, work)
+    return {"ok": True, "workspace": wid, "snapshot": sid}
 
 
 @app.get("/sandbox/list")
@@ -357,7 +453,6 @@ def sandbox_container_exec(req: SandboxExecRequest):
     cwd = _safe_sandbox_path(req.cwd)
     cwd.mkdir(parents=True, exist_ok=True)
     image, inner_command = _container_profile(req.command)
-    # Only the current task directory is writable. Network is disabled by default.
     run_command = [
         engine, "run", "--rm", "--network", "none", "--read-only",
         "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"),
