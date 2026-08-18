@@ -2,17 +2,14 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import io
 import json
 import logging
 import os
 import queue
-import re
-import shutil
 import threading
 import time
+from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import sounddevice as sd
@@ -42,15 +39,19 @@ CONFIG = json.loads((CONFIG_DIR / "voice_config.json").read_text(encoding="utf-8
 EMOTIONS = json.loads((CONFIG_DIR / "emotions.json").read_text(encoding="utf-8"))
 PERSONALITY = AuroraPersonality(CONFIG_DIR / "personality.json")
 
-logging.basicConfig(filename=LOG_DIR / "aurora_voice.log", level=logging.INFO,
-                    format="%(asctime)s %(levelname)s %(message)s", encoding="utf-8")
+logging.basicConfig(
+    filename=LOG_DIR / "aurora_voice.log",
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(message)s",
+    encoding="utf-8",
+)
 log = logging.getLogger("aurora_voice")
 
 HOST = os.getenv("AURORAFOX_VOICE_HOST", "127.0.0.1")
 PORT = int(os.getenv("AURORAFOX_VOICE_PORT", "8765"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-app = FastAPI(title="AuroraFox Voice", version="1.0.0")
+app = FastAPI(title="AuroraFox Voice", version="1.1.0")
 processor = AuroraVoiceProcessor(CONFIG.get("processor", {}))
 router = EngineRouter(CONFIG, DEVICE)
 _stt_pipe = None
@@ -74,10 +75,13 @@ class PathRequest(BaseModel):
 class ModeRequest(BaseModel):
     mode: str
     device: int | None = None
+    sensitivity: float = Field(default=0.5, ge=0.0, le=1.0)
+    noise_suppression: bool = True
 
 
 class TTSStateRequest(BaseModel):
     playing: bool
+    text: str = ""
 
 
 class EventHub:
@@ -92,10 +96,9 @@ class EventHub:
 
     def emit(self, event: str, **data):
         payload = {"event": event, "time": time.time(), **data}
-        loop = self.loop
-        if not loop or not self.clients:
+        if not self.loop or not self.clients:
             return
-        asyncio.run_coroutine_threadsafe(self._broadcast(payload), loop)
+        asyncio.run_coroutine_threadsafe(self._broadcast(payload), self.loop)
 
     async def _broadcast(self, payload: dict):
         dead = []
@@ -117,14 +120,20 @@ def get_stt():
         model = CONFIG.get("stt", {}).get("model", "openai/whisper-large-v3-turbo")
         dtype = torch.float16 if DEVICE == "cuda" else torch.float32
         log.info("loading STT model=%s device=%s", model, DEVICE)
-        _stt_pipe = pipeline("automatic-speech-recognition", model=model, torch_dtype=dtype,
-                             device=0 if DEVICE == "cuda" else -1)
+        _stt_pipe = pipeline(
+            "automatic-speech-recognition",
+            model=model,
+            torch_dtype=dtype,
+            device=0 if DEVICE == "cuda" else -1,
+        )
     return _stt_pipe
 
 
 def transcribe_array(audio: np.ndarray, sr: int = 16000) -> str:
-    result = get_stt()({"array": audio.astype(np.float32), "sampling_rate": sr},
-                       generate_kwargs={"language": "ru", "task": "transcribe"})
+    result = get_stt()(
+        {"array": audio.astype(np.float32), "sampling_rate": sr},
+        generate_kwargs={"language": "ru", "task": "transcribe"},
+    )
     return str(result.get("text", "")).strip()
 
 
@@ -142,10 +151,20 @@ def transcribe_path(path: str) -> str:
 
 
 def cache_key(req: SayRequest, clean: str, engine: str) -> str:
-    payload = json.dumps({"text": clean, "engine": engine, "emotion": req.emotion,
-                          "intensity": req.intensity, "speed": req.speed, "pitch": req.pitch,
-                          "mechanical": req.mechanical_amount, "processor": CONFIG.get("processor", {})},
-                         ensure_ascii=False, sort_keys=True)
+    payload = json.dumps(
+        {
+            "text": clean,
+            "engine": engine,
+            "emotion": req.emotion,
+            "intensity": req.intensity,
+            "speed": req.speed,
+            "pitch": req.pitch,
+            "mechanical": req.mechanical_amount,
+            "processor": CONFIG.get("processor", {}),
+        },
+        ensure_ascii=False,
+        sort_keys=True,
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -170,8 +189,16 @@ def synthesize(req: SayRequest) -> dict:
     profile = EMOTIONS.get(emotion, EMOTIONS["neutral"])
     base_speed = float(CONFIG.get("speed", 1.04))
     speed = float(req.speed if req.speed is not None else base_speed * profile.get("speed", 1.0))
-    pitch = float(req.pitch if req.pitch is not None else (float(CONFIG.get("pitch", 1.02)) * profile.get("pitch", 1.0) - 1.0))
-    mech = float(req.mechanical_amount if req.mechanical_amount is not None else profile.get("mechanical", CONFIG.get("mechanical_amount", 0.035)))
+    pitch = float(
+        req.pitch
+        if req.pitch is not None
+        else float(CONFIG.get("pitch", 1.02)) * profile.get("pitch", 1.0) - 1.0
+    )
+    mech = float(
+        req.mechanical_amount
+        if req.mechanical_amount is not None
+        else profile.get("mechanical", CONFIG.get("mechanical_amount", 0.035))
+    )
     selected = router.choose(req.backend).name
     key = cache_key(req, clean, selected)
     wav_path = CACHE_DIR / f"{key}.wav"
@@ -179,15 +206,23 @@ def synthesize(req: SayRequest) -> dict:
     if wav_path.is_file() and meta_path.is_file():
         os.utime(wav_path, None)
         return json.loads(meta_path.read_text(encoding="utf-8")) | {"cached": True}
-    fallback = None
     try:
         audio, sr, engine, fallback = router.synthesize(clean, emotion, intensity, speed, req.backend)
         audio = processor.process(audio, sr, emotion, intensity, mech, pitch, speed)
         sf.write(wav_path, audio, sr, subtype="PCM_16")
-        meta = {"ok": True, "path": str(wav_path), "emotion": emotion, "intensity": intensity,
-                "engine": engine, "fallback_error": fallback, "sample_rate": sr,
-                "duration": float(len(audio) / sr), "amplitude": amplitude_envelope(audio), "cached": False,
-                "spoken_text": clean}
+        meta = {
+            "ok": True,
+            "path": str(wav_path),
+            "emotion": emotion,
+            "intensity": intensity,
+            "engine": engine,
+            "fallback_error": fallback,
+            "sample_rate": sr,
+            "duration": float(len(audio) / sr),
+            "amplitude": amplitude_envelope(audio),
+            "cached": False,
+            "spoken_text": clean,
+        }
         meta_path.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
         trim_cache()
         if fallback:
@@ -198,42 +233,73 @@ def synthesize(req: SayRequest) -> dict:
         raise HTTPException(500, f"TTS failed: {exc}") from exc
 
 
+def _normalized_words(text: str) -> str:
+    return " ".join("".join(ch.lower() if ch.isalnum() else " " for ch in (text or "")).split())
+
+
+def _echo_similarity(recognized: str, spoken: str) -> float:
+    a = _normalized_words(recognized)
+    b = _normalized_words(spoken)
+    if not a or not b:
+        return 0.0
+    if a in b or b in a:
+        return min(1.0, min(len(a), len(b)) / max(4.0, float(max(len(a), len(b)))) + 0.35)
+    return SequenceMatcher(None, a, b).ratio()
+
+
 class MicMonitor:
     def __init__(self):
         self.mode = "off"
         self.device = None
+        self.sensitivity = 0.5
+        self.noise_suppression = True
         self.q: queue.Queue[np.ndarray] = queue.Queue(maxsize=128)
         self.stream = None
         self.thread = None
         self.stop_event = threading.Event()
         self.tts_playing = False
+        self.last_tts_text = ""
+        self.ignore_wake_until = 0.0
         self.conversation_until = 0.0
         self.noise_floor = 0.006
         self.vad_model = None
         self.vad = None
         self.vosk_model = None
 
-    def start(self, mode: str, device=None):
+    def start(self, mode: str, device=None, sensitivity: float = 0.5, noise_suppression: bool = True):
         self.stop()
         self.mode = mode
         self.device = device
-        if mode == "off" or mode == "push_to_talk":
+        self.sensitivity = float(np.clip(sensitivity, 0.0, 1.0))
+        self.noise_suppression = bool(noise_suppression)
+        if mode in {"off", "push_to_talk"}:
             return
         try:
+            base_threshold = float(CONFIG["vad"]["threshold"])
+            threshold = float(np.clip(base_threshold + (0.5 - self.sensitivity) * 0.22, 0.35, 0.78))
             self.vad_model = load_silero_vad(onnx=True)
-            self.vad = VADIterator(self.vad_model, threshold=float(CONFIG["vad"]["threshold"]),
-                                   sampling_rate=16000,
-                                   min_silence_duration_ms=int(CONFIG["vad"]["min_silence_ms"]))
+            self.vad = VADIterator(
+                self.vad_model,
+                threshold=threshold,
+                sampling_rate=16000,
+                min_silence_duration_ms=int(CONFIG["vad"]["min_silence_ms"]),
+            )
             vosk_path = (ROOT.parent / CONFIG["wake"]["vosk_model"]).resolve()
             if vosk_path.is_dir():
                 self.vosk_model = Model(str(vosk_path))
             self.stop_event.clear()
-            self.stream = sd.InputStream(samplerate=16000, channels=1, dtype="float32", blocksize=512,
-                                         device=device, callback=self._callback)
+            self.stream = sd.InputStream(
+                samplerate=16000,
+                channels=1,
+                dtype="float32",
+                blocksize=512,
+                device=device,
+                callback=self._callback,
+            )
             self.stream.start()
             self.thread = threading.Thread(target=self._worker, daemon=True, name="AuroraVoiceMic")
             self.thread.start()
-            log.info("microphone monitor started mode=%s device=%s", mode, device)
+            log.info("microphone monitor started mode=%s device=%s threshold=%.3f", mode, device, threshold)
         except Exception:
             log.exception("microphone monitor failed")
             hub.emit("microphone_error", message="Не удалось запустить микрофон")
@@ -241,13 +307,26 @@ class MicMonitor:
     def stop(self):
         self.stop_event.set()
         if self.stream:
-            try: self.stream.stop(); self.stream.close()
-            except Exception: pass
+            try:
+                self.stream.stop()
+                self.stream.close()
+            except Exception:
+                pass
         self.stream = None
         self.thread = None
         while not self.q.empty():
-            try: self.q.get_nowait()
-            except queue.Empty: break
+            try:
+                self.q.get_nowait()
+            except queue.Empty:
+                break
+
+    def set_tts_state(self, playing: bool, text: str = ""):
+        self.tts_playing = bool(playing)
+        if text:
+            self.last_tts_text = text
+        if not playing:
+            # Prevent the end of AuroraFox's own acoustic output from being treated as wake audio.
+            self.ignore_wake_until = time.time() + 1.15
 
     def _callback(self, indata, frames, timing, status):
         if status:
@@ -256,6 +335,14 @@ class MicMonitor:
             self.q.put_nowait(np.asarray(indata[:, 0], dtype=np.float32).copy())
         except queue.Full:
             pass
+
+    def _soft_noise_gate(self, chunk: np.ndarray) -> np.ndarray:
+        if not self.noise_suppression:
+            return chunk
+        gate = max(0.0025, self.noise_floor * 1.35)
+        magnitude = np.abs(chunk)
+        gain = np.clip((magnitude - gate * 0.35) / max(gate * 1.7, 1e-5), 0.18, 1.0)
+        return (chunk * gain).astype(np.float32)
 
     def _wake_text(self, audio: np.ndarray) -> str:
         if self.vosk_model is None:
@@ -270,53 +357,88 @@ class MicMonitor:
     def _worker(self):
         chunks: list[np.ndarray] = []
         started = False
+        started_during_tts = False
         start_time = 0.0
+        max_rms = 0.0
         while not self.stop_event.is_set():
             try:
-                chunk = self.q.get(timeout=0.2)
+                raw = self.q.get(timeout=0.2)
             except queue.Empty:
                 continue
-            rms = float(np.sqrt(np.mean(np.square(chunk))))
-            if not started:
-                self.noise_floor = self.noise_floor * 0.995 + min(rms, 0.03) * 0.005
+            raw_rms = float(np.sqrt(np.mean(np.square(raw))))
+            if not started and not self.tts_playing:
+                self.noise_floor = self.noise_floor * 0.995 + min(raw_rms, 0.03) * 0.005
+            chunk = self._soft_noise_gate(raw)
             event = self.vad(torch.from_numpy(chunk), return_seconds=False) if self.vad else None
             if event and "start" in event:
                 started = True
+                started_during_tts = self.tts_playing
                 start_time = time.time()
+                max_rms = raw_rms
                 chunks = [chunk]
-                hub.emit("user_speech_started", rms=rms)
+                hub.emit("user_speech_started", rms=raw_rms)
             elif started:
                 chunks.append(chunk)
-            if self.tts_playing and started:
-                elapsed = (time.time() - start_time) * 1000.0
-                limit = max(float(CONFIG["vad"]["barge_in_rms"]), self.noise_floor * float(CONFIG["vad"]["noise_multiplier"]))
-                if elapsed >= float(CONFIG["vad"]["barge_in_min_ms"]) and rms >= limit:
-                    hub.emit("barge_in", rms=rms)
-                    self.tts_playing = False
-            if event and "end" in event and started:
-                audio = np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
-                started = False
-                chunks = []
-                hub.emit("user_speech_finished", duration=float(len(audio) / 16000))
-                if len(audio) < int(16000 * 0.20):
-                    continue
-                now = time.time()
-                if self.mode == "wake_word" and now > self.conversation_until:
-                    wake = self._wake_text(audio)
-                    words = CONFIG["wake"]["words"]
-                    if any(w in wake.split() for w in words) or "эй фокс" in wake or "эй лиса" in wake:
-                        self.conversation_until = now + float(CONFIG["wake"]["conversation_window_sec"])
-                        hub.emit("wake_detected", text=wake)
-                    continue
-                if self.mode == "continuous" or now <= self.conversation_until or self.tts_playing:
+                max_rms = max(max_rms, raw_rms)
+
+            if not (event and "end" in event and started):
+                continue
+
+            audio = np.concatenate(chunks) if chunks else np.zeros(0, dtype=np.float32)
+            duration_ms = float(len(audio) / 16.0)
+            started = False
+            chunks = []
+            hub.emit("user_speech_finished", duration=float(len(audio) / 16000))
+            if len(audio) < int(16000 * 0.20):
+                continue
+
+            now = time.time()
+            # Any segment that began while AuroraFox was speaking is never allowed into wake-word logic.
+            # It can become a barge-in only after STT proves it differs from AuroraFox's own sentence.
+            if started_during_tts:
+                limit = max(
+                    float(CONFIG["vad"]["barge_in_rms"]),
+                    self.noise_floor * float(CONFIG["vad"]["noise_multiplier"]),
+                )
+                if duration_ms >= float(CONFIG["vad"]["barge_in_min_ms"]) and max_rms >= limit:
                     try:
                         text = transcribe_array(audio)
-                        if text:
-                            self.conversation_until = time.time() + float(CONFIG["wake"]["conversation_window_sec"])
+                        similarity = _echo_similarity(text, self.last_tts_text)
+                        if text and similarity < 0.62:
+                            self.conversation_until = now + float(CONFIG["wake"]["conversation_window_sec"])
+                            hub.emit("barge_in", rms=max_rms, echo_similarity=similarity)
                             hub.emit("transcript", text=text)
-                    except Exception as exc:
-                        log.exception("continuous STT failed")
-                        hub.emit("stt_error", message=str(exc))
+                        else:
+                            log.info("suppressed probable self-echo similarity=%.3f", similarity)
+                    except Exception:
+                        log.exception("barge-in STT failed")
+                started_during_tts = False
+                continue
+
+            if self.mode == "wake_word" and now > self.conversation_until:
+                if now <= self.ignore_wake_until:
+                    continue
+                wake = self._wake_text(audio)
+                words = CONFIG["wake"]["words"]
+                if any(w in wake.split() for w in words) or "эй фокс" in wake or "эй лиса" in wake:
+                    self.conversation_until = now + float(CONFIG["wake"]["conversation_window_sec"])
+                    hub.emit("wake_detected", text=wake)
+                continue
+
+            if self.mode == "continuous" or now <= self.conversation_until:
+                try:
+                    text = transcribe_array(audio)
+                    if text:
+                        # Final echo guard also protects the conversational window after a spoken wake response.
+                        similarity = _echo_similarity(text, self.last_tts_text) if now <= self.ignore_wake_until else 0.0
+                        if similarity >= 0.68:
+                            log.info("suppressed conversational self-echo similarity=%.3f", similarity)
+                            continue
+                        self.conversation_until = time.time() + float(CONFIG["wake"]["conversation_window_sec"])
+                        hub.emit("transcript", text=text)
+                except Exception as exc:
+                    log.exception("continuous STT failed")
+                    hub.emit("stt_error", message=str(exc))
 
 
 mic = MicMonitor()
@@ -342,9 +464,14 @@ async def websocket_endpoint(ws: WebSocket):
             data = await ws.receive_json()
             cmd = data.get("command")
             if cmd == "set_mode":
-                mic.start(str(data.get("mode", "off")), data.get("device"))
+                mic.start(
+                    str(data.get("mode", "off")),
+                    data.get("device"),
+                    float(data.get("sensitivity", 0.5)),
+                    bool(data.get("noise_suppression", True)),
+                )
             elif cmd == "tts_state":
-                mic.tts_playing = bool(data.get("playing", False))
+                mic.set_tts_state(bool(data.get("playing", False)), str(data.get("text", "")))
             elif cmd == "ping":
                 await ws.send_json({"event": "pong", "time": time.time()})
     except WebSocketDisconnect:
@@ -353,9 +480,16 @@ async def websocket_endpoint(ws: WebSocket):
 
 @app.get("/health")
 def health():
-    return {"ok": True, "device": DEVICE, "backend": "AuroraVoice", "mode": mic.mode,
-            "tts": {name: eng.available() for name, eng in router.engines.items()},
-            "vad": mic.vad_model is not None, "wake_model": mic.vosk_model is not None}
+    return {
+        "ok": True,
+        "device": DEVICE,
+        "backend": "AuroraVoice",
+        "mode": mic.mode,
+        "tts": {name: eng.available() for name, eng in router.engines.items()},
+        "vad": mic.vad_model is not None,
+        "wake_model": mic.vosk_model is not None,
+        "stt_loaded": _stt_pipe is not None,
+    }
 
 
 @app.get("/devices")
@@ -369,13 +503,13 @@ def devices():
 
 @app.post("/mode")
 def set_mode(req: ModeRequest):
-    mic.start(req.mode, req.device)
+    mic.start(req.mode, req.device, req.sensitivity, req.noise_suppression)
     return {"ok": True, "mode": mic.mode}
 
 
 @app.post("/tts_state")
 def tts_state(req: TTSStateRequest):
-    mic.tts_playing = req.playing
+    mic.set_tts_state(req.playing, req.text)
     return {"ok": True}
 
 
@@ -397,8 +531,10 @@ def stt_path(req: PathRequest):
     finally:
         p = Path(req.path)
         if "aurorafox_voice_input" in p.name:
-            try: p.unlink(missing_ok=True)
-            except Exception: pass
+            try:
+                p.unlink(missing_ok=True)
+            except Exception:
+                pass
 
 
 @app.get("/emotion")
@@ -414,7 +550,8 @@ def phrase(category: str):
 @app.post("/cache/clear")
 def clear_cache():
     for p in CACHE_DIR.glob("*"):
-        if p.is_file(): p.unlink(missing_ok=True)
+        if p.is_file():
+            p.unlink(missing_ok=True)
     return {"ok": True}
 
 
