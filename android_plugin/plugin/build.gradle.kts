@@ -54,6 +54,10 @@ android {
 
 dependencies {
     implementation("org.godotengine:godot:4.7.1.stable")
+    val sherpaAar = file("libs/sherpa-onnx-1.13.4.aar")
+    if (sherpaAar.exists()) {
+        implementation(files(sherpaAar))
+    }
 }
 
 val copyDebugAar by tasks.registering(Copy::class) {
