@@ -1,6 +1,9 @@
 package com.aurorafox.runtime
 
+import android.app.ActivityManager
+import android.content.Context
 import android.os.Build
+import android.os.StatFs
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
 import org.godotengine.godot.plugin.UsedByGodot
@@ -19,6 +22,11 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun getCapabilitiesJson(): String {
         val loaded = native.isLoaded()
+        val memoryInfo = ActivityManager.MemoryInfo()
+        val manager = activity?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        manager?.getMemoryInfo(memoryInfo)
+        val files = activity?.filesDir
+        val freeStorage = if (files != null) StatFs(files.absolutePath).availableBytes else 0L
         return JSONObject(
             mapOf(
                 "embedded_runtime" to true,
@@ -29,7 +37,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 "llama_cpp" to (loaded && native.hasLlama()),
                 "whisper_cpp" to (loaded && native.hasWhisper()),
                 "wasm" to (loaded && native.hasWasm()),
-                "architecture" to Build.SUPPORTED_ABIS.joinToString(",")
+                "architecture" to Build.SUPPORTED_ABIS.joinToString(","),
+                "total_ram_mb" to (memoryInfo.totalMem / 1024L / 1024L),
+                "free_storage_mb" to (freeStorage / 1024L / 1024L)
             )
         ).toString()
     }
@@ -56,23 +66,15 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val workspace = File(request.optString("workspace", ""))
         val rootCanonical = root.canonicalFile
         val workspaceCanonical = try { workspace.canonicalFile } catch (_: Exception) { return errorJson("Invalid workspace") }
-        if (workspaceCanonical != rootCanonical && !workspaceCanonical.path.startsWith(rootCanonical.path + File.separator)) {
-            return errorJson("Workspace escapes app sandbox")
-        }
-
+        if (workspaceCanonical != rootCanonical && !workspaceCanonical.path.startsWith(rootCanonical.path + File.separator)) return errorJson("Workspace escapes app sandbox")
         val command = request.optJSONArray("command") ?: return errorJson("Missing command")
         if (command.length() == 0) return errorJson("Empty command")
         val executable = command.optString(0).lowercase()
-        if (executable !in setOf("wasm", "wasmtime", "wasm3")) {
-            return errorJson("Android sandbox accepts WASM execution only; compile source to WASM first")
-        }
+        if (executable !in setOf("wasm", "wasmtime", "wasm3")) return errorJson("Android sandbox accepts WASM execution only; compile source to WASM first")
         if (!native.isLoaded() || !native.hasWasm()) return errorJson("WASM runtime is not bundled in this build")
         if (command.length() < 2) return errorJson("WASM module path is required")
-
         val module = File(workspaceCanonical, command.optString(1)).canonicalFile
-        if (!module.path.startsWith(workspaceCanonical.path + File.separator) || !module.isFile) {
-            return errorJson("WASM module is outside workspace or missing")
-        }
+        if (!module.path.startsWith(workspaceCanonical.path + File.separator) || !module.isFile) return errorJson("WASM module is outside workspace or missing")
         val args = mutableListOf<String>()
         for (i in 2 until command.length()) args += command.optString(i)
         return native.runWasm(module.absolutePath, workspaceCanonical.absolutePath, args.toTypedArray())
@@ -82,12 +84,9 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val out = StringBuilder()
         for (i in 0 until messages.length()) {
             val item = messages.optJSONObject(i) ?: continue
-            val role = item.optString("role", "user").lowercase().let {
-                if (it in setOf("system", "user", "assistant")) it else "user"
-            }
+            val role = item.optString("role", "user").lowercase().let { if (it in setOf("system", "user", "assistant")) it else "user" }
             val content = item.optString("content", "")
-            out.append("<|im_start|>").append(role).append('\n')
-            out.append(content).append("<|im_end|>\n")
+            out.append("<|im_start|>").append(role).append('\n').append(content).append("<|im_end|>\n")
         }
         out.append("<|im_start|>assistant\n")
         return out.toString()
