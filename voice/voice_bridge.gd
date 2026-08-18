@@ -19,6 +19,7 @@ var connected := false
 var _retry := 0.0
 var _stopping := false
 var android_runtime := AndroidLocalRuntime.new()
+var android_mic: AuroraAndroidMicMonitor
 
 func _ready() -> void:
 	add_child(android_runtime)
@@ -27,6 +28,19 @@ func _ready() -> void:
 		_start_backend_if_installed()
 		_connect_ws()
 	elif OS.get_name() == "Android":
+		android_mic = AuroraAndroidMicMonitor.new()
+		add_child(android_mic)
+		android_mic.wake_detected.connect(func(text):
+			wake_detected.emit(str(text))
+			backend_event.emit({"event":"wake_detected", "text":str(text), "runtime":"android-native"})
+		)
+		android_mic.transcript_ready.connect(func(text): transcript_ready.emit(str(text)))
+		android_mic.barge_in.connect(func(text):
+			barge_in.emit()
+			transcript_ready.emit(str(text))
+		)
+		android_mic.user_speech_started.connect(func(): user_speech_started.emit())
+		android_mic.user_speech_finished.connect(func(): user_speech_finished.emit())
 		await get_tree().process_frame
 		backend_ready.emit({"runtime":"android-native", "capabilities":android_runtime.capabilities()})
 
@@ -90,6 +104,10 @@ func send_command(command: String, data: Dictionary = {}) -> void:
 	socket.send_text(JSON.stringify(payload))
 
 func set_mode(mode: String, device: Variant = null, options: Dictionary = {}) -> void:
+	if OS.get_name() == "Android":
+		if android_mic != null:
+			android_mic.set_mode(mode, float(options.get("sensitivity", 0.5)), bool(options.get("noise_suppression", true)))
+		return
 	if OS.get_name() != "Windows": return
 	var data := options.duplicate(true)
 	data["mode"] = mode
@@ -118,8 +136,7 @@ func synthesize(text: String, emotion: String, intensity: float, options: Dictio
 
 func transcribe_file(path: String) -> Dictionary:
 	if OS.get_name() == "Android":
-		var model := "user://models/whisper-model.bin"
-		return android_runtime.transcribe(ProjectSettings.globalize_path(model), ProjectSettings.globalize_path(path), "ru")
+		return android_runtime.transcribe("", ProjectSettings.globalize_path(path), "ru")
 	return await _json_request("/stt_path", HTTPClient.METHOD_POST, {"path": ProjectSettings.globalize_path(path)}, 300.0)
 
 func get_phrase(category: String) -> String:
@@ -128,7 +145,7 @@ func get_phrase(category: String) -> String:
 	return str(result.get("text", "")) if result.get("ok", false) else ""
 
 func clear_cache() -> Dictionary:
-	if OS.get_name() == "Android": return {"ok": true}
+	if OS.get_name() == "Android": return android_runtime.clear_voice_cache()
 	return await _json_request("/cache/clear", HTTPClient.METHOD_POST, {})
 
 func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 30.0) -> Dictionary:
