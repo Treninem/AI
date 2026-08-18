@@ -6,13 +6,17 @@ import android.os.Build
 import android.os.StatFs
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
-import org.godotengine.godot.plugin.UsedByGodot
+import org.godengine.godot.plugin.UsedByGodot
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private val native = NativeRuntime()
+    private val voice by lazy {
+        val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
+        AndroidVoiceRuntime(ctx)
+    }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
 
@@ -27,6 +31,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         manager?.getMemoryInfo(memoryInfo)
         val files = activity?.filesDir
         val freeStorage = if (files != null) StatFs(files.absolutePath).availableBytes else 0L
+        val tts = try { voice.isTtsAvailable() } catch (_: Throwable) { false }
+        val sherpaStt = try { voice.isSttAvailable() } catch (_: Throwable) { false }
         return JSONObject(
             mapOf(
                 "embedded_runtime" to true,
@@ -36,6 +42,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 "container_runtime" to false,
                 "llama_cpp" to (loaded && native.hasLlama()),
                 "whisper_cpp" to (loaded && native.hasWhisper()),
+                "sherpa_stt" to sherpaStt,
+                "local_tts" to tts,
                 "wasm" to (loaded && native.hasWasm()),
                 "architecture" to Build.SUPPORTED_ABIS.joinToString(","),
                 "total_ram_mb" to (memoryInfo.totalMem / 1024L / 1024L),
@@ -53,9 +61,25 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     @UsedByGodot
+    fun synthesizeSpeechLocal(text: String, speed: Float, emotion: String, intensity: Float): String {
+        return try { voice.synthesize(text, speed, emotion, intensity) }
+        catch (t: Throwable) { errorJson("Android TTS unavailable: ${t.message ?: t.javaClass.simpleName}") }
+    }
+
+    @UsedByGodot
+    fun clearVoiceCache(): String {
+        return try { voice.clearCache() } catch (t: Throwable) { errorJson(t.message ?: "Cannot clear voice cache") }
+    }
+
+    @UsedByGodot
     fun transcribeLocal(modelPath: String, audioPath: String, language: String): String {
-        if (!native.isLoaded() || !native.hasWhisper()) return errorJson("whisper.cpp runtime is not bundled in this build")
-        if (!isInsideAppStorage(modelPath) || !isInsideAppStorage(audioPath)) return errorJson("Model and audio must be inside AuroraFox app storage")
+        if (!isInsideAppStorage(audioPath)) return errorJson("Audio must be inside AuroraFox app storage")
+        // Prefer sherpa-onnx Whisper assets shipped with AuroraFox. Keep the older whisper.cpp route as fallback.
+        try {
+            if (voice.isSttAvailable()) return voice.transcribe(audioPath, language)
+        } catch (_: Throwable) { }
+        if (!native.isLoaded() || !native.hasWhisper()) return errorJson("No local Android STT backend is available")
+        if (!isInsideAppStorage(modelPath)) return errorJson("Whisper model path must be inside AuroraFox app storage")
         return native.transcribe(modelPath, audioPath, language)
     }
 
