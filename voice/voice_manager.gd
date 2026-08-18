@@ -45,6 +45,7 @@ var backend_is_ready := false
 var _startup_done := false
 var _personality: Dictionary = {}
 var _last_local_phrase := ""
+var _last_event_sound_ms := -10000
 
 func _ready() -> void:
 	_load_settings()
@@ -57,7 +58,6 @@ func _ready() -> void:
 	speech_queue.setup(bridge)
 	wake.setup(bridge)
 	speech_queue.set_volume(float(settings.get("volume", 0.86)))
-
 	bridge.backend_ready.connect(_on_backend_ready)
 	bridge.backend_lost.connect(func(): backend_is_ready = false; backend_status.emit(false, {}))
 	bridge.transcript_ready.connect(_on_transcript)
@@ -81,14 +81,25 @@ func say(text: String, emotion := "auto", intensity := -1.0, options: Dictionary
 	if not bool(settings.get("enabled", true)) or not bool(settings.get("auto_speak", true)) or text.strip_edges().is_empty(): return
 	var analysis := emotions.analyze(text) if emotion == "auto" else {"emotion": emotion, "intensity": 0.5 if intensity < 0.0 else intensity}
 	var selected := str(analysis.get("emotion", "neutral"))
-	var power := float(analysis.get("intensity", 0.5) if intensity < 0.0 else intensity) * float(settings.get("emotionality", 0.78))
+	var raw_power := float(analysis.get("intensity", 0.5) if intensity < 0.0 else intensity)
+	var power := clampf(raw_power * float(settings.get("emotionality", 0.78)), 0.0, 1.0)
+	var profile := emotions.get_profile(selected)
 	emotions.set_emotion(selected, power, 7.0)
+
+	# User sliders are the base voice. Emotion contributes only a bounded deviation from it.
+	var profile_speed := float(profile.get("speed", 1.0))
+	var profile_pitch := float(profile.get("pitch", 1.0))
+	var profile_mech := float(profile.get("mechanical", settings.get("mechanical_amount", 0.035)))
+	var speech_speed := float(settings.get("speed", 1.04)) * (1.0 + (profile_speed - 1.0) * power)
+	var pitch_factor := float(settings.get("pitch", 1.02)) * (1.0 + (profile_pitch - 1.0) * power)
+	var mechanical := lerpf(float(settings.get("mechanical_amount", 0.035)), profile_mech, power)
+
 	var opts := options.duplicate(true)
 	opts.merge({
 		"backend": str(settings.get("backend", "auto")),
-		"speed": float(settings.get("speed", 1.04)),
-		"pitch": float(settings.get("pitch", 1.02)) - 1.0,
-		"mechanical_amount": float(settings.get("mechanical_amount", 0.035))
+		"speed": clampf(speech_speed, 0.82, 1.20),
+		"pitch": clampf(pitch_factor - 1.0, -0.08, 0.10),
+		"mechanical_amount": clampf(mechanical, 0.0, 0.10)
 	}, false)
 	speech_queue.enqueue(text, selected, power, opts)
 
@@ -203,6 +214,11 @@ func _on_user_speech_finished() -> void:
 func _on_emotion_changed(emotion: String, intensity: float, profile: Dictionary) -> void:
 	avatar.set_emotion(emotion, intensity, profile)
 	emotion_changed.emit(emotion, intensity)
+	if emotion in ["success", "error", "warning"] and intensity >= 0.45:
+		var now := Time.get_ticks_msec()
+		if now - _last_event_sound_ms >= 5500:
+			_last_event_sound_ms = now
+			_play_system_sound(emotion)
 
 func _on_speech_started(_item: Dictionary) -> void:
 	avatar.set_state("AI_SPEAKING")
@@ -251,16 +267,24 @@ func _phrase(category: String) -> String:
 func _play_system_sound(kind: String) -> void:
 	if not bool(settings.get("system_sounds", true)): return
 	var rate := 24000
-	var duration := 0.075 if kind != "startup" else 0.12
+	var duration := 0.08
+	var freq := 760.0
+	var second_freq := 1180.0
+	var gain := 0.075
+	match kind:
+		"startup": duration = 0.13; freq = 520.0; second_freq = 860.0; gain = 0.08
+		"wake": duration = 0.07; freq = 920.0; second_freq = 1380.0; gain = 0.065
+		"success": duration = 0.075; freq = 880.0; second_freq = 1320.0; gain = 0.055
+		"warning": duration = 0.09; freq = 610.0; second_freq = 915.0; gain = 0.052
+		"error": duration = 0.09; freq = 430.0; second_freq = 690.0; gain = 0.05
 	var frames := int(rate * duration)
 	var data := PackedByteArray()
 	data.resize(frames * 2)
-	var freq := 920.0 if kind == "wake" else 660.0
-	if kind == "startup": freq = 520.0
 	for i in range(frames):
 		var t := float(i) / rate
-		var env := exp(-t * 28.0)
-		var sample := int(clampf(sin(TAU * freq * t) * env * 0.13, -1.0, 1.0) * 32767.0)
+		var env := exp(-t * 26.0)
+		var tone := sin(TAU * freq * t) * 0.78 + sin(TAU * second_freq * t) * 0.22
+		var sample := int(clampf(tone * env * gain, -1.0, 1.0) * 32767.0)
 		data.encode_s16(i * 2, sample)
 	var wav := AudioStreamWAV.new()
 	wav.format = AudioStreamWAV.FORMAT_16_BITS
