@@ -13,9 +13,13 @@ window/size/viewport_height=900
 window/size/window_width_override=1440
 window/size/window_height_override=900
 window/stretch/mode="canvas_items"
+window/handheld/orientation=1
 
 [rendering]
 renderer/rendering_method="gl_compatibility"
 renderer/rendering_method.mobile="gl_compatibility"
 
 audio/driver/enable_input=true
+
+[editor_plugins]
+enabled=PackedStringArray("res://addons/AuroraFoxRuntime/plugin.cfg")
