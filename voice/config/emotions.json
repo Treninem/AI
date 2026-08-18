@@ -1,0 +1,15 @@
+{
+  "neutral":{"pitch":1.00,"speed":1.00,"mechanical":0.02,"tail_speed":0.55,"blink_rate":1.0,"ear":0.55,"paw_glow":0.10},
+  "happy":{"pitch":1.045,"speed":1.035,"mechanical":0.015,"tail_speed":1.15,"blink_rate":1.05,"ear":0.76,"paw_glow":0.20},
+  "excited":{"pitch":1.065,"speed":1.07,"mechanical":0.02,"tail_speed":1.45,"blink_rate":1.12,"ear":0.90,"paw_glow":0.35},
+  "thinking":{"pitch":0.995,"speed":0.93,"mechanical":0.025,"tail_speed":0.32,"blink_rate":0.72,"ear":0.48,"paw_glow":0.16},
+  "focused":{"pitch":0.985,"speed":0.96,"mechanical":0.03,"tail_speed":0.22,"blink_rate":0.82,"ear":0.70,"paw_glow":0.28},
+  "serious":{"pitch":0.975,"speed":0.94,"mechanical":0.025,"tail_speed":0.10,"blink_rate":0.80,"ear":0.62,"paw_glow":0.22},
+  "warning":{"pitch":0.985,"speed":0.92,"mechanical":0.055,"tail_speed":0.08,"blink_rate":0.78,"ear":0.82,"paw_glow":0.72},
+  "sad":{"pitch":0.965,"speed":0.90,"mechanical":0.0,"tail_speed":0.08,"blink_rate":0.62,"ear":0.25,"paw_glow":0.06},
+  "confused":{"pitch":1.01,"speed":0.92,"mechanical":0.018,"tail_speed":0.28,"blink_rate":0.88,"ear":0.40,"paw_glow":0.12},
+  "sleepy":{"pitch":0.97,"speed":0.84,"mechanical":0.01,"tail_speed":0.10,"blink_rate":0.45,"ear":0.30,"paw_glow":0.05},
+  "playful":{"pitch":1.055,"speed":1.045,"mechanical":0.018,"tail_speed":1.30,"blink_rate":1.08,"ear":0.84,"paw_glow":0.25},
+  "success":{"pitch":1.035,"speed":1.02,"mechanical":0.04,"tail_speed":1.35,"blink_rate":1.10,"ear":0.88,"paw_glow":0.65},
+  "error":{"pitch":0.97,"speed":0.91,"mechanical":0.065,"tail_speed":0.06,"blink_rate":0.74,"ear":0.42,"paw_glow":0.82}
+}
