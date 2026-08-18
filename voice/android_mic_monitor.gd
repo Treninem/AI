@@ -25,6 +25,7 @@ var conversation_window := 25.0
 var _source_rate := 48000
 var _speech := false
 var _started_during_tts := false
+var _tts_text_at_start := ""
 var _speech_time := 0.0
 var _silence_time := 0.0
 var _noise_floor := 0.004
@@ -32,6 +33,8 @@ var _segment := PackedFloat32Array()
 var _busy_stt := false
 
 func _ready() -> void:
+	if OS.get_name() == "Android":
+		OS.request_permission("android.permission.RECORD_AUDIO")
 	add_child(runtime)
 	_setup_capture()
 	set_process(true)
@@ -101,6 +104,7 @@ func _process_frames(frames: PackedVector2Array) -> void:
 	if voiced and not _speech:
 		_speech = true
 		_started_during_tts = AuroraVoice.speech_queue.is_speaking()
+		_tts_text_at_start = str(AuroraVoice.speech_queue.current_item.get("text", "")) if _started_during_tts else ""
 		_speech_time = 0.0
 		_silence_time = 0.0
 		_segment = PackedFloat32Array()
@@ -127,6 +131,7 @@ func _append_samples(samples: PackedFloat32Array) -> void:
 func _finish_segment() -> void:
 	var samples := _segment
 	var began_during_tts := _started_during_tts
+	var spoken_at_start := _tts_text_at_start
 	_reset_segment()
 	user_speech_finished.emit()
 	if samples.size() < int(_source_rate * MIN_SPEECH_SEC): return
@@ -147,8 +152,7 @@ func _finish_segment() -> void:
 	if text.is_empty(): return
 	var now := Time.get_unix_time_from_system()
 	if began_during_tts:
-		var spoken := str(AuroraVoice.speech_queue.current_item.get("text", ""))
-		if _similarity(text, spoken) < 0.62:
+		if _similarity(text, spoken_at_start) < 0.62:
 			open_conversation_window(conversation_window)
 			barge_in.emit(text)
 		return
@@ -164,6 +168,7 @@ func _finish_segment() -> void:
 func _reset_segment() -> void:
 	_speech = false
 	_started_during_tts = false
+	_tts_text_at_start = ""
 	_speech_time = 0.0
 	_silence_time = 0.0
 	_segment = PackedFloat32Array()
@@ -185,8 +190,12 @@ func _similarity(a: String, b: String) -> float:
 
 func _normalize(text: String) -> String:
 	var out := ""
-	for c in text.to_lower():
-		out += c if c.is_valid_identifier() or c.is_valid_int() else " "
+	for i in range(text.length()):
+		var c := text.substr(i, 1).to_lower()
+		var u := c.unicode_at(0)
+		var latin_or_digit := (u >= 48 and u <= 57) or (u >= 97 and u <= 122)
+		var cyrillic := u >= 0x0400 and u <= 0x052f
+		out += c if latin_or_digit or cyrillic else " "
 	return " ".join(out.split(" ", false))
 
 func _resample(input: PackedFloat32Array, src_rate: int, dst_rate: int) -> PackedFloat32Array:
@@ -205,6 +214,7 @@ func _resample(input: PackedFloat32Array, src_rate: int, dst_rate: int) -> Packe
 func _write_wav16(path: String, samples: PackedFloat32Array, rate: int) -> bool:
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null: return false
+	f.big_endian = false
 	var pcm_bytes := samples.size() * 2
 	f.store_buffer("RIFF".to_ascii_buffer())
 	f.store_32(36 + pcm_bytes)
