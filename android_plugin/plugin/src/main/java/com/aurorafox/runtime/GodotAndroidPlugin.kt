@@ -16,50 +16,44 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     fun getPrivateRoot(): String = activity?.filesDir?.absolutePath ?: ""
 
     @UsedByGodot
-    fun getCapabilities(): Map<String, Any> {
+    fun getCapabilitiesJson(): String {
         val loaded = native.isLoaded()
-        return mapOf(
-            "embedded_runtime" to true,
-            "android_app_sandbox" to true,
-            "isolated_service" to true,
-            "native_processes" to false,
-            "container_runtime" to false,
-            "llama_cpp" to (loaded && native.hasLlama()),
-            "whisper_cpp" to (loaded && native.hasWhisper()),
-            "wasm" to (loaded && native.hasWasm()),
-            "architecture" to Build.SUPPORTED_ABIS.joinToString(",")
-        )
+        return JSONObject(
+            mapOf(
+                "embedded_runtime" to true,
+                "android_app_sandbox" to true,
+                "isolated_service" to true,
+                "native_processes" to false,
+                "container_runtime" to false,
+                "llama_cpp" to (loaded && native.hasLlama()),
+                "whisper_cpp" to (loaded && native.hasWhisper()),
+                "wasm" to (loaded && native.hasWasm()),
+                "architecture" to Build.SUPPORTED_ABIS.joinToString(",")
+            )
+        ).toString()
     }
 
     @UsedByGodot
     fun chatLocal(modelPath: String, messagesJson: String, optionsJson: String): String {
-        if (!native.isLoaded() || !native.hasLlama()) {
-            return errorJson("llama.cpp runtime is not bundled in this build")
-        }
-        if (!isInsideAppStorage(modelPath)) {
-            return errorJson("Model path must be inside AuroraFox app storage")
-        }
+        if (!native.isLoaded() || !native.hasLlama()) return errorJson("llama.cpp runtime is not bundled in this build")
+        if (!isInsideAppStorage(modelPath)) return errorJson("Model path must be inside AuroraFox app storage")
         return native.chat(modelPath, messagesJson, optionsJson)
     }
 
     @UsedByGodot
     fun transcribeLocal(modelPath: String, audioPath: String, language: String): String {
-        if (!native.isLoaded() || !native.hasWhisper()) {
-            return errorJson("whisper.cpp runtime is not bundled in this build")
-        }
-        if (!isInsideAppStorage(modelPath) || !isInsideAppStorage(audioPath)) {
-            return errorJson("Model and audio must be inside AuroraFox app storage")
-        }
+        if (!native.isLoaded() || !native.hasWhisper()) return errorJson("whisper.cpp runtime is not bundled in this build")
+        if (!isInsideAppStorage(modelPath) || !isInsideAppStorage(audioPath)) return errorJson("Model and audio must be inside AuroraFox app storage")
         return native.transcribe(modelPath, audioPath, language)
     }
 
     @UsedByGodot
     fun executeSandbox(requestJson: String): String {
         val root = activity?.filesDir ?: return errorJson("No Android activity")
-        val request = try { JSONObject(requestJson) } catch (e: Exception) { return errorJson("Invalid request JSON") }
+        val request = try { JSONObject(requestJson) } catch (_: Exception) { return errorJson("Invalid request JSON") }
         val workspace = File(request.optString("workspace", ""))
         val rootCanonical = root.canonicalFile
-        val workspaceCanonical = try { workspace.canonicalFile } catch (e: Exception) { return errorJson("Invalid workspace") }
+        val workspaceCanonical = try { workspace.canonicalFile } catch (_: Exception) { return errorJson("Invalid workspace") }
         if (workspaceCanonical != rootCanonical && !workspaceCanonical.path.startsWith(rootCanonical.path + File.separator)) {
             return errorJson("Workspace escapes app sandbox")
         }
@@ -67,15 +61,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val command = request.optJSONArray("command") ?: return errorJson("Missing command")
         if (command.length() == 0) return errorJson("Empty command")
         val executable = command.optString(0).lowercase()
-
-        // Android build intentionally does not expose shell/native process execution.
-        // Portable experiments run as WASM inside the native runtime.
         if (executable !in setOf("wasm", "wasmtime", "wasm3")) {
             return errorJson("Android sandbox accepts WASM execution only; compile source to WASM first")
         }
-        if (!native.isLoaded() || !native.hasWasm()) {
-            return errorJson("WASM runtime is not bundled in this build")
-        }
+        if (!native.isLoaded() || !native.hasWasm()) return errorJson("WASM runtime is not bundled in this build")
         if (command.length() < 2) return errorJson("WASM module path is required")
 
         val module = File(workspaceCanonical, command.optString(1)).canonicalFile
@@ -89,7 +78,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
 
     private fun isInsideAppStorage(path: String): Boolean {
         val root = activity?.filesDir?.canonicalFile ?: return false
-        val target = try { File(path).canonicalFile } catch (e: Exception) { return false }
+        val target = try { File(path).canonicalFile } catch (_: Exception) { return false }
         return target == root || target.path.startsWith(root.path + File.separator)
     }
 
