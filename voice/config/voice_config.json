@@ -18,7 +18,8 @@
     "model": "v5_5_ru",
     "speaker": "xenia",
     "sample_rate": 48000,
-    "license": "CC-BY-NC"
+    "license": "CC-BY-NC",
+    "note": "Optional non-commercial voice model. Use a project-compatible backend for commercial distribution."
   },
   "xtts": {
     "enabled": false,
@@ -43,7 +44,7 @@
     "mode": "wake_word",
     "words": ["fox", "фокс", "лиса"],
     "conversation_window_sec": 25,
-    "vosk_model": "voice/models/vosk-model-small-ru-0.22"
+    "vosk_model": "models/vosk-model-small-ru-0.22"
   },
   "processor": {
     "normalize": true,
