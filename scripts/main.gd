@@ -1,5 +1,10 @@
 extends Control
 
+signal ai_working_started(state: String)
+signal ai_working_finished
+signal assistant_response_ready(text: String)
+signal user_message_submitted(text: String)
+
 var ai := AIClient.new()
 var memory := MemoryStore.new()
 var tools := ToolRegistry.new()
@@ -26,7 +31,6 @@ const CYAN := Color("32c9ff")
 const MUTED := Color("8993aa")
 const WHITE := Color("eef5ff")
 
-# Координаты относятся к уменьшенному атласу 768x512.
 const REGION_PANEL_PURPLE := Rect2(16, 20, 358, 95)
 const REGION_PANEL_CYAN := Rect2(395, 20, 357, 95)
 const REGION_BUTTON_PURPLE := Rect2(17, 456, 135, 38)
@@ -260,6 +264,7 @@ func _build_ui() -> void:
 	add_child(file_dialog)
 
 func _new_chat() -> void:
+	AuroraVoice.stop()
 	chats.create_chat()
 	pending_attachments.clear()
 	_refresh_attachment_bar()
@@ -268,10 +273,8 @@ func _new_chat() -> void:
 	input.grab_focus()
 
 func _refresh_chat_list(query: String = "") -> void:
-	if chat_list == null:
-		return
-	for child in chat_list.get_children():
-		child.queue_free()
+	if chat_list == null: return
+	for child in chat_list.get_children(): child.queue_free()
 	var source: Array = chats.search(query)
 	for chat in source:
 		var row := HBoxContainer.new()
@@ -283,28 +286,19 @@ func _refresh_chat_list(query: String = "") -> void:
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_apply_neon_button(b, false)
 		var id := str(chat.get("id", ""))
-		b.pressed.connect(func():
-			chats.active_chat_id = id
-			chats.save_all()
-			_render_active_chat()
-		)
+		b.pressed.connect(func(): chats.active_chat_id = id; chats.save_all(); _render_active_chat())
 		row.add_child(b)
 		var del := Button.new()
 		del.text = "×"
 		del.tooltip_text = "Удалить чат"
 		del.custom_minimum_size = Vector2(42, 40)
 		_apply_neon_button(del, true)
-		del.pressed.connect(func():
-			chats.delete_chat(id)
-			_refresh_chat_list(query)
-			_render_active_chat()
-		)
+		del.pressed.connect(func(): chats.delete_chat(id); _refresh_chat_list(query); _render_active_chat())
 		row.add_child(del)
 		chat_list.add_child(row)
 
 func _render_active_chat() -> void:
-	if output == null:
-		return
+	if output == null: return
 	output.clear()
 	var chat := chats.get_active_chat()
 	var messages: Array = chat.get("messages", [])
@@ -315,10 +309,8 @@ func _render_active_chat() -> void:
 	for message in messages:
 		var role := str(message.get("role", "assistant"))
 		var content := str(message.get("content", ""))
-		if role == "user":
-			output.append_text("\n[color=#32c9ff][b]Вы[/b][/color]\n%s\n" % content)
-		else:
-			output.append_text("\n[color=#a66cff][b]AuroraFox[/b][/color]\n%s\n" % content)
+		if role == "user": output.append_text("\n[color=#32c9ff][b]Вы[/b][/color]\n%s\n" % content)
+		else: output.append_text("\n[color=#a66cff][b]AuroraFox[/b][/color]\n%s\n" % content)
 
 func _open_file_dialog() -> void:
 	file_dialog.popup_centered_ratio(0.72)
@@ -326,23 +318,18 @@ func _open_file_dialog() -> void:
 func _on_files_selected(paths: PackedStringArray) -> void:
 	for path in paths:
 		var item := attachments.describe(path)
-		if item.get("ok", false):
-			pending_attachments.append(item)
+		if item.get("ok", false): pending_attachments.append(item)
 	_refresh_attachment_bar()
 
 func _refresh_attachment_bar() -> void:
-	for child in attachment_bar.get_children():
-		child.queue_free()
+	for child in attachment_bar.get_children(): child.queue_free()
 	for item in pending_attachments:
 		var chip := Button.new()
 		chip.text = "📎 %s" % item.get("name", "file")
 		chip.tooltip_text = "%s • %s" % [item.get("kind", ""), item.get("size", 0)]
 		_apply_neon_button(chip, false)
 		var target = item
-		chip.pressed.connect(func():
-			pending_attachments.erase(target)
-			_refresh_attachment_bar()
-		)
+		chip.pressed.connect(func(): pending_attachments.erase(target); _refresh_attachment_bar())
 		attachment_bar.add_child(chip)
 
 func _on_input_gui(event: InputEvent) -> void:
@@ -350,27 +337,39 @@ func _on_input_gui(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		_submit_current()
 
+func submit_voice_text(text: String) -> void:
+	if text.strip_edges().is_empty() or input == null: return
+	input.text = text.strip_edges()
+	_submit_current()
+
 func _submit_current() -> void:
 	var text := input.text.strip_edges()
-	if text.is_empty() and pending_attachments.is_empty():
-		return
+	if text.is_empty() and pending_attachments.is_empty(): return
+	AuroraVoice.stop()
 	input.clear()
 	var shown := text
-	if shown.is_empty():
-		shown = "Проанализируй прикреплённые файлы."
+	if shown.is_empty(): shown = "Проанализируй прикреплённые файлы."
 	var attachment_copy := pending_attachments.duplicate(true)
 	chats.add_message("user", shown, attachment_copy)
+	user_message_submitted.emit(shown)
 	pending_attachments.clear()
 	_refresh_attachment_bar()
 	_refresh_chat_list()
 	_render_active_chat()
+	var work_state := "AI_READING" if not attachment_copy.is_empty() else "AI_WORKING"
 	status.text = "AuroraFox думает…"
+	ai_working_started.emit(work_state)
+	AuroraVoice.set_ai_working(true, work_state)
 	var task := shown + attachments.build_context(attachment_copy)
 	var answer := await agent.run_task(task)
+	AuroraVoice.set_ai_working(false)
+	ai_working_finished.emit()
 	chats.add_message("assistant", answer)
 	_render_active_chat()
 	_refresh_chat_list()
 	status.text = "● готово   •   %d инструментов   •   память %d" % [tools.tools.size(), memory.memory.size()]
+	assistant_response_ready.emit(answer)
+	AuroraVoice.say(answer)
 
 func _show_tools_info() -> void:
-	output.append_text("\n[color=#a66cff][b]Инструменты AuroraFox[/b][/color]\nИнтернет, HTTP, файлы, Git, системная информация, память, база знаний и безопасное создание модулей улучшения.\n")
+	output.append_text("\n[color=#a66cff][b]Инструменты AuroraFox[/b][/color]\nИнтернет, HTTP, файлы, Git, системная информация, память, база знаний, компьютерный агент, песочницы и локальный голос.\n")
