@@ -115,7 +115,10 @@ func _build_settings(popup: PopupPanel) -> void:
 	var box := VBoxContainer.new()
 	box.add_theme_constant_override("separation", 8)
 	margin.add_child(box)
-	var title := Label.new(); title.text = "Голос AuroraFox"; title.add_theme_font_size_override("font_size", 22); box.add_child(title)
+	var title := Label.new()
+	title.text = "Голос AuroraFox"
+	title.add_theme_font_size_override("font_size", 22)
+	box.add_child(title)
 	box.add_child(_check("Голос AuroraFox", "enabled"))
 	box.add_child(_check("Озвучивать ответы", "auto_speak"))
 	box.add_child(_option("Движок", "backend", ["auto", "silero", "xtts"], ["Автоматически", "Silero", "XTTS / Advanced"]))
@@ -129,27 +132,50 @@ func _build_settings(popup: PopupPanel) -> void:
 	box.add_child(_check("Приветствие при запуске", "startup_greeting"))
 	box.add_child(_check("Останавливать речь, когда говорю я", "barge_in"))
 	box.add_child(_option("Микрофон", "mic_mode", ["off", "wake_word", "continuous", "push_to_talk"], ["Выкл.", "Fox / Лиса", "Постоянный диалог", "Push-to-talk"]))
-	var clear := Button.new(); clear.text = "Очистить голосовой кэш"; _apply_button(clear, false); clear.pressed.connect(_clear_cache); box.add_child(clear)
-	var note := Label.new(); note.text = "Wake word, VAD, STT и TTS обрабатываются локально. XTTS включается только при настроенном собственном speaker_wav."; note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART; box.add_child(note)
+	var clear := Button.new()
+	clear.text = "Очистить голосовой кэш"
+	_apply_button(clear, false)
+	clear.pressed.connect(_clear_cache)
+	box.add_child(clear)
+	var note := Label.new()
+	note.text = "Wake word, VAD, STT и TTS обрабатываются локально. XTTS включается только при настроенном собственном speaker_wav."
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(note)
 
 func _check(text: String, key: String) -> CheckBox:
-	var c := CheckBox.new(); c.text = text; c.button_pressed = bool(AuroraVoice.settings.get(key, false))
+	var c := CheckBox.new()
+	c.text = text
+	c.button_pressed = bool(AuroraVoice.settings.get(key, false))
 	c.toggled.connect(func(v): AuroraVoice.update_setting(key, v); _refresh_buttons())
 	return c
 
 func _option(label_text: String, key: String, values: Array, labels: Array) -> VBoxContainer:
-	var box := VBoxContainer.new(); var l := Label.new(); l.text = label_text; box.add_child(l)
+	var box := VBoxContainer.new()
+	var l := Label.new()
+	l.text = label_text
+	box.add_child(l)
 	var o := OptionButton.new()
-	for i in range(values.size()): o.add_item(str(labels[i])); o.set_item_metadata(i, values[i])
 	for i in range(values.size()):
-		if str(values[i]) == str(AuroraVoice.settings.get(key, values[0])): o.select(i)
+		o.add_item(str(labels[i]))
+		o.set_item_metadata(i, values[i])
+	for i in range(values.size()):
+		if str(values[i]) == str(AuroraVoice.settings.get(key, values[0])):
+			o.select(i)
 	o.item_selected.connect(func(i): AuroraVoice.update_setting(key, o.get_item_metadata(i)); _refresh_buttons())
-	box.add_child(o); return box
+	box.add_child(o)
+	return box
 
 func _slider(label_text: String, key: String, min_v: float, max_v: float, step_v: float) -> VBoxContainer:
-	var box := VBoxContainer.new(); var l := Label.new(); box.add_child(l)
-	var s := HSlider.new(); s.min_value = min_v; s.max_value = max_v; s.step = step_v; s.value = float(AuroraVoice.settings.get(key, min_v)); box.add_child(s)
-	func update_label(v): l.text = "%s: %.2f" % [label_text, v]
+	var box := VBoxContainer.new()
+	var l := Label.new()
+	box.add_child(l)
+	var s := HSlider.new()
+	s.min_value = min_v
+	s.max_value = max_v
+	s.step = step_v
+	s.value = float(AuroraVoice.settings.get(key, min_v))
+	box.add_child(s)
+	var update_label := func(v): l.text = "%s: %.2f" % [label_text, v]
 	update_label.call(s.value)
 	s.value_changed.connect(func(v): update_label.call(v); AuroraVoice.update_setting(key, v))
 	return box
@@ -158,19 +184,29 @@ func _setup_microphone() -> void:
 	var bus_name := "AuroraFoxRecord"
 	var bus_idx := AudioServer.get_bus_index(bus_name)
 	if bus_idx < 0:
-		AudioServer.add_bus(); bus_idx = AudioServer.bus_count - 1; AudioServer.set_bus_name(bus_idx, bus_name)
+		AudioServer.add_bus()
+		bus_idx = AudioServer.bus_count - 1
+		AudioServer.set_bus_name(bus_idx, bus_name)
 	AudioServer.set_bus_mute(bus_idx, true)
 	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
 		var effect := AudioServer.get_bus_effect(bus_idx, i)
-		if effect is AudioEffectRecord: record_effect = effect
+		if effect is AudioEffectRecord:
+			record_effect = effect
 	if record_effect == null:
-		record_effect = AudioEffectRecord.new(); AudioServer.add_bus_effect(bus_idx, record_effect)
-	mic_player = AudioStreamPlayer.new(); mic_player.stream = AudioStreamMicrophone.new(); mic_player.bus = bus_name; add_child(mic_player)
+		record_effect = AudioEffectRecord.new()
+		AudioServer.add_bus_effect(bus_idx, record_effect)
+	mic_player = AudioStreamPlayer.new()
+	mic_player.stream = AudioStreamMicrophone.new()
+	mic_player.bus = bus_name
+	add_child(mic_player)
 
 func _mic_pressed() -> void:
 	var mode := str(AuroraVoice.settings.mic_mode)
 	if mode == "push_to_talk":
-		if recording: await _stop_ptt() else: _start_ptt()
+		if recording:
+			await _stop_ptt()
+		else:
+			_start_ptt()
 	elif mode == "off":
 		AuroraVoice.set_mic_mode("wake_word")
 	else:
@@ -179,17 +215,28 @@ func _mic_pressed() -> void:
 
 func _start_ptt() -> void:
 	if record_effect == null: return
-	record_effect.set_recording_active(true); mic_player.play(); recording = true; mic_button.text = "■ Говорите…"
+	record_effect.set_recording_active(true)
+	mic_player.play()
+	recording = true
+	mic_button.text = "■ Говорите…"
 	AuroraVoice.stop()
 
 func _stop_ptt() -> void:
-	record_effect.set_recording_active(false); mic_player.stop(); recording = false; mic_button.text = "…"
+	record_effect.set_recording_active(false)
+	mic_player.stop()
+	recording = false
+	mic_button.text = "…"
 	var rec := record_effect.get_recording()
-	if rec == null: _refresh_buttons(); return
+	if rec == null:
+		_refresh_buttons()
+		return
 	var path := "user://aurorafox_voice_input.wav"
-	if rec.save_to_wav("user://aurorafox_voice_input") != OK: _refresh_buttons(); return
+	if rec.save_to_wav("user://aurorafox_voice_input") != OK:
+		_refresh_buttons()
+		return
 	var result := await AuroraVoice.bridge.transcribe_file(path)
-	if result.get("ok", false): _submit_transcript(str(result.get("text", "")))
+	if result.get("ok", false):
+		_submit_transcript(str(result.get("text", "")))
 	_refresh_buttons()
 
 func _submit_transcript(text: String) -> void:
