@@ -21,6 +21,8 @@ func capabilities() -> Dictionary:
 		"isolated_service": false,
 		"llama_cpp": false,
 		"whisper_cpp": false,
+		"sherpa_stt": false,
+		"local_tts": false,
 		"wasm": false
 	}
 	if _plugin != null and _plugin.has_method("getCapabilitiesJson"):
@@ -54,9 +56,22 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 		return {"ok": false, "error": "Local Android LLM runtime unavailable"}
 	return _parse_result(_plugin.call("chatLocal", model_path, JSON.stringify(messages), JSON.stringify(options)), "Invalid local chat response")
 
+func synthesize_speech(text: String, speed := 1.0, emotion := "neutral", intensity := 0.5) -> Dictionary:
+	if _plugin == null or not _plugin.has_method("synthesizeSpeechLocal"):
+		return {"ok": false, "error": "Local Android TTS runtime unavailable"}
+	return _parse_result(
+		_plugin.call("synthesizeSpeechLocal", text, float(speed), emotion, float(intensity)),
+		"Invalid Android TTS response"
+	)
+
+func clear_voice_cache() -> Dictionary:
+	if _plugin == null or not _plugin.has_method("clearVoiceCache"):
+		return {"ok": false, "error": "Local Android voice cache API unavailable"}
+	return _parse_result(_plugin.call("clearVoiceCache"), "Invalid Android cache response")
+
 func transcribe(model_path: String, audio_path: String, language := "ru") -> Dictionary:
 	if _plugin == null or not _plugin.has_method("transcribeLocal"):
-		return {"ok": false, "error": "Local Android Whisper runtime unavailable"}
+		return {"ok": false, "error": "Local Android STT runtime unavailable"}
 	return _parse_result(_plugin.call("transcribeLocal", model_path, audio_path, language), "Invalid transcription response")
 
 func _parse_result(raw: Variant, fallback_error: String) -> Dictionary:
