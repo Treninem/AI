@@ -21,7 +21,7 @@ TTS_SPEAKER = os.getenv("AURORAFOX_TTS_SPEAKER", "xenia")
 SAMPLE_RATE = int(os.getenv("AURORAFOX_TTS_SAMPLE_RATE", "48000"))
 STT_MODEL = os.getenv("AURORAFOX_STT_MODEL", "openai/whisper-large-v3-turbo")
 
-app = FastAPI(title="AuroraFox Voice", version="0.1.0")
+app = FastAPI(title="AuroraFox Voice", version="0.2.0")
 
 _tts_model = None
 _stt_pipe = None
@@ -32,6 +32,10 @@ class TTSRequest(BaseModel):
     text: str = Field(min_length=1, max_length=12000)
     speaker: str = TTS_SPEAKER
     sample_rate: int = SAMPLE_RATE
+
+
+class STTPathRequest(BaseModel):
+    path: str = Field(min_length=1, max_length=4096)
 
 
 def get_tts_model():
@@ -54,6 +58,20 @@ def get_stt_pipe():
             device=0 if _device == "cuda" else -1,
         )
     return _stt_pipe
+
+
+def transcribe_path(path: str) -> str:
+    audio_path = Path(path).expanduser().resolve()
+    if not audio_path.is_file():
+        raise HTTPException(status_code=404, detail="Audio file not found")
+    if audio_path.suffix.lower() not in {".wav", ".mp3", ".ogg", ".flac", ".m4a", ".webm"}:
+        raise HTTPException(status_code=400, detail="Unsupported audio format")
+    recognizer = get_stt_pipe()
+    result = recognizer(
+        str(audio_path),
+        generate_kwargs={"language": "ru", "task": "transcribe"},
+    )
+    return str(result.get("text", "")).strip()
 
 
 @app.get("/health")
@@ -100,13 +118,10 @@ async def stt(file: UploadFile = File(...)):
         with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
             tmp.write(data)
             temp_path = tmp.name
-        recognizer = get_stt_pipe()
-        result = recognizer(
-            temp_path,
-            generate_kwargs={"language": "ru", "task": "transcribe"},
-        )
-        text = str(result.get("text", "")).strip()
+        text = transcribe_path(temp_path)
         return {"ok": True, "text": text, "language": "ru"}
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(status_code=500, detail=f"STT failed: {exc}") from exc
     finally:
@@ -115,6 +130,16 @@ async def stt(file: UploadFile = File(...)):
                 os.unlink(temp_path)
             except OSError:
                 pass
+
+
+@app.post("/stt_path")
+def stt_path(req: STTPathRequest):
+    try:
+        return {"ok": True, "text": transcribe_path(req.path), "language": "ru"}
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(status_code=500, detail=f"STT failed: {exc}") from exc
 
 
 if __name__ == "__main__":
