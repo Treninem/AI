@@ -41,13 +41,12 @@ func _ready() -> void:
 	add_child(progress_timer)
 
 func status() -> Dictionary:
-	var recommendation := recommend_profile()
 	return {
 		"ok": true,
 		"installed": FileAccess.file_exists(ACTIVE_MODEL),
 		"path": ACTIVE_MODEL,
-		"size": FileAccess.get_file_as_bytes(ACTIVE_MODEL).size() if FileAccess.file_exists(ACTIVE_MODEL) and _small_enough_for_size_probe() else _file_size(ACTIVE_MODEL),
-		"recommended_profile": recommendation,
+		"size": _file_size(ACTIVE_MODEL),
+		"recommended_profile": recommend_profile(),
 		"profiles": PROFILES,
 		"device": android_runtime.capabilities() if OS.get_name() == "Android" else {"platform": OS.get_name()}
 	}
@@ -149,6 +148,3 @@ func _write_metadata(profile_id: String, profile: Dictionary, hash: String) -> v
 func _file_size(path: String) -> int:
 	var f := FileAccess.open(path, FileAccess.READ)
 	return f.get_length() if f != null else 0
-
-func _small_enough_for_size_probe() -> bool:
-	return false
