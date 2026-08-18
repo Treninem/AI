@@ -44,7 +44,7 @@
     "mode": "wake_word",
     "words": ["fox", "фокс", "лиса"],
     "conversation_window_sec": 25,
-    "vosk_model": "models/vosk-model-small-ru-0.22"
+    "vosk_model": "voice/models/vosk-model-small-ru-0.22"
   },
   "processor": {
     "normalize": true,
