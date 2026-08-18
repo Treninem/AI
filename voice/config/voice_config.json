@@ -1,0 +1,57 @@
+{
+  "enabled": true,
+  "backend": "auto",
+  "quality": "balanced",
+  "language": "ru",
+  "volume": 0.86,
+  "speed": 1.04,
+  "pitch": 1.02,
+  "mechanical_amount": 0.035,
+  "emotionality": 0.78,
+  "system_sounds": true,
+  "startup_greeting": false,
+  "barge_in": true,
+  "auto_speak": true,
+  "read_code_automatically": false,
+  "cache_limit_mb": 512,
+  "silero": {
+    "model": "v5_5_ru",
+    "speaker": "xenia",
+    "sample_rate": 48000,
+    "license": "CC-BY-NC"
+  },
+  "xtts": {
+    "enabled": false,
+    "model": "tts_models/multilingual/multi-dataset/xtts_v2",
+    "speaker_wav": "",
+    "language": "ru"
+  },
+  "stt": {
+    "model": "openai/whisper-large-v3-turbo",
+    "device": "auto",
+    "language": "ru"
+  },
+  "vad": {
+    "threshold": 0.56,
+    "min_speech_ms": 240,
+    "min_silence_ms": 620,
+    "barge_in_min_ms": 520,
+    "barge_in_rms": 0.025,
+    "noise_multiplier": 2.7
+  },
+  "wake": {
+    "mode": "wake_word",
+    "words": ["fox", "фокс", "лиса"],
+    "conversation_window_sec": 25,
+    "vosk_model": "voice/models/vosk-model-small-ru-0.22"
+  },
+  "processor": {
+    "normalize": true,
+    "compression": true,
+    "limiter": true,
+    "breathing_pauses": true,
+    "highpass_hz": 58,
+    "mechanical_frequency_hz": 1830,
+    "mechanical_mix": 0.035
+  }
+}
