@@ -16,21 +16,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
-import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
 
-/**
- * Fully local Android voice fallback for AuroraFox.
- *
- * Models are packaged in plugin/src/main/assets/voice by setup_native.ps1.
- * No network calls are made here. TTS uses a generic Russian Piper model;
- * STT uses multilingual Whisper tiny through sherpa-onnx.
- */
 class AndroidVoiceRuntime(private val context: Context) {
     private val assets: AssetManager = context.assets
     private val cacheDir = File(context.filesDir, "voice_cache").apply { mkdirs() }
+    private val ttsAssetRoot = "voice/vits-piper-ru_RU-denis-medium"
+    private val sttAssetRoot = "voice/sherpa-onnx-whisper-tiny"
 
     @Volatile private var tts: OfflineTts? = null
     @Volatile private var recognizer: OfflineRecognizer? = null
@@ -38,15 +32,14 @@ class AndroidVoiceRuntime(private val context: Context) {
     private val sttLock = Any()
 
     fun isTtsAvailable(): Boolean = try {
-        findAsset("voice/vits-piper-ru_RU-irina-medium") { it.endsWith(".onnx") } != null &&
-            findAsset("voice/vits-piper-ru_RU-irina-medium") { it.endsWith("tokens.txt") } != null
+        findAsset(ttsAssetRoot) { it.endsWith(".onnx") } != null &&
+            findAsset(ttsAssetRoot) { it.endsWith("tokens.txt") } != null
     } catch (_: Throwable) { false }
 
     fun isSttAvailable(): Boolean = try {
-        val root = "voice/sherpa-onnx-whisper-tiny"
-        findAsset(root) { it.contains("encoder") && it.endsWith(".onnx") } != null &&
-            findAsset(root) { it.contains("decoder") && it.endsWith(".onnx") } != null &&
-            findAsset(root) { it.contains("tokens") && it.endsWith(".txt") } != null
+        findAsset(sttAssetRoot) { it.contains("encoder") && it.endsWith(".onnx") } != null &&
+            findAsset(sttAssetRoot) { it.contains("decoder") && it.endsWith(".onnx") } != null &&
+            findAsset(sttAssetRoot) { it.contains("tokens") && it.endsWith(".txt") } != null
     } catch (_: Throwable) { false }
 
     fun synthesize(text: String, speed: Float, emotion: String, intensity: Float): String {
@@ -55,7 +48,7 @@ class AndroidVoiceRuntime(private val context: Context) {
         return try {
             val engine = ensureTts()
             val safeSpeed = speed.coerceIn(0.82f, 1.20f)
-            val key = sha256("$text|$safeSpeed|$emotion|$intensity|piper-irina-v1")
+            val key = sha256("$text|$safeSpeed|$emotion|$intensity|piper-denis-v1")
             val wav = File(cacheDir, "$key.wav")
             val meta = File(cacheDir, "$key.json")
             if (wav.isFile && meta.isFile) {
@@ -80,7 +73,7 @@ class AndroidVoiceRuntime(private val context: Context) {
             val payload = JSONObject().apply {
                 put("ok", true)
                 put("path", wav.absolutePath)
-                put("engine", "sherpa-onnx-piper")
+                put("engine", "sherpa-onnx-piper-denis")
                 put("sample_rate", audio.sampleRate)
                 put("duration", audio.samples.size.toDouble() / audio.sampleRate.toDouble())
                 put("emotion", emotion)
@@ -131,13 +124,12 @@ class AndroidVoiceRuntime(private val context: Context) {
     @Synchronized
     private fun ensureTts(): OfflineTts {
         tts?.let { return it }
-        val root = "voice/vits-piper-ru_RU-irina-medium"
-        val model = findAsset(root) { it.endsWith(".onnx") && !it.contains("duration", true) }
+        val model = findAsset(ttsAssetRoot) { it.endsWith(".onnx") && !it.contains("duration", true) }
             ?: throw IllegalStateException("Russian TTS model.onnx not found")
-        val tokens = findAsset(root) { it.endsWith("tokens.txt") }
+        val tokens = findAsset(ttsAssetRoot) { it.endsWith("tokens.txt") }
             ?: throw IllegalStateException("Russian TTS tokens.txt not found")
-        val dataDir = findAssetDirectory(root, "espeak-ng-data") ?: "$root/espeak-ng-data"
-        val lexicon = findAsset(root) { it.endsWith("lexicon.txt") } ?: ""
+        val dataDir = findAssetDirectory(ttsAssetRoot, "espeak-ng-data") ?: "$ttsAssetRoot/espeak-ng-data"
+        val lexicon = findAsset(ttsAssetRoot) { it.endsWith("lexicon.txt") } ?: ""
         val config = OfflineTtsConfig(
             model = OfflineTtsModelConfig(
                 vits = OfflineTtsVitsModelConfig(
@@ -159,14 +151,12 @@ class AndroidVoiceRuntime(private val context: Context) {
 
     @Synchronized
     private fun ensureRecognizer(language: String): OfflineRecognizer {
-        // Whisper language is part of config. Recreate only if another language is requested.
         recognizer?.let { return it }
-        val root = "voice/sherpa-onnx-whisper-tiny"
-        val encoder = findAsset(root) { it.contains("encoder", true) && it.endsWith(".onnx") }
+        val encoder = findAsset(sttAssetRoot) { it.contains("encoder", true) && it.endsWith(".onnx") }
             ?: throw IllegalStateException("Whisper encoder not found")
-        val decoder = findAsset(root) { it.contains("decoder", true) && it.endsWith(".onnx") }
+        val decoder = findAsset(sttAssetRoot) { it.contains("decoder", true) && it.endsWith(".onnx") }
             ?: throw IllegalStateException("Whisper decoder not found")
-        val tokens = findAsset(root) { it.contains("tokens", true) && it.endsWith(".txt") }
+        val tokens = findAsset(sttAssetRoot) { it.contains("tokens", true) && it.endsWith(".txt") }
             ?: throw IllegalStateException("Whisper tokens not found")
         val config = OfflineRecognizerConfig(
             modelConfig = OfflineModelConfig(
