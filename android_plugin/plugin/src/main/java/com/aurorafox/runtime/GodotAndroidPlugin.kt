@@ -4,6 +4,7 @@ import android.os.Build
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
 import org.godotengine.godot.plugin.UsedByGodot
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 
@@ -37,7 +38,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     fun chatLocal(modelPath: String, messagesJson: String, optionsJson: String): String {
         if (!native.isLoaded() || !native.hasLlama()) return errorJson("llama.cpp runtime is not bundled in this build")
         if (!isInsideAppStorage(modelPath)) return errorJson("Model path must be inside AuroraFox app storage")
-        return native.chat(modelPath, messagesJson, optionsJson)
+        val prompt = try { formatChatPrompt(JSONArray(messagesJson)) } catch (_: Exception) { return errorJson("Invalid messages JSON") }
+        return native.chat(modelPath, prompt, optionsJson)
     }
 
     @UsedByGodot
@@ -74,6 +76,21 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val args = mutableListOf<String>()
         for (i in 2 until command.length()) args += command.optString(i)
         return native.runWasm(module.absolutePath, workspaceCanonical.absolutePath, args.toTypedArray())
+    }
+
+    private fun formatChatPrompt(messages: JSONArray): String {
+        val out = StringBuilder()
+        for (i in 0 until messages.length()) {
+            val item = messages.optJSONObject(i) ?: continue
+            val role = item.optString("role", "user").lowercase().let {
+                if (it in setOf("system", "user", "assistant")) it else "user"
+            }
+            val content = item.optString("content", "")
+            out.append("<|im_start|>").append(role).append('\n')
+            out.append(content).append("<|im_end|>\n")
+        }
+        out.append("<|im_start|>assistant\n")
+        return out.toString()
     }
 
     private fun isInsideAppStorage(path: String): Boolean {
