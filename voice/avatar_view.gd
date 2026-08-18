@@ -58,14 +58,12 @@ func _draw() -> void:
 	var cyan := Color("32c9ff")
 	var warning := Color("ff6c6c") if emotion in ["error", "warning"] else green
 
-	# Black tail behind the body.
 	var tail_angle := sin(tail_phase) * 0.35 * tail_speed
 	var tail_base := center + Vector2(47, 28)
 	var tail_tip := tail_base + Vector2(43 + 8 * cos(tail_angle), 12 + 24 * sin(tail_angle))
 	draw_polyline(PackedVector2Array([tail_base, tail_base + Vector2(22, 4), tail_tip]), shadow, 18.0, true)
 	draw_polyline(PackedVector2Array([tail_base, tail_base + Vector2(22, 4), tail_tip]), Color("111826"), 12.0, true)
 
-	# Ears react to listening/emotion.
 	var lift := 9.0 * ear_level + (7.0 if listening else 0.0)
 	var left_ear := PackedVector2Array([center + Vector2(-43, -25), center + Vector2(-26, -64 - lift), center + Vector2(-8, -28)])
 	var right_ear := PackedVector2Array([center + Vector2(11, -28), center + Vector2(32, -64 - lift), center + Vector2(46, -22)])
@@ -74,12 +72,10 @@ func _draw() -> void:
 	draw_colored_polygon(PackedVector2Array([center + Vector2(-37,-30), center + Vector2(-26,-54-lift), center + Vector2(-14,-31)]), Color("d9c9e9"))
 	draw_colored_polygon(PackedVector2Array([center + Vector2(17,-31), center + Vector2(32,-54-lift), center + Vector2(40,-27)]), Color("d9c9e9"))
 
-	# Head/body.
 	draw_circle(center, 48, shadow)
 	draw_circle(center, 44, white)
 	draw_circle(center + Vector2(0, 45), 31, white)
 
-	# Eyes. Thinking looks slightly upward/right.
 	var look := Vector2(3, -3) if thinking or emotion == "thinking" else Vector2.ZERO
 	var eye_h := lerpf(10.0, 1.5, blink)
 	for ex in [-18.0, 18.0]:
@@ -88,24 +84,24 @@ func _draw() -> void:
 		if blink < 0.6:
 			draw_circle(center + Vector2(ex - 2, -11) + look, 1.7, Color.WHITE)
 
-	# Nose and mouth/lip sync.
 	draw_circle(center + Vector2(0, 10), 4.3, shadow)
 	var mouth_open := clampf(amplitude * 14.0, 1.0, 13.0)
 	draw_ellipse(center + Vector2(0, 22), Vector2(8.5, mouth_open), shadow)
 	if mouth_open > 5.0:
 		draw_ellipse(center + Vector2(0, 24), Vector2(5.0, mouth_open * 0.52), Color("d86f92"))
 
-	# Mechanical front paw.
 	var paw := center + Vector2(48, 43)
 	draw_line(paw + Vector2(-12,-18), paw + Vector2(2,7), Color("8894a8"), 9.0, true)
 	draw_circle(paw + Vector2(3,8), 10, Color("333b4c"))
-	draw_circle(paw + Vector2(3,8), 5.5, warning.lerp(cyan, 0.25), 2.0 + paw_glow * 2.0)
+	var glow_color := warning.lerp(cyan, 0.25)
+	draw_circle(paw + Vector2(3,8), 5.5, glow_color)
 	if paw_glow > 0.3:
-		draw_circle(paw + Vector2(3,8), 12 + paw_glow * 6, Color(warning, 0.08 + paw_glow * 0.08), false, 2.0)
+		var ring_color := Color(glow_color.r, glow_color.g, glow_color.b, 0.12 + paw_glow * 0.18)
+		draw_arc(paw + Vector2(3,8), 12 + paw_glow * 6, 0.0, TAU, 36, ring_color, 2.0, true)
 
 func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
 	var pts := PackedVector2Array()
-	for i in 32:
+	for i in range(32):
 		var a := TAU * float(i) / 32.0
 		pts.append(center + Vector2(cos(a) * radius.x, sin(a) * radius.y))
 	draw_colored_polygon(pts, color)
