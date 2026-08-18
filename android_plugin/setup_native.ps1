@@ -38,18 +38,19 @@ Ensure-Repo "llama.cpp" "https://github.com/ggml-org/llama.cpp.git"
 Ensure-Repo "whisper.cpp" "https://github.com/ggml-org/whisper.cpp.git"
 Ensure-Repo "wasm3" "https://github.com/wasm3/wasm3.git"
 
-# sherpa-onnx is used only for local Android speech. The AAR contains its JNI libraries.
+# sherpa-onnx: local Android speech runtime (Apache-2.0 framework).
 $sherpaVersion = "1.13.4"
 $sherpaAar = Join-Path $libs "sherpa-onnx-$sherpaVersion.aar"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/sherpa-onnx-$sherpaVersion.aar" $sherpaAar
 
-# Original Russian AuroraFox mobile fallback voice. This is a generic Piper model, not a cloned real person.
-$ttsName = "vits-piper-ru_RU-irina-medium"
+# Russian Piper fallback voice. Denis uses the CC0 Russian dataset in Piper model metadata,
+# avoiding the unclear dataset provenance of the earlier Irina fallback.
+$ttsName = "vits-piper-ru_RU-denis-medium"
 $ttsArchive = Join-Path $temp "$ttsName.tar.bz2"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$ttsName.tar.bz2" $ttsArchive
 Extract-TarBz2 $ttsArchive $voiceAssets $ttsName
 
-# Multilingual Whisper tiny for offline Android Russian STT.
+# Multilingual Whisper tiny for fully offline Android Russian STT.
 $sttName = "sherpa-onnx-whisper-tiny"
 $sttArchive = Join-Path $temp "$sttName.tar.bz2"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$sttName.tar.bz2" $sttArchive
