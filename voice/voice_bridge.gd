@@ -70,14 +70,31 @@ func _process(delta: float) -> void:
 				_connect_ws()
 
 func _start_backend_if_installed() -> void:
-	var pythonw := ProjectSettings.globalize_path("res://voice/.venv/Scripts/pythonw.exe")
-	var python := ProjectSettings.globalize_path("res://voice/.venv/Scripts/python.exe")
-	var server := ProjectSettings.globalize_path("res://voice/python/aurora_voice_server.py")
-	if not FileAccess.file_exists(server): return
-	var executable := pythonw if FileAccess.file_exists(pythonw) else python
-	if not FileAccess.file_exists(executable): return
 	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
-	backend_pid = OS.create_process(executable, PackedStringArray([server]), false)
+	var exe_dir := OS.get_executable_path().get_base_dir()
+	var packaged_root := exe_dir.path_join("voice")
+	var candidates: Array[Dictionary] = [
+		{
+			"pythonw": packaged_root.path_join(".venv/Scripts/pythonw.exe"),
+			"python": packaged_root.path_join(".venv/Scripts/python.exe"),
+			"server": packaged_root.path_join("python/aurora_voice_server.py")
+		},
+		{
+			"pythonw": ProjectSettings.globalize_path("res://voice/.venv/Scripts/pythonw.exe"),
+			"python": ProjectSettings.globalize_path("res://voice/.venv/Scripts/python.exe"),
+			"server": ProjectSettings.globalize_path("res://voice/python/aurora_voice_server.py")
+		}
+	]
+	for candidate in candidates:
+		var server := str(candidate.server)
+		if not FileAccess.file_exists(server): continue
+		var pythonw := str(candidate.pythonw)
+		var python := str(candidate.python)
+		var executable := pythonw if FileAccess.file_exists(pythonw) else python
+		if not FileAccess.file_exists(executable): continue
+		backend_pid = OS.create_process(executable, PackedStringArray([server]), false)
+		if backend_pid > 0:
+			return
 
 func _connect_ws() -> void:
 	if socket.get_ready_state() in [WebSocketPeer.STATE_OPEN, WebSocketPeer.STATE_CONNECTING]: return
