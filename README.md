@@ -1,96 +1,266 @@
-# AuroraFox — Godot 4.7.1
+# AuroraFox — локальный AI для Windows и Android
 
-AuroraFox — локальное AI-приложение с современным чат-интерфейсом, интернетом, памятью, базой знаний, инструментами и контролируемым самоулучшением.
+AuroraFox — локальное AI-приложение на Godot 4.7.1 с современным чат-интерфейсом, памятью, файлами, голосом, компьютерным зрением, агентными инструментами, песочницами и контролируемым самоулучшением.
 
-## Текущий стек
+Главное правило проекта: по возможности использовать локальные и бесплатные компоненты. Облачный AI не требуется для основной архитектуры.
 
-- Godot 4.7.1 / GDScript
-- Ollama как локальный сервер LLM
-- модель по умолчанию: `qwen3:8b`
-- JSON-память в `user://memory.json`
-- база знаний в `user://knowledge.json`
-- история чатов в `user://aurorafox_chats.json`
-- HTTP/HTTPS через `HTTPRequest`
-- Git/системные инструменты через ограниченный `OS.execute`
+## Платформы
 
-## Уже реализовано
+### Windows x86_64
 
-- собственный интерфейс AuroraFox, не копирующий ChatGPT пиксель-в-пиксель;
-- левый сайдбар с историей чатов;
-- создание нового чата;
-- переключение между старыми чатами;
-- поиск по истории;
-- удаление чатов;
-- автоматическое сохранение сообщений и контекста;
-- поле общения с Enter / Shift+Enter;
-- прикрепление нескольких файлов;
-- чтение текстовых документов и исходного кода;
-- классификация изображений, документов, аудио, видео и архивов для дальнейших локальных анализаторов;
-- диалог с локальной LLM;
-- автономный цикл выбора инструментов;
-- интернет HTTP GET;
-- чтение файлов проекта;
-- безопасная запись в `res://workspace/`, `res://generated/`, `user://`;
-- просмотр каталогов;
-- запуск разрешённых программ: git/python/godot/curl;
-- git status / git diff;
-- информация о системе;
-- долговременная память;
-- накопительная база знаний;
-- генерация новых модулей улучшения в `res://generated/`;
-- запрет прямого бесконтрольного изменения рабочего ядра.
+Основной полнофункциональный режим:
 
-## Файлы
+- Godot 4.7.1;
+- Ollama для локальных LLM;
+- `qwen3:8b` — основной агент;
+- `qwen3-coder:30b` — программирование;
+- `qwen3-vl:8b` — зрение/GUI;
+- локальная память, база знаний, история и опыт;
+- Python voice/computer services;
+- управление мышью/клавиатурой и чтение Windows UI Automation;
+- локальная песочница;
+- Docker/Podman-песочница при наличии;
+- сеть внутри контейнера отключена по умолчанию;
+- снимки workspace и rollback;
+- тесты/компиляция перед признанием результата рабочим.
 
-`main.gd` — интерфейс AuroraFox и соединение компонентов.
+### Android arm64
 
-`chat_store.gd` — локальные чаты, история, поиск и сохранение.
+Мобильная версия использует тот же AgentCore и UI-логику, но другой локальный runtime:
 
-`attachment_manager.gd` — приём файлов, определение типов и подготовка контекста.
+- Godot 4.7.1 + Gradle Android export;
+- responsive/touch UI;
+- private app storage Android;
+- `AuroraFoxRuntime` Godot Android plugin;
+- локальный `llama.cpp` JNI runtime;
+- GGUF-модель хранится в `user://models/aurorafox-main.gguf`;
+- первый запуск предлагает скачать подходящую локальную модель;
+- Qwen3 1.7B Q4 для более слабых устройств;
+- Qwen3 4B Q4 для устройств с большим объёмом RAM;
+- SHA-256 проверка модели после загрузки;
+- WASM-песочница для переносимых экспериментальных модулей;
+- отдельный Android `isolatedProcess` сервис заложен в плагин для дальнейшего усиления изоляции.
 
-`agent_core.gd` — цикл: задача → модель → инструмент → результат → модель → ответ.
+После установки GGUF сама генерация ответов выполняется локально на устройстве. Первая загрузка модели требует интернета, если GGUF не скопирован на устройство вручную.
 
-`ai_client.gd` — клиент Ollama API.
+## Интерфейс
 
-`memory_store.gd` — память и база знаний.
+- собственный дизайн AuroraFox;
+- фон и UI-атлас из `assets/`;
+- новый чат;
+- история чатов;
+- поиск;
+- удаление/переключение;
+- автоматическое сохранение;
+- несколько вложений;
+- drag/file picker архитектура;
+- Enter — отправить, Shift+Enter — новая строка;
+- Android: сворачиваемый sidebar и touch-friendly controls.
 
-`tool_registry.gd` — расширяемый каталог инструментов.
+## Агентное ядро
 
-`self_improver.gd` — создание новых модулей улучшения в изолированной области.
+`AgentCore` использует не одну роль, а команду специалистов:
 
-## Поддерживаемые вложения
+- planner;
+- researcher;
+- critic;
+- computer operator;
+- file analyst;
+- tester;
+- verifier;
+- knowledge curator;
+- Code Architect / Code Specialist.
 
-Сейчас напрямую читаются текст/код: TXT, MD, JSON, CSV, GDScript, Python, JS/TS, HTML/CSS/XML, YAML, TOML, INI, логи, shader/GLSL, C/C++, C#, Java, Rust.
+Сложная задача проходит цепочку:
 
-Интерфейс уже принимает изображения, PDF/DOCX/XLSX/PPTX, аудио, видео и архивы. Следующий слой — локальные специализированные парсеры и vision/speech модели, чтобы содержимое этих форматов реально извлекалось и анализировалось, а не только прикреплялось.
+`задача → похожий опыт → специалисты → общий план → критик плана → песочница/инструменты → тесты → self-check → verifier → ответ → сохранение навыка`.
 
-## Аватар
+## Работа с кодом
 
-Официальный образ AuroraFox — белый мультяшный лисёнок с зелёными глазами, чёрным хвостом и AI/кибернетической тематикой. Исходное пользовательское изображение нужно хранить как `res://assets/aurorafox.png` и затем использовать для иконки окна, Windows EXE, ярлыка и аватара ассистента.
+AuroraFox имеет расширяемый реестр языков и не привязан к одному стеку. В реестре уже предусмотрены Python, GDScript, JavaScript, TypeScript, C, C++, C#, Java, Kotlin, Rust, Go, PHP, Ruby, Lua, Swift, Dart, SQL, Bash, PowerShell, R, Julia, Elixir, Erlang, Haskell, OCaml, Zig, Nim, Fortran, COBOL, Pascal, Assembly и другие.
 
-## Запуск
+Правило кодового режима:
 
-1. Установить Godot 4.7.1.
-2. Установить Ollama.
-3. Выполнить `ollama pull qwen3:8b`.
-4. Запустить Ollama.
-5. Открыть репозиторий в Godot и запустить проект.
+1. определить язык, проект и зависимости;
+2. понять назначение, состояние и поток данных;
+3. создать отдельный workspace;
+4. работать с копиями;
+5. создать snapshot перед крупным изменением;
+6. выполнить код в подходящей среде;
+7. запустить тест/компиляцию/static check;
+8. при ухудшении выполнить rollback;
+9. только после проверки переносить результат в реальную среду.
 
-## Следующие этапы
+Поддержка языка в реестре не означает, что компилятор этого языка автоматически установлен на каждом устройстве. Windows может использовать локально установленные инструменты или контейнерный профиль. Android на текущем этапе исполняет экспериментальный код через WASM runtime.
 
-- локальный PDF parser;
-- DOCX/XLSX/PPTX extraction;
-- vision-модель для изображений;
-- Whisper-compatible speech-to-text;
-- анализ видео через кадры + аудио;
-- безопасная распаковка архивов;
-- настоящий web-search через несколько провайдеров;
-- HTML extraction и чтение документации;
-- embeddings + семантический поиск;
-- SQLite при росте базы;
-- планировщик автономных исследований;
-- автоматическая оценка качества ответа;
-- тестовая песочница собственного кода;
-- Git branch/commit/revert для успешных улучшений;
-- локальный deployment supervisor;
-- резервное копирование памяти и истории.
+## Песочницы
+
+Основной API:
+
+- `workspace_create`;
+- `workspace_status`;
+- `workspace_tree`;
+- `workspace_write`;
+- `workspace_read`;
+- `workspace_snapshot`;
+- `workspace_rollback`;
+- `workspace_exec`;
+- `workspace_test`.
+
+### Windows sandbox
+
+`computer/computer_service.py` хранит реальный workspace и выполняет команды в той же папке, в которую агент пишет файлы.
+
+При наличии Podman/Docker предпочтителен контейнер:
+
+- `--network none`;
+- read-only root filesystem;
+- только текущий workspace монтируется writable;
+- memory/CPU/PID limits;
+- no-new-privileges;
+- временная файловая система `/tmp` ограничена.
+
+Без контейнера используется разрешённый список локальных инструментов.
+
+### Android sandbox
+
+Android уже изолирует AuroraFox на уровне UID/private app storage. Дополнительно экспериментальные исполняемые модули проходят через WASM runtime и не получают Android shell/API автоматически.
+
+На текущем этапе Android runtime выполняет **предварительно скомпилированные WASM-модули**. Полноценные встроенные компиляторы/интерпретаторы для всех языков на телефоне ещё не считаются готовыми.
+
+## Локальные модели Android
+
+`LocalModelManager` поддерживает:
+
+- streamed download прямо в файл, без загрузки всей модели в RAM;
+- выбор профиля по RAM/storage;
+- проверку свободного места;
+- SHA-256 verification;
+- ручную установку локального GGUF;
+- активацию модели только после успешной проверки.
+
+Активная модель:
+
+`user://models/aurorafox-main.gguf`
+
+## Голос
+
+### Windows
+
+Уже подключены:
+
+- русский TTS через локальный voice service;
+- Whisper-compatible STT;
+- микрофон в Godot;
+- автоматическое чтение ответов.
+
+### Android
+
+В Android plugin уже есть интерфейс локального STT, а официальный `whisper.cpp` исходник загружается сборочным setup-скриптом. Полный JNI-adapter для Android STT и отдельный качественный русский Android TTS ещё требуется довести и проверить на реальном устройстве. Эти функции не должны считаться готовыми до runtime-теста.
+
+## Компьютерный агент
+
+На Windows:
+
+- screenshot;
+- Qwen3-VL vision;
+- UI Automation;
+- mouse move/click/right click/double click;
+- keyboard/type/hotkeys;
+- scroll;
+- цикл `вижу → действую → снова вижу → проверяю`;
+- PyAutoGUI fail-safe.
+
+Это позволяет строить навыки для обычных GUI-задач и визуальных игр, но успех каждой конкретной задачи должен подтверждаться наблюдаемым состоянием экрана.
+
+Android не получает эквивалентный глобальный доступ к чужим приложениям автоматически: мобильная ОС имеет другую модель разрешений и изоляции.
+
+## Память и обучение на опыте
+
+AuroraFox хранит:
+
+- историю диалогов;
+- долговременную память;
+- базу знаний;
+- навыки;
+- успешные стратегии;
+- ошибки;
+- контрольные точки;
+- confidence;
+- идеи улучшений.
+
+`DreamCycle` анализирует повторяющиеся ошибки и предлагает улучшения, но не переписывает рабочее ядро бесконтрольно.
+
+## Основные файлы
+
+- `scripts/main.gd` — UI;
+- `scripts/agent_core.gd` — главный агент;
+- `scripts/specialist_team.gd` — команда специалистов;
+- `scripts/code_specialist.gd` — Code Architect;
+- `scripts/code_language_registry.gd` — языки;
+- `scripts/memory_store.gd` — память;
+- `scripts/experience_store.gd` — навыки/опыт;
+- `scripts/cognition_layer.gd` — planning/self-check;
+- `scripts/dream_cycle.gd` — предложения улучшений;
+- `scripts/tool_registry.gd` — инструменты;
+- `scripts/sandbox_manager.gd` — единый sandbox API;
+- `scripts/sandbox_tool_bridge.gd` — sandbox tools для AgentCore;
+- `computer/computer_service.py` — Windows GUI + sandbox service;
+- `scripts/android_local_runtime.gd` — Godot bridge к Android runtime;
+- `android_plugin/` — Android native plugin;
+- `scripts/local_model_manager.gd` — локальные мобильные GGUF;
+- `scripts/android_first_run.gd` — установка модели при первом запуске;
+- `scripts/mobile_ui_adapter.gd` — адаптация UI для телефона.
+
+## Сборка Windows
+
+Требуются Godot 4.7.1 export templates. Затем:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build\build_windows.ps1
+```
+
+Результат должен появиться в:
+
+`build/windows/AuroraFox.exe`
+
+## Сборка Android
+
+Нужны:
+
+- Godot 4.7.1 + Android export templates;
+- Android SDK/NDK;
+- Java/Gradle;
+- переменная `ANDROID_HOME` или `ANDROID_SDK_ROOT`.
+
+Сборка:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\build\build_android.ps1
+```
+
+Скрипт:
+
+1. получает исходники локальных native runtimes;
+2. собирает `AuroraFoxRuntime` AAR;
+3. копирует AAR в Godot addon;
+4. устанавливает Gradle build template;
+5. экспортирует Android preset.
+
+Ожидаемый результат:
+
+`build/android/AuroraFox.apk`
+
+## Что ещё обязательно проверить перед релизом
+
+- headless parse/test всех GDScript на Godot 4.7.1;
+- реальную Windows сборку;
+- Docker/Podman sandbox integration test;
+- Android Gradle/NDK build;
+- запуск llama.cpp GGUF на реальном arm64 телефоне;
+- производительность 1.7B/4B моделей;
+- Android WASM runtime;
+- Android voice STT/TTS;
+- Android permissions/lifecycle/background behavior;
+- installer/update pipeline;
+- лицензии всех моделей перед публичной/коммерческой поставкой.
