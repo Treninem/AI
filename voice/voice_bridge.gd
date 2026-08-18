@@ -73,6 +73,15 @@ func _start_backend_if_installed() -> void:
 	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
 	var exe_dir := OS.get_executable_path().get_base_dir()
 	var packaged_root := exe_dir.path_join("voice")
+	_configure_model_cache(packaged_root)
+
+	# Release build: portable backend created by PyInstaller. It does not require Python on the target PC.
+	var portable := packaged_root.path_join("AuroraVoiceBackend/AuroraVoiceBackend.exe")
+	if FileAccess.file_exists(portable):
+		backend_pid = OS.create_process(portable, PackedStringArray(), false)
+		if backend_pid > 0: return
+
+	# Development / emergency fallback: Python 3.11 virtual environment.
 	var candidates: Array[Dictionary] = [
 		{
 			"root": packaged_root,
@@ -94,12 +103,14 @@ func _start_backend_if_installed() -> void:
 		var python := str(candidate.python)
 		var executable := pythonw if FileAccess.file_exists(pythonw) else python
 		if not FileAccess.file_exists(executable): continue
-		var runtime_root := str(candidate.root)
-		OS.set_environment("HF_HOME", runtime_root.path_join("models/cache/huggingface"))
-		OS.set_environment("HUGGINGFACE_HUB_CACHE", runtime_root.path_join("models/cache/huggingface/hub"))
-		OS.set_environment("TORCH_HOME", runtime_root.path_join("models/cache/torch"))
+		_configure_model_cache(str(candidate.root))
 		backend_pid = OS.create_process(executable, PackedStringArray([server]), false)
 		if backend_pid > 0: return
+
+func _configure_model_cache(runtime_root: String) -> void:
+	OS.set_environment("HF_HOME", runtime_root.path_join("models/cache/huggingface"))
+	OS.set_environment("HUGGINGFACE_HUB_CACHE", runtime_root.path_join("models/cache/huggingface/hub"))
+	OS.set_environment("TORCH_HOME", runtime_root.path_join("models/cache/torch"))
 
 func _connect_ws() -> void:
 	if socket.get_ready_state() in [WebSocketPeer.STATE_OPEN, WebSocketPeer.STATE_CONNECTING]: return
