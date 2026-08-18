@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <meta-data
+            android:name="org.godotengine.plugin.v2.${godotPluginName}"
+            android:value="${godotPluginPackageName}.GodotAndroidPlugin" />
+
+        <service
+            android:name="${godotPluginPackageName}.SandboxIsolatedService"
+            android:exported="false"
+            android:isolatedProcess="true"
+            android:stopWithTask="true" />
+    </application>
+</manifest>
