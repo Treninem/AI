@@ -1,0 +1,92 @@
+name: AuroraFox API CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'api/**'
+      - 'tests/test_api_gateway.py'
+      - 'tests/api_gateway_smoke.gd'
+      - 'main.tscn'
+      - 'build/build_windows.ps1'
+      - '.github/workflows/api-ci.yml'
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'tests/test_api_gateway.py'
+      - 'tests/api_gateway_smoke.gd'
+      - 'main.tscn'
+      - 'build/build_windows.ps1'
+      - '.github/workflows/api-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  python-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Validate API Python modules
+        shell: bash
+        run: |
+          if [ ! -f api/server.py ]; then
+            echo 'API module not present on this revision; skipping.'
+            exit 0
+          fi
+          python -m pip install --disable-pip-version-check -r api/requirements.txt pytest==8.4.1
+          python -m compileall -q api
+          pytest -q tests/test_api_gateway.py
+
+  godot-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: API gateway smoke
+        shell: bash
+        run: |
+          if [ -f tests/api_gateway_smoke.gd ]; then
+            timeout 30s ./godot --headless --path . --script tests/api_gateway_smoke.gd
+          else
+            echo 'API gateway smoke not present on this revision; skipping.'
+          fi
+
+  windows-api:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse API and build PowerShell scripts
+        shell: powershell
+        run: |
+          $files = @('.\build\build_windows.ps1')
+          if (Test-Path '.\api\install_api.ps1') { $files += '.\api\install_api.ps1' }
+          if (Test-Path '.\api\start_api.ps1') { $files += '.\api\start_api.ps1' }
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              foreach ($parseError in $errors) {
+                $extent = $parseError.Extent
+                Write-Error ("{0}:{1}:{2}: {3}" -f $file, $extent.StartLineNumber, $extent.StartColumnNumber, $parseError.Message)
+              }
+              throw "PowerShell parse failed: $file"
+            }
+          }
