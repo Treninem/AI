@@ -10,11 +10,14 @@ const STATE_PATH := "user://agent/autonomy_state.json"
 
 @export var autonomous_enabled := true
 @export var autonomous_hot_improvements := true
+@export var autonomous_research_enabled := true
 @export_range(60.0, 86400.0, 1.0) var cycle_interval_seconds := 900.0
 @export_range(300.0, 604800.0, 1.0) var mutation_cooldown_seconds := 21600.0
+@export_range(900.0, 604800.0, 1.0) var research_cooldown_seconds := 3600.0
 
 var component_registry := AuroraComponentRegistry.new()
 var goals := AuroraGoals.new()
+var research := AuroraResearchCollector.new()
 
 var tools: ToolRegistry
 var ai: AIClient
@@ -27,10 +30,13 @@ var _timer: Timer
 var _cycle_running := false
 var _last_report: Dictionary = {}
 var _last_improvement_unix := 0
+var _last_research_unix := 0
 var _events: Array = []
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STATE_DIR))
+	if research.get_parent() == null:
+		add_child(research)
 	_load_state()
 	call_deferred("_bootstrap")
 
@@ -46,7 +52,7 @@ func _bootstrap() -> void:
 		return
 	_register_coordination_tools()
 	_setup_timer()
-	var report := await synchronize_all()
+	var report: Dictionary = await synchronize_all()
 	if not bool(report.get("compatible", false)):
 		_record_event("initial_sync_pending", {
 			"missing_components": report.get("missing_components", []),
@@ -71,7 +77,7 @@ func _bind_existing() -> void:
 	var main := get_parent()
 	if main == null:
 		return
-	var value = main.get("tools")
+	var value: Variant = main.get("tools")
 	if value is ToolRegistry:
 		tools = value
 	value = main.get("ai")
@@ -91,6 +97,8 @@ func _bind_existing() -> void:
 		extensions = extension_node
 		if tools != null:
 			extensions.bind_registry(tools)
+	if memory != null and tools != null:
+		research.setup(memory, tools)
 	_connect_existing_signals()
 
 func _connect_existing_signals() -> void:
@@ -125,9 +133,16 @@ func _register_coordination_tools() -> void:
 	if not tools.tools.has("aurora_autonomous_cycle"):
 		tools.register_tool(
 			"aurora_autonomous_cycle",
-			"Запустить один полный автономный цикл наблюдения, синхронизации и проверенного улучшения AuroraFox.",
+			"Запустить один полный автономный цикл наблюдения, исследования, синхронизации и проверенного улучшения AuroraFox.",
 			{},
 			Callable(self, "_tool_cycle")
+		)
+	if not tools.tools.has("aurora_research_now"):
+		tools.register_tool(
+			"aurora_research_now",
+			"Собрать свежие локальные и интернет-наблюдения для текущей цели AuroraFox.",
+			{"query": "string"},
+			Callable(self, "_tool_research")
 		)
 
 func _setup_timer() -> void:
@@ -141,7 +156,7 @@ func _setup_timer() -> void:
 
 func synchronize_all() -> Dictionary:
 	_bind_existing()
-	var observations := await _collect_observations()
+	var observations: Dictionary = await _collect_observations()
 	var services := {
 		"platform": OS.get_name(),
 		"voice": get_node_or_null("/root/AuroraVoice") != null,
@@ -154,8 +169,10 @@ func synchronize_all() -> Dictionary:
 	report["goals"] = goals.snapshot()
 	report["autonomous_enabled"] = autonomous_enabled
 	report["autonomous_hot_improvements"] = autonomous_hot_improvements
+	report["autonomous_research_enabled"] = autonomous_research_enabled
 	report["hot_improvement_supported"] = _hot_improvement_supported()
 	report["last_improvement_unix"] = _last_improvement_unix
+	report["last_research_unix"] = _last_research_unix
 	report["events"] = _events.slice(maxi(0, _events.size() - 20), _events.size())
 	_last_report = report.duplicate(true)
 	_save_state()
@@ -175,7 +192,7 @@ func _collect_observations() -> Dictionary:
 
 	var voice_node := get_node_or_null("/root/AuroraVoice")
 	if voice_node != null:
-		var voice_settings = voice_node.get("settings")
+		var voice_settings: Variant = voice_node.get("settings")
 		result["voice"] = {
 			"backend_ready": bool(voice_node.get("backend_is_ready")),
 			"enabled": bool(voice_settings.get("enabled", true)) if voice_settings is Dictionary else true,
@@ -196,7 +213,7 @@ func _collect_observations() -> Dictionary:
 	if tools.tools.has("git_status"):
 		result["git_status"] = await tools.call_tool("git_status", {})
 	if tools.tools.has("project_index_status"):
-		var index_status = await tools.call_tool("project_index_status", {"path": "res://"})
+		var index_status: Variant = await tools.call_tool("project_index_status", {"path": "res://"})
 		result["project_index"] = index_status
 		if index_status is Dictionary and index_status.get("ok", false) and int(index_status.get("files", 0)) == 0 and tools.tools.has("index_project"):
 			result["project_index_refresh"] = await tools.call_tool("index_project", {"path": "res://", "max_files": 30000, "force": false})
@@ -210,7 +227,7 @@ func run_autonomous_cycle() -> Dictionary:
 	if _cycle_running:
 		return {"ok": false, "error": "Autonomous cycle is already running"}
 	_cycle_running = true
-	var sync_report := await synchronize_all()
+	var sync_report: Dictionary = await synchronize_all()
 	if not bool(sync_report.get("compatible", false)):
 		var incompatible := {"ok": false, "stage": "compatibility", "sync": sync_report}
 		_record_event("cycle_blocked", incompatible)
@@ -225,20 +242,30 @@ func run_autonomous_cycle() -> Dictionary:
 		"ok": true,
 		"goal": selected_goal,
 		"sync": sync_report,
+		"research_attempted": false,
 		"mutation_attempted": false,
 		"mutation_applied": false,
 		"hot_improvement_supported": _hot_improvement_supported()
 	}
 
 	var now := int(Time.get_unix_time_from_system())
+	var research_ready := now - _last_research_unix >= int(research_cooldown_seconds)
+	if autonomous_research_enabled and research_ready:
+		report["research_attempted"] = true
+		var research_result: Dictionary = await research.collect(selected_goal)
+		report["research"] = _compact(research_result)
+		if research_result.get("ok", false):
+			_last_research_unix = now
+			_record_event("research_completed", {"goal": selected_goal, "count": int(research_result.get("count", 0)), "sources": research_result.get("sources", {})})
+
 	var cooldown_ready := now - _last_improvement_unix >= int(mutation_cooldown_seconds)
 	if autonomous_hot_improvements and _hot_improvement_supported() and cooldown_ready and improver != null and extensions != null and ai != null:
 		report["mutation_attempted"] = true
-		var proposal_result := await improver.propose_improvement(selected_goal)
+		var proposal_result: Dictionary = await improver.propose_improvement(selected_goal)
 		report["proposal"] = _compact(proposal_result)
 		if proposal_result.get("ok", false):
 			var proposal: Dictionary = proposal_result.get("proposal", {})
-			var staged := await improver.apply_generated_module(proposal)
+			var staged: Dictionary = await improver.apply_generated_module(proposal)
 			report["verification"] = _compact(staged)
 			if staged.get("ok", false):
 				var activated := extensions.activate_staged(str(staged.get("stage_path", "")), str(staged.get("sha256", "")))
@@ -248,7 +275,7 @@ func run_autonomous_cycle() -> Dictionary:
 					_last_improvement_unix = now
 					_record_event("mutation_activated", {"goal": selected_goal, "id": activated.get("id", ""), "tools": activated.get("tools", [])})
 
-	_record_event("cycle_completed", {"goal": selected_goal, "mutation_applied": report.get("mutation_applied", false)})
+	_record_event("cycle_completed", {"goal": selected_goal, "mutation_applied": report.get("mutation_applied", false), "research_attempted": report.get("research_attempted", false)})
 	_cycle_running = false
 	_save_state()
 	autonomous_cycle_completed.emit(report)
@@ -265,6 +292,17 @@ func _tool_sync(_args: Dictionary) -> Dictionary:
 
 func _tool_cycle(_args: Dictionary) -> Dictionary:
 	return await run_autonomous_cycle()
+
+func _tool_research(args: Dictionary) -> Dictionary:
+	var query := str(args.get("query", "")).strip_edges()
+	if query.is_empty():
+		query = "local AI Godot LLM context optimization"
+	var result: Dictionary = await research.collect(query)
+	if result.get("ok", false):
+		_last_research_unix = int(Time.get_unix_time_from_system())
+		_record_event("research_manual", {"query": query, "count": int(result.get("count", 0))})
+		_save_state()
+	return result
 
 func _on_timer_timeout() -> void:
 	if autonomous_enabled and not _cycle_running:
@@ -297,6 +335,7 @@ func _save_state() -> void:
 		return
 	file.store_string(JSON.stringify({
 		"last_improvement_unix": _last_improvement_unix,
+		"last_research_unix": _last_research_unix,
 		"events": _events,
 		"last_report": _last_report
 	}))
@@ -308,15 +347,16 @@ func _load_state() -> void:
 	var file := FileAccess.open(STATE_PATH, FileAccess.READ)
 	if file == null:
 		return
-	var parsed = JSON.parse_string(file.get_as_text())
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
 	file.close()
 	if not parsed is Dictionary:
 		return
 	_last_improvement_unix = int(parsed.get("last_improvement_unix", 0))
-	var saved_events = parsed.get("events", [])
+	_last_research_unix = int(parsed.get("last_research_unix", 0))
+	var saved_events: Variant = parsed.get("events", [])
 	if saved_events is Array:
 		_events = saved_events
-	var saved_report = parsed.get("last_report", {})
+	var saved_report: Variant = parsed.get("last_report", {})
 	if saved_report is Dictionary:
 		_last_report = saved_report
 

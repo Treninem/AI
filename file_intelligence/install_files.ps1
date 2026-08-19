@@ -24,47 +24,47 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
             message = $Message
             time = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
         } | ConvertTo-Json -Compress
-        [IO.File]::WriteAllText($StateFile, $payload, [Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText($StateFile, $payload, (New-Object Text.UTF8Encoding($false)))
     }
 }
 
 try {
-    Set-Stage 'runtime' 5 'Подготовка локального Python runtime AuroraFox'
+    Set-Stage 'runtime' 5 'Preparing AuroraFox managed Python runtime'
     if (-not (Test-Path -LiteralPath $RuntimeScript)) {
-        throw "Не найден runtime/ensure_uv.ps1: $RuntimeScript"
+        throw "runtime/ensure_uv.ps1 was not found: $RuntimeScript"
     }
-    $uvOutput = & powershell -NoProfile -ExecutionPolicy Bypass -File $RuntimeScript -RuntimeRoot $RuntimeRoot
-    if ($LASTEXITCODE -ne 0) { throw 'Не удалось подготовить managed Python 3.11.' }
+    $null = & powershell -NoProfile -ExecutionPolicy Bypass -File $RuntimeScript -RuntimeRoot $RuntimeRoot
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare managed Python 3.11.' }
     $uv = Join-Path $RuntimeRoot 'uv\uv.exe'
-    if (-not (Test-Path -LiteralPath $uv)) { throw "uv.exe не найден: $uv" }
+    if (-not (Test-Path -LiteralPath $uv)) { throw "uv.exe was not found: $uv" }
 
     $env:UV_PYTHON_INSTALL_DIR = Join-Path $RuntimeRoot 'python'
     $env:UV_CACHE_DIR = Join-Path $RuntimeRoot 'cache'
     $env:UV_PYTHON_PREFERENCE = 'only-managed'
 
-    Set-Stage 'venv' 22 'Создание изолированного окружения File Intelligence'
+    Set-Stage 'venv' 22 'Creating isolated File Intelligence environment'
     if (-not (Test-Path -LiteralPath $Python)) {
         & $uv venv --python 3.11 $Venv
-        if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать окружение File Intelligence.' }
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to create File Intelligence environment.' }
     }
 
-    Set-Stage 'dependencies' 42 'Установка локальных парсеров документов, изображений и видео'
+    Set-Stage 'dependencies' 42 'Installing local document image and video parsers'
     & $uv pip install --python $Python --requirements $Requirements
-    if ($LASTEXITCODE -ne 0) { throw 'Не удалось установить зависимости File Intelligence.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to install File Intelligence dependencies.' }
 
-    Set-Stage 'verify' 90 'Проверка импортов и встроенного ffmpeg'
-    $check = @'
-import imageio_ffmpeg
-import pypdf, pypdfium2, docx, openpyxl, xlrd, pptx, PIL, py7zr
-from pathlib import Path
-exe = Path(imageio_ffmpeg.get_ffmpeg_exe())
-assert exe.is_file(), f"ffmpeg missing: {exe}"
-print("AURORA_FILE_INTELLIGENCE_READY", exe)
-'@
+    Set-Stage 'verify' 90 'Verifying imports and bundled ffmpeg'
+    $check = @(
+        'import imageio_ffmpeg',
+        'import pypdf, pypdfium2, docx, openpyxl, xlrd, pptx, PIL, py7zr',
+        'from pathlib import Path',
+        'exe = Path(imageio_ffmpeg.get_ffmpeg_exe())',
+        'assert exe.is_file(), f"ffmpeg missing: {exe}"',
+        'print("AURORA_FILE_INTELLIGENCE_READY", exe)'
+    ) -join "`n"
     & $Python -c $check
-    if ($LASTEXITCODE -ne 0) { throw 'Проверка File Intelligence не пройдена.' }
+    if ($LASTEXITCODE -ne 0) { throw 'File Intelligence verification failed.' }
 
-    Set-Stage 'ready' 100 'File Intelligence готов к локальной работе'
+    Set-Stage 'ready' 100 'File Intelligence is ready for local use'
     Write-Host 'AuroraFox File Intelligence installed.' -ForegroundColor Green
 } catch {
     Set-Stage 'error' 0 $_.Exception.Message

@@ -1,4 +1,4 @@
-param(
+﻿param(
     [ValidateSet('core','balanced','full')][string]$Profile = 'balanced',
     [string]$StateFile = ''
 )

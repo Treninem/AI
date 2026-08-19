@@ -118,7 +118,10 @@ jobs:
             $errors = $null
             [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
             if ($errors.Count -gt 0) {
-              $errors | ForEach-Object { Write-Error "$file : $($_.Message)" }
+              foreach ($parseError in $errors) {
+                $extent = $parseError.Extent
+                Write-Error ("{0}:{1}:{2}: {3} | token={4}" -f $file, $extent.StartLineNumber, $extent.StartColumnNumber, $parseError.Message, $extent.Text)
+              }
               throw "PowerShell parse failed: $file"
             }
           }

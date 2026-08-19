@@ -81,7 +81,7 @@ func _build_overlay() -> void:
 	profile_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	panel.add_child(profile_label)
 
-	var device := models.status().get("device", {})
+	var device: Dictionary = models.status().get("device", {})
 	var device_label := Label.new()
 	device_label.text = "Память устройства: %s МБ RAM • свободно %s МБ" % [str(device.get("total_ram_mb", "?")), str(device.get("free_storage_mb", "?"))]
 	device_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -142,7 +142,7 @@ func _install() -> void:
 	_set_actions_enabled(false)
 	cancel_button.visible = true
 	status_label.text = "Подготовка загрузки…"
-	var result := await models.download_recommended()
+	var result: Dictionary = await models.download_recommended()
 	if not result.get("ok", false) and not result.get("cancelled", false):
 		status_label.text = "Ошибка: " + str(result.get("error", "Не удалось установить модель"))
 		_set_actions_enabled(true)
@@ -161,7 +161,7 @@ func _on_local_model_selected(path: String) -> void:
 	status_label.text = "Проверяю и копирую GGUF…"
 	progress.value = 0
 	await get_tree().process_frame
-	var result := models.install_local_gguf(path)
+	var result: Dictionary = models.install_local_gguf(path)
 	if result.get("ok", false):
 		status_label.text = "Локальная модель установлена. AuroraFox готов."
 		progress.max_value = maxf(1.0, float(result.get("bytes", 1)))

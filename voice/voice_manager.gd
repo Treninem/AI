@@ -16,6 +16,7 @@ signal settings_changed(settings: Dictionary)
 
 const SETTINGS_PATH := "user://aurora_voice_settings.json"
 const PERSONALITY_PATH := "res://voice/config/personality.json"
+const VERSION_PATH := "res://project/version.json"
 const DEFAULTS := {
 	"enabled": true,
 	"auto_speak": true,
@@ -175,10 +176,22 @@ func _on_backend_ready(info: Dictionary) -> void:
 	_apply_mic_mode()
 	if not _startup_done:
 		_startup_done = true
+		_play_system_sound("startup")
+		var phrase := "Загружаюсь. Версия %s. Я стала другой." % _current_version()
 		if bool(settings.get("startup_greeting", false)):
-			_play_system_sound("startup")
-			var phrase := await _phrase("startup")
-			if not phrase.is_empty(): say(phrase, "happy", 0.42)
+			var extra := await _phrase("startup")
+			if not extra.is_empty():
+				phrase += " " + extra
+		say(phrase, "happy", 0.42)
+
+func _current_version() -> String:
+	if FileAccess.file_exists(VERSION_PATH):
+		var data = JSON.parse_string(FileAccess.get_file_as_string(VERSION_PATH))
+		if data is Dictionary:
+			var value := str(data.get("numeric", "")).strip_edges()
+			if not value.is_empty():
+				return value
+	return str(ProjectSettings.get_setting("application/config/version", "0.0.0.0"))
 
 func _on_awakened() -> void:
 	wake_word_detected.emit()

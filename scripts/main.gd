@@ -27,8 +27,8 @@ var rename_dialog: AcceptDialog
 var rename_input: LineEdit
 var rename_target_id := ""
 
-const CHAT_BACKGROUND: Texture2D = preload("res://assets/chat_background.webp")
-const UI_ATLAS: Texture2D = preload("res://assets/ui_atlas.webp")
+const CHAT_BACKGROUND: Texture2D = preload("res://assets/chat_background.png")
+const UI_ATLAS: Texture2D = preload("res://assets/ui_atlas.png")
 
 const BG := Color("070b14")
 const SIDEBAR := Color(0.025, 0.03, 0.075, 0.93)

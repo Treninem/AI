@@ -16,7 +16,6 @@ func _init() -> void:
 		FileIntelligenceClient.new(),
 		AttachmentManager.new(),
 		AuroraFileSetupWizard.new(),
-		AuroraSettingsOverlay.new(),
 		AndroidFileToolBridge.new(),
 		ProjectAccessStore.new(),
 		ProjectIndexClient.new(),
@@ -34,5 +33,7 @@ func _init() -> void:
 			quit(2)
 			return
 		node.free()
+	# AuroraSettingsOverlay intentionally depends on project autoloads AuroraVoice/AuroraUpdate.
+	# It is validated by the full Godot project import step, not this standalone --script smoke.
 	print("AURORA_VOICE_GODOT_SMOKE_OK")
 	quit(0)

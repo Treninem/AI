@@ -29,15 +29,15 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
             message = $Message
             time = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
         } | ConvertTo-Json -Compress
-        [IO.File]::WriteAllText($StateFile, $payload, [Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText($StateFile, $payload, (New-Object Text.UTF8Encoding($false)))
     }
 }
 
 try {
-    Set-Stage 'components' 5 'Подготовка локального Python runtime AuroraFox'
-    if (-not (Test-Path -LiteralPath $ensureUv)) { throw 'runtime/ensure_uv.ps1 не найден.' }
+    Set-Stage 'components' 5 'Preparing AuroraFox managed Python runtime'
+    if (-not (Test-Path -LiteralPath $ensureUv)) { throw 'runtime/ensure_uv.ps1 was not found.' }
     & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureUv -RuntimeRoot $runtimeRoot | Out-Null
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $uv)) { throw 'Не удалось подготовить локальный uv/Python runtime.' }
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $uv)) { throw 'Failed to prepare the local uv/Python runtime.' }
 
     $env:UV_PYTHON_INSTALL_DIR = Join-Path $runtimeRoot 'python'
     $env:UV_CACHE_DIR = Join-Path $runtimeRoot 'cache'
@@ -45,16 +45,16 @@ try {
 
     if (-not (Test-Path -LiteralPath $python)) {
         & $uv venv --python 3.11 $venv
-        if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать локальное окружение Aurora Voice.' }
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to create the Aurora Voice environment.' }
     }
 
-    Set-Stage 'dependencies' 18 'Установка зависимостей голосового модуля'
+    Set-Stage 'dependencies' 18 'Installing Aurora Voice dependencies'
     & $uv pip install --python $python -r (Join-Path $PSScriptRoot 'requirements.txt')
-    if ($LASTEXITCODE -ne 0) { throw 'Не удалось установить зависимости Aurora Voice.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Failed to install Aurora Voice dependencies.' }
 
     New-Item -ItemType Directory -Force -Path $models,$modelCache,$hfHome,$torchHome | Out-Null
 
-    Set-Stage 'wake_word' 38 'Подготовка локальной модели Fox / Лиса'
+    Set-Stage 'wake_word' 38 'Preparing local Fox wake-word model'
     if (-not (Test-Path $voskDir)) {
         Invoke-WebRequest -Uri 'https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip' -OutFile $voskZip
         Expand-Archive -Path $voskZip -DestinationPath $models -Force
@@ -66,45 +66,45 @@ try {
     $env:TORCH_HOME = $torchHome
 
     if (-not $SkipHeavyModels) {
-        Set-Stage 'stt_model' 55 'Загрузка Whisper large-v3-turbo для локального распознавания'
-        $sttCode = @'
-from transformers import pipeline
-import torch
-pipeline(
-    "automatic-speech-recognition",
-    model="openai/whisper-large-v3-turbo",
-    torch_dtype=torch.float32,
-    device=-1,
-)
-print("WHISPER_READY")
-'@
+        Set-Stage 'stt_model' 55 'Downloading Whisper large-v3-turbo for local STT'
+        $sttCode = @(
+            'from transformers import pipeline',
+            'import torch',
+            'pipeline(',
+            '    "automatic-speech-recognition",',
+            '    model="openai/whisper-large-v3-turbo",',
+            '    torch_dtype=torch.float32,',
+            '    device=-1,',
+            ')',
+            'print("WHISPER_READY")'
+        ) -join "`n"
         & $python -c $sttCode
-        if ($LASTEXITCODE -ne 0) { throw 'Не удалось подготовить Whisper.' }
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Whisper.' }
 
-        Set-Stage 'tts_model' 78 'Загрузка русского Silero TTS fallback'
-        $ttsCode = @'
-from silero import silero_tts
-model, _ = silero_tts(language="ru", speaker="v5_5_ru")
-print("SILERO_READY")
-'@
+        Set-Stage 'tts_model' 78 'Downloading Russian Silero TTS fallback'
+        $ttsCode = @(
+            'from silero import silero_tts',
+            'model, _ = silero_tts(language="ru", speaker="v5_5_ru")',
+            'print("SILERO_READY")'
+        ) -join "`n"
         & $python -c $ttsCode
-        if ($LASTEXITCODE -ne 0) { throw 'Не удалось подготовить Silero TTS.' }
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Silero TTS.' }
     }
 
-    Set-Stage 'microphone' 92 'Проверка аудио-библиотеки'
-    $audioCode = @'
-import sounddevice as sd
-print("AUDIO_DEVICES", len(sd.query_devices()))
-'@
+    Set-Stage 'microphone' 92 'Checking audio library'
+    $audioCode = @(
+        'import sounddevice as sd',
+        'print("AUDIO_DEVICES", len(sd.query_devices()))'
+    ) -join "`n"
     & $python -c $audioCode
-    if ($LASTEXITCODE -ne 0) { throw 'Аудио-библиотека не смогла инициализироваться.' }
+    if ($LASTEXITCODE -ne 0) { throw 'Audio library initialization failed.' }
 
-    Set-Stage 'ready' 100 'Голосовой модуль AuroraFox готов'
+    Set-Stage 'ready' 100 'AuroraFox voice module is ready'
     Write-Host ''
-    Write-Host 'AuroraFox Voice установлен.' -ForegroundColor Green
-    Write-Host 'Системный Python не требуется: AuroraFox использует собственный managed Python 3.11.'
-    Write-Host 'Wake word, VAD, STT и TTS подготовлены для локальной работы.'
-    Write-Host 'XTTS остаётся необязательным backend и включается только с разрешённым оригинальным speaker_wav.'
+    Write-Host 'AuroraFox Voice installed.' -ForegroundColor Green
+    Write-Host 'System Python is not required; AuroraFox uses managed Python 3.11.'
+    Write-Host 'Wake word, VAD, STT and TTS are prepared for local use.'
+    Write-Host 'XTTS remains optional and requires an authorized original speaker_wav.'
 } catch {
     Set-Stage 'error' 0 $_.Exception.Message
     throw

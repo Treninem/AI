@@ -18,11 +18,11 @@ function Write-UpdateLog([string]$Message) {
     } catch {}
 }
 
-function Wait-ForExit([int]$Pid, [int]$TimeoutSec = 90) {
+function Wait-ForExit([int]$ProcessId, [int]$TimeoutSec = 90) {
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     while ((Get-Date) -lt $deadline) {
-        $p = Get-Process -Id $Pid -ErrorAction SilentlyContinue
-        if (-not $p) { return $true }
+        $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+        if (-not $process) { return $true }
         Start-Sleep -Milliseconds 300
     }
     return $false
@@ -80,6 +80,28 @@ function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
     }
 }
 
+function Start-AuroraProcess([string]$Executable, [string[]]$Arguments = @(), [switch]$PassThru) {
+    $extension = [IO.Path]::GetExtension($Executable).ToLowerInvariant()
+    if ($extension -in @('.cmd', '.bat')) {
+        $escapedArgs = @($Arguments | ForEach-Object { '"' + ([string]$_).Replace('"', '""') + '"' })
+        $commandLine = '"' + $Executable + '"'
+        if ($escapedArgs.Count -gt 0) { $commandLine += ' ' + ($escapedArgs -join ' ') }
+        $params = @{
+            FilePath = $env:ComSpec
+            ArgumentList = @('/d', '/s', '/c', ('"' + $commandLine + '"'))
+            WindowStyle = 'Hidden'
+        }
+        if ($PassThru) { $params.PassThru = $true }
+        return Start-Process @params
+    }
+    $params = @{
+        FilePath = $Executable
+        ArgumentList = $Arguments
+    }
+    if ($PassThru) { $params.PassThru = $true }
+    return Start-Process @params
+}
+
 $Package = [IO.Path]::GetFullPath($Package)
 $InstallDir = [IO.Path]::GetFullPath($InstallDir).TrimEnd('\')
 $ExpectedSha256 = $ExpectedSha256.ToLowerInvariant()
@@ -97,7 +119,7 @@ try {
     $actual = (Get-FileHash -LiteralPath $Package -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actual -ne $ExpectedSha256) { throw "SHA-256 mismatch: $actual" }
 
-    if (-not (Wait-ForExit -Pid $ParentPid)) { throw 'AuroraFox did not exit in time' }
+    if (-not (Wait-ForExit -ProcessId $ParentPid)) { throw 'AuroraFox did not exit in time' }
     Stop-AuroraRuntimeProcesses -Root $InstallDir
 
     Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
@@ -112,7 +134,7 @@ try {
             Remove-Item -LiteralPath $inner -Recurse -Force
         }
     }
-    if (-not (Test-Path -LiteralPath (Join-Path $staging $ExeName))) { throw 'New package does not contain AuroraFox.exe' }
+    if (-not (Test-Path -LiteralPath (Join-Path $staging $ExeName))) { throw "New package does not contain $ExeName" }
 
     if (Test-Path -LiteralPath $HealthFile) { Remove-Item -LiteralPath $HealthFile -Force }
     if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
@@ -131,24 +153,24 @@ try {
 
     if (-not (Test-Path -LiteralPath $newExe)) { throw 'Updated executable disappeared after switch' }
     Write-UpdateLog 'Launching updated AuroraFox for health confirmation'
-    $newProcess = Start-Process -FilePath $newExe -ArgumentList @('--', '--aurora-update-health', $HealthFile) -PassThru
+    $newProcess = Start-AuroraProcess -Executable $newExe -Arguments @('--', '--aurora-update-health', $HealthFile) -PassThru
 
     $deadline = (Get-Date).AddSeconds(45)
     $healthy = $false
     while ((Get-Date) -lt $deadline) {
         if (Test-Path -LiteralPath $HealthFile) { $healthy = $true; break }
-        if ($newProcess.HasExited) { break }
+        if ($newProcess -and $newProcess.HasExited) { break }
         Start-Sleep -Milliseconds 350
     }
 
     if (-not $healthy) {
         Write-UpdateLog 'Health check failed, rolling back'
-        try { if (-not $newProcess.HasExited) { Stop-Process -Id $newProcess.Id -Force -ErrorAction SilentlyContinue } } catch {}
+        try { if ($newProcess -and -not $newProcess.HasExited) { Stop-Process -Id $newProcess.Id -Force -ErrorAction SilentlyContinue } } catch {}
         Start-Sleep -Milliseconds 500
         if (Test-Path -LiteralPath $InstallDir) { Remove-Item -LiteralPath $InstallDir -Recurse -Force }
         Move-Item -LiteralPath $backup -Destination $InstallDir
         $oldExe = Join-Path $InstallDir $ExeName
-        if (Test-Path -LiteralPath $oldExe) { Start-Process -FilePath $oldExe | Out-Null }
+        if (Test-Path -LiteralPath $oldExe) { Start-AuroraProcess -Executable $oldExe | Out-Null }
         throw 'Updated AuroraFox did not pass startup health check; rollback completed'
     }
 

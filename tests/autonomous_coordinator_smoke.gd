@@ -29,10 +29,16 @@ func _init() -> void:
 		quit(2)
 		return
 
+	if int(report.get("schema_version", 0)) != 1:
+		push_error("Compatibility report schema changed unexpectedly")
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(3)
+		return
+
 	if str(report.get("hot_extension_contract", "")) != "RefCounted/aurora_ext_*":
 		push_error("Hot extension compatibility contract changed unexpectedly")
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
-		quit(3)
+		quit(4)
 		return
 
 	var goals := AuroraGoals.new()
@@ -40,21 +46,31 @@ func _init() -> void:
 	if selected.strip_edges().is_empty():
 		push_error("Autonomous goal selection returned an empty goal")
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
-		quit(4)
+		quit(5)
 		return
 
 	var coordinator_script = load("res://agent/autonomous_coordinator.gd")
 	if coordinator_script == null or not coordinator_script.can_instantiate():
 		push_error("Autonomous coordinator cannot be instantiated")
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
-		quit(5)
+		quit(6)
 		return
+
+	var coordinator = coordinator_script.new()
+	if coordinator == null or not coordinator.has_method("synchronize_all") or not coordinator.has_method("run_autonomous_cycle"):
+		push_error("Autonomous coordinator public integration API is incomplete")
+		if coordinator != null:
+			coordinator.free()
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(7)
+		return
+	coordinator.free()
 
 	var main_scene_text := FileAccess.get_file_as_string("res://main.tscn")
 	if not main_scene_text.contains("AutonomousCoordinator"):
 		push_error("Main scene does not contain AutonomousCoordinator")
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
-		quit(6)
+		quit(8)
 		return
 
 	_cleanup([tools, agent_core, improver, extensions, memory, ai])

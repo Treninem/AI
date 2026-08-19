@@ -2,7 +2,7 @@ class_name DeveloperRuntimeManager
 extends Node
 
 const GODOT_VERSION := "4.7.1"
-const GODOT_ZIP_URL := "https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip"
+const GODOT_ZIP_URL := "https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip"
 const RUNTIME_DIR := "user://developer_runtime"
 const ZIP_PATH := "user://developer_runtime/godot-4.7.1.zip"
 const EXE_PATH := "user://developer_runtime/godot.exe"
@@ -24,10 +24,10 @@ func ensure_ready() -> Dictionary:
 		return {"ok": false, "error": "Bundled developer Godot runtime is currently prepared for Windows only"}
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(RUNTIME_DIR))
 	_emit("download", 10, "Загрузка Godot 4.7.1 developer runtime")
-	var downloaded := await _download()
+	var downloaded: Dictionary = await _download()
 	if not downloaded.get("ok", false): return downloaded
 	_emit("extract", 65, "Распаковка Godot 4.7.1")
-	var extracted := _extract()
+	var extracted: Dictionary = _extract()
 	if not extracted.get("ok", false): return extracted
 	_detect_existing()
 	if developer_godot.is_empty(): return {"ok": false, "error": "Developer Godot executable was not found after extraction"}
