@@ -96,7 +96,7 @@ jobs:
 
       - name: Build AuroraFox Android release APK
         shell: pwsh
-        run: ./build/build_android.ps1 -Godot "$env:GODOT" -Gradle "gradle"
+        run: ./build/build_android.ps1 -Godot "$env:GODOT" -Gradle "gradle" -ReleaseOnly
 
       - name: Create installable test-signed APK
         shell: bash
