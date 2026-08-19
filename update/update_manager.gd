@@ -20,8 +20,9 @@ const PUBLIC_KEY_PATH := "res://update/release_public.pub"
 const DEFAULT_SETTINGS := {
 	"auto_check": true,
 	"auto_download": true,
+	"auto_apply": true,
 	"channel": "stable",
-	"check_interval_hours": 6,
+	"check_interval_hours": 1,
 	"last_check_unix": 0.0
 }
 
@@ -47,14 +48,14 @@ func _process(delta: float) -> void:
 	if _timer < 60.0: return
 	_timer = 0.0
 	var last := float(settings.get("last_check_unix", 0.0))
-	var hours := maxf(1.0, float(settings.get("check_interval_hours", 6)))
+	var hours := maxf(1.0, float(settings.get("check_interval_hours", 1)))
 	if Time.get_unix_time_from_system() - last >= hours * 3600.0:
 		check_for_updates(false)
 
 func _initial_check() -> void:
 	await get_tree().create_timer(2.0).timeout
 	if bool(settings.get("auto_check", true)):
-		check_for_updates(false)
+		await check_for_updates(false)
 
 func check_for_updates(manual := true) -> Dictionary:
 	if checking:
@@ -119,9 +120,10 @@ func check_for_updates(manual := true) -> Dictionary:
 	latest_info["selected_asset"] = asset
 	_log("update available %s -> %s" % [current_version, remote])
 	update_available.emit(latest_info)
+	var response := {"ok": true, "available": true, "info": latest_info}
 	if bool(settings.get("auto_download", true)):
-		download_update()
-	return {"ok": true, "available": true, "info": latest_info}
+		response["download"] = await download_update()
+	return response
 
 func download_update() -> Dictionary:
 	if downloading:
@@ -165,7 +167,11 @@ func download_update() -> Dictionary:
 	downloaded_path = absolute
 	_log("download verified version=%s sha256=%s" % [version, actual])
 	update_ready.emit(latest_info, downloaded_path)
-	return {"ok": true, "path": downloaded_path, "sha256": actual}
+	var response := {"ok": true, "path": downloaded_path, "sha256": actual, "verified": true}
+	if bool(settings.get("auto_apply", true)) and not OS.has_feature("editor"):
+		_log("verified update is configured for automatic apply")
+		response["apply"] = apply_downloaded_update()
+	return response
 
 func apply_downloaded_update() -> Dictionary:
 	if latest_info.is_empty() or downloaded_path.is_empty() or not FileAccess.file_exists(downloaded_path):
@@ -183,6 +189,10 @@ func set_auto_check(value: bool) -> void:
 
 func set_auto_download(value: bool) -> void:
 	settings["auto_download"] = value
+	_save_settings()
+
+func set_auto_apply(value: bool) -> void:
+	settings["auto_apply"] = value
 	_save_settings()
 
 func set_check_interval_hours(value: int) -> void:
@@ -258,7 +268,7 @@ func _apply_windows_update() -> Dictionary:
 	if pid <= 0: return _fail("Не удалось запустить updater helper", true)
 	_log("windows updater launched pid=%d" % pid)
 	get_tree().quit()
-	return {"ok": true, "applying": true}
+	return {"ok": true, "applying": true, "automatic": true}
 
 func _apply_android_update() -> Dictionary:
 	if not Engine.has_singleton("AuroraFoxRuntime"):
@@ -269,11 +279,12 @@ func _apply_android_update() -> Dictionary:
 	var raw = plugin.call("installUpdateApk", downloaded_path)
 	var parsed = JSON.parse_string(str(raw))
 	if parsed is Dictionary:
+		parsed["automatic"] = true
 		if bool(parsed.get("ok", false)):
-			_log("android package installer opened")
+			_log("android package installer opened automatically")
 			return parsed
 		if bool(parsed.get("requires_permission", false)):
-			_log("android unknown-app-source permission requested")
+			_log("android unknown-app-source permission requested automatically")
 			return parsed
 		return _fail(str(parsed.get("error", "Не удалось открыть установщик Android")), true)
 	return _fail("Некорректный ответ Android updater", true)
