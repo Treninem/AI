@@ -1,0 +1,91 @@
+name: AuroraFox Agent Sync CI
+
+on:
+  push:
+    branches:
+      - main
+      - aurora-agent-sync-v1
+    paths:
+      - 'agent/**'
+      - 'scripts/**'
+      - 'runtime/**'
+      - 'update/**'
+      - 'file_intelligence/**'
+      - 'models/**'
+      - 'voice/**'
+      - 'tests/**'
+      - 'main.tscn'
+      - 'project.godot'
+      - '.github/workflows/agent-sync-ci.yml'
+  pull_request:
+    paths:
+      - 'agent/**'
+      - 'scripts/**'
+      - 'runtime/**'
+      - 'update/**'
+      - 'file_intelligence/**'
+      - 'models/**'
+      - 'voice/**'
+      - 'tests/**'
+      - 'main.tscn'
+      - 'project.godot'
+      - '.github/workflows/agent-sync-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  godot-sync:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot 4.7.1
+        id: godot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable'
+          New-Item -ItemType Directory -Force .ci\godot | Out-Null
+          Invoke-WebRequest "$base/Godot_v4.7.1-stable_win64.exe.zip" -OutFile .ci\godot.zip
+          Expand-Archive .ci\godot.zip .ci\godot -Force
+          $godot = (Get-ChildItem .ci\godot -Filter '*_console.exe' | Select-Object -First 1).FullName
+          if (-not $godot) { $godot = (Get-ChildItem .ci\godot -Filter '*.exe' | Select-Object -First 1).FullName }
+          if (-not $godot) { throw 'Godot executable not found' }
+          "path=$godot" >> $env:GITHUB_OUTPUT
+
+      - name: Import and parse project
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --import
+          if ($LASTEXITCODE -ne 0) { throw 'Godot import failed' }
+
+      - name: Autonomous coordinator smoke
+        shell: pwsh
+        run: |
+          if (Test-Path tests/autonomous_coordinator_smoke.gd) {
+            & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/autonomous_coordinator_smoke.gd
+            if ($LASTEXITCODE -ne 0) { throw 'Autonomous coordinator smoke failed' }
+          } else {
+            Write-Host 'Autonomous coordinator not present on this revision; skipping its dedicated smoke test.'
+          }
+
+      - name: Self improvement smoke
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/self_improver_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Self improver smoke failed' }
+
+      - name: Runtime extension smoke
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/runtime_extension_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Runtime extension smoke failed' }
+
+      - name: Update smoke
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/update_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Update smoke failed' }
