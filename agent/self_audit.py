@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import subprocess
 from dataclasses import dataclass, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -51,6 +53,45 @@ def current_version() -> str:
         return "V0.0.0.0"
 
 
+def repository_digest() -> str:
+    """Hash committed file identities, excluding the readiness evidence itself.
+
+    Git index blob ids make this stable across Windows/Linux line-ending checkouts.
+    Any committed code/config/test change invalidates old readiness evidence even
+    when somebody forgot to bump the version number.
+    """
+    try:
+        proc = subprocess.run(
+            ["git", "-C", str(ROOT), "ls-files", "-s", "-z"],
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.DEVNULL,
+        )
+    except Exception:
+        return ""
+    digest = hashlib.sha256()
+    rows: list[tuple[str, str]] = []
+    for raw in proc.stdout.split(b"\0"):
+        if not raw:
+            continue
+        text = raw.decode("utf-8", errors="surrogateescape")
+        if "\t" not in text:
+            continue
+        meta, path = text.split("\t", 1)
+        if path == "agent/state/release_verification.json":
+            continue
+        parts = meta.split()
+        if len(parts) < 2:
+            continue
+        rows.append((path, parts[1]))
+    for path, blob in sorted(rows):
+        digest.update(path.encode("utf-8", errors="surrogateescape"))
+        digest.update(b"\0")
+        digest.update(blob.encode("ascii", errors="ignore"))
+        digest.update(b"\0")
+    return digest.hexdigest() if rows else ""
+
+
 def check_files(key: str, title: str, weight: int, files: list[str], markers: dict[str, list[str]] | None = None) -> Check:
     evidence: list[str] = []
     missing: list[str] = []
@@ -75,17 +116,17 @@ def check_release_verification(weight: int = 24) -> Check:
     if not RELEASE_EVIDENCE.exists():
         return Check(
             "release_verification",
-            "Observed full release verification for current version",
+            "Observed full release verification for current repository state",
             weight,
             False,
             [],
-            [rel + ": no full release verification evidence for current version"],
+            [rel + ": no full release verification evidence for current repository state"],
         )
     evidence.append(rel)
     try:
         data = json.loads(RELEASE_EVIDENCE.read_text(encoding="utf-8"))
     except Exception as exc:
-        return Check("release_verification", "Observed full release verification for current version", weight, False, evidence, [f"{rel}: invalid JSON: {exc}"])
+        return Check("release_verification", "Observed full release verification for current repository state", weight, False, evidence, [f"{rel}: invalid JSON: {exc}"])
 
     version = current_version()
     if not bool(data.get("verified", False)):
@@ -99,9 +140,19 @@ def check_release_verification(weight: int = 24) -> Check:
     commit = str(data.get("commit", "")).strip()
     if len(commit) < 7:
         missing.append(f"{rel}: verified commit SHA is missing")
+
+    expected_digest = str(data.get("source_digest", "")).strip()
+    current_digest = repository_digest()
+    if not current_digest:
+        missing.append(f"{rel}: cannot compute current Git repository digest")
+    elif not expected_digest:
+        missing.append(f"{rel}: source_digest is missing")
+    elif expected_digest != current_digest:
+        missing.append(f"{rel}: repository changed after verification")
+
     return Check(
         "release_verification",
-        "Observed full release verification for current version",
+        "Observed full release verification for current repository state",
         weight,
         not missing,
         evidence,
@@ -132,7 +183,7 @@ def build_checks() -> list[Check]:
             "api_privacy",
             "External API with conversation isolation and private-by-default learning",
             8,
-            ["api/server.py", "api/agent_bridge.gd", "api/private_memory_view.gd", "api/private_experience_store.gd", "tests/test_api_privacy_contract.py", ".github/workflows/api-ci.yml"],
+            ["api/server.py", "api/agent_bridge.gd", "api/learning_sync.py", "api/private_memory_view.gd", "api/private_experience_store.gd", "tests/test_api_privacy_contract.py", ".github/workflows/api-ci.yml"],
             {
                 "api/agent_bridge.gd": ["ApiPrivateMemoryView", "ApiPrivateExperienceStore", "share_for_learning"],
                 "api/learning_sync.py": ["skipped_private", "share_for_learning"],
@@ -223,12 +274,13 @@ def audit() -> dict:
         for item in checks
     ]
     return {
-        "schema_version": 2,
+        "schema_version": 3,
         "generated_at": now_iso(),
         "version": current_version(),
+        "repository_digest": repository_digest(),
         "progress_percent": percent,
         "ready": ready,
-        "readiness_basis": "current-version full release verification evidence is mandatory",
+        "readiness_basis": "current-version full release verification plus exact committed repository digest is mandatory",
         "required_release_gates": sorted(REQUIRED_RELEASE_GATES),
         "checks": [asdict(item) for item in checks],
         "missing": missing,
