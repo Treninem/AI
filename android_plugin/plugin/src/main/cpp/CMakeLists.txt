@@ -11,7 +11,7 @@ target_link_libraries(aurorafox_runtime PRIVATE ${log-lib})
 
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 
-# Local LLM runtime: official llama.cpp source fetched by setup_native.ps1.
+# Local LLM runtime: official llama.cpp source fetched at a pinned revision.
 if(EXISTS "${THIRD_PARTY_DIR}/llama.cpp/CMakeLists.txt")
     set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
     set(GGML_NATIVE OFF CACHE BOOL "" FORCE)
@@ -36,7 +36,6 @@ if(EXISTS "${THIRD_PARTY_DIR}/wasm3/source/CMakeLists.txt")
     target_include_directories(aurorafox_runtime PRIVATE ${THIRD_PARTY_DIR}/wasm3/source)
 endif()
 
-# whisper.cpp is downloaded now; its tested JNI adapter is enabled separately.
-if(EXISTS "${THIRD_PARTY_DIR}/whisper.cpp/CMakeLists.txt")
-    target_compile_definitions(aurorafox_runtime PRIVATE AURORAFOX_WHISPER_SOURCES_PRESENT=1)
-endif()
+# Android speech is intentionally supplied by sherpa-onnx in the Kotlin layer.
+# There is no dead whisper.cpp JNI build here; NativeRuntime reports that
+# fallback as unavailable and AndroidVoiceRuntime handles offline STT/TTS.
