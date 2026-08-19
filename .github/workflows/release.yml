@@ -27,7 +27,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $base = 'https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.1-stable'
           New-Item -ItemType Directory -Force .ci\godot,.ci\templates | Out-Null
           Invoke-WebRequest "$base/Godot_v4.7.1-stable_win64.exe.zip" -OutFile .ci\godot.zip
           Expand-Archive .ci\godot.zip .ci\godot -Force
@@ -120,7 +120,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          base='https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable'
+          base='https://github.com/godotengine/godot/releases/download/4.7.1-stable'
           mkdir -p .ci/godot "$HOME/.local/share/godot/export_templates/4.7.1.stable"
           curl -L "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o .ci/godot.zip
           unzip -q .ci/godot.zip -d .ci/godot
