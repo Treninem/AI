@@ -1,5 +1,6 @@
 ; AuroraFox for Godot 4.7.1
 ; Engine configuration file.
+; CI validation probe: no runtime behavior change.
 config_version=5
 
 [application]

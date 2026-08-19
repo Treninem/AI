@@ -1,0 +1,1 @@
+AuroraFox V1.2.0.0 full validation trigger for the exact latest main source.
