@@ -1,6 +1,6 @@
 [gd_scene load_steps=29 format=3]
 
-[ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
+[ext_resource path="res://scripts/main_compat.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/voice_overlay_compat.gd" type="Script" id="2_voice"]
 [ext_resource path="res://scripts/computer_overlay_compat.gd" type="Script" id="3_computer"]
 [ext_resource path="res://scripts/sandbox_tool_bridge.gd" type="Script" id="4_sandbox"]
