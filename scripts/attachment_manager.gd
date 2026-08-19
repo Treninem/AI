@@ -1,6 +1,8 @@
 class_name AttachmentManager
 extends Node
 
+signal file_setup_required
+
 const TEXT_EXTENSIONS := ["txt", "md", "json", "csv", "tsv", "gd", "py", "js", "ts", "tsx", "jsx", "html", "css", "xml", "yaml", "yml", "toml", "ini", "cfg", "log", "shader", "glsl", "cpp", "c", "h", "hpp", "cs", "java", "kt", "rs", "go", "php", "rb", "lua", "swift", "dart", "sql", "sh", "ps1", "r", "jl"]
 const IMAGE_EXTENSIONS := ["png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "tif", "tiff"]
 const DOCUMENT_EXTENSIONS := ["pdf", "docx", "xlsx", "xls", "pptx", "odt", "ods"]
@@ -59,6 +61,7 @@ func analyze(path: String, question := "") -> Dictionary:
 		item["analysis_error"] = str(result.get("error", "File Intelligence недоступен"))
 		item["needs_setup"] = not intelligence.runtime_is_installed()
 		item["warnings"] = [str(result.get("error", "File Intelligence недоступен"))]
+		if bool(item["needs_setup"]): file_setup_required.emit()
 		return item
 
 	item["content"] = str(result.get("content", ""))
