@@ -1,6 +1,6 @@
 #define MyAppName "AuroraFox"
 #ifndef MyAppVersion
-  #define MyAppVersion "0.4.0"
+  #define MyAppVersion "1.0.0.0"
 #endif
 #define MyAppPublisher "AuroraFox"
 #define MyAppExeName "AuroraFox.exe"
