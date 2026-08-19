@@ -23,7 +23,7 @@ $env:AURORAFOX_API_HOST = $HostAddress
 $env:AURORAFOX_API_PORT = [string]$Port
 $env:AURORAFOX_USER_DIR = (Join-Path $env:USERPROFILE '.aurorafox')
 
-$arguments = @('-m', 'api.app')
+$arguments = @('-m', 'api.server')
 $process = Start-Process -FilePath $Pythonw -ArgumentList $arguments -WorkingDirectory $AppRoot -WindowStyle Hidden -RedirectStandardOutput $StdOut -RedirectStandardError $StdErr -PassThru
 
 Write-Host ("AuroraFox API started: PID {0}, http://{1}:{2}" -f $process.Id, $HostAddress, $Port)
