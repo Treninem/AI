@@ -7,8 +7,8 @@ func _init() -> void:
 		improver.free()
 		quit(2)
 		return
-	if not improver.has_method("run_mutation_tournament"):
-		push_error("SelfImprover mutation tournament API is missing")
+	if not improver.has_method("run_mutation_tournament") or not improver.has_method("_runtime_contract_test"):
+		push_error("SelfImprover tournament/runtime verification API is missing")
 		improver.free()
 		quit(3)
 		return
@@ -38,20 +38,70 @@ func _init() -> void:
 		improver.free()
 		quit(8)
 		return
+
+	var valid_extension := """extends RefCounted
+
+func aurora_extension_manifest() -> Dictionary:
+	return {
+		"name": "smoke",
+		"description": "deterministic smoke extension",
+		"tools": [{
+			"name": "aurora_ext_smoke_rank",
+			"description": "rank an integer",
+			"schema": {"value": "int"},
+			"method": "_rank"
+		}]
+	}
+
+func aurora_extension_self_test() -> Dictionary:
+	return {"ok": _rank({"value": 3}) == 6}
+
+func _rank(args: Dictionary) -> int:
+	return int(args.get("value", 0)) * 2
+"""
+	var proposal := {
+		"path": "res://generated/smoke.gd",
+		"content": valid_extension,
+		"reason": "robust context ranking with deterministic input validation and explicit edge handling",
+		"verification": "Godot compiler, manifest contract and extension self-test must pass"
+	}
+	var validation := improver._validate_proposal(proposal)
+	if not validation.get("ok", false):
+		push_error("Valid generated extension was rejected: " + JSON.stringify(validation))
+		improver.free()
+		quit(9)
+		return
+	var runtime_test := improver._runtime_contract_test(valid_extension)
+	if not runtime_test.get("ok", false) or not runtime_test.get("compiled", false):
+		push_error("Generated extension runtime contract test failed: " + JSON.stringify(runtime_test))
+		improver.free()
+		quit(10)
+		return
+	var declared_tools = runtime_test.get("tools", [])
+	if not declared_tools is Array or "aurora_ext_smoke_rank" not in declared_tools:
+		push_error("Generated extension manifest tool was not verified")
+		improver.free()
+		quit(11)
+		return
+
+	var broken_self_test := valid_extension.replace('return {"ok": _rank({"value": 3}) == 6}', 'return {"ok": false, "error": "intentional smoke failure"}')
+	var failed := improver._runtime_contract_test(broken_self_test)
+	if failed.get("ok", false):
+		push_error("SelfImprover accepted a mutation whose self-test failed")
+		improver.free()
+		quit(12)
+		return
+
 	var score := improver._deterministic_candidate_score(
 		"robust context ranking",
-		{
-			"reason": "robust context ranking with deterministic input validation and explicit edge handling",
-			"verification": "Godot parser and workspace tests must pass",
-			"content": "extends RefCounted\nfunc aurora_extension_manifest(): return {}\nfunc run(args):\n\tif args is Dictionary:\n\t\treturn clamp(1, 0, 1)\n\treturn 0\n"
-		},
+		proposal,
 		{"ok": true, "test": {"ok": true}}
 	)
 	if score <= 60.0 or score > 75.0:
 		push_error("Deterministic mutation score is outside expected bounds: " + str(score))
 		improver.free()
-		quit(9)
+		quit(13)
 		return
 	improver.free()
-	print("AURORA_SELF_IMPROVER_SMOKE_OK tournament=3..10")
+	print("AURORA_SELF_IMPROVER_SMOKE_OK tournament=3..10 runtime_contract=true")
 	quit(0)
