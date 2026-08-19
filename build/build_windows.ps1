@@ -113,11 +113,11 @@ foreach ($file in @("computer_service.py", "requirements.txt", "install_computer
 $computerVenv = Join-Path $computerSource ".venv"
 if (Test-Path $computerVenv) { Copy-Item $computerVenv (Join-Path $computerOut ".venv") -Recurse -Force }
 
-# Rich File Intelligence bootstrap. Heavy dependencies are installed into its
-# own local .venv on demand using the same managed AuroraFox Python.
+# Rich File Intelligence + source-project index bootstrap. Both services reuse
+# the same isolated .venv and managed AuroraFox Python.
 if (Test-Path $fileOut) { Remove-Item $fileOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $fileOut | Out-Null
-foreach ($file in @("file_service.py", "requirements.txt", "install_files.ps1")) {
+foreach ($file in @("file_service.py", "project_index_service.py", "requirements.txt", "install_files.ps1")) {
     $source = Join-Path $fileSource $file
     if (-not (Test-Path $source)) { throw "File Intelligence bootstrap is missing: $file" }
     Copy-Item $source (Join-Path $fileOut $file) -Force
@@ -142,6 +142,7 @@ if (-not $SkipVoiceSetup) {
 if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "file_service.py"))) { throw "File Intelligence service was not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "project_index_service.py"))) { throw "Project index service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "install_files.ps1"))) { throw "File Intelligence installer was not packaged" }
 if (-not (Test-Path (Join-Path $modelsOut "install_models.ps1"))) { throw "Local AI model bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
@@ -151,5 +152,5 @@ Write-Host "Managed runtime bootstrap: $runtimeOut"
 Write-Host "Local AI bootstrap: $modelsOut"
 Write-Host "Voice runtime/bootstrap: $voiceOut"
 Write-Host "Computer Agent bootstrap: $computerOut"
-Write-Host "File Intelligence bootstrap: $fileOut"
+Write-Host "File Intelligence + Project Index bootstrap: $fileOut"
 Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - managed-Python fallback/setup wizard" })))
