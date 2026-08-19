@@ -1,6 +1,6 @@
 extends Node
 
-const UI_ATLAS: Texture2D = preload("res://assets/ui_atlas.webp")
+const UI_ATLAS: Texture2D = preload("res://assets/ui_atlas.png")
 const REGION_BUTTON_PURPLE := Rect2(17, 456, 135, 38)
 const REGION_BUTTON_PURPLE_ALT := Rect2(167, 456, 135, 38)
 const REGION_BUTTON_CYAN := Rect2(326, 456, 142, 38)
