@@ -7,6 +7,9 @@ import torch
 from silero import silero_tts
 
 
+VOICE_ROOT = Path(__file__).resolve().parents[1]
+
+
 class TTSEngine(ABC):
     name = "base"
 
@@ -53,25 +56,48 @@ class XTTSVoiceEngine(TTSEngine):
         self.device = device
         self.model = None
         try:
-            from TTS.api import TTS  # optional dependency
+            from TTS.api import TTS  # coqui-tts keeps the TTS import namespace
             self._tts_cls = TTS
         except Exception:
             self._tts_cls = None
 
+    def _speaker_path(self) -> Path | None:
+        raw = str(self.config.get("speaker_wav", "")).strip()
+        if not raw:
+            return None
+        path = Path(raw).expanduser()
+        if not path.is_absolute():
+            path = VOICE_ROOT / path
+        try:
+            return path.resolve()
+        except OSError:
+            return path
+
     def available(self) -> bool:
-        wav = str(self.config.get("speaker_wav", "")).strip()
-        return bool(self.config.get("enabled", False) and self._tts_cls is not None and wav and Path(wav).is_file())
+        wav = self._speaker_path()
+        return bool(self.config.get("enabled", False) and self._tts_cls is not None and wav is not None and wav.is_file())
 
     def _load(self):
         if self.model is None:
-            self.model = self._tts_cls(self.config.get("model", "tts_models/multilingual/multi-dataset/xtts_v2")).to(self.device)
+            if self._tts_cls is None:
+                raise RuntimeError("coqui-tts is not installed")
+            self.model = self._tts_cls(
+                self.config.get("model", "tts_models/multilingual/multi-dataset/xtts_v2")
+            ).to(self.device)
         return self.model
 
     def synthesize(self, text: str, emotion: str = "neutral", intensity: float = 0.5,
                    speed: float = 1.0) -> tuple[np.ndarray, int]:
         if not self.available():
             raise RuntimeError("XTTS backend is unavailable or speaker_wav is not configured")
-        wav = self._load().tts(text=text, speaker_wav=self.config["speaker_wav"], language=self.config.get("language", "ru"))
+        speaker = self._speaker_path()
+        assert speaker is not None
+        wav = self._load().tts(
+            text=text,
+            speaker_wav=str(speaker),
+            language=self.config.get("language", "ru"),
+            speed=max(0.5, min(float(speed), 2.0)),
+        )
         return np.asarray(wav, dtype=np.float32), 24000
 
 
