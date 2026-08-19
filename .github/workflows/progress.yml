@@ -1,0 +1,67 @@
+name: AuroraFox Evolution Progress
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - 'agent/**'
+      - 'project/version.json'
+      - 'project.godot'
+      - 'runtime/**'
+      - 'update/**'
+      - 'file_intelligence/**'
+      - 'voice/**'
+      - 'scripts/**'
+      - 'tests/**'
+      - 'assets/ui/progress_bar.tscn'
+      - '.github/workflows/progress.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  evolution-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Compile autonomous agent utilities
+        run: python -m compileall -q agent
+
+      - name: Collect local and internet learning observations
+        run: >-
+          python agent/learning_collector.py
+          --query "local AI Godot LLM agent reasoning context optimization"
+          --local-limit 80
+          --source-limit 5
+
+      - name: Generate architecture audit
+        run: |
+          python agent/self_audit.py --output agent/state/audit.json || code=$?
+          if [ "${code:-0}" -ne 0 ] && [ "${code:-0}" -ne 2 ]; then exit "$code"; fi
+
+      - name: Generate release progress snapshot
+        run: |
+          python agent/progress_tracker.py --json || code=$?
+          if [ "${code:-0}" -ne 0 ] && [ "${code:-0}" -ne 2 ]; then exit "$code"; fi
+
+      - name: Upload evolution observations and progress
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurorafox-evolution-progress
+          path: |
+            .aurora/learning/observations.jsonl
+            agent/state/audit.json
+            agent/state/progress.json
+          if-no-files-found: error
+          retention-days: 14
