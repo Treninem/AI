@@ -49,6 +49,26 @@ jobs:
           PY
           rm -f assets/chat_background.webp assets/ui_atlas.webp
 
+      - name: Normalize PowerShell scripts for Windows PowerShell 5.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          from pathlib import Path
+
+          bom = b'\xef\xbb\xbf'
+          changed = 0
+          for path in sorted(Path('.').rglob('*.ps1')):
+              if '.git' in path.parts or 'build/private' in path.as_posix():
+                  continue
+              data = path.read_bytes()
+              if data.startswith(bom):
+                  continue
+              path.write_bytes(bom + data)
+              changed += 1
+          print(f'PowerShell UTF-8 BOM normalized: {changed} files')
+          PY
+
       - name: Verify converted assets
         shell: bash
         run: |
@@ -56,16 +76,16 @@ jobs:
           file assets/chat_background.png assets/ui_atlas.png
           grep -R --line-number --fixed-strings '.webp' scripts/main.gd scripts/voice_overlay.gd && exit 1 || true
 
-      - name: Commit repaired assets
+      - name: Commit repaired assets and PowerShell encoding
         shell: bash
         run: |
           set -euo pipefail
           git config user.name 'AuroraFox CI'
           git config user.email 'actions@users.noreply.github.com'
-          git add assets scripts/main.gd scripts/voice_overlay.gd
+          git add assets scripts/main.gd scripts/voice_overlay.gd '*.ps1' runtime voice computer file_intelligence models update build tests
           if git diff --cached --quiet; then
-            echo 'No asset repair changes required.'
+            echo 'No repair changes required.'
             exit 0
           fi
-          git commit -m 'fix: convert AuroraFox UI assets to Godot-safe PNG'
+          git commit -m 'fix: normalize Godot UI assets and Windows PowerShell scripts'
           git push origin HEAD:release-ci-validation
