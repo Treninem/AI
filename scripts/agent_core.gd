@@ -27,7 +27,7 @@ func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRe
 	dream_cycle.setup(ai)
 	team.setup(ai)
 
-func run_task(task: String) -> String:
+func run_task(task: String, conversation_context: Array = []) -> String:
 	memory.remember("user_task", task)
 	var useful_skills := experience.relevant_skills(task, 5)
 	var recent_failures := experience.recent_failures(5)
@@ -48,9 +48,10 @@ func run_task(task: String) -> String:
 	memory.remember("task_plan", JSON.stringify(plan))
 
 	var messages: Array = [
-		{"role":"system", "content": _system_prompt(task, useful_skills, plan, recent_failures, specialist_context)},
-		{"role":"user", "content": task}
+		{"role":"system", "content": _system_prompt(task, useful_skills, plan, recent_failures, specialist_context)}
 	]
+	_append_conversation_context(messages, conversation_context)
+	messages.append({"role":"user", "content": task})
 	var trajectory: Array = []
 	var draft_answer := ""
 
@@ -116,21 +117,37 @@ func run_task(task: String) -> String:
 			memory.remember("improvement_ideas", JSON.stringify(ideas))
 	return final_answer
 
+func _append_conversation_context(messages: Array, conversation_context: Array) -> void:
+	if conversation_context.is_empty(): return
+	var start := maxi(0, conversation_context.size() - 24)
+	for i in range(start, conversation_context.size()):
+		var item = conversation_context[i]
+		if not item is Dictionary: continue
+		var role := str(item.get("role", ""))
+		if role not in ["user", "assistant"]: continue
+		var content := str(item.get("content", "")).strip_edges()
+		if content.is_empty(): continue
+		# Keep a real per-chat transcript without allowing one huge old message to monopolize local context.
+		messages.append({"role": role, "content": content.substr(0, 16000)})
+
 func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary) -> String:
 	var recent := memory.recent(8)
 	var knowledge := memory.search_knowledge(task, 6)
 	return """
 Ты AuroraFox — автономный локальный AI-агент внутри Godot 4.7.1.
-Используй память, инструменты, компьютерное зрение, песочницу, File Intelligence, индекс проекта, внутреннюю команду специалистов и накопленные навыки.
+Используй контекст текущего чата, память, инструменты, компьютерное зрение, песочницу, File Intelligence, индекс проекта, внутреннюю команду специалистов и накопленные навыки.
 Если нужен инструмент, верни ТОЛЬКО JSON: {"tool":"tool_name","args":{...}}. Иначе дай конечный ответ.
 
 ПРОТОКОЛ РАБОТЫ С БОЛЬШИМ ПРОЕКТОМ:
 1. Если задача относится к существующему репозиторию/кодовой базе и нужно понять больше одного-двух файлов, сначала используй project_index_status.
 2. Если индекс отсутствует или устарел относительно задачи, вызови index_project. Повторная индексация инкрементальная и не должна без причины выполняться с force=true.
 3. Для поиска реализации, ошибки, класса, функции или зависимости сначала используй search_symbols и search_project, а не последовательное чтение всего дерева.
-4. После поиска читай/анализируй только реально релевантные файлы через read_file/analyze_file либо копируй их в workspace.
-5. Не считай результат поиска доказательством правильности кода: после изменения обязательны тест/компиляция/статический анализ и проверка фактического поведения.
-6. Индекс — навигация, а не источник истины после незаписанных изменений; при изменении файлов обнови индекс перед дальнейшим широким поиском, если это влияет на решение.
+4. Для внешней папки сначала проверь trusted_projects. Если папки там нет, не пытайся обходить ограничение: пользователь должен явно добавить её через настройки AuroraFox.
+5. Если задача требует изменить доверенный внешний проект: создай workspace, затем вызови workspace_import_project и работай только с копией в work/.
+6. Перед применением результата запусти workspace_test или эквивалентную проверку, затем project_compare_file для каждого изменяемого файла.
+7. project_apply_file используй только когда задача пользователя действительно требует внести изменения. Этот инструмент создаёт резервную копию, но не заменяет необходимость проверки.
+8. После применения изменений обнови индекс проекта, если дальнейшая работа зависит от новых символов/содержимого.
+9. Не считай результат поиска доказательством правильности кода: после изменения обязательны тест/компиляция/статический анализ и проверка фактического поведения.
 
 ПРОТОКОЛ ПЕСОЧНИЦЫ:
 1. Для сложной задачи с кодом, файлами, проектом или экспериментом сначала вызови workspace_create.
