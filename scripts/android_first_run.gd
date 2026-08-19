@@ -163,7 +163,7 @@ func _on_local_model_selected(path: String) -> void:
 	await get_tree().process_frame
 	var result: Dictionary = models.install_local_gguf(path)
 	if result.get("ok", false):
-		status_label.text = "Локальная модель установлена. AuroraFox готов."
+		status_label.text = "Локальная модель установлена."
 		progress.max_value = maxf(1.0, float(result.get("bytes", 1)))
 		progress.value = progress.max_value
 		await get_tree().create_timer(0.6).timeout
@@ -189,7 +189,7 @@ func _on_progress(_profile: String, downloaded_bytes: int, expected_bytes: int) 
 func _on_finished(_profile: String, ok: bool, message: String) -> void:
 	cancel_button.visible = false
 	if ok:
-		status_label.text = "Модель установлена. AuroraFox готов."
+		status_label.text = "Локальная модель установлена."
 		await get_tree().create_timer(0.7).timeout
 		_close_overlay()
 	elif message != "Download cancelled":
