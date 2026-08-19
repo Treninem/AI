@@ -169,6 +169,28 @@ func _collect_observations() -> Dictionary:
 		"godot": Engine.get_version_info(),
 		"tools_count": tools.tools.size() if tools != null else 0
 	}
+
+	if ai != null:
+		result["ai"] = ai.runtime_info()
+
+	var voice_node := get_node_or_null("/root/AuroraVoice")
+	if voice_node != null:
+		var voice_settings = voice_node.get("settings")
+		result["voice"] = {
+			"backend_ready": bool(voice_node.get("backend_is_ready")),
+			"enabled": bool(voice_settings.get("enabled", true)) if voice_settings is Dictionary else true,
+			"mic_mode": str(voice_settings.get("mic_mode", "unknown")) if voice_settings is Dictionary else "unknown"
+		}
+
+	var update_node := get_node_or_null("/root/AuroraUpdate")
+	if update_node != null:
+		result["update"] = {
+			"current_version": str(update_node.get("current_version")),
+			"checking": bool(update_node.get("checking")),
+			"downloading": bool(update_node.get("downloading")),
+			"download_ready": not str(update_node.get("downloaded_path")).is_empty()
+		}
+
 	if tools == null:
 		return result
 	if tools.tools.has("git_status"):
