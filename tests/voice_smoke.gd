@@ -13,6 +13,7 @@ func _init() -> void:
 		FileIntelligenceClient.new(),
 		AttachmentManager.new(),
 		AuroraFileSetupWizard.new(),
+		AuroraSettingsOverlay.new(),
 	]
 	for node in nodes:
 		if node == null:
