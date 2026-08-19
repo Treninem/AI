@@ -1,10 +1,10 @@
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
-$thirdParty = Join-Path $root "plugin\src\main\cpp\third_party"
-$libs = Join-Path $root "plugin\libs"
-$voiceAssets = Join-Path $root "plugin\src\main\assets\voice"
-$temp = Join-Path $env:TEMP "aurorafox-android-voice"
+$thirdParty = Join-Path $root "plugin/src/main/cpp/third_party"
+$libs = Join-Path $root "plugin/libs"
+$voiceAssets = Join-Path $root "plugin/src/main/assets/voice"
+$temp = Join-Path ([IO.Path]::GetTempPath()) "aurorafox-android-voice"
 New-Item -ItemType Directory -Force -Path $thirdParty,$libs,$voiceAssets,$temp | Out-Null
 
 function Ensure-Repo($name, $url) {
@@ -12,9 +12,11 @@ function Ensure-Repo($name, $url) {
     if (Test-Path (Join-Path $dest ".git")) {
         Write-Host "Updating $name..."
         git -C $dest pull --ff-only
+        if ($LASTEXITCODE -ne 0) { throw "Failed to update $name" }
     } else {
         Write-Host "Cloning $name..."
         git clone --depth 1 $url $dest
+        if ($LASTEXITCODE -ne 0) { throw "Failed to clone $name" }
     }
 }
 
@@ -28,7 +30,7 @@ function Download-IfMissing($url, $dest) {
 function Extract-TarBz2($archive, $dest, $expectedFolder) {
     if (Test-Path (Join-Path $dest $expectedFolder)) { return }
     if (-not (Get-Command tar -ErrorAction SilentlyContinue)) {
-        throw "tar.exe is required to unpack Android voice models"
+        throw "tar is required to unpack Android voice models"
     }
     & tar -xjf $archive -C $dest
     if ($LASTEXITCODE -ne 0) { throw "Failed to extract $archive" }
@@ -38,13 +40,12 @@ Ensure-Repo "llama.cpp" "https://github.com/ggml-org/llama.cpp.git"
 Ensure-Repo "whisper.cpp" "https://github.com/ggml-org/whisper.cpp.git"
 Ensure-Repo "wasm3" "https://github.com/wasm3/wasm3.git"
 
-# sherpa-onnx: local Android speech runtime (Apache-2.0 framework).
+# sherpa-onnx: local Android speech runtime.
 $sherpaVersion = "1.13.4"
 $sherpaAar = Join-Path $libs "sherpa-onnx-$sherpaVersion.aar"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/sherpa-onnx-$sherpaVersion.aar" $sherpaAar
 
-# Russian Piper fallback voice. Denis uses the CC0 Russian dataset in Piper model metadata,
-# avoiding the unclear dataset provenance of the earlier Irina fallback.
+# Russian Piper fallback voice.
 $ttsName = "vits-piper-ru_RU-denis-medium"
 $ttsArchive = Join-Path $temp "$ttsName.tar.bz2"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$ttsName.tar.bz2" $ttsArchive
