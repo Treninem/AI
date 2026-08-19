@@ -15,6 +15,8 @@ func _init() -> void:
 		AuroraFileSetupWizard.new(),
 		AuroraSettingsOverlay.new(),
 		AndroidFileToolBridge.new(),
+		ProjectIndexClient.new(),
+		ProjectIndexToolBridge.new(),
 	]
 	for node in nodes:
 		if node == null:
