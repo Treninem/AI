@@ -60,20 +60,53 @@ function Get-OllamaVersion {
     return $null
 }
 
+function Stop-OllamaProcesses {
+    $processes = @(Get-Process -Name 'ollama' -ErrorAction SilentlyContinue)
+    foreach ($process in $processes) {
+        try {
+            Stop-Process -Id $process.Id -Force -ErrorAction Stop
+        } catch {
+            Write-Warning "Не удалось остановить Ollama PID $($process.Id): $($_.Exception.Message)"
+        }
+    }
+    if ($processes.Count -gt 0) {
+        $deadline = (Get-Date).AddSeconds(12)
+        while ((Get-Date) -lt $deadline -and (Test-OllamaServer)) {
+            Start-Sleep -Milliseconds 300
+        }
+    }
+}
+
 function Install-Or-Update-Ollama([string]$Reason) {
     Set-Stage 'runtime_download' 10 "Загрузка официального установщика Ollama ($Reason)"
     $installScript = Invoke-RestMethod -Uri 'https://ollama.com/install.ps1' -Method Get -TimeoutSec 60
     if (-not $installScript) { throw 'Не удалось загрузить официальный установщик Ollama.' }
     if ([string]$installScript -notmatch 'ollama') { throw 'Получен неожиданный ответ вместо установщика Ollama.' }
+
+    $previous = Find-Ollama
+    if (Test-OllamaServer) {
+        Set-Stage 'runtime_install' 14 'Останавливаю старый локальный Ollama перед обновлением'
+        Stop-OllamaProcesses
+    }
     Set-Stage 'runtime_install' 16 'Установка/обновление Ollama в профиль текущего пользователя'
-    & ([ScriptBlock]::Create([string]$installScript))
-    if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { throw "Установщик Ollama завершился с кодом $LASTEXITCODE" }
+    try {
+        & ([ScriptBlock]::Create([string]$installScript))
+        if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { throw "Установщик Ollama завершился с кодом $LASTEXITCODE" }
+    } catch {
+        if ($previous -and (Test-Path -LiteralPath $previous)) {
+            try { Start-Process -FilePath $previous -ArgumentList @('serve') -WindowStyle Hidden | Out-Null } catch {}
+        }
+        throw
+    }
     $found = Find-Ollama
     if (-not $found) { throw 'Ollama установлен/обновлён, но ollama.exe не найден.' }
     return $found
 }
 
-function Ensure-OllamaServer([string]$OllamaPath) {
+function Ensure-OllamaServer([string]$OllamaPath, [switch]$ForceRestart) {
+    if ($ForceRestart -and (Test-OllamaServer)) {
+        Stop-OllamaProcesses
+    }
     if (Test-OllamaServer) { return }
     Set-Stage 'runtime_start' 22 'Запуск локального Ollama API'
     Start-Process -FilePath $OllamaPath -ArgumentList @('serve') -WindowStyle Hidden | Out-Null
@@ -164,8 +197,10 @@ try {
     $ollama = Find-Ollama
     if (-not $ollama) {
         $ollama = Install-Or-Update-Ollama 'Ollama не установлен'
+        Ensure-OllamaServer $ollama -ForceRestart
+    } else {
+        Ensure-OllamaServer $ollama
     }
-    Ensure-OllamaServer $ollama
 
     if ($Profile -in @('balanced','full')) {
         $version = Get-OllamaVersion
@@ -173,7 +208,7 @@ try {
             $shown = if ($null -eq $version) { 'не определена' } else { $version.ToString() }
             Set-Stage 'runtime_install' 18 "Обновление Ollama для vision-модели (текущая версия: $shown)"
             $ollama = Install-Or-Update-Ollama "нужна версия $MinimumVisionOllama или новее для qwen3-vl"
-            Ensure-OllamaServer $ollama
+            Ensure-OllamaServer $ollama -ForceRestart
             $version = Get-OllamaVersion
             if ($null -eq $version -or $version -lt $MinimumVisionOllama) {
                 throw "Ollama $MinimumVisionOllama+ требуется для qwen3-vl; после обновления обнаружена версия $version"
