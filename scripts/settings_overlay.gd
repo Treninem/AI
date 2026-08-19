@@ -11,7 +11,6 @@ var project_select: OptionButton
 
 func _ready() -> void:
 	_build_ui()
-	call_deferred("_connect_existing_settings_button")
 	AuroraUpdate.update_available.connect(func(info): update_status.text = "Доступна версия %s" % str(info.get("version", "")))
 	AuroraUpdate.no_update.connect(func(version): update_status.text = "Установлена актуальная версия %s" % version)
 	AuroraUpdate.update_error.connect(func(message): update_status.text = "Обновление: %s" % message)
@@ -21,20 +20,6 @@ func show_settings() -> void:
 	_sync_status()
 	_refresh_project_list()
 	popup.popup_centered()
-
-func _connect_existing_settings_button() -> void:
-	var main := get_parent()
-	if main == null: return
-	var button := _find_button(main, "⚙  Инструменты и настройки")
-	if button != null and not button.pressed.is_connected(show_settings):
-		button.pressed.connect(show_settings)
-
-func _find_button(node: Node, text: String) -> Button:
-	if node is Button and node.text == text: return node
-	for child in node.get_children():
-		var found := _find_button(child, text)
-		if found != null: return found
-	return null
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
