@@ -1,0 +1,134 @@
+name: AuroraFox Android APK Artifact
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  android-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Prepare Android SDK tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1'
+          echo "ANDROID_HOME=${ANDROID_SDK_ROOT}" >> "$GITHUB_ENV"
+          ls -la "$ANDROID_SDK_ROOT/ndk" || true
+          NDK_VERSION="$(ls -1 "$ANDROID_SDK_ROOT/ndk" 2>/dev/null | sort -V | tail -n1 || true)"
+          if [ -z "$NDK_VERSION" ]; then
+            sdkmanager 'ndk;28.0.13004108'
+            NDK_VERSION='28.0.13004108'
+          fi
+          echo "AURORA_NDK_VERSION=$NDK_VERSION" >> "$GITHUB_ENV"
+          echo "Using Android NDK $NDK_VERSION"
+
+      - name: Pin plugin to installed NDK
+        shell: python
+        run: |
+          from pathlib import Path
+          import os
+          path = Path('android_plugin/plugin/build.gradle.kts')
+          text = path.read_text(encoding='utf-8')
+          marker = '    compileSdk = 35\n'
+          ndk = os.environ['AURORA_NDK_VERSION']
+          if 'ndkVersion =' not in text:
+              text = text.replace(marker, marker + f'    ndkVersion = "{ndk}"\n', 1)
+          path.write_text(text, encoding='utf-8')
+
+      - name: Download Godot 4.7.1 and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          mkdir -p .ci/godot .ci/templates
+          curl -fL "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o .ci/godot.zip
+          unzip -q .ci/godot.zip -d .ci/godot
+          GODOT="$(find .ci/godot -maxdepth 1 -type f -name 'Godot*' | head -n1)"
+          chmod +x "$GODOT"
+          curl -fL "$base/Godot_v4.7.1-stable_export_templates.tpz" -o .ci/templates.tpz
+          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.1.stable"
+          unzip -q .ci/templates.tpz -d .ci/templates
+          cp -a .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.1.stable/"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+          "$GODOT" --version
+
+      - name: Verify AuroraFox V1.0.0.0
+        shell: pwsh
+        run: ./tests/version_sync_test.ps1
+
+      - name: Prepare unsigned Android release export
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('export_presets.cfg')
+          text = p.read_text(encoding='utf-8-sig')
+          if 'name="Android"' not in text:
+              raise SystemExit('Android export preset missing')
+          text = text.replace('package/signed=true', 'package/signed=false', 1)
+          p.write_text(text, encoding='utf-8')
+
+      - name: Build AuroraFox Android release APK
+        shell: pwsh
+        run: ./build/build_android.ps1 -Godot "$env:GODOT" -Gradle "gradle"
+
+      - name: Create installable test-signed APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp build/android/AuroraFox.apk dist/AuroraFox-V1.0.0.0-Android-Unsigned-Release.apk
+          BUILD_TOOLS="$ANDROID_SDK_ROOT/build-tools/35.0.0"
+          PASS="$(openssl rand -hex 24)"
+          keytool -genkeypair -noprompt \
+            -keystore /tmp/aurorafox-test.keystore \
+            -storepass "$PASS" -keypass "$PASS" \
+            -alias aurorafox-test -keyalg RSA -keysize 4096 -validity 3650 \
+            -dname 'CN=AuroraFox Test Build,O=AuroraFox,C=US'
+          "$BUILD_TOOLS/zipalign" -p -f 4 \
+            dist/AuroraFox-V1.0.0.0-Android-Unsigned-Release.apk \
+            dist/AuroraFox-V1.0.0.0-Android-Aligned.apk
+          "$BUILD_TOOLS/apksigner" sign \
+            --ks /tmp/aurorafox-test.keystore \
+            --ks-key-alias aurorafox-test \
+            --ks-pass "pass:$PASS" --key-pass "pass:$PASS" \
+            --out dist/AuroraFox-V1.0.0.0-Android-Test.apk \
+            dist/AuroraFox-V1.0.0.0-Android-Aligned.apk
+          "$BUILD_TOOLS/apksigner" verify --verbose --print-certs dist/AuroraFox-V1.0.0.0-Android-Test.apk
+          rm -f dist/AuroraFox-V1.0.0.0-Android-Aligned.apk /tmp/aurorafox-test.keystore
+
+      - name: Inspect and hash APKs
+        shell: bash
+        run: |
+          set -euo pipefail
+          ls -lh dist/*.apk
+          sha256sum dist/*.apk | tee dist/SHA256SUMS.txt
+
+      - name: Upload Android APK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraFox-V1.0.0.0-Android
+          path: |
+            dist/AuroraFox-V1.0.0.0-Android-Test.apk
+            dist/AuroraFox-V1.0.0.0-Android-Unsigned-Release.apk
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
