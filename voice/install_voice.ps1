@@ -25,6 +25,7 @@ $xttsRequirements = Join-Path $PSScriptRoot 'requirements_xtts.txt'
 $xttsSpeakerTarget = Join-Path $models 'xtts_speaker.wav'
 $prepareFfmpeg = Join-Path $PSScriptRoot 'prepare_ffmpeg.ps1'
 $ffmpegBin = Join-Path $PSScriptRoot 'runtime\ffmpeg\bin'
+$xttsAgreementMarker = Join-Path $PSScriptRoot 'runtime\xtts_cpml_accepted.txt'
 $voicePythonDir = Join-Path $PSScriptRoot 'python'
 
 function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
@@ -54,6 +55,12 @@ function Configure-Xtts([string]$SpeakerPath) {
     $json = ($config | ConvertTo-Json -Depth 20) + "`n"
     [IO.File]::WriteAllText($voiceConfigPath, $json, (New-Object Text.UTF8Encoding($false)))
     Copy-Item -LiteralPath $SpeakerPath -Destination $xttsSpeakerTarget -Force
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $xttsAgreementMarker) | Out-Null
+    [IO.File]::WriteAllText(
+        $xttsAgreementMarker,
+        "XTTS-v2 CPML/TOS explicitly accepted by the local user via -AcceptXttsCpml.`n",
+        (New-Object Text.UTF8Encoding($false))
+    )
 }
 
 try {
