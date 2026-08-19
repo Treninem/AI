@@ -72,7 +72,7 @@ func _run() -> void:
 	if not store is ChatStore:
 		_fail("Main UI is not connected to ChatStore", 14)
 		return
-	var before := store.active_chat_id
+	var before: String = str(store.active_chat_id)
 	main.call("_new_chat")
 	await process_frame
 	if store.active_chat_id.is_empty() or store.active_chat_id == before:
