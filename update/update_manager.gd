@@ -14,6 +14,8 @@ const SETTINGS_PATH := "user://aurora_update_settings.json"
 const UPDATES_DIR := "user://updates"
 const LOG_PATH := "user://logs/aurora_update.log"
 const MANIFEST_URL := "https://github.com/Treninem/AI/releases/latest/download/update.json"
+const MANIFEST_SIG_URL := "https://github.com/Treninem/AI/releases/latest/download/update.sig"
+const PUBLIC_KEY_PATH := "res://update/release_public.pub"
 
 const DEFAULT_SETTINGS := {
 	"auto_check": true,
@@ -71,18 +73,31 @@ func check_for_updates(manual := true) -> Dictionary:
 		return _fail("Не удалось запустить проверку обновлений: %s" % error_string(err), manual)
 	var result: Array = await req.request_completed
 	req.queue_free()
-	checking = false
 	settings["last_check_unix"] = Time.get_unix_time_from_system()
 	_save_settings()
 	var code := int(result[1])
 	if code == 404:
+		checking = false
 		_log("no published update manifest yet")
 		if manual: no_update.emit(current_version)
 		return {"ok": true, "available": false, "version": current_version}
 	if code < 200 or code >= 300:
+		checking = false
 		return _fail("Сервер обновлений ответил кодом %d" % code, manual)
-	var raw := (result[3] as PackedByteArray).get_string_from_utf8()
+
+	var manifest_bytes: PackedByteArray = result[3]
+	var signature_result := await _fetch_manifest_signature()
+	if not signature_result.get("ok", false):
+		checking = false
+		return _fail(str(signature_result.get("error", "Подпись update.json недоступна")), manual)
+	if not _verify_manifest_signature(manifest_bytes, signature_result.get("signature", PackedByteArray())):
+		checking = false
+		return _fail("Криптографическая подпись update.json недействительна. Обновление отклонено.", manual)
+	_log("update manifest RSA-SHA256 signature verified")
+
+	var raw := manifest_bytes.get_string_from_utf8()
 	var parsed = JSON.parse_string(raw)
+	checking = false
 	if not parsed is Dictionary:
 		return _fail("Некорректный update.json", manual)
 	var info: Dictionary = parsed
@@ -98,8 +113,8 @@ func check_for_updates(manual := true) -> Dictionary:
 	var asset := _platform_asset(info)
 	if asset.is_empty():
 		return _fail("Для этой платформы в релизе нет пакета обновления", manual)
-	if str(asset.get("url", "")).is_empty() or str(asset.get("sha256", "")).length() < 32:
-		return _fail("Релиз опубликован без URL или SHA-256", manual)
+	if str(asset.get("url", "")).is_empty() or str(asset.get("sha256", "")).length() != 64:
+		return _fail("Релиз опубликован без корректного URL или SHA-256", manual)
 	latest_info = info
 	latest_info["selected_asset"] = asset
 	_log("update available %s -> %s" % [current_version, remote])
@@ -183,6 +198,39 @@ func _platform_asset(info: Dictionary) -> Dictionary:
 	if OS.get_name() == "Windows": return assets.get("windows", {})
 	if OS.get_name() == "Android": return assets.get("android", {})
 	return {}
+
+func _fetch_manifest_signature() -> Dictionary:
+	if not FileAccess.file_exists(PUBLIC_KEY_PATH):
+		return {"ok": false, "error": "В этой сборке отсутствует публичный ключ обновлений AuroraFox"}
+	var req := HTTPRequest.new()
+	req.timeout = 25.0
+	add_child(req)
+	var headers := PackedStringArray(["Accept: application/octet-stream", "User-Agent: AuroraFox-Updater/%s" % current_version])
+	var err := req.request(MANIFEST_SIG_URL, headers, HTTPClient.METHOD_GET)
+	if err != OK:
+		req.queue_free()
+		return {"ok": false, "error": "Не удалось запросить подпись update.sig: %s" % error_string(err)}
+	var result: Array = await req.request_completed
+	req.queue_free()
+	var code := int(result[1])
+	if code < 200 or code >= 300:
+		return {"ok": false, "error": "Подпись update.sig недоступна: HTTP %d" % code}
+	var signature: PackedByteArray = result[3]
+	if signature.size() < 128:
+		return {"ok": false, "error": "Файл update.sig слишком короткий"}
+	return {"ok": true, "signature": signature}
+
+func _verify_manifest_signature(payload: PackedByteArray, signature: PackedByteArray) -> bool:
+	var key := CryptoKey.new()
+	var key_error := key.load(PUBLIC_KEY_PATH, true)
+	if key_error != OK or not key.is_public_only():
+		_log("update public key failed to load: %s" % error_string(key_error))
+		return false
+	var ctx := HashingContext.new()
+	if ctx.start(HashingContext.HASH_SHA256) != OK: return false
+	if ctx.update(payload) != OK: return false
+	var digest := ctx.finish()
+	return Crypto.new().verify(HashingContext.HASH_SHA256, digest, signature, key)
 
 func _apply_windows_update() -> Dictionary:
 	if OS.has_feature("editor"):
