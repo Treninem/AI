@@ -8,6 +8,8 @@ plugins {
 val pluginName = "AuroraFoxRuntime"
 val pluginPackageName = "com.aurorafox.runtime"
 val godotAddonDir = file("../../addons/$pluginName")
+val sherpaVersion = "1.13.4"
+val sherpaAar = file("libs/sherpa-onnx-$sherpaVersion.aar")
 
 android {
     namespace = pluginPackageName
@@ -55,29 +57,44 @@ android {
 
 dependencies {
     implementation("org.godotengine:godot:4.7.1.stable")
-    val sherpaAar = file("libs/sherpa-onnx-1.13.4.aar")
     if (sherpaAar.exists()) {
-        implementation(files(sherpaAar))
+        // Do not try to embed a local AAR inside AuroraFoxRuntime. Godot exports
+        // sherpa-onnx as a separate AAR next to this plugin.
+        compileOnly(files(sherpaAar))
     }
 }
 
 val copyDebugAar by tasks.registering(Copy::class) {
     dependsOn("assembleDebug")
-    from(layout.buildDirectory.dir("outputs/aar"))
-    include("$pluginName-debug.aar")
+    from(layout.buildDirectory.dir("outputs/aar")) {
+        include("$pluginName-debug.aar")
+    }
+    if (sherpaAar.exists()) {
+        from(sherpaAar)
+    }
     into(file("$godotAddonDir/bin/debug"))
 }
 
 val copyReleaseAar by tasks.registering(Copy::class) {
     dependsOn("assembleRelease")
-    from(layout.buildDirectory.dir("outputs/aar"))
-    include("$pluginName-release.aar")
+    from(layout.buildDirectory.dir("outputs/aar")) {
+        include("$pluginName-release.aar")
+    }
+    if (sherpaAar.exists()) {
+        from(sherpaAar)
+    }
     into(file("$godotAddonDir/bin/release"))
 }
 
 tasks.register("installGodotPlugin") {
     dependsOn(copyDebugAar, copyReleaseAar)
     doLast {
-        println("AuroraFoxRuntime AARs copied to ${godotAddonDir.absolutePath}")
+        val debugPlugin = file("$godotAddonDir/bin/debug/$pluginName-debug.aar")
+        val releasePlugin = file("$godotAddonDir/bin/release/$pluginName-release.aar")
+        val debugSherpa = file("$godotAddonDir/bin/debug/sherpa-onnx-$sherpaVersion.aar")
+        val releaseSherpa = file("$godotAddonDir/bin/release/sherpa-onnx-$sherpaVersion.aar")
+        check(debugPlugin.exists() && releasePlugin.exists()) { "AuroraFoxRuntime AAR build output is missing" }
+        check(debugSherpa.exists() && releaseSherpa.exists()) { "sherpa-onnx AAR was not installed into Godot addon" }
+        println("AuroraFoxRuntime + sherpa-onnx AARs copied to ${godotAddonDir.absolutePath}")
     }
 }
