@@ -9,7 +9,6 @@ New-Item -ItemType Directory -Force -Path $thirdParty,$libs,$voiceAssets,$temp |
 
 # Pinned revisions: do not silently build a different native runtime tomorrow.
 $llamaRevision = "6d05498314db1b57f81c271080018aa2d0b89be9"
-$whisperRevision = "4834a2327d008ace3ec5a9ed00f51454bcabbc1c"
 $wasm3Revision = "2f3123dfbf93e30fe92eeb60a6fdada6b0141a87"
 
 function Ensure-Repo($name, $url, $revision) {
@@ -48,10 +47,11 @@ function Extract-TarBz2($archive, $dest, $expectedFolder) {
 }
 
 Ensure-Repo "llama.cpp" "https://github.com/ggml-org/llama.cpp.git" $llamaRevision
-Ensure-Repo "whisper.cpp" "https://github.com/ggml-org/whisper.cpp.git" $whisperRevision
 Ensure-Repo "wasm3" "https://github.com/wasm3/wasm3.git" $wasm3Revision
 
-# sherpa-onnx: local Android speech runtime. AAR version is pinned as well.
+# sherpa-onnx is the actual Android speech runtime for both TTS and STT.
+# Do not fetch whisper.cpp here: AuroraFox does not compile its JNI adapter,
+# and AndroidVoiceRuntime already provides the offline Whisper path via sherpa.
 $sherpaVersion = "1.13.4"
 $sherpaAar = Join-Path $libs "sherpa-onnx-$sherpaVersion.aar"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/sherpa-onnx-$sherpaVersion.aar" $sherpaAar
@@ -62,7 +62,7 @@ $ttsArchive = Join-Path $temp "$ttsName.tar.bz2"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$ttsName.tar.bz2" $ttsArchive
 Extract-TarBz2 $ttsArchive $voiceAssets $ttsName
 
-# Multilingual Whisper tiny for fully offline Android Russian STT.
+# Multilingual Whisper tiny through sherpa-onnx for fully offline Android STT.
 $sttName = "sherpa-onnx-whisper-tiny"
 $sttArchive = Join-Path $temp "$sttName.tar.bz2"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$sttName.tar.bz2" $sttArchive
@@ -70,7 +70,6 @@ Extract-TarBz2 $sttArchive $voiceAssets $sttName
 
 Write-Host "Native and Android voice sources are ready." -ForegroundColor Green
 Write-Host "llama.cpp  $llamaRevision"
-Write-Host "whisper.cpp $whisperRevision"
 Write-Host "wasm3       $wasm3Revision"
 Write-Host "sherpa-onnx $sherpaVersion"
 Write-Host "Voice assets: $voiceAssets"
