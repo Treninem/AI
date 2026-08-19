@@ -24,6 +24,23 @@ try {
     Pass 'Project, Android and update-manifest versions are synchronized'
 } catch { Fail "Version synchronization: $($_.Exception.Message)" }
 
+# Android release invariants must pass before any production tag is considered ready.
+$androidContract = Join-Path $root 'tests\test_android_contract.py'
+if (-not (Test-Path -LiteralPath $androidContract)) {
+    Fail 'tests/test_android_contract.py is missing'
+} else {
+    $pythonCommand = if (Has-Command 'python') { 'python' } elseif (Has-Command 'python3') { 'python3' } else { '' }
+    if ([string]::IsNullOrWhiteSpace($pythonCommand)) {
+        Fail 'Python is required for Android release contract validation'
+    } else {
+        try {
+            & $pythonCommand $androidContract
+            if ($LASTEXITCODE -ne 0) { throw "test_android_contract.py returned $LASTEXITCODE" }
+            Pass 'Android release contract passed'
+        } catch { Fail "Android release contract: $($_.Exception.Message)" }
+    }
+}
+
 $projectText = Get-Content -LiteralPath (Join-Path $root 'project.godot') -Raw
 $version = if ($projectText -match 'config/version="([^"]+)"') { $Matches[1] } else { '' }
 if ($version) { Pass "Release version is $version; expected tag v$version" } else { Fail 'Cannot read application/config/version' }
@@ -52,6 +69,7 @@ $requiredFiles = @(
     'update\update_manager.gd',
     'update\windows_updater.ps1',
     'android_plugin\setup_native.ps1',
+    'tests\test_android_contract.py',
     'export_presets.cfg'
 )
 foreach ($relative in $requiredFiles) {
