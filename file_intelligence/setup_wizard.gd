@@ -15,6 +15,14 @@ func _ready() -> void:
 	if OS.get_name() != "Windows": return
 	_build_ui()
 	set_process(true)
+	call_deferred("_connect_manager")
+
+func _connect_manager() -> void:
+	var main := get_parent()
+	if main == null: return
+	var manager = main.get("attachments")
+	if manager is AttachmentManager and not manager.file_setup_required.is_connected(show_setup):
+		manager.file_setup_required.connect(show_setup)
 
 func _process(delta: float) -> void:
 	if setup_pid <= 0: return
@@ -120,7 +128,9 @@ func _read_state() -> void:
 		setup_pid = 0
 		install_button.disabled = false
 		_restart_backend()
-		await get_tree().create_timer(1.2).timeout
+		stage_label.text = "Запускаю File Intelligence…"
+		await get_tree().create_timer(2.0).timeout
+		await _reanalyze_pending_files()
 		popup.hide()
 	elif stage == "error":
 		setup_pid = 0
@@ -132,6 +142,24 @@ func _restart_backend() -> void:
 	var manager = main.get("attachments")
 	if manager is AttachmentManager:
 		manager.restart_file_backend()
+
+func _reanalyze_pending_files() -> void:
+	var main := get_parent()
+	if main == null: return
+	var manager = main.get("attachments")
+	var pending = main.get("pending_attachments")
+	if not manager is AttachmentManager or not pending is Array: return
+	for i in range(pending.size()):
+		var item = pending[i]
+		if item is Dictionary and bool(item.get("needs_setup", false)):
+			var path := str(item.get("path", ""))
+			if not path.is_empty():
+				pending[i] = await manager.analyze(path)
+	if main.has_method("_refresh_attachment_bar"):
+		main.call("_refresh_attachment_bar")
+	var status = main.get("status")
+	if status is Label:
+		status.text = "● File Intelligence готов"
 
 func _installer_path() -> String:
 	for root in _candidate_roots():
