@@ -8,10 +8,14 @@ var progress: ProgressBar
 var stage_label: Label
 var detail_label: Label
 var install_button: Button
+var advanced_button: Button
 var setup_pid := 0
 var poll_timer := 0.0
 var startup_wait := 3.5
 var shown := false
+var xtts_file_dialog: FileDialog
+var xtts_agreement: ConfirmationDialog
+var pending_xtts_wav := ""
 
 func _ready() -> void:
 	if OS.get_name() != "Windows": return
@@ -37,7 +41,7 @@ func _build_ui() -> void:
 	layer.layer = 90
 	add_child(layer)
 	popup = PopupPanel.new()
-	popup.size = Vector2i(610, 360)
+	popup.size = Vector2i(650, 440)
 	layer.add_child(popup)
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -67,22 +71,63 @@ func _build_ui() -> void:
 	progress.custom_minimum_size.y = 28
 	box.add_child(progress)
 	detail_label = Label.new()
-	detail_label.text = "Будут подготовлены VAD, Fox/Лиса wake word, Whisper STT и локальный TTS."
+	detail_label.text = "Базовый профиль: VAD, Fox/Лиса wake word, Whisper STT и локальный Silero TTS. XTTS-v2 включается отдельно и только после явного принятия его лицензии."
 	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(detail_label)
+
+	var advanced_info := Label.new()
+	advanced_info.text = "XTTS-v2 использует выбранный WAV как образец голоса. Используй только запись, на которую у тебя есть право."
+	advanced_info.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	advanced_info.modulate = Color(0.82, 0.86, 0.94)
+	box.add_child(advanced_info)
+
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_END
+	row.add_theme_constant_override("separation", 10)
 	box.add_child(row)
 	var later := Button.new()
 	later.text = "Позже"
 	later.pressed.connect(func(): popup.hide())
 	row.add_child(later)
+	advanced_button = Button.new()
+	advanced_button.text = "XTTS-v2 по WAV"
+	advanced_button.pressed.connect(_open_xtts_file)
+	row.add_child(advanced_button)
 	install_button = Button.new()
-	install_button.text = "Подготовить голос"
-	install_button.pressed.connect(_start_install)
+	install_button.text = "Подготовить базовый голос"
+	install_button.pressed.connect(func(): _start_install("", false))
 	row.add_child(install_button)
 
-func _start_install() -> void:
+	xtts_file_dialog = FileDialog.new()
+	xtts_file_dialog.title = "Выбери WAV-образец голоса для XTTS-v2"
+	xtts_file_dialog.file_mode = FileDialog.FILE_MODE_OPEN_FILE
+	xtts_file_dialog.access = FileDialog.ACCESS_FILESYSTEM
+	xtts_file_dialog.use_native_dialog = true
+	xtts_file_dialog.filters = PackedStringArray(["*.wav ; WAV audio"])
+	xtts_file_dialog.file_selected.connect(_on_xtts_wav_selected)
+	layer.add_child(xtts_file_dialog)
+
+	xtts_agreement = ConfirmationDialog.new()
+	xtts_agreement.title = "XTTS-v2: лицензия и права на голос"
+	xtts_agreement.dialog_text = "XTTS-v2 распространяется по Coqui Public Model License (CPML) и требует явного принятия условий. Подтверждая, ты принимаешь CPML/TOS и подтверждаешь право использовать выбранную запись как образец голоса. AuroraFox сохранит подтверждение локально."
+	xtts_agreement.get_ok_button().text = "Принимаю и установить"
+	xtts_agreement.confirmed.connect(_confirm_xtts_install)
+	layer.add_child(xtts_agreement)
+
+func _open_xtts_file() -> void:
+	if setup_pid > 0: return
+	xtts_file_dialog.popup_centered_ratio(0.88)
+
+func _on_xtts_wav_selected(path: String) -> void:
+	pending_xtts_wav = path
+	if pending_xtts_wav.is_empty(): return
+	xtts_agreement.popup_centered(Vector2i(620, 270))
+
+func _confirm_xtts_install() -> void:
+	if pending_xtts_wav.is_empty(): return
+	_start_install(pending_xtts_wav, true)
+
+func _start_install(xtts_wav: String = "", enable_xtts := false) -> void:
 	var installer := _installer_path()
 	if installer.is_empty():
 		stage_label.text = "Установщик не найден"
@@ -94,11 +139,17 @@ func _start_install() -> void:
 		"-NoProfile", "-WindowStyle", "Hidden", "-ExecutionPolicy", "Bypass",
 		"-File", installer, "-StateFile", state_abs
 	])
+	if enable_xtts:
+		args.append("-EnableXtts")
+		args.append("-AcceptXttsCpml")
+		args.append("-XttsSpeakerWav")
+		args.append(xtts_wav)
 	setup_pid = OS.create_process("powershell.exe", args, false)
 	if setup_pid <= 0:
 		stage_label.text = "Не удалось запустить установщик"
 		return
 	install_button.disabled = true
+	advanced_button.disabled = true
 	stage_label.text = "Запуск установки…"
 	detail_label.text = "Ожидаю первый реальный этап."
 
@@ -116,23 +167,28 @@ func _read_real_state() -> void:
 	if stage == "ready":
 		setup_pid = 0
 		install_button.disabled = false
+		advanced_button.disabled = false
 		AuroraVoice.bridge.call("_start_backend_if_installed")
-		stage_label.text = "Готово. Запускаю голос AuroraFox…"
+		stage_label.text = "Голосовой модуль проверен. Запускаю backend…"
 		await get_tree().create_timer(1.5).timeout
 		popup.hide()
 	elif stage == "error":
 		setup_pid = 0
 		install_button.disabled = false
+		advanced_button.disabled = false
 
 func _stage_title(stage: String) -> String:
 	return {
 		"components":"Проверка компонентов",
 		"dependencies":"Подготовка зависимостей",
+		"ffmpeg":"Подготовка FFmpeg для XTTS",
+		"xtts_dependencies":"Подготовка XTTS-v2",
 		"wake_word":"Подготовка Fox / Лиса",
 		"stt_model":"Подготовка распознавания речи",
-		"tts_model":"Подготовка голоса",
+		"tts_model":"Подготовка базового голоса",
+		"xtts_model":"Проверка XTTS-v2",
 		"microphone":"Проверка микрофона",
-		"ready":"Готово",
+		"ready":"Голосовой модуль проверен",
 		"error":"Ошибка подготовки"
 	}.get(stage, "Подготовка голосового модуля")
 
@@ -161,5 +217,5 @@ func _voice_roots() -> Array[String]:
 func _on_backend_status(ready: bool, _info: Dictionary) -> void:
 	if ready and popup != null and popup.visible:
 		progress.value = 100
-		stage_label.text = "Голос AuroraFox готов"
-		detail_label.text = "Локальный backend подключён."
+		stage_label.text = "Голосовой backend подключён"
+		detail_label.text = "Локальный voice backend отвечает на health-проверку."
