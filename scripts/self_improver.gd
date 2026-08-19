@@ -12,12 +12,12 @@ const MAX_PROJECT_FILES := 30000
 const MAX_PROJECT_BYTES := 2 * 1024 * 1024 * 1024
 const HOT_TOOL_PREFIX := "aurora_ext_"
 const HOT_BLOCKED_MARKERS := [
-	"OS.", "FileAccess", "DirAccess", "ProjectSettings", "Engine.",
-	"HTTPRequest", "HTTPClient", "TCPServer", "UDPServer", "PacketPeerUDP",
-	"WebSocket", "JavaClassWrapper", "JavaScriptBridge", "ResourceLoader",
-	"ResourceSaver", "load(", "preload(", "@tool", "@onready",
-	"func _init", "func _ready", "func _process", "func _physics_process",
-	"func _notification", "func _enter_tree", "func _exit_tree"
+	"OS.", "FileAccess", "DirAccess", "ProjectSettings", "Engine.", "ClassDB",
+	"DisplayServer", "RenderingServer", "AudioServer", "Input.", "InputMap",
+	"HTTPRequest", "HTTPClient", "TCPServer", "StreamPeerTCP", "UDPServer", "PacketPeerUDP",
+	"WebSocket", "IP.", "JavaClassWrapper", "JavaScriptBridge", "ResourceLoader",
+	"ResourceSaver", "GDScript.new", "source_code", "Expression.new", "preload(",
+	"instance_from_id", "@tool", "@onready", "while true"
 ]
 
 var tools: ToolRegistry
@@ -38,15 +38,15 @@ func propose_improvement(goal: String) -> Dictionary:
 {"path":"res://generated/<filename>.gd","content":"полный готовый GDScript","reason":"что улучшает","verification":"что должно подтвердить корректность"}
 
 ОБЯЗАТЕЛЬНЫЙ КОНТРАКТ HOT-EXTENSION:
-- файл начинается с `extends Node`;
+- файл начинается с `extends RefCounted`;
 - реализуй `func aurora_extension_manifest() -> Dictionary`;
 - manifest должен содержать `name`, `description`, `tools`;
 - каждый элемент tools: {"name":"aurora_ext_<unique>","description":"...","schema":{...},"method":"_method_name"};
 - каждый method принимает один Dictionary args и возвращает результат; асинхронный метод допустим;
 - имена инструментов только с префиксом aurora_ext_ и не должны совпадать друг с другом;
 - расширение не получает ToolRegistry и не регистрирует инструменты самостоятельно;
-- запрещены lifecycle-функции _init/_ready/_process/_physics_process/_notification/_enter_tree/_exit_tree;
-- запрещён прямой доступ к OS, FileAccess, DirAccess, ProjectSettings, Engine, HTTP/TCP/UDP/WebSocket, ResourceLoader/ResourceSaver, load/preload;
+- расширение НЕ является Node, не входит в scene tree и не должно пытаться получать get_tree/get_parent;
+- запрещён прямой доступ к OS, файлам, настройкам движка, сети, динамической загрузке ресурсов/скриптов и системным singleton API;
 - горячее расширение должно быть вычислительным/логическим. Новые привилегии, файлы, сеть или системные действия делаются только через полноценное обновление AuroraFox.
 
 ОБЩИЕ ПРАВИЛА:
@@ -167,15 +167,21 @@ func _validate_proposal(proposal: Dictionary) -> Dictionary:
 		return {"ok": false, "error": "Generated module exceeds size limit"}
 	if _contains_unfinished_markers(content):
 		return {"ok": false, "error": "Generated module contains unfinished placeholder/stub markers"}
-	if not content.contains("extends Node"):
-		return {"ok": false, "error": "Hot extension must extend Node"}
+	if not content.contains("extends RefCounted"):
+		return {"ok": false, "error": "Hot extension must extend RefCounted"}
+	if content.contains("extends Node"):
+		return {"ok": false, "error": "Hot extension cannot join the scene tree"}
 	if not content.contains("func aurora_extension_manifest"):
 		return {"ok": false, "error": "Hot extension is missing aurora_extension_manifest()"}
 	if not content.contains(HOT_TOOL_PREFIX):
 		return {"ok": false, "error": "Hot extension does not declare an aurora_ext_ tool"}
 	for marker in HOT_BLOCKED_MARKERS:
 		if content.contains(marker):
-			return {"ok": false, "error": "Hot extension uses blocked privileged API/lifecycle marker: " + marker}
+			return {"ok": false, "error": "Hot extension uses blocked privileged API marker: " + marker}
+	for line in content.split("\n"):
+		var clean := str(line).strip_edges()
+		if clean.begins_with("load(") or clean.contains("= load(") or clean.begins_with("return load("):
+			return {"ok": false, "error": "Hot extension uses blocked dynamic load()"}
 	return {"ok": true, "path": path}
 
 func _safe_generated_path(value: String) -> String:
