@@ -110,9 +110,10 @@ func _dispatch(op: String, payload: Dictionary) -> Dictionary:
 	if main == null:
 		return {"ok": false, "error": "Main node unavailable"}
 	var agent = main.get("agent")
+	var ai = main.get("ai")
 	var memory = main.get("memory")
 	var tools = main.get("tools")
-	if not agent is AgentCore or not memory is MemoryStore or not tools is ToolRegistry:
+	if not agent is AgentCore or not ai is AIClient or not memory is MemoryStore or not tools is ToolRegistry:
 		return {"ok": false, "error": "AuroraFox core is not initialized"}
 
 	match op:
@@ -137,25 +138,26 @@ func _dispatch(op: String, payload: Dictionary) -> Dictionary:
 			if message.is_empty():
 				return {"ok": false, "error": "empty message"}
 			var context: Array = payload.get("context", [])
-			var metadata: Dictionary = payload.get("metadata", {})
-			var conversation_id := str(payload.get("conversation_id", ""))
-			var source := str(metadata.get("source", "api"))
-			memory.remember(
-				"api_request",
-				JSON.stringify({"conversation_id": conversation_id, "message": message, "metadata": metadata}),
-				"api:" + source,
-				0.64,
-				0.92
-			)
-			var answer: String = await agent.run_task(message, context)
-			memory.remember(
-				"api_response",
-				JSON.stringify({"conversation_id": conversation_id, "answer": answer}),
-				"api:" + source,
-				0.54,
-				0.82
-			)
-			return {"ok": true, "content": answer, "model": "aurorafox-agent", "runtime": "godot-agent-core"}
+
+			# Never route an external API conversation through the desktop owner's
+			# episodic memory or persisted experience. Each request gets the full
+			# AgentCore planning/tool/self-check stack, but with a knowledge-only
+			# memory view and ephemeral experience store. Conversation history is
+			# supplied by the API ConversationStore, already scoped by API key id.
+			var private_memory := ApiPrivateMemoryView.new(memory)
+			var private_agent := AgentCore.new()
+			private_agent.experience = ApiPrivateExperienceStore.new()
+			add_child(private_agent)
+			private_agent.setup(ai, private_memory, tools)
+			var answer: String = await private_agent.run_task(message, context)
+			private_agent.queue_free()
+			return {
+				"ok": true,
+				"content": answer,
+				"model": "aurorafox-agent",
+				"runtime": "godot-agent-core",
+				"details": {"privacy": "conversation_scoped", "shared_episodic_memory": false}
+			}
 		"learn":
 			return _learn_from_api(memory, payload)
 		"feedback":
@@ -185,19 +187,33 @@ func _feedback_from_api(agent: AgentCore, memory: MemoryStore, payload: Dictiona
 	var corrected := str(payload.get("corrected_answer", "")).strip_edges()
 	var note := str(payload.get("note", ""))
 	var conversation_id := str(payload.get("conversation_id", ""))
+	var metadata: Dictionary = payload.get("metadata", {})
+	var share_for_learning := bool(metadata.get("share_for_learning", false))
+
+	# Feedback remains private by default. Only an explicit opt-in promotes raw
+	# request/answer/correction data into shared AuroraFox learning stores.
+	if not share_for_learning:
+		return {
+			"ok": true,
+			"feedback_recorded": true,
+			"global_learning": false,
+			"score": score,
+			"corrected": false
+		}
+
 	var snapshot := {
 		"conversation_id": conversation_id,
 		"message": message,
 		"answer": answer,
 		"score": score,
 		"note": note,
-		"metadata": payload.get("metadata", {})
+		"metadata": metadata
 	}
 	memory.remember("api_feedback", JSON.stringify(snapshot), source, 0.82, 0.92)
 	if score < -0.15:
 		agent.experience.record_failure(
-		message if not message.is_empty() else "API conversation " + conversation_id,
-		"External API feedback %.2f: %s" % [score, note if not note.is_empty() else answer.substr(0, 1000)]
+			message if not message.is_empty() else "API conversation " + conversation_id,
+			"External API feedback %.2f: %s" % [score, note if not note.is_empty() else answer.substr(0, 1000)]
 		)
 	if score > 0.20:
 		memory.learn(
@@ -215,7 +231,13 @@ func _feedback_from_api(agent: AgentCore, memory: MemoryStore, payload: Dictiona
 			0.96,
 			"corrected_api_answer"
 		)
-	return {"ok": true, "feedback_recorded": true, "score": score, "corrected": not corrected.is_empty()}
+	return {
+		"ok": true,
+		"feedback_recorded": true,
+		"global_learning": true,
+		"score": score,
+		"corrected": not corrected.is_empty()
+	}
 
 func _send(peer: StreamPeerTCP, payload: Dictionary) -> void:
 	var raw := (JSON.stringify(payload) + "\n").to_utf8_buffer()
