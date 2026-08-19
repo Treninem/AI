@@ -1,0 +1,42 @@
+name: AuroraFox Premium UI CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'assets/ui/AuroraFox_UI/**'
+      - 'scripts/premium_asset_pack.gd'
+      - 'scripts/premium_ui_theme.gd'
+      - 'tests/premium_ui_pack_smoke.gd'
+      - 'tests/desktop_ui_smoke.gd'
+      - 'main.tscn'
+  pull_request:
+    paths:
+      - 'assets/ui/AuroraFox_UI/**'
+      - 'scripts/premium_asset_pack.gd'
+      - 'scripts/premium_ui_theme.gd'
+      - 'tests/premium_ui_pack_smoke.gd'
+      - 'tests/desktop_ui_smoke.gd'
+      - 'main.tscn'
+
+jobs:
+  premium-ui:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: Verify 75 premium PNG resources
+        run: timeout 45s ./godot --headless --path . --script tests/premium_ui_pack_smoke.gd
+      - name: Verify desktop integration
+        run: timeout 45s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
