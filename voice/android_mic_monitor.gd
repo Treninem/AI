@@ -103,8 +103,10 @@ func _process_frames(frames: PackedVector2Array) -> void:
 
 	if voiced and not _speech:
 		_speech = true
-		_started_during_tts = AuroraVoice.speech_queue.is_speaking()
-		_tts_text_at_start = str(AuroraVoice.speech_queue.current_item.get("text", "")) if _started_during_tts else ""
+		var voice_node := get_node_or_null("/root/AuroraVoice")
+		var speech_queue = voice_node.get("speech_queue") if voice_node != null else null
+		_started_during_tts = speech_queue != null and speech_queue.has_method("is_speaking") and bool(speech_queue.call("is_speaking"))
+		_tts_text_at_start = str(speech_queue.get("current_item").get("text", "")) if _started_during_tts and speech_queue != null else ""
 		_speech_time = 0.0
 		_silence_time = 0.0
 		_segment = PackedFloat32Array()
@@ -142,7 +144,7 @@ func _finish_segment() -> void:
 		_busy_stt = false
 		microphone_error.emit("Не удалось сохранить временный голосовой буфер")
 		return
-	var result := await runtime.transcribe("", ProjectSettings.globalize_path(path), "ru")
+	var result: Dictionary = await runtime.transcribe("", ProjectSettings.globalize_path(path), "ru")
 	_busy_stt = false
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	if not result.get("ok", false):
