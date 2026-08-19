@@ -3,13 +3,14 @@ extends Node
 
 const ASSET_ROOT := "res://assets/ui/AuroraFox_UI/"
 const MAP_PATH := ASSET_ROOT + "ASSET_MAP.json"
-const BACKGROUND_PATH := ASSET_ROOT + "backgrounds/aurorafox_chat_background.png"
-const LOGO_PATH := ASSET_ROOT + "icons/aurorafox_logo.png"
-const APP_ICON_PATH := ASSET_ROOT + "icons/aurorafox_app_icon.png"
+const BACKGROUND_REL := "backgrounds/aurorafox_chat_background.png"
+const LOGO_REL := "icons/aurorafox_logo.png"
+const APP_ICON_REL := "icons/aurorafox_app_icon.png"
 
 var _root: Control
 var _map: Dictionary = {}
 var _premium_ready := false
+var _pack := AuroraPremiumAssetPack.new()
 
 func _ready() -> void:
 	_root = get_parent() as Control
@@ -21,6 +22,9 @@ func _ready() -> void:
 		return
 	call_deferred("_apply_after_main_build")
 
+func _exit_tree() -> void:
+	_pack.close()
+
 func _load_map() -> void:
 	if not FileAccess.file_exists(MAP_PATH):
 		return
@@ -29,10 +33,10 @@ func _load_map() -> void:
 		_map = parsed
 
 func _has_required_assets() -> bool:
-	if _map.is_empty():
+	if _map.is_empty() or not _pack.prepare():
 		return false
-	for path in [BACKGROUND_PATH, LOGO_PATH, APP_ICON_PATH]:
-		if not ResourceLoader.exists(path):
+	for path in [BACKGROUND_REL, LOGO_REL, APP_ICON_REL]:
+		if not _pack.has(path):
 			return false
 	var buttons: Dictionary = _map.get("buttons", {})
 	for required in ["new_chat", "settings", "attach", "send", "computer", "auto", "microphone", "speaker"]:
@@ -41,30 +45,32 @@ func _has_required_assets() -> bool:
 		var states: Dictionary = buttons[required].get("states", {})
 		for state in ["normal", "hover", "pressed", "disabled"]:
 			var rel := str(states.get(state, ""))
-			if rel.is_empty() or not ResourceLoader.exists(ASSET_ROOT + rel):
+			if rel.is_empty() or not _pack.has(rel):
 				return false
 	return true
 
 func _apply_after_main_build() -> void:
-	for _i in range(3):
+	for _i in range(4):
 		await get_tree().process_frame
 	_replace_main_artwork(_root)
 	_apply_button_tree(_root)
 	_apply_runtime_window_icon()
 
 func _replace_main_artwork(node: Node) -> void:
-	var background := load(BACKGROUND_PATH) as Texture2D
-	var logo := load(LOGO_PATH) as Texture2D
+	var background := _pack.texture(BACKGROUND_REL)
+	var logo := _pack.texture(LOGO_REL)
+	if background == null or logo == null:
+		return
 	for child in node.get_children():
 		if child is TextureRect:
 			var rect := child as TextureRect
 			var path := rect.texture.resource_path if rect.texture != null else ""
-			if path.ends_with("aurora_background.svg") or path.ends_with("aurora_background_final.svg") or path.ends_with("aurorafox_chat_background.png"):
+			if path.ends_with("aurora_background.svg") or path.ends_with("aurora_background_final.svg"):
 				rect.texture = background
 				rect.modulate = Color.WHITE
 				rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 				rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			elif path.ends_with("fox_logo.svg") or path.ends_with("aurorafox_logo.png"):
+			elif path.ends_with("fox_logo.svg"):
 				rect.texture = logo
 				rect.modulate = Color.WHITE
 		_replace_main_artwork(child)
@@ -152,16 +158,26 @@ func _apply_button_kind(button: Button, kind: String) -> void:
 	if not buttons.has(kind):
 		return
 	var spec: Dictionary = buttons[kind]
+	var size: Array = spec.get("size", [])
+	if size.size() < 2:
+		return
+	var source_width := float(size[0])
+	var source_height := float(size[1])
+	var compact_view := get_viewport().get_visible_rect().size.x < 1180.0
+
+	# Wide artwork is never squeezed in compact layouts. The safe flat theme remains active there.
+	if compact_view and source_width > 140.0:
+		return
+
 	var states: Dictionary = spec.get("states", {})
 	for state in ["normal", "hover", "pressed", "disabled"]:
 		var rel := str(states.get(state, ""))
 		if rel.is_empty():
 			continue
-		var path := ASSET_ROOT + rel
-		if not ResourceLoader.exists(path):
-			continue
-		var texture := load(path) as Texture2D
+		var texture := _pack.texture(rel)
 		if texture == null:
+			continue
+		if not is_equal_approx(texture.get_width(), source_width) or not is_equal_approx(texture.get_height(), source_height):
 			continue
 		var style := StyleBoxTexture.new()
 		style.texture = texture
@@ -172,23 +188,20 @@ func _apply_button_kind(button: Button, kind: String) -> void:
 	button.add_theme_color_override("font_hover_color", Color.WHITE)
 	button.add_theme_color_override("font_pressed_color", Color.WHITE)
 	button.add_theme_color_override("font_disabled_color", Color(0.62, 0.66, 0.74, 0.72))
-	var size: Array = spec.get("size", [])
-	if size.size() >= 2:
-		button.custom_minimum_size.y = float(size[1])
-		# Preserve exact source width on normal desktop layouts; compact mode may shrink horizontally.
-		if get_viewport().get_visible_rect().size.x >= 1180.0:
-			button.custom_minimum_size.x = float(size[0])
+	button.custom_minimum_size.y = source_height
+	if not compact_view:
+		button.custom_minimum_size.x = source_width
 
 func _apply_runtime_window_icon() -> void:
-	if not ResourceLoader.exists(APP_ICON_PATH):
-		return
-	var texture := load(APP_ICON_PATH) as Texture2D
+	var texture := _pack.texture(APP_ICON_REL)
 	if texture != null:
 		DisplayServer.set_icon(texture.get_image())
 
 func status() -> Dictionary:
+	var pack_status := _pack.status()
 	return {
 		"premium_ready": _premium_ready,
-		"asset_root": ASSET_ROOT,
-		"mapped_button_groups": int((_map.get("buttons", {}) as Dictionary).size()) if not _map.is_empty() else 0
+		"mapped_button_groups": int((_map.get("buttons", {}) as Dictionary).size()) if not _map.is_empty() else 0,
+		"png_count": int(pack_status.get("png_count", 0)),
+		"pack_error": str(pack_status.get("error", ""))
 	}
