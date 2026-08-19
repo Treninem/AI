@@ -1,6 +1,7 @@
 # Godot generated data
 .godot/
 .android/
+.ci/
 
 # Local AI / speech models
 *.gguf
@@ -29,14 +30,26 @@ android_plugin/.gradle/
 android_plugin/plugin/build/
 android/
 
-# Build outputs
+# Build / release outputs
 build/output/
 build/windows/
 build/android/
+build/release/
+build/private/
+build/voice_backend/
+build/.voice_pyinstaller/
+build/.voice_spec/
+dist/
 *.apk
 *.aab
 *.exe
 *.pck
+
+# Signing secrets never belong in Git
+*.keystore
+*.jks
+*.p12
+*.pfx
 
 # Generated Android plugin binaries copied into the Godot project
 addons/AuroraFoxRuntime/bin/*.aar
