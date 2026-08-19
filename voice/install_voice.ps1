@@ -67,35 +67,35 @@ try {
 
     if (-not $SkipHeavyModels) {
         Set-Stage 'stt_model' 55 'Загрузка Whisper large-v3-turbo для локального распознавания'
-        $sttCode = @'
-from transformers import pipeline
-import torch
-pipeline(
-    "automatic-speech-recognition",
-    model="openai/whisper-large-v3-turbo",
-    torch_dtype=torch.float32,
-    device=-1,
-)
-print("WHISPER_READY")
-'@
+        $sttCode = @(
+            'from transformers import pipeline',
+            'import torch',
+            'pipeline(',
+            '    "automatic-speech-recognition",',
+            '    model="openai/whisper-large-v3-turbo",',
+            '    torch_dtype=torch.float32,',
+            '    device=-1,',
+            ')',
+            'print("WHISPER_READY")'
+        ) -join "`n"
         & $python -c $sttCode
         if ($LASTEXITCODE -ne 0) { throw 'Не удалось подготовить Whisper.' }
 
         Set-Stage 'tts_model' 78 'Загрузка русского Silero TTS fallback'
-        $ttsCode = @'
-from silero import silero_tts
-model, _ = silero_tts(language="ru", speaker="v5_5_ru")
-print("SILERO_READY")
-'@
+        $ttsCode = @(
+            'from silero import silero_tts',
+            'model, _ = silero_tts(language="ru", speaker="v5_5_ru")',
+            'print("SILERO_READY")'
+        ) -join "`n"
         & $python -c $ttsCode
         if ($LASTEXITCODE -ne 0) { throw 'Не удалось подготовить Silero TTS.' }
     }
 
     Set-Stage 'microphone' 92 'Проверка аудио-библиотеки'
-    $audioCode = @'
-import sounddevice as sd
-print("AUDIO_DEVICES", len(sd.query_devices()))
-'@
+    $audioCode = @(
+        'import sounddevice as sd',
+        'print("AUDIO_DEVICES", len(sd.query_devices()))'
+    ) -join "`n"
     & $python -c $audioCode
     if ($LASTEXITCODE -ne 0) { throw 'Аудио-библиотека не смогла инициализироваться.' }
 
