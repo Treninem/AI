@@ -64,17 +64,53 @@ func _init() -> void:
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
 		quit(7)
 		return
+	if int(coordinator.mutation_population_size) < 3 or int(coordinator.mutation_population_size) > 10:
+		push_error("Default mutation population escaped 3..10")
+		coordinator.free()
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(8)
+		return
+	if not is_equal_approx(float(coordinator.cycle_interval_seconds), 300.0):
+		push_error("Autonomous cycle should run every 5 minutes by default")
+		coordinator.free()
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(9)
+		return
+	if not is_equal_approx(float(coordinator.mutation_cooldown_seconds), 900.0):
+		push_error("Mutation cooldown should be 15 minutes by default")
+		coordinator.free()
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(10)
+		return
+	if not coordinator.has_method("_run_initial_cycle") or not coordinator.has_method("_population_size_for_cycle"):
+		push_error("Automatic initial cycle / adaptive population API is missing")
+		coordinator.free()
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(11)
+		return
 	coordinator.free()
+
+	var source := FileAccess.get_file_as_string("res://agent/autonomous_coordinator.gd")
+	if not source.contains("run_mutation_tournament") or not source.contains("extensions.activate_staged"):
+		push_error("Coordinator does not run tournament and auto-activate winner")
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(12)
+		return
+	if not source.contains('call_deferred("_run_initial_cycle")'):
+		push_error("Coordinator does not start autonomous evolution after bootstrap")
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(13)
+		return
 
 	var main_scene_text := FileAccess.get_file_as_string("res://main.tscn")
 	if not main_scene_text.contains("AutonomousCoordinator"):
 		push_error("Main scene does not contain AutonomousCoordinator")
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
-		quit(8)
+		quit(14)
 		return
 
 	_cleanup([tools, agent_core, improver, extensions, memory, ai])
-	print("AURORA_AUTONOMOUS_COORDINATOR_SMOKE_OK")
+	print("AURORA_AUTONOMOUS_COORDINATOR_SMOKE_OK tournament=3..10 startup=automatic")
 	quit(0)
 
 func _cleanup(nodes: Array) -> void:
