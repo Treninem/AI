@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 
-DEFAULT_SCOPES = ["chat", "models.read", "conversations.read", "files", "tools.read"]
+DEFAULT_SCOPES = ["chat", "feedback", "models.read", "conversations.read", "files", "tools.read"]
 ADMIN_SCOPES = ["*"]
 
 
