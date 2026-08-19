@@ -1,0 +1,1 @@
+AuroraFox V1.0.0.0 real Windows Ollama + qwen3:8b + AIClient bootstrap validation v2.
