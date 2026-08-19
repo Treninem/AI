@@ -19,6 +19,10 @@ user-data/
 # Local Python environments and downloaded model caches
 voice/.venv/
 voice/venv/
+computer/.venv/
+runtime/windows/uv/
+runtime/windows/python/
+runtime/windows/cache/
 __pycache__/
 *.pyc
 
