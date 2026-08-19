@@ -24,24 +24,34 @@ def prepare_for_speech(text: str, read_code: bool = False) -> str:
     return text
 
 
-def split_for_streaming(text: str, max_chars: int = 240) -> list[str]:
-    text = prepare_for_speech(text)
-    if not text:
-        return []
-    parts = re.split(r"(?<=[.!?…])\s+", text)
+def _split_long_spoken_chunk(text: str, max_chars: int) -> list[str]:
+    if len(text) <= max_chars:
+        return [text]
+
     out: list[str] = []
     buf = ""
-    for part in parts:
-        if not part:
-            continue
-        candidate = (buf + " " + part).strip()
+    for word in text.split():
+        candidate = f"{buf} {word}".strip()
         if buf and len(candidate) > max_chars:
             out.append(buf)
-            buf = part
+            buf = word
         else:
             buf = candidate
     if buf:
         out.append(buf)
+    return out
+
+
+def split_for_streaming(text: str, max_chars: int = 240) -> list[str]:
+    text = prepare_for_speech(text)
+    if not text:
+        return []
+
+    max_chars = max(24, int(max_chars))
+    sentences = [part.strip() for part in re.split(r"(?<=[.!?…])\s+", text) if part.strip()]
+    out: list[str] = []
+    for sentence in sentences:
+        out.extend(_split_long_spoken_chunk(sentence, max_chars))
     return out
 
 
