@@ -1,0 +1,25 @@
+{
+  "background": "backgrounds/aurorafox_chat_background.png",
+  "logo": "icons/aurorafox_logo.png",
+  "app_icon": "icons/aurorafox_app_icon.png",
+  "buttons": {
+    "attach": {"size":[44,44],"states":{"normal":"buttons/btn_attach_normal.png","hover":"buttons/btn_attach_hover.png","pressed":"buttons/btn_attach_pressed.png","disabled":"buttons/btn_attach_disabled.png"}},
+    "auto": {"size":[72,44],"states":{"normal":"buttons/btn_auto_normal.png","hover":"buttons/btn_auto_hover.png","pressed":"buttons/btn_auto_pressed.png","disabled":"buttons/btn_auto_disabled.png"}},
+    "chat_delete": {"size":[40,40],"states":{"normal":"buttons/btn_chat_delete_normal.png","hover":"buttons/btn_chat_delete_hover.png","pressed":"buttons/btn_chat_delete_pressed.png","disabled":"buttons/btn_chat_delete_disabled.png"}},
+    "chat_history": {"size":[174,40],"states":{"normal":"buttons/btn_chat_history_normal.png","hover":"buttons/btn_chat_history_hover.png","pressed":"buttons/btn_chat_history_pressed.png","disabled":"buttons/btn_chat_history_disabled.png"}},
+    "chat_options": {"size":[44,44],"states":{"normal":"buttons/btn_chat_options_normal.png","hover":"buttons/btn_chat_options_hover.png","pressed":"buttons/btn_chat_options_pressed.png","disabled":"buttons/btn_chat_options_disabled.png"}},
+    "chat_rename": {"size":[40,40],"states":{"normal":"buttons/btn_chat_rename_normal.png","hover":"buttons/btn_chat_rename_hover.png","pressed":"buttons/btn_chat_rename_pressed.png","disabled":"buttons/btn_chat_rename_disabled.png"}},
+    "computer": {"size":[108,44],"states":{"normal":"buttons/btn_computer_normal.png","hover":"buttons/btn_computer_hover.png","pressed":"buttons/btn_computer_pressed.png","disabled":"buttons/btn_computer_disabled.png"}},
+    "microphone": {"size":[44,44],"states":{"normal":"buttons/btn_microphone_normal.png","hover":"buttons/btn_microphone_hover.png","pressed":"buttons/btn_microphone_pressed.png","disabled":"buttons/btn_microphone_disabled.png"}},
+    "new_chat": {"size":[254,48],"states":{"normal":"buttons/btn_new_chat_normal.png","hover":"buttons/btn_new_chat_hover.png","pressed":"buttons/btn_new_chat_pressed.png","disabled":"buttons/btn_new_chat_disabled.png"}},
+    "prepare_ai": {"size":[116,44],"states":{"normal":"buttons/btn_prepare_ai_normal.png","hover":"buttons/btn_prepare_ai_hover.png","pressed":"buttons/btn_prepare_ai_pressed.png","disabled":"buttons/btn_prepare_ai_disabled.png"}},
+    "send": {"size":[52,52],"states":{"normal":"buttons/btn_send_normal.png","hover":"buttons/btn_send_hover.png","pressed":"buttons/btn_send_pressed.png","disabled":"buttons/btn_send_disabled.png"}},
+    "settings_close": {"size":[120,42],"states":{"normal":"buttons/btn_settings_close_normal.png","hover":"buttons/btn_settings_close_hover.png","pressed":"buttons/btn_settings_close_pressed.png","disabled":"buttons/btn_settings_close_disabled.png"}},
+    "settings": {"size":[254,48],"states":{"normal":"buttons/btn_settings_normal.png","hover":"buttons/btn_settings_hover.png","pressed":"buttons/btn_settings_pressed.png","disabled":"buttons/btn_settings_disabled.png"}},
+    "settings_primary": {"size":[320,44],"states":{"normal":"buttons/btn_settings_primary_normal.png","hover":"buttons/btn_settings_primary_hover.png","pressed":"buttons/btn_settings_primary_pressed.png","disabled":"buttons/btn_settings_primary_disabled.png"}},
+    "settings_secondary": {"size":[240,44],"states":{"normal":"buttons/btn_settings_secondary_normal.png","hover":"buttons/btn_settings_secondary_hover.png","pressed":"buttons/btn_settings_secondary_pressed.png","disabled":"buttons/btn_settings_secondary_disabled.png"}},
+    "settings_small": {"size":[120,40],"states":{"normal":"buttons/btn_settings_small_normal.png","hover":"buttons/btn_settings_small_hover.png","pressed":"buttons/btn_settings_small_pressed.png","disabled":"buttons/btn_settings_small_disabled.png"}},
+    "speaker": {"size":[44,44],"states":{"normal":"buttons/btn_speaker_normal.png","hover":"buttons/btn_speaker_hover.png","pressed":"buttons/btn_speaker_pressed.png","disabled":"buttons/btn_speaker_disabled.png"}},
+    "update": {"size":[44,44],"states":{"normal":"buttons/btn_update_normal.png","hover":"buttons/btn_update_hover.png","pressed":"buttons/btn_update_pressed.png","disabled":"buttons/btn_update_disabled.png"}}
+  }
+}
