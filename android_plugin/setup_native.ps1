@@ -7,17 +7,28 @@ $voiceAssets = Join-Path $root "plugin/src/main/assets/voice"
 $temp = Join-Path ([IO.Path]::GetTempPath()) "aurorafox-android-voice"
 New-Item -ItemType Directory -Force -Path $thirdParty,$libs,$voiceAssets,$temp | Out-Null
 
-function Ensure-Repo($name, $url) {
+# Pinned revisions: do not silently build a different native runtime tomorrow.
+$llamaRevision = "6d05498314db1b57f81c271080018aa2d0b89be9"
+$whisperRevision = "4834a2327d008ace3ec5a9ed00f51454bcabbc1c"
+$wasm3Revision = "2f3123dfbf93e30fe92eeb60a6fdada6b0141a87"
+
+function Ensure-Repo($name, $url, $revision) {
     $dest = Join-Path $thirdParty $name
-    if (Test-Path (Join-Path $dest ".git")) {
-        Write-Host "Updating $name..."
-        git -C $dest pull --ff-only
-        if ($LASTEXITCODE -ne 0) { throw "Failed to update $name" }
-    } else {
+    if (-not (Test-Path (Join-Path $dest ".git"))) {
+        if (Test-Path $dest) { Remove-Item $dest -Recurse -Force }
         Write-Host "Cloning $name..."
-        git clone --depth 1 $url $dest
+        git clone --filter=blob:none --no-checkout $url $dest
         if ($LASTEXITCODE -ne 0) { throw "Failed to clone $name" }
     }
+    Write-Host "Pinning $name at $revision..."
+    git -C $dest fetch --depth 1 origin $revision
+    if ($LASTEXITCODE -ne 0) { throw "Failed to fetch pinned revision for $name" }
+    git -C $dest checkout --detach --force FETCH_HEAD
+    if ($LASTEXITCODE -ne 0) { throw "Failed to checkout pinned revision for $name" }
+    $actual = (git -C $dest rev-parse HEAD).Trim()
+    if ($actual -ne $revision) { throw "$name revision mismatch: $actual != $revision" }
+    git -C $dest clean -fdx
+    if ($LASTEXITCODE -ne 0) { throw "Failed to clean $name source tree" }
 }
 
 function Download-IfMissing($url, $dest) {
@@ -36,11 +47,11 @@ function Extract-TarBz2($archive, $dest, $expectedFolder) {
     if ($LASTEXITCODE -ne 0) { throw "Failed to extract $archive" }
 }
 
-Ensure-Repo "llama.cpp" "https://github.com/ggml-org/llama.cpp.git"
-Ensure-Repo "whisper.cpp" "https://github.com/ggml-org/whisper.cpp.git"
-Ensure-Repo "wasm3" "https://github.com/wasm3/wasm3.git"
+Ensure-Repo "llama.cpp" "https://github.com/ggml-org/llama.cpp.git" $llamaRevision
+Ensure-Repo "whisper.cpp" "https://github.com/ggml-org/whisper.cpp.git" $whisperRevision
+Ensure-Repo "wasm3" "https://github.com/wasm3/wasm3.git" $wasm3Revision
 
-# sherpa-onnx: local Android speech runtime.
+# sherpa-onnx: local Android speech runtime. AAR version is pinned as well.
 $sherpaVersion = "1.13.4"
 $sherpaAar = Join-Path $libs "sherpa-onnx-$sherpaVersion.aar"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/sherpa-onnx-$sherpaVersion.aar" $sherpaAar
@@ -58,5 +69,8 @@ Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-
 Extract-TarBz2 $sttArchive $voiceAssets $sttName
 
 Write-Host "Native and Android voice sources are ready." -ForegroundColor Green
+Write-Host "llama.cpp  $llamaRevision"
+Write-Host "whisper.cpp $whisperRevision"
+Write-Host "wasm3       $wasm3Revision"
+Write-Host "sherpa-onnx $sherpaVersion"
 Write-Host "Voice assets: $voiceAssets"
-Write-Host "Build the Android plugin with Gradle after Android SDK/NDK is configured."
