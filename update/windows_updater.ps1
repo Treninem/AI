@@ -28,10 +28,29 @@ function Wait-ForExit([int]$Pid, [int]$TimeoutSec = 90) {
     return $false
 }
 
+function Stop-AuroraRuntimeProcesses([string]$Root) {
+    try {
+        $prefix = ([IO.Path]::GetFullPath($Root).TrimEnd('\') + '\').ToLowerInvariant()
+        $selfPid = $PID
+        $processes = Get-CimInstance Win32_Process -ErrorAction Stop
+        foreach ($process in $processes) {
+            if ([int]$process.ProcessId -eq $selfPid) { continue }
+            $path = [string]$process.ExecutablePath
+            if ([string]::IsNullOrWhiteSpace($path)) { continue }
+            $full = ([IO.Path]::GetFullPath($path)).ToLowerInvariant()
+            if ($full.StartsWith($prefix)) {
+                Write-UpdateLog "Stopping locked AuroraFox runtime pid=$($process.ProcessId) path=$path"
+                Stop-Process -Id ([int]$process.ProcessId) -Force -ErrorAction SilentlyContinue
+            }
+        }
+        Start-Sleep -Milliseconds 650
+    } catch {
+        Write-UpdateLog "Runtime process cleanup warning: $($_.Exception.Message)"
+        Start-Sleep -Milliseconds 650
+    }
+}
+
 function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
-    # Large local runtimes/models are user-installed once and should not be downloaded
-    # on every AuroraFox code update. Failures here are non-fatal: the first-run setup
-    # can repair/re-download them later.
     $paths = @(
         'voice\.venv',
         'voice\models',
@@ -76,6 +95,7 @@ try {
     if ($actual -ne $ExpectedSha256) { throw "SHA-256 mismatch: $actual" }
 
     if (-not (Wait-ForExit -Pid $ParentPid)) { throw 'AuroraFox did not exit in time' }
+    Stop-AuroraRuntimeProcesses -Root $InstallDir
 
     Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
     New-Item -ItemType Directory -Force -Path $staging | Out-Null
