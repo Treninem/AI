@@ -44,7 +44,9 @@ function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
             $target = Join-Path $NewRoot $relative
             if (-not (Test-Path -LiteralPath $source)) { continue }
             if (Test-Path -LiteralPath $target) {
-                Copy-Item -LiteralPath (Join-Path $source '*') -Destination $target -Recurse -Force -ErrorAction Stop
+                Get-ChildItem -LiteralPath $source -Force | ForEach-Object {
+                    Copy-Item -LiteralPath $_.FullName -Destination $target -Recurse -Force -ErrorAction Stop
+                }
             } else {
                 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
                 Copy-Item -LiteralPath $source -Destination $target -Recurse -Force -ErrorAction Stop
