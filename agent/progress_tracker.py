@@ -30,18 +30,21 @@ def summarize(report: dict) -> tuple[str, str, str]:
     passed = [item["title"] for item in report.get("checks", []) if item.get("ok")]
     pending = [item["title"] for item in report.get("checks", []) if not item.get("ok")]
     percent = int(report.get("progress_percent", 0))
-    if percent >= 100:
-        state = "Релизная архитектура собрана"
-    elif percent >= 85:
-        state = "Финальная синхронизация и тесты"
-    elif percent >= 60:
-        state = "Основные автономные подсистемы соединены"
+    verified = bool(report.get("ready", False))
+    if verified:
+        state = "Полный релизный прогон подтверждён"
+    elif percent >= 90:
+        state = "Архитектура собрана, но релиз ещё не подтверждён полным прогоном"
+    elif percent >= 75:
+        state = "Финальная интеграция и проверка релизных контуров"
+    elif percent >= 55:
+        state = "Основные подсистемы соединены, проверки ещё неполные"
     elif percent >= 35:
         state = "Автономный контур достраивается"
     else:
         state = "Базовые узлы автономного развития подключаются"
     done = "; ".join(passed[-3:]) if passed else "аудит начат"
-    left = "; ".join(pending[:3]) if pending else "финальный релизный прогон"
+    left = "; ".join(pending[:3]) if pending else ("нет" if verified else "полный релизный прогон и подтверждение текущего commit")
     return state, done, left
 
 
@@ -54,6 +57,8 @@ def snapshot(started: float) -> dict:
         "version": version_display(),
         "percent": int(report.get("progress_percent", 0)),
         "ready": bool(report.get("ready", False)),
+        "verified": bool(report.get("ready", False)),
+        "readiness_basis": report.get("readiness_basis", ""),
         "state": state,
         "done": done,
         "left": left,
@@ -62,9 +67,10 @@ def snapshot(started: float) -> dict:
 
 
 def render(item: dict) -> str:
+    status = "ПОДТВЕРЖДЕНО" if item["verified"] else "НЕ ПОДТВЕРЖДЕНО"
     return (
-        f"🦊 [{item['elapsed']}] AuroraFox {item['version']}: {item['percent']}% до релиза. "
-        f"{item['state']}. Сделано: {item['done']}. Осталось: {item['left']}."
+        f"🦊 [{item['elapsed']}] AuroraFox {item['version']}: {item['percent']}% архитектурного/релизного аудита; "
+        f"готовность: {status}. {item['state']}. Сделано: {item['done']}. Осталось: {item['left']}."
     )
 
 
@@ -74,7 +80,7 @@ def persist(item: dict) -> None:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="AuroraFox real-time release progress reporter")
+    parser = argparse.ArgumentParser(description="AuroraFox verified release progress reporter")
     parser.add_argument("--watch", action="store_true", help="Keep reporting at the requested interval")
     parser.add_argument("--interval", type=int, default=60, help="Seconds between reports; default 60")
     parser.add_argument("--count", type=int, default=0, help="Stop after N reports; 0 means unlimited in watch mode")
