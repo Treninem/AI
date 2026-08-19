@@ -10,6 +10,7 @@ $OllamaInstallerUrl = 'https://ollama.com/download/OllamaSetup.exe'
 $MinimumVisionOllama = [Version]'0.12.7'
 $ModelEstimatedBytes = @{
     'qwen3:8b' = 5200000000L
+    'qwen3-embedding:0.6b' = 639000000L
     'qwen3-vl:8b' = 6100000000L
     'qwen3-coder:30b' = 19000000000L
 }
@@ -345,7 +346,7 @@ try {
         }
     }
 
-    $models = @('qwen3:8b')
+    $models = @('qwen3:8b', 'qwen3-embedding:0.6b')
     if ($Profile -in @('balanced','full')) { $models += 'qwen3-vl:8b' }
     if ($Profile -eq 'full') { $models += 'qwen3-coder:30b' }
 
