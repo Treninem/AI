@@ -6,6 +6,7 @@
 $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $OllamaBase = 'http://127.0.0.1:11434'
+$OllamaInstallerUrl = 'https://ollama.com/download/OllamaSetup.exe'
 $MinimumVisionOllama = [Version]'0.12.7'
 $ModelEstimatedBytes = @{
     'qwen3:8b' = 5200000000L
@@ -29,7 +30,7 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message, [hashtable]$
         foreach ($key in $Extra.Keys) { $payload[$key] = $Extra[$key] }
         $json = $payload | ConvertTo-Json -Compress -Depth 5
         $temp = "$StateFile.tmp"
-        [IO.File]::WriteAllText($temp, $json, [Text.UTF8Encoding]::new($false))
+        [IO.File]::WriteAllText($temp, $json, (New-Object Text.UTF8Encoding($false)))
         Move-Item -LiteralPath $temp -Destination $StateFile -Force
     }
 }
@@ -86,7 +87,7 @@ function Get-FreeBytesForPath([string]$Path) {
         $full = [IO.Path]::GetFullPath($Path)
         $root = [IO.Path]::GetPathRoot($full)
         if (-not $root) { return -1L }
-        return ([IO.DriveInfo]::new($root)).AvailableFreeSpace
+        return (New-Object IO.DriveInfo($root)).AvailableFreeSpace
     } catch {
         return -1L
     }
@@ -107,7 +108,6 @@ function Assert-ModelStorage([string[]]$Models) {
     }
     $root = Get-OllamaModelRoot
     $free = Get-FreeBytesForPath $root
-    # Temporary download blobs, manifests and filesystem slack need headroom.
     $required = [long][Math]::Ceiling($missingBytes * 1.08 + 1500000000L)
     Set-Stage 'storage' 27 "Проверка места: нужно примерно $(Format-Bytes $required), свободно $(if ($free -ge 0) { Format-Bytes $free } else { 'не удалось определить' })" @{
         model_root = $root
@@ -121,7 +121,11 @@ function Assert-ModelStorage([string[]]$Models) {
 }
 
 function Stop-OllamaProcesses {
-    $processes = @(Get-Process -Name 'ollama' -ErrorAction SilentlyContinue)
+    $processes = @()
+    foreach ($name in @('ollama', 'ollama app')) {
+        $processes += @(Get-Process -Name $name -ErrorAction SilentlyContinue)
+    }
+    $processes = @($processes | Sort-Object Id -Unique)
     foreach ($process in $processes) {
         try {
             Stop-Process -Id $process.Id -Force -ErrorAction Stop
@@ -137,28 +141,75 @@ function Stop-OllamaProcesses {
     }
 }
 
+function Remove-DirectoryWithRetry([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path)) { return }
+    for ($attempt = 1; $attempt -le 8; $attempt++) {
+        try {
+            Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+            return
+        } catch {
+            if ($attempt -eq 8) {
+                Write-Warning "Не удалось удалить временную папку $Path: $($_.Exception.Message)"
+                return
+            }
+            Start-Sleep -Milliseconds (250 * $attempt)
+        }
+    }
+}
+
 function Install-Or-Update-Ollama([string]$Reason) {
     Set-Stage 'runtime_download' 10 "Загрузка официального установщика Ollama ($Reason)"
-    $installScript = Invoke-RestMethod -Uri 'https://ollama.com/install.ps1' -Method Get -TimeoutSec 60
-    if (-not $installScript) { throw 'Не удалось загрузить официальный установщик Ollama.' }
-    if ([string]$installScript -notmatch 'ollama') { throw 'Получен неожиданный ответ вместо установщика Ollama.' }
-
     $previous = Find-Ollama
     if (Test-OllamaServer) {
-        Set-Stage 'runtime_install' 14 'Останавливаю старый локальный Ollama перед обновлением'
+        Set-Stage 'runtime_install' 13 'Останавливаю старый локальный Ollama перед обновлением'
         Stop-OllamaProcesses
     }
-    Set-Stage 'runtime_install' 16 'Установка/обновление Ollama в профиль текущего пользователя'
+
+    $tempRoot = Join-Path $env:TEMP ("AuroraFox-Ollama-" + [Guid]::NewGuid().ToString('N'))
+    $tempInstaller = Join-Path $tempRoot 'OllamaSetup.exe'
+    New-Item -ItemType Directory -Force -Path $tempRoot | Out-Null
     try {
-        & ([ScriptBlock]::Create([string]$installScript))
-        if ($LASTEXITCODE -ne 0 -and $null -ne $LASTEXITCODE) { throw "Установщик Ollama завершился с кодом $LASTEXITCODE" }
+        $downloaded = $false
+        for ($attempt = 1; $attempt -le 3; $attempt++) {
+            try {
+                Invoke-WebRequest -Uri $OllamaInstallerUrl -OutFile $tempInstaller -UseBasicParsing -TimeoutSec 240
+                if (-not (Test-Path -LiteralPath $tempInstaller)) { throw 'Файл установщика не появился после загрузки.' }
+                if ((Get-Item -LiteralPath $tempInstaller).Length -lt 1000000) { throw 'Получен слишком маленький файл вместо OllamaSetup.exe.' }
+                $downloaded = $true
+                break
+            } catch {
+                if ($attempt -eq 3) { throw }
+                Start-Sleep -Seconds (2 * $attempt)
+            }
+        }
+        if (-not $downloaded) { throw 'Не удалось загрузить OllamaSetup.exe.' }
+
+        Set-Stage 'runtime_install' 15 'Проверка цифровой подписи OllamaSetup.exe'
+        $signature = Get-AuthenticodeSignature -FilePath $tempInstaller
+        if ($signature.Status -ne 'Valid') {
+            throw "Цифровая подпись OllamaSetup.exe не прошла проверку: $($signature.Status)"
+        }
+
+        Set-Stage 'runtime_install' 17 'Установка/обновление Ollama в профиль текущего пользователя'
+        $process = Start-Process -FilePath $tempInstaller -ArgumentList @('/VERYSILENT','/NORESTART','/SUPPRESSMSGBOXES') -Wait -PassThru
+        if ($process.ExitCode -notin @(0, 3010)) {
+            throw "Установщик Ollama завершился с кодом $($process.ExitCode)"
+        }
     } catch {
         if ($previous -and (Test-Path -LiteralPath $previous)) {
             try { Start-Process -FilePath $previous -ArgumentList @('serve') -WindowStyle Hidden | Out-Null } catch {}
         }
         throw
+    } finally {
+        Remove-DirectoryWithRetry $tempRoot
     }
+
+    $deadline = (Get-Date).AddSeconds(20)
     $found = Find-Ollama
+    while (-not $found -and (Get-Date) -lt $deadline) {
+        Start-Sleep -Milliseconds 500
+        $found = Find-Ollama
+    }
     if (-not $found) { throw 'Ollama установлен/обновлён, но ollama.exe не найден.' }
     return $found
 }
@@ -196,58 +247,76 @@ function Pull-OllamaModel(
     $modelSpan = [Math]::Max(1, $modelEnd - $modelStart)
     Set-Stage 'model_pull' $modelStart "Подготовка $Model" @{ model = $Model; model_index = $Index + 1; model_count = $Count; completed = 0; total = 0 }
 
-    $handler = [Net.Http.HttpClientHandler]::new()
-    $client = [Net.Http.HttpClient]::new($handler)
-    $client.Timeout = [TimeSpan]::FromHours(12)
+    $request = [System.Net.HttpWebRequest]::Create("$OllamaBase/api/pull")
+    $request.Method = 'POST'
+    $request.ContentType = 'application/json'
+    $request.Accept = 'application/x-ndjson, application/json'
+    $request.Timeout = 43200000
+    $request.ReadWriteTimeout = 43200000
+    $payload = @{ name = $Model; stream = $true } | ConvertTo-Json -Compress
+    $payloadBytes = [Text.Encoding]::UTF8.GetBytes($payload)
+    $request.ContentLength = $payloadBytes.Length
+
+    $requestStream = $null
+    $response = $null
+    $stream = $null
+    $reader = $null
     try {
-        $request = [Net.Http.HttpRequestMessage]::new([Net.Http.HttpMethod]::Post, "$OllamaBase/api/pull")
-        $request.Content = [Net.Http.StringContent]::new((@{ name = $Model; stream = $true } | ConvertTo-Json -Compress), [Text.Encoding]::UTF8, 'application/json')
-        $response = $client.SendAsync($request, [Net.Http.HttpCompletionOption]::ResponseHeadersRead).GetAwaiter().GetResult()
-        if (-not $response.IsSuccessStatusCode) {
-            $body = $response.Content.ReadAsStringAsync().GetAwaiter().GetResult()
-            throw "Ollama pull $Model HTTP $([int]$response.StatusCode): $($body.Substring(0, [Math]::Min(1000, $body.Length)))"
-        }
-        $stream = $response.Content.ReadAsStreamAsync().GetAwaiter().GetResult()
-        $reader = [IO.StreamReader]::new($stream, [Text.Encoding]::UTF8)
+        $requestStream = $request.GetRequestStream()
+        $requestStream.Write($payloadBytes, 0, $payloadBytes.Length)
+        $requestStream.Flush()
+        $requestStream.Dispose()
+        $requestStream = $null
+
         try {
-            $lastProgress = -1
-            while (-not $reader.EndOfStream) {
-                $line = $reader.ReadLine()
-                if ([string]::IsNullOrWhiteSpace($line)) { continue }
-                try { $event = $line | ConvertFrom-Json } catch { continue }
-                if ($event.error) { throw "Ollama: $($event.error)" }
-                $completed = if ($null -ne $event.completed) { [long]$event.completed } else { 0L }
-                $total = if ($null -ne $event.total) { [long]$event.total } else { 0L }
-                $overall = $modelStart
-                $detail = [string]$event.status
-                if ($total -gt 0) {
-                    $fraction = [Math]::Max(0.0, [Math]::Min(1.0, [double]$completed / [double]$total))
-                    $overall = $modelStart + [int][Math]::Floor($modelSpan * $fraction)
-                    $detail = "$Model • $(Format-Bytes $completed) / $(Format-Bytes $total) • $([int]($fraction * 100))%"
-                } elseif (-not $detail) {
-                    $detail = "Загрузка $Model"
-                }
-                if ($overall -ne $lastProgress -or $total -gt 0) {
-                    Set-Stage 'model_pull' ([Math]::Min($overall, $modelEnd - 1)) $detail @{
-                        model = $Model
-                        model_index = $Index + 1
-                        model_count = $Count
-                        completed = $completed
-                        total = $total
-                        status = [string]$event.status
-                    }
-                    $lastProgress = $overall
-                }
+            $response = $request.GetResponse()
+        } catch [System.Net.WebException] {
+            $webError = $_.Exception
+            if ($webError.Response) {
+                $errorStream = $webError.Response.GetResponseStream()
+                $errorReader = New-Object IO.StreamReader($errorStream, [Text.Encoding]::UTF8)
+                try { $errorBody = $errorReader.ReadToEnd() } finally { $errorReader.Dispose(); $errorStream.Dispose(); $webError.Response.Dispose() }
+                throw "Ollama pull $Model HTTP error: $($errorBody.Substring(0, [Math]::Min(1000, $errorBody.Length)))"
             }
-        } finally {
-            $reader.Dispose()
-            $stream.Dispose()
-            $response.Dispose()
-            $request.Dispose()
+            throw
+        }
+
+        $stream = $response.GetResponseStream()
+        $reader = New-Object IO.StreamReader($stream, [Text.Encoding]::UTF8)
+        $lastProgress = -1
+        while (-not $reader.EndOfStream) {
+            $line = $reader.ReadLine()
+            if ([string]::IsNullOrWhiteSpace($line)) { continue }
+            try { $event = $line | ConvertFrom-Json } catch { continue }
+            if ($event.error) { throw "Ollama: $($event.error)" }
+            $completed = if ($null -ne $event.completed) { [long]$event.completed } else { 0L }
+            $total = if ($null -ne $event.total) { [long]$event.total } else { 0L }
+            $overall = $modelStart
+            $detail = [string]$event.status
+            if ($total -gt 0) {
+                $fraction = [Math]::Max(0.0, [Math]::Min(1.0, [double]$completed / [double]$total))
+                $overall = $modelStart + [int][Math]::Floor($modelSpan * $fraction)
+                $detail = "$Model • $(Format-Bytes $completed) / $(Format-Bytes $total) • $([int]($fraction * 100))%"
+            } elseif (-not $detail) {
+                $detail = "Загрузка $Model"
+            }
+            if ($overall -ne $lastProgress -or $total -gt 0) {
+                Set-Stage 'model_pull' ([Math]::Min($overall, $modelEnd - 1)) $detail @{
+                    model = $Model
+                    model_index = $Index + 1
+                    model_count = $Count
+                    completed = $completed
+                    total = $total
+                    status = [string]$event.status
+                }
+                $lastProgress = $overall
+            }
         }
     } finally {
-        $client.Dispose()
-        $handler.Dispose()
+        if ($reader) { $reader.Dispose() }
+        if ($stream) { $stream.Dispose() }
+        if ($response) { $response.Dispose() }
+        if ($requestStream) { $requestStream.Dispose() }
     }
     Set-Stage 'model_pull' $modelEnd "$Model загружена и проверена Ollama" @{ model = $Model; model_index = $Index + 1; model_count = $Count }
 }
