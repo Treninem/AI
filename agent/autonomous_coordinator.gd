@@ -43,7 +43,7 @@ func _ready() -> void:
 	call_deferred("_bootstrap")
 
 func _bootstrap() -> void:
-	for _i in range(60):
+	for _i in range(180):
 		_bind_existing()
 		if _minimum_integration_ready():
 			break
@@ -68,19 +68,31 @@ func _run_initial_cycle() -> void:
 	if initial_cycle_delay_seconds > 0.0:
 		await get_tree().create_timer(initial_cycle_delay_seconds).timeout
 	if autonomous_enabled and not _cycle_running:
-		_record_event("initial_autonomous_cycle_started", {"population": mutation_population_size})
+		_record_event("initial_autonomous_cycle_started", {
+			"population": mutation_population_size,
+			"platform": OS.get_name()
+		})
 		await run_autonomous_cycle()
 
 func _minimum_integration_ready() -> bool:
 	if tools == null or ai == null or memory == null or agent_core == null or improver == null or extensions == null:
 		return false
-	for name in ["workspace_create", "workspace_test"]:
-		if not tools.tools.has(name):
-			return false
 	if OS.get_name() == "Windows":
-		for name in ["project_index_status", "index_project", "search_project", "search_symbols", "workspace_import_project", "project_compare_file", "project_apply_file"]:
+		for name in [
+			"workspace_create", "workspace_test", "workspace_import_project",
+			"project_index_status", "index_project", "search_project", "search_symbols",
+			"project_compare_file", "project_apply_file"
+		]:
 			if not tools.tools.has(name):
 				return false
+	elif OS.get_name() == "Android":
+		# Android verifies restricted hot mutations with the embedded Godot
+		# GDScript compiler/contract test and stages only inside user://.
+		for name in ["read_file", "write_file"]:
+			if not tools.tools.has(name):
+				return false
+	else:
+		return false
 	return true
 
 func _bind_existing() -> void:
@@ -231,9 +243,9 @@ func _collect_observations() -> Dictionary:
 
 	if tools == null:
 		return result
-	if tools.tools.has("git_status"):
+	if OS.get_name() == "Windows" and tools.tools.has("git_status"):
 		result["git_status"] = await tools.call_tool("git_status", {})
-	if tools.tools.has("project_index_status"):
+	if OS.get_name() == "Windows" and tools.tools.has("project_index_status"):
 		var index_status: Variant = await tools.call_tool("project_index_status", {"path": "res://"})
 		result["project_index"] = index_status
 		if index_status is Dictionary and index_status.get("ok", false) and int(index_status.get("files", 0)) == 0 and tools.tools.has("index_project"):
@@ -268,7 +280,8 @@ func run_autonomous_cycle() -> Dictionary:
 		"mutation_attempted": false,
 		"mutation_applied": false,
 		"mutation_population_size": population_size,
-		"hot_improvement_supported": _hot_improvement_supported()
+		"hot_improvement_supported": _hot_improvement_supported(),
+		"platform": OS.get_name()
 	}
 
 	var now := int(Time.get_unix_time_from_system())
@@ -279,12 +292,17 @@ func run_autonomous_cycle() -> Dictionary:
 		report["research"] = _compact(research_result)
 		if research_result.get("ok", false):
 			_last_research_unix = now
-			_record_event("research_completed", {"goal": selected_goal, "count": int(research_result.get("count", 0)), "sources": research_result.get("sources", {})})
+			_record_event("research_completed", {
+				"goal": selected_goal,
+				"count": int(research_result.get("count", 0)),
+				"learned": int(research_result.get("learned", 0)),
+				"sources": research_result.get("sources", {})
+			})
 
 	var cooldown_ready := now - _last_improvement_unix >= int(mutation_cooldown_seconds)
 	if autonomous_hot_improvements and _hot_improvement_supported() and cooldown_ready and improver != null and extensions != null and ai != null:
 		report["mutation_attempted"] = true
-		_record_event("mutation_tournament_started", {"goal": selected_goal, "requested": population_size})
+		_record_event("mutation_tournament_started", {"goal": selected_goal, "requested": population_size, "platform": OS.get_name()})
 		var tournament: Dictionary = await improver.run_mutation_tournament(selected_goal, population_size)
 		report["tournament"] = _compact(tournament)
 		if tournament.get("ok", false):
@@ -299,7 +317,8 @@ func run_autonomous_cycle() -> Dictionary:
 					"tools": activated.get("tools", []),
 					"population_size": tournament.get("population_size", 0),
 					"verified_count": tournament.get("verified_count", 0),
-					"winner": tournament.get("winner", {})
+					"winner": tournament.get("winner", {}),
+					"platform": OS.get_name()
 				})
 		else:
 			_record_event("mutation_tournament_rejected", {
@@ -307,7 +326,8 @@ func run_autonomous_cycle() -> Dictionary:
 				"stage": tournament.get("stage", ""),
 				"error": tournament.get("error", ""),
 				"population_size": tournament.get("population_size", 0),
-				"verified_count": tournament.get("verified_count", 0)
+				"verified_count": tournament.get("verified_count", 0),
+				"platform": OS.get_name()
 			})
 
 	_record_event("cycle_completed", {
@@ -315,7 +335,8 @@ func run_autonomous_cycle() -> Dictionary:
 		"mutation_applied": report.get("mutation_applied", false),
 		"mutation_attempted": report.get("mutation_attempted", false),
 		"research_attempted": report.get("research_attempted", false),
-		"population_size": population_size
+		"population_size": population_size,
+		"platform": OS.get_name()
 	})
 	_cycle_running = false
 	_save_state()
@@ -324,13 +345,12 @@ func run_autonomous_cycle() -> Dictionary:
 
 func _population_size_for_cycle(failures: Array) -> int:
 	var size := clampi(mutation_population_size, SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)
-	# More recent failures create more competing variants, but never more than 10.
 	if failures.size() >= 2: size += 1
 	if failures.size() >= 4: size += 1
 	return clampi(size, SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)
 
 func _hot_improvement_supported() -> bool:
-	return OS.get_name() == "Windows"
+	return OS.get_name() in ["Windows", "Android"]
 
 func _tool_status(_args: Dictionary) -> Dictionary:
 	return await synchronize_all()
@@ -348,7 +368,11 @@ func _tool_research(args: Dictionary) -> Dictionary:
 	var result: Dictionary = await research.collect(query)
 	if result.get("ok", false):
 		_last_research_unix = int(Time.get_unix_time_from_system())
-		_record_event("research_manual", {"query": query, "count": int(result.get("count", 0))})
+		_record_event("research_manual", {
+			"query": query,
+			"count": int(result.get("count", 0)),
+			"learned": int(result.get("learned", 0))
+		})
 		_save_state()
 	return result
 
@@ -363,7 +387,7 @@ func _on_improvement_rejected(result: Dictionary) -> void:
 	_record_event("improvement_rejected", result)
 
 func _on_mutation_population_started(goal: String, requested: int) -> void:
-	_record_event("mutation_population_started", {"goal": goal, "requested": requested})
+	_record_event("mutation_population_started", {"goal": goal, "requested": requested, "platform": OS.get_name()})
 
 func _on_mutation_candidate_completed(candidate: Dictionary) -> void:
 	_record_event("mutation_candidate_completed", {
@@ -372,7 +396,8 @@ func _on_mutation_candidate_completed(candidate: Dictionary) -> void:
 		"path": candidate.get("path", ""),
 		"verified": candidate.get("verified", false),
 		"score": candidate.get("score", 0.0),
-		"sha256": candidate.get("sha256", "")
+		"sha256": candidate.get("sha256", ""),
+		"platform": OS.get_name()
 	})
 
 func _on_mutation_tournament_completed(result: Dictionary) -> void:
@@ -382,14 +407,15 @@ func _on_mutation_tournament_completed(result: Dictionary) -> void:
 		"population_size": result.get("population_size", 0),
 		"verified_count": result.get("verified_count", 0),
 		"winner": result.get("winner", {}),
-		"error": result.get("error", "")
+		"error": result.get("error", ""),
+		"platform": OS.get_name()
 	})
 
 func _on_extension_activated(id: String, tool_names: Array) -> void:
-	_record_event("extension_activated", {"id": id, "tools": tool_names})
+	_record_event("extension_activated", {"id": id, "tools": tool_names, "platform": OS.get_name()})
 
 func _on_extension_error(message: String, details: Dictionary) -> void:
-	_record_event("extension_error", {"message": message, "details": _compact(details)})
+	_record_event("extension_error", {"message": message, "details": _compact(details), "platform": OS.get_name()})
 
 func _record_event(kind: String, details: Dictionary) -> void:
 	_events.append({
