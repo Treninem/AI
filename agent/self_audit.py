@@ -153,12 +153,33 @@ def build_checks() -> list[Check]:
     return [
         check_files(
             "autonomous_cycle",
-            "Observation -> analysis -> mutation -> test -> activation -> synchronization",
+            "Autonomous research -> 3-10 mutations -> independent tests -> competition -> final test -> activation",
             12,
-            ["agent/autonomous_coordinator.gd", "scripts/self_improver.gd", "scripts/runtime_extension_manager.gd"],
+            [
+                "agent/autonomous_coordinator.gd",
+                "scripts/self_improver.gd",
+                "scripts/runtime_extension_manager.gd",
+                "tests/test_autonomous_evolution_contract.py",
+                "tests/autonomous_coordinator_smoke.gd",
+                "tests/self_improver_smoke.gd",
+            ],
             {
-                "agent/autonomous_coordinator.gd": ["run_autonomous_cycle", "propose_improvement", "activate_staged", "synchronize_all"],
-                "scripts/self_improver.gd": ["evaluate_generated_module", "workspace_test"],
+                "agent/autonomous_coordinator.gd": [
+                    "run_autonomous_cycle",
+                    "run_mutation_tournament",
+                    "mutation_population_size",
+                    "_run_initial_cycle",
+                    "activate_staged",
+                    "synchronize_all",
+                ],
+                "scripts/self_improver.gd": [
+                    "MIN_MUTATIONS := 3",
+                    "MAX_MUTATIONS := 10",
+                    "run_mutation_tournament",
+                    "workspace_test",
+                    "winner_final_test",
+                    "_judge_verified_candidates",
+                ],
             },
         ),
         check_files(
@@ -229,9 +250,13 @@ def build_checks() -> list[Check]:
         ),
         check_files(
             "updater",
-            "Signed self-update pipeline",
+            "Signed automatic self-update pipeline",
             5,
-            ["update/update_manager.gd", "update/windows_updater.ps1", ".github/workflows/release.yml"],
+            ["update/update_manager.gd", "update/windows_updater.ps1", ".github/workflows/release.yml", "tests/update_smoke.gd"],
+            {
+                "update/update_manager.gd": ["auto_apply", "apply_downloaded_update", "update manifest RSA-SHA256 signature verified"],
+                "tests/update_smoke.gd": ["auto_apply", "automatically applied"],
+            },
         ),
         check_files(
             "versioning",
@@ -263,7 +288,7 @@ def audit() -> dict:
         for item in checks
     ]
     return {
-        "schema_version": 4,
+        "schema_version": 5,
         "generated_at": now_iso(),
         "version": current_version(),
         "progress_percent": percent,
