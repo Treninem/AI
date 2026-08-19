@@ -28,6 +28,34 @@ function Wait-ForExit([int]$Pid, [int]$TimeoutSec = 90) {
     return $false
 }
 
+function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
+    # Large local runtimes/models are user-installed once and should not be downloaded
+    # on every AuroraFox code update. Failures here are non-fatal: the first-run setup
+    # can repair/re-download them later.
+    $paths = @(
+        'voice\.venv',
+        'voice\models',
+        'computer\.venv',
+        'computer\models'
+    )
+    foreach ($relative in $paths) {
+        try {
+            $source = Join-Path $OldRoot $relative
+            $target = Join-Path $NewRoot $relative
+            if (-not (Test-Path -LiteralPath $source)) { continue }
+            if (Test-Path -LiteralPath $target) {
+                Copy-Item -LiteralPath (Join-Path $source '*') -Destination $target -Recurse -Force -ErrorAction Stop
+            } else {
+                New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
+                Copy-Item -LiteralPath $source -Destination $target -Recurse -Force -ErrorAction Stop
+            }
+            Write-UpdateLog "Preserved $relative"
+        } catch {
+            Write-UpdateLog "Runtime preservation warning for $relative : $($_.Exception.Message)"
+        }
+    }
+}
+
 $Package = [IO.Path]::GetFullPath($Package)
 $InstallDir = [IO.Path]::GetFullPath($InstallDir).TrimEnd('\')
 $ExpectedSha256 = $ExpectedSha256.ToLowerInvariant()
@@ -51,8 +79,6 @@ try {
     New-Item -ItemType Directory -Force -Path $staging | Out-Null
     Expand-Archive -LiteralPath $Package -DestinationPath $staging -Force
 
-    # Release ZIP must contain AuroraFox.exe at its root. If CI wrapped it in one folder,
-    # transparently unwrap that single folder.
     if (-not (Test-Path -LiteralPath (Join-Path $staging $ExeName))) {
         $entries = @(Get-ChildItem -LiteralPath $staging -Force)
         if ($entries.Count -eq 1 -and $entries[0].PSIsContainer -and (Test-Path -LiteralPath (Join-Path $entries[0].FullName $ExeName))) {
@@ -75,6 +101,8 @@ try {
         Move-Item -LiteralPath $backup -Destination $InstallDir
         throw
     }
+
+    Preserve-LocalRuntime -OldRoot $backup -NewRoot $InstallDir
 
     if (-not (Test-Path -LiteralPath $newExe)) { throw 'Updated executable disappeared after switch' }
     Write-UpdateLog 'Launching updated AuroraFox for health confirmation'
