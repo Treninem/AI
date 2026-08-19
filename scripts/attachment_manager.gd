@@ -1,13 +1,18 @@
 class_name AttachmentManager
 extends Node
 
-const TEXT_EXTENSIONS := ["txt", "md", "json", "csv", "gd", "py", "js", "ts", "html", "css", "xml", "yaml", "yml", "toml", "ini", "cfg", "log", "shader", "glsl", "cpp", "c", "h", "hpp", "cs", "java", "rs"]
-const IMAGE_EXTENSIONS := ["png", "jpg", "jpeg", "webp", "bmp", "gif", "svg"]
+const TEXT_EXTENSIONS := ["txt", "md", "json", "csv", "tsv", "gd", "py", "js", "ts", "tsx", "jsx", "html", "css", "xml", "yaml", "yml", "toml", "ini", "cfg", "log", "shader", "glsl", "cpp", "c", "h", "hpp", "cs", "java", "kt", "rs", "go", "php", "rb", "lua", "swift", "dart", "sql", "sh", "ps1", "r", "jl"]
+const IMAGE_EXTENSIONS := ["png", "jpg", "jpeg", "webp", "bmp", "gif", "svg", "tif", "tiff"]
 const DOCUMENT_EXTENSIONS := ["pdf", "docx", "xlsx", "xls", "pptx", "odt", "ods"]
-const AUDIO_EXTENSIONS := ["wav", "mp3", "ogg", "flac", "m4a"]
-const VIDEO_EXTENSIONS := ["mp4", "mkv", "webm", "mov", "avi"]
-const ARCHIVE_EXTENSIONS := ["zip", "7z", "rar", "tar", "gz"]
+const AUDIO_EXTENSIONS := ["wav", "mp3", "ogg", "flac", "m4a", "aac", "opus"]
+const VIDEO_EXTENSIONS := ["mp4", "mkv", "webm", "mov", "avi", "m4v"]
+const ARCHIVE_EXTENSIONS := ["zip", "7z", "rar", "tar", "gz", "tgz", "bz2", "tbz2", "xz", "txz"]
 const MAX_TEXT_BYTES := 2 * 1024 * 1024
+
+var intelligence := FileIntelligenceClient.new()
+
+func _ready() -> void:
+	add_child(intelligence)
 
 func describe(path: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -23,31 +28,81 @@ func describe(path: String) -> Dictionary:
 		"extension": ext,
 		"kind": kind,
 		"size": size,
-		"content": ""
+		"content": "",
+		"warnings": [],
+		"analyzed": false
 	}
 	if ext in TEXT_EXTENSIONS and size <= MAX_TEXT_BYTES:
 		result["content"] = file.get_as_text()
+		result["analyzed"] = true
 	elif ext in TEXT_EXTENSIONS:
-		result["content"] = "[Текстовый файл слишком большой для полного чтения: %d байт]" % size
+		result["content"] = "[Текстовый файл большой; будет прочитан локальным File Intelligence с лимитом контекста.]"
 	else:
-		result["content"] = _processing_hint(kind)
+		result["content"] = "[Ожидает локального анализа файла]"
+	file.close()
 	return result
+
+func analyze(path: String, question := "") -> Dictionary:
+	var item := describe(path)
+	if not item.get("ok", false): return item
+	if bool(item.get("analyzed", false)):
+		return item
+
+	if OS.get_name() != "Windows":
+		item["content"] = _processing_hint(str(item.get("kind", "binary")))
+		item["warnings"] = ["Расширенный File Intelligence пока доступен в Windows runtime; мобильный native parser подключается отдельно."]
+		return item
+
+	var result := await intelligence.analyze_file(path, question, true)
+	if not result.get("ok", false):
+		item["content"] = _processing_hint(str(item.get("kind", "binary")))
+		item["analysis_error"] = str(result.get("error", "File Intelligence недоступен"))
+		item["needs_setup"] = not intelligence.runtime_is_installed()
+		item["warnings"] = [str(result.get("error", "File Intelligence недоступен"))]
+		return item
+
+	item["content"] = str(result.get("content", ""))
+	item["kind"] = str(result.get("kind", item.get("kind", "binary")))
+	item["metadata"] = result.get("metadata", {})
+	item["warnings"] = result.get("warnings", [])
+	item["truncated"] = bool(result.get("truncated", false))
+	item["cached"] = bool(result.get("cached", false))
+	item["elapsed_ms"] = int(result.get("elapsed_ms", 0))
+	item["analyzed"] = true
+	return item
 
 func build_context(attachments: Array) -> String:
 	if attachments.is_empty(): return ""
 	var parts: Array[String] = []
 	for item in attachments:
-		parts.append("Файл: %s\nТип: %s\nРазмер: %s\nСодержимое/статус:\n%s" % [
+		var warning_text := ""
+		var warnings: Array = item.get("warnings", [])
+		if not warnings.is_empty():
+			warning_text = "\nПредупреждения: " + " | ".join(PackedStringArray(warnings))
+		parts.append("Файл: %s\nТип: %s\nРазмер: %s\nРезультат локального анализа:\n%s%s" % [
 			item.get("name", "file"),
 			item.get("kind", "unknown"),
 			_human_size(int(item.get("size", 0))),
-			item.get("content", "")
+			item.get("content", ""),
+			warning_text
 		])
 	return "\n\n--- ПРИКРЕПЛЕННЫЕ ФАЙЛЫ ---\n" + "\n\n".join(parts)
 
 func supported_extensions() -> PackedStringArray:
 	var all: Array = TEXT_EXTENSIONS + IMAGE_EXTENSIONS + DOCUMENT_EXTENSIONS + AUDIO_EXTENSIONS + VIDEO_EXTENSIONS + ARCHIVE_EXTENSIONS
 	return PackedStringArray(all)
+
+func file_runtime_ready() -> bool:
+	return intelligence.runtime_is_installed()
+
+func file_installer_path() -> String:
+	return intelligence.installer_path()
+
+func restart_file_backend() -> void:
+	intelligence.restart_backend()
+
+func clear_file_cache() -> Dictionary:
+	return await intelligence.clear_cache()
 
 func _kind_for_extension(ext: String) -> String:
 	if ext in TEXT_EXTENSIONS: return "text/code"
@@ -60,14 +115,15 @@ func _kind_for_extension(ext: String) -> String:
 
 func _processing_hint(kind: String) -> String:
 	match kind:
-		"image": return "Изображение принято. Для визуального анализа подключается vision-модель/локальный анализатор."
-		"document": return "Документ принят. Для извлечения PDF/DOCX/XLSX будет использоваться локальный парсер."
-		"audio": return "Аудио принято. Для расшифровки подключается локальный speech-to-text модуль."
-		"video": return "Видео принято. Для анализа будут извлечены кадры и аудиодорожка."
-		"archive": return "Архив принят. Распаковка должна выполняться в изолированную временную папку с лимитами."
+		"image": return "Изображение принято, но расширенный локальный визуальный анализ сейчас недоступен."
+		"document": return "Документ принят, но локальный парсер сейчас недоступен."
+		"audio": return "Аудио принято, но локальная расшифровка сейчас недоступна."
+		"video": return "Видео принято, но извлечение кадров/аудио сейчас недоступно."
+		"archive": return "Архив принят, но безопасный анализ содержимого сейчас недоступен."
 		_: return "Файл принят как бинарный ресурс."
 
 func _human_size(bytes: int) -> String:
 	if bytes < 1024: return "%d B" % bytes
 	if bytes < 1024 * 1024: return "%.1f KB" % (float(bytes) / 1024.0)
-	return "%.1f MB" % (float(bytes) / (1024.0 * 1024.0))
+	if bytes < 1024 * 1024 * 1024: return "%.1f MB" % (float(bytes) / (1024.0 * 1024.0))
+	return "%.2f GB" % (float(bytes) / (1024.0 * 1024.0 * 1024.0))
