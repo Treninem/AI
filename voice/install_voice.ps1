@@ -5,6 +5,10 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$runtimeRoot = Join-Path $projectRoot 'runtime\windows'
+$ensureUv = Join-Path $projectRoot 'runtime\ensure_uv.ps1'
+$uv = Join-Path $runtimeRoot 'uv\uv.exe'
 $venv = Join-Path $PSScriptRoot '.venv'
 $python = Join-Path $venv 'Scripts\python.exe'
 $models = Join-Path $PSScriptRoot 'models'
@@ -12,7 +16,7 @@ $modelCache = Join-Path $models 'cache'
 $hfHome = Join-Path $modelCache 'huggingface'
 $torchHome = Join-Path $modelCache 'torch'
 $voskDir = Join-Path $models 'vosk-model-small-ru-0.22'
-$voskZip = Join-Path $env:TEMP 'aurorafox-vosk-ru.zip'
+$voskZip = Join-Path ([IO.Path]::GetTempPath()) 'aurorafox-vosk-ru.zip'
 
 function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
     Write-Host ("[{0,3}%] {1}: {2}" -f $Progress, $Name, $Message) -ForegroundColor Cyan
@@ -30,24 +34,22 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
 }
 
 try {
-    Set-Stage 'components' 5 'Проверка Python 3.11 и окружения'
-    $launcher = Get-Command py -ErrorAction SilentlyContinue
-    $plainPython = Get-Command python -ErrorAction SilentlyContinue
-    if (-not $launcher -and -not $plainPython) { throw 'Python 3.11 не найден.' }
+    Set-Stage 'components' 5 'Подготовка локального Python runtime AuroraFox'
+    if (-not (Test-Path -LiteralPath $ensureUv)) { throw 'runtime/ensure_uv.ps1 не найден.' }
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureUv -RuntimeRoot $runtimeRoot | Out-Null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $uv)) { throw 'Не удалось подготовить локальный uv/Python runtime.' }
 
-    if (-not (Test-Path $python)) {
-        if ($launcher) {
-            & py -3.11 -m venv $venv
-        } else {
-            & python -m venv $venv
-        }
-        if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать Python окружение.' }
+    $env:UV_PYTHON_INSTALL_DIR = Join-Path $runtimeRoot 'python'
+    $env:UV_CACHE_DIR = Join-Path $runtimeRoot 'cache'
+    $env:UV_PYTHON_PREFERENCE = 'only-managed'
+
+    if (-not (Test-Path -LiteralPath $python)) {
+        & $uv venv --python 3.11 $venv
+        if ($LASTEXITCODE -ne 0) { throw 'Не удалось создать локальное окружение Aurora Voice.' }
     }
 
-    Set-Stage 'dependencies' 18 'Установка зафиксированных локальных зависимостей'
-    & $python -m pip install --disable-pip-version-check --upgrade 'pip==25.2' 'setuptools==80.9.0' 'wheel==0.45.1'
-    if ($LASTEXITCODE -ne 0) { throw 'Не удалось обновить pip.' }
-    & $python -m pip install --disable-pip-version-check -r (Join-Path $PSScriptRoot 'requirements.txt')
+    Set-Stage 'dependencies' 18 'Установка зависимостей голосового модуля'
+    & $uv pip install --python $python -r (Join-Path $PSScriptRoot 'requirements.txt')
     if ($LASTEXITCODE -ne 0) { throw 'Не удалось установить зависимости Aurora Voice.' }
 
     New-Item -ItemType Directory -Force -Path $models,$modelCache,$hfHome,$torchHome | Out-Null
@@ -100,6 +102,7 @@ print("AUDIO_DEVICES", len(sd.query_devices()))
     Set-Stage 'ready' 100 'Голосовой модуль AuroraFox готов'
     Write-Host ''
     Write-Host 'AuroraFox Voice установлен.' -ForegroundColor Green
+    Write-Host 'Системный Python не требуется: AuroraFox использует собственный managed Python 3.11.'
     Write-Host 'Wake word, VAD, STT и TTS подготовлены для локальной работы.'
     Write-Host 'XTTS остаётся необязательным backend и включается только с разрешённым оригинальным speaker_wav.'
 } catch {
