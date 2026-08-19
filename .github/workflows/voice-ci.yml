@@ -83,6 +83,8 @@ jobs:
         run: timeout 90s ./godot --headless --editor --path . --quit
       - name: Run AuroraFox subsystem GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
+      - name: Run per-chat attachment context smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/chat_context_smoke.gd
       - name: Run updater GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/update_smoke.gd
 
