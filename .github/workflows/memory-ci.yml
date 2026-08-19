@@ -1,0 +1,63 @@
+name: AuroraFox Semantic Memory CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/memory_store.gd'
+      - 'scripts/agent_core.gd'
+      - 'models/install_models.ps1'
+      - 'models/model_setup_wizard.gd'
+      - 'tests/semantic_memory_smoke.gd'
+      - '.github/workflows/memory-ci.yml'
+  pull_request:
+    paths:
+      - 'scripts/memory_store.gd'
+      - 'scripts/agent_core.gd'
+      - 'models/install_models.ps1'
+      - 'models/model_setup_wizard.gd'
+      - 'tests/semantic_memory_smoke.gd'
+      - '.github/workflows/memory-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  semantic-memory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: Run semantic memory integration smoke
+        run: timeout 30s ./godot --headless --path . --script tests/semantic_memory_smoke.gd
+
+  windows-model-installer-parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse model installer
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\models\install_models.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            foreach ($parseError in $errors) {
+              $extent = $parseError.Extent
+              Write-Error ("models/install_models.ps1:{0}:{1}: {2}" -f $extent.StartLineNumber, $extent.StartColumnNumber, $parseError.Message)
+            }
+            throw 'models/install_models.ps1 parse failed'
+          }
