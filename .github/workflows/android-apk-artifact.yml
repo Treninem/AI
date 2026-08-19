@@ -2,6 +2,16 @@ name: AuroraFox Android APK Artifact
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'android_plugin/**'
+      - 'addons/AuroraFoxRuntime/**'
+      - 'build/build_android.ps1'
+      - 'export_presets.cfg'
+      - 'project.godot'
+      - 'project/version.json'
+      - '.github/workflows/android-apk-artifact.yml'
 
 permissions:
   contents: read
@@ -25,42 +35,21 @@ jobs:
         with:
           gradle-version: '8.13'
 
-      - name: Prepare Android SDK tools
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install pinned Android toolchain
         shell: bash
         run: |
           set -euo pipefail
-          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
-          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort | tail -n1 || true)"
-          if [ -z "$SDKMANAGER" ]; then
-            echo "sdkmanager not found under $SDK_ROOT/cmdline-tools" >&2
-            find "$SDK_ROOT" -maxdepth 4 -type f -name sdkmanager -print || true
-            exit 1
-          fi
-          yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1'
-          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
-          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
-          ls -la "$SDK_ROOT/ndk" || true
-          NDK_VERSION="$(ls -1 "$SDK_ROOT/ndk" 2>/dev/null | sort -V | tail -n1 || true)"
-          if [ -z "$NDK_VERSION" ]; then
-            "$SDKMANAGER" 'ndk;28.0.13004108'
-            NDK_VERSION='28.0.13004108'
-          fi
-          echo "AURORA_NDK_VERSION=$NDK_VERSION" >> "$GITHUB_ENV"
-          echo "Using Android SDK $SDK_ROOT, NDK $NDK_VERSION"
-
-      - name: Pin plugin to installed NDK
-        shell: python
-        run: |
-          from pathlib import Path
-          import os
-          path = Path('android_plugin/plugin/build.gradle.kts')
-          text = path.read_text(encoding='utf-8')
-          marker = '    compileSdk = 35\n'
-          ndk = os.environ['AURORA_NDK_VERSION']
-          if 'ndkVersion =' not in text:
-              text = text.replace(marker, marker + f'    ndkVersion = "{ndk}"\n', 1)
-          path.write_text(text, encoding='utf-8')
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            'platform-tools' \
+            'platforms;android-35' \
+            'build-tools;35.0.1' \
+            'cmake;3.22.1' \
+            'ndk;28.1.13356709'
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
 
       - name: Download Godot 4.7.1 and export templates
         shell: bash
@@ -71,6 +60,7 @@ jobs:
           curl -fL "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o .ci/godot.zip
           unzip -q .ci/godot.zip -d .ci/godot
           GODOT="$(find .ci/godot -maxdepth 1 -type f -name 'Godot*' | head -n1)"
+          test -n "$GODOT"
           chmod +x "$GODOT"
           curl -fL "$base/Godot_v4.7.1-stable_export_templates.tpz" -o .ci/templates.tpz
           mkdir -p "$HOME/.local/share/godot/export_templates/4.7.1.stable"
@@ -79,34 +69,79 @@ jobs:
           echo "GODOT=$GODOT" >> "$GITHUB_ENV"
           "$GODOT" --version
 
-      - name: Build AuroraFox Android release APK
-        shell: pwsh
-        run: ./build/build_android.ps1 -Godot "$env:GODOT" -ReleaseOnly -AllowUnsignedRelease
-
-      - name: Test-sign APK for installation artifact
+      - name: Resolve canonical AuroraFox version
+        id: version
         shell: bash
         run: |
           set -euo pipefail
-          APK='build/android/AuroraFox.apk'
-          test -f "$APK"
-          KS="$RUNNER_TEMP/aurorafox-test.keystore"
-          keytool -genkeypair -keystore "$KS" -storepass aurorafox -keypass aurorafox -alias aurorafox-test -keyalg RSA -keysize 2048 -validity 3650 -dname 'CN=AuroraFox Test, O=AuroraFox, C=RU'
-          APKSIGNER="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name apksigner | sort -V | tail -n1)"
-          ZIPALIGN="$(find "$ANDROID_SDK_ROOT/build-tools" -type f -name zipalign | sort -V | tail -n1)"
-          test -n "$APKSIGNER" && test -n "$ZIPALIGN"
-          "$ZIPALIGN" -f 4 "$APK" build/android/AuroraFox-aligned.apk
-          "$APKSIGNER" sign --ks "$KS" --ks-key-alias aurorafox-test --ks-pass pass:aurorafox --key-pass pass:aurorafox --out build/android/AuroraFox-V1.0.0.0-Android-Test.apk build/android/AuroraFox-aligned.apk
-          "$APKSIGNER" verify --verbose --print-certs build/android/AuroraFox-V1.0.0.0-Android-Test.apk
+          numeric="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          state = json.loads(Path('project/version.json').read_text(encoding='utf-8'))
+          numeric = str(state.get('numeric', '')).strip()
+          if not numeric or len(numeric.split('.')) != 4:
+              raise SystemExit('project/version.json has invalid numeric version')
+          print(numeric)
+          PY
+          )"
+          echo "numeric=$numeric" >> "$GITHUB_OUTPUT"
+          echo "AuroraFox Android version: $numeric"
 
-      - name: SHA-256
+      - name: Build unsigned AuroraFox release APK
+        shell: pwsh
+        run: ./build/build_android.ps1 -Godot "$env:GODOT" -Gradle 'gradle' -ReleaseOnly -AllowUnsignedRelease
+
+      - name: Sign and validate installable APK
         shell: bash
-        run: sha256sum build/android/AuroraFox-V1.0.0.0-Android-Test.apk | tee build/android/SHA256SUMS.txt
+        run: |
+          set -euo pipefail
+          version='${{ steps.version.outputs.numeric }}'
+          raw='build/android/AuroraFox.apk'
+          aligned='build/android/AuroraFox-aligned.apk'
+          final="build/android/AuroraFox-V${version}-Android-Test.apk"
+          test -s "$raw"
+
+          KS="$RUNNER_TEMP/aurorafox-test.keystore"
+          keytool -genkeypair \
+            -keystore "$KS" \
+            -storepass aurorafox \
+            -keypass aurorafox \
+            -alias aurorafox-test \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 3650 \
+            -dname 'CN=AuroraFox Test, O=AuroraFox, C=RU'
+
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n1)"
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n1)"
+          test -n "$APKSIGNER" && test -n "$ZIPALIGN" && test -n "$AAPT"
+
+          "$ZIPALIGN" -f -p 4 "$raw" "$aligned"
+          "$APKSIGNER" sign \
+            --ks "$KS" \
+            --ks-key-alias aurorafox-test \
+            --ks-pass pass:aurorafox \
+            --key-pass pass:aurorafox \
+            --out "$final" \
+            "$aligned"
+          "$APKSIGNER" verify --verbose --print-certs "$final"
+          "$AAPT" dump badging "$final" | tee build/android/aapt-badging.txt
+          grep -q "package: name='com.aurorafox.ai'" build/android/aapt-badging.txt
+          grep -q "versionName='${version}'" build/android/aapt-badging.txt
+          grep -q "sdkVersion:'26'" build/android/aapt-badging.txt
+          grep -q "targetSdkVersion:'35'" build/android/aapt-badging.txt
+          test "$(stat -c%s "$final")" -gt 1048576
+
+          sha256sum "$final" | tee build/android/SHA256SUMS.txt
+          echo "APK_PATH=$final" >> "$GITHUB_ENV"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: AuroraFox-V1.0.0.0-Android-Test
+          name: AuroraFox-V${{ steps.version.outputs.numeric }}-Android-Test
           path: |
-            build/android/AuroraFox-V1.0.0.0-Android-Test.apk
+            ${{ env.APK_PATH }}
             build/android/SHA256SUMS.txt
+            build/android/aapt-badging.txt
           if-no-files-found: error
