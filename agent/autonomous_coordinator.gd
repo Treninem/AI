@@ -11,9 +11,11 @@ const STATE_PATH := "user://agent/autonomy_state.json"
 @export var autonomous_enabled := true
 @export var autonomous_hot_improvements := true
 @export var autonomous_research_enabled := true
-@export_range(60.0, 86400.0, 1.0) var cycle_interval_seconds := 900.0
-@export_range(300.0, 604800.0, 1.0) var mutation_cooldown_seconds := 21600.0
-@export_range(900.0, 604800.0, 1.0) var research_cooldown_seconds := 3600.0
+@export_range(60.0, 86400.0, 1.0) var cycle_interval_seconds := 300.0
+@export_range(60.0, 604800.0, 1.0) var mutation_cooldown_seconds := 900.0
+@export_range(60.0, 604800.0, 1.0) var research_cooldown_seconds := 300.0
+@export_range(3, 10, 1) var mutation_population_size := 5
+@export_range(0.0, 120.0, 1.0) var initial_cycle_delay_seconds := 8.0
 
 var component_registry := AuroraComponentRegistry.new()
 var goals := AuroraGoals.new()
@@ -60,6 +62,14 @@ func _bootstrap() -> void:
 		})
 	if autonomous_enabled:
 		_timer.start()
+		call_deferred("_run_initial_cycle")
+
+func _run_initial_cycle() -> void:
+	if initial_cycle_delay_seconds > 0.0:
+		await get_tree().create_timer(initial_cycle_delay_seconds).timeout
+	if autonomous_enabled and not _cycle_running:
+		_record_event("initial_autonomous_cycle_started", {"population": mutation_population_size})
+		await run_autonomous_cycle()
 
 func _minimum_integration_ready() -> bool:
 	if tools == null or ai == null or memory == null or agent_core == null or improver == null or extensions == null:
@@ -107,6 +117,12 @@ func _connect_existing_signals() -> void:
 			improver.improvement_verified.connect(_on_improvement_verified)
 		if not improver.improvement_rejected.is_connected(_on_improvement_rejected):
 			improver.improvement_rejected.connect(_on_improvement_rejected)
+		if not improver.mutation_population_started.is_connected(_on_mutation_population_started):
+			improver.mutation_population_started.connect(_on_mutation_population_started)
+		if not improver.mutation_candidate_completed.is_connected(_on_mutation_candidate_completed):
+			improver.mutation_candidate_completed.connect(_on_mutation_candidate_completed)
+		if not improver.mutation_tournament_completed.is_connected(_on_mutation_tournament_completed):
+			improver.mutation_tournament_completed.connect(_on_mutation_tournament_completed)
 	if extensions != null:
 		if not extensions.extension_activated.is_connected(_on_extension_activated):
 			extensions.extension_activated.connect(_on_extension_activated)
@@ -133,7 +149,7 @@ func _register_coordination_tools() -> void:
 	if not tools.tools.has("aurora_autonomous_cycle"):
 		tools.register_tool(
 			"aurora_autonomous_cycle",
-			"Запустить один полный автономный цикл наблюдения, исследования, синхронизации и проверенного улучшения AuroraFox.",
+			"Запустить полный автономный цикл: обучение, 3-10 независимых мутаций, отдельные тесты, соревнование и автоматическую активацию победителя.",
 			{},
 			Callable(self, "_tool_cycle")
 		)
@@ -171,6 +187,10 @@ func synchronize_all() -> Dictionary:
 	report["autonomous_hot_improvements"] = autonomous_hot_improvements
 	report["autonomous_research_enabled"] = autonomous_research_enabled
 	report["hot_improvement_supported"] = _hot_improvement_supported()
+	report["mutation_population_size"] = clampi(mutation_population_size, SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)
+	report["cycle_interval_seconds"] = cycle_interval_seconds
+	report["mutation_cooldown_seconds"] = mutation_cooldown_seconds
+	report["research_cooldown_seconds"] = research_cooldown_seconds
 	report["last_improvement_unix"] = _last_improvement_unix
 	report["last_research_unix"] = _last_research_unix
 	report["events"] = _events.slice(maxi(0, _events.size() - 20), _events.size())
@@ -205,7 +225,8 @@ func _collect_observations() -> Dictionary:
 			"current_version": str(update_node.get("current_version")),
 			"checking": bool(update_node.get("checking")),
 			"downloading": bool(update_node.get("downloading")),
-			"download_ready": not str(update_node.get("downloaded_path")).is_empty()
+			"download_ready": not str(update_node.get("downloaded_path")).is_empty(),
+			"settings": update_node.call("get_settings") if update_node.has_method("get_settings") else {}
 		}
 
 	if tools == null:
@@ -238,6 +259,7 @@ func run_autonomous_cycle() -> Dictionary:
 	var observations: Dictionary = sync_report.get("observations", {})
 	var failures: Array = observations.get("recent_failures", [])
 	var selected_goal := goals.choose_goal(sync_report, failures, observations)
+	var population_size := _population_size_for_cycle(failures)
 	var report := {
 		"ok": true,
 		"goal": selected_goal,
@@ -245,6 +267,7 @@ func run_autonomous_cycle() -> Dictionary:
 		"research_attempted": false,
 		"mutation_attempted": false,
 		"mutation_applied": false,
+		"mutation_population_size": population_size,
 		"hot_improvement_supported": _hot_improvement_supported()
 	}
 
@@ -261,25 +284,50 @@ func run_autonomous_cycle() -> Dictionary:
 	var cooldown_ready := now - _last_improvement_unix >= int(mutation_cooldown_seconds)
 	if autonomous_hot_improvements and _hot_improvement_supported() and cooldown_ready and improver != null and extensions != null and ai != null:
 		report["mutation_attempted"] = true
-		var proposal_result: Dictionary = await improver.propose_improvement(selected_goal)
-		report["proposal"] = _compact(proposal_result)
-		if proposal_result.get("ok", false):
-			var proposal: Dictionary = proposal_result.get("proposal", {})
-			var staged: Dictionary = await improver.apply_generated_module(proposal)
-			report["verification"] = _compact(staged)
-			if staged.get("ok", false):
-				var activated := extensions.activate_staged(str(staged.get("stage_path", "")), str(staged.get("sha256", "")))
-				report["activation"] = _compact(activated)
-				if activated.get("ok", false):
-					report["mutation_applied"] = true
-					_last_improvement_unix = now
-					_record_event("mutation_activated", {"goal": selected_goal, "id": activated.get("id", ""), "tools": activated.get("tools", [])})
+		_record_event("mutation_tournament_started", {"goal": selected_goal, "requested": population_size})
+		var tournament: Dictionary = await improver.run_mutation_tournament(selected_goal, population_size)
+		report["tournament"] = _compact(tournament)
+		if tournament.get("ok", false):
+			var activated := extensions.activate_staged(str(tournament.get("stage_path", "")), str(tournament.get("sha256", "")))
+			report["activation"] = _compact(activated)
+			if activated.get("ok", false):
+				report["mutation_applied"] = true
+				_last_improvement_unix = int(Time.get_unix_time_from_system())
+				_record_event("mutation_winner_activated", {
+					"goal": selected_goal,
+					"id": activated.get("id", ""),
+					"tools": activated.get("tools", []),
+					"population_size": tournament.get("population_size", 0),
+					"verified_count": tournament.get("verified_count", 0),
+					"winner": tournament.get("winner", {})
+				})
+		else:
+			_record_event("mutation_tournament_rejected", {
+				"goal": selected_goal,
+				"stage": tournament.get("stage", ""),
+				"error": tournament.get("error", ""),
+				"population_size": tournament.get("population_size", 0),
+				"verified_count": tournament.get("verified_count", 0)
+			})
 
-	_record_event("cycle_completed", {"goal": selected_goal, "mutation_applied": report.get("mutation_applied", false), "research_attempted": report.get("research_attempted", false)})
+	_record_event("cycle_completed", {
+		"goal": selected_goal,
+		"mutation_applied": report.get("mutation_applied", false),
+		"mutation_attempted": report.get("mutation_attempted", false),
+		"research_attempted": report.get("research_attempted", false),
+		"population_size": population_size
+	})
 	_cycle_running = false
 	_save_state()
 	autonomous_cycle_completed.emit(report)
 	return report
+
+func _population_size_for_cycle(failures: Array) -> int:
+	var size := clampi(mutation_population_size, SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)
+	# More recent failures create more competing variants, but never more than 10.
+	if failures.size() >= 2: size += 1
+	if failures.size() >= 4: size += 1
+	return clampi(size, SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)
 
 func _hot_improvement_supported() -> bool:
 	return OS.get_name() == "Windows"
@@ -314,6 +362,29 @@ func _on_improvement_verified(result: Dictionary) -> void:
 func _on_improvement_rejected(result: Dictionary) -> void:
 	_record_event("improvement_rejected", result)
 
+func _on_mutation_population_started(goal: String, requested: int) -> void:
+	_record_event("mutation_population_started", {"goal": goal, "requested": requested})
+
+func _on_mutation_candidate_completed(candidate: Dictionary) -> void:
+	_record_event("mutation_candidate_completed", {
+		"mutation_tag": candidate.get("mutation_tag", ""),
+		"strategy": candidate.get("strategy", ""),
+		"path": candidate.get("path", ""),
+		"verified": candidate.get("verified", false),
+		"score": candidate.get("score", 0.0),
+		"sha256": candidate.get("sha256", "")
+	})
+
+func _on_mutation_tournament_completed(result: Dictionary) -> void:
+	_record_event("mutation_tournament_completed", {
+		"ok": result.get("ok", false),
+		"goal": result.get("goal", ""),
+		"population_size": result.get("population_size", 0),
+		"verified_count": result.get("verified_count", 0),
+		"winner": result.get("winner", {}),
+		"error": result.get("error", "")
+	})
+
 func _on_extension_activated(id: String, tool_names: Array) -> void:
 	_record_event("extension_activated", {"id": id, "tools": tool_names})
 
@@ -326,8 +397,9 @@ func _record_event(kind: String, details: Dictionary) -> void:
 		"kind": kind,
 		"details": _compact(details)
 	})
-	if _events.size() > 200:
-		_events = _events.slice(_events.size() - 200, _events.size())
+	if _events.size() > 500:
+		_events = _events.slice(_events.size() - 500, _events.size())
+	_save_state()
 
 func _save_state() -> void:
 	var file := FileAccess.open(STATE_PATH, FileAccess.WRITE)
@@ -336,6 +408,7 @@ func _save_state() -> void:
 	file.store_string(JSON.stringify({
 		"last_improvement_unix": _last_improvement_unix,
 		"last_research_unix": _last_research_unix,
+		"mutation_population_size": mutation_population_size,
 		"events": _events,
 		"last_report": _last_report
 	}))
@@ -353,6 +426,7 @@ func _load_state() -> void:
 		return
 	_last_improvement_unix = int(parsed.get("last_improvement_unix", 0))
 	_last_research_unix = int(parsed.get("last_research_unix", 0))
+	mutation_population_size = clampi(int(parsed.get("mutation_population_size", mutation_population_size)), SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)
 	var saved_events: Variant = parsed.get("events", [])
 	if saved_events is Array:
 		_events = saved_events
