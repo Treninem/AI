@@ -25,6 +25,8 @@ func _init() -> void:
 		WindowsTrustedProjectBridge.new(),
 		DeveloperRuntimeManager.new(),
 		DeveloperRuntimeToolBridge.new(),
+		RuntimeExtensionManager.new(),
+		SelfImprovementOverlay.new(),
 	]
 	for node in nodes:
 		if node == null:
