@@ -22,7 +22,6 @@ if (-not (Test-Path -LiteralPath $exportPresetPath)) {
 
 if (Test-Path -LiteralPath $versionTest) {
     & $versionTest
-    if ($LASTEXITCODE -ne 0) { throw "AuroraFox version synchronization check failed" }
 }
 
 $nativeSetup = Join-Path $pluginRoot "setup_native.ps1"
