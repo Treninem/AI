@@ -1,0 +1,74 @@
+name: AuroraFox Model Bootstrap E2E
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - 'model-bootstrap-e2e/**'
+    paths:
+      - 'models/**'
+      - 'scripts/ai_client.gd'
+      - 'tests/model_bootstrap_e2e.gd'
+      - 'build/model_bootstrap_trigger.txt'
+      - '.github/workflows/model-bootstrap-e2e.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  windows-model-bootstrap:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Parse model installer
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\models\install_models.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw 'models/install_models.ps1 parse failed'
+          }
+
+      - name: Bootstrap Ollama and qwen3 core profile
+        shell: powershell
+        run: |
+          $state = Join-Path $env:RUNNER_TEMP 'aurora-model-setup-state.json'
+          .\models\install_models.ps1 -Profile core -StateFile $state
+          if ($LASTEXITCODE -ne 0) { throw "Model bootstrap exited with $LASTEXITCODE" }
+          if (-not (Test-Path $state)) { throw 'Model bootstrap state file missing' }
+          $data = Get-Content $state -Raw | ConvertFrom-Json
+          if ($data.stage -ne 'ready' -or [int]$data.progress -ne 100) {
+            throw "Model bootstrap did not reach ready/100: $(Get-Content $state -Raw)"
+          }
+          $tags = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 10
+          $names = @($tags.models | ForEach-Object { [string]$_.name })
+          if ($names -notcontains 'qwen3:8b') { throw "qwen3:8b missing after bootstrap: $($names -join ', ')" }
+          Get-Content $state
+
+      - name: Download Godot 4.7.1
+        id: godot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          New-Item -ItemType Directory -Force .ci\godot | Out-Null
+          Invoke-WebRequest "$base/Godot_v4.7.1-stable_win64.exe.zip" -OutFile .ci\godot.zip
+          Expand-Archive .ci\godot.zip .ci\godot -Force
+          $godot = (Get-ChildItem .ci\godot -Filter '*_console.exe' | Select-Object -First 1).FullName
+          if (-not $godot) { $godot = (Get-ChildItem .ci\godot -Filter '*.exe' | Select-Object -First 1).FullName }
+          if (-not $godot) { throw 'Godot executable not found' }
+          "path=$godot" >> $env:GITHUB_OUTPUT
+          & $godot --version
+
+      - name: Verify AuroraFox AIClient end-to-end
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --editor --path . --quit
+          if ($LASTEXITCODE -ne 0) { throw 'Godot import failed before AIClient E2E' }
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/model_bootstrap_e2e.gd
+          if ($LASTEXITCODE -ne 0) { throw 'AuroraFox AIClient model bootstrap E2E failed' }
