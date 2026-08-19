@@ -1,23 +1,33 @@
-name: AuroraFox Voice CI
+name: AuroraFox Core / Voice CI
 
 on:
   push:
     branches: [main]
     paths:
       - 'voice/**'
+      - 'update/**'
       - 'scripts/**'
       - 'tests/**'
+      - 'android_plugin/**'
+      - 'build/**'
       - 'project.godot'
       - 'main.tscn'
+      - 'export_presets.cfg'
       - '.github/workflows/voice-ci.yml'
+      - '.github/workflows/release.yml'
   pull_request:
     paths:
       - 'voice/**'
+      - 'update/**'
       - 'scripts/**'
       - 'tests/**'
+      - 'android_plugin/**'
+      - 'build/**'
       - 'project.godot'
       - 'main.tscn'
+      - 'export_presets.cfg'
       - '.github/workflows/voice-ci.yml'
+      - '.github/workflows/release.yml'
   workflow_dispatch:
 
 jobs:
@@ -35,18 +45,22 @@ jobs:
       - name: Run voice unit tests
         run: pytest -q tests/test_voice_text.py tests/test_voice_configs.py
 
-  godot-voice:
+  godot-core:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot 4.7.1
         run: |
-          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
           unzip -q godot.zip
-          mv Godot_v4.7.1-stable_linux.x86_64 godot
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
           chmod +x godot
           ./godot --version
       - name: Import project and parse scripts
-        run: timeout 60s ./godot --headless --editor --path . --quit
+        run: timeout 90s ./godot --headless --editor --path . --quit
       - name: Run voice GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
+      - name: Run updater GDScript smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/update_smoke.gd
