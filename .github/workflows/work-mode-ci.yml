@@ -8,6 +8,7 @@ on:
       - 'scripts/desktop_visual_theme.gd'
       - 'scripts/ai_client.gd'
       - 'tests/work_mode_smoke.gd'
+      - 'tests/work_mode_store_smoke.gd'
       - 'tests/ollama_model_selection_smoke.gd'
       - 'main.tscn'
       - '.github/workflows/work-mode-ci.yml'
@@ -19,6 +20,7 @@ on:
       - 'scripts/desktop_visual_theme.gd'
       - 'scripts/ai_client.gd'
       - 'tests/work_mode_smoke.gd'
+      - 'tests/work_mode_store_smoke.gd'
       - 'tests/ollama_model_selection_smoke.gd'
       - 'main.tscn'
   workflow_dispatch:
@@ -44,6 +46,8 @@ jobs:
           ./godot --version
       - name: Import and parse project
         run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: Work store smoke
+        run: timeout 30s ./godot --headless --path . --script tests/work_mode_store_smoke.gd
       - name: Work mode and settings smoke
         run: timeout 40s ./godot --headless --path . --script tests/work_mode_smoke.gd
       - name: Ollama fallback selection smoke
