@@ -20,6 +20,8 @@ user-data/
 voice/.venv/
 voice/venv/
 computer/.venv/
+file_intelligence/.venv/
+file_intelligence/cache/
 runtime/windows/uv/
 runtime/windows/python/
 runtime/windows/cache/
