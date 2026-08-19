@@ -2,13 +2,13 @@ class_name AuroraModelSetupWizard
 extends Node
 
 const STATE_PATH := "user://aurora_model_setup_state.json"
-const REQUIRED_MODEL := "qwen3:8b"
+const REQUIRED_MODELS := ["qwen3:8b", "qwen3-embedding:0.6b"]
 const OLLAMA_TAGS := "http://127.0.0.1:11434/api/tags"
 const FOX_LOGO: Texture2D = preload("res://assets/ui/fox_logo.svg")
 const PROFILE_INFO := {
-	"core": {"label":"Базовый — чат", "models":"qwen3:8b", "bytes":5200000000, "note":"Основной локальный чат и инструменты."},
-	"balanced": {"label":"Сбалансированный — чат + зрение", "models":"qwen3:8b + qwen3-vl:8b", "bytes":11300000000, "note":"Добавляет анализ изображений, сканов PDF и кадров видео."},
-	"full": {"label":"Полный — чат + зрение + Code 30B", "models":"qwen3:8b + qwen3-vl:8b + qwen3-coder:30b", "bytes":30300000000, "note":"Добавляет отдельную Code-модель для сложных программных задач."}
+	"core": {"label":"Базовый — чат + память", "models":"qwen3:8b + qwen3-embedding:0.6b", "bytes":5839000000, "note":"Основной локальный чат, инструменты и семантическая долговременная память."},
+	"balanced": {"label":"Сбалансированный — чат + память + зрение", "models":"qwen3:8b + qwen3-embedding:0.6b + qwen3-vl:8b", "bytes":11939000000, "note":"Добавляет анализ изображений, сканов PDF и кадров видео."},
+	"full": {"label":"Полный — чат + память + зрение + Code 30B", "models":"qwen3:8b + qwen3-embedding:0.6b + qwen3-vl:8b + qwen3-coder:30b", "bytes":30939000000, "note":"Добавляет отдельную Code-модель для сложных программных задач."}
 }
 
 var popup: PopupPanel
@@ -176,7 +176,7 @@ func _build_ui() -> void:
 	box.add_child(progress)
 
 	detail_label = Label.new()
-	detail_label.text = "Проверю Ollama и выбранные локальные модели."
+	detail_label.text = "Проверю Ollama, модель чата и embedding-модель памяти."
 	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_label.add_theme_font_size_override("font_size", 13)
 	detail_label.add_theme_color_override("font_color", Color("cbd4e8"))
@@ -289,10 +289,16 @@ func _required_model_ready() -> bool:
 	var parsed = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
 	if not parsed is Dictionary:
 		return false
+	var installed: Array[String] = []
 	for item in parsed.get("models", []):
-		if item is Dictionary and str(item.get("name", item.get("model", ""))) == REQUIRED_MODEL:
-			return true
-	return false
+		if item is Dictionary:
+			var model_name := str(item.get("name", item.get("model", "")))
+			if not model_name.is_empty():
+				installed.append(model_name)
+	for required in REQUIRED_MODELS:
+		if str(required) not in installed:
+			return false
+	return true
 
 func _installer_path() -> String:
 	for root in _model_roots():
@@ -325,8 +331,8 @@ func _update_main_status() -> void:
 	if main == null:
 		return
 	if main.has_method("_set_status"):
-		main.call("_set_status", "Модель подключена • qwen3:8b", true, false)
+		main.call("_set_status", "Модель подключена • qwen3:8b • semantic memory", true, false)
 		return
 	var label = main.get("status")
 	if label is Label:
-		label.text = "Модель подключена • qwen3:8b"
+		label.text = "Модель подключена • qwen3:8b • semantic memory"
