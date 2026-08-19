@@ -53,7 +53,7 @@ try {
     Set-Stage 'verify' 90 'Verifying AuroraFox API imports'
     Push-Location $AppRoot
     try {
-        & $Python -c "import fastapi, uvicorn, pydantic, requests; import api.app; print('AURORAFOX_API_READY')"
+        & $Python -c "import fastapi, uvicorn, pydantic, requests; import api.server; print('AURORAFOX_API_READY')"
         if ($LASTEXITCODE -ne 0) { throw 'AuroraFox API import verification failed.' }
     } finally {
         Pop-Location
