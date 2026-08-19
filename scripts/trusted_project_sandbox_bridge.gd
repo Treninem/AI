@@ -20,7 +20,7 @@ func _register() -> void:
 	if not registry is ToolRegistry: return
 	registry.register_tool(
 		"workspace_import_project",
-		"Скопировать доверенный локальный проект в work/project активной песочницы перед изменениями. Игнорирует тяжёлые build/cache каталоги и имеет лимиты файлов/размера.",
+		"Скопировать доверенный локальный проект в work/project активной песочницы перед изменениями. Собственный res:// AuroraFox разрешён автоматически; внешние проекты требуют явного разрешения пользователя.",
 		{"project_path":"string","target":"string","max_files":"int","max_bytes":"int"},
 		Callable(self, "_import_project")
 	)
@@ -55,6 +55,15 @@ func _sandbox_bridge() -> SandboxToolBridge:
 	return main.get_node_or_null("SandboxTools") as SandboxToolBridge
 
 func _trusted_root(path: String) -> String:
+	var requested := path.strip_edges()
+	var own_root := ProjectSettings.globalize_path("res://").replace("\\", "/")
+	while own_root.ends_with("/") and own_root.length() > 3: own_root = own_root.trim_suffix("/")
+	var requested_global := ProjectSettings.globalize_path(requested).replace("\\", "/") if requested.begins_with("res://") or requested.begins_with("user://") else requested.replace("\\", "/")
+	while requested_global.ends_with("/") and requested_global.length() > 3: requested_global = requested_global.trim_suffix("/")
+	var compare_own := own_root.to_lower() if OS.get_name() == "Windows" else own_root
+	var compare_requested := requested_global.to_lower() if OS.get_name() == "Windows" else requested_global
+	if requested == "res://" or compare_requested == compare_own:
+		return own_root
 	var bridge := _project_bridge()
 	if bridge == null: return ""
 	if not bridge.access.is_trusted_root(path): return ""
