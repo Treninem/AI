@@ -136,20 +136,26 @@ jobs:
       - name: Create portable ZIP and hashes
         shell: pwsh
         run: |
+          $text = Get-Content project.godot -Raw
+          if ($text -notmatch 'config/version="([0-9.]+)"') { throw 'application/config/version missing' }
+          $version = $Matches[1]
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path build\windows\* -DestinationPath dist\AuroraFox-V1.0.0.0-Windows-Portable.zip -CompressionLevel Optimal -Force
-          Copy-Item build\release\AuroraFox_Setup_Windows.exe dist\AuroraFox-V1.0.0.0-Setup-Windows.exe -Force
-          Get-FileHash dist\AuroraFox-V1.0.0.0-Setup-Windows.exe -Algorithm SHA256 | ForEach-Object { "SETUP  $($_.Hash.ToLower())" } | Set-Content dist\SHA256SUMS.txt
-          Get-FileHash dist\AuroraFox-V1.0.0.0-Windows-Portable.zip -Algorithm SHA256 | ForEach-Object { "PORTABLE  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
+          $portable = "dist\AuroraFox-V$version-Windows-Portable.zip"
+          $setup = "dist\AuroraFox-V$version-Setup-Windows.exe"
+          Compress-Archive -Path build\windows\* -DestinationPath $portable -CompressionLevel Optimal -Force
+          Copy-Item build\release\AuroraFox_Setup_Windows.exe $setup -Force
+          Get-FileHash $setup -Algorithm SHA256 | ForEach-Object { "SETUP  $($_.Hash.ToLower())" } | Set-Content dist\SHA256SUMS.txt
+          Get-FileHash $portable -Algorithm SHA256 | ForEach-Object { "PORTABLE  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
+          Get-ChildItem dist | Select-Object Name,Length
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: AuroraFox-V1.0.0.0-Windows
+          name: AuroraFox-Windows
           path: |
-            dist/AuroraFox-V1.0.0.0-Setup-Windows.exe
-            dist/AuroraFox-V1.0.0.0-Windows-Portable.zip
+            dist/AuroraFox-V*-Setup-Windows.exe
+            dist/AuroraFox-V*-Windows-Portable.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
