@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.conversation_store import ConversationStore
 from api.file_client import FileIntelligenceClient
+from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
 from api.runtime_bridge import AuroraRuntimeBridge
 
@@ -33,6 +34,7 @@ bridge = AuroraRuntimeBridge(
     host=os.getenv("AURORAFOX_BRIDGE_HOST", "127.0.0.1"),
     port=int(os.getenv("AURORAFOX_BRIDGE_PORT", "8770")),
 )
+learning = LearningSynchronizer(API_ROOT, bridge)
 ollama = OllamaClient(
     base_url=os.getenv("OLLAMA_URL", "http://127.0.0.1:11434"),
     preferred_model=os.getenv("AURORAFOX_CHAT_MODEL", "qwen3:8b"),
@@ -83,6 +85,27 @@ class ChatRequest(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class FeedbackRequest(BaseModel):
+    conversation_id: str = Field(min_length=1, max_length=256)
+    source: str = Field(default="api", max_length=64)
+    user_id: str = Field(default="", max_length=256)
+    message: str = Field(default="", max_length=100000)
+    answer: str = Field(default="", max_length=100000)
+    score: float = Field(ge=-1.0, le=1.0)
+    corrected_answer: str = Field(default="", max_length=100000)
+    note: str = Field(default="", max_length=12000)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
+class LearningRequest(BaseModel):
+    source: str = Field(default="api", max_length=64)
+    kind: str = Field(default="external_knowledge", max_length=128)
+    content: str = Field(min_length=1, max_length=200000)
+    importance: float = Field(default=0.65, ge=0.0, le=1.0)
+    confidence: float = Field(default=0.80, ge=0.0, le=1.0)
+    metadata: dict[str, Any] = Field(default_factory=dict)
+
+
 class FileAnalyzeRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     content_base64: str = Field(min_length=1)
@@ -128,12 +151,50 @@ def _require(record: dict[str, Any], scope: str) -> None:
         raise HTTPException(403, f"API key does not have scope: {scope}")
 
 
-def _execute_chat(message: str, context: list[dict[str, Any]], mode: str, temperature: float, conversation_id: str) -> dict[str, Any]:
+def _learning_payload(
+    message: str,
+    answer: str,
+    conversation_id: str,
+    source: str,
+    runtime: str,
+    metadata: dict[str, Any],
+) -> dict[str, Any]:
+    return {
+        "source": source,
+        "kind": "api_interaction",
+        "content": json.dumps({
+            "conversation_id": conversation_id,
+            "request": message,
+            "answer": answer,
+            "runtime": runtime,
+            "metadata": metadata,
+        }, ensure_ascii=False),
+        "importance": 0.58,
+        "confidence": 0.78,
+        "metadata": metadata,
+    }
+
+
+def _execute_chat(
+    message: str,
+    context: list[dict[str, Any]],
+    mode: str,
+    temperature: float,
+    conversation_id: str,
+    metadata: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    metadata = metadata or {}
     bridge_error = ""
     if mode in {"auto", "agent"}:
         try:
-            result = bridge.chat(message, context, conversation_id)
+            result = bridge.chat(message, context, conversation_id, metadata)
             if result.get("ok", False):
+                # If earlier API requests were handled while the GUI/core was
+                # offline, replay a small batch as soon as AgentCore is back.
+                try:
+                    learning.flush(25)
+                except Exception:
+                    pass
                 return {
                     "ok": True,
                     "content": str(result.get("content", "")),
@@ -160,16 +221,38 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
     owner = str(record.get("id", "unknown"))
     conversation_id = req.conversation_id or uuid.uuid4().hex
     context = conversations.context(owner, conversation_id, 24)
-    result = _execute_chat(req.message, context, req.mode, req.temperature, conversation_id)
-    conversations.append(owner, conversation_id, "user", req.message, req.metadata)
-    conversations.append(owner, conversation_id, "assistant", str(result.get("content", "")), {
+    metadata = dict(req.metadata)
+    metadata.setdefault("source", "api")
+    metadata["api_key_id"] = owner
+    result = _execute_chat(req.message, context, req.mode, req.temperature, conversation_id, metadata)
+    reply = str(result.get("content", ""))
+    conversations.append(owner, conversation_id, "user", req.message, metadata)
+    conversations.append(owner, conversation_id, "assistant", reply, {
         "runtime": result.get("runtime", ""),
         "model": result.get("model", ""),
+        "source": metadata.get("source", "api"),
     })
+
+    # AgentCore already stores its own interaction in MemoryStore. Only queue
+    # fallback-Ollama interactions so they can be learned when AgentCore returns.
+    if str(result.get("runtime", "")) != "aurorafox-agent":
+        learning.record(
+            "api_interaction",
+            _learning_payload(
+                req.message,
+                reply,
+                conversation_id,
+                str(metadata.get("source", "api")),
+                str(result.get("runtime", "ollama")),
+                metadata,
+            ),
+            True,
+        )
+
     return {
         "ok": True,
         "conversation_id": conversation_id,
-        "reply": str(result.get("content", "")),
+        "reply": reply,
         "runtime": result.get("runtime", ""),
         "model": result.get("model", ""),
     }
@@ -198,6 +281,7 @@ def health() -> dict[str, Any]:
         "ollama_online": bool(ollama_models),
         "ollama_models": ollama_models,
         "bridge": f"127.0.0.1:{bridge.port}",
+        "learning": learning.status(),
     }
 
 
@@ -209,6 +293,7 @@ def capabilities(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
         "features": [
             "agent-chat", "ollama-fallback", "conversation-memory", "openai-compatible-chat",
             "websocket", "file-intelligence", "tool-discovery", "scoped-api-keys",
+            "integration-learning", "feedback-learning", "offline-learning-queue",
         ],
     }
 
@@ -216,6 +301,36 @@ def capabilities(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
 @app.post("/v1/chat")
 def chat(req: ChatRequest, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
     return _native_chat(req, record)
+
+
+@app.post("/v1/feedback")
+def feedback(req: FeedbackRequest, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    _require(record, "feedback")
+    payload = req.model_dump()
+    payload["api_key_id"] = str(record.get("id", ""))
+    result = learning.feedback(payload, True)
+    return {"ok": True, "queued": not bool(result.get("synced", False)), **result, "learning": learning.status()}
+
+
+@app.post("/v1/learn")
+def learn(req: LearningRequest, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    _require(record, "memory.write")
+    payload = req.model_dump()
+    payload["api_key_id"] = str(record.get("id", ""))
+    result = learning.record(req.kind, payload, True)
+    return {"ok": True, "queued": not bool(result.get("synced", False)), **result, "learning": learning.status()}
+
+
+@app.get("/v1/learning/status")
+def learning_status(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    _require(record, "memory.read")
+    return learning.status()
+
+
+@app.post("/v1/learning/sync")
+def learning_sync(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    _require(record, "memory.write")
+    return learning.flush(250)
 
 
 @app.get("/v1/conversations/{conversation_id}")
@@ -289,11 +404,23 @@ def openai_chat(req: OpenAIChatRequest, record: dict[str, Any] = Depends(_auth))
     context = messages[:last]
     conversation_id = req.user or uuid.uuid4().hex
     mode = "agent" if req.model == "aurorafox-agent" else "auto"
-    result = _execute_chat(message, context, mode, req.temperature, conversation_id)
+    metadata = {
+        "source": "openai_compatible",
+        "api_key_id": str(record.get("id", "")),
+        "requested_model": req.model,
+    }
+    result = _execute_chat(message, context, mode, req.temperature, conversation_id, metadata)
     created = int(time.time())
     completion_id = "chatcmpl-" + uuid.uuid4().hex
     model_name = str(result.get("model", req.model))
     content = str(result.get("content", ""))
+
+    if str(result.get("runtime", "")) != "aurorafox-agent":
+        learning.record(
+            "api_interaction",
+            _learning_payload(message, content, conversation_id, "openai_compatible", str(result.get("runtime", "ollama")), metadata),
+            True,
+        )
 
     if req.stream:
         async def stream():
