@@ -5,12 +5,16 @@ signal tool_called(name: String, args: Dictionary)
 
 var tools: Dictionary = {}
 var computer_base_url := "http://127.0.0.1:8766"
+var files_base_url := "http://127.0.0.1:8767"
 
 func _ready() -> void:
 	register_tool("http_get", "Скачать текст или JSON по URL", {"url":"string"}, Callable(self, "_http_get"))
 	register_tool("read_file", "Прочитать текстовый файл проекта или user://", {"path":"string"}, Callable(self, "_read_file"))
 	register_tool("write_file", "Записать текстовый файл в разрешённую область", {"path":"string","content":"string"}, Callable(self, "_write_file"))
 	register_tool("list_dir", "Показать файлы и папки", {"path":"string"}, Callable(self, "_list_dir"))
+	register_tool("analyze_file", "Глубоко разобрать локальный файл: PDF, DOCX, XLS/XLSX, PPTX, ODT/ODS, изображение, аудио, видео, архив или исходный код", {"path":"string","question":"string","visual":"bool"}, Callable(self, "_analyze_file"))
+	register_tool("file_tree", "Построить дерево локальной папки проекта или user:// с размерами файлов", {"path":"string","max_items":"int"}, Callable(self, "_file_tree"))
+	register_tool("search_file_cache", "Найти ранее разобранные файлы и фрагменты по локальному индексу File Intelligence", {"query":"string","limit":"int"}, Callable(self, "_search_file_cache"))
 	register_tool("run_process", "Запустить разрешённую внешнюю программу", {"program":"string","args":"array"}, Callable(self, "_run_process"))
 	register_tool("git_status", "Проверить git status", {}, Callable(self, "_git_status"))
 	register_tool("git_diff", "Посмотреть git diff", {}, Callable(self, "_git_diff"))
@@ -74,7 +78,7 @@ func _http_get(args: Dictionary) -> Dictionary:
 	var req := HTTPRequest.new()
 	req.timeout = 30.0
 	add_child(req)
-	var err := req.request(url, PackedStringArray(["User-Agent: AuroraFox/0.2"]))
+	var err := req.request(url, PackedStringArray(["User-Agent: AuroraFox/0.4"]))
 	if err != OK:
 		req.queue_free()
 		return {"ok": false, "error": "request error %s" % err}
@@ -91,16 +95,21 @@ func _read_file(args: Dictionary) -> Dictionary:
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		return {"ok": false, "error": "Cannot open file"}
-	return {"ok": true, "content": f.get_as_text()}
+	var content := f.get_as_text()
+	f.close()
+	return {"ok": true, "content": content}
 
 func _write_file(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))
 	if not _path_allowed(path, true):
 		return {"ok": false, "error": "Write path denied"}
+	var absolute := ProjectSettings.globalize_path(path)
+	DirAccess.make_dir_recursive_absolute(absolute.get_base_dir())
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f == null:
 		return {"ok": false, "error": "Cannot open file"}
 	f.store_string(str(args.get("content", "")))
+	f.close()
 	return {"ok": true}
 
 func _list_dir(args: Dictionary) -> Dictionary:
@@ -118,6 +127,32 @@ func _list_dir(args: Dictionary) -> Dictionary:
 		name = dir.get_next()
 	dir.list_dir_end()
 	return {"ok": true, "items": items}
+
+func _analyze_file(args: Dictionary) -> Dictionary:
+	var path := str(args.get("path", ""))
+	if not _path_allowed(path, false):
+		return {"ok": false, "error": "File Intelligence path denied. Use res:// or user://."}
+	return await _http_json(files_base_url + "/analyze", HTTPClient.METHOD_POST, {
+		"path": ProjectSettings.globalize_path(path),
+		"question": str(args.get("question", "")),
+		"visual": bool(args.get("visual", true)),
+		"max_chars": 200000
+	}, 620.0)
+
+func _file_tree(args: Dictionary) -> Dictionary:
+	var path := str(args.get("path", "res://"))
+	if not _path_allowed(path, false):
+		return {"ok": false, "error": "File tree path denied. Use res:// or user://."}
+	return await _http_json(files_base_url + "/tree", HTTPClient.METHOD_POST, {
+		"path": ProjectSettings.globalize_path(path),
+		"max_items": clampi(int(args.get("max_items", 2000)), 1, 5000)
+	}, 90.0)
+
+func _search_file_cache(args: Dictionary) -> Dictionary:
+	return await _http_json(files_base_url + "/cache/search", HTTPClient.METHOD_POST, {
+		"query": str(args.get("query", "")),
+		"limit": clampi(int(args.get("limit", 20)), 1, 100)
+	}, 30.0)
 
 func _run_process(args: Dictionary) -> Dictionary:
 	var program := str(args.get("program", ""))
