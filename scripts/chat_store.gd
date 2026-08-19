@@ -43,7 +43,9 @@ func add_message(role: String, content: String, attachments: Array = []) -> void
 	messages.append({
 		"role": role,
 		"content": content,
-		"attachments": attachments,
+		# Full extracted PDF/DOCX/XLSX/video text lives in File Intelligence cache and is used
+		# for the current task. Chat history keeps only lightweight attachment metadata.
+		"attachments": _compact_attachments(attachments),
 		"time": Time.get_datetime_string_from_system()
 	})
 	chat["messages"] = messages
@@ -52,6 +54,26 @@ func add_message(role: String, content: String, attachments: Array = []) -> void
 		var clean := content.strip_edges().replace("\n", " ")
 		chat["title"] = clean.substr(0, 38) if clean.length() > 0 else "Новый чат"
 	save_all()
+
+func _compact_attachments(items: Array) -> Array:
+	var out: Array = []
+	for item in items:
+		if not item is Dictionary: continue
+		var compact := {
+			"path": str(item.get("path", "")),
+			"name": str(item.get("name", "file")),
+			"extension": str(item.get("extension", "")),
+			"kind": str(item.get("kind", "unknown")),
+			"size": int(item.get("size", 0)),
+			"metadata": item.get("metadata", {}),
+			"warnings": item.get("warnings", []),
+			"truncated": bool(item.get("truncated", false)),
+			"cached": bool(item.get("cached", false)),
+			"analyzed": bool(item.get("analyzed", false))
+		}
+		if item.has("private_copy"): compact["private_copy"] = str(item.get("private_copy", ""))
+		out.append(compact)
+	return out
 
 func rename_chat(id: String, title: String) -> void:
 	var chat := get_chat(id)
@@ -88,12 +110,14 @@ func save_all() -> void:
 	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify({"active_chat_id": active_chat_id, "chats": chats}))
+		file.close()
 
 func load_all() -> void:
 	if not FileAccess.file_exists(SAVE_PATH): return
 	var file := FileAccess.open(SAVE_PATH, FileAccess.READ)
 	if not file: return
 	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
 	if typeof(parsed) != TYPE_DICTIONARY: return
 	chats = parsed.get("chats", [])
 	active_chat_id = str(parsed.get("active_chat_id", ""))
