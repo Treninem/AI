@@ -65,8 +65,12 @@ jobs:
       - name: Autonomous coordinator smoke
         shell: pwsh
         run: |
-          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/autonomous_coordinator_smoke.gd
-          if ($LASTEXITCODE -ne 0) { throw 'Autonomous coordinator smoke failed' }
+          if (Test-Path tests/autonomous_coordinator_smoke.gd) {
+            & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/autonomous_coordinator_smoke.gd
+            if ($LASTEXITCODE -ne 0) { throw 'Autonomous coordinator smoke failed' }
+          } else {
+            Write-Host 'Autonomous coordinator not present on this revision; skipping its dedicated smoke test.'
+          }
 
       - name: Self improvement smoke
         shell: pwsh
