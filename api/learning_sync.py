@@ -12,7 +12,26 @@ class LearningSynchronizer:
         self.store = LearningStore(root)
         self.bridge = bridge
 
+    @staticmethod
+    def _implicit_interaction_can_learn(kind: str, payload: dict[str, Any]) -> bool:
+        if kind != "api_interaction":
+            return True
+        metadata = payload.get("metadata", {})
+        return isinstance(metadata, dict) and bool(metadata.get("share_for_learning", False))
+
     def record(self, kind: str, payload: dict[str, Any], try_sync: bool = True) -> dict[str, Any]:
+        # Ordinary chat is private by default. The API server may call record()
+        # for an Ollama fallback interaction, but that raw request/answer must
+        # not enter the shared AuroraFox knowledge store unless the client
+        # explicitly opted in with metadata.share_for_learning=true.
+        if not self._implicit_interaction_can_learn(kind, payload):
+            return {
+                "event_id": "",
+                "synced": False,
+                "bridge": {},
+                "skipped_private": True,
+            }
+
         event = self.store.append(kind, payload)
         synced = False
         bridge_result: dict[str, Any] = {}
@@ -31,6 +50,9 @@ class LearningSynchronizer:
         }
 
     def feedback(self, payload: dict[str, Any], try_sync: bool = True) -> dict[str, Any]:
+        # Feedback is kept inside the API-local learning log. The Godot bridge
+        # independently decides whether it may promote raw data into shared
+        # learning; default is private unless metadata.share_for_learning=true.
         event = self.store.append("feedback", payload)
         synced = False
         bridge_result: dict[str, Any] = {}
