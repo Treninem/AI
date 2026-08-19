@@ -11,9 +11,19 @@ $voiceSource = Join-Path $root "voice"
 $voiceOut = Join-Path $outDir "voice"
 $computerSource = Join-Path $root "computer"
 $computerOut = Join-Path $outDir "computer"
+$runtimeSource = Join-Path $root "runtime"
+$runtimeOut = Join-Path $outDir "runtime"
+$ensureUv = Join-Path $runtimeSource "ensure_uv.ps1"
 $portableDist = Join-Path $root "build\voice_backend"
 $portableBuilt = $false
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
+
+# Always ship AuroraFox's own uv runtime so the installed app never requires
+# a system Python. Python 3.11 itself is installed into AuroraFox's runtime
+# on first voice/computer setup and then reused locally.
+if (-not (Test-Path -LiteralPath $ensureUv)) { throw "runtime/ensure_uv.ps1 is missing" }
+& powershell -NoProfile -ExecutionPolicy Bypass -File $ensureUv -RuntimeRoot (Join-Path $runtimeSource "windows") -SkipPythonInstall | Out-Null
+if ($LASTEXITCODE -ne 0) { throw "Failed to prepare bundled uv runtime" }
 
 if (-not $SkipModelSetup) {
     $models = Join-Path $root "models\install_models.ps1"
@@ -37,7 +47,7 @@ if (-not $SkipVoiceSetup) {
             $portableExe = Join-Path $portableDist "AuroraVoiceBackend\AuroraVoiceBackend.exe"
             $portableBuilt = (Test-Path $portableExe)
         } catch {
-            Write-Warning "Portable AuroraVoiceBackend build failed. Windows package will use the local Python environment fallback: $($_.Exception.Message)"
+            Write-Warning "Portable AuroraVoiceBackend build failed. Windows package will use the local managed-Python fallback: $($_.Exception.Message)"
             $portableBuilt = $false
         }
     }
@@ -51,6 +61,17 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Windows export failed" }
 } finally {
     Pop-Location
+}
+
+# Managed runtime bootstrap. Only uv binaries are shipped; Python/cache are
+# populated inside the installed AuroraFox directory on demand.
+if (Test-Path $runtimeOut) { Remove-Item $runtimeOut -Recurse -Force }
+New-Item -ItemType Directory -Force -Path (Join-Path $runtimeOut "windows\uv") | Out-Null
+Copy-Item $ensureUv (Join-Path $runtimeOut "ensure_uv.ps1") -Force
+$uvSource = Join-Path $runtimeSource "windows\uv"
+if (-not (Test-Path (Join-Path $uvSource "uv.exe"))) { throw "Bundled uv.exe was not prepared" }
+Get-ChildItem -LiteralPath $uvSource -File | ForEach-Object {
+    Copy-Item $_.FullName (Join-Path $runtimeOut "windows\uv\$($_.Name)") -Force
 }
 
 # Voice runtime/bootstrap next to AuroraFox.exe.
@@ -72,7 +93,7 @@ if ($portableBuilt) {
 }
 
 # Computer Agent bootstrap is always shipped. A locally prepared .venv is reused if present;
-# otherwise the in-app Computer Agent control can run install_computer.ps1 after installation.
+# otherwise AuroraFox runs install_computer.ps1 using its own managed Python runtime.
 if (Test-Path $computerOut) { Remove-Item $computerOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $computerOut | Out-Null
 foreach ($file in @("computer_service.py", "requirements.txt", "install_computer.ps1")) {
@@ -94,14 +115,16 @@ if (-not $SkipVoiceSetup) {
     if (-not (Test-Path $wake)) { throw "Packaged Fox/Лиса wake model is missing" }
     if (-not (Test-Path $hfCache)) { throw "Packaged Whisper cache is missing" }
     if (-not (Test-Path $portableExe) -and -not (Test-Path $pythonw)) {
-        throw "Neither portable nor Python Aurora Voice runtime is available"
+        throw "Neither portable nor managed-Python Aurora Voice runtime is available"
     }
 }
 
 if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
+if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
 
 Write-Host "AuroraFox Windows build: $outDir\AuroraFox.exe" -ForegroundColor Green
+Write-Host "Managed runtime bootstrap: $runtimeOut"
 Write-Host "Voice runtime/bootstrap: $voiceOut"
 Write-Host "Computer Agent bootstrap: $computerOut"
-Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - fallback/setup wizard" })))
+Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - managed-Python fallback/setup wizard" })))
