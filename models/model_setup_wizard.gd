@@ -2,7 +2,6 @@ class_name AuroraModelSetupWizard
 extends Node
 
 const STATE_PATH := "user://aurora_model_setup_state.json"
-const REQUIRED_MODELS := ["qwen3:8b", "qwen3-embedding:0.6b"]
 const OLLAMA_TAGS := "http://127.0.0.1:11434/api/tags"
 const FOX_LOGO: Texture2D = preload("res://assets/ui/fox_logo.svg")
 const PROFILE_INFO := {
@@ -23,6 +22,7 @@ var poll_timer := 0.0
 var startup_wait := 2.0
 var shown := false
 var last_stage := ""
+var detected_chat_model := ""
 
 func _ready() -> void:
 	if OS.get_name() != "Windows":
@@ -127,7 +127,7 @@ func _build_ui() -> void:
 	titles.add_child(sub)
 
 	var description := Label.new()
-	description.text = "Если Ollama или выбранные модели отсутствуют, AuroraFox подготовит их автоматически. Уже установленные модели повторно не скачиваются."
+	description.text = "AuroraFox сначала использует уже установленную системную Ollama и существующую chat-модель. Рекомендуемые модели скачиваются только если их действительно нет."
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	description.add_theme_color_override("font_color", Color("cbd4e8"))
 	box.add_child(description)
@@ -153,7 +153,7 @@ func _build_ui() -> void:
 	_sync_profile_detail()
 
 	var hint := Label.new()
-	hint.text = "Перед загрузкой проверяются версия Ollama и свободное место. Для первого запуска достаточно базового профиля; Vision и Code можно добавить позже."
+	hint.text = "Для чата достаточно любой совместимой модели, уже видимой Ollama. Embedding, Vision и Code-модели расширяют возможности и могут быть добавлены позже."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 12)
 	hint.add_theme_color_override("font_color", Color("8d98ad"))
@@ -176,7 +176,7 @@ func _build_ui() -> void:
 	box.add_child(progress)
 
 	detail_label = Label.new()
-	detail_label.text = "Проверю Ollama, модель чата и embedding-модель памяти."
+	detail_label.text = "Проверю системную Ollama и реально установленные модели."
 	detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail_label.add_theme_font_size_override("font_size", 13)
 	detail_label.add_theme_color_override("font_color", Color("cbd4e8"))
@@ -275,6 +275,16 @@ func _read_state() -> void:
 		stage_label.text = "Ошибка подготовки AI"
 
 func _required_model_ready() -> bool:
+	var main := get_parent()
+	if main != null:
+		var existing_ai = main.get("ai")
+		if existing_ai is AIClient:
+			var detected: Dictionary = await existing_ai.ensure_ollama_model(true)
+			if detected.get("ok", false):
+				detected_chat_model = str(detected.get("model", existing_ai.model))
+				return true
+
+	# Fallback for isolated use of the wizard: any non-embedding Ollama model is enough for chat.
 	var req := HTTPRequest.new()
 	req.timeout = 4.0
 	add_child(req)
@@ -289,14 +299,20 @@ func _required_model_ready() -> bool:
 	var parsed = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
 	if not parsed is Dictionary:
 		return false
-	var installed: Array[String] = []
 	for item in parsed.get("models", []):
 		if item is Dictionary:
-			var model_name := str(item.get("name", item.get("model", "")))
-			if not model_name.is_empty():
-				installed.append(model_name)
-	for required in REQUIRED_MODELS:
-		if str(required) not in installed:
+			var model_name := str(item.get("name", item.get("model", ""))).strip_edges()
+			if _is_chat_model(model_name):
+				detected_chat_model = model_name
+				return true
+	return false
+
+func _is_chat_model(name: String) -> bool:
+	var lower := name.to_lower()
+	if lower.is_empty():
+		return false
+	for marker in ["embed", "embedding", "nomic-embed", "mxbai-embed", "bge-", "snowflake-arctic-embed"]:
+		if lower.contains(marker):
 			return false
 	return true
 
@@ -330,9 +346,15 @@ func _update_main_status() -> void:
 	var main := get_parent()
 	if main == null:
 		return
+	var active_model := detected_chat_model
+	var existing_ai = main.get("ai")
+	if existing_ai is AIClient:
+		active_model = existing_ai.model
+	if active_model.is_empty():
+		active_model = "Ollama"
 	if main.has_method("_set_status"):
-		main.call("_set_status", "Модель подключена • qwen3:8b • semantic memory", true, false)
+		main.call("_set_status", "Модель подключена • %s" % active_model, true, false)
 		return
 	var label = main.get("status")
 	if label is Label:
-		label.text = "Модель подключена • qwen3:8b • semantic memory"
+		label.text = "Модель подключена • %s" % active_model
