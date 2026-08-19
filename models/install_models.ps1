@@ -149,7 +149,7 @@ function Remove-DirectoryWithRetry([string]$Path) {
             return
         } catch {
             if ($attempt -eq 8) {
-                Write-Warning "Не удалось удалить временную папку $Path: $($_.Exception.Message)"
+                Write-Warning "Не удалось удалить временную папку ${Path}: $($_.Exception.Message)"
                 return
             }
             Start-Sleep -Milliseconds (250 * $attempt)
