@@ -13,12 +13,12 @@ const MAX_SOURCE_BYTES := 512 * 1024
 const TOOL_PREFIX := "aurora_ext_"
 
 const BLOCKED_SOURCE_MARKERS := [
-	"OS.", "FileAccess", "DirAccess", "ProjectSettings", "Engine.",
-	"HTTPRequest", "HTTPClient", "TCPServer", "UDPServer", "PacketPeerUDP",
-	"WebSocket", "JavaClassWrapper", "JavaScriptBridge", "ResourceLoader",
-	"ResourceSaver", "preload(", "@tool", "@onready",
-	"func _init", "func _ready", "func _process", "func _physics_process",
-	"func _notification", "func _enter_tree", "func _exit_tree"
+	"OS.", "FileAccess", "DirAccess", "ProjectSettings", "Engine.", "ClassDB",
+	"DisplayServer", "RenderingServer", "AudioServer", "Input.", "InputMap",
+	"HTTPRequest", "HTTPClient", "TCPServer", "StreamPeerTCP", "UDPServer", "PacketPeerUDP",
+	"WebSocket", "IP.", "JavaClassWrapper", "JavaScriptBridge", "ResourceLoader",
+	"ResourceSaver", "GDScript.new", "source_code", "Expression.new", "preload(",
+	"instance_from_id", "@tool", "@onready", "while true"
 ]
 
 var registry: ToolRegistry
@@ -73,39 +73,22 @@ func activate_staged(stage_path: String, expected_sha256 := "") -> Dictionary:
 	var sha := _sha256_text(source)
 	if not expected_sha256.strip_edges().is_empty() and sha != expected_sha256.to_lower():
 		return _fail("SHA-256 подготовленного модуля изменился после проверки", {"expected": expected_sha256, "actual": sha})
-	var static_check := _validate_source(source)
-	if not static_check.get("ok", false): return static_check
-
-	var compiled := _compile_extension(source)
-	if not compiled.get("ok", false): return compiled
-	var instance: Node = compiled.get("instance")
-	var declaration = instance.call("aurora_extension_manifest")
-	if not declaration is Dictionary:
-		instance.free()
-		return _fail("aurora_extension_manifest() должен вернуть Dictionary", {})
-	var manifest_check := _validate_extension_manifest(declaration, instance)
-	if not manifest_check.get("ok", false):
-		instance.free()
-		return manifest_check
-
+	var prepared := _prepare_instance(source)
+	if not prepared.get("ok", false): return prepared
+	var instance: RefCounted = prepared.get("instance")
+	var declaration: Dictionary = prepared.get("manifest", {})
 	var id := _extension_id(sha, str(declaration.get("name", "extension")))
 	if entries.has(id) and active_instances.has(id):
-		instance.free()
 		return {"ok": true, "already_active": true, "id": id, "tools": active_tools.get(id, [])}
 
 	var copied_path := EXTENSION_ROOT + id + ".gd"
 	var copy_result := _write_extension_source(copied_path, source)
-	if not copy_result.get("ok", false):
-		instance.free()
-		return copy_result
-
+	if not copy_result.get("ok", false): return copy_result
 	var registered := _register_declared_tools(id, declaration, instance)
 	if not registered.get("ok", false):
-		instance.free()
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(copied_path))
 		return registered
 
-	add_child(instance)
 	active_instances[id] = instance
 	active_tools[id] = registered.get("tools", [])
 	entries[id] = {
@@ -125,10 +108,7 @@ func activate_staged(stage_path: String, expected_sha256 := "") -> Dictionary:
 func deactivate(id: String) -> Dictionary:
 	if not entries.has(id): return {"ok": false, "error": "Unknown extension"}
 	_remove_extension_tools(id)
-	if active_instances.has(id):
-		var instance = active_instances[id]
-		if is_instance_valid(instance): instance.queue_free()
-		active_instances.erase(id)
+	active_instances.erase(id)
 	active_tools.erase(id)
 	var item: Dictionary = entries[id]
 	item["enabled"] = false
@@ -177,30 +157,31 @@ func _activate_saved(id: String, path: String, expected_sha: String) -> Dictiona
 	var source := str(source_result.get("source", ""))
 	var sha := _sha256_text(source)
 	if sha != expected_sha.to_lower(): return _fail("Extension SHA-256 mismatch", {"id": id, "expected": expected_sha, "actual": sha})
-	var static_check := _validate_source(source)
-	if not static_check.get("ok", false): return static_check
-	var compiled := _compile_extension(source)
-	if not compiled.get("ok", false): return compiled
-	var instance: Node = compiled.get("instance")
-	var declaration = instance.call("aurora_extension_manifest")
-	if not declaration is Dictionary:
-		instance.free()
-		return _fail("Saved extension manifest is invalid", {"id": id})
-	var manifest_check := _validate_extension_manifest(declaration, instance)
-	if not manifest_check.get("ok", false):
-		instance.free()
-		return manifest_check
+	var prepared := _prepare_instance(source)
+	if not prepared.get("ok", false): return prepared
+	var instance: RefCounted = prepared.get("instance")
+	var declaration: Dictionary = prepared.get("manifest", {})
 	var registered := _register_declared_tools(id, declaration, instance)
-	if not registered.get("ok", false):
-		instance.free()
-		return registered
-	add_child(instance)
+	if not registered.get("ok", false): return registered
 	active_instances[id] = instance
 	active_tools[id] = registered.get("tools", [])
 	extension_activated.emit(id, registered.get("tools", []))
 	return {"ok": true, "id": id, "tools": registered.get("tools", []), "restored": true}
 
-func _register_declared_tools(id: String, declaration: Dictionary, instance: Node) -> Dictionary:
+func _prepare_instance(source: String) -> Dictionary:
+	var static_check := _validate_source(source)
+	if not static_check.get("ok", false): return static_check
+	var compiled := _compile_extension(source)
+	if not compiled.get("ok", false): return compiled
+	var instance: RefCounted = compiled.get("instance")
+	var declaration = instance.call("aurora_extension_manifest")
+	if not declaration is Dictionary:
+		return _fail("aurora_extension_manifest() должен вернуть Dictionary", {})
+	var manifest_check := _validate_extension_manifest(declaration, instance)
+	if not manifest_check.get("ok", false): return manifest_check
+	return {"ok": true, "instance": instance, "manifest": declaration}
+
+func _register_declared_tools(id: String, declaration: Dictionary, instance: RefCounted) -> Dictionary:
 	var tool_defs: Array = declaration.get("tools", [])
 	var names: Array = []
 	for definition in tool_defs:
@@ -220,7 +201,7 @@ func _remove_names(names: Array) -> void:
 	if registry == null: return
 	for name in names: registry.tools.erase(str(name))
 
-func _validate_extension_manifest(value: Dictionary, instance: Node) -> Dictionary:
+func _validate_extension_manifest(value: Dictionary, instance: RefCounted) -> Dictionary:
 	var name := str(value.get("name", "")).strip_edges()
 	if name.is_empty(): return _fail("Extension manifest name is empty", {})
 	var tool_defs = value.get("tools", [])
@@ -243,11 +224,12 @@ func _validate_extension_manifest(value: Dictionary, instance: Node) -> Dictiona
 func _validate_source(source: String) -> Dictionary:
 	if source.strip_edges().is_empty(): return _fail("Extension source is empty", {})
 	if source.to_utf8_buffer().size() > MAX_SOURCE_BYTES: return _fail("Extension exceeds size limit", {})
-	if not source.contains("extends Node"): return _fail("Runtime extension must extend Node", {})
+	if not source.contains("extends RefCounted"): return _fail("Runtime extension must extend RefCounted", {})
+	if source.contains("extends Node"): return _fail("Runtime extension cannot join the scene tree", {})
 	if not source.contains("func aurora_extension_manifest"):
 		return _fail("Runtime extension must implement aurora_extension_manifest()", {})
 	for marker in BLOCKED_SOURCE_MARKERS:
-		if source.contains(marker): return _fail("Runtime extension uses blocked privileged API or lifecycle hook", {"marker": marker})
+		if source.contains(marker): return _fail("Runtime extension uses blocked privileged API", {"marker": marker})
 	for line in source.split("\n"):
 		var clean := str(line).strip_edges()
 		if clean.begins_with("load(") or clean.contains("= load(") or clean.begins_with("return load("):
@@ -261,9 +243,7 @@ func _compile_extension(source: String) -> Dictionary:
 	if err != OK: return _fail("GDScript runtime compilation failed: %s" % error_string(err), {})
 	if not script.can_instantiate(): return _fail("Compiled runtime extension cannot instantiate", {})
 	var value = script.new()
-	if not value is Node:
-		if value != null and value.has_method("free"): value.free()
-		return _fail("Runtime extension root must be Node", {})
+	if not value is RefCounted: return _fail("Runtime extension root must be RefCounted", {})
 	return {"ok": true, "instance": value}
 
 func _allowed_stage_path(path: String) -> String:
