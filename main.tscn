@@ -1,4 +1,4 @@
-[gd_scene load_steps=18 format=3]
+[gd_scene load_steps=20 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/voice_overlay.gd" type="Script" id="2_voice"]
@@ -17,6 +17,8 @@
 [ext_resource path="res://scripts/trusted_project_sandbox_bridge.gd" type="Script" id="15_trusted_sandbox"]
 [ext_resource path="res://scripts/windows_trusted_project_bridge.gd" type="Script" id="16_windows_trusted_sandbox"]
 [ext_resource path="res://scripts/developer_runtime_tool_bridge.gd" type="Script" id="17_developer_runtime"]
+[ext_resource path="res://scripts/runtime_extension_manager.gd" type="Script" id="18_runtime_extensions"]
+[ext_resource path="res://scripts/self_improvement_overlay.gd" type="Script" id="19_self_improvement"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -74,3 +76,9 @@ script = ExtResource("16_windows_trusted_sandbox")
 
 [node name="DeveloperRuntimeTools" type="Node" parent="."]
 script = ExtResource("17_developer_runtime")
+
+[node name="RuntimeExtensions" type="Node" parent="."]
+script = ExtResource("18_runtime_extensions")
+
+[node name="SelfImprovementCenter" type="Node" parent="."]
+script = ExtResource("19_self_improvement")
