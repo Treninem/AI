@@ -12,14 +12,11 @@ const MANIFEST_PATH := "user://runtime_extensions.json"
 const MAX_SOURCE_BYTES := 512 * 1024
 const TOOL_PREFIX := "aurora_ext_"
 
-# Hot extensions intentionally have a narrow privilege surface. Anything that
-# needs files, OS processes, network, engine settings or lifecycle hooks must
-# go through the full source/sandbox/release path instead of hot activation.
 const BLOCKED_SOURCE_MARKERS := [
 	"OS.", "FileAccess", "DirAccess", "ProjectSettings", "Engine.",
 	"HTTPRequest", "HTTPClient", "TCPServer", "UDPServer", "PacketPeerUDP",
 	"WebSocket", "JavaClassWrapper", "JavaScriptBridge", "ResourceLoader",
-	"ResourceSaver", "load(", "preload(", "@tool", "@onready",
+	"ResourceSaver", "preload(", "@tool", "@onready",
 	"func _init", "func _ready", "func _process", "func _physics_process",
 	"func _notification", "func _enter_tree", "func _exit_tree"
 ]
@@ -81,7 +78,7 @@ func activate_staged(stage_path: String, expected_sha256 := "") -> Dictionary:
 
 	var compiled := _compile_extension(source)
 	if not compiled.get("ok", false): return compiled
-	var instance: Node = compiled.instance
+	var instance: Node = compiled.get("instance")
 	var declaration = instance.call("aurora_extension_manifest")
 	if not declaration is Dictionary:
 		instance.free()
@@ -110,7 +107,7 @@ func activate_staged(stage_path: String, expected_sha256 := "") -> Dictionary:
 
 	add_child(instance)
 	active_instances[id] = instance
-	active_tools[id] = registered.tools
+	active_tools[id] = registered.get("tools", [])
 	entries[id] = {
 		"id": id,
 		"name": str(declaration.get("name", id)).substr(0, 80),
@@ -118,12 +115,12 @@ func activate_staged(stage_path: String, expected_sha256 := "") -> Dictionary:
 		"path": copied_path,
 		"sha256": sha,
 		"enabled": true,
-		"tools": registered.tools,
+		"tools": registered.get("tools", []),
 		"activated_at": Time.get_datetime_string_from_system(true)
 	}
 	_save_manifest()
-	extension_activated.emit(id, registered.tools)
-	return {"ok": true, "id": id, "path": copied_path, "sha256": sha, "tools": registered.tools, "name": declaration.get("name", id)}
+	extension_activated.emit(id, registered.get("tools", []))
+	return {"ok": true, "id": id, "path": copied_path, "sha256": sha, "tools": registered.get("tools", []), "name": declaration.get("name", id)}
 
 func deactivate(id: String) -> Dictionary:
 	if not entries.has(id): return {"ok": false, "error": "Unknown extension"}
@@ -144,9 +141,7 @@ func enable(id: String) -> Dictionary:
 	if not entries.has(id): return {"ok": false, "error": "Unknown extension"}
 	if active_instances.has(id): return {"ok": true, "already_active": true, "id": id}
 	var item: Dictionary = entries[id]
-	var path := str(item.get("path", ""))
-	var expected := str(item.get("sha256", ""))
-	var result := _activate_saved(id, path, expected)
+	var result := _activate_saved(id, str(item.get("path", "")), str(item.get("sha256", "")))
 	if result.get("ok", false):
 		item["enabled"] = true
 		entries[id] = item
@@ -179,14 +174,14 @@ func _activate_saved(id: String, path: String, expected_sha: String) -> Dictiona
 	if not path.begins_with(EXTENSION_ROOT): return _fail("Extension path escapes user://extensions", {"id": id})
 	var source_result := _read_source(path)
 	if not source_result.get("ok", false): return source_result
-	var source := str(source_result.source)
+	var source := str(source_result.get("source", ""))
 	var sha := _sha256_text(source)
 	if sha != expected_sha.to_lower(): return _fail("Extension SHA-256 mismatch", {"id": id, "expected": expected_sha, "actual": sha})
 	var static_check := _validate_source(source)
 	if not static_check.get("ok", false): return static_check
 	var compiled := _compile_extension(source)
 	if not compiled.get("ok", false): return compiled
-	var instance: Node = compiled.instance
+	var instance: Node = compiled.get("instance")
 	var declaration = instance.call("aurora_extension_manifest")
 	if not declaration is Dictionary:
 		instance.free()
@@ -201,9 +196,9 @@ func _activate_saved(id: String, path: String, expected_sha: String) -> Dictiona
 		return registered
 	add_child(instance)
 	active_instances[id] = instance
-	active_tools[id] = registered.tools
-	extension_activated.emit(id, registered.tools)
-	return {"ok": true, "id": id, "tools": registered.tools, "restored": true}
+	active_tools[id] = registered.get("tools", [])
+	extension_activated.emit(id, registered.get("tools", []))
+	return {"ok": true, "id": id, "tools": registered.get("tools", []), "restored": true}
 
 func _register_declared_tools(id: String, declaration: Dictionary, instance: Node) -> Dictionary:
 	var tool_defs: Array = declaration.get("tools", [])
@@ -253,6 +248,10 @@ func _validate_source(source: String) -> Dictionary:
 		return _fail("Runtime extension must implement aurora_extension_manifest()", {})
 	for marker in BLOCKED_SOURCE_MARKERS:
 		if source.contains(marker): return _fail("Runtime extension uses blocked privileged API or lifecycle hook", {"marker": marker})
+	for line in source.split("\n"):
+		var clean := str(line).strip_edges()
+		if clean.begins_with("load(") or clean.contains("= load(") or clean.begins_with("return load("):
+			return _fail("Runtime extension uses blocked dynamic load()", {"line": clean.substr(0, 200)})
 	return {"ok": true}
 
 func _compile_extension(source: String) -> Dictionary:
