@@ -10,6 +10,9 @@ func _init() -> void:
 		AuroraAndroidMicMonitor.new(),
 		AuroraFoxAvatarView.new(),
 		AuroraModelSetupWizard.new(),
+		FileIntelligenceClient.new(),
+		AttachmentManager.new(),
+		AuroraFileSetupWizard.new(),
 	]
 	for node in nodes:
 		if node == null:
