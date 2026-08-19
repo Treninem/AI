@@ -55,16 +55,34 @@ func is_available() -> bool:
 		if not android_runtime.is_available(): return false
 		var caps := android_runtime.capabilities()
 		return bool(caps.get("llama_cpp", false)) and FileAccess.file_exists(android_model_path)
+	var info := await ollama_status()
+	return bool(info.get("ok", false)) and bool(info.get("model_available", false))
+
+func ollama_status() -> Dictionary:
+	if OS.get_name() == "Android":
+		return {"ok": false, "error": "Ollama is not used on Android"}
 	var request_node := HTTPRequest.new()
 	request_node.timeout = 5.0
 	add_child(request_node)
 	var err := request_node.request(base_url + "/api/tags")
 	if err != OK:
 		request_node.queue_free()
-		return false
+		return {"ok": false, "server": false, "model_available": false, "error": error_string(err)}
 	var result: Array = await request_node.request_completed
 	request_node.queue_free()
-	return int(result[1]) == 200
+	var code := int(result[1])
+	if code != 200:
+		return {"ok": false, "server": false, "model_available": false, "http": code}
+	var parsed = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
+	if not parsed is Dictionary:
+		return {"ok": false, "server": true, "model_available": false, "error": "invalid /api/tags response"}
+	var installed: Array[String] = []
+	for entry in parsed.get("models", []):
+		if entry is Dictionary:
+			var name := str(entry.get("name", entry.get("model", "")))
+			if not name.is_empty(): installed.append(name)
+	var found := installed.has(model)
+	return {"ok": true, "server": true, "model_available": found, "model": model, "installed": installed}
 
 func runtime_info() -> Dictionary:
 	if OS.get_name() == "Android":
