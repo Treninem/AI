@@ -50,16 +50,16 @@ func analyze(path: String, question := "") -> Dictionary:
 	if bool(item.get("analyzed", false)):
 		return item
 
-	if OS.get_name() != "Windows":
+	if OS.get_name() not in ["Windows", "Android"]:
 		item["content"] = _processing_hint(str(item.get("kind", "binary")))
-		item["warnings"] = ["Расширенный File Intelligence пока доступен в Windows runtime; мобильный native parser подключается отдельно."]
+		item["warnings"] = ["Расширенный File Intelligence на этой платформе пока не подключён."]
 		return item
 
 	var result := await intelligence.analyze_file(path, question, true)
 	if not result.get("ok", false):
 		item["content"] = _processing_hint(str(item.get("kind", "binary")))
 		item["analysis_error"] = str(result.get("error", "File Intelligence недоступен"))
-		item["needs_setup"] = not intelligence.runtime_is_installed()
+		item["needs_setup"] = OS.get_name() == "Windows" and not intelligence.runtime_is_installed()
 		item["warnings"] = [str(result.get("error", "File Intelligence недоступен"))]
 		if bool(item["needs_setup"]): file_setup_required.emit()
 		return item
@@ -71,6 +71,7 @@ func analyze(path: String, question := "") -> Dictionary:
 	item["truncated"] = bool(result.get("truncated", false))
 	item["cached"] = bool(result.get("cached", false))
 	item["elapsed_ms"] = int(result.get("elapsed_ms", 0))
+	item["private_copy"] = result.get("private_copy", "")
 	item["analyzed"] = true
 	return item
 
