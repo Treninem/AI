@@ -9,6 +9,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "file_intelligence"))
 
+import file_service  # noqa: E402
 from file_service import _analyze, _archive_listing  # noqa: E402
 
 
@@ -79,3 +80,39 @@ def test_binary_does_not_crash(tmp_path: Path) -> None:
     result = _analyze(path, "", False)
     assert result["kind"] == "binary"
     assert result["text"]
+
+
+class _FakeResponse:
+    def __init__(self, status_code: int, payload: dict | None = None) -> None:
+        self.status_code = status_code
+        self._payload = payload or {}
+
+    def json(self) -> dict:
+        return self._payload
+
+
+def test_health_does_not_claim_vision_without_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_get(url: str, timeout: float):
+        if url.endswith("/api/tags"):
+            return _FakeResponse(200, {"models": [{"name": "qwen3:8b"}]})
+        return _FakeResponse(200, {"ok": True})
+
+    monkeypatch.setattr(file_service.requests, "get", fake_get)
+    result = file_service.health()
+    assert result["ok"] is True
+    assert result["ollama_online"] is True
+    assert result["vision_online"] is False
+    assert result["vision_model"] == file_service.VISION_MODEL
+
+
+def test_health_claims_vision_only_with_selected_model(monkeypatch: pytest.MonkeyPatch) -> None:
+    def fake_get(url: str, timeout: float):
+        if url.endswith("/api/tags"):
+            return _FakeResponse(200, {"models": [{"name": "qwen3:8b"}, {"name": file_service.VISION_MODEL}]})
+        return _FakeResponse(200, {"ok": True})
+
+    monkeypatch.setattr(file_service.requests, "get", fake_get)
+    result = file_service.health()
+    assert result["ollama_online"] is True
+    assert result["vision_online"] is True
+    assert file_service.VISION_MODEL in result["installed_models"]
