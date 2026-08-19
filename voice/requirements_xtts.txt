@@ -1,0 +1,6 @@
+# Optional high-quality voice-cloning backend for AuroraFox Voice.
+# Coqui maintained fork; import namespace remains `TTS`.
+coqui-tts==0.27.5
+# AuroraFox base voice runtime currently pins torch==2.9.0.
+# TorchCodec 0.9.1 is the compatible bugfix release for Torch 2.9.
+torchcodec==0.9.1
