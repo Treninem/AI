@@ -20,6 +20,8 @@ func _init() -> void:
 		ProjectIndexToolBridge.new(),
 		TrustedProjectSandboxBridge.new(),
 		WindowsTrustedProjectBridge.new(),
+		DeveloperRuntimeManager.new(),
+		DeveloperRuntimeToolBridge.new(),
 	]
 	for node in nodes:
 		if node == null:
