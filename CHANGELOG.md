@@ -1,5 +1,17 @@
 # AuroraFox Changelog
 
+## V1.1.1.2 — 2026-08-19
+
+- Re-enabled Android as an actively validated release target instead of leaving only the mobile foundation in the repository.
+- Fixed the broken Android APK artifact workflow: `-AllowUnsignedRelease` is now implemented by the build script and the signed export preset is restored after CI export.
+- Removed the stale hard-coded `V1.0.0.0` Android artifact name; APK artifacts now derive the canonical four-part AuroraFox version.
+- Added Android release-contract checks for package id, versionName/versionCode, SDK levels, arm64, permissions, updater manifest, native plugin and routing invariants.
+- Added APK signature, package metadata and SHA-256 validation.
+- Added an Android 35 emulator smoke that installs the generated APK, launches `com.aurorafox.ai`, verifies the running process/version and rejects launch-time fatal crashes.
+- Fixed Android AI routing so a missing native runtime never falls through to desktop Ollama on `127.0.0.1:11434`.
+- Removed misleading first-run text that claimed the whole AuroraFox application was ready merely because a GGUF model finished installing.
+- Bumped Android `versionCode` to `100003` for the V1.1.1.2 update path.
+
 ## V1.1.1.1 — 2026-08-19
 
 - Fixed Ollama fallback after HTTP 404: a stale/broken chat model is blacklisted for the retry and AuroraFox selects another installed compatible chat model instead of repeating the same failed request.
