@@ -10,6 +10,15 @@ const RUNTIME_GENERATED_ROOT := "user://generated/"
 const MAX_GENERATED_BYTES := 512 * 1024
 const MAX_PROJECT_FILES := 30000
 const MAX_PROJECT_BYTES := 2 * 1024 * 1024 * 1024
+const HOT_TOOL_PREFIX := "aurora_ext_"
+const HOT_BLOCKED_MARKERS := [
+	"OS.", "FileAccess", "DirAccess", "ProjectSettings", "Engine.",
+	"HTTPRequest", "HTTPClient", "TCPServer", "UDPServer", "PacketPeerUDP",
+	"WebSocket", "JavaClassWrapper", "JavaScriptBridge", "ResourceLoader",
+	"ResourceSaver", "load(", "preload(", "@tool", "@onready",
+	"func _init", "func _ready", "func _process", "func _physics_process",
+	"func _notification", "func _enter_tree", "func _exit_tree"
+]
 
 var tools: ToolRegistry
 var ai: AIClient
@@ -23,18 +32,30 @@ func propose_improvement(goal: String) -> Dictionary:
 		return {"ok": false, "error": "AI client is not configured"}
 	var prompt := """
 Ты анализируешь AuroraFox — Godot 4.7.1 проект автономного локального AI.
-Предложи ОДНО небольшое законченное безопасное улучшение для цели: %s
+Предложи ОДНО небольшое законченное безопасное горячее расширение для цели: %s
 
 Верни ТОЛЬКО строгий JSON:
 {"path":"res://generated/<filename>.gd","content":"полный готовый GDScript","reason":"что улучшает","verification":"что должно подтвердить корректность"}
 
-Правила:
+ОБЯЗАТЕЛЬНЫЙ КОНТРАКТ HOT-EXTENSION:
+- файл начинается с `extends Node`;
+- реализуй `func aurora_extension_manifest() -> Dictionary`;
+- manifest должен содержать `name`, `description`, `tools`;
+- каждый элемент tools: {"name":"aurora_ext_<unique>","description":"...","schema":{...},"method":"_method_name"};
+- каждый method принимает один Dictionary args и возвращает результат; асинхронный метод допустим;
+- имена инструментов только с префиксом aurora_ext_ и не должны совпадать друг с другом;
+- расширение не получает ToolRegistry и не регистрирует инструменты самостоятельно;
+- запрещены lifecycle-функции _init/_ready/_process/_physics_process/_notification/_enter_tree/_exit_tree;
+- запрещён прямой доступ к OS, FileAccess, DirAccess, ProjectSettings, Engine, HTTP/TCP/UDP/WebSocket, ResourceLoader/ResourceSaver, load/preload;
+- горячее расширение должно быть вычислительным/логическим. Новые привилегии, файлы, сеть или системные действия делаются только через полноценное обновление AuroraFox.
+
+ОБЩИЕ ПРАВИЛА:
 - только новый .gd внутри логического res://generated/;
 - никакого TODO/FIXME/placeholder/stub/pass/implement later;
 - код должен быть самодостаточным и совместимым с Godot 4.7.1;
 - не меняй project.godot, autoload, секреты, обновлятор и существующее ядро;
 - не удаляй файлы;
-- не утверждай, что код проверен: проверку выполнит AuroraFox отдельно.
+- не утверждай, что код проверен: AuroraFox сама выполнит sandbox + Godot 4.7.1 проверку.
 """ % goal.strip_edges()
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.1)
 	if not result.get("ok", false): return result
@@ -61,7 +82,7 @@ func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 	var content := str(proposal.get("content", ""))
 	improvement_stage.emit("workspace", {"path": path})
 	var created = await tools.call_tool("workspace_create", {
-		"task": "AuroraFox self-improvement verification: " + str(proposal.get("reason", "generated module")),
+		"task": "AuroraFox self-improvement verification: " + str(proposal.get("reason", "generated extension")),
 		"runtime": "local"
 	})
 	if not _ok(created): return _reject("workspace_create", created)
@@ -105,9 +126,6 @@ func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 	return result
 
 func apply_generated_module(proposal: Dictionary) -> Dictionary:
-	# "Apply" deliberately means verify + stage. It does not silently replace
-	# active core. In the editor the staged module can live in res://generated/;
-	# an installed app must use writable user://generated/.
 	var verification := await evaluate_generated_module(proposal)
 	if not verification.get("ok", false): return verification
 	var logical_path := str(verification.get("path", ""))
@@ -125,11 +143,12 @@ func apply_generated_module(proposal: Dictionary) -> Dictionary:
 		"ok": true,
 		"verified": true,
 		"staged": true,
+		"hot_extension": true,
 		"path": logical_path,
 		"stage_path": stage_path,
 		"sha256": _sha256_text(expected),
 		"verification": verification,
-		"message": "Generated module passed Godot 4.7.1 verification and was staged without activating core changes."
+		"message": "Generated hot extension passed Godot 4.7.1 verification and was staged without activation."
 	}
 
 func _stage_path(logical_path: String) -> String:
@@ -148,8 +167,15 @@ func _validate_proposal(proposal: Dictionary) -> Dictionary:
 		return {"ok": false, "error": "Generated module exceeds size limit"}
 	if _contains_unfinished_markers(content):
 		return {"ok": false, "error": "Generated module contains unfinished placeholder/stub markers"}
-	if not content.contains("extends ") and not content.contains("class_name "):
-		return {"ok": false, "error": "Generated file does not look like a GDScript module"}
+	if not content.contains("extends Node"):
+		return {"ok": false, "error": "Hot extension must extend Node"}
+	if not content.contains("func aurora_extension_manifest"):
+		return {"ok": false, "error": "Hot extension is missing aurora_extension_manifest()"}
+	if not content.contains(HOT_TOOL_PREFIX):
+		return {"ok": false, "error": "Hot extension does not declare an aurora_ext_ tool"}
+	for marker in HOT_BLOCKED_MARKERS:
+		if content.contains(marker):
+			return {"ok": false, "error": "Hot extension uses blocked privileged API/lifecycle marker: " + marker}
 	return {"ok": true, "path": path}
 
 func _safe_generated_path(value: String) -> String:
