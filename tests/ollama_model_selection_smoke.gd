@@ -35,6 +35,20 @@ func _init() -> void:
 		quit(4)
 		return
 
+	# Regression: Ollama may report a stale/broken model in /api/tags while
+	# /api/chat returns 404 for it. The retry selector must blacklist it.
+	ai.model = "qwen3:8b"
+	selected = ai.choose_chat_model([
+		"qwen3:8b",
+		"gemma3:latest",
+		"nomic-embed-text:latest"
+	], ["qwen3:8b"])
+	if selected != "gemma3:latest":
+		push_error("Broken qwen3 must be skipped after 404, got: " + selected)
+		ai.free()
+		quit(5)
+		return
+
 	ai.free()
 	print("AURORA_OLLAMA_MODEL_SELECTION_SMOKE_OK")
 	quit(0)
