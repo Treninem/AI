@@ -14,7 +14,7 @@ if (-not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
 }
 
 $nativeSetup = Join-Path $pluginRoot "setup_native.ps1"
-& powershell -ExecutionPolicy Bypass -File $nativeSetup
+& powershell -NoProfile -ExecutionPolicy Bypass -File $nativeSetup
 if ($LASTEXITCODE -ne 0) { throw "Android native source setup failed" }
 
 Push-Location $pluginRoot
@@ -27,9 +27,17 @@ try {
 
 Push-Location $root
 try {
-    & $Godot --headless --path $root --install-android-build-template --export-release "Android" (Join-Path $outDir "AuroraFox.apk")
+    & $Godot --headless --path $root --import
+    if ($LASTEXITCODE -ne 0) { throw "Godot import failed" }
+
+    & $Godot --headless --path $root --install-android-build-template
+    if ($LASTEXITCODE -ne 0) { throw "Godot Android Gradle build template installation failed" }
+
+    & $Godot --headless --path $root --export-release "Android" (Join-Path $outDir "AuroraFox.apk")
     if ($LASTEXITCODE -ne 0) { throw "Android export failed" }
-    Write-Host "AuroraFox Android build: $outDir\AuroraFox.apk"
+    if (-not (Test-Path (Join-Path $outDir "AuroraFox.apk"))) { throw "Android APK was not produced" }
+
+    Write-Host "AuroraFox Android build: $outDir\AuroraFox.apk" -ForegroundColor Green
 } finally {
     Pop-Location
 }
