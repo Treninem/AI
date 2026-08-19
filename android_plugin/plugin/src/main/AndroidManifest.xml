@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
     <application>
         <meta-data
             android:name="org.godotengine.plugin.v2.${godotPluginName}"
@@ -10,5 +12,11 @@
             android:exported="false"
             android:isolatedProcess="true"
             android:stopWithTask="true" />
+
+        <provider
+            android:name="${godotPluginPackageName}.AuroraUpdateProvider"
+            android:authorities="${applicationId}.aurorafox.updates"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>
