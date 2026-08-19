@@ -45,7 +45,7 @@ logging.basicConfig(
 )
 log = logging.getLogger("aurora_files")
 
-app = FastAPI(title="AuroraFox File Intelligence", version="1.0.0")
+app = FastAPI(title="AuroraFox File Intelligence", version="1.1.0")
 
 
 class AnalyzeRequest(BaseModel):
@@ -510,14 +510,37 @@ def _analyze(path: Path, question: str, visual: bool) -> dict[str, Any]:
     return {"kind": kind, "text": text, "metadata": metadata, "warnings": warnings}
 
 
+def _ollama_models() -> tuple[bool, list[str]]:
+    try:
+        r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=1.5)
+        if r.status_code != 200:
+            return False, []
+        payload = r.json()
+        models = []
+        for item in payload.get("models", []):
+            if isinstance(item, dict):
+                name = str(item.get("name") or item.get("model") or "").strip()
+                if name:
+                    models.append(name)
+        return True, models
+    except Exception:
+        return False, []
+
+
+def _model_installed(model: str, models: list[str]) -> bool:
+    wanted = model.strip()
+    if wanted in models:
+        return True
+    if ":" not in wanted:
+        return any(name == wanted or name.startswith(wanted + ":") for name in models)
+    return False
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
-    vision = False
+    ollama_online, installed_models = _ollama_models()
+    vision = ollama_online and _model_installed(VISION_MODEL, installed_models)
     voice = False
-    try:
-        vision = requests.get(f"{OLLAMA_URL}/api/tags", timeout=1.5).status_code == 200
-    except Exception:
-        pass
     try:
         voice = requests.get(f"{VOICE_URL}/health", timeout=1.5).status_code == 200
     except Exception:
@@ -525,7 +548,10 @@ def health() -> dict[str, Any]:
     return {
         "ok": True,
         "backend": "AuroraFileIntelligence",
+        "ollama_online": ollama_online,
         "vision_online": vision,
+        "vision_model": VISION_MODEL,
+        "installed_models": installed_models,
         "voice_online": voice,
         "cache_dir": str(CACHE_DIR),
         "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS},
