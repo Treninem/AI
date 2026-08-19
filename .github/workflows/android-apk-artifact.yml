@@ -143,6 +143,40 @@ jobs:
           sha256sum "$final" | tee build/android/SHA256SUMS.txt
           echo "APK_PATH=$final" >> "$GITHUB_ENV"
 
+      - name: Enable KVM
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install and launch APK on Android 35
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
+          script: |
+            set -euo pipefail
+            adb install -r "$APK_PATH"
+            adb shell pm path com.aurorafox.ai | tee build/android/emulator-package.txt
+            grep -q '^package:' build/android/emulator-package.txt
+            adb shell monkey -p com.aurorafox.ai -c android.intent.category.LAUNCHER 1
+            sleep 8
+            pid="$(adb shell pidof com.aurorafox.ai | tr -d '\r')"
+            test -n "$pid"
+            adb shell dumpsys package com.aurorafox.ai | grep -F "versionName=${{ steps.version.outputs.numeric }}"
+            adb logcat -d -v brief > build/android/emulator-logcat.txt
+            if grep -A10 -B4 'FATAL EXCEPTION' build/android/emulator-logcat.txt | grep -q 'com.aurorafox.ai'; then
+              echo 'AuroraFox crashed during Android launch smoke.' >&2
+              grep -A20 -B6 'FATAL EXCEPTION' build/android/emulator-logcat.txt | tail -n 120 >&2
+              exit 1
+            fi
+            echo "AURORA_ANDROID_EMULATOR_OK pid=$pid"
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
@@ -151,4 +185,6 @@ jobs:
             ${{ env.APK_PATH }}
             build/android/SHA256SUMS.txt
             build/android/aapt-badging.txt
+            build/android/emulator-package.txt
+            build/android/emulator-logcat.txt
           if-no-files-found: error
