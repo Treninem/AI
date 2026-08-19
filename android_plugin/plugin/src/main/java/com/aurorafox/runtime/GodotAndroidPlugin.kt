@@ -2,8 +2,11 @@ package com.aurorafox.runtime
 
 import android.app.ActivityManager
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
 import android.os.StatFs
+import android.provider.Settings
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
 import org.godotengine.godot.plugin.UsedByGodot
@@ -45,6 +48,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 "sherpa_stt" to sherpaStt,
                 "local_tts" to tts,
                 "wasm" to (loaded && native.hasWasm()),
+                "app_update_install" to true,
                 "architecture" to Build.SUPPORTED_ABIS.joinToString(","),
                 "total_ram_mb" to (memoryInfo.totalMem / 1024L / 1024L),
                 "free_storage_mb" to (freeStorage / 1024L / 1024L)
@@ -69,6 +73,51 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun clearVoiceCache(): String {
         return try { voice.clearCache() } catch (t: Throwable) { errorJson(t.message ?: "Cannot clear voice cache") }
+    }
+
+    @UsedByGodot
+    fun installUpdateApk(apkPath: String): String {
+        val act = activity ?: return errorJson("No Android activity")
+        val source = try { File(apkPath).canonicalFile } catch (_: Throwable) { return errorJson("Invalid APK path") }
+        if (!source.isFile) return errorJson("Downloaded APK is missing")
+        val roots = listOf(act.filesDir.canonicalFile, act.cacheDir.canonicalFile)
+        if (roots.none { root -> source == root || source.path.startsWith(root.path + File.separator) }) {
+            return errorJson("Update APK must be inside AuroraFox private storage")
+        }
+
+        return try {
+            val updateDir = File(act.cacheDir, "aurora_updates").apply { mkdirs() }
+            val target = File(updateDir, "AuroraFox-update.apk")
+            if (source != target.canonicalFile) source.copyTo(target, overwrite = true)
+            act.getSharedPreferences(AuroraUpdateProvider.PREFS, Context.MODE_PRIVATE)
+                .edit().putString(AuroraUpdateProvider.KEY_APK_PATH, target.canonicalPath).apply()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !act.packageManager.canRequestPackageInstalls()) {
+                val permissionIntent = Intent(
+                    Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:${act.packageName}")
+                )
+                act.startActivity(permissionIntent)
+                return JSONObject(
+                    mapOf(
+                        "ok" to false,
+                        "requires_permission" to true,
+                        "message" to "Разрешите установку обновлений для AuroraFox и повторите установку."
+                    )
+                ).toString()
+            }
+
+            val uri = Uri.parse("content://${act.packageName}.aurorafox.updates/update.apk")
+            val installIntent = Intent(Intent.ACTION_VIEW).apply {
+                setDataAndType(uri, "application/vnd.android.package-archive")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            act.startActivity(installIntent)
+            JSONObject(mapOf("ok" to true, "installer_opened" to true)).toString()
+        } catch (t: Throwable) {
+            errorJson("Cannot open Android package installer: ${t.message ?: t.javaClass.simpleName}")
+        }
     }
 
     @UsedByGodot
