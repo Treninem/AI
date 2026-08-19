@@ -151,9 +151,6 @@ jobs:
 
       - name: Build Android plugin and APK
         shell: pwsh
-        env:
-          ANDROID_HOME: ${{ env.ANDROID_HOME }}
-          JAVA_HOME: ${{ env.JAVA_HOME }}
         run: |
           ./build/build_android.ps1 -Godot '${{ steps.godot.outputs.path }}' -Gradle 'gradle'
 
