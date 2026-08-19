@@ -1,5 +1,6 @@
 #include <jni.h>
 #include <algorithm>
+#include <cstdio>
 #include <fstream>
 #include <mutex>
 #include <sstream>
@@ -54,16 +55,32 @@ static std::string from_jstring(JNIEnv *env, jstring value) {
     return out;
 }
 
-static int extract_json_int(const std::string &json, const std::string &key, int fallback) {
+static size_t find_json_value(const std::string &json, const std::string &key) {
     const std::string needle = "\"" + key + "\"";
     size_t pos = json.find(needle);
-    if (pos == std::string::npos) return fallback;
+    if (pos == std::string::npos) return std::string::npos;
     pos = json.find(':', pos + needle.size());
-    if (pos == std::string::npos) return fallback;
+    if (pos == std::string::npos) return std::string::npos;
     ++pos;
-    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t')) ++pos;
+    while (pos < json.size() && (json[pos] == ' ' || json[pos] == '\t' || json[pos] == '\r' || json[pos] == '\n')) ++pos;
+    return pos;
+}
+
+static int extract_json_int(const std::string &json, const std::string &key, int fallback) {
+    const size_t pos = find_json_value(json, key);
+    if (pos == std::string::npos) return fallback;
     try {
         return std::stoi(json.substr(pos));
+    } catch (...) {
+        return fallback;
+    }
+}
+
+static float extract_json_float(const std::string &json, const std::string &key, float fallback) {
+    const size_t pos = find_json_value(json, key);
+    if (pos == std::string::npos) return fallback;
+    try {
+        return std::stof(json.substr(pos));
     } catch (...) {
         return fallback;
     }
@@ -98,7 +115,33 @@ static llama_model *ensure_llama_model(const std::string &path, std::string &err
     return g_model;
 }
 
-static std::string llama_generate(const std::string &model_path, const std::string &prompt, int n_predict) {
+static llama_sampler *make_sampler(float temperature, float top_p, int top_k, uint32_t seed) {
+    llama_sampler_chain_params chain_params = llama_sampler_chain_default_params();
+    chain_params.no_perf = true;
+    llama_sampler *sampler = llama_sampler_chain_init(chain_params);
+    if (!sampler) return nullptr;
+    if (temperature <= 0.0f) {
+        llama_sampler_chain_add(sampler, llama_sampler_init_greedy());
+        return sampler;
+    }
+    top_k = std::clamp(top_k, 1, 200);
+    top_p = std::clamp(top_p, 0.05f, 1.0f);
+    temperature = std::clamp(temperature, 0.05f, 2.0f);
+    llama_sampler_chain_add(sampler, llama_sampler_init_top_k(top_k));
+    llama_sampler_chain_add(sampler, llama_sampler_init_top_p(top_p, 1));
+    llama_sampler_chain_add(sampler, llama_sampler_init_temp(temperature));
+    llama_sampler_chain_add(sampler, llama_sampler_init_dist(seed));
+    return sampler;
+}
+
+static std::string llama_generate(
+        const std::string &model_path,
+        const std::string &prompt,
+        int n_predict,
+        float temperature,
+        float top_p,
+        int top_k,
+        uint32_t seed) {
     std::lock_guard<std::mutex> lock(g_llama_mutex);
     std::string error;
     llama_model *model = ensure_llama_model(model_path, error);
@@ -131,10 +174,11 @@ static std::string llama_generate(const std::string &model_path, const std::stri
     llama_context *ctx = llama_init_from_model(model, ctx_params);
     if (!ctx) return R"({"ok":false,"error":"Failed to create llama context"})";
 
-    llama_sampler_chain_params chain_params = llama_sampler_chain_default_params();
-    chain_params.no_perf = true;
-    llama_sampler *sampler = llama_sampler_chain_init(chain_params);
-    llama_sampler_chain_add(sampler, llama_sampler_init_greedy());
+    llama_sampler *sampler = make_sampler(temperature, top_p, top_k, seed);
+    if (!sampler) {
+        llama_free(ctx);
+        return R"({"ok":false,"error":"Failed to create llama sampler"})";
+    }
 
     int pos = 0;
     for (int offset = 0; offset < n_prompt; offset += 512) {
@@ -157,6 +201,7 @@ static std::string llama_generate(const std::string &model_path, const std::stri
         char piece[512];
         const int n = llama_token_to_piece(vocab, token, piece, sizeof(piece), 0, true);
         if (n > 0) generated.append(piece, static_cast<size_t>(n));
+        llama_sampler_accept(sampler, token);
 
         llama_token next = token;
         llama_batch batch = llama_batch_get_one(&next, 1);
@@ -203,8 +248,12 @@ Java_com_aurorafox_runtime_NativeRuntime_nativeChat(
     const std::string prompt_text = from_jstring(env, prompt);
     const std::string options = from_jstring(env, optionsJson);
     if (model_path.empty() || prompt_text.empty()) return to_jstring(env, R"({"ok":false,"error":"Model path or prompt is empty"})");
-    int n_predict = extract_json_int(options, "max_tokens", extract_json_int(options, "num_predict", 384));
-    return to_jstring(env, llama_generate(model_path, prompt_text, n_predict));
+    const int n_predict = extract_json_int(options, "max_tokens", extract_json_int(options, "num_predict", 384));
+    const float temperature = extract_json_float(options, "temperature", 0.2f);
+    const float top_p = extract_json_float(options, "top_p", 0.92f);
+    const int top_k = extract_json_int(options, "top_k", 40);
+    const int seed_value = extract_json_int(options, "seed", static_cast<int>(LLAMA_DEFAULT_SEED));
+    return to_jstring(env, llama_generate(model_path, prompt_text, n_predict, temperature, top_p, top_k, static_cast<uint32_t>(seed_value)));
 #endif
 }
 
