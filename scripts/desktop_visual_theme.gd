@@ -49,6 +49,7 @@ func _apply_all() -> void:
 	if root == null:
 		return
 	_walk(root)
+	_relocate_update_button()
 	_apply_layout()
 
 func _walk(node: Node) -> void:
@@ -123,10 +124,26 @@ func _button_texture_style(tint: Color) -> StyleBoxTexture:
 	style.content_margin_bottom = 8.0
 	return style
 
+func _relocate_update_button() -> void:
+	var host := root.find_child("MainHeaderActions", true, false) as HBoxContainer
+	var overlay := root.get_node_or_null("UpdateOverlay")
+	if host == null or overlay == null:
+		return
+	var button = overlay.get("open_button")
+	if not button is Button:
+		return
+	var update_button := button as Button
+	if update_button.get_parent() != host:
+		update_button.reparent(host)
+	update_button.name = "UpdateButton"
+	update_button.position = Vector2.ZERO
+	update_button.custom_minimum_size = Vector2(40, 38)
+
 func _apply_layout() -> void:
 	_layout_queued = false
 	if root == null or not is_instance_valid(root):
 		return
+	_relocate_update_button()
 	var width := get_viewport().get_visible_rect().size.x
 	var compact := width < COMPACT_WIDTH
 	var wide := width >= WIDE_WIDTH
