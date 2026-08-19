@@ -4,12 +4,18 @@ extends Node
 const STATE_PATH := "user://aurora_model_setup_state.json"
 const REQUIRED_MODEL := "qwen3:8b"
 const OLLAMA_TAGS := "http://127.0.0.1:11434/api/tags"
+const PROFILE_INFO := {
+	"core": {"label":"Базовый — чат", "models":"qwen3:8b", "bytes":5200000000, "note":"Основной локальный чат и инструменты."},
+	"balanced": {"label":"Сбалансированный — чат + зрение", "models":"qwen3:8b + qwen3-vl:8b", "bytes":11300000000, "note":"Добавляет реальный анализ изображений, сканов PDF и кадров видео."},
+	"full": {"label":"Полный — чат + зрение + Code 30B", "models":"qwen3:8b + qwen3-vl:8b + qwen3-coder:30b", "bytes":30300000000, "note":"Добавляет отдельного Code Architect для сложных программных задач."}
+}
 
 var popup: PopupPanel
 var progress: ProgressBar
 var stage_label: Label
 var detail_label: Label
 var profile_select: OptionButton
+var profile_detail: Label
 var install_button: Button
 var setup_pid := 0
 var poll_timer := 0.0
@@ -41,7 +47,7 @@ func _build_ui() -> void:
 	layer.layer = 89
 	add_child(layer)
 	popup = PopupPanel.new()
-	popup.size = Vector2i(650, 430)
+	popup.size = Vector2i(690, 500)
 	layer.add_child(popup)
 
 	var margin := MarginContainer.new()
@@ -60,7 +66,7 @@ func _build_ui() -> void:
 	box.add_child(title)
 
 	var description := Label.new()
-	description.text = "AuroraFox работает локально. Если Ollama или модель отсутствуют, приложение может подготовить их автоматически."
+	description.text = "AuroraFox работает локально. Если Ollama или модель отсутствуют, приложение может подготовить их автоматически. Уже установленные модели повторно не скачиваются."
 	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(description)
 
@@ -68,17 +74,22 @@ func _build_ui() -> void:
 	profile_title.text = "Профиль моделей"
 	box.add_child(profile_title)
 	profile_select = OptionButton.new()
-	profile_select.add_item("Базовый — чат (qwen3:8b)")
-	profile_select.set_item_metadata(0, "core")
-	profile_select.add_item("Сбалансированный — чат + зрение")
-	profile_select.set_item_metadata(1, "balanced")
-	profile_select.add_item("Полный — чат + зрение + Code 30B")
-	profile_select.set_item_metadata(2, "full")
+	for id in ["core", "balanced", "full"]:
+		var info: Dictionary = PROFILE_INFO[id]
+		profile_select.add_item("%s • ≈ %.1f ГБ" % [info.get("label", id), float(info.get("bytes", 0)) / 1000000000.0])
+		profile_select.set_item_metadata(profile_select.item_count - 1, id)
 	profile_select.selected = 1
+	profile_select.item_selected.connect(func(_index): _sync_profile_detail())
 	box.add_child(profile_select)
 
+	profile_detail = Label.new()
+	profile_detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	profile_detail.add_theme_color_override("font_color", Color("8993aa"))
+	box.add_child(profile_detail)
+	_sync_profile_detail()
+
 	var hint := Label.new()
-	hint.text = "Полный профиль занимает значительно больше места. Его можно установить позже; базовый ИИ работает без Code 30B."
+	hint.text = "Перед загрузкой AuroraFox проверит версию Ollama и свободное место. Full-профиль можно поставить позже — базовый ИИ от него не зависит."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(hint)
 
@@ -112,6 +123,14 @@ func _build_ui() -> void:
 	install_button.pressed.connect(_start_install)
 	row.add_child(install_button)
 
+func _sync_profile_detail() -> void:
+	if profile_select == null or profile_detail == null: return
+	var id := str(profile_select.get_item_metadata(profile_select.selected))
+	var info: Dictionary = PROFILE_INFO.get(id, {})
+	profile_detail.text = "%s\nМодели: %s\nПолный объём профиля ≈ %.1f ГБ; если часть уже установлена, скачивается только недостающее." % [
+		str(info.get("note", "")), str(info.get("models", "")), float(info.get("bytes", 0)) / 1000000000.0
+	]
+
 func _start_install() -> void:
 	if setup_pid > 0: return
 	var installer := _installer_path()
@@ -141,6 +160,7 @@ func _read_state() -> void:
 	var f := FileAccess.open(STATE_PATH, FileAccess.READ)
 	if f == null: return
 	var data = JSON.parse_string(f.get_as_text())
+	f.close()
 	if not data is Dictionary: return
 	var stage := str(data.get("stage", ""))
 	progress.value = clampi(int(data.get("progress", 0)), 0, 100)
@@ -194,9 +214,10 @@ func _stage_title(stage: String) -> String:
 	return {
 		"runtime":"Проверка AI runtime",
 		"runtime_download":"Загрузка Ollama",
-		"runtime_install":"Установка Ollama",
+		"runtime_install":"Установка / обновление Ollama",
 		"runtime_start":"Запуск локального API",
-		"model_pull":"Загрузка модели",
+		"storage":"Проверка свободного места",
+		"model_pull":"Загрузка моделей",
 		"verify":"Проверка моделей",
 		"ready":"Готово",
 		"error":"Ошибка подготовки"
