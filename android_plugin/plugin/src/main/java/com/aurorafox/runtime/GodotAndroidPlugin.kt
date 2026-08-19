@@ -20,6 +20,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
         AndroidVoiceRuntime(ctx)
     }
+    private val files by lazy {
+        val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
+        AndroidFileRuntime(ctx, voice)
+    }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
 
@@ -32,8 +36,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val memoryInfo = ActivityManager.MemoryInfo()
         val manager = activity?.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         manager?.getMemoryInfo(memoryInfo)
-        val files = activity?.filesDir
-        val freeStorage = if (files != null) StatFs(files.absolutePath).availableBytes else 0L
+        val filesDir = activity?.filesDir
+        val freeStorage = if (filesDir != null) StatFs(filesDir.absolutePath).availableBytes else 0L
         val tts = try { voice.isTtsAvailable() } catch (_: Throwable) { false }
         val sherpaStt = try { voice.isSttAvailable() } catch (_: Throwable) { false }
         return JSONObject(
@@ -47,6 +51,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 "whisper_cpp" to (loaded && native.hasWhisper()),
                 "sherpa_stt" to sherpaStt,
                 "local_tts" to tts,
+                "file_intelligence" to true,
                 "wasm" to (loaded && native.hasWasm()),
                 "app_update_install" to true,
                 "architecture" to Build.SUPPORTED_ABIS.joinToString(","),
@@ -73,6 +78,25 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     @UsedByGodot
     fun clearVoiceCache(): String {
         return try { voice.clearCache() } catch (t: Throwable) { errorJson(t.message ?: "Cannot clear voice cache") }
+    }
+
+    @UsedByGodot
+    fun analyzeLocalFile(path: String, question: String, visual: Boolean): String {
+        if (!isInsideAppStorage(path)) return errorJson("File must be inside AuroraFox private storage")
+        return try { files.analyze(path, question, visual) }
+        catch (t: Throwable) { errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}") }
+    }
+
+    @UsedByGodot
+    fun clearFileCache(): String {
+        return try { files.clearCache() } catch (t: Throwable) { errorJson(t.message ?: "Cannot clear file cache") }
+    }
+
+    @UsedByGodot
+    fun treeLocal(path: String, maxItems: Int): String {
+        if (!isInsideAppStorage(path)) return errorJson("Directory must be inside AuroraFox private storage")
+        return try { files.tree(path, maxItems) }
+        catch (t: Throwable) { errorJson("Cannot build Android file tree: ${t.message ?: t.javaClass.simpleName}") }
     }
 
     @UsedByGodot
@@ -165,9 +189,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     private fun isInsideAppStorage(path: String): Boolean {
-        val root = activity?.filesDir?.canonicalFile ?: return false
+        val act = activity ?: return false
         val target = try { File(path).canonicalFile } catch (_: Exception) { return false }
-        return target == root || target.path.startsWith(root.path + File.separator)
+        val roots = listOf(act.filesDir.canonicalFile, act.cacheDir.canonicalFile)
+        return roots.any { root -> target == root || target.path.startsWith(root.path + File.separator) }
     }
 
     private fun errorJson(message: String): String = JSONObject(mapOf("ok" to false, "error" to message)).toString()
