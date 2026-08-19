@@ -56,6 +56,7 @@ function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
         'voice\models',
         'computer\.venv',
         'computer\models',
+        'file_intelligence\.venv',
         'runtime\windows\python',
         'runtime\windows\cache'
     )
