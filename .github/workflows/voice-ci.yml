@@ -65,10 +65,13 @@ jobs:
       - name: Run updater GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/update_smoke.gd
 
-  windows-updater:
+  windows-integration:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify release version synchronization
+        shell: powershell
+        run: .\tests\version_sync_test.ps1
       - name: Run transactional updater integration test
         shell: powershell
         run: .\tests\windows_updater_test.ps1
