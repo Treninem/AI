@@ -75,8 +75,9 @@ func _send_ollama_chat(messages: Array, temperature: float, failed_models: Array
 			if failed not in failed_models:
 				failed_models.append(failed)
 			var info := await _fetch_ollama_models()
+			var installed: Array = []
 			if info.get("ok", false):
-				var installed: Array = info.get("installed", [])
+				installed = info.get("installed", [])
 				var replacement := choose_chat_model(installed, failed_models)
 				if not replacement.is_empty() and replacement != failed:
 					model = replacement
