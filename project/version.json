@@ -1,0 +1,13 @@
+{
+  "version": "V1.0.0.0",
+  "numeric": "1.0.0.0",
+  "major": 1,
+  "minor": 0,
+  "patch": 0,
+  "build": 0,
+  "android_version_code": 100000,
+  "status": "evolving",
+  "auto_increment": true,
+  "updated_at": "2026-08-19T12:12:00Z",
+  "reason": "Major migration to autonomous evolution architecture"
+}
