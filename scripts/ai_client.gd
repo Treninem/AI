@@ -38,7 +38,14 @@ func configure_android_model(path: String) -> void:
 	android_model_path = path
 
 func chat(messages: Array, temperature: float = 0.2) -> Dictionary:
-	if OS.get_name() == "Android" and android_runtime.is_available():
+	if OS.get_name() == "Android":
+		if not android_runtime.is_available():
+			return {"ok": false, "error": "Встроенный Android AI runtime не загрузился", "runtime": "android_native"}
+		var caps := android_runtime.capabilities()
+		if not bool(caps.get("llama_cpp", false)):
+			return {"ok": false, "error": "В этой Android-сборке недоступен llama.cpp runtime", "runtime": "android_native", "capabilities": caps}
+		if not FileAccess.file_exists(android_model_path):
+			return {"ok": false, "error": "Локальная Android-модель не установлена", "runtime": "android_native", "model_path": android_model_path}
 		var local_path := ProjectSettings.globalize_path(android_model_path)
 		return android_runtime.chat(local_path, messages, {"temperature": temperature})
 	return await _chat_ollama(messages, temperature)
