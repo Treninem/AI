@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'voice/**'
+      - 'runtime/**'
       - 'update/**'
       - 'scripts/**'
       - 'tests/**'
@@ -18,6 +19,7 @@ on:
   pull_request:
     paths:
       - 'voice/**'
+      - 'runtime/**'
       - 'update/**'
       - 'scripts/**'
       - 'tests/**'
@@ -69,6 +71,14 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Verify managed uv bootstrap without system Python dependency
+        shell: powershell
+        run: |
+          .\runtime\ensure_uv.ps1 -RuntimeRoot "$env:RUNNER_TEMP\aurora-runtime" -SkipPythonInstall | Out-Null
+          $uv = Join-Path $env:RUNNER_TEMP 'aurora-runtime\uv\uv.exe'
+          if (-not (Test-Path $uv)) { throw 'uv.exe was not prepared' }
+          & $uv --version
+          if ($LASTEXITCODE -ne 0) { throw 'bundled uv bootstrap is not executable' }
       - name: Verify release version synchronization
         shell: powershell
         run: .\tests\version_sync_test.ps1
