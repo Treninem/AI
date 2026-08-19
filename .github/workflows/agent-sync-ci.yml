@@ -47,7 +47,7 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          $base = 'https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.1-stable'
           New-Item -ItemType Directory -Force .ci\godot | Out-Null
           Invoke-WebRequest "$base/Godot_v4.7.1-stable_win64.exe.zip" -OutFile .ci\godot.zip
           Expand-Archive .ci\godot.zip .ci\godot -Force
