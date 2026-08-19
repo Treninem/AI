@@ -1,6 +1,7 @@
 param(
     [string]$Godot = "godot",
-    [string]$Gradle = "gradle"
+    [string]$Gradle = "gradle",
+    [switch]$ReleaseOnly
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,7 +20,9 @@ if ($LASTEXITCODE -ne 0) { throw "Android native source setup failed" }
 
 Push-Location $pluginRoot
 try {
-    & $Gradle :plugin:installGodotPlugin
+    $pluginTask = if ($ReleaseOnly) { ":plugin:installGodotPluginRelease" } else { ":plugin:installGodotPlugin" }
+    Write-Host "Building Android plugin task: $pluginTask"
+    & $Gradle $pluginTask
     if ($LASTEXITCODE -ne 0) { throw "AuroraFoxRuntime AAR build failed" }
 } finally {
     Pop-Location
