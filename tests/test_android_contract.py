@@ -29,6 +29,7 @@ def main() -> None:
     require('gradle_build/min_sdk="26"' in preset, "Android minSdk must remain 26")
     require('gradle_build/target_sdk="35"' in preset, "Android targetSdk must remain 35")
     require('architectures/arm64-v8a=true' in preset, "Android arm64 build is disabled")
+    require('architectures/x86_64=true' in preset, "Android x86_64 build is required for exact-APK emulator validation")
     require('permissions/internet=true' in preset, "Android internet permission is missing")
     require('permissions/record_audio=true' in preset, "Android microphone permission is missing")
 
@@ -42,6 +43,13 @@ def main() -> None:
     require("V1.0.0.0" not in artifact, "APK artifact workflow contains a stale hard-coded version")
     require("project/version.json" in artifact, "APK artifact workflow does not derive canonical version")
     require("apksigner" in artifact and "aapt" in artifact, "APK signature/package validation is missing")
+    require("android-emulator-runner" in artifact and "arch: x86_64" in artifact, "Android emulator validation is missing")
+    require('adb install -r "$APK_PATH"' in artifact, "Android artifact smoke does not install the generated APK")
+
+    release = read(".github/workflows/release.yml")
+    require("Install and launch signed APK on Android 35" in release, "production Android emulator gate is missing")
+    require("arch: x86_64" in release, "production Android emulator ABI drifted")
+    require("dist/AuroraFox-Android.apk" in release, "production APK path changed unexpectedly")
 
     ai_client = read("scripts/ai_client.gd")
     android_branch = ai_client.split('func chat(messages: Array, temperature: float = 0.2) -> Dictionary:', 1)[1].split('func _chat_ollama', 1)[0]
@@ -64,10 +72,10 @@ def main() -> None:
     gradle = read("android_plugin/plugin/build.gradle.kts")
     require("compileSdk = 35" in gradle, "Android plugin compileSdk drifted")
     require("minSdk = 26" in gradle, "Android plugin minSdk drifted")
-    require('abiFilters += listOf("arm64-v8a")' in gradle, "Android plugin ABI drifted")
+    require('abiFilters += listOf("arm64-v8a", "x86_64")' in gradle, "Android plugin ABI drifted")
     require('implementation("org.godotengine:godot:4.7.1.stable")' in gradle, "Godot Android plugin dependency drifted")
 
-    print(f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']}")
+    print(f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} abis=arm64-v8a,x86_64")
 
 
 if __name__ == "__main__":
