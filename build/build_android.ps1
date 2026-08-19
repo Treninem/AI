@@ -21,7 +21,7 @@ if (-not (Test-Path -LiteralPath $exportPresetPath)) {
 }
 
 if (Test-Path -LiteralPath $versionTest) {
-    & pwsh -NoProfile -File $versionTest
+    & $versionTest
     if ($LASTEXITCODE -ne 0) { throw "AuroraFox version synchronization check failed" }
 }
 
