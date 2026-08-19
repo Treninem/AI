@@ -1,0 +1,71 @@
+name: AuroraFox One-Shot UI Asset Repair
+
+on:
+  push:
+    branches: [release-ci-validation]
+    paths:
+      - '.github/workflows/fix-ui-assets-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout working branch
+        uses: actions/checkout@v4
+        with:
+          ref: release-ci-validation
+          fetch-depth: 0
+
+      - name: Re-encode UI assets as PNG and update references
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check pillow==11.3.0
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image
+
+          for src, dst in [
+              (Path('assets/chat_background.webp'), Path('assets/chat_background.png')),
+              (Path('assets/ui_atlas.webp'), Path('assets/ui_atlas.png')),
+          ]:
+              if src.exists():
+                  with Image.open(src) as image:
+                      image.load()
+                      image.save(dst, format='PNG', optimize=True)
+
+          replacements = {
+              'res://assets/chat_background.webp': 'res://assets/chat_background.png',
+              'res://assets/ui_atlas.webp': 'res://assets/ui_atlas.png',
+          }
+          for path in [Path('scripts/main.gd'), Path('scripts/voice_overlay.gd')]:
+              text = path.read_text(encoding='utf-8')
+              for old, new in replacements.items():
+                  text = text.replace(old, new)
+              path.write_text(text, encoding='utf-8', newline='\n')
+          PY
+          rm -f assets/chat_background.webp assets/ui_atlas.webp
+
+      - name: Verify converted assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          file assets/chat_background.png assets/ui_atlas.png
+          grep -R --line-number --fixed-strings '.webp' scripts/main.gd scripts/voice_overlay.gd && exit 1 || true
+
+      - name: Commit repaired assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name 'AuroraFox CI'
+          git config user.email 'actions@users.noreply.github.com'
+          git add assets scripts/main.gd scripts/voice_overlay.gd
+          if git diff --cached --quiet; then
+            echo 'No asset repair changes required.'
+            exit 0
+          fi
+          git commit -m 'fix: convert AuroraFox UI assets to Godot-safe PNG'
+          git push origin HEAD:release-ci-validation
