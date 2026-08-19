@@ -21,7 +21,11 @@ var file_dialog: FileDialog
 var pending_attachments: Array = []
 var attachment_bar: HBoxContainer
 var request_busy := false
+var file_processing_busy := false
 var queued_voice_text := ""
+var rename_dialog: AcceptDialog
+var rename_input: LineEdit
+var rename_target_id := ""
 
 const CHAT_BACKGROUND: Texture2D = preload("res://assets/chat_background.webp")
 const UI_ATLAS: Texture2D = preload("res://assets/ui_atlas.webp")
@@ -39,7 +43,6 @@ const REGION_BUTTON_PURPLE := Rect2(17, 456, 135, 38)
 const REGION_BUTTON_PURPLE_ALT := Rect2(167, 456, 135, 38)
 const REGION_BUTTON_CYAN := Rect2(326, 456, 142, 38)
 const REGION_BUTTON_CYAN_ALT := Rect2(482, 456, 131, 38)
-const REGION_BUTTON_CYAN_NEXT := Rect2(626, 456, 124, 38)
 
 func _ready() -> void:
 	add_child(ai)
@@ -52,6 +55,8 @@ func _ready() -> void:
 	agent.setup(ai, memory, tools)
 	improver.setup(tools, ai)
 	_build_ui()
+	if not get_window().files_dropped.is_connected(_on_files_dropped):
+		get_window().files_dropped.connect(_on_files_dropped)
 	_refresh_chat_list()
 	_render_active_chat()
 	await get_tree().process_frame
@@ -254,7 +259,7 @@ func _build_ui() -> void:
 	row.add_child(send)
 
 	var hint := Label.new()
-	hint.text = "Enter — отправить  •  Shift+Enter — новая строка  •  прикрепляйте файлы кнопкой +"
+	hint.text = "Enter — отправить  •  Shift+Enter — новая строка  •  файлы можно перетащить прямо в окно"
 	hint.add_theme_color_override("font_color", MUTED)
 	composer.add_child(hint)
 
@@ -265,8 +270,19 @@ func _build_ui() -> void:
 	file_dialog.files_selected.connect(_on_files_selected)
 	add_child(file_dialog)
 
+	rename_dialog = AcceptDialog.new()
+	rename_dialog.title = "Переименовать чат"
+	rename_dialog.dialog_text = "Новое название:"
+	rename_dialog.min_size = Vector2i(430, 150)
+	rename_dialog.confirmed.connect(_confirm_rename_chat)
+	add_child(rename_dialog)
+	rename_input = LineEdit.new()
+	rename_input.custom_minimum_size = Vector2(380, 42)
+	rename_input.max_length = 60
+	rename_dialog.add_child(rename_input)
+
 func _new_chat() -> void:
-	if request_busy: return
+	if request_busy or file_processing_busy: return
 	AuroraVoice.stop()
 	chats.create_chat()
 	pending_attachments.clear()
@@ -282,33 +298,62 @@ func _refresh_chat_list(query: String = "") -> void:
 	for chat in source:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var id := str(chat.get("id", ""))
+		var title_text := str(chat.get("title", "Новый чат"))
+
 		var b := Button.new()
-		b.text = str(chat.get("title", "Новый чат"))
+		b.text = title_text
+		b.tooltip_text = title_text
 		b.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		b.custom_minimum_size.y = 40
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_apply_neon_button(b, false)
-		var id := str(chat.get("id", ""))
 		b.pressed.connect(func():
-			if request_busy: return
+			if request_busy or file_processing_busy: return
 			chats.active_chat_id = id
 			chats.save_all()
 			_render_active_chat()
 		)
 		row.add_child(b)
+
+		var rename := Button.new()
+		rename.text = "✎"
+		rename.tooltip_text = "Переименовать чат"
+		rename.custom_minimum_size = Vector2(40, 40)
+		_apply_neon_button(rename, false)
+		rename.pressed.connect(func(): _open_rename_chat(id, title_text))
+		row.add_child(rename)
+
 		var del := Button.new()
 		del.text = "×"
 		del.tooltip_text = "Удалить чат"
 		del.custom_minimum_size = Vector2(42, 40)
 		_apply_neon_button(del, true)
 		del.pressed.connect(func():
-			if request_busy: return
+			if request_busy or file_processing_busy: return
 			chats.delete_chat(id)
 			_refresh_chat_list(query)
 			_render_active_chat()
 		)
 		row.add_child(del)
 		chat_list.add_child(row)
+
+func _open_rename_chat(id: String, current_title: String) -> void:
+	if request_busy: return
+	rename_target_id = id
+	rename_input.text = current_title
+	rename_dialog.popup_centered()
+	await get_tree().process_frame
+	rename_input.grab_focus()
+	rename_input.select_all()
+
+func _confirm_rename_chat() -> void:
+	if rename_target_id.is_empty(): return
+	var title_text := rename_input.text.strip_edges()
+	if title_text.is_empty(): return
+	chats.rename_chat(rename_target_id, title_text)
+	rename_target_id = ""
+	_refresh_chat_list()
 
 func _render_active_chat() -> void:
 	if output == null: return
@@ -326,20 +371,42 @@ func _render_active_chat() -> void:
 		else: output.append_text("\n[color=#a66cff][b]AuroraFox[/b][/color]\n%s\n" % content)
 
 func _open_file_dialog() -> void:
-	if not request_busy: file_dialog.popup_centered_ratio(0.72)
+	if not request_busy and not file_processing_busy: file_dialog.popup_centered_ratio(0.72)
 
 func _on_files_selected(paths: PackedStringArray) -> void:
+	await _ingest_files(paths)
+
+func _on_files_dropped(paths: PackedStringArray) -> void:
+	await _ingest_files(paths)
+
+func _ingest_files(paths: PackedStringArray) -> void:
+	if request_busy or file_processing_busy or paths.is_empty(): return
+	file_processing_busy = true
 	for path in paths:
-		var item := attachments.describe(path)
+		var duplicate := false
+		for existing in pending_attachments:
+			if str(existing.get("path", "")) == path:
+				duplicate = true
+				break
+		if duplicate: continue
+		status.text = "Разбираю файл: %s…" % path.get_file()
+		var item := await attachments.analyze(path)
 		if item.get("ok", false): pending_attachments.append(item)
 	_refresh_attachment_bar()
+	file_processing_busy = false
+	status.text = "● файлы готовы   •   %d вложений" % pending_attachments.size()
 
 func _refresh_attachment_bar() -> void:
+	if attachment_bar == null: return
 	for child in attachment_bar.get_children(): child.queue_free()
 	for item in pending_attachments:
 		var chip := Button.new()
-		chip.text = "📎 %s" % item.get("name", "file")
-		chip.tooltip_text = "%s • %s" % [item.get("kind", ""), item.get("size", 0)]
+		var marker := "⚠" if not item.get("warnings", []).is_empty() else "📎"
+		chip.text = "%s %s" % [marker, item.get("name", "file")]
+		chip.tooltip_text = "%s • %s B%s" % [
+			item.get("kind", ""), item.get("size", 0),
+			" • анализ готов" if bool(item.get("analyzed", false)) else " • анализ ограничен"
+		]
 		_apply_neon_button(chip, false)
 		var target = item
 		chip.pressed.connect(func(): pending_attachments.erase(target); _refresh_attachment_bar())
@@ -353,7 +420,7 @@ func _on_input_gui(event: InputEvent) -> void:
 func submit_voice_text(text: String) -> void:
 	var clean := text.strip_edges()
 	if clean.is_empty(): return
-	if request_busy:
+	if request_busy or file_processing_busy:
 		queued_voice_text = clean
 		return
 	if input == null: return
@@ -361,13 +428,17 @@ func submit_voice_text(text: String) -> void:
 	_submit_current()
 
 func _submit_queued_voice() -> void:
-	if request_busy or queued_voice_text.is_empty(): return
+	if request_busy or file_processing_busy or queued_voice_text.is_empty(): return
 	var next := queued_voice_text
 	queued_voice_text = ""
 	submit_voice_text(next)
 
 func _submit_current() -> void:
-	if request_busy: return
+	if request_busy:
+		return
+	if file_processing_busy:
+		status.text = "Сначала заканчиваю локальный анализ вложений…"
+		return
 	var text := input.text.strip_edges()
 	if text.is_empty() and pending_attachments.is_empty(): return
 	request_busy = true
@@ -400,4 +471,4 @@ func _submit_current() -> void:
 	if not queued_voice_text.is_empty(): call_deferred("_submit_queued_voice")
 
 func _show_tools_info() -> void:
-	output.append_text("\n[color=#a66cff][b]Инструменты AuroraFox[/b][/color]\nИнтернет, HTTP, файлы, Git, системная информация, память, база знаний, компьютерный агент, песочницы и локальный голос.\n")
+	output.append_text("\n[color=#a66cff][b]Инструменты AuroraFox[/b][/color]\nИнтернет, HTTP, файлы, Git, системная информация, память, база знаний, компьютерный агент, песочницы, File Intelligence и локальный голос.\n")
