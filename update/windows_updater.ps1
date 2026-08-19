@@ -18,11 +18,11 @@ function Write-UpdateLog([string]$Message) {
     } catch {}
 }
 
-function Wait-ForExit([int]$Pid, [int]$TimeoutSec = 90) {
+function Wait-ForExit([int]$ProcessId, [int]$TimeoutSec = 90) {
     $deadline = (Get-Date).AddSeconds($TimeoutSec)
     while ((Get-Date) -lt $deadline) {
-        $p = Get-Process -Id $Pid -ErrorAction SilentlyContinue
-        if (-not $p) { return $true }
+        $process = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
+        if (-not $process) { return $true }
         Start-Sleep -Milliseconds 300
     }
     return $false
@@ -119,7 +119,7 @@ try {
     $actual = (Get-FileHash -LiteralPath $Package -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actual -ne $ExpectedSha256) { throw "SHA-256 mismatch: $actual" }
 
-    if (-not (Wait-ForExit -Pid $ParentPid)) { throw 'AuroraFox did not exit in time' }
+    if (-not (Wait-ForExit -ProcessId $ParentPid)) { throw 'AuroraFox did not exit in time' }
     Stop-AuroraRuntimeProcesses -Root $InstallDir
 
     Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue
