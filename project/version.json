@@ -1,13 +1,13 @@
 {
-  "version": "V1.1.1.1",
-  "numeric": "1.1.1.1",
+  "version": "V1.1.1.2",
+  "numeric": "1.1.1.2",
   "major": 1,
   "minor": 1,
   "patch": 1,
-  "build": 1,
-  "android_version_code": 100002,
+  "build": 2,
+  "android_version_code": 100003,
   "status": "evolving",
   "auto_increment": true,
-  "updated_at": "2026-08-19T19:30:00Z",
-  "reason": "Bugfix: resilient Ollama fallback, readable settings, safe desktop visuals and AuroraFox Work foundation"
+  "updated_at": "2026-08-19T22:01:39Z",
+  "reason": "Android release hardening: deterministic APK CI, emulator install/launch smoke, guarded native runtime routing and truthful setup status"
 }
