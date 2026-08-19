@@ -127,9 +127,25 @@ func _append_conversation_context(messages: Array, conversation_context: Array) 
 		if not item is Dictionary: continue
 		var role := str(item.get("role", ""))
 		if role not in ["user", "assistant"]: continue
+		var parts: Array[String] = []
 		var content := str(item.get("content", "")).strip_edges()
-		if content.is_empty(): continue
-		messages.append({"role": role, "content": content.substr(0, 16000)})
+		if not content.is_empty(): parts.append(content.substr(0, 16000))
+		var attachments: Array = item.get("attachments", [])
+		var attachment_count := mini(attachments.size(), 6)
+		for a_index in range(attachment_count):
+			var attachment = attachments[a_index]
+			if not attachment is Dictionary: continue
+			var name := str(attachment.get("name", "file"))
+			var kind := str(attachment.get("kind", "unknown"))
+			var excerpt := str(attachment.get("excerpt", "")).strip_edges().substr(0, 6000)
+			var meta := attachment.get("metadata", {})
+			var attachment_text := "[Вложение из этой реплики: %s; тип: %s" % [name, kind]
+			if meta is Dictionary and not meta.is_empty(): attachment_text += "; метаданные: " + JSON.stringify(meta).substr(0, 1800)
+			attachment_text += "]"
+			if not excerpt.is_empty(): attachment_text += "\n" + excerpt
+			parts.append(attachment_text)
+		if parts.is_empty(): continue
+		messages.append({"role": role, "content": "\n\n".join(parts).substr(0, 24000)})
 
 func _active_chat_context() -> Array:
 	var main := get_parent()
@@ -138,8 +154,6 @@ func _active_chat_context() -> Array:
 	if not store is ChatStore: return []
 	var chat := store.get_active_chat()
 	var history: Array = chat.get("messages", []).duplicate(true)
-	# main.gd saves the current user message before run_task(). The task itself is appended separately below,
-	# therefore remove that last user message here to avoid sending it twice.
 	if not history.is_empty():
 		var last = history[history.size() - 1]
 		if last is Dictionary and str(last.get("role", "")) == "user": history.pop_back()
