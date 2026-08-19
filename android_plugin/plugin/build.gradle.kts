@@ -32,8 +32,11 @@ android {
                 arguments += listOf("-DANDROID_STL=c++_shared")
             }
         }
+        // arm64-v8a is the production phone ABI. x86_64 is also built so the
+        // exact release APK can be installed and launched on the API-35 CI
+        // emulator instead of validating a different test-only binary.
         ndk {
-            abiFilters += listOf("arm64-v8a")
+            abiFilters += listOf("arm64-v8a", "x86_64")
         }
     }
 
