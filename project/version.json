@@ -1,13 +1,13 @@
 {
-  "version": "V1.1.1.2",
-  "numeric": "1.1.1.2",
+  "version": "V1.2.0.0",
+  "numeric": "1.2.0.0",
   "major": 1,
-  "minor": 1,
-  "patch": 1,
-  "build": 2,
-  "android_version_code": 100003,
+  "minor": 2,
+  "patch": 0,
+  "build": 0,
+  "android_version_code": 100004,
   "status": "evolving",
   "auto_increment": true,
-  "updated_at": "2026-08-19T22:01:39Z",
-  "reason": "Android release hardening: deterministic APK CI, emulator install/launch smoke, guarded native runtime routing and truthful setup status"
+  "updated_at": "2026-08-19T22:45:00Z",
+  "reason": "Autonomous evolution tournament: immediate learning cycle, 3-10 distinct mutations, independent sandbox tests, scored competition, final winner retest, automatic activation and verified release auto-apply"
 }
