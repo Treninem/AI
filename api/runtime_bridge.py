@@ -35,11 +35,18 @@ class AuroraRuntimeBridge:
                     return data
         raise RuntimeError("AuroraFox bridge closed without a response")
 
-    def chat(self, message: str, context: list[dict[str, Any]], conversation_id: str) -> dict[str, Any]:
+    def chat(
+        self,
+        message: str,
+        context: list[dict[str, Any]],
+        conversation_id: str,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         return self.request("chat", {
             "message": message,
             "context": context,
             "conversation_id": conversation_id,
+            "metadata": metadata or {},
         })
 
     def status(self) -> dict[str, Any]:
@@ -50,3 +57,9 @@ class AuroraRuntimeBridge:
 
     def run_tool(self, name: str, args: dict[str, Any]) -> dict[str, Any]:
         return self.request("tool", {"name": name, "args": args})
+
+    def learn(self, event: dict[str, Any]) -> dict[str, Any]:
+        return self.request("learn", event)
+
+    def feedback(self, payload: dict[str, Any]) -> dict[str, Any]:
+        return self.request("feedback", payload)
