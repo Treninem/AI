@@ -86,6 +86,17 @@ val copyReleaseAar by tasks.registering(Copy::class) {
     into(file("$godotAddonDir/bin/release"))
 }
 
+tasks.register("installGodotPluginRelease") {
+    dependsOn(copyReleaseAar)
+    doLast {
+        val releasePlugin = file("$godotAddonDir/bin/release/$pluginName-release.aar")
+        val releaseSherpa = file("$godotAddonDir/bin/release/sherpa-onnx-$sherpaVersion.aar")
+        check(releasePlugin.exists()) { "AuroraFoxRuntime release AAR build output is missing" }
+        check(releaseSherpa.exists()) { "sherpa-onnx release AAR was not installed into Godot addon" }
+        println("AuroraFoxRuntime release + sherpa-onnx AARs copied to ${godotAddonDir.absolutePath}")
+    }
+}
+
 tasks.register("installGodotPlugin") {
     dependsOn(copyDebugAar, copyReleaseAar)
     doLast {
