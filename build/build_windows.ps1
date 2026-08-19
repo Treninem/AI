@@ -19,6 +19,8 @@ $runtimeSource = Join-Path $root "runtime"
 $runtimeOut = Join-Path $outDir "runtime"
 $updateSource = Join-Path $root "update"
 $updateOut = Join-Path $outDir "update"
+$apiSource = Join-Path $root "api"
+$apiOut = Join-Path $outDir "api"
 $ensureUv = Join-Path $runtimeSource "ensure_uv.ps1"
 $portableDist = Join-Path $root "build\voice_backend"
 $portableBuilt = $false
@@ -26,7 +28,7 @@ New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 # Always ship AuroraFox's own uv runtime so the installed app never requires
 # a system Python. Python 3.11 itself is installed into AuroraFox's runtime
-# on first voice/computer/file setup and then reused locally.
+# on first voice/computer/file/API setup and then reused locally.
 if (-not (Test-Path -LiteralPath $ensureUv)) { throw "runtime/ensure_uv.ps1 is missing" }
 & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureUv -RuntimeRoot (Join-Path $runtimeSource "windows") -SkipPythonInstall | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Failed to prepare bundled uv runtime" }
@@ -127,6 +129,16 @@ foreach ($file in @("file_service.py", "project_index_service.py", "requirements
 $fileVenv = Join-Path $fileSource ".venv"
 if (Test-Path $fileVenv) { Copy-Item $fileVenv (Join-Path $fileOut ".venv") -Recurse -Force }
 
+# External API Gateway bootstrap. Keep the source next to AuroraFox.exe so
+# the managed Python service can run independently from the Godot PCK.
+if (Test-Path $apiOut) { Remove-Item $apiOut -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $apiOut | Out-Null
+Get-ChildItem -LiteralPath $apiSource -File | Where-Object {
+    $_.Extension -eq '.py' -or $_.Extension -eq '.ps1' -or $_.Name -eq 'requirements.txt'
+} | ForEach-Object {
+    Copy-Item $_.FullName (Join-Path $apiOut $_.Name) -Force
+}
+
 # Transactional Windows updater must be present next to the installed app.
 if (Test-Path $updateOut) { Remove-Item $updateOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $updateOut | Out-Null
@@ -156,6 +168,10 @@ if (-not (Test-Path (Join-Path $fileOut "install_files.ps1"))) { throw "File Int
 if (-not (Test-Path (Join-Path $modelsOut "install_models.ps1"))) { throw "Local AI model bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $updateOut "windows_updater.ps1"))) { throw "Transactional Windows updater was not packaged" }
+if (-not (Test-Path (Join-Path $apiOut "server.py"))) { throw "AuroraFox API server was not packaged" }
+if (-not (Test-Path (Join-Path $apiOut "start_api.ps1"))) { throw "AuroraFox API start script was not packaged" }
+if (-not (Test-Path (Join-Path $apiOut "install_api.ps1"))) { throw "AuroraFox API installer was not packaged" }
+if (-not (Test-Path (Join-Path $apiOut "requirements.txt"))) { throw "AuroraFox API requirements were not packaged" }
 
 Write-Host "AuroraFox Windows build: $outDir\AuroraFox.exe" -ForegroundColor Green
 Write-Host "Managed runtime bootstrap: $runtimeOut"
@@ -163,5 +179,6 @@ Write-Host "Local AI bootstrap: $modelsOut"
 Write-Host "Voice runtime/bootstrap: $voiceOut"
 Write-Host "Computer Agent bootstrap: $computerOut"
 Write-Host "File Intelligence + Project Index bootstrap: $fileOut"
+Write-Host "External API Gateway bootstrap: $apiOut"
 Write-Host "Transactional updater: $updateOut"
 Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - managed-Python fallback/setup wizard" })))
