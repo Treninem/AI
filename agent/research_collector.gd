@@ -31,15 +31,17 @@ func collect(query: String) -> Dictionary:
 	items.append_array(await _collect_reddit("MachineLearning"))
 	items.append_array(await _collect_arxiv(clean_query))
 
+	var learned := 0
 	for item in items:
 		if item is Dictionary:
-			_remember(item)
+			if _learn(item): learned += 1
 			_append_log(item)
 	var report := {
 		"ok": true,
 		"query": clean_query,
 		"items": items,
 		"count": items.size(),
+		"learned": learned,
 		"sources": _source_counts(items),
 		"timestamp_unix": int(Time.get_unix_time_from_system())
 	}
@@ -180,7 +182,7 @@ func _request_text(url: String) -> Dictionary:
 	var req := HTTPRequest.new()
 	req.timeout = 20.0
 	add_child(req)
-	var headers := PackedStringArray(["User-Agent: AuroraFox-Learning/1.0", "Accept: application/json, application/atom+xml, text/xml, text/plain;q=0.9"])
+	var headers := PackedStringArray(["User-Agent: AuroraFox-Learning/1.2", "Accept: application/json, application/atom+xml, text/xml, text/plain;q=0.9"])
 	var err := req.request(url, headers, HTTPClient.METHOD_GET)
 	if err != OK:
 		req.queue_free()
@@ -206,11 +208,31 @@ func _item(source: String, title: String, summary: String, url: String = "", met
 func _clean(value: String, limit: int) -> String:
 	return " ".join(value.split(" ", false)).strip_edges().substr(0, limit)
 
-func _remember(item: Dictionary) -> void:
+func _learn(item: Dictionary) -> bool:
 	if memory == null:
-		return
-	var content := "%s | %s | %s" % [str(item.get("source", "source")), str(item.get("title", "")), str(item.get("summary", ""))]
-	memory.remember("research", content.substr(0, 5000))
+		return false
+	var source := str(item.get("source", "source"))
+	var title := str(item.get("title", "")).strip_edges()
+	var summary := str(item.get("summary", "")).strip_edges()
+	if title.is_empty() and summary.is_empty():
+		return false
+	var content := "%s | %s | %s | %s" % [source, title, summary, str(item.get("url", ""))]
+	var confidence := 0.58
+	var importance := 0.56
+	if source == "local_documents":
+		confidence = 0.78
+		importance = 0.72
+	elif source == "arxiv":
+		confidence = 0.70
+		importance = 0.66
+	elif source == "stackoverflow":
+		confidence = 0.62
+		importance = 0.58
+	elif source.begins_with("reddit/"):
+		confidence = 0.42
+		importance = 0.44
+	memory.learn(content.substr(0, 5000), "autonomous_research:" + source, importance, confidence, "research_knowledge")
+	return true
 
 func _append_log(item: Dictionary) -> void:
 	var file := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE)
