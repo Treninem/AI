@@ -1,0 +1,21 @@
+{
+  "version": "0.4.0",
+  "channel": "stable",
+  "mandatory": false,
+  "published_at": "",
+  "notes": "AuroraFox stable update",
+  "assets": {
+    "windows": {
+      "url": "",
+      "sha256": "",
+      "size": 0,
+      "format": "zip"
+    },
+    "android": {
+      "url": "",
+      "sha256": "",
+      "size": 0,
+      "format": "apk"
+    }
+  }
+}
