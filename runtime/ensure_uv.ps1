@@ -1,6 +1,7 @@
 param(
     [string]$Version = "0.12.1",
-    [string]$RuntimeRoot = ""
+    [string]$RuntimeRoot = "",
+    [switch]$SkipPythonInstall
 )
 
 $ErrorActionPreference = "Stop"
@@ -53,8 +54,10 @@ $env:UV_PYTHON_INSTALL_DIR = $pythonDir
 $env:UV_CACHE_DIR = $cacheDir
 $env:UV_PYTHON_PREFERENCE = "only-managed"
 
-# Installs a private CPython only when it is missing; no system Python is required.
-& $uvExe python install 3.11
-if ($LASTEXITCODE -ne 0) { throw "AuroraFox managed Python 3.11 setup failed" }
+if (-not $SkipPythonInstall) {
+    # Installs a private CPython only when it is missing; no system Python is required.
+    & $uvExe python install 3.11
+    if ($LASTEXITCODE -ne 0) { throw "AuroraFox managed Python 3.11 setup failed" }
+}
 
 Write-Output $uvExe
