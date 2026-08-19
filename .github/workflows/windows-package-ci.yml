@@ -1,0 +1,139 @@
+name: AuroraFox Windows Package CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'assets/**'
+      - 'agent/**'
+      - 'scripts/**'
+      - 'models/**'
+      - 'voice/**'
+      - 'computer/**'
+      - 'file_intelligence/**'
+      - 'runtime/**'
+      - 'update/**'
+      - 'build/**'
+      - 'main.tscn'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - '.github/workflows/windows-package-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download Godot 4.7.1 and export templates
+        id: godot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          New-Item -ItemType Directory -Force .ci\godot,.ci\templates | Out-Null
+          Invoke-WebRequest "$base/Godot_v4.7.1-stable_win64.exe.zip" -OutFile .ci\godot.zip
+          Expand-Archive .ci\godot.zip .ci\godot -Force
+          $godot = (Get-ChildItem .ci\godot -Filter '*_console.exe' | Select-Object -First 1).FullName
+          if (-not $godot) { $godot = (Get-ChildItem .ci\godot -Filter '*.exe' | Select-Object -First 1).FullName }
+          if (-not $godot) { throw 'Godot executable not found' }
+          Invoke-WebRequest "$base/Godot_v4.7.1-stable_export_templates.tpz" -OutFile .ci\templates.tpz
+          Copy-Item .ci\templates.tpz .ci\templates.zip
+          Expand-Archive .ci\templates.zip .ci\templates -Force
+          $dest = Join-Path $env:APPDATA 'Godot\export_templates\4.7.1.stable'
+          New-Item -ItemType Directory -Force $dest | Out-Null
+          $source = Join-Path (Resolve-Path .ci\templates).Path 'templates'
+          Copy-Item "$source\*" $dest -Recurse -Force
+          "path=$godot" >> $env:GITHUB_OUTPUT
+          & $godot --version
+
+      - name: Verify version synchronization
+        shell: pwsh
+        run: .\tests\version_sync_test.ps1
+
+      - name: Import project
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --editor --path . --quit
+          if ($LASTEXITCODE -ne 0) { throw 'Godot project import failed' }
+
+      - name: Build Windows package
+        shell: pwsh
+        run: .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup -SkipVoiceSetup
+
+      - name: Verify packaged runtime assets
+        shell: pwsh
+        run: |
+          $required = @(
+            'build\windows\AuroraFox.exe',
+            'build\windows\models\install_models.ps1',
+            'build\windows\voice\install_voice.ps1',
+            'build\windows\computer\install_computer.ps1',
+            'build\windows\file_intelligence\install_files.ps1',
+            'build\windows\update\windows_updater.ps1'
+          )
+          foreach ($path in $required) {
+            if (-not (Test-Path $path)) { throw "Packaged runtime asset missing: $path" }
+          }
+
+      - name: Smoke exported executable
+        shell: pwsh
+        run: |
+          $p = Start-Process -FilePath '.\build\windows\AuroraFox.exe' -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Exported AuroraFox.exe exited with $($p.ExitCode)" }
+
+      - name: Build installer
+        shell: pwsh
+        run: |
+          choco install innosetup --no-progress -y
+          $text = Get-Content project.godot -Raw
+          if ($text -notmatch 'config/version="([0-9.]+)"') { throw 'application/config/version missing' }
+          $version = $Matches[1]
+          $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found' }
+          & $iscc "/DMyAppVersion=$version" build\AuroraFox.iss
+          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          if (-not (Test-Path build\release\AuroraFox_Setup_Windows.exe)) { throw 'Installer was not produced' }
+
+      - name: Silent install and installed-app smoke
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP 'AuroraFoxInstalled'
+          $installer = (Resolve-Path 'build\release\AuroraFox_Setup_Windows.exe').Path
+          $p = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
+          if ($p.ExitCode -notin @(0,3010)) { throw "Installer exited with $($p.ExitCode)" }
+          $exe = Join-Path $installDir 'AuroraFox.exe'
+          if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe missing' }
+          $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
+          if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
+          $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
+          if (-not $uninstaller) { throw 'Uninstaller missing' }
+          $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
+          if ($un.ExitCode -ne 0) { throw "Uninstaller exited with $($un.ExitCode)" }
+
+      - name: Create portable ZIP and hashes
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force dist | Out-Null
+          Compress-Archive -Path build\windows\* -DestinationPath dist\AuroraFox-V1.0.0.0-Windows-Portable.zip -CompressionLevel Optimal -Force
+          Copy-Item build\release\AuroraFox_Setup_Windows.exe dist\AuroraFox-V1.0.0.0-Setup-Windows.exe -Force
+          Get-FileHash dist\AuroraFox-V1.0.0.0-Setup-Windows.exe -Algorithm SHA256 | ForEach-Object { "SETUP  $($_.Hash.ToLower())" } | Set-Content dist\SHA256SUMS.txt
+          Get-FileHash dist\AuroraFox-V1.0.0.0-Windows-Portable.zip -Algorithm SHA256 | ForEach-Object { "PORTABLE  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
+          Get-Content dist\SHA256SUMS.txt
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraFox-V1.0.0.0-Windows
+          path: |
+            dist/AuroraFox-V1.0.0.0-Setup-Windows.exe
+            dist/AuroraFox-V1.0.0.0-Windows-Portable.zip
+            dist/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14
