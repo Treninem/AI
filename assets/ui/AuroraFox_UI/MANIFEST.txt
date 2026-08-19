@@ -1,0 +1,5 @@
+AuroraFox UI — COMPLETE PREMIUM SET
+Source: AuroraFox_UI_COMPLETE (2).zip supplied by user on 2026-08-19.
+Expected assets: 75 PNG files.
+All buttons are separate per state: normal / hover / pressed / disabled.
+No atlas stretching is permitted.
