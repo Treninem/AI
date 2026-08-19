@@ -118,17 +118,32 @@ func run_task(task: String, conversation_context: Array = []) -> String:
 	return final_answer
 
 func _append_conversation_context(messages: Array, conversation_context: Array) -> void:
-	if conversation_context.is_empty(): return
-	var start := maxi(0, conversation_context.size() - 24)
-	for i in range(start, conversation_context.size()):
-		var item = conversation_context[i]
+	var source: Array = conversation_context
+	if source.is_empty(): source = _active_chat_context()
+	if source.is_empty(): return
+	var start := maxi(0, source.size() - 24)
+	for i in range(start, source.size()):
+		var item = source[i]
 		if not item is Dictionary: continue
 		var role := str(item.get("role", ""))
 		if role not in ["user", "assistant"]: continue
 		var content := str(item.get("content", "")).strip_edges()
 		if content.is_empty(): continue
-		# Keep a real per-chat transcript without allowing one huge old message to monopolize local context.
 		messages.append({"role": role, "content": content.substr(0, 16000)})
+
+func _active_chat_context() -> Array:
+	var main := get_parent()
+	if main == null: return []
+	var store = main.get("chats")
+	if not store is ChatStore: return []
+	var chat := store.get_active_chat()
+	var history: Array = chat.get("messages", []).duplicate(true)
+	# main.gd saves the current user message before run_task(). The task itself is appended separately below,
+	# therefore remove that last user message here to avoid sending it twice.
+	if not history.is_empty():
+		var last = history[history.size() - 1]
+		if last is Dictionary and str(last.get("role", "")) == "user": history.pop_back()
+	return history
 
 func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary) -> String:
 	var recent := memory.recent(8)
