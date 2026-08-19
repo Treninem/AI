@@ -2,8 +2,6 @@ class_name AuroraDesktopVisualTheme
 extends Node
 
 const FINAL_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_final.svg")
-# Temporary safe fallback until the final per-element AuroraFox PNG archive is imported.
-# Do not use the previously corrupted aurora_fox_user.jpg / aurora_button_user.jpg assets.
 const FOX_IMAGE: Texture2D = preload("res://assets/ui/fox_logo.svg")
 
 const MIN_WINDOW := Vector2i(960, 640)
@@ -26,24 +24,19 @@ func _ready() -> void:
 func _apply_after_build() -> void:
 	for _i in range(3):
 		await get_tree().process_frame
-	_replace_visual_assets(_root)
+	_replace_background(_root)
 	_apply_safe_button_styles(_root)
 	_replace_header_avatar()
 	_apply_responsive_layout()
 
-func _replace_visual_assets(node: Node) -> void:
+func _replace_background(node: Node) -> void:
 	for child in node.get_children():
 		if child is TextureRect:
 			var rect := child as TextureRect
-			if rect.texture != null:
-				var path := rect.texture.resource_path
-				if path.ends_with("aurora_background.svg") or path.ends_with("aurora_background_user.jpg"):
-					rect.texture = FINAL_BACKGROUND
-					rect.modulate = Color(1, 1, 1, 0.96)
-				elif path.ends_with("aurora_fox_user.jpg"):
-					rect.texture = FOX_IMAGE
-					rect.modulate = Color.WHITE
-		_replace_visual_assets(child)
+			if rect.texture != null and rect.texture.resource_path.ends_with("aurora_background.svg"):
+				rect.texture = FINAL_BACKGROUND
+				rect.modulate = Color(1, 1, 1, 0.96)
+		_replace_background(child)
 
 func _flat_state(fill: Color, border: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
