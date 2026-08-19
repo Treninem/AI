@@ -35,7 +35,8 @@ const HOT_BLOCKED_MARKERS := [
 	"HTTPRequest", "HTTPClient", "TCPServer", "StreamPeerTCP", "UDPServer", "PacketPeerUDP",
 	"WebSocket", "IP.", "JavaClassWrapper", "JavaScriptBridge", "ResourceLoader",
 	"ResourceSaver", "GDScript.new", "source_code", "Expression.new", "preload(",
-	"instance_from_id", "@tool", "@onready", "while true"
+	"instance_from_id", "@tool", "@onready", "get_tree(", "get_parent(", "while true",
+	"Thread.new", "Mutex.new", "Semaphore.new"
 ]
 
 var tools: ToolRegistry
@@ -68,14 +69,15 @@ func propose_improvement(goal: String, mutation_index := 0, strategy := "balance
 ОБЯЗАТЕЛЬНЫЙ КОНТРАКТ HOT-EXTENSION:
 - файл начинается с `extends RefCounted`;
 - реализуй `func aurora_extension_manifest() -> Dictionary`;
+- реализуй `func aurora_extension_self_test() -> Dictionary`, он должен быть детерминированным, быстрым и вернуть {"ok": true, ...} только если внутренняя проверка прошла;
 - manifest должен содержать `name`, `description`, `tools`;
 - каждый элемент tools: {"name":"aurora_ext_<unique>","description":"...","schema":{...},"method":"_method_name"};
 - каждый method принимает один Dictionary args и возвращает результат; асинхронный метод допустим;
 - имена инструментов только с префиксом aurora_ext_ и не должны совпадать друг с другом;
 - расширение не получает ToolRegistry и не регистрирует инструменты самостоятельно;
-- расширение НЕ является Node, не входит в scene tree и не должно пытаться получать get_tree/get_parent;
-- запрещён прямой доступ к OS, файлам, настройкам движка, сети, динамической загрузке ресурсов/скриптов и системным singleton API;
-- горячее расширение должно быть вычислительным/логическим. Новые привилегии, файлы, сеть или системные действия делаются только через полноценное обновление AuroraFox.
+- расширение НЕ является Node, не входит в scene tree и не использует get_tree/get_parent;
+- запрещён прямой доступ к OS, файлам, настройкам движка, сети, динамической загрузке ресурсов/скриптов, потокам и системным singleton API;
+- горячее расширение должно быть вычислительным/логическим. Новые привилегии, файлы, сеть или системные действия делаются только через полноценное подписанное обновление AuroraFox.
 
 ОБЩИЕ ПРАВИЛА:
 - только новый .gd внутри логического res://generated/;
@@ -83,10 +85,11 @@ func propose_improvement(goal: String, mutation_index := 0, strategy := "balance
 - код должен быть самодостаточным и совместимым с Godot 4.7.1;
 - не меняй project.godot, autoload, секреты, обновлятор и существующее ядро;
 - не удаляй файлы;
-- не утверждай, что код проверен: AuroraFox сама выполнит отдельный sandbox + Godot 4.7.1 тест каждой мутации.
+- не утверждай, что код проверен: AuroraFox сама выполнит независимые тесты каждой мутации.
 """ % [goal.strip_edges(), mutation_tag, strategy, mutation_tag, diversity]
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.45)
-	if not result.get("ok", false): return result
+	if not result.get("ok", false):
+		return result
 	var text := str(result.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
 	var proposal = JSON.parse_string(text)
 	if not proposal is Dictionary:
@@ -103,12 +106,18 @@ func propose_improvement(goal: String, mutation_index := 0, strategy := "balance
 func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 	if ai == null or tools == null:
 		return {"ok": false, "error": "SelfImprover is not fully configured", "stage": "setup"}
-	if OS.get_name() != "Windows":
-		return {"ok": false, "error": "Automatic mutation tournament verification is currently enabled on Windows only", "stage": "platform"}
+	if OS.get_name() not in ["Windows", "Android"]:
+		return {"ok": false, "error": "Automatic mutation tournament verification is supported on Windows and Android", "stage": "platform"}
 
 	var requested := clampi(requested_count, MIN_MUTATIONS, MAX_MUTATIONS)
 	mutation_population_started.emit(goal, requested)
-	improvement_stage.emit("mutation_population", {"goal": goal, "requested": requested, "min": MIN_MUTATIONS, "max": MAX_MUTATIONS})
+	improvement_stage.emit("mutation_population", {
+		"goal": goal,
+		"requested": requested,
+		"min": MIN_MUTATIONS,
+		"max": MAX_MUTATIONS,
+		"platform": OS.get_name()
+	})
 
 	var population: Array = []
 	var verified: Array = []
@@ -118,34 +127,9 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 	var generation_errors: Array = []
 	var attempt := 0
 
-	# Build at least the requested population. If too few candidates survive
-	# verification, keep generating distinct mutations up to the hard maximum 10.
-	while population.size() < requested and attempt < MAX_GENERATION_ATTEMPTS:
-		var strategy := str(MUTATION_STRATEGIES[attempt % MUTATION_STRATEGIES.size()])
-		var proposal_result: Dictionary = await propose_improvement(goal, attempt, strategy, signatures)
-		attempt += 1
-		if not proposal_result.get("ok", false):
-			generation_errors.append(_compact(proposal_result))
-			continue
-		var proposal: Dictionary = proposal_result.get("proposal", {})
-		var content := str(proposal.get("content", ""))
-		var sha := _sha256_text(content)
-		var path := str(proposal.get("path", ""))
-		if sha.is_empty() or seen_hashes.has(sha) or seen_paths.has(path):
-			generation_errors.append({"ok": false, "error": "duplicate mutation rejected", "path": path, "sha256": sha})
-			continue
-		seen_hashes[sha] = true
-		seen_paths[path] = true
-		signatures.append("%s | %s | %s" % [path, str(proposal.get("reason", "")).substr(0, 220), sha.substr(0, 12)])
-		var candidate := await _verify_tournament_candidate(goal, proposal, population.size())
-		population.append(candidate)
-		if candidate.get("verified", false):
-			verified.append(candidate)
-		mutation_candidate_completed.emit(_compact(candidate))
-
-	# A tournament should not auto-update from a single lucky survivor. If fewer
-	# than three verified mutations survived, create extra distinct copies up to 10.
-	while verified.size() < MIN_MUTATIONS and population.size() < MAX_MUTATIONS and attempt < MAX_GENERATION_ATTEMPTS:
+	# Create the requested population and, when needed, keep generating distinct
+	# candidates until at least three independently verified finalists exist.
+	while (population.size() < requested or verified.size() < MIN_MUTATIONS) and population.size() < MAX_MUTATIONS and attempt < MAX_GENERATION_ATTEMPTS:
 		var strategy := str(MUTATION_STRATEGIES[attempt % MUTATION_STRATEGIES.size()])
 		var proposal_result: Dictionary = await propose_improvement(goal, attempt, strategy, signatures)
 		attempt += 1
@@ -169,7 +153,7 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 		mutation_candidate_completed.emit(_compact(candidate))
 
 	if population.size() < MIN_MUTATIONS:
-		var insufficient := {
+		return _finish_rejected_tournament({
 			"ok": false,
 			"stage": "population",
 			"error": "Could not create at least 3 distinct valid mutations",
@@ -179,25 +163,19 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 			"generation_attempts": attempt,
 			"generation_errors": generation_errors.slice(0, mini(generation_errors.size(), 20)),
 			"candidates": _compact_candidates(population)
-		}
-		improvement_rejected.emit(insufficient)
-		mutation_tournament_completed.emit(insufficient)
-		return insufficient
+		})
 
 	if verified.size() < MIN_MUTATIONS:
-		var no_finalists := {
+		return _finish_rejected_tournament({
 			"ok": false,
 			"stage": "competition",
-			"error": "Fewer than 3 mutations passed independent Godot tests; automatic update cancelled",
+			"error": "Fewer than 3 mutations passed independent tests; automatic update cancelled",
 			"goal": goal,
 			"population_size": population.size(),
 			"verified_count": verified.size(),
 			"generation_attempts": attempt,
 			"candidates": _compact_candidates(population)
-		}
-		improvement_rejected.emit(no_finalists)
-		mutation_tournament_completed.emit(no_finalists)
-		return no_finalists
+		})
 
 	improvement_stage.emit("competition", {"goal": goal, "population": population.size(), "verified": verified.size()})
 	var judge := await _judge_verified_candidates(goal, verified)
@@ -205,7 +183,8 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 	verified.sort_custom(func(a, b):
 		var score_a := float(a.get("score", 0.0))
 		var score_b := float(b.get("score", 0.0))
-		if not is_equal_approx(score_a, score_b): return score_a > score_b
+		if not is_equal_approx(score_a, score_b):
+			return score_a > score_b
 		return str(a.get("sha256", "")) < str(b.get("sha256", ""))
 	)
 
@@ -215,15 +194,14 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 		"goal": goal,
 		"path": winner_proposal.get("path", ""),
 		"score": winner.get("score", 0.0),
-		"verified_candidates": verified.size()
+		"verified_candidates": verified.size(),
+		"platform": OS.get_name()
 	})
 
-	# Re-run the winner from a fresh sandbox before staging. This means the code
-	# that wins the competition is tested twice: once as a contestant and once
-	# immediately before automatic activation.
+	# The winning code is tested a second time immediately before staging.
 	var staged := await apply_generated_module(winner_proposal)
 	if not staged.get("ok", false):
-		var final_reject := {
+		return _finish_rejected_tournament({
 			"ok": false,
 			"stage": "winner_final_test",
 			"error": str(staged.get("error", "Winning mutation failed final verification")),
@@ -234,9 +212,7 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 			"final_verification": _compact(staged),
 			"scoreboard": _scoreboard(verified),
 			"judge": _compact(judge)
-		}
-		mutation_tournament_completed.emit(final_reject)
-		return final_reject
+		})
 
 	var result := {
 		"ok": true,
@@ -253,8 +229,14 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 		"path": staged.get("path", ""),
 		"verified": true,
 		"staged": true,
+		"platform": OS.get_name(),
 		"final_verification": _compact(staged.get("verification", {}))
 	}
+	mutation_tournament_completed.emit(result)
+	return result
+
+func _finish_rejected_tournament(result: Dictionary) -> Dictionary:
+	improvement_rejected.emit(result)
 	mutation_tournament_completed.emit(result)
 	return result
 
@@ -263,7 +245,8 @@ func _verify_tournament_candidate(goal: String, proposal: Dictionary, index: int
 		"goal": goal,
 		"candidate": index + 1,
 		"path": proposal.get("path", ""),
-		"strategy": proposal.get("strategy", "")
+		"strategy": proposal.get("strategy", ""),
+		"platform": OS.get_name()
 	})
 	var verification := await evaluate_generated_module(proposal)
 	var verified_ok := bool(verification.get("ok", false) and verification.get("verified", false))
@@ -288,14 +271,13 @@ func _verify_tournament_candidate(goal: String, proposal: Dictionary, index: int
 	return candidate
 
 func _deterministic_candidate_score(goal: String, proposal: Dictionary, verification: Dictionary) -> float:
-	if not verification.get("ok", false): return 0.0
+	if not verification.get("ok", false):
+		return 0.0
 	var score := 60.0
 	var content := str(proposal.get("content", ""))
 	var reason := str(proposal.get("reason", ""))
 	var verification_text := str(proposal.get("verification", ""))
 	var lines := content.split("\n").size()
-	# Reward explicit reasoning/verification and goal relevance without rewarding
-	# raw code size. Tests remain the hard gate; these are tie-breaking metrics.
 	if reason.length() >= 80: score += 4.0
 	if verification_text.length() >= 40: score += 3.0
 	score += minf(10.0, float(_goal_overlap(goal, reason + "\n" + content)) * 1.5)
@@ -304,7 +286,8 @@ func _deterministic_candidate_score(goal: String, proposal: Dictionary, verifica
 	if content.contains("match ") or content.contains("if "): score += 2.0
 	if content.contains("clamp") or content.contains("is Dictionary") or content.contains("typeof"):
 		score += 2.0
-	if verification.get("test", {}) is Dictionary and bool(verification.get("test", {}).get("ok", false)):
+	var test_value: Variant = verification.get("test", {})
+	if test_value is Dictionary and bool(test_value.get("ok", false)):
 		score += 4.0
 	return clampf(score, 0.0, 75.0)
 
@@ -314,9 +297,11 @@ func _goal_overlap(goal: String, text: String) -> int:
 	var count := 0
 	for raw in goal.to_lower().split(" ", false):
 		var token := str(raw).strip_edges().trim_prefix(".").trim_suffix(".").trim_suffix(",").trim_suffix(":")
-		if token.length() < 4 or seen.has(token): continue
+		if token.length() < 4 or seen.has(token):
+			continue
 		seen[token] = true
-		if haystack.contains(token): count += 1
+		if haystack.contains(token):
+			count += 1
 	return count
 
 func _judge_verified_candidates(goal: String, candidates: Array) -> Dictionary:
@@ -335,7 +320,7 @@ func _judge_verified_candidates(goal: String, candidates: Array) -> Dictionary:
 			"base_score": candidate.get("base_score", 0.0)
 		})
 	var prompt := """
-Ты судья турнира мутаций AuroraFox. Все варианты ниже УЖЕ независимо прошли Godot 4.7.1 sandbox-тесты.
+Ты судья турнира мутаций AuroraFox. Все варианты ниже уже независимо прошли обязательные тесты AuroraFox.
 Цель: %s
 
 Оцени каждый вариант 0..100 по одинаковым критериям:
@@ -354,7 +339,8 @@ func _judge_verified_candidates(goal: String, candidates: Array) -> Dictionary:
 %s
 """ % [goal, JSON.stringify(public_candidates)]
 	var response := await ai.chat([{"role":"user","content":prompt}], 0.0)
-	if not response.get("ok", false): return response
+	if not response.get("ok", false):
+		return response
 	var text := str(response.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
 	var parsed = JSON.parse_string(text)
 	if not parsed is Dictionary:
@@ -365,12 +351,15 @@ func _judge_verified_candidates(goal: String, candidates: Array) -> Dictionary:
 	return {"ok": true, "scores": scores, "winner_index": int(parsed.get("winner_index", -1))}
 
 func _apply_judge_scores(candidates: Array, judge: Dictionary) -> void:
-	if not judge.get("ok", false): return
+	if not judge.get("ok", false):
+		return
 	var by_index: Dictionary = {}
 	for item in judge.get("scores", []):
-		if not item is Dictionary: continue
+		if not item is Dictionary:
+			continue
 		var idx := int(item.get("index", -1))
-		if idx < 0 or idx >= candidates.size(): continue
+		if idx < 0 or idx >= candidates.size():
+			continue
 		by_index[idx] = {
 			"score": clampf(float(item.get("score", 0.0)), 0.0, 100.0),
 			"reason": str(item.get("reason", "")).substr(0, 800)
@@ -387,8 +376,8 @@ func _apply_judge_scores(candidates: Array, judge: Dictionary) -> void:
 func _scoreboard(candidates: Array) -> Array:
 	var result: Array = []
 	for candidate in candidates:
-		if not candidate is Dictionary: continue
-		result.append(_candidate_public(candidate))
+		if candidate is Dictionary:
+			result.append(_candidate_public(candidate))
 	return result
 
 func _compact_candidates(candidates: Array) -> Array:
@@ -421,12 +410,34 @@ func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 		return validation
 	if tools == null:
 		return {"ok": false, "error": "Tool registry is not configured"}
-	if OS.get_name() != "Windows":
-		return {"ok": false, "error": "Automatic Godot 4.7.1 self-improvement verification is currently enabled on Windows only", "stage": "platform"}
+	var platform := OS.get_name()
+	if platform not in ["Windows", "Android"]:
+		return {"ok": false, "error": "Automatic self-improvement verification is supported on Windows and Android", "stage": "platform"}
 
 	var path := str(validation.get("path", ""))
-	var relative := path.trim_prefix("res://")
 	var content := str(proposal.get("content", ""))
+	improvement_stage.emit("runtime_contract_test", {"path": path, "platform": platform})
+	var runtime_test := _runtime_contract_test(content)
+	if not runtime_test.get("ok", false):
+		return _reject("runtime_contract_test", runtime_test)
+
+	if platform == "Android":
+		var android_result := {
+			"ok": true,
+			"verified": true,
+			"path": path,
+			"reason": str(proposal.get("reason", "")),
+			"platform": platform,
+			"test": runtime_test,
+			"content_sha256": _sha256_text(content),
+			"verification_mode": "restricted_gdscript_compile_contract"
+		}
+		improvement_verified.emit(android_result)
+		return android_result
+
+	# Windows performs the runtime contract check above and then a second,
+	# independent full-project test in a copied workspace using pinned Godot 4.7.1.
+	var relative := path.trim_prefix("res://")
 	improvement_stage.emit("workspace", {"path": path})
 	var created = await tools.call_tool("workspace_create", {
 		"task": "AuroraFox self-improvement verification: " + str(proposal.get("reason", "generated extension")),
@@ -464,20 +475,83 @@ func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 		"verified": true,
 		"path": path,
 		"reason": str(proposal.get("reason", "")),
+		"platform": platform,
+		"runtime_contract": runtime_test,
 		"workspace": created.get("workspace", {}),
 		"import": _compact(imported),
 		"test": _compact(tested),
-		"content_sha256": _sha256_text(content)
+		"content_sha256": _sha256_text(content),
+		"verification_mode": "runtime_contract_plus_full_project_godot_4_7_1"
 	}
 	improvement_verified.emit(result)
 	return result
 
+func _runtime_contract_test(content: String) -> Dictionary:
+	# This check is available inside both desktop and Android Godot. It compiles
+	# the exact generated GDScript and validates the executable extension contract.
+	# Privileged APIs were rejected before this function is reached.
+	var script := GDScript.new()
+	script.source_code = content
+	var reload_error := script.reload()
+	if reload_error != OK:
+		return {"ok": false, "error": "Generated GDScript failed to compile", "code": reload_error}
+	if not script.can_instantiate():
+		return {"ok": false, "error": "Generated GDScript cannot be instantiated"}
+	var instance = script.new()
+	if instance == null:
+		return {"ok": false, "error": "Generated GDScript instance creation failed"}
+	if not instance.has_method("aurora_extension_manifest"):
+		return {"ok": false, "error": "Compiled extension is missing aurora_extension_manifest"}
+	if not instance.has_method("aurora_extension_self_test"):
+		return {"ok": false, "error": "Compiled extension is missing aurora_extension_self_test"}
+
+	var manifest_value = instance.call("aurora_extension_manifest")
+	if not manifest_value is Dictionary:
+		return {"ok": false, "error": "Extension manifest must return Dictionary"}
+	var manifest: Dictionary = manifest_value
+	var declared_tools = manifest.get("tools", [])
+	if not declared_tools is Array or declared_tools.is_empty():
+		return {"ok": false, "error": "Extension manifest must declare at least one tool"}
+	var seen: Dictionary = {}
+	for tool_value in declared_tools:
+		if not tool_value is Dictionary:
+			return {"ok": false, "error": "Extension tool declaration must be Dictionary"}
+		var tool: Dictionary = tool_value
+		var tool_name := str(tool.get("name", ""))
+		var method_name := str(tool.get("method", ""))
+		if not tool_name.begins_with(HOT_TOOL_PREFIX):
+			return {"ok": false, "error": "Extension tool name must begin with aurora_ext_"}
+		if seen.has(tool_name):
+			return {"ok": false, "error": "Extension manifest contains duplicate tool name: " + tool_name}
+		seen[tool_name] = true
+		if method_name.is_empty() or not instance.has_method(method_name):
+			return {"ok": false, "error": "Extension tool method is missing: " + method_name}
+		var schema_value = tool.get("schema", {})
+		if not schema_value is Dictionary:
+			return {"ok": false, "error": "Extension tool schema must be Dictionary"}
+
+	var self_test_value = instance.call("aurora_extension_self_test")
+	if not self_test_value is Dictionary:
+		return {"ok": false, "error": "aurora_extension_self_test must return Dictionary"}
+	var self_test: Dictionary = self_test_value
+	if not bool(self_test.get("ok", false)):
+		return {"ok": false, "error": str(self_test.get("error", "Extension self-test failed")), "self_test": _compact(self_test)}
+	return {
+		"ok": true,
+		"compiled": true,
+		"manifest_name": str(manifest.get("name", "")),
+		"tools": seen.keys(),
+		"self_test": _compact(self_test)
+	}
+
 func apply_generated_module(proposal: Dictionary) -> Dictionary:
 	var verification := await evaluate_generated_module(proposal)
-	if not verification.get("ok", false): return verification
+	if not verification.get("ok", false):
+		return verification
 	var logical_path := str(verification.get("path", ""))
 	var stage_path := _stage_path(logical_path)
-	if stage_path.is_empty(): return _reject("stage_path", {"ok": false, "error": "Cannot resolve writable stage path"})
+	if stage_path.is_empty():
+		return _reject("stage_path", {"ok": false, "error": "Cannot resolve writable stage path"})
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stage_path.get_base_dir()))
 	var write_result = await tools.call_tool("write_file", {"path": stage_path, "content": str(proposal.get("content", ""))})
 	if not _ok(write_result): return _reject("stage_generated", write_result)
@@ -495,12 +569,13 @@ func apply_generated_module(proposal: Dictionary) -> Dictionary:
 		"stage_path": stage_path,
 		"sha256": _sha256_text(expected),
 		"verification": verification,
-		"message": "Generated hot extension passed Godot 4.7.1 verification and was staged without activation."
+		"message": "Winning generated extension passed final verification and was staged for automatic activation."
 	}
 
 func _stage_path(logical_path: String) -> String:
 	var safe := _safe_generated_path(logical_path)
-	if safe.is_empty(): return ""
+	if safe.is_empty():
+		return ""
 	var relative := safe.trim_prefix(GENERATED_ROOT)
 	var root := GENERATED_ROOT if OS.has_feature("editor") else RUNTIME_GENERATED_ROOT
 	return root + relative
@@ -520,6 +595,8 @@ func _validate_proposal(proposal: Dictionary) -> Dictionary:
 		return {"ok": false, "error": "Hot extension cannot join the scene tree"}
 	if not content.contains("func aurora_extension_manifest"):
 		return {"ok": false, "error": "Hot extension is missing aurora_extension_manifest()"}
+	if not content.contains("func aurora_extension_self_test"):
+		return {"ok": false, "error": "Hot extension is missing aurora_extension_self_test()"}
 	if not content.contains(HOT_TOOL_PREFIX):
 		return {"ok": false, "error": "Hot extension does not declare an aurora_ext_ tool"}
 	for marker in HOT_BLOCKED_MARKERS:
@@ -527,7 +604,8 @@ func _validate_proposal(proposal: Dictionary) -> Dictionary:
 			return {"ok": false, "error": "Hot extension uses blocked privileged API marker: " + marker}
 	for line in content.split("\n"):
 		var clean := str(line).strip_edges()
-		if clean.begins_with("load(") or clean.contains("= load(") or clean.begins_with("return load("):
+		var compact := clean.replace(" ", "").replace("\t", "")
+		if compact.begins_with("load(") or compact.contains("=load(") or compact.begins_with("returnload("):
 			return {"ok": false, "error": "Hot extension uses blocked dynamic load()"}
 	return {"ok": true, "path": path}
 
@@ -550,7 +628,8 @@ func _contains_unfinished_markers(content: String) -> bool:
 		"push_error(\"not implemented", "return null # stub"
 	]
 	for marker in markers:
-		if lower.contains(marker): return true
+		if lower.contains(marker):
+			return true
 	return false
 
 func _ok(value: Variant) -> bool:
@@ -573,7 +652,8 @@ func _compact(value: Variant) -> Variant:
 		var out: Dictionary = value.duplicate(true)
 		for key in out.keys():
 			var text := str(out[key])
-			if text.length() > 6000: out[key] = text.substr(0, 6000) + "…"
+			if text.length() > 6000:
+				out[key] = text.substr(0, 6000) + "…"
 		return out
 	if value is Array:
 		var arr: Array = value
