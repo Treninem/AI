@@ -79,16 +79,16 @@ func _draw() -> void:
 	var look := Vector2(3, -3) if thinking or emotion == "thinking" else Vector2.ZERO
 	var eye_h := lerpf(10.0, 1.5, blink)
 	for ex in [-18.0, 18.0]:
-		draw_ellipse(center + Vector2(ex, -8) + look, Vector2(10, eye_h), shadow)
-		draw_ellipse(center + Vector2(ex, -8) + look, Vector2(7, maxf(1.0, eye_h - 2.0)), green)
+		_draw_ellipse_shape(center + Vector2(ex, -8) + look, Vector2(10, eye_h), shadow)
+		_draw_ellipse_shape(center + Vector2(ex, -8) + look, Vector2(7, maxf(1.0, eye_h - 2.0)), green)
 		if blink < 0.6:
 			draw_circle(center + Vector2(ex - 2, -11) + look, 1.7, Color.WHITE)
 
 	draw_circle(center + Vector2(0, 10), 4.3, shadow)
 	var mouth_open := clampf(amplitude * 14.0, 1.0, 13.0)
-	draw_ellipse(center + Vector2(0, 22), Vector2(8.5, mouth_open), shadow)
+	_draw_ellipse_shape(center + Vector2(0, 22), Vector2(8.5, mouth_open), shadow)
 	if mouth_open > 5.0:
-		draw_ellipse(center + Vector2(0, 24), Vector2(5.0, mouth_open * 0.52), Color("d86f92"))
+		_draw_ellipse_shape(center + Vector2(0, 24), Vector2(5.0, mouth_open * 0.52), Color("d86f92"))
 
 	var paw := center + Vector2(48, 43)
 	draw_line(paw + Vector2(-12,-18), paw + Vector2(2,7), Color("8894a8"), 9.0, true)
@@ -99,7 +99,7 @@ func _draw() -> void:
 		var ring_color := Color(glow_color.r, glow_color.g, glow_color.b, 0.12 + paw_glow * 0.18)
 		draw_arc(paw + Vector2(3,8), 12 + paw_glow * 6, 0.0, TAU, 36, ring_color, 2.0, true)
 
-func draw_ellipse(center: Vector2, radius: Vector2, color: Color) -> void:
+func _draw_ellipse_shape(center: Vector2, radius: Vector2, color: Color) -> void:
 	var pts := PackedVector2Array()
 	for i in range(32):
 		var a := TAU * float(i) / 32.0
