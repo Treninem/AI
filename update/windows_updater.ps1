@@ -55,7 +55,9 @@ function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
         'voice\.venv',
         'voice\models',
         'computer\.venv',
-        'computer\models'
+        'computer\models',
+        'runtime\windows\python',
+        'runtime\windows\cache'
     )
     foreach ($relative in $paths) {
         try {
