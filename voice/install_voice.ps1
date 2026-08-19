@@ -1,5 +1,7 @@
 param(
     [switch]$SkipHeavyModels,
+    [switch]$EnableXtts,
+    [string]$XttsSpeakerWav = "",
     [string]$StateFile = ""
 )
 
@@ -17,6 +19,9 @@ $hfHome = Join-Path $modelCache 'huggingface'
 $torchHome = Join-Path $modelCache 'torch'
 $voskDir = Join-Path $models 'vosk-model-small-ru-0.22'
 $voskZip = Join-Path ([IO.Path]::GetTempPath()) 'aurorafox-vosk-ru.zip'
+$voiceConfigPath = Join-Path $PSScriptRoot 'config\voice_config.json'
+$xttsRequirements = Join-Path $PSScriptRoot 'requirements_xtts.txt'
+$xttsSpeakerTarget = Join-Path $models 'xtts_speaker.wav'
 
 function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
     Write-Host ("[{0,3}%] {1}: {2}" -f $Progress, $Name, $Message) -ForegroundColor Cyan
@@ -31,6 +36,20 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
         } | ConvertTo-Json -Compress
         [IO.File]::WriteAllText($StateFile, $payload, (New-Object Text.UTF8Encoding($false)))
     }
+}
+
+function Configure-Xtts([string]$SpeakerPath) {
+    if (-not (Test-Path -LiteralPath $voiceConfigPath)) { throw 'voice/config/voice_config.json is missing.' }
+    $config = Get-Content -LiteralPath $voiceConfigPath -Raw | ConvertFrom-Json
+    if ($null -eq $config.xtts) { throw 'XTTS configuration section is missing.' }
+    $config.xtts.enabled = $true
+    $config.xtts.model = 'tts_models/multilingual/multi-dataset/xtts_v2'
+    $config.xtts.speaker_wav = 'models/xtts_speaker.wav'
+    $config.xtts.language = 'ru'
+    $config.quality = 'quality'
+    $json = ($config | ConvertTo-Json -Depth 20) + "`n"
+    [IO.File]::WriteAllText($voiceConfigPath, $json, (New-Object Text.UTF8Encoding($false)))
+    Copy-Item -LiteralPath $SpeakerPath -Destination $xttsSpeakerTarget -Force
 }
 
 try {
@@ -54,7 +73,24 @@ try {
 
     New-Item -ItemType Directory -Force -Path $models,$modelCache,$hfHome,$torchHome | Out-Null
 
-    Set-Stage 'wake_word' 38 'Preparing local Fox wake-word model'
+    if ($EnableXtts) {
+        Set-Stage 'xtts_dependencies' 28 'Installing maintained Coqui XTTS-v2 backend'
+        if (-not (Test-Path -LiteralPath $xttsRequirements)) { throw 'voice/requirements_xtts.txt is missing.' }
+        if ([string]::IsNullOrWhiteSpace($XttsSpeakerWav)) {
+            throw 'EnableXtts requires -XttsSpeakerWav with an authorized speaker reference WAV.'
+        }
+        $speaker = (Resolve-Path -LiteralPath $XttsSpeakerWav).Path
+        if ([IO.Path]::GetExtension($speaker).ToLowerInvariant() -ne '.wav') {
+            throw 'XTTS speaker reference must be a WAV file.'
+        }
+        & $uv pip install --python $python -r $xttsRequirements
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to install XTTS-v2 dependencies.' }
+        Configure-Xtts $speaker
+        & $python -c "from TTS.api import TTS; import torchcodec; print('XTTS_IMPORT_OK')"
+        if ($LASTEXITCODE -ne 0) { throw 'XTTS-v2 dependency import validation failed.' }
+    }
+
+    Set-Stage 'wake_word' 40 'Preparing local Fox wake-word model'
     if (-not (Test-Path $voskDir)) {
         Invoke-WebRequest -Uri 'https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip' -OutFile $voskZip
         Expand-Archive -Path $voskZip -DestinationPath $models -Force
@@ -66,7 +102,7 @@ try {
     $env:TORCH_HOME = $torchHome
 
     if (-not $SkipHeavyModels) {
-        Set-Stage 'stt_model' 55 'Downloading Whisper large-v3-turbo for local STT'
+        Set-Stage 'stt_model' 58 'Downloading Whisper large-v3-turbo for local STT'
         $sttCode = @(
             'from transformers import pipeline',
             'import torch',
@@ -81,7 +117,7 @@ try {
         & $python -c $sttCode
         if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Whisper.' }
 
-        Set-Stage 'tts_model' 78 'Downloading Russian Silero TTS fallback'
+        Set-Stage 'tts_model' 76 'Downloading Russian Silero TTS fallback'
         $ttsCode = @(
             'from silero import silero_tts',
             'model, _ = silero_tts(language="ru", speaker="v5_5_ru")',
@@ -89,9 +125,20 @@ try {
         ) -join "`n"
         & $python -c $ttsCode
         if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Silero TTS.' }
+
+        if ($EnableXtts) {
+            Set-Stage 'xtts_model' 86 'Downloading and loading XTTS-v2 model'
+            $xttsCode = @(
+                'from TTS.api import TTS',
+                'model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cpu")',
+                'print("XTTS_MODEL_READY")'
+            ) -join "`n"
+            & $python -c $xttsCode
+            if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare XTTS-v2 model.' }
+        }
     }
 
-    Set-Stage 'microphone' 92 'Checking audio library'
+    Set-Stage 'microphone' 94 'Checking audio library'
     $audioCode = @(
         'import sounddevice as sd',
         'print("AUDIO_DEVICES", len(sd.query_devices()))'
@@ -99,12 +146,16 @@ try {
     & $python -c $audioCode
     if ($LASTEXITCODE -ne 0) { throw 'Audio library initialization failed.' }
 
-    Set-Stage 'ready' 100 'AuroraFox voice module is ready'
+    Set-Stage 'complete' 100 'AuroraFox voice installation checks passed'
     Write-Host ''
-    Write-Host 'AuroraFox Voice installed.' -ForegroundColor Green
+    Write-Host 'AuroraFox Voice installation checks passed.' -ForegroundColor Green
     Write-Host 'System Python is not required; AuroraFox uses managed Python 3.11.'
-    Write-Host 'Wake word, VAD, STT and TTS are prepared for local use.'
-    Write-Host 'XTTS remains optional and requires an authorized original speaker_wav.'
+    Write-Host 'Wake word, VAD, STT and local TTS dependencies are prepared.'
+    if ($EnableXtts) {
+        Write-Host 'XTTS-v2 is enabled with the supplied local speaker reference.' -ForegroundColor Green
+    } else {
+        Write-Host 'XTTS-v2 is optional. Re-run with -EnableXtts -XttsSpeakerWav <authorized.wav> to enable it.'
+    }
 } catch {
     Set-Stage 'error' 0 $_.Exception.Message
     throw
