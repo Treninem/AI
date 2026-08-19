@@ -9,6 +9,8 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $outDir = Join-Path $root "build\windows"
 $voiceSource = Join-Path $root "voice"
 $voiceOut = Join-Path $outDir "voice"
+$computerSource = Join-Path $root "computer"
+$computerOut = Join-Path $outDir "computer"
 $portableDist = Join-Path $root "build\voice_backend"
 $portableBuilt = $false
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
@@ -51,10 +53,9 @@ try {
     Pop-Location
 }
 
+# Voice runtime/bootstrap next to AuroraFox.exe.
 if (Test-Path $voiceOut) { Remove-Item $voiceOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $voiceOut | Out-Null
-
-# Runtime-independent resources are always copied next to the EXE.
 foreach ($dir in @("python", "config", "models")) {
     $source = Join-Path $voiceSource $dir
     if (Test-Path $source) { Copy-Item $source (Join-Path $voiceOut $dir) -Recurse -Force }
@@ -63,13 +64,24 @@ foreach ($file in @("voice_service.py", "requirements.txt", "install_voice.ps1",
     $source = Join-Path $voiceSource $file
     if (Test-Path $source) { Copy-Item $source (Join-Path $voiceOut $file) -Force }
 }
-
 if ($portableBuilt) {
     Copy-Item (Join-Path $portableDist "AuroraVoiceBackend") (Join-Path $voiceOut "AuroraVoiceBackend") -Recurse -Force
 } elseif (-not $SkipVoiceSetup) {
-    # Development/emergency fallback. On the build PC this remains fully functional.
     $venvSource = Join-Path $voiceSource ".venv"
     if (Test-Path $venvSource) { Copy-Item $venvSource (Join-Path $voiceOut ".venv") -Recurse -Force }
+}
+
+# Computer Agent bootstrap is always shipped. A locally prepared .venv is reused if present;
+# otherwise the in-app Computer Agent control can run install_computer.ps1 after installation.
+if (Test-Path $computerOut) { Remove-Item $computerOut -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $computerOut | Out-Null
+foreach ($file in @("computer_service.py", "requirements.txt", "install_computer.ps1")) {
+    $source = Join-Path $computerSource $file
+    if (Test-Path $source) { Copy-Item $source (Join-Path $computerOut $file) -Force }
+}
+$computerVenv = Join-Path $computerSource ".venv"
+if (Test-Path $computerVenv) {
+    Copy-Item $computerVenv (Join-Path $computerOut ".venv") -Recurse -Force
 }
 
 $server = Join-Path $voiceOut "python\aurora_voice_server.py"
@@ -86,6 +98,10 @@ if (-not $SkipVoiceSetup) {
     }
 }
 
+if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
+if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
+
 Write-Host "AuroraFox Windows build: $outDir\AuroraFox.exe" -ForegroundColor Green
-Write-Host "Voice runtime: $voiceOut"
-Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - fallback" })))
+Write-Host "Voice runtime/bootstrap: $voiceOut"
+Write-Host "Computer Agent bootstrap: $computerOut"
+Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - fallback/setup wizard" })))
