@@ -201,8 +201,8 @@ func _make_touch_friendly(node: Node) -> void:
 func _adjust_margins(node: Node) -> void:
 	for child in node.get_children():
 		if child is MarginContainer:
-			var left := child.get_theme_constant("margin_left")
-			var right := child.get_theme_constant("margin_right")
+			var left: int = child.get_theme_constant("margin_left")
+			var right: int = child.get_theme_constant("margin_right")
 			if left > 24: child.add_theme_constant_override("margin_left", 16)
 			if right > 24: child.add_theme_constant_override("margin_right", 16)
 		_adjust_margins(child)
