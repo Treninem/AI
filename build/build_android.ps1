@@ -6,7 +6,7 @@ param(
 $ErrorActionPreference = "Stop"
 $root = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $pluginRoot = Join-Path $root "android_plugin"
-$outDir = Join-Path $root "build\android"
+$outDir = Join-Path $root "build/android"
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 if (-not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
@@ -14,7 +14,7 @@ if (-not $env:ANDROID_HOME -and -not $env:ANDROID_SDK_ROOT) {
 }
 
 $nativeSetup = Join-Path $pluginRoot "setup_native.ps1"
-& powershell -NoProfile -ExecutionPolicy Bypass -File $nativeSetup
+& $nativeSetup
 if ($LASTEXITCODE -ne 0) { throw "Android native source setup failed" }
 
 Push-Location $pluginRoot
@@ -37,7 +37,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw "Android export failed" }
     if (-not (Test-Path (Join-Path $outDir "AuroraFox.apk"))) { throw "Android APK was not produced" }
 
-    Write-Host "AuroraFox Android build: $outDir\AuroraFox.apk" -ForegroundColor Green
+    Write-Host "AuroraFox Android build: $(Join-Path $outDir 'AuroraFox.apk')" -ForegroundColor Green
 } finally {
     Pop-Location
 }
