@@ -138,9 +138,9 @@ func _append_conversation_context(messages: Array, conversation_context: Array) 
 			var name := str(attachment.get("name", "file"))
 			var kind := str(attachment.get("kind", "unknown"))
 			var excerpt := str(attachment.get("excerpt", "")).strip_edges().substr(0, 6000)
-			var meta := attachment.get("metadata", {})
+			var meta: Dictionary = attachment.get("metadata", {})
 			var attachment_text := "[Вложение из этой реплики: %s; тип: %s" % [name, kind]
-			if meta is Dictionary and not meta.is_empty(): attachment_text += "; метаданные: " + JSON.stringify(meta).substr(0, 1800)
+			if not meta.is_empty(): attachment_text += "; метаданные: " + JSON.stringify(meta).substr(0, 1800)
 			attachment_text += "]"
 			if not excerpt.is_empty(): attachment_text += "\n" + excerpt
 			parts.append(attachment_text)
@@ -152,7 +152,7 @@ func _active_chat_context() -> Array:
 	if main == null: return []
 	var store = main.get("chats")
 	if not store is ChatStore: return []
-	var chat := store.get_active_chat()
+	var chat: Dictionary = store.get_active_chat()
 	var history: Array = chat.get("messages", []).duplicate(true)
 	if not history.is_empty():
 		var last = history[history.size() - 1]
