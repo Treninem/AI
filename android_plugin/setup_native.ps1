@@ -30,6 +30,50 @@ function Ensure-Repo($name, $url, $revision) {
     if ($LASTEXITCODE -ne 0) { throw "Failed to clean $name source tree" }
 }
 
+function Patch-Wasm3AndroidCompatibility {
+    $sourcePath = Join-Path $thirdParty "wasm3/source/m3_api_wasi.c"
+    if (-not (Test-Path -LiteralPath $sourcePath)) {
+        throw "Pinned wasm3 WASI source is missing: $sourcePath"
+    }
+
+    $source = [IO.File]::ReadAllText($sourcePath)
+    $includeNeedle = "#include <fcntl.h>"
+    if (-not $source.Contains($includeNeedle)) {
+        throw "Pinned wasm3 include layout changed; refusing an unverified Android patch"
+    }
+    if (-not $source.Contains("#include <stdlib.h>")) {
+        $source = $source.Replace($includeNeedle, "$includeNeedle`n#include <stdlib.h>")
+    }
+
+    $old = @'
+#   else
+        retlen = getentropy(buf, reqlen) < 0 ? -1 : reqlen;
+#   endif
+'@
+    $replacement = @'
+#   elif defined(__ANDROID_API__)
+        // Android getentropy() is API 28+, while AuroraFox supports API 26.
+        // Bionic arc4random_buf() is available on every Android API level.
+        arc4random_buf(buf, reqlen);
+        retlen = reqlen;
+#   else
+        retlen = getentropy(buf, reqlen) < 0 ? -1 : reqlen;
+#   endif
+'@
+    if (-not $source.Contains($old)) {
+        throw "Pinned wasm3 random_get layout changed; refusing an unverified Android patch"
+    }
+    $source = $source.Replace($old, $replacement)
+    $utf8 = New-Object Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText($sourcePath, $source, $utf8)
+
+    $verify = [IO.File]::ReadAllText($sourcePath)
+    if (-not $verify.Contains("arc4random_buf(buf, reqlen)")) {
+        throw "wasm3 Android entropy compatibility patch was not applied"
+    }
+    Write-Host "Patched pinned wasm3 WASI entropy for Android API 26 compatibility."
+}
+
 function Download-IfMissing($url, $dest) {
     if (-not (Test-Path $dest)) {
         Write-Host "Downloading $(Split-Path $dest -Leaf)..."
@@ -48,6 +92,7 @@ function Extract-TarBz2($archive, $dest, $expectedFolder) {
 
 Ensure-Repo "llama.cpp" "https://github.com/ggml-org/llama.cpp.git" $llamaRevision
 Ensure-Repo "wasm3" "https://github.com/wasm3/wasm3.git" $wasm3Revision
+Patch-Wasm3AndroidCompatibility
 
 # sherpa-onnx is the actual Android speech runtime for both TTS and STT.
 # Do not fetch whisper.cpp here: AuroraFox does not compile its JNI adapter,
