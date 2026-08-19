@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/voice_overlay.gd" type="Script" id="2_voice"]
@@ -15,6 +15,7 @@
 [ext_resource path="res://scripts/android_file_tool_bridge.gd" type="Script" id="13_android_files"]
 [ext_resource path="res://scripts/project_index_tool_bridge.gd" type="Script" id="14_project_index"]
 [ext_resource path="res://scripts/trusted_project_sandbox_bridge.gd" type="Script" id="15_trusted_sandbox"]
+[ext_resource path="res://scripts/windows_trusted_project_bridge.gd" type="Script" id="16_windows_trusted_sandbox"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -66,3 +67,6 @@ script = ExtResource("14_project_index")
 
 [node name="TrustedProjectSandbox" type="Node" parent="."]
 script = ExtResource("15_trusted_sandbox")
+
+[node name="WindowsTrustedProjectSandbox" type="Node" parent="."]
+script = ExtResource("16_windows_trusted_sandbox")
