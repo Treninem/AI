@@ -48,18 +48,21 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Failed to create File Intelligence environment.' }
     }
 
-    Set-Stage 'dependencies' 42 'Installing local document image and video parsers'
+    Set-Stage 'dependencies' 42 'Installing local document image video EPUB and RAR parsers'
     & $uv pip install --python $Python --requirements $Requirements
     if ($LASTEXITCODE -ne 0) { throw 'Failed to install File Intelligence dependencies.' }
 
-    Set-Stage 'verify' 90 'Verifying imports and bundled ffmpeg'
+    Set-Stage 'verify' 90 'Verifying parsers extended formats and bundled ffmpeg'
     $check = @(
         'import imageio_ffmpeg',
-        'import pypdf, pypdfium2, docx, openpyxl, xlrd, pptx, PIL, py7zr',
+        'import pypdf, pypdfium2, docx, openpyxl, xlrd, pptx, PIL, py7zr, rarfile',
+        'import extended_formats',
         'from pathlib import Path',
         'exe = Path(imageio_ffmpeg.get_ffmpeg_exe())',
         'assert exe.is_file(), f"ffmpeg missing: {exe}"',
-        'print("AURORA_FILE_INTELLIGENCE_READY", exe)'
+        'assert callable(extended_formats.analyze_epub)',
+        'assert callable(extended_formats.analyze_rar)',
+        'print("AURORA_FILE_INTELLIGENCE_READY", exe, rarfile.__version__)'
     ) -join "`n"
     & $Python -c $check
     if ($LASTEXITCODE -ne 0) { throw 'File Intelligence verification failed.' }
