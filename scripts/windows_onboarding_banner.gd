@@ -47,7 +47,7 @@ func _refresh() -> void:
 	var ai = main.get("ai")
 	if not ai is AIClient:
 		return
-	var available := await ai.is_available()
+	var available: bool = bool(await ai.is_available())
 	if available:
 		_remove_banner()
 		return
