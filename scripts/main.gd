@@ -272,13 +272,17 @@ func _build_ui() -> void:
 
 	rename_dialog = AcceptDialog.new()
 	rename_dialog.title = "Переименовать чат"
-	rename_dialog.dialog_text = "Новое название:"
-	rename_dialog.min_size = Vector2i(430, 150)
+	rename_dialog.dialog_text = "Введите новое название чата:"
+	rename_dialog.min_size = Vector2i(460, 190)
 	rename_dialog.confirmed.connect(_confirm_rename_chat)
 	add_child(rename_dialog)
 	rename_input = LineEdit.new()
-	rename_input.custom_minimum_size = Vector2(380, 42)
+	rename_input.position = Vector2(24, 72)
+	rename_input.size = Vector2(410, 42)
+	rename_input.custom_minimum_size = Vector2(410, 42)
 	rename_input.max_length = 60
+	rename_input.placeholder_text = "Название чата"
+	rename_input.text_submitted.connect(func(_text): rename_dialog.get_ok_button().emit_signal("pressed"))
 	rename_dialog.add_child(rename_input)
 
 func _new_chat() -> void:
@@ -471,4 +475,6 @@ func _submit_current() -> void:
 	if not queued_voice_text.is_empty(): call_deferred("_submit_queued_voice")
 
 func _show_tools_info() -> void:
-	output.append_text("\n[color=#a66cff][b]Инструменты AuroraFox[/b][/color]\nИнтернет, HTTP, файлы, Git, системная информация, память, база знаний, компьютерный агент, песочницы, File Intelligence и локальный голос.\n")
+	var settings_panel := get_node_or_null("SettingsOverlay")
+	if settings_panel != null and settings_panel.has_method("show_settings"):
+		settings_panel.call("show_settings")
