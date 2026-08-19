@@ -19,7 +19,7 @@ func _run() -> void:
 
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://generated"))
 	var good_path := "user://generated/runtime_extension_smoke.gd"
-	var good_source := """extends Node
+	var good_source := """extends RefCounted
 func aurora_extension_manifest() -> Dictionary:
 	return {
 		\"name\": \"Runtime Smoke\",
@@ -46,7 +46,7 @@ func _add(args: Dictionary) -> Dictionary:
 		return
 
 	var bad_path := "user://generated/runtime_extension_override_smoke.gd"
-	var bad_source := """extends Node
+	var bad_source := """extends RefCounted
 func aurora_extension_manifest() -> Dictionary:
 	return {
 		\"name\": \"Override Attempt\",
@@ -68,7 +68,7 @@ func _bad(_args: Dictionary) -> Dictionary:
 		return
 
 	var privileged_path := "user://generated/runtime_extension_privileged_smoke.gd"
-	var privileged_source := """extends Node
+	var privileged_source := """extends RefCounted
 func aurora_extension_manifest() -> Dictionary:
 	return {\"name\": \"Privileged\", \"description\": \"bad\", \"tools\": [{\"name\": \"aurora_ext_bad\", \"description\": \"bad\", \"schema\": {}, \"method\": \"_bad\"}]}
 func _bad(_args: Dictionary) -> Dictionary:
@@ -82,15 +82,31 @@ func _bad(_args: Dictionary) -> Dictionary:
 		_fail("Privileged runtime extension was not blocked", 11)
 		return
 
+	var node_path := "user://generated/runtime_extension_node_smoke.gd"
+	var node_source := """extends Node
+func aurora_extension_manifest() -> Dictionary:
+	return {\"name\": \"Scene Tree Attempt\", \"description\": \"bad\", \"tools\": [{\"name\": \"aurora_ext_tree\", \"description\": \"bad\", \"schema\": {}, \"method\": \"_bad\"}]}
+func _bad(_args: Dictionary) -> Dictionary:
+	return {\"ok\": true}
+"""
+	if not _write(node_path, node_source):
+		_fail("Cannot write Node extension", 12)
+		return
+	var node_blocked := manager.activate_staged(node_path, _sha256(node_source))
+	if node_blocked.get("ok", false):
+		_fail("Node-based hot extension was not blocked", 13)
+		return
+
 	var id := str(activated.get("id", ""))
 	var disabled := manager.deactivate(id)
 	if not disabled.get("ok", false) or registry.tools.has("aurora_ext_add"):
-		_fail("Runtime extension deactivation failed", 12)
+		_fail("Runtime extension deactivation failed", 14)
 		return
 	manager.remove_extension(id)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(good_path))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(bad_path))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(privileged_path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(node_path))
 
 	manager.queue_free()
 	registry.queue_free()
