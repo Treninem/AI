@@ -6,6 +6,7 @@ signal improvement_verified(result: Dictionary)
 signal improvement_rejected(result: Dictionary)
 
 const GENERATED_ROOT := "res://generated/"
+const RUNTIME_GENERATED_ROOT := "user://generated/"
 const MAX_GENERATED_BYTES := 512 * 1024
 const MAX_PROJECT_FILES := 30000
 const MAX_PROJECT_BYTES := 2 * 1024 * 1024 * 1024
@@ -28,7 +29,7 @@ func propose_improvement(goal: String) -> Dictionary:
 {"path":"res://generated/<filename>.gd","content":"полный готовый GDScript","reason":"что улучшает","verification":"что должно подтвердить корректность"}
 
 Правила:
-- только новый .gd внутри res://generated/;
+- только новый .gd внутри логического res://generated/;
 - никакого TODO/FIXME/placeholder/stub/pass/implement later;
 - код должен быть самодостаточным и совместимым с Godot 4.7.1;
 - не меняй project.godot, autoload, секреты, обновлятор и существующее ядро;
@@ -81,7 +82,6 @@ func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 	})
 	if not _ok(written): return _reject("workspace_write", written)
 
-	# Check that the exact candidate bytes are present before launching Godot.
 	var reread = await tools.call_tool("workspace_read", {"path": "project/" + relative, "area": "work"})
 	if not _ok(reread): return _reject("workspace_read", reread)
 	if str(reread.get("content", "")) != content:
@@ -105,16 +105,18 @@ func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 	return result
 
 func apply_generated_module(proposal: Dictionary) -> Dictionary:
-	# Compatibility name retained for the UI, but "apply" now means:
-	# verify the complete copied project first, then stage a NEW module only in
-	# res://generated/. It never edits active core scripts.
+	# "Apply" deliberately means verify + stage. It does not silently replace
+	# active core. In the editor the staged module can live in res://generated/;
+	# an installed app must use writable user://generated/.
 	var verification := await evaluate_generated_module(proposal)
 	if not verification.get("ok", false): return verification
-	var path := str(verification.get("path", ""))
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(GENERATED_ROOT))
-	var write_result = await tools.call_tool("write_file", {"path": path, "content": str(proposal.get("content", ""))})
+	var logical_path := str(verification.get("path", ""))
+	var stage_path := _stage_path(logical_path)
+	if stage_path.is_empty(): return _reject("stage_path", {"ok": false, "error": "Cannot resolve writable stage path"})
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(stage_path.get_base_dir()))
+	var write_result = await tools.call_tool("write_file", {"path": stage_path, "content": str(proposal.get("content", ""))})
 	if not _ok(write_result): return _reject("stage_generated", write_result)
-	var check = await tools.call_tool("read_file", {"path": path})
+	var check = await tools.call_tool("read_file", {"path": stage_path})
 	if not _ok(check): return _reject("stage_verify", check)
 	var expected := str(proposal.get("content", ""))
 	if str(check.get("content", "")) != expected:
@@ -123,11 +125,19 @@ func apply_generated_module(proposal: Dictionary) -> Dictionary:
 		"ok": true,
 		"verified": true,
 		"staged": true,
-		"path": path,
+		"path": logical_path,
+		"stage_path": stage_path,
 		"sha256": _sha256_text(expected),
 		"verification": verification,
 		"message": "Generated module passed Godot 4.7.1 verification and was staged without activating core changes."
 	}
+
+func _stage_path(logical_path: String) -> String:
+	var safe := _safe_generated_path(logical_path)
+	if safe.is_empty(): return ""
+	var relative := safe.trim_prefix(GENERATED_ROOT)
+	var root := GENERATED_ROOT if OS.has_feature("editor") else RUNTIME_GENERATED_ROOT
+	return root + relative
 
 func _validate_proposal(proposal: Dictionary) -> Dictionary:
 	var path := _safe_generated_path(str(proposal.get("path", "")))
