@@ -55,15 +55,36 @@ def test_conversations_are_isolated_by_api_key_owner(tmp_path: Path):
     assert store.context("key-b", "same-chat")[-1]["content"] == "B"
 
 
-def test_learning_is_durable_while_godot_is_offline_and_replayed_later(tmp_path: Path):
+def test_implicit_chat_learning_is_private_by_default(tmp_path: Path):
+    bridge = FakeBridge()
+    bridge.online = True
+    sync = LearningSynchronizer(tmp_path / "api", bridge)
+    payload = {
+        "source": "telegram",
+        "kind": "api_interaction",
+        "content": "private user chat",
+        "importance": 0.8,
+        "confidence": 0.9,
+        "metadata": {},
+    }
+    result = sync.record("api_interaction", payload, True)
+    assert result["synced"] is False
+    assert result["skipped_private"] is True
+    assert result["event_id"] == ""
+    assert sync.status()["pending"] == 0
+    assert bridge.learned == []
+
+
+def test_opted_in_learning_is_durable_while_godot_is_offline_and_replayed_later(tmp_path: Path):
     bridge = FakeBridge()
     sync = LearningSynchronizer(tmp_path / "api", bridge)
     payload = {
         "source": "telegram",
         "kind": "api_interaction",
-        "content": "User prefers concise code examples",
+        "content": "Reusable public integration knowledge",
         "importance": 0.8,
         "confidence": 0.9,
+        "metadata": {"share_for_learning": True},
     }
     result = sync.record("api_interaction", payload, True)
     assert result["synced"] is False
@@ -88,6 +109,7 @@ def test_feedback_replays_into_agent_experience_bridge(tmp_path: Path):
         "score": -1.0,
         "corrected_answer": "correct answer",
         "note": "user correction",
+        "metadata": {},
     }
     first = sync.feedback(payload, True)
     assert first["synced"] is False
