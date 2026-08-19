@@ -157,22 +157,74 @@ func download_profile(profile_id: String) -> Dictionary:
 		download_finished.emit(profile_id, false, hash_error)
 		return {"ok": false, "error": hash_error, "expected": expected_hash, "actual": actual_hash}
 
-	if FileAccess.file_exists(ACTIVE_MODEL): DirAccess.remove_absolute(ProjectSettings.globalize_path(ACTIVE_MODEL))
-	var rename_error := DirAccess.rename_absolute(temp_absolute, ProjectSettings.globalize_path(ACTIVE_MODEL))
-	if rename_error != OK:
-		download_finished.emit(profile_id, false, "Cannot activate downloaded model")
-		return {"ok": false, "error": "Cannot activate downloaded model", "code": rename_error}
+	var activation := _activate_temp_model(temp_path)
+	if not activation.get("ok", false):
+		download_finished.emit(profile_id, false, str(activation.get("error", "Cannot activate downloaded model")))
+		return activation
 	_write_metadata(profile_id, profile, actual_hash, actual_size)
 	download_progress.emit(profile_id, actual_size, actual_size)
 	download_finished.emit(profile_id, true, "Model installed")
 	return {"ok": true, "profile": profile_id, "path": ACTIVE_MODEL, "sha256": actual_hash, "bytes": actual_size}
 
 func install_local_gguf(source_path: String) -> Dictionary:
-	if not FileAccess.file_exists(source_path): return {"ok": false, "error": "Source GGUF not found"}
+	if current_request != null: return {"ok": false, "error": "Wait for the current model download to finish"}
 	if source_path.get_extension().to_lower() != "gguf": return {"ok": false, "error": "Only GGUF files are accepted"}
-	var err := DirAccess.copy_absolute(ProjectSettings.globalize_path(source_path), ProjectSettings.globalize_path(ACTIVE_MODEL))
-	if err != OK: return {"ok": false, "error": "Cannot copy GGUF", "code": err}
-	return {"ok": true, "path": ACTIVE_MODEL, "sha256": FileAccess.get_sha256(ACTIVE_MODEL), "bytes": _file_size(ACTIVE_MODEL)}
+	var source_absolute := _absolute_path(source_path)
+	var active_absolute := ProjectSettings.globalize_path(ACTIVE_MODEL)
+	if source_absolute.is_empty() or not FileAccess.file_exists(source_absolute): return {"ok": false, "error": "Source GGUF not found"}
+	if source_absolute.replace("\\", "/") == active_absolute.replace("\\", "/"):
+		return {"ok": true, "path": ACTIVE_MODEL, "sha256": FileAccess.get_sha256(ACTIVE_MODEL), "bytes": _file_size(ACTIVE_MODEL), "already_active": true}
+
+	var source := FileAccess.open(source_absolute, FileAccess.READ)
+	if source == null: return {"ok": false, "error": "Cannot open selected GGUF"}
+	var source_size := source.get_length()
+	if source_size < 1024 * 1024:
+		source.close()
+		return {"ok": false, "error": "Selected file is too small to be a model"}
+	var magic := source.get_buffer(4).get_string_from_ascii()
+	if magic != "GGUF":
+		source.close()
+		return {"ok": false, "error": "Selected file has no GGUF header"}
+	source.seek(0)
+
+	if OS.get_name() == "Android":
+		var caps := android_runtime.capabilities()
+		var free_mb := int(caps.get("free_storage_mb", 0))
+		var required_mb := int(ceil(float(source_size) / 1048576.0)) + 256
+		if free_mb > 0 and free_mb < required_mb:
+			source.close()
+			return {"ok": false, "error": "Not enough free storage to import GGUF", "required_mb": required_mb, "free_mb": free_mb}
+
+	var temp_path := ACTIVE_MODEL + ".import"
+	var temp_absolute := ProjectSettings.globalize_path(temp_path)
+	if FileAccess.file_exists(temp_path): DirAccess.remove_absolute(temp_absolute)
+	var target := FileAccess.open(temp_path, FileAccess.WRITE)
+	if target == null:
+		source.close()
+		return {"ok": false, "error": "Cannot create temporary model file"}
+	while source.get_position() < source_size:
+		var remaining := source_size - source.get_position()
+		var block := source.get_buffer(mini(1024 * 1024, remaining))
+		if block.is_empty():
+			target.close()
+			source.close()
+			DirAccess.remove_absolute(temp_absolute)
+			return {"ok": false, "error": "Selected GGUF ended unexpectedly during copy"}
+		target.store_buffer(block)
+	target.close()
+	source.close()
+	if _file_size(temp_path) != source_size:
+		DirAccess.remove_absolute(temp_absolute)
+		return {"ok": false, "error": "Imported GGUF byte count mismatch"}
+
+	var hash := FileAccess.get_sha256(temp_path).to_lower()
+	if hash.is_empty():
+		DirAccess.remove_absolute(temp_absolute)
+		return {"ok": false, "error": "Cannot calculate GGUF SHA-256"}
+	var activation := _activate_temp_model(temp_path)
+	if not activation.get("ok", false): return activation
+	_write_metadata("custom", {"name": source_path.get_file()}, hash, source_size)
+	return {"ok": true, "path": ACTIVE_MODEL, "sha256": hash, "bytes": source_size, "custom": true}
 
 func cancel_download() -> void:
 	if current_request == null: return
@@ -200,6 +252,28 @@ func _cleanup_request() -> void:
 	_completion.clear()
 	_cancel_requested = false
 	_reported_total_bytes = 0
+
+func _activate_temp_model(temp_path: String) -> Dictionary:
+	var temp_absolute := ProjectSettings.globalize_path(temp_path)
+	var active_absolute := ProjectSettings.globalize_path(ACTIVE_MODEL)
+	if not FileAccess.file_exists(temp_path): return {"ok": false, "error": "Temporary model is missing"}
+	var previous_path := ACTIVE_MODEL + ".previous"
+	var previous_absolute := ProjectSettings.globalize_path(previous_path)
+	if FileAccess.file_exists(previous_path): DirAccess.remove_absolute(previous_absolute)
+	var had_active := FileAccess.file_exists(ACTIVE_MODEL)
+	if had_active:
+		var backup_error := DirAccess.rename_absolute(active_absolute, previous_absolute)
+		if backup_error != OK: return {"ok": false, "error": "Cannot preserve current model before replacement", "code": backup_error}
+	var rename_error := DirAccess.rename_absolute(temp_absolute, active_absolute)
+	if rename_error != OK:
+		if had_active and FileAccess.file_exists(previous_path): DirAccess.rename_absolute(previous_absolute, active_absolute)
+		return {"ok": false, "error": "Cannot activate model", "code": rename_error}
+	if FileAccess.file_exists(previous_path): DirAccess.remove_absolute(previous_absolute)
+	return {"ok": true}
+
+func _absolute_path(path: String) -> String:
+	if path.begins_with("res://") or path.begins_with("user://"): return ProjectSettings.globalize_path(path)
+	return path
 
 func _write_metadata(profile_id: String, profile: Dictionary, hash: String, bytes: int) -> void:
 	var f := FileAccess.open(MODEL_DIR + "/active_model.json", FileAccess.WRITE)
