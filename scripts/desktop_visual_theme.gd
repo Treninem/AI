@@ -55,16 +55,20 @@ func _texture_style() -> StyleBoxTexture:
 	style.expand_margin_right = 1.0
 	style.expand_margin_top = 1.0
 	style.expand_margin_bottom = 1.0
-	style.axis_stretch_horizontal = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
-	style.axis_stretch_vertical = StyleBoxTexture.AXIS_STRETCH_MODE_STRETCH
 	return style
 
 func _flat_state(fill: Color, border: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
 	style.border_color = border
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(11)
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = 11
+	style.corner_radius_top_right = 11
+	style.corner_radius_bottom_left = 11
+	style.corner_radius_bottom_right = 11
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 8
@@ -91,6 +95,8 @@ func _replace_header_avatar() -> void:
 		return
 	for child in slot.get_children():
 		child.visible = false
+	if slot.find_child("AuroraFoxRealAvatar", false, false) != null:
+		return
 	var fox := TextureRect.new()
 	fox.name = "AuroraFoxRealAvatar"
 	fox.texture = FOX_IMAGE
@@ -122,15 +128,18 @@ func _apply_responsive_layout() -> void:
 		header_actions.add_theme_constant_override("separation", 5 if compact else 8)
 		for child in header_actions.get_children():
 			if child is Button:
-				(child as Button).custom_minimum_size.x = minf((child as Button).custom_minimum_size.x, 104.0 if compact else 132.0)
+				var button := child as Button
+				var max_width := 104.0 if compact else 132.0
+				if button.custom_minimum_size.x > max_width:
+					button.custom_minimum_size.x = max_width
 
 	var voice_status := _root.find_child("VoiceStatus", true, false) as Label
 	if voice_status != null:
 		voice_status.visible = not compact
 
-	var title := _root.find_child("MainPanel", true, false) as Control
-	if title != null:
-		title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var main_panel := _root.find_child("MainPanel", true, false) as Control
+	if main_panel != null:
+		main_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var composer := _root.find_child("ComposerMargin", true, false) as MarginContainer
 	if composer != null:
