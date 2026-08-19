@@ -9,10 +9,11 @@ func _init() -> void:
 		AuroraWakeWordController.new(),
 		AuroraAndroidMicMonitor.new(),
 		AuroraFoxAvatarView.new(),
+		AuroraModelSetupWizard.new(),
 	]
 	for node in nodes:
 		if node == null:
-			push_error("Voice class failed to instantiate")
+			push_error("AuroraFox subsystem class failed to instantiate")
 			quit(2)
 			return
 		node.free()
