@@ -1,0 +1,71 @@
+name: AuroraFox Android Plugin CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'android_plugin/**'
+      - 'addons/AuroraFoxRuntime/**'
+      - '.github/workflows/android-plugin-ci.yml'
+  pull_request:
+    paths:
+      - 'android_plugin/**'
+      - 'addons/AuroraFoxRuntime/**'
+      - '.github/workflows/android-plugin-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  android-plugin:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android native toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            "platform-tools" \
+            "build-tools;35.0.1" \
+            "platforms;android-35" \
+            "cmake;3.22.1" \
+            "ndk;28.1.13356709"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
+
+      - name: Prepare pinned native dependencies and speech assets
+        shell: pwsh
+        run: ./android_plugin/setup_native.ps1
+
+      - name: Build AuroraFoxRuntime debug/release AARs
+        working-directory: android_plugin
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle :plugin:installGodotPlugin --stacktrace
+
+      - name: Verify exported Android libraries
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f addons/AuroraFoxRuntime/bin/debug/AuroraFoxRuntime-debug.aar
+          test -f addons/AuroraFoxRuntime/bin/release/AuroraFoxRuntime-release.aar
+          test -f addons/AuroraFoxRuntime/bin/debug/sherpa-onnx-1.13.4.aar
+          test -f addons/AuroraFoxRuntime/bin/release/sherpa-onnx-1.13.4.aar
+          echo AURORA_ANDROID_PLUGIN_BUILD_OK
