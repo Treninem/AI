@@ -31,9 +31,8 @@ func show_center() -> void:
 
 func _connect_signals() -> void:
 	var improver := _improver()
-	if improver != null:
-		if not improver.improvement_stage.is_connected(_on_improvement_stage):
-			improver.improvement_stage.connect(_on_improvement_stage)
+	if improver != null and not improver.improvement_stage.is_connected(_on_improvement_stage):
+		improver.improvement_stage.connect(_on_improvement_stage)
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
@@ -63,7 +62,7 @@ func _build_ui() -> void:
 	box.add_child(title)
 
 	var safety := Label.new()
-	safety.text = "Горячее улучшение не заменяет ядро. AuroraFox создаёт новый модуль, проверяет полную копию проекта через Godot 4.7.1 и только после отдельного подтверждения может подключить его как ограниченное runtime-расширение."
+	safety.text = "Горячее улучшение не заменяет ядро. AuroraFox создаёт ограниченное RefCounted-расширение, проверяет полную копию проекта через Godot 4.7.1 и только после отдельного подтверждения подключает новые aurora_ext_* инструменты."
 	safety.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(safety)
 
@@ -95,9 +94,10 @@ func _build_ui() -> void:
 	box.add_child(status_label)
 
 	proposal_view = RichTextLabel.new()
-	proposal_view.bbcode_enabled = true
+	proposal_view.bbcode_enabled = false
 	proposal_view.custom_minimum_size.y = 210
 	proposal_view.fit_content = false
+	proposal_view.selection_enabled = true
 	box.add_child(proposal_view)
 
 	box.add_child(HSeparator.new())
@@ -106,7 +106,7 @@ func _build_ui() -> void:
 	ext_title.add_theme_font_size_override("font_size", 20)
 	box.add_child(ext_title)
 	var ext_hint := Label.new()
-	ext_hint.text = "Активированное горячее расширение может добавлять только новые инструменты aurora_ext_* и не получает прямой доступ к OS, файлам, сети или настройкам движка."
+	ext_hint.text = "Активированное расширение живёт вне scene tree, может добавлять только новые aurora_ext_* инструменты и не получает прямого доступа к OS, файлам, сети или настройкам движка."
 	ext_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ext_hint)
 	extension_list = VBoxContainer.new()
@@ -146,7 +146,6 @@ func _create_proposal() -> void:
 	if result.get("ok", false):
 		current_proposal = result.get("proposal", {})
 		_render_proposal()
-		verify_button.disabled = OS.get_name() != "Windows"
 		status_label.text = "Предложение создано. Следующий шаг — проверка полной копии проекта."
 		_add_history("proposal", true, {"goal": goal, "path": current_proposal.get("path", ""), "reason": current_proposal.get("reason", "")})
 	else:
@@ -162,19 +161,15 @@ func _verify_and_stage() -> void:
 	var improver := _improver()
 	if improver == null: return
 	_set_busy(true)
-	verify_button.disabled = true
-	activate_button.disabled = true
 	status_label.text = "Создаю песочницу и проверяю проект…"
 	var result := await improver.apply_generated_module(current_proposal)
 	if result.get("ok", false):
 		staged_result = result
-		activate_button.disabled = false
 		status_label.text = "Проверка пройдена. Модуль подготовлен, но ещё НЕ активирован."
-		proposal_view.append_text("\n[color=#74ffb2][b]Godot 4.7.1: проверка пройдена[/b][/color]\nПодготовлено: %s\nSHA-256: %s\n" % [str(result.get("stage_path", "")), str(result.get("sha256", ""))])
+		proposal_view.append_text("\n\nGodot 4.7.1: проверка пройдена\nПодготовлено: %s\nSHA-256: %s\n" % [str(result.get("stage_path", "")), str(result.get("sha256", ""))])
 		_add_history("verification", true, {"path": result.get("stage_path", ""), "sha256": result.get("sha256", "")})
 	else:
 		status_label.text = "Проверка не пройдена: %s" % str(result.get("error", "unknown"))
-		verify_button.disabled = false
 		_add_history("verification", false, {"stage": result.get("stage", ""), "error": result.get("error", "unknown")})
 	_set_busy(false)
 
@@ -194,7 +189,7 @@ func _activate_confirmed() -> void:
 	var result := manager.activate_staged(str(staged_result.get("stage_path", "")), str(staged_result.get("sha256", "")))
 	if result.get("ok", false):
 		status_label.text = "Расширение активно: %s" % str(result.get("name", result.get("id", "")))
-		activate_button.disabled = true
+		staged_result.clear()
 		_add_history("activation", true, {"id": result.get("id", ""), "tools": result.get("tools", [])})
 		_refresh_extensions()
 	else:
@@ -205,12 +200,12 @@ func _activate_confirmed() -> void:
 func _render_proposal() -> void:
 	proposal_view.clear()
 	if current_proposal.is_empty(): return
-	proposal_view.append_text("[b]Причина[/b]\n%s\n\n[b]Файл[/b]\n%s\n\n[b]Что будет проверено[/b]\n%s\n\n[b]Код[/b]\n[code]%s[/code]" % [
+	proposal_view.text = "Причина\n%s\n\nФайл\n%s\n\nЧто будет проверено\n%s\n\nКод\n%s" % [
 		str(current_proposal.get("reason", "")),
 		str(current_proposal.get("path", "")),
 		str(current_proposal.get("verification", "Godot 4.7.1 parse/import")),
-		str(current_proposal.get("content", "")).replace("[", "[")
-	])
+		str(current_proposal.get("content", ""))
+	]
 
 func _on_improvement_stage(stage: String, details: Dictionary) -> void:
 	if not busy: return
@@ -241,7 +236,8 @@ func _refresh_extensions() -> void:
 		var row := HBoxContainer.new()
 		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var label := Label.new()
-		label.text = "%s • %s • %s" % [str(item.get("name", item.get("id", "extension"))), "активно" if bool(item.get("active", false)) else "выключено", ", ".join(PackedStringArray(item.get("tools", [])))]
+		var tool_names: PackedStringArray = PackedStringArray(item.get("tools", []))
+		label.text = "%s • %s • %s" % [str(item.get("name", item.get("id", "extension"))), "активно" if bool(item.get("active", false)) else "выключено", ", ".join(tool_names)]
 		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(label)
@@ -259,17 +255,23 @@ func _refresh_extensions() -> void:
 func _toggle_extension(id: String) -> void:
 	var manager := _extensions()
 	if manager == null: return
-	var is_active := manager.active_instances.has(id)
-	var result := manager.deactivate(id) if is_active else manager.enable(id)
-	status_label.text = "Расширение %s" % ("отключено" if result.get("ok", false) and is_active else "включено" if result.get("ok", false) else "не изменено: " + str(result.get("error", "unknown")))
-	_add_history("deactivate" if is_active else "enable", bool(result.get("ok", false)), {"id": id, "error": result.get("error", "")})
+	var was_active := manager.active_instances.has(id)
+	var result := manager.deactivate(id) if was_active else manager.enable(id)
+	if result.get("ok", false):
+		status_label.text = "Расширение отключено." if was_active else "Расширение включено."
+	else:
+		status_label.text = "Не удалось изменить расширение: %s" % str(result.get("error", "unknown"))
+	_add_history("deactivate" if was_active else "enable", bool(result.get("ok", false)), {"id": id, "error": result.get("error", "")})
 	_refresh_extensions()
 
 func _remove_extension(id: String) -> void:
 	var manager := _extensions()
 	if manager == null: return
 	var result := manager.remove_extension(id)
-	status_label.text = "Расширение удалено." if result.get("ok", false) else "Не удалось удалить расширение: %s" % str(result.get("error", "unknown"))
+	if result.get("ok", false):
+		status_label.text = "Расширение удалено."
+	else:
+		status_label.text = "Не удалось удалить расширение: %s" % str(result.get("error", "unknown"))
 	_add_history("remove", bool(result.get("ok", false)), {"id": id, "error": result.get("error", "")})
 	_refresh_extensions()
 
