@@ -1,0 +1,50 @@
+name: AuroraFox Work Mode CI
+
+on:
+  pull_request:
+    paths:
+      - 'work/**'
+      - 'scripts/settings_visual_fix.gd'
+      - 'scripts/desktop_visual_theme.gd'
+      - 'scripts/ai_client.gd'
+      - 'tests/work_mode_smoke.gd'
+      - 'tests/ollama_model_selection_smoke.gd'
+      - 'main.tscn'
+      - '.github/workflows/work-mode-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'work/**'
+      - 'scripts/settings_visual_fix.gd'
+      - 'scripts/desktop_visual_theme.gd'
+      - 'scripts/ai_client.gd'
+      - 'tests/work_mode_smoke.gd'
+      - 'tests/ollama_model_selection_smoke.gd'
+      - 'main.tscn'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  godot-work:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: Work mode and settings smoke
+        run: timeout 40s ./godot --headless --path . --script tests/work_mode_smoke.gd
+      - name: Ollama fallback selection smoke
+        run: timeout 30s ./godot --headless --path . --script tests/ollama_model_selection_smoke.gd
