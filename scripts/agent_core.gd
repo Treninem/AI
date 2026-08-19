@@ -28,7 +28,7 @@ func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRe
 	team.setup(ai)
 
 func run_task(task: String, conversation_context: Array = []) -> String:
-	memory.remember("user_task", task)
+	memory.remember("user_task", task, "chat", 0.72, 0.98)
 	var useful_skills := experience.relevant_skills(task, 5)
 	var recent_failures := experience.recent_failures(5)
 	var specialist_context: Dictionary = {}
@@ -36,19 +36,22 @@ func run_task(task: String, conversation_context: Array = []) -> String:
 	if enable_specialist_team and _needs_specialists(task):
 		specialist_context = await team.consult(task, {})
 		specialist_plan = await team.synthesize(task, specialist_context)
-		memory.remember("specialist_consultation", JSON.stringify(_compact_result(specialist_context)))
+		memory.remember("specialist_consultation", JSON.stringify(_compact_result(specialist_context)), "specialist", 0.58, 0.76)
 		if specialist_plan.has("audit"):
-			memory.remember("specialist_plan_audit", JSON.stringify(_compact_result(specialist_plan.get("audit", {}))))
+			memory.remember("specialist_plan_audit", JSON.stringify(_compact_result(specialist_plan.get("audit", {}))), "specialist", 0.62, 0.82)
 
 	var plan: Dictionary = {"objective": task, "steps": []}
 	if specialist_plan.get("ok", false):
 		plan = specialist_plan
 	elif enable_planning:
 		plan = await cognition.make_plan(task, useful_skills, recent_failures)
-	memory.remember("task_plan", JSON.stringify(plan))
+	memory.remember("task_plan", JSON.stringify(plan), "planner", 0.52, 0.80)
 
+	# Retrieve only the memories/knowledge relevant to the current task. This
+	# avoids pushing the entire long-term store into every model request.
+	var retrieved_context: Array = await memory.retrieve(task, 10, true, true)
 	var messages: Array = [
-		{"role":"system", "content": _system_prompt(task, useful_skills, plan, recent_failures, specialist_context)}
+		{"role":"system", "content": _system_prompt(task, useful_skills, plan, recent_failures, specialist_context, retrieved_context)}
 	]
 	_append_conversation_context(messages, conversation_context)
 	messages.append({"role":"user", "content": task})
@@ -73,7 +76,7 @@ func run_task(task: String, conversation_context: Array = []) -> String:
 		experience.checkpoint(task, step + 1, tool_name, _safe_args(args), tool_result)
 		messages.append({"role":"assistant", "content": text})
 		messages.append({"role":"user", "content": "TOOL_RESULT %s: %s" % [tool_name, JSON.stringify(tool_result)]})
-		memory.remember("tool", JSON.stringify(trace_item))
+		memory.remember("tool", JSON.stringify(trace_item), tool_name, 0.62, 0.92)
 
 	if draft_answer.is_empty():
 		experience.record_failure(task, "Autonomous step limit reached")
@@ -87,7 +90,7 @@ func run_task(task: String, conversation_context: Array = []) -> String:
 		confidence = clampf(float(verification.get("confidence", 0.55)), 0.0, 1.0)
 		var issues: Array = verification.get("issues", [])
 		if not issues.is_empty():
-			memory.remember("self_check_issues", JSON.stringify(issues))
+			memory.remember("self_check_issues", JSON.stringify(issues), "self_check", 0.68, confidence)
 
 	if enable_specialist_team and not specialist_context.is_empty():
 		var team_audit := await team.audit_answer(task, final_answer, trajectory, specialist_context)
@@ -99,22 +102,22 @@ func run_task(task: String, conversation_context: Array = []) -> String:
 				final_answer = corrected
 			var audit_issues: Array = team_audit.get("issues", [])
 			if not audit_issues.is_empty():
-				memory.remember("specialist_answer_issues", JSON.stringify(audit_issues))
-			memory.remember("specialist_answer_audit", JSON.stringify(_compact_result(team_audit)))
+				memory.remember("specialist_answer_issues", JSON.stringify(audit_issues), "specialist", 0.68, audit_confidence)
+			memory.remember("specialist_answer_audit", JSON.stringify(_compact_result(team_audit)), "specialist", 0.64, audit_confidence)
 
-	memory.remember("assistant_answer", final_answer)
-	memory.remember("answer_confidence", str(confidence))
+	memory.remember("assistant_answer", final_answer, "assistant", 0.58, confidence)
+	memory.remember("answer_confidence", str(confidence), "self_check", 0.38, confidence)
 	if enable_skill_learning and confidence >= 0.62 and not trajectory.is_empty():
 		var skill := await cognition.extract_skill(task, final_answer, trajectory, confidence)
 		if not skill.is_empty():
 			experience.save_skill(skill)
-			memory.remember("learned_skill", JSON.stringify(skill))
+			memory.remember("learned_skill", JSON.stringify(skill), "skill", 0.82, confidence)
 
 	dream_cycle.note_completed_task()
 	if enable_dream_cycle and dream_cycle.should_reflect():
 		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(20))
 		if not ideas.is_empty():
-			memory.remember("improvement_ideas", JSON.stringify(ideas))
+			memory.remember("improvement_ideas", JSON.stringify(ideas), "dream_cycle", 0.62, 0.65)
 	return final_answer
 
 func _append_conversation_context(messages: Array, conversation_context: Array) -> void:
@@ -159,12 +162,11 @@ func _active_chat_context() -> Array:
 		if last is Dictionary and str(last.get("role", "")) == "user": history.pop_back()
 	return history
 
-func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary) -> String:
+func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary, retrieved_context: Array) -> String:
 	var recent := memory.recent(8)
-	var knowledge := memory.search_knowledge(task, 6)
 	return """
 Ты AuroraFox — автономный локальный AI-агент внутри Godot 4.7.1.
-Используй контекст текущего чата, память, инструменты, компьютерное зрение, песочницу, File Intelligence, индекс проекта, внутреннюю команду специалистов и накопленные навыки.
+Используй контекст текущего чата, релевантную долговременную память, инструменты, компьютерное зрение, песочницу, File Intelligence, индекс проекта, внутреннюю команду специалистов и накопленные навыки.
 Если нужен инструмент, верни ТОЛЬКО JSON: {"tool":"tool_name","args":{...}}. Иначе дай конечный ответ.
 
 ПРОТОКОЛ РАБОТЫ С БОЛЬШИМ ПРОЕКТОМ:
@@ -199,9 +201,9 @@ func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failur
 Полезные навыки: %s
 Недавние ошибки: %s
 Инструменты: %s
-Память: %s
-Знания: %s
-""" % [JSON.stringify(plan), JSON.stringify(_compact_result(specialist_context)), JSON.stringify(useful_skills), JSON.stringify(failures), JSON.stringify(tools.describe_tools()), JSON.stringify(recent), JSON.stringify(knowledge)]
+Недавняя память: %s
+Релевантная долговременная память и знания: %s
+""" % [JSON.stringify(plan), JSON.stringify(_compact_result(specialist_context)), JSON.stringify(useful_skills), JSON.stringify(failures), JSON.stringify(tools.describe_tools()), JSON.stringify(recent), JSON.stringify(_compact_result(retrieved_context))]
 
 func _needs_specialists(task: String) -> bool:
 	if task.length() > 350: return true
