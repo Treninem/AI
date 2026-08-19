@@ -14,6 +14,7 @@ func _init() -> void:
 		AttachmentManager.new(),
 		AuroraFileSetupWizard.new(),
 		AuroraSettingsOverlay.new(),
+		AndroidFileToolBridge.new(),
 	]
 	for node in nodes:
 		if node == null:
