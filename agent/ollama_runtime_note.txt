@@ -1,1 +1,0 @@
-AuroraFox runtime selection must prefer an already-running system Ollama and an installed compatible chat model before offering any model download.
