@@ -144,7 +144,7 @@ jobs:
             echo 'Android release signing secrets are required so every update uses the same signing identity.' >&2
             exit 1
           fi
-          echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/aurorafox-release.keystore"
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/aurorafox-release.keystore"
           echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$RUNNER_TEMP/aurorafox-release.keystore" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=$KEYSTORE_USER" >> "$GITHUB_ENV"
           echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
@@ -226,10 +226,32 @@ jobs:
                   },
               },
           }
-          with open('dist/update.json', 'w', encoding='utf-8') as f:
+          with open('dist/update.json', 'w', encoding='utf-8', newline='\n') as f:
               json.dump(manifest, f, ensure_ascii=False, indent=2)
+              f.write('\n')
           PY
           cat dist/update.json
+
+      - name: Sign update manifest with pinned AuroraFox release key
+        env:
+          UPDATE_KEY_B64: ${{ secrets.AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64 }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f update/release_public.pub || { echo 'update/release_public.pub is missing. Run build/create_update_signing_key.ps1 and commit only the public key.' >&2; exit 1; }
+          test -n "$UPDATE_KEY_B64" || { echo 'AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64 secret is missing.' >&2; exit 1; }
+          key="$RUNNER_TEMP/aurora-update-signing-private.pem"
+          derived="$RUNNER_TEMP/aurora-update-derived-public.pem"
+          printf '%s' "$UPDATE_KEY_B64" | base64 --decode > "$key"
+          chmod 600 "$key"
+          openssl pkey -in "$key" -pubout -out "$derived"
+          committed_fp="$(openssl pkey -pubin -in update/release_public.pub -outform DER | sha256sum | awk '{print $1}')"
+          derived_fp="$(openssl pkey -pubin -in "$derived" -outform DER | sha256sum | awk '{print $1}')"
+          test "$committed_fp" = "$derived_fp" || { echo 'Update signing private key does not match pinned public key.' >&2; exit 1; }
+          openssl dgst -sha256 -sign "$key" -out dist/update.sig dist/update.json
+          openssl dgst -sha256 -verify update/release_public.pub -signature dist/update.sig dist/update.json
+          rm -f "$key" "$derived"
+          echo "Signed update.json with pinned key fingerprint $committed_fp"
 
       - name: Publish GitHub Release
         env:
@@ -243,5 +265,6 @@ jobs:
             dist/AuroraFox_Setup_Windows.exe \
             dist/AuroraFox-Android.apk \
             dist/update.json \
+            dist/update.sig \
             --title "AuroraFox $tag" \
             --generate-notes
