@@ -24,9 +24,22 @@ def test_tournament_competes_only_after_independent_tests():
     text = read("scripts/self_improver.gd")
     assert "await evaluate_generated_module(proposal)" in text
     assert 'tools.call_tool("workspace_test"' in text
+    assert "_runtime_contract_test" in text
+    assert "aurora_extension_self_test" in text
     assert "_judge_verified_candidates" in text
     assert "verified.sort_custom" in text
     assert "scoreboard" in text
+
+
+def test_windows_and_android_support_autonomous_hot_mutations():
+    improver = read("scripts/self_improver.gd")
+    coordinator = read("agent/autonomous_coordinator.gd")
+    assert 'OS.get_name() not in ["Windows", "Android"]' in improver
+    assert 'platform == "Android"' in improver
+    assert 'verification_mode": "restricted_gdscript_compile_contract"' in improver
+    assert 'return OS.get_name() in ["Windows", "Android"]' in coordinator
+    assert 'elif OS.get_name() == "Android":' in coordinator
+    assert 'for name in ["read_file", "write_file"]' in coordinator
 
 
 def test_coordinator_starts_learning_and_evolution_without_manual_trigger():
@@ -42,6 +55,13 @@ def test_coordinator_starts_learning_and_evolution_without_manual_trigger():
     assert "extensions.activate_staged" in text
 
 
+def test_autonomous_research_is_promoted_to_long_term_knowledge():
+    text = read("agent/research_collector.gd")
+    assert "memory.learn(" in text
+    assert '"research_knowledge"' in text
+    assert '"learned": learned' in text
+
+
 def test_verified_release_updates_are_applied_automatically_by_default():
     text = read("update/update_manager.gd")
     assert '"auto_check": true' in text
@@ -55,13 +75,14 @@ def test_verified_release_updates_are_applied_automatically_by_default():
 def test_no_user_confirmation_gate_exists_in_evolution_path():
     improver = read("scripts/self_improver.gd").lower()
     coordinator = read("agent/autonomous_coordinator.gd").lower()
-    # These strings would indicate an interactive approval gate in the core
-    # evolution path. Runtime safety tests/rollback are allowed and required.
+    overlay = read("scripts/self_improvement_overlay.gd").lower()
     for forbidden in (
         "await user_confirmation",
         "require_user_confirmation",
         "approval_required",
         "confirm_before_activation",
+        "confirmationdialog",
     ):
         assert forbidden not in improver
         assert forbidden not in coordinator
+        assert forbidden not in overlay
