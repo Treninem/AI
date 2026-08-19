@@ -12,7 +12,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -43,9 +43,10 @@ jobs:
           Copy-Item "$source\*" $dest -Recurse -Force
           "path=$godot" >> $env:GITHUB_OUTPUT
 
-      - name: Verify project version
+      - name: Verify project and platform versions
         shell: pwsh
         run: |
+          .\tests\version_sync_test.ps1
           $text = Get-Content project.godot -Raw
           if ($text -notmatch 'config/version="([0-9.]+)"') { throw 'application/config/version missing' }
           $version = $Matches[1]
@@ -54,10 +55,24 @@ jobs:
             if ($tag -ne $version) { throw "Tag $tag does not match project version $version" }
           }
 
+      - name: Import project on Windows
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --editor --path . --quit
+          if ($LASTEXITCODE -ne 0) { throw 'Godot project import failed on Windows' }
+
       - name: Build Windows core package
         shell: pwsh
         run: |
           .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup -SkipVoiceSetup
+
+      - name: Smoke exported Windows executable
+        shell: pwsh
+        run: |
+          $exe = '.\build\windows\AuroraFox.exe'
+          if (-not (Test-Path $exe)) { throw 'AuroraFox.exe was not produced' }
+          $p = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
+          if ($p.ExitCode -ne 0) { throw "Exported AuroraFox.exe exited with $($p.ExitCode)" }
 
       - name: Create Windows updater ZIP
         shell: pwsh
@@ -76,7 +91,25 @@ jobs:
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found' }
           & $iscc "/DMyAppVersion=$version" build\AuroraFox.iss
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          if (-not (Test-Path build\release\AuroraFox_Setup_Windows.exe)) { throw 'Installer was not produced' }
           Copy-Item build\release\AuroraFox_Setup_Windows.exe dist\AuroraFox_Setup_Windows.exe -Force
+
+      - name: Silent install, launch and uninstall Windows release
+        shell: pwsh
+        run: |
+          $installDir = Join-Path $env:RUNNER_TEMP 'AuroraFoxReleaseInstalled'
+          $installer = (Resolve-Path 'build\release\AuroraFox_Setup_Windows.exe').Path
+          $install = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
+          if ($install.ExitCode -notin @(0,3010)) { throw "Installer exited with $($install.ExitCode)" }
+          $exe = Join-Path $installDir 'AuroraFox.exe'
+          if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe is missing' }
+          $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
+          if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
+          $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
+          if (-not $uninstaller) { throw 'Uninstaller is missing' }
+          $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
+          if ($un.ExitCode -ne 0) { throw "Uninstaller exited with $($un.ExitCode)" }
+          Write-Host 'AURORA_WINDOWS_INSTALL_SMOKE_OK' -ForegroundColor Green
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -89,7 +122,7 @@ jobs:
 
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -158,6 +191,54 @@ jobs:
           unzip -q .ci/templates.zip -d .ci/templates
           cp -R .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.1.stable/"
           echo "path=$godot" >> "$GITHUB_OUTPUT"
+
+      - name: Install release-test Python dependencies
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --disable-pip-version-check \
+            -r api/requirements.txt \
+            pytest==8.4.1 numpy==2.2.6 \
+            requests==2.32.5 pypdf==6.14.2 python-docx==1.2.0 \
+            openpyxl==3.1.5 xlrd==2.0.2 python-pptx==1.0.2
+
+      - name: Run Python API, privacy, voice and file gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m compileall -q agent api voice/python file_intelligence tests
+          PYTHONPATH="$PWD" python3 -m pytest -q \
+            tests/test_api_gateway.py \
+            tests/test_api_privacy_contract.py \
+            tests/test_voice_configs.py \
+            tests/test_xtts_contract.py \
+            tests/test_file_intelligence.py \
+            tests/test_project_index.py
+
+      - name: Import project and run Godot core gates
+        shell: bash
+        run: |
+          set -euo pipefail
+          godot='${{ steps.godot.outputs.path }}'
+          timeout 90s "$godot" --headless --editor --path . --quit
+          for script in \
+            tests/voice_smoke.gd \
+            tests/chat_context_smoke.gd \
+            tests/semantic_memory_smoke.gd \
+            tests/work_mode_store_smoke.gd \
+            tests/work_mode_smoke.gd \
+            tests/desktop_ui_smoke.gd \
+            tests/api_gateway_smoke.gd \
+            tests/autonomous_coordinator_smoke.gd \
+            tests/self_improver_smoke.gd \
+            tests/runtime_extension_smoke.gd \
+            tests/update_smoke.gd
+          do
+            test -f "$script"
+            echo "Running $script"
+            timeout 45s "$godot" --headless --path . --script "$script"
+          done
+          echo 'AURORA_CORE_RELEASE_GATES_OK'
 
       - name: Require stable Android signing key
         shell: bash
@@ -283,7 +364,7 @@ jobs:
           name: aurorafox-android
           path: dist
 
-      - name: Generate verified update manifest
+      - name: Generate verified update manifest and release evidence
         shell: bash
         run: |
           set -euo pipefail
@@ -294,38 +375,46 @@ jobs:
           apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
           win_size="$(stat -c%s "$win")"
           apk_size="$(stat -c%s "$apk")"
-          python3 - "$version" "$win_sha" "$apk_sha" "$win_size" "$apk_size" <<'PY'
+          python3 - "$version" "$win_sha" "$apk_sha" "$win_size" "$apk_size" "$GITHUB_SHA" <<'PY'
           import json, sys
           from datetime import datetime, timezone
-          version, win_sha, apk_sha, win_size, apk_size = sys.argv[1:]
+          from pathlib import Path
+          version, win_sha, apk_sha, win_size, apk_size, commit = sys.argv[1:]
           tag = 'v' + version
           base = f'https://github.com/${{ github.repository }}/releases/download/{tag}'
+          now = datetime.now(timezone.utc).isoformat()
           manifest = {
               'version': version,
               'channel': 'stable',
               'mandatory': False,
-              'published_at': datetime.now(timezone.utc).isoformat(),
+              'published_at': now,
               'notes': f'AuroraFox {version}',
               'assets': {
-                  'windows': {
-                      'url': base + '/AuroraFox-Windows.zip',
-                      'sha256': win_sha,
-                      'size': int(win_size),
-                      'format': 'zip',
-                  },
-                  'android': {
-                      'url': base + '/AuroraFox-Android.apk',
-                      'sha256': apk_sha,
-                      'size': int(apk_size),
-                      'format': 'apk',
-                  },
+                  'windows': {'url': base + '/AuroraFox-Windows.zip', 'sha256': win_sha, 'size': int(win_size), 'format': 'zip'},
+                  'android': {'url': base + '/AuroraFox-Android.apk', 'sha256': apk_sha, 'size': int(apk_size), 'format': 'apk'},
               },
           }
-          with open('dist/update.json', 'w', encoding='utf-8', newline='\n') as f:
-              json.dump(manifest, f, ensure_ascii=False, indent=2)
-              f.write('\n')
+          evidence = {
+              'schema_version': 1,
+              'verified': True,
+              'version': 'V' + version,
+              'commit': commit,
+              'verified_at': now,
+              'passed_gates': [
+                  'android_apk', 'android_emulator', 'windows_package', 'windows_install',
+                  'voice_core', 'api_gateway', 'api_privacy', 'semantic_memory',
+                  'work_mode', 'updater',
+              ],
+              'artifacts': {
+                  'windows_sha256': win_sha,
+                  'android_sha256': apk_sha,
+              },
+          }
+          Path('dist/update.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
+          Path('dist/release_verification.json').write_text(json.dumps(evidence, ensure_ascii=False, indent=2) + '\n', encoding='utf-8')
           PY
           cat dist/update.json
+          cat dist/release_verification.json
 
       - name: Sign update manifest with pinned AuroraFox release key
         env:
@@ -348,7 +437,7 @@ jobs:
           rm -f "$key" "$derived"
           echo "Signed update.json with pinned key fingerprint $committed_fp"
 
-      - name: Publish GitHub Release
+      - name: Create draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -361,5 +450,41 @@ jobs:
             dist/AuroraFox-Android.apk \
             dist/update.json \
             dist/update.sig \
+            dist/release_verification.json \
             --title "AuroraFox $tag" \
-            --generate-notes
+            --generate-notes \
+            --draft
+
+      - name: Record verified release evidence on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="V${GITHUB_REF_NAME#v}"
+          git config user.name 'AuroraFox Release Bot'
+          git config user.email 'aurorafox-release@users.noreply.github.com'
+          git fetch origin main
+          git checkout -B main origin/main
+          current="$(python3 - <<'PY'
+          import json
+          print(json.load(open('project/version.json', encoding='utf-8'))['version'])
+          PY
+          )"
+          if [ "$current" != "$version" ]; then
+            echo "main moved to $current while verified tag is $version; refusing to write stale readiness evidence" >&2
+            exit 1
+          fi
+          mkdir -p agent/state
+          cp dist/release_verification.json agent/state/release_verification.json
+          git add -f agent/state/release_verification.json
+          git commit -m "release: record verified ${version}" || true
+          git push origin main
+
+      - name: Publish verified GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gh release edit "$GITHUB_REF_NAME" --draft=false
