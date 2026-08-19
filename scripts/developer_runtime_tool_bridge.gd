@@ -17,7 +17,7 @@ func _register_tools() -> void:
 	if not registry is ToolRegistry: return
 	registry.register_tool(
 		"workspace_test",
-		"Проверить код активной песочницы подходящим тестом/компилятором. Для GDScript AuroraFox автоматически готовит локальный Godot 4.7.1 developer runtime.",
+		"Проверить код активной песочницы подходящим тестом/компилятором. Для GDScript AuroraFox автоматически готовит и использует ровно Godot 4.7.1.",
 		{"language":"string","cwd":"string"},
 		Callable(self, "_workspace_test")
 	)
@@ -42,13 +42,31 @@ func _sandbox_bridge() -> SandboxToolBridge:
 
 func _workspace_test(args: Dictionary) -> Dictionary:
 	var language := str(args.get("language", "")).to_lower()
+	var cwd := str(args.get("cwd", "."))
+	var bridge := _sandbox_bridge()
+	if bridge == null: return {"ok": false, "error": "SandboxTools node is unavailable"}
+
 	if language in ["gdscript", "godot", "gd"]:
 		var prepared := await runtime.ensure_ready()
 		if not prepared.get("ok", false):
 			return {"ok": false, "stage": "developer_runtime", "error": prepared.get("error", "Godot developer runtime unavailable"), "runtime": prepared}
-	var bridge := _sandbox_bridge()
-	if bridge == null: return {"ok": false, "error": "SandboxTools node is unavailable"}
-	return await bridge.manager.test(language, str(args.get("cwd", ".")))
+		var godot_path := runtime.path()
+		if godot_path.is_empty(): return {"ok": false, "error": "Pinned Godot runtime path is empty"}
+		# Use an absolute executable path and local mode. The computer service may
+		# have started before PATH was updated, and Docker intentionally has no
+		# Godot profile. Path(command[0]).name is still godot.exe and remains on
+		# the computer-service executable allowlist.
+		var result := await bridge.manager.execute(
+			[godot_path, "--headless", "--path", ".", "--quit"],
+			cwd,
+			180,
+			"local"
+		)
+		result["runtime"] = godot_path
+		result["expected_version"] = DeveloperRuntimeManager.GODOT_VERSION
+		return result
+
+	return await bridge.manager.test(language, cwd)
 
 func _runtime_status(_args: Dictionary) -> Dictionary:
 	return {"ok": true, "available": runtime.has_runtime(), "path": runtime.path(), "version": DeveloperRuntimeManager.GODOT_VERSION}
