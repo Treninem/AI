@@ -1,10 +1,8 @@
 extends Node
 
-const UI_ATLAS: Texture2D = preload("res://assets/ui_atlas.png")
-const REGION_BUTTON_PURPLE := Rect2(17, 456, 135, 38)
-const REGION_BUTTON_PURPLE_ALT := Rect2(167, 456, 135, 38)
-const REGION_BUTTON_CYAN := Rect2(326, 456, 142, 38)
-const REGION_BUTTON_CYAN_ALT := Rect2(482, 456, 131, 38)
+const ICON_MIC: Texture2D = preload("res://assets/ui/icon_mic.svg")
+const ICON_SPEAKER: Texture2D = preload("res://assets/ui/icon_speaker.svg")
+const ICON_SETTINGS: Texture2D = preload("res://assets/ui/icon_settings.svg")
 
 var mic_player: AudioStreamPlayer
 var record_effect: AudioEffectRecord
@@ -23,89 +21,101 @@ func _ready() -> void:
 	AuroraVoice.bind_avatar(avatar_view)
 	AuroraVoice.transcript_ready.connect(_submit_transcript)
 	AuroraVoice.backend_status.connect(_on_backend_status)
-	AuroraVoice.listening_started.connect(func(): status_label.text = "Слушаю…")
+	AuroraVoice.listening_started.connect(func(): status_label.text = "Слушаю")
 	AuroraVoice.listening_finished.connect(func(): status_label.text = "")
-	AuroraVoice.speech_started.connect(func(): status_label.text = "Говорю…")
+	AuroraVoice.speech_started.connect(func(): status_label.text = "Говорю")
 	AuroraVoice.speech_finished.connect(func(): status_label.text = "")
 	_refresh_buttons()
-	if AuroraVoice.backend_is_ready: _refresh_devices()
+	if AuroraVoice.backend_is_ready:
+		_refresh_devices()
 
-func _atlas_texture(region: Rect2) -> AtlasTexture:
-	var texture := AtlasTexture.new()
-	texture.atlas = UI_ATLAS
-	texture.region = region
-	return texture
-
-func _style(region: Rect2) -> StyleBoxTexture:
-	var style := StyleBoxTexture.new()
-	style.texture = _atlas_texture(region)
-	style.texture_margin_left = 11
-	style.texture_margin_right = 11
-	style.texture_margin_top = 11
-	style.texture_margin_bottom = 11
-	style.content_margin_left = 10
-	style.content_margin_right = 10
+func _style(fill: Color, border: Color, radius := 11) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = fill
+	style.border_color = border
+	style.border_width_left = 1
+	style.border_width_right = 1
+	style.border_width_top = 1
+	style.border_width_bottom = 1
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
+	style.content_margin_left = 9
+	style.content_margin_right = 9
 	style.content_margin_top = 7
 	style.content_margin_bottom = 7
 	return style
 
-func _apply_button(button: Button, cyan: bool) -> void:
-	var normal := REGION_BUTTON_CYAN if cyan else REGION_BUTTON_PURPLE
-	var hover := REGION_BUTTON_CYAN_ALT if cyan else REGION_BUTTON_PURPLE_ALT
-	button.add_theme_stylebox_override("normal", _style(normal))
-	button.add_theme_stylebox_override("hover", _style(hover))
-	button.add_theme_stylebox_override("pressed", _style(hover))
-	button.add_theme_stylebox_override("focus", _style(hover))
+func _apply_button(button: Button, accent: bool) -> void:
+	var border := Color(0.30, 0.34, 0.46, 0.6)
+	if accent:
+		border = Color(0.27, 0.83, 1.0, 0.68)
+	button.add_theme_stylebox_override("normal", _style(Color(0.055, 0.066, 0.10, 0.96), border))
+	button.add_theme_stylebox_override("hover", _style(Color(0.10, 0.12, 0.18, 1.0), border))
+	button.add_theme_stylebox_override("pressed", _style(Color(0.14, 0.11, 0.22, 1.0), Color(0.66, 0.54, 1.0, 0.85)))
+	button.add_theme_stylebox_override("focus", _style(Color(0.10, 0.12, 0.18, 1.0), Color(0.66, 0.54, 1.0, 0.85)))
 	button.add_theme_color_override("font_color", Color("eef5ff"))
+	button.expand_icon = true
+	button.icon_max_width = 19
 
 func _build_overlay() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 25
-	add_child(layer)
+	var main := get_parent()
+	if main == null:
+		return
 
-	avatar_view = AuroraFoxAvatarView.new()
-	avatar_view.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	avatar_view.position = Vector2(-196, 70)
-	layer.add_child(avatar_view)
+	var avatar_slot := main.find_child("AvatarSlot", true, false) as Control
+	if avatar_slot != null:
+		avatar_view = AuroraFoxAvatarView.new()
+		avatar_view.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		avatar_slot.add_child(avatar_view)
+	else:
+		avatar_view = AuroraFoxAvatarView.new()
+		avatar_view.visible = false
+		main.add_child(avatar_view)
 
-	status_label = Label.new()
-	status_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	status_label.position = Vector2(-190, 205)
-	status_label.size = Vector2(180, 26)
-	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	status_label.add_theme_color_override("font_color", Color("8993aa"))
-	layer.add_child(status_label)
-
-	var row := HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	row.position = Vector2(-345, -86)
-	row.custom_minimum_size = Vector2(330, 52)
-	row.add_theme_constant_override("separation", 7)
-	layer.add_child(row)
+	var voice_dock := main.find_child("VoiceDock", true, false) as HBoxContainer
+	if voice_dock == null:
+		voice_dock = HBoxContainer.new()
+		voice_dock.visible = false
+		main.add_child(voice_dock)
 
 	mic_button = Button.new()
-	mic_button.custom_minimum_size = Vector2(112, 48)
+	mic_button.name = "VoiceMicButton"
+	mic_button.icon = ICON_MIC
+	mic_button.tooltip_text = "Микрофон AuroraFox"
+	mic_button.custom_minimum_size = Vector2(42, 42)
 	mic_button.pressed.connect(_mic_pressed)
-	_apply_button(mic_button, true)
-	row.add_child(mic_button)
+	voice_dock.add_child(mic_button)
 
 	speak_button = Button.new()
-	speak_button.custom_minimum_size = Vector2(112, 48)
+	speak_button.name = "VoiceSpeakButton"
+	speak_button.icon = ICON_SPEAKER
+	speak_button.tooltip_text = "Озвучивание ответов"
+	speak_button.custom_minimum_size = Vector2(42, 42)
 	speak_button.pressed.connect(_toggle_speech)
-	_apply_button(speak_button, false)
-	row.add_child(speak_button)
+	voice_dock.add_child(speak_button)
 
 	var settings_button := Button.new()
-	settings_button.text = "⚙"
+	settings_button.name = "VoiceSettingsButton"
+	settings_button.icon = ICON_SETTINGS
 	settings_button.tooltip_text = "Настройки голоса"
-	settings_button.custom_minimum_size = Vector2(54, 48)
+	settings_button.custom_minimum_size = Vector2(42, 42)
 	settings_button.pressed.connect(_open_settings)
-	_apply_button(settings_button, true)
-	row.add_child(settings_button)
+	_apply_button(settings_button, false)
+	voice_dock.add_child(settings_button)
+
+	status_label = Label.new()
+	status_label.name = "VoiceStatus"
+	status_label.custom_minimum_size.x = 56
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.add_theme_font_size_override("font_size", 10)
+	status_label.add_theme_color_override("font_color", Color("8993aa"))
+	voice_dock.add_child(status_label)
 
 	settings_popup = PopupPanel.new()
 	settings_popup.size = Vector2i(560, 720)
-	layer.add_child(settings_popup)
+	main.add_child(settings_popup)
 	_build_settings(settings_popup)
 
 func _build_settings(popup: PopupPanel) -> void:
@@ -153,7 +163,7 @@ func _build_settings(popup: PopupPanel) -> void:
 	refresh.pressed.connect(_refresh_devices)
 	_apply_button(refresh, true)
 	box.add_child(refresh)
-	box.add_child(_option("Режим", "mic_mode", ["off", "wake_word", "continuous", "push_to_talk"], ["Выкл.", "Fox / Лиса", "Постоянный диалог", "Push-to-talk"]))
+	box.add_child(_option("Режим", "mic_mode", ["off", "wake_word", "continuous", "push_to_talk"], ["Выкл.", "Fox / Фокс / Лиса", "Постоянный диалог", "Push-to-talk"]))
 	box.add_child(_slider("Чувствительность", "mic_sensitivity", 0.0, 1.0, 0.01))
 	box.add_child(_check("Подавление фонового шума", "noise_suppression"))
 
@@ -163,7 +173,7 @@ func _build_settings(popup: PopupPanel) -> void:
 	clear.pressed.connect(_clear_cache)
 	box.add_child(clear)
 	var note := Label.new()
-	note.text = "Wake word, VAD, STT и TTS обрабатываются локально. XTTS включается только при настроенном собственном speaker_wav."
+	note.text = "Wake word, VAD, STT и TTS обрабатываются локально. XTTS включается при настроенном разрешённом speaker reference."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(note)
 
@@ -176,32 +186,33 @@ func _check(text: String, key: String) -> CheckBox:
 
 func _option(label_text: String, key: String, values: Array, labels: Array) -> VBoxContainer:
 	var box := VBoxContainer.new()
-	var l := Label.new()
-	l.text = label_text
-	box.add_child(l)
-	var o := OptionButton.new()
+	var label := Label.new()
+	label.text = label_text
+	box.add_child(label)
+	var option := OptionButton.new()
 	for i in range(values.size()):
-		o.add_item(str(labels[i]))
-		o.set_item_metadata(i, values[i])
+		option.add_item(str(labels[i]))
+		option.set_item_metadata(i, values[i])
 	for i in range(values.size()):
-		if str(values[i]) == str(AuroraVoice.settings.get(key, values[0])): o.select(i)
-	o.item_selected.connect(func(i): AuroraVoice.update_setting(key, o.get_item_metadata(i)); _refresh_buttons())
-	box.add_child(o)
+		if str(values[i]) == str(AuroraVoice.settings.get(key, values[0])):
+			option.select(i)
+	option.item_selected.connect(func(i): AuroraVoice.update_setting(key, option.get_item_metadata(i)); _refresh_buttons())
+	box.add_child(option)
 	return box
 
 func _slider(label_text: String, key: String, min_v: float, max_v: float, step_v: float) -> VBoxContainer:
 	var box := VBoxContainer.new()
-	var l := Label.new()
-	box.add_child(l)
-	var s := HSlider.new()
-	s.min_value = min_v
-	s.max_value = max_v
-	s.step = step_v
-	s.value = float(AuroraVoice.settings.get(key, min_v))
-	box.add_child(s)
-	var update_label := func(v): l.text = "%s: %.2f" % [label_text, v]
-	update_label.call(s.value)
-	s.value_changed.connect(func(v): update_label.call(v); AuroraVoice.update_setting(key, v))
+	var label := Label.new()
+	box.add_child(label)
+	var slider := HSlider.new()
+	slider.min_value = min_v
+	slider.max_value = max_v
+	slider.step = step_v
+	slider.value = float(AuroraVoice.settings.get(key, min_v))
+	box.add_child(slider)
+	var update_label := func(v): label.text = "%s: %.2f" % [label_text, v]
+	update_label.call(slider.value)
+	slider.value_changed.connect(func(v): update_label.call(v); AuroraVoice.update_setting(key, v))
 	return box
 
 func _setup_microphone() -> void:
@@ -214,7 +225,8 @@ func _setup_microphone() -> void:
 	AudioServer.set_bus_mute(bus_idx, true)
 	for i in range(AudioServer.get_bus_effect_count(bus_idx)):
 		var effect := AudioServer.get_bus_effect(bus_idx, i)
-		if effect is AudioEffectRecord: record_effect = effect
+		if effect is AudioEffectRecord:
+			record_effect = effect
 	if record_effect == null:
 		record_effect = AudioEffectRecord.new()
 		AudioServer.add_bus_effect(bus_idx, record_effect)
@@ -226,8 +238,10 @@ func _setup_microphone() -> void:
 func _mic_pressed() -> void:
 	var mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
 	if mode == "push_to_talk":
-		if recording: await _stop_ptt()
-		else: _start_ptt()
+		if recording:
+			await _stop_ptt()
+		else:
+			_start_ptt()
 	elif mode == "off":
 		AuroraVoice.set_mic_mode("wake_word")
 	else:
@@ -235,18 +249,19 @@ func _mic_pressed() -> void:
 	_refresh_buttons()
 
 func _start_ptt() -> void:
-	if record_effect == null: return
+	if record_effect == null:
+		return
 	record_effect.set_recording_active(true)
 	mic_player.play()
 	recording = true
-	mic_button.text = "■ Говорите…"
+	status_label.text = "Говорите"
 	AuroraVoice.stop()
 
 func _stop_ptt() -> void:
 	record_effect.set_recording_active(false)
 	mic_player.stop()
 	recording = false
-	mic_button.text = "…"
+	status_label.text = ""
 	var rec := record_effect.get_recording()
 	if rec == null:
 		_refresh_buttons()
@@ -256,11 +271,13 @@ func _stop_ptt() -> void:
 		_refresh_buttons()
 		return
 	var result := await AuroraVoice.bridge.transcribe_file(path)
-	if result.get("ok", false): _submit_transcript(str(result.get("text", "")))
+	if result.get("ok", false):
+		_submit_transcript(str(result.get("text", "")))
 	_refresh_buttons()
 
 func _submit_transcript(text: String) -> void:
-	if text.strip_edges().is_empty(): return
+	if text.strip_edges().is_empty():
+		return
 	var main := get_parent()
 	if main != null and main.has_method("submit_voice_text"):
 		main.call("submit_voice_text", text.strip_edges())
@@ -278,9 +295,11 @@ func _clear_cache() -> void:
 	status_label.text = "Кэш очищен" if result.get("ok", false) else "Ошибка кэша"
 
 func _refresh_devices() -> void:
-	if mic_device_option == null: return
+	if mic_device_option == null:
+		return
 	var result := await AuroraVoice.bridge.devices()
-	if not result.get("ok", false): return
+	if not result.get("ok", false):
+		return
 	var selected_id := int(AuroraVoice.settings.get("mic_device", -1))
 	mic_device_option.clear()
 	mic_device_option.add_item("Системный микрофон")
@@ -290,15 +309,26 @@ func _refresh_devices() -> void:
 		var idx := mic_device_option.item_count
 		mic_device_option.add_item(str(device.get("name", "Микрофон")))
 		mic_device_option.set_item_metadata(idx, int(device.get("id", -1)))
-		if int(device.get("id", -1)) == selected_id: selected_index = idx
+		if int(device.get("id", -1)) == selected_id:
+			selected_index = idx
 	mic_device_option.select(selected_index)
 
 func _on_backend_status(ready: bool, _info: Dictionary) -> void:
 	status_label.text = "Голос готов" if ready else "Голос недоступен"
-	if ready: _refresh_devices()
+	if ready:
+		_refresh_devices()
 
 func _refresh_buttons() -> void:
-	if mic_button == null: return
+	if mic_button == null:
+		return
 	var mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
-	mic_button.text = {"off":"🎙 Выкл.", "wake_word":"🎙 Fox / Лиса", "continuous":"🎙 Диалог", "push_to_talk":"🎙 Нажми"}.get(mode, "🎙")
-	speak_button.text = "🔊" if bool(AuroraVoice.settings.get("auto_speak", true)) else "🔇"
+	mic_button.tooltip_text = {
+		"off": "Микрофон выключен",
+		"wake_word": "Wake word: Fox / Фокс / Лиса",
+		"continuous": "Постоянный диалог",
+		"push_to_talk": "Push-to-talk"
+	}.get(mode, "Микрофон")
+	_apply_button(mic_button, mode != "off")
+	var auto_speak := bool(AuroraVoice.settings.get("auto_speak", true))
+	speak_button.tooltip_text = "Озвучивание ответов включено" if auto_speak else "Озвучивание ответов выключено"
+	_apply_button(speak_button, auto_speak)
