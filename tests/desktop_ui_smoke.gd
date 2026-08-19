@@ -41,7 +41,8 @@ func _run() -> void:
 		"VoiceSpeakButton",
 		"VoiceSettingsButton",
 		"ComputerAgentToggle",
-		"ComputerAgentAuto"
+		"ComputerAgentAuto",
+		"DesktopVisualTheme"
 	]
 	for node_name in required:
 		if main.find_child(str(node_name), true, false) == null:
@@ -67,6 +68,49 @@ func _run() -> void:
 			if button.text == marker:
 				_fail("Temporary text-glyph button remains: %s" % marker, 13)
 				return
+
+	# User-provided visual assets must replace the temporary SVG placeholders.
+	for node in main.find_children("*", "TextureRect", true, false):
+		var view := node as TextureRect
+		if view == null or view.texture == null:
+			continue
+		var path := view.texture.resource_path.to_lower()
+		if path.ends_with("aurora_background.svg") or path.ends_with("fox_logo.svg"):
+			_fail("Temporary AuroraFox SVG placeholder remains visible: %s" % path, 19)
+			return
+
+	var new_chat := main.find_child("NewChatButton", true, false) as Button
+	if new_chat == null or not new_chat.get_theme_stylebox("normal") is StyleBoxTexture:
+		_fail("New Chat does not use the AuroraFox textured button surface", 20)
+		return
+	var settings_button := main.find_child("SettingsButton", true, false) as Button
+	if settings_button == null or not settings_button.get_theme_stylebox("normal") is StyleBoxTexture:
+		_fail("Settings does not use the AuroraFox textured button surface", 21)
+		return
+
+	# Force the smallest supported desktop layout and verify the major regions remain inside it.
+	root.size = Vector2i(960, 640)
+	await create_timer(0.12).timeout
+	var root_layout := main.find_child("RootLayout", true, false) as Control
+	var sidebar := main.find_child("Sidebar", true, false) as Control
+	var main_panel := main.find_child("MainPanel", true, false) as Control
+	var header_actions := main.find_child("MainHeaderActions", true, false) as Control
+	var composer := main.find_child("ComposerMargin", true, false) as Control
+	if root_layout == null or sidebar == null or main_panel == null or header_actions == null or composer == null:
+		_fail("Responsive layout controls are missing", 22)
+		return
+	if root_layout.get_global_rect().end.x > 961.0 or root_layout.get_global_rect().end.y > 641.0:
+		_fail("Root desktop layout overflows the 960x640 minimum window", 23)
+		return
+	if sidebar.get_global_rect().end.x > main_panel.get_global_rect().position.x + 1.0:
+		_fail("Sidebar overlaps the main chat panel", 24)
+		return
+	if header_actions.get_global_rect().end.x > main_panel.get_global_rect().end.x + 1.0:
+		_fail("Header actions overflow the main panel", 25)
+		return
+	if composer.get_global_rect().end.x > main_panel.get_global_rect().end.x + 1.0 or composer.get_global_rect().end.y > main_panel.get_global_rect().end.y + 1.0:
+		_fail("Composer overflows the main panel", 26)
+		return
 
 	var store = main.get("chats")
 	if not store is ChatStore:
