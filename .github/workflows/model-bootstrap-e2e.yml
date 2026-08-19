@@ -11,12 +11,20 @@ on:
       - 'tests/model_bootstrap_e2e.gd'
       - 'build/model_bootstrap_trigger.txt'
       - '.github/workflows/model-bootstrap-e2e.yml'
+  pull_request:
+    paths:
+      - 'models/**'
+      - 'scripts/ai_client.gd'
+      - 'tests/model_bootstrap_e2e.gd'
+      - 'build/model_bootstrap_trigger.txt'
+      - '.github/workflows/model-bootstrap-e2e.yml'
 
 permissions:
   contents: read
 
 jobs:
   windows-model-bootstrap:
+    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'model-bootstrap-e2e/')
     runs-on: windows-latest
     timeout-minutes: 90
     steps:
