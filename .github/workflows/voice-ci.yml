@@ -85,6 +85,8 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
       - name: Run per-chat attachment context smoke test
         run: timeout 30s ./godot --headless --path . --script tests/chat_context_smoke.gd
+      - name: Run desktop UI integration smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
       - name: Run self-improver safety smoke test
         run: timeout 30s ./godot --headless --path . --script tests/self_improver_smoke.gd
       - name: Run guarded runtime extension lifecycle smoke test
