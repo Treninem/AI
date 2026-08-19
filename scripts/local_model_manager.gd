@@ -12,7 +12,7 @@ const PROFILES := {
 	"mobile_lite": {
 		"name": "Qwen3 1.7B Q4_K_M",
 		"url": "https://huggingface.co/ggml-org/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf?download=true",
-		"bytes": 1280000000,
+		"bytes": 1282439264,
 		"sha256": "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5",
 		"min_ram_mb": 4096,
 		"recommended_ram_mb": 6144
@@ -20,7 +20,7 @@ const PROFILES := {
 	"mobile_standard": {
 		"name": "Qwen3 4B Q4_K_M",
 		"url": "https://huggingface.co/ggml-org/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q4_K_M.gguf?download=true",
-		"bytes": 2500000000,
+		"bytes": 2497280640,
 		"sha256": "ab27b9bfa375a178d6cba48f3ad892b94b7739659dcc7aae8058ce0ffed6b328",
 		"min_ram_mb": 6144,
 		"recommended_ram_mb": 8192
@@ -31,6 +31,10 @@ var android_runtime := AndroidLocalRuntime.new()
 var current_request: HTTPRequest
 var current_profile := ""
 var progress_timer: Timer
+var _completion_ready := false
+var _completion: Array = []
+var _cancel_requested := false
+var _reported_total_bytes := 0
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(MODEL_DIR))
@@ -48,6 +52,7 @@ func status() -> Dictionary:
 		"size": _file_size(ACTIVE_MODEL),
 		"recommended_profile": recommend_profile(),
 		"profiles": PROFILES,
+		"downloading": current_request != null,
 		"device": android_runtime.capabilities() if OS.get_name() == "Android" else {"platform": OS.get_name()}
 	}
 
@@ -74,77 +79,143 @@ func download_profile(profile_id: String) -> Dictionary:
 			return {"ok": false, "error": "Not enough free storage", "required_mb": required_mb, "free_mb": free_mb}
 
 	var temp_path := ACTIVE_MODEL + ".download"
-	if FileAccess.file_exists(temp_path): DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
+	var temp_absolute := ProjectSettings.globalize_path(temp_path)
+	if FileAccess.file_exists(temp_path): DirAccess.remove_absolute(temp_absolute)
 	current_profile = profile_id
+	_completion_ready = false
+	_completion.clear()
+	_cancel_requested = false
+	_reported_total_bytes = int(profile.get("bytes", 0))
+
 	current_request = HTTPRequest.new()
 	current_request.timeout = 0.0
 	current_request.use_threads = true
+	current_request.accept_gzip = false
 	current_request.body_size_limit = -1
 	current_request.download_chunk_size = 1024 * 1024
-	current_request.download_file = temp_path
+	current_request.download_file = temp_absolute
+	current_request.request_completed.connect(_on_request_completed, CONNECT_ONE_SHOT)
 	add_child(current_request)
-	download_started.emit(profile_id, int(profile.get("bytes", 0)))
+	download_started.emit(profile_id, _reported_total_bytes)
 	progress_timer.start()
-	var err := current_request.request(str(profile.get("url", "")), PackedStringArray(["User-Agent: AuroraFox/0.3"]), HTTPClient.METHOD_GET)
+	var err := current_request.request(
+		str(profile.get("url", "")),
+		PackedStringArray(["User-Agent: AuroraFox/0.4.0", "Accept-Encoding: identity"]),
+		HTTPClient.METHOD_GET
+	)
 	if err != OK:
+		progress_timer.stop()
 		_cleanup_request()
-		return {"ok": false, "error": "Download request failed: %s" % err}
-	var completed: Array = await current_request.request_completed
+		var start_error := "Download request failed: %s" % error_string(err)
+		download_finished.emit(profile_id, false, start_error)
+		return {"ok": false, "error": start_error}
+
+	while not _completion_ready and not _cancel_requested:
+		await get_tree().process_frame
+
+	progress_timer.stop()
+	if _cancel_requested:
+		if current_request != null: current_request.cancel_request()
+		_cleanup_request()
+		if FileAccess.file_exists(temp_path): DirAccess.remove_absolute(temp_absolute)
+		download_finished.emit(profile_id, false, "Download cancelled")
+		return {"ok": false, "cancelled": true, "error": "Download cancelled"}
+
+	var completed := _completion.duplicate()
+	var final_body_size := current_request.get_body_size() if current_request != null else -1
+	_cleanup_request()
+	if completed.size() < 4:
+		if FileAccess.file_exists(temp_path): DirAccess.remove_absolute(temp_absolute)
+		var malformed := "Model download ended without a complete HTTP result"
+		download_finished.emit(profile_id, false, malformed)
+		return {"ok": false, "error": malformed}
+
 	var result_code := int(completed[0])
 	var http_code := int(completed[1])
-	progress_timer.stop()
-	_cleanup_request()
 	if result_code != HTTPRequest.RESULT_SUCCESS or http_code < 200 or http_code >= 300:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
+		if FileAccess.file_exists(temp_path): DirAccess.remove_absolute(temp_absolute)
 		var message := "Model download failed: result=%d http=%d" % [result_code, http_code]
 		download_finished.emit(profile_id, false, message)
 		return {"ok": false, "error": message}
+	if not FileAccess.file_exists(temp_path):
+		var missing := "Downloaded model file is missing"
+		download_finished.emit(profile_id, false, missing)
+		return {"ok": false, "error": missing}
+
+	var actual_size := _file_size(temp_path)
+	if final_body_size > 0 and actual_size != final_body_size:
+		DirAccess.remove_absolute(temp_absolute)
+		var size_error := "Downloaded byte count does not match HTTP body size"
+		download_finished.emit(profile_id, false, size_error)
+		return {"ok": false, "error": size_error, "expected_bytes": final_body_size, "actual_bytes": actual_size}
 
 	var expected_hash := str(profile.get("sha256", "")).to_lower()
 	var actual_hash := FileAccess.get_sha256(temp_path).to_lower()
-	if not expected_hash.is_empty() and actual_hash != expected_hash:
-		DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_path))
-		var message := "SHA-256 verification failed"
-		download_finished.emit(profile_id, false, message)
-		return {"ok": false, "error": message, "expected": expected_hash, "actual": actual_hash}
+	if expected_hash.is_empty() or actual_hash != expected_hash:
+		DirAccess.remove_absolute(temp_absolute)
+		var hash_error := "SHA-256 verification failed"
+		download_finished.emit(profile_id, false, hash_error)
+		return {"ok": false, "error": hash_error, "expected": expected_hash, "actual": actual_hash}
 
 	if FileAccess.file_exists(ACTIVE_MODEL): DirAccess.remove_absolute(ProjectSettings.globalize_path(ACTIVE_MODEL))
-	var rename_error := DirAccess.rename_absolute(ProjectSettings.globalize_path(temp_path), ProjectSettings.globalize_path(ACTIVE_MODEL))
+	var rename_error := DirAccess.rename_absolute(temp_absolute, ProjectSettings.globalize_path(ACTIVE_MODEL))
 	if rename_error != OK:
 		download_finished.emit(profile_id, false, "Cannot activate downloaded model")
 		return {"ok": false, "error": "Cannot activate downloaded model", "code": rename_error}
-	_write_metadata(profile_id, profile, actual_hash)
+	_write_metadata(profile_id, profile, actual_hash, actual_size)
+	download_progress.emit(profile_id, actual_size, actual_size)
 	download_finished.emit(profile_id, true, "Model installed")
-	return {"ok": true, "profile": profile_id, "path": ACTIVE_MODEL, "sha256": actual_hash}
+	return {"ok": true, "profile": profile_id, "path": ACTIVE_MODEL, "sha256": actual_hash, "bytes": actual_size}
 
 func install_local_gguf(source_path: String) -> Dictionary:
 	if not FileAccess.file_exists(source_path): return {"ok": false, "error": "Source GGUF not found"}
 	if source_path.get_extension().to_lower() != "gguf": return {"ok": false, "error": "Only GGUF files are accepted"}
 	var err := DirAccess.copy_absolute(ProjectSettings.globalize_path(source_path), ProjectSettings.globalize_path(ACTIVE_MODEL))
 	if err != OK: return {"ok": false, "error": "Cannot copy GGUF", "code": err}
-	return {"ok": true, "path": ACTIVE_MODEL, "sha256": FileAccess.get_sha256(ACTIVE_MODEL)}
+	return {"ok": true, "path": ACTIVE_MODEL, "sha256": FileAccess.get_sha256(ACTIVE_MODEL), "bytes": _file_size(ACTIVE_MODEL)}
 
 func cancel_download() -> void:
-	if current_request != null: current_request.cancel_request()
+	if current_request == null: return
+	_cancel_requested = true
+	current_request.cancel_request()
 	progress_timer.stop()
-	_cleanup_request()
+
+func _on_request_completed(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
+	_completion = [result, response_code, headers, body]
+	_completion_ready = true
 
 func _emit_progress() -> void:
 	if current_request == null or current_profile.is_empty(): return
-	var expected := int(PROFILES.get(current_profile, {}).get("bytes", 0))
-	download_progress.emit(current_profile, current_request.get_downloaded_bytes(), expected)
+	var body_size := current_request.get_body_size()
+	if body_size > 0: _reported_total_bytes = body_size
+	var downloaded := current_request.get_downloaded_bytes()
+	download_progress.emit(current_profile, downloaded, maxi(_reported_total_bytes, downloaded))
 
 func _cleanup_request() -> void:
 	if current_request != null:
 		current_request.queue_free()
 		current_request = null
 	current_profile = ""
+	_completion_ready = false
+	_completion.clear()
+	_cancel_requested = false
+	_reported_total_bytes = 0
 
-func _write_metadata(profile_id: String, profile: Dictionary, hash: String) -> void:
+func _write_metadata(profile_id: String, profile: Dictionary, hash: String, bytes: int) -> void:
 	var f := FileAccess.open(MODEL_DIR + "/active_model.json", FileAccess.WRITE)
 	if f != null:
-		f.store_string(JSON.stringify({"profile": profile_id, "name": profile.get("name", ""), "sha256": hash, "installed_at": Time.get_datetime_string_from_system(true)}, "  "))
+		f.store_string(JSON.stringify({
+			"profile": profile_id,
+			"name": profile.get("name", ""),
+			"sha256": hash,
+			"bytes": bytes,
+			"installed_at": Time.get_datetime_string_from_system(true)
+		}, "  "))
+		f.close()
 
 func _file_size(path: String) -> int:
 	var f := FileAccess.open(path, FileAccess.READ)
-	return f.get_length() if f != null else 0
+	if f == null: return 0
+	var size := f.get_length()
+	f.close()
+	return size
