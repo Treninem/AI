@@ -1,0 +1,42 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="base" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#050711"/>
+      <stop offset="0.48" stop-color="#0A0D1A"/>
+      <stop offset="1" stop-color="#060812"/>
+    </linearGradient>
+    <radialGradient id="violet" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#8F63FF" stop-opacity="0.20"/>
+      <stop offset="1" stop-color="#8F63FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="cyan" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#32D8FF" stop-opacity="0.15"/>
+      <stop offset="1" stop-color="#32D8FF" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="aurora" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8B5CFF" stop-opacity="0"/>
+      <stop offset="0.35" stop-color="#8B5CFF" stop-opacity="0.16"/>
+      <stop offset="0.65" stop-color="#35DBFF" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#35DBFF" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="42"/></filter>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#A98AFF" stroke-opacity="0.025" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="1440" height="900" fill="url(#base)"/>
+  <ellipse cx="370" cy="110" rx="480" ry="330" fill="url(#violet)" filter="url(#blur)"/>
+  <ellipse cx="1160" cy="690" rx="470" ry="360" fill="url(#cyan)" filter="url(#blur)"/>
+  <path d="M-80 630 C250 430 420 590 700 430 C960 280 1160 340 1510 160 L1510 430 C1190 540 1060 510 780 650 C470 800 260 680 -80 820Z" fill="url(#aurora)" filter="url(#blur)"/>
+  <rect width="1440" height="900" fill="url(#grid)"/>
+  <g fill="#B7A5FF" fill-opacity="0.12" font-family="monospace" font-size="14">
+    <text x="370" y="105">01 10 11 :: fox.observe()</text><text x="980" y="170">memory.sync()</text>
+    <text x="760" y="310">{ learn → test → evolve }</text><text x="1180" y="395">0xAF 0x01</text>
+    <text x="420" y="670">agent.think()</text><text x="920" y="760">runtime.ready = true</text>
+    <text x="1250" y="820">V1.0.0.0</text>
+  </g>
+  <g fill="#35D8FF" fill-opacity="0.20">
+    <circle cx="1020" cy="120" r="2"/><circle cx="1100" cy="240" r="1.5"/><circle cx="1250" cy="520" r="2"/>
+    <circle cx="710" cy="150" r="1.5"/><circle cx="580" cy="780" r="2"/><circle cx="1320" cy="260" r="1.5"/>
+  </g>
+</svg>
