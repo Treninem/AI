@@ -9,6 +9,7 @@ on:
       - 'models/**'
       - 'runtime/**'
       - 'update/**'
+      - 'agent/**'
       - 'scripts/**'
       - 'tests/**'
       - 'android_plugin/**'
@@ -25,6 +26,7 @@ on:
       - 'models/**'
       - 'runtime/**'
       - 'update/**'
+      - 'agent/**'
       - 'scripts/**'
       - 'tests/**'
       - 'android_plugin/**'
@@ -45,11 +47,11 @@ jobs:
         with:
           python-version: '3.11'
       - name: Compile Python modules
-        run: python -m compileall -q voice/python voice/voice_service.py file_intelligence/file_service.py file_intelligence/project_index_service.py tests
+        run: python -m compileall -q agent api voice/python voice/voice_service.py file_intelligence/file_service.py file_intelligence/project_index_service.py tests
       - name: Install lightweight voice test dependencies
         run: python -m pip install --disable-pip-version-check pytest==8.4.1 numpy==2.2.6
-      - name: Run voice unit and XTTS contract tests
-        run: pytest -q tests/test_voice_text.py tests/test_voice_configs.py tests/test_xtts_contract.py
+      - name: Run voice and autonomous-evolution contract tests
+        run: pytest -q tests/test_voice_text.py tests/test_voice_configs.py tests/test_xtts_contract.py tests/test_autonomous_evolution_contract.py
 
   file-intelligence:
     runs-on: ubuntu-latest
@@ -85,9 +87,11 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
       - name: Run per-chat attachment context smoke test
         run: timeout 30s ./godot --headless --path . --script tests/chat_context_smoke.gd
+      - name: Run autonomous coordinator smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/autonomous_coordinator_smoke.gd
       - name: Run desktop UI integration smoke test
         run: timeout 30s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
-      - name: Run self-improver safety smoke test
+      - name: Run self-improver tournament smoke test
         run: timeout 30s ./godot --headless --path . --script tests/self_improver_smoke.gd
       - name: Run guarded runtime extension lifecycle smoke test
         run: timeout 30s ./godot --headless --path . --script tests/runtime_extension_smoke.gd
@@ -104,6 +108,7 @@ jobs:
           $files = @(
             '.\runtime\ensure_uv.ps1',
             '.\voice\install_voice.ps1',
+            '.\voice\prepare_ffmpeg.ps1',
             '.\computer\install_computer.ps1',
             '.\file_intelligence\install_files.ps1',
             '.\models\install_models.ps1',
