@@ -107,7 +107,8 @@ jobs:
             '.\build\build_windows.ps1',
             '.\build\build_android.ps1',
             '.\build\create_update_signing_key.ps1',
-            '.\build\configure_release_signing.ps1'
+            '.\build\configure_release_signing.ps1',
+            '.\build\set_version.ps1'
           )
           foreach ($file in $files) {
             $tokens = $null
