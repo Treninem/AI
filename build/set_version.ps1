@@ -121,9 +121,13 @@ if ([string](($stateText | ConvertFrom-Json).version) -ne $display) { throw 'Gen
 $backupDir = Join-Path $root 'build\private\version-backup'
 New-Item -ItemType Directory -Force -Path $backupDir | Out-Null
 $backupStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-$filesToBackup = @($projectPath, $exportPath, $manifestPath, $versionPath)
+$backupMap = @{}
+$filesToBackup = @($projectPath, $exportPath, $manifestPath, $versionPath, $changelogPath, $evolutionPath)
 foreach ($path in $filesToBackup) {
-    Copy-Item -LiteralPath $path -Destination (Join-Path $backupDir ($backupStamp + '-' + (Split-Path $path -Leaf))) -Force
+    if (-not (Test-Path -LiteralPath $path)) { continue }
+    $backupPath = Join-Path $backupDir ($backupStamp + '-' + (Split-Path $path -Leaf))
+    Copy-Item -LiteralPath $path -Destination $backupPath -Force
+    $backupMap[$path] = $backupPath
 }
 
 try {
@@ -137,7 +141,15 @@ try {
     & powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root 'tests\version_sync_test.ps1')
     if ($LASTEXITCODE -ne 0) { throw 'Version synchronization test failed after update' }
 } catch {
-    throw
+    $originalError = $_
+    foreach ($path in $filesToBackup) {
+        if ($backupMap.ContainsKey($path)) {
+            Copy-Item -LiteralPath $backupMap[$path] -Destination $path -Force
+        } elseif (Test-Path -LiteralPath $path) {
+            Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+        }
+    }
+    throw $originalError
 }
 
 Write-Host "AuroraFox version synchronized: $display (Android versionCode=$androidCode)" -ForegroundColor Green
