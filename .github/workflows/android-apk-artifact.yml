@@ -29,17 +29,25 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1'
-          echo "ANDROID_HOME=${ANDROID_SDK_ROOT}" >> "$GITHUB_ENV"
-          ls -la "$ANDROID_SDK_ROOT/ndk" || true
-          NDK_VERSION="$(ls -1 "$ANDROID_SDK_ROOT/ndk" 2>/dev/null | sort -V | tail -n1 || true)"
+          SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+          SDKMANAGER="$(find "$SDK_ROOT/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort | tail -n1 || true)"
+          if [ -z "$SDKMANAGER" ]; then
+            echo "sdkmanager not found under $SDK_ROOT/cmdline-tools" >&2
+            find "$SDK_ROOT" -maxdepth 4 -type f -name sdkmanager -print || true
+            exit 1
+          fi
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" 'platforms;android-35' 'build-tools;35.0.0' 'cmake;3.22.1'
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          ls -la "$SDK_ROOT/ndk" || true
+          NDK_VERSION="$(ls -1 "$SDK_ROOT/ndk" 2>/dev/null | sort -V | tail -n1 || true)"
           if [ -z "$NDK_VERSION" ]; then
-            sdkmanager 'ndk;28.0.13004108'
+            "$SDKMANAGER" 'ndk;28.0.13004108'
             NDK_VERSION='28.0.13004108'
           fi
           echo "AURORA_NDK_VERSION=$NDK_VERSION" >> "$GITHUB_ENV"
-          echo "Using Android NDK $NDK_VERSION"
+          echo "Using Android SDK $SDK_ROOT, NDK $NDK_VERSION"
 
       - name: Pin plugin to installed NDK
         shell: python
