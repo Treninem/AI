@@ -16,13 +16,39 @@ func _exit_tree() -> void:
 		backend_pid = 0
 
 func health() -> Dictionary:
+	if OS.get_name() == "Android":
+		if not Engine.has_singleton("AuroraFoxRuntime"):
+			return {"ok": false, "error": "AuroraFoxRuntime Android plugin is unavailable"}
+		var plugin := Engine.get_singleton("AuroraFoxRuntime")
+		var raw = plugin.call("getCapabilitiesJson") if plugin.has_method("getCapabilitiesJson") else "{}"
+		var caps = JSON.parse_string(str(raw))
+		return {"ok": caps is Dictionary and bool(caps.get("file_intelligence", false)), "runtime": "android-native", "capabilities": caps}
 	if OS.get_name() != "Windows":
-		return {"ok": false, "error": "Rich File Intelligence backend is not available on this platform yet", "platform": OS.get_name()}
+		return {"ok": false, "error": "File Intelligence is not available on this platform", "platform": OS.get_name()}
 	return await _request("/health", HTTPClient.METHOD_GET, {}, 4.0)
 
 func analyze_file(path: String, question := "", visual := true, max_chars := 160000) -> Dictionary:
+	if OS.get_name() == "Android":
+		if not Engine.has_singleton("AuroraFoxRuntime"):
+			return {"ok": false, "error": "AuroraFoxRuntime Android plugin is unavailable"}
+		var private_path := _android_private_copy(path)
+		if private_path.is_empty():
+			return {"ok": false, "error": "Не удалось скопировать выбранный файл в приватную песочницу AuroraFox"}
+		var plugin := Engine.get_singleton("AuroraFoxRuntime")
+		if not plugin.has_method("analyzeLocalFile"):
+			return {"ok": false, "error": "Android runtime does not expose File Intelligence"}
+		var raw = plugin.call("analyzeLocalFile", private_path, question, visual)
+		var parsed = JSON.parse_string(str(raw))
+		if parsed is Dictionary:
+			parsed["path"] = path
+			parsed["private_copy"] = private_path
+			if str(parsed.get("content", "")).length() > max_chars:
+				parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars) + "\n[Обрезано AuroraFox]"
+				parsed["truncated"] = true
+			return parsed
+		return {"ok": false, "error": "Invalid Android File Intelligence response"}
 	if OS.get_name() != "Windows":
-		return {"ok": false, "error": "Rich file analysis is not available on this platform yet", "platform": OS.get_name()}
+		return {"ok": false, "error": "Rich file analysis is not available on this platform", "platform": OS.get_name()}
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
 	return await _request("/analyze", HTTPClient.METHOD_POST, {
 		"path": absolute,
@@ -32,23 +58,38 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 	}, 600.0)
 
 func tree(path: String, max_items := 2000) -> Dictionary:
+	if OS.get_name() == "Android":
+		if not path.begins_with("user://") or not Engine.has_singleton("AuroraFoxRuntime"):
+			return {"ok": false, "error": "Android directory tree is restricted to user://"}
+		var plugin := Engine.get_singleton("AuroraFoxRuntime")
+		if not plugin.has_method("treeLocal"): return {"ok": false, "error": "Android treeLocal is unavailable"}
+		var raw = plugin.call("treeLocal", ProjectSettings.globalize_path(path), clampi(max_items, 1, 5000))
+		return _parse_native(raw)
 	if OS.get_name() != "Windows":
-		return {"ok": false, "error": "Directory intelligence is not available on this platform yet"}
+		return {"ok": false, "error": "Directory intelligence is not available on this platform"}
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
 	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, 5000)}, 60.0)
 
 func search_cache(query: String, limit := 20) -> Dictionary:
-	if OS.get_name() != "Windows": return {"ok": false, "results": []}
+	if OS.get_name() != "Windows": return {"ok": false, "results": [], "error": "Cache search is currently Windows-only"}
 	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, 100)}, 30.0)
 
 func clear_cache() -> Dictionary:
+	if OS.get_name() == "Android":
+		if not Engine.has_singleton("AuroraFoxRuntime"): return {"ok": false, "error": "Android runtime unavailable"}
+		var plugin := Engine.get_singleton("AuroraFoxRuntime")
+		if not plugin.has_method("clearFileCache"): return {"ok": false, "error": "clearFileCache unavailable"}
+		return _parse_native(plugin.call("clearFileCache"))
 	if OS.get_name() != "Windows": return {"ok": true, "removed": 0}
 	return await _request("/cache/clear", HTTPClient.METHOD_POST, {}, 30.0)
 
 func runtime_is_installed() -> bool:
+	if OS.get_name() == "Android":
+		return Engine.has_singleton("AuroraFoxRuntime")
 	return not _find_runtime().is_empty()
 
 func installer_path() -> String:
+	if OS.get_name() != "Windows": return ""
 	for root in _candidate_roots():
 		var path := root.path_join("install_files.ps1")
 		if FileAccess.file_exists(path): return path
@@ -85,6 +126,43 @@ func _candidate_roots() -> Array[String]:
 		OS.get_executable_path().get_base_dir().path_join("file_intelligence"),
 		ProjectSettings.globalize_path("res://file_intelligence")
 	]
+
+func _android_private_copy(path: String) -> String:
+	var user_root := ProjectSettings.globalize_path("user://")
+	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("user://") or path.begins_with("res://") else path
+	if absolute.begins_with(user_root): return absolute
+	var src := FileAccess.open(path, FileAccess.READ)
+	if src == null and absolute != path: src = FileAccess.open(absolute, FileAccess.READ)
+	if src == null: return ""
+	var target_dir := "user://file_inputs"
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target_dir))
+	var safe_name := _safe_filename(path.get_file())
+	var target := "%s/%d_%s" % [target_dir, Time.get_ticks_msec(), safe_name]
+	var dst := FileAccess.open(target, FileAccess.WRITE)
+	if dst == null:
+		src.close()
+		return ""
+	var total := src.get_length()
+	while src.get_position() < total:
+		var remaining := total - src.get_position()
+		dst.store_buffer(src.get_buffer(mini(1024 * 1024, remaining)))
+	src.close()
+	dst.close()
+	return ProjectSettings.globalize_path(target)
+
+func _safe_filename(value: String) -> String:
+	var out := ""
+	for ch in value:
+		var s := str(ch)
+		if s.to_lower() in "abcdefghijklmnopqrstuvwxyz0123456789._-" or s.to_upper() != s.to_lower():
+			out += s
+		else:
+			out += "_"
+	return out.substr(0, 120) if not out.is_empty() else "file.bin"
+
+func _parse_native(raw: Variant) -> Dictionary:
+	var parsed = JSON.parse_string(str(raw))
+	return parsed if parsed is Dictionary else {"ok": false, "error": "Invalid Android native response"}
 
 func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0) -> Dictionary:
 	var req := HTTPRequest.new()
