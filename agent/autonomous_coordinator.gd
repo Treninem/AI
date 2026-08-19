@@ -137,6 +137,7 @@ func synchronize_all() -> Dictionary:
 	report["goals"] = goals.snapshot()
 	report["autonomous_enabled"] = autonomous_enabled
 	report["autonomous_hot_improvements"] = autonomous_hot_improvements
+	report["hot_improvement_supported"] = _hot_improvement_supported()
 	report["last_improvement_unix"] = _last_improvement_unix
 	report["events"] = _events.slice(maxi(0, _events.size() - 20), _events.size())
 	_last_report = report.duplicate(true)
@@ -186,12 +187,13 @@ func run_autonomous_cycle() -> Dictionary:
 		"goal": selected_goal,
 		"sync": sync_report,
 		"mutation_attempted": false,
-		"mutation_applied": false
+		"mutation_applied": false,
+		"hot_improvement_supported": _hot_improvement_supported()
 	}
 
 	var now := int(Time.get_unix_time_from_system())
 	var cooldown_ready := now - _last_improvement_unix >= int(mutation_cooldown_seconds)
-	if autonomous_hot_improvements and cooldown_ready and improver != null and extensions != null and ai != null:
+	if autonomous_hot_improvements and _hot_improvement_supported() and cooldown_ready and improver != null and extensions != null and ai != null:
 		report["mutation_attempted"] = true
 		var proposal_result := await improver.propose_improvement(selected_goal)
 		report["proposal"] = _compact(proposal_result)
@@ -213,6 +215,9 @@ func run_autonomous_cycle() -> Dictionary:
 	autonomous_cycle_completed.emit(report)
 	return report
 
+func _hot_improvement_supported() -> bool:
+	return OS.get_name() == "Windows"
+
 func _tool_status(_args: Dictionary) -> Dictionary:
 	return await synchronize_all()
 
@@ -227,10 +232,10 @@ func _on_timer_timeout() -> void:
 		await run_autonomous_cycle()
 
 func _on_improvement_verified(result: Dictionary) -> void:
-	_record_event("improvement_verified", _compact(result))
+	_record_event("improvement_verified", result)
 
 func _on_improvement_rejected(result: Dictionary) -> void:
-	_record_event("improvement_rejected", _compact(result))
+	_record_event("improvement_rejected", result)
 
 func _on_extension_activated(id: String, tool_names: Array) -> void:
 	_record_event("extension_activated", {"id": id, "tools": tool_names})
@@ -242,7 +247,7 @@ func _record_event(kind: String, details: Dictionary) -> void:
 	_events.append({
 		"time": int(Time.get_unix_time_from_system()),
 		"kind": kind,
-		"details": details
+		"details": _compact(details)
 	})
 	if _events.size() > 200:
 		_events = _events.slice(_events.size() - 200, _events.size())
