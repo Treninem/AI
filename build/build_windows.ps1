@@ -11,6 +11,8 @@ $voiceSource = Join-Path $root "voice"
 $voiceOut = Join-Path $outDir "voice"
 $computerSource = Join-Path $root "computer"
 $computerOut = Join-Path $outDir "computer"
+$modelsSource = Join-Path $root "models"
+$modelsOut = Join-Path $outDir "models"
 $runtimeSource = Join-Path $root "runtime"
 $runtimeOut = Join-Path $outDir "runtime"
 $ensureUv = Join-Path $runtimeSource "ensure_uv.ps1"
@@ -26,9 +28,9 @@ if (-not (Test-Path -LiteralPath $ensureUv)) { throw "runtime/ensure_uv.ps1 is m
 if ($LASTEXITCODE -ne 0) { throw "Failed to prepare bundled uv runtime" }
 
 if (-not $SkipModelSetup) {
-    $models = Join-Path $root "models\install_models.ps1"
-    if (Test-Path $models) {
-        & powershell -NoProfile -ExecutionPolicy Bypass -File $models
+    $modelInstaller = Join-Path $modelsSource "install_models.ps1"
+    if (Test-Path $modelInstaller) {
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $modelInstaller
         if ($LASTEXITCODE -ne 0) { throw "Local model setup failed" }
     }
 }
@@ -73,6 +75,14 @@ if (-not (Test-Path (Join-Path $uvSource "uv.exe"))) { throw "Bundled uv.exe was
 Get-ChildItem -LiteralPath $uvSource -File | ForEach-Object {
     Copy-Item $_.FullName (Join-Path $runtimeOut "windows\uv\$($_.Name)") -Force
 }
+
+# Local AI bootstrap: installed AuroraFox can install/update Ollama and pull
+# the selected local model profile without requiring a terminal.
+if (Test-Path $modelsOut) { Remove-Item $modelsOut -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $modelsOut | Out-Null
+$modelInstaller = Join-Path $modelsSource "install_models.ps1"
+if (-not (Test-Path $modelInstaller)) { throw "Model bootstrap is missing" }
+Copy-Item $modelInstaller (Join-Path $modelsOut "install_models.ps1") -Force
 
 # Voice runtime/bootstrap next to AuroraFox.exe.
 if (Test-Path $voiceOut) { Remove-Item $voiceOut -Recurse -Force }
@@ -121,10 +131,12 @@ if (-not $SkipVoiceSetup) {
 
 if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
+if (-not (Test-Path (Join-Path $modelsOut "install_models.ps1"))) { throw "Local AI model bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
 
 Write-Host "AuroraFox Windows build: $outDir\AuroraFox.exe" -ForegroundColor Green
 Write-Host "Managed runtime bootstrap: $runtimeOut"
+Write-Host "Local AI bootstrap: $modelsOut"
 Write-Host "Voice runtime/bootstrap: $voiceOut"
 Write-Host "Computer Agent bootstrap: $computerOut"
 Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - managed-Python fallback/setup wizard" })))
