@@ -51,8 +51,13 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Failed to install AuroraFox API dependencies.' }
 
     Set-Stage 'verify' 90 'Verifying AuroraFox API imports'
-    & $Python -c "import fastapi, uvicorn, pydantic, requests; import api.app; print('AURORAFOX_API_READY')"
-    if ($LASTEXITCODE -ne 0) { throw 'AuroraFox API import verification failed.' }
+    Push-Location $AppRoot
+    try {
+        & $Python -c "import fastapi, uvicorn, pydantic, requests; import api.app; print('AURORAFOX_API_READY')"
+        if ($LASTEXITCODE -ne 0) { throw 'AuroraFox API import verification failed.' }
+    } finally {
+        Pop-Location
+    }
 
     Set-Stage 'ready' 100 'AuroraFox API runtime is ready'
 } catch {
