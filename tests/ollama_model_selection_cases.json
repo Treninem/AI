@@ -1,0 +1,5 @@
+{
+  "reuse_existing": ["gemma3:latest"],
+  "reject_for_chat": ["qwen3-embedding:0.6b", "nomic-embed-text:latest"],
+  "preserve_configured_when_installed": "llama3.2:latest"
+}
