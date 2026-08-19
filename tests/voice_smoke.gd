@@ -19,6 +19,7 @@ func _init() -> void:
 		ProjectIndexClient.new(),
 		ProjectIndexToolBridge.new(),
 		TrustedProjectSandboxBridge.new(),
+		WindowsTrustedProjectBridge.new(),
 	]
 	for node in nodes:
 		if node == null:
