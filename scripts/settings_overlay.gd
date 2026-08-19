@@ -259,7 +259,7 @@ func _refresh_file_status() -> void:
 	if not manager is AttachmentManager:
 		file_status.text = "File Intelligence: менеджер не подключён"
 		return
-	var result := await manager.intelligence.health()
+	var result: Dictionary = await manager.intelligence.health()
 	if not result.get("ok", false):
 		file_status.text = "File Intelligence: требуется подготовка" if OS.get_name() == "Windows" else "File Intelligence: Android runtime недоступен"
 		return
@@ -276,7 +276,7 @@ func _clear_file_cache() -> void:
 	if main == null: return
 	var manager = main.get("attachments")
 	if manager is AttachmentManager:
-		var result := await manager.clear_file_cache()
+		var result: Dictionary = await manager.clear_file_cache()
 		file_status.text = ("Кэш файлов очищен" if OS.get_name() == "Android" else "Кэш очищен: %s" % str(result.get("removed", 0))) if result.get("ok", false) else "Не удалось очистить кэш"
 
 func _project_bridge() -> ProjectIndexToolBridge:
@@ -327,7 +327,7 @@ func _index_selected_project() -> void:
 		project_status.text = "Сначала выбери папку проекта."
 		return
 	project_status.text = "Индексирую изменившиеся файлы…"
-	var result := await bridge.index.index_project(root, 30000, false)
+	var result: Dictionary = await bridge.index.index_project(root, 30000, false)
 	if result.get("ok", false):
 		project_status.text = "Индекс готов: %d файлов • обновлено %d • %d мс" % [int(result.get("total_files", 0)), int(result.get("updated_files", 0)), int(result.get("elapsed_ms", 0))]
 	else:
@@ -337,7 +337,7 @@ func _refresh_index_status() -> void:
 	var root := _selected_project()
 	var bridge := _project_bridge()
 	if root.is_empty() or bridge == null: return
-	var result := await bridge.index.status(root)
+	var result: Dictionary = await bridge.index.status(root)
 	if result.get("ok", false):
 		project_status.text = "Индекс: %d файлов • %s" % [int(result.get("files", 0)), JSON.stringify(result.get("languages", {}))]
 
