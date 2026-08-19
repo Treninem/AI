@@ -2,22 +2,20 @@ class_name SelfImprovementOverlay
 extends Node
 
 const HISTORY_PATH := "user://self_improvement_history.json"
-const HISTORY_LIMIT := 50
+const HISTORY_LIMIT := 100
 
 var popup: PopupPanel
 var goal_input: TextEdit
 var status_label: Label
 var proposal_view: RichTextLabel
-var propose_button: Button
-var verify_button: Button
-var activate_button: Button
+var tournament_button: Button
 var extension_list: VBoxContainer
-var confirmation: ConfirmationDialog
 
-var current_proposal: Dictionary = {}
-var staged_result: Dictionary = {}
 var history: Array = []
 var busy := false
+var tournament_requested := 0
+var tournament_completed := 0
+var tournament_verified := 0
 
 func _ready() -> void:
 	_load_history()
@@ -26,20 +24,33 @@ func _ready() -> void:
 
 func show_center() -> void:
 	_refresh_extensions()
-	_sync_platform_status()
+	_sync_autonomy_status()
 	popup.popup_centered()
 
 func _connect_signals() -> void:
 	var improver := _improver()
-	if improver != null and not improver.improvement_stage.is_connected(_on_improvement_stage):
-		improver.improvement_stage.connect(_on_improvement_stage)
+	if improver != null:
+		if not improver.improvement_stage.is_connected(_on_improvement_stage):
+			improver.improvement_stage.connect(_on_improvement_stage)
+		if not improver.mutation_population_started.is_connected(_on_mutation_population_started):
+			improver.mutation_population_started.connect(_on_mutation_population_started)
+		if not improver.mutation_candidate_completed.is_connected(_on_mutation_candidate_completed):
+			improver.mutation_candidate_completed.connect(_on_mutation_candidate_completed)
+		if not improver.mutation_tournament_completed.is_connected(_on_mutation_tournament_completed):
+			improver.mutation_tournament_completed.connect(_on_mutation_tournament_completed)
+	var coordinator := _coordinator()
+	if coordinator != null:
+		if not coordinator.autonomous_cycle_completed.is_connected(_on_autonomous_cycle_completed):
+			coordinator.autonomous_cycle_completed.connect(_on_autonomous_cycle_completed)
+		if not coordinator.autonomous_cycle_failed.is_connected(_on_autonomous_cycle_failed):
+			coordinator.autonomous_cycle_failed.connect(_on_autonomous_cycle_failed)
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 120
 	add_child(layer)
 	popup = PopupPanel.new()
-	popup.size = Vector2i(820, 780)
+	popup.size = Vector2i(860, 800)
 	layer.add_child(popup)
 
 	var margin := MarginContainer.new()
@@ -57,56 +68,54 @@ func _build_ui() -> void:
 	scroll.add_child(box)
 
 	var title := Label.new()
-	title.text = "Центр самоулучшения AuroraFox"
+	title.text = "Эволюция AuroraFox"
 	title.add_theme_font_size_override("font_size", 26)
 	box.add_child(title)
 
+	var autonomous := Label.new()
+	autonomous.text = "Автономный режим включён: AuroraFox сама собирает знания, создаёт 3–10 разных мутаций, проверяет каждую в отдельной копии, проводит соревнование, повторно тестирует победителя и автоматически активирует его без запроса подтверждения."
+	autonomous.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(autonomous)
+
 	var safety := Label.new()
-	safety.text = "Горячее улучшение не заменяет ядро. AuroraFox создаёт ограниченное RefCounted-расширение, проверяет полную копию проекта через Godot 4.7.1 и только после отдельного подтверждения подключает новые aurora_ext_* инструменты."
+	safety.text = "Непрошедшая тесты мутация не активируется. Горячие мутации работают как ограниченные RefCounted-расширения aurora_ext_* без прямого доступа к OS, файлам, сети и системным singleton API."
 	safety.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	safety.modulate = Color(0.82, 0.88, 0.95)
 	box.add_child(safety)
 
 	goal_input = TextEdit.new()
-	goal_input.placeholder_text = "Например: добавь инструмент, который сравнивает две версии строки и возвращает различия…"
-	goal_input.custom_minimum_size.y = 100
+	goal_input.placeholder_text = "Необязательно: задай цель для внеочередного турнира. Если поле пустое — AuroraFox сама выберет цель по состоянию, ошибкам и знаниям."
+	goal_input.custom_minimum_size.y = 92
 	goal_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	box.add_child(goal_input)
 
 	var actions := HBoxContainer.new()
+	actions.alignment = BoxContainer.ALIGNMENT_END
 	box.add_child(actions)
-	propose_button = Button.new()
-	propose_button.text = "1. Создать предложение"
-	propose_button.pressed.connect(_create_proposal)
-	actions.add_child(propose_button)
-	verify_button = Button.new()
-	verify_button.text = "2. Проверить и подготовить"
-	verify_button.disabled = true
-	verify_button.pressed.connect(_verify_and_stage)
-	actions.add_child(verify_button)
-	activate_button = Button.new()
-	activate_button.text = "3. Активировать"
-	activate_button.disabled = true
-	activate_button.pressed.connect(_request_activation)
-	actions.add_child(activate_button)
+	tournament_button = Button.new()
+	tournament_button.text = "Запустить внеочередной турнир сейчас"
+	tournament_button.pressed.connect(_run_tournament_now)
+	actions.add_child(tournament_button)
 
 	status_label = Label.new()
 	status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	status_label.add_theme_font_size_override("font_size", 17)
 	box.add_child(status_label)
 
 	proposal_view = RichTextLabel.new()
 	proposal_view.bbcode_enabled = false
-	proposal_view.custom_minimum_size.y = 210
+	proposal_view.custom_minimum_size.y = 260
 	proposal_view.fit_content = false
 	proposal_view.selection_enabled = true
 	box.add_child(proposal_view)
 
 	box.add_child(HSeparator.new())
 	var ext_title := Label.new()
-	ext_title.text = "Runtime-расширения"
+	ext_title.text = "Активные и сохранённые победители"
 	ext_title.add_theme_font_size_override("font_size", 20)
 	box.add_child(ext_title)
 	var ext_hint := Label.new()
-	ext_hint.text = "Активированное расширение живёт вне scene tree, может добавлять только новые aurora_ext_* инструменты и не получает прямого доступа к OS, файлам, сети или настройкам движка."
+	ext_hint.text = "Победители сохраняются между запусками. Здесь можно вручную отключить или удалить конкретное расширение для отката, но подтверждение перед автоматической эволюцией не требуется."
 	ext_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ext_hint)
 	extension_list = VBoxContainer.new()
@@ -119,103 +128,145 @@ func _build_ui() -> void:
 	close.pressed.connect(func(): popup.hide())
 	box.add_child(close)
 
-	confirmation = ConfirmationDialog.new()
-	confirmation.title = "Активировать проверенное расширение?"
-	confirmation.dialog_text = "Модуль уже прошёл sandbox/Godot-проверку. После активации его новые aurora_ext_* инструменты станут доступны агенту. Встроенные инструменты он заменить не может."
-	confirmation.confirmed.connect(_activate_confirmed)
-	layer.add_child(confirmation)
-
-func _create_proposal() -> void:
+func _run_tournament_now() -> void:
 	if busy: return
-	var goal := goal_input.text.strip_edges()
-	if goal.is_empty():
-		status_label.text = "Сначала опиши, что AuroraFox должна улучшить."
-		return
 	var improver := _improver()
-	if improver == null:
-		status_label.text = "SelfImprover не подключён."
+	var coordinator := _coordinator()
+	if improver == null or coordinator == null:
+		status_label.text = "Автономный контур ещё не подключён."
 		return
-	_set_busy(true)
-	current_proposal.clear()
-	staged_result.clear()
-	verify_button.disabled = true
-	activate_button.disabled = true
-	proposal_view.clear()
-	status_label.text = "Создаю одно небольшое безопасное расширение…"
-	var result := await improver.propose_improvement(goal)
-	if result.get("ok", false):
-		current_proposal = result.get("proposal", {})
-		_render_proposal()
-		status_label.text = "Предложение создано. Следующий шаг — проверка полной копии проекта."
-		_add_history("proposal", true, {"goal": goal, "path": current_proposal.get("path", ""), "reason": current_proposal.get("reason", "")})
-	else:
-		status_label.text = "Предложение отклонено: %s" % str(result.get("error", "unknown"))
-		_add_history("proposal", false, {"goal": goal, "error": result.get("error", "unknown")})
-	_set_busy(false)
-
-func _verify_and_stage() -> void:
-	if busy or current_proposal.is_empty(): return
 	if OS.get_name() != "Windows":
-		status_label.text = "Автоматическая Godot 4.7.1 проверка самоулучшений сейчас выполняется на Windows."
-		return
-	var improver := _improver()
-	if improver == null: return
-	_set_busy(true)
-	status_label.text = "Создаю песочницу и проверяю проект…"
-	var result := await improver.apply_generated_module(current_proposal)
-	if result.get("ok", false):
-		staged_result = result
-		status_label.text = "Проверка пройдена. Модуль подготовлен, но ещё НЕ активирован."
-		proposal_view.append_text("\n\nGodot 4.7.1: проверка пройдена\nПодготовлено: %s\nSHA-256: %s\n" % [str(result.get("stage_path", "")), str(result.get("sha256", ""))])
-		_add_history("verification", true, {"path": result.get("stage_path", ""), "sha256": result.get("sha256", "")})
-	else:
-		status_label.text = "Проверка не пройдена: %s" % str(result.get("error", "unknown"))
-		_add_history("verification", false, {"stage": result.get("stage", ""), "error": result.get("error", "unknown")})
-	_set_busy(false)
-
-func _request_activation() -> void:
-	if busy or staged_result.is_empty(): return
-	confirmation.dialog_text = "Активировать проверенное расширение сейчас?\n\nФайл: %s\nSHA-256: %s\n\nОно сможет добавить только новые aurora_ext_* инструменты. Активацию можно отменить позже в этом окне." % [str(staged_result.get("stage_path", "")), str(staged_result.get("sha256", ""))]
-	confirmation.popup_centered()
-
-func _activate_confirmed() -> void:
-	if busy or staged_result.is_empty(): return
-	var manager := _extensions()
-	if manager == null:
-		status_label.text = "RuntimeExtensionManager не подключён."
+		status_label.text = "Полная sandbox/Godot-проверка мутаций сейчас выполняется на Windows; Android продолжает использовать уже проверенные релизные и runtime-компоненты."
 		return
 	_set_busy(true)
-	status_label.text = "Компилирую и подключаю проверенное расширение…"
-	var result := manager.activate_staged(str(staged_result.get("stage_path", "")), str(staged_result.get("sha256", "")))
-	if result.get("ok", false):
-		status_label.text = "Расширение активно: %s" % str(result.get("name", result.get("id", "")))
-		staged_result.clear()
-		_add_history("activation", true, {"id": result.get("id", ""), "tools": result.get("tools", [])})
-		_refresh_extensions()
-	else:
-		status_label.text = "Активация отклонена: %s" % str(result.get("error", "unknown"))
-		_add_history("activation", false, {"error": result.get("error", "unknown")})
-	_set_busy(false)
-
-func _render_proposal() -> void:
 	proposal_view.clear()
-	if current_proposal.is_empty(): return
-	proposal_view.text = "Причина\n%s\n\nФайл\n%s\n\nЧто будет проверено\n%s\n\nКод\n%s" % [
-		str(current_proposal.get("reason", "")),
-		str(current_proposal.get("path", "")),
-		str(current_proposal.get("verification", "Godot 4.7.1 parse/import")),
-		str(current_proposal.get("content", ""))
+	var custom_goal := goal_input.text.strip_edges()
+	if custom_goal.is_empty():
+		status_label.text = "Запускаю внеочередной полный автономный цикл…"
+		var cycle: Dictionary = await coordinator.run_autonomous_cycle()
+		_render_cycle(cycle)
+		_add_history("manual_autonomous_cycle", bool(cycle.get("ok", false)), _compact(cycle))
+	else:
+		var population := clampi(int(coordinator.mutation_population_size), SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)
+		status_label.text = "Запускаю турнир из %d+ разных мутаций для заданной цели…" % population
+		var tournament: Dictionary = await improver.run_mutation_tournament(custom_goal, population)
+		if tournament.get("ok", false):
+			var manager := _extensions()
+			if manager == null:
+				tournament = {"ok": false, "error": "RuntimeExtensionManager не подключён", "tournament": tournament}
+			else:
+				var activation := manager.activate_staged(str(tournament.get("stage_path", "")), str(tournament.get("sha256", "")))
+				tournament["activation"] = activation
+				tournament["mutation_applied"] = bool(activation.get("ok", false))
+		_render_tournament(tournament)
+		_add_history("manual_tournament", bool(tournament.get("ok", false)), _compact(tournament))
+	_refresh_extensions()
+	_set_busy(false)
+
+func _on_mutation_population_started(goal: String, requested: int) -> void:
+	tournament_requested = requested
+	tournament_completed = 0
+	tournament_verified = 0
+	status_label.text = "Эволюция: создаю %d независимых мутаций. Цель: %s" % [requested, goal]
+	proposal_view.text = "Турнир запущен\nЦель: %s\nПлан: 3–10 мутаций → отдельный Godot-тест каждой → соревнование → повторный тест победителя → автоматическая активация.\n" % goal
+	_add_history("population_started", true, {"goal": goal, "requested": requested})
+
+func _on_mutation_candidate_completed(candidate: Dictionary) -> void:
+	tournament_completed += 1
+	if bool(candidate.get("verified", false)):
+		tournament_verified += 1
+	status_label.text = "Эволюция: проверено %d/%d, прошли тесты %d. Последняя: %s — %s" % [
+		tournament_completed,
+		maxi(tournament_requested, tournament_completed),
+		tournament_verified,
+		str(candidate.get("mutation_tag", "mutation")),
+		"допущена" if bool(candidate.get("verified", false)) else "выбыла"
 	]
+	proposal_view.append_text("\n%s | %s | verified=%s | score=%.2f\n%s\n" % [
+		str(candidate.get("mutation_tag", "mutation")),
+		str(candidate.get("strategy", "")),
+		str(candidate.get("verified", false)),
+		float(candidate.get("score", 0.0)),
+		str(candidate.get("reason", "")).substr(0, 700)
+	])
+
+func _on_mutation_tournament_completed(result: Dictionary) -> void:
+	_render_tournament(result)
+	_add_history("tournament", bool(result.get("ok", false)), _compact(result))
 
 func _on_improvement_stage(stage: String, details: Dictionary) -> void:
-	if not busy: return
 	status_label.text = {
-		"workspace": "Создаю отдельную песочницу…",
-		"import": "Копирую AuroraFox в песочницу…",
-		"candidate": "Вношу кандидат только в рабочую копию…",
-		"godot_test": "Запускаю Godot 4.7.1 headless-проверку…"
-	}.get(stage, "Проверка: " + stage)
+		"mutation_population": "Эволюция: создаю разные мутации…",
+		"candidate_test": "Эволюция: запускаю отдельный тест очередной мутации…",
+		"workspace": "Эволюция: создаю отдельную песочницу…",
+		"import": "Эволюция: копирую AuroraFox в песочницу…",
+		"candidate": "Эволюция: вношу мутацию только в рабочую копию…",
+		"godot_test": "Эволюция: Godot 4.7.1 тестирует мутацию…",
+		"competition": "Эволюция: прошедшие мутации соревнуются…",
+		"winner_final_test": "Эволюция: победитель проходит финальный повторный тест…"
+	}.get(stage, "Эволюция: " + stage)
 	if not details.is_empty(): status_label.tooltip_text = JSON.stringify(details)
+
+func _on_autonomous_cycle_completed(report: Dictionary) -> void:
+	_render_cycle(report)
+	_add_history("autonomous_cycle", bool(report.get("ok", false)), _compact(report))
+	_refresh_extensions()
+
+func _on_autonomous_cycle_failed(report: Dictionary) -> void:
+	status_label.text = "Автономный цикл не применил изменение: %s" % str(report.get("error", report.get("stage", "проверка совместимости")))
+	proposal_view.text = JSON.stringify(_compact(report), "  ")
+	_add_history("autonomous_cycle_failed", false, _compact(report))
+
+func _render_tournament(result: Dictionary) -> void:
+	if result.is_empty(): return
+	var ok := bool(result.get("ok", false))
+	var applied := bool(result.get("mutation_applied", result.get("staged", false)))
+	var winner: Dictionary = result.get("winner", {}) if result.get("winner", {}) is Dictionary else {}
+	if ok:
+		status_label.text = "Турнир завершён: %d мутаций, тесты прошли %d. Победитель %s. %s" % [
+			int(result.get("population_size", 0)),
+			int(result.get("verified_count", 0)),
+			str(winner.get("mutation_tag", winner.get("path", "winner"))),
+			"Победитель активирован автоматически." if applied else "Победитель проверен и подготовлен к автоматической активации."
+		]
+	else:
+		status_label.text = "Турнир отклонён — обновление не применено: %s" % str(result.get("error", "не прошёл обязательные тесты"))
+	var lines: Array[String] = []
+	lines.append("Результат турнира")
+	lines.append("ok=%s population=%s verified=%s" % [str(ok), str(result.get("population_size", 0)), str(result.get("verified_count", 0))])
+	if not winner.is_empty():
+		lines.append("Победитель: %s" % str(winner.get("path", "")))
+		lines.append("Стратегия: %s" % str(winner.get("strategy", "")))
+		lines.append("Итоговый score: %.2f" % float(winner.get("score", 0.0)))
+		lines.append("Причина: %s" % str(winner.get("reason", "")))
+	lines.append("\nТаблица соревнования:")
+	for item in result.get("scoreboard", []):
+		if item is Dictionary:
+			lines.append("%s | %.2f | base %.2f | judge %.2f | %s" % [
+				str(item.get("mutation_tag", "mutation")),
+				float(item.get("score", 0.0)),
+				float(item.get("base_score", 0.0)),
+				float(item.get("judge_score", 0.0)),
+				str(item.get("strategy", ""))
+			])
+	proposal_view.text = "\n".join(lines)
+
+func _render_cycle(report: Dictionary) -> void:
+	if report.is_empty(): return
+	var tournament = report.get("tournament", {})
+	if tournament is Dictionary and not tournament.is_empty():
+		var view: Dictionary = tournament.duplicate(true)
+		view["mutation_applied"] = bool(report.get("mutation_applied", false))
+		if report.get("activation", {}) is Dictionary:
+			view["activation"] = report.get("activation", {})
+		_render_tournament(view)
+		return
+	status_label.text = "Автономный цикл завершён. Обучение=%s, турнир=%s, обновление=%s" % [
+		str(report.get("research_attempted", false)),
+		str(report.get("mutation_attempted", false)),
+		str(report.get("mutation_applied", false))
+	]
+	proposal_view.text = JSON.stringify(_compact(report), "  ")
 
 func _refresh_extensions() -> void:
 	if extension_list == null: return
@@ -229,7 +280,7 @@ func _refresh_extensions() -> void:
 	var items := manager.list_extensions()
 	if items.is_empty():
 		var empty := Label.new()
-		empty.text = "Активированных или сохранённых runtime-расширений пока нет."
+		empty.text = "Победителей пока нет — первый автономный турнир запускается после старта AuroraFox."
 		extension_list.add_child(empty)
 		return
 	for item in items:
@@ -258,7 +309,7 @@ func _toggle_extension(id: String) -> void:
 	var was_active := manager.active_instances.has(id)
 	var result := manager.deactivate(id) if was_active else manager.enable(id)
 	if result.get("ok", false):
-		status_label.text = "Расширение отключено." if was_active else "Расширение включено."
+		status_label.text = "Расширение отключено вручную." if was_active else "Расширение включено вручную."
 	else:
 		status_label.text = "Не удалось изменить расширение: %s" % str(result.get("error", "unknown"))
 	_add_history("deactivate" if was_active else "enable", bool(result.get("ok", false)), {"id": id, "error": result.get("error", "")})
@@ -269,29 +320,28 @@ func _remove_extension(id: String) -> void:
 	if manager == null: return
 	var result := manager.remove_extension(id)
 	if result.get("ok", false):
-		status_label.text = "Расширение удалено."
+		status_label.text = "Расширение удалено вручную."
 	else:
 		status_label.text = "Не удалось удалить расширение: %s" % str(result.get("error", "unknown"))
 	_add_history("remove", bool(result.get("ok", false)), {"id": id, "error": result.get("error", "")})
 	_refresh_extensions()
 
-func _sync_platform_status() -> void:
-	if OS.get_name() == "Windows":
-		status_label.text = "Готово. Автоматическая проверка использует отдельную песочницу и локальный Godot 4.7.1."
-	else:
-		status_label.text = "Создавать предложения можно, но автоматическая Godot 4.7.1 проверка горячих улучшений сейчас выполняется на Windows."
-	verify_button.disabled = current_proposal.is_empty() or OS.get_name() != "Windows"
-	activate_button.disabled = staged_result.is_empty()
+func _sync_autonomy_status() -> void:
+	var coordinator := _coordinator()
+	if coordinator == null:
+		status_label.text = "Автономный координатор ещё не подключён."
+		return
+	var platform_note := "Полный эволюционный sandbox активен." if OS.get_name() == "Windows" else "На этой платформе горячая мутация ограничена текущими возможностями runtime."
+	status_label.text = "Автономность=%s • цикл каждые %.0f с • турнир %d–10 мутаций • %s" % [
+		str(coordinator.autonomous_enabled),
+		float(coordinator.cycle_interval_seconds),
+		maxi(SelfImprover.MIN_MUTATIONS, int(coordinator.mutation_population_size)),
+		platform_note
+	]
 
 func _set_busy(value: bool) -> void:
 	busy = value
-	propose_button.disabled = value
-	if value:
-		verify_button.disabled = true
-		activate_button.disabled = true
-	else:
-		verify_button.disabled = current_proposal.is_empty() or OS.get_name() != "Windows"
-		activate_button.disabled = staged_result.is_empty()
+	tournament_button.disabled = value
 
 func _improver() -> SelfImprover:
 	var main := get_parent()
@@ -303,6 +353,24 @@ func _extensions() -> RuntimeExtensionManager:
 	var main := get_parent()
 	if main == null: return null
 	return main.get_node_or_null("RuntimeExtensions") as RuntimeExtensionManager
+
+func _coordinator() -> AuroraAutonomousCoordinator:
+	var main := get_parent()
+	if main == null: return null
+	return main.get_node_or_null("AutonomousCoordinator") as AuroraAutonomousCoordinator
+
+func _compact(value: Variant) -> Variant:
+	if value is Dictionary:
+		var out: Dictionary = value.duplicate(true)
+		for key in out.keys():
+			if key in ["content", "proposal"]:
+				var text := str(out[key])
+				if text.length() > 2500: out[key] = text.substr(0, 2500) + "…"
+		return out
+	if value is Array:
+		var arr: Array = value
+		return arr.slice(0, mini(arr.size(), 30))
+	return value
 
 func _add_history(kind: String, ok: bool, details: Dictionary) -> void:
 	history.push_front({"time": Time.get_datetime_string_from_system(true), "kind": kind, "ok": ok, "details": details})
