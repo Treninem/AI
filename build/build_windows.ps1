@@ -17,6 +17,8 @@ $modelsSource = Join-Path $root "models"
 $modelsOut = Join-Path $outDir "models"
 $runtimeSource = Join-Path $root "runtime"
 $runtimeOut = Join-Path $outDir "runtime"
+$updateSource = Join-Path $root "update"
+$updateOut = Join-Path $outDir "update"
 $ensureUv = Join-Path $runtimeSource "ensure_uv.ps1"
 $portableDist = Join-Path $root "build\voice_backend"
 $portableBuilt = $false
@@ -125,6 +127,13 @@ foreach ($file in @("file_service.py", "project_index_service.py", "requirements
 $fileVenv = Join-Path $fileSource ".venv"
 if (Test-Path $fileVenv) { Copy-Item $fileVenv (Join-Path $fileOut ".venv") -Recurse -Force }
 
+# Transactional Windows updater must be present next to the installed app.
+if (Test-Path $updateOut) { Remove-Item $updateOut -Recurse -Force }
+New-Item -ItemType Directory -Force -Path $updateOut | Out-Null
+$windowsUpdater = Join-Path $updateSource "windows_updater.ps1"
+if (-not (Test-Path $windowsUpdater)) { throw "Windows updater bootstrap is missing" }
+Copy-Item $windowsUpdater (Join-Path $updateOut "windows_updater.ps1") -Force
+
 $server = Join-Path $voiceOut "python\aurora_voice_server.py"
 $wake = Join-Path $voiceOut "models\vosk-model-small-ru-0.22"
 $hfCache = Join-Path $voiceOut "models\cache\huggingface"
@@ -146,6 +155,7 @@ if (-not (Test-Path (Join-Path $fileOut "project_index_service.py"))) { throw "P
 if (-not (Test-Path (Join-Path $fileOut "install_files.ps1"))) { throw "File Intelligence installer was not packaged" }
 if (-not (Test-Path (Join-Path $modelsOut "install_models.ps1"))) { throw "Local AI model bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
+if (-not (Test-Path (Join-Path $updateOut "windows_updater.ps1"))) { throw "Transactional Windows updater was not packaged" }
 
 Write-Host "AuroraFox Windows build: $outDir\AuroraFox.exe" -ForegroundColor Green
 Write-Host "Managed runtime bootstrap: $runtimeOut"
@@ -153,4 +163,5 @@ Write-Host "Local AI bootstrap: $modelsOut"
 Write-Host "Voice runtime/bootstrap: $voiceOut"
 Write-Host "Computer Agent bootstrap: $computerOut"
 Write-Host "File Intelligence + Project Index bootstrap: $fileOut"
+Write-Host "Transactional updater: $updateOut"
 Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - managed-Python fallback/setup wizard" })))
