@@ -7,6 +7,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+RELEASE_EVIDENCE = ROOT / "agent" / "state" / "release_verification.json"
+REQUIRED_RELEASE_GATES = {
+    "android_apk",
+    "android_emulator",
+    "windows_package",
+    "windows_install",
+    "voice_core",
+    "api_gateway",
+    "api_privacy",
+    "semantic_memory",
+    "work_mode",
+    "updater",
+}
 
 
 @dataclass
@@ -30,6 +43,14 @@ def read(path: str) -> str:
     return target.read_text(encoding="utf-8", errors="replace")
 
 
+def current_version() -> str:
+    try:
+        data = json.loads(read("project/version.json"))
+        return str(data.get("version", "V0.0.0.0"))
+    except Exception:
+        return "V0.0.0.0"
+
+
 def check_files(key: str, title: str, weight: int, files: list[str], markers: dict[str, list[str]] | None = None) -> Check:
     evidence: list[str] = []
     missing: list[str] = []
@@ -47,12 +68,53 @@ def check_files(key: str, title: str, weight: int, files: list[str], markers: di
     return Check(key, title, weight, not missing, evidence, missing)
 
 
+def check_release_verification(weight: int = 24) -> Check:
+    evidence: list[str] = []
+    missing: list[str] = []
+    rel = "agent/state/release_verification.json"
+    if not RELEASE_EVIDENCE.exists():
+        return Check(
+            "release_verification",
+            "Observed full release verification for current version",
+            weight,
+            False,
+            [],
+            [rel + ": no full release verification evidence for current version"],
+        )
+    evidence.append(rel)
+    try:
+        data = json.loads(RELEASE_EVIDENCE.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return Check("release_verification", "Observed full release verification for current version", weight, False, evidence, [f"{rel}: invalid JSON: {exc}"])
+
+    version = current_version()
+    if not bool(data.get("verified", False)):
+        missing.append(f"{rel}: verified=true is required")
+    if str(data.get("version", "")) != version:
+        missing.append(f"{rel}: version {data.get('version', '')!r} does not match {version!r}")
+    passed = {str(item) for item in data.get("passed_gates", [])}
+    absent = sorted(REQUIRED_RELEASE_GATES - passed)
+    if absent:
+        missing.append(f"{rel}: missing passed gates: {', '.join(absent)}")
+    commit = str(data.get("commit", "")).strip()
+    if len(commit) < 7:
+        missing.append(f"{rel}: verified commit SHA is missing")
+    return Check(
+        "release_verification",
+        "Observed full release verification for current version",
+        weight,
+        not missing,
+        evidence,
+        missing,
+    )
+
+
 def build_checks() -> list[Check]:
     return [
         check_files(
             "autonomous_cycle",
             "Observation -> analysis -> mutation -> test -> activation -> synchronization",
-            18,
+            12,
             ["agent/autonomous_coordinator.gd", "scripts/self_improver.gd", "scripts/runtime_extension_manager.gd"],
             {
                 "agent/autonomous_coordinator.gd": ["run_autonomous_cycle", "propose_improvement", "activate_staged", "synchronize_all"],
@@ -60,55 +122,85 @@ def build_checks() -> list[Check]:
             },
         ),
         check_files(
+            "semantic_memory",
+            "Semantic long-term memory and shared knowledge",
+            8,
+            ["scripts/memory_store.gd", "tests/semantic_memory_smoke.gd", ".github/workflows/memory-ci.yml"],
+            {"scripts/memory_store.gd": ["retrieve", "reindex_semantic", "EMBEDDING_MODEL"]},
+        ),
+        check_files(
+            "api_privacy",
+            "External API with conversation isolation and private-by-default learning",
+            8,
+            ["api/server.py", "api/agent_bridge.gd", "api/private_memory_view.gd", "api/private_experience_store.gd", "tests/test_api_privacy_contract.py", ".github/workflows/api-ci.yml"],
+            {
+                "api/agent_bridge.gd": ["ApiPrivateMemoryView", "ApiPrivateExperienceStore", "share_for_learning"],
+                "api/learning_sync.py": ["skipped_private", "share_for_learning"],
+            },
+        ),
+        check_files(
+            "voice",
+            "Local voice, wake word, STT/TTS and optional XTTS-v2",
+            7,
+            ["voice/voice_manager.gd", "voice/python/tts_engine.py", "voice/requirements_xtts.txt", "tests/test_xtts_contract.py", ".github/workflows/voice-ci.yml"],
+            {"voice/python/tts_engine.py": ["XTTSVoiceEngine", "xtts_v2"]},
+        ),
+        check_files(
+            "work_mode",
+            "Persistent Work projects, tasks and artifacts",
+            7,
+            ["work", "tests/work_mode_smoke.gd", "tests/work_mode_store_smoke.gd", ".github/workflows/work-mode-ci.yml"],
+        ),
+        check_files(
+            "android_release",
+            "Android native runtime, signed APK and emulator gate",
+            8,
+            ["android_plugin", "build/build_android.ps1", "tests/test_android_contract.py", ".github/workflows/android-apk-artifact.yml", ".github/workflows/release.yml"],
+            {
+                ".github/workflows/android-apk-artifact.yml": ["android-emulator-runner", "adb install", "apksigner"],
+                "build/build_android.ps1": ["AllowUnsignedRelease", "Android APK was not produced"],
+            },
+        ),
+        check_files(
+            "windows_release",
+            "Windows export, installer and installed-app smoke",
+            7,
+            ["build/build_windows.ps1", "build/AuroraFox.iss", ".github/workflows/windows-package-ci.yml"],
+            {".github/workflows/windows-package-ci.yml": ["Silent install and installed-app smoke", "Uninstaller missing"]},
+        ),
+        check_files(
             "file_intelligence",
-            "Local knowledge and project intelligence",
-            12,
+            "Local knowledge, documents and project intelligence",
+            5,
             ["file_intelligence/file_service.py", "file_intelligence/project_index_service.py"],
         ),
         check_files(
             "learning_sources",
             "Autonomous local and internet learning collector",
-            12,
+            5,
             ["agent/learning_collector.py"],
         ),
         check_files(
             "sandbox",
             "Sandbox, snapshots, rollback and verification",
-            12,
+            5,
             ["scripts/sandbox_manager.gd", "scripts/sandbox_tool_bridge.gd"],
             {"scripts/sandbox_manager.gd": ["snapshot", "rollback", "test"]},
         ),
         check_files(
             "updater",
-            "Existing signed self-update pipeline",
-            10,
+            "Signed self-update pipeline",
+            5,
             ["update/update_manager.gd", "update/windows_updater.ps1", ".github/workflows/release.yml"],
         ),
         check_files(
             "versioning",
             "Canonical VMajor.Minor.Patch.Build version state",
-            12,
-            ["project/version.json", "agent/version_manager.py", "project.godot"],
+            5,
+            ["project/version.json", "agent/version_manager.py", "project.godot", "export_presets.cfg"],
             {"agent/version_manager.py": ["major", "minor", "patch", "build", "android_version_code"]},
         ),
-        check_files(
-            "history",
-            "Evolution and changelog history",
-            6,
-            ["CHANGELOG.md", "evolution.log"],
-        ),
-        check_files(
-            "progress",
-            "Real-time local release progress reporting",
-            8,
-            ["agent/progress_tracker.py", "assets/ui/progress_bar.tscn"],
-        ),
-        check_files(
-            "ci",
-            "Automated audit, smoke and release gates",
-            10,
-            [".github/workflows/agent-sync-ci.yml", ".github/workflows/voice-ci.yml", ".github/workflows/progress.yml"],
-        ),
+        check_release_verification(18),
     ]
 
 
@@ -118,6 +210,8 @@ def audit() -> dict:
     earned = sum(item.weight for item in checks if item.ok)
     percent = round((earned / total) * 100) if total else 0
     missing = [problem for item in checks for problem in item.missing]
+    release_check = next((item for item in checks if item.key == "release_verification"), None)
+    ready = bool(release_check and release_check.ok and all(item.ok for item in checks))
     plan = [
         {
             "key": item.key,
@@ -129,10 +223,13 @@ def audit() -> dict:
         for item in checks
     ]
     return {
-        "schema_version": 1,
+        "schema_version": 2,
         "generated_at": now_iso(),
+        "version": current_version(),
         "progress_percent": percent,
-        "ready": percent == 100,
+        "ready": ready,
+        "readiness_basis": "current-version full release verification evidence is mandatory",
+        "required_release_gates": sorted(REQUIRED_RELEASE_GATES),
         "checks": [asdict(item) for item in checks],
         "missing": missing,
         "plan": plan,
@@ -140,7 +237,7 @@ def audit() -> dict:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="One-shot AuroraFox autonomous architecture audit")
+    parser = argparse.ArgumentParser(description="One-shot AuroraFox architecture and verified-release audit")
     parser.add_argument("--output", default="", help="Optional JSON report path relative to repository root")
     parser.add_argument("--compact", action="store_true")
     args = parser.parse_args()
