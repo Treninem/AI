@@ -1,8 +1,8 @@
-[gd_scene load_steps=26 format=3]
+[gd_scene load_steps=29 format=3]
 
-[ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
-[ext_resource path="res://scripts/voice_overlay.gd" type="Script" id="2_voice"]
-[ext_resource path="res://scripts/computer_overlay.gd" type="Script" id="3_computer"]
+[ext_resource path="res://scripts/main_compat.gd" type="Script" id="1_main"]
+[ext_resource path="res://scripts/voice_overlay_compat.gd" type="Script" id="2_voice"]
+[ext_resource path="res://scripts/computer_overlay_compat.gd" type="Script" id="3_computer"]
 [ext_resource path="res://scripts/sandbox_tool_bridge.gd" type="Script" id="4_sandbox"]
 [ext_resource path="res://scripts/mobile_ui_adapter.gd" type="Script" id="5_mobile"]
 [ext_resource path="res://scripts/android_first_run.gd" type="Script" id="6_first_run"]
@@ -25,6 +25,9 @@
 [ext_resource path="res://api/settings_overlay.gd" type="Script" id="23_api_settings"]
 [ext_resource path="res://scripts/desktop_visual_theme.gd" type="Script" id="24_desktop_theme"]
 [ext_resource path="res://scripts/windows_startup_coordinator.gd" type="Script" id="25_startup"]
+[ext_resource path="res://work/work_manager.gd" type="Script" id="26_work_manager"]
+[ext_resource path="res://work/work_overlay.gd" type="Script" id="27_work_overlay"]
+[ext_resource path="res://scripts/settings_visual_fix.gd" type="Script" id="28_settings_visual_fix"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -101,8 +104,17 @@ script = ExtResource("22_api_manager")
 [node name="ApiSettings" type="Node" parent="."]
 script = ExtResource("23_api_settings")
 
+[node name="WorkManager" type="Node" parent="."]
+script = ExtResource("26_work_manager")
+
+[node name="WorkOverlay" type="Node" parent="."]
+script = ExtResource("27_work_overlay")
+
 [node name="DesktopVisualTheme" type="Node" parent="."]
 script = ExtResource("24_desktop_theme")
+
+[node name="SettingsVisualFix" type="Node" parent="."]
+script = ExtResource("28_settings_visual_fix")
 
 [node name="WindowsStartupCoordinator" type="Node" parent="."]
 script = ExtResource("25_startup")

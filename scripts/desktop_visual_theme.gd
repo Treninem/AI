@@ -2,8 +2,7 @@ class_name AuroraDesktopVisualTheme
 extends Node
 
 const FINAL_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_final.svg")
-const FOX_IMAGE: Texture2D = preload("res://assets/ui/aurora_fox_user.jpg")
-const BUTTON_TEXTURE: Texture2D = preload("res://assets/ui/aurora_button_user.jpg")
+const FOX_IMAGE: Texture2D = preload("res://assets/ui/fox_logo.svg")
 
 const MIN_WINDOW := Vector2i(960, 640)
 const SIDEBAR_WIDE := 286.0
@@ -25,37 +24,19 @@ func _ready() -> void:
 func _apply_after_build() -> void:
 	for _i in range(3):
 		await get_tree().process_frame
-	_replace_visual_assets(_root)
-	_apply_button_textures(_root)
+	_replace_background(_root)
+	_apply_safe_button_styles(_root)
 	_replace_header_avatar()
 	_apply_responsive_layout()
 
-func _replace_visual_assets(node: Node) -> void:
+func _replace_background(node: Node) -> void:
 	for child in node.get_children():
 		if child is TextureRect:
 			var rect := child as TextureRect
-			if rect.texture != null:
-				var path := rect.texture.resource_path
-				if path.ends_with("aurora_background.svg") or path.ends_with("aurora_background_user.jpg"):
-					rect.texture = FINAL_BACKGROUND
-					rect.modulate = Color(1, 1, 1, 0.96)
-				elif path.ends_with("fox_logo.svg") or path.ends_with("aurora_fox_user.jpg"):
-					rect.texture = FOX_IMAGE
-					rect.modulate = Color.WHITE
-		_replace_visual_assets(child)
-
-func _texture_style() -> StyleBoxTexture:
-	var style := StyleBoxTexture.new()
-	style.texture = BUTTON_TEXTURE
-	style.texture_margin_left = 18.0
-	style.texture_margin_right = 18.0
-	style.texture_margin_top = 14.0
-	style.texture_margin_bottom = 14.0
-	style.expand_margin_left = 1.0
-	style.expand_margin_right = 1.0
-	style.expand_margin_top = 1.0
-	style.expand_margin_bottom = 1.0
-	return style
+			if rect.texture != null and rect.texture.resource_path.ends_with("aurora_background.svg"):
+				rect.texture = FINAL_BACKGROUND
+				rect.modulate = Color(1, 1, 1, 0.96)
+		_replace_background(child)
 
 func _flat_state(fill: Color, border: Color) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -75,19 +56,19 @@ func _flat_state(fill: Color, border: Color) -> StyleBoxFlat:
 	style.content_margin_bottom = 8
 	return style
 
-func _apply_button_textures(node: Node) -> void:
+func _apply_safe_button_styles(node: Node) -> void:
 	for child in node.get_children():
 		if child is Button:
 			var button := child as Button
-			button.add_theme_stylebox_override("normal", _texture_style())
-			button.add_theme_stylebox_override("hover", _flat_state(Color(0.12, 0.08, 0.22, 0.97), Color(0.38, 0.83, 1.0, 0.78)))
-			button.add_theme_stylebox_override("pressed", _flat_state(Color(0.16, 0.08, 0.28, 1.0), Color(0.67, 0.54, 1.0, 0.92)))
-			button.add_theme_stylebox_override("focus", _flat_state(Color(0.10, 0.08, 0.18, 0.98), Color(0.40, 0.83, 1.0, 0.90)))
-			button.add_theme_stylebox_override("disabled", _flat_state(Color(0.04, 0.045, 0.07, 0.78), Color(0.20, 0.23, 0.31, 0.55)))
+			button.add_theme_stylebox_override("normal", _flat_state(Color(0.065, 0.07, 0.115, 0.98), Color(0.28, 0.47, 0.70, 0.70)))
+			button.add_theme_stylebox_override("hover", _flat_state(Color(0.12, 0.08, 0.22, 0.99), Color(0.38, 0.83, 1.0, 0.86)))
+			button.add_theme_stylebox_override("pressed", _flat_state(Color(0.16, 0.08, 0.28, 1.0), Color(0.67, 0.54, 1.0, 0.94)))
+			button.add_theme_stylebox_override("focus", _flat_state(Color(0.10, 0.08, 0.18, 0.99), Color(0.40, 0.83, 1.0, 0.90)))
+			button.add_theme_stylebox_override("disabled", _flat_state(Color(0.04, 0.045, 0.07, 0.86), Color(0.20, 0.23, 0.31, 0.55)))
 			button.add_theme_color_override("font_color", Color("f4f6ff"))
 			button.add_theme_color_override("font_hover_color", Color.WHITE)
 			button.clip_text = true
-		_apply_button_textures(child)
+		_apply_safe_button_styles(child)
 
 func _replace_header_avatar() -> void:
 	var slot := _root.find_child("AvatarSlot", true, false) as Control
@@ -95,10 +76,10 @@ func _replace_header_avatar() -> void:
 		return
 	for child in slot.get_children():
 		child.visible = false
-	if slot.find_child("AuroraFoxRealAvatar", false, false) != null:
+	if slot.find_child("AuroraFoxSafeAvatar", false, false) != null:
 		return
 	var fox := TextureRect.new()
-	fox.name = "AuroraFoxRealAvatar"
+	fox.name = "AuroraFoxSafeAvatar"
 	fox.texture = FOX_IMAGE
 	fox.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	fox.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

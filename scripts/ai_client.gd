@@ -47,9 +47,9 @@ func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
 	var resolved := await ensure_ollama_model()
 	if not resolved.get("ok", false):
 		return resolved
-	return await _send_ollama_chat(messages, temperature, false)
+	return await _send_ollama_chat(messages, temperature, [])
 
-func _send_ollama_chat(messages: Array, temperature: float, is_retry: bool) -> Dictionary:
+func _send_ollama_chat(messages: Array, temperature: float, failed_models: Array) -> Dictionary:
 	var request_node := HTTPRequest.new()
 	request_node.timeout = 180.0
 	add_child(request_node)
@@ -70,11 +70,26 @@ func _send_ollama_chat(messages: Array, temperature: float, is_retry: bool) -> D
 	var body: PackedByteArray = result[3]
 	var body_text := body.get_string_from_utf8()
 	if response_code < 200 or response_code >= 300:
-		if not is_retry and response_code == 404 and body_text.to_lower().contains("model") and body_text.to_lower().contains("not found"):
-			var previous := model
-			var refreshed := await ensure_ollama_model(true)
-			if refreshed.get("ok", false) and model != previous:
-				return await _send_ollama_chat(messages, temperature, true)
+		if response_code == 404 and body_text.to_lower().contains("model") and body_text.to_lower().contains("not found"):
+			var failed := model
+			if failed not in failed_models:
+				failed_models.append(failed)
+			var info := await _fetch_ollama_models()
+			var installed: Array = []
+			if info.get("ok", false):
+				installed = info.get("installed", [])
+				var replacement := choose_chat_model(installed, failed_models)
+				if not replacement.is_empty() and replacement != failed:
+					model = replacement
+					model_source = "existing_ollama_retry"
+					return await _send_ollama_chat(messages, temperature, failed_models)
+			return {
+				"ok": false,
+				"error": "Ollama отвечает, но доступная chat-модель не найдена после отказа модели %s. Установленные модели: %s" % [failed, ", ".join(installed) if not installed.is_empty() else "нет моделей"],
+				"runtime": "ollama",
+				"model": failed,
+				"failed_models": failed_models
+			}
 		return {
 			"ok": false,
 			"error": "Ollama HTTP %d: %s" % [response_code, body_text],
@@ -190,16 +205,16 @@ func _fetch_ollama_models() -> Dictionary:
 	installed.sort()
 	return {"ok": true, "server": true, "installed": installed}
 
-func choose_chat_model(installed: Array) -> String:
-	if installed.has(model) and _is_chat_model(model):
+func choose_chat_model(installed: Array, excluded: Array = []) -> String:
+	if installed.has(model) and _is_chat_model(model) and model not in excluded:
 		return model
-	if installed.has(DEFAULT_MODEL):
+	if installed.has(DEFAULT_MODEL) and DEFAULT_MODEL not in excluded:
 		return DEFAULT_MODEL
 	var best := ""
 	var best_score := -100000
 	for value in installed:
 		var candidate := str(value).strip_edges()
-		if not _is_chat_model(candidate):
+		if candidate in excluded or not _is_chat_model(candidate):
 			continue
 		var lower := candidate.to_lower()
 		var score := 10

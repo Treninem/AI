@@ -1,5 +1,14 @@
 # AuroraFox Changelog
 
+## V1.1.1.1 — 2026-08-19
+
+- Fixed Ollama fallback after HTTP 404: a stale/broken chat model is blacklisted for the retry and AuroraFox selects another installed compatible chat model instead of repeating the same failed request.
+- Removed the corrupted desktop button/avatar JPG assets from the active theme until the final per-element AuroraFox PNG asset pack is imported.
+- Added an opaque, high-contrast settings panel so chat content no longer bleeds through the settings window.
+- Added the first persistent AuroraFox Work mode: projects, project instructions, linked files, long-running tasks, visible progress and saved result artifacts, all routed through the existing AgentCore and long-term memory.
+- Added Work/Ollama/settings regression smoke tests for Godot 4.7.1.
+- Kept Android build disabled for this Windows bugfix cycle while synchronizing Android versionCode/versionName for the next APK.
+
 ## V1.1.0.0 — 2026-08-19
 
 - Added external AuroraFox API Gateway for Telegram, VK, websites, applications and OpenAI-compatible clients.
