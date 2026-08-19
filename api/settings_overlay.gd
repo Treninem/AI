@@ -98,7 +98,7 @@ func _build_popup() -> void:
 	enabled_toggle = CheckButton.new()
 	enabled_toggle.text = "Запускать локальный API вместе с AuroraFox"
 	enabled_toggle.button_pressed = manager.enabled
-	enabled_toggle.toggled.connect(func(v): manager.set_enabled(v))
+	enabled_toggle.toggled.connect(_on_enabled_toggled)
 	root.add_child(enabled_toggle)
 
 	var endpoint_row := HBoxContainer.new()
@@ -118,7 +118,7 @@ func _build_popup() -> void:
 	port_box.step = 1
 	port_box.value = manager.port
 	port_box.custom_minimum_size.x = 120
-	port_box.value_changed.connect(func(v): manager.set_port(int(v)))
+	port_box.value_changed.connect(_on_port_changed)
 	endpoint_row.add_child(port_box)
 
 	status_label = Label.new()
@@ -160,7 +160,7 @@ func _build_popup() -> void:
 	token_output.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	token_row.add_child(token_output)
 	var copy := _button("Копировать")
-	copy.pressed.connect(func(): if not token_output.text.is_empty(): DisplayServer.clipboard_set(token_output.text))
+	copy.pressed.connect(_copy_token)
 	token_row.add_child(copy)
 
 	var scope_hint := Label.new()
@@ -179,7 +179,7 @@ func _build_popup() -> void:
 	scroll.add_child(keys_box)
 
 	var close := _button("Закрыть")
-	close.pressed.connect(func(): popup.hide())
+	close.pressed.connect(_close_popup)
 	root.add_child(close)
 
 func _inject_settings_button() -> void:
@@ -216,7 +216,7 @@ func _find_main_vbox(node: Node) -> VBoxContainer:
 	for child in node.get_children():
 		if child is VBoxContainer and child.get_child_count() >= 5:
 			return child
-		var found := _find_main_vbox(child)
+		var found: VBoxContainer = _find_main_vbox(child)
 		if found != null:
 			return found
 	return null
@@ -237,8 +237,27 @@ func _refresh() -> void:
 func _on_status_changed(is_online: bool, details: Dictionary) -> void:
 	if status_label == null:
 		return
-	status_label.text = "API: работает • AgentCore %s" % ("подключён" if bool(details.get("agent_online", false)) else "ожидает AuroraFox") if is_online else "API: запускается / не отвечает"
-	status_label.add_theme_color_override("font_color", GREEN if is_online else Color("ffb36d"))
+	if is_online:
+		var core_state := "подключён" if bool(details.get("agent_online", false)) else "ожидает AuroraFox"
+		status_label.text = "API: работает • AgentCore " + core_state
+		status_label.add_theme_color_override("font_color", GREEN)
+	else:
+		status_label.text = "API: запускается / не отвечает"
+		status_label.add_theme_color_override("font_color", Color("ffb36d"))
+
+func _on_enabled_toggled(value: bool) -> void:
+	manager.set_enabled(value)
+
+func _on_port_changed(value: float) -> void:
+	manager.set_port(int(value))
+	url_label.text = manager.base_url()
+
+func _copy_token() -> void:
+	if not token_output.text.is_empty():
+		DisplayServer.clipboard_set(token_output.text)
+
+func _close_popup() -> void:
+	popup.hide()
 
 func _create_key() -> void:
 	var name := key_name.text.strip_edges()
@@ -254,6 +273,10 @@ func _on_key_created(api_key: String, _info: Dictionary) -> void:
 	token_output.secret = false
 	DisplayServer.clipboard_set(api_key)
 	status_label.text = "Ключ создан и скопирован. Сохрани его: повторно полный ключ не показывается."
+
+func _revoke_key(key_id: String) -> void:
+	manager.revoke_key(key_id)
+	_refresh_keys()
 
 func _refresh_keys() -> void:
 	if keys_box == null or manager == null:
@@ -283,5 +306,5 @@ func _refresh_keys() -> void:
 		if not bool(item.get("revoked", false)):
 			var revoke := _button("Отозвать")
 			var key_id := str(item.get("id", ""))
-			revoke.pressed.connect(func(): manager.revoke_key(key_id); _refresh_keys())
+			revoke.pressed.connect(_revoke_key.bind(key_id))
 			row.add_child(revoke)
