@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import subprocess
 from dataclasses import dataclass, asdict
@@ -53,43 +52,36 @@ def current_version() -> str:
         return "V0.0.0.0"
 
 
-def repository_digest() -> str:
-    """Hash committed file identities, excluding the readiness evidence itself.
+def repository_matches_verified_commit(commit: str) -> bool | None:
+    """Return True when current committed state differs only by readiness evidence.
 
-    Git index blob ids make this stable across Windows/Linux line-ending checkouts.
-    Any committed code/config/test change invalidates old readiness evidence even
-    when somebody forgot to bump the version number.
+    The tag/source commit is stored in release_verification.json. The release bot
+    may add that one evidence file to main after verification; no other committed
+    change is allowed without forcing readiness back to false.
     """
+    if len(commit.strip()) < 7:
+        return False
     try:
-        proc = subprocess.run(
-            ["git", "-C", str(ROOT), "ls-files", "-s", "-z"],
-            check=True,
-            stdout=subprocess.PIPE,
+        exists = subprocess.run(
+            ["git", "-C", str(ROOT), "cat-file", "-e", f"{commit}^{{commit}}"],
+            stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
         )
+        if exists.returncode != 0:
+            return False
+        diff = subprocess.run(
+            [
+                "git", "-C", str(ROOT), "diff", "--quiet", f"{commit}..HEAD", "--", ".",
+                ":(exclude)agent/state/release_verification.json",
+            ],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+        return diff.returncode == 0
+    except FileNotFoundError:
+        return None
     except Exception:
-        return ""
-    digest = hashlib.sha256()
-    rows: list[tuple[str, str]] = []
-    for raw in proc.stdout.split(b"\0"):
-        if not raw:
-            continue
-        text = raw.decode("utf-8", errors="surrogateescape")
-        if "\t" not in text:
-            continue
-        meta, path = text.split("\t", 1)
-        if path == "agent/state/release_verification.json":
-            continue
-        parts = meta.split()
-        if len(parts) < 2:
-            continue
-        rows.append((path, parts[1]))
-    for path, blob in sorted(rows):
-        digest.update(path.encode("utf-8", errors="surrogateescape"))
-        digest.update(b"\0")
-        digest.update(blob.encode("ascii", errors="ignore"))
-        digest.update(b"\0")
-    return digest.hexdigest() if rows else ""
+        return False
 
 
 def check_files(key: str, title: str, weight: int, files: list[str], markers: dict[str, list[str]] | None = None) -> Check:
@@ -140,15 +132,12 @@ def check_release_verification(weight: int = 24) -> Check:
     commit = str(data.get("commit", "")).strip()
     if len(commit) < 7:
         missing.append(f"{rel}: verified commit SHA is missing")
-
-    expected_digest = str(data.get("source_digest", "")).strip()
-    current_digest = repository_digest()
-    if not current_digest:
-        missing.append(f"{rel}: cannot compute current Git repository digest")
-    elif not expected_digest:
-        missing.append(f"{rel}: source_digest is missing")
-    elif expected_digest != current_digest:
-        missing.append(f"{rel}: repository changed after verification")
+    else:
+        matches = repository_matches_verified_commit(commit)
+        if matches is None:
+            missing.append(f"{rel}: Git is unavailable, so verified source state cannot be confirmed")
+        elif not matches:
+            missing.append(f"{rel}: repository code/config/tests changed after verified commit {commit[:12]}")
 
     return Check(
         "release_verification",
@@ -274,13 +263,12 @@ def audit() -> dict:
         for item in checks
     ]
     return {
-        "schema_version": 3,
+        "schema_version": 4,
         "generated_at": now_iso(),
         "version": current_version(),
-        "repository_digest": repository_digest(),
         "progress_percent": percent,
         "ready": ready,
-        "readiness_basis": "current-version full release verification plus exact committed repository digest is mandatory",
+        "readiness_basis": "full release verification must match current version and current committed repository state",
         "required_release_gates": sorted(REQUIRED_RELEASE_GATES),
         "checks": [asdict(item) for item in checks],
         "missing": missing,
