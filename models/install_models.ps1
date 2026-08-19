@@ -7,6 +7,11 @@ $ErrorActionPreference = 'Stop'
 $ProgressPreference = 'SilentlyContinue'
 $OllamaBase = 'http://127.0.0.1:11434'
 $MinimumVisionOllama = [Version]'0.12.7'
+$ModelEstimatedBytes = @{
+    'qwen3:8b' = 5200000000L
+    'qwen3-vl:8b' = 6100000000L
+    'qwen3-coder:30b' = 19000000000L
+}
 
 function Set-Stage([string]$Name, [int]$Progress, [string]$Message, [hashtable]$Extra = @{}) {
     $Progress = [Math]::Max(0, [Math]::Min(100, $Progress))
@@ -58,6 +63,61 @@ function Get-OllamaVersion {
         if ($raw -match '([0-9]+\.[0-9]+\.[0-9]+)') { return [Version]$Matches[1] }
     } catch {}
     return $null
+}
+
+function Get-InstalledModelNames {
+    try {
+        $tags = Invoke-RestMethod -Method Get -Uri "$OllamaBase/api/tags" -TimeoutSec 10
+        return @($tags.models | ForEach-Object { [string]$_.name })
+    } catch {
+        return @()
+    }
+}
+
+function Get-OllamaModelRoot {
+    if ($env:OLLAMA_MODELS) {
+        return [IO.Path]::GetFullPath([Environment]::ExpandEnvironmentVariables($env:OLLAMA_MODELS))
+    }
+    return Join-Path $env:USERPROFILE '.ollama\models'
+}
+
+function Get-FreeBytesForPath([string]$Path) {
+    try {
+        $full = [IO.Path]::GetFullPath($Path)
+        $root = [IO.Path]::GetPathRoot($full)
+        if (-not $root) { return -1L }
+        return ([IO.DriveInfo]::new($root)).AvailableFreeSpace
+    } catch {
+        return -1L
+    }
+}
+
+function Assert-ModelStorage([string[]]$Models) {
+    $installed = Get-InstalledModelNames
+    [long]$missingBytes = 0
+    $missing = @()
+    foreach ($model in $Models) {
+        if ($installed -contains $model) { continue }
+        $missing += $model
+        if ($ModelEstimatedBytes.ContainsKey($model)) { $missingBytes += [long]$ModelEstimatedBytes[$model] }
+    }
+    if ($missing.Count -eq 0) {
+        Set-Stage 'storage' 27 'Все модели выбранного профиля уже находятся локально' @{ required_bytes = 0; free_bytes = (Get-FreeBytesForPath (Get-OllamaModelRoot)); missing_models = @() }
+        return
+    }
+    $root = Get-OllamaModelRoot
+    $free = Get-FreeBytesForPath $root
+    # Temporary download blobs, manifests and filesystem slack need headroom.
+    $required = [long][Math]::Ceiling($missingBytes * 1.08 + 1500000000L)
+    Set-Stage 'storage' 27 "Проверка места: нужно примерно $(Format-Bytes $required), свободно $(if ($free -ge 0) { Format-Bytes $free } else { 'не удалось определить' })" @{
+        model_root = $root
+        required_bytes = $required
+        free_bytes = $free
+        missing_models = $missing
+    }
+    if ($free -ge 0 -and $free -lt $required) {
+        throw "Недостаточно места для профиля $Profile. Нужно примерно $(Format-Bytes $required), свободно $(Format-Bytes $free)."
+    }
 }
 
 function Stop-OllamaProcesses {
@@ -220,6 +280,7 @@ try {
     if ($Profile -in @('balanced','full')) { $models += 'qwen3-vl:8b' }
     if ($Profile -eq 'full') { $models += 'qwen3-coder:30b' }
 
+    Assert-ModelStorage $models
     for ($i = 0; $i -lt $models.Count; $i++) {
         Pull-OllamaModel -Model $models[$i] -Index $i -Count $models.Count
     }
