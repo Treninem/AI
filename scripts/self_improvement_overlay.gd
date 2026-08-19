@@ -73,12 +73,12 @@ func _build_ui() -> void:
 	box.add_child(title)
 
 	var autonomous := Label.new()
-	autonomous.text = "Автономный режим включён: AuroraFox сама собирает знания, создаёт 3–10 разных мутаций, проверяет каждую в отдельной копии, проводит соревнование, повторно тестирует победителя и автоматически активирует его без запроса подтверждения."
+	autonomous.text = "Автономный режим включён: AuroraFox сама собирает знания, создаёт 3–10 разных мутаций, отдельно проверяет каждую, проводит соревнование, повторно тестирует победителя и автоматически активирует его без запроса подтверждения."
 	autonomous.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(autonomous)
 
 	var safety := Label.new()
-	safety.text = "Непрошедшая тесты мутация не активируется. Горячие мутации работают как ограниченные RefCounted-расширения aurora_ext_* без прямого доступа к OS, файлам, сети и системным singleton API."
+	safety.text = "Непрошедшая тесты мутация не активируется. На Windows дополнительно тестируется полная копия проекта в отдельной песочнице Godot 4.7.1; на Android горячая мутация проходит встроенную компиляцию GDScript, проверку manifest-контракта и собственный детерминированный self-test."
 	safety.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	safety.modulate = Color(0.82, 0.88, 0.95)
 	box.add_child(safety)
@@ -129,14 +129,15 @@ func _build_ui() -> void:
 	box.add_child(close)
 
 func _run_tournament_now() -> void:
-	if busy: return
+	if busy:
+		return
 	var improver := _improver()
 	var coordinator := _coordinator()
 	if improver == null or coordinator == null:
 		status_label.text = "Автономный контур ещё не подключён."
 		return
-	if OS.get_name() != "Windows":
-		status_label.text = "Полная sandbox/Godot-проверка мутаций сейчас выполняется на Windows; Android продолжает использовать уже проверенные релизные и runtime-компоненты."
+	if OS.get_name() not in ["Windows", "Android"]:
+		status_label.text = "Автоматический турнир мутаций поддерживается в Windows и Android сборках AuroraFox."
 		return
 	_set_busy(true)
 	proposal_view.clear()
@@ -168,8 +169,8 @@ func _on_mutation_population_started(goal: String, requested: int) -> void:
 	tournament_completed = 0
 	tournament_verified = 0
 	status_label.text = "Эволюция: создаю %d независимых мутаций. Цель: %s" % [requested, goal]
-	proposal_view.text = "Турнир запущен\nЦель: %s\nПлан: 3–10 мутаций → отдельный Godot-тест каждой → соревнование → повторный тест победителя → автоматическая активация.\n" % goal
-	_add_history("population_started", true, {"goal": goal, "requested": requested})
+	proposal_view.text = "Турнир запущен\nЦель: %s\nПлан: 3–10 мутаций → отдельный тест каждой → соревнование → повторный тест победителя → автоматическая активация.\n" % goal
+	_add_history("population_started", true, {"goal": goal, "requested": requested, "platform": OS.get_name()})
 
 func _on_mutation_candidate_completed(candidate: Dictionary) -> void:
 	tournament_completed += 1
@@ -198,14 +199,16 @@ func _on_improvement_stage(stage: String, details: Dictionary) -> void:
 	status_label.text = {
 		"mutation_population": "Эволюция: создаю разные мутации…",
 		"candidate_test": "Эволюция: запускаю отдельный тест очередной мутации…",
+		"runtime_contract_test": "Эволюция: компилирую мутацию и проверяю её runtime-контракт/self-test…",
 		"workspace": "Эволюция: создаю отдельную песочницу…",
 		"import": "Эволюция: копирую AuroraFox в песочницу…",
 		"candidate": "Эволюция: вношу мутацию только в рабочую копию…",
-		"godot_test": "Эволюция: Godot 4.7.1 тестирует мутацию…",
+		"godot_test": "Эволюция: Godot 4.7.1 тестирует полную копию…",
 		"competition": "Эволюция: прошедшие мутации соревнуются…",
 		"winner_final_test": "Эволюция: победитель проходит финальный повторный тест…"
 	}.get(stage, "Эволюция: " + stage)
-	if not details.is_empty(): status_label.tooltip_text = JSON.stringify(details)
+	if not details.is_empty():
+		status_label.tooltip_text = JSON.stringify(details)
 
 func _on_autonomous_cycle_completed(report: Dictionary) -> void:
 	_render_cycle(report)
@@ -218,10 +221,12 @@ func _on_autonomous_cycle_failed(report: Dictionary) -> void:
 	_add_history("autonomous_cycle_failed", false, _compact(report))
 
 func _render_tournament(result: Dictionary) -> void:
-	if result.is_empty(): return
+	if result.is_empty():
+		return
 	var ok := bool(result.get("ok", false))
 	var applied := bool(result.get("mutation_applied", result.get("staged", false)))
-	var winner: Dictionary = result.get("winner", {}) if result.get("winner", {}) is Dictionary else {}
+	var winner_value = result.get("winner", {})
+	var winner: Dictionary = winner_value if winner_value is Dictionary else {}
 	if ok:
 		status_label.text = "Турнир завершён: %d мутаций, тесты прошли %d. Победитель %s. %s" % [
 			int(result.get("population_size", 0)),
@@ -233,7 +238,7 @@ func _render_tournament(result: Dictionary) -> void:
 		status_label.text = "Турнир отклонён — обновление не применено: %s" % str(result.get("error", "не прошёл обязательные тесты"))
 	var lines: Array[String] = []
 	lines.append("Результат турнира")
-	lines.append("ok=%s population=%s verified=%s" % [str(ok), str(result.get("population_size", 0)), str(result.get("verified_count", 0))])
+	lines.append("platform=%s ok=%s population=%s verified=%s" % [str(result.get("platform", OS.get_name())), str(ok), str(result.get("population_size", 0)), str(result.get("verified_count", 0))])
 	if not winner.is_empty():
 		lines.append("Победитель: %s" % str(winner.get("path", "")))
 		lines.append("Стратегия: %s" % str(winner.get("strategy", "")))
@@ -252,7 +257,8 @@ func _render_tournament(result: Dictionary) -> void:
 	proposal_view.text = "\n".join(lines)
 
 func _render_cycle(report: Dictionary) -> void:
-	if report.is_empty(): return
+	if report.is_empty():
+		return
 	var tournament = report.get("tournament", {})
 	if tournament is Dictionary and not tournament.is_empty():
 		var view: Dictionary = tournament.duplicate(true)
@@ -269,8 +275,10 @@ func _render_cycle(report: Dictionary) -> void:
 	proposal_view.text = JSON.stringify(_compact(report), "  ")
 
 func _refresh_extensions() -> void:
-	if extension_list == null: return
-	for child in extension_list.get_children(): child.queue_free()
+	if extension_list == null:
+		return
+	for child in extension_list.get_children():
+		child.queue_free()
 	var manager := _extensions()
 	if manager == null:
 		var missing := Label.new()
@@ -305,7 +313,8 @@ func _refresh_extensions() -> void:
 
 func _toggle_extension(id: String) -> void:
 	var manager := _extensions()
-	if manager == null: return
+	if manager == null:
+		return
 	var was_active := manager.active_instances.has(id)
 	var result := manager.deactivate(id) if was_active else manager.enable(id)
 	if result.get("ok", false):
@@ -317,7 +326,8 @@ func _toggle_extension(id: String) -> void:
 
 func _remove_extension(id: String) -> void:
 	var manager := _extensions()
-	if manager == null: return
+	if manager == null:
+		return
 	var result := manager.remove_extension(id)
 	if result.get("ok", false):
 		status_label.text = "Расширение удалено вручную."
@@ -331,7 +341,13 @@ func _sync_autonomy_status() -> void:
 	if coordinator == null:
 		status_label.text = "Автономный координатор ещё не подключён."
 		return
-	var platform_note := "Полный эволюционный sandbox активен." if OS.get_name() == "Windows" else "На этой платформе горячая мутация ограничена текущими возможностями runtime."
+	var platform_note := ""
+	if OS.get_name() == "Windows":
+		platform_note = "runtime-contract + полная sandbox-проверка Godot 4.7.1"
+	elif OS.get_name() == "Android":
+		platform_note = "встроенная GDScript compile/manifest/self-test проверка"
+	else:
+		platform_note = "горячая эволюция на этой платформе отключена"
 	status_label.text = "Автономность=%s • цикл каждые %.0f с • турнир %d–10 мутаций • %s" % [
 		str(coordinator.autonomous_enabled),
 		float(coordinator.cycle_interval_seconds),
@@ -345,18 +361,21 @@ func _set_busy(value: bool) -> void:
 
 func _improver() -> SelfImprover:
 	var main := get_parent()
-	if main == null: return null
+	if main == null:
+		return null
 	var value = main.get("improver")
 	return value as SelfImprover
 
 func _extensions() -> RuntimeExtensionManager:
 	var main := get_parent()
-	if main == null: return null
+	if main == null:
+		return null
 	return main.get_node_or_null("RuntimeExtensions") as RuntimeExtensionManager
 
 func _coordinator() -> AuroraAutonomousCoordinator:
 	var main := get_parent()
-	if main == null: return null
+	if main == null:
+		return null
 	return main.get_node_or_null("AutonomousCoordinator") as AuroraAutonomousCoordinator
 
 func _compact(value: Variant) -> Variant:
@@ -365,7 +384,8 @@ func _compact(value: Variant) -> Variant:
 		for key in out.keys():
 			if key in ["content", "proposal"]:
 				var text := str(out[key])
-				if text.length() > 2500: out[key] = text.substr(0, 2500) + "…"
+				if text.length() > 2500:
+					out[key] = text.substr(0, 2500) + "…"
 		return out
 	if value is Array:
 		var arr: Array = value
@@ -374,12 +394,14 @@ func _compact(value: Variant) -> Variant:
 
 func _add_history(kind: String, ok: bool, details: Dictionary) -> void:
 	history.push_front({"time": Time.get_datetime_string_from_system(true), "kind": kind, "ok": ok, "details": details})
-	if history.size() > HISTORY_LIMIT: history.resize(HISTORY_LIMIT)
+	if history.size() > HISTORY_LIMIT:
+		history.resize(HISTORY_LIMIT)
 	_save_history()
 
 func _load_history() -> void:
 	var f := FileAccess.open(HISTORY_PATH, FileAccess.READ)
-	if f == null: return
+	if f == null:
+		return
 	var parsed = JSON.parse_string(f.get_as_text())
 	f.close()
 	if parsed is Dictionary and parsed.get("history", []) is Array:
