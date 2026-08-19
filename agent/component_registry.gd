@@ -1,6 +1,8 @@
 class_name AuroraComponentRegistry
 extends RefCounted
 
+const REPORT_SCHEMA_VERSION := 1
+
 const CORE_TOOLS := [
 	"system_info",
 	"git_status",
@@ -76,6 +78,7 @@ func build_report(
 
 	var compatible := missing_components.is_empty() and missing_required.is_empty()
 	return {
+		"schema_version": REPORT_SCHEMA_VERSION,
 		"ok": compatible,
 		"compatible": compatible,
 		"platform": platform,
