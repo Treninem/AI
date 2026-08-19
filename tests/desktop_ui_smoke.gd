@@ -10,32 +10,43 @@ func _fail(message: String, code: int) -> void:
 func _run() -> void:
 	for asset in [
 		"res://assets/ui/aurora_background_final.svg",
-		"res://assets/ui/aurora_fox_user.jpg",
-		"res://assets/ui/aurora_button_user.jpg"
+		"res://assets/ui/fox_logo.svg"
 	]:
 		var resource = load(asset)
 		if resource == null:
-			_fail("Final AuroraFox visual asset cannot be loaded: " + asset, 2)
+			_fail("Safe AuroraFox visual asset cannot be loaded: " + asset, 2)
+			return
+
+	# Regression for the striped/stretched UI seen in V1.1.0.0.
+	for forbidden_asset in [
+		"res://assets/ui/aurora_fox_user.jpg",
+		"res://assets/ui/aurora_button_user.jpg"
+	]:
+		if FileAccess.file_exists(forbidden_asset):
+			_fail("Corrupted legacy UI asset must not be packaged: " + forbidden_asset, 3)
 			return
 
 	var theme_script = load("res://scripts/desktop_visual_theme.gd")
 	var startup_script = load("res://scripts/windows_startup_coordinator.gd")
 	if theme_script == null or not theme_script.can_instantiate():
-		_fail("Desktop visual theme cannot be instantiated", 3)
+		_fail("Desktop visual theme cannot be instantiated", 4)
 		return
 	if startup_script == null or not startup_script.can_instantiate():
-		_fail("Windows startup coordinator cannot be instantiated", 4)
+		_fail("Windows startup coordinator cannot be instantiated", 5)
 		return
 
 	var scene_text := FileAccess.get_file_as_string("res://main.tscn")
-	for node_name in ["DesktopVisualTheme", "WindowsStartupCoordinator", "ApiAgentBridge", "ApiGatewayManager", "ApiSettings"]:
+	for node_name in [
+		"DesktopVisualTheme", "SettingsVisualFix", "WindowsStartupCoordinator",
+		"ApiAgentBridge", "ApiGatewayManager", "ApiSettings", "WorkManager", "WorkOverlay"
+	]:
 		if not scene_text.contains(node_name):
-			_fail("main.tscn is missing integrated node: " + node_name, 5)
+			_fail("main.tscn is missing integrated node: " + node_name, 6)
 			return
 
 	var packed := load("res://main.tscn") as PackedScene
 	if packed == null:
-		_fail("main.tscn could not be loaded", 6)
+		_fail("main.tscn could not be loaded", 7)
 		return
 	var main := packed.instantiate()
 	root.add_child(main)
@@ -49,7 +60,7 @@ func _run() -> void:
 		"MainPanel", "MainHeaderActions", "AvatarSlot", "MessageScroll", "MessageList", "ComposerMargin",
 		"MessageInput", "AttachmentBar", "AttachButton", "VoiceDock", "SendButton", "SettingsButton",
 		"VoiceMicButton", "VoiceSpeakButton", "VoiceSettingsButton", "ComputerAgentToggle", "ComputerAgentAuto",
-		"AuroraFoxRealAvatar"
+		"AuroraFoxSafeAvatar", "WorkButton"
 	]
 	for node_name in required:
 		if main.find_child(str(node_name), true, false) == null:
@@ -60,14 +71,17 @@ func _run() -> void:
 		_fail("Misleading release-progress overlay is still present in production UI", 11)
 		return
 
-	var real_avatar := main.find_child("AuroraFoxRealAvatar", true, false) as TextureRect
-	if real_avatar == null or real_avatar.texture == null or not real_avatar.texture.resource_path.ends_with("aurora_fox_user.jpg"):
-		_fail("Header does not use AuroraFox fox artwork", 12)
+	var safe_avatar := main.find_child("AuroraFoxSafeAvatar", true, false) as TextureRect
+	if safe_avatar == null or safe_avatar.texture == null or not safe_avatar.texture.resource_path.ends_with("fox_logo.svg"):
+		_fail("Header does not use safe AuroraFox fallback artwork", 12)
 		return
 
 	var new_chat := main.find_child("NewChatButton", true, false) as Button
-	if new_chat == null or not (new_chat.get_theme_stylebox("normal") is StyleBoxTexture):
-		_fail("AuroraFox button texture is not active", 13)
+	if new_chat == null or not (new_chat.get_theme_stylebox("normal") is StyleBoxFlat):
+		_fail("Safe flat button state is not active", 13)
+		return
+	if new_chat.get_theme_stylebox("normal") is StyleBoxTexture:
+		_fail("Shared stretched button texture must not be active before final PNG pack", 14)
 		return
 
 	var sidebar := main.find_child("Sidebar", true, false) as Control
@@ -75,31 +89,31 @@ func _run() -> void:
 	var composer := main.find_child("ComposerMargin", true, false) as Control
 	var header_actions := main.find_child("MainHeaderActions", true, false) as Control
 	if sidebar == null or panel == null or composer == null or header_actions == null:
-		_fail("Responsive layout nodes missing", 14)
+		_fail("Responsive layout nodes missing", 15)
 		return
 	if sidebar.custom_minimum_size.x > 240.0:
-		_fail("Compact sidebar remained too wide at 960px", 15)
+		_fail("Compact sidebar remained too wide at 960px", 16)
 		return
 	if composer.position.y + composer.size.y > root.size.y + 2.0:
-		_fail("Composer exceeds compact viewport", 16)
+		_fail("Composer exceeds compact viewport", 17)
 		return
 	if header_actions.position.x + header_actions.size.x > panel.size.x + 2.0:
-		_fail("Header actions exceed main panel width", 17)
+		_fail("Header actions exceed main panel width", 18)
 		return
 
 	var store = main.get("chats")
 	if not store is ChatStore:
-		_fail("Main UI is not connected to ChatStore", 18)
+		_fail("Main UI is not connected to ChatStore", 19)
 		return
 	var before: String = str(store.active_chat_id)
 	main.call("_new_chat")
 	await process_frame
 	if store.active_chat_id.is_empty() or store.active_chat_id == before:
-		_fail("New chat button path did not create/activate a new chat", 19)
+		_fail("New chat button path did not create/activate a new chat", 20)
 		return
 	store.rename_chat(store.active_chat_id, "UI smoke chat")
 	if str(store.get_active_chat().get("title", "")) != "UI smoke chat":
-		_fail("Chat rename path failed", 20)
+		_fail("Chat rename path failed", 21)
 		return
 
 	main.queue_free()
