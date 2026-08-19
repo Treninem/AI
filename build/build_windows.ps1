@@ -89,16 +89,26 @@ $modelInstaller = Join-Path $modelsSource "install_models.ps1"
 if (-not (Test-Path $modelInstaller)) { throw "Model bootstrap is missing" }
 Copy-Item $modelInstaller (Join-Path $modelsOut "install_models.ps1") -Force
 
-# Voice runtime/bootstrap next to AuroraFox.exe.
+# Voice runtime/bootstrap next to AuroraFox.exe. The lightweight portable
+# backend serves the default profile; optional XTTS is installed on demand
+# into the managed .venv and gets its own verified shared FFmpeg runtime.
 if (Test-Path $voiceOut) { Remove-Item $voiceOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $voiceOut | Out-Null
 foreach ($dir in @("python", "config", "models")) {
     $source = Join-Path $voiceSource $dir
     if (Test-Path $source) { Copy-Item $source (Join-Path $voiceOut $dir) -Recurse -Force }
 }
-foreach ($file in @("voice_service.py", "requirements.txt", "install_voice.ps1", "build_backend.ps1")) {
+foreach ($file in @(
+    "voice_service.py",
+    "requirements.txt",
+    "requirements_xtts.txt",
+    "install_voice.ps1",
+    "prepare_ffmpeg.ps1",
+    "build_backend.ps1"
+)) {
     $source = Join-Path $voiceSource $file
-    if (Test-Path $source) { Copy-Item $source (Join-Path $voiceOut $file) -Force }
+    if (-not (Test-Path $source)) { throw "Voice bootstrap is missing: $file" }
+    Copy-Item $source (Join-Path $voiceOut $file) -Force
 }
 if ($portableBuilt) {
     Copy-Item (Join-Path $portableDist "AuroraVoiceBackend") (Join-Path $voiceOut "AuroraVoiceBackend") -Recurse -Force
@@ -159,6 +169,8 @@ if (-not $SkipVoiceSetup) {
         throw "Neither portable nor managed-Python Aurora Voice runtime is available"
     }
 }
+if (-not (Test-Path (Join-Path $voiceOut "requirements_xtts.txt"))) { throw "XTTS dependency profile was not packaged" }
+if (-not (Test-Path (Join-Path $voiceOut "prepare_ffmpeg.ps1"))) { throw "XTTS shared FFmpeg bootstrap was not packaged" }
 
 if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
