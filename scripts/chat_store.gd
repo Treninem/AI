@@ -2,6 +2,7 @@ class_name ChatStore
 extends Node
 
 const SAVE_PATH := "user://aurorafox_chats.json"
+const ATTACHMENT_EXCERPT_CHARS := 6000
 
 var chats: Array = []
 var active_chat_id := ""
@@ -43,8 +44,8 @@ func add_message(role: String, content: String, attachments: Array = []) -> void
 	messages.append({
 		"role": role,
 		"content": content,
-		# Full extracted PDF/DOCX/XLSX/video text lives in File Intelligence cache and is used
-		# for the current task. Chat history keeps only lightweight attachment metadata.
+		# Full extraction stays in File Intelligence cache. History keeps a short excerpt so
+		# follow-up questions such as “а что во второй части файла?” retain useful context.
 		"attachments": _compact_attachments(attachments),
 		"time": Time.get_datetime_string_from_system()
 	})
@@ -69,7 +70,8 @@ func _compact_attachments(items: Array) -> Array:
 			"warnings": item.get("warnings", []),
 			"truncated": bool(item.get("truncated", false)),
 			"cached": bool(item.get("cached", false)),
-			"analyzed": bool(item.get("analyzed", false))
+			"analyzed": bool(item.get("analyzed", false)),
+			"excerpt": str(item.get("content", "")).substr(0, ATTACHMENT_EXCERPT_CHARS)
 		}
 		if item.has("private_copy"): compact["private_copy"] = str(item.get("private_copy", ""))
 		out.append(compact)
@@ -104,6 +106,10 @@ func search(query: String) -> Array:
 			if str(message.get("content", "")).to_lower().contains(q):
 				result.append(chat)
 				break
+			for attachment in message.get("attachments", []):
+				if str(attachment.get("name", "")).to_lower().contains(q) or str(attachment.get("excerpt", "")).to_lower().contains(q):
+					result.append(chat)
+					break
 	return result
 
 func save_all() -> void:
