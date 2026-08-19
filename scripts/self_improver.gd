@@ -4,6 +4,9 @@ extends Node
 signal improvement_stage(stage: String, details: Dictionary)
 signal improvement_verified(result: Dictionary)
 signal improvement_rejected(result: Dictionary)
+signal mutation_population_started(goal: String, requested: int)
+signal mutation_candidate_completed(candidate: Dictionary)
+signal mutation_tournament_completed(result: Dictionary)
 
 const GENERATED_ROOT := "res://generated/"
 const RUNTIME_GENERATED_ROOT := "user://generated/"
@@ -11,6 +14,21 @@ const MAX_GENERATED_BYTES := 512 * 1024
 const MAX_PROJECT_FILES := 30000
 const MAX_PROJECT_BYTES := 2 * 1024 * 1024 * 1024
 const HOT_TOOL_PREFIX := "aurora_ext_"
+const MIN_MUTATIONS := 3
+const MAX_MUTATIONS := 10
+const MAX_GENERATION_ATTEMPTS := 24
+const MUTATION_STRATEGIES := [
+	"robustness_and_edge_cases",
+	"performance_and_low_allocations",
+	"precision_and_determinism",
+	"simplicity_and_maintainability",
+	"context_quality_and_reasoning",
+	"observability_and_diagnostics",
+	"composability_and_reuse",
+	"failure_resistance",
+	"input_validation",
+	"low_memory_behavior"
+]
 const HOT_BLOCKED_MARKERS := [
 	"OS.", "FileAccess", "DirAccess", "ProjectSettings", "Engine.", "ClassDB",
 	"DisplayServer", "RenderingServer", "AudioServer", "Input.", "InputMap",
@@ -27,15 +45,25 @@ func setup(tool_registry: ToolRegistry, ai_client: AIClient) -> void:
 	tools = tool_registry
 	ai = ai_client
 
-func propose_improvement(goal: String) -> Dictionary:
+func propose_improvement(goal: String, mutation_index := 0, strategy := "balanced", previous_signatures: Array = []) -> Dictionary:
 	if ai == null:
 		return {"ok": false, "error": "AI client is not configured"}
+	var mutation_tag := "m%02d" % maxi(0, mutation_index + 1)
+	var diversity := ""
+	if not previous_signatures.is_empty():
+		diversity = "\nУже созданные варианты (НЕ ПОВТОРЯЙ их путь/структуру/идею):\n- " + "\n- ".join(previous_signatures.slice(0, mini(previous_signatures.size(), 12)))
 	var prompt := """
-Ты анализируешь AuroraFox — Godot 4.7.1 проект автономного локального AI.
-Предложи ОДНО небольшое законченное безопасное горячее расширение для цели: %s
+Ты создаёшь ОДНУ независимую мутацию AuroraFox — Godot 4.7.1 проекта автономного локального AI.
+Цель эволюции: %s
+Номер мутации: %s
+Стратегия этой мутации: %s
+
+Эта мутация участвует в автоматическом турнире против других независимых копий.
+Она должна реально отличаться архитектурной идеей/алгоритмом, а не только именами.
+Используй %s в имени файла и имени хотя бы одного aurora_ext_ инструмента, чтобы исключить коллизии.%s
 
 Верни ТОЛЬКО строгий JSON:
-{"path":"res://generated/<filename>.gd","content":"полный готовый GDScript","reason":"что улучшает","verification":"что должно подтвердить корректность"}
+{"path":"res://generated/<filename>.gd","content":"полный готовый GDScript","reason":"что улучшает и чем эта мутация отличается","verification":"что должно подтвердить корректность"}
 
 ОБЯЗАТЕЛЬНЫЙ КОНТРАКТ HOT-EXTENSION:
 - файл начинается с `extends RefCounted`;
@@ -55,17 +83,336 @@ func propose_improvement(goal: String) -> Dictionary:
 - код должен быть самодостаточным и совместимым с Godot 4.7.1;
 - не меняй project.godot, autoload, секреты, обновлятор и существующее ядро;
 - не удаляй файлы;
-- не утверждай, что код проверен: AuroraFox сама выполнит sandbox + Godot 4.7.1 проверку.
-""" % goal.strip_edges()
-	var result := await ai.chat([{"role":"user","content":prompt}], 0.1)
+- не утверждай, что код проверен: AuroraFox сама выполнит отдельный sandbox + Godot 4.7.1 тест каждой мутации.
+""" % [goal.strip_edges(), mutation_tag, strategy, mutation_tag, diversity]
+	var result := await ai.chat([{"role":"user","content":prompt}], 0.45)
 	if not result.get("ok", false): return result
 	var text := str(result.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
 	var proposal = JSON.parse_string(text)
 	if not proposal is Dictionary:
-		return {"ok": false, "error": "Invalid improvement proposal JSON"}
+		return {"ok": false, "error": "Invalid improvement proposal JSON", "mutation": mutation_tag}
 	var validation := _validate_proposal(proposal)
-	if not validation.get("ok", false): return validation
+	if not validation.get("ok", false):
+		validation["mutation"] = mutation_tag
+		return validation
+	proposal["mutation_index"] = mutation_index
+	proposal["mutation_tag"] = mutation_tag
+	proposal["strategy"] = strategy
 	return {"ok": true, "proposal": proposal}
+
+func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
+	if ai == null or tools == null:
+		return {"ok": false, "error": "SelfImprover is not fully configured", "stage": "setup"}
+	if OS.get_name() != "Windows":
+		return {"ok": false, "error": "Automatic mutation tournament verification is currently enabled on Windows only", "stage": "platform"}
+
+	var requested := clampi(requested_count, MIN_MUTATIONS, MAX_MUTATIONS)
+	mutation_population_started.emit(goal, requested)
+	improvement_stage.emit("mutation_population", {"goal": goal, "requested": requested, "min": MIN_MUTATIONS, "max": MAX_MUTATIONS})
+
+	var population: Array = []
+	var verified: Array = []
+	var signatures: Array = []
+	var seen_hashes: Dictionary = {}
+	var seen_paths: Dictionary = {}
+	var generation_errors: Array = []
+	var attempt := 0
+
+	# Build at least the requested population. If too few candidates survive
+	# verification, keep generating distinct mutations up to the hard maximum 10.
+	while population.size() < requested and attempt < MAX_GENERATION_ATTEMPTS:
+		var strategy := str(MUTATION_STRATEGIES[attempt % MUTATION_STRATEGIES.size()])
+		var proposal_result: Dictionary = await propose_improvement(goal, attempt, strategy, signatures)
+		attempt += 1
+		if not proposal_result.get("ok", false):
+			generation_errors.append(_compact(proposal_result))
+			continue
+		var proposal: Dictionary = proposal_result.get("proposal", {})
+		var content := str(proposal.get("content", ""))
+		var sha := _sha256_text(content)
+		var path := str(proposal.get("path", ""))
+		if sha.is_empty() or seen_hashes.has(sha) or seen_paths.has(path):
+			generation_errors.append({"ok": false, "error": "duplicate mutation rejected", "path": path, "sha256": sha})
+			continue
+		seen_hashes[sha] = true
+		seen_paths[path] = true
+		signatures.append("%s | %s | %s" % [path, str(proposal.get("reason", "")).substr(0, 220), sha.substr(0, 12)])
+		var candidate := await _verify_tournament_candidate(goal, proposal, population.size())
+		population.append(candidate)
+		if candidate.get("verified", false):
+			verified.append(candidate)
+		mutation_candidate_completed.emit(_compact(candidate))
+
+	# A tournament should not auto-update from a single lucky survivor. If fewer
+	# than three verified mutations survived, create extra distinct copies up to 10.
+	while verified.size() < MIN_MUTATIONS and population.size() < MAX_MUTATIONS and attempt < MAX_GENERATION_ATTEMPTS:
+		var strategy := str(MUTATION_STRATEGIES[attempt % MUTATION_STRATEGIES.size()])
+		var proposal_result: Dictionary = await propose_improvement(goal, attempt, strategy, signatures)
+		attempt += 1
+		if not proposal_result.get("ok", false):
+			generation_errors.append(_compact(proposal_result))
+			continue
+		var proposal: Dictionary = proposal_result.get("proposal", {})
+		var content := str(proposal.get("content", ""))
+		var sha := _sha256_text(content)
+		var path := str(proposal.get("path", ""))
+		if sha.is_empty() or seen_hashes.has(sha) or seen_paths.has(path):
+			generation_errors.append({"ok": false, "error": "duplicate mutation rejected", "path": path, "sha256": sha})
+			continue
+		seen_hashes[sha] = true
+		seen_paths[path] = true
+		signatures.append("%s | %s | %s" % [path, str(proposal.get("reason", "")).substr(0, 220), sha.substr(0, 12)])
+		var candidate := await _verify_tournament_candidate(goal, proposal, population.size())
+		population.append(candidate)
+		if candidate.get("verified", false):
+			verified.append(candidate)
+		mutation_candidate_completed.emit(_compact(candidate))
+
+	if population.size() < MIN_MUTATIONS:
+		var insufficient := {
+			"ok": false,
+			"stage": "population",
+			"error": "Could not create at least 3 distinct valid mutations",
+			"goal": goal,
+			"population_size": population.size(),
+			"verified_count": verified.size(),
+			"generation_attempts": attempt,
+			"generation_errors": generation_errors.slice(0, mini(generation_errors.size(), 20)),
+			"candidates": _compact_candidates(population)
+		}
+		improvement_rejected.emit(insufficient)
+		mutation_tournament_completed.emit(insufficient)
+		return insufficient
+
+	if verified.size() < MIN_MUTATIONS:
+		var no_finalists := {
+			"ok": false,
+			"stage": "competition",
+			"error": "Fewer than 3 mutations passed independent Godot tests; automatic update cancelled",
+			"goal": goal,
+			"population_size": population.size(),
+			"verified_count": verified.size(),
+			"generation_attempts": attempt,
+			"candidates": _compact_candidates(population)
+		}
+		improvement_rejected.emit(no_finalists)
+		mutation_tournament_completed.emit(no_finalists)
+		return no_finalists
+
+	improvement_stage.emit("competition", {"goal": goal, "population": population.size(), "verified": verified.size()})
+	var judge := await _judge_verified_candidates(goal, verified)
+	_apply_judge_scores(verified, judge)
+	verified.sort_custom(func(a, b):
+		var score_a := float(a.get("score", 0.0))
+		var score_b := float(b.get("score", 0.0))
+		if not is_equal_approx(score_a, score_b): return score_a > score_b
+		return str(a.get("sha256", "")) < str(b.get("sha256", ""))
+	)
+
+	var winner: Dictionary = verified[0]
+	var winner_proposal: Dictionary = winner.get("proposal", {})
+	improvement_stage.emit("winner_final_test", {
+		"goal": goal,
+		"path": winner_proposal.get("path", ""),
+		"score": winner.get("score", 0.0),
+		"verified_candidates": verified.size()
+	})
+
+	# Re-run the winner from a fresh sandbox before staging. This means the code
+	# that wins the competition is tested twice: once as a contestant and once
+	# immediately before automatic activation.
+	var staged := await apply_generated_module(winner_proposal)
+	if not staged.get("ok", false):
+		var final_reject := {
+			"ok": false,
+			"stage": "winner_final_test",
+			"error": str(staged.get("error", "Winning mutation failed final verification")),
+			"goal": goal,
+			"population_size": population.size(),
+			"verified_count": verified.size(),
+			"winner": _candidate_public(winner),
+			"final_verification": _compact(staged),
+			"scoreboard": _scoreboard(verified),
+			"judge": _compact(judge)
+		}
+		mutation_tournament_completed.emit(final_reject)
+		return final_reject
+
+	var result := {
+		"ok": true,
+		"tournament": true,
+		"goal": goal,
+		"population_size": population.size(),
+		"verified_count": verified.size(),
+		"generation_attempts": attempt,
+		"winner": _candidate_public(winner),
+		"scoreboard": _scoreboard(verified),
+		"judge": _compact(judge),
+		"stage_path": staged.get("stage_path", ""),
+		"sha256": staged.get("sha256", ""),
+		"path": staged.get("path", ""),
+		"verified": true,
+		"staged": true,
+		"final_verification": _compact(staged.get("verification", {}))
+	}
+	mutation_tournament_completed.emit(result)
+	return result
+
+func _verify_tournament_candidate(goal: String, proposal: Dictionary, index: int) -> Dictionary:
+	improvement_stage.emit("candidate_test", {
+		"goal": goal,
+		"candidate": index + 1,
+		"path": proposal.get("path", ""),
+		"strategy": proposal.get("strategy", "")
+	})
+	var verification := await evaluate_generated_module(proposal)
+	var verified_ok := bool(verification.get("ok", false) and verification.get("verified", false))
+	var candidate := {
+		"index": index,
+		"mutation_tag": proposal.get("mutation_tag", ""),
+		"strategy": proposal.get("strategy", ""),
+		"path": proposal.get("path", ""),
+		"sha256": _sha256_text(str(proposal.get("content", ""))),
+		"reason": str(proposal.get("reason", "")),
+		"proposal": proposal,
+		"verification": _compact(verification),
+		"verified": verified_ok,
+		"base_score": 0.0,
+		"judge_score": 0.0,
+		"score": 0.0
+	}
+	if verified_ok:
+		var base := _deterministic_candidate_score(goal, proposal, verification)
+		candidate["base_score"] = base
+		candidate["score"] = base
+	return candidate
+
+func _deterministic_candidate_score(goal: String, proposal: Dictionary, verification: Dictionary) -> float:
+	if not verification.get("ok", false): return 0.0
+	var score := 60.0
+	var content := str(proposal.get("content", ""))
+	var reason := str(proposal.get("reason", ""))
+	var verification_text := str(proposal.get("verification", ""))
+	var lines := content.split("\n").size()
+	# Reward explicit reasoning/verification and goal relevance without rewarding
+	# raw code size. Tests remain the hard gate; these are tie-breaking metrics.
+	if reason.length() >= 80: score += 4.0
+	if verification_text.length() >= 40: score += 3.0
+	score += minf(10.0, float(_goal_overlap(goal, reason + "\n" + content)) * 1.5)
+	if lines >= 12 and lines <= 180: score += 5.0
+	elif lines > 320: score -= 4.0
+	if content.contains("match ") or content.contains("if "): score += 2.0
+	if content.contains("clamp") or content.contains("is Dictionary") or content.contains("typeof"):
+		score += 2.0
+	if verification.get("test", {}) is Dictionary and bool(verification.get("test", {}).get("ok", false)):
+		score += 4.0
+	return clampf(score, 0.0, 75.0)
+
+func _goal_overlap(goal: String, text: String) -> int:
+	var haystack := text.to_lower()
+	var seen: Dictionary = {}
+	var count := 0
+	for raw in goal.to_lower().split(" ", false):
+		var token := str(raw).strip_edges().trim_prefix(".").trim_suffix(".").trim_suffix(",").trim_suffix(":")
+		if token.length() < 4 or seen.has(token): continue
+		seen[token] = true
+		if haystack.contains(token): count += 1
+	return count
+
+func _judge_verified_candidates(goal: String, candidates: Array) -> Dictionary:
+	if ai == null:
+		return {"ok": false, "error": "AI judge unavailable"}
+	var public_candidates: Array = []
+	for i in range(candidates.size()):
+		var candidate: Dictionary = candidates[i]
+		var proposal: Dictionary = candidate.get("proposal", {})
+		public_candidates.append({
+			"index": i,
+			"strategy": candidate.get("strategy", ""),
+			"reason": str(proposal.get("reason", "")).substr(0, 1200),
+			"verification": str(proposal.get("verification", "")).substr(0, 800),
+			"content": str(proposal.get("content", "")).substr(0, 7000),
+			"base_score": candidate.get("base_score", 0.0)
+		})
+	var prompt := """
+Ты судья турнира мутаций AuroraFox. Все варианты ниже УЖЕ независимо прошли Godot 4.7.1 sandbox-тесты.
+Цель: %s
+
+Оцени каждый вариант 0..100 по одинаковым критериям:
+1) соответствие цели;
+2) корректность алгоритма и обработка краёв;
+3) устойчивость к плохому вводу;
+4) эффективность;
+5) простота сопровождения;
+6) полезность как инструмента AuroraFox.
+Не награждай длину кода и не выдумывай результаты тестов.
+
+Верни ТОЛЬКО JSON:
+{"scores":[{"index":0,"score":0,"reason":"кратко"}],"winner_index":0}
+
+Кандидаты:
+%s
+""" % [goal, JSON.stringify(public_candidates)]
+	var response := await ai.chat([{"role":"user","content":prompt}], 0.0)
+	if not response.get("ok", false): return response
+	var text := str(response.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
+	var parsed = JSON.parse_string(text)
+	if not parsed is Dictionary:
+		return {"ok": false, "error": "Mutation judge returned invalid JSON"}
+	var scores = parsed.get("scores", [])
+	if not scores is Array:
+		return {"ok": false, "error": "Mutation judge scores are invalid"}
+	return {"ok": true, "scores": scores, "winner_index": int(parsed.get("winner_index", -1))}
+
+func _apply_judge_scores(candidates: Array, judge: Dictionary) -> void:
+	if not judge.get("ok", false): return
+	var by_index: Dictionary = {}
+	for item in judge.get("scores", []):
+		if not item is Dictionary: continue
+		var idx := int(item.get("index", -1))
+		if idx < 0 or idx >= candidates.size(): continue
+		by_index[idx] = {
+			"score": clampf(float(item.get("score", 0.0)), 0.0, 100.0),
+			"reason": str(item.get("reason", "")).substr(0, 800)
+		}
+	for i in range(candidates.size()):
+		var candidate: Dictionary = candidates[i]
+		if by_index.has(i):
+			var judgement: Dictionary = by_index[i]
+			candidate["judge_score"] = float(judgement.get("score", 0.0))
+			candidate["judge_reason"] = judgement.get("reason", "")
+			candidate["score"] = clampf(float(candidate.get("base_score", 0.0)) + float(candidate.get("judge_score", 0.0)) * 0.25, 0.0, 100.0)
+		candidates[i] = candidate
+
+func _scoreboard(candidates: Array) -> Array:
+	var result: Array = []
+	for candidate in candidates:
+		if not candidate is Dictionary: continue
+		result.append(_candidate_public(candidate))
+	return result
+
+func _compact_candidates(candidates: Array) -> Array:
+	var result: Array = []
+	for candidate in candidates:
+		if candidate is Dictionary:
+			result.append(_candidate_public(candidate))
+	return result
+
+func _candidate_public(candidate: Dictionary) -> Dictionary:
+	return {
+		"index": candidate.get("index", -1),
+		"mutation_tag": candidate.get("mutation_tag", ""),
+		"strategy": candidate.get("strategy", ""),
+		"path": candidate.get("path", ""),
+		"sha256": candidate.get("sha256", ""),
+		"reason": str(candidate.get("reason", "")).substr(0, 1200),
+		"verified": bool(candidate.get("verified", false)),
+		"base_score": float(candidate.get("base_score", 0.0)),
+		"judge_score": float(candidate.get("judge_score", 0.0)),
+		"judge_reason": str(candidate.get("judge_reason", "")).substr(0, 800),
+		"score": float(candidate.get("score", 0.0)),
+		"verification": _compact(candidate.get("verification", {}))
+	}
 
 func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 	var validation := _validate_proposal(proposal)
