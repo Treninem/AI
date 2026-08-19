@@ -22,7 +22,20 @@ func health() -> Dictionary:
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
 		var raw = plugin.call("getCapabilitiesJson") if plugin.has_method("getCapabilitiesJson") else "{}"
 		var caps = JSON.parse_string(str(raw))
-		return {"ok": caps is Dictionary and bool(caps.get("file_intelligence", false)), "runtime": "android-native", "capabilities": caps}
+		if not caps is Dictionary:
+			return {"ok": false, "error": "Invalid Android runtime capabilities"}
+		var file_ready := bool(caps.get("file_intelligence", false))
+		return {
+			"ok": file_ready,
+			"backend": "AuroraFileIntelligence",
+			"runtime": "android-native",
+			"vision_online": false,
+			"vision_model": "",
+			"voice_online": bool(caps.get("sherpa_stt", false)),
+			"local_tts": bool(caps.get("local_tts", false)),
+			"capabilities": caps,
+			"warnings": ["Android File Intelligence currently provides native document/media metadata and local STT, but no deep local vision/OCR backend."] if file_ready else []
+		}
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "File Intelligence is not available on this platform", "platform": OS.get_name()}
 	return await _request("/health", HTTPClient.METHOD_GET, {}, 4.0)
