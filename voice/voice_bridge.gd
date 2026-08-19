@@ -73,39 +73,56 @@ func _start_backend_if_installed() -> void:
 	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
 	var exe_dir := OS.get_executable_path().get_base_dir()
 	var packaged_root := exe_dir.path_join("voice")
-	_configure_model_cache(packaged_root)
+	var source_root := ProjectSettings.globalize_path("res://voice")
+	var roots: Array[String] = [packaged_root, source_root]
 
-	# Release build: portable backend created by PyInstaller. It does not require Python on the target PC.
+	# XTTS is installed into AuroraFox's managed Python environment on demand.
+	# If it is enabled, use that environment first instead of the lightweight
+	# PyInstaller backend which intentionally contains only the base voice stack.
+	for root in roots:
+		if _xtts_enabled(root) and _start_python_backend(root):
+			return
+
+	# Default release path: portable base voice backend, no system Python needed.
+	_configure_runtime_environment(packaged_root)
 	var portable := packaged_root.path_join("AuroraVoiceBackend/AuroraVoiceBackend.exe")
 	if FileAccess.file_exists(portable):
 		backend_pid = OS.create_process(portable, PackedStringArray(), false)
 		if backend_pid > 0: return
 
-	# Development / emergency fallback: Python 3.11 virtual environment.
-	var candidates: Array[Dictionary] = [
-		{
-			"root": packaged_root,
-			"pythonw": packaged_root.path_join(".venv/Scripts/pythonw.exe"),
-			"python": packaged_root.path_join(".venv/Scripts/python.exe"),
-			"server": packaged_root.path_join("python/aurora_voice_server.py")
-		},
-		{
-			"root": ProjectSettings.globalize_path("res://voice"),
-			"pythonw": ProjectSettings.globalize_path("res://voice/.venv/Scripts/pythonw.exe"),
-			"python": ProjectSettings.globalize_path("res://voice/.venv/Scripts/python.exe"),
-			"server": ProjectSettings.globalize_path("res://voice/python/aurora_voice_server.py")
-		}
-	]
-	for candidate in candidates:
-		var server := str(candidate.server)
-		if not FileAccess.file_exists(server): continue
-		var pythonw := str(candidate.pythonw)
-		var python := str(candidate.python)
-		var executable := pythonw if FileAccess.file_exists(pythonw) else python
-		if not FileAccess.file_exists(executable): continue
-		_configure_model_cache(str(candidate.root))
-		backend_pid = OS.create_process(executable, PackedStringArray([server]), false)
-		if backend_pid > 0: return
+	# Development / emergency / advanced-voice fallback: managed Python 3.11.
+	for root in roots:
+		if _start_python_backend(root):
+			return
+
+func _start_python_backend(root: String) -> bool:
+	var server := root.path_join("python/aurora_voice_server.py")
+	if not FileAccess.file_exists(server): return false
+	var pythonw := root.path_join(".venv/Scripts/pythonw.exe")
+	var python := root.path_join(".venv/Scripts/python.exe")
+	var executable := pythonw if FileAccess.file_exists(pythonw) else python
+	if not FileAccess.file_exists(executable): return false
+	_configure_runtime_environment(root)
+	backend_pid = OS.create_process(executable, PackedStringArray([server]), false)
+	return backend_pid > 0
+
+func _xtts_enabled(root: String) -> bool:
+	var config_path := root.path_join("config/voice_config.json")
+	var file := FileAccess.open(config_path, FileAccess.READ)
+	if file == null: return false
+	var data = JSON.parse_string(file.get_as_text())
+	if not data is Dictionary: return false
+	var xtts = data.get("xtts", {})
+	return xtts is Dictionary and bool(xtts.get("enabled", false))
+
+func _configure_runtime_environment(runtime_root: String) -> void:
+	_configure_model_cache(runtime_root)
+	var ffmpeg_bin := runtime_root.path_join("runtime/ffmpeg/bin")
+	if FileAccess.file_exists(ffmpeg_bin.path_join("ffmpeg.exe")):
+		OS.set_environment("AURORAFOX_FFMPEG_BIN", ffmpeg_bin)
+	var cpml_marker := runtime_root.path_join("runtime/xtts_cpml_accepted.txt")
+	if FileAccess.file_exists(cpml_marker):
+		OS.set_environment("COQUI_TOS_AGREED", "1")
 
 func _configure_model_cache(runtime_root: String) -> void:
 	OS.set_environment("HF_HOME", runtime_root.path_join("models/cache/huggingface"))
