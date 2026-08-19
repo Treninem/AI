@@ -1,6 +1,8 @@
 class_name AuroraFoxAvatarView
 extends Control
 
+const DESIGN_SIZE := Vector2(176.0, 150.0)
+
 var emotion := "neutral"
 var intensity := 0.45
 var amplitude := 0.0
@@ -15,7 +17,7 @@ var paw_glow := 0.10
 var blink_rate := 1.0
 
 func _ready() -> void:
-	custom_minimum_size = Vector2(176, 150)
+	custom_minimum_size = Vector2(112, 54)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	set_process(true)
 
@@ -51,7 +53,13 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 func _draw() -> void:
-	var center := Vector2(size.x * 0.53, size.y * 0.48)
+	var scale_factor := minf(size.x / DESIGN_SIZE.x, size.y / DESIGN_SIZE.y)
+	if scale_factor <= 0.0:
+		return
+	var origin := (size - DESIGN_SIZE * scale_factor) * 0.5
+	draw_set_transform(origin, 0.0, Vector2(scale_factor, scale_factor))
+
+	var center := Vector2(93.0, 72.0)
 	var white := Color("f4f8ff")
 	var shadow := Color(0.04, 0.06, 0.10, 0.95)
 	var green := Color("60ff9a")
@@ -98,6 +106,8 @@ func _draw() -> void:
 	if paw_glow > 0.3:
 		var ring_color := Color(glow_color.r, glow_color.g, glow_color.b, 0.12 + paw_glow * 0.18)
 		draw_arc(paw + Vector2(3,8), 12 + paw_glow * 6, 0.0, TAU, 36, ring_color, 2.0, true)
+
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 func _draw_ellipse_shape(center: Vector2, radius: Vector2, color: Color) -> void:
 	var pts := PackedVector2Array()
