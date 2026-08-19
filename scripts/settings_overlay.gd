@@ -6,6 +6,7 @@ var update_status: Label
 var file_status: Label
 var voice_status: Label
 var project_status: Label
+var improvement_status: Label
 var project_picker: FileDialog
 var project_select: OptionButton
 
@@ -156,6 +157,20 @@ func _build_ui() -> void:
 	box.add_child(project_buttons)
 	_add_separator(box)
 
+	_add_section(box, "Самоулучшение")
+	var improvement_hint := Label.new()
+	improvement_hint.text = "AuroraFox может предложить новое ограниченное расширение, проверить полную копию проекта в песочнице через Godot 4.7.1 и подготовить его. Активация выполняется только после отдельного подтверждения и не заменяет ядро."
+	improvement_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(improvement_hint)
+	improvement_status = Label.new()
+	improvement_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(improvement_status)
+	var improvement_button := Button.new()
+	improvement_button.text = "Открыть центр самоулучшения"
+	improvement_button.pressed.connect(_open_self_improvement)
+	box.add_child(improvement_button)
+	_add_separator(box)
+
 	_add_section(box, "Обновления")
 	var update_settings := AuroraUpdate.get_settings()
 	var auto_check := CheckButton.new()
@@ -235,6 +250,7 @@ func _sync_status() -> void:
 	voice_status.text = "Голосовой backend: %s" % ("готов" if AuroraVoice.backend_is_ready else "не подключён")
 	_refresh_file_status()
 	_refresh_index_status()
+	_sync_improvement_status()
 
 func _refresh_file_status() -> void:
 	var main := get_parent()
@@ -248,8 +264,7 @@ func _refresh_file_status() -> void:
 		file_status.text = "File Intelligence: требуется подготовка" if OS.get_name() == "Windows" else "File Intelligence: Android runtime недоступен"
 		return
 	if OS.get_name() == "Android":
-		var caps = result.get("capabilities", {})
-		file_status.text = "File Intelligence: Android native • STT %s • PDF/DOCX/XLSX/PPTX/ZIP" % ("готов" if caps is Dictionary and (caps.get("sherpa_stt", false) or caps.get("whisper_cpp", false)) else "ограничен")
+		file_status.text = "File Intelligence: Android native • STT %s • PDF/DOCX/XLSX/PPTX/ZIP • глубокое vision/OCR пока не подключено" % ("готов" if result.get("voice_online", false) else "ограничен")
 	else:
 		file_status.text = "File Intelligence: готов • vision %s • voice/STT %s" % [
 			"подключено" if result.get("vision_online", false) else "не подключено",
@@ -267,8 +282,7 @@ func _clear_file_cache() -> void:
 func _project_bridge() -> ProjectIndexToolBridge:
 	var main := get_parent()
 	if main == null: return null
-	var node := main.get_node_or_null("ProjectIndexTools")
-	return node as ProjectIndexToolBridge
+	return main.get_node_or_null("ProjectIndexTools") as ProjectIndexToolBridge
 
 func _refresh_project_list() -> void:
 	if project_select == null: return
@@ -334,6 +348,33 @@ func _remove_selected_project() -> void:
 	await bridge.index.clear(root)
 	bridge.access.remove_root(root)
 	_refresh_project_list()
+
+func _runtime_extensions() -> RuntimeExtensionManager:
+	var main := get_parent()
+	if main == null: return null
+	return main.get_node_or_null("RuntimeExtensions") as RuntimeExtensionManager
+
+func _sync_improvement_status() -> void:
+	if improvement_status == null: return
+	var manager := _runtime_extensions()
+	if manager == null:
+		improvement_status.text = "Runtime-расширения: менеджер не подключён"
+		return
+	var items := manager.list_extensions()
+	var active := 0
+	for item in items:
+		if bool(item.get("active", false)): active += 1
+	improvement_status.text = "Runtime-расширения: %d активных / %d сохранённых • автоматическая Godot-проверка: %s" % [active, items.size(), "Windows" if OS.get_name() == "Windows" else "недоступна на этой платформе"]
+
+func _open_self_improvement() -> void:
+	var main := get_parent()
+	if main == null: return
+	var center := main.get_node_or_null("SelfImprovementCenter")
+	if center == null or not center.has_method("show_center"):
+		improvement_status.text = "Центр самоулучшения не подключён"
+		return
+	popup.hide()
+	center.call("show_center")
 
 func _check_updates() -> void:
 	update_status.text = "Проверяю подписанный stable-релиз…"
