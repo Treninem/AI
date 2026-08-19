@@ -1,6 +1,7 @@
 param(
     [switch]$SkipHeavyModels,
     [switch]$EnableXtts,
+    [switch]$AcceptXttsCpml,
     [string]$XttsSpeakerWav = "",
     [string]$StateFile = ""
 )
@@ -22,6 +23,9 @@ $voskZip = Join-Path ([IO.Path]::GetTempPath()) 'aurorafox-vosk-ru.zip'
 $voiceConfigPath = Join-Path $PSScriptRoot 'config\voice_config.json'
 $xttsRequirements = Join-Path $PSScriptRoot 'requirements_xtts.txt'
 $xttsSpeakerTarget = Join-Path $models 'xtts_speaker.wav'
+$prepareFfmpeg = Join-Path $PSScriptRoot 'prepare_ffmpeg.ps1'
+$ffmpegBin = Join-Path $PSScriptRoot 'runtime\ffmpeg\bin'
+$voicePythonDir = Join-Path $PSScriptRoot 'python'
 
 function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
     Write-Host ("[{0,3}%] {1}: {2}" -f $Progress, $Name, $Message) -ForegroundColor Cyan
@@ -74,8 +78,9 @@ try {
     New-Item -ItemType Directory -Force -Path $models,$modelCache,$hfHome,$torchHome | Out-Null
 
     if ($EnableXtts) {
-        Set-Stage 'xtts_dependencies' 28 'Installing maintained Coqui XTTS-v2 backend'
-        if (-not (Test-Path -LiteralPath $xttsRequirements)) { throw 'voice/requirements_xtts.txt is missing.' }
+        if (-not $AcceptXttsCpml) {
+            throw 'XTTS-v2 requires explicit CPML/TOS acceptance. Re-run with -AcceptXttsCpml after reviewing the Coqui Public Model License.'
+        }
         if ([string]::IsNullOrWhiteSpace($XttsSpeakerWav)) {
             throw 'EnableXtts requires -XttsSpeakerWav with an authorized speaker reference WAV.'
         }
@@ -83,14 +88,33 @@ try {
         if ([IO.Path]::GetExtension($speaker).ToLowerInvariant() -ne '.wav') {
             throw 'XTTS speaker reference must be a WAV file.'
         }
+
+        Set-Stage 'ffmpeg' 25 'Preparing verified shared FFmpeg runtime for XTTS/TorchCodec'
+        if (-not (Test-Path -LiteralPath $prepareFfmpeg)) { throw 'voice/prepare_ffmpeg.ps1 is missing.' }
+        & powershell -NoProfile -ExecutionPolicy Bypass -File $prepareFfmpeg | Out-Host
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare the AuroraFox shared FFmpeg runtime.' }
+        if (-not (Test-Path -LiteralPath (Join-Path $ffmpegBin 'ffmpeg.exe'))) {
+            throw 'AuroraFox shared FFmpeg runtime was not produced.'
+        }
+        if (@(Get-ChildItem -LiteralPath $ffmpegBin -Filter 'avcodec-*.dll' -File -ErrorAction SilentlyContinue).Count -eq 0) {
+            throw 'AuroraFox FFmpeg runtime does not contain shared avcodec DLLs.'
+        }
+        $env:AURORAFOX_FFMPEG_BIN = $ffmpegBin
+        $env:PATH = "$ffmpegBin;$env:PATH"
+
+        Set-Stage 'xtts_dependencies' 32 'Installing maintained Coqui XTTS-v2 backend'
+        if (-not (Test-Path -LiteralPath $xttsRequirements)) { throw 'voice/requirements_xtts.txt is missing.' }
         & $uv pip install --python $python -r $xttsRequirements
         if ($LASTEXITCODE -ne 0) { throw 'Failed to install XTTS-v2 dependencies.' }
+
         Configure-Xtts $speaker
-        & $python -c "from TTS.api import TTS; import torchcodec; print('XTTS_IMPORT_OK')"
-        if ($LASTEXITCODE -ne 0) { throw 'XTTS-v2 dependency import validation failed.' }
+        $env:COQUI_TOS_AGREED = '1'
+        $env:AURORAFOX_VOICE_PYTHON_DIR = $voicePythonDir
+        & $python -c "import os,sys; sys.path.insert(0, os.environ['AURORAFOX_VOICE_PYTHON_DIR']); import tts_engine; from TTS.api import TTS; import torchcodec; print('XTTS_IMPORT_OK', tts_engine.LOCAL_FFMPEG_BIN)"
+        if ($LASTEXITCODE -ne 0) { throw 'XTTS-v2/TorchCodec/FFmpeg import validation failed.' }
     }
 
-    Set-Stage 'wake_word' 40 'Preparing local Fox wake-word model'
+    Set-Stage 'wake_word' 42 'Preparing local Fox wake-word model'
     if (-not (Test-Path $voskDir)) {
         Invoke-WebRequest -Uri 'https://alphacephei.com/vosk/models/vosk-model-small-ru-0.22.zip' -OutFile $voskZip
         Expand-Archive -Path $voskZip -DestinationPath $models -Force
@@ -117,7 +141,7 @@ try {
         & $python -c $sttCode
         if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Whisper.' }
 
-        Set-Stage 'tts_model' 76 'Downloading Russian Silero TTS fallback'
+        Set-Stage 'tts_model' 75 'Downloading Russian Silero TTS fallback'
         $ttsCode = @(
             'from silero import silero_tts',
             'model, _ = silero_tts(language="ru", speaker="v5_5_ru")',
@@ -127,18 +151,25 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Silero TTS.' }
 
         if ($EnableXtts) {
-            Set-Stage 'xtts_model' 86 'Downloading and loading XTTS-v2 model'
+            Set-Stage 'xtts_model' 87 'Downloading and loading XTTS-v2 model through AuroraFox runtime'
+            $env:AURORAFOX_VOICE_PYTHON_DIR = $voicePythonDir
+            $env:AURORAFOX_VOICE_CONFIG = $voiceConfigPath
             $xttsCode = @(
-                'from TTS.api import TTS',
-                'model = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to("cpu")',
-                'print("XTTS_MODEL_READY")'
+                'import json, os, sys',
+                'sys.path.insert(0, os.environ["AURORAFOX_VOICE_PYTHON_DIR"])',
+                'import tts_engine',
+                'cfg = json.load(open(os.environ["AURORAFOX_VOICE_CONFIG"], encoding="utf-8"))',
+                'engine = tts_engine.XTTSVoiceEngine(cfg["xtts"], "cpu")',
+                'assert engine.available(), engine.diagnostics()',
+                'engine._load()',
+                'print("XTTS_MODEL_READY", engine.diagnostics())'
             ) -join "`n"
             & $python -c $xttsCode
             if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare XTTS-v2 model.' }
         }
     }
 
-    Set-Stage 'microphone' 94 'Checking audio library'
+    Set-Stage 'microphone' 95 'Checking audio library'
     $audioCode = @(
         'import sounddevice as sd',
         'print("AUDIO_DEVICES", len(sd.query_devices()))'
@@ -146,15 +177,16 @@ try {
     & $python -c $audioCode
     if ($LASTEXITCODE -ne 0) { throw 'Audio library initialization failed.' }
 
-    Set-Stage 'complete' 100 'AuroraFox voice installation checks passed'
+    Set-Stage 'ready' 100 'AuroraFox voice installation checks passed'
     Write-Host ''
     Write-Host 'AuroraFox Voice installation checks passed.' -ForegroundColor Green
     Write-Host 'System Python is not required; AuroraFox uses managed Python 3.11.'
     Write-Host 'Wake word, VAD, STT and local TTS dependencies are prepared.'
     if ($EnableXtts) {
-        Write-Host 'XTTS-v2 is enabled with the supplied local speaker reference.' -ForegroundColor Green
+        Write-Host 'XTTS-v2 is enabled with the supplied local speaker reference and AuroraFox-local shared FFmpeg runtime.' -ForegroundColor Green
     } else {
-        Write-Host 'XTTS-v2 is optional. Re-run with -EnableXtts -XttsSpeakerWav <authorized.wav> to enable it.'
+        Write-Host 'XTTS-v2 is optional and remains disabled by default.'
+        Write-Host 'To enable it, review CPML and run: install_voice.ps1 -EnableXtts -AcceptXttsCpml -XttsSpeakerWav <authorized.wav>'
     }
 } catch {
     Set-Stage 'error' 0 $_.Exception.Message
