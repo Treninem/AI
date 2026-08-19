@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'voice/**'
+      - 'models/**'
       - 'runtime/**'
       - 'update/**'
       - 'scripts/**'
@@ -19,6 +20,7 @@ on:
   pull_request:
     paths:
       - 'voice/**'
+      - 'models/**'
       - 'runtime/**'
       - 'update/**'
       - 'scripts/**'
@@ -62,7 +64,7 @@ jobs:
           ./godot --version
       - name: Import project and parse scripts
         run: timeout 90s ./godot --headless --editor --path . --quit
-      - name: Run voice GDScript smoke test
+      - name: Run voice and setup GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
       - name: Run updater GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/update_smoke.gd
@@ -71,6 +73,26 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Parse Windows bootstrap scripts
+        shell: powershell
+        run: |
+          $files = @(
+            '.\runtime\ensure_uv.ps1',
+            '.\voice\install_voice.ps1',
+            '.\computer\install_computer.ps1',
+            '.\models\install_models.ps1',
+            '.\update\windows_updater.ps1',
+            '.\build\build_windows.ps1'
+          )
+          foreach ($file in $files) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $file), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$file : $($_.Message)" }
+              throw "PowerShell parse failed: $file"
+            }
+          }
       - name: Verify managed uv bootstrap without system Python dependency
         shell: powershell
         run: |
