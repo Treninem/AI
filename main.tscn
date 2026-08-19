@@ -1,4 +1,4 @@
-[gd_scene load_steps=22 format=3]
+[gd_scene load_steps=24 format=3]
 
 [ext_resource path="res://scripts/main.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/voice_overlay.gd" type="Script" id="2_voice"]
@@ -21,6 +21,8 @@
 [ext_resource path="res://scripts/self_improvement_overlay.gd" type="Script" id="19_self_improvement"]
 [ext_resource path="res://agent/autonomous_coordinator.gd" type="Script" id="20_autonomous_coordinator"]
 [ext_resource path="res://api/agent_bridge.gd" type="Script" id="21_api_bridge"]
+[ext_resource path="res://api/gateway_manager.gd" type="Script" id="22_api_manager"]
+[ext_resource path="res://api/settings_overlay.gd" type="Script" id="23_api_settings"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -90,3 +92,9 @@ script = ExtResource("20_autonomous_coordinator")
 
 [node name="ApiAgentBridge" type="Node" parent="."]
 script = ExtResource("21_api_bridge")
+
+[node name="ApiGatewayManager" type="Node" parent="."]
+script = ExtResource("22_api_manager")
+
+[node name="ApiSettings" type="Node" parent="."]
+script = ExtResource("23_api_settings")
