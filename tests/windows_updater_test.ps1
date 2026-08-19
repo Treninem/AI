@@ -6,6 +6,7 @@ $install = Join-Path $root 'AuroraFox'
 $newRoot = Join-Path $root 'new-build'
 $package = Join-Path $root 'AuroraFox-Windows.zip'
 $health = Join-Path $root 'health.ok'
+$updaterLog = Join-Path $root 'windows_updater.log'
 
 Remove-Item $root -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force -Path $install,$newRoot | Out-Null
@@ -50,7 +51,17 @@ $updater = Join-Path $repo 'update\windows_updater.ps1'
     -ExpectedSha256 $sha `
     -HealthFile $health
 
-if ($LASTEXITCODE -ne 0) { throw "windows_updater.ps1 returned $LASTEXITCODE" }
+if ($LASTEXITCODE -ne 0) {
+    Write-Host '--- windows_updater.log ---' -ForegroundColor Yellow
+    if (Test-Path -LiteralPath $updaterLog) {
+        Get-Content -LiteralPath $updaterLog | ForEach-Object { Write-Host $_ }
+    } else {
+        Write-Host '(updater log missing)'
+    }
+    Write-Host '--- updater integration tree ---' -ForegroundColor Yellow
+    Get-ChildItem -LiteralPath $root -Force -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Write-Host $_.FullName }
+    throw "windows_updater.ps1 returned $LASTEXITCODE"
+}
 if (-not (Test-Path $health)) { throw 'New installation did not produce update health marker' }
 if ((Get-Content (Join-Path $install 'version.txt') -Raw).Trim() -ne 'new') { throw 'New installation was not activated' }
 if (-not (Test-Path (Join-Path $install 'voice\models\keep.txt'))) { throw 'Existing local model was not preserved' }
