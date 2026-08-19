@@ -202,12 +202,18 @@ jobs:
           sha256sum "$apk" | tee build/android/release-sha256.txt
           cp "$apk" dist/AuroraFox-Android.apk
 
-      - name: Enable KVM
+      - name: Enable KVM when available
         shell: bash
         run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
+          set -euo pipefail
+          if [ -e /dev/kvm ]; then
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+            ls -l /dev/kvm
+          else
+            echo 'KVM is unavailable on this runner; emulator runner may use software acceleration.'
+          fi
 
       - name: Install and launch signed APK on Android 35
         uses: reactivecircus/android-emulator-runner@v2.38.0
@@ -217,6 +223,7 @@ jobs:
           arch: x86_64
           profile: pixel_7
           disable-animations: true
+          disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
             set -euo pipefail
