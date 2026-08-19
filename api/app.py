@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from api.learning_queue import LearningQueue
 from api.learning_routes import build_learning_router
+from api.learning_sync import LearningSynchronizer
 from api.server import API_ROOT, HOST, PORT, _auth, _require, app, bridge
 
-learning_queue = LearningQueue(API_ROOT / "learning_queue.json")
-app.include_router(build_learning_router(_auth, _require, learning_queue, bridge))
+learning = LearningSynchronizer(API_ROOT, bridge)
+app.include_router(build_learning_router(_auth, _require, learning))
 
 
 if __name__ == "__main__":
