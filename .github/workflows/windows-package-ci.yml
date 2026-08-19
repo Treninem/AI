@@ -18,6 +18,22 @@ on:
       - 'project.godot'
       - 'export_presets.cfg'
       - '.github/workflows/windows-package-ci.yml'
+  pull_request:
+    paths:
+      - 'assets/**'
+      - 'agent/**'
+      - 'scripts/**'
+      - 'models/**'
+      - 'voice/**'
+      - 'computer/**'
+      - 'file_intelligence/**'
+      - 'runtime/**'
+      - 'update/**'
+      - 'build/**'
+      - 'main.tscn'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - '.github/workflows/windows-package-ci.yml'
   workflow_dispatch:
 
 permissions:
