@@ -127,11 +127,13 @@ func _start_backend_if_installed() -> void:
 
 func _find_runtime() -> Dictionary:
 	for root in _candidate_roots():
-		var service := root.path_join("file_service.py")
+		var launcher := root.path_join("file_service_launcher.py")
+		var legacy_service := root.path_join("file_service.py")
+		var service := launcher if FileAccess.file_exists(launcher) else legacy_service
 		var pythonw := root.path_join(".venv/Scripts/pythonw.exe")
 		var python := root.path_join(".venv/Scripts/python.exe")
 		if FileAccess.file_exists(service) and (FileAccess.file_exists(pythonw) or FileAccess.file_exists(python)):
-			return {"root": root, "service": service, "pythonw": pythonw, "python": python}
+			return {"root": root, "service": service, "pythonw": pythonw, "python": python, "extended_formats": service == launcher}
 	return {}
 
 func _candidate_roots() -> Array[String]:
