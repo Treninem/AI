@@ -151,35 +151,43 @@ func _android_private_copy(path: String) -> String:
 	return ProjectSettings.globalize_path(target)
 
 func _safe_filename(value: String) -> String:
-	var out := ""
-	for ch in value:
-		var s := str(ch)
-		if s.to_lower() in "abcdefghijklmnopqrstuvwxyz0123456789._-" or s.to_upper() != s.to_lower():
-			out += s
-		else:
-			out += "_"
-	return out.substr(0, 120) if not out.is_empty() else "file.bin"
+	var out := value
+	for bad in ["/", "\\", ":", "*", "?", "\"", "<", ">", "|"]:
+		out = out.replace(bad, "_")
+	out = out.strip_edges()
+	if out.is_empty(): out = "file.bin"
+	return out.substr(0, 120)
 
 func _parse_native(raw: Variant) -> Dictionary:
 	var parsed = JSON.parse_string(str(raw))
 	return parsed if parsed is Dictionary else {"ok": false, "error": "Invalid Android native response"}
 
 func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0) -> Dictionary:
-	var req := HTTPRequest.new()
-	req.timeout = timeout
-	add_child(req)
-	var headers := PackedStringArray(["Content-Type: application/json"])
-	var body := "" if payload.is_empty() else JSON.stringify(payload)
-	var err := req.request(BASE_URL + path, headers, method, body)
-	if err != OK:
-		req.queue_free()
-		return {"ok": false, "error": "File Intelligence request error: %s" % error_string(err)}
-	var result: Array = await req.request_completed
-	req.queue_free()
-	var code := int(result[1])
-	var raw := (result[3] as PackedByteArray).get_string_from_utf8()
-	var parsed = JSON.parse_string(raw)
-	if parsed is Dictionary:
-		if code >= 200 and code < 300: return parsed
-		return {"ok": false, "http": code, "error": str(parsed.get("detail", parsed.get("error", raw)))}
-	return {"ok": false, "http": code, "error": raw.substr(0, 4000)}
+	var last_error := ""
+	for attempt in range(2):
+		var req := HTTPRequest.new()
+		req.timeout = timeout
+		add_child(req)
+		var headers := PackedStringArray(["Content-Type: application/json"])
+		var body := "" if payload.is_empty() else JSON.stringify(payload)
+		var err := req.request(BASE_URL + path, headers, method, body)
+		if err != OK:
+			last_error = "File Intelligence request error: %s" % error_string(err)
+			req.queue_free()
+		else:
+			var result: Array = await req.request_completed
+			req.queue_free()
+			var code := int(result[1])
+			var raw := (result[3] as PackedByteArray).get_string_from_utf8()
+			var parsed = JSON.parse_string(raw)
+			if code >= 200 and code < 300 and parsed is Dictionary:
+				return parsed
+			if code > 0:
+				if parsed is Dictionary:
+					return {"ok": false, "http": code, "error": str(parsed.get("detail", parsed.get("error", raw)))}
+				return {"ok": false, "http": code, "error": raw.substr(0, 4000)}
+			last_error = "File Intelligence backend is not ready"
+		if attempt == 0 and OS.get_name() == "Windows" and runtime_is_installed():
+			if backend_pid <= 0: _start_backend_if_installed()
+			await get_tree().create_timer(0.9).timeout
+	return {"ok": false, "error": last_error if not last_error.is_empty() else "File Intelligence unavailable"}
