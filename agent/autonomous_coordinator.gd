@@ -35,9 +35,9 @@ func _ready() -> void:
 	call_deferred("_bootstrap")
 
 func _bootstrap() -> void:
-	for _i in range(40):
+	for _i in range(60):
 		_bind_existing()
-		if tools != null and agent_core != null and improver != null and extensions != null:
+		if _minimum_integration_ready():
 			break
 		await get_tree().process_frame
 	_bind_existing()
@@ -47,8 +47,25 @@ func _bootstrap() -> void:
 	_register_coordination_tools()
 	_setup_timer()
 	var report := await synchronize_all()
-	if autonomous_enabled and bool(report.get("compatible", false)):
+	if not bool(report.get("compatible", false)):
+		_record_event("initial_sync_pending", {
+			"missing_components": report.get("missing_components", []),
+			"missing_required_tools": report.get("missing_required_tools", [])
+		})
+	if autonomous_enabled:
 		_timer.start()
+
+func _minimum_integration_ready() -> bool:
+	if tools == null or ai == null or memory == null or agent_core == null or improver == null or extensions == null:
+		return false
+	for name in ["workspace_create", "workspace_test"]:
+		if not tools.tools.has(name):
+			return false
+	if OS.get_name() == "Windows":
+		for name in ["project_index_status", "index_project", "search_project", "search_symbols", "workspace_import_project", "project_compare_file", "project_apply_file"]:
+			if not tools.tools.has(name):
+				return false
+	return true
 
 func _bind_existing() -> void:
 	var main := get_parent()
