@@ -241,8 +241,14 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: aurorafox-android
+          path: dist/AuroraFox-Android.apk
+          if-no-files-found: error
+
+      - name: Upload Android diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurorafox-android-diagnostics
           path: |
-            dist/AuroraFox-Android.apk
             build/android/release-signature.txt
             build/android/release-badging.txt
             build/android/release-sha256.txt
