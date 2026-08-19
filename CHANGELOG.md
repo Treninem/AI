@@ -1,5 +1,20 @@
 # AuroraFox Changelog
 
+## V1.2.0.0 — 2026-08-20
+
+- Replaced the single-mutation self-improvement path with an automatic evolutionary tournament that creates 3–10 distinct mutation candidates for the same goal.
+- Each mutation is generated with a different strategy, receives its own isolated workspace copy, and must pass Godot 4.7.1 verification before it can enter the competition.
+- The tournament requires at least three independently verified survivors; otherwise AuroraFox rejects the evolution cycle and applies nothing.
+- Verified candidates are scored by deterministic quality signals plus a zero-temperature comparative judge; the strongest candidate wins, then is tested again from a fresh sandbox immediately before staging.
+- The winning mutation is activated automatically through RuntimeExtensionManager without a user confirmation step, with SHA-256 integrity checks and persistent activation metadata.
+- Autonomous research now writes sourced findings into shared long-term knowledge instead of only episodic memory/logs.
+- AuroraFox now starts its first autonomous learning/evolution cycle shortly after bootstrap instead of waiting for the first long timer interval.
+- Default evolution cadence changed to a 5-minute observation cycle, 5-minute research cooldown and 15-minute mutation cooldown; default competition population is five and can adapt up to ten after repeated failures.
+- Stable signed releases are checked hourly by default, downloaded automatically and applied automatically after signature and SHA-256 verification. Android opens the platform package installer automatically where Android requires OS-level installation permission.
+- Added regression contracts and Godot smoke tests that reject builds where the 3–10 tournament, startup evolution, independent testing, winner retest, automatic activation or automatic update path disappears.
+- Fixed Android release-emulator validation so the exact APK contains both production arm64-v8a and CI x86_64 ABIs instead of trying to install an arm64-only package on an x86_64 emulator.
+- Bumped AuroraFox to `V1.2.0.0` and Android `versionCode` to `100004`.
+
 ## V1.1.1.2 — 2026-08-19
 
 - Re-enabled Android as an actively validated release target instead of leaving only the mobile foundation in the repository.
