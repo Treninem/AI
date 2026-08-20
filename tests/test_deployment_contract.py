@@ -44,6 +44,8 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     updater = read("deploy/reg_ru/update.sh")
     install = read("deploy/reg_ru/install.sh")
     requirements = read("api/requirements.txt")
+    assert b"\r\n" not in (ROOT / "deploy/reg_ru/install.sh").read_bytes()
+    assert b"\r\n" not in (ROOT / "deploy/reg_ru/update.sh").read_bytes()
     assert "https://github.com/Treninem/AI.git" in install
     assert "AURORAFOX_GITHUB_REF='main'" in install
     assert "gpg --batch --yes --dearmor" in install
