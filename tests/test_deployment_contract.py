@@ -67,3 +67,5 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "PasswordAuthentication no" in install
     assert "ufw --force enable" in install
     assert "ForceCommand internal-sftp" in install
+    assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
+    assert "chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup" in install
