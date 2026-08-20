@@ -10,18 +10,25 @@ if [[ "${EUID}" -ne 0 ]]; then
   echo 'Run AuroraFox REG.RU installation as root.' >&2
   exit 2
 fi
-public_ip="$(ip -4 route get 1.1.1.1 | awk '{for (i=1; i<=NF; i++) if ($i=="src") {print $(i+1); exit}}')"
+public_ip="${2:-${AURORAFOX_PUBLIC_IP:-}}"
+if [[ -z "${public_ip}" ]]; then
+  public_ip="$(ip -4 route get 1.1.1.1 | awk '{for (i=1; i<=NF; i++) if ($i=="src") {print $(i+1); exit}}')"
+fi
 test -n "${public_ip}"
+if [[ ! "${public_ip}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+  echo 'Invalid AuroraFox public IPv4 address.' >&2
+  exit 3
+fi
 if [[ -z "${public_host}" ]]; then
   public_host="${public_ip}.sslip.io"
 fi
 if [[ ! "${public_host}" =~ ^[A-Za-z0-9.-]+$ ]]; then
   echo 'Invalid AuroraFox public host.' >&2
-  exit 3
+  exit 4
 fi
 if [[ ! "${backup_public_key}" =~ ^ssh-ed25519[[:space:]][A-Za-z0-9+/=]+([[:space:]].*)?$ ]]; then
   echo 'AURORAFOX_BACKUP_PUBLIC_KEY must contain the owner PC ed25519 public key.' >&2
-  exit 4
+  exit 5
 fi
 site_hosts="${public_host}"
 api_public_host="${public_host}"
