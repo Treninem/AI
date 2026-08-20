@@ -33,6 +33,12 @@ def main() -> None:
     require('permissions/internet=true' in preset, "Android internet permission is missing")
     require('permissions/record_audio=true' in preset, "Android microphone permission is missing")
 
+    project = read("project.godot")
+    require(
+        "textures/vram_compression/import_etc2_astc=true" in project,
+        "Android ETC2/ASTC texture import must be enabled for export",
+    )
+
     build_script = read("build/build_android.ps1")
     require("[switch]$AllowUnsignedRelease" in build_script, "CI unsigned export switch is missing")
     require("package/signed=false" in build_script, "unsigned CI export is not implemented")
