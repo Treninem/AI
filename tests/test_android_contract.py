@@ -33,10 +33,24 @@ def main() -> None:
     require('permissions/internet=true' in preset, "Android internet permission is missing")
     require('permissions/record_audio=true' in preset, "Android microphone permission is missing")
 
+    project = read("project.godot")
+    require(
+        "textures/vram_compression/import_etc2_astc=true" in project,
+        "Android ETC2/ASTC texture import must be enabled for export",
+    )
+
     build_script = read("build/build_android.ps1")
     require("[switch]$AllowUnsignedRelease" in build_script, "CI unsigned export switch is missing")
     require("package/signed=false" in build_script, "unsigned CI export is not implemented")
     require("Restored signed Android export preset" in build_script, "signed preset restoration guard is missing")
+    require(
+        '--install-android-build-template --export-release "Android"' in build_script,
+        "Android build template installation must be coupled to export so Godot exits",
+    )
+    require(
+        build_script.count("--install-android-build-template") == 1,
+        "Android build template installation must not run as a standalone Godot process",
+    )
 
     artifact = read(".github/workflows/android-apk-artifact.yml")
     require("-AllowUnsignedRelease" in artifact, "APK artifact workflow does not use controlled unsigned export")
@@ -45,11 +59,44 @@ def main() -> None:
     require("apksigner" in artifact and "aapt" in artifact, "APK signature/package validation is missing")
     require("android-emulator-runner" in artifact and "arch: x86_64" in artifact, "Android emulator validation is missing")
     require('adb install -r "$APK_PATH"' in artifact, "Android artifact smoke does not install the generated APK")
+    emulator_script = artifact.split("script: |", 1)[1].split("- name: Upload APK artifact", 1)[0]
+    require("set -eu" in emulator_script, "Android emulator smoke must fail fast under POSIX /bin/sh")
+    require("pipefail" not in emulator_script, "Android emulator smoke uses Bash-only pipefail under POSIX /bin/sh")
+    require("emulator-pid.txt" in emulator_script, "Android emulator smoke does not persist PID across runner shell commands")
+    require(
+        "; exit 1; fi" in emulator_script,
+        "Android emulator crash check must stay on one line because the runner executes every line separately",
+    )
+    require(
+        not any(line.strip() in {"then", "fi"} for line in emulator_script.splitlines()),
+        "Android emulator smoke contains a multiline shell conditional that the runner cannot preserve",
+    )
+    require(
+        emulator_script.index("adb logcat -d") < emulator_script.index("test -s build/android/emulator-pid.txt"),
+        "Android failure diagnostics must be captured before the process liveness assertion",
+    )
 
     release = read(".github/workflows/release.yml")
     require("Install and launch signed APK on Android 35" in release, "production Android emulator gate is missing")
     require("arch: x86_64" in release, "production Android emulator ABI drifted")
     require("dist/AuroraFox-Android.apk" in release, "production APK path changed unexpectedly")
+    release_emulator_script = release.split("Install and launch signed APK on Android 35", 1)[1].split(
+        "- name: Upload Android artifact", 1
+    )[0]
+    require("set -eu" in release_emulator_script, "production emulator smoke must use POSIX fail-fast mode")
+    require("pipefail" not in release_emulator_script, "production emulator smoke uses Bash-only pipefail")
+    require(
+        "release-emulator-pid.txt" in release_emulator_script,
+        "production emulator smoke does not persist PID across runner shell commands",
+    )
+    require(
+        "; exit 1; fi" in release_emulator_script,
+        "production emulator crash check must stay on one line",
+    )
+    require(
+        not any(line.strip() in {"then", "fi"} for line in release_emulator_script.splitlines()),
+        "production emulator smoke contains a multiline shell conditional",
+    )
 
     ai_client = read("scripts/ai_client.gd")
     android_branch = ai_client.split('func chat(messages: Array, temperature: float = 0.2) -> Dictionary:', 1)[1].split('func _chat_ollama', 1)[0]
@@ -80,3 +127,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

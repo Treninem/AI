@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -80,6 +81,8 @@ def persist(item: dict) -> None:
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     parser = argparse.ArgumentParser(description="AuroraFox verified release progress reporter")
     parser.add_argument("--watch", action="store_true", help="Keep reporting at the requested interval")
     parser.add_argument("--interval", type=int, default=60, help="Seconds between reports; default 60")
@@ -104,3 +107,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+

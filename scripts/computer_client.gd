@@ -69,10 +69,12 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 	req.queue_free()
 	var code := int(result[1])
 	var raw: PackedByteArray = result[3]
-	var text := raw.get_string_from_utf8()
-	var data = JSON.parse_string(text)
+	var text := raw.get_string_from_utf8().strip_edges()
 	if code < 200 or code >= 300:
-		return {"ok": false, "error": text, "http": code}
+		return {"ok": false, "error": text if not text.is_empty() else "Empty HTTP error response", "http": code}
+	if text.is_empty():
+		return {"ok": false, "error": "Empty response", "http": code}
+	var data = JSON.parse_string(text)
 	if data is Dictionary:
 		return data
 	return {"ok": false, "error": "Invalid response"}

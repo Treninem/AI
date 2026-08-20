@@ -307,23 +307,21 @@ jobs:
           disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            set -euo pipefail
+            # android-emulator-runner executes this block with POSIX /bin/sh.
+            set -eu
             apk='dist/AuroraFox-Android.apk'
             adb install -r "$apk"
             adb shell pm path com.aurorafox.ai | tee build/android/release-emulator-package.txt
             grep -q '^package:' build/android/release-emulator-package.txt
+            adb logcat -c
             adb shell monkey -p com.aurorafox.ai -c android.intent.category.LAUNCHER 1
             sleep 8
-            pid="$(adb shell pidof com.aurorafox.ai | tr -d '\r')"
-            test -n "$pid"
-            adb shell dumpsys package com.aurorafox.ai | grep -F "versionName=${{ steps.version.outputs.numeric }}"
             adb logcat -d -v brief > build/android/release-emulator-logcat.txt
-            if grep -A10 -B4 'FATAL EXCEPTION' build/android/release-emulator-logcat.txt | grep -q 'com.aurorafox.ai'; then
-              echo 'Signed AuroraFox APK crashed during Android release smoke.' >&2
-              grep -A20 -B6 'FATAL EXCEPTION' build/android/release-emulator-logcat.txt | tail -n 120 >&2
-              exit 1
-            fi
-            echo "AURORA_ANDROID_RELEASE_EMULATOR_OK pid=$pid"
+            adb shell pidof com.aurorafox.ai | tr -d '\r' | tee build/android/release-emulator-pid.txt
+            test -s build/android/release-emulator-pid.txt
+            adb shell dumpsys package com.aurorafox.ai | grep -F "versionName=${{ steps.version.outputs.numeric }}"
+            if grep -A10 -B4 'FATAL EXCEPTION' build/android/release-emulator-logcat.txt | grep -q 'com.aurorafox.ai'; then echo 'Signed AuroraFox APK crashed during Android release smoke.' >&2; grep -A20 -B6 'FATAL EXCEPTION' build/android/release-emulator-logcat.txt | tail -n 120 >&2; exit 1; fi
+            echo "AURORA_ANDROID_RELEASE_EMULATOR_OK pid=$(cat build/android/release-emulator-pid.txt)"
 
       - name: Upload Android artifact
         uses: actions/upload-artifact@v4
@@ -341,6 +339,7 @@ jobs:
             build/android/release-badging.txt
             build/android/release-sha256.txt
             build/android/release-emulator-package.txt
+            build/android/release-emulator-pid.txt
             build/android/release-emulator-logcat.txt
           if-no-files-found: error
 
@@ -488,3 +487,4 @@ jobs:
         run: |
           set -euo pipefail
           gh release edit "$GITHUB_REF_NAME" --draft=false
+

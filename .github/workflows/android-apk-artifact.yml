@@ -39,10 +39,16 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: aurorafox-android-apk-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   android-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 180
+    env:
+      AURORAFOX_NATIVE_CACHE_DIR: ${{ github.workspace }}/.ci/native-cache
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -61,6 +67,31 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+          cache-cleanup: on-success
+
+      - name: Restore AuroraFox native build cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            android_plugin/plugin/src/main/cpp/third_party
+            android_plugin/plugin/libs
+            android_plugin/plugin/src/main/assets/voice
+            android_plugin/plugin/.cxx
+            .ci/native-cache
+          key: aurorafox-android-native-v3-${{ runner.os }}-${{ hashFiles('android_plugin/setup_native.ps1', 'android_plugin/plugin/build.gradle.kts', 'android_plugin/plugin/src/main/cpp/CMakeLists.txt', '.github/workflows/android-apk-artifact.yml') }}
+          restore-keys: |
+            aurorafox-android-native-v3-${{ runner.os }}-
+
+      - name: Restore Godot 4.7.1 cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            .ci/godot
+            .ci/godot.zip
+            .ci/templates
+            .ci/templates.tpz
+            ~/.local/share/godot/export_templates/4.7.1.stable
+          key: aurorafox-godot-4.7.1-${{ runner.os }}
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -78,21 +109,36 @@ jobs:
             'ndk;28.1.13356709'
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
 
-      - name: Download Godot 4.7.1 and export templates
+      - name: Prepare Godot 4.7.1 and export templates
         shell: bash
         run: |
           set -euo pipefail
           base='https://github.com/godotengine/godot/releases/download/4.7.1-stable'
           mkdir -p .ci/godot .ci/templates
-          curl -fL "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o .ci/godot.zip
-          unzip -q .ci/godot.zip -d .ci/godot
-          GODOT="$(find .ci/godot -maxdepth 1 -type f -name 'Godot*' | head -n1)"
+
+          GODOT="$(find .ci/godot -maxdepth 1 -type f -name 'Godot*' | head -n1 || true)"
+          if [ -z "$GODOT" ]; then
+            if [ ! -s .ci/godot.zip ]; then
+              curl --retry 4 --retry-all-errors -fL "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o .ci/godot.zip
+            fi
+            unzip -qo .ci/godot.zip -d .ci/godot
+            GODOT="$(find .ci/godot -maxdepth 1 -type f -name 'Godot*' | head -n1)"
+          fi
           test -n "$GODOT"
           chmod +x "$GODOT"
-          curl -fL "$base/Godot_v4.7.1-stable_export_templates.tpz" -o .ci/templates.tpz
-          mkdir -p "$HOME/.local/share/godot/export_templates/4.7.1.stable"
-          unzip -q .ci/templates.tpz -d .ci/templates
-          cp -a .ci/templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.1.stable/"
+
+          template_dir="$HOME/.local/share/godot/export_templates/4.7.1.stable"
+          mkdir -p "$template_dir"
+          if [ ! -s "$template_dir/android_debug.apk" ] || [ ! -s "$template_dir/android_release.apk" ]; then
+            if [ ! -s .ci/templates.tpz ]; then
+              curl --retry 4 --retry-all-errors -fL "$base/Godot_v4.7.1-stable_export_templates.tpz" -o .ci/templates.tpz
+            fi
+            rm -rf .ci/templates
+            mkdir -p .ci/templates
+            unzip -q .ci/templates.tpz -d .ci/templates
+            cp -a .ci/templates/templates/. "$template_dir/"
+          fi
+
           echo "GODOT=$GODOT" >> "$GITHUB_ENV"
           "$GODOT" --version
 
@@ -187,22 +233,20 @@ jobs:
           disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            set -euo pipefail
+            # android-emulator-runner executes this block with POSIX /bin/sh.
+            set -eu
             adb install -r "$APK_PATH"
             adb shell pm path com.aurorafox.ai | tee build/android/emulator-package.txt
             grep -q '^package:' build/android/emulator-package.txt
+            adb logcat -c
             adb shell monkey -p com.aurorafox.ai -c android.intent.category.LAUNCHER 1
             sleep 8
-            pid="$(adb shell pidof com.aurorafox.ai | tr -d '\r')"
-            test -n "$pid"
-            adb shell dumpsys package com.aurorafox.ai | grep -F "versionName=${{ steps.version.outputs.numeric }}"
             adb logcat -d -v brief > build/android/emulator-logcat.txt
-            if grep -A10 -B4 'FATAL EXCEPTION' build/android/emulator-logcat.txt | grep -q 'com.aurorafox.ai'; then
-              echo 'AuroraFox crashed during Android launch smoke.' >&2
-              grep -A20 -B6 'FATAL EXCEPTION' build/android/emulator-logcat.txt | tail -n 120 >&2
-              exit 1
-            fi
-            echo "AURORA_ANDROID_EMULATOR_OK pid=$pid"
+            adb shell pidof com.aurorafox.ai | tr -d '\r' | tee build/android/emulator-pid.txt
+            test -s build/android/emulator-pid.txt
+            adb shell dumpsys package com.aurorafox.ai | grep -F "versionName=${{ steps.version.outputs.numeric }}"
+            if grep -A10 -B4 'FATAL EXCEPTION' build/android/emulator-logcat.txt | grep -q 'com.aurorafox.ai'; then echo 'AuroraFox crashed during Android launch smoke.' >&2; grep -A20 -B6 'FATAL EXCEPTION' build/android/emulator-logcat.txt | tail -n 120 >&2; exit 1; fi
+            echo "AURORA_ANDROID_EMULATOR_OK pid=$(cat build/android/emulator-pid.txt)"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -213,5 +257,18 @@ jobs:
             build/android/SHA256SUMS.txt
             build/android/aapt-badging.txt
             build/android/emulator-package.txt
+            build/android/emulator-pid.txt
             build/android/emulator-logcat.txt
           if-no-files-found: error
+
+      - name: Upload Android diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraFox-Android-Failure-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            build/android/*.txt
+            build/android/*.apk
+            android_plugin/plugin/build/reports/**
+          if-no-files-found: ignore
+          retention-days: 7

@@ -31,8 +31,15 @@ if ($LASTEXITCODE -ne 0) { throw "Android native source setup failed" }
 Push-Location $pluginRoot
 try {
     $pluginTask = if ($ReleaseOnly) { ":plugin:installGodotPluginRelease" } else { ":plugin:installGodotPlugin" }
-    Write-Host "Building Android plugin task: $pluginTask"
-    & $Gradle $pluginTask
+    $gradleArgs = @(
+        $pluginTask,
+        "--build-cache",
+        "--parallel",
+        "--no-daemon",
+        "--stacktrace"
+    )
+    Write-Host "Building Android plugin task: $pluginTask (Gradle build cache + parallel workers enabled)"
+    & $Gradle @gradleArgs
     if ($LASTEXITCODE -ne 0) { throw "AuroraFoxRuntime AAR build failed" }
 } finally {
     Pop-Location
@@ -66,14 +73,15 @@ try {
         & $Godot --headless --path $root --import
         if ($LASTEXITCODE -ne 0) { throw "Godot import failed" }
 
-        & $Godot --headless --path $root --install-android-build-template
-        if ($LASTEXITCODE -ne 0) { throw "Godot Android Gradle build template installation failed" }
-
         $apkPath = Join-Path $outDir "AuroraFox.apk"
         if (Test-Path -LiteralPath $apkPath) {
             Remove-Item -LiteralPath $apkPath -Force
         }
-        & $Godot --headless --path $root --export-release "Android" $apkPath
+        # This flag is an export modifier, not a standalone one-shot command.
+        # Invoking it alone starts the project after installing the template and
+        # leaves CI running indefinitely. Keep installation and export in the
+        # same Godot process so the editor exits when the APK is produced.
+        & $Godot --headless --path $root --install-android-build-template --export-release "Android" $apkPath
         if ($LASTEXITCODE -ne 0) { throw "Android export failed" }
         if (-not (Test-Path -LiteralPath $apkPath)) { throw "Android APK was not produced" }
 

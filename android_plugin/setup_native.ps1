@@ -4,7 +4,12 @@ $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 $thirdParty = Join-Path $root "plugin/src/main/cpp/third_party"
 $libs = Join-Path $root "plugin/libs"
 $voiceAssets = Join-Path $root "plugin/src/main/assets/voice"
-$temp = Join-Path ([IO.Path]::GetTempPath()) "aurorafox-android-voice"
+$cacheRoot = if ($env:AURORAFOX_NATIVE_CACHE_DIR) {
+    [IO.Path]::GetFullPath($env:AURORAFOX_NATIVE_CACHE_DIR)
+} else {
+    Join-Path ([IO.Path]::GetTempPath()) "aurorafox-android-native-cache"
+}
+$temp = Join-Path $cacheRoot "voice-archives"
 New-Item -ItemType Directory -Force -Path $thirdParty,$libs,$voiceAssets,$temp | Out-Null
 
 # Pinned revisions: do not silently build a different native runtime tomorrow.
@@ -78,11 +83,16 @@ function Download-IfMissing($url, $dest) {
     if (-not (Test-Path $dest)) {
         Write-Host "Downloading $(Split-Path $dest -Leaf)..."
         Invoke-WebRequest -Uri $url -OutFile $dest
+    } else {
+        Write-Host "Using cached $(Split-Path $dest -Leaf)."
     }
 }
 
 function Extract-TarBz2($archive, $dest, $expectedFolder) {
-    if (Test-Path (Join-Path $dest $expectedFolder)) { return }
+    if (Test-Path (Join-Path $dest $expectedFolder)) {
+        Write-Host "Using cached extracted model $expectedFolder."
+        return
+    }
     if (-not (Get-Command tar -ErrorAction SilentlyContinue)) {
         throw "tar is required to unpack Android voice models"
     }
@@ -104,17 +114,28 @@ Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sh
 # Russian Piper fallback voice.
 $ttsName = "vits-piper-ru_RU-denis-medium"
 $ttsArchive = Join-Path $temp "$ttsName.tar.bz2"
-Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$ttsName.tar.bz2" $ttsArchive
-Extract-TarBz2 $ttsArchive $voiceAssets $ttsName
+$ttsFolder = Join-Path $voiceAssets $ttsName
+if (-not (Test-Path -LiteralPath $ttsFolder)) {
+    Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$ttsName.tar.bz2" $ttsArchive
+    Extract-TarBz2 $ttsArchive $voiceAssets $ttsName
+} else {
+    Write-Host "Using cached extracted model $ttsName."
+}
 
 # Multilingual Whisper tiny through sherpa-onnx for fully offline Android STT.
 $sttName = "sherpa-onnx-whisper-tiny"
 $sttArchive = Join-Path $temp "$sttName.tar.bz2"
-Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$sttName.tar.bz2" $sttArchive
-Extract-TarBz2 $sttArchive $voiceAssets $sttName
+$sttFolder = Join-Path $voiceAssets $sttName
+if (-not (Test-Path -LiteralPath $sttFolder)) {
+    Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/$sttName.tar.bz2" $sttArchive
+    Extract-TarBz2 $sttArchive $voiceAssets $sttName
+} else {
+    Write-Host "Using cached extracted model $sttName."
+}
 
 Write-Host "Native and Android voice sources are ready." -ForegroundColor Green
 Write-Host "llama.cpp  $llamaRevision"
 Write-Host "wasm3       $wasm3Revision"
 Write-Host "sherpa-onnx $sherpaVersion"
 Write-Host "Voice assets: $voiceAssets"
+Write-Host "Native cache: $cacheRoot"
