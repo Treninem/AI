@@ -69,7 +69,8 @@ install -d -o root -g root -m 0755 /srv/aurorafox-backup
 install -d -o aurorafox -g aurorafox-backup -m 2750 /srv/aurorafox-backup/exports
 install -d -o root -g root -m 0755 /etc/ssh/authorized_keys
 printf '%s\n' "${backup_public_key}" > /etc/ssh/authorized_keys/aurorafox-backup
-chmod 0600 /etc/ssh/authorized_keys/aurorafox-backup
+chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup
+chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup
 cat > /etc/ssh/sshd_config.d/10-aurorafox-hardening.conf <<'EOF'
 PasswordAuthentication no
 KbdInteractiveAuthentication no
