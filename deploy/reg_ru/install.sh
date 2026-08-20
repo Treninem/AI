@@ -5,6 +5,7 @@ readonly AURORAFOX_GITHUB_REPO='https://github.com/Treninem/AI.git'
 readonly AURORAFOX_GITHUB_REF='main'
 public_host="${1:-${AURORAFOX_PUBLIC_HOST:-}}"
 backup_public_key="${AURORAFOX_BACKUP_PUBLIC_KEY:-}"
+readonly ssh_port="${AURORAFOX_SSH_PORT:-22022}"
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo 'Run AuroraFox REG.RU installation as root.' >&2
@@ -30,6 +31,11 @@ if [[ ! "${backup_public_key}" =~ ^ssh-ed25519[[:space:]][A-Za-z0-9+/=]+([[:spac
   echo 'AURORAFOX_BACKUP_PUBLIC_KEY must contain the owner PC ed25519 public key.' >&2
   exit 5
 fi
+if [[ ! "${ssh_port}" =~ ^[0-9]+$ ]] || (( ssh_port < 1024 || ssh_port > 65535 )) ||
+   [[ "${ssh_port}" == 80 || "${ssh_port}" == 443 ]]; then
+  echo 'AURORAFOX_SSH_PORT must be an unused port between 1024 and 65535.' >&2
+  exit 6
+fi
 site_hosts="${public_host}"
 api_public_host="${public_host}"
 if [[ "${public_host}" == 'aurorafox.ru' ]]; then
@@ -40,7 +46,7 @@ fi
 
 export DEBIAN_FRONTEND=noninteractive
 apt-get update
-apt-get install -y ca-certificates curl git openssh-server python3 python3-pip python3-venv ufw unattended-upgrades
+apt-get install -y ca-certificates curl fail2ban git openssh-server python3 python3-pip python3-venv ufw unattended-upgrades
 if ! command -v caddy >/dev/null 2>&1; then
   apt-get install -y debian-keyring debian-archive-keyring apt-transport-https gpg
   rm -f /usr/share/keyrings/caddy-stable-archive-keyring.asc
@@ -71,6 +77,15 @@ install -d -o root -g root -m 0755 /etc/ssh/authorized_keys
 printf '%s\n' "${backup_public_key}" > /etc/ssh/authorized_keys/aurorafox-backup
 chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup
 chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup
+rm -f /etc/ssh/sshd_config.d/00-temp.conf
+cat > /etc/ssh/sshd_config.d/05-aurorafox-availability.conf <<EOF
+Port 22
+Port ${ssh_port}
+LoginGraceTime 20
+MaxAuthTries 3
+MaxStartups 50:30:100
+PerSourceMaxStartups 5
+EOF
 cat > /etc/ssh/sshd_config.d/10-aurorafox-hardening.conf <<'EOF'
 PasswordAuthentication no
 KbdInteractiveAuthentication no
@@ -95,9 +110,21 @@ systemctl enable --now ssh.service
 systemctl restart ssh.service
 
 ufw allow OpenSSH
+ufw allow "${ssh_port}/tcp"
 ufw allow 80/tcp
 ufw allow 443/tcp
 ufw --force enable
+cat > /etc/fail2ban/jail.d/aurorafox-sshd.local <<EOF
+[sshd]
+enabled = true
+port = 22,${ssh_port}
+backend = systemd
+mode = aggressive
+maxretry = 5
+findtime = 10m
+bantime = 1h
+EOF
+systemctl enable --now fail2ban.service
 systemctl enable --now unattended-upgrades.service
 
 if [[ ! -d /opt/aurorafox/repository/.git ]]; then
@@ -246,6 +273,7 @@ systemctl start aurorafox-backup.service
 test -s /srv/aurorafox-backup/exports/latest.zip
 test -s /srv/aurorafox-backup/exports/latest.sha256
 
-echo "AURORAFOX_REG_RU_OK url=https://${public_host} api=https://${api_public_host} sha=${current_sha} updates=github/main"
+echo "AURORAFOX_REG_RU_OK url=https://${public_host} api=https://${api_public_host} sha=${current_sha} updates=github/main ssh_port=${ssh_port}"
 echo 'Bootstrap admin key (read it once, then remove the file): /var/lib/aurorafox/api/bootstrap_key.txt'
 echo 'Owner PC backup transport: key-pinned, chrooted internal SFTP user aurorafox-backup.'
+
