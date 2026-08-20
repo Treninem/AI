@@ -62,6 +62,11 @@ def main() -> None:
     emulator_script = artifact.split("script: |", 1)[1].split("- name: Upload APK artifact", 1)[0]
     require("set -eu" in emulator_script, "Android emulator smoke must fail fast under POSIX /bin/sh")
     require("pipefail" not in emulator_script, "Android emulator smoke uses Bash-only pipefail under POSIX /bin/sh")
+    require("emulator-pid.txt" in emulator_script, "Android emulator smoke does not persist PID across runner shell commands")
+    require(
+        emulator_script.index("adb logcat -d") < emulator_script.index("test -s build/android/emulator-pid.txt"),
+        "Android failure diagnostics must be captured before the process liveness assertion",
+    )
 
     release = read(".github/workflows/release.yml")
     require("Install and launch signed APK on Android 35" in release, "production Android emulator gate is missing")
