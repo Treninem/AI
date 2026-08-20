@@ -37,6 +37,14 @@ def main() -> None:
     require("[switch]$AllowUnsignedRelease" in build_script, "CI unsigned export switch is missing")
     require("package/signed=false" in build_script, "unsigned CI export is not implemented")
     require("Restored signed Android export preset" in build_script, "signed preset restoration guard is missing")
+    require(
+        '--install-android-build-template --export-release "Android"' in build_script,
+        "Android build template installation must be coupled to export so Godot exits",
+    )
+    require(
+        build_script.count("--install-android-build-template") == 1,
+        "Android build template installation must not run as a standalone Godot process",
+    )
 
     artifact = read(".github/workflows/android-apk-artifact.yml")
     require("-AllowUnsignedRelease" in artifact, "APK artifact workflow does not use controlled unsigned export")
