@@ -29,13 +29,15 @@ apt-get update
 apt-get install -y ca-certificates curl git openssh-server python3 python3-pip python3-venv ufw unattended-upgrades
 if ! command -v caddy >/dev/null 2>&1; then
   apt-get install -y debian-keyring debian-archive-keyring apt-transport-https gpg
+  rm -f /usr/share/keyrings/caddy-stable-archive-keyring.asc
   curl --fail --silent --show-error --location \
-    'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' \
-    -o /usr/share/keyrings/caddy-stable-archive-keyring.asc
+    'https://dl.cloudsmith.io/public/caddy/stable/gpg.key' |
+    gpg --batch --yes --dearmor \
+      -o /usr/share/keyrings/caddy-stable-archive-keyring.gpg
   curl --fail --silent --show-error --location \
     'https://dl.cloudsmith.io/public/caddy/stable/debian.deb.txt' \
     -o /etc/apt/sources.list.d/caddy-stable.list
-  chmod 0644 /usr/share/keyrings/caddy-stable-archive-keyring.asc /etc/apt/sources.list.d/caddy-stable.list
+  chmod 0644 /usr/share/keyrings/caddy-stable-archive-keyring.gpg /etc/apt/sources.list.d/caddy-stable.list
   apt-get update
   apt-get install -y caddy
 fi
@@ -229,3 +231,4 @@ test -s /srv/aurorafox-backup/exports/latest.sha256
 echo "AURORAFOX_REG_RU_OK url=https://${public_host} sha=${current_sha} updates=github/main"
 echo 'Bootstrap admin key (read it once, then remove the file): /var/lib/aurorafox/api/bootstrap_key.txt'
 echo 'Owner PC backup transport: key-pinned, chrooted internal SFTP user aurorafox-backup.'
+
