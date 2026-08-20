@@ -78,8 +78,9 @@ jobs:
             android_plugin/plugin/src/main/assets/voice
             android_plugin/plugin/.cxx
             .ci/native-cache
-          key: aurorafox-android-native-v3-${{ runner.os }}-${{ hashFiles('android_plugin/setup_native.ps1', 'android_plugin/plugin/build.gradle.kts', 'android_plugin/plugin/src/main/cpp/CMakeLists.txt', '.github/workflows/android-apk-artifact.yml') }}
+          key: aurorafox-android-native-v4-${{ runner.os }}-${{ hashFiles('android_plugin/setup_native.ps1', 'android_plugin/plugin/build.gradle.kts', 'android_plugin/plugin/src/main/cpp/CMakeLists.txt') }}
           restore-keys: |
+            aurorafox-android-native-v4-${{ runner.os }}-
             aurorafox-android-native-v3-${{ runner.os }}-
 
       - name: Restore Godot 4.7.1 cache
@@ -160,9 +161,29 @@ jobs:
           echo "numeric=$numeric" >> "$GITHUB_OUTPUT"
           echo "AuroraFox Android version: $numeric"
 
-      - name: Build unsigned AuroraFox release APK
-        shell: pwsh
-        run: ./build/build_android.ps1 -Godot "$env:GODOT" -Gradle 'gradle' -ReleaseOnly -AllowUnsignedRelease
+      - name: Prepare native runtime and release AAR
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM 35m pwsh -NoLogo -NoProfile -File ./build/build_android.ps1 -Gradle gradle -ReleaseOnly -Stage native
+
+      - name: Import Godot project
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM 15m pwsh -NoLogo -NoProfile -File ./build/build_android.ps1 -Godot "$GODOT" -Stage import
+
+      - name: Install Android Gradle template
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM 15m pwsh -NoLogo -NoProfile -File ./build/build_android.ps1 -Godot "$GODOT" -Stage template
+
+      - name: Export unsigned AuroraFox release APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM 75m pwsh -NoLogo -NoProfile -File ./build/build_android.ps1 -Godot "$GODOT" -ReleaseOnly -AllowUnsignedRelease -Stage export
 
       - name: Sign and validate installable APK
         shell: bash
