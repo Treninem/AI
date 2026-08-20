@@ -50,6 +50,12 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "caddy-stable-archive-keyring.gpg" in install
     assert "caddy-stable-archive-keyring.asc" in install
     assert "pydantic==2.13.4" in requirements
+    assert "api.aurorafox.ru" in install
+    assert "ws.aurorafox.ru" in install
+    assert "files.aurorafox.ru" in install
+    assert "update.aurorafox.ru" in install
+    assert "--retry-connrefused" in install
+    assert "systemctl restart aurorafox-api.service caddy.service" in install
     assert "git merge-base --is-ancestor" in updater
     assert "rollback" in updater.lower()
     assert "systemctl restart aurorafox-api.service" in updater
