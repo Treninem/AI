@@ -80,6 +80,23 @@ def main() -> None:
     require("Install and launch signed APK on Android 35" in release, "production Android emulator gate is missing")
     require("arch: x86_64" in release, "production Android emulator ABI drifted")
     require("dist/AuroraFox-Android.apk" in release, "production APK path changed unexpectedly")
+    release_emulator_script = release.split("Install and launch signed APK on Android 35", 1)[1].split(
+        "- name: Upload Android artifact", 1
+    )[0]
+    require("set -eu" in release_emulator_script, "production emulator smoke must use POSIX fail-fast mode")
+    require("pipefail" not in release_emulator_script, "production emulator smoke uses Bash-only pipefail")
+    require(
+        "release-emulator-pid.txt" in release_emulator_script,
+        "production emulator smoke does not persist PID across runner shell commands",
+    )
+    require(
+        "; exit 1; fi" in release_emulator_script,
+        "production emulator crash check must stay on one line",
+    )
+    require(
+        not any(line.strip() in {"then", "fi"} for line in release_emulator_script.splitlines()),
+        "production emulator smoke contains a multiline shell conditional",
+    )
 
     ai_client = read("scripts/ai_client.gd")
     android_branch = ai_client.split('func chat(messages: Array, temperature: float = 0.2) -> Dictionary:', 1)[1].split('func _chat_ollama', 1)[0]
@@ -110,3 +127,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
