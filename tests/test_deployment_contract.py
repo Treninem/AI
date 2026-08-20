@@ -36,6 +36,7 @@ def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
     assert "ssh-keygen" in installer
     assert "Copy-Item" in installer
     assert "New-TimeSpan -Minutes 5" in installer
+    assert "-User $currentUser," not in installer
     assert "AuroraFox Server Backup" in installer
 
 
@@ -51,3 +52,4 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "PasswordAuthentication no" in install
     assert "ufw --force enable" in install
     assert "ForceCommand internal-sftp" in install
+
