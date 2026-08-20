@@ -91,6 +91,7 @@ Match User aurorafox-backup
   X11Forwarding no
 EOF
 sshd -t
+systemctl enable --now ssh.service
 systemctl restart ssh.service
 
 ufw allow OpenSSH
