@@ -88,13 +88,15 @@ func _poll() -> void:
 	request.queue_free()
 	var code := int(result[1])
 	var raw: PackedByteArray = result[3]
-	var parsed = JSON.parse_string(raw.get_string_from_utf8())
-	if code == 200 and parsed is Dictionary:
-		_set_online(bool(parsed.get("ok", false)), parsed)
-	else:
-		_set_online(false, {"ok": false, "http": code})
-		if enabled and Time.get_unix_time_from_system() >= _start_cooldown_until:
-			start_gateway()
+	var text := raw.get_string_from_utf8().strip_edges()
+	if code == 200 and not text.is_empty():
+		var parsed = JSON.parse_string(text)
+		if parsed is Dictionary:
+			_set_online(bool(parsed.get("ok", false)), parsed)
+			return
+	_set_online(false, {"ok": false, "http": code, "error": "Empty or invalid health response"})
+	if enabled and Time.get_unix_time_from_system() >= _start_cooldown_until:
+		start_gateway()
 
 func _set_online(value: bool, details: Dictionary) -> void:
 	var changed := value != online or JSON.stringify(details) != JSON.stringify(last_status)
@@ -139,6 +141,8 @@ func _run_keyctl(args: Array[String]) -> Dictionary:
 	var text := "\n".join(output).strip_edges()
 	if code != 0:
 		return {"ok": false, "code": code, "error": text}
+	if text.is_empty():
+		return {"ok": false, "code": code, "error": "API key command returned an empty response"}
 	var parsed = JSON.parse_string(text)
 	return {"ok": parsed is Dictionary, "code": code, "data": parsed if parsed is Dictionary else {}, "raw": text}
 
@@ -168,3 +172,4 @@ func _save_settings() -> void:
 		return
 	file.store_string(JSON.stringify({"enabled": enabled, "host": "127.0.0.1", "port": port}, "\t"))
 	file.close()
+
