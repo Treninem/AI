@@ -64,6 +64,14 @@ def main() -> None:
     require("pipefail" not in emulator_script, "Android emulator smoke uses Bash-only pipefail under POSIX /bin/sh")
     require("emulator-pid.txt" in emulator_script, "Android emulator smoke does not persist PID across runner shell commands")
     require(
+        "; exit 1; fi" in emulator_script,
+        "Android emulator crash check must stay on one line because the runner executes every line separately",
+    )
+    require(
+        not any(line.strip() in {"then", "fi"} for line in emulator_script.splitlines()),
+        "Android emulator smoke contains a multiline shell conditional that the runner cannot preserve",
+    )
+    require(
         emulator_script.index("adb logcat -d") < emulator_script.index("test -s build/android/emulator-pid.txt"),
         "Android failure diagnostics must be captured before the process liveness assertion",
     )
@@ -102,4 +110,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

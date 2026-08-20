@@ -245,11 +245,7 @@ jobs:
             adb shell pidof com.aurorafox.ai | tr -d '\r' | tee build/android/emulator-pid.txt
             test -s build/android/emulator-pid.txt
             adb shell dumpsys package com.aurorafox.ai | grep -F "versionName=${{ steps.version.outputs.numeric }}"
-            if grep -A10 -B4 'FATAL EXCEPTION' build/android/emulator-logcat.txt | grep -q 'com.aurorafox.ai'; then
-              echo 'AuroraFox crashed during Android launch smoke.' >&2
-              grep -A20 -B6 'FATAL EXCEPTION' build/android/emulator-logcat.txt | tail -n 120 >&2
-              exit 1
-            fi
+            if grep -A10 -B4 'FATAL EXCEPTION' build/android/emulator-logcat.txt | grep -q 'com.aurorafox.ai'; then echo 'AuroraFox crashed during Android launch smoke.' >&2; grep -A20 -B6 'FATAL EXCEPTION' build/android/emulator-logcat.txt | tail -n 120 >&2; exit 1; fi
             echo "AURORA_ANDROID_EMULATOR_OK pid=$(cat build/android/emulator-pid.txt)"
 
       - name: Upload APK artifact
@@ -276,4 +272,3 @@ jobs:
             android_plugin/plugin/build/reports/**
           if-no-files-found: ignore
           retention-days: 7
-

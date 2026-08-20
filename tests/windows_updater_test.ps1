@@ -1,7 +1,9 @@
 $ErrorActionPreference = 'Stop'
 
 $repo = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$root = Join-Path $env:RUNNER_TEMP 'aurorafox-updater-integration'
+$temporaryRoot = $env:RUNNER_TEMP
+if ([string]::IsNullOrWhiteSpace($temporaryRoot)) { $temporaryRoot = [IO.Path]::GetTempPath() }
+$root = Join-Path $temporaryRoot 'aurorafox-updater-integration'
 $install = Join-Path $root 'AuroraFox'
 $newRoot = Join-Path $root 'new-build'
 $package = Join-Path $root 'AuroraFox-Windows.zip'

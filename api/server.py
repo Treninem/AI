@@ -41,9 +41,20 @@ ollama = OllamaClient(
 )
 files = FileIntelligenceClient(API_ROOT / "uploads", os.getenv("AURORAFOX_FILES_URL", "http://127.0.0.1:8767"))
 
+
+def _canonical_version() -> str:
+    configured = os.getenv("AURORAFOX_VERSION", "").strip().lstrip("Vv")
+    if configured:
+        return configured
+    try:
+        state_path = Path(__file__).resolve().parents[1] / "project" / "version.json"
+        return str(json.loads(state_path.read_text(encoding="utf-8"))["numeric"])
+    except Exception:
+        return "0.0.0.0"
+
 app = FastAPI(
     title="AuroraFox API",
-    version="1.0.0",
+    version=_canonical_version(),
     description="External gateway to AuroraFox AgentCore, memory, tools, files and local models.",
 )
 
@@ -276,6 +287,9 @@ def health() -> dict[str, Any]:
     return {
         "ok": True,
         "service": "AuroraFox API",
+        "version": app.version,
+        "build_sha": os.getenv("AURORAFOX_BUILD_SHA", "local"),
+        "deployment": os.getenv("AURORAFOX_DEPLOYMENT", "local"),
         "agent_online": agent_online,
         "agent": agent_details,
         "ollama_online": bool(ollama_models),
