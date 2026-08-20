@@ -233,7 +233,8 @@ jobs:
           disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            set -euo pipefail
+            # android-emulator-runner executes this block with POSIX /bin/sh.
+            set -eu
             adb install -r "$APK_PATH"
             adb shell pm path com.aurorafox.ai | tee build/android/emulator-package.txt
             grep -q '^package:' build/android/emulator-package.txt
@@ -273,3 +274,4 @@ jobs:
             android_plugin/plugin/build/reports/**
           if-no-files-found: ignore
           retention-days: 7
+
