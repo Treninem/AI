@@ -65,6 +65,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "systemctl restart aurorafox-api.service" in updater
     assert "tests/test_backup_service.py" in updater
     assert "PasswordAuthentication no" in install
+    assert "systemctl enable --now ssh.service" in install
     assert "ufw --force enable" in install
     assert "ForceCommand internal-sftp" in install
     assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
