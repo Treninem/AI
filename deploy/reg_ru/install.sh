@@ -10,9 +10,9 @@ if [[ "${EUID}" -ne 0 ]]; then
   echo 'Run AuroraFox REG.RU installation as root.' >&2
   exit 2
 fi
+public_ip="$(ip -4 route get 1.1.1.1 | awk '{for (i=1; i<=NF; i++) if ($i=="src") {print $(i+1); exit}}')"
+test -n "${public_ip}"
 if [[ -z "${public_host}" ]]; then
-  public_ip="$(ip -4 route get 1.1.1.1 | awk '{for (i=1; i<=NF; i++) if ($i=="src") {print $(i+1); exit}}')"
-  test -n "${public_ip}"
   public_host="${public_ip}.sslip.io"
 fi
 if [[ ! "${public_host}" =~ ^[A-Za-z0-9.-]+$ ]]; then
@@ -22,6 +22,13 @@ fi
 if [[ ! "${backup_public_key}" =~ ^ssh-ed25519[[:space:]][A-Za-z0-9+/=]+([[:space:]].*)?$ ]]; then
   echo 'AURORAFOX_BACKUP_PUBLIC_KEY must contain the owner PC ed25519 public key.' >&2
   exit 4
+fi
+site_hosts="${public_host}"
+api_public_host="${public_host}"
+if [[ "${public_host}" == 'aurorafox.ru' ]]; then
+  site_hosts='aurorafox.ru, www.aurorafox.ru, api.aurorafox.ru, auth.aurorafox.ru, ws.aurorafox.ru, files.aurorafox.ru, update.aurorafox.ru'
+  site_hosts+=", ${public_ip}.sslip.io"
+  api_public_host='api.aurorafox.ru'
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -109,7 +116,7 @@ AURORAFOX_DEPLOYMENT=reg-ru
 AURORAFOX_BACKUP_MAX_BYTES=268435456
 AURORAFOX_GITHUB_REPO=${AURORAFOX_GITHUB_REPO}
 AURORAFOX_GITHUB_REF=${AURORAFOX_GITHUB_REF}
-AURORAFOX_PUBLIC_URL=https://${public_host}
+AURORAFOX_PUBLIC_URL=https://${api_public_host}
 EOF
 chmod 0600 /etc/aurorafox/aurorafox.env
 current_sha="$(git -C /opt/aurorafox/repository rev-parse HEAD)"
@@ -199,7 +206,7 @@ WantedBy=timers.target
 EOF
 
 cat > /etc/caddy/Caddyfile <<EOF
-${public_host} {
+${site_hosts} {
   encode zstd gzip
   reverse_proxy 127.0.0.1:8768
   header {
@@ -222,13 +229,15 @@ if ! swapon --show=NAME --noheadings | grep -q . && [[ "$(df --output=avail -B1 
 fi
 
 systemctl daemon-reload
-systemctl enable --now aurorafox-api.service aurorafox-update.timer aurorafox-backup.timer caddy.service
-curl --fail --silent --show-error --retry 30 --retry-delay 2 http://127.0.0.1:8768/health >/dev/null
+systemctl enable aurorafox-api.service caddy.service
+systemctl restart aurorafox-api.service caddy.service
+systemctl enable --now aurorafox-update.timer aurorafox-backup.timer
+curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 2 http://127.0.0.1:8768/health >/dev/null
 systemctl start aurorafox-backup.service
 test -s /srv/aurorafox-backup/exports/latest.zip
 test -s /srv/aurorafox-backup/exports/latest.sha256
 
-echo "AURORAFOX_REG_RU_OK url=https://${public_host} sha=${current_sha} updates=github/main"
+echo "AURORAFOX_REG_RU_OK url=https://${public_host} api=https://${api_public_host} sha=${current_sha} updates=github/main"
 echo 'Bootstrap admin key (read it once, then remove the file): /var/lib/aurorafox/api/bootstrap_key.txt'
 echo 'Owner PC backup transport: key-pinned, chrooted internal SFTP user aurorafox-backup.'
 
