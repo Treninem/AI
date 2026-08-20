@@ -48,6 +48,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert b"\r" not in (ROOT / "deploy/reg_ru/update.sh").read_bytes()
     assert "https://github.com/Treninem/AI.git" in install
     assert "AURORAFOX_GITHUB_REF='main'" in install
+    assert 'public_ip="${2:-${AURORAFOX_PUBLIC_IP:-}}"' in install
     assert "gpg --batch --yes --dearmor" in install
     assert "caddy-stable-archive-keyring.gpg" in install
     assert "caddy-stable-archive-keyring.asc" in install
