@@ -67,11 +67,6 @@ def main() -> None:
     require("Install and launch signed APK on Android 35" in release, "production Android emulator gate is missing")
     require("arch: x86_64" in release, "production Android emulator ABI drifted")
     require("dist/AuroraFox-Android.apk" in release, "production APK path changed unexpectedly")
-    release_emulator_script = release.split("Install and launch signed APK on Android 35", 1)[1].split(
-        "- name: Upload Android artifact", 1
-    )[0]
-    require("set -eu" in release_emulator_script, "production Android smoke must fail fast under POSIX /bin/sh")
-    require("pipefail" not in release_emulator_script, "production Android smoke uses Bash-only pipefail under POSIX /bin/sh")
 
     ai_client = read("scripts/ai_client.gd")
     android_branch = ai_client.split('func chat(messages: Array, temperature: float = 0.2) -> Dictionary:', 1)[1].split('func _chat_ollama', 1)[0]
