@@ -66,7 +66,15 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "tests/test_backup_service.py" in updater
     assert "PasswordAuthentication no" in install
     assert "systemctl enable --now ssh.service" in install
+    assert 'AURORAFOX_SSH_PORT:-22022' in install
+    assert "Port ${ssh_port}" in install
+    assert "MaxStartups 50:30:100" in install
+    assert "PerSourceMaxStartups 5" in install
+    assert "ufw allow \"${ssh_port}/tcp\"" in install
+    assert "fail2ban" in install
+    assert "rm -f /etc/ssh/sshd_config.d/00-temp.conf" in install
     assert "ufw --force enable" in install
     assert "ForceCommand internal-sftp" in install
     assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
     assert "chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup" in install
+
