@@ -43,8 +43,13 @@ def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
 def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     updater = read("deploy/reg_ru/update.sh")
     install = read("deploy/reg_ru/install.sh")
+    requirements = read("api/requirements.txt")
     assert "https://github.com/Treninem/AI.git" in install
     assert "AURORAFOX_GITHUB_REF='main'" in install
+    assert "gpg --batch --yes --dearmor" in install
+    assert "caddy-stable-archive-keyring.gpg" in install
+    assert "caddy-stable-archive-keyring.asc" in install
+    assert "pydantic==2.13.4" in requirements
     assert "git merge-base --is-ancestor" in updater
     assert "rollback" in updater.lower()
     assert "systemctl restart aurorafox-api.service" in updater
