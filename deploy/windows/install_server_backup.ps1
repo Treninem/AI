@@ -54,7 +54,7 @@ if ([string]::IsNullOrWhiteSpace($engine)) {
 $arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$syncScript`" -ConfigPath `"$configPath`""
 $action = New-ScheduledTaskAction -Execute $engine -Argument $arguments
 $triggers = @(
-    New-ScheduledTaskTrigger -AtLogOn -User $currentUser,
+    New-ScheduledTaskTrigger -AtLogOn -User $currentUser
     New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)
 )
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -MultipleInstances IgnoreNew -ExecutionTimeLimit (New-TimeSpan -Minutes 15)
@@ -66,3 +66,4 @@ $publicKey = (Get-Content -LiteralPath ($privateKey + '.pub') -Raw).Trim()
 Write-Output "AURORAFOX_BACKUP_CLIENT_KEY public_key=$publicKey"
 & $engine -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $syncScript -ConfigPath $configPath
 Write-Output "AURORAFOX_BACKUP_SCHEDULE_OK interval_minutes=5 destination=$Destination transport=sftp"
+
