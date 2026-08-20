@@ -31,8 +31,15 @@ if ($LASTEXITCODE -ne 0) { throw "Android native source setup failed" }
 Push-Location $pluginRoot
 try {
     $pluginTask = if ($ReleaseOnly) { ":plugin:installGodotPluginRelease" } else { ":plugin:installGodotPlugin" }
-    Write-Host "Building Android plugin task: $pluginTask"
-    & $Gradle $pluginTask
+    $gradleArgs = @(
+        $pluginTask,
+        "--build-cache",
+        "--parallel",
+        "--no-daemon",
+        "--stacktrace"
+    )
+    Write-Host "Building Android plugin task: $pluginTask (Gradle build cache + parallel workers enabled)"
+    & $Gradle @gradleArgs
     if ($LASTEXITCODE -ne 0) { throw "AuroraFoxRuntime AAR build failed" }
 } finally {
     Pop-Location
