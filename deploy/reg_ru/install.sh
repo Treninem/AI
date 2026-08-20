@@ -26,7 +26,7 @@ fi
 site_hosts="${public_host}"
 api_public_host="${public_host}"
 if [[ "${public_host}" == 'aurorafox.ru' ]]; then
-  site_hosts='aurorafox.ru, www.aurorafox.ru, api.aurorafox.ru, auth.aurorafox.ru, ws.aurorafox.ru, files.aurorafox.ru, update.aurorafox.ru'
+  site_hosts='aurorafox.ru, www.aurorafox.ru, api.aurorafox.ru, auth.aurorafox.ru, ws.aurorafox.ru, files.aurorafox.ru, update.aurorafox.ru, cloud.aurorafox.ru'
   site_hosts+=", ${public_ip}.sslip.io"
   api_public_host='api.aurorafox.ru'
 fi
@@ -240,4 +240,3 @@ test -s /srv/aurorafox-backup/exports/latest.sha256
 echo "AURORAFOX_REG_RU_OK url=https://${public_host} api=https://${api_public_host} sha=${current_sha} updates=github/main"
 echo 'Bootstrap admin key (read it once, then remove the file): /var/lib/aurorafox/api/bootstrap_key.txt'
 echo 'Owner PC backup transport: key-pinned, chrooted internal SFTP user aurorafox-backup.'
-
