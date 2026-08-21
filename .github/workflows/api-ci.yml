@@ -13,6 +13,7 @@ on:
       - 'tests/test_deployment_contract.py'
       - 'tests/test_network_json_contract.py'
       - 'tests/test_progress_tracker.py'
+      - 'tests/test_learning_sync.py'
       - 'tests/api_gateway_smoke.gd'
       - 'main.tscn'
       - 'build/build_windows.ps1'
@@ -28,6 +29,7 @@ on:
       - 'tests/test_deployment_contract.py'
       - 'tests/test_network_json_contract.py'
       - 'tests/test_progress_tracker.py'
+      - 'tests/test_learning_sync.py'
       - 'tests/api_gateway_smoke.gd'
       - 'main.tscn'
       - 'build/build_windows.ps1'
@@ -58,7 +60,8 @@ jobs:
             tests/test_backup_service.py \
             tests/test_deployment_contract.py \
             tests/test_network_json_contract.py \
-            tests/test_progress_tracker.py
+            tests/test_progress_tracker.py \
+            tests/test_learning_sync.py
 
   godot-api:
     runs-on: ubuntu-latest
