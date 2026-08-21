@@ -51,7 +51,7 @@ jobs:
           test -f api/server.py
           python -m pip install --disable-pip-version-check -r api/requirements.txt pytest==8.4.1
           python -m compileall -q api
-          bash -n deploy/reg_ru/install.sh deploy/reg_ru/update.sh
+          bash -n deploy/reg_ru/install.sh deploy/reg_ru/update.sh deploy/reg_ru/install_learning_sync.sh
           PYTHONPATH="$PWD" python -m pytest -q \
             tests/test_api_gateway.py \
             tests/test_api_privacy_contract.py \
