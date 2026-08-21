@@ -55,6 +55,14 @@ PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_backup_service.py \
   tests/test_deployment_contract.py
 
+# The learning synchronizer is an additive server component. Install it only
+# after the candidate has passed compilation and the existing test suite.
+# If the component is absent in an older candidate, the production update is
+# still valid and the existing API behavior is preserved.
+if [[ -x "deploy/reg_ru/install_learning_sync.sh" ]]; then
+  deploy/reg_ru/install_learning_sync.sh
+fi
+
 printf 'AURORAFOX_BUILD_SHA=%s\n' "${candidate}" > "${build_environment}.tmp"
 mv "${build_environment}.tmp" "${build_environment}"
 systemctl restart aurorafox-api.service
@@ -73,4 +81,3 @@ done
 test "${healthy}" = 'yes'
 trap - ERR
 echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref}"
-
