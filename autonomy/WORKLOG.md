@@ -10,7 +10,7 @@
 - Confirmed REG.RU deployment scripts already exist.
 - Confirmed intended production hosts are `aurorafox.ru` / `api.aurorafox.ru`; the actual IPv4 is supplied/derived at deployment time rather than committed.
 - Inspected `agent/autonomous_coordinator.gd` and found a substantial existing autonomous cycle rather than a blank project.
-- Confirmed the existing coordinator already supports periodic operation, research, goal selection, 3–10 mutation candidates, tournament scoring, staged activation and persistent cycle state.
+- Confirmed the existing coordinator is instantiated by `main.tscn` and already supports automatic startup, periodic operation, synchronization/observation, goal selection, public/local research, 3–10 mutation candidates, independent candidate verification, tournament scoring, final winner verification, staged activation and persistent cycle state.
 - Confirmed `agent/research_collector.gd` already performs public internet collection from GitHub, Stack Overflow, Reddit and arXiv and writes selected observations into MemoryStore.
 - Confirmed `agent/learning_collector.py` already has a separate allowlisted public-source collector for GitHub, Stack Overflow, Reddit, arXiv, Habr, Medium, Godot docs and Ollama docs, plus local project observations.
 - Confirmed `api/learning_sync.py` persists learning events and retries synchronization through the existing runtime bridge.
@@ -26,6 +26,18 @@
 - Added `tests/test_learning_sync.py` covering private interaction filtering, successful opt-in learning, retry after bridge failure and feedback retry.
 - Extended API CI to run the learning synchronization regression tests and validate the new deployment script.
 - Opened PR #25 to review/merge the additive server-learning foundation.
+- Updated the persistent project memory with the actual CI evidence and the remaining physical-server verification requirement.
+
+### Verification observed
+
+For integration commit `be2361e6e23d0eb618bb81d5ce38d973305f4227`, GitHub Actions completed successfully for the available workflows:
+
+- AuroraFox API CI: `godot-api`, `python-api`, `windows-api` all passed.
+- AuroraFox Agent Sync CI: `godot-sync` passed, including autonomous coordinator, self-improvement, runtime extension and updater smoke tests.
+- AuroraFox Core / Voice CI: `godot-core`, `file-intelligence`, `windows-integration`, `python-voice` all passed, including autonomous coordinator and self-improver tournament smoke tests.
+- AuroraFox Android APK Artifact: completed successfully.
+
+The combined status endpoint returned no legacy status entries, so the workflow conclusions above are the authoritative CI evidence currently visible.
 
 ### Important findings
 
@@ -43,11 +55,12 @@
 - Existing API/backup/deployment tests remain the production gate in `deploy/reg_ru/update.sh`.
 - New installer is included in API CI bash syntax validation.
 - New learning synchronization unit tests are included in API CI.
-- Full GitHub Actions result for the current PR head must be observed before promotion to `main`.
+- Current visible CI for the integration commit is green for API, Agent Sync, Core/Voice and Android workflows.
+- PR #25 remains unmerged until the production gate is explicitly satisfied.
 
 ### Next implementation pass
 
-1. Observe the current PR CI and fix any failures before merge.
+1. Verify the physical REG.RU deployment from the server itself; do not infer live health from GitHub.
 2. Add authenticated server-to-PC learning synchronization without exposing the local AgentCore TCP bridge publicly.
 3. Add server-visible autonomy status and cycle history using the existing coordinator state rather than a duplicate runtime.
 4. Connect the existing autonomous coordinator's research/learning cycle to the persistent server queue.
