@@ -13,6 +13,7 @@ on:
       - 'tests/test_deployment_contract.py'
       - 'tests/test_network_json_contract.py'
       - 'tests/test_progress_tracker.py'
+      - 'tests/test_learning_sync.py'
       - 'tests/api_gateway_smoke.gd'
       - 'main.tscn'
       - 'build/build_windows.ps1'
@@ -28,6 +29,7 @@ on:
       - 'tests/test_deployment_contract.py'
       - 'tests/test_network_json_contract.py'
       - 'tests/test_progress_tracker.py'
+      - 'tests/test_learning_sync.py'
       - 'tests/api_gateway_smoke.gd'
       - 'main.tscn'
       - 'build/build_windows.ps1'
@@ -51,14 +53,15 @@ jobs:
           test -f api/server.py
           python -m pip install --disable-pip-version-check -r api/requirements.txt pytest==8.4.1
           python -m compileall -q api
-          bash -n deploy/reg_ru/install.sh deploy/reg_ru/update.sh
+          bash -n deploy/reg_ru/install.sh deploy/reg_ru/update.sh deploy/reg_ru/install_learning_sync.sh
           PYTHONPATH="$PWD" python -m pytest -q \
             tests/test_api_gateway.py \
             tests/test_api_privacy_contract.py \
             tests/test_backup_service.py \
             tests/test_deployment_contract.py \
             tests/test_network_json_contract.py \
-            tests/test_progress_tracker.py
+            tests/test_progress_tracker.py \
+            tests/test_learning_sync.py
 
   godot-api:
     runs-on: ubuntu-latest

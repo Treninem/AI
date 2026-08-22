@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AuroraFox Autonomy Configuration",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "enabled": {"type": "boolean", "default": true},
+    "research": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "default": true},
+        "public_sources_only": {"type": "boolean", "default": true},
+        "require_registration": {"type": "boolean", "default": false},
+        "max_pages_per_cycle": {"type": "integer", "minimum": 1, "default": 20}
+      }
+    },
+    "self_evaluation": {"type": "boolean", "default": true},
+    "experimentation": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "default": true},
+        "population_size": {"type": "integer", "minimum": 3, "maximum": 10, "default": 5},
+        "sandbox_only": {"type": "boolean", "default": true},
+        "require_tests_before_promotion": {"type": "boolean", "default": true}
+      }
+    },
+    "ollama": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": {"type": "boolean", "default": true},
+        "provider_role": {"type": "string", "enum": ["bridge", "primary"]}
+      }
+    },
+    "rollback": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "retain_versions": {"type": "integer", "minimum": 1, "default": 20},
+        "external_control_only": {"type": "boolean", "const": true}
+      }
+    }
+  }
+}
