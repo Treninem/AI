@@ -1,5 +1,41 @@
 # AuroraFox server operations
 
+## Current integration notes (2026-09-13)
+
+The timer is a LOCAL bridge retry mechanism, not a network tunnel to a PC.
+Its failed exit status is visible in systemd and subsequent timer runs retry it.
+For a PC behind NAT, `python -m api.learning_pull --watch` makes outgoing HTTPS
+requests and delivers to the unchanged localhost AgentCore bridge. Configure:
+
+- `AURORAFOX_SYNC_URL=https://api.aurorafox.ru`
+- `AURORAFOX_SYNC_TOKEN_FILE=<owner-readable credential file outside Git>`
+- `AURORAFOX_USER_DIR=<the local profile data directory>`
+
+Provision an explicit `learning.sync` scope on the integration credential through
+the existing admin key API. The PC receives only events whose server-assigned
+`api_key_id` matches this credential; other credentials' data is never included,
+even with wildcard scope. Use the same credential to enqueue and consume this
+integration's events. This does NOT implement account enrollment or multi-device
+user sessions. Do not use a shared credential across unrelated users.
+
+TLS verification is mandatory and redirects are refused. No inbound PC port is
+needed. The receipt database avoids redelivery after a lost server acknowledgement.
+Delivery remains at-least-once if the PC crashes between applying a bridge effect
+and recording its receipt. Do not advertise exactly-once feedback processing.
+
+Fresh installation installs the timer. Updates call its installer through bash
+after tests and API health; rollback restores previous unit files and timer state.
+Before upgrading from an old installed updater, explicitly refresh
+`/usr/local/sbin/aurorafox-update` from a reviewed revision: old copied updater code
+cannot acquire the new behavior merely because Git checked out new source.
+Small rollback snapshots remain under `/etc/aurorafox/update-rollback.*` for review.
+The in-place update briefly stops API/queue writers; blue/green is not implemented.
+
+Queue format stays JSONL for compatibility. All cooperating writers must run the
+new locking implementation; stop old writers before upgrading. Pending records
+are not purged by retention. Monitor disk usage for prolonged offline backlogs.
+Corruption is an error requiring recovery, not an empty successful queue.
+
 ## Production hosts
 
 - Main site: `aurorafox.ru`

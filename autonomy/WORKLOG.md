@@ -1,5 +1,31 @@
 # AuroraFox Autonomy Work Log
 
+## 2026-09-13 — implementation following PR review
+
+- Rechecked PR head 54cc9b2 and main 9611864 before editing.
+- Recovered owner's full distributed-system and visual requirements. Added
+  OWNER_REQUIREMENTS.md, including latest autonomous research/full-core arena,
+  provider independence and owner-only STOP/rollback requirements.
+- Preserved existing Android, Windows, Godot runtime and image assets.
+- Added portable process locking and durable writes to existing JSONL queue;
+  protected unsent records from retention and corrected pending/attempt counts.
+- Fixed installer executable-bit dependency, fresh-install integration, deployment
+  test gate, rollback of systemd units and installed updater refresh.
+- Added key-isolated HTTPS pending/ACK endpoints and owner-PC pull client with
+  persistent receipts; documented remaining at-least-once crash boundary.
+- Added multiprocess, retention, corruption, failed-replace, daemon, scope,
+  lost-ACK and real TLS API tests. Final execution results belong to the handoff.
+- Local verification: `python -m pytest -q tests` — 68 passed; API compileall,
+  bash syntax validation and git diff whitespace validation passed. First TLS
+  run exposed a test-server cleanup timeout; bounded shutdown/cleanup corrected
+  it and the full suite was repeated. GitHub/native-platform results are separate.
+- Flush now checkpoints each successful delivery and observes a timer budget,
+  so a long queue does not lose all batch progress at the systemd timeout.
+- Original approved fox/background pixels not recovered: prior conversation notes
+  are not usable image assets. Full visual acceptance is not complete.
+- No claim of production deployment, complete account synchronization, full-core
+  evolution or a protected external STOP implementation.
+
 ## 2026-08-22
 
 ### Completed

@@ -270,6 +270,7 @@ systemctl restart aurorafox-api.service caddy.service
 systemctl enable --now aurorafox-update.timer aurorafox-backup.timer
 curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 2 http://127.0.0.1:8768/health >/dev/null
 systemctl start aurorafox-backup.service
+bash /opt/aurorafox/repository/deploy/reg_ru/install_learning_sync.sh
 test -s /srv/aurorafox-backup/exports/latest.zip
 test -s /srv/aurorafox-backup/exports/latest.sha256
 

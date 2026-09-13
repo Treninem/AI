@@ -2,6 +2,24 @@
 
 > Persistent handoff file for future chats/accounts. This records project facts, decisions, completed work and next actions. It does not contain hidden chain-of-thought or secrets.
 
+## 2026-09-13 implementation checkpoint (supersedes readiness claims below)
+
+The sections below describe historical PR #25, not completion of the full product.
+The owner's current acceptance contract is `autonomy/OWNER_REQUIREMENTS.md`.
+Do not infer that a remembered assistant statement proves code was committed.
+
+- Queue writers now use a cross-process sidecar lock and fsync. Pending records
+  are never removed by acknowledged-history retention. Read errors are surfaced.
+- Deployment invokes the learning installer through bash, tests the queue,
+  snapshots/restores timer units on rollback and refreshes the installed updater.
+- A PC-side HTTPS pull client consumes only the authenticated key's own events.
+  This is a key-scoped integration path, NOT completed user/device account sync.
+- Approved fox source PNGs are absent from this branch and main. Available prior
+  notes describe the image but do not supply its pixels. Do not invent a replacement.
+- Full-core sandbox tournaments, isolated owner STOP/rollback, account/device
+  reconciliation, and visual/native-platform acceptance remain open work.
+- No production deployment or merge is implied by this checkpoint.
+
 ## Current state
 
 - Repository: `Treninem/AI`

@@ -117,6 +117,10 @@ class LearningRequest(BaseModel):
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
+class LearningAcknowledgement(BaseModel):
+    event_ids: list[str] = Field(min_length=1, max_length=100)
+
+
 class FileAnalyzeRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     content_base64: str = Field(min_length=1)
@@ -345,6 +349,27 @@ def learning_status(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
 def learning_sync(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
     _require(record, "memory.write")
     return learning.flush(250)
+
+
+@app.get("/v1/learning/pending")
+def learning_pending(limit: int = Query(default=25, ge=1, le=100),
+                     record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    # Explicit scope, never granted to ordinary integration keys by default.
+    # Even administrators pull only records belonging to this credential.
+    _require(record, "learning.sync")
+    owner = str(record["id"])
+    events = [event for event in learning.store.pending(None)
+              if isinstance(event.get("payload"), dict)
+              and event["payload"].get("api_key_id") == owner]
+    return {"ok": True, "events": events[:limit], "pending": len(events)}
+
+
+@app.post("/v1/learning/ack")
+def learning_ack(req: LearningAcknowledgement,
+                 record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    _require(record, "learning.sync")
+    changed = learning.store.mark_synced(set(req.event_ids), owner=str(record["id"]))
+    return {"ok": True, "acknowledged": changed}
 
 
 @app.get("/v1/conversations/{conversation_id}")

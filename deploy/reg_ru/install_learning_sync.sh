@@ -13,6 +13,9 @@ readonly APP_ROOT="${AURORAFOX_APP_ROOT:-/opt/aurorafox/repository}"
 readonly ENV_FILE="${AURORAFOX_ENV_FILE:-/etc/aurorafox/aurorafox.env}"
 readonly SERVICE="aurorafox-learning-sync.service"
 readonly TIMER="aurorafox-learning-sync.timer"
+readonly PYTHON="${AURORAFOX_PYTHON:-/opt/aurorafox/venv/bin/python}"
+# The server installation intentionally uses this canonical data directory.
+readonly USER_ROOT='/var/lib/aurorafox'
 
 if [[ ! -f "${APP_ROOT}/api/learning_daemon.py" ]]; then
   echo "Missing ${APP_ROOT}/api/learning_daemon.py; update the repository first." >&2
@@ -35,12 +38,14 @@ User=aurorafox
 Group=aurorafox
 WorkingDirectory=${APP_ROOT}
 EnvironmentFile=${ENV_FILE}
-ExecStart=/opt/aurorafox/venv/bin/python -m api.learning_daemon
+ExecStart=${PYTHON} -m api.learning_daemon
+Environment=AURORAFOX_USER_DIR=${USER_ROOT}
+TimeoutStartSec=90s
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/var/lib/aurorafox
+ReadWritePaths=${USER_ROOT}
 EOF
 
 cat > "/etc/systemd/system/${TIMER}" <<EOF
@@ -59,7 +64,7 @@ EOF
 
 systemctl daemon-reload
 systemctl enable --now "${TIMER}"
-systemctl start "${SERVICE}"
+# An offline worker must not fail the deployment. The timer starts it separately.
 
 echo "AURORAFOX_LEARNING_SYNC_OK timer=${TIMER}"
 systemctl --no-pager --full status "${TIMER}" || true

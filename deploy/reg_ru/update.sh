@@ -33,19 +33,52 @@ if ! git merge-base --is-ancestor "${previous}" "${candidate}"; then
   exit 4
 fi
 
+readonly sync_service='aurorafox-learning-sync.service'
+readonly sync_timer='aurorafox-learning-sync.timer'
+readonly unit_directory='/etc/systemd/system'
+readonly snapshot="$(mktemp -d /etc/aurorafox/update-rollback.XXXXXX)"
+timer_enabled='no'
+timer_active='no'
+systemctl is-enabled --quiet "${sync_timer}" && timer_enabled='yes'
+systemctl is-active --quiet "${sync_timer}" && timer_active='yes'
+for unit in "${sync_service}" "${sync_timer}"; do
+  if [[ -f "${unit_directory}/${unit}" ]]; then
+    cp -p "${unit_directory}/${unit}" "${snapshot}/${unit}"
+  fi
+done
+cp -p /usr/local/sbin/aurorafox-update "${snapshot}/aurorafox-update"
+
 rollback() {
   status=$?
   trap - ERR
   echo "AuroraFox update failed; rollback to ${previous}." >&2
+  systemctl stop "${sync_timer}" "${sync_service}" || true
+  systemctl disable "${sync_timer}" || true
+  for unit in "${sync_service}" "${sync_timer}"; do
+    if [[ -f "${snapshot}/${unit}" ]]; then
+      cp -p "${snapshot}/${unit}" "${unit_directory}/${unit}"
+    else
+      # These exact additive units did not exist before this deployment.
+      rm -f "${unit_directory}/${unit}"
+    fi
+  done
+  cp -p "${snapshot}/aurorafox-update" /usr/local/sbin/aurorafox-update
+  systemctl daemon-reload || true
   git checkout --detach "${previous}" || true
   /opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check -r api/requirements.txt >/dev/null || true
   printf 'AURORAFOX_BUILD_SHA=%s\n' "${previous}" > "${build_environment}.tmp"
   mv "${build_environment}.tmp" "${build_environment}"
   systemctl restart aurorafox-api.service || true
+  if [[ "${timer_enabled}" == 'yes' ]]; then systemctl enable "${sync_timer}" || true; fi
+  if [[ "${timer_active}" == 'yes' ]]; then systemctl start "${sync_timer}" || true; fi
+  echo "Rollback snapshot retained at ${snapshot}" >&2
   exit "${status}"
 }
 trap rollback ERR
 
+# Quiesce old writers before replacing queue code in place.
+systemctl stop "${sync_timer}" "${sync_service}" || true
+systemctl stop aurorafox-api.service
 git checkout --detach "${candidate}"
 /opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check -r api/requirements.txt pytest==8.4.1
 /opt/aurorafox/venv/bin/python -m compileall -q api
@@ -53,15 +86,8 @@ PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_api_gateway.py \
   tests/test_api_privacy_contract.py \
   tests/test_backup_service.py \
-  tests/test_deployment_contract.py
-
-# The learning synchronizer is an additive server component. Install it only
-# after the candidate has passed compilation and the existing test suite.
-# If the component is absent in an older candidate, the production update is
-# still valid and the existing API behavior is preserved.
-if [[ -x "deploy/reg_ru/install_learning_sync.sh" ]]; then
-  deploy/reg_ru/install_learning_sync.sh
-fi
+  tests/test_deployment_contract.py \
+  tests/test_learning_sync.py
 
 printf 'AURORAFOX_BUILD_SHA=%s\n' "${candidate}" > "${build_environment}.tmp"
 mv "${build_environment}.tmp" "${build_environment}"
@@ -79,5 +105,10 @@ for _ in {1..30}; do
   sleep 2
 done
 test "${healthy}" = 'yes'
+# Installation is independent of the executable bit and follows the health gate.
+bash deploy/reg_ru/install_learning_sync.sh
+# Refresh the installed updater too; changing the repository alone is insufficient.
+install -m 0755 deploy/reg_ru/update.sh /usr/local/sbin/aurorafox-update
 trap - ERR
+echo "Rollback snapshot retained at ${snapshot}"
 echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref}"

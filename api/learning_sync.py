@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 from typing import Any
 
 from api.learning_store import LearningStore
@@ -70,13 +71,18 @@ class LearningSynchronizer:
             "bridge": bridge_result,
         }
 
-    def flush(self, limit: int = 100) -> dict[str, Any]:
+    def flush(self, limit: int = 100, max_seconds: float | None = None) -> dict[str, Any]:
         events = self.store.pending(limit)
         if not events:
             return {"ok": True, "pending": 0, "synced": 0, "attempted": 0, "failed": 0}
-        synced_ids: set[str] = set()
+        changed = 0
         failed = 0
+        attempted = 0
+        started = time.monotonic()
         for event in events:
+            if max_seconds is not None and time.monotonic() - started >= max_seconds:
+                break
+            attempted += 1
             try:
                 payload = event.get("payload", {}) if isinstance(event.get("payload"), dict) else {}
                 if str(event.get("kind", "")) == "feedback":
@@ -84,22 +90,22 @@ class LearningSynchronizer:
                 else:
                     result = self.bridge.learn(payload)
                 if result.get("ok", False):
-                    synced_ids.add(str(event.get("id", "")))
+                    # Checkpoint every confirmed delivery, not only at batch end.
+                    changed += self.store.mark_synced({str(event.get("id", ""))})
                 else:
                     failed += 1
             except Exception:
                 failed += 1
                 break
-        changed = self.store.mark_synced(synced_ids)
-        remaining = len(self.store.pending(max(1000, limit)))
+        remaining = len(self.store.pending(None))
         return {
             "ok": failed == 0,
-            "attempted": len(events),
+            "attempted": attempted,
             "synced": changed,
             "failed": failed,
             "pending": remaining,
         }
 
     def status(self) -> dict[str, Any]:
-        pending = self.store.pending(10000)
+        pending = self.store.pending(None)
         return {"ok": True, "pending": len(pending)}
