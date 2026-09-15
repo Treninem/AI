@@ -19,6 +19,9 @@ func inspect_file(path: String) -> Dictionary:
 	var existing_revision := int(by_path.get("revision", 0)) if not by_path.is_empty() else 0
 	var same_path_same_hash := not by_path.is_empty() and str(by_path.get("fingerprint_sha256", "")) == fingerprint
 	var duplicate_of := str(by_hash.get("source", "")) if not by_hash.is_empty() else ""
+	var existing_role := ""
+	if not by_path.is_empty():
+		existing_role = "canonical" if str(by_path.get("source", "")) == path else "alias"
 	return {
 		"ok": true,
 		"path": path,
@@ -29,6 +32,7 @@ func inspect_file(path: String) -> Dictionary:
 		"duplicate": not by_hash.is_empty(),
 		"duplicate_of": duplicate_of,
 		"existing_source": by_path,
+		"existing_role": existing_role,
 		"matching_source": by_hash,
 		"revision": maxi(1, existing_revision + (0 if same_path_same_hash else 1)),
 		"source_id": _source_id(fingerprint)
@@ -90,10 +94,41 @@ func mark_imported(path: String, inspection: Dictionary, result: Dictionary, met
 	}
 	if existing_index >= 0:
 		var old: Dictionary = rows[existing_index]
-		row["source_id"] = str(old.get("source_id", row["source_id"])) if str(old.get("fingerprint_sha256", "")) == fingerprint else str(row["source_id"])
-		row["aliases"] = old.get("aliases", []) if old.get("aliases", []) is Array else []
-		row["imported_at"] = str(old.get("imported_at", now))
-		rows[existing_index] = row
+		var old_hash := str(old.get("fingerprint_sha256", ""))
+		var old_canonical := str(old.get("source", ""))
+		if old_hash == fingerprint:
+			# Reindexing unchanged canonical bytes keeps history and aliases.
+			row["source"] = old_canonical
+			row["source_id"] = str(old.get("source_id", row["source_id"]))
+			row["aliases"] = old.get("aliases", []) if old.get("aliases", []) is Array else []
+			row["imported_at"] = str(old.get("imported_at", now))
+			rows[existing_index] = row
+		elif old_canonical == path:
+			# Canonical file changed. Existing aliases were fingerprints of the old
+			# bytes and must not silently follow this new revision.
+			row["aliases"] = []
+			row["imported_at"] = str(old.get("imported_at", now))
+			rows[existing_index] = row
+		else:
+			# An alias/copy changed independently. Detach only that alias from the
+			# old canonical source and create a new source for its new bytes.
+			var aliases: Array = old.get("aliases", []) if old.get("aliases", []) is Array else []
+			aliases.erase(path)
+			old["aliases"] = aliases
+			old["last_seen_at"] = now
+			rows[existing_index] = old
+			matching_index = _find_hash_index(rows, fingerprint)
+			if matching_index >= 0:
+				var canonical: Dictionary = rows[matching_index]
+				var canonical_aliases: Array = canonical.get("aliases", []) if canonical.get("aliases", []) is Array else []
+				if path != str(canonical.get("source", "")) and path not in canonical_aliases:
+					canonical_aliases.append(path)
+				canonical["aliases"] = canonical_aliases
+				canonical["last_seen_at"] = now
+				rows[matching_index] = canonical
+				row = canonical
+			else:
+				rows.append(row)
 	elif matching_index >= 0:
 		# A byte-identical source should normally have been skipped before import.
 		# If it reaches here, preserve one canonical row and register this path as an alias.
