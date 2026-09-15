@@ -1,0 +1,253 @@
+name: AuroraFox Core Candidate Promotion
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_ref:
+        description: 'Git ref containing core_candidate_submission/candidate.json and the candidate target file'
+        required: true
+        type: string
+      create_pr:
+        description: 'Create a PR after all independent promotion gates pass'
+        required: true
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  verify-candidate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+          path: project
+          persist-credentials: false
+
+      - name: Checkout untrusted candidate ref separately
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.candidate_ref }}
+          path: submission
+          persist-credentials: false
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Independently verify hashes, allowlist and source contract
+        id: verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f submission/core_candidate_submission/candidate.json
+          mkdir -p promotion-out
+          python project/build/verify_core_candidate_bundle.py \
+            --project project \
+            --bundle submission/core_candidate_submission \
+            --apply \
+            --report promotion-out/report.json
+          python - <<'PY' >> "$GITHUB_OUTPUT"
+          import json
+          from pathlib import Path
+          report = json.loads(Path('promotion-out/report.json').read_text(encoding='utf-8'))
+          print('target=' + report['target'])
+          print('candidate_id=' + report['candidate_id'])
+          print('candidate_sha256=' + report['candidate_sha256'])
+          print('base_sha256=' + report['base_sha256'])
+          PY
+
+      - name: Install Godot 4.7.1
+        id: godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          mkdir -p "$RUNNER_TEMP/aurora-godot"
+          curl -fL --retry 3 "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/aurora-godot"
+          godot="$(find "$RUNNER_TEMP/aurora-godot" -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          chmod +x "$godot"
+          "$godot" --version
+          echo "path=$godot" >> "$GITHUB_OUTPUT"
+
+      - name: Parse full project with candidate on trusted main
+        shell: bash
+        working-directory: project
+        run: |
+          set -euo pipefail
+          timeout 90s '${{ steps.godot.outputs.path }}' --headless --editor --path . --quit
+
+      - name: Run target-specific before-release behavior gates
+        shell: bash
+        working-directory: project
+        env:
+          GODOT: ${{ steps.godot.outputs.path }}
+          TARGET: ${{ steps.verify.outputs.target }}
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            scripts/memory_store.gd)
+              scripts=(tests/local_semantic_memory_smoke.gd tests/semantic_memory_smoke.gd)
+              ;;
+            scripts/agent_core.gd)
+              scripts=(tests/autonomous_coordinator_smoke.gd tests/chat_context_smoke.gd)
+              ;;
+            scripts/cognition_layer.gd)
+              scripts=(tests/autonomous_coordinator_smoke.gd tests/self_improver_smoke.gd)
+              ;;
+            agent/goals.gd)
+              scripts=(tests/autonomous_coordinator_smoke.gd)
+              ;;
+            *)
+              echo "Unexpected target after verifier: $TARGET" >&2
+              exit 2
+              ;;
+          esac
+          for script in "${scripts[@]}"; do
+            timeout 45s "$GODOT" --headless --path . --script "$script"
+          done
+
+      - name: Run protected-boundary regression gates
+        shell: bash
+        working-directory: project
+        env:
+          GODOT: ${{ steps.godot.outputs.path }}
+        run: |
+          set -euo pipefail
+          for script in \
+            tests/core_candidate_benchmark_smoke.gd \
+            tests/runtime_extension_smoke.gd \
+            tests/update_smoke.gd \
+            tests/autonomy_learning_smoke.gd
+          do
+            timeout 45s "$GODOT" --headless --path . --script "$script"
+          done
+
+      - name: Run independent Python autonomy/promotion contracts
+        shell: bash
+        working-directory: project
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check pytest==8.4.1
+          python -m pytest -q \
+            tests/test_autonomous_evolution_contract.py \
+            tests/test_core_candidate_promotion.py
+
+      - name: Require candidate to change exactly one allowlisted file
+        shell: bash
+        env:
+          TARGET: ${{ steps.verify.outputs.target }}
+        run: |
+          set -euo pipefail
+          mapfile -t changed < <(git -C project diff --name-only)
+          printf 'Changed files:\n%s\n' "${changed[*]:-<none>}"
+          if [ "${#changed[@]}" -ne 1 ] || [ "${changed[0]}" != "$TARGET" ]; then
+            echo 'Promotion worktree changed something other than the verified target.' >&2
+            exit 3
+          fi
+          git -C project diff --check
+          git -C project diff --binary > promotion-out/core-candidate.patch
+          test -s promotion-out/core-candidate.patch
+          cp submission/core_candidate_submission/candidate.json promotion-out/client-candidate.json
+
+      - name: Upload independently verified promotion artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: verified-core-candidate-${{ steps.verify.outputs.candidate_id }}
+          path: promotion-out/
+          if-no-files-found: error
+          retention-days: 14
+
+  create-promotion-pr:
+    if: ${{ inputs.create_pr }}
+    needs: verify-candidate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - name: Checkout trusted main
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Download verified candidate artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: verified-core-candidate-*
+          path: promotion
+          merge-multiple: true
+
+      - name: Revalidate promotion report and apply verified patch
+        id: report
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY' > "$RUNNER_TEMP/promotion.env"
+          import json
+          import re
+          from pathlib import Path
+          report = json.loads(Path('promotion/report.json').read_text(encoding='utf-8'))
+          if report.get('ok') is not True or report.get('applied') is not True:
+              raise SystemExit('promotion artifact is not independently verified')
+          cid = str(report['candidate_id'])
+          if not re.fullmatch(r'[A-Za-z0-9._-]{1,80}', cid):
+              raise SystemExit('unsafe candidate id')
+          for key in ('target','candidate_sha256','base_sha256'):
+              value = str(report[key])
+              if '\n' in value or '\r' in value:
+                  raise SystemExit('unsafe report field')
+          print('CANDIDATE_ID=' + cid)
+          print('TARGET=' + str(report['target']))
+          print('CANDIDATE_SHA=' + str(report['candidate_sha256']))
+          print('BASE_SHA=' + str(report['base_sha256']))
+          PY
+          cat "$RUNNER_TEMP/promotion.env" >> "$GITHUB_ENV"
+          git apply --check promotion/core-candidate.patch
+          git apply promotion/core-candidate.patch
+          mapfile -t changed < <(git diff --name-only)
+          source "$RUNNER_TEMP/promotion.env"
+          if [ "${#changed[@]}" -ne 1 ] || [ "${changed[0]}" != "$TARGET" ]; then
+            echo 'Downloaded promotion patch changed an unexpected path.' >&2
+            exit 4
+          fi
+          git diff --check
+
+      - name: Create isolated promotion branch and PR
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          set -euo pipefail
+          branch="core-candidate/${CANDIDATE_ID}-${GITHUB_RUN_ID}"
+          git config user.name 'AuroraFox Promotion Bot'
+          git config user.email 'aurorafox-promotion@users.noreply.github.com'
+          git switch -c "$branch"
+          git add -- "$TARGET"
+          git commit -m "core: promote verified candidate ${CANDIDATE_ID}"
+          git push origin "$branch"
+          cat > "$RUNNER_TEMP/pr-body.md" <<EOF
+          Automated AuroraFox Core candidate promotion.
+
+          - Candidate: \`${CANDIDATE_ID}\`
+          - Target: \`${TARGET}\`
+          - Base SHA-256: \`${BASE_SHA}\`
+          - Candidate SHA-256: \`${CANDIDATE_SHA}\`
+          - Promotion run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}
+
+          The candidate was revalidated from a clean main checkout. The workflow independently checked hashes, allowlist, public API/signals, source growth and risky primitives, then ran Godot target/regression gates. This PR does not contain or use release-signing secrets. Normal branch protection and the standard signed release workflow remain the final release boundary.
+          EOF
+          gh pr create \
+            --base "$BASE_BRANCH" \
+            --head "$branch" \
+            --title "Core candidate: ${CANDIDATE_ID}" \
+            --body-file "$RUNNER_TEMP/pr-body.md"
