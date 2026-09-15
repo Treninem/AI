@@ -1,9 +1,18 @@
 {
+  "schema_version": 1,
   "version": "1.2.0.0",
   "channel": "stable",
   "mandatory": false,
   "published_at": "",
   "notes": "AuroraFox autonomous evolution tournament update",
+  "compatibility": {
+    "legacy_manifest": true,
+    "direct_update": true,
+    "oldest_embedded_updater_date": "2026-08-19",
+    "manifest_url_contract": "github_latest_update_json",
+    "windows_strategy": "full_zip_replace",
+    "android_strategy": "same_package_signed_apk"
+  },
   "assets": {
     "windows": {
       "url": "",
