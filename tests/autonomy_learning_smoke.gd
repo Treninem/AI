@@ -1,9 +1,6 @@
 extends SceneTree
 
-var _failed := false
-
 func _fail(message: String, code: int) -> void:
-	_failed = true
 	push_error(message)
 	quit(code)
 
@@ -106,14 +103,14 @@ func _run() -> void:
 	# Background updater failures must be logged/returned but must not emit the
 	# user-facing update_error signal. Manual failures remain visible.
 	var updater := AuroraUpdateManager.new()
-	var visible_errors := 0
-	updater.update_error.connect(func(_message): visible_errors += 1)
+	var visible_errors := [0]
+	updater.update_error.connect(func(_message): visible_errors[0] = int(visible_errors[0]) + 1)
 	var background := updater._fail("offline background test", false)
-	if visible_errors != 0 or not bool(background.get("background", false)):
+	if int(visible_errors[0]) != 0 or not bool(background.get("background", false)):
 		_fail("Background updater error became user-blocking", 16)
 		return
 	var manual := updater._fail("manual update test", true)
-	if visible_errors != 1 or bool(manual.get("background", true)):
+	if int(visible_errors[0]) != 1 or bool(manual.get("background", true)):
 		_fail("Manual updater error visibility contract failed", 17)
 		return
 
