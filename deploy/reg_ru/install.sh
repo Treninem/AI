@@ -142,6 +142,18 @@ python3 -m venv /opt/aurorafox/venv
 /opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check \
   -r /opt/aurorafox/repository/api/requirements.txt pytest==8.4.1
 
+# First activation gets the same provider-independence/privacy/candidate gates as
+# every later GitHub update. A broken main commit is never started as production.
+/opt/aurorafox/venv/bin/python -m compileall -q /opt/aurorafox/repository/api
+PYTHONPATH=/opt/aurorafox/repository /opt/aurorafox/venv/bin/python -m pytest -q \
+  /opt/aurorafox/repository/tests/test_api_gateway.py \
+  /opt/aurorafox/repository/tests/test_api_privacy_contract.py \
+  /opt/aurorafox/repository/tests/test_api_runtime_resilience.py \
+  /opt/aurorafox/repository/tests/test_core_candidate_queue.py \
+  /opt/aurorafox/repository/tests/test_backup_service.py \
+  /opt/aurorafox/repository/tests/test_deployment_contract.py \
+  /opt/aurorafox/repository/tests/test_network_json_contract.py
+
 cat > /etc/aurorafox/aurorafox.env <<EOF
 AURORAFOX_USER_DIR=/var/lib/aurorafox
 AURORAFOX_API_HOST=127.0.0.1
