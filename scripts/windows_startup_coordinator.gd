@@ -13,11 +13,12 @@ func _stabilize_startup() -> void:
 	if main == null:
 		return
 
-	# Setup wizards remain fully available from Settings, but they no longer
-	# compete for the screen during application startup.
+	# Setup centers remain available from Settings, but they do not compete for
+	# the screen during normal application startup. Core readiness is reflected
+	# in the main status and can be configured explicitly by the user.
 	var model_setup: Node = main.get_node_or_null("ModelSetup")
 	if model_setup != null:
-		model_setup.set("shown", true)
+		model_setup.set("shown_once", true)
 		var model_popup: Variant = model_setup.get("popup")
 		if model_popup is PopupPanel:
 			(model_popup as PopupPanel).hide()
