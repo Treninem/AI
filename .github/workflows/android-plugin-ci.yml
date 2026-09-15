@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
@@ -35,6 +35,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android native toolchain
         shell: bash
@@ -68,4 +70,5 @@ jobs:
           test -f addons/AuroraFoxRuntime/bin/release/AuroraFoxRuntime-release.aar
           test -f addons/AuroraFoxRuntime/bin/debug/sherpa-onnx-1.13.4.aar
           test -f addons/AuroraFoxRuntime/bin/release/sherpa-onnx-1.13.4.aar
+          grep -q 'com.tom-roush:pdfbox-android:2.0.27.0' addons/AuroraFoxRuntime/export_plugin.gd
           echo AURORA_ANDROID_PLUGIN_BUILD_OK
