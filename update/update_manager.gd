@@ -61,7 +61,8 @@ func check_for_updates(manual := true) -> Dictionary:
 	if checking:
 		return {"ok": false, "error": "update check already running"}
 	checking = true
-	update_check_started.emit()
+	if manual:
+		update_check_started.emit()
 	_log("update check started version=%s manual=%s" % [current_version, manual])
 	var req := HTTPRequest.new()
 	req.timeout = 25.0
@@ -109,7 +110,7 @@ func check_for_updates(manual := true) -> Dictionary:
 	if _compare_versions(remote, current_version) <= 0:
 		latest_info = info
 		_log("no update current=%s remote=%s" % [current_version, remote])
-		no_update.emit(current_version)
+		if manual: no_update.emit(current_version)
 		return {"ok": true, "available": false, "version": remote}
 	var asset := _platform_asset(info)
 	if asset.is_empty():
@@ -122,10 +123,10 @@ func check_for_updates(manual := true) -> Dictionary:
 	update_available.emit(latest_info)
 	var response := {"ok": true, "available": true, "info": latest_info}
 	if bool(settings.get("auto_download", true)):
-		response["download"] = await download_update()
+		response["download"] = await download_update(manual)
 	return response
 
-func download_update() -> Dictionary:
+func download_update(manual := true) -> Dictionary:
 	if downloading:
 		return {"ok": false, "error": "download already running"}
 	if latest_info.is_empty():
@@ -141,8 +142,9 @@ func download_update() -> Dictionary:
 	DirAccess.make_dir_recursive_absolute(absolute.get_base_dir())
 	if FileAccess.file_exists(relative): DirAccess.remove_absolute(absolute)
 	downloading = true
-	download_started.emit(latest_info)
-	_log("download started url=%s" % url)
+	if manual:
+		download_started.emit(latest_info)
+	_log("download started url=%s manual=%s" % [url, manual])
 	var req := HTTPRequest.new()
 	req.timeout = 1800.0
 	req.download_file = absolute
@@ -152,36 +154,36 @@ func download_update() -> Dictionary:
 	if err != OK:
 		downloading = false
 		req.queue_free()
-		return _fail("Не удалось начать загрузку обновления: %s" % error_string(err), true)
+		return _fail("Не удалось начать загрузку обновления: %s" % error_string(err), manual)
 	var result: Array = await req.request_completed
 	req.queue_free()
 	downloading = false
 	var code := int(result[1])
 	if code < 200 or code >= 300:
 		DirAccess.remove_absolute(absolute)
-		return _fail("Ошибка загрузки обновления: HTTP %d" % code, true)
+		return _fail("Ошибка загрузки обновления: HTTP %d" % code, manual)
 	var actual := _sha256_file(absolute)
 	if actual.is_empty() or actual != expected:
 		DirAccess.remove_absolute(absolute)
-		return _fail("SHA-256 обновления не совпал. Пакет удалён.", true)
+		return _fail("SHA-256 обновления не совпал. Пакет удалён.", manual)
 	downloaded_path = absolute
 	_log("download verified version=%s sha256=%s" % [version, actual])
 	update_ready.emit(latest_info, downloaded_path)
 	var response := {"ok": true, "path": downloaded_path, "sha256": actual, "verified": true}
 	if bool(settings.get("auto_apply", true)) and not OS.has_feature("editor"):
 		_log("verified update is configured for automatic apply")
-		response["apply"] = apply_downloaded_update()
+		response["apply"] = apply_downloaded_update(manual)
 	return response
 
-func apply_downloaded_update() -> Dictionary:
+func apply_downloaded_update(manual := true) -> Dictionary:
 	if latest_info.is_empty() or downloaded_path.is_empty() or not FileAccess.file_exists(downloaded_path):
 		return {"ok": false, "error": "verified update package is missing"}
 	update_applying.emit(latest_info)
 	if OS.get_name() == "Windows":
-		return _apply_windows_update()
+		return _apply_windows_update(manual)
 	if OS.get_name() == "Android":
-		return _apply_android_update()
-	return _fail("Автообновление пока поддерживает Windows и Android", true)
+		return _apply_android_update(manual)
+	return _fail("Автообновление пока поддерживает Windows и Android", manual)
 
 func set_auto_check(value: bool) -> void:
 	settings["auto_check"] = value
@@ -242,13 +244,13 @@ func _verify_manifest_signature(payload: PackedByteArray, signature: PackedByteA
 	var digest := ctx.finish()
 	return Crypto.new().verify(HashingContext.HASH_SHA256, digest, signature, key)
 
-func _apply_windows_update() -> Dictionary:
+func _apply_windows_update(visible_errors := true) -> Dictionary:
 	if OS.has_feature("editor"):
-		return _fail("Установка обновления отключена при запуске из редактора Godot", true)
+		return _fail("Установка обновления отключена при запуске из редактора Godot", visible_errors)
 	var helper_res := "res://update/windows_updater.ps1"
 	var helper_user := UPDATES_DIR + "/windows_updater.ps1"
 	if not _copy_text_resource(helper_res, helper_user):
-		return _fail("Не удалось подготовить Windows updater", true)
+		return _fail("Не удалось подготовить Windows updater", visible_errors)
 	var install_dir := OS.get_executable_path().get_base_dir()
 	var exe_name := OS.get_executable_path().get_file()
 	var health := ProjectSettings.globalize_path(UPDATES_DIR + "/health-%s.ok" % str(latest_info.get("version", "next")))
@@ -265,29 +267,29 @@ func _apply_windows_update() -> Dictionary:
 		"-HealthFile", health
 	])
 	var pid := OS.create_process("powershell.exe", args, false)
-	if pid <= 0: return _fail("Не удалось запустить updater helper", true)
+	if pid <= 0: return _fail("Не удалось запустить updater helper", visible_errors)
 	_log("windows updater launched pid=%d" % pid)
 	get_tree().quit()
-	return {"ok": true, "applying": true, "automatic": true}
+	return {"ok": true, "applying": true, "automatic": not visible_errors}
 
-func _apply_android_update() -> Dictionary:
+func _apply_android_update(visible_errors := true) -> Dictionary:
 	if not Engine.has_singleton("AuroraFoxRuntime"):
-		return _fail("Android updater plugin отсутствует в этой сборке", true)
+		return _fail("Android updater plugin отсутствует в этой сборке", visible_errors)
 	var plugin := Engine.get_singleton("AuroraFoxRuntime")
 	if not plugin.has_method("installUpdateApk"):
-		return _fail("Android runtime не поддерживает установку обновления", true)
+		return _fail("Android runtime не поддерживает установку обновления", visible_errors)
 	var raw = plugin.call("installUpdateApk", downloaded_path)
 	var parsed = JSON.parse_string(str(raw))
 	if parsed is Dictionary:
-		parsed["automatic"] = true
+		parsed["automatic"] = not visible_errors
 		if bool(parsed.get("ok", false)):
-			_log("android package installer opened automatically")
+			_log("android package installer opened")
 			return parsed
 		if bool(parsed.get("requires_permission", false)):
-			_log("android unknown-app-source permission requested automatically")
+			_log("android unknown-app-source permission requested")
 			return parsed
-		return _fail(str(parsed.get("error", "Не удалось открыть установщик Android")), true)
-	return _fail("Некорректный ответ Android updater", true)
+		return _fail(str(parsed.get("error", "Не удалось открыть установщик Android")), visible_errors)
+	return _fail("Некорректный ответ Android updater", visible_errors)
 
 func _compare_versions(a: String, b: String) -> int:
 	var aa := _version_parts(a)
@@ -370,7 +372,7 @@ func _save_settings() -> void:
 func _fail(message: String, visible: bool) -> Dictionary:
 	_log("ERROR " + message)
 	if visible: update_error.emit(message)
-	return {"ok": false, "error": message}
+	return {"ok": false, "error": message, "background": not visible}
 
 func _log(message: String) -> void:
 	_ensure_dirs()
