@@ -4,6 +4,8 @@ extends Node
 const DEFAULT_MODEL_PATH := "user://models/aurorafox-main.gguf"
 const LOCAL_MODEL_DIR := "user://models"
 const MAX_LOCAL_FALLBACK_MODELS := 4
+const MODEL_MIN_RETRY_SECONDS := 20.0
+const MODEL_MAX_RETRY_SECONDS := 300.0
 const OLLAMA_TIMEOUT_SECONDS := 12.0
 const OLLAMA_MIN_RETRY_SECONDS := 30.0
 const OLLAMA_MAX_RETRY_SECONDS := 300.0
@@ -19,6 +21,7 @@ var ollama_model := "qwen3:8b"
 
 var _ollama_failures := 0
 var _ollama_retry_after_unix := 0.0
+var _model_failures: Dictionary = {}
 var _last_runtime := ""
 var _last_local_error := ""
 var _last_ollama_error := ""
@@ -89,34 +92,52 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 			"attempted_models": []
 		}
 	var failures: Array = []
+	var skipped: Array = []
 	var attempted := 0
-	for candidate in candidates:
+	for candidate_value in candidates:
+		var candidate := str(candidate_value)
 		if attempted >= MAX_LOCAL_FALLBACK_MODELS:
 			break
+		if _model_circuit_open(candidate):
+			skipped.append(_model_failure_summary(candidate))
+			continue
 		attempted += 1
-		var result := await _chat_local_model(str(candidate), messages, temperature)
+		var result := await _chat_local_model(candidate, messages, temperature)
 		if bool(result.get("ok", false)):
+			_reset_model_failure(candidate)
 			result["preferred_model"] = candidate == model_path
 			result["local_failover_count"] = failures.size()
+			result["skipped_quarantined_models"] = skipped
 			if candidate != model_path:
 				result["recovered_with_local_fallback"] = true
 			return result
+		var error := str(result.get("error", "local model failed"))
+		_record_model_failure(candidate, error)
 		failures.append({
 			"model_path": candidate,
 			"runtime": result.get("runtime", "aurora_core"),
-			"error": str(result.get("error", "local model failed")).substr(0, 600)
+			"error": error.substr(0, 600),
+			"health": _model_failure_summary(candidate)
 		})
+	var first_error := "local runtime unavailable"
+	if not failures.is_empty():
+		first_error = str(failures[0].get("error", first_error))
+	elif not skipped.is_empty():
+		first_error = "Локальные модели временно исключены после ошибок загрузки; AuroraFox повторит их автоматически"
 	return {
 		"ok": false,
 		"runtime": "aurora_core",
-		"error": str(failures[0].get("error", "local runtime unavailable")) if not failures.is_empty() else "local runtime unavailable",
+		"error": first_error,
 		"model_path": model_path,
-		"attempted_models": failures
+		"attempted_models": failures,
+		"skipped_quarantined_models": skipped
 	}
 
 func _chat_local_model(candidate_path: String, messages: Array, temperature: float) -> Dictionary:
 	if not FileAccess.file_exists(candidate_path):
 		return {"ok": false, "runtime": "aurora_core", "error": "local GGUF missing", "model_path": candidate_path}
+	if not _looks_like_gguf(candidate_path):
+		return {"ok": false, "runtime": "aurora_core", "error": "local GGUF header/size validation failed", "model_path": candidate_path}
 	if OS.get_name() == "Android":
 		if not android_runtime.is_available(): return {"ok": false, "runtime": "aurora_core", "error": "Встроенное ядро AuroraFox недоступно в этой Android-сборке", "model_path": candidate_path}
 		var caps := android_runtime.capabilities()
@@ -177,6 +198,63 @@ func _looks_like_gguf(path: String) -> bool:
 	file.close()
 	return magic == "GGUF"
 
+func _record_model_failure(path: String, message: String) -> void:
+	var identity := _model_identity(path)
+	var previous: Dictionary = _model_failures.get(path, {}) if _model_failures.get(path, {}) is Dictionary else {}
+	var same_identity := not previous.is_empty() and int(previous.get("size", -1)) == int(identity.get("size", -2)) and int(previous.get("modified", -1)) == int(identity.get("modified", -2))
+	var failures := int(previous.get("failures", 0)) + 1 if same_identity else 1
+	var exponent := float(mini(maxi(failures - 1, 0), 4))
+	var delay := minf(MODEL_MAX_RETRY_SECONDS, MODEL_MIN_RETRY_SECONDS * pow(2.0, exponent))
+	_model_failures[path] = {
+		"failures": failures,
+		"retry_after_unix": Time.get_unix_time_from_system() + delay,
+		"size": int(identity.get("size", -1)),
+		"modified": int(identity.get("modified", -1)),
+		"last_error": message.substr(0, 600),
+		"last_failure_at": Time.get_datetime_string_from_system(true)
+	}
+
+func _reset_model_failure(path: String) -> void:
+	_model_failures.erase(path)
+
+func _model_circuit_open(path: String) -> bool:
+	if not _model_failures.has(path):
+		return false
+	var entry: Dictionary = _model_failures.get(path, {})
+	var identity := _model_identity(path)
+	if int(entry.get("size", -1)) != int(identity.get("size", -2)) or int(entry.get("modified", -1)) != int(identity.get("modified", -2)):
+		_model_failures.erase(path)
+		return false
+	return float(entry.get("retry_after_unix", 0.0)) > Time.get_unix_time_from_system()
+
+func _model_identity(path: String) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {"size": -1, "modified": -1}
+	var size := file.get_length()
+	file.close()
+	return {"size": size, "modified": int(FileAccess.get_modified_time(path))}
+
+func _model_failure_summary(path: String) -> Dictionary:
+	if not _model_failures.has(path):
+		return {"model_path": path, "quarantined": false}
+	var entry: Dictionary = _model_failures.get(path, {})
+	return {
+		"model_path": path,
+		"quarantined": _model_circuit_open(path),
+		"failures": int(entry.get("failures", 0)),
+		"retry_after_unix": float(entry.get("retry_after_unix", 0.0)),
+		"last_error": str(entry.get("last_error", "")),
+		"size": int(entry.get("size", -1)),
+		"modified": int(entry.get("modified", -1))
+	}
+
+func _model_health_snapshot(paths: Array[String]) -> Array:
+	var out: Array = []
+	for path in paths:
+		out.append(_model_failure_summary(path))
+	return out
+
 func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
 	var request_node := HTTPRequest.new()
 	request_node.timeout = OLLAMA_TIMEOUT_SECONDS
@@ -215,6 +293,11 @@ func core_engine_installer() -> String:
 
 func runtime_info() -> Dictionary:
 	var local_models := _available_model_paths()
+	var health := _model_health_snapshot(local_models)
+	var quarantined := 0
+	for row in health:
+		if row is Dictionary and bool(row.get("quarantined", false)):
+			quarantined += 1
 	var info := {
 		"runtime": "AuroraFox Core",
 		"local_first": true,
@@ -222,6 +305,8 @@ func runtime_info() -> Dictionary:
 		"model_installed": not local_models.is_empty(),
 		"available_local_models": local_models,
 		"available_local_model_count": local_models.size(),
+		"model_health": health,
+		"quarantined_local_model_count": quarantined,
 		"last_model_path": _last_model_path,
 		"ollama_required": false,
 		"ollama_fallback": allow_ollama_fallback,
