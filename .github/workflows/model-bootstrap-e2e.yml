@@ -77,6 +77,8 @@ jobs:
       - name: Install verified AuroraFox Core Engine
         shell: powershell
         timeout-minutes: 8
+        env:
+          AURORAFOX_GITHUB_TOKEN: ${{ github.token }}
         run: |
           $ErrorActionPreference = 'Stop'
           $state = Join-Path $env:RUNNER_TEMP 'aurora-core-setup-state.json'
