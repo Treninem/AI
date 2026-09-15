@@ -208,6 +208,16 @@ def _learning_payload(
     }
 
 
+def _bridge_runtime(result: dict[str, Any]) -> str:
+    details = result.get("details", {})
+    if isinstance(details, dict):
+        fallback_runtime = str(details.get("fallback_runtime", "")).strip()
+        if fallback_runtime:
+            return fallback_runtime
+    runtime = str(result.get("runtime", "")).strip()
+    return runtime or "aurorafox-agent"
+
+
 def _execute_chat(
     message: str,
     context: list[dict[str, Any]],
@@ -229,22 +239,32 @@ def _execute_chat(
                 return {
                     "ok": True,
                     "content": str(result.get("content", "")),
-                    "runtime": "aurorafox-agent",
+                    "runtime": _bridge_runtime(result),
                     "model": str(result.get("model", "agent")),
                     "details": result.get("details", {}),
                 }
             bridge_error = str(result.get("error", "AgentCore bridge rejected request"))
         except Exception as exc:
             bridge_error = str(exc)
-        if mode == "agent":
-            raise HTTPException(503, f"AuroraFox AgentCore is unavailable: {bridge_error}")
 
+    messages = list(context) + [{"role": "user", "content": message}]
     try:
-        messages = list(context) + [{"role": "user", "content": message}]
-        return ollama.chat(messages, temperature=temperature)
+        result = ollama.chat(messages, temperature=temperature)
+        if not isinstance(result, dict) or not result.get("ok", False):
+            raise RuntimeError(str(result.get("error", "compatibility adapter returned an invalid result")) if isinstance(result, dict) else "invalid compatibility result")
+        if bridge_error:
+            result.setdefault("fallbacks", []).append({"runtime": "aurorafox-agent", "error": bridge_error[:1000]})
+        return result
     except Exception as exc:
-        detail = f"AgentCore unavailable: {bridge_error}; Ollama fallback failed: {exc}" if bridge_error else str(exc)
-        raise HTTPException(503, detail) from exc
+        # OllamaClient already fails open to AuroraFox local Core and local
+        # knowledge. This final guard makes the API itself non-blocking even if
+        # an unexpected adapter exception escapes in a future implementation.
+        fallback = bridge.local_knowledge.reply(message)
+        fallback["fallbacks"] = [
+            {"runtime": "aurorafox-agent", "error": bridge_error[:1000]},
+            {"runtime": "compatibility-adapter", "error": str(exc)[:1000]},
+        ]
+        return fallback
 
 
 def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
@@ -272,7 +292,7 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
                 reply,
                 conversation_id,
                 str(metadata.get("source", "api")),
-                str(result.get("runtime", "ollama")),
+                str(result.get("runtime", "local")),
                 metadata,
             ),
             True,
@@ -284,6 +304,7 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
         "reply": reply,
         "runtime": result.get("runtime", ""),
         "model": result.get("model", ""),
+        "degraded": bool(result.get("degraded", False)),
     }
 
 
@@ -297,21 +318,33 @@ def health() -> dict[str, Any]:
         agent_details = status
     except Exception:
         pass
+
+    local_core: dict[str, Any] = {}
+    try:
+        local_core = bridge.local_core.status()
+    except Exception as exc:
+        local_core = {"ok": False, "runtime": "aurorafox-local-core", "error": str(exc)}
+
     ollama_models: list[str] = []
     try:
-        ollama_models = ollama.models()
+        ollama_models = ollama.models(timeout=0.75)
     except Exception:
         pass
+
     return {
         "ok": True,
         "service": "AuroraFox API",
         "version": app.version,
         "build_sha": os.getenv("AURORAFOX_BUILD_SHA", "local"),
         "deployment": os.getenv("AURORAFOX_DEPLOYMENT", "local"),
+        "chat_available": True,
         "agent_online": agent_online,
         "agent": agent_details,
+        "local_core": local_core,
         "ollama_online": bool(ollama_models),
         "ollama_models": ollama_models,
+        "ollama_required": False,
+        "provider_policy": "agent_then_local_core_then_optional_ollama_then_local_knowledge",
         "bridge": f"127.0.0.1:{bridge.port}",
         "learning": learning.status(),
         "core_candidates": core_candidates.status(),
@@ -324,7 +357,8 @@ def capabilities(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
         "object": "aurorafox.capabilities",
         "scopes": record.get("scopes", []),
         "features": [
-            "agent-chat", "ollama-fallback", "conversation-memory", "openai-compatible-chat",
+            "agent-chat", "aurorafox-local-core", "optional-ollama-compatibility",
+            "local-knowledge-fallback", "conversation-memory", "openai-compatible-chat",
             "websocket", "file-intelligence", "tool-discovery", "scoped-api-keys",
             "integration-learning", "feedback-learning", "offline-learning-queue",
             "core-candidate-queue",
@@ -447,10 +481,14 @@ def delete_conversation(conversation_id: str, record: dict[str, Any] = Depends(_
 @app.get("/v1/models")
 def models(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
     _require(record, "models.read")
-    items = [{"id": "aurorafox-agent", "object": "model", "owned_by": "aurorafox"}]
+    items = [
+        {"id": "aurorafox-agent", "object": "model", "owned_by": "aurorafox", "optional": False},
+        {"id": "aurorafox-local-core", "object": "model", "owned_by": "aurorafox", "optional": False},
+        {"id": "aurorafox-local-knowledge", "object": "model", "owned_by": "aurorafox", "optional": False},
+    ]
     try:
-        for name in ollama.models():
-            items.append({"id": name, "object": "model", "owned_by": "ollama"})
+        for name in ollama.models(timeout=0.75):
+            items.append({"id": name, "object": "model", "owned_by": "ollama", "optional": True})
     except Exception:
         pass
     return {"object": "list", "data": items}
@@ -517,7 +555,7 @@ def openai_chat(req: OpenAIChatRequest, record: dict[str, Any] = Depends(_auth))
     if str(result.get("runtime", "")) != "aurorafox-agent":
         learning.record(
             "api_interaction",
-            _learning_payload(message, content, conversation_id, "openai_compatible", str(result.get("runtime", "ollama")), metadata),
+            _learning_payload(message, content, conversation_id, "openai_compatible", str(result.get("runtime", "local")), metadata),
             True,
         )
 
