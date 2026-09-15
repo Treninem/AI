@@ -5,6 +5,7 @@ const HOST := "127.0.0.1"
 const PORT := 8766
 const BASE_URL := "http://127.0.0.1:8766"
 const MODEL_ALIAS := "AuroraFox-Core"
+const STARTUP_ATTEMPTS := 480
 
 var server_pid := 0
 var active_model := ""
@@ -79,7 +80,7 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		starting = false
 		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Не удалось запустить встроенный AuroraFox Core Engine", "engine": exe}
 	active_model = model_absolute_path
-	for _attempt in range(80):
+	for _attempt in range(STARTUP_ATTEMPTS):
 		if server_pid <= 0 or not OS.is_process_running(server_pid):
 			starting = false
 			server_pid = 0
@@ -91,7 +92,7 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		await get_tree().create_timer(0.25).timeout
 	starting = false
 	stop()
-	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine не успел загрузить модель"}
+	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine не успел загрузить модель за 120 секунд"}
 
 func stop() -> void:
 	if server_pid > 0 and OS.is_process_running(server_pid): OS.kill(server_pid)
@@ -145,11 +146,15 @@ func _find_server_recursive(root: String, depth: int) -> String:
 		var name := dir.get_next()
 		if name.is_empty(): break
 		if name in [".", ".."]: continue
+		var is_dir := dir.current_is_dir()
 		var full := root.path_join(name)
-		if not dir.current_is_dir() and name.to_lower() == "llama-server.exe":
-			dir.list_dir_end(); return full
-		if dir.current_is_dir() and depth > 0:
+		if not is_dir and name.to_lower() == "llama-server.exe":
+			dir.list_dir_end()
+			return full
+		if is_dir and depth > 0:
 			var found := _find_server_recursive(full, depth - 1)
-			if not found.is_empty(): dir.list_dir_end(); return found
+			if not found.is_empty():
+				dir.list_dir_end()
+				return found
 	dir.list_dir_end()
 	return ""
