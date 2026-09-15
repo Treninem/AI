@@ -9,6 +9,7 @@ const CANDIDATE_ROOT := "user://core_candidates"
 const STATE_PATH := "user://core_candidates/state.json"
 const MAX_SOURCE_BYTES := 1024 * 1024
 const MAX_HISTORY := 30
+const MIN_REVIEW_IMPROVEMENT := 1.0
 const CORE_TARGETS := [
 	"scripts/cognition_layer.gd",
 	"scripts/agent_core.gd",
@@ -28,6 +29,7 @@ const NEVER_TOUCH_PREFIXES := [
 var ai: AIClient
 var tools: ToolRegistry
 var coordinator: AuroraAutonomousCoordinator
+var benchmark := CoreCandidateBenchmark.new()
 var _running := false
 var _last_candidate_unix := 0.0
 var _history: Array = []
@@ -68,7 +70,7 @@ func _register_tools() -> void:
 	if not tools.tools.has("aurora_core_candidate"):
 		tools.register_tool(
 			"aurora_core_candidate",
-			"Создать, проверить и безопасно подготовить улучшение разрешённой части ядра AuroraFox.",
+			"Создать, сравнить с текущим ядром, проверить и безопасно подготовить реальное улучшение разрешённой части AuroraFox.",
 			{"goal":"string", "target":"string"},
 			Callable(self, "_tool_candidate")
 		)
@@ -127,6 +129,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 	var original := str(source_result.get("content", ""))
 	_running = true
 	core_candidate_started.emit(clean_goal, target)
+
 	var proposal_result := await _propose(clean_goal, target, original)
 	if not bool(proposal_result.get("ok", false)):
 		return _finish_rejected(proposal_result)
@@ -134,9 +137,18 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 	var validation := _validate_candidate(target, original, proposal)
 	if not bool(validation.get("ok", false)):
 		return _finish_rejected(validation)
-	var verification := await _verify_in_workspace(clean_goal, target, str(proposal.get("content", "")))
+
+	var candidate_content := str(proposal.get("content", ""))
+	var verification := await _verify_in_workspace(clean_goal, target, candidate_content)
 	if not bool(verification.get("ok", false)):
 		return _finish_rejected(verification)
+	verification["source_contract"] = validation.get("source_contract", {})
+
+	var review := await _comparative_review(clean_goal, target, original, candidate_content, verification, proposal)
+	if not bool(review.get("ok", false)):
+		return _finish_rejected(review)
+	verification["comparative_review"] = review
+
 	var stored := _store_candidate(clean_goal, target, original, proposal, verification)
 	if not bool(stored.get("ok", false)):
 		return _finish_rejected(stored)
@@ -149,18 +161,19 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 		"candidate_path": stored.get("candidate_path", ""),
 		"manifest_path": stored.get("manifest_path", ""),
 		"base_sha256": _sha256_text(original),
-		"candidate_sha256": _sha256_text(str(proposal.get("content", ""))),
+		"candidate_sha256": _sha256_text(candidate_content),
 		"reason": str(proposal.get("reason", "")).substr(0, 2000),
 		"verified": true,
+		"benchmark_verified": true,
+		"review_improved": true,
 		"verification": _compact(verification),
 		"promotion": "signed_update",
 		"applied_to_dev_checkout": false
 	}
 
-	# A source checkout launched from the Godot editor can safely receive the
-	# already-tested file: project_apply_file creates a backup and verifies SHA.
-	# Packaged applications never rewrite their signed runtime in-place; they
-	# keep the candidate for the signed updater instead.
+	# Dev checkout receives only a candidate that passed source contracts,
+	# baseline/candidate behavioral benchmarks and comparative improvement review.
+	# Packaged builds still never rewrite their signed runtime in place.
 	if OS.has_feature("editor") and auto_apply_dev_checkout:
 		var applied = await tools.call_tool("project_apply_file", {
 			"project_path": "res://",
@@ -184,20 +197,21 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 
 func _propose(goal: String, target: String, original: String) -> Dictionary:
 	var prompt := """
-Ты улучшаешь ОДИН разрешённый файл собственного ядра AuroraFox. Работа будет проверена на полной копии проекта Godot 4.7.1 до применения.
+Ты улучшаешь ОДИН разрешённый файл собственного ядра AuroraFox. Работа будет независимо сравнена с текущей версией на полной копии проекта Godot 4.7.1.
 Цель: %s
 Файл: %s
 
 Верни ТОЛЬКО строгий JSON:
-{"path":"%s","content":"ПОЛНЫЙ новый текст файла","reason":"что реально улучшено","verification":"какие регрессии особенно важно проверить"}
+{"path":"%s","content":"ПОЛНЫЙ новый текст файла","reason":"какое измеримое улучшение внесено","verification":"какие регрессии особенно важно проверить"}
 
 Правила:
-- сохраняй назначение файла и совместимость всех публичных методов/сигналов, если изменение интерфейса не абсолютно необходимо;
-- не удаляй существующие функции ради упрощения;
+- сохраняй назначение файла и совместимость публичных методов/сигналов;
+- не удаляй существующие публичные функции ради упрощения;
 - не трогай updater, подписи, sandbox, разрешения, секреты, project.godot или другие файлы;
-- не добавляй обходы ограничений, скрытые сетевые каналы, произвольное выполнение команд или ослабление проверок;
+- не добавляй новые process/network primitives, обходы ограничений, скрытые каналы или ослабление проверок;
 - не используй TODO/FIXME/placeholder;
-- улучшение должно быть измеримым: устойчивость, качество, память, планирование, отказоустойчивость или производительность;
+- изменение должно давать конкретное улучшение устойчивости, качества, памяти, планирования, отказоустойчивости или производительности;
+- кандидат будет отклонён, если только компилируется, но не проходит baseline/candidate benchmarks и сравнительное ревью;
 - не утверждай, что тесты прошли: их запустит AuroraFox независимо.
 
 Текущий файл:
@@ -205,7 +219,7 @@ func _propose(goal: String, target: String, original: String) -> Dictionary:
 %s
 --- END CURRENT SOURCE ---
 """ % [goal, target, target, original]
-	var response := await ai.chat([{"role":"user", "content":prompt}], 0.18)
+	var response := await ai.chat([{"role":"user", "content":prompt}], 0.12)
 	if not bool(response.get("ok", false)):
 		return {"ok": false, "stage": "proposal", "error": str(response.get("error", "local proposal generation failed"))}
 	var text := str(response.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
@@ -236,16 +250,33 @@ func _validate_candidate(target: String, original: String, proposal: Dictionary)
 	var new_extends := _line_with_prefix(content, "extends ")
 	if not old_extends.is_empty() and old_extends != new_extends:
 		return {"ok": false, "stage": "validation", "error": "candidate changed base class contract", "expected": old_extends, "actual": new_extends}
-	return {"ok": true}
+	var contract := benchmark.source_contract(original, content, target)
+	if not bool(contract.get("ok", false)):
+		return {
+			"ok": false,
+			"stage": "source_contract",
+			"error": "candidate regresses public contracts, adds risky primitives or grows beyond the bounded source budget",
+			"source_contract": contract
+		}
+	return {"ok": true, "source_contract": contract}
 
 func _verify_in_workspace(goal: String, target: String, content: String) -> Dictionary:
-	for required in ["workspace_create", "workspace_import_project", "workspace_write", "workspace_read", "workspace_test", "project_compare_file"]:
+	for required in ["workspace_create", "workspace_import_project", "workspace_write", "workspace_read", "workspace_test", "workspace_exec", "project_compare_file"]:
 		if not tools.tools.has(required):
 			return {"ok": false, "stage": "workspace", "error": "required verification tool missing", "tool": required}
-	var created = await tools.call_tool("workspace_create", {"task":"AuroraFox core candidate: " + goal, "runtime":"local"})
+	var created = await tools.call_tool("workspace_create", {"task":"AuroraFox core candidate benchmark: " + goal, "runtime":"local"})
 	if not _ok(created): return _failed("workspace_create", created)
 	var imported = await tools.call_tool("workspace_import_project", {"project_path":"res://", "target":"project", "max_files":30000, "max_bytes":2147483648})
 	if not _ok(imported): return _failed("workspace_import_project", imported)
+
+	var benchmark_commands := benchmark.commands_for_target(target)
+	if benchmark_commands.is_empty():
+		return {"ok": false, "stage": "baseline_benchmark", "error": "no deterministic benchmark suite is registered for target", "target": target}
+	var baseline_runs := await _run_benchmark_commands(benchmark_commands)
+	var baseline_summary := benchmark.summarize_runs(baseline_runs)
+	if not bool(baseline_summary.get("ok", false)):
+		return {"ok": false, "stage": "baseline_benchmark", "error": "current source baseline is not healthy enough to judge an autonomous replacement", "baseline": _compact(baseline_summary)}
+
 	var sandbox_path := "project/" + target
 	var written = await tools.call_tool("workspace_write", {"path":sandbox_path, "content":content})
 	if not _ok(written): return _failed("workspace_write", written)
@@ -253,8 +284,15 @@ func _verify_in_workspace(goal: String, target: String, content: String) -> Dict
 	if not _ok(reread): return _failed("workspace_read", reread)
 	if str(reread.get("content", "")) != content:
 		return {"ok": false, "stage": "candidate_integrity", "error": "workspace candidate differs from proposed source"}
+
 	var tested = await tools.call_tool("workspace_test", {"language":"gdscript", "cwd":"project"})
 	if not _ok(tested): return _failed("workspace_test", tested)
+	var candidate_runs := await _run_benchmark_commands(benchmark_commands)
+	var candidate_summary := benchmark.summarize_runs(candidate_runs)
+	var runtime_comparison := benchmark.compare_runtime(baseline_summary, candidate_summary)
+	if not bool(runtime_comparison.get("ok", false)):
+		return {"ok": false, "stage": "candidate_benchmark", "error": "candidate failed target-specific no-regression benchmark", "benchmark": _compact(runtime_comparison)}
+
 	var compared = await tools.call_tool("project_compare_file", {"project_path":"res://", "relative_path":target, "sandbox_path":sandbox_path})
 	if not _ok(compared): return _failed("project_compare_file", compared)
 	if not bool(compared.get("changed", false)):
@@ -265,9 +303,79 @@ func _verify_in_workspace(goal: String, target: String, content: String) -> Dict
 		"workspace": _compact(created.get("workspace", {})),
 		"import": _compact(imported),
 		"test": _compact(tested),
+		"benchmark": _compact(runtime_comparison),
 		"compare": _compact(compared),
 		"sandbox_path": sandbox_path,
-		"verification_mode": "full_project_godot_4_7_1_plus_hash_compare"
+		"verification_mode": "baseline_then_candidate_godot_4_7_1_target_benchmarks_plus_hash_compare"
+	}
+
+func _run_benchmark_commands(commands: Array) -> Array:
+	var results: Array = []
+	for command in commands:
+		if not command is Array:
+			results.append({"ok": false, "error": "invalid benchmark command", "command": command})
+			continue
+		var result = await tools.call_tool("workspace_exec", {
+			"command": command,
+			"cwd": "project",
+			"timeout": 150,
+			"mode": "auto"
+		})
+		if result is Dictionary:
+			var row: Dictionary = result.duplicate(true)
+			row["command"] = command
+			results.append(row)
+		else:
+			results.append({"ok": false, "error": "benchmark command returned invalid result", "command": command})
+	return results
+
+func _comparative_review(goal: String, target: String, original: String, candidate: String, verification: Dictionary, proposal: Dictionary) -> Dictionary:
+	var evidence := {
+		"source_contract": verification.get("source_contract", {}),
+		"benchmark": verification.get("benchmark", {}),
+		"requested_reason": str(proposal.get("reason", "")).substr(0, 2000),
+		"requested_verification": str(proposal.get("verification", "")).substr(0, 1500)
+	}
+	var prompt := """
+Ты независимый финальный reviewer AuroraFox. Сравни текущий файл и уже прошедший компиляцию/регрессионные тесты кандидат.
+Цель: %s
+Файл: %s
+
+Верни ТОЛЬКО JSON:
+{"baseline_score":0-100,"candidate_score":0-100,"improved":true|false,"reasons":["..."],"risks":["..."]}
+
+Оценивай только реальное качество кода относительно цели: корректность, устойчивость, понятность, производительность, отказоустойчивость, сохранение контрактов. Не давай бонус за размер или новизну сами по себе. Если улучшение не доказано, improved=false. Кандидат уже обязан сохранить safety/update/permission boundaries и пройти одинаковые target-specific тесты.
+
+Проверочная информация:
+%s
+
+--- CURRENT ---
+%s
+--- CANDIDATE ---
+%s
+""" % [goal, target, JSON.stringify(_compact(evidence)), original.substr(0, 120000), candidate.substr(0, 120000)]
+	var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)
+	if not bool(response.get("ok", false)):
+		return {"ok": false, "stage": "comparative_review", "error": str(response.get("error", "comparative review failed"))}
+	var text := str(response.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
+	var parsed = JSON.parse_string(text)
+	if not parsed is Dictionary:
+		return {"ok": false, "stage": "comparative_review", "error": "review did not return valid JSON"}
+	var baseline_score := clampf(float(parsed.get("baseline_score", 0.0)), 0.0, 100.0)
+	var candidate_score := clampf(float(parsed.get("candidate_score", 0.0)), 0.0, 100.0)
+	var delta := candidate_score - baseline_score
+	var improved := bool(parsed.get("improved", false)) and delta >= MIN_REVIEW_IMPROVEMENT
+	return {
+		"ok": improved,
+		"stage": "comparative_review",
+		"improved": improved,
+		"baseline_score": baseline_score,
+		"candidate_score": candidate_score,
+		"delta": delta,
+		"minimum_delta": MIN_REVIEW_IMPROVEMENT,
+		"reasons": parsed.get("reasons", []),
+		"risks": parsed.get("risks", []),
+		"error": "candidate was not demonstrably better than baseline" if not improved else ""
 	}
 
 func _store_candidate(goal: String, target: String, original: String, proposal: Dictionary, verification: Dictionary) -> Dictionary:
@@ -292,6 +400,8 @@ func _store_candidate(goal: String, target: String, original: String, proposal: 
 		"reason": str(proposal.get("reason", "")).substr(0, 4000),
 		"requested_verification": str(proposal.get("verification", "")).substr(0, 3000),
 		"verified": true,
+		"benchmark_verified": bool(verification.get("benchmark", {}).get("ok", false)) if verification.get("benchmark", {}) is Dictionary else false,
+		"comparative_review": verification.get("comparative_review", {}),
 		"verification": _compact(verification),
 		"created_at": Time.get_datetime_string_from_system(true),
 		"promotion": "signed_update"
@@ -353,6 +463,7 @@ func status() -> Dictionary:
 		"auto_apply_dev_checkout": auto_apply_dev_checkout,
 		"candidate_cooldown_seconds": candidate_cooldown_seconds,
 		"last_candidate_unix": _last_candidate_unix,
+		"minimum_review_improvement": MIN_REVIEW_IMPROVEMENT,
 		"targets": CORE_TARGETS.duplicate(),
 		"history": _history.duplicate(true)
 	}
@@ -376,8 +487,11 @@ func _history_entry(result: Dictionary) -> Dictionary:
 		"candidate_id": str(result.get("candidate_id", "")),
 		"candidate_sha256": str(result.get("candidate_sha256", "")),
 		"verified": bool(result.get("verified", false)),
+		"benchmark_verified": bool(result.get("benchmark_verified", false)),
+		"review_improved": bool(result.get("review_improved", false)),
 		"promotion": str(result.get("promotion", "")),
 		"applied_to_dev_checkout": bool(result.get("applied_to_dev_checkout", false)),
+		"stage": str(result.get("stage", "")),
 		"error": str(result.get("error", "")).substr(0, 1000),
 		"time": Time.get_datetime_string_from_system(true)
 	}
@@ -435,7 +549,7 @@ func _compact(value: Variant) -> Variant:
 		var out := {}
 		for key in value.keys():
 			var k := str(key)
-			if k in ["content", "source", "raw", "stdout", "stderr"]:
+			if k in ["content", "source", "raw", "stdout", "stderr", "output"]:
 				continue
 			out[k] = _compact(value[key])
 		return out
