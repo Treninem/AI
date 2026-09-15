@@ -1,4 +1,4 @@
-[gd_scene load_steps=29 format=3]
+[gd_scene load_steps=30 format=3]
 
 [ext_resource path="res://scripts/main_compat.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/voice_overlay_compat.gd" type="Script" id="2_voice"]
@@ -28,6 +28,7 @@
 [ext_resource path="res://work/work_manager.gd" type="Script" id="26_work_manager"]
 [ext_resource path="res://work/work_overlay.gd" type="Script" id="27_work_overlay"]
 [ext_resource path="res://scripts/settings_visual_fix.gd" type="Script" id="28_settings_visual_fix"]
+[ext_resource path="res://scripts/knowledge_base_overlay.gd" type="Script" id="29_knowledge_base"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -70,6 +71,9 @@ script = ExtResource("11_file_setup")
 
 [node name="SettingsOverlay" type="Node" parent="."]
 script = ExtResource("12_settings")
+
+[node name="KnowledgeBase" type="Node" parent="."]
+script = ExtResource("29_knowledge_base")
 
 [node name="AndroidFileTools" type="Node" parent="."]
 script = ExtResource("13_android_files")
