@@ -8,6 +8,7 @@
   "compatibility": {
     "legacy_manifest": true,
     "direct_update": true,
+    "oldest_direct_update_version": "1.0.0.0",
     "oldest_embedded_updater_date": "2026-08-19",
     "manifest_url_contract": "github_latest_update_json",
     "windows_strategy": "full_zip_replace",
