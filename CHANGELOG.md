@@ -1,5 +1,23 @@
 # AuroraFox Changelog
 
+## V1.3.0.0 — 2026-09-15
+
+- Made AuroraFox Core local-first on Windows and Android. Ollama remains an optional compatibility fallback and is not required for startup or normal local operation.
+- Added verified Windows Core Engine bootstrap around llama.cpp with SHA-256 verification, executable smoke testing, authenticated GitHub metadata requests when available and bounded retry handling for API rate limits.
+- Added local GGUF model management and failure recovery: broken preferred models can be quarantined with backoff, alternate local models can be selected, and replaced files are automatically reconsidered.
+- Expanded Core Knowledge import to arbitrary filenames and many structured/document formats, including JSON/JSONL/NDJSON, text/code/data files and rich documents. Large JSONL/CSV/text sources are streamed and large monolithic JSON uses bounded parsing rather than loading the complete database into memory.
+- Added source fingerprinting, aliases, re-import transactions, rollback and duplicate prevention so renamed or changed learning files do not silently duplicate or corrupt Core Knowledge.
+- Added local semantic memory with the AuroraFox local-vector backend, no network/Ollama dependency, deterministic retrieval tests and lexical fallback.
+- Added Android offline PDF text extraction and final APK dependency packaging, with bounded file/page/text limits and safe handling of image-only PDFs.
+- Hardened autonomous Core improvement: narrow mutation allowlists, isolated candidates, deterministic regression tests, comparative quality gates, independent verification and SHA-256 checked promotion bundles.
+- Added scoped VPS/API candidate submission boundaries so ordinary chat/API credentials cannot promote Core code and clients never receive release-signing authority.
+- Preserved the direct-update compatibility floor from V1.0.0.0, legacy update.json fields, Windows full-ZIP replacement layout and Android package identity `com.aurorafox.ai`.
+- Fixed updater trust-key packaging so the pinned public update key is explicitly included in Windows and Android exports once the owner initializes the production trust root.
+- Added production release-readiness tooling plus a one-time local signing bootstrap for the persistent Android keystore and RSA update key; private keys remain outside source control.
+- Strengthened Windows CI to parse release helpers, build the package and installer, perform silent installation, launch the installed application, uninstall it and publish hashes/artifacts.
+- Strengthened Android CI to build, sign a test APK, validate package metadata, install it and launch it on an Android 35 emulator.
+- Bumped AuroraFox to `V1.3.0.0` and Android `versionCode` to `100005`.
+
 ## V1.2.0.0 — 2026-08-20
 
 - Replaced the single-mutation self-improvement path with an automatic evolutionary tournament that creates 3–10 distinct mutation candidates for the same goal.
