@@ -9,6 +9,8 @@ import pytest
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.core_candidate_queue import CoreCandidateQueue, CoreCandidateQueueError
 
+ROOT = Path(__file__).resolve().parents[1]
+
 
 def _sha(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
@@ -41,6 +43,19 @@ def test_default_api_keys_cannot_submit_core_candidates(tmp_path: Path) -> None:
     assert set(DEFAULT_SCOPES).issubset(set(record["scopes"]))
     assert not allows(verified, "core.candidate.submit")
     assert not allows(verified, "core.candidate.manage")
+
+
+def test_server_exposes_candidate_routes_only_behind_explicit_scopes() -> None:
+    server = (ROOT / "api" / "server.py").read_text(encoding="utf-8")
+    assert '@app.post("/v1/core-candidates")' in server
+    assert '_require(record, "core.candidate.submit")' in server
+    assert '@app.get("/v1/core-candidates/status")' in server
+    assert '_require(record, "core.candidate.manage")' in server
+    assert 'str(row.get("owner", "")) == str(record.get("id", ""))' in server
+    auth = (ROOT / "api" / "auth.py").read_text(encoding="utf-8")
+    default_block = auth.split("DEFAULT_SCOPES = [", 1)[1].split("]", 1)[0]
+    assert "core.candidate.submit" not in default_block
+    assert "core.candidate.manage" not in default_block
 
 
 def test_verified_candidate_is_queued_and_materialized_without_execution(tmp_path: Path) -> None:
