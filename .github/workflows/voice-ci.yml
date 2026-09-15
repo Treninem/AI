@@ -99,6 +99,10 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/update_smoke.gd
       - name: Run autonomy, learning and core rewrite safety smoke test
         run: timeout 30s ./godot --headless --path . --script tests/autonomy_learning_smoke.gd
+      - name: Run fingerprinted knowledge registry and rich document smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/knowledge_registry_smoke.gd
+      - name: Run dependency-free local semantic memory smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/local_semantic_memory_smoke.gd
 
   windows-integration:
     runs-on: windows-latest
