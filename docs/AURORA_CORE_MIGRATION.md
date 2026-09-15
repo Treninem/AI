@@ -105,14 +105,16 @@ AuroraFox has two controlled improvement paths.
 - A packaged/signed AuroraFox does **not** rewrite its installed protected executable/runtime in place. Verified Core candidates are staged for the trusted promotion/release path instead.
 - A signed official update always takes priority over autonomous source evolution; `UpdateAutonomyGuard` pauses mutation/core-candidate work while an update is being selected/downloaded/applied, then resumes the previous autonomy state.
 
-### Independent server/CI promotion boundary
+### Independent server/CI promotion and transport boundary
 - `build/verify_core_candidate_bundle.py` independently revalidates a candidate bundle outside the client. It recalculates base/candidate SHA-256, verifies the exact target allowlist and repeats public API/signal, risky-primitive and source-growth checks rather than trusting `candidate.json` by itself.
 - `.github/workflows/core-candidate-promotion.yml` checks out trusted `main` separately from an untrusted candidate ref. Candidate code therefore cannot replace the verifier/tests/workflow that judge it.
 - Only `core_candidate_submission/candidate.json` plus its allowlisted target is consumed from the candidate ref.
 - The candidate is applied to a clean trusted-main checkout, parsed by Godot 4.7.1, run through target-specific and protected-boundary regression gates, and required to change exactly one allowed file.
 - A verified patch/report is passed to a second job. Only after the verification job succeeds can that job receive repository/PR write permission and create an isolated promotion PR.
 - The promotion workflow intentionally has no updater private key or Android signing credentials. Merge/branch protection plus the ordinary signed release workflow remain the final production boundary.
-- The remaining missing link is automated transport/submission from a client/VPS verified candidate into the standardized `core_candidate_submission` ref/bundle. The promotion verifier itself is already implemented.
+- `api/core_candidate_queue.py` accepts verified bundles through separate `core.candidate.submit` / `core.candidate.manage` scopes. Ordinary API keys do not have these scopes. The VPS recalculates hashes/evidence and stores candidates without executing them.
+- `CoreCandidateSubmitter` is an autoloaded client transport. It is inert unless both `AURORAFOX_PROMOTION_API_URL` and `AURORAFOX_PROMOTION_API_TOKEN` are explicitly provisioned. Remote submission requires HTTPS, locally rechecks candidate SHA-256, never persists the bearer token, retains failed candidates and retries transient failures with bounded backoff.
+- Client transport therefore does not contain GitHub/release credentials. A trusted server/CI identity remains responsible for materializing a queued candidate into the standardized promotion ref/workflow.
 
 ## Implemented — user control over autonomy
 `AutonomySettingsManager` persists controls under `user://autonomy_settings.json`.
@@ -127,17 +129,23 @@ The Settings UI exposes:
 
 Turning the master switch off stops autonomous learning/research cycles, hot mutations and Core candidate generation without deleting the user’s model, knowledge, memory or last working version.
 
-## Implemented — automatic and signed updates
+## Implemented — automatic, signed and backward-compatible updates
 - Stable updater defaults remain automatic: check, download and apply are independently configurable.
-- `update.json` is signed using the AuroraFox release signing key and verified with the pinned public key in the application.
+- AuroraFox V1.0.0.0 is the permanent direct-update compatibility floor. V1.0+ can use `releases/latest/download/update.json` to jump directly to the newest compatible stable release without installing every intermediate version.
+- The release keeps legacy `version/channel/mandatory/assets.windows/assets.android` manifest fields and permanent `AuroraFox-Windows.zip` / `AuroraFox-Android.apk` asset names.
+- `update.sig` is additive security for current clients; it never replaces the legacy `update.json` discovery contract.
+- `update.json` is signed using the AuroraFox release signing key and verified with the pinned public key in current application builds.
+- Both Windows and Android Godot export presets explicitly include `update/release_public.pub`, because a `.pub` file is not a normal imported Godot resource and must exist inside packaged `res://` for the updater to verify future manifests.
 - Platform assets are separately verified by SHA-256 before installation.
-- Windows updater uses a helper, health marker and rollback to the previous version if the new application fails its startup health check.
-- Android uses the platform package installer and does not bypass Android installation permission/confirmation requirements.
+- Windows updater uses a full-package ZIP, helper, health marker and rollback to the previous version if the new application fails its startup health check. Current ZIP layout remains compatible with the V1.0 helper.
+- Android keeps package ID `com.aurorafox.ai`, uses the platform package installer and does not bypass Android installation permission/confirmation requirements. Update continuity also requires the same persistent Android signing identity.
 - Background check/download/apply transport failures are logged and returned internally without emitting a user-blocking update error; explicit manual checks retain visible diagnostics.
 - Network/update-server failure therefore never prevents the current verified local AuroraFox version from operating.
-- The real signed release workflow now has a blocking `core-gates` job before both Windows and Android jobs. Platform builds therefore cannot reach updater/Android signing if local semantic memory, GGUF recovery, knowledge registry/streaming/rollback, autonomous rewrite benchmark or promotion-contract gates fail.
-- `release_verification.json` records these new gates as release evidence before the signed update manifest is created.
+- The real signed release workflow has a blocking `core-gates` job before both Windows and Android jobs. Platform builds therefore cannot reach updater/Android signing if local semantic memory, GGUF recovery, knowledge registry/streaming/rollback, autonomous rewrite benchmark, promotion-contract or legacy-update gates fail.
+- `build/bridge_release_readiness.ps1` checks V1 compatibility, version synchronization, public-key/export readiness, Android package identity, release contract and optional GitHub signing-secret names before the first bridge release is considered ready.
 - The separate Core-candidate promotion workflow does not have release-signing secrets; only the standard release workflow reaches those credentials after build dependencies have passed.
+
+Current external release prerequisite: the repository still needs its one-time owner-generated `update/release_public.pub` and matching private key configured as `AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64`. The private key must never be committed. Until that trust root is initialized, release CI is intentionally not allowed to publish a signed stable update.
 
 ## Routing principles
 Imported material is **Core Knowledge**, not personal conversational memory. Semantic metadata decides where/how it is retrieved. Explicit validation is required before a learned algorithm/template can become executable behavior.
@@ -157,10 +165,12 @@ Personal/local documents are not silently converted into shared autonomous train
 
 `Autonomous goal -> research/knowledge -> 3–10 sandbox mutations -> verification -> hot extension OR verified Core candidate`
 
-`Verified Core candidate -> baseline/candidate benchmarks + comparative improvement -> local candidate bundle -> independent trusted-main verifier -> verified promotion patch/PR -> blocking signed-release Core gates -> platform builds -> updater signature -> SHA/health/rollback`
+`Verified Core candidate -> baseline/candidate benchmarks + comparative improvement -> local candidate bundle -> credential-gated HTTPS submitter -> scoped VPS queue -> independent trusted-main verifier/promotion PR -> blocking signed-release Core gates -> platform builds -> updater signature -> SHA/health/rollback`
+
+`V1.0+ installed app -> permanent latest/update.json -> full Windows ZIP or same-package Android APK -> direct latest stable update -> current RSA-pinned updater for subsequent releases`
 
 ## CI / regression gates
-Confirmed green Core/Voice CI at commit `087935a24c653b66866a80e964996fd0f6fa68c7` includes all four main jobs and the current implementation through release-gate integration. The Godot 4.7.1 job covers:
+Confirmed green Core/Voice CI at commit `6d36d8d7b64b0424ab90f4decd4f9b0a6c9d3e74` includes all four main jobs. The Godot 4.7.1 job covers:
 - project import/script parse;
 - voice/chat/autonomy/self-improver/runtime-extension/updater;
 - source registry and rich-document extraction;
@@ -169,21 +179,23 @@ Confirmed green Core/Voice CI at commit `087935a24c653b66866a80e964996fd0f6fa68c
 - large streaming knowledge import/search/removal;
 - monolithic arbitrary JSON streaming with semantic record aggregation;
 - source-scoped rollback after a partial malformed large import;
-- Core-candidate benchmark/source-contract gate.
+- Core-candidate benchmark/source-contract gate;
+- credential-gated Core candidate submission transport.
 
-The Python job covers autonomous evolution, independent Core candidate verifier/promotion contracts and voice contracts. File Intelligence document/archive/index tests and Windows bootstrap/version/updater integration also pass in the same workflow family.
+The Python job covers autonomous evolution, independent Core candidate verifier/promotion contracts, signed-release dependency/legacy-update contracts and voice contracts. File Intelligence document/archive/index tests and Windows bootstrap/version/transactional-updater integration also pass in the same workflow.
 
-A release-workflow dependency contract additionally guards that Windows and Android release jobs depend on `core-gates`, publish depends on both platform jobs, and release signing remains downstream of those dependencies.
+API CI separately covers the Core candidate VPS queue/scopes/ownership boundary. A release-workflow dependency contract guards that Windows and Android release jobs depend on `core-gates`, publish depends on both platform jobs, and release signing remains downstream of those dependencies.
 
 ## Remaining engineering work
-1. Implement authenticated client/VPS transport for a locally verified Core candidate into the standardized server-side `core_candidate_submission` queue/ref without putting GitHub or release credentials in the client.
-2. Continue real-device Windows/Android local inference benchmarking, especially model load failure/VRAM-RAM pressure, cold-start latency and fallback quality.
-3. Consider a higher-fidelity AuroraFox-owned dense/neural embedding backend as an optional upgrade over the current dependency-free local feature-hash semantic vectorizer; the current vectorizer remains the guaranteed offline baseline.
-4. Continue server synchronization/conflict/evolution integration so shared infrastructure can carry approved general improvements while personal memory remains private and per-user.
-5. Expand release regressions on real Windows/Android hardware across memory/tools/Work/voice/update/rollback and interrupted-download scenarios.
-6. Expand built-in document extraction where platform-native parsing can replace helper runtimes without sacrificing fidelity.
+1. Provision the production VPS promotion endpoint and narrowly scoped client/device token outside source control, then connect the trusted server-side worker/CI identity that converts queued bundles into the existing promotion ref/workflow.
+2. Initialize the one-time AuroraFox update RSA trust root on the owner machine and configure the GitHub Actions secret; then publish/test the first signed V1.2.0.0 bridge release.
+3. Perform real Windows V1.0/V1.1 -> bridge-release and Android old-signed-APK -> new-signed-APK update tests on physical/VM devices when historical install artifacts and Android signing identity are available.
+4. Continue real-device Windows/Android local inference benchmarking, especially model load failure/VRAM-RAM pressure, cold-start latency and fallback quality.
+5. Consider a higher-fidelity AuroraFox-owned dense/neural embedding backend as an optional upgrade over the current dependency-free local feature-hash semantic vectorizer; the current vectorizer remains the guaranteed offline baseline.
+6. Continue server synchronization/conflict/evolution integration so shared infrastructure can carry approved general improvements while personal memory remains private and per-user.
+7. Expand built-in document extraction where platform-native parsing can replace helper runtimes without sacrificing fidelity.
 
 ## Compatibility and safety rule
 Do not remove existing AuroraFox features while completing this migration. Provider-specific code stays behind adapters and must never become a startup requirement again.
 
-Autonomous improvement may optimize the assistant, but it must not autonomously remove the user’s master stop, rollback path, signed-update boundary, permission boundary, security validation or protected-file denylist.
+Autonomous improvement may optimize the assistant, but it must not autonomously remove the user’s master stop, rollback path, signed-update boundary, legacy V1.0 update path, permission boundary, security validation or protected-file denylist.
