@@ -14,7 +14,12 @@ func _ready() -> void:
 	_build_ui()
 	AuroraUpdate.update_available.connect(func(info): update_status.text = "Доступна версия %s" % str(info.get("version", "")))
 	AuroraUpdate.no_update.connect(func(version): update_status.text = "Установлена актуальная версия %s" % version)
-	AuroraUpdate.update_error.connect(func(message): update_status.text = "Обновление: %s" % message)
+	AuroraUpdate.update_error.connect(func(message):
+		# Background updater failures are logged/retried by the updater. The label
+		# is useful when Settings is open, but never gates AuroraFox operation.
+		if popup != null and popup.visible:
+			update_status.text = "Фоновое обновление будет повторено позже • %s" % message
+	)
 	AuroraVoice.backend_status.connect(func(ready, _info): voice_status.text = "Голосовой backend: %s" % ("готов" if ready else "не подключён"))
 
 func show_settings() -> void:
@@ -27,7 +32,7 @@ func _build_ui() -> void:
 	layer.layer = 110
 	add_child(layer)
 	popup = PopupPanel.new()
-	popup.size = Vector2i(760, 760)
+	popup.size = Vector2i(800, 820)
 	layer.add_child(popup)
 
 	var margin := MarginContainer.new()
@@ -97,7 +102,7 @@ func _build_ui() -> void:
 
 	_add_section(box, "Локальный AI")
 	var ai_hint := Label.new()
-	ai_hint.text = "Профили моделей: базовый чат, чат + зрение, полный с отдельной Code-моделью."
+	ai_hint.text = "AuroraFox Core всегда работает local-first. Основной GGUF и другие локальные GGUF используются раньше необязательного Ollama-адаптера; отказ Ollama не останавливает AuroraFox."
 	ai_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ai_hint)
 	var ai_prepare := Button.new()
@@ -157,11 +162,50 @@ func _build_ui() -> void:
 	box.add_child(project_buttons)
 	_add_separator(box)
 
-	_add_section(box, "Самоулучшение")
+	_add_section(box, "Обучение и самоулучшение")
 	var improvement_hint := Label.new()
-	improvement_hint.text = "AuroraFox может предложить новое ограниченное расширение, проверить полную копию проекта в песочнице через Godot 4.7.1 и подготовить его. Активация выполняется только после отдельного подтверждения и не заменяет ядро."
+	improvement_hint.text = "AuroraFox может самостоятельно собирать знания, проводить турнир 3–10 изолированных мутаций и создавать проверенные кандидаты улучшения разрешённых частей ядра. Непрошедшие проверки изменения не применяются; рабочая версия и откат сохраняются."
 	improvement_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(improvement_hint)
+	var autonomy := _autonomy_settings()
+	var autonomy_settings := autonomy.get_settings() if autonomy != null else {}
+	var master := CheckButton.new()
+	master.text = "Разрешить автономное обучение и развитие AuroraFox"
+	master.button_pressed = bool(autonomy_settings.get("master_enabled", true))
+	master.disabled = autonomy == null
+	master.toggled.connect(func(v): if autonomy != null: autonomy.set_master_enabled(v))
+	box.add_child(master)
+	var learning := CheckButton.new()
+	learning.text = "Самостоятельно пополнять Core Knowledge из проверяемых исследований"
+	learning.button_pressed = bool(autonomy_settings.get("autonomous_learning", true))
+	learning.disabled = autonomy == null
+	learning.toggled.connect(func(v): if autonomy != null: autonomy.set_autonomous_learning(v))
+	box.add_child(learning)
+	var cycles := CheckButton.new()
+	cycles.text = "Запускать автономные циклы целей и анализа"
+	cycles.button_pressed = bool(autonomy_settings.get("autonomous_cycles", true))
+	cycles.disabled = autonomy == null
+	cycles.toggled.connect(func(v): if autonomy != null: autonomy.set_autonomous_cycles(v))
+	box.add_child(cycles)
+	var hot := CheckButton.new()
+	hot.text = "Автоматически активировать прошедшие тесты безопасные runtime-мутации"
+	hot.button_pressed = bool(autonomy_settings.get("hot_improvements", true))
+	hot.disabled = autonomy == null
+	hot.toggled.connect(func(v): if autonomy != null: autonomy.set_hot_improvements(v))
+	box.add_child(hot)
+	var core := CheckButton.new()
+	core.text = "Разрешить создание проверенных кандидатов переписывания ядра"
+	core.button_pressed = bool(autonomy_settings.get("core_candidates", true))
+	core.disabled = autonomy == null
+	core.toggled.connect(func(v): if autonomy != null: autonomy.set_core_candidates(v))
+	box.add_child(core)
+	var dev_apply := CheckButton.new()
+	dev_apply.text = "В dev/editor автоматически применять проверенный кандидат с резервной копией"
+	dev_apply.button_pressed = bool(autonomy_settings.get("auto_apply_dev_checkout", true))
+	dev_apply.disabled = autonomy == null
+	dev_apply.visible = OS.has_feature("editor")
+	dev_apply.toggled.connect(func(v): if autonomy != null: autonomy.set_auto_apply_dev_checkout(v))
+	box.add_child(dev_apply)
 	improvement_status = Label.new()
 	improvement_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(improvement_status)
@@ -173,6 +217,10 @@ func _build_ui() -> void:
 
 	_add_section(box, "Обновления")
 	var update_settings := AuroraUpdate.get_settings()
+	var update_hint := Label.new()
+	update_hint.text = "Stable-обновления проверяются RSA-SHA256 и SHA-256 пакета. На Windows применяется health-check/rollback; на Android используется системный установщик. Ошибка сети не останавливает текущую локальную версию."
+	update_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	box.add_child(update_hint)
 	var auto_check := CheckButton.new()
 	auto_check.text = "Автоматически проверять обновления"
 	auto_check.button_pressed = bool(update_settings.get("auto_check", true))
@@ -183,6 +231,11 @@ func _build_ui() -> void:
 	auto_download.button_pressed = bool(update_settings.get("auto_download", true))
 	auto_download.toggled.connect(func(v): AuroraUpdate.set_auto_download(v))
 	box.add_child(auto_download)
+	var auto_apply := CheckButton.new()
+	auto_apply.text = "Автоматически применять проверенные обновления"
+	auto_apply.button_pressed = bool(update_settings.get("auto_apply", true))
+	auto_apply.toggled.connect(func(v): AuroraUpdate.set_auto_apply(v))
+	box.add_child(auto_apply)
 	update_status = Label.new()
 	update_status.text = "Канал: stable"
 	update_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -354,9 +407,15 @@ func _runtime_extensions() -> RuntimeExtensionManager:
 	if main == null: return null
 	return main.get_node_or_null("RuntimeExtensions") as RuntimeExtensionManager
 
+func _autonomy_settings() -> AutonomySettingsManager:
+	var main := get_parent()
+	if main == null: return null
+	return main.get_node_or_null("AutonomySettings") as AutonomySettingsManager
+
 func _sync_improvement_status() -> void:
 	if improvement_status == null: return
 	var manager := _runtime_extensions()
+	var autonomy := _autonomy_settings()
 	if manager == null:
 		improvement_status.text = "Runtime-расширения: менеджер не подключён"
 		return
@@ -364,7 +423,11 @@ func _sync_improvement_status() -> void:
 	var active := 0
 	for item in items:
 		if bool(item.get("active", false)): active += 1
-	improvement_status.text = "Runtime-расширения: %d активных / %d сохранённых • автоматическая Godot-проверка: %s" % [active, items.size(), "Windows" if OS.get_name() == "Windows" else "недоступна на этой платформе"]
+	var mode := "управление автономностью ещё подключается"
+	if autonomy != null:
+		var a := autonomy.status()
+		mode = "автономность включена" if bool(a.get("master_enabled", true)) else "автономность полностью остановлена пользователем"
+	improvement_status.text = "Саморазвитие: %s • runtime-расширения %d/%d • полная sandbox-проверка ядра: %s" % [mode, active, items.size(), "Godot 4.7.1 / Windows" if OS.get_name() == "Windows" else "кандидаты ядра не применяются на этой платформе"]
 
 func _open_self_improvement() -> void:
 	var main := get_parent()
