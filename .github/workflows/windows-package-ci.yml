@@ -6,11 +6,13 @@ on:
     paths:
       - 'assets/**'
       - 'agent/**'
+      - 'api/**'
       - 'scripts/**'
       - 'models/**'
       - 'voice/**'
       - 'computer/**'
       - 'file_intelligence/**'
+      - 'core_runtime/**'
       - 'runtime/**'
       - 'update/**'
       - 'build/**'
@@ -22,11 +24,13 @@ on:
     paths:
       - 'assets/**'
       - 'agent/**'
+      - 'api/**'
       - 'scripts/**'
       - 'models/**'
       - 'voice/**'
       - 'computer/**'
       - 'file_intelligence/**'
+      - 'core_runtime/**'
       - 'runtime/**'
       - 'update/**'
       - 'build/**'
@@ -92,6 +96,14 @@ jobs:
             'build\windows\voice\install_voice.ps1',
             'build\windows\computer\install_computer.ps1',
             'build\windows\file_intelligence\install_files.ps1',
+            'build\windows\core_runtime\install_core.ps1',
+            'build\windows\api\server.py',
+            'build\windows\api\local_core_client.py',
+            'build\windows\api\runtime_bridge.py',
+            'build\windows\api\ollama_client.py',
+            'build\windows\api\install_api.ps1',
+            'build\windows\api\start_api.ps1',
+            'build\windows\api\requirements.txt',
             'build\windows\update\windows_updater.ps1'
           )
           foreach ($path in $required) {
@@ -126,6 +138,9 @@ jobs:
           if ($p.ExitCode -notin @(0,3010)) { throw "Installer exited with $($p.ExitCode)" }
           $exe = Join-Path $installDir 'AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe missing' }
+          foreach ($relative in @('api\local_core_client.py','api\runtime_bridge.py','core_runtime\install_core.ps1','update\windows_updater.ps1')) {
+            if (-not (Test-Path (Join-Path $installDir $relative))) { throw "Installed runtime asset missing: $relative" }
+          }
           $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
           if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
