@@ -30,8 +30,39 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message, [hashtable]$
     }
 }
 
+function Get-GitHubToken {
+    foreach ($name in @('AURORAFOX_GITHUB_TOKEN', 'GH_TOKEN', 'GITHUB_TOKEN')) {
+        $value = [Environment]::GetEnvironmentVariable($name)
+        if (-not [string]::IsNullOrWhiteSpace($value)) { return $value.Trim() }
+    }
+    return ''
+}
+
 function Get-Json([string]$Uri) {
-    return Invoke-RestMethod -Method Get -Uri $Uri -Headers @{ 'User-Agent' = $UserAgent; 'Accept' = 'application/vnd.github+json' } -TimeoutSec 45
+    $headers = @{
+        'User-Agent' = $UserAgent
+        'Accept' = 'application/vnd.github+json'
+        'X-GitHub-Api-Version' = '2022-11-28'
+    }
+    $token = Get-GitHubToken
+    if ($token) { $headers['Authorization'] = "Bearer $token" }
+
+    $lastError = $null
+    for ($attempt = 1; $attempt -le 3; $attempt++) {
+        try {
+            return Invoke-RestMethod -Method Get -Uri $Uri -Headers $headers -TimeoutSec 45
+        } catch {
+            $lastError = $_
+            $status = 0
+            try { $status = [int]$_.Exception.Response.StatusCode } catch { }
+            if ($status -eq 403 -and -not $token) {
+                throw "GitHub API rate limit reached while resolving the verified Core Engine. Retry later or set AURORAFOX_GITHUB_TOKEN to a GitHub token with public contents read access. Original error: $($_.Exception.Message)"
+            }
+            if ($attempt -ge 3 -or $status -notin @(0, 429, 500, 502, 503, 504)) { throw }
+            Start-Sleep -Seconds ([Math]::Min(8, [Math]::Pow(2, $attempt)))
+        }
+    }
+    throw $lastError
 }
 
 function Remove-Tree([string]$Path) {
