@@ -193,6 +193,9 @@ if (-not (Test-Path (Join-Path $coreOut "install_core.ps1"))) { throw "AuroraFox
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $updateOut "windows_updater.ps1"))) { throw "Transactional Windows updater was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "server.py"))) { throw "AuroraFox API server was not packaged" }
+if (-not (Test-Path (Join-Path $apiOut "local_core_client.py"))) { throw "AuroraFox local Core API client was not packaged" }
+if (-not (Test-Path (Join-Path $apiOut "runtime_bridge.py"))) { throw "AuroraFox Agent/Core runtime bridge was not packaged" }
+if (-not (Test-Path (Join-Path $apiOut "ollama_client.py"))) { throw "AuroraFox optional Ollama compatibility adapter was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "start_api.ps1"))) { throw "AuroraFox API start script was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "install_api.ps1"))) { throw "AuroraFox API installer was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "requirements.txt"))) { throw "AuroraFox API requirements were not packaged" }
