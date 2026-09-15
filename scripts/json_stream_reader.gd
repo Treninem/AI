@@ -108,6 +108,7 @@ func _parse_object(path: String, depth: int) -> bool:
 		if separator != 44:
 			return _fail("В объекте JSON ожидалась ',' или '}'")
 		_skip_ws()
+	return false
 
 func _parse_array(path: String, depth: int) -> bool:
 	_get_byte() # [
@@ -127,6 +128,7 @@ func _parse_array(path: String, depth: int) -> bool:
 		if separator != 44:
 			return _fail("В массиве JSON ожидалась ',' или ']'")
 		_skip_ws()
+	return false
 
 func _parse_string() -> Dictionary:
 	if _get_byte() != 34:
