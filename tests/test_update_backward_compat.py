@@ -104,6 +104,15 @@ def test_android_identity_and_windows_full_zip_strategy_are_stable() -> None:
     assert compatibility["android_strategy"] == "same_package_signed_apk"
 
 
+def test_public_update_key_is_embedded_in_windows_and_android_exports() -> None:
+    presets = (ROOT / "export_presets.cfg").read_text(encoding="utf-8")
+    # .pub is not a normal Godot resource, so it must be explicitly included
+    # in both exports for res://update/release_public.pub to exist at runtime.
+    assert presets.count('include_filter="update/release_public.pub"') == 2
+    updater = (ROOT / "update" / "update_manager.gd").read_text(encoding="utf-8")
+    assert 'const PUBLIC_KEY_PATH := "res://update/release_public.pub"' in updater
+
+
 def test_pre_v1_builds_are_documented_as_one_time_manual_bootstrap() -> None:
     docs = (ROOT / "update" / "README.md").read_text(encoding="utf-8")
     assert "V1.0.0.0" in docs
