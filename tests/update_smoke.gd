@@ -37,6 +37,13 @@ func _init() -> void:
 		push_error("Updater failed older-version comparison")
 		quit(9)
 		return
+	# A client that already contains the updater must be able to jump straight
+	# from an arbitrarily old semantic version to a current multi-part version.
+	for legacy in ["0.0.1", "0.1", "0.4.0", "1.0.0", "v1.1.9"]:
+		if updater._compare_versions("9.8.7.6", legacy) != 1:
+			push_error("Direct legacy-to-current version jump failed for " + legacy)
+			quit(21)
+			return
 
 	var source := FileAccess.get_file_as_string("res://update/update_manager.gd")
 	if not source.contains('response["apply"] = apply_downloaded_update(manual)'):
@@ -50,6 +57,14 @@ func _init() -> void:
 	if not source.contains("func set_auto_apply"):
 		push_error("Updater auto_apply state is not exposed")
 		quit(12)
+		return
+	if not source.contains('const MANIFEST_URL := "https://github.com/Treninem/AI/releases/latest/download/update.json"'):
+		push_error("Permanent legacy update manifest URL changed")
+		quit(22)
+		return
+	if not source.contains('const MANIFEST_SIG_URL := "https://github.com/Treninem/AI/releases/latest/download/update.sig"'):
+		push_error("Current signed manifest sidecar URL changed")
+		quit(23)
 		return
 
 	var file := FileAccess.open("res://update/manifest.template.json", FileAccess.READ)
@@ -68,6 +83,25 @@ func _init() -> void:
 	if not assets is Dictionary or not assets.has("windows") or not assets.has("android"):
 		push_error("Update manifest does not define both platform assets")
 		quit(15)
+		return
+	for platform in ["windows", "android"]:
+		var asset = assets.get(platform, {})
+		if not asset is Dictionary or not asset.has("url") or not asset.has("sha256"):
+			push_error("Legacy manifest asset contract missing for " + platform)
+			quit(24)
+			return
+	var compatibility = parsed.get("compatibility", {})
+	if not compatibility is Dictionary or not bool(compatibility.get("legacy_manifest", false)) or not bool(compatibility.get("direct_update", false)):
+		push_error("Manifest no longer declares direct legacy updater compatibility")
+		quit(25)
+		return
+	if str(compatibility.get("windows_strategy", "")) != "full_zip_replace":
+		push_error("Windows legacy update strategy changed")
+		quit(26)
+		return
+	if str(compatibility.get("android_strategy", "")) != "same_package_signed_apk":
+		push_error("Android legacy update strategy changed")
+		quit(27)
 		return
 
 	# Exercise the same RSA-SHA256 primitives used by the production updater.
@@ -103,7 +137,7 @@ func _init() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(public_path))
 
 	updater.free()
-	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true silent_background=true")
+	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true legacy_direct_update=true signed_current=true")
 	quit(0)
 
 func _sha256(data: PackedByteArray) -> PackedByteArray:
