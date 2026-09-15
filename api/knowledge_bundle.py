@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
 import subprocess
 import sys
 import time
+import zlib
 from pathlib import Path
 from typing import Any
 
@@ -88,11 +90,15 @@ def _atomic_write(path: Path, data: bytes) -> None:
 
 
 def _repo_seed_bytes() -> bytes:
-    seed_dir = repository_root() / "knowledge" / "v7" / "seed"
-    parts = sorted(seed_dir.glob("part-*.jsonl"))
+    seed_dir = repository_root() / "knowledge" / "v7" / "seed_compressed"
+    parts = sorted(seed_dir.glob("part-*.b64"))
     if not parts:
-        raise RuntimeError(f"AuroraFox knowledge seed parts are missing: {seed_dir}")
-    return b"".join(path.read_bytes() for path in parts)
+        raise RuntimeError(f"AuroraFox compressed knowledge seed parts are missing: {seed_dir}")
+    encoded = b"".join(path.read_bytes().strip() for path in parts)
+    try:
+        return zlib.decompress(base64.b64decode(encoded, validate=True))
+    except Exception as exc:
+        raise RuntimeError(f"Cannot decode AuroraFox knowledge seed: {exc}") from exc
 
 
 def ensure_seed() -> dict[str, Any]:
