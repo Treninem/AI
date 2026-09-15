@@ -7,14 +7,15 @@ from typing import Any
 
 knowledge_bootstrap: dict[str, Any] = {"ok": True, "skipped": True}
 
-# The REG.RU API service imports this package on every restart. That makes the
-# package initializer a lightweight deployment hook: it validates the compact
-# canonical seed immediately and starts deterministic knowledge materialization
-# in a detached process. The materializer process itself is guarded to avoid a
-# recursive spawn when it imports the ``api`` package through ``python -m``.
+# The production API service runs as the dedicated ``aurorafox`` user. The
+# deployment updater and its pytest gate run as root with the same environment,
+# so explicitly skip bootstrap for root: otherwise CI/update tests could start
+# a background database build with root-owned files in /var/lib/aurorafox.
+_is_root = bool(hasattr(os, "geteuid") and os.geteuid() == 0)
 if (
     os.getenv("AURORAFOX_DEPLOYMENT", "").strip().lower() == "reg-ru"
     and os.getenv("AURORAFOX_KNOWLEDGE_MATERIALIZER", "") != "1"
+    and not _is_root
 ):
     try:
         from api.knowledge_bundle import bootstrap_server_knowledge
