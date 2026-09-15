@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.conversation_store import ConversationStore
+from api.core_candidate_queue import CoreCandidateQueue, CoreCandidateQueueError
 from api.file_client import FileIntelligenceClient
 from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
@@ -40,6 +41,7 @@ ollama = OllamaClient(
     preferred_model=os.getenv("AURORAFOX_CHAT_MODEL", "qwen3:8b"),
 )
 files = FileIntelligenceClient(API_ROOT / "uploads", os.getenv("AURORAFOX_FILES_URL", "http://127.0.0.1:8767"))
+core_candidates = CoreCandidateQueue(API_ROOT)
 
 
 def _canonical_version() -> str:
@@ -51,6 +53,7 @@ def _canonical_version() -> str:
         return str(json.loads(state_path.read_text(encoding="utf-8"))["numeric"])
     except Exception:
         return "0.0.0.0"
+
 
 app = FastAPI(
     title="AuroraFox API",
@@ -129,6 +132,19 @@ class ToolRunRequest(BaseModel):
     args: dict[str, Any] = Field(default_factory=dict)
 
 
+class CoreCandidateSubmitRequest(BaseModel):
+    manifest: dict[str, Any]
+    content_base64: str = Field(min_length=1, max_length=2 * 1024 * 1024)
+    source: str = Field(default="aurorafox-client", min_length=1, max_length=128)
+
+
+class CoreCandidateStateRequest(BaseModel):
+    state: Literal["received", "queued", "verifying", "promoted", "rejected", "expired"]
+    promotion_ref: str = Field(default="", max_length=512)
+    promotion_run: str = Field(default="", max_length=512)
+    error: str = Field(default="", max_length=4000)
+
+
 class KeyCreateRequest(BaseModel):
     name: str = Field(min_length=1, max_length=128)
     scopes: list[str] = Field(default_factory=lambda: list(DEFAULT_SCOPES))
@@ -160,6 +176,12 @@ def _auth(authorization: str = Header(default="")) -> dict[str, Any]:
 def _require(record: dict[str, Any], scope: str) -> None:
     if not allows(record, scope):
         raise HTTPException(403, f"API key does not have scope: {scope}")
+
+
+def _core_candidate_visible(record: dict[str, Any], row: dict[str, Any]) -> bool:
+    if allows(record, "core.candidate.manage"):
+        return True
+    return allows(record, "core.candidate.submit") and str(row.get("owner", "")) == str(record.get("id", ""))
 
 
 def _learning_payload(
@@ -200,8 +222,6 @@ def _execute_chat(
         try:
             result = bridge.chat(message, context, conversation_id, metadata)
             if result.get("ok", False):
-                # If earlier API requests were handled while the GUI/core was
-                # offline, replay a small batch as soon as AgentCore is back.
                 try:
                     learning.flush(25)
                 except Exception:
@@ -244,8 +264,6 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
         "source": metadata.get("source", "api"),
     })
 
-    # AgentCore already stores its own interaction in MemoryStore. Only queue
-    # fallback-Ollama interactions so they can be learned when AgentCore returns.
     if str(result.get("runtime", "")) != "aurorafox-agent":
         learning.record(
             "api_interaction",
@@ -296,6 +314,7 @@ def health() -> dict[str, Any]:
         "ollama_models": ollama_models,
         "bridge": f"127.0.0.1:{bridge.port}",
         "learning": learning.status(),
+        "core_candidates": core_candidates.status(),
     }
 
 
@@ -308,6 +327,7 @@ def capabilities(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
             "agent-chat", "ollama-fallback", "conversation-memory", "openai-compatible-chat",
             "websocket", "file-intelligence", "tool-discovery", "scoped-api-keys",
             "integration-learning", "feedback-learning", "offline-learning-queue",
+            "core-candidate-queue",
         ],
     }
 
@@ -345,6 +365,71 @@ def learning_status(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
 def learning_sync(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
     _require(record, "memory.write")
     return learning.flush(250)
+
+
+@app.post("/v1/core-candidates")
+def submit_core_candidate(req: CoreCandidateSubmitRequest, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    _require(record, "core.candidate.submit")
+    try:
+        return core_candidates.submit(
+            req.manifest,
+            req.content_base64,
+            owner=str(record.get("id", "unknown")),
+            source=req.source,
+        )
+    except CoreCandidateQueueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/v1/core-candidates/status")
+def core_candidate_queue_status(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    _require(record, "core.candidate.manage")
+    return core_candidates.status()
+
+
+@app.get("/v1/core-candidates")
+def list_core_candidates(
+    state: str = Query(default=""),
+    limit: int = Query(default=50, ge=1, le=200),
+    record: dict[str, Any] = Depends(_auth),
+) -> dict[str, Any]:
+    _require(record, "core.candidate.manage")
+    try:
+        return {"ok": True, "items": core_candidates.list(limit, state)}
+    except CoreCandidateQueueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/v1/core-candidates/{candidate_id}")
+def get_core_candidate(candidate_id: str, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    if not allows(record, "core.candidate.submit") and not allows(record, "core.candidate.manage"):
+        raise HTTPException(403, "API key does not have Core candidate scope")
+    row = core_candidates.get(candidate_id)
+    if not row:
+        raise HTTPException(404, "Core candidate not found")
+    if not _core_candidate_visible(record, row):
+        raise HTTPException(403, "Core candidate belongs to a different submitter")
+    return {"ok": True, **row}
+
+
+@app.post("/v1/core-candidates/{candidate_id}/state")
+def set_core_candidate_state(
+    candidate_id: str,
+    req: CoreCandidateStateRequest,
+    record: dict[str, Any] = Depends(_auth),
+) -> dict[str, Any]:
+    _require(record, "core.candidate.manage")
+    try:
+        return core_candidates.set_state(
+            candidate_id,
+            req.state,
+            promotion_ref=req.promotion_ref,
+            promotion_run=req.promotion_run,
+            error=req.error,
+        )
+    except CoreCandidateQueueError as exc:
+        message = str(exc)
+        raise HTTPException(404 if "not present" in message else 422, message) from exc
 
 
 @app.get("/v1/conversations/{conversation_id}")
