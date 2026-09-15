@@ -11,6 +11,7 @@ on:
       - 'update/**'
       - 'agent/**'
       - 'scripts/**'
+      - 'api/**'
       - 'tests/**'
       - 'android_plugin/**'
       - 'build/**'
@@ -29,6 +30,7 @@ on:
       - 'update/**'
       - 'agent/**'
       - 'scripts/**'
+      - 'api/**'
       - 'tests/**'
       - 'android_plugin/**'
       - 'build/**'
@@ -51,9 +53,9 @@ jobs:
       - name: Compile Python modules
         run: python -m compileall -q agent api voice/python voice/voice_service.py file_intelligence/file_service.py file_intelligence/project_index_service.py build/verify_core_candidate_bundle.py tests
       - name: Install lightweight voice test dependencies
-        run: python -m pip install --disable-pip-version-check pytest==8.4.1 numpy==2.2.6
-      - name: Run voice autonomous-evolution promotion and release contract tests
-        run: pytest -q tests/test_voice_text.py tests/test_voice_configs.py tests/test_xtts_contract.py tests/test_autonomous_evolution_contract.py tests/test_core_candidate_promotion.py tests/test_release_core_gates.py
+        run: python -m pip install --disable-pip-version-check pytest==8.4.1 numpy==2.2.6 requests==2.32.5
+      - name: Run voice autonomous-evolution promotion release and provider-independence tests
+        run: pytest -q tests/test_voice_text.py tests/test_voice_configs.py tests/test_xtts_contract.py tests/test_autonomous_evolution_contract.py tests/test_core_candidate_promotion.py tests/test_release_core_gates.py tests/test_api_runtime_resilience.py
 
   file-intelligence:
     runs-on: ubuntu-latest
