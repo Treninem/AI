@@ -1,62 +1,90 @@
-name: AuroraFox Model Bootstrap E2E
+name: AuroraFox Core Bootstrap E2E
 
 on:
   workflow_dispatch:
   push:
     branches:
       - 'model-bootstrap-e2e/**'
+      - 'main'
     paths:
+      - 'core_runtime/**'
       - 'models/**'
+      - 'scripts/aurora_core_runtime.gd'
+      - 'scripts/desktop_local_runtime.gd'
+      - 'scripts/local_model_manager.gd'
       - 'scripts/ai_client.gd'
+      - 'scripts/knowledge_*.gd'
+      - 'scripts/knowledge_base_overlay.gd'
+      - 'main.tscn'
       - 'tests/model_bootstrap_e2e.gd'
-      - 'build/model_bootstrap_trigger.txt'
+      - 'build/build_windows.ps1'
       - '.github/workflows/model-bootstrap-e2e.yml'
   pull_request:
     paths:
+      - 'core_runtime/**'
       - 'models/**'
+      - 'scripts/aurora_core_runtime.gd'
+      - 'scripts/desktop_local_runtime.gd'
+      - 'scripts/local_model_manager.gd'
       - 'scripts/ai_client.gd'
+      - 'scripts/knowledge_*.gd'
+      - 'scripts/knowledge_base_overlay.gd'
+      - 'main.tscn'
       - 'tests/model_bootstrap_e2e.gd'
-      - 'build/model_bootstrap_trigger.txt'
+      - 'build/build_windows.ps1'
       - '.github/workflows/model-bootstrap-e2e.yml'
 
 permissions:
   contents: read
 
 jobs:
-  windows-model-bootstrap:
-    if: github.event_name != 'pull_request' || startsWith(github.head_ref, 'model-bootstrap-e2e/')
+  windows-core-bootstrap:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 45
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Parse model installer
+      - name: Parse PowerShell bootstraps
         shell: powershell
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\models\install_models.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
-          if ($errors.Count -gt 0) {
-            $errors | ForEach-Object { Write-Error $_.Message }
-            throw 'models/install_models.ps1 parse failed'
+          foreach ($script in @('.\core_runtime\install_core.ps1','.\models\install_models.ps1','.\build\build_windows.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$script :: $($_.Message)" }
+              throw "$script parse failed"
+            }
           }
 
-      - name: Bootstrap Ollama and qwen3 core profile
+      - name: Install verified AuroraFox Core Engine
         shell: powershell
         run: |
-          $state = Join-Path $env:RUNNER_TEMP 'aurora-model-setup-state.json'
-          .\models\install_models.ps1 -Profile core -StateFile $state
-          if ($LASTEXITCODE -ne 0) { throw "Model bootstrap exited with $LASTEXITCODE" }
-          if (-not (Test-Path $state)) { throw 'Model bootstrap state file missing' }
+          $state = Join-Path $env:RUNNER_TEMP 'aurora-core-setup-state.json'
+          .\core_runtime\install_core.ps1 -StateFile $state
+          if ($LASTEXITCODE -ne 0) { throw "Core Engine installer exited with $LASTEXITCODE" }
+          if (-not (Test-Path $state)) { throw 'Core Engine state file missing' }
           $data = Get-Content $state -Raw | ConvertFrom-Json
           if ($data.stage -ne 'ready' -or [int]$data.progress -ne 100) {
-            throw "Model bootstrap did not reach ready/100: $(Get-Content $state -Raw)"
+            throw "Core Engine did not reach ready/100: $(Get-Content $state -Raw)"
           }
-          $tags = Invoke-RestMethod -Method Get -Uri 'http://127.0.0.1:11434/api/tags' -TimeoutSec 10
-          $names = @($tags.models | ForEach-Object { [string]$_.name })
-          if ($names -notcontains 'qwen3:8b') { throw "qwen3:8b missing after bootstrap: $($names -join ', ')" }
+          $server = '.\core_runtime\engine\llama-server.exe'
+          if (-not (Test-Path $server)) { throw 'llama-server.exe missing after verified Core setup' }
+          & $server --version
+          if ($LASTEXITCODE -ne 0) { throw 'AuroraFox Core Engine smoke test failed' }
           Get-Content $state
+
+      - name: Verify compatibility bootstrap does not require Ollama
+        shell: powershell
+        run: |
+          $state = Join-Path $env:RUNNER_TEMP 'aurora-model-compat-state.json'
+          .\models\install_models.ps1 -Profile core -StateFile $state
+          if ($LASTEXITCODE -ne 0) { throw "Compatibility bootstrap exited with $LASTEXITCODE" }
+          $data = Get-Content $state -Raw | ConvertFrom-Json
+          if ($data.stage -ne 'ready' -or [int]$data.progress -ne 100) { throw 'Compatibility bootstrap did not reach ready' }
+          if ($data.ollama_required -ne $false) { throw 'Compatibility bootstrap unexpectedly requires Ollama' }
+          if (Get-Process -Name 'ollama' -ErrorAction SilentlyContinue) { throw 'Bootstrap unexpectedly started Ollama' }
 
       - name: Download Godot 4.7.1
         id: godot
@@ -73,10 +101,14 @@ jobs:
           "path=$godot" >> $env:GITHUB_OUTPUT
           & $godot --version
 
-      - name: Verify AuroraFox AIClient end-to-end
+      - name: Parse and import AuroraFox project
         shell: pwsh
         run: |
           & '${{ steps.godot.outputs.path }}' --headless --editor --path . --quit
-          if ($LASTEXITCODE -ne 0) { throw 'Godot import failed before AIClient E2E' }
+          if ($LASTEXITCODE -ne 0) { throw 'Godot project import / script parse failed' }
+
+      - name: Run Core and Knowledge contracts
+        shell: pwsh
+        run: |
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/model_bootstrap_e2e.gd
-          if ($LASTEXITCODE -ne 0) { throw 'AuroraFox AIClient model bootstrap E2E failed' }
+          if ($LASTEXITCODE -ne 0) { throw 'AuroraFox Core bootstrap contract failed' }
