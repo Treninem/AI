@@ -2,9 +2,10 @@ package com.aurorafox.runtime
 
 import android.content.Context
 import android.graphics.BitmapFactory
-import android.graphics.pdf.PdfRenderer
 import android.media.MediaMetadataRetriever
-import android.os.ParcelFileDescriptor
+import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.tom_roush.pdfbox.pdmodel.PDDocument
+import com.tom_roush.pdfbox.text.PDFTextStripper
 import org.json.JSONArray
 import org.json.JSONObject
 import org.w3c.dom.Element
@@ -154,21 +155,40 @@ class AndroidFileRuntime(
     }
 
     private fun analyzePdf(file: File): String {
-        val descriptor = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
-        PdfRenderer(descriptor).use { renderer ->
-            val pages = renderer.pageCount
-            val pageInfo = JSONArray()
-            val sample = minOf(pages, 8)
-            for (i in 0 until sample) {
-                renderer.openPage(i).use { page ->
-                    pageInfo.put(JSONObject(mapOf("page" to (i + 1), "width" to page.width, "height" to page.height)))
-                }
+        // PDFBox runs entirely on-device and extracts the embedded text layer.
+        // No network, Ollama, cloud OCR or external AI is involved here.
+        if (file.length() > 128L * 1024L * 1024L) {
+            return error("PDF is larger than the 128 MB Android local-extraction limit")
+        }
+        PDFBoxResourceLoader.init(context.applicationContext)
+        PDDocument.load(file).use { document ->
+            val pages = document.numberOfPages
+            val pagesToRead = minOf(pages, 200)
+            val stripper = PDFTextStripper().apply {
+                sortByPosition = true
+                startPage = 1
+                endPage = maxOf(1, pagesToRead)
+            }
+            val extracted = if (pages > 0) stripper.getText(document).trim() else ""
+            val warnings = mutableListOf<String>()
+            if (pages > pagesToRead) {
+                warnings += "PDF содержит $pages стр.; для безопасного мобильного импорта прочитаны первые $pagesToRead стр."
+            }
+            if (extracted.isBlank()) {
+                warnings += "В PDF не найден текстовый слой. Локальный OCR для сканированных PDF на Android пока не подключён; пустой результат не будет записан в Core Knowledge."
             }
             return payload(
                 "pdf",
-                "PDF: $pages стр. Android native runtime подтвердил структуру документа. Текстовый слой PDF на мобильном backend пока не извлекается; для полного разбора используйте Windows File Intelligence или будущий локальный mobile OCR/vision backend.",
-                mapOf("pages" to pages, "sample_pages" to pageInfo),
-                warnings = listOf("На Android PdfRenderer рендерит страницы, но текущий AuroraFox runtime ещё не выполняет локальный OCR PDF.")
+                extracted.take(160_000),
+                mapOf(
+                    "pages" to pages,
+                    "pages_extracted" to pagesToRead,
+                    "text_layer" to extracted.isNotBlank(),
+                    "engine" to "pdfbox-android",
+                    "offline" to true,
+                ),
+                warnings = warnings,
+                truncated = extracted.length > 160_000 || pages > pagesToRead,
             )
         }
     }
