@@ -52,8 +52,11 @@ git checkout --detach "${candidate}"
 PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_api_gateway.py \
   tests/test_api_privacy_contract.py \
+  tests/test_api_runtime_resilience.py \
+  tests/test_core_candidate_queue.py \
   tests/test_backup_service.py \
-  tests/test_deployment_contract.py
+  tests/test_deployment_contract.py \
+  tests/test_network_json_contract.py
 
 printf 'AURORAFOX_BUILD_SHA=%s\n' "${candidate}" > "${build_environment}.tmp"
 mv "${build_environment}.tmp" "${build_environment}"
@@ -73,4 +76,3 @@ done
 test "${healthy}" = 'yes'
 trap - ERR
 echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref}"
-
