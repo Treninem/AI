@@ -7,6 +7,7 @@ signal semantic_backend_status(ready: bool, message: String)
 const MEMORY_PATH := "user://memory.json"
 const KNOWLEDGE_PATH := "user://knowledge.json"
 const VECTOR_PATH := "user://memory_vectors.json"
+const CORE_SETTINGS_PATH := "user://aurora_core_settings.json"
 const EMBEDDING_MODEL := "qwen3-embedding:0.6b"
 const EMBED_URL := "http://127.0.0.1:11434/api/embed"
 const VECTOR_DIMENSIONS := 256
@@ -24,28 +25,55 @@ var _queued_ids: Dictionary = {}
 var _embedding_busy := false
 var _semantic_ready := false
 var _next_embedding_retry_unix := 0.0
+var _legacy_semantic_compat_enabled := false
 
 func _ready() -> void:
 	memory = _load_array(MEMORY_PATH)
 	knowledge = _load_array(KNOWLEDGE_PATH)
 	_load_vector_index()
+	_load_core_settings()
 	var changed := _migrate_collection(memory, "memory")
 	changed = _migrate_collection(knowledge, "knowledge") or changed
 	if changed:
 		_save_array(MEMORY_PATH, memory)
 		_save_array(KNOWLEDGE_PATH, knowledge)
-	_queue_missing_embeddings(memory, "memory")
-	_queue_missing_embeddings(knowledge, "knowledge")
-	set_process(true)
-	if not _embed_queue.is_empty():
-		call_deferred("_drain_embedding_queue")
+	set_process(_legacy_semantic_compat_enabled)
+	if _legacy_semantic_compat_enabled:
+		_queue_missing_embeddings(memory, "memory")
+		_queue_missing_embeddings(knowledge, "knowledge")
+		if not _embed_queue.is_empty():
+			call_deferred("_drain_embedding_queue")
+	else:
+		_semantic_ready = not vectors.is_empty()
 
 func _process(_delta: float) -> void:
+	if not _legacy_semantic_compat_enabled:
+		return
 	if _embedding_busy or _embed_queue.is_empty():
 		return
 	if Time.get_unix_time_from_system() < _next_embedding_retry_unix:
 		return
 	call_deferred("_drain_embedding_queue")
+
+func set_legacy_semantic_compat_enabled(enabled: bool) -> void:
+	if _legacy_semantic_compat_enabled == enabled:
+		return
+	_legacy_semantic_compat_enabled = enabled
+	set_process(enabled)
+	if enabled:
+		_queue_missing_embeddings(memory, "memory")
+		_queue_missing_embeddings(knowledge, "knowledge")
+		if not _embed_queue.is_empty():
+			call_deferred("_drain_embedding_queue")
+	else:
+		_embed_queue.clear()
+		_queued_ids.clear()
+		_embedding_busy = false
+		_next_embedding_retry_unix = 0.0
+		semantic_backend_status.emit(false, "Legacy Ollama semantic compatibility disabled")
+
+func legacy_semantic_compat_enabled() -> bool:
+	return _legacy_semantic_compat_enabled
 
 func remember(kind: String, content: String, source: String = "", importance: float = 0.55, confidence: float = 0.85) -> void:
 	var clean := content.strip_edges()
@@ -55,14 +83,16 @@ func remember(kind: String, content: String, source: String = "", importance: fl
 	if duplicate >= 0:
 		_touch_existing(memory[duplicate], importance, confidence, source)
 		_save_array(MEMORY_PATH, memory)
-		_queue_item_embedding(memory[duplicate], "memory")
+		if _legacy_semantic_compat_enabled:
+			_queue_item_embedding(memory[duplicate], "memory")
 		return
 	var item := _make_item("memory", kind, clean, source, importance, confidence)
 	memory.append(item)
 	if memory.size() > MAX_MEMORY:
 		_trim_collection(memory, MAX_MEMORY)
 	_save_array(MEMORY_PATH, memory)
-	_queue_item_embedding(item, "memory")
+	if _legacy_semantic_compat_enabled:
+		_queue_item_embedding(item, "memory")
 
 func learn(content: String, source: String = "", importance: float = 0.65, confidence: float = 0.80, kind: String = "knowledge") -> void:
 	var clean := content.strip_edges()
@@ -72,14 +102,16 @@ func learn(content: String, source: String = "", importance: float = 0.65, confi
 	if duplicate >= 0:
 		_touch_existing(knowledge[duplicate], importance, confidence, source)
 		_save_array(KNOWLEDGE_PATH, knowledge)
-		_queue_item_embedding(knowledge[duplicate], "knowledge")
+		if _legacy_semantic_compat_enabled:
+			_queue_item_embedding(knowledge[duplicate], "knowledge")
 		return
 	var item := _make_item("knowledge", kind, clean, source, importance, confidence)
 	knowledge.append(item)
 	if knowledge.size() > MAX_KNOWLEDGE:
 		_trim_collection(knowledge, MAX_KNOWLEDGE)
 	_save_array(KNOWLEDGE_PATH, knowledge)
-	_queue_item_embedding(item, "knowledge")
+	if _legacy_semantic_compat_enabled:
+		_queue_item_embedding(item, "knowledge")
 
 func recent(limit: int = 12) -> Array:
 	if memory.is_empty():
@@ -91,14 +123,15 @@ func retrieve(query: String, limit: int = 8, include_memory: bool = true, includ
 	var clean := query.strip_edges()
 	if clean.is_empty() or limit <= 0:
 		return []
-	var query_vectors := await _embed_batch(["search_query: " + clean])
-	var semantic: Array = []
-	if not query_vectors.is_empty() and query_vectors[0] is Array and not (query_vectors[0] as Array).is_empty():
-		semantic = _semantic_search(query_vectors[0], limit, include_memory, include_knowledge)
-	if semantic.is_empty():
-		semantic = _lexical_search(clean, limit, include_memory, include_knowledge)
-	_touch_results(semantic)
-	return semantic
+	var result: Array = []
+	if _legacy_semantic_compat_enabled:
+		var query_vectors := await _embed_batch(["search_query: " + clean])
+		if not query_vectors.is_empty() and query_vectors[0] is Array and not (query_vectors[0] as Array).is_empty():
+			result = _semantic_search(query_vectors[0], limit, include_memory, include_knowledge)
+	if result.is_empty():
+		result = _lexical_search(clean, limit, include_memory, include_knowledge)
+	_touch_results(result)
+	return result
 
 func search_knowledge(query: String, limit: int = 8) -> Array:
 	return _lexical_search(query, limit, false, true)
@@ -109,12 +142,16 @@ func search_memory(query: String, limit: int = 8) -> Array:
 func semantic_status() -> Dictionary:
 	return {
 		"ready": _semantic_ready,
+		"enabled": _legacy_semantic_compat_enabled,
+		"provider": "ollama_legacy" if _legacy_semantic_compat_enabled else "local_lexical",
 		"model": EMBEDDING_MODEL,
+		"endpoint": EMBED_URL if _legacy_semantic_compat_enabled else "",
 		"dimensions": VECTOR_DIMENSIONS,
 		"indexed": vectors.size(),
 		"pending": _embed_queue.size(),
 		"memory_items": memory.size(),
-		"knowledge_items": knowledge.size()
+		"knowledge_items": knowledge.size(),
+		"local_fallback": "lexical"
 	}
 
 func reindex_semantic() -> Dictionary:
@@ -122,6 +159,9 @@ func reindex_semantic() -> Dictionary:
 	_embed_queue.clear()
 	_queued_ids.clear()
 	_save_vector_index()
+	if not _legacy_semantic_compat_enabled:
+		_semantic_ready = false
+		return semantic_status()
 	_queue_missing_embeddings(memory, "memory")
 	_queue_missing_embeddings(knowledge, "knowledge")
 	await _drain_embedding_queue(true)
@@ -213,11 +253,15 @@ func _trim_collection(items: Array, max_items: int) -> void:
 	_remove_orphan_vectors()
 
 func _queue_missing_embeddings(items: Array, collection: String) -> void:
+	if not _legacy_semantic_compat_enabled:
+		return
 	for item in items:
 		if item is Dictionary:
 			_queue_item_embedding(item, collection)
 
 func _queue_item_embedding(item: Dictionary, collection: String) -> void:
+	if not _legacy_semantic_compat_enabled:
+		return
 	var id := str(item.get("id", ""))
 	var content := str(item.get("content", "")).strip_edges()
 	if id.is_empty() or content.is_empty() or vectors.has(id) or _queued_ids.has(id):
@@ -232,6 +276,8 @@ func _queue_item_embedding(item: Dictionary, collection: String) -> void:
 		call_deferred("_drain_embedding_queue")
 
 func _drain_embedding_queue(force_all: bool = false) -> void:
+	if not _legacy_semantic_compat_enabled:
+		return
 	if _embedding_busy or _embed_queue.is_empty():
 		return
 	if not force_all and Time.get_unix_time_from_system() < _next_embedding_retry_unix:
@@ -252,7 +298,7 @@ func _drain_embedding_queue(force_all: bool = false) -> void:
 				_queued_ids[str(row.get("id", ""))] = true
 			_next_embedding_retry_unix = Time.get_unix_time_from_system() + EMBED_RETRY_SECONDS
 			_semantic_ready = false
-			semantic_backend_status.emit(false, "Embedding backend/model unavailable")
+			semantic_backend_status.emit(false, "Legacy Ollama embedding backend/model unavailable")
 			break
 		for i in range(batch.size()):
 			var id := str(batch[i].get("id", ""))
@@ -263,7 +309,7 @@ func _drain_embedding_queue(force_all: bool = false) -> void:
 				processed += 1
 		_save_vector_index()
 		_semantic_ready = true
-		semantic_backend_status.emit(true, EMBEDDING_MODEL)
+		semantic_backend_status.emit(true, "Legacy semantic compatibility: " + EMBEDDING_MODEL)
 		semantic_index_updated.emit(vectors.size(), _embed_queue.size())
 		if not force_all:
 			break
@@ -272,7 +318,7 @@ func _drain_embedding_queue(force_all: bool = false) -> void:
 		call_deferred("_drain_embedding_queue")
 
 func _embed_batch(inputs: Array) -> Array:
-	if inputs.is_empty():
+	if inputs.is_empty() or not _legacy_semantic_compat_enabled:
 		return []
 	var request_node := HTTPRequest.new()
 	request_node.timeout = 45.0
@@ -470,6 +516,18 @@ func _save_vector_index() -> void:
 		"updated_at": Time.get_datetime_string_from_system(true),
 		"vectors": vectors
 	})
+
+func _load_core_settings() -> void:
+	_legacy_semantic_compat_enabled = false
+	if not FileAccess.file_exists(CORE_SETTINGS_PATH):
+		return
+	var file := FileAccess.open(CORE_SETTINGS_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if parsed is Dictionary:
+		_legacy_semantic_compat_enabled = bool(parsed.get("ollama_fallback", false))
 
 func _load_array(path: String) -> Array:
 	if not FileAccess.file_exists(path):
