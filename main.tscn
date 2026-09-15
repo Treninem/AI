@@ -1,4 +1,4 @@
-[gd_scene load_steps=33 format=3]
+[gd_scene load_steps=34 format=3]
 
 [ext_resource path="res://scripts/main_compat.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/voice_overlay_compat.gd" type="Script" id="2_voice"]
@@ -32,6 +32,7 @@
 [ext_resource path="res://scripts/core_status_coordinator.gd" type="Script" id="30_core_status"]
 [ext_resource path="res://scripts/core_improvement_pipeline.gd" type="Script" id="31_core_improvement"]
 [ext_resource path="res://agent/learning_curator.gd" type="Script" id="32_learning_curator"]
+[ext_resource path="res://scripts/update_autonomy_guard.gd" type="Script" id="33_update_guard"]
 
 [node name="Main" type="Control"]
 layout_mode = 3
@@ -107,6 +108,9 @@ script = ExtResource("32_learning_curator")
 
 [node name="CoreImprovementPipeline" type="Node" parent="."]
 script = ExtResource("31_core_improvement")
+
+[node name="UpdateAutonomyGuard" type="Node" parent="."]
+script = ExtResource("33_update_guard")
 
 [node name="ApiAgentBridge" type="Node" parent="."]
 script = ExtResource("21_api_bridge")
