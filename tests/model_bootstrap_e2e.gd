@@ -10,32 +10,83 @@ func _fail(message: String, code: int) -> void:
 func _run() -> void:
 	var ai := AIClient.new()
 	root.add_child(ai)
+	ai.set_ollama_fallback(false)
+	await process_frame
 
-	var status: Dictionary = await ai.ollama_status()
-	if not status.get("ok", false):
-		_fail("Ollama status failed: " + JSON.stringify(status), 2)
+	var info: Dictionary = ai.runtime_info()
+	if bool(info.get("ollama_required", true)):
+		_fail("AuroraFox Core still reports Ollama as required: " + JSON.stringify(info), 2)
 		return
-	if not status.get("model_available", false):
-		_fail("qwen3:8b is not available after bootstrap: " + JSON.stringify(status), 3)
+	if str(info.get("runtime", "")) != "AuroraFox Core":
+		_fail("Unexpected primary runtime: " + JSON.stringify(info), 3)
+		return
+	if OS.get_name() == "Windows":
+		var desktop: Dictionary = info.get("desktop", {})
+		if str(desktop.get("backend", "")) != "AuroraFox Core Engine":
+			_fail("Windows Core Engine contract missing: " + JSON.stringify(desktop), 4)
+			return
+		if ai.core_engine_installer().is_empty():
+			_fail("Core Engine installer was not discoverable", 5)
+			return
+
+	var source := "user://core_contract_training_any_name.json"
+	var f := FileAccess.open(source, FileAccess.WRITE)
+	if f == null:
+		_fail("Cannot create temporary knowledge dataset", 6)
+		return
+	f.store_string(JSON.stringify({
+		"random_container": {
+			"workflow": {"name": "demo", "steps": ["alpha", "beta"]},
+			"template": {"question": "ping", "answer": "pong"},
+			"fact": "AuroraFox Core Knowledge contract"
+		}
+	}))
+	f.close()
+
+	var imported: Dictionary = ai.learn_from_file(source)
+	if not bool(imported.get("ok", false)):
+		_fail("Schema-free JSON import failed: " + JSON.stringify(imported), 7)
+		return
+	var search: Array = ai.search_knowledge("AuroraFox Core Knowledge contract", 4)
+	if search.is_empty():
+		_fail("Imported Core Knowledge cannot be retrieved", 8)
+		return
+	var sources: Array = ai.knowledge_sources()
+	var found := false
+	for row in sources:
+		if row is Dictionary and str(row.get("source", "")) == source:
+			found = true
+			break
+	if not found:
+		_fail("Knowledge source inventory did not include imported dataset", 9)
 		return
 
-	var response: Dictionary = await ai.chat([
-		{"role": "system", "content": "Reply with one short plain sentence."},
-		{"role": "user", "content": "Say that AuroraFox local AI is ready."}
-	], 0.0)
-	if not response.get("ok", false):
-		_fail("AIClient chat failed: " + JSON.stringify(response), 4)
+	# Re-import must replace the source rather than multiply old chunks forever.
+	var before := int(ai.knowledge_stats().get("chunks", 0))
+	var imported_again: Dictionary = ai.learn_from_file(source)
+	if not bool(imported_again.get("ok", false)):
+		_fail("Knowledge re-import failed", 10)
 		return
-	var content := str(response.get("content", "")).strip_edges()
-	if content.is_empty():
-		_fail("AIClient returned an empty Ollama response", 5)
-		return
-	if str(response.get("runtime", "")) != "ollama":
-		_fail("AIClient did not use the Ollama runtime", 6)
+	var after := int(ai.knowledge_stats().get("chunks", 0))
+	if after != before:
+		_fail("Knowledge re-import changed total chunk count; source replacement contract failed: %d -> %d" % [before, after], 11)
 		return
 
-	print("AURORA_MODEL_BOOTSTRAP_E2E_OK")
-	print(content.substr(0, 300))
+	var cleaned := ai.remove_knowledge_source(source)
+	if not bool(cleaned.get("ok", false)):
+		_fail("Temporary knowledge source cleanup failed", 12)
+		return
+	if FileAccess.file_exists(source): DirAccess.remove_absolute(ProjectSettings.globalize_path(source))
+
+	# With fallback explicitly disabled and no required test model, a failed chat
+	# must remain a Core failure and never silently contact Ollama.
+	var response: Dictionary = await ai.chat([{"role": "user", "content": "core contract"}], 0.0)
+	if str(response.get("runtime", "")).begins_with("ollama"):
+		_fail("Core contract unexpectedly used Ollama with fallback disabled", 13)
+		return
+
+	print("AURORA_CORE_BOOTSTRAP_CONTRACT_OK")
+	print(JSON.stringify(info))
 	ai.queue_free()
 	await process_frame
 	quit(0)
