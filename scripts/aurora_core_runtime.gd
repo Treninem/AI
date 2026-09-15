@@ -6,7 +6,9 @@ const DEFAULT_MODEL_PATH := "user://models/aurorafox-main.gguf"
 var model_path := DEFAULT_MODEL_PATH
 var android_runtime := AndroidLocalRuntime.new()
 var desktop_runtime := DesktopLocalRuntime.new()
-var allow_ollama_fallback := true
+# Fresh AuroraFox installations never contact Ollama unless the user explicitly
+# enables the compatibility adapter in Local AI settings.
+var allow_ollama_fallback := false
 var ollama_base_url := "http://127.0.0.1:11434"
 var ollama_model := "qwen3:8b"
 
@@ -43,8 +45,6 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 		result["model_path"] = model_path
 		return result
 	if OS.get_name() == "Windows":
-		# Prefer a future in-process native plugin when packaged, but keep the owned
-		# AuroraFox Core Engine as the normal desktop backend. Neither path needs Ollama.
 		if Engine.has_singleton("AuroraFoxRuntime"):
 			var plugin := Engine.get_singleton("AuroraFoxRuntime")
 			if plugin != null and plugin.has_method("chatLocal"):
@@ -54,22 +54,25 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 					parsed["runtime"] = "aurora_core_native"
 					parsed["model_path"] = model_path
 					return parsed
-		var desktop := await desktop_runtime.chat(model_path, messages, {"temperature": temperature})
-		if bool(desktop.get("ok", false)): return desktop
-		return desktop
+		return await desktop_runtime.chat(model_path, messages, {"temperature": temperature})
 	return {"ok": false, "runtime": "aurora_core", "error": "Локальный Core backend пока не подключён на этой платформе", "platform": OS.get_name(), "model_path": model_path}
 
 func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
-	var request_node := HTTPRequest.new(); request_node.timeout = 180.0; add_child(request_node)
+	var request_node := HTTPRequest.new()
+	request_node.timeout = 180.0
+	add_child(request_node)
 	var payload := {"model": ollama_model, "messages": messages, "stream": false, "options": {"temperature": temperature}}
 	var err := request_node.request(ollama_base_url + "/api/chat", PackedStringArray(["Content-Type: application/json"]), HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if err != OK:
 		request_node.queue_free()
 		return {"ok": false, "runtime": "ollama_legacy", "error": "Необязательный Ollama fallback недоступен"}
-	var result: Array = await request_node.request_completed; request_node.queue_free()
-	if int(result[1]) < 200 or int(result[1]) >= 300: return {"ok": false, "runtime": "ollama_legacy", "error": "Ollama fallback HTTP %d" % int(result[1])}
+	var result: Array = await request_node.request_completed
+	request_node.queue_free()
+	if int(result[1]) < 200 or int(result[1]) >= 300:
+		return {"ok": false, "runtime": "ollama_legacy", "error": "Ollama fallback HTTP %d" % int(result[1])}
 	var data = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
-	if not data is Dictionary: return {"ok": false, "runtime": "ollama_legacy", "error": "Некорректный ответ Ollama fallback"}
+	if not data is Dictionary:
+		return {"ok": false, "runtime": "ollama_legacy", "error": "Некорректный ответ Ollama fallback"}
 	return {"ok": true, "content": str((data.get("message", {}) as Dictionary).get("content", "")), "raw": data, "runtime": "ollama_legacy", "model": ollama_model}
 
 func core_engine_installer() -> String:
