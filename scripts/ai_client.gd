@@ -8,6 +8,7 @@ var model_source := "aurora_core"
 var android_model_path := "user://models/aurorafox-main.gguf"
 var core_runtime := AuroraCoreRuntime.new()
 var knowledge := KnowledgeStore.new()
+var knowledge_manager := KnowledgeManager.new()
 
 func _ready() -> void:
 	if core_runtime.get_parent() == null: add_child(core_runtime)
@@ -20,10 +21,13 @@ func set_ollama_fallback(enabled: bool) -> void: core_runtime.allow_ollama_fallb
 func chat(messages: Array, temperature: float = 0.2) -> Dictionary: return await core_runtime.chat(_with_knowledge(messages), temperature)
 func import_knowledge_text(text: String, source := "manual", metadata: Dictionary = {}) -> Dictionary: return knowledge.import_text(text, source, metadata)
 func import_knowledge_file(path: String, metadata: Dictionary = {}) -> Dictionary: return knowledge.import_file(path, metadata)
-# User-facing alias: file name is irrelevant; AuroraFox inspects, extracts, classifies and stores it.
 func learn_from_file(path: String, metadata: Dictionary = {}) -> Dictionary: return knowledge.import_file(path, metadata)
 func supported_learning_files() -> PackedStringArray: return knowledge.supported_import_extensions()
 func search_knowledge(query: String, limit := 6) -> Array: return knowledge.search(query, limit)
+func knowledge_sources() -> Array: return knowledge_manager.sources()
+func knowledge_stats() -> Dictionary: return knowledge_manager.stats()
+func remove_knowledge_source(source: String) -> Dictionary: return knowledge_manager.remove_source(source)
+func compact_knowledge() -> Dictionary: return knowledge_manager.compact()
 func _with_knowledge(messages: Array) -> Array:
 	var copied := messages.duplicate(true); var query := ""
 	for i in range(copied.size() - 1, -1, -1):
@@ -47,4 +51,4 @@ func ollama_status() -> Dictionary:
 	if int(result[1]) != 200: return {"ok": false, "required": false, "server": false, "http": int(result[1])}
 	return {"ok": true, "required": false, "server": true, "configured_model": model}
 func runtime_info() -> Dictionary:
-	var info := core_runtime.runtime_info(); info["platform"] = OS.get_name(); info["knowledge_items"] = knowledge.all_items().size(); info["learning_file_types"] = Array(knowledge.supported_import_extensions()); return info
+	var info := core_runtime.runtime_info(); info["platform"] = OS.get_name(); info["knowledge"] = knowledge_manager.stats(); info["learning_file_types"] = Array(knowledge.supported_import_extensions()); return info
