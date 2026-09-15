@@ -138,6 +138,7 @@ jobs:
             '.\build\create_update_signing_key.ps1',
             '.\build\configure_release_signing.ps1',
             '.\build\release_preflight.ps1',
+            '.\build\bridge_release_readiness.ps1',
             '.\build\set_version.ps1'
           )
           foreach ($file in $files) {
