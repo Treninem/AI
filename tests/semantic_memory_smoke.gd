@@ -70,14 +70,33 @@ func _init() -> void:
 		return
 
 	var status := store.semantic_status()
+	if bool(status.get("enabled", true)):
+		_fail("Legacy Ollama semantic compatibility must be disabled by default: " + JSON.stringify(status), 7)
+		store.free()
+		return
+	if str(status.get("provider", "")) != "local_lexical" or not str(status.get("endpoint", "x")).is_empty():
+		_fail("Default memory provider is not fully local: " + JSON.stringify(status), 8)
+		store.free()
+		return
 	if str(status.get("model", "")) != "qwen3-embedding:0.6b" or int(status.get("dimensions", 0)) != 256:
-		_fail("Semantic memory model/index contract is wrong: " + JSON.stringify(status), 7)
+		_fail("Legacy semantic compatibility contract changed unexpectedly: " + JSON.stringify(status), 9)
+		store.free()
+		return
+
+	# With compatibility disabled, retrieval must work without making an embedding request.
+	var lexical: Array = await store.retrieve("краткие технические ответы", 2, false, true)
+	if lexical.is_empty() or str(lexical[0].get("id", "")) != "knowledge_relevant":
+		_fail("Local lexical fallback retrieval failed: " + JSON.stringify(lexical), 10)
+		store.free()
+		return
+	if str(lexical[0].get("retrieval", "")) != "lexical":
+		_fail("Local lexical retrieval marker is missing", 11)
 		store.free()
 		return
 
 	var agent_source := FileAccess.get_file_as_string("res://scripts/agent_core.gd")
 	if not agent_source.contains("await memory.retrieve(task") or not agent_source.contains("Релевантная долговременная память"):
-		_fail("AgentCore is not wired to semantic retrieval", 8)
+		_fail("AgentCore is not wired to memory retrieval", 12)
 		store.free()
 		return
 
