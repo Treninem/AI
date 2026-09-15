@@ -47,10 +47,29 @@ function Remove-Tree([string]$Path) {
     }
 }
 
+function Test-CoreExecutable([string]$Executable) {
+    $probeRoot = Join-Path $env:TEMP ('AuroraFox-Core-Probe-' + [Guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Force -Path $probeRoot | Out-Null
+    $stdout = Join-Path $probeRoot 'stdout.txt'
+    $stderr = Join-Path $probeRoot 'stderr.txt'
+    try {
+        $process = Start-Process -FilePath $Executable -ArgumentList @('--version') -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+        $text = ''
+        if (Test-Path -LiteralPath $stdout) { $text += (Get-Content -LiteralPath $stdout -Raw -ErrorAction SilentlyContinue) }
+        if (Test-Path -LiteralPath $stderr) { $text += (Get-Content -LiteralPath $stderr -Raw -ErrorAction SilentlyContinue) }
+        if ($process.ExitCode -ne 0) { throw "llama-server --version failed with code $($process.ExitCode): $text" }
+        if ($text -notmatch '(?i)(llama|version|build)') { throw "Unexpected Core Engine version output: $text" }
+        return $text.Trim()
+    } finally {
+        Remove-Tree $probeRoot
+    }
+}
+
 try {
     $existingServer = Join-Path $EngineDir 'llama-server.exe'
     if (-not $Force -and (Test-Path -LiteralPath $existingServer) -and (Test-Path -LiteralPath $MetaFile)) {
-        Set-Stage 'ready' 100 'AuroraFox Core Engine already installed' @{ engine = $existingServer; reused = $true }
+        $version = Test-CoreExecutable $existingServer
+        Set-Stage 'ready' 100 'AuroraFox Core Engine already installed' @{ engine = $existingServer; reused = $true; version = $version }
         exit 0
     }
 
@@ -129,10 +148,9 @@ try {
 
         Set-Stage 'smoke' 94 'Checking Core Engine executable'
         $serverExe = Join-Path $EngineDir 'llama-server.exe'
-        $versionOutput = & $serverExe --version 2>&1 | Out-String
-        if ($LASTEXITCODE -ne 0) { throw "llama-server --version failed: $versionOutput" }
+        $versionOutput = Test-CoreExecutable $serverExe
 
-        Set-Stage 'ready' 100 'AuroraFox Core Engine is ready' @{ engine = $serverExe; tag = $nightlyTag; sha256 = $actualHash }
+        Set-Stage 'ready' 100 'AuroraFox Core Engine is ready' @{ engine = $serverExe; tag = $nightlyTag; sha256 = $actualHash; version = $versionOutput }
         Write-Host 'AuroraFox Core Engine installed successfully.' -ForegroundColor Green
     } finally {
         Remove-Tree $tempRoot
