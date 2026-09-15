@@ -102,7 +102,7 @@ try {
         Remove-Tree $nextDir
         Remove-Tree $backupDir
         New-Item -ItemType Directory -Force -Path $nextDir | Out-Null
-        Copy-Item -LiteralPath (Join-Path $payloadRoot '*') -Destination $nextDir -Recurse -Force
+        Copy-Item -Path (Join-Path $payloadRoot '*') -Destination $nextDir -Recurse -Force
         if (-not (Test-Path -LiteralPath (Join-Path $nextDir 'llama-server.exe'))) { throw 'Prepared Core Engine payload is incomplete.' }
 
         Set-Stage 'activate' 84 'Activating verified Core Engine'
