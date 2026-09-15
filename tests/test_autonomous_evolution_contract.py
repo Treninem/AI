@@ -68,8 +68,17 @@ def test_verified_release_updates_are_applied_automatically_by_default():
     assert '"auto_download": true' in text
     assert '"auto_apply": true' in text
     assert '"check_interval_hours": 1' in text
-    assert 'response["apply"] = apply_downloaded_update()' in text
+    assert 'response["download"] = await download_update(manual)' in text
+    assert 'response["apply"] = apply_downloaded_update(manual)' in text
     assert "set_auto_apply" in text
+
+
+def test_background_update_failures_remain_non_blocking():
+    text = read("update/update_manager.gd")
+    assert "func check_for_updates(manual := true)" in text
+    assert "func download_update(manual := true)" in text
+    assert "func apply_downloaded_update(manual := true)" in text
+    assert "if visible: update_error.emit(message)" in text
 
 
 def test_no_user_confirmation_gate_exists_in_evolution_path():
