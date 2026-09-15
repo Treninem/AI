@@ -151,9 +151,10 @@ def test_signed_release_keeps_direct_update_path_for_legacy_clients() -> None:
     # This test file is part of release.yml/core-gates, so these assertions run
     # before Windows/Android artifacts or update signatures may be published.
     update_compat.test_current_updater_keeps_original_latest_manifest_url()
-    update_compat.test_manifest_template_remains_readable_by_first_embedded_updater()
+    update_compat.test_manifest_template_remains_readable_by_v1_updater()
     update_compat.test_release_keeps_legacy_asset_names_and_latest_update_json()
     update_compat.test_release_manifest_generator_preserves_legacy_top_level_and_asset_fields()
     update_compat.test_update_signature_is_additive_not_a_replacement_for_legacy_manifest()
     update_compat.test_android_identity_and_windows_full_zip_strategy_are_stable()
-    update_compat.test_pre_updater_builds_are_documented_as_one_time_manual_bootstrap()
+    update_compat.test_public_update_key_is_embedded_in_windows_and_android_exports()
+    update_compat.test_pre_v1_builds_are_documented_as_one_time_manual_bootstrap()
