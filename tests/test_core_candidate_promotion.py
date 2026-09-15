@@ -115,3 +115,26 @@ def test_independent_contract_rejects_removed_public_api() -> None:
     contract = promotion.source_contract(original, candidate, "scripts/agent_core.gd")
     assert contract["ok"] is False
     assert contract["missing_public_functions"] == ["public_api"]
+
+
+def test_promotion_workflow_keeps_candidate_untrusted_until_verified() -> None:
+    workflow = (ROOT / ".github" / "workflows" / "core-candidate-promotion.yml").read_text(encoding="utf-8")
+    assert "permissions:\n  contents: read" in workflow
+    assert "Checkout trusted main" in workflow
+    assert "Checkout untrusted candidate ref separately" in workflow
+    assert "path: project" in workflow
+    assert "path: submission" in workflow
+    assert "persist-credentials: false" in workflow
+    assert "project/build/verify_core_candidate_bundle.py" in workflow
+    assert "submission/core_candidate_submission" in workflow
+    assert "git -C project diff --name-only" in workflow
+    assert "needs: verify-candidate" in workflow
+    assert "pull-requests: write" in workflow
+    assert "git apply --check promotion/core-candidate.patch" in workflow
+    assert "Normal branch protection and the standard signed release workflow remain the final release boundary" in workflow
+    for secret_name in (
+        "AURORA_UPDATE_PRIVATE_KEY",
+        "AURORA_ANDROID_KEYSTORE_BASE64",
+        "AURORA_ANDROID_KEYSTORE_PASSWORD",
+    ):
+        assert secret_name not in workflow
