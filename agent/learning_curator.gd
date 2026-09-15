@@ -8,6 +8,8 @@ const MAX_SEEN := 5000
 const MAX_TEXT_CHARS := 5000
 const MIN_PROMOTION_SCORE := 0.48
 
+@export var enabled := true
+
 var ai: AIClient
 var coordinator: AuroraAutonomousCoordinator
 var _seen: Dictionary = {}
@@ -42,7 +44,7 @@ func _bind_existing() -> void:
 		coordinator = node
 
 func _on_research_completed(report: Dictionary) -> void:
-	if ai == null:
+	if not enabled or ai == null:
 		return
 	var items: Array = report.get("items", [])
 	var promoted := 0
@@ -159,6 +161,7 @@ func _clean(text: String, limit: int) -> String:
 
 func status() -> Dictionary:
 	return {
+		"enabled": enabled,
 		"bound": _bound,
 		"seen": _seen.size(),
 		"minimum_promotion_score": MIN_PROMOTION_SCORE,
