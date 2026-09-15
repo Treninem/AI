@@ -2,10 +2,10 @@
 
 AuroraFox uses GitHub Releases as the stable update channel. It does not execute arbitrary repository files. Every published update uses two verification layers before installation:
 
-1. `update.json` is verified against `update.sig` with the RSA public key pinned inside the AuroraFox build;
-2. the selected Windows ZIP or Android APK is then verified against the SHA-256 stored inside that already-authenticated manifest.
+1. `update.json` is verified against `update.sig` with the RSA public key pinned inside current AuroraFox builds;
+2. the selected Windows ZIP or Android APK is then verified against the SHA-256 stored inside that authenticated manifest.
 
-If the manifest signature or package checksum is invalid, the update is rejected and the existing AuroraFox keeps running.
+If the manifest signature or package checksum is invalid, the current updater rejects the update and the existing AuroraFox keeps running.
 
 ## Runtime flow
 
@@ -15,12 +15,36 @@ Default policy:
 
 - channel: `stable`;
 - automatic check: enabled;
-- interval: 6 hours;
 - automatic download: enabled;
-- install remains platform-controlled;
+- automatic apply: enabled where the platform permits it;
 - update failure never disables the chat/AI core.
 
 The UI is `update/update_overlay.gd` and exposes check/download/install plus update preferences.
+
+## Backward-compatible updates
+
+The first embedded AuroraFox updater was introduced on **2026-08-19**. It already used this permanent discovery URL:
+
+`https://github.com/Treninem/AI/releases/latest/download/update.json`
+
+It also already understood the same legacy manifest fields used today: `version`, `channel`, `mandatory`, `assets.windows.url`, `assets.windows.sha256`, `assets.android.url` and `assets.android.sha256`.
+
+Therefore every AuroraFox build that contains that updater can update **directly to the newest compatible stable release**. It does not need to install every intermediate version in sequence. A current release may add new manifest fields such as `schema_version`, `compatibility`, sizes, formats and signature metadata, but it must retain the legacy fields because old clients ignore unknown fields and keep reading the original ones.
+
+Permanent compatibility rules for stable releases:
+
+- always publish `update.json` in the GitHub **latest release** path;
+- keep `AuroraFox-Windows.zip` as the Windows full-package update asset;
+- keep `AuroraFox-Android.apk` as the Android update asset;
+- keep the legacy top-level manifest and `assets.windows` / `assets.android` fields;
+- `update.sig` is additive security for newer clients and must never replace `update.json`;
+- Windows updates remain a full ZIP replacement with transactional backup/rollback, so a very old updater can jump directly to the current package;
+- Android keeps package ID `com.aurorafox.ai` and the same persistent signing identity. Android will reject an APK signed by a different key as an update of the installed app;
+- do not move the legacy manifest URL or rename legacy release assets unless a bridge release has first shipped an updater that understands both old and new locations.
+
+Builds made **before 2026-08-19**, before AuroraFox contained any updater, cannot discover a future update by themselves. They need one manual bootstrap installation of a version that contains the updater. After that one-time manual bootstrap, later compatible releases can update through the application normally.
+
+This compatibility contract is enforced by `tests/test_update_backward_compat.py` and release CI.
 
 ## Update trust key
 
@@ -42,7 +66,7 @@ Configure repository secret:
 
 The release workflow derives the public key from the secret and compares its SHA-256 fingerprint to the committed `update/release_public.pub` before signing. A mismatched private key aborts the release.
 
-Back up the private update-signing key outside the repository. A planned key rotation requires shipping a version that trusts the next public key before the old private key is retired.
+Back up the private update-signing key outside the repository. A planned key rotation requires shipping a bridge version that trusts the next public key before the old private key is retired. Old signed-update-capable builds must never be stranded by an unannounced trust-key replacement.
 
 ## Windows
 
@@ -50,7 +74,7 @@ GitHub Release asset: `AuroraFox-Windows.zip`.
 
 Flow:
 
-1. verify RSA signature of `update.json`;
+1. current clients verify the RSA signature of `update.json`; legacy updater clients read the same backwards-compatible manifest contract;
 2. download ZIP;
 3. verify ZIP SHA-256;
 4. copy `update/windows_updater.ps1` to `user://updates/`;
@@ -72,7 +96,7 @@ GitHub Release asset: `AuroraFox-Android.apk`.
 
 Flow:
 
-1. verify RSA signature of `update.json`;
+1. current clients verify the RSA signature of `update.json`; legacy updater clients use the same manifest URL and asset fields;
 2. download APK to AuroraFox private storage;
 3. verify APK SHA-256;
 4. native Godot Android plugin copies it into app cache;
@@ -106,22 +130,24 @@ Use one command to synchronize project and Android version fields:
 
 Then publish tag `v0.4.1` after CI is clean.
 
-`.github/workflows/release.yml` builds both targets, calculates SHA-256, generates the manifest, validates the update signing private/public key pair, signs the exact `update.json` bytes, verifies that signature again in CI, and publishes:
+`.github/workflows/release.yml` builds both targets, calculates SHA-256, generates the backwards-compatible manifest, validates the update signing private/public key pair, signs the exact `update.json` bytes, verifies that signature again in CI, and publishes:
 
 - `AuroraFox_Setup_Windows.exe`;
 - `AuroraFox-Windows.zip`;
 - `AuroraFox-Android.apk`;
 - `update.json`;
-- `update.sig`.
+- `update.sig`;
+- `release_verification.json`.
 
 The tag must match `application/config/version` in `project.godot`.
 
 ## Tests
 
 - `tests/update_smoke.gd` checks version ordering, manifest structure, RSA signing/verification and tamper rejection using Godot cryptographic APIs;
+- `tests/test_update_backward_compat.py` emulates the first embedded updater contract and protects the permanent legacy URL, manifest fields and release asset names;
 - `tests/version_sync_test.ps1` checks project/Android/manifest version synchronization;
 - `tests/windows_updater_test.ps1` exercises the real transactional Windows updater against a temporary installation;
 - `.github/workflows/android-plugin-ci.yml` compiles the native Android plugin and verifies both AuroraFoxRuntime and sherpa-onnx AAR outputs;
-- core CI parses the Godot 4.7.1 project and executes the updater smoke tests.
+- core/release CI parses the Godot 4.7.1 project and executes updater/recovery smoke tests before signed artifacts may be published.
 
 CI coverage is not a substitute for installing the produced Windows installer and Android APK on actual devices. Release artifacts should only be called device-verified after those platform runtime tests pass.
