@@ -8,10 +8,11 @@ ROOT = Path(__file__).resolve().parents[1]
 LEGACY_MANIFEST_URL = "https://github.com/Treninem/AI/releases/latest/download/update.json"
 WINDOWS_ASSET = "AuroraFox-Windows.zip"
 ANDROID_ASSET = "AuroraFox-Android.apk"
+OLDEST_DIRECT_UPDATE_VERSION = "1.0.0.0"
 
 
 def legacy_updater_accepts(manifest: dict) -> bool:
-    """Model the first embedded AuroraFox updater contract from 2026-08-19."""
+    """Model the V1.0.0.0 embedded AuroraFox updater manifest contract."""
     if not isinstance(manifest, dict):
         return False
     if not str(manifest.get("version", "")):
@@ -38,7 +39,7 @@ def test_current_updater_keeps_original_latest_manifest_url() -> None:
     assert "releases/latest/download/update.sig" in source
 
 
-def test_manifest_template_remains_readable_by_first_embedded_updater() -> None:
+def test_manifest_template_remains_readable_by_v1_updater() -> None:
     template = json.loads((ROOT / "update" / "manifest.template.json").read_text(encoding="utf-8"))
     template["version"] = "9.9.9.9"
     template["channel"] = "stable"
@@ -51,6 +52,7 @@ def test_manifest_template_remains_readable_by_first_embedded_updater() -> None:
     compatibility = template.get("compatibility", {})
     assert compatibility.get("legacy_manifest") is True
     assert compatibility.get("direct_update") is True
+    assert compatibility.get("oldest_direct_update_version") == OLDEST_DIRECT_UPDATE_VERSION
 
 
 def test_release_keeps_legacy_asset_names_and_latest_update_json() -> None:
@@ -92,6 +94,9 @@ def test_update_signature_is_additive_not_a_replacement_for_legacy_manifest() ->
 def test_android_identity_and_windows_full_zip_strategy_are_stable() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert "package: name='com.aurorafox.ai'" in workflow
+    # V1.0 Windows updater expands the ZIP and expects AuroraFox.exe at archive
+    # root (or one wrapping directory). Compressing build/windows/* preserves it.
+    assert "Compress-Archive -Path build\\windows\\*" in workflow
     assert WINDOWS_ASSET in workflow
     template = json.loads((ROOT / "update" / "manifest.template.json").read_text(encoding="utf-8"))
     compatibility = template["compatibility"]
@@ -99,7 +104,8 @@ def test_android_identity_and_windows_full_zip_strategy_are_stable() -> None:
     assert compatibility["android_strategy"] == "same_package_signed_apk"
 
 
-def test_pre_updater_builds_are_documented_as_one_time_manual_bootstrap() -> None:
+def test_pre_v1_builds_are_documented_as_one_time_manual_bootstrap() -> None:
     docs = (ROOT / "update" / "README.md").read_text(encoding="utf-8")
+    assert "V1.0.0.0" in docs
     assert "2026-08-19" in docs
     assert re.search(r"manual.+bootstrap|bootstrap.+manual", docs, re.IGNORECASE | re.DOTALL)
