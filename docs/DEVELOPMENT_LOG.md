@@ -33,14 +33,18 @@ A Core candidate may change only the narrow intelligence allowlist. It must pres
 
 Reason: self-improvement must demonstrate no regression and a real advantage over the current version before it can proceed.
 
-### Independent promotion boundary
+### Independent promotion boundary and completed client/VPS transport
 Added an independent server/CI verifier and `.github/workflows/core-candidate-promotion.yml`. Trusted `main` and the untrusted candidate ref are checked out separately. The candidate cannot replace the verifier, tests or workflow judging it. Only one allowlisted target can become the verified promotion patch. The promotion workflow has no release-signing or Android signing credentials.
 
 Added `api/core_candidate_queue.py` and scoped API routes. A verified client candidate can be accepted by a VPS queue only with `core.candidate.submit`; queue/list/state management requires `core.candidate.manage`. Ordinary chat/site/integration API keys do not receive either scope by default. The VPS recalculates candidate SHA-256, rechecks target/evidence/limits, stores the bundle atomically and never executes it merely because it was submitted.
 
-Reason: GitHub/release signing authority must remain outside user clients. Candidate transport and candidate release authority are separate trust levels.
+Added `scripts/core_candidate_submitter.gd` as an autoload. It scans locally verified `user://core_candidates` bundles and only enables network submission when both `AURORAFOX_PROMOTION_API_URL` and `AURORAFOX_PROMOTION_API_TOKEN` are explicitly provisioned. Remote plaintext HTTP is rejected; HTTPS is required except localhost development. Candidate bytes are re-hashed before POST, credentials are not written to submission state, failed delivery leaves the original candidate intact and uses bounded exponential retry/backoff.
 
-Remaining on this subtask: client-side authenticated submission/retry configuration to the VPS queue still needs to be wired to a provisioned device/server credential. Until configured, locally verified candidates remain local; no candidate should be deleted because the server is unavailable.
+Reason: GitHub/release signing authority must remain outside user clients. Candidate transport and candidate release authority are separate trust levels, and a missing VPS must never delete a locally verified candidate.
+
+Verification: Core/Voice CI commit `6d36d8d7b64b0424ab90f4decd4f9b0a6c9d3e74` passed all four jobs. Its Godot 4.7.1 job explicitly passed `core_candidate_submitter_smoke.gd` in addition to the existing Core/knowledge/update gates.
+
+Remaining on this subtask: production deployment still needs an owner-provisioned VPS URL and a narrowly scoped device token. Those credentials must be provisioned outside source control; they are intentionally not embedded in the application. A trusted server-side worker/CI identity still performs the final queue-to-promotion-ref dispatch rather than giving GitHub credentials to the client.
 
 ### Backward-compatible application updates
 Repository history was checked instead of assuming compatibility. The completed **V1.0.0.0** release already contained the transactional Windows updater and the permanent manifest URL:
@@ -60,9 +64,10 @@ Permanent compatibility invariants now covered by tests:
 - keep `update.sig` additive rather than replacing `update.json`;
 - preserve full-ZIP Windows replacement layout;
 - preserve Android package identity/signing continuity;
-- require a bridge release before any future endpoint or asset-name migration.
+- explicitly include the pinned public update key in both Godot exports;
+- require a bridge release before any future endpoint, asset-name or trust-key migration.
 
-`tests/update_smoke.gd` now checks direct jumps from old version strings to a new four-part version. `tests/test_update_backward_compat.py` models the V1.0 manifest contract and is invoked through the signed release Core gate, so breaking an old updater contract blocks a future release before signing.
+`tests/update_smoke.gd` checks direct jumps from old version strings to a new four-part version. `tests/test_update_backward_compat.py` models the V1.0 manifest contract and is invoked through the signed release Core gate, so breaking an old updater contract blocks a future release before signing.
 
 ### Update trust-key packaging defect found and fixed
 Current updater verifies `update.sig` using `res://update/release_public.pub`. A `.pub` file is not a normal imported Godot resource, while both export presets previously had an empty `include_filter`. This could have produced a build whose updater code existed but whose pinned trust key was absent from the packaged `res://` filesystem.
@@ -74,6 +79,11 @@ Both Windows and Android export presets now explicitly include:
 The backward-compatibility test asserts the include rule exists in both presets.
 
 Reason: a signed updater without its pinned public key cannot accept any later signed update.
+
+### Bridge release readiness tooling
+Added `build/bridge_release_readiness.ps1`. It validates the V1 backward-update contract, version synchronization, V1.0 compatibility floor, Android package identity, legacy asset names, release Core-gate dependency, public-key presence/format/export inclusion and—when GitHub CLI access is available—the required update/Android signing secret names.
+
+The script intentionally fails while the trust root or signing secrets are absent. It is a release-readiness tool, not a way to bypass missing credentials. The normal Windows CI parses the script so syntax regressions are caught without pretending an uninitialized trust root is release-ready.
 
 ### Current release-signing blocker
 `update/release_public.pub` does not currently exist on `main`, and GitHub Releases are currently empty. Historical signed-updater code referenced this file but repository history did not contain the actual trust key. This means the update code is ready but the trust root has never been initialized for a real release.
@@ -91,9 +101,10 @@ The first real signed V1.2.0.0 release can then act as the bridge: V1.0/V1.1 cli
 Confirmed green on the implementation path:
 - API queue/scoped boundary: `AuroraFox API CI` success on commit `047027d9b0c5f3f13957732226324299483b5180`;
 - Core/Voice CI success on the same API-boundary head;
-- direct legacy-update Godot smoke, Windows transactional updater integration, promotion/release Python contracts and all existing Core/File Intelligence jobs succeeded on commit `dc4f9fc49401c9a5b0c92f5a52fde3c8f0a5e1d5`.
+- direct legacy-update Godot smoke, Windows transactional updater integration, promotion/release Python contracts and all existing Core/File Intelligence jobs succeeded on commit `dc4f9fc49401c9a5b0c92f5a52fde3c8f0a5e1d5`;
+- client candidate transport and its credential/SHA guard passed the complete four-job Core/Voice workflow on commit `6d36d8d7b64b0424ab90f4decd4f9b0a6c9d3e74`.
 
-Later documentation/export-key commits trigger another normal CI cycle; do not call them verified until their runs complete.
+The subsequent trust-key export/readiness documentation commits trigger another normal CI cycle; their latest run must be checked before calling that exact head verified.
 
 ### Protected invariants for future work
 Do not allow autonomous code to remove or weaken:
@@ -105,11 +116,12 @@ Do not allow autonomous code to remove or weaken:
 - pinned updater trust key/signature verification;
 - legacy V1.0 direct-update contract without first shipping a compatible bridge release;
 - API scope separation for Core candidate submission/management;
+- credential-gated HTTPS client candidate submission;
 - personal-memory privacy boundaries.
 
 ### Next work
-1. Wait for/inspect CI from the export-key compatibility changes and repair any regression immediately.
-2. Wire client-side Core candidate submission/retry only after a proper VPS/device credential provisioning mechanism is available; do not embed a privileged token in application source.
-3. Initialize the update RSA trust root on the owner machine, then publish the first signed bridge release through the existing release workflow.
+1. Inspect the final CI cycle after bridge-readiness tooling and repair any regression immediately.
+2. Provision the production VPS promotion endpoint/device token outside source control and connect the trusted server-side worker/CI identity that materializes queued bundles into the existing promotion workflow.
+3. Initialize the update RSA trust root on the owner machine, commit only the public key, configure the matching GitHub secret and then publish the first signed bridge release through the existing release workflow.
 4. Perform real Windows V1.0/V1.1 -> bridge-release update testing and Android old-signed-APK -> new-signed-APK testing on actual devices once historical install artifacts/signing identity are available.
 5. Continue real-device local inference, memory, Work, voice and update/rollback regression coverage.
