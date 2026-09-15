@@ -135,8 +135,30 @@ def main() -> None:
     require("minSdk = 26" in gradle, "Android plugin minSdk drifted")
     require('abiFilters += listOf("arm64-v8a", "x86_64")' in gradle, "Android plugin ABI drifted")
     require('implementation("org.godotengine:godot:4.7.1.stable")' in gradle, "Godot Android plugin dependency drifted")
+    require(
+        'implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")' in gradle,
+        "Android local PDF text dependency is missing from plugin build",
+    )
 
-    print(f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} abis=arm64-v8a,x86_64")
+    export_plugin = read("addons/AuroraFoxRuntime/export_plugin.gd")
+    require(
+        'com.tom-roush:pdfbox-android:2.0.27.0' in export_plugin,
+        "PDFBox dependency is not exported into the final Godot APK",
+    )
+    require(
+        "return PackedStringArray([_pdfbox_dependency])" in export_plugin,
+        "Godot Android export no longer exposes PDFBox Maven dependency",
+    )
+
+    file_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt")
+    require("PDFBoxResourceLoader.init" in file_runtime, "Android PDFBox runtime is not initialized")
+    require("PDDocument.load(file).use" in file_runtime, "Android PDF text path does not open PDF locally")
+    require("PDFTextStripper()" in file_runtime, "Android PDF text layer is not extracted")
+    require('"engine" to "pdfbox-android"' in file_runtime, "Android PDF extraction engine metadata drifted")
+    require('"offline" to true' in file_runtime, "Android PDF extraction must remain offline")
+    require("PdfRenderer" not in file_runtime, "Android PDF path regressed to metadata-only PdfRenderer")
+
+    print(f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} abis=arm64-v8a,x86_64 pdf=offline")
 
 
 if __name__ == "__main__":
