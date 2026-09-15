@@ -69,10 +69,12 @@ jobs:
           if ($data.stage -ne 'ready' -or [int]$data.progress -ne 100) {
             throw "Core Engine did not reach ready/100: $(Get-Content $state -Raw)"
           }
-          $server = '.\core_runtime\engine\llama-server.exe'
-          if (-not (Test-Path $server)) { throw 'llama-server.exe missing after verified Core setup' }
-          & $server --version
-          if ($LASTEXITCODE -ne 0) { throw 'AuroraFox Core Engine smoke test failed' }
+          $server = (Resolve-Path '.\core_runtime\engine\llama-server.exe').Path
+          $stdout = Join-Path $env:RUNNER_TEMP 'llama-version-out.txt'
+          $stderr = Join-Path $env:RUNNER_TEMP 'llama-version-err.txt'
+          $probe = Start-Process -FilePath $server -ArgumentList @('--version') -Wait -PassThru -NoNewWindow -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+          if ($probe.ExitCode -ne 0) { throw "AuroraFox Core Engine smoke test failed: $($probe.ExitCode)" }
+          Get-Content $stdout,$stderr -ErrorAction SilentlyContinue
           Get-Content $state
 
       - name: Verify compatibility bootstrap does not require Ollama
