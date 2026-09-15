@@ -55,7 +55,8 @@ class OllamaClient:
 
     Even when a caller explicitly selects Ollama, an unavailable Ollama process
     must not make AuroraFox unavailable. The adapter falls through to AuroraFox
-    local Core and finally local knowledge.
+    local Core and finally local knowledge. Discovery uses a short timeout so a
+    dead compatibility endpoint cannot stall health/status or every chat call.
     """
 
     def __init__(self, base_url: str = "http://127.0.0.1:11434", preferred_model: str = "qwen3:8b"):
@@ -65,8 +66,8 @@ class OllamaClient:
         self.local_core = AuroraLocalCoreClient(user_root)
         self.local_knowledge = AuroraKnowledgeFallback(user_root)
 
-    def models(self) -> list[str]:
-        response = requests.get(f"{self.base_url}/api/tags", timeout=4)
+    def models(self, timeout: float = 0.9) -> list[str]:
+        response = requests.get(f"{self.base_url}/api/tags", timeout=max(0.2, float(timeout)))
         response.raise_for_status()
         payload = response.json()
         out: list[str] = []
