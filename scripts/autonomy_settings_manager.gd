@@ -84,13 +84,16 @@ func resume_all() -> void:
 	set_master_enabled(true)
 
 func status() -> Dictionary:
+	_bind_existing()
 	var result := get_settings()
 	result["coordinator_bound"] = coordinator != null
 	result["core_pipeline_bound"] = core_pipeline != null
 	result["learning_curator_bound"] = learning_curator != null
 	if coordinator != null:
-		result["coordinator_running"] = coordinator.running
-		result["next_cycle_in_seconds"] = coordinator.time_until_next_cycle()
+		result["coordinator_running"] = bool(coordinator.get("_cycle_running"))
+		result["cycle_interval_seconds"] = coordinator.cycle_interval_seconds
+		result["autonomous_enabled_effective"] = coordinator.autonomous_enabled
+		result["hot_improvements_effective"] = coordinator.autonomous_hot_improvements
 	if core_pipeline != null:
 		result["core_pipeline"] = core_pipeline.status()
 	if learning_curator != null:
@@ -103,6 +106,16 @@ func _apply() -> void:
 	if coordinator != null:
 		coordinator.autonomous_enabled = master and bool(settings.get("autonomous_cycles", true))
 		coordinator.autonomous_hot_improvements = master and bool(settings.get("hot_improvements", true))
+		# Research collection remains part of autonomous cycles only when both the
+		# master and learning preference permit it.
+		coordinator.autonomous_research_enabled = master and bool(settings.get("autonomous_learning", true))
+		var timer = coordinator.get("_timer")
+		if timer is Timer:
+			if coordinator.autonomous_enabled:
+				if timer.is_stopped():
+					timer.start()
+			else:
+				timer.stop()
 	if core_pipeline != null:
 		core_pipeline.autonomous_core_candidates = master and bool(settings.get("core_candidates", true))
 		core_pipeline.auto_apply_dev_checkout = master and bool(settings.get("auto_apply_dev_checkout", true))
