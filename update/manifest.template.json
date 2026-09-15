@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "version": "1.2.0.0",
+  "version": "1.3.0.0",
   "channel": "stable",
   "mandatory": false,
   "published_at": "",
-  "notes": "AuroraFox autonomous evolution tournament update",
+  "notes": "AuroraFox V1.3.0.0 local-first Core, knowledge, memory, Android document intelligence and updater hardening",
   "compatibility": {
     "legacy_manifest": true,
     "direct_update": true,
