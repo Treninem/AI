@@ -39,9 +39,11 @@ func _prepare_file(path: String, metadata: Dictionary) -> Dictionary:
 	var existing: Dictionary = inspection.get("existing_source", {})
 	var matching: Dictionary = inspection.get("matching_source", {})
 	var same_path_same_hash := bool(inspection.get("same_path_same_hash", false))
+	var force_reindex := bool(metadata.get("force_reindex", false))
 	# Identical bytes already indexed under this path, or a truly new alias/copy
-	# of another source, do not create another set of chunks.
-	var safe_duplicate := same_path_same_hash or (existing.is_empty() and not matching.is_empty())
+	# of another source, do not create another set of chunks. An explicit reindex
+	# bypasses this shortcut so parser/index upgrades can rebuild unchanged files.
+	var safe_duplicate := not force_reindex and (same_path_same_hash or (existing.is_empty() and not matching.is_empty()))
 	if safe_duplicate:
 		var duplicate := registry.register_duplicate(path, inspection)
 		duplicate["transaction"] = "skipped_duplicate"
