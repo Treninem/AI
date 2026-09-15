@@ -1,0 +1,46 @@
+{"i":"META-v7","k":"manifest","t":"Сводная база знаний AuroraFox v7: ядро ИИ, программирование, веб, базы данных, DevOps, игры, алгоритмы, mobile, ML/AI, мультимодальные домены, инструменты и практики."}
+{"i":"TOPIC-001","k":"curriculum","t":"Python — синтаксис, типы данных, функции, классы — Освоить «Python» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-002","k":"curriculum","t":"JavaScript — ES6+, замыкания, прототипы, event loop — Освоить «JavaScript» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-003","k":"curriculum","t":"TypeScript — типы, интерфейсы, дженерики, декораторы — Освоить «TypeScript» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-004","k":"curriculum","t":"Java — JVM, коллекции, потоки, лямбды — Освоить «Java» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-005","k":"curriculum","t":"C — указатели, ручное управление памятью, препроцессор — Освоить «C» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-006","k":"curriculum","t":"C++ — RAII, шаблоны, STL, умные указатели — Освоить «C++» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-007","k":"curriculum","t":"C# — LINQ, async/await, делегаты, атрибуты — Освоить «C#» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-008","k":"curriculum","t":"Go — горутины, каналы, интерфейсы, generics — Освоить «Go» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-009","k":"curriculum","t":"Rust — ownership, borrowing, lifetimes, traits — Освоить «Rust» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-010","k":"curriculum","t":"Kotlin — coroutines, data classes, null-safety — Освоить «Kotlin» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-011","k":"curriculum","t":"Swift — optionals, ARC, protocols, generics — Освоить «Swift» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-012","k":"curriculum","t":"Ruby — блоки, модули, метапрограммирование — Освоить «Ruby» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-013","k":"curriculum","t":"PHP — Composer, PSR, типы, Laravel — Освоить «PHP» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-014","k":"curriculum","t":"Dart — sound null safety, isolates, async — Освоить «Dart» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-015","k":"curriculum","t":"Scala — pattern matching, implicits, Actor model — Освоить «Scala» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-016","k":"curriculum","t":"Haskell — монады, чистые функции, ленивые вычисления — Освоить «Haskell» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-017","k":"curriculum","t":"Lua — таблицы, метатаблицы, корутины — Освоить «Lua» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-018","k":"curriculum","t":"R — векторизация, data frame, ggplot2 — Освоить «R» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-019","k":"curriculum","t":"Perl — регулярные выражения, CPAN — Освоить «Perl» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-020","k":"curriculum","t":"Elixir — pattern matching, OTP, BEAM — Освоить «Elixir» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-021","k":"curriculum","t":"Zig — comptime, ручное управление памятью — Освоить «Zig» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-022","k":"curriculum","t":"Nim — макросы, AST, интерполяция — Освоить «Nim» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-023","k":"curriculum","t":"Julia — множественная диспетчеризация, Jupyter — Освоить «Julia» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-024","k":"curriculum","t":"Clojure — транзиенты, макросы, transducers — Освоить «Clojure» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-025","k":"curriculum","t":"F# — discriminated unions, computation expressions — Освоить «F#» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-026","k":"curriculum","t":"OCaml — вариантные типы, функторы — Освоить «OCaml» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-027","k":"curriculum","t":"Erlang — горячая замена кода, распределённость — Освоить «Erlang» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-028","k":"curriculum","t":"Groovy — DSL, AST-трансформации — Освоить «Groovy» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-029","k":"curriculum","t":"Assembly (x86_64, ARM) — регистры, инструкции, прерывания — Освоить «Assembly (x86_64, ARM)» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-030","k":"curriculum","t":"Solidity — смарт-контракты, gas, modifiers — Освоить «Solidity» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-031","k":"curriculum","t":"HTML5 — семантические теги, accessibility, формы — Освоить «HTML5» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-032","k":"curriculum","t":"CSS3 — Flexbox, Grid, анимации, переменные — Освоить «CSS3» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-033","k":"curriculum","t":"SCSS/Sass — миксины, вложенность, функции — Освоить «SCSS/Sass» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-034","k":"curriculum","t":"Tailwind CSS — utility-first, конфигурация, плагины — Освоить «Tailwind CSS» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-035","k":"curriculum","t":"React — хуки, контекст, Suspense, Server Components — Освоить «React» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-036","k":"curriculum","t":"Vue.js — реактивность, Composition API, директивы — Освоить «Vue.js» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-037","k":"curriculum","t":"Angular — DI, RxJS, NgModule, standalone components — Освоить «Angular» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-038","k":"curriculum","t":"Svelte — компиляция, stores, transitions — Освоить «Svelte» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-039","k":"curriculum","t":"Next.js — SSR, SSG, App Router, middleware — Освоить «Next.js» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-040","k":"curriculum","t":"Nuxt.js — модули, плагины, server routes — Освоить «Nuxt.js» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-041","k":"curriculum","t":"Astro — islands architecture, content collections — Освоить «Astro» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-042","k":"curriculum","t":"Redux — actions, reducers, middleware, toolkit — Освоить «Redux» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-043","k":"curriculum","t":"Zustand — минимальный state management — Освоить «Zustand» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-044","k":"curriculum","t":"Webpack — loaders, plugins, tree shaking — Освоить «Webpack» от базовых принципов до практического применения и production-проверок."}
+{"i":"TOPIC-045","k":"curriculum","t":"Vite — esbuild, HMR, plugins — Освоить «Vite» от базовых принципов до практического применения и production-проверок."}
