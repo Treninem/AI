@@ -4,17 +4,13 @@ extends RefCounted
 const DB_PATH := "user://knowledge/knowledge.jsonl"
 const STRUCTURED_PATH := "user://knowledge/structured.jsonl"
 var registry := KnowledgeSourceRegistry.new()
+var _scan_cache: Dictionary = {}
+var _scan_size := -1
+var _scan_mtime := -1
 
 func sources() -> Array:
-	var map := {}
-	for item in _read(DB_PATH):
-		var source := str(item.get("source", "manual"))
-		if not map.has(source): map[source] = {"source": source, "chunks": 0, "kinds": {}, "latest": ""}
-		map[source]["chunks"] = int(map[source]["chunks"]) + 1
-		var kind := str(item.get("kind", "knowledge"))
-		map[source]["kinds"][kind] = int(map[source]["kinds"].get(kind, 0)) + 1
-		var created := str(item.get("created_at", ""))
-		if created > str(map[source]["latest"]): map[source]["latest"] = created
+	var scan := _scan_db()
+	var map: Dictionary = scan.get("sources", {}).duplicate(true)
 	var registry_rows := registry.sources()
 	for value in registry_rows:
 		if not value is Dictionary:
@@ -34,88 +30,128 @@ func sources() -> Array:
 	return result
 
 func stats() -> Dictionary:
-	var items := _read(DB_PATH)
-	var structured := _read(STRUCTURED_PATH)
-	var kinds := {}
-	for item in items:
-		var kind := str(item.get("kind", "knowledge"))
-		kinds[kind] = int(kinds.get(kind, 0)) + 1
+	var scan := _scan_db()
 	var registry_stats := registry.stats()
 	return {
-		"chunks": items.size(),
-		"structured_records": structured.size(),
-		"sources": sources().size(),
-		"kinds": kinds,
+		"chunks": int(scan.get("chunks", 0)),
+		"structured_records": _count_jsonl(STRUCTURED_PATH),
+		"sources": int((scan.get("sources", {}) as Dictionary).size()),
+		"kinds": scan.get("kinds", {}),
 		"bytes": _size(DB_PATH) + _size(STRUCTURED_PATH) + int(registry_stats.get("bytes", 0)),
 		"source_aliases": int(registry_stats.get("aliases", 0)),
 		"source_revisions_total": int(registry_stats.get("revisions_total", 0)),
-		"registry": registry_stats
+		"registry": registry_stats,
+		"streaming_index": true
 	}
 
 func remove_source(source: String) -> Dictionary:
 	var canonical := registry.canonical_source(source)
-	var before := _read(DB_PATH)
-	var keep: Array = []
-	for item in before:
-		if str(item.get("source", "")) != canonical and str(item.get("source", "")) != source: keep.append(item)
-	var db_ok := _write(DB_PATH, keep)
-	var structured_before := _read(STRUCTURED_PATH)
-	var structured_keep: Array = []
-	for item in structured_before:
-		if str(item.get("source", "")) != canonical and str(item.get("source", "")) != source: structured_keep.append(item)
-	var structured_ok := _write(STRUCTURED_PATH, structured_keep)
+	var store := KnowledgeStore.new()
+	var removed := store.remove_source(canonical)
+	if canonical != source and int(removed.get("removed", 0)) == 0 and int(removed.get("structured_removed", 0)) == 0:
+		removed = store.remove_source(source)
 	var registry_result := registry.remove_source(source)
+	_invalidate_scan()
 	return {
-		"ok": db_ok and structured_ok and bool(registry_result.get("ok", false)),
+		"ok": bool(removed.get("ok", false)) and bool(registry_result.get("ok", false)),
 		"source": source,
 		"canonical_source": canonical,
-		"removed": before.size() - keep.size(),
-		"structured_removed": structured_before.size() - structured_keep.size(),
+		"removed": removed.get("removed", 0),
+		"structured_removed": removed.get("structured_removed", 0),
 		"registry_removed": registry_result.get("removed", 0)
 	}
 
 func compact() -> Dictionary:
+	if not FileAccess.file_exists(DB_PATH):
+		return {"ok": true, "items": 0, "duplicates_removed": 0, "registry": registry.stats()}
+	var input := FileAccess.open(DB_PATH, FileAccess.READ)
+	if input == null:
+		return {"ok": false, "error": "Не удалось открыть индекс знаний"}
+	var temp := DB_PATH + ".compact.tmp"
+	var output := FileAccess.open(temp, FileAccess.WRITE)
+	if output == null:
+		input.close()
+		return {"ok": false, "error": "Не удалось создать временный compact-индекс"}
 	var seen := {}
-	var out: Array = []
+	var kept := 0
 	var removed := 0
-	for item in _read(DB_PATH):
+	while not input.eof_reached():
+		var line := input.get_line()
+		if line.strip_edges().is_empty():
+			continue
+		var item = JSON.parse_string(line)
+		if not item is Dictionary:
+			output.store_line(line)
+			continue
 		var id := str(item.get("id", ""))
 		if not id.is_empty() and seen.has(id):
 			removed += 1
 			continue
 		if not id.is_empty(): seen[id] = true
-		out.append(item)
-	var ok := _write(DB_PATH, out)
-	return {"ok": ok, "items": out.size(), "duplicates_removed": removed, "registry": registry.stats()}
+		output.store_line(line)
+		kept += 1
+	input.close()
+	output.close()
+	if not _replace_file(temp, DB_PATH):
+		return {"ok": false, "error": "Не удалось заменить индекс после compact"}
+	_invalidate_scan()
+	return {"ok": true, "items": kept, "duplicates_removed": removed, "registry": registry.stats(), "streaming": true}
 
-func _read(path: String) -> Array:
-	if not FileAccess.file_exists(path): return []
+func _scan_db() -> Dictionary:
+	var size := _size(DB_PATH)
+	var mtime := int(FileAccess.get_modified_time(DB_PATH)) if FileAccess.file_exists(DB_PATH) else 0
+	if size == _scan_size and mtime == _scan_mtime and not _scan_cache.is_empty():
+		return _scan_cache.duplicate(true)
+	var map := {}
+	var kinds := {}
+	var chunks := 0
+	if FileAccess.file_exists(DB_PATH):
+		var file := FileAccess.open(DB_PATH, FileAccess.READ)
+		if file != null:
+			while not file.eof_reached():
+				var line := file.get_line().strip_edges()
+				if line.is_empty(): continue
+				var item = JSON.parse_string(line)
+				if not item is Dictionary: continue
+				chunks += 1
+				var source := str(item.get("source", "manual"))
+				if not map.has(source): map[source] = {"source": source, "chunks": 0, "kinds": {}, "latest": ""}
+				map[source]["chunks"] = int(map[source]["chunks"]) + 1
+				var kind := str(item.get("kind", "knowledge"))
+				map[source]["kinds"][kind] = int(map[source]["kinds"].get(kind, 0)) + 1
+				kinds[kind] = int(kinds.get(kind, 0)) + 1
+				var created := str(item.get("created_at", ""))
+				if created > str(map[source]["latest"]): map[source]["latest"] = created
+			file.close()
+	_scan_size = size
+	_scan_mtime = mtime
+	_scan_cache = {"chunks": chunks, "sources": map, "kinds": kinds}
+	return _scan_cache.duplicate(true)
+
+func _count_jsonl(path: String) -> int:
+	if not FileAccess.file_exists(path): return 0
 	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null: return []
-	var out: Array = []
+	if file == null: return 0
+	var count := 0
 	while not file.eof_reached():
-		var line := file.get_line().strip_edges()
-		if line.is_empty(): continue
-		var parsed = JSON.parse_string(line)
-		if parsed is Dictionary: out.append(parsed)
+		if not file.get_line().strip_edges().is_empty(): count += 1
 	file.close()
-	return out
+	return count
 
-func _write(path: String, rows: Array) -> bool:
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://knowledge"))
-	var temp := path + ".tmp"
-	var file := FileAccess.open(temp, FileAccess.WRITE)
-	if file == null: return false
-	for row in rows: file.store_line(JSON.stringify(row))
-	file.close()
-	var abs := ProjectSettings.globalize_path(path)
+func _replace_file(temp: String, target: String) -> bool:
+	var abs := ProjectSettings.globalize_path(target)
 	var temp_abs := ProjectSettings.globalize_path(temp)
-	if FileAccess.file_exists(path):
+	if FileAccess.file_exists(target):
 		var remove_error := DirAccess.remove_absolute(abs)
 		if remove_error != OK:
 			DirAccess.remove_absolute(temp_abs)
 			return false
 	return DirAccess.rename_absolute(temp_abs, abs) == OK
+
+func _invalidate_scan() -> void:
+	_scan_cache = {}
+	_scan_size = -1
+	_scan_mtime = -1
 
 func _size(path: String) -> int:
 	var file := FileAccess.open(path, FileAccess.READ)
