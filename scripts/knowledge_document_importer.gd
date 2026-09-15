@@ -1,14 +1,14 @@
 class_name KnowledgeDocumentImporter
 extends RefCounted
 
-const TEXT_EXTENSIONS := ["txt", "md", "csv", "tsv", "jsonl", "ndjson", "yaml", "yml", "xml", "html", "htm", "log", "ini", "cfg", "conf", "gd", "py", "js", "ts", "java", "kt", "kts", "c", "h", "cpp", "hpp", "cs", "go", "rs", "sql", "sh", "ps1", "bat"]
+const TEXT_EXTENSIONS := ["txt", "md", "csv", "tsv", "jsonl", "ndjson", "yaml", "yml", "xml", "html", "htm", "log", "ini", "cfg", "conf", "toml", "gd", "py", "js", "ts", "tsx", "jsx", "java", "kt", "kts", "c", "h", "cpp", "hpp", "cs", "go", "rs", "sql", "sh", "ps1", "bat", "php", "rb", "lua", "swift", "dart", "r", "jl"]
 const WORD_EXTENSIONS := ["docx", "odt", "rtf"]
-const DATA_EXTENSIONS := ["json", "jsonl", "ndjson", "csv", "tsv", "yaml", "yml", "xml"]
-const DOCUMENT_EXTENSIONS := ["pdf", "docx", "odt", "rtf", "epub"]
+const DATA_EXTENSIONS := ["json", "jsonl", "ndjson", "csv", "tsv", "yaml", "yml", "xml", "xlsx", "xls", "ods"]
+const DOCUMENT_EXTENSIONS := ["pdf", "docx", "odt", "rtf", "epub", "xlsx", "xls", "ods", "pptx"]
 
 func supported_extensions() -> PackedStringArray:
 	var result := PackedStringArray(["json"])
-	for ext in TEXT_EXTENSIONS + WORD_EXTENSIONS + DOCUMENT_EXTENSIONS:
+	for ext in TEXT_EXTENSIONS + DOCUMENT_EXTENSIONS:
 		if not result.has(ext): result.append(ext)
 	return result
 
@@ -21,16 +21,15 @@ func extract(path: String) -> Dictionary:
 	var ext := path.get_extension().to_lower()
 	if ext == "json": return {"ok": true, "mode": "json", "path": path}
 	if ext in TEXT_EXTENSIONS: return _read_text(path, ext)
-	# Rich office/PDF formats need a parser in the packaged AuroraFox runtime.
-	# We deliberately do not treat binary bytes as text.
 	var native := _extract_native(path, ext)
 	if bool(native.get("ok", false)): return native
-	return {"ok": false, "error": "Для формата %s нужен встроенный экстрактор AuroraFox" % ext, "path": path, "extension": ext, "requires_extractor": true}
+	return {"ok": false, "error": "Для формата %s требуется File Intelligence AuroraFox" % ext, "path": path, "extension": ext, "requires_extractor": true, "kind_hint": _kind_hint(ext)}
 
 func _read_text(path: String, ext: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null: return {"ok": false, "error": "Не удалось прочитать файл", "path": path}
-	var text := file.get_as_text(); file.close()
+	var text := file.get_as_text()
+	file.close()
 	return {"ok": true, "mode": "text", "text": text, "path": path, "extension": ext, "kind_hint": _kind_hint(ext)}
 
 func _extract_native(path: String, ext: String) -> Dictionary:
@@ -48,5 +47,5 @@ func _extract_native(path: String, ext: String) -> Dictionary:
 func _kind_hint(ext: String) -> String:
 	if ext in DATA_EXTENSIONS: return "dataset"
 	if ext in WORD_EXTENSIONS or ext in DOCUMENT_EXTENSIONS: return "document"
-	if ext in ["gd", "py", "js", "ts", "java", "kt", "kts", "c", "h", "cpp", "hpp", "cs", "go", "rs", "sql", "sh", "ps1", "bat"]: return "code"
+	if ext in ["gd", "py", "js", "ts", "tsx", "jsx", "java", "kt", "kts", "c", "h", "cpp", "hpp", "cs", "go", "rs", "sql", "sh", "ps1", "bat", "php", "rb", "lua", "swift", "dart", "r", "jl"]: return "code"
 	return "knowledge"
