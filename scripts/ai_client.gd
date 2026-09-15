@@ -31,7 +31,7 @@ func configure_local_model(path: String) -> void:
 	configure_android_model(path)
 
 func set_ollama_fallback(enabled: bool) -> void:
-	core_runtime.allow_ollama_fallback = enabled
+	core_runtime.set_ollama_fallback_enabled(enabled)
 	_save_core_settings()
 
 func ollama_fallback_enabled() -> bool:
@@ -99,21 +99,31 @@ func _with_knowledge(messages: Array) -> Array:
 	return copied
 
 func is_available() -> bool:
+	# Availability means AuroraFox itself can answer locally. Ollama is not used
+	# to decide whether the product is operational.
 	var info := core_runtime.runtime_info()
 	var model_installed := bool(info.get("model_installed", false))
-	if model_installed:
-		if OS.get_name() == "Android":
-			var android: Dictionary = info.get("android", {})
-			if bool(android.get("llama_cpp", false)): return true
-		elif OS.get_name() == "Windows":
-			if Engine.has_singleton("AuroraFoxRuntime"):
-				var native := Engine.get_singleton("AuroraFoxRuntime")
-				if native != null and native.has_method("chatLocal"): return true
-			var desktop: Dictionary = info.get("desktop", {})
-			if bool(desktop.get("engine_installed", false)): return true
-	if core_runtime.allow_ollama_fallback and OS.get_name() != "Android":
-		return bool((await ollama_status()).get("ok", false))
+	if not model_installed:
+		return false
+	if OS.get_name() == "Android":
+		var android: Dictionary = info.get("android", {})
+		return bool(android.get("llama_cpp", false))
+	if OS.get_name() == "Windows":
+		if Engine.has_singleton("AuroraFoxRuntime"):
+			var native := Engine.get_singleton("AuroraFoxRuntime")
+			if native != null and native.has_method("chatLocal"):
+				return true
+		var desktop: Dictionary = info.get("desktop", {})
+		return bool(desktop.get("engine_installed", false))
 	return false
+
+func compatibility_available() -> bool:
+	if not core_runtime.allow_ollama_fallback or OS.get_name() == "Android":
+		return false
+	var info := core_runtime.runtime_info()
+	if bool(info.get("ollama_circuit_open", false)):
+		return false
+	return bool((await ollama_status()).get("ok", false))
 
 # Compatibility API. Ollama never gates AuroraFox Core startup.
 func ensure_ollama_model(force_refresh := false) -> Dictionary:
@@ -124,25 +134,36 @@ func ensure_ollama_model(force_refresh := false) -> Dictionary:
 
 func ollama_status() -> Dictionary:
 	if OS.get_name() == "Android":
-		return {"ok": false, "required": false, "error": "Ollama не используется на Android"}
+		return {"ok": false, "required": false, "server": false, "compatibility_only": true}
+	var info := core_runtime.runtime_info()
+	if bool(info.get("ollama_circuit_open", false)):
+		return {
+			"ok": false,
+			"required": false,
+			"server": false,
+			"compatibility_only": true,
+			"circuit_open": true,
+			"retry_after_unix": info.get("ollama_retry_after_unix", 0.0)
+		}
 	var request_node := HTTPRequest.new()
 	request_node.timeout = 3.0
 	add_child(request_node)
 	var err := request_node.request(base_url + "/api/tags")
 	if err != OK:
 		request_node.queue_free()
-		return {"ok": false, "required": false, "server": false, "error": "Необязательный Ollama fallback недоступен"}
+		return {"ok": false, "required": false, "server": false, "compatibility_only": true}
 	var result: Array = await request_node.request_completed
 	request_node.queue_free()
 	if int(result[1]) != 200:
-		return {"ok": false, "required": false, "server": false, "http": int(result[1])}
-	return {"ok": true, "required": false, "server": true, "configured_model": model}
+		return {"ok": false, "required": false, "server": false, "compatibility_only": true, "http": int(result[1])}
+	return {"ok": true, "required": false, "server": true, "compatibility_only": true, "configured_model": model}
 
 func runtime_info() -> Dictionary:
 	var info := core_runtime.runtime_info()
 	info["platform"] = OS.get_name()
 	info["knowledge"] = knowledge_manager.stats()
 	info["learning_file_types"] = Array(knowledge.supported_import_extensions())
+	info["operational_without_ollama"] = true
 	return info
 
 func _load_core_settings() -> void:
@@ -155,7 +176,7 @@ func _load_core_settings() -> void:
 	file.close()
 	if not parsed is Dictionary:
 		return
-	core_runtime.allow_ollama_fallback = bool(parsed.get("ollama_fallback", false))
+	core_runtime.set_ollama_fallback_enabled(bool(parsed.get("ollama_fallback", false)))
 
 func _save_core_settings() -> void:
 	var file := FileAccess.open(CORE_SETTINGS_PATH, FileAccess.WRITE)
