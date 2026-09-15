@@ -51,6 +51,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Parse Windows build and release helpers
+        shell: powershell
+        run: |
+          foreach ($script in @(
+            '.\build\build_windows.ps1',
+            '.\build\bridge_release_readiness.ps1',
+            '.\build\create_update_signing_key.ps1',
+            '.\build\setup_release_signing.ps1'
+          )) {
+            if (-not (Test-Path $script)) { throw "Required Windows/release helper missing: $script" }
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) {
+              $errors | ForEach-Object { Write-Error "$script :: $($_.Message)" }
+              throw "$script parse failed"
+            }
+          }
+
       - name: Download Godot 4.7.1 and export templates
         id: godot
         shell: pwsh
