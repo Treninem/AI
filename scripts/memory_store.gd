@@ -8,23 +8,23 @@ const MEMORY_PATH := "user://memory.json"
 const KNOWLEDGE_PATH := "user://knowledge.json"
 const VECTOR_PATH := "user://memory_vectors.json"
 const CORE_SETTINGS_PATH := "user://aurora_core_settings.json"
-const EMBEDDING_MODEL := "qwen3-embedding:0.6b"
-const EMBED_URL := "http://127.0.0.1:11434/api/embed"
-const VECTOR_DIMENSIONS := 256
+const VECTOR_MODEL := AuroraLocalSemanticVectorizer.MODEL_ID
+const VECTOR_DIMENSIONS := AuroraLocalSemanticVectorizer.DIMENSIONS
 const MAX_MEMORY := 5000
 const MAX_KNOWLEDGE := 10000
-const EMBED_BATCH := 12
-const EMBED_RETRY_SECONDS := 30.0
+const LOCAL_INDEX_BATCH := 64
 
 var memory: Array = []
 var knowledge: Array = []
 var vectors: Dictionary = {}
+var vectorizer := AuroraLocalSemanticVectorizer.new()
 
-var _embed_queue: Array = []
+var _index_queue: Array = []
 var _queued_ids: Dictionary = {}
-var _embedding_busy := false
+var _index_busy := false
 var _semantic_ready := false
-var _next_embedding_retry_unix := 0.0
+# Kept only as compatibility state for settings/UI. Memory retrieval no longer
+# contacts Ollama even when the general Ollama compatibility switch is enabled.
 var _legacy_semantic_compat_enabled := false
 
 func _ready() -> void:
@@ -37,40 +37,25 @@ func _ready() -> void:
 	if changed:
 		_save_array(MEMORY_PATH, memory)
 		_save_array(KNOWLEDGE_PATH, knowledge)
-	set_process(_legacy_semantic_compat_enabled)
-	if _legacy_semantic_compat_enabled:
-		_queue_missing_embeddings(memory, "memory")
-		_queue_missing_embeddings(knowledge, "knowledge")
-		if not _embed_queue.is_empty():
-			call_deferred("_drain_embedding_queue")
+	_queue_missing_vectors(memory, "memory")
+	_queue_missing_vectors(knowledge, "knowledge")
+	_semantic_ready = vectors.size() > 0 or (_index_queue.is_empty() and memory.is_empty() and knowledge.is_empty())
+	set_process(true)
+	if not _index_queue.is_empty():
+		call_deferred("_drain_local_index")
 	else:
-		_semantic_ready = not vectors.is_empty()
+		semantic_backend_status.emit(true, VECTOR_MODEL)
 
 func _process(_delta: float) -> void:
-	if not _legacy_semantic_compat_enabled:
+	if _index_busy or _index_queue.is_empty():
 		return
-	if _embedding_busy or _embed_queue.is_empty():
-		return
-	if Time.get_unix_time_from_system() < _next_embedding_retry_unix:
-		return
-	call_deferred("_drain_embedding_queue")
+	call_deferred("_drain_local_index")
 
 func set_legacy_semantic_compat_enabled(enabled: bool) -> void:
-	if _legacy_semantic_compat_enabled == enabled:
-		return
 	_legacy_semantic_compat_enabled = enabled
-	set_process(enabled)
-	if enabled:
-		_queue_missing_embeddings(memory, "memory")
-		_queue_missing_embeddings(knowledge, "knowledge")
-		if not _embed_queue.is_empty():
-			call_deferred("_drain_embedding_queue")
-	else:
-		_embed_queue.clear()
-		_queued_ids.clear()
-		_embedding_busy = false
-		_next_embedding_retry_unix = 0.0
-		semantic_backend_status.emit(false, "Legacy Ollama semantic compatibility disabled")
+	# Deliberately no HTTP request and no background queue switch here. The local
+	# AuroraFox vector index remains the authoritative memory backend.
+	semantic_backend_status.emit(true, VECTOR_MODEL)
 
 func legacy_semantic_compat_enabled() -> bool:
 	return _legacy_semantic_compat_enabled
@@ -83,16 +68,14 @@ func remember(kind: String, content: String, source: String = "", importance: fl
 	if duplicate >= 0:
 		_touch_existing(memory[duplicate], importance, confidence, source)
 		_save_array(MEMORY_PATH, memory)
-		if _legacy_semantic_compat_enabled:
-			_queue_item_embedding(memory[duplicate], "memory")
+		_queue_item_vector(memory[duplicate], "memory")
 		return
 	var item := _make_item("memory", kind, clean, source, importance, confidence)
 	memory.append(item)
 	if memory.size() > MAX_MEMORY:
 		_trim_collection(memory, MAX_MEMORY)
 	_save_array(MEMORY_PATH, memory)
-	if _legacy_semantic_compat_enabled:
-		_queue_item_embedding(item, "memory")
+	_queue_item_vector(item, "memory")
 
 func learn(content: String, source: String = "", importance: float = 0.65, confidence: float = 0.80, kind: String = "knowledge") -> void:
 	var clean := content.strip_edges()
@@ -102,16 +85,14 @@ func learn(content: String, source: String = "", importance: float = 0.65, confi
 	if duplicate >= 0:
 		_touch_existing(knowledge[duplicate], importance, confidence, source)
 		_save_array(KNOWLEDGE_PATH, knowledge)
-		if _legacy_semantic_compat_enabled:
-			_queue_item_embedding(knowledge[duplicate], "knowledge")
+		_queue_item_vector(knowledge[duplicate], "knowledge")
 		return
 	var item := _make_item("knowledge", kind, clean, source, importance, confidence)
 	knowledge.append(item)
 	if knowledge.size() > MAX_KNOWLEDGE:
 		_trim_collection(knowledge, MAX_KNOWLEDGE)
 	_save_array(KNOWLEDGE_PATH, knowledge)
-	if _legacy_semantic_compat_enabled:
-		_queue_item_embedding(item, "knowledge")
+	_queue_item_vector(item, "knowledge")
 
 func recent(limit: int = 12) -> Array:
 	if memory.is_empty():
@@ -123,48 +104,58 @@ func retrieve(query: String, limit: int = 8, include_memory: bool = true, includ
 	var clean := query.strip_edges()
 	if clean.is_empty() or limit <= 0:
 		return []
-	var result: Array = []
-	if _legacy_semantic_compat_enabled:
-		var query_vectors := await _embed_batch(["search_query: " + clean])
-		if not query_vectors.is_empty() and query_vectors[0] is Array and not (query_vectors[0] as Array).is_empty():
-			result = _semantic_search(query_vectors[0], limit, include_memory, include_knowledge)
-	if result.is_empty():
-		result = _lexical_search(clean, limit, include_memory, include_knowledge)
+	var query_vector := vectorizer.embed(clean)
+	var semantic := _semantic_search(query_vector, limit, include_memory, include_knowledge)
+	var lexical := _lexical_search(clean, limit, include_memory, include_knowledge)
+	var result := _merge_results(semantic, lexical, limit)
 	_touch_results(result)
 	return result
 
 func search_knowledge(query: String, limit: int = 8) -> Array:
-	return _lexical_search(query, limit, false, true)
+	if query.strip_edges().is_empty() or limit <= 0:
+		return []
+	return _merge_results(
+		_semantic_search(vectorizer.embed(query), limit, false, true),
+		_lexical_search(query, limit, false, true),
+		limit
+	)
 
 func search_memory(query: String, limit: int = 8) -> Array:
-	return _lexical_search(query, limit, true, false)
+	if query.strip_edges().is_empty() or limit <= 0:
+		return []
+	return _merge_results(
+		_semantic_search(vectorizer.embed(query), limit, true, false),
+		_lexical_search(query, limit, true, false),
+		limit
+	)
 
 func semantic_status() -> Dictionary:
 	return {
 		"ready": _semantic_ready,
-		"enabled": _legacy_semantic_compat_enabled,
-		"provider": "ollama_legacy" if _legacy_semantic_compat_enabled else "local_lexical",
-		"model": EMBEDDING_MODEL,
-		"endpoint": EMBED_URL if _legacy_semantic_compat_enabled else "",
+		"enabled": true,
+		"provider": "aurorafox_local_vector",
+		"model": VECTOR_MODEL,
+		"endpoint": "",
 		"dimensions": VECTOR_DIMENSIONS,
 		"indexed": vectors.size(),
-		"pending": _embed_queue.size(),
+		"pending": _index_queue.size(),
 		"memory_items": memory.size(),
 		"knowledge_items": knowledge.size(),
+		"network_required": false,
+		"external_runtime_required": false,
+		"ollama_required": false,
+		"legacy_compat_setting": _legacy_semantic_compat_enabled,
 		"local_fallback": "lexical"
 	}
 
 func reindex_semantic() -> Dictionary:
 	vectors.clear()
-	_embed_queue.clear()
+	_index_queue.clear()
 	_queued_ids.clear()
 	_save_vector_index()
-	if not _legacy_semantic_compat_enabled:
-		_semantic_ready = false
-		return semantic_status()
-	_queue_missing_embeddings(memory, "memory")
-	_queue_missing_embeddings(knowledge, "knowledge")
-	await _drain_embedding_queue(true)
+	_queue_missing_vectors(memory, "memory")
+	_queue_missing_vectors(knowledge, "knowledge")
+	_drain_local_index(true)
 	return semantic_status()
 
 func _make_item(collection: String, kind: String, content: String, source: String, importance: float, confidence: float) -> Dictionary:
@@ -252,97 +243,53 @@ func _trim_collection(items: Array, max_items: int) -> void:
 	items.append_array(keep)
 	_remove_orphan_vectors()
 
-func _queue_missing_embeddings(items: Array, collection: String) -> void:
-	if not _legacy_semantic_compat_enabled:
-		return
+func _queue_missing_vectors(items: Array, collection: String) -> void:
 	for item in items:
 		if item is Dictionary:
-			_queue_item_embedding(item, collection)
+			_queue_item_vector(item, collection)
 
-func _queue_item_embedding(item: Dictionary, collection: String) -> void:
-	if not _legacy_semantic_compat_enabled:
-		return
+func _queue_item_vector(item: Dictionary, collection: String) -> void:
 	var id := str(item.get("id", ""))
 	var content := str(item.get("content", "")).strip_edges()
 	if id.is_empty() or content.is_empty() or vectors.has(id) or _queued_ids.has(id):
 		return
 	_queued_ids[id] = true
-	_embed_queue.append({
+	_index_queue.append({
 		"id": id,
 		"collection": collection,
-		"content": "search_document: " + content.substr(0, 24000)
+		"content": content.substr(0, 24000)
 	})
-	if not _embedding_busy and Time.get_unix_time_from_system() >= _next_embedding_retry_unix:
-		call_deferred("_drain_embedding_queue")
+	if not _index_busy:
+		call_deferred("_drain_local_index")
 
-func _drain_embedding_queue(force_all: bool = false) -> void:
-	if not _legacy_semantic_compat_enabled:
+func _drain_local_index(force_all: bool = false) -> void:
+	if _index_busy or _index_queue.is_empty():
+		if _index_queue.is_empty():
+			_semantic_ready = true
 		return
-	if _embedding_busy or _embed_queue.is_empty():
-		return
-	if not force_all and Time.get_unix_time_from_system() < _next_embedding_retry_unix:
-		return
-	_embedding_busy = true
+	_index_busy = true
 	var processed := 0
-	while not _embed_queue.is_empty():
-		var batch_count := mini(EMBED_BATCH, _embed_queue.size())
-		var batch: Array = _embed_queue.slice(0, batch_count)
-		_embed_queue = _embed_queue.slice(batch_count, _embed_queue.size())
-		var inputs: Array = []
+	while not _index_queue.is_empty():
+		var batch_count := mini(LOCAL_INDEX_BATCH, _index_queue.size())
+		var batch: Array = _index_queue.slice(0, batch_count)
+		_index_queue = _index_queue.slice(batch_count, _index_queue.size())
 		for row in batch:
-			inputs.append(str(row.get("content", "")))
-		var embeddings := await _embed_batch(inputs)
-		if embeddings.size() != batch.size():
-			_embed_queue = batch + _embed_queue
-			for row in batch:
-				_queued_ids[str(row.get("id", ""))] = true
-			_next_embedding_retry_unix = Time.get_unix_time_from_system() + EMBED_RETRY_SECONDS
-			_semantic_ready = false
-			semantic_backend_status.emit(false, "Legacy Ollama embedding backend/model unavailable")
-			break
-		for i in range(batch.size()):
-			var id := str(batch[i].get("id", ""))
+			var id := str(row.get("id", ""))
 			_queued_ids.erase(id)
-			var vector = embeddings[i]
-			if vector is Array and not (vector as Array).is_empty():
+			var content := str(row.get("content", ""))
+			var vector := vectorizer.embed(content)
+			if not id.is_empty() and vector is Array and not vector.is_empty():
 				vectors[id] = vector
 				processed += 1
-		_save_vector_index()
-		_semantic_ready = true
-		semantic_backend_status.emit(true, "Legacy semantic compatibility: " + EMBEDDING_MODEL)
-		semantic_index_updated.emit(vectors.size(), _embed_queue.size())
 		if not force_all:
 			break
-	_embedding_busy = false
-	if processed > 0 and not _embed_queue.is_empty() and not force_all:
-		call_deferred("_drain_embedding_queue")
-
-func _embed_batch(inputs: Array) -> Array:
-	if inputs.is_empty() or not _legacy_semantic_compat_enabled:
-		return []
-	var request_node := HTTPRequest.new()
-	request_node.timeout = 45.0
-	add_child(request_node)
-	var payload := {
-		"model": EMBEDDING_MODEL,
-		"input": inputs,
-		"truncate": true,
-		"dimensions": VECTOR_DIMENSIONS
-	}
-	var headers := PackedStringArray(["Content-Type: application/json"])
-	var err := request_node.request(EMBED_URL, headers, HTTPClient.METHOD_POST, JSON.stringify(payload))
-	if err != OK:
-		request_node.queue_free()
-		return []
-	var result: Array = await request_node.request_completed
-	request_node.queue_free()
-	if int(result[1]) != 200:
-		return []
-	var parsed = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
-	if not parsed is Dictionary:
-		return []
-	var embeddings = parsed.get("embeddings", [])
-	return embeddings if embeddings is Array else []
+	_save_vector_index()
+	_index_busy = false
+	_semantic_ready = _index_queue.is_empty() or not vectors.is_empty()
+	semantic_index_updated.emit(vectors.size(), _index_queue.size())
+	semantic_backend_status.emit(true, VECTOR_MODEL)
+	if processed > 0 and not _index_queue.is_empty() and not force_all:
+		call_deferred("_drain_local_index")
 
 func _semantic_search(query_vector: Array, limit: int, include_memory: bool, include_knowledge: bool) -> Array:
 	var scored: Array = []
@@ -363,7 +310,7 @@ func _semantic_search(query_vector: Array, limit: int, include_memory: bool, inc
 		seen[id] = true
 		var copy: Dictionary = item.duplicate(true)
 		copy["retrieval_score"] = float(row.get("score", 0.0))
-		copy["retrieval"] = "semantic"
+		copy["retrieval"] = "local_vector"
 		out.append(copy)
 		if out.size() >= limit:
 			break
@@ -380,8 +327,8 @@ func _score_semantic_collection(items: Array, _collection: String, query_vector:
 		var vector = vectors[id]
 		if not vector is Array:
 			continue
-		var similarity := _dot(query_vector, vector)
-		if similarity < 0.20:
+		var similarity := vectorizer.similarity(query_vector, vector)
+		if similarity < 0.10:
 			continue
 		var age_days := maxf(0.0, (now - float(item.get("time_unix", now))) / 86400.0)
 		var recency := 1.0 / (1.0 + age_days / 30.0)
@@ -426,6 +373,24 @@ func _score_lexical_collection(items: Array, words: Array[String], scored: Array
 		var score := coverage * 0.72 + clampf(float(item.get("importance", 0.5)), 0.0, 1.0) * 0.18 + clampf(float(item.get("confidence", 0.5)), 0.0, 1.0) * 0.10
 		scored.append({"score": score, "item": item})
 
+func _merge_results(primary: Array, secondary: Array, limit: int) -> Array:
+	var out: Array = []
+	var seen: Dictionary = {}
+	for source in [primary, secondary]:
+		for item in source:
+			if not item is Dictionary:
+				continue
+			var id := str(item.get("id", ""))
+			if id.is_empty():
+				id = str(item.get("content", "")).sha256_text()
+			if seen.has(id):
+				continue
+			seen[id] = true
+			out.append(item)
+			if out.size() >= limit:
+				return out
+	return out
+
 func _touch_results(items: Array) -> void:
 	if items.is_empty():
 		return
@@ -450,15 +415,6 @@ func _touch_results(items: Array) -> void:
 		_save_array(MEMORY_PATH, memory)
 	if knowledge_changed:
 		_save_array(KNOWLEDGE_PATH, knowledge)
-
-func _dot(a: Array, b: Array) -> float:
-	var count := mini(a.size(), b.size())
-	if count <= 0:
-		return 0.0
-	var value := 0.0
-	for i in range(count):
-		value += float(a[i]) * float(b[i])
-	return value
 
 func _tokens(text: String) -> Array[String]:
 	var normalized := _normalize_text(text)
@@ -503,7 +459,7 @@ func _load_vector_index() -> void:
 	file.close()
 	if not parsed is Dictionary:
 		return
-	if str(parsed.get("model", "")) != EMBEDDING_MODEL or int(parsed.get("dimensions", 0)) != VECTOR_DIMENSIONS:
+	if str(parsed.get("model", "")) != VECTOR_MODEL or int(parsed.get("dimensions", 0)) != VECTOR_DIMENSIONS:
 		return
 	var stored = parsed.get("vectors", {})
 	if stored is Dictionary:
@@ -511,8 +467,10 @@ func _load_vector_index() -> void:
 
 func _save_vector_index() -> void:
 	_save_json(VECTOR_PATH, {
-		"model": EMBEDDING_MODEL,
+		"model": VECTOR_MODEL,
 		"dimensions": VECTOR_DIMENSIONS,
+		"provider": "aurorafox_local_vector",
+		"network_required": false,
 		"updated_at": Time.get_datetime_string_from_system(true),
 		"vectors": vectors
 	})
