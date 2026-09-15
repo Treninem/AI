@@ -16,9 +16,13 @@ on:
       - 'scripts/memory_store.gd'
       - 'scripts/knowledge_*.gd'
       - 'scripts/knowledge_base_overlay.gd'
+      - 'scripts/core_improvement_pipeline.gd'
+      - 'scripts/autonomy_settings_manager.gd'
+      - 'agent/learning_curator.gd'
       - 'main.tscn'
       - 'tests/model_bootstrap_e2e.gd'
       - 'tests/semantic_memory_smoke.gd'
+      - 'tests/autonomy_learning_smoke.gd'
       - 'build/build_windows.ps1'
       - '.github/workflows/model-bootstrap-e2e.yml'
   pull_request:
@@ -32,19 +36,27 @@ on:
       - 'scripts/memory_store.gd'
       - 'scripts/knowledge_*.gd'
       - 'scripts/knowledge_base_overlay.gd'
+      - 'scripts/core_improvement_pipeline.gd'
+      - 'scripts/autonomy_settings_manager.gd'
+      - 'agent/learning_curator.gd'
       - 'main.tscn'
       - 'tests/model_bootstrap_e2e.gd'
       - 'tests/semantic_memory_smoke.gd'
+      - 'tests/autonomy_learning_smoke.gd'
       - 'build/build_windows.ps1'
       - '.github/workflows/model-bootstrap-e2e.yml'
 
 permissions:
   contents: read
 
+concurrency:
+  group: aurorafox-core-bootstrap-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   windows-core-bootstrap:
     runs-on: windows-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -64,6 +76,7 @@ jobs:
 
       - name: Install verified AuroraFox Core Engine
         shell: powershell
+        timeout-minutes: 8
         run: |
           $ErrorActionPreference = 'Stop'
           $state = Join-Path $env:RUNNER_TEMP 'aurora-core-setup-state.json'
@@ -83,6 +96,7 @@ jobs:
 
       - name: Verify compatibility bootstrap does not require Ollama
         shell: powershell
+        timeout-minutes: 3
         run: |
           $ErrorActionPreference = 'Stop'
           $state = Join-Path $env:RUNNER_TEMP 'aurora-model-compat-state.json'
@@ -96,6 +110,7 @@ jobs:
       - name: Download Godot 4.7.1
         id: godot
         shell: pwsh
+        timeout-minutes: 5
         run: |
           $ErrorActionPreference = 'Stop'
           $base = 'https://github.com/godotengine/godot/releases/download/4.7.1-stable'
@@ -111,18 +126,28 @@ jobs:
 
       - name: Parse and import AuroraFox project
         shell: pwsh
+        timeout-minutes: 3
         run: |
           & '${{ steps.godot.outputs.path }}' --headless --editor --path . --quit
           if ($LASTEXITCODE -ne 0) { throw 'Godot project import / script parse failed' }
 
       - name: Run Core and Knowledge contracts
         shell: pwsh
+        timeout-minutes: 3
         run: |
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/model_bootstrap_e2e.gd
           if ($LASTEXITCODE -ne 0) { throw 'AuroraFox Core bootstrap contract failed' }
 
       - name: Run local-first memory contract
         shell: pwsh
+        timeout-minutes: 3
         run: |
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/semantic_memory_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'AuroraFox local-first memory contract failed' }
+
+      - name: Run autonomy and self-evolution safety contract
+        shell: pwsh
+        timeout-minutes: 3
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/autonomy_learning_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'AuroraFox autonomy/self-evolution contract failed' }
