@@ -10,6 +10,7 @@ val pluginPackageName = "com.aurorafox.runtime"
 val godotAddonDir = file("../../addons/$pluginName")
 val sherpaVersion = "1.13.4"
 val sherpaAar = file("libs/sherpa-onnx-$sherpaVersion.aar")
+val pdfBoxAndroidVersion = "2.0.27.0"
 
 android {
     namespace = pluginPackageName
@@ -60,6 +61,10 @@ android {
 
 dependencies {
     implementation("org.godotengine:godot:4.7.1.stable")
+    // Local/offline text extraction for PDFs selected for Core Knowledge.
+    // The export plugin also declares this Maven dependency so the classes are
+    // present in the final Godot APK, not only while compiling this AAR.
+    implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")
     if (sherpaAar.exists()) {
         // Do not try to embed a local AAR inside AuroraFoxRuntime. Godot exports
         // sherpa-onnx as a separate AAR next to this plugin.
