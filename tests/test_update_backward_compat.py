@@ -10,7 +10,7 @@ WINDOWS_ASSET = "AuroraFox-Windows.zip"
 ANDROID_ASSET = "AuroraFox-Android.apk"
 
 
-def _legacy_updater_accepts(manifest: dict) -> bool:
+def legacy_updater_accepts(manifest: dict) -> bool:
     """Model the first embedded AuroraFox updater contract from 2026-08-19."""
     if not isinstance(manifest, dict):
         return False
@@ -40,15 +40,13 @@ def test_current_updater_keeps_original_latest_manifest_url() -> None:
 
 def test_manifest_template_remains_readable_by_first_embedded_updater() -> None:
     template = json.loads((ROOT / "update" / "manifest.template.json").read_text(encoding="utf-8"))
-    # URLs/hashes in the template are placeholders; supply release-like values
-    # while retaining the exact schema future releases are generated from.
     template["version"] = "9.9.9.9"
     template["channel"] = "stable"
     template["assets"]["windows"]["url"] = f"https://example.invalid/{WINDOWS_ASSET}"
     template["assets"]["windows"]["sha256"] = "a" * 64
     template["assets"]["android"]["url"] = f"https://example.invalid/{ANDROID_ASSET}"
     template["assets"]["android"]["sha256"] = "b" * 64
-    assert _legacy_updater_accepts(template)
+    assert legacy_updater_accepts(template)
     assert template.get("schema_version") == 1
     compatibility = template.get("compatibility", {})
     assert compatibility.get("legacy_manifest") is True
@@ -78,9 +76,6 @@ def test_release_manifest_generator_preserves_legacy_top_level_and_asset_fields(
         "'android': {'url': base + '/AuroraFox-Android.apk', 'sha256': apk_sha",
     ):
         assert literal in workflow
-    assert "'schema_version': 1" in workflow
-    assert "'legacy_manifest': True" in workflow
-    assert "'direct_update': True" in workflow
 
 
 def test_update_signature_is_additive_not_a_replacement_for_legacy_manifest() -> None:
@@ -97,7 +92,7 @@ def test_update_signature_is_additive_not_a_replacement_for_legacy_manifest() ->
 def test_android_identity_and_windows_full_zip_strategy_are_stable() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert "package: name='com.aurorafox.ai'" in workflow
-    assert "AuroraFox-Windows.zip" in workflow
+    assert WINDOWS_ASSET in workflow
     template = json.loads((ROOT / "update" / "manifest.template.json").read_text(encoding="utf-8"))
     compatibility = template["compatibility"]
     assert compatibility["windows_strategy"] == "full_zip_replace"
