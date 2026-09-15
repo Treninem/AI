@@ -152,11 +152,11 @@ func _build_ui() -> void:
 	box.add_child(HSeparator.new())
 	fallback_toggle = CheckButton.new()
 	fallback_toggle.text = "Разрешить Ollama как резервный режим совместимости"
-	fallback_toggle.tooltip_text = "Не требуется для AuroraFox Core. Используется только если собственный локальный runtime не смог ответить."
+	fallback_toggle.tooltip_text = "Не требуется для AuroraFox Core. При включении разрешает legacy fallback для чата и legacy semantic embeddings памяти."
 	fallback_toggle.toggled.connect(_toggle_fallback)
 	box.add_child(fallback_toggle)
 	var safety := Label.new()
-	safety.text = "Core Engine и модель проверяются локально. Импорт GGUF проверяет заголовок файла и SHA-256; установка Engine использует SHA-256 опубликованного GitHub Release asset и транзакционную замену."
+	safety.text = "Core Engine и модель проверяются локально. Импорт GGUF проверяет заголовок файла и SHA-256; установка Engine использует SHA-256 опубликованного GitHub Release asset и транзакционную замену. По умолчанию AuroraFox не обращается к Ollama даже для памяти."
 	safety.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	safety.add_theme_font_size_override("font_size", 12)
 	box.add_child(safety)
@@ -186,6 +186,12 @@ func _main_ai() -> AIClient:
 	if main == null: return null
 	var existing = main.get("ai")
 	return existing if existing is AIClient else null
+
+func _main_memory() -> MemoryStore:
+	var main := get_parent()
+	if main == null: return null
+	var existing = main.get("memory")
+	return existing if existing is MemoryStore else null
 
 func _refresh_status() -> void:
 	if engine_status == null: return
@@ -262,7 +268,12 @@ func _activate_model() -> void:
 
 func _toggle_fallback(enabled: bool) -> void:
 	var ai := _main_ai()
-	if ai != null: ai.set_ollama_fallback(enabled)
+	if ai != null:
+		ai.set_ollama_fallback(enabled)
+	var memory_store := _main_memory()
+	if memory_store != null:
+		memory_store.set_legacy_semantic_compat_enabled(enabled)
+	detail_label.text = "Legacy Ollama compatibility включена для чата и семантической памяти." if enabled else "Полностью локальный режим: Ollama compatibility отключена."
 
 func _on_download_started(_profile: String, expected_bytes: int) -> void:
 	progress.value = 0
