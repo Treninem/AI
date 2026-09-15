@@ -43,8 +43,8 @@ func _init() -> void:
 		_fail("Semantic memory did not rank the relevant fact first: " + JSON.stringify(ranked), 2)
 		store.free()
 		return
-	if str(ranked[0].get("retrieval", "")) != "semantic":
-		_fail("Semantic retrieval marker is missing", 3)
+	if str(ranked[0].get("retrieval", "")) != "local_vector":
+		_fail("Local-vector retrieval marker is missing", 3)
 		store.free()
 		return
 
@@ -70,36 +70,46 @@ func _init() -> void:
 		return
 
 	var status := store.semantic_status()
-	if bool(status.get("enabled", true)):
-		_fail("Legacy Ollama semantic compatibility must be disabled by default: " + JSON.stringify(status), 7)
+	if not bool(status.get("enabled", false)):
+		_fail("AuroraFox local semantic memory is unexpectedly disabled: " + JSON.stringify(status), 7)
 		store.free()
 		return
-	if str(status.get("provider", "")) != "local_lexical" or not str(status.get("endpoint", "x")).is_empty():
+	if str(status.get("provider", "")) != "aurorafox_local_vector" or not str(status.get("endpoint", "x")).is_empty():
 		_fail("Default memory provider is not fully local: " + JSON.stringify(status), 8)
 		store.free()
 		return
-	if str(status.get("model", "")) != "qwen3-embedding:0.6b" or int(status.get("dimensions", 0)) != 256:
-		_fail("Legacy semantic compatibility contract changed unexpectedly: " + JSON.stringify(status), 9)
+	if str(status.get("model", "")) != "aurorafox-local-vector-v1" or int(status.get("dimensions", 0)) != 256:
+		_fail("Local semantic vector contract changed unexpectedly: " + JSON.stringify(status), 9)
+		store.free()
+		return
+	if bool(status.get("network_required", true)) or bool(status.get("external_runtime_required", true)) or bool(status.get("ollama_required", true)):
+		_fail("Local semantic memory unexpectedly depends on network/Ollama: " + JSON.stringify(status), 10)
+		store.free()
+		return
+	if bool(status.get("legacy_compat_setting", true)):
+		_fail("Legacy semantic compatibility must remain disabled by default: " + JSON.stringify(status), 11)
 		store.free()
 		return
 
-	# With compatibility disabled, retrieval must work without making an embedding request.
+	# When no vector exists for an item, retrieval must still fall back to the
+	# fully local lexical path rather than contacting an external embedding API.
+	store.vectors.clear()
 	var lexical: Array = await store.retrieve("краткие технические ответы", 2, false, true)
 	if lexical.is_empty() or str(lexical[0].get("id", "")) != "knowledge_relevant":
-		_fail("Local lexical fallback retrieval failed: " + JSON.stringify(lexical), 10)
+		_fail("Local lexical fallback retrieval failed: " + JSON.stringify(lexical), 12)
 		store.free()
 		return
 	if str(lexical[0].get("retrieval", "")) != "lexical":
-		_fail("Local lexical retrieval marker is missing", 11)
+		_fail("Local lexical retrieval marker is missing", 13)
 		store.free()
 		return
 
 	var agent_source := FileAccess.get_file_as_string("res://scripts/agent_core.gd")
 	if not agent_source.contains("await memory.retrieve(task") or not agent_source.contains("Релевантная долговременная память"):
-		_fail("AgentCore is not wired to memory retrieval", 12)
+		_fail("AgentCore is not wired to memory retrieval", 14)
 		store.free()
 		return
 
 	store.free()
-	print("AURORA_SEMANTIC_MEMORY_SMOKE_OK")
+	print("AURORA_SEMANTIC_MEMORY_SMOKE_OK provider=aurorafox_local_vector fallback=lexical network=false ollama=false")
 	quit(0)
