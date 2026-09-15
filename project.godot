@@ -12,6 +12,7 @@ config/icon="res://assets/ui/fox_logo.svg"
 [autoload]
 AuroraVoice="*res://voice/voice_manager.gd"
 AuroraUpdate="*res://update/update_manager.gd"
+AuroraCoreCandidateSubmitter="*res://scripts/core_candidate_submitter.gd"
 
 [display]
 window/size/viewport_width=1440
