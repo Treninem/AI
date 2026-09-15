@@ -68,7 +68,7 @@ func knowledge_stats() -> Dictionary:
 	return knowledge_manager.stats()
 
 func remove_knowledge_source(source: String) -> Dictionary:
-	return knowledge.remove_source(source)
+	return knowledge_manager.remove_source(source)
 
 func compact_knowledge() -> Dictionary:
 	return knowledge_manager.compact()
@@ -76,9 +76,11 @@ func compact_knowledge() -> Dictionary:
 func reindex_knowledge_source(source: String, extracted_text := "", metadata: Dictionary = {}) -> Dictionary:
 	if not FileAccess.file_exists(source):
 		return {"ok": false, "source": source, "error": "Исходный файл больше недоступен"}
+	var meta := metadata.duplicate(true)
+	meta["force_reindex"] = true
 	if not extracted_text.strip_edges().is_empty():
-		return knowledge_transaction.import_extracted_file(knowledge, source, extracted_text, metadata)
-	return knowledge_transaction.import_file(knowledge, source, metadata)
+		return knowledge_transaction.import_extracted_file(knowledge, source, extracted_text, meta)
+	return knowledge_transaction.import_file(knowledge, source, meta)
 
 func _with_knowledge(messages: Array) -> Array:
 	var copied := messages.duplicate(true)
