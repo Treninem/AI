@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import json
+import os
 import socket
 import uuid
+from pathlib import Path
 from typing import Any
+
+from api.local_core_client import AuroraKnowledgeFallback, AuroraLocalCoreClient
 
 
 class AuroraRuntimeBridge:
@@ -11,6 +15,9 @@ class AuroraRuntimeBridge:
         self.host = host
         self.port = port
         self.timeout = timeout
+        user_root = Path(os.getenv("AURORAFOX_USER_DIR", str(Path.home() / ".aurorafox"))).resolve()
+        self.local_core = AuroraLocalCoreClient(user_root)
+        self.local_knowledge = AuroraKnowledgeFallback(user_root)
 
     def request(self, op: str, payload: dict[str, Any] | None = None) -> dict[str, Any]:
         request_id = uuid.uuid4().hex
@@ -42,12 +49,41 @@ class AuroraRuntimeBridge:
         conversation_id: str,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        return self.request("chat", {
-            "message": message,
-            "context": context,
-            "conversation_id": conversation_id,
-            "metadata": metadata or {},
-        })
+        try:
+            return self.request("chat", {
+                "message": message,
+                "context": context,
+                "conversation_id": conversation_id,
+                "metadata": metadata or {},
+            })
+        except Exception as bridge_exc:
+            messages = list(context) + [{"role": "user", "content": message}]
+            try:
+                local = self.local_core.chat(messages, temperature=float((metadata or {}).get("temperature", 0.2)))
+                return {
+                    "ok": True,
+                    "content": str(local.get("content", "")),
+                    "model": str(local.get("model", "AuroraFox-Core")),
+                    "details": {
+                        "fallback_runtime": str(local.get("runtime", "aurorafox-local-core")),
+                        "agent_bridge_online": False,
+                        "bridge_error": str(bridge_exc)[:1000],
+                    },
+                }
+            except Exception as local_exc:
+                local = self.local_knowledge.reply(message)
+                return {
+                    "ok": True,
+                    "content": str(local.get("content", "")),
+                    "model": str(local.get("model", "local-knowledge")),
+                    "details": {
+                        "fallback_runtime": str(local.get("runtime", "aurorafox-local-knowledge")),
+                        "agent_bridge_online": False,
+                        "bridge_error": str(bridge_exc)[:1000],
+                        "local_core_error": str(local_exc)[:1000],
+                        "degraded": True,
+                    },
+                }
 
     def status(self) -> dict[str, Any]:
         return self.request("status")
