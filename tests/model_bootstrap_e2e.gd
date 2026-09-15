@@ -17,22 +17,25 @@ func _run() -> void:
 	if bool(info.get("ollama_required", true)):
 		_fail("AuroraFox Core still reports Ollama as required: " + JSON.stringify(info), 2)
 		return
+	if not bool(info.get("operational_without_ollama", false)):
+		_fail("AIClient does not advertise local operation without Ollama", 3)
+		return
 	if str(info.get("runtime", "")) != "AuroraFox Core":
-		_fail("Unexpected primary runtime: " + JSON.stringify(info), 3)
+		_fail("Unexpected primary runtime: " + JSON.stringify(info), 4)
 		return
 	if OS.get_name() == "Windows":
 		var desktop: Dictionary = info.get("desktop", {})
 		if str(desktop.get("backend", "")) != "AuroraFox Core Engine":
-			_fail("Windows Core Engine contract missing: " + JSON.stringify(desktop), 4)
+			_fail("Windows Core Engine contract missing: " + JSON.stringify(desktop), 5)
 			return
 		if ai.core_engine_installer().is_empty():
-			_fail("Core Engine installer was not discoverable", 5)
+			_fail("Core Engine installer was not discoverable", 6)
 			return
 
 	var source := "user://core_contract_training_any_name.json"
 	var f := FileAccess.open(source, FileAccess.WRITE)
 	if f == null:
-		_fail("Cannot create temporary knowledge dataset", 6)
+		_fail("Cannot create temporary knowledge dataset", 7)
 		return
 	f.store_string(JSON.stringify({
 		"random_container": {
@@ -45,11 +48,11 @@ func _run() -> void:
 
 	var imported: Dictionary = ai.learn_from_file(source)
 	if not bool(imported.get("ok", false)):
-		_fail("Schema-free JSON import failed: " + JSON.stringify(imported), 7)
+		_fail("Schema-free JSON import failed: " + JSON.stringify(imported), 8)
 		return
 	var search: Array = ai.search_knowledge("AuroraFox Core Knowledge contract", 4)
 	if search.is_empty():
-		_fail("Imported Core Knowledge cannot be retrieved", 8)
+		_fail("Imported Core Knowledge cannot be retrieved", 9)
 		return
 	var sources: Array = ai.knowledge_sources()
 	var found := false
@@ -58,32 +61,65 @@ func _run() -> void:
 			found = true
 			break
 	if not found:
-		_fail("Knowledge source inventory did not include imported dataset", 9)
+		_fail("Knowledge source inventory did not include imported dataset", 10)
 		return
 
 	# Re-import must replace the source rather than multiply old chunks forever.
 	var before := int(ai.knowledge_stats().get("chunks", 0))
 	var imported_again: Dictionary = ai.learn_from_file(source)
 	if not bool(imported_again.get("ok", false)):
-		_fail("Knowledge re-import failed", 10)
+		_fail("Knowledge re-import failed", 11)
 		return
 	var after := int(ai.knowledge_stats().get("chunks", 0))
 	if after != before:
-		_fail("Knowledge re-import changed total chunk count; source replacement contract failed: %d -> %d" % [before, after], 11)
+		_fail("Knowledge re-import changed total chunk count; source replacement contract failed: %d -> %d" % [before, after], 12)
 		return
 
 	var cleaned := ai.remove_knowledge_source(source)
 	if not bool(cleaned.get("ok", false)):
-		_fail("Temporary knowledge source cleanup failed", 12)
+		_fail("Temporary knowledge source cleanup failed", 13)
 		return
 	if FileAccess.file_exists(source): DirAccess.remove_absolute(ProjectSettings.globalize_path(source))
 
-	# With fallback explicitly disabled and no required test model, a failed chat
-	# must remain a Core failure and never silently contact Ollama.
+	# Fallback disabled: no request may be delegated to Ollama.
 	var response: Dictionary = await ai.chat([{"role": "user", "content": "core contract"}], 0.0)
 	if str(response.get("runtime", "")).begins_with("ollama"):
-		_fail("Core contract unexpectedly used Ollama with fallback disabled", 13)
+		_fail("Core contract unexpectedly used Ollama with fallback disabled", 14)
 		return
+
+	# Fallback enabled but unreachable: the compatibility adapter must not replace
+	# the Core result and a circuit breaker must prevent repeated blocking calls.
+	ai.configure("http://127.0.0.1:1", "unreachable-test-model")
+	ai.set_ollama_fallback(true)
+	var outage: Dictionary = await ai.chat([{"role":"user", "content":"compatibility outage contract"}], 0.0)
+	if str(outage.get("runtime", "")).begins_with("ollama"):
+		_fail("Ollama outage replaced the AuroraFox Core result", 15)
+		return
+	var outage_info := ai.runtime_info()
+	if not bool(outage_info.get("ollama_circuit_open", false)):
+		_fail("Ollama outage did not open the non-blocking compatibility circuit", 16)
+		return
+	var adapter: Dictionary = outage.get("compatibility_adapter", {})
+	if not bool(adapter.get("ignored", false)):
+		_fail("Ollama outage was not explicitly ignored by the local-first router", 17)
+		return
+	ai.set_ollama_fallback(false)
+
+	# Autonomous core evolution may rewrite only a narrow allowlist and must never
+	# gain access to updater/security/runtime validation code.
+	var pipeline := CoreImprovementPipeline.new()
+	if not pipeline._target_allowed("scripts/agent_core.gd"):
+		_fail("Core improvement allowlist does not include AgentCore", 18)
+		return
+	for blocked in ["update/update_manager.gd", "scripts/runtime_extension_manager.gd", "scripts/core_improvement_pipeline.gd", "project.godot"]:
+		if pipeline._target_allowed(blocked):
+			_fail("Core improvement pipeline allows protected target: " + blocked, 19)
+			return
+	var selected := pipeline._select_target("улучшить память и поиск знаний", "")
+	if selected != "scripts/memory_store.gd":
+		_fail("Core improvement target selection contract failed: " + selected, 20)
+		return
+	pipeline.free()
 
 	print("AURORA_CORE_BOOTSTRAP_CONTRACT_OK")
 	print(JSON.stringify(info))
