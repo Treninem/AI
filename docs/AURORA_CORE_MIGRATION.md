@@ -1,36 +1,38 @@
 # AuroraFox Core migration
 
 ## Goal
-AuroraFox must remain functional without a mandatory Ollama installation or a third-party AI client. Existing memory, agents, voice, computer tools, Work, sandbox, Android, evolution, updates and server synchronization remain intact.
+AuroraFox must remain functional without mandatory Ollama or another third-party AI client. Existing memory, agents, voice, computer tools, Work, sandbox, Android, evolution, updates and server synchronization remain intact.
 
 ## Implemented
-- Added `AuroraCoreRuntime` as the local-first inference boundary.
-- `AIClient` now calls AuroraFox Core instead of calling Ollama directly.
-- Ollama remains an optional legacy fallback for compatibility; its absence no longer defines the architecture.
-- Android continues using the packaged native runtime and local GGUF model through the Core boundary.
-- Added `KnowledgeStore`, a persistent user-managed Core Knowledge base under `user://knowledge/`.
-- Added text/file knowledge import, chunking, lightweight local retrieval and automatic relevant-context injection into chat.
-- Added schema-free JSON database import. A `.json` file may have any filename and arbitrary nested object/array structure.
-- JSON is recursively inspected and records are automatically classified as `algorithm`, `template`, `skill`, `example`, `instruction`, `fact` or general `knowledge` based on structure/content rather than filename.
-- Original structured JSON records are retained in `structured.jsonl`; searchable normalized text goes to `knowledge.jsonl`. This allows later re-indexing without losing source structure.
-- Related leaf objects are kept together so datasets such as question/answer pairs, templates and algorithm records do not get unnecessarily split apart.
-- Added public AIClient methods: `configure_local_model`, `set_ollama_fallback`, `import_knowledge_text`, `import_knowledge_file`, `search_knowledge`.
+- `AuroraCoreRuntime` is the local-first inference boundary; Ollama is an optional legacy fallback only.
+- Android keeps its packaged native runtime/GGUF path through Core.
+- Windows model setup no longer probes Ollama or blocks startup because Ollama is missing/wrong. Primary readiness is the AuroraFox local GGUF model.
+- `KnowledgeStore` persists user-managed Core Knowledge under `user://knowledge/`.
+- Schema-free JSON import accepts arbitrary filenames/nesting and classifies records as algorithm/template/skill/example/instruction/fact/knowledge.
+- Original structured JSON is retained in `structured.jsonl`; normalized searchable material is retained in `knowledge.jsonl`.
+- `KnowledgeDocumentImporter` provides one ingestion boundary for JSON, JSONL, TXT, Markdown, CSV/TSV, YAML, XML, HTML, logs/configs, source code, Word-family documents, PDF and EPUB.
+- Rich binary documents are never interpreted as raw text. DOCX/ODT/RTF/PDF/EPUB route to the packaged `AuroraFoxRuntime.extractDocumentText` interface when available.
+- `KnowledgeManager` adds source inventory, category statistics, storage size, source deletion and duplicate compaction.
+- `AIClient` exposes `learn_from_file`, supported formats, source management, statistics and compaction while keeping previous compatibility methods.
+- Imported documents are untrusted knowledge data: their contents do not automatically receive system authority and uploaded code/algorithms are not automatically executed.
 
 ## Routing principle
-Imported material is treated as **Core Knowledge**, not blindly written into personal conversational memory. Templates, algorithms, examples and factual datasets receive semantic type metadata and are retrieved when relevant. This prevents a random training JSON from overwriting user memory or runtime configuration. In later stages, explicit trusted packages can be routed to dedicated Skills/Algorithms stores through a validated importer.
+Imported material is **Core Knowledge**, not personal conversational memory. Semantic metadata decides where/how it is retrieved. Explicit validated promotion will be required before a trusted algorithm/template can become an executable skill. This preserves user memory boundaries and prevents a random uploaded database from silently changing runtime policy.
 
-## Why
-The previous desktop `AIClient.chat()` always entered the Ollama path, so missing/incompatible Ollama prevented normal inference. The new boundary makes the inference provider replaceable while callers continue using the same AIClient API.
+## Current architecture
+`File -> KnowledgeDocumentImporter -> extraction/parser -> semantic classification -> structured archive + normalized Core Knowledge -> retrieval -> AIClient -> AuroraFox Core`
+
+`AuroraFox Core -> embedded local runtime first -> optional Ollama compatibility fallback`
 
 ## Next stages
-1. Package a desktop native llama.cpp/GDExtension backend implementing `AuroraFoxRuntime.chatLocal`, so Windows has the same embedded GGUF path as Android.
-2. Change the model setup wizard and Windows installer from mandatory Ollama bootstrap to AuroraFox local model bootstrap; keep an advanced optional Ollama compatibility switch.
-3. Add UI for Knowledge Base: import JSON/files/folders, list sources and detected categories, delete/reindex sources, storage size and status.
-4. Extend document ingestion through existing File Intelligence for PDF/DOCX and other rich formats before storing extracted text.
-5. Add semantic/vector retrieval when an embedded local embedding backend is available; keep keyword retrieval as offline fallback.
-6. Add validated promotion of trusted imported algorithms/templates into dedicated skill/runtime registries. Imported data must never execute code merely because it was uploaded.
-7. Replace Ollama-specific CI with Core-runtime contract tests while retaining one compatibility test for the optional adapter.
-8. Verify Windows/Android release pipelines, startup behavior with no Ollama installed, memory/tool/Work regressions and rollback/update flows.
+1. Implement/package the Windows desktop native llama.cpp/GDExtension backend for `AuroraFoxRuntime.chatLocal` and `extractDocumentText`.
+2. Replace the old Ollama-oriented PowerShell model installer with AuroraFox-owned GGUF model installation/import and integrity verification.
+3. Add Knowledge Base UI: file/folder picker, drag/drop, import progress, source/category list, delete/reindex/compact, storage/status.
+4. Add actual packaged DOCX/PDF/ODT/RTF extraction backend.
+5. Add embedded semantic/vector retrieval while retaining keyword retrieval as offline fallback.
+6. Add validated trusted-package promotion for algorithms/templates/skills with review, versioning and rollback; uploaded data never executes merely because it was imported.
+7. Add Core runtime contract tests, no-Ollama startup tests, import/retrieval tests and compatibility tests.
+8. Verify Windows/Android release pipelines and regressions across memory/tools/Work/voice/update/rollback.
 
 ## Compatibility rule
-Do not remove existing AuroraFox features while completing this migration. Provider-specific code must stay behind adapters and must never become a startup requirement again.
+Do not remove existing AuroraFox features while completing this migration. Provider-specific code stays behind adapters and must never become a startup requirement again.
