@@ -4,6 +4,9 @@ extends RefCounted
 const DB_PATH := "user://knowledge/knowledge.jsonl"
 const STRUCTURED_PATH := "user://knowledge/structured.jsonl"
 const MAX_CHUNK_CHARS := 1800
+const LARGE_TEXT_THRESHOLD_BYTES := 8 * 1024 * 1024
+const STREAM_BATCH_CHARS := 128 * 1024
+const SEARCH_BUFFER_LIMIT := 256
 var document_importer := KnowledgeDocumentImporter.new()
 
 func import_text(text: String, source := "manual", metadata: Dictionary = {}) -> Dictionary:
@@ -37,6 +40,8 @@ func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 		return import_json_lines_file(path, metadata)
 	if ext in ["csv", "tsv"]:
 		return import_delimited_file(path, "\t" if ext == "tsv" else ",", metadata)
+	if ext in KnowledgeDocumentImporter.TEXT_EXTENSIONS and _file_size(path) >= LARGE_TEXT_THRESHOLD_BYTES:
+		return import_large_text_file(path, metadata)
 	var extracted := document_importer.extract(path)
 	if not bool(extracted.get("ok", false)):
 		return extracted
@@ -45,6 +50,8 @@ func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 	meta["format"] = ext
 	meta["original_file"] = path
 	meta["kind_hint"] = extracted.get("kind_hint", "knowledge")
+	meta["extractor"] = extracted.get("extractor", "knowledge_document_importer")
+	meta["truncated"] = extracted.get("truncated", false)
 	meta["scope"] = str(meta.get("scope", "core_knowledge"))
 	return import_text(str(extracted.get("text", "")), path, meta)
 
@@ -62,6 +69,46 @@ func import_extracted_file(path: String, text: String, metadata: Dictionary = {}
 func supported_import_extensions() -> PackedStringArray:
 	return document_importer.supported_extensions()
 
+func import_large_text_file(path: String, metadata: Dictionary = {}) -> Dictionary:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {"ok": false, "error": "Не удалось открыть большой текстовый источник", "path": path}
+	var removed := remove_source(path)
+	if not bool(removed.get("ok", false)):
+		file.close()
+		return removed
+	var meta := metadata.duplicate(true)
+	meta["format"] = path.get_extension().to_lower()
+	meta["original_file"] = path
+	meta["streaming"] = true
+	meta["source_size_bytes"] = _file_size(path)
+	meta["scope"] = str(meta.get("scope", "core_knowledge"))
+	var routed := _empty_routes()
+	var written := 0
+	var batch := ""
+	while not file.eof_reached():
+		var line := file.get_line()
+		if batch.length() + line.length() + 1 > STREAM_BATCH_CHARS and not batch.is_empty():
+			var imported := import_text(batch, path, meta)
+			if not bool(imported.get("ok", false)):
+				file.close()
+				return imported
+			written += int(imported.get("chunks", 0))
+			_merge_routes(routed, imported.get("routed", {}))
+			batch = ""
+		batch += line + "\n"
+	if not batch.strip_edges().is_empty():
+		var imported := import_text(batch, path, meta)
+		if not bool(imported.get("ok", false)):
+			file.close()
+			return imported
+		written += int(imported.get("chunks", 0))
+		_merge_routes(routed, imported.get("routed", {}))
+	file.close()
+	if written <= 0:
+		return {"ok": false, "error": "Большой текстовый источник не содержит данных", "path": path}
+	return {"ok": true, "source": path, "format": path.get_extension().to_lower(), "chunks": written, "kind": _dominant_kind(routed), "routed": routed, "streaming": true, "path": DB_PATH}
+
 func import_json_file(path: String, metadata: Dictionary = {}, replace_existing := true) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
@@ -74,7 +121,9 @@ func import_json_file(path: String, metadata: Dictionary = {}, replace_existing 
 		return {"ok": false, "error": "Некорректный JSON: %s" % parser.get_error_message(), "line": parser.get_error_line(), "path": path}
 	var parsed = parser.data
 	if replace_existing:
-		remove_source(path)
+		var removed := remove_source(path)
+		if not bool(removed.get("ok", false)):
+			return removed
 	var records: Array = []
 	_flatten_json(parsed, "$", records)
 	return _import_structured_records(path, records, "json", metadata)
@@ -83,7 +132,11 @@ func import_json_lines_file(path: String, metadata: Dictionary = {}) -> Dictiona
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {"ok": false, "error": "Не удалось прочитать JSONL", "path": path}
-	var records: Array = []
+	var removed := remove_source(path)
+	if not bool(removed.get("ok", false)):
+		file.close()
+		return removed
+	var state := _structured_state()
 	var line_number := 0
 	while not file.eof_reached():
 		var line := file.get_line().strip_edges()
@@ -94,12 +147,12 @@ func import_json_lines_file(path: String, metadata: Dictionary = {}) -> Dictiona
 		if parser.parse(line) != OK:
 			file.close()
 			return {"ok": false, "error": "Некорректный JSONL в строке %d: %s" % [line_number, parser.get_error_message()], "path": path}
-		records.append({"json_path": "$[%d]" % (line_number - 1), "value": parser.data})
+		var imported := _import_structured_value(path, "$[%d]" % (line_number - 1), parser.data, path.get_extension().to_lower(), metadata, state)
+		if not bool(imported.get("ok", false)):
+			file.close()
+			return imported
 	file.close()
-	if records.is_empty():
-		return {"ok": false, "error": "JSONL не содержит записей", "path": path}
-	remove_source(path)
-	return _import_structured_records(path, records, path.get_extension().to_lower(), metadata)
+	return _structured_result(path, path.get_extension().to_lower(), state, true)
 
 func import_delimited_file(path: String, delimiter: String, metadata: Dictionary = {}) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
@@ -112,7 +165,11 @@ func import_delimited_file(path: String, delimiter: String, metadata: Dictionary
 	if headers.is_empty():
 		file.close()
 		return {"ok": false, "error": "В таблице нет заголовков", "path": path}
-	var records: Array = []
+	var removed := remove_source(path)
+	if not bool(removed.get("ok", false)):
+		file.close()
+		return removed
+	var state := _structured_state()
 	var row_index := 0
 	while not file.eof_reached():
 		var values := file.get_csv_line(delimiter)
@@ -124,55 +181,71 @@ func import_delimited_file(path: String, delimiter: String, metadata: Dictionary
 			if key.is_empty():
 				key = "column_%d" % (i + 1)
 			row[key] = str(values[i]) if i < values.size() else ""
-		records.append({"json_path": "$[%d]" % row_index, "value": row})
+		var imported := _import_structured_value(path, "$[%d]" % row_index, row, path.get_extension().to_lower(), metadata, state)
+		if not bool(imported.get("ok", false)):
+			file.close()
+			return imported
 		row_index += 1
 	file.close()
-	if records.is_empty():
-		return {"ok": false, "error": "Таблица не содержит строк данных", "path": path}
-	remove_source(path)
-	return _import_structured_records(path, records, path.get_extension().to_lower(), metadata)
+	return _structured_result(path, path.get_extension().to_lower(), state, true)
 
 func _import_structured_records(source: String, records: Array, format: String, metadata: Dictionary) -> Dictionary:
-	var routed := _empty_routes()
-	var seen := {}
-	var structured_written := 0
-	var normalized_chunks := 0
+	var state := _structured_state()
 	for row in records:
 		if not row is Dictionary:
 			continue
-		var value = row.get("value")
-		var text := _record_text(value)
-		if text.strip_edges().is_empty():
-			continue
-		var record_path := str(row.get("json_path", "$"))
-		var fingerprint := _id(source + record_path, text)
-		if seen.has(fingerprint):
-			continue
-		seen[fingerprint] = true
-		var kind := _classify_record(record_path, value)
-		routed[kind] = int(routed.get(kind, 0)) + 1
-		var meta := metadata.duplicate(true)
-		meta.merge({
-			"kind": kind,
-			"format": format,
-			"json_path": record_path,
-			"original_file": source,
-			"scope": "core_knowledge"
-		}, true)
-		if _append(STRUCTURED_PATH, {
-			"id": fingerprint,
-			"kind": kind,
-			"source": source,
-			"json_path": record_path,
-			"value": value,
-			"metadata": meta,
-			"created_at": Time.get_datetime_string_from_system(true)
-		}):
-			structured_written += 1
-		var normalized := import_text(text, source, meta)
-		if not bool(normalized.get("ok", false)):
-			return normalized
-		normalized_chunks += int(normalized.get("chunks", 0))
+		var imported := _import_structured_value(source, str(row.get("json_path", "$")), row.get("value"), format, metadata, state)
+		if not bool(imported.get("ok", false)):
+			return imported
+	return _structured_result(source, format, state, false)
+
+func _structured_state() -> Dictionary:
+	return {"routed": _empty_routes(), "seen": {}, "structured_written": 0, "normalized_chunks": 0}
+
+func _import_structured_value(source: String, record_path: String, value: Variant, format: String, metadata: Dictionary, state: Dictionary) -> Dictionary:
+	var text := _record_text(value)
+	if text.strip_edges().is_empty():
+		return {"ok": true, "skipped": true}
+	var fingerprint := _id(source + record_path, text)
+	var seen: Dictionary = state.get("seen", {})
+	if seen.has(fingerprint):
+		return {"ok": true, "duplicate": true}
+	seen[fingerprint] = true
+	state["seen"] = seen
+	var kind := _classify_record(record_path, value)
+	var routed: Dictionary = state.get("routed", _empty_routes())
+	routed[kind] = int(routed.get(kind, 0)) + 1
+	state["routed"] = routed
+	var meta := metadata.duplicate(true)
+	meta.merge({
+		"kind": kind,
+		"format": format,
+		"json_path": record_path,
+		"original_file": source,
+		"scope": "core_knowledge"
+	}, true)
+	if not _append(STRUCTURED_PATH, {
+		"id": fingerprint,
+		"kind": kind,
+		"source": source,
+		"json_path": record_path,
+		"value": value,
+		"metadata": meta,
+		"created_at": Time.get_datetime_string_from_system(true)
+	}):
+		return {"ok": false, "error": "Не удалось записать структурированную запись", "source": source, "json_path": record_path}
+	state["structured_written"] = int(state.get("structured_written", 0)) + 1
+	var normalized := import_text(text, source, meta)
+	if not bool(normalized.get("ok", false)):
+		return normalized
+	state["normalized_chunks"] = int(state.get("normalized_chunks", 0)) + int(normalized.get("chunks", 0))
+	return {"ok": true}
+
+func _structured_result(source: String, format: String, state: Dictionary, streaming: bool) -> Dictionary:
+	var seen: Dictionary = state.get("seen", {})
+	if seen.is_empty():
+		return {"ok": false, "error": "Источник не содержит структурированных записей", "source": source}
+	var structured_written := int(state.get("structured_written", 0))
 	if structured_written != seen.size():
 		return {"ok": false, "error": "Не удалось полностью записать структурированную базу", "source": source, "written": structured_written, "expected": seen.size()}
 	return {
@@ -180,58 +253,59 @@ func _import_structured_records(source: String, records: Array, format: String, 
 		"source": source,
 		"format": format,
 		"records": seen.size(),
-		"chunks": normalized_chunks,
-		"routed": routed,
+		"chunks": int(state.get("normalized_chunks", 0)),
+		"routed": state.get("routed", _empty_routes()),
+		"streaming": streaming,
 		"note": "Имя файла не влияет на маршрутизацию; назначение определяется по структуре и содержимому."
 	}
 
 func remove_source(source: String) -> Dictionary:
-	var before := _read_jsonl(DB_PATH)
-	var keep: Array = []
-	for item in before:
-		if str(item.get("source", "")) != source:
-			keep.append(item)
-	var structured_before := _read_jsonl(STRUCTURED_PATH)
-	var structured_keep: Array = []
-	for item in structured_before:
-		if str(item.get("source", "")) != source:
-			structured_keep.append(item)
-	var db_ok := _write_jsonl(DB_PATH, keep)
-	var structured_ok := _write_jsonl(STRUCTURED_PATH, structured_keep)
-	return {
-		"ok": db_ok and structured_ok,
-		"source": source,
-		"removed": before.size() - keep.size(),
-		"structured_removed": structured_before.size() - structured_keep.size()
-	}
+	var db := _filter_source_jsonl(DB_PATH, source)
+	if not bool(db.get("ok", false)):
+		return db
+	var structured := _filter_source_jsonl(STRUCTURED_PATH, source)
+	if not bool(structured.get("ok", false)):
+		return structured
+	return {"ok": true, "source": source, "removed": db.get("removed", 0), "structured_removed": structured.get("removed", 0), "streaming": true}
 
 func search(query: String, limit := 6) -> Array:
 	var normalized_query := query.to_lower().strip_edges()
+	if normalized_query.is_empty() or limit <= 0 or not FileAccess.file_exists(DB_PATH):
+		return []
 	var terms := normalized_query.split(" ", false)
+	var file := FileAccess.open(DB_PATH, FileAccess.READ)
+	if file == null:
+		return []
 	var scored: Array = []
-	for item in all_items():
+	while not file.eof_reached():
+		var line := file.get_line().strip_edges()
+		if line.is_empty():
+			continue
+		var item = JSON.parse_string(line)
+		if not item is Dictionary:
+			continue
 		var text := str(item.get("text", "")).to_lower()
 		var source := str(item.get("source", "")).to_lower()
 		var kind := str(item.get("kind", "")).to_lower()
 		var score := 0
-		if not normalized_query.is_empty() and text.contains(normalized_query):
+		if text.contains(normalized_query):
 			score += 5
 		for term in terms:
 			if term.length() < 2:
 				continue
-			if text.contains(term):
-				score += 2
-			if source.contains(term):
-				score += 1
-			if kind.contains(term):
-				score += 1
+			if text.contains(term): score += 2
+			if source.contains(term): score += 1
+			if kind.contains(term): score += 1
 		if score > 0:
 			scored.append({"score": score, "item": item})
-	scored.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.get("score", 0)) > int(b.get("score", 0)))
+			if scored.size() >= SEARCH_BUFFER_LIMIT:
+				_scored_trim(scored, maxi(limit * 4, 32))
+	file.close()
+	_scored_trim(scored, limit)
 	var out: Array = []
-	var count := mini(maxi(limit, 0), scored.size())
-	for i in range(count):
-		out.append((scored[i] as Dictionary).get("item", {}))
+	for row in scored:
+		if row is Dictionary:
+			out.append(row.get("item", {}))
 	return out
 
 func all_items() -> Array:
@@ -259,6 +333,12 @@ func _knowledge_item(source: String, text: String, kind: String, metadata: Dicti
 
 func _empty_routes() -> Dictionary:
 	return {"algorithm": 0, "template": 0, "skill": 0, "fact": 0, "example": 0, "instruction": 0, "knowledge": 0}
+
+func _merge_routes(target: Dictionary, value: Variant) -> void:
+	if not value is Dictionary:
+		return
+	for key in value.keys():
+		target[key] = int(target.get(key, 0)) + int(value.get(key, 0))
 
 func _dominant_kind(routes: Dictionary) -> String:
 	var best := "knowledge"
@@ -348,6 +428,34 @@ func _append(path: String, value: Dictionary) -> bool:
 	file.close()
 	return true
 
+func _filter_source_jsonl(path: String, source: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {"ok": true, "removed": 0}
+	_ensure_dir()
+	var input := FileAccess.open(path, FileAccess.READ)
+	if input == null:
+		return {"ok": false, "error": "Не удалось открыть индекс для замены источника", "path": path}
+	var temp := path + ".filter.tmp"
+	var output := FileAccess.open(temp, FileAccess.WRITE)
+	if output == null:
+		input.close()
+		return {"ok": false, "error": "Не удалось создать временный индекс", "path": temp}
+	var removed := 0
+	while not input.eof_reached():
+		var line := input.get_line()
+		if line.strip_edges().is_empty():
+			continue
+		var parsed = JSON.parse_string(line)
+		if parsed is Dictionary and str(parsed.get("source", "")) == source:
+			removed += 1
+			continue
+		output.store_line(line)
+	input.close()
+	output.close()
+	if not _replace_file(temp, path):
+		return {"ok": false, "error": "Не удалось завершить потоковую замену индекса", "path": path}
+	return {"ok": true, "removed": removed}
+
 func _read_jsonl(path: String) -> Array:
 	if not FileAccess.file_exists(path):
 		return []
@@ -374,15 +482,30 @@ func _write_jsonl(path: String, rows: Array) -> bool:
 	for row in rows:
 		file.store_line(JSON.stringify(row))
 	file.close()
-	var absolute := ProjectSettings.globalize_path(path)
+	return _replace_file(temp, path)
+
+func _replace_file(temp: String, target: String) -> bool:
+	var absolute := ProjectSettings.globalize_path(target)
 	var temp_absolute := ProjectSettings.globalize_path(temp)
-	if FileAccess.file_exists(path):
+	if FileAccess.file_exists(target):
 		var remove_error := DirAccess.remove_absolute(absolute)
 		if remove_error != OK:
 			DirAccess.remove_absolute(temp_absolute)
 			return false
-	var rename_error := DirAccess.rename_absolute(temp_absolute, absolute)
-	return rename_error == OK
+	return DirAccess.rename_absolute(temp_absolute, absolute) == OK
+
+func _scored_trim(scored: Array, limit: int) -> void:
+	scored.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.get("score", 0)) > int(b.get("score", 0)))
+	if scored.size() > limit:
+		scored.resize(limit)
+
+func _file_size(path: String) -> int:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return 0
+	var size := file.get_length()
+	file.close()
+	return size
 
 func _ensure_dir() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://knowledge"))
