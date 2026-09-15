@@ -2,15 +2,24 @@ class_name AuroraCoreRuntime
 extends Node
 
 const DEFAULT_MODEL_PATH := "user://models/aurorafox-main.gguf"
+const OLLAMA_TIMEOUT_SECONDS := 12.0
+const OLLAMA_MIN_RETRY_SECONDS := 30.0
+const OLLAMA_MAX_RETRY_SECONDS := 300.0
 
 var model_path := DEFAULT_MODEL_PATH
 var android_runtime := AndroidLocalRuntime.new()
 var desktop_runtime := DesktopLocalRuntime.new()
-# Fresh AuroraFox installations never contact Ollama unless the user explicitly
-# enables the compatibility adapter in Local AI settings.
+# Ollama is never a required provider. The built-in Core remains primary even
+# when the compatibility switch is enabled.
 var allow_ollama_fallback := false
 var ollama_base_url := "http://127.0.0.1:11434"
 var ollama_model := "qwen3:8b"
+
+var _ollama_failures := 0
+var _ollama_retry_after_unix := 0.0
+var _last_runtime := ""
+var _last_local_error := ""
+var _last_ollama_error := ""
 
 func _ready() -> void:
 	if android_runtime.get_parent() == null: add_child(android_runtime)
@@ -23,14 +32,45 @@ func configure_legacy_ollama(url: String, model_name: String) -> void:
 	ollama_base_url = url.trim_suffix("/")
 	if not model_name.strip_edges().is_empty(): ollama_model = model_name.strip_edges()
 
+func set_ollama_fallback_enabled(enabled: bool) -> void:
+	allow_ollama_fallback = enabled
+	if not enabled:
+		_reset_ollama_circuit()
+
 func chat(messages: Array, temperature := 0.2) -> Dictionary:
+	# Local inference always gets the first chance. Enabling Ollama must never
+	# turn AuroraFox into an Ollama-dependent application.
 	var local := await _chat_local(messages, temperature)
-	if bool(local.get("ok", false)): return local
-	if allow_ollama_fallback and OS.get_name() != "Android":
+	if bool(local.get("ok", false)):
+		_last_runtime = str(local.get("runtime", "aurora_core"))
+		_last_local_error = ""
+		return local
+
+	_last_local_error = str(local.get("error", "local runtime unavailable"))
+	if allow_ollama_fallback and OS.get_name() != "Android" and not _ollama_circuit_open():
 		var legacy := await _chat_ollama(messages, temperature)
 		if bool(legacy.get("ok", false)):
+			_reset_ollama_circuit()
+			_last_runtime = "ollama_legacy"
 			legacy["fallback_from"] = local.get("runtime", "aurora_core")
+			legacy["local_error_hidden"] = _last_local_error
 			return legacy
+		_record_ollama_failure(str(legacy.get("error", "compatibility adapter unavailable")))
+		# Do not replace the useful local diagnostic with an Ollama/network error.
+		local["compatibility_adapter"] = {
+			"enabled": true,
+			"available": false,
+			"ignored": true,
+			"retry_after_unix": _ollama_retry_after_unix
+		}
+	elif allow_ollama_fallback and _ollama_circuit_open():
+		local["compatibility_adapter"] = {
+			"enabled": true,
+			"available": false,
+			"ignored": true,
+			"circuit_open": true,
+			"retry_after_unix": _ollama_retry_after_unix
+		}
 	return local
 
 func _chat_local(messages: Array, temperature: float) -> Dictionary:
@@ -59,21 +99,36 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 
 func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
 	var request_node := HTTPRequest.new()
-	request_node.timeout = 180.0
+	request_node.timeout = OLLAMA_TIMEOUT_SECONDS
 	add_child(request_node)
 	var payload := {"model": ollama_model, "messages": messages, "stream": false, "options": {"temperature": temperature}}
 	var err := request_node.request(ollama_base_url + "/api/chat", PackedStringArray(["Content-Type: application/json"]), HTTPClient.METHOD_POST, JSON.stringify(payload))
 	if err != OK:
 		request_node.queue_free()
-		return {"ok": false, "runtime": "ollama_legacy", "error": "Необязательный Ollama fallback недоступен"}
+		return {"ok": false, "runtime": "ollama_legacy", "error": "compatibility adapter request unavailable"}
 	var result: Array = await request_node.request_completed
 	request_node.queue_free()
 	if int(result[1]) < 200 or int(result[1]) >= 300:
-		return {"ok": false, "runtime": "ollama_legacy", "error": "Ollama fallback HTTP %d" % int(result[1])}
+		return {"ok": false, "runtime": "ollama_legacy", "error": "compatibility adapter HTTP %d" % int(result[1])}
 	var data = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
 	if not data is Dictionary:
-		return {"ok": false, "runtime": "ollama_legacy", "error": "Некорректный ответ Ollama fallback"}
+		return {"ok": false, "runtime": "ollama_legacy", "error": "invalid compatibility adapter response"}
 	return {"ok": true, "content": str((data.get("message", {}) as Dictionary).get("content", "")), "raw": data, "runtime": "ollama_legacy", "model": ollama_model}
+
+func _record_ollama_failure(message: String) -> void:
+	_ollama_failures += 1
+	_last_ollama_error = message
+	var exponent := float(mini(maxi(_ollama_failures - 1, 0), 4))
+	var delay := minf(OLLAMA_MAX_RETRY_SECONDS, OLLAMA_MIN_RETRY_SECONDS * pow(2.0, exponent))
+	_ollama_retry_after_unix = Time.get_unix_time_from_system() + delay
+
+func _reset_ollama_circuit() -> void:
+	_ollama_failures = 0
+	_ollama_retry_after_unix = 0.0
+	_last_ollama_error = ""
+
+func _ollama_circuit_open() -> bool:
+	return _ollama_retry_after_unix > Time.get_unix_time_from_system()
 
 func core_engine_installer() -> String:
 	return desktop_runtime.installer_path() if OS.get_name() == "Windows" else ""
@@ -85,7 +140,13 @@ func runtime_info() -> Dictionary:
 		"model_path": model_path,
 		"model_installed": FileAccess.file_exists(model_path),
 		"ollama_required": false,
-		"ollama_fallback": allow_ollama_fallback
+		"ollama_fallback": allow_ollama_fallback,
+		"ollama_circuit_open": _ollama_circuit_open(),
+		"ollama_retry_after_unix": _ollama_retry_after_unix,
+		"ollama_failures": _ollama_failures,
+		"last_runtime": _last_runtime,
+		"last_local_error": _last_local_error,
+		"last_ollama_error": _last_ollama_error
 	}
 	if OS.get_name() == "Windows": info["desktop"] = desktop_runtime.runtime_info()
 	elif OS.get_name() == "Android": info["android"] = android_runtime.capabilities()
