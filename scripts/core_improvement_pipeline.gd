@@ -447,7 +447,12 @@ func _compact(value: Variant) -> Variant:
 	return value
 
 func _sha256_text(text: String) -> String:
-	return text.to_utf8_buffer().sha256_buffer().hex_encode().to_lower()
+	var ctx := HashingContext.new()
+	if ctx.start(HashingContext.HASH_SHA256) != OK:
+		return ""
+	if ctx.update(text.to_utf8_buffer()) != OK:
+		return ""
+	return ctx.finish().hex_encode().to_lower()
 
 func _sha256_file(path: String) -> String:
 	var file := FileAccess.open(path, FileAccess.READ)
