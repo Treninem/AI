@@ -139,7 +139,10 @@ func _build_ui() -> void:
 	add_child(folder_picker)
 
 func _on_files_selected(paths: PackedStringArray) -> void:
-	await _import_paths(Array(paths))
+	var selected: Array = []
+	for path in paths:
+		selected.append(path)
+	await _import_paths(selected)
 
 func _on_folder_selected(path: String) -> void:
 	if import_busy: return
@@ -159,8 +162,9 @@ func _collect_supported(path: String, out: Array, limit: int) -> void:
 		var name := dir.get_next()
 		if name.is_empty(): break
 		if name in [".", ".."] or name.begins_with("."): continue
+		var is_directory := dir.current_is_dir()
 		var full := path.path_join(name)
-		if dir.current_is_dir():
+		if is_directory:
 			_collect_supported(full, out, limit)
 		elif _is_supported(full):
 			out.append(full)
@@ -178,7 +182,7 @@ func _import_paths(paths: Array) -> void:
 		return
 	import_busy = true
 	var ok_count := 0
-	var failures: Array[String] = []
+	var failures: PackedStringArray = PackedStringArray()
 	for i in range(paths.size()):
 		var path := str(paths[i])
 		progress_label.text = "Импорт %d/%d • %s" % [i + 1, paths.size(), path.get_file()]
@@ -189,7 +193,10 @@ func _import_paths(paths: Array) -> void:
 			failures.append("%s: %s" % [path.get_file(), str(result.get("error", "ошибка"))])
 		await get_tree().process_frame
 	import_busy = false
-	progress_label.text = "Импортировано: %d из %d%s" % [ok_count, paths.size(), " • Ошибки: " + " | ".join(failures) if not failures.is_empty() else ""]
+	var failure_text := ""
+	if not failures.is_empty():
+		failure_text = " • Ошибки: " + " | ".join(failures)
+	progress_label.text = "Импортировано: %d из %d%s" % [ok_count, paths.size(), failure_text]
 	_refresh()
 
 func _import_one(path: String) -> Dictionary:
@@ -255,11 +262,11 @@ func _add_source_card(source: Dictionary) -> void:
 		var reindex := Button.new()
 		reindex.text = "Переиндексировать"
 		reindex.disabled = not FileAccess.file_exists(source_path)
-		reindex.pressed.connect(func(): await _reindex(source_path))
+		reindex.pressed.connect(_reindex.bind(source_path))
 		row.add_child(reindex)
 	var remove := Button.new()
 	remove.text = "Удалить"
-	remove.pressed.connect(func(): _delete_source(source_path))
+	remove.pressed.connect(_delete_source.bind(source_path))
 	row.add_child(remove)
 
 func _delete_source(source: String) -> void:
@@ -287,7 +294,7 @@ func _compact() -> void:
 
 func _format_kinds(value: Variant) -> String:
 	if not value is Dictionary or value.is_empty(): return "knowledge"
-	var parts: Array[String] = []
+	var parts: PackedStringArray = PackedStringArray()
 	for key in value.keys(): parts.append("%s:%d" % [str(key), int(value.get(key, 0))])
 	parts.sort()
 	return ", ".join(parts)
