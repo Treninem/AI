@@ -60,7 +60,7 @@ def seed_path() -> Path:
 
 
 def server_db_path() -> Path:
-    return generated_root() / "aurorafox_v7_server.jsonl"
+    return generated_root() / "aurorafox_v7_server.kbdata"
 
 
 def manifest_path() -> Path:
