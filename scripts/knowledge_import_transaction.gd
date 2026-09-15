@@ -9,6 +9,7 @@ const STRUCTURED_BACKUP := "user://knowledge/.structured.jsonl.txn"
 const REGISTRY_BACKUP := "user://knowledge/.sources.json.txn"
 
 var registry := KnowledgeSourceRegistry.new()
+var large_json_importer := LargeJsonKnowledgeImporter.new()
 
 func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {}) -> Dictionary:
 	var prepared := _prepare_file(path, metadata)
@@ -18,7 +19,11 @@ func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {})
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
-	var result := store.import_file(path, meta)
+	var result: Dictionary
+	if large_json_importer.should_stream(path):
+		result = large_json_importer.import_file(store, path, meta)
+	else:
+		result = store.import_file(path, meta)
 	return _finish_import(path, result, prepared.get("inspection", {}), meta, snapshot)
 
 func import_extracted_file(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
@@ -55,6 +60,9 @@ func _prepare_file(path: String, metadata: Dictionary) -> Dictionary:
 	meta["source_revision"] = inspection.get("revision", 1)
 	meta["source_size_bytes"] = inspection.get("size_bytes", 0)
 	meta["source_registry_version"] = KnowledgeSourceRegistry.REGISTRY_VERSION
+	if large_json_importer.should_stream(path):
+		meta["streaming_json"] = true
+		meta["parser_version"] = "aurora_json_stream_v1"
 	return {"ok": true, "inspection": inspection, "metadata": meta}
 
 func _finish_import(path: String, result: Dictionary, inspection: Dictionary, metadata: Dictionary, snapshot: Dictionary) -> Dictionary:
