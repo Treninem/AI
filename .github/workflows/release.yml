@@ -165,6 +165,8 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android 35 / NDK r28b / CMake 3.22.1
         shell: bash
@@ -487,4 +489,3 @@ jobs:
         run: |
           set -euo pipefail
           gh release edit "$GITHUB_REF_NAME" --draft=false
-
