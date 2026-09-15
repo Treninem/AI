@@ -98,16 +98,30 @@ def main() -> None:
         "production emulator smoke contains a multiline shell conditional",
     )
 
+    # AIClient is now a platform-neutral facade. Platform routing belongs to
+    # AuroraCoreRuntime, so the Android contract must verify the actual owner of
+    # the behavior instead of forcing platform code back into AIClient.
     ai_client = read("scripts/ai_client.gd")
-    android_branch = ai_client.split('func chat(messages: Array, temperature: float = 0.2) -> Dictionary:', 1)[1].split('func _chat_ollama', 1)[0]
-    require('if OS.get_name() == "Android":' in android_branch, "AIClient.chat lacks Android branch")
-    require("android_runtime.is_available()" in android_branch, "AIClient.chat does not validate Android runtime")
-    require("return await _chat_ollama" in android_branch, "desktop Ollama route is missing")
     require(
-        android_branch.index('return await _chat_ollama') > android_branch.index('if OS.get_name() == "Android":'),
-        "Android routing structure is malformed",
+        "return await core_runtime.chat(_with_knowledge(messages), temperature)" in ai_client,
+        "AIClient.chat does not delegate inference to AuroraFox Core",
     )
-    require("127.0.0.1:11434" not in android_branch, "Android chat branch directly references desktop Ollama")
+    require(
+        'info["operational_without_ollama"] = true' in ai_client,
+        "AIClient no longer guarantees operation independent of Ollama",
+    )
+
+    core_runtime = read("scripts/aurora_core_runtime.gd")
+    core_chat = core_runtime.split("func _chat_local(messages: Array, temperature: float) -> Dictionary:", 1)[1].split(
+        "func _chat_ollama", 1
+    )[0]
+    require('if OS.get_name() == "Android":' in core_chat, "AuroraCoreRuntime lacks Android branch")
+    require("android_runtime.is_available()" in core_chat, "AuroraCoreRuntime does not validate Android runtime")
+    require('caps.get("llama_cpp", false)' in core_chat, "AuroraCoreRuntime does not require Android llama.cpp capability")
+    require("android_runtime.chat(" in core_chat, "AuroraCoreRuntime does not invoke embedded Android inference")
+    require("127.0.0.1:11434" not in core_chat, "Android local chat branch directly references Ollama")
+    require("var allow_ollama_fallback := false" in core_runtime, "Ollama compatibility must be opt-in")
+    require("OS.get_name() != \"Android\"" in core_runtime, "Ollama compatibility route is not excluded on Android")
 
     first_run = read("scripts/android_first_run.gd")
     require("AuroraFox готов." not in first_run, "Android model installer still claims full AuroraFox readiness")
@@ -127,4 +141,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
