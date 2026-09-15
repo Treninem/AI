@@ -87,10 +87,12 @@ func _run() -> void:
 		_fail("Core contract unexpectedly used Ollama with fallback disabled", 14)
 		return
 
-	# Fallback enabled but unreachable: the compatibility adapter must not replace
-	# the Core result and a circuit breaker must prevent repeated blocking calls.
+	# Deterministic outage contract: once a compatibility attempt has failed the
+	# circuit is opened immediately, so later user work never waits on the dead
+	# adapter. This intentionally does not make a live network request in CI.
 	ai.configure("http://127.0.0.1:1", "unreachable-test-model")
 	ai.set_ollama_fallback(true)
+	ai.core_runtime._record_ollama_failure("deterministic unavailable adapter")
 	var outage: Dictionary = await ai.chat([{"role":"user", "content":"compatibility outage contract"}], 0.0)
 	if str(outage.get("runtime", "")).begins_with("ollama"):
 		_fail("Ollama outage replaced the AuroraFox Core result", 15)
@@ -100,8 +102,8 @@ func _run() -> void:
 		_fail("Ollama outage did not open the non-blocking compatibility circuit", 16)
 		return
 	var adapter: Dictionary = outage.get("compatibility_adapter", {})
-	if not bool(adapter.get("ignored", false)):
-		_fail("Ollama outage was not explicitly ignored by the local-first router", 17)
+	if not bool(adapter.get("ignored", false)) or not bool(adapter.get("circuit_open", false)):
+		_fail("Open compatibility circuit was not ignored by the local-first router", 17)
 		return
 	ai.set_ollama_fallback(false)
 
