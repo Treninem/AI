@@ -10,6 +10,7 @@ var android_model_path := "user://models/aurorafox-main.gguf"
 var core_runtime := AuroraCoreRuntime.new()
 var knowledge := KnowledgeStore.new()
 var knowledge_manager := KnowledgeManager.new()
+var knowledge_transaction := KnowledgeImportTransaction.new()
 
 func _ready() -> void:
 	if core_runtime.get_parent() == null: add_child(core_runtime)
@@ -46,13 +47,13 @@ func import_knowledge_text(text: String, source := "manual", metadata: Dictionar
 	return knowledge.import_text(text, source, metadata)
 
 func import_knowledge_file(path: String, metadata: Dictionary = {}) -> Dictionary:
-	return knowledge.import_file(path, metadata)
+	return knowledge_transaction.import_file(knowledge, path, metadata)
 
 func learn_from_file(path: String, metadata: Dictionary = {}) -> Dictionary:
-	return knowledge.import_file(path, metadata)
+	return knowledge_transaction.import_file(knowledge, path, metadata)
 
 func learn_from_extracted_file(path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
-	return knowledge.import_extracted_file(path, text, metadata)
+	return knowledge_transaction.import_extracted_file(knowledge, path, text, metadata)
 
 func supported_learning_files() -> PackedStringArray:
 	return knowledge.supported_import_extensions()
@@ -76,8 +77,8 @@ func reindex_knowledge_source(source: String, extracted_text := "", metadata: Di
 	if not FileAccess.file_exists(source):
 		return {"ok": false, "source": source, "error": "Исходный файл больше недоступен"}
 	if not extracted_text.strip_edges().is_empty():
-		return knowledge.import_extracted_file(source, extracted_text, metadata)
-	return knowledge.import_file(source, metadata)
+		return knowledge_transaction.import_extracted_file(knowledge, source, extracted_text, metadata)
+	return knowledge_transaction.import_file(knowledge, source, metadata)
 
 func _with_knowledge(messages: Array) -> Array:
 	var copied := messages.duplicate(true)
