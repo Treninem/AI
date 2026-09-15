@@ -70,7 +70,7 @@ func _build_ui() -> void:
 	title.add_theme_font_size_override("font_size", 26)
 	root.add_child(title)
 	var intro := Label.new()
-	intro.text = "Загружайте JSON с любой структурой и любым названием, TXT/Markdown/CSV/YAML/XML, Word, PDF, Excel, PowerPoint, ODT/ODS и исходный код. AuroraFox извлекает содержимое, определяет его смысл и сохраняет как знания, факты, шаблоны, алгоритмы, примеры или навыки."
+	intro.text = "Загружайте JSON с любой структурой и любым названием, TXT/Markdown/CSV/YAML/XML, Word, PDF, Excel, PowerPoint, ODT/ODS, RTF/EPUB и исходный код. AuroraFox извлекает содержимое, определяет его смысл и сохраняет как знания, факты, шаблоны, алгоритмы, примеры или навыки."
 	intro.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	root.add_child(intro)
 	var safety := Label.new()
@@ -205,11 +205,12 @@ func _import_paths(paths: Array) -> void:
 	progress_label.text = "Обработано: %d из %d%s%s" % [ok_count, paths.size(), duplicate_text, failure_text]
 	_refresh()
 
-func _import_one(path: String) -> Dictionary:
+func _import_one(path: String, force_reindex := false) -> Dictionary:
 	var ai := _main_ai()
 	if ai == null: return {"ok": false, "error": "AIClient недоступен"}
 	if not _is_supported(path): return {"ok": false, "error": "Формат не поддерживается для базы знаний"}
-	var direct := ai.learn_from_file(path, {"scope": "core_knowledge", "imported_by": "knowledge_base"})
+	var base_meta := {"scope": "core_knowledge", "imported_by": "knowledge_base", "force_reindex": force_reindex}
+	var direct := ai.learn_from_file(path, base_meta)
 	if bool(direct.get("ok", false)): return direct
 	if not bool(direct.get("requires_extractor", false)): return direct
 	var files := _attachments()
@@ -226,15 +227,16 @@ func _import_one(path: String) -> Dictionary:
 		"document_metadata": analyzed.get("metadata", {}),
 		"truncated": analyzed.get("truncated", false),
 		"visual_used": false,
-		"external_ai_required": false
+		"external_ai_required": false,
+		"force_reindex": force_reindex
 	})
 
 func _refresh() -> void:
 	var ai := _main_ai()
 	if ai == null or stats_label == null: return
 	var stats: Dictionary = ai.knowledge_stats()
-	stats_label.text = "Источников: %d • фрагментов: %d • структурированных записей: %d • хранилище: %s • категории: %s" % [
-		int(stats.get("sources", 0)), int(stats.get("chunks", 0)), int(stats.get("structured_records", 0)), _human_size(int(stats.get("bytes", 0))), _format_kinds(stats.get("kinds", {}))
+	stats_label.text = "Источников: %d • копий/alias: %d • ревизий: %d • фрагментов: %d • структурированных записей: %d • хранилище: %s • категории: %s" % [
+		int(stats.get("sources", 0)), int(stats.get("source_aliases", 0)), int(stats.get("source_revisions_total", 0)), int(stats.get("chunks", 0)), int(stats.get("structured_records", 0)), _human_size(int(stats.get("bytes", 0))), _format_kinds(stats.get("kinds", {}))
 	]
 	for child in sources_box.get_children(): child.queue_free()
 	var sources: Array = ai.knowledge_sources()
@@ -266,7 +268,7 @@ func _add_source_card(source: Dictionary) -> void:
 	if not fingerprint.is_empty():
 		registry_details = " • rev:%d • SHA:%s" % [int(source.get("revision", 1)), fingerprint.substr(0, 10)]
 	var aliases = source.get("aliases", [])
-	if aliases is Array and aliases.size() > 1:
+	if aliases is Array and not aliases.is_empty():
 		registry_details += " • копий:%d" % aliases.size()
 	var details := Label.new()
 	details.text = "%s\n%d фрагм. • %s%s" % [source_path, int(source.get("chunks", 0)), _format_kinds(source.get("kinds", {})), registry_details]
@@ -294,8 +296,8 @@ func _delete_source(source: String) -> void:
 func _reindex(source: String) -> void:
 	if import_busy: return
 	import_busy = true
-	progress_label.text = "Переиндексация • %s" % source.get_file()
-	var result := await _import_one(source)
+	progress_label.text = "Принудительная переиндексация • %s" % source.get_file()
+	var result := await _import_one(source, true)
 	import_busy = false
 	progress_label.text = "Переиндексация завершена." if bool(result.get("ok", false)) else "Ошибка переиндексации: %s" % str(result.get("error", ""))
 	_refresh()
