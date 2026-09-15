@@ -155,3 +155,45 @@ Do not rewrite these in-progress runs as verified successes until GitHub Actions
 
 ### Remaining external release boundary
 Production Android release still intentionally requires the owner-controlled persistent Android keystore. Signed updater releases still require the owner-controlled RSA private update key corresponding to the public trust key. These private credentials must remain outside source control; no code change should bypass that boundary.
+
+## 2026-09-15 — V1.2.0.0 delivery verification and final CI repairs
+
+### Core bootstrap rate-limit repair
+A real Windows Core Bootstrap E2E exposed a GitHub API `403` caused by anonymous release-metadata rate limiting while resolving the verified llama.cpp binary. `core_runtime/install_core.ps1` now uses `AURORAFOX_GITHUB_TOKEN` when a trusted environment provides it, retains anonymous installation for ordinary user machines, retries transient metadata requests and keeps SHA-256 verification plus executable smoke testing unchanged. The workflow passes the standard read-only `${{ github.token }}` rather than adding a release secret.
+
+Verification: run `35004268677` on commit `ae05e50cb78022e918f248cfa5b5f08d79d070ea` completed successfully. It installed a verified llama.cpp Core Engine, confirmed Ollama is not required, imported the Godot project, passed Core/Knowledge, local-first memory and autonomy/self-evolution safety contracts.
+
+### Local semantic-memory contract repair
+The implementation had already migrated from the old lexical/legacy semantic marker to `aurorafox_local_vector`, but one old smoke test still expected `retrieval=semantic` and provider `local_lexical`. The test was corrected to validate the actual current architecture rather than an obsolete provider name: local-vector ranking, `aurorafox-local-vector-v1`, 256 dimensions, no network/external runtime/Ollama requirement, legacy compatibility disabled by default and an explicit lexical fallback when vectors are absent.
+
+Verification: `AuroraFox Semantic Memory CI` and `AuroraFox Core / Voice CI` are successful on commit `ae05e50cb78022e918f248cfa5b5f08d79d070ea`; Agent Sync also passes its coordinator/self-improvement/runtime-extension/update smoke jobs on the same head.
+
+### Android PDF and installable APK verified
+Android Plugin CI run `34994300368` completed successfully after the SDK setup repair, proving the PDFBox-backed AuroraFoxRuntime AAR builds. Full Android APK Artifact run `34994347552` on product commit `b174dda5bab429ccd1959bb6e09d7a7a3adec6f6` completed successfully, including Godot export, test signing, APK validation, install and launch on an Android 35 emulator.
+
+Delivered installable Android test build metadata:
+- package: `com.aurorafox.ai`;
+- version: `1.2.0.0` / versionCode `100004`;
+- min SDK: `26`;
+- target SDK: `35`;
+- APK SHA-256: `02d78db3f4132fd9acf84bc0b0a6e893368557ea0d3b64b2c23639b76cf3085b`.
+
+Later commits through `ae05e50cb78022e918f248cfa5b5f08d79d070ea` changed Windows Core bootstrap/CI/tests only and did not change Android product code. A repeated exact-head Android artifact run is therefore a redundant binary regression check, not a missing Android feature.
+
+### Windows V1.2.0.0 delivery artifacts
+Windows Package CI run `34995614726` on commit `1b2cf17b1e43f06d619d9537338cb1eef08a6b23` completed successfully after the Core installer authentication repair. Product code after this commit was unchanged by the subsequent workflow/test-only commits.
+
+The verified Windows artifact contains:
+- `AuroraFox-V1.2.0.0-Setup-Windows.exe` — SHA-256 `c5b7b12d047efd52363a467c0f59f8ecb7fc59989013842ff426f52e01afd74c`;
+- `AuroraFox-V1.2.0.0-Windows-Portable.zip` — SHA-256 `9f3c47b9d4086c846e70a074c02bede37309a320e3af1fcd40802fc7268ac5cc`.
+
+The Windows CI did a real silent install, verified packaged runtime/API/Core/update assets, launched the installed AuroraFox executable and then uninstalled it successfully.
+
+### What is product-ready vs owner-signing-ready
+The installable Windows program and Android test-signed program are built and verified. The application-side update code, legacy V1.0 direct-update compatibility, rollback and manifest contracts are implemented and tested.
+
+A **production automatic-update channel is intentionally not published yet** because two owner-controlled signing identities do not exist in the repository/environment:
+1. `update/release_public.pub` is still absent, so the permanent updater RSA trust root has not been initialized and the matching `AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64` cannot yet be configured;
+2. the permanent Android release keystore (`AURORA_ANDROID_KEYSTORE_BASE64`, user and password secrets) has not been provisioned, so the delivered Android APK is CI test-signed rather than the permanent production identity.
+
+GitHub Releases are still empty. This is an external signing/provisioning boundary, not an unfinished application feature. Do not publish a temporary-key “production” release: doing so would break Android update continuity and/or the updater trust chain. The next owner action is to initialize and preserve those signing identities once, then run the existing `AuroraFox Release` workflow to produce the first signed bridge release and update manifest.
