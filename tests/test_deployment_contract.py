@@ -63,7 +63,17 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "git merge-base --is-ancestor" in updater
     assert "rollback" in updater.lower()
     assert "systemctl restart aurorafox-api.service" in updater
-    assert "tests/test_backup_service.py" in updater
+    for gate in (
+        "tests/test_api_gateway.py",
+        "tests/test_api_privacy_contract.py",
+        "tests/test_api_runtime_resilience.py",
+        "tests/test_core_candidate_queue.py",
+        "tests/test_backup_service.py",
+        "tests/test_deployment_contract.py",
+        "tests/test_network_json_contract.py",
+    ):
+        assert gate in updater
+    assert 'PYTHONPATH="${repository}"' in updater
     assert "PasswordAuthentication no" in install
     assert "systemctl enable --now ssh.service" in install
     assert 'AURORAFOX_SSH_PORT:-22022' in install
@@ -77,3 +87,16 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "ForceCommand internal-sftp" in install
     assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
     assert "chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup" in install
+
+
+def test_api_provider_independence_is_packaged_and_deployed():
+    build = read("build/build_windows.ps1")
+    updater = read("deploy/reg_ru/update.sh")
+    api_ci = read(".github/workflows/api-ci.yml")
+    voice_ci = read(".github/workflows/voice-ci.yml")
+    assert "Get-ChildItem -LiteralPath $apiSource -File" in build
+    assert "api/local_core_client.py" in "api/local_core_client.py"
+    assert "tests/test_api_runtime_resilience.py" in updater
+    assert "tests/test_api_runtime_resilience.py" in api_ci
+    assert "tests/test_api_runtime_resilience.py" in voice_ci
+    assert 'PYTHONPATH="$PWD"' in voice_ci
