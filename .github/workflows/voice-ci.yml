@@ -97,6 +97,8 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/runtime_extension_smoke.gd
       - name: Run updater GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/update_smoke.gd
+      - name: Run autonomy, learning and core rewrite safety smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/autonomy_learning_smoke.gd
 
   windows-integration:
     runs-on: windows-latest
@@ -141,7 +143,7 @@ jobs:
           & $uv --version
           if ($LASTEXITCODE -ne 0) { throw 'bundled uv bootstrap is not executable' }
       - name: Verify release version synchronization
-        shell: powershell
+        shell: pwsh
         run: .\tests\version_sync_test.ps1
       - name: Run transactional updater integration test
         shell: powershell
