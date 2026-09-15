@@ -125,3 +125,33 @@ Do not allow autonomous code to remove or weaken:
 3. Initialize the update RSA trust root on the owner machine, commit only the public key, configure the matching GitHub secret and then publish the first signed bridge release through the existing release workflow.
 4. Perform real Windows V1.0/V1.1 -> bridge-release update testing and Android old-signed-APK -> new-signed-APK testing on actual devices once historical install artifacts/signing identity are available.
 5. Continue real-device local inference, memory, Work, voice and update/rollback regression coverage.
+
+## 2026-09-15 — Resilient API packaging and Android offline PDF knowledge import
+
+### Provider-independent API/VPS runtime
+The external API was aligned with the local-first runtime policy. Agent bridge results now preserve their real runtime identity instead of being relabelled blindly as `aurorafox-agent`, and absence of AgentCore/Ollama is not treated as fatal when AuroraFox local Core/Knowledge fallback can answer. Initial REG.RU installation now runs the same API/privacy/no-Ollama/Core-candidate/backup/deployment/network regression gates before production activation that are required for later VPS updates.
+
+Reason: Ollama or an optional compatibility layer must never be a single point of failure for AuroraFox.
+
+### Windows package contract
+`windows-package-ci.yml` now runs for `api/**` and `core_runtime/**` changes and verifies the Core/API/update assets both in the staged package and after a real silent install. Run `34993367532` on commit `951ee5dc1fa9e48b5ae7cdb08ee0f8b449d7838f` completed successfully, including installer smoke and uninstall.
+
+`build/build_windows.ps1` now also requires `api/local_core_client.py`, `api/runtime_bridge.py` and the optional `api/ollama_client.py` compatibility adapter in every Windows package. This puts the invariant in the build itself, so manual builds and production release builds cannot silently omit the resilient runtime even if a workflow-specific check changes later. Commit: `e016e0bafe7a175b5fbec753a0c8de28e8d1713c`.
+
+### Android local PDF extraction for Core Knowledge
+Android File Intelligence previously parsed DOCX/XLSX/PPTX/ODT/ODS locally but PDF analysis returned metadata only. Added an offline text-layer parser using `com.tom-roush:pdfbox-android:2.0.27.0` and exported the dependency through the Godot Android export plugin so it is present in the final APK, not only while compiling the plugin AAR.
+
+The mobile PDF path is bounded: files over 128 MB are rejected for local PDF extraction, no more than 200 pages are read in one import, extracted context is capped at 160k characters, and no cloud/Ollama/external AI is involved. Image-only scanned PDFs return an empty content result plus a warning; `knowledge_base_overlay.gd` already refuses to commit empty extracted content, so a warning string cannot accidentally become learned Core Knowledge.
+
+The Android plugin CI initially failed before Gradle because `android-actions/setup-android@v3` attempted to install the obsolete SDK `tools` package. `android-plugin-ci.yml` now requests `platform-tools` explicitly and installs the pinned Android 35/NDK/CMake toolchain itself, matching the full APK workflow. `tests/test_android_contract.py` locks the PDFBox dependency, final APK export dependency, offline metadata, `PDDocument`/`PDFTextStripper` extraction path and guards against regression to the old metadata-only `PdfRenderer` path.
+
+Verification state at the time of this log entry:
+- prior full Android artifact run `34981910973` on commit `7167213a3a5f5db125c2ff14ff8ab754180f2bab` was green and produced an installable emulator-tested Android test artifact;
+- Android Plugin CI run `34994300368` for the SDK-setup/PDFBox path is currently in progress at native AAR compilation; all setup/toolchain steps have passed;
+- Android APK Artifact run `34994347552` on `b174dda5bab429ccd1959bb6e09d7a7a3adec6f6` is currently in progress at the full APK build step; Android contract/toolchain/Godot setup steps have passed;
+- Windows/API/Core workflows for commit `e016e0bafe7a175b5fbec753a0c8de28e8d1713c` were triggered by the stronger build-package contract and are currently in progress.
+
+Do not rewrite these in-progress runs as verified successes until GitHub Actions actually reports `conclusion=success`.
+
+### Remaining external release boundary
+Production Android release still intentionally requires the owner-controlled persistent Android keystore. Signed updater releases still require the owner-controlled RSA private update key corresponding to the public trust key. These private credentials must remain outside source control; no code change should bypass that boundary.
