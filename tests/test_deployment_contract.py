@@ -17,6 +17,9 @@ def test_server_metadata_is_versioned_and_backup_is_not_exposed_over_http():
     assert '"numeric": "1.2.0.0"' in version
     assert '"build_sha": os.getenv("AURORAFOX_BUILD_SHA", "local")' in server
     assert '"deployment": os.getenv("AURORAFOX_DEPLOYMENT", "local")' in server
+    assert '"ollama_required": False' in server
+    assert '"chat_available": True' in server
+    assert '"local_core": local_core' in server
     assert '/v1/backups/latest' not in server
 
 
@@ -63,7 +66,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "git merge-base --is-ancestor" in updater
     assert "rollback" in updater.lower()
     assert "systemctl restart aurorafox-api.service" in updater
-    for gate in (
+    gates = (
         "tests/test_api_gateway.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
@@ -71,9 +74,13 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
         "tests/test_backup_service.py",
         "tests/test_deployment_contract.py",
         "tests/test_network_json_contract.py",
-    ):
+    )
+    for gate in gates:
         assert gate in updater
+        assert gate in install
     assert 'PYTHONPATH="${repository}"' in updater
+    assert "PYTHONPATH=/opt/aurorafox/repository" in install
+    assert "compileall -q /opt/aurorafox/repository/api" in install
     assert "PasswordAuthentication no" in install
     assert "systemctl enable --now ssh.service" in install
     assert 'AURORAFOX_SSH_PORT:-22022' in install
@@ -91,12 +98,22 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
 
 def test_api_provider_independence_is_packaged_and_deployed():
     build = read("build/build_windows.ps1")
+    local_core = read("api/local_core_client.py")
+    bridge = read("api/runtime_bridge.py")
+    ollama = read("api/ollama_client.py")
     updater = read("deploy/reg_ru/update.sh")
+    installer = read("deploy/reg_ru/install.sh")
     api_ci = read(".github/workflows/api-ci.yml")
     voice_ci = read(".github/workflows/voice-ci.yml")
     assert "Get-ChildItem -LiteralPath $apiSource -File" in build
-    assert "api/local_core_client.py" in "api/local_core_client.py"
+    assert "class AuroraLocalCoreClient" in local_core
+    assert "class AuroraKnowledgeFallback" in local_core
+    assert "AuroraLocalCoreClient" in bridge
+    assert "AuroraKnowledgeFallback" in bridge
+    assert "AuroraLocalCoreClient" in ollama
+    assert "AuroraKnowledgeFallback" in ollama
     assert "tests/test_api_runtime_resilience.py" in updater
+    assert "tests/test_api_runtime_resilience.py" in installer
     assert "tests/test_api_runtime_resilience.py" in api_ci
     assert "tests/test_api_runtime_resilience.py" in voice_ci
     assert 'PYTHONPATH="$PWD"' in voice_ci
