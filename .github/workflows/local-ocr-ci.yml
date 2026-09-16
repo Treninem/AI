@@ -54,6 +54,7 @@ jobs:
           AURORAFOX_OCR_LANGUAGES: rus+eng
         run: |
           python -m py_compile file_intelligence/local_ocr.py file_intelligence/file_service.py
+          PYTHONPATH=file_intelligence python -c "import local_ocr; h=local_ocr.health(); assert h['available'], h; assert set(h['languages']) >= {'rus','eng'}, h; print('AURORA_LINUX_BILINGUAL_OCR_READY', h['tessdata_dir'])"
           pytest -q tests/test_local_ocr.py
 
   windows-portable-ocr:
