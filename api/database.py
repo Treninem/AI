@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import os
 import sqlite3
@@ -194,3 +195,16 @@ def atomic_write_text(path: Path, text: str, *, mode: int | None = None) -> None
                 pass
     finally:
         temporary.unlink(missing_ok=True)
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Validate AuroraFox API SQLite persistence")
+    parser.add_argument("--path", required=True, help="Path to aurorafox.sqlite3")
+    args = parser.parse_args()
+    status = AuroraDatabase(Path(args.path)).integrity_check()
+    print(json.dumps(status, ensure_ascii=False, sort_keys=True))
+    return 0 if bool(status.get("ok", False)) and status.get("journal_mode") == "wal" else 1
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
