@@ -63,7 +63,7 @@ func _scenario_import(format: String, target_mb: int) -> Dictionary:
 	var store := KnowledgeStoreScript.new()
 	var txn := KnowledgeImportTransactionScript.new()
 	var started := Time.get_ticks_usec()
-	var imported := txn.import_file(store, path, {"scope": "core_knowledge", "imported_by": "knowledge_stress_benchmark"})
+	var imported := _dict_call(txn, "import_file", [store, path, {"scope": "core_knowledge", "imported_by": "knowledge_stress_benchmark"}])
 	var import_ms := _elapsed_ms(started)
 	if not bool(imported.get("ok", false)):
 		return {"ok": false, "error": "import failed", "import": imported, "dataset": generated, "import_duration_ms": import_ms}
@@ -73,7 +73,7 @@ func _scenario_import(format: String, target_mb: int) -> Dictionary:
 	if not bool(searches.get("correct", false)):
 		return {"ok": false, "error": "search correctness failed", "search": searches, "import": imported, "dataset": generated}
 	var manager := KnowledgeManagerScript.new()
-	var stats := manager.stats()
+	var stats := _dict_call(manager, "stats")
 	return {
 		"ok": true,
 		"dataset": generated,
@@ -100,10 +100,10 @@ func _scenario_restart_check() -> Dictionary:
 	var store := KnowledgeStoreScript.new()
 	var manager := KnowledgeManagerScript.new()
 	var registry := KnowledgeSourceRegistryScript.new()
-	var found := store.search(marker, 8)
+	var found := _array_call(store, "search", [marker, 8])
 	var elapsed := _elapsed_ms(started)
 	var matched := _contains_source(found, source)
-	var row := registry.record_for_source(source) if not source.is_empty() else {}
+	var row := _dict_call(registry, "record_for_source", [source]) if not source.is_empty() else {}
 	return {
 		"ok": matched and (source.is_empty() or not row.is_empty()),
 		"restart_load_search_ms": elapsed,
@@ -111,7 +111,7 @@ func _scenario_restart_check() -> Dictionary:
 		"source_registry_present": source.is_empty() or not row.is_empty(),
 		"fingerprint_sha256": str(row.get("fingerprint_sha256", "")),
 		"revision": int(row.get("revision", 0)),
-		"store": manager.stats(),
+		"store": _dict_call(manager, "stats"),
 		"process_restart_proof": true
 	}
 
@@ -122,7 +122,7 @@ func _scenario_dedupe_seed(target_mb: int) -> Dictionary:
 	if not bool(generated.get("ok", false)):
 		return generated
 	var txn := KnowledgeImportTransactionScript.new()
-	var result := txn.import_file(KnowledgeStoreScript.new(), path, {"imported_by": "knowledge_stress_benchmark"})
+	var result := _dict_call(txn, "import_file", [KnowledgeStoreScript.new(), path, {"imported_by": "knowledge_stress_benchmark"}])
 	return {
 		"ok": bool(result.get("ok", false)) and not bool(result.get("skipped", false)),
 		"dataset": generated,
@@ -139,23 +139,23 @@ func _scenario_dedupe_reimport() -> Dictionary:
 	var store := KnowledgeStoreScript.new()
 	var manager := KnowledgeManagerScript.new()
 	var txn := KnowledgeImportTransactionScript.new()
-	var before := manager.stats()
-	var same := txn.import_file(store, path, {"imported_by": "knowledge_stress_benchmark"})
-	var after_same := manager.stats()
+	var before := _dict_call(manager, "stats")
+	var same := _dict_call(txn, "import_file", [store, path, {"imported_by": "knowledge_stress_benchmark"}])
+	var after_same := _dict_call(manager, "stats")
 	var copy := BENCH_ROOT.path_join("копия базы с пробелами.jsonl")
 	var copy_error := DirAccess.copy_absolute(ProjectSettings.globalize_path(path), ProjectSettings.globalize_path(copy))
 	if copy_error != OK:
 		return {"ok": false, "error": "cannot make dedupe copy", "code": copy_error}
-	var renamed := txn.import_file(store, copy, {"imported_by": "knowledge_stress_benchmark"})
-	var after_copy := manager.stats()
+	var renamed := _dict_call(txn, "import_file", [store, copy, {"imported_by": "knowledge_stress_benchmark"}])
+	var after_copy := _dict_call(manager, "stats")
 	var append := FileAccess.open(path, FileAccess.READ_WRITE)
 	if append == null:
 		return {"ok": false, "error": "cannot mutate dedupe source"}
 	append.seek_end()
 	append.store_line(JSON.stringify({"kind": "fact", "content": "AURORA_DEDUPE_CHANGED_REVISION_MARKER"}))
 	append.close()
-	var changed := txn.import_file(store, path, {"imported_by": "knowledge_stress_benchmark"})
-	var changed_search := store.search("AURORA_DEDUPE_CHANGED_REVISION_MARKER", 5)
+	var changed := _dict_call(txn, "import_file", [store, path, {"imported_by": "knowledge_stress_benchmark"}])
+	var changed_search := _array_call(store, "search", ["AURORA_DEDUPE_CHANGED_REVISION_MARKER", 5])
 	var chunks_before := int(before.get("chunks", 0))
 	var chunks_same := int(after_same.get("chunks", 0))
 	var chunks_copy := int(after_copy.get("chunks", 0))
@@ -187,19 +187,20 @@ func _scenario_source_lifecycle(target_mb: int) -> Dictionary:
 		var generated := _generate_dataset(path, "txt", target_bytes, "LIFECYCLE_%s" % label)
 		if not bool(generated.get("ok", false)):
 			return generated
-		var result := txn.import_file(store, path, {"imported_by": "knowledge_stress_benchmark"})
+		var result := _dict_call(txn, "import_file", [store, path, {"imported_by": "knowledge_stress_benchmark"}])
 		if not bool(result.get("ok", false)):
 			return {"ok": false, "error": "lifecycle import failed", "label": label, "result": result}
 		paths.append(path)
 		markers.append(str(generated.get("late_marker", "")))
 	var manager := KnowledgeManagerScript.new()
 	var started := Time.get_ticks_usec()
-	var removed := manager.remove_source(paths[1])
+	var removed := _dict_call(manager, "remove_source", [paths[1]])
 	var removal_ms := _elapsed_ms(started)
-	var a_ok := _contains_source(store.search(markers[0], 5), paths[0])
-	var b_gone := store.search(markers[1], 5).is_empty()
-	var c_ok := _contains_source(store.search(markers[2], 5), paths[2])
-	var orphan_registry := not KnowledgeSourceRegistryScript.new().record_for_source(paths[1]).is_empty()
+	var a_ok := _contains_source(_array_call(store, "search", [markers[0], 5]), paths[0])
+	var b_gone := _array_call(store, "search", [markers[1], 5]).is_empty()
+	var c_ok := _contains_source(_array_call(store, "search", [markers[2], 5]), paths[2])
+	var registry := KnowledgeSourceRegistryScript.new()
+	var orphan_registry := not _dict_call(registry, "record_for_source", [paths[1]]).is_empty()
 	return {
 		"ok": bool(removed.get("ok", false)) and a_ok and b_gone and c_ok and not orphan_registry,
 		"removal_duration_ms": removal_ms,
@@ -208,7 +209,7 @@ func _scenario_source_lifecycle(target_mb: int) -> Dictionary:
 		"source_b_removed": b_gone,
 		"source_c_preserved": c_ok,
 		"orphan_registry": orphan_registry,
-		"store": manager.stats()
+		"store": _dict_call(manager, "stats")
 	}
 
 func _scenario_rollback(target_mb: int) -> Dictionary:
@@ -222,7 +223,7 @@ func _scenario_rollback(target_mb: int) -> Dictionary:
 	first.close()
 	var store := KnowledgeStoreScript.new()
 	var txn := KnowledgeImportTransactionScript.new()
-	var initial := txn.import_file(store, path, {"imported_by": "knowledge_stress_benchmark"})
+	var initial := _dict_call(txn, "import_file", [store, path, {"imported_by": "knowledge_stress_benchmark"}])
 	if not bool(initial.get("ok", false)):
 		return {"ok": false, "error": "initial rollback seed failed", "result": initial}
 	var old_fp := str(initial.get("fingerprint_sha256", ""))
@@ -236,11 +237,12 @@ func _scenario_rollback(target_mb: int) -> Dictionary:
 	broken.store_string('}')
 	broken.close()
 	var started := Time.get_ticks_usec()
-	var failed := txn.import_file(store, path, {"imported_by": "knowledge_stress_benchmark"})
+	var failed := _dict_call(txn, "import_file", [store, path, {"imported_by": "knowledge_stress_benchmark"}])
 	var rollback_ms := _elapsed_ms(started)
-	var stable := not store.search("AURORA_ROLLBACK_STABLE_MARKER", 5).is_empty()
-	var partial_gone := store.search("AURORA_ROLLBACK_PARTIAL_MARKER", 5).is_empty()
-	var row := KnowledgeSourceRegistryScript.new().record_for_source(path)
+	var stable := not _array_call(store, "search", ["AURORA_ROLLBACK_STABLE_MARKER", 5]).is_empty()
+	var partial_gone := _array_call(store, "search", ["AURORA_ROLLBACK_PARTIAL_MARKER", 5]).is_empty()
+	var registry := KnowledgeSourceRegistryScript.new()
+	var row := _dict_call(registry, "record_for_source", [path])
 	var fp_restored := str(row.get("fingerprint_sha256", "")) == old_fp
 	return {
 		"ok": not bool(failed.get("ok", false)) and str(failed.get("transaction", "")) == "rolled_back" and stable and partial_gone and fp_restored,
@@ -264,12 +266,13 @@ func _scenario_scaling_many_sources(count: int, source_kb: int) -> Dictionary:
 		var generated := _generate_dataset(path, "txt", source_kb * 1024, "SCALE_%05d" % i)
 		if not bool(generated.get("ok", false)):
 			return generated
-		var result := txn.import_file(store, path, {"imported_by": "knowledge_stress_benchmark"})
+		var result := _dict_call(txn, "import_file", [store, path, {"imported_by": "knowledge_stress_benchmark"}])
 		if not bool(result.get("ok", false)):
 			return {"ok": false, "error": "scaling source import failed", "index": i, "result": result}
 		chunks += int(result.get("chunks", 0))
 	var elapsed := _elapsed_ms(started)
-	var stats := KnowledgeManagerScript.new().stats()
+	var manager := KnowledgeManagerScript.new()
+	var stats := _dict_call(manager, "stats")
 	return {
 		"ok": int(stats.get("sources", 0)) == count,
 		"source_count": count,
@@ -289,13 +292,13 @@ func _scenario_semantic_memory(count: int) -> Dictionary:
 	var write_started := Time.get_ticks_usec()
 	for i in range(count):
 		var content := "AuroraFox memory benchmark record %d калибровка локальная память token_%d" % [i, i]
-		memory.learn(content, "knowledge_memory_benchmark", 0.65, 0.85, "benchmark")
+		memory.call("learn", content, "knowledge_memory_benchmark", 0.65, 0.85, "benchmark")
 	var write_ms := _elapsed_ms(write_started)
 	var index_started := Time.get_ticks_usec()
-	var status := memory.reindex_semantic()
+	var status := _dict_call(memory, "reindex_semantic")
 	var index_ms := _elapsed_ms(index_started)
 	var query_started := Time.get_ticks_usec()
-	var found := memory.search_knowledge("локальная калибровка token_%d" % (count - 1), 8)
+	var found := _array_call(memory, "search_knowledge", ["локальная калибровка token_%d" % (count - 1), 8])
 	var query_ms := _elapsed_ms(query_started)
 	var self_reliant := str(status.get("provider", "")) == "aurorafox_local_vector"
 	self_reliant = self_reliant and not bool(status.get("network_required", true))
@@ -308,10 +311,11 @@ func _scenario_semantic_memory(count: int) -> Dictionary:
 	root.add_child(restarted)
 	await process_frame
 	var restart_ms := _elapsed_ms(restart_started)
-	var restart_found := restarted.search_knowledge("token_%d" % (count - 1), 8)
-	var restart_status := restarted.semantic_status()
+	var restart_found := _array_call(restarted, "search_knowledge", ["token_%d" % (count - 1), 8])
+	var restart_status := _dict_call(restarted, "semantic_status")
+	var max_knowledge := int(_script_constant(MemoryStoreScript, "MAX_KNOWLEDGE", count))
 	var ok := self_reliant and not found.is_empty() and not restart_found.is_empty()
-	ok = ok and int(restart_status.get("knowledge_items", 0)) == mini(count, MemoryStoreScript.MAX_KNOWLEDGE)
+	ok = ok and int(restart_status.get("knowledge_items", 0)) == mini(count, max_knowledge)
 	restarted.queue_free()
 	await process_frame
 	return {
@@ -342,9 +346,10 @@ func _scenario_unicode_long_path() -> Dictionary:
 		return generated
 	var store := KnowledgeStoreScript.new()
 	var txn := KnowledgeImportTransactionScript.new()
-	var imported := txn.import_file(store, path, {"imported_by": "knowledge_stress_benchmark"})
-	var found := store.search(str(generated.get("late_marker", "")), 5)
-	var removed := KnowledgeManagerScript.new().remove_source(path)
+	var imported := _dict_call(txn, "import_file", [store, path, {"imported_by": "knowledge_stress_benchmark"}])
+	var found := _array_call(store, "search", [str(generated.get("late_marker", "")), 5])
+	var manager := KnowledgeManagerScript.new()
+	var removed := _dict_call(manager, "remove_source", [path])
 	return {
 		"ok": bool(imported.get("ok", false)) and _contains_source(found, path) and bool(removed.get("ok", false)),
 		"path_chars": path.length(),
@@ -365,16 +370,22 @@ func _scenario_concurrent_import(target_mb: int) -> Dictionary:
 	var ta := Thread.new()
 	var tb := Thread.new()
 	var started := Time.get_ticks_usec()
-	var ea := ta.start(func(): return KnowledgeImportTransactionScript.new().import_file(KnowledgeStoreScript.new(), a, {"imported_by": "knowledge_stress_concurrency"}))
-	var eb := tb.start(func(): return KnowledgeImportTransactionScript.new().import_file(KnowledgeStoreScript.new(), b, {"imported_by": "knowledge_stress_concurrency"}))
+	var ea := ta.start(func():
+		var txn := KnowledgeImportTransactionScript.new()
+		return txn.call("import_file", KnowledgeStoreScript.new(), a, {"imported_by": "knowledge_stress_concurrency"})
+	)
+	var eb := tb.start(func():
+		var txn := KnowledgeImportTransactionScript.new()
+		return txn.call("import_file", KnowledgeStoreScript.new(), b, {"imported_by": "knowledge_stress_concurrency"})
+	)
 	if ea != OK or eb != OK:
 		return {"ok": false, "error": "thread start failed", "thread_a": ea, "thread_b": eb}
 	var ra = ta.wait_to_finish()
 	var rb = tb.wait_to_finish()
 	var elapsed := _elapsed_ms(started)
 	var store := KnowledgeStoreScript.new()
-	var a_ok := _contains_source(store.search(str(ga.get("late_marker", "")), 8), a)
-	var b_ok := _contains_source(store.search(str(gb.get("late_marker", "")), 8), b)
+	var a_ok := _contains_source(_array_call(store, "search", [str(ga.get("late_marker", "")), 8]), a)
+	var b_ok := _contains_source(_array_call(store, "search", [str(gb.get("late_marker", "")), 8]), b)
 	return {
 		"ok": ra is Dictionary and rb is Dictionary and bool(ra.get("ok", false)) and bool(rb.get("ok", false)) and a_ok and b_ok,
 		"duration_ms": elapsed,
@@ -437,7 +448,7 @@ func _search_matrix(store, marker: String, expected_source: String) -> Dictionar
 		var last: Array = []
 		for _i in range(5):
 			var started := Time.get_ticks_usec()
-			last = store.search(str(case.get("query", "")), 8)
+			last = _array_call(store, "search", [str(case.get("query", "")), 8])
 			samples.append(_elapsed_ms(started))
 		var required := bool(case.get("require", false))
 		var found_expected := not required or _contains_source(last, expected_source)
@@ -453,6 +464,19 @@ func _search_matrix(store, marker: String, expected_source: String) -> Dictionar
 			"correct": found_expected
 		})
 	return {"correct": correct, "cases": reports}
+
+func _dict_call(target: Object, method: StringName, args: Array = []) -> Dictionary:
+	var value = target.callv(method, args)
+	if value is Dictionary:
+		return value
+	return {"ok": false, "error": "benchmark call %s returned non-dictionary" % str(method)}
+
+func _array_call(target: Object, method: StringName, args: Array = []) -> Array:
+	var value = target.callv(method, args)
+	return value if value is Array else []
+
+func _script_constant(script: Script, name: StringName, fallback = null):
+	return script.get_script_constant_map().get(name, fallback)
 
 func _contains_source(items: Array, source: String) -> bool:
 	if source.is_empty():
@@ -490,20 +514,26 @@ func _runtime_identity() -> Dictionary:
 	}
 
 func _reset_state() -> void:
+	var store_constants := KnowledgeStoreScript.get_script_constant_map()
+	var registry_constants := KnowledgeSourceRegistryScript.get_script_constant_map()
+	var txn_constants := KnowledgeImportTransactionScript.get_script_constant_map()
+	var memory_constants := MemoryStoreScript.get_script_constant_map()
+	var db_path := str(store_constants.get("DB_PATH", "user://knowledge/knowledge.jsonl"))
+	var structured_path := str(store_constants.get("STRUCTURED_PATH", "user://knowledge/structured.jsonl"))
 	for path in [
-		KnowledgeStoreScript.DB_PATH,
-		KnowledgeStoreScript.STRUCTURED_PATH,
-		KnowledgeSourceRegistryScript.REGISTRY_PATH,
-		KnowledgeImportTransactionScript.DB_BACKUP,
-		KnowledgeImportTransactionScript.STRUCTURED_BACKUP,
-		KnowledgeImportTransactionScript.REGISTRY_BACKUP,
-		MemoryStoreScript.MEMORY_PATH,
-		MemoryStoreScript.KNOWLEDGE_PATH,
-		MemoryStoreScript.VECTOR_PATH,
-		KnowledgeStoreScript.DB_PATH + ".filter.tmp",
-		KnowledgeStoreScript.STRUCTURED_PATH + ".filter.tmp",
-		KnowledgeStoreScript.DB_PATH + ".rollback.tmp",
-		KnowledgeStoreScript.STRUCTURED_PATH + ".rollback.tmp"
+		db_path,
+		structured_path,
+		str(registry_constants.get("REGISTRY_PATH", "user://knowledge/sources.json")),
+		str(txn_constants.get("DB_BACKUP", "user://knowledge/.knowledge_source.txn.jsonl")),
+		str(txn_constants.get("STRUCTURED_BACKUP", "user://knowledge/.structured_source.txn.jsonl")),
+		str(txn_constants.get("REGISTRY_BACKUP", "user://knowledge/.sources.json.txn")),
+		str(memory_constants.get("MEMORY_PATH", "user://memory.json")),
+		str(memory_constants.get("KNOWLEDGE_PATH", "user://knowledge.json")),
+		str(memory_constants.get("VECTOR_PATH", "user://memory_vectors.json")),
+		db_path + ".filter.tmp",
+		structured_path + ".filter.tmp",
+		db_path + ".rollback.tmp",
+		structured_path + ".rollback.tmp"
 	]:
 		_remove_file(str(path))
 	_ensure_bench_dir()
