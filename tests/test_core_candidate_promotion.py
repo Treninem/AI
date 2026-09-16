@@ -147,14 +147,15 @@ def test_promotion_workflow_keeps_candidate_untrusted_until_verified() -> None:
         assert secret_name not in workflow
 
 
-def test_signed_release_keeps_direct_update_path_for_legacy_clients() -> None:
+def test_signed_release_enforces_v12_repair_and_v13_signed_update_floor() -> None:
     # This test file is part of release.yml/core-gates, so these assertions run
     # before Windows/Android artifacts or update signatures may be published.
-    update_compat.test_current_updater_keeps_original_latest_manifest_url()
-    update_compat.test_manifest_template_remains_readable_by_v1_updater()
-    update_compat.test_release_keeps_legacy_asset_names_and_latest_update_json()
+    update_compat.test_current_updater_keeps_permanent_latest_manifest_url()
+    update_compat.test_manifest_template_is_legacy_readable_but_does_not_claim_legacy_direct_update()
+    update_compat.test_release_keeps_stable_asset_names_and_latest_update_json()
     update_compat.test_release_manifest_generator_preserves_legacy_top_level_and_asset_fields()
-    update_compat.test_update_signature_is_additive_not_a_replacement_for_legacy_manifest()
+    update_compat.test_update_signature_is_required_for_signed_generation()
     update_compat.test_android_identity_and_windows_full_zip_strategy_are_stable()
-    update_compat.test_public_update_key_is_embedded_in_windows_and_android_exports()
-    update_compat.test_pre_v1_builds_are_documented_as_one_time_manual_bootstrap()
+    update_compat.test_public_update_key_is_embedded_in_signed_generation_exports()
+    update_compat.test_windows_v12_repair_uses_same_inno_identity_and_is_ci_verified()
+    update_compat.test_documentation_states_v12_repair_and_android_signing_boundary()
