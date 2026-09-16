@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.conversation_store import ConversationStore
 from api.core_candidate_queue import CoreCandidateQueue, CoreCandidateQueueError
+from api.database import SCHEMA_VERSION
 from api.file_client import FileIntelligenceClient
 from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
@@ -30,6 +31,7 @@ API_ROOT.mkdir(parents=True, exist_ok=True)
 
 keys = KeyStore(API_ROOT)
 keys.ensure_bootstrap_key()
+database = keys.database
 conversations = ConversationStore(API_ROOT / "conversations")
 bridge = AuroraRuntimeBridge(
     host=os.getenv("AURORAFOX_BRIDGE_HOST", "127.0.0.1"),
@@ -308,6 +310,21 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _component_status(callable_status) -> dict[str, Any]:
+    try:
+        value = callable_status()
+        return value if isinstance(value, dict) else {"ok": True, "value": value}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
+
+
+def _public_database_status() -> dict[str, Any]:
+    status = dict(database.integrity_check())
+    status.pop("path", None)
+    status["backend"] = "sqlite"
+    return status
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     agent_online = False
@@ -346,9 +363,29 @@ def health() -> dict[str, Any]:
         "ollama_required": False,
         "provider_policy": "agent_then_local_core_then_optional_ollama_then_local_knowledge",
         "bridge": f"127.0.0.1:{bridge.port}",
-        "learning": learning.status(),
-        "core_candidates": core_candidates.status(),
+        "database": {"backend": "sqlite", "schema_version": SCHEMA_VERSION},
+        "learning": _component_status(learning.status),
+        "core_candidates": _component_status(core_candidates.status),
     }
+
+
+@app.get("/ready")
+def ready() -> dict[str, Any]:
+    database_status = _public_database_status()
+    learning_status = _component_status(learning.status)
+    ready_now = bool(database_status.get("ok", False)) and bool(learning_status.get("ok", False))
+    payload = {
+        "ok": ready_now,
+        "service": "AuroraFox API",
+        "version": app.version,
+        "build_sha": os.getenv("AURORAFOX_BUILD_SHA", "local"),
+        "deployment": os.getenv("AURORAFOX_DEPLOYMENT", "local"),
+        "database": database_status,
+        "learning": learning_status,
+    }
+    if not ready_now:
+        raise HTTPException(status_code=503, detail=payload)
+    return payload
 
 
 @app.get("/v1/capabilities")
