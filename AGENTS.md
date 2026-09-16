@@ -33,6 +33,31 @@ Work in coherent batches. After each completed batch, update `docs/PROJECT_MASTE
 
 When stopping, mark the claim DONE or clearly state what remains so the next Chat/Work/Codex session can continue directly from the repository without repeating completed work.
 
+## HARD VERSIONING INVARIANT — test first, version last
+
+AuroraFox uses four-part versions `MAJOR.MINOR.PATCH.BUILD`.
+
+Every user-visible or functional change must be assigned an intended bump level in its ACTIVE claim, but **the canonical version must not be bumped before the changed block passes its relevant acceptance tests**. Versioning is the final release step, not a substitute for testing.
+
+- `MAJOR`: incompatible architecture/product/data/API migration requiring an intentional transition.
+- `MINOR`: major new capability, broad multi-subsystem improvement, or a new release/update floor.
+- `PATCH`: accepted improvement/rework of an existing block such as UI, voice, memory, knowledge, updater, Core quality or Computer Agent while compatibility is preserved.
+- `BUILD`: narrow bugfix/hotfix/packaging-only correction.
+
+Required sequence for every lane:
+
+1. Declare the intended bump in the master-log claim.
+2. Implement without reusing an already shipped version for delivery.
+3. Run unit/smoke/integration/package/device/release tests relevant to the changed block.
+4. Accept the block only when those tests are green and no known P0/P1 defect makes the changed feature unusable or regressed.
+5. Only then perform one final version bump for the accumulated release using the highest required bump level.
+6. Synchronize `project/version.json`, `project.godot`, Android `versionCode`, export/installer/update metadata, CHANGELOG and release contracts.
+7. Re-run version-sync plus package/update/release gates after the bump. A red post-bump gate means the new version is not ready.
+8. Android `versionCode` must strictly increase for every installable Android release.
+9. Never publish or hand out a functionally changed binary under the same version number as an older binary.
+
+Do not increment the public version for every internal commit. Multiple accepted changes may be grouped into one release, but that release must have a strictly newer version than every previously distributed normal build.
+
 ## HARD PRODUCT INVARIANT — AuroraFox is self-primary and self-reliant
 
 AuroraFox must **depend and rely on its own Core as the foundation of intelligence**. This is stronger than merely preferring a local provider.
