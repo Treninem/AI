@@ -151,11 +151,20 @@ def main() -> int:
         for index, row in enumerate(results)
         if not row.get("ok")
     ]
+    for index, row in enumerate(results):
+        for key in ("network_required", "external_runtime_required", "ollama_required"):
+            if bool(row.get(key, True)):
+                errors.append({"source_count": row.get("source_count", counts[index]), "error": f"self-reliance regression: {key}=true"})
     findings = pair_findings(results)
     report = {
         "schema": "aurorafox_knowledge_registry_scaling_v1",
         "generated_at_unix": time.time(),
         "platform_runtime_identity": base.comparable_identity(),
+        "self_reliance_contract": {
+            "network_required": False,
+            "external_runtime_required": False,
+            "ollama_required": False,
+        },
         "hard_correctness": {"passed": not errors, "errors": errors},
         "relative_performance": {
             "n_2n_4n": findings,
