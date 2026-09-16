@@ -283,6 +283,21 @@ class AccountStore:
                 return None
             return self._request_account_token(connection, str(row["id"]), "reset_password", self.reset_ttl)
 
+    def revoke_account_token(self, token: str, purpose: str) -> bool:
+        if purpose not in {"verify_email", "reset_password"}:
+            raise AccountError("Unsupported account token purpose")
+        if not token:
+            return False
+        now = self._now()
+        digest = self._hash_token(token)
+        with self.database.connection(write=True) as connection:
+            cursor = connection.execute(
+                "UPDATE account_tokens SET revoked_at=? WHERE token_hash=? AND purpose=? "
+                "AND used_at IS NULL AND revoked_at IS NULL",
+                (now, digest, purpose),
+            )
+        return cursor.rowcount > 0
+
     def reset_password(self, token: str, new_password: str) -> None:
         salt, digest, params = self._new_password(new_password)
         token_hash = self._hash_token(token)

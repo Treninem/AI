@@ -478,7 +478,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Инженерная причина: normal `latest` release отсутствует, а historical V1.3 использует RSA updater, но не содержит pinned `release_public.pub`; поэтому публикация одного `update.json` не может исправить уже установленный бинарник. Нужен one-time repair на новый signed floor и permanent version/release discipline.
 - Acceptance: V1.2 repair остаётся рабочим; V1.3 repair проверен in-place на Windows с сохранением `user://`; новый floor содержит pinned public key; updater contract на floor видит версию выше себя и отклоняет неверную подпись/hash; release workflow обязан формировать `latest` assets; version bump выполняется только после зелёных Core/Windows/Android/update/release gates.
 
-
 Код: draft [PR #29](https://github.com/Treninem/AI/pull/29), commit `13b5a948363688eb0b38429330e127a9a52ea7a4`. Эта запись публикует только координацию; код и полный текст 56 пунктов ТЗ находятся в PR до CI/интеграции.
 
 ## 18. Core Quality / Performance Benchmark & Regression Gate — active lane
@@ -734,3 +733,120 @@ NEXT:
 - Сохранять `chat-knowledge-races-v2-20260916` без нового PR и синхронизировать только при релевантном Knowledge overlap. На coordinator Wave-B signal переоткрыть PR #64, выполнить consolidated Linux/Windows batch, разобрать JSON artifacts и либо исправить доказанный owned-path defect, либо выписать точный OCR `PERFORMANCE-BLOCKER`; после green same-SHA evidence запустить 100/250 MiB stress gate.
 
 - Освобождённые файлы: нет; CLAIM остаётся ACTIVE до runtime/large-stress acceptance.
+
+## 33. Voice Quality — Android female local TTS candidate, 2026-09-16
+
+### `CHAT-2026-09-16-VOICE-QUALITY` — ownership extension
+
+- Статус: **ACTIVE — coordinator acceptance; Android female TTS candidate isolated before integration**.
+- Fresh main checked through: `b6cdcaa76f51649ffa1f0302fc987ee05b17e423`; existing voice coordinator acceptance remains under the same CLAIM and intended bump remains **PATCH** only after relevant green gates.
+- Ownership extension for this substage: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`, `android_plugin/setup_native.ps1`, `tests/test_android_contract.py`, plus already claimed voice acceptance files. `android_plugin/plugin/build.gradle.kts`, `android_plugin/settings.gradle.kts`, `AndroidFileRuntime.kt` and OCR/package metadata remain owned by `CHAT-2026-09-16-LOCAL-OCR` and must not be modified by VOICE-QUALITY.
+- Evidence/blocker: current Android local TTS packages `vits-piper-ru_RU-denis-medium` and reports `sherpa-onnx-piper-denis`; this is a male voice and therefore does not satisfy the coordinator requirement for Russian female voice evidence on both platforms. Current Android package/install/launch proof validates the local Piper path but not that requirement.
+- Candidate selection: Piper `ru_RU-irina-medium` is not accepted for a distributable AuroraFox baseline because its upstream model metadata leaves the dataset/license status unclear. Supertonic 3 is evaluated instead as a fully local ONNX candidate. The existing pinned `sherpa-onnx 1.13.4` already contains `OfflineTtsSupertonicModelConfig`, so this candidate does **not** require touching OCR-owned Gradle/settings or changing the sherpa version.
+- Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
+- Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
+- Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1–F5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
+- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially регresses intelligibility, clipping, latency/memory/package limits or local-only operation.
+
+## 34. Integration Gate — release-train delta and routed status, 2026-09-16
+
+- Fresh release-train code checkpoint: `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` (`test: tighten integration updater and branding gates`) on parent `5bca4a1353ff66731073515533414ab1d0369e15`. Integration-owned changes only: `.github/workflows/integration-gate.yml` and new `tests/test_release_branding_contract.py`; production UI/Core/updater files and canonical version were not modified.
+- Integration workflow stale updater selector was corrected to `test_signed_release_enforces_v12_v13_repair_and_v14_signed_update_floor`, matching updater fix commit `99b2c144dbeb675caafb527ad528f5db18a32b50` and current `tests/test_core_candidate_promotion.py`.
+- Owner-approved immutable branding source masters are now release-gated by Git blob identity: `assets/ui/aurorafox_avatar_master.png` = `89ff783b171733f88b5153acd24c6a28fb2953dd`; `assets/ui/aurorafox_background_master.png` = `ed17e933244b7ce0f520b28897c0ca1ad50a5347`. The contract also requires runtime use of those paths and forbids active legacy `fox_logo.svg` / `aurora_background.svg` substitution.
+- Exact-head Integration Gate run `35147689311` on `cc44cce8...` remains **PENDING** with no jobs at this checkpoint; it is explicitly not green evidence. Exact-head Updater Repair Validation run `35147697509` remains **QUEUED**. Per coordinator NO-QUEUE policy no duplicate rerun was started.
+- Current `scripts/code_specialist.gd` after `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` no longer reads `AIClient.base_url` or directly calls Ollama in the normal path; `_chat_code()` delegates to `general_ai.chat()`. This is static fix evidence only; section 29 is not closed until runtime/real-Core proof is green.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: BLOCKER
+EVIDENCE: Exact main checkpoint `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` contains byte-exact owner masters above, while active runtime `scripts/main.gd` still preloads `res://assets/ui/aurora_background.svg` and `res://assets/ui/fox_logo.svg`. Integration commit `cc44cce8...` adds `tests/test_release_branding_contract.py` and the `Owner-approved branding identity contract` step so this mismatch cannot silently ship. Run `35147689311` is still pending, therefore this blocker is based on deterministic source/runtime mismatch, not a claimed CI failure.
+ACTION: In UI-owned runtime/package surfaces, make Windows and Android use `assets/ui/aurorafox_avatar_master.png` and `assets/ui/aurorafox_background_master.png` as the active canonical branding without modifying their source bytes; remove legacy `fox_logo.svg` / `aurora_background.svg` from active runtime substitution. If any derived platform asset is unavoidable, prove exact-pixel identity from the canonical master and keep the master bytes unchanged. Extend UI/package smoke/capture evidence and rerun Integration Gate on the same resulting SHA.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UPDATER-VERSIONING
+TYPE: NEXT
+EVIDENCE: Updater bridge selector drift from section 25 is statically reconciled by updater commit `99b2c144dbeb675caafb527ad528f5db18a32b50` plus integration commit `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b`; current composite function name and Integration workflow selector both target the V1.2/V1.3 repair + V1.4 signed-floor contract. Exact-head Integration run `35147689311` is PENDING and Updater Repair Validation `35147697509` is QUEUED, so runtime acceptance is not yet proven.
+ACTION: Do not reopen the stale function-name fix. Keep section 25 runtime blocker open only until an exact-head updater compatibility step plus repair/signing validation is green; preserve V1.2/V1.3 repair, pinned trust root and V1.4 signed floor without weakening signing/version discipline.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-CORE-BENCHMARKS
+TYPE: NEXT
+EVIDENCE: CodeSpecialist production fix `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` removes the stale `AIClient.base_url` access and direct normal-path Ollama `/api/chat` call; current `scripts/code_specialist.gd::_chat_code()` delegates to `general_ai.chat()`. Exact runtime Work Mode / real bundled-Core CodeSpecialist proof after this fix has not yet been accepted by Integration Gate.
+ACTION: Preserve the bundled-Core-only CodeSpecialist path, add/retain a real bundled-Core CodeSpecialist smoke/benchmark, and close section 29 only with same-SHA runtime evidence that setup + analyze/review/explain work without Ollama/remote AI.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT_MAIN-2026-09-16-RESEARCH-QUALITY
+TYPE: READY
+EVIDENCE: AuroraFox Research Quality CI run `35112565080` on exact SHA `adb5ae35b19b2e5412b565133c820d3be7d1437c` completed SUCCESS. The landed Integration Gate retains Research evidence-lifecycle, collector-privacy and source-resilience contracts/smokes so future cross-subsystem regression remains covered.
+ACTION: Coordinator-authorized Research source-resilience acceptance is satisfied. Mark the Research lane DONE/free its production/test paths unless a newer coordinator assignment exists; preserve collector→curator single-authority, provenance/privacy and source-resilience coverage in the final release candidate gate.
+
+PROGRESS_COMPLETE: 66%
+PROGRESS_REMAINING: 34%
+
+DONE:
+- Integration workflow/test infrastructure is on main and its stale updater selector is corrected.
+- Byte-exact canonical branding release contract is on main and routes the current runtime mismatch to UI ownership.
+- Research Quality source-resilience gate has exact successful run evidence and is routed READY.
+- Updater and CodeSpecialist old findings are separated into static-fix vs runtime-acceptance status rather than being falsely marked green.
+
+REMAINING:
+- Obtain a non-pending exact-head Integration Gate run after queue wave execution and triage each step independently.
+- Obtain exact updater repair/signing validation before closing section 25.
+- Obtain real bundled-Core CodeSpecialist runtime evidence before closing section 29.
+- Recheck UI branding/login-guest/memory/Work-Computer fixes after UI lane lands, then Windows/Android package/device boundaries and final release matrix.
+
+BLOCKERS:
+- UI canonical branding mismatch is a current source/runtime release blocker.
+- Integration run `35147689311` and updater repair run `35147697509` are queued/pending and therefore cannot be counted as green.
+- Physical Windows/Android device + human visual/listening acceptance remains a separate evidence boundary.
+
+NEXT:
+- Follow coordinator CI wave control without duplicate reruns. On the next executable exact-main gate, inspect updater, branding, Research, Work/Computer, Core/CodeSpecialist, Account/Guest, OCR, Voice and package steps separately; route only reproducible failures to the exact owning CLAIM and do not change their production files.
+
+## 35. Integration Gate — UI candidate regressions and handoff, 2026-09-16
+
+- Integration-owned branding contract follow-up commit: `b19719bdb4b88cbafbd07310ed34330c6c80660e` (`test: validate branding through active UI runtime`). The gate still pins both owner-master Git blobs byte-for-byte, but now validates the actual product entrypoint `main.tscn -> scripts/main_compat.gd` and permits legacy base placeholders only when the active compatibility layer replaces/removes them before final UI rendering. This avoids a false failure for the UI candidate architecture without weakening owner-art identity.
+- Exact-main Integration Gate run `35148889897` on `b19719bd...` is **PENDING**; no manual duplicate rerun was started under coordinator NO-QUEUE policy.
+- UI PR #27 remains draft at head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b`, `mergeable=false`, and is still based on pre-integration main `5bca4a1353ff66731073515533414ab1d0369e15`; it must be reconciled non-force before merge.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: BLOCKER
+EVIDENCE: UI Visual CI run `35147641336`, job `104967664697`, on UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b`: `Parse UI project headlessly` succeeded, then `Run headless layout interaction smoke` failed with exit code `66` and the exact assertion `Portrait owner background is not right-biased`. All downstream owner-art/navigation/render-matrix steps were skipped. The candidate `scripts/main_compat.gd::_owner_background_texture()` derives its crop from `get_viewport_rect().size`; the portrait smoke observed a crop with no positive rightward X offset.
+ACTION: Fix the UI-owned owner-background crop so portrait/narrow rendering derives from the effective target viewport/content-scale after resize and produces the intended right-biased focal region while retaining the immutable `aurorafox_background_master.png` bytes and neutral rendering. Re-run `desktop_ui_smoke.gd`, owner-art smoke, pointer/navigation and render matrix on the same candidate SHA before calling UI Wave A ready.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: REGRESSION
+EVIDENCE: UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b` has unique non-UI patches against current main that delete SERVER-DB-owned resilience behavior: `api/account_store.py::revoke_account_token`, the `_deliver_account_token` SMTP-failure revocation path in `api/server.py`, and the regressions `test_smtp_failure_revokes_issued_token_and_immediate_resend_is_not_cooldown_blocked` plus `test_undelivered_account_token_revoke_allows_immediate_retry_inside_cooldown`. These paths are explicitly owned by `CHAT-2026-09-16-SERVER-DB`; removing them would reintroduce an undelivered-token cooldown/retry defect unrelated to UI work.
+ACTION: Re-sync/reconcile PR #27 non-force with fresh `main` and preserve the current SERVER-DB token revoke/retry implementation plus both regression tests. Any intentional server semantic change must be coordinated with `CHAT-2026-09-16-SERVER-DB`; otherwise eliminate these API/test diffs from the UI branch. Require API CI + UI Visual CI + Integration Gate on one same SHA before merge.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: NEXT
+EVIDENCE: The current PR #27 `scripts/computer_overlay.gd` patch statically addresses section 28: the visible Computer toggle propagates through `set_computer_control_enabled(enabled)`, high-level goal execution delegates to `AgentCore.run_task()`, preview delegates to local `AIClient.chat()`, and the overlay no longer calls `ComputerClient.run()` / `plan()` as a service-side planner. This preserves bundled AuroraFox Core as planning authority, but same-SHA Work/UI runtime evidence is still queued/not accepted.
+ACTION: Preserve this local-Core/default-OFF permission architecture while fixing the remaining UI blockers. Close section 28 only after the reconciled PR SHA has green Work Mode + UI Visual + Integration evidence proving enable/disable, high-level goal routing and no service-side/external-AI planning regression.
+
+PROGRESS_COMPLETE: 68%
+PROGRESS_REMAINING: 32%
+
+DONE:
+- Integration-owned branding gate is corrected for the actual `main_compat.gd` runtime architecture without relaxing immutable owner-master identity.
+- UI Visual failure is localized to the portrait/right-biased owner-background crop with exact run/job/assertion evidence.
+- Cross-lane SERVER-DB regression inside UI PR #27 is identified at concrete production functions and test names before merge.
+- Work/Computer UI candidate is statically reconciled with bundled-Core planning authority and process-wide permission semantics; runtime acceptance remains separate.
+
+REMAINING:
+- UI lane must fix portrait crop and remove/reconcile accidental SERVER-DB diffs, then produce one same-SHA green UI/API/Work/Integration set.
+- Exact-main Integration Gate `35148889897` must execute and be triaged step-by-step.
+- Updater repair/signing and CodeSpecialist bundled-Core runtime acceptance remain open until green exact evidence.
+- Windows/Android package plus physical-device/human visual/listening boundaries remain before final release readiness.
+
+BLOCKERS:
+- `CHAT-2026-09-16-UI-POLISH`: UI Visual run `35147641336/104967664697` fails portrait owner-background focal crop.
+- `CHAT-2026-09-16-UI-POLISH` cross-lane regression: PR #27 currently deletes SERVER-DB token-delivery revoke/retry safety code/tests.
+- Exact-main Integration Gate `35148889897` is pending, not green evidence.
+- Physical Windows/Android device and human visual/listening acceptance remain external evidence boundaries.
+
+NEXT:
+- Do not merge or manually rerun the stale UI candidate. Let `CHAT-2026-09-16-UI-POLISH` reconcile the two routed blockers against fresh main; then inspect the next UI head's API/UI/Work exact-SHA results and feed only the reconciled candidate into the release-train Integration Gate. Preserve coordinator Wave-A/Wave-B queue control.

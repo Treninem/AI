@@ -291,6 +291,13 @@ def _deliver_account_token(email: str, purpose: str, token: str | None) -> bool:
         return True
     except AccountMailError:
         LOGGER.warning("AuroraFox account email delivery failed for purpose=%s", purpose)
+        # Production stores only the token hash. If SMTP delivery fails, leaving
+        # the newly issued token active would make the resend/reset cooldown hide
+        # a raw token the user never received. Revoke only that undelivered token
+        # so an immediate retry may issue a replacement. Developer-token mode is
+        # excluded because the raw token is intentionally returned to the caller.
+        if not DEV_ACCOUNT_TOKENS:
+            accounts.revoke_account_token(token, purpose)
         return False
 
 

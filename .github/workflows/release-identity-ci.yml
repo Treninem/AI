@@ -4,8 +4,6 @@ on:
   push:
     branches: [main]
     paths:
-      - 'AGENTS.md'
-      - 'docs/PROJECT_MASTER_LOG.md'
       - 'project/version.json'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -22,6 +20,7 @@ on:
       - 'tests/test_update_backward_compat.py'
       - 'tests/update_smoke.gd'
       - 'tests/version_policy_test.ps1'
+      - 'tests/version_sync_test.ps1'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
@@ -30,8 +29,6 @@ on:
       - '.github/workflows/release-identity-ci.yml'
   pull_request:
     paths:
-      - 'AGENTS.md'
-      - 'docs/PROJECT_MASTER_LOG.md'
       - 'project/version.json'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -48,6 +45,7 @@ on:
       - 'tests/test_update_backward_compat.py'
       - 'tests/update_smoke.gd'
       - 'tests/version_policy_test.ps1'
+      - 'tests/version_sync_test.ps1'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
@@ -58,6 +56,10 @@ on:
 
 permissions:
   contents: read
+
+concurrency:
+  group: aurorafox-release-identity-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   release-identity:
