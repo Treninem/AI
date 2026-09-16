@@ -98,8 +98,9 @@ func _verify_after_restart() -> void:
 	var journals_clean: bool = not FileAccess.file_exists(KnowledgeImportTransactionScript.DB_BACKUP)
 	journals_clean = journals_clean and not FileAccess.file_exists(KnowledgeImportTransactionScript.STRUCTURED_BACKUP)
 	journals_clean = journals_clean and not FileAccess.file_exists(KnowledgeImportTransactionScript.REGISTRY_BACKUP)
-	if "TXN_MANIFEST" in KnowledgeImportTransactionScript:
-		journals_clean = journals_clean and not FileAccess.file_exists(str(KnowledgeImportTransactionScript.TXN_MANIFEST))
+	var constants: Dictionary = KnowledgeImportTransactionScript.get_script_constant_map()
+	if constants.has("TXN_MANIFEST"):
+		journals_clean = journals_clean and not FileAccess.file_exists(str(constants.get("TXN_MANIFEST", "")))
 	var ok: bool = recovery is Dictionary and bool(recovery.get("ok", false)) and bool(recovery.get("recovered", false))
 	ok = ok and not stable.is_empty() and uncommitted.is_empty() and not registry.is_empty() and journals_clean
 	_emit({
@@ -150,11 +151,12 @@ func _reset_state() -> void:
 		KnowledgeStoreScript.STRUCTURED_PATH + ".rollback.tmp",
 		SOURCE
 	]
-	if "TXN_MANIFEST" in KnowledgeImportTransactionScript:
-		paths.append(KnowledgeImportTransactionScript.TXN_MANIFEST)
+	var constants: Dictionary = KnowledgeImportTransactionScript.get_script_constant_map()
+	if constants.has("TXN_MANIFEST"):
+		paths.append(constants.get("TXN_MANIFEST", ""))
 	for value in paths:
 		var path := str(value)
-		if FileAccess.file_exists(path):
+		if not path.is_empty() and FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func _emit(result: Dictionary, code: int) -> void:
