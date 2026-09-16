@@ -30,6 +30,7 @@ func _apply_after_build() -> void:
 		_replace_background(_root)
 	_remove_temporary_avatar_art(_root)
 	_remove_redundant_quick_controls()
+	_repair_knowledge_popup()
 	await get_tree().process_frame
 	_apply_safe_button_styles(_root)
 	_apply_popup_styles(_root)
@@ -73,6 +74,56 @@ func _remove_redundant_quick_controls() -> void:
 				has_visible = true
 				break
 		header_actions.visible = has_visible
+
+func _find_label_by_text(node: Node, text: String) -> Label:
+	if node is Label and str((node as Label).text) == text:
+		return node as Label
+	for child in node.get_children():
+		var found := _find_label_by_text(child, text)
+		if found != null:
+			return found
+	return null
+
+func _find_button_by_text(node: Node, text: String) -> Button:
+	if node is Button and str((node as Button).text) == text:
+		return node as Button
+	for child in node.get_children():
+		var found := _find_button_by_text(child, text)
+		if found != null:
+			return found
+	return null
+
+func _repair_knowledge_popup() -> void:
+	# The original Knowledge popup put its only close action below an expanding
+	# source list. On a tall/narrow embedded mobile window the action could end up
+	# outside the visible portion. Promote it into the title row without touching
+	# Knowledge import/runtime logic.
+	var popup := _root.find_child("KnowledgeBasePopup", true, false) as PopupPanel
+	if popup == null or popup.find_child("KnowledgeHeader", true, false) != null:
+		return
+	var title := _find_label_by_text(popup, "База знаний AuroraFox")
+	var close := _find_button_by_text(popup, "Закрыть")
+	if title == null or close == null:
+		return
+	var box := title.get_parent() as VBoxContainer
+	if box == null or close.get_parent() != box:
+		return
+	var title_index := title.get_index()
+	var header := HBoxContainer.new()
+	header.name = "KnowledgeHeader"
+	header.add_theme_constant_override("separation", 12)
+	box.add_child(header)
+	box.move_child(header, title_index)
+	box.remove_child(title)
+	header.add_child(title)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.remove_child(close)
+	header.add_child(close)
+	close.name = "KnowledgeCloseButton"
+	close.text = "Готово"
+	close.custom_minimum_size = Vector2(96, 42)
+	close.size_flags_horizontal = Control.SIZE_SHRINK_END
+	close.clip_text = false
 
 func _flat_state(fill: Color, border: Color, radius := 12) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -126,6 +177,8 @@ func _apply_safe_button_styles(node: Node) -> void:
 			button.add_theme_color_override("font_hover_color", Color.WHITE)
 			if button.get_parent() is HFlowContainer:
 				_preserve_flow_button_label(button)
+			elif button.name == "KnowledgeCloseButton":
+				button.clip_text = false
 			else:
 				# Fixed/expanding rows may intentionally clip long chat titles.
 				button.clip_text = true
