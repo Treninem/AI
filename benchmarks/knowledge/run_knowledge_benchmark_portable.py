@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Portable entrypoint for the AuroraFox Knowledge benchmark.
 
-Fresh Windows Godot runners can statically resolve a preloaded GDScript resource
-as an external script class and reject dynamic production methods before the
-benchmark starts. The production scripts are valid (the project/editor parse is
-already green); this adapter writes an untracked runtime copy of the benchmark
-script whose preloaded production-script handles and inferred locals are
-explicitly Variant-typed. That keeps all calls dynamic without changing any
-production source.
+Fresh Windows Godot runners may start a ``--script`` process before its isolated
+profile has populated the project/global script-class metadata used by depended
+production scripts. The project itself parses successfully in editor mode, so
+this adapter warms *the same isolated HOME/APPDATA* before a Windows benchmark
+child and also keeps benchmark-side production handles dynamically typed. No
+production source is rewritten.
 """
 from __future__ import annotations
 
@@ -15,6 +14,7 @@ import os
 from pathlib import Path
 import re
 import subprocess
+import sys
 import time
 from typing import Any
 
@@ -33,6 +33,7 @@ SCRIPT_NAMES = (
 )
 RUNTIME_NAME = ".knowledge_stress_benchmark.portable.gd"
 UNTYPED_INFERRED_VAR = re.compile(r"\bvar\s+([A-Za-z_][A-Za-z0-9_]*)\s*:=")
+WARM_SENTINEL = ".godot-profile-warmed"
 
 
 def portable_harness(repo: Path) -> Path:
@@ -47,23 +48,88 @@ def portable_harness(repo: Path) -> Path:
             text = text.replace(old, new, 1)
             changed += 1
         elif new in text:
-            # Future direct source hardening remains compatible with this runner.
             changed += 1
     if changed != len(SCRIPT_NAMES):
         raise RuntimeError(
             f"portable harness transform incomplete: {changed}/{len(SCRIPT_NAMES)} script handles found"
         )
 
-    # Once a Script handle is Variant-typed, expressions such as
-    # `var store := KnowledgeStoreScript.new()` also become Variant at runtime.
-    # Godot 4.7 refuses to infer a static type from those dynamic expressions.
-    # Make only otherwise-untyped inferred locals explicit Variant in the
-    # generated runtime copy. The canonical benchmark source remains strongly
-    # inferred/typed and production sources are never rewritten.
+    # Dynamic Script handles make inferred locals ambiguous on Godot 4.7. Keep
+    # this relaxation confined to the generated benchmark copy.
     text = UNTYPED_INFERRED_VAR.sub(r"var \1: Variant =", text)
-
     target.write_text(text, encoding="utf-8")
     return target
+
+
+def warm_isolated_windows_profile(
+    godot: str,
+    repo: Path,
+    user_root: Path,
+    env: dict[str, str],
+    timeout_seconds: int,
+    log_dir: Path,
+    tag: str,
+) -> dict[str, Any]:
+    """Populate Godot metadata in the exact profile used by the benchmark child.
+
+    The workflow-level editor parse uses the runner's default profile. Benchmark
+    cases intentionally replace HOME/APPDATA for isolation, which is exactly the
+    condition that previously reproduced missing global class registrations on
+    Windows. Warm each isolated case once; Linux does not need this workaround.
+    """
+    if sys.platform != "win32":
+        return {"ok": True, "required": False, "performed": False}
+    sentinel = user_root / WARM_SENTINEL
+    if sentinel.exists():
+        return {"ok": True, "required": True, "performed": False, "cached": True}
+
+    stdout_path = log_dir / f"{tag}.warm.stdout.log"
+    stderr_path = log_dir / f"{tag}.warm.stderr.log"
+    command = [godot, "--headless", "--editor", "--path", str(repo), "--quit"]
+    started = time.perf_counter()
+    try:
+        with stdout_path.open("wb") as stdout_file, stderr_path.open("wb") as stderr_file:
+            proc = subprocess.run(
+                command,
+                cwd=repo,
+                env=env,
+                stdout=stdout_file,
+                stderr=stderr_file,
+                timeout=max(30, min(120, timeout_seconds)),
+                check=False,
+            )
+    except subprocess.TimeoutExpired:
+        return {
+            "ok": False,
+            "required": True,
+            "performed": True,
+            "timed_out": True,
+            "error": "isolated Windows Godot editor warm-up timed out",
+            "stdout_log": str(stdout_path),
+            "stderr_log": str(stderr_path),
+        }
+    wall_ms = (time.perf_counter() - started) * 1000.0
+    if proc.returncode != 0:
+        return {
+            "ok": False,
+            "required": True,
+            "performed": True,
+            "return_code": proc.returncode,
+            "wall_ms": wall_ms,
+            "error": "isolated Windows Godot editor warm-up failed",
+            "stdout_log": str(stdout_path),
+            "stderr_log": str(stderr_path),
+        }
+    sentinel.write_text("ok\n", encoding="utf-8")
+    return {
+        "ok": True,
+        "required": True,
+        "performed": True,
+        "return_code": proc.returncode,
+        "wall_ms": wall_ms,
+        "stdout_log": str(stdout_path),
+        "stderr_log": str(stderr_path),
+    }
 
 
 def portable_run_godot_case(
@@ -83,6 +149,22 @@ def portable_run_godot_case(
         env.update(extra_env)
     stdout_path = log_dir / f"{tag}.stdout.log"
     stderr_path = log_dir / f"{tag}.stderr.log"
+
+    warm = warm_isolated_windows_profile(godot, repo, user_root, env, timeout_seconds, log_dir, tag)
+    if not warm.get("ok"):
+        return {
+            "ok": False,
+            "error": warm.get("error", "isolated Windows Godot warm-up failed"),
+            "runner_return_code": int(warm.get("return_code", 1) or 1),
+            "runner_wall_ms": float(warm.get("wall_ms", 0.0)),
+            "peak_rss_bytes": 0,
+            "timed_out": bool(warm.get("timed_out", False)),
+            "stdout_log": str(stdout_path),
+            "stderr_log": str(stderr_path),
+            "portable_dynamic_harness": True,
+            "isolated_profile_warmup": warm,
+        }
+
     runtime_script = portable_harness(repo)
     script_arg = runtime_script.relative_to(repo).as_posix()
     command = [godot, "--headless", "--path", str(repo), "--script", script_arg]
@@ -119,6 +201,7 @@ def portable_run_godot_case(
             "stdout_log": str(stdout_path),
             "stderr_log": str(stderr_path),
             "portable_dynamic_harness": True,
+            "isolated_profile_warmup": warm,
         }
     )
     if timed_out or return_code != 0:
