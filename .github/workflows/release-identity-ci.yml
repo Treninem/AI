@@ -1,0 +1,76 @@
+name: AuroraFox Release Identity CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'AGENTS.md'
+      - 'docs/PROJECT_MASTER_LOG.md'
+      - 'project/version.json'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'update/**'
+      - 'release/**'
+      - 'build/set_version.ps1'
+      - 'build/build_android.ps1'
+      - 'build/AuroraFox.iss'
+      - 'build/AuroraFox_V13_BridgeFixture.iss'
+      - 'tests/test_release_identity_version_policy.py'
+      - 'tests/windows_v13_bridge_smoke.ps1'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/updater-repair-validation.yml'
+      - '.github/workflows/release-identity-ci.yml'
+  pull_request:
+    paths:
+      - 'AGENTS.md'
+      - 'docs/PROJECT_MASTER_LOG.md'
+      - 'project/version.json'
+      - 'project.godot'
+      - 'export_presets.cfg'
+      - 'update/**'
+      - 'release/**'
+      - 'build/set_version.ps1'
+      - 'build/build_android.ps1'
+      - 'build/AuroraFox.iss'
+      - 'build/AuroraFox_V13_BridgeFixture.iss'
+      - 'tests/test_release_identity_version_policy.py'
+      - 'tests/windows_v13_bridge_smoke.ps1'
+      - '.github/workflows/release.yml'
+      - '.github/workflows/updater-repair-validation.yml'
+      - '.github/workflows/release-identity-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-identity:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Verify OpenSSL availability
+        run: openssl version
+      - name: Run release identity and version policy contract
+        run: python -m pytest -q tests/test_release_identity_version_policy.py
+      - name: Verify canonical version synchronization contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+          state=json.loads(Path('project/version.json').read_text(encoding='utf-8'))
+          numeric=state['numeric']
+          project=Path('project.godot').read_text(encoding='utf-8')
+          export=Path('export_presets.cfg').read_text(encoding='utf-8')
+          manifest=json.loads(Path('update/manifest.template.json').read_text(encoding='utf-8'))
+          assert f'config/version="{numeric}"' in project
+          assert f'version/name="{numeric}"' in export
+          assert manifest['version'] == numeric
+          assert state['version'] == 'V'+numeric
+          assert re.fullmatch(r'\d+\.\d+\.\d+\.\d+', numeric)
+          print('AURORA_RELEASE_VERSION_POLICY_OK', numeric)
+          PY
