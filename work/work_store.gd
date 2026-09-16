@@ -26,7 +26,7 @@ const VALID_STATES := [
 ]
 
 const VALID_TRANSITIONS := {
-	STATE_QUEUED: [STATE_RUNNING, STATE_PAUSED, STATE_CANCELLED, STATE_FAILED],
+	STATE_QUEUED: [STATE_RUNNING, STATE_PAUSED, STATE_COMPLETED, STATE_CANCELLED, STATE_FAILED],
 	STATE_RUNNING: [STATE_PAUSED, STATE_COMPLETED, STATE_FAILED, STATE_CANCELLED, STATE_INTERRUPTED, STATE_PARTIAL],
 	STATE_PAUSED: [STATE_QUEUED, STATE_RUNNING, STATE_CANCELLED, STATE_INTERRUPTED],
 	STATE_COMPLETED: [],
@@ -54,7 +54,7 @@ func _ready() -> void:
 	_ensure_directories()
 	_load()
 
-func create_project(title: String, context: String = "", idempotency_key: String = "") -> Dictionary:
+func create_project(title: String, instructions := "", idempotency_key: String = "") -> Dictionary:
 	var clean_key := idempotency_key.strip_edges()
 	if not clean_key.is_empty():
 		for existing in projects:
@@ -63,8 +63,8 @@ func create_project(title: String, context: String = "", idempotency_key: String
 	var now := _now()
 	var project := {
 		"id": _new_id("project"),
-		"title": title.strip_edges() if not title.strip_edges().is_empty() else "Project",
-		"context": context,
+		"title": title.strip_edges() if not title.strip_edges().is_empty() else "Новый проект",
+		"instructions": str(instructions).strip_edges(),
 		"files": [],
 		"tasks": [],
 		"idempotency_key": clean_key,
@@ -73,6 +73,8 @@ func create_project(title: String, context: String = "", idempotency_key: String
 	}
 	projects.push_front(project)
 	active_project_id = str(project["id"])
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(project_dir(active_project_id)))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(artifact_dir(active_project_id)))
 	_mark_dirty()
 	return project.duplicate(true)
 
@@ -85,8 +87,13 @@ func get_project(project_id: String) -> Dictionary:
 		return {}
 	return (projects[index] as Dictionary).duplicate(true)
 
-func active_project() -> Dictionary:
+func get_active_project() -> Dictionary:
+	if active_project_id.is_empty() and not projects.is_empty():
+		active_project_id = str(projects[0].get("id", ""))
 	return get_project(active_project_id)
+
+func active_project() -> Dictionary:
+	return get_active_project()
 
 func set_active(project_id: String) -> bool:
 	if _project_index(project_id) < 0:
@@ -95,16 +102,23 @@ func set_active(project_id: String) -> bool:
 	_mark_dirty()
 	return true
 
-func update_project(project_id: String, patch: Dictionary) -> bool:
+func update_project(project_id: String, title_or_patch, instructions: String = "") -> bool:
 	var index := _project_index(project_id)
 	if index < 0:
 		return false
 	var project: Dictionary = projects[index]
-	for key in patch.keys():
-		var key_text := str(key)
-		if key_text in ["id", "created_at", "tasks"]:
-			continue
-		project[key_text] = patch[key]
+	if title_or_patch is Dictionary:
+		var patch: Dictionary = title_or_patch
+		for key in patch.keys():
+			var key_text := str(key)
+			if key_text in ["id", "created_at", "tasks"]:
+				continue
+			project[key_text] = patch[key]
+	else:
+		var title := str(title_or_patch).strip_edges()
+		if not title.is_empty():
+			project["title"] = title
+		project["instructions"] = instructions.strip_edges()
 	project["updated_at"] = _now()
 	projects[index] = project
 	_mark_dirty()
@@ -140,7 +154,7 @@ func remove_file(project_id: String, path: String) -> bool:
 	_mark_dirty()
 	return true
 
-func create_task(project_id: String, prompt: String, output_name: String = "", idempotency_key: String = "") -> Dictionary:
+func create_task(project_id: String, prompt: String, output_name := "", idempotency_key: String = "") -> Dictionary:
 	var project_index := _project_index(project_id)
 	if project_index < 0:
 		return {}
@@ -155,11 +169,11 @@ func create_task(project_id: String, prompt: String, output_name: String = "", i
 	var task := {
 		"id": _new_id("task"),
 		"project_id": project_id,
-		"prompt": prompt,
+		"prompt": prompt.strip_edges(),
 		"status": STATE_QUEUED,
 		"progress": 0,
-		"message": "Queued",
-		"output_name": output_name,
+		"message": "В очереди",
+		"output_name": str(output_name).strip_edges(),
 		"artifact_path": "",
 		"result": "",
 		"result_summary": "",
@@ -170,6 +184,7 @@ func create_task(project_id: String, prompt: String, output_name: String = "", i
 		"last_action_retry_safety": "safe",
 		"requires_user_action": false,
 		"cancel_requested": false,
+		"retryable": true,
 		"attempts": 0,
 		"execution_id": "",
 		"idempotency_key": clean_key,
@@ -237,9 +252,7 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 		task["finished_at"] = ""
 		task["cancel_requested"] = false
 		task["requires_user_action"] = false
-	elif new_state in [STATE_COMPLETED, STATE_FAILED, STATE_CANCELLED]:
-		task["finished_at"] = now
-	elif new_state in [STATE_INTERRUPTED, STATE_PARTIAL]:
+	elif new_state in [STATE_COMPLETED, STATE_FAILED, STATE_CANCELLED, STATE_INTERRUPTED, STATE_PARTIAL]:
 		task["finished_at"] = now
 	if explicit_retry:
 		task["progress"] = 0
@@ -259,10 +272,11 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 	return true
 
 func start_task(project_id: String, task_id: String, execution_id: String) -> bool:
+	var task := get_task(project_id, task_id)
 	return transition_task(project_id, task_id, STATE_RUNNING, {
 		"execution_id": execution_id,
 		"message": "Running",
-		"progress": maxi(1, int(get_task(project_id, task_id).get("progress", 0))),
+		"progress": maxi(1, int(task.get("progress", 0))),
 	}, false)
 
 func pause_task(project_id: String, task_id: String, message: String = "Paused") -> bool:
@@ -346,6 +360,12 @@ func note_action(project_id: String, task_id: String, action_name: String, actio
 		"last_action_id": action_id.substr(0, 256),
 		"last_action_retry_safety": safety,
 	})
+
+func project_dir(project_id: String) -> String:
+	return "%s/%s" % [work_root, project_id]
+
+func artifact_dir(project_id: String) -> String:
+	return "%s/artifacts" % project_dir(project_id)
 
 func begin_batch() -> void:
 	_batch_depth += 1
@@ -483,6 +503,10 @@ func _sanitize_loaded(data: Dictionary) -> bool:
 	if _project_index(active_project_id) < 0:
 		active_project_id = str(projects[0].get("id", "")) if not projects.is_empty() else ""
 		migrated = true
+	for project in projects:
+		var project_id := str(project.get("id", ""))
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(project_dir(project_id)))
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(artifact_dir(project_id)))
 	return migrated
 
 func _sanitize_project(raw: Dictionary, used_project_ids: Dictionary, used_task_ids: Dictionary) -> Dictionary:
@@ -518,10 +542,10 @@ func _sanitize_project(raw: Dictionary, used_project_ids: Dictionary, used_task_
 	else:
 		migrated = true
 	var created := str(raw.get("created_at", _now()))
-	var project := {
+	return {
 		"id": project_id,
-		"title": str(raw.get("title", "Project")),
-		"context": str(raw.get("context", "")),
+		"title": str(raw.get("title", "Новый проект")),
+		"instructions": str(raw.get("instructions", raw.get("context", ""))),
 		"files": files,
 		"tasks": tasks,
 		"idempotency_key": str(raw.get("idempotency_key", "")),
@@ -529,7 +553,6 @@ func _sanitize_project(raw: Dictionary, used_project_ids: Dictionary, used_task_
 		"updated_at": str(raw.get("updated_at", created)),
 		"_migrated": migrated,
 	}
-	return project
 
 func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictionary) -> Dictionary:
 	var migrated := false
@@ -554,7 +577,7 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 		requires_user_action = retry_safety == "unsafe"
 		migrated = true
 	var created := str(raw.get("created_at", _now()))
-	var task := {
+	return {
 		"id": task_id,
 		"project_id": project_id,
 		"prompt": str(raw.get("prompt", "")),
@@ -572,6 +595,7 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 		"last_action_retry_safety": retry_safety,
 		"requires_user_action": requires_user_action,
 		"cancel_requested": false,
+		"retryable": bool(raw.get("retryable", true)),
 		"attempts": maxi(0, int(raw.get("attempts", 0))),
 		"execution_id": "" if state == STATE_INTERRUPTED else str(raw.get("execution_id", "")),
 		"idempotency_key": str(raw.get("idempotency_key", "")),
@@ -581,7 +605,6 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 		"updated_at": str(raw.get("updated_at", created)),
 		"_migrated": migrated,
 	}
-	return task
 
 func _mark_dirty() -> void:
 	_dirty = true
@@ -603,7 +626,8 @@ func _save() -> bool:
 	file.store_string(JSON.stringify(data, "  "))
 	file.flush()
 	file.close()
-	if _read_store(tmp).is_empty() and not projects.is_empty():
+	var verified := _read_store(tmp)
+	if verified.is_empty():
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(tmp))
 		return false
 	var primary_abs := ProjectSettings.globalize_path(store_path)
@@ -612,7 +636,8 @@ func _save() -> bool:
 	if FileAccess.file_exists(store_path):
 		var primary_data := _read_store(store_path)
 		if not primary_data.is_empty():
-			DirAccess.remove_absolute(backup_abs)
+			if FileAccess.file_exists(_backup_path()):
+				DirAccess.remove_absolute(backup_abs)
 			if DirAccess.copy_absolute(primary_abs, backup_abs) != OK:
 				DirAccess.remove_absolute(tmp_abs)
 				return false
@@ -632,7 +657,8 @@ func _preserve_corrupt_primary() -> void:
 		return
 	var source := ProjectSettings.globalize_path(store_path)
 	var target := ProjectSettings.globalize_path(store_path + ".corrupt")
-	DirAccess.remove_absolute(target)
+	if FileAccess.file_exists(store_path + ".corrupt"):
+		DirAccess.remove_absolute(target)
 	DirAccess.copy_absolute(source, target)
 
 func _backup_path() -> String:
@@ -654,12 +680,10 @@ func _redact(text: String) -> String:
 	if text.is_empty():
 		return text
 	var value := text
-	var patterns := [
-		"(?i)(password|passwd|token|api[_-]?key|authorization|cookie|private[_-]?key)\\s*[:=]\\s*[^\\s,;]+",
-		"(?i)bearer\\s+[A-Za-z0-9._~+/-]{8,}",
-	]
-	for pattern in patterns:
-		var regex := RegEx.new()
-		if regex.compile(pattern) == OK:
-			value = regex.sub(value, "$1=[REDACTED]", true) if pattern.begins_with("(?i)(") else regex.sub(value, "Bearer [REDACTED]", true)
+	var secret_regex := RegEx.new()
+	if secret_regex.compile("(?i)(password|passwd|token|api[_-]?key|authorization|cookie|private[_-]?key)\\s*[:=]\\s*[^\\s,;]+") == OK:
+		value = secret_regex.sub(value, "$1=[REDACTED]", true)
+	var bearer_regex := RegEx.new()
+	if bearer_regex.compile("(?i)bearer\\s+[A-Za-z0-9._~+/-]{8,}") == OK:
+		value = bearer_regex.sub(value, "Bearer [REDACTED]", true)
 	return value
