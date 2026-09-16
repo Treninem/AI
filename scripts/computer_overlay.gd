@@ -161,6 +161,17 @@ func _sync_computer_permission() -> void:
 	if computer != null and computer.has_method("set_computer_control_enabled"):
 		computer.call("set_computer_control_enabled", enabled)
 
+func _computer_primitives_ready() -> bool:
+	if main == null:
+		return false
+	var registry = main.get("tools")
+	if not registry is ToolRegistry:
+		return false
+	for tool_name in ["computer_action", "computer_screenshot", "computer_windows"]:
+		if not registry.tools.has(tool_name):
+			return false
+	return true
+
 func _refresh_control_state() -> void:
 	if enabled_toggle != null:
 		enabled_toggle.set_pressed_no_signal(enabled)
@@ -171,9 +182,17 @@ func _refresh_control_state() -> void:
 func _refresh_health() -> void:
 	var health := await computer.health()
 	var ok := bool(health.get("ok", false))
+	var primitives_ready := _computer_primitives_ready()
 	if status_label != null:
-		status_label.text = "Локальный Computer Agent готов. Планирование выполняет AuroraFox Core." if ok else "Локальный Computer Agent не запущен. Основной чат AuroraFox продолжает работать без него."
-		status_label.add_theme_color_override("font_color", Color("64ff9d") if ok else Color("ffbd75"))
+		if ok and primitives_ready:
+			status_label.text = "Локальный Computer Agent готов. Планирование выполняет AuroraFox Core."
+			status_label.add_theme_color_override("font_color", Color("64ff9d"))
+		elif ok:
+			status_label.text = "Computer Agent найден, но защищённые Core-примитивы ещё не интегрированы. Выполнение задач заблокировано до безопасного контракта."
+			status_label.add_theme_color_override("font_color", Color("ffbd75"))
+		else:
+			status_label.text = "Локальный Computer Agent не запущен. Основной чат AuroraFox продолжает работать без него."
+			status_label.add_theme_color_override("font_color", Color("ffbd75"))
 	if setup_button != null:
 		setup_button.visible = not ok and OS.get_name() == "Windows" and not computer.installer_path().is_empty()
 
@@ -234,6 +253,15 @@ func execute_goal(goal: String, max_steps: int = 30) -> Dictionary:
 	var clean_goal := goal.strip_edges()
 	if clean_goal.is_empty():
 		return {"ok": false, "error": "empty_goal"}
+	if not _computer_primitives_ready():
+		if status_label != null:
+			status_label.text = "Выполнение заблокировано: защищённые Computer-примитивы AuroraFox Core ещё не доступны."
+		return {
+			"ok": false,
+			"error": "protected_computer_primitives_unavailable",
+			"planning_owner": "aurorafox_core",
+			"service_side_planning": false,
+		}
 	var core := _agent_core()
 	if core == null:
 		return {"ok": false, "error": "aurorafox_core_unavailable"}
