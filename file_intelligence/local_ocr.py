@@ -13,6 +13,7 @@ from PIL import Image
 OCR_LANGUAGES = os.getenv("AURORAFOX_OCR_LANGUAGES", "rus+eng")
 OCR_TIMEOUT_SECONDS = int(os.getenv("AURORAFOX_OCR_TIMEOUT_SECONDS", "90"))
 OCR_MAX_PIXELS = int(os.getenv("AURORAFOX_OCR_MAX_PIXELS", str(16_000_000)))
+OCR_MAX_INPUT_PIXELS = int(os.getenv("AURORAFOX_OCR_MAX_INPUT_PIXELS", str(64_000_000)))
 OCR_MAX_OUTPUT_CHARS = int(os.getenv("AURORAFOX_OCR_MAX_OUTPUT_CHARS", "200000"))
 OCR_PSM = int(os.getenv("AURORAFOX_OCR_PSM", "6"))
 
@@ -124,6 +125,7 @@ def health() -> dict[str, Any]:
         "network_required": False,
         "external_ai_required": False,
         "max_pixels": OCR_MAX_PIXELS,
+        "max_input_pixels": OCR_MAX_INPUT_PIXELS,
         "timeout_seconds": OCR_TIMEOUT_SECONDS,
     }
 
@@ -165,6 +167,22 @@ def _prepare_image(image: Image.Image) -> Image.Image:
 def recognize_image(image: Image.Image, *, page_number: int | None = None) -> dict[str, Any]:
     rt = runtime()
     requested = tuple(part for part in OCR_LANGUAGES.split("+") if part)
+    input_pixels = max(1, int(image.width) * int(image.height))
+    if input_pixels > OCR_MAX_INPUT_PIXELS:
+        return {
+            "ok": False,
+            "available": rt.available and set(rt.languages) >= set(requested),
+            "text": "",
+            "error": f"Image exceeds local OCR input limit of {OCR_MAX_INPUT_PIXELS} pixels",
+            "page": page_number,
+            "engine": "tesseract-local",
+            "languages": list(rt.languages),
+            "width": image.width,
+            "height": image.height,
+            "input_pixels": input_pixels,
+            "network_required": False,
+            "external_ai_required": False,
+        }
     missing = [lang for lang in requested if lang not in rt.languages]
     if rt.executable is None or rt.tessdata_dir is None or missing:
         return {

@@ -21,6 +21,7 @@ class AndroidOcrRuntime(private val context: Context) {
         private const val MAX_OCR_PAGES = 150
         private const val MAX_OUTPUT_CHARS = 160_000
         private const val MAX_PIXELS = 8_000_000L
+        private const val MAX_INPUT_PIXELS = 64_000_000L
         private const val LANGUAGES = "rus+eng"
         private val MODEL_SHA = mapOf(
             "eng.traineddata" to "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
@@ -43,6 +44,7 @@ class AndroidOcrRuntime(private val context: Context) {
         put("max_ocr_pages", MAX_OCR_PAGES)
         put("max_output_chars", MAX_OUTPUT_CHARS)
         put("max_pixels", MAX_PIXELS)
+        put("max_input_pixels", MAX_INPUT_PIXELS)
     }
 
     fun extract(path: String): String {
@@ -89,7 +91,7 @@ class AndroidOcrRuntime(private val context: Context) {
     }
 
     private fun extractImage(file: File): String {
-        val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return error("Image cannot be decoded")
+        val bitmap = decodeBoundedBitmap(file) ?: return error("Image cannot be decoded")
         return try {
             val raw = recognize(bitmap)
             val truncated = raw.length > MAX_OUTPUT_CHARS
@@ -145,7 +147,7 @@ class AndroidOcrRuntime(private val context: Context) {
                     if (!complete) { outputTruncated = true; break }
                     continue
                 }
-                val bitmap = renderer.renderImageWithDPI(index, 180f)
+                val bitmap = renderBoundedPdfPage(document, renderer, index)
                 val recognized = try { recognize(bitmap) } finally { bitmap.recycle() }
                 ocrPages++
                 val chosen = if (recognized.isNotBlank()) recognized else layer
@@ -191,6 +193,35 @@ class AndroidOcrRuntime(private val context: Context) {
         }
         out.append(block, 0, remaining)
         return false
+    }
+
+    private fun decodeBoundedBitmap(file: File): Bitmap? {
+        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(file.absolutePath, bounds)
+        val width = bounds.outWidth
+        val height = bounds.outHeight
+        if (width <= 0 || height <= 0) return null
+        val inputPixels = width.toLong() * height.toLong()
+        require(inputPixels <= MAX_INPUT_PIXELS) { "Image exceeds local OCR input limit of $MAX_INPUT_PIXELS pixels" }
+        var sample = 1
+        while ((width / sample).toLong().coerceAtLeast(1L) * (height / sample).toLong().coerceAtLeast(1L) > MAX_PIXELS) {
+            sample *= 2
+        }
+        val options = BitmapFactory.Options().apply {
+            inSampleSize = sample
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return BitmapFactory.decodeFile(file.absolutePath, options)
+    }
+
+    private fun renderBoundedPdfPage(document: PDDocument, renderer: PDFRenderer, index: Int): Bitmap {
+        val box = document.getPage(index).cropBox
+        val defaultScale = 180.0 / 72.0
+        val projected = maxOf(1.0, box.width.toDouble() * box.height.toDouble() * defaultScale * defaultScale)
+        val scale = if (projected > MAX_PIXELS.toDouble()) {
+            defaultScale * kotlin.math.sqrt(MAX_PIXELS.toDouble() / projected)
+        } else defaultScale
+        return renderer.renderImage(index, scale.coerceAtLeast(0.1).toFloat())
     }
 
     private fun limitBitmap(bitmap: Bitmap): Bitmap {

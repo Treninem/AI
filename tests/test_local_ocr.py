@@ -60,6 +60,20 @@ def test_runtime_contract_is_local_only():
     assert set(status["requested_languages"]) == {"rus", "eng"}
 
 
+def test_oversized_image_rejected_before_decode_work(monkeypatch):
+    monkeypatch.setattr(local_ocr, "OCR_MAX_INPUT_PIXELS", 1_000)
+    image = Image.new("RGB", (100, 100), "white")
+    try:
+        result = local_ocr.recognize_image(image)
+    finally:
+        image.close()
+    assert result["ok"] is False
+    assert result["input_pixels"] == 10_000
+    assert "input limit" in result["error"]
+    assert result["network_required"] is False
+    assert result["external_ai_required"] is False
+
+
 def test_text_layer_pdf_skips_ocr(tmp_path, monkeypatch):
     pdf = tmp_path / "text.pdf"
     _text_pdf(pdf, "Normal embedded English text layer 12345")
