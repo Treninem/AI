@@ -1,0 +1,82 @@
+name: AuroraFox Knowledge Registry Recovery
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'benchmarks/knowledge/lost_registry_rollback_probe.gd'
+      - '.github/workflows/knowledge-registry-recovery.yml'
+  pull_request:
+    paths:
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'benchmarks/knowledge/lost_registry_rollback_probe.gd'
+      - '.github/workflows/knowledge-registry-recovery.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  recovery-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+      - name: Parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Verify lost-registry rollback safety
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/lost_registry_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_LOST_REGISTRY_ROLLBACK_RESULT=
+          --report artifacts/knowledge-registry-recovery/linux.json
+      - name: Upload recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-registry-recovery-linux-${{ github.sha }}
+          path: artifacts/knowledge-registry-recovery/
+          if-no-files-found: error
+
+  recovery-windows:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri 'https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip' -OutFile godot.zip
+          Expand-Archive -Path godot.zip -DestinationPath godot-bin -Force
+          $godot = Get-ChildItem -Path godot-bin -Filter 'Godot_v4.7.1-stable_win64.exe' -Recurse | Select-Object -First 1
+          if (-not $godot) { throw 'Godot executable missing' }
+          Copy-Item $godot.FullName '.\godot.exe'
+      - name: Parse project
+        shell: powershell
+        run: .\godot.exe --headless --editor --path . --quit
+      - name: Verify lost-registry rollback safety
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/lost_registry_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_LOST_REGISTRY_ROLLBACK_RESULT=
+          --report artifacts/knowledge-registry-recovery/windows.json
+      - name: Upload recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-registry-recovery-windows-${{ github.sha }}
+          path: artifacts/knowledge-registry-recovery/
+          if-no-files-found: error
