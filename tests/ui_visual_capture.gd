@@ -42,12 +42,21 @@ func _populate_chat(main: Control, mobile: bool) -> bool:
 	if not store is ChatStore:
 		_fail("ChatStore missing during visual capture", 10)
 		return false
+
+	# The structural smoke runs before visual capture in the same workspace and
+	# intentionally creates several chats. Visual review must represent the clean
+	# product surface, not test-history leftovers from the previous step.
+	store.chats.clear()
+	store.active_chat_id = ""
+	store.save_all()
+	main.call("_refresh_chat_list")
 	main.call("_new_chat")
 	await process_frame
 	store.rename_chat(store.active_chat_id, "Интерфейс AuroraFox" if mobile else "Проверка интерфейса AuroraFox")
 	store.add_message("user", "Покажи, как теперь выглядит аккуратный интерфейс без лишних элементов.")
 	store.add_message("assistant", "Готово. Основной чат оставляет только нужные действия, а расширенные функции собраны по понятным разделам настроек.")
 	main.call("_render_active_chat")
+	main.call("_refresh_chat_list")
 	await process_frame
 	await process_frame
 	return true
