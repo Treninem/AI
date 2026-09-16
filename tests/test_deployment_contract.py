@@ -24,7 +24,23 @@ def test_server_metadata_is_versioned_and_backup_is_not_exposed_over_http():
     assert '"ollama_required": False' in server
     assert '"chat_available": True' in server
     assert '"local_core": local_core' in server
+    assert '"database": {"backend": "sqlite", "schema_version": SCHEMA_VERSION}' in server
     assert '/v1/backups/latest' not in server
+
+
+def test_server_readiness_is_database_integrity_backed():
+    server = read("api/server.py")
+    database = read("api/database.py")
+    assert '@app.get("/ready")' in server
+    assert "database.integrity_check()" in server
+    assert 'status.pop("path", None)' in server
+    assert 'status["backend"] = "sqlite"' in server
+    assert "HTTPException(status_code=503, detail=payload)" in server
+    assert 'database_status.get("ok", False)' in server
+    assert 'database_status.get("journal_mode")' not in server or '"journal_mode"' in database
+    assert 'PRAGMA integrity_check' in database
+    assert 'PRAGMA foreign_key_check' in database
+    assert 'PRAGMA journal_mode=WAL' in database
 
 
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
@@ -102,15 +118,19 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
 
     # Production switching is data-aware: the current SQLite state must be
     # healthy, a verifiable snapshot must exist before checkout, and the new
-    # process must pass integrity again before the update is accepted.
+    # process must pass readiness plus direct integrity before acceptance.
     assert "python -m api.database --path" in updater
     assert "python -m api.database --path" in install
     assert "systemctl start aurorafox-backup.service" in updater
     assert "latest.zip" in updater and "latest.sha256" in updater
     assert "sha256sum -c" in updater
     assert "preupdate_backup_sha=" in updater
+    assert "http://127.0.0.1:8768/ready" in updater
+    assert 'data["database"]["ok"] is True' in updater
+    assert 'data["database"]["journal_mode"] == "wal"' in updater
     assert updater.index("systemctl start aurorafox-backup.service") < updater.index('git checkout --detach "${candidate}"')
     assert updater.rindex("python -m api.database --path") > updater.index("systemctl restart aurorafox-api.service")
+    assert updater.index("http://127.0.0.1:8768/ready") > updater.index("systemctl restart aurorafox-api.service")
     assert "sha256sum -c latest.sha256" in install
     assert "db=sqlite-wal" in install
 
