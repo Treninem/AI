@@ -10,10 +10,10 @@ permissions:
   contents: write
 
 jobs:
-  validate-v13-repair:
+  validate-legacy-repairs:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
     runs-on: windows-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - name: Checkout exact packaged commit
         uses: actions/checkout@v4
@@ -50,25 +50,29 @@ jobs:
         shell: pwsh
         run: choco install innosetup --no-progress -y
 
-      - name: Parse V1.3 repair smoke
+      - name: Parse V1.2 and V1.3 repair smokes
         shell: pwsh
         run: |
-          $tokens = $null
-          $errors = $null
-          [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path '.\tests\windows_v13_bridge_smoke.ps1'), [ref]$tokens, [ref]$errors) | Out-Null
-          if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error $_.Message }; throw 'V1.3 repair smoke parse failed' }
+          foreach ($script in @('.\tests\windows_v12_bridge_smoke.ps1','.\tests\windows_v13_bridge_smoke.ps1')) {
+            $tokens = $null
+            $errors = $null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script), [ref]$tokens, [ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error "$script :: $($_.Message)" }; throw "$script parse failed" }
+          }
 
-      - name: Verify historical V1.3 to signed floor in-place repair
+      - name: Verify historical V1.2 and V1.3 in-place trust-root repair
         shell: pwsh
         run: |
           $state = Get-Content project\version.json -Raw | ConvertFrom-Json
           $current = [string]$state.numeric
-          $target = if ([version]$current -gt [version]'1.3.0.0') { $current } else { '1.4.0.0' }
-          .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $target
+          $setup = Get-ChildItem dist -Filter 'AuroraFox-V*-Setup-Windows.exe' | Select-Object -First 1
+          if (-not $setup) { throw 'Current Windows setup artifact is missing' }
+          .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller $setup.FullName
+          .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $current
 
   normalize-and-publish-repairs:
     if: github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main'
-    needs: validate-v13-repair
+    needs: validate-legacy-repairs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout exact packaged commit
@@ -84,7 +88,7 @@ jobs:
           run-id: ${{ github.event.workflow_run.id }}
           github-token: ${{ github.token }}
 
-      - name: Normalize repair releases away from stable latest
+      - name: Normalize existing repair releases away from stable latest
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -96,31 +100,44 @@ jobs:
             fi
           done
 
-      - name: Publish permanent V1.2 and V1.3 repair assets after signed floor
+      - name: Check signed-floor repair publication eligibility
+        id: floor
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - "$GITHUB_OUTPUT" <<'PY'
+          import json, sys
+          from pathlib import Path
+
+          def ver(value):
+              parts = tuple(int(p) for p in str(value).strip().lstrip('Vv').split('.'))
+              if len(parts) != 4:
+                  raise SystemExit(f'invalid four-part version: {value!r}')
+              return parts
+
+          state = json.loads(Path('project/version.json').read_text(encoding='utf-8'))
+          identity = json.loads(Path('update/release_identity.json').read_text(encoding='utf-8'))
+          current = str(state['numeric'])
+          floor = str(identity['signed_update_floor'])
+          legacy = str(identity['legacy_repair_required_through'])
+          eligible = ver(current) >= ver(floor) and ver(current) > ver(legacy)
+          with open(sys.argv[1], 'a', encoding='utf-8') as fh:
+              fh.write(f'eligible={str(eligible).lower()}\n')
+              fh.write(f'current={current}\n')
+              fh.write(f'floor={floor}\n')
+              fh.write(f'legacy={legacy}\n')
+          print(f'AURORA_REPAIR_PUBLICATION_ELIGIBILITY current={current} floor={floor} legacy={legacy} eligible={eligible}')
+          PY
+
+      - name: Publish permanent V1.2 and V1.3 trust-root repair assets
+        if: steps.floor.outputs.eligible == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          version="$(python3 - <<'PY'
-          import json
-          print(json.load(open('project/version.json', encoding='utf-8'))['numeric'])
-          PY
-          )"
-          set +e
-          python3 - "$version" <<'PY'
-          import sys
-          v=tuple(map(int,sys.argv[1].split('.')))
-          raise SystemExit(0 if v > (1,3,0,0) else 20)
-          PY
-          rc=$?
-          set -e
-          if [ "$rc" -eq 20 ]; then
-            echo 'Canonical version has not reached the signed floor yet; normalization only.'
-            exit 0
-          fi
-          if [ "$rc" -ne 0 ]; then exit "$rc"; fi
-
+          version='${{ steps.floor.outputs.current }}'
+          floor='${{ steps.floor.outputs.floor }}'
           source="dist/AuroraFox-V${version}-Setup-Windows.exe"
           test -s "$source"
           for old in 1.2 1.3; do
@@ -131,19 +148,40 @@ jobs:
             tag="repair-v${old}-windows"
             notes="$RUNNER_TEMP/${tag}.md"
             cat > "$notes" <<EOF
-          # AuroraFox V${old} Windows Repair Bridge
+          # AuroraFox V${old} Windows Trust-Root Repair
 
-          Historical AuroraFox V${old} builds predate the permanent signed-update trust root.
+          Historical AuroraFox V${old} Windows builds were produced before the permanent signed-update trust root was embedded in packaged applications.
 
-          Run \`AuroraFox-V${old}-Repair-Windows.exe\` over the existing installation. The verified in-place bridge preserves Godot \`user://\` data and moves the installation to AuroraFox V${version}, the permanent signed-update line.
+          Run \`AuroraFox-V${old}-Repair-Windows.exe\` over the existing installation. The verified in-place bridge preserves Godot \`user://\` data and installs AuroraFox V${version} with the permanent update trust root. From the signed V${floor} floor onward, normal automatic updates use \`releases/latest/download/update.json\` plus RSA verification.
 
           This is a one-time repair and is deliberately a prerelease so it can never occupy the stable \`releases/latest\` updater endpoint.
           EOF
             if gh release view "$tag" >/dev/null 2>&1; then
               gh release upload "$tag" "$stable" "$sums" --clobber
-              gh release edit "$tag" --title "AuroraFox V${old} Windows Repair Bridge" --notes-file "$notes" --prerelease --latest=false
+              gh release edit "$tag" --title "AuroraFox V${old} Windows Trust-Root Repair" --notes-file "$notes" --prerelease --latest=false
             else
-              gh release create "$tag" "$stable" "$sums" --title "AuroraFox V${old} Windows Repair Bridge" --notes-file "$notes" --prerelease --latest=false
+              gh release create "$tag" "$stable" "$sums" --title "AuroraFox V${old} Windows Trust-Root Repair" --notes-file "$notes" --prerelease --latest=false
             fi
           done
-          echo "AURORA_REPAIR_RELEASES_READY signed_floor=$version"
+          echo "AURORA_REPAIR_RELEASES_READY bootstrap_version=$version signed_floor=$floor"
+
+      - name: Verify repair tags cannot be stable latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          latest="$(gh api "repos/${GITHUB_REPOSITORY}/releases/latest" --jq '.tag_name' 2>/dev/null || true)"
+          case "$latest" in
+            repair-v1.2-windows|repair-v1.3-windows)
+              echo "Repair release illegally occupies stable latest: $latest" >&2
+              exit 1
+              ;;
+          esac
+          for tag in repair-v1.2-windows repair-v1.3-windows; do
+            if gh release view "$tag" >/dev/null 2>&1; then
+              is_pre="$(gh release view "$tag" --json isPrerelease --jq '.isPrerelease')"
+              test "$is_pre" = 'true' || { echo "$tag must be prerelease" >&2; exit 1; }
+            fi
+          done
+          echo "AURORA_REPAIR_LATEST_ISOLATION_OK latest=${latest:-none}"

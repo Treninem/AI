@@ -33,10 +33,10 @@ $baseCode = [int]$base.android_version_code
 
 try {
     $cases = @(
-        @{ bump='build'; expected=@($baseParts[0],$baseParts[1],$baseParts[2],$baseParts[3]+1) },
-        @{ bump='patch'; expected=@($baseParts[0],$baseParts[1],$baseParts[2]+1,0) },
-        @{ bump='minor'; expected=@($baseParts[0],$baseParts[1]+1,0,0) },
-        @{ bump='major'; expected=@($baseParts[0]+1,0,0,0) }
+        @{ bump='build'; expected=@($baseParts[0], $baseParts[1], $baseParts[2], ($baseParts[3] + 1)) },
+        @{ bump='patch'; expected=@($baseParts[0], $baseParts[1], ($baseParts[2] + 1), 0) },
+        @{ bump='minor'; expected=@($baseParts[0], ($baseParts[1] + 1), 0, 0) },
+        @{ bump='major'; expected=@(($baseParts[0] + 1), 0, 0, 0) }
     )
 
     foreach ($case in $cases) {
@@ -59,6 +59,7 @@ try {
     $same = [string]$base.numeric
     & powershell -NoProfile -ExecutionPolicy Bypass -File .\build\set_version.ps1 -Version $same -Reason 'must fail'
     if ($LASTEXITCODE -eq 0) { throw 'set_version accepted the already-current version' }
+    $global:LASTEXITCODE = 0
 
     Restore-Tracked
     $lower = "$($baseParts[0]).$($baseParts[1]).$($baseParts[2]).0"
@@ -67,6 +68,7 @@ try {
     }
     & powershell -NoProfile -ExecutionPolicy Bypass -File .\build\set_version.ps1 -Version $lower -Reason 'must fail downgrade'
     if ($LASTEXITCODE -eq 0) { throw 'set_version accepted a non-newer explicit version' }
+    $global:LASTEXITCODE = 0
 
     Write-Host 'AURORA_VERSION_POLICY_EXECUTION_OK' -ForegroundColor Green
 } finally {

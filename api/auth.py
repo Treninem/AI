@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from api.account_store import AccountStore
 from api.database import AuroraDatabase, atomic_write_text
 
 
@@ -34,6 +35,7 @@ class KeyStore:
         self.path = self.root / "keys.json"
         self.bootstrap_path = self.root / "bootstrap_key.txt"
         self.database = AuroraDatabase(self.root / "aurorafox.sqlite3")
+        self.personal = AccountStore(self.root)
         self._write_lock = threading.RLock()
         self._migrate_legacy_once()
 
@@ -61,6 +63,7 @@ class KeyStore:
             "scopes": [str(value) for value in scopes],
             "created_at": int(row["created_at"]),
             "revoked": bool(row["revoked"]),
+            "auth_kind": "api_key",
         }
 
     def _read_legacy(self) -> list[dict[str, Any]]:
@@ -150,6 +153,7 @@ class KeyStore:
             "scopes": self._normalize_scopes(scopes),
             "created_at": int(time.time()),
             "revoked": False,
+            "auth_kind": "api_key",
         }
         return token, record
 
@@ -195,6 +199,8 @@ class KeyStore:
     def verify(self, token: str) -> dict[str, Any] | None:
         if not token:
             return None
+        if token.startswith("af_access_") or token.startswith("af_guest_"):
+            return self.personal.verify_personal_token(token)
         digest = self._hash(token)
         with self.database.connection() as connection:
             row = connection.execute(

@@ -25,6 +25,7 @@ on:
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
+      - '.github/workflows/windows-package-ci.yml'
       - '.github/workflows/updater-repair-validation.yml'
       - '.github/workflows/release-identity-ci.yml'
   pull_request:
@@ -50,6 +51,7 @@ on:
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
+      - '.github/workflows/windows-package-ci.yml'
       - '.github/workflows/updater-repair-validation.yml'
       - '.github/workflows/release-identity-ci.yml'
   workflow_dispatch:
@@ -66,6 +68,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install release identity test runner
+        run: python -m pip install --disable-pip-version-check pytest==8.4.1
       - name: Verify OpenSSL availability
         run: openssl version
       - name: Run release identity versioning and legacy update contracts

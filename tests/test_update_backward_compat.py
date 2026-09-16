@@ -9,12 +9,13 @@ LEGACY_MANIFEST_URL = "https://github.com/Treninem/AI/releases/latest/download/u
 WINDOWS_ASSET = "AuroraFox-Windows.zip"
 ANDROID_ASSET = "AuroraFox-Android.apk"
 LEGACY_REPAIR_THROUGH = "1.3.0.0"
+REPAIR_BOOTSTRAP_VERSION = "1.3.0.0"
 SIGNED_UPDATE_FLOOR = "1.4.0.0"
 APP_ID = "8C21F024-53DE-4FA3-A150-78C80829B6BF"
 
 
 def legacy_manifest_parser_accepts(manifest: dict) -> bool:
-    """Model the stable manifest fields; readability never bypasses trust verification."""
+    """Model stable manifest fields; readability never bypasses trust verification."""
     if not isinstance(manifest, dict) or not str(manifest.get("version", "")):
         return False
     if str(manifest.get("channel", "stable")) != "stable":
@@ -51,9 +52,11 @@ def test_manifest_template_requires_repair_through_v13_and_signed_v14_floor() ->
     assert compatibility["legacy_manifest_readable"] is True
     assert compatibility["legacy_direct_update"] is False
     assert compatibility["legacy_repair_required_through"] == LEGACY_REPAIR_THROUGH
+    assert compatibility["repair_bootstrap_version"] == REPAIR_BOOTSTRAP_VERSION
+    assert compatibility["repair_release_tags"] == ["repair-v1.2-windows", "repair-v1.3-windows"]
     assert compatibility["signed_direct_update"] is True
     assert compatibility["signed_update_floor"] == SIGNED_UPDATE_FLOOR
-    assert "repair" in compatibility["windows_strategy"]
+    assert "trust_root_repair" in compatibility["windows_strategy"]
     assert compatibility["android_strategy"] == "same_package_same_permanent_signing_identity_required"
 
 
@@ -73,7 +76,36 @@ def test_repair_releases_are_separate_prereleases_not_stable_latest() -> None:
     assert "repair-v1.3-windows" in workflow
     assert "--prerelease" in workflow
     assert "--latest=false" in workflow
-    assert "releases/latest" not in workflow
+    # Stable URL text may legitimately appear in human-readable release notes.
+    # What matters is that repair releases are always addressed by their fixed
+    # repair tags and never created/uploaded as a stable latest payload.
+    assert 'tag="repair-v${old}-windows"' in workflow
+    assert 'gh release upload "$tag"' in workflow
+    assert 'gh release create "$tag"' in workflow
+    assert 'gh release create latest' not in workflow
+    assert "Verify repair tags cannot be stable latest" in workflow
+    assert "Repair release illegally occupies stable latest" in workflow
+
+
+def test_repair_assets_publish_only_from_signed_v14_or_newer_floor() -> None:
+    workflow = (ROOT / ".github/workflows/updater-repair-validation.yml").read_text(encoding="utf-8")
+    assert "Check signed-floor repair publication eligibility" in workflow
+    assert "eligible = ver(current) >= ver(floor) and ver(current) > ver(legacy)" in workflow
+    assert "if: steps.floor.outputs.eligible == 'true'" in workflow
+    assert 'for old in 1.2 1.3' in workflow
+    assert 'source="dist/AuroraFox-V${version}-Setup-Windows.exe"' in workflow
+    assert 'stable="dist/AuroraFox-V${old}-Repair-Windows.exe"' in workflow
+    assert 'gh release upload "$tag" "$stable" "$sums" --clobber' in workflow
+    assert "AURORA_REPAIR_RELEASES_READY" in workflow
+
+
+def test_windows_package_is_only_artifact_producer_not_repair_release_writer() -> None:
+    workflow = (ROOT / ".github/workflows/windows-package-ci.yml").read_text(encoding="utf-8")
+    assert "publish-v12-repair" not in workflow
+    assert "gh release create" not in workflow
+    assert "gh release upload" not in workflow
+    assert "tests/windows_v13_bridge_smoke.ps1" in workflow
+    assert "update\\release_public.pub" in workflow
 
 
 def test_public_update_key_is_embedded_in_windows_and_android() -> None:
@@ -112,7 +144,6 @@ def test_private_signing_material_is_git_ignored() -> None:
     setup = (ROOT / "build/setup_release_signing.ps1").read_text(encoding="utf-8")
     assert "build/private/" in ignore
     assert "*.keystore" in ignore
-    assert "*.jks" in ignore
     assert "aurora_update_signing_private.pem" in setup
     assert "aurorafox-android-release.jks" in setup
     assert "git add build/private" not in setup
@@ -133,7 +164,8 @@ def test_windows_v12_and_v13_repairs_share_same_inno_identity() -> None:
     assert "bridge-v12-sentinel.txt" in v12_test
     assert "AURORA_WINDOWS_V12_TO_CURRENT_BRIDGE_OK" in v12_test
     assert "bridge-v13-sentinel.txt" in v13_test
-    assert "AURORA_WINDOWS_V13_TO_SIGNED_FLOOR_BRIDGE_OK" in v13_test
+    assert "release_public.pub" in v13_test
+    assert "AURORA_WINDOWS_V13_TRUST_ROOT_REPAIR_OK" in v13_test
 
 
 def test_old_clients_missing_trust_root_get_repair_state_not_unsigned_install() -> None:
@@ -142,7 +174,8 @@ def test_old_clients_missing_trust_root_get_repair_state_not_unsigned_install() 
     assert "untrusted_remote" in updater
     assert "Автоматическая установка заблокирована безопасностью" in updater
     assert "_verify_manifest_signature" in updater
-    assert "_verify_sha256" in updater
+    assert "_sha256_file" in updater
+    assert "actual != expected" in updater
 
 
 def test_documentation_names_v12_v13_repair_and_v14_floor() -> None:

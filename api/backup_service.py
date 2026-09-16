@@ -98,16 +98,40 @@ class BackupService:
             str(row[0])
             for row in destination_db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
         }
-        if "api_keys" not in tables:
-            return False
-        destination_db.execute("DELETE FROM api_keys")
+        sensitive = False
+        if "api_keys" in tables:
+            destination_db.execute("DELETE FROM api_keys")
+            sensitive = True
+        if "auth_sessions" in tables:
+            destination_db.execute("DELETE FROM auth_sessions")
+            sensitive = True
+        # auth_sessions cascades refresh rows with foreign keys only when the
+        # connection has FK enforcement enabled; delete explicitly as well so
+        # sanitized exports never depend on connection PRAGMA state.
+        if "refresh_tokens" in tables:
+            destination_db.execute("DELETE FROM refresh_tokens")
+            sensitive = True
+        if "account_tokens" in tables:
+            destination_db.execute("DELETE FROM account_tokens")
+            sensitive = True
+        if "accounts" in tables:
+            destination_db.execute(
+                "UPDATE accounts SET password_salt='', password_hash='', password_params_json='{}'"
+            )
+            sensitive = True
+        if "guests" in tables:
+            # Preserve guest principal IDs/data ownership in the owner backup but
+            # make every copied bearer hash unusable and deterministic per row.
+            destination_db.execute("UPDATE guests SET token_hash='redacted:' || id")
+            sensitive = True
         if "metadata" in tables:
             destination_db.execute("DELETE FROM metadata WHERE key LIKE 'migration.api_keys.%'")
         destination_db.commit()
-        # DELETE alone can leave credential hashes in free pages. VACUUM rebuilds
-        # the snapshot so excluded hashes cannot be recovered from the archive.
-        destination_db.execute("VACUUM")
-        return True
+        if sensitive:
+            # DELETE/UPDATE can leave old hashes in free pages. VACUUM rebuilds
+            # the snapshot so excluded credentials cannot be recovered from ZIP.
+            destination_db.execute("VACUUM")
+        return sensitive
 
     def _copy_source(self, source: Path, destination: Path) -> bool:
         destination.parent.mkdir(parents=True, exist_ok=True)

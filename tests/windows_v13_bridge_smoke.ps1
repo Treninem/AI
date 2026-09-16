@@ -1,6 +1,6 @@
 param(
     [Parameter(Mandatory = $true)][string]$Iscc,
-    [string]$CandidateVersion = '1.4.0.0'
+    [string]$CandidateVersion = '1.3.0.0'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,8 +12,8 @@ $targetDir = Join-Path $root 'build\release\v13-repair-target'
 
 if ($CandidateVersion -notmatch '^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$') { throw 'CandidateVersion must use four numeric parts' }
 $parts = @([int]$Matches[1],[int]$Matches[2],[int]$Matches[3],[int]$Matches[4])
-if (($parts[0] -lt 1) -or (($parts[0] -eq 1) -and ($parts[1] -le 3))) {
-    throw "V1.3 repair target must be strictly above V1.3.x: $CandidateVersion"
+if (($parts[0] -lt 1) -or (($parts[0] -eq 1) -and ($parts[1] -lt 3))) {
+    throw "V1.3 trust-root repair target must be V1.3.0.0 or newer: $CandidateVersion"
 }
 if (-not (Test-Path -LiteralPath $Iscc)) { throw "Inno Setup compiler missing: $Iscc" }
 if (-not (Test-Path -LiteralPath $fixtureIss)) { throw 'V1.3 bridge fixture definition is missing' }
@@ -66,7 +66,10 @@ try {
     if (-not (Test-Path -LiteralPath $bridgeMarker)) { throw 'V1.3 repair marker was not created' }
     $bridgeText = Get-Content -LiteralPath $bridgeMarker -Raw
     if ($bridgeText -notmatch 'previous=1\.3\.0\.0') { throw "Bridge marker did not record V1.3 source version: $bridgeText" }
-    if ($bridgeText -notmatch ('current=' + [regex]::Escape($CandidateVersion))) { throw "Bridge marker did not record signed-floor target $CandidateVersion`: $bridgeText" }
+    if ($bridgeText -notmatch ('current=' + [regex]::Escape($CandidateVersion))) { throw "Bridge marker did not record repair target $CandidateVersion`: $bridgeText" }
+
+    $trustRoot = Join-Path $installDir 'update\release_public.pub'
+    if (-not (Test-Path -LiteralPath $trustRoot)) { throw 'Permanent signed-update trust root was not installed by V1.3 repair' }
 
     if (-not (Test-Path -LiteralPath $sentinel)) { throw 'Godot user data was deleted during V1.3 repair' }
     $after = (Get-Content -LiteralPath $sentinel -Raw).Trim()
@@ -75,7 +78,7 @@ try {
     $run = Start-Process -FilePath $installedExe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
     if ($run.ExitCode -ne 0) { throw "Repaired AuroraFox exited with $($run.ExitCode)" }
 
-    Write-Host "AURORA_WINDOWS_V13_TO_SIGNED_FLOOR_BRIDGE_OK target=$CandidateVersion" -ForegroundColor Green
+    Write-Host "AURORA_WINDOWS_V13_TRUST_ROOT_REPAIR_OK target=$CandidateVersion" -ForegroundColor Green
 } finally {
     $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($uninstaller) {

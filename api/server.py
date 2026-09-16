@@ -15,6 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from api.account_store import AccountError, AuthenticationError, ConflictError, RefreshReplayError
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.conversation_store import ConversationStore
 from api.core_candidate_queue import CoreCandidateQueue, CoreCandidateQueueError
@@ -23,6 +24,7 @@ from api.file_client import FileIntelligenceClient
 from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
 from api.runtime_bridge import AuroraRuntimeBridge
+from api.sync_store import SyncStore
 
 HOST = os.getenv("AURORAFOX_API_HOST", "127.0.0.1")
 PORT = int(os.getenv("AURORAFOX_API_PORT", "8768"))
@@ -32,7 +34,9 @@ API_ROOT.mkdir(parents=True, exist_ok=True)
 
 keys = KeyStore(API_ROOT)
 keys.ensure_bootstrap_key()
+accounts = keys.personal
 database = keys.database
+sync = SyncStore(API_ROOT)
 conversations = ConversationStore(API_ROOT / "conversations")
 bridge = AuroraRuntimeBridge(
     host=os.getenv("AURORAFOX_BRIDGE_HOST", "127.0.0.1"),
@@ -61,7 +65,7 @@ def _canonical_version() -> str:
 app = FastAPI(
     title="AuroraFox API",
     version=_canonical_version(),
-    description="External gateway to AuroraFox AgentCore, memory, tools, files and local models.",
+    description="External gateway to AuroraFox AgentCore, personal sync, tools, files and local models.",
 )
 
 origins = [x.strip() for x in os.getenv("AURORAFOX_API_CORS", "").split(",") if x.strip()]
@@ -155,6 +159,56 @@ class KeyCreateRequest(BaseModel):
     scopes: list[str] = Field(default_factory=lambda: list(DEFAULT_SCOPES))
 
 
+class AccountRegisterRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=10, max_length=1024)
+    display_name: str = Field(default="", max_length=128)
+
+
+class AccountVerifyRequest(BaseModel):
+    token: str = Field(min_length=16, max_length=512)
+
+
+class AccountLoginRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+    password: str = Field(min_length=1, max_length=1024)
+    device_name: str = Field(default="AuroraFox device", max_length=128)
+    platform: str = Field(default="unknown", max_length=64)
+    device_id: str | None = Field(default=None, max_length=64)
+
+
+class AccountRefreshRequest(BaseModel):
+    refresh_token: str = Field(min_length=16, max_length=512)
+
+
+class AccountEmailRequest(BaseModel):
+    email: str = Field(min_length=3, max_length=320)
+
+
+class AccountResetConfirmRequest(BaseModel):
+    token: str = Field(min_length=16, max_length=512)
+    new_password: str = Field(min_length=10, max_length=1024)
+
+
+class GuestCreateRequest(BaseModel):
+    device_name: str = Field(default="Guest device", max_length=128)
+    platform: str = Field(default="unknown", max_length=64)
+
+
+class GuestMigrationRequest(BaseModel):
+    guest_token: str = Field(min_length=16, max_length=512)
+
+
+class SyncPushRequest(BaseModel):
+    items: list[dict[str, Any]] = Field(default_factory=list, max_length=200)
+
+
+class SyncResolveRequest(BaseModel):
+    expected_revision: int = Field(ge=0)
+    payload: Any = Field(default_factory=dict)
+    deleted: bool = False
+
+
 class OpenAIMessage(BaseModel):
     role: Literal["system", "user", "assistant"]
     content: str
@@ -170,17 +224,35 @@ class OpenAIChatRequest(BaseModel):
 
 def _auth(authorization: str = Header(default="")) -> dict[str, Any]:
     if not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Missing AuroraFox API bearer key")
+        raise HTTPException(401, "Missing AuroraFox bearer token")
     record = keys.verify(authorization[7:].strip())
     if record is None:
-        raise HTTPException(401, "Invalid or revoked AuroraFox API key")
+        raise HTTPException(401, "Invalid or revoked AuroraFox bearer token")
     rate_limiter.check(str(record.get("id", "unknown")))
     return record
 
 
 def _require(record: dict[str, Any], scope: str) -> None:
     if not allows(record, scope):
-        raise HTTPException(403, f"API key does not have scope: {scope}")
+        raise HTTPException(403, f"Bearer principal does not have scope: {scope}")
+
+
+def _personal(record: dict[str, Any]) -> dict[str, Any]:
+    if str(record.get("auth_kind", "")) not in {"account_session", "guest_session"}:
+        raise HTTPException(403, "Personal account or guest session required")
+    return record
+
+
+def _account(record: dict[str, Any]) -> dict[str, Any]:
+    if str(record.get("auth_kind", "")) != "account_session":
+        raise HTTPException(403, "Account session required")
+    return record
+
+
+def _dev_token(payload: dict[str, Any], key: str, token: str | None) -> dict[str, Any]:
+    if token and os.getenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "0") == "1":
+        payload[key] = token
+    return payload
 
 
 def _core_candidate_visible(record: dict[str, Any], row: dict[str, Any]) -> bool:
@@ -232,7 +304,6 @@ def _execute_chat(
     metadata: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     metadata = metadata or {}
-    bridge_error = ""
     if mode in {"auto", "agent"}:
         try:
             result = bridge.chat(message, context, conversation_id, metadata)
@@ -251,24 +322,23 @@ def _execute_chat(
             bridge_error = str(result.get("error", "AgentCore bridge rejected request"))
         except Exception as exc:
             bridge_error = str(exc)
+        fallback = bridge.local_knowledge.reply(message)
+        fallback["fallbacks"] = [{"runtime": "aurorafox-agent", "error": bridge_error[:1000]}]
+        return fallback
 
     messages = list(context) + [{"role": "user", "content": message}]
     try:
         result = ollama.chat(messages, temperature=temperature)
         if not isinstance(result, dict) or not result.get("ok", False):
-            raise RuntimeError(str(result.get("error", "compatibility adapter returned an invalid result")) if isinstance(result, dict) else "invalid compatibility result")
-        if bridge_error:
-            result.setdefault("fallbacks", []).append({"runtime": "aurorafox-agent", "error": bridge_error[:1000]})
+            raise RuntimeError(
+                str(result.get("error", "compatibility adapter returned an invalid result"))
+                if isinstance(result, dict)
+                else "invalid compatibility result"
+            )
         return result
     except Exception as exc:
-        # OllamaClient already fails open to AuroraFox local Core and local
-        # knowledge. This final guard makes the API itself non-blocking even if
-        # an unexpected adapter exception escapes in a future implementation.
         fallback = bridge.local_knowledge.reply(message)
-        fallback["fallbacks"] = [
-            {"runtime": "aurorafox-agent", "error": bridge_error[:1000]},
-            {"runtime": "compatibility-adapter", "error": str(exc)[:1000]},
-        ]
+        fallback["fallbacks"] = [{"runtime": "compatibility-adapter", "error": str(exc)[:1000]}]
         return fallback
 
 
@@ -279,7 +349,8 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
     context = conversations.context(owner, conversation_id, 24)
     metadata = dict(req.metadata)
     metadata.setdefault("source", "api")
-    metadata["api_key_id"] = owner
+    metadata["principal_id"] = owner
+    metadata["auth_kind"] = str(record.get("auth_kind", "api_key"))
     result = _execute_chat(req.message, context, req.mode, req.temperature, conversation_id, metadata)
     reply = str(result.get("content", ""))
     conversations.append(owner, conversation_id, "user", req.message, metadata)
@@ -289,7 +360,9 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
         "source": metadata.get("source", "api"),
     })
 
-    if str(result.get("runtime", "")) != "aurorafox-agent":
+    # Personal account/guest chat is private personalization data. Only explicit
+    # integration API keys may feed the shared learning queue here.
+    if str(record.get("auth_kind", "api_key")) == "api_key" and str(result.get("runtime", "")) != "aurorafox-agent":
         learning.record(
             "api_interaction",
             _learning_payload(
@@ -342,19 +415,16 @@ def _public_database_status() -> dict[str, Any]:
 def health() -> dict[str, Any]:
     agent_status = _component_status(bridge.status)
     agent_online = bool(agent_status.get("ok", False))
-
     local_core_status = _component_status(bridge.local_core.status)
     local_core = {
         "ok": bool(local_core_status.get("ok", False)),
         "runtime": str(local_core_status.get("runtime", "aurorafox-local-core")),
     }
-
     ollama_online = False
     try:
         ollama_online = bool(ollama.models(timeout=0.75))
     except Exception:
         pass
-
     return {
         "ok": True,
         "service": "AuroraFox API",
@@ -367,7 +437,7 @@ def health() -> dict[str, Any]:
         "local_core": local_core,
         "ollama_online": ollama_online,
         "ollama_required": False,
-        "provider_policy": "agent_then_local_core_then_optional_ollama_then_local_knowledge",
+        "provider_policy": "agent_then_local_core_then_local_knowledge;ollama_explicit_compatibility_only",
         "database": {"backend": "sqlite", "schema_version": SCHEMA_VERSION},
         "learning": _public_component_status(learning.status),
         "core_candidates": _public_component_status(core_candidates.status),
@@ -393,6 +463,152 @@ def ready() -> dict[str, Any]:
     return payload
 
 
+@app.post("/v1/auth/register")
+def register_account(req: AccountRegisterRequest) -> dict[str, Any]:
+    try:
+        created = accounts.register(req.email, req.password, req.display_name)
+    except ConflictError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except AccountError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    payload = {"ok": True, "account": created["account"], "email_verification_required": True}
+    return _dev_token(payload, "verification_token", str(created.get("verification_token", "")))
+
+
+@app.post("/v1/auth/verify-email")
+def verify_account_email(req: AccountVerifyRequest) -> dict[str, Any]:
+    try:
+        return {"ok": True, "account": accounts.verify_email(req.token)}
+    except AuthenticationError as exc:
+        raise HTTPException(401, str(exc)) from exc
+
+
+@app.post("/v1/auth/resend-verification")
+def resend_account_verification(req: AccountEmailRequest) -> dict[str, Any]:
+    try:
+        token = accounts.resend_verification(req.email)
+    except AccountError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    payload = {"ok": True, "accepted": True}
+    return _dev_token(payload, "verification_token", token)
+
+
+@app.post("/v1/auth/login")
+def login_account(req: AccountLoginRequest) -> dict[str, Any]:
+    try:
+        return {"ok": True, **accounts.login(req.email, req.password, req.device_name, req.platform, req.device_id)}
+    except AuthenticationError as exc:
+        raise HTTPException(401, str(exc)) from exc
+    except AccountError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/v1/auth/refresh")
+def refresh_account(req: AccountRefreshRequest) -> dict[str, Any]:
+    try:
+        return {"ok": True, **accounts.refresh(req.refresh_token)}
+    except RefreshReplayError as exc:
+        raise HTTPException(401, str(exc)) from exc
+    except AuthenticationError as exc:
+        raise HTTPException(401, str(exc)) from exc
+
+
+@app.post("/v1/auth/password-reset/request")
+def request_account_password_reset(req: AccountEmailRequest) -> dict[str, Any]:
+    try:
+        token = accounts.request_password_reset(req.email)
+    except AccountError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    payload = {"ok": True, "accepted": True}
+    return _dev_token(payload, "reset_token", token)
+
+
+@app.post("/v1/auth/password-reset/confirm")
+def confirm_account_password_reset(req: AccountResetConfirmRequest) -> dict[str, Any]:
+    try:
+        accounts.reset_password(req.token, req.new_password)
+        return {"ok": True}
+    except AuthenticationError as exc:
+        raise HTTPException(401, str(exc)) from exc
+    except AccountError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.post("/v1/auth/guest")
+def create_guest(req: GuestCreateRequest) -> dict[str, Any]:
+    return {"ok": True, **accounts.create_guest(req.device_name, req.platform)}
+
+
+@app.get("/v1/account/devices")
+def account_devices(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    record = _account(record)
+    return {"ok": True, "devices": accounts.list_devices(str(record["principal_id"]))}
+
+
+@app.delete("/v1/account/devices/{device_id}")
+def revoke_account_device(device_id: str, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    record = _account(record)
+    return {"ok": True, "revoked": accounts.revoke_device(str(record["principal_id"]), device_id)}
+
+
+@app.post("/v1/account/migrate-guest")
+def migrate_guest(req: GuestMigrationRequest, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    account_record = _account(record)
+    guest_record = accounts.verify_guest(req.guest_token)
+    if guest_record is None:
+        raise HTTPException(401, "Invalid or revoked guest token")
+    try:
+        return sync.migrate_guest_to_account(guest_record, account_record)
+    except AccountError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@app.post("/v1/sync/push")
+def sync_push(req: SyncPushRequest, record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
+    record = _personal(record)
+    try:
+        return sync.push(record, req.items)
+    except AccountError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+@app.get("/v1/sync/pull")
+def sync_pull(
+    cursor: int = Query(default=0, ge=0),
+    limit: int = Query(default=200, ge=1, le=500),
+    record: dict[str, Any] = Depends(_auth),
+) -> dict[str, Any]:
+    return sync.pull(_personal(record), cursor=cursor, limit=limit)
+
+
+@app.get("/v1/sync/conflicts")
+def sync_conflicts(
+    limit: int = Query(default=100, ge=1, le=500),
+    record: dict[str, Any] = Depends(_auth),
+) -> dict[str, Any]:
+    return {"ok": True, "conflicts": sync.conflicts(_personal(record), limit)}
+
+
+@app.post("/v1/sync/conflicts/{conflict_id}/resolve")
+def sync_resolve_conflict(
+    conflict_id: str,
+    req: SyncResolveRequest,
+    record: dict[str, Any] = Depends(_auth),
+) -> dict[str, Any]:
+    try:
+        return sync.resolve_conflict(
+            _personal(record),
+            conflict_id,
+            expected_revision=req.expected_revision,
+            payload=req.payload,
+            deleted=req.deleted,
+        )
+    except ConflictError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except AccountError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
 @app.get("/v1/capabilities")
 def capabilities(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
     return {
@@ -403,7 +619,7 @@ def capabilities(record: dict[str, Any] = Depends(_auth)) -> dict[str, Any]:
             "local-knowledge-fallback", "conversation-memory", "openai-compatible-chat",
             "websocket", "file-intelligence", "tool-discovery", "scoped-api-keys",
             "integration-learning", "feedback-learning", "offline-learning-queue",
-            "core-candidate-queue",
+            "core-candidate-queue", "accounts", "guest-mode", "device-sessions", "incremental-personal-sync",
         ],
     }
 
@@ -585,7 +801,8 @@ def openai_chat(req: OpenAIChatRequest, record: dict[str, Any] = Depends(_auth))
     mode = "agent" if req.model == "aurorafox-agent" else "auto"
     metadata = {
         "source": "openai_compatible",
-        "api_key_id": str(record.get("id", "")),
+        "principal_id": str(record.get("id", "")),
+        "auth_kind": str(record.get("auth_kind", "api_key")),
         "requested_model": req.model,
     }
     result = _execute_chat(message, context, mode, req.temperature, conversation_id, metadata)
@@ -594,7 +811,7 @@ def openai_chat(req: OpenAIChatRequest, record: dict[str, Any] = Depends(_auth))
     model_name = str(result.get("model", req.model))
     content = str(result.get("content", ""))
 
-    if str(result.get("runtime", "")) != "aurorafox-agent":
+    if str(record.get("auth_kind", "api_key")) == "api_key" and str(result.get("runtime", "")) != "aurorafox-agent":
         learning.record(
             "api_interaction",
             _learning_payload(message, content, conversation_id, "openai_compatible", str(result.get("runtime", "local")), metadata),

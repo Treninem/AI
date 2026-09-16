@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 3
 
 
 class AuroraDatabase:
@@ -113,8 +113,166 @@ class AuroraDatabase:
                 );
                 CREATE INDEX IF NOT EXISTS idx_learning_pending
                     ON learning_events(synced, created_at, id);
+
+                CREATE TABLE IF NOT EXISTS accounts (
+                    id TEXT PRIMARY KEY,
+                    email_norm TEXT NOT NULL UNIQUE,
+                    display_name TEXT NOT NULL,
+                    password_salt TEXT NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    password_params_json TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    email_verified_at INTEGER,
+                    disabled_at INTEGER
+                );
+                CREATE INDEX IF NOT EXISTS idx_accounts_email_active
+                    ON accounts(email_norm, disabled_at);
+
+                CREATE TABLE IF NOT EXISTS guests (
+                    id TEXT PRIMARY KEY,
+                    token_hash TEXT NOT NULL UNIQUE,
+                    created_at INTEGER NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    migrated_to_account TEXT,
+                    revoked_at INTEGER,
+                    FOREIGN KEY(migrated_to_account) REFERENCES accounts(id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_guests_token_active
+                    ON guests(token_hash, revoked_at);
+
+                CREATE TABLE IF NOT EXISTS devices (
+                    id TEXT PRIMARY KEY,
+                    account_id TEXT,
+                    guest_id TEXT,
+                    name TEXT NOT NULL,
+                    platform TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    last_seen_at INTEGER NOT NULL,
+                    revoked_at INTEGER,
+                    CHECK ((account_id IS NOT NULL AND guest_id IS NULL) OR
+                           (account_id IS NULL AND guest_id IS NOT NULL)),
+                    FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+                    FOREIGN KEY(guest_id) REFERENCES guests(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_devices_account_active
+                    ON devices(account_id, revoked_at, last_seen_at);
+                CREATE INDEX IF NOT EXISTS idx_devices_guest_active
+                    ON devices(guest_id, revoked_at, last_seen_at);
+
+                CREATE TABLE IF NOT EXISTS auth_sessions (
+                    id TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL,
+                    device_id TEXT NOT NULL,
+                    family_id TEXT NOT NULL,
+                    access_hash TEXT NOT NULL UNIQUE,
+                    access_expires_at INTEGER NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    last_seen_at INTEGER NOT NULL,
+                    revoked_at INTEGER,
+                    FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE,
+                    FOREIGN KEY(device_id) REFERENCES devices(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_auth_sessions_access_active
+                    ON auth_sessions(access_hash, revoked_at, access_expires_at);
+                CREATE INDEX IF NOT EXISTS idx_auth_sessions_account
+                    ON auth_sessions(account_id, revoked_at, last_seen_at);
+                CREATE INDEX IF NOT EXISTS idx_auth_sessions_family
+                    ON auth_sessions(family_id, revoked_at);
+
+                CREATE TABLE IF NOT EXISTS refresh_tokens (
+                    id TEXT PRIMARY KEY,
+                    session_id TEXT NOT NULL,
+                    family_id TEXT NOT NULL,
+                    token_hash TEXT NOT NULL UNIQUE,
+                    generation INTEGER NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    consumed_at INTEGER,
+                    revoked_at INTEGER,
+                    FOREIGN KEY(session_id) REFERENCES auth_sessions(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_lookup
+                    ON refresh_tokens(token_hash, expires_at);
+                CREATE INDEX IF NOT EXISTS idx_refresh_tokens_family
+                    ON refresh_tokens(family_id, generation);
+
+                CREATE TABLE IF NOT EXISTS account_tokens (
+                    id TEXT PRIMARY KEY,
+                    account_id TEXT NOT NULL,
+                    purpose TEXT NOT NULL CHECK (purpose IN ('verify_email', 'reset_password')),
+                    token_hash TEXT NOT NULL UNIQUE,
+                    created_at INTEGER NOT NULL,
+                    expires_at INTEGER NOT NULL,
+                    used_at INTEGER,
+                    revoked_at INTEGER,
+                    FOREIGN KEY(account_id) REFERENCES accounts(id) ON DELETE CASCADE
+                );
+                CREATE INDEX IF NOT EXISTS idx_account_tokens_lookup
+                    ON account_tokens(token_hash, purpose, expires_at);
+
+                CREATE TABLE IF NOT EXISTS sync_entities (
+                    principal_kind TEXT NOT NULL CHECK (principal_kind IN ('account', 'guest')),
+                    principal_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    entity_id TEXT NOT NULL,
+                    revision INTEGER NOT NULL CHECK (revision >= 1),
+                    payload_json TEXT NOT NULL,
+                    checksum TEXT NOT NULL,
+                    origin_device_id TEXT NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    deleted INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1)),
+                    PRIMARY KEY(principal_kind, principal_id, entity_type, entity_id)
+                );
+                CREATE INDEX IF NOT EXISTS idx_sync_entities_principal
+                    ON sync_entities(principal_kind, principal_id, entity_type, updated_at);
+
+                CREATE TABLE IF NOT EXISTS sync_changes (
+                    seq INTEGER PRIMARY KEY AUTOINCREMENT,
+                    principal_kind TEXT NOT NULL CHECK (principal_kind IN ('account', 'guest')),
+                    principal_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    entity_id TEXT NOT NULL,
+                    revision INTEGER NOT NULL,
+                    payload_json TEXT NOT NULL,
+                    checksum TEXT NOT NULL,
+                    origin_device_id TEXT NOT NULL,
+                    updated_at INTEGER NOT NULL,
+                    deleted INTEGER NOT NULL DEFAULT 0 CHECK (deleted IN (0, 1))
+                );
+                CREATE INDEX IF NOT EXISTS idx_sync_changes_pull
+                    ON sync_changes(principal_kind, principal_id, seq);
+
+                CREATE TABLE IF NOT EXISTS sync_conflicts (
+                    id TEXT PRIMARY KEY,
+                    principal_kind TEXT NOT NULL CHECK (principal_kind IN ('account', 'guest')),
+                    principal_id TEXT NOT NULL,
+                    entity_type TEXT NOT NULL,
+                    entity_id TEXT NOT NULL,
+                    current_revision INTEGER NOT NULL,
+                    incoming_base_revision INTEGER NOT NULL,
+                    incoming_payload_json TEXT NOT NULL,
+                    incoming_checksum TEXT NOT NULL,
+                    incoming_deleted INTEGER NOT NULL DEFAULT 0 CHECK (incoming_deleted IN (0, 1)),
+                    origin_device_id TEXT NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    resolved_at INTEGER,
+                    resolution_revision INTEGER
+                );
+                CREATE INDEX IF NOT EXISTS idx_sync_conflicts_open
+                    ON sync_conflicts(principal_kind, principal_id, resolved_at, created_at);
                 """
             )
+            if current < 3:
+                columns = {
+                    str(row[1])
+                    for row in connection.execute("PRAGMA table_info(sync_conflicts)").fetchall()
+                }
+                if "incoming_deleted" not in columns:
+                    connection.execute(
+                        "ALTER TABLE sync_conflicts ADD COLUMN incoming_deleted INTEGER NOT NULL DEFAULT 0 "
+                        "CHECK (incoming_deleted IN (0, 1))"
+                    )
             if current < SCHEMA_VERSION:
                 connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
             connection.execute(
@@ -148,6 +306,14 @@ class AuroraDatabase:
                     "learning_events": int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0]),
                     "learning_pending": int(
                         connection.execute("SELECT COUNT(*) FROM learning_events WHERE synced=0").fetchone()[0]
+                    ),
+                    "accounts": int(connection.execute("SELECT COUNT(*) FROM accounts").fetchone()[0]),
+                    "guests": int(connection.execute("SELECT COUNT(*) FROM guests").fetchone()[0]),
+                    "devices": int(connection.execute("SELECT COUNT(*) FROM devices").fetchone()[0]),
+                    "auth_sessions": int(connection.execute("SELECT COUNT(*) FROM auth_sessions").fetchone()[0]),
+                    "sync_entities": int(connection.execute("SELECT COUNT(*) FROM sync_entities").fetchone()[0]),
+                    "sync_conflicts_open": int(
+                        connection.execute("SELECT COUNT(*) FROM sync_conflicts WHERE resolved_at IS NULL").fetchone()[0]
                     ),
                 }
                 return {
