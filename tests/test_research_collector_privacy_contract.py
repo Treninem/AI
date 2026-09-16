@@ -44,4 +44,16 @@ def test_external_response_memory_is_bounded_before_parsing() -> None:
     assert "const REQUEST_TIMEOUT_SECONDS := 20.0" in text
     assert "req.timeout = REQUEST_TIMEOUT_SECONDS" in text
     assert "req.body_size_limit = MAX_RESPONSE_BYTES" in text
+    assert "request_result != HTTPRequest.RESULT_SUCCESS" in text
     assert "body.substr(0, MAX_RESPONSE_BYTES)" in text
+
+
+def test_research_audit_log_has_bounded_rotation() -> None:
+    text = _read()
+
+    assert 'const LOG_BACKUP_PATH := "user://agent/research.jsonl.1"' in text
+    assert "const MAX_LOG_BYTES := 8 * 1024 * 1024" in text
+    assert '"audit_log_limit_bytes": MAX_LOG_BYTES' in text
+    assert "_rotate_log_if_needed()" in text
+    assert "if size < MAX_LOG_BYTES:" in text
+    assert "DirAccess.rename_absolute(log_abs, backup_abs)" in text
