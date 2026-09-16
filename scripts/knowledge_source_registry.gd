@@ -164,6 +164,7 @@ func mark_imported(path: String, inspection: Dictionary, result: Dictionary, met
 func remove_source(source: String) -> Dictionary:
 	var rows := _load_rows()
 	var removed := 0
+	var aliases_removed := 0
 	var out: Array = []
 	for value in rows:
 		if not value is Dictionary:
@@ -171,12 +172,23 @@ func remove_source(source: String) -> Dictionary:
 		var row: Dictionary = value
 		var canonical := str(row.get("source", ""))
 		var aliases: Array = row.get("aliases", []) if row.get("aliases", []) is Array else []
-		if canonical == source or source in aliases:
+		if canonical == source:
 			removed += 1
 			continue
+		if source in aliases:
+			aliases.erase(source)
+			row["aliases"] = aliases
+			row["last_seen_at"] = Time.get_datetime_string_from_system(true)
+			aliases_removed += 1
 		out.append(row)
 	var ok := _save_rows(out)
-	return {"ok": ok, "source": source, "removed": removed}
+	return {
+		"ok": ok,
+		"source": source,
+		"removed": removed,
+		"aliases_removed": aliases_removed,
+		"canonical_preserved": aliases_removed > 0 and removed == 0
+	}
 
 func sources() -> Array:
 	return _load_rows().duplicate(true)
