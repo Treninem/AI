@@ -13,77 +13,89 @@
 ### Verified CI on V1.3.0.0 baseline
 
 - Windows Package CI `35006665055`: success.
-  - version synchronization
-  - Godot import
-  - Windows package build
-  - required runtime assets
-  - exported executable smoke
-  - Inno Setup installer
-  - silent install
-  - installed-app launch
-  - uninstall
-  - portable ZIP/hashes/artifact upload
-- Android APK Artifact `35006664982`: success.
-  - release contract
-  - pinned Android toolchain
-  - Godot Android export
-  - APK test signing/validation
-  - install and launch on Android 35 emulator
-  - artifact upload
+- Android APK Artifact `35006664982`: success, including install/launch on Android 35 emulator.
 - Core / Voice CI `35006665008`: success.
 - Agent Sync CI `35006665083`: success.
 - Evolution Progress push run `35006665037`: success.
 
 ### Verified V1.3.0.0 delivery artifacts
 
-Downloaded directly from the successful V1.3 workflows and independently re-hashed after extraction.
-
-Windows workflow artifact `10412017819`:
+Baseline Windows workflow artifact `10412017819`:
 
 - `AuroraFox-V1.3.0.0-Setup-Windows.exe`
   - SHA-256: `8dc88d5dcbed12d81daf1ce14d2149207092d97421b85c8c0e5e7d0f5fba6f15`
 - `AuroraFox-V1.3.0.0-Windows-Portable.zip`
   - SHA-256: `96aac3962f5d8aa8669144b7a632b48720fc6ca33e8205d13e1645e33e275c6a`
 
-The independently computed Windows hashes match the workflow-generated `SHA256SUMS.txt` exactly.
-
-Android workflow artifact `10412014222`:
+Baseline Android workflow artifact `10412014222`:
 
 - `AuroraFox-V1.3.0.0-Android-Test.apk`
   - SHA-256: `c02fef0e7d58eb4eeb999f7a1ec3c71074250c4993711d003c8ebd939328676c`
   - package: `com.aurorafox.ai`
-  - built, validated, installed and launched by the successful Android 35 emulator workflow.
+  - CI/test-signed; not a production signing identity replacement.
 
-The Android artifact is CI/test-signed. It is suitable for installation/testing, but it is not a production signing identity replacement.
+### Historical V1.2.0.0 updater defect
 
-### V1.2.0.0 updater defect discovered
+Historical version-bump commit: `976ffc175e3d3191af67a85c87a9ac789339e3ef`.
 
-Historical commit `976ffc175e3d3191af67a85c87a9ac789339e3ef` is the V1.2.0.0 version bump. Its updater already requests:
+Facts verified from that historical source:
 
-- `https://github.com/Treninem/AI/releases/latest/download/update.json`
-- `https://github.com/Treninem/AI/releases/latest/download/update.sig`
-- local `res://update/release_public.pub`
+- V1.2 requests `releases/latest/download/update.json`.
+- V1.2 requests `update.sig` and requires `res://update/release_public.pub`.
+- `update/release_public.pub` did not exist in the V1.2 commit.
+- Repository GitHub Releases were empty when the defect was diagnosed, so V1.2 received 404 and reported no published update.
+- Historical Android test APK workflow generated an ephemeral keystore per CI run. Such test APKs do not have a reusable signing identity and cannot be upgraded in place by a differently signed APK.
 
-Current GitHub Releases for `Treninem/AI` are empty, so the V1.2 updater receives HTTP 404 for `update.json` and intentionally reports no published update.
+Therefore legacy manifest readability is NOT treated as proof of a working legacy trust chain.
 
-A second historical defect is more important: `update/release_public.pub` does not exist at the V1.2 commit. Therefore an already-installed V1.2 binary cannot authenticate a future signed `update.json` even after a release is published. This missing trust root is client-side and cannot be repaired remotely through the updater that requires that same trust root before downloading a package.
+### Implemented V1.2 -> V1.3 repair
 
-Decision / migration path:
+Commits in the repair series:
 
-- Do not pretend publishing an unsigned release solves V1.2; weakening signature verification would create an unsafe update channel.
-- Windows V1.2 requires one manual bridge installation of V1.3 (the installer preserves AuroraFox user data because application data lives outside the program directory). V1.3 and later must contain the initialized pinned public update key so subsequent updates can be automatic.
-- Android in-place bridge additionally requires continuity with the signing certificate of the already-installed V1.2 APK. A differently signed APK cannot replace it in place under Android package-signing rules. If the original signing identity is unavailable, one uninstall/install bootstrap may be required, with user-data migration handled separately if needed.
-- Production V1.3 publication still requires initialization of the owner-controlled RSA update trust root and the persistent Android signing identity. Private keys must remain outside Git.
+- `3d81626ac6398ce20738f589b3db129d3d7d8a02` — historical V1.2 Inno fixture with the real AuroraFox AppId.
+- `baf0a088182ed00a198359bfccaa196aba3e03f3` — current installer performs in-place repair bookkeeping and does not touch Godot user data.
+- `ee8c0e1da3c2901271727259a685d7e04e817173` — real Windows V1.2->V1.3 bridge smoke.
+- `fadfce67714bba8f857f3b0bb2cfcff31fc7a603` — Windows CI publishes an explicitly named repair installer.
+- `92b00a80b9fdfc470f289c0eed580dfe37409958` — manifest compatibility corrected: repair through V1.2, signed floor V1.3.
+- `5aa58d091ef42e582ee7144569ebc863126fa541` — compatibility regression contract corrected.
+- `94bf124799a2e3059dbdd1953d47abb748dda43f` — updater documentation corrected.
+- `36149980044c4483ae1f30ac2427586edc2f127f` — readiness tool corrected to the repair boundary.
+- `de17e8d7ba38ba8b944dfed1fb8785b176e957db` — V1.3 updater reports `repair_required` if a newer manifest exists but the local trust root is missing; it never trusts/downloads unsigned asset metadata.
+- `fc251d226b4332203664e46dcb50ade53482092c` — Godot update smoke enforces the new contract.
+- `8bcd5d51ed828502a9b77e41e5019c536dd7fa71` — signed-release/Core promotion tests aligned with the V1.2 repair boundary.
 
-This defect and bridge path are release-sensitive. Work mode must not change updater trust behavior or claim that V1.2 can automatically self-repair without first integrating this finding.
+Verified Windows bridge CI:
+
+- Windows Package CI run `35052987623`: **success**.
+- Job `package-windows` / step `Verify V1.2 to V1.3 in-place bridge`: **success**.
+- The test installs a V1.2 fixture using the historical AppId, creates a sentinel in `%APPDATA%/Godot/app_userdata/AuroraFox`, installs V1.3 on top, verifies the sentinel is unchanged, verifies `bridge_repair.txt` records `previous=1.2.0.0` and `current=1.3.0.0`, launches the upgraded application, then packages the repair artifact.
+
+Verified repair workflow artifact `10428734786`:
+
+- `AuroraFox-V1.2-to-V1.3.0.0-Repair-Windows.exe`
+- independently calculated SHA-256: `e2c2b0aa690a0a96f636e069e8fbc5fcd6379b22c37ce886b3feed8f4d9f70e2`
+- CI `SHA256SUMS.txt` reports the same SHA-256.
+
+Godot updater contract verification:
+
+- Agent Sync run `35053017103`: success, including the updated `tests/update_smoke.gd`.
+- Core/Voice run `35053017088` initially failed only because `tests/test_core_candidate_promotion.py` referenced renamed old compatibility-test functions; product/Godot Core jobs were green. That stale test reference was fixed by `8bcd5d51ed828502a9b77e41e5019c536dd7fa71` and must be rechecked by the next Core/Voice run before declaring the latest test head fully green.
+
+### Supported update boundary after repair
+
+- Windows V1.0-V1.2: one-time V1.2->V1.3 Repair/Bridge installation is the supported recovery path for the historical trust-root defect.
+- Windows V1.3+: signed automatic update path after the owner-controlled RSA trust root is initialized.
+- Android: in-place update requires the same package ID **and the same signing certificate**. Historical CI/test APKs used ephemeral signing identities and cannot be repaired into a different signing lineage retroactively.
+- Production Android V1.3+ must use one persistent owner-controlled signing keystore.
+- Never weaken signature verification or publish an unsigned stable release just to make V1.2 appear updateable.
 
 ### Active chat-mode scope
 
-1. Keep legacy manifest/asset URL compatibility intact where technically possible.
+1. Keep stable manifest/asset URL compatibility intact where technically possible.
 2. Finish production signing/bootstrap/readiness without exposing private keys.
 3. Keep release/version files synchronized.
-4. Prepare the V1.2 -> V1.3 one-time bridge path and ensure V1.3+ updates are genuinely automatic after trust-root initialization.
-5. Prepare public production release only after owner-controlled signing identity is initialized.
+4. Keep the V1.2 repair bridge green and ensure V1.3+ updates are genuinely automatic after trust-root initialization.
+5. Prepare public production release only after owner-controlled signing identities are initialized.
 6. Update `docs/DEVELOPMENT_LOG.md` only after factual verification.
 
 ### Reserved files for this lane
@@ -94,17 +106,25 @@ Until this entry is explicitly changed to RELEASED, avoid parallel edits to:
 - `project/version.json`
 - `export_presets.cfg`
 - `update/manifest.template.json`
+- `update/update_manager.gd`
+- `update/README.md`
 - `CHANGELOG.md`
+- `build/AuroraFox.iss`
+- `build/AuroraFox_V12_BridgeFixture.iss`
+- `build/bridge_release_readiness.ps1`
 - `build/setup_release_signing.ps1`
 - `build/create_update_signing_key.ps1`
+- `tests/windows_v12_bridge_smoke.ps1`
+- `tests/test_update_backward_compat.py`
+- `tests/update_smoke.gd`
 - `.github/workflows/release.yml`
 - `.github/workflows/windows-package-ci.yml`
 - `.github/workflows/android-apk-artifact.yml`
 
 ### Safe parallel work
 
-Work mode may take another subsystem and should record its claim in `docs/workstreams/WORK_MODE.md`. Good independent targets include UI/UX, voice, Work/projects, new regression tests, OCR/File Intelligence or performance work that does not edit the reserved files above.
+Work mode may take another subsystem and should record its claim in `docs/workstreams/WORK_MODE.md`. Good independent targets include UI/UX, voice, Work/projects, OCR/File Intelligence and performance work outside the reserved release/update files.
 
 ### Release status
 
-V1.3.0.0 Windows and Android application packages are CI-verified and independently hashed. Production public release/update publication still must retain the owner-controlled Android signing identity and RSA update-signing trust root; private signing material must never be committed to Git.
+The Windows V1.2->V1.3 repair path is implemented and verified end-to-end by CI. The V1.3 application packages remain CI-verified. Production public signed update publication still requires the owner-controlled RSA update trust root and persistent Android signing identity; private signing material must never be committed to Git.
