@@ -55,6 +55,7 @@ class KnowledgeResilienceBatchTests(unittest.TestCase):
             "concurrency_race_probe.gd",
             "record_dedupe_shared_source_probe.gd",
             "dedupe_alias_removal_probe.gd",
+            "legacy_unregistered_rollback_probe.gd",
             "write_failure_rollback_probe.gd",
             "registry_truncated_temp_probe.gd",
             "run_interrupted_import_recovery.py",
