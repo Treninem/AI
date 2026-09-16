@@ -143,9 +143,53 @@ def test_learning_queue_uses_sqlite_state_and_rollback_mirror(tmp_path: Path):
     status = store.status()
     assert status["total"] == 2
     assert status["pending"] == 1
+    assert status["pending_protected"] is True
+    assert status["over_capacity"] == 0
 
     mirror = [json.loads(line) for line in (root / "learning_events.jsonl").read_text(encoding="utf-8").splitlines()]
     by_id = {event["id"]: event for event in mirror}
     assert by_id[first["id"]]["synced"] is True
     assert by_id[second["id"]]["synced"] is False
     assert AuroraDatabase(root / "aurorafox.sqlite3").integrity_check()["ok"] is True
+
+
+def test_learning_queue_never_evicts_unsynced_events_when_offline(tmp_path: Path):
+    root = tmp_path / "api"
+    store = LearningStore(root)
+    # Production keeps a much larger floor; reduce it only inside this regression
+    # test so the overflow policy is exercised without thousands of writes.
+    store.max_events = 3
+
+    first = store.append("feedback", {"value": 1})
+    second = store.append("feedback", {"value": 2})
+    third = store.append("feedback", {"value": 3})
+    assert store.mark_synced({first["id"], second["id"]}) == 2
+
+    fourth = store.append("external_knowledge", {"value": 4})
+    fifth = store.append("external_knowledge", {"value": 5})
+    # The two old synced rows are safe to evict, leaving only pending work.
+    assert [event["id"] for event in store.pending(10)] == [third["id"], fourth["id"], fifth["id"]]
+    assert store.status()["total"] == 3
+
+    sixth = store.append("external_knowledge", {"value": 6})
+    # With no synced history left, capacity is a soft limit: durability wins and
+    # every pending item remains in SQLite and in the rollback-compatible JSONL.
+    pending_ids = [event["id"] for event in store.pending(10)]
+    assert pending_ids == [third["id"], fourth["id"], fifth["id"], sixth["id"]]
+    status = store.status()
+    assert status["pending"] == 4
+    assert status["total"] == 4
+    assert status["over_capacity"] == 1
+    assert status["pending_protected"] is True
+
+    store._rewrite_legacy_mirror()
+    mirror = [json.loads(line) for line in (root / "learning_events.jsonl").read_text(encoding="utf-8").splitlines()]
+    assert [event["id"] for event in mirror if not event["synced"]] == pending_ids
+
+    # Once part of the backlog is synchronized, compaction can safely return the
+    # database to its configured history bound without dropping remaining work.
+    assert store.mark_synced({third["id"], fourth["id"]}) == 2
+    assert [event["id"] for event in store.pending(10)] == [fifth["id"], sixth["id"]]
+    assert store.status()["total"] == 3
+    assert store.status()["over_capacity"] == 0
+    assert store.database.integrity_check()["ok"] is True
