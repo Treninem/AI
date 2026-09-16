@@ -659,7 +659,7 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 		last_error = "Legacy Work attempt has unknown side-effect history. Verify external state before retry."
 		migrated = true
 	elif state == STATE_RUNNING:
-		if not retry_safety_present or retry_safety == "unsafe":
+		if attempt_safety == "unsafe" or not retry_safety_present or retry_safety == "unsafe":
 			attempt_safety = "unsafe"
 			requires_user_action = true
 			retryable = false

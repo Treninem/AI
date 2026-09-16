@@ -160,6 +160,7 @@ func _run() -> void:
 					{"id": "dup-task", "prompt": "one", "status": "running", "last_action_retry_safety": "safe", "attempt_retry_safety": "safe"},
 					{"id": "dup-task", "prompt": "two", "status": "unknown"},
 					{"id": "legacy-unknown", "prompt": "three", "status": "running", "last_action_retry_safety": "safe"},
+					{"id": "earlier-unsafe-last-safe", "prompt": "four", "status": "running", "last_action_retry_safety": "safe", "attempt_retry_safety": "unsafe"},
 					"corrupt-record"
 				]
 			},
@@ -184,7 +185,7 @@ func _run() -> void:
 		_fail("Duplicate project IDs survived migration", 25)
 		return
 	var legacy_tasks: Array = first.get("tasks", [])
-	if legacy_tasks.size() != 3 or str(legacy_tasks[0].get("id", "")) == str(legacy_tasks[1].get("id", "")):
+	if legacy_tasks.size() != 4 or str(legacy_tasks[0].get("id", "")) == str(legacy_tasks[1].get("id", "")):
 		_fail("Duplicate/malformed task migration failed", 26)
 		return
 	if str(legacy_tasks[0].get("status", "")) != AuroraWorkStore.STATE_INTERRUPTED:
@@ -205,6 +206,13 @@ func _run() -> void:
 		return
 	if "legacy_attempt_retry_safety_unknown" not in migrated.recovery_notes:
 		_fail("Legacy unknown attempt safety was not observable in recovery notes", 41)
+		return
+	var earlier_unsafe: Dictionary = legacy_tasks[3]
+	if str(earlier_unsafe.get("status", "")) != AuroraWorkStore.STATE_INTERRUPTED or str(earlier_unsafe.get("attempt_retry_safety", "")) != "unsafe" or not bool(earlier_unsafe.get("requires_user_action", false)) or bool(earlier_unsafe.get("retryable", true)):
+		_fail("Whole-attempt unsafe history was lost when the last action was safe", 55)
+		return
+	if migrated.retry_task(str(first.get("id", "")), str(earlier_unsafe.get("id", ""))):
+		_fail("Earlier unsafe side effect was blindly retryable after restart", 56)
 		return
 	if migrated.get_project(migrated.active_project_id).is_empty():
 		_fail("Stale active project reference not repaired", 29)
