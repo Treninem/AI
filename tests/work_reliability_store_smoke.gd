@@ -73,6 +73,19 @@ func _run() -> void:
 	if reloaded.retry_task(project_id, task_id):
 		_fail("Unsafe interrupted task was blindly retryable", 9)
 		return
+	if reloaded.update_task(project_id, task_id, {"requires_user_action": false, "retryable": true, "attempt_retry_safety": "safe"}):
+		_fail("Generic task patch relaxed persisted retry safety", 51)
+		return
+	var still_locked := reloaded.get_task(project_id, task_id)
+	if not bool(still_locked.get("requires_user_action", false)) or bool(still_locked.get("retryable", true)) or str(still_locked.get("attempt_retry_safety", "")) != "unsafe":
+		_fail("Rejected safety-relaxation patch changed task state", 52)
+		return
+	if not reloaded.acknowledge_user_action(project_id, task_id, true, "external state verified"):
+		_fail("Validated user acknowledgement was rejected", 53)
+		return
+	if not reloaded.retry_task(project_id, task_id):
+		_fail("Acknowledged unsafe task did not allow explicit retry", 54)
+		return
 
 	# Defense in depth: a pending user-verification bit blocks direct RUNNING too.
 	var direct_blocked := reloaded.create_task(project_id, "must verify")

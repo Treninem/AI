@@ -163,15 +163,7 @@ func acknowledge_uncertain_action(project_id: String, task_id: String, allow_ret
 		return {"ok": false, "error": "Подтверждение допустимо только для остановленной terminal-задачи", "retryable": false, "task_id": task_id}
 	if not bool(task.get("requires_user_action", false)):
 		return {"ok": false, "error": "Эта задача не ожидает пользовательской проверки", "retryable": bool(task.get("retryable", false)), "task_id": task_id}
-	var clean_note := note.strip_edges()
-	var patch := {
-		"requires_user_action": false,
-		"retryable": allow_retry,
-		"message": "User verified external state; retry allowed" if allow_retry else "User verified external state; retry blocked",
-	}
-	if not clean_note.is_empty():
-		patch["last_error"] = clean_note
-	if not store.update_task(project_id, task_id, patch):
+	if not store.acknowledge_user_action(project_id, task_id, allow_retry, note):
 		return {"ok": false, "error": "Не удалось сохранить подтверждение пользователя", "retryable": false, "task_id": task_id}
 	return {"ok": true, "task_id": task_id, "state": state, "retryable": allow_retry, "requires_user_action": false}
 

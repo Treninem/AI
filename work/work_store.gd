@@ -214,6 +214,8 @@ func update_task(project_id: String, task_id: String, patch: Dictionary) -> bool
 	if location.is_empty():
 		return false
 	var current := get_task(project_id, task_id)
+	if _patch_relaxes_safety(current, patch):
+		return false
 	if patch.has("status"):
 		var new_state := str(patch.get("status", ""))
 		if new_state != str(current.get("status", STATE_QUEUED)):
@@ -234,6 +236,8 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 	var tasks: Array = project.get("tasks", [])
 	var task: Dictionary = tasks[task_index]
 	var old_state := str(task.get("status", STATE_QUEUED))
+	if _patch_relaxes_safety(task, patch):
+		return false
 	if new_state == STATE_RUNNING and bool(task.get("requires_user_action", false)):
 		return false
 	if old_state == new_state:
@@ -319,6 +323,25 @@ func retry_task(project_id: String, task_id: String) -> bool:
 	if task.is_empty() or bool(task.get("requires_user_action", false)) or not bool(task.get("retryable", true)):
 		return false
 	return transition_task(project_id, task_id, STATE_QUEUED, {}, true)
+
+func acknowledge_user_action(project_id: String, task_id: String, allow_retry: bool, note: String = "") -> bool:
+	var location := _task_location(project_id, task_id)
+	if location.is_empty():
+		return false
+	var task := get_task(project_id, task_id)
+	var state := str(task.get("status", ""))
+	if state not in [STATE_INTERRUPTED, STATE_CANCELLED, STATE_PARTIAL, STATE_FAILED]:
+		return false
+	if not bool(task.get("requires_user_action", false)):
+		return false
+	var patch := {
+		"requires_user_action": false,
+		"retryable": allow_retry,
+		"message": "User verified external state; retry allowed" if allow_retry else "User verified external state; retry blocked",
+	}
+	if not note.strip_edges().is_empty():
+		patch["last_error"] = note.strip_edges()
+	return _patch_task(location, patch)
 
 func fail_task(project_id: String, task_id: String, error_text: String, retryable: bool = true) -> bool:
 	var task := get_task(project_id, task_id)
@@ -411,6 +434,17 @@ func _patch_task(location: Dictionary, patch: Dictionary) -> bool:
 	projects[project_index] = project
 	_mark_dirty()
 	return true
+
+func _patch_relaxes_safety(task: Dictionary, patch: Dictionary) -> bool:
+	if bool(task.get("requires_user_action", false)) and patch.has("requires_user_action") and not bool(patch.get("requires_user_action", true)):
+		return true
+	if not bool(task.get("retryable", true)) and patch.has("retryable") and bool(patch.get("retryable", false)):
+		return true
+	if str(task.get("attempt_retry_safety", "safe")) == "unsafe" and patch.has("attempt_retry_safety") and str(patch.get("attempt_retry_safety", "unsafe")) == "safe":
+		return true
+	if str(task.get("last_action_retry_safety", "safe")) == "unsafe" and patch.has("last_action_retry_safety") and str(patch.get("last_action_retry_safety", "unsafe")) == "safe":
+		return true
+	return false
 
 func _apply_safe_patch(task: Dictionary, patch: Dictionary) -> void:
 	for key in patch.keys():
