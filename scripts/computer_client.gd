@@ -7,6 +7,7 @@ const ACTION_TIMEOUT := 14.0
 const MAX_SANDBOX_TIMEOUT := 300
 
 static var _shared_service_token := ""
+static var _computer_control_enabled := false
 
 var base_url := "http://127.0.0.1:8766"
 var backend_pid := 0
@@ -29,6 +30,12 @@ static func shared_service_token() -> String:
 		var crypto := Crypto.new()
 		_shared_service_token = crypto.generate_random_bytes(32).hex_encode()
 	return _shared_service_token
+
+static func set_computer_control_enabled(value: bool) -> void:
+	_computer_control_enabled = value
+
+static func computer_control_enabled() -> bool:
+	return _computer_control_enabled
 
 static func master_enabled_from(node: Node) -> bool:
 	var current: Node = node
@@ -106,11 +113,13 @@ func _candidate_roots() -> Array[String]:
 		ProjectSettings.globalize_path("res://computer")
 	]
 
-func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout_seconds: float = DEFAULT_TIMEOUT, require_autonomy: bool = true) -> Dictionary:
+func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout_seconds: float = DEFAULT_TIMEOUT, require_autonomy: bool = true, require_computer_permission: bool = false) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return _unsupported()
 	if require_autonomy and not _master_enabled():
 		return {"ok": false, "error": "master_stop", "message": "Master stop активен", "retryable": false}
+	if require_computer_permission and not computer_control_enabled():
+		return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
 	var req := HTTPRequest.new()
 	req.timeout = clampf(timeout_seconds, 1.0, 320.0)
 	add_child(req)
@@ -162,18 +171,20 @@ func health() -> Dictionary:
 			"external_ai_required": false,
 			"network_required": false,
 		}
-	return await _json_request("/health", HTTPClient.METHOD_GET, {}, 3.0, false)
+	return await _json_request("/health", HTTPClient.METHOD_GET, {}, 3.0, false, false)
 
 func capabilities() -> Dictionary:
 	if OS.get_name() != "Windows":
 		return _unsupported(true)
-	return await _json_request("/capabilities", HTTPClient.METHOD_GET, {}, 4.0, false)
+	var result := await _json_request("/capabilities", HTTPClient.METHOD_GET, {}, 4.0, false, false)
+	result["computer_control_enabled"] = computer_control_enabled()
+	return result
 
 func screen() -> Dictionary:
-	return await _json_request("/screen", HTTPClient.METHOD_GET, {}, SCREEN_TIMEOUT, true)
+	return await _json_request("/screen", HTTPClient.METHOD_GET, {}, SCREEN_TIMEOUT, true, true)
 
 func windows() -> Dictionary:
-	return await _json_request("/windows", HTTPClient.METHOD_GET, {}, SCREEN_TIMEOUT, true)
+	return await _json_request("/windows", HTTPClient.METHOD_GET, {}, SCREEN_TIMEOUT, true, true)
 
 func plan(_goal: String) -> Dictionary:
 	return {
@@ -194,10 +205,12 @@ func run(_goal: String, _max_steps: int = 30, _auto_execute: bool = false) -> Di
 func action(data: Dictionary) -> Dictionary:
 	if not _master_enabled():
 		return {"ok": false, "error": "master_stop", "message": "Master stop активен", "retryable": false}
+	if not computer_control_enabled():
+		return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
 	var payload := data.duplicate(true)
 	if str(payload.get("action_id", "")).strip_edges().is_empty():
 		payload["action_id"] = _new_action_id()
-	return await _json_request("/action", HTTPClient.METHOD_POST, payload, ACTION_TIMEOUT, true)
+	return await _json_request("/action", HTTPClient.METHOD_POST, payload, ACTION_TIMEOUT, true, true)
 
 func sandbox_exec(command: Array[String], cwd: String = ".", timeout: int = 60, allow_network: bool = false) -> Dictionary:
 	var bounded_timeout := clampi(timeout, 1, MAX_SANDBOX_TIMEOUT)
@@ -206,7 +219,7 @@ func sandbox_exec(command: Array[String], cwd: String = ".", timeout: int = 60, 
 		"cwd": cwd,
 		"timeout": bounded_timeout,
 		"allow_network": allow_network,
-	}, float(bounded_timeout + 5), true)
+	}, float(bounded_timeout + 5), true, false)
 
 func sandbox_container_exec(command: Array[String], cwd: String = ".", timeout: int = 60, allow_network: bool = false) -> Dictionary:
 	var bounded_timeout := clampi(timeout, 1, MAX_SANDBOX_TIMEOUT)
@@ -215,10 +228,10 @@ func sandbox_container_exec(command: Array[String], cwd: String = ".", timeout: 
 		"cwd": cwd,
 		"timeout": bounded_timeout,
 		"allow_network": allow_network,
-	}, float(bounded_timeout + 5), true)
+	}, float(bounded_timeout + 5), true, false)
 
 func sandbox_write(path: String, content: String) -> Dictionary:
-	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content}, DEFAULT_TIMEOUT, true)
+	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content}, DEFAULT_TIMEOUT, true, false)
 
 func _master_enabled() -> bool:
 	return master_enabled_from(self)
@@ -241,6 +254,7 @@ func _unsupported(as_capability: bool = false) -> Dictionary:
 		result["clipboard"] = false
 		result["service_side_planning"] = false
 		result["local_core_planning_required"] = true
+		result["computer_control_enabled"] = false
 	return result
 
 func _new_service_token() -> String:
