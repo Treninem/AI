@@ -10,10 +10,15 @@
     "legacy_manifest_readable": true,
     "legacy_direct_update": false,
     "legacy_repair_required_through": "1.3.0.0",
+    "repair_bootstrap_version": "1.3.0.0",
+    "repair_release_tags": [
+      "repair-v1.2-windows",
+      "repair-v1.3-windows"
+    ],
     "signed_direct_update": true,
     "signed_update_floor": "1.4.0.0",
     "manifest_url_contract": "github_latest_update_json",
-    "windows_strategy": "one_time_repair_through_v1_3_then_signed_full_zip_replace",
+    "windows_strategy": "one_time_trust_root_repair_through_v1_3_then_signed_full_zip_replace",
     "android_strategy": "same_package_same_permanent_signing_identity_required"
   },
   "assets": {
