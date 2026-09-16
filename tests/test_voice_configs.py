@@ -88,6 +88,23 @@ def test_all_required_emotions_exist_and_are_bounded():
         assert 0.0 <= float(profile["paw_glow"]) <= 1.0, name
 
 
+def test_acoustic_benchmark_keeps_coordinator_persona_and_latency_evidence():
+    benchmark = (ROOT / "voice" / "tools" / "acoustic_benchmark.py").read_text(encoding="utf-8")
+    for sample_id in ["persona_morning", "persona_night", "persona_playful", "persona_serious"]:
+        assert sample_id in benchmark
+    for metric in [
+        "model_load_sec",
+        "synthesis_wall_sec",
+        "processor_wall_sec",
+        "total_wall_sec",
+        "real_time_factor",
+        "clipping_ratio",
+    ]:
+        assert metric in benchmark
+    assert 'OUT / f"{sample_id}_aurora.wav"' in benchmark
+    assert 'if row["id"].startswith("persona_")' in benchmark
+
+
 def test_personality_categories_are_populated():
     personality = load("personality.json")
     for category in ["greeting", "thinking", "success", "error", "warning", "joke", "startup", "shutdown", "notification", "wake_response", "confused"]:
