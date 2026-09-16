@@ -120,6 +120,27 @@ class KnowledgeStressGateTests(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertTrue(findings[0]["suspected_superlinear_search"])
 
+    def test_registry_scaling_detects_near_quadratic_double(self) -> None:
+        registry = load_module("knowledge_registry_scaling", "run_registry_scaling.py")
+        rows = [
+            {"ok": True, "source_count": 16, "register_duration_ms": 100.0},
+            {"ok": True, "source_count": 32, "register_duration_ms": 360.0},
+            {"ok": True, "source_count": 64, "register_duration_ms": 1390.0},
+        ]
+        findings = registry.pair_findings(rows)
+        self.assertEqual(len(findings), 2)
+        self.assertTrue(all(row["suspected_quadratic_registry"] for row in findings))
+        validator = load_module("knowledge_perf_validator_registry", "validate_performance_report.py")
+        result = validator.evaluate_report(
+            {
+                "hard_correctness": {"passed": True, "errors": []},
+                "relative_performance": {"suspected_quadratic_registry": True},
+                "results": [],
+            },
+            "registry.json",
+        )
+        self.assertEqual(result["performance_blockers"], ["suspected_quadratic_registry"])
+
     def test_portable_harness_makes_dynamic_script_locals_explicit_variant(self) -> None:
         portable = load_module("knowledge_portable_runner", "run_knowledge_benchmark_portable.py")
         with tempfile.TemporaryDirectory() as tmp:
