@@ -1,9 +1,9 @@
 class_name AuroraSettingsOverlay
 extends Node
 
-const BG := Color(0.020, 0.024, 0.041, 0.995)
-const SURFACE := Color(0.045, 0.052, 0.082, 0.98)
-const SURFACE_HOVER := Color(0.075, 0.085, 0.13, 0.99)
+const BG := Color(0.018, 0.022, 0.038, 0.995)
+const SURFACE := Color(0.043, 0.050, 0.078, 0.985)
+const SURFACE_HOVER := Color(0.074, 0.086, 0.132, 0.995)
 const BORDER := Color(0.30, 0.36, 0.50, 0.52)
 const ACCENT := Color("a98aff")
 const CYAN := Color("45d8ff")
@@ -30,22 +30,88 @@ var project_select: OptionButton
 
 func _ready() -> void:
 	_build_ui()
-	AuroraUpdate.update_available.connect(func(info):
-		if update_status != null:
-			update_status.text = "Доступна версия %s" % str(info.get("version", ""))
-	)
-	AuroraUpdate.no_update.connect(func(version):
-		if update_status != null:
-			update_status.text = "Установлена актуальная версия %s" % version
-	)
-	AuroraUpdate.update_error.connect(func(message):
-		if update_status != null and popup != null and popup.visible:
-			update_status.text = "Обновление сейчас недоступно • %s" % message
-	)
-	AuroraVoice.backend_status.connect(func(ready, _info):
-		if voice_status != null:
-			voice_status.text = "Голосовой модуль: %s" % ("готов" if ready else "не подключён")
-	)
+	_bind_runtime_signals()
+
+func _bind_runtime_signals() -> void:
+	var updater := _update_manager()
+	if updater != null:
+		if updater.has_signal("update_available"):
+			updater.connect("update_available", Callable(self, "_on_update_available"))
+		if updater.has_signal("no_update"):
+			updater.connect("no_update", Callable(self, "_on_no_update"))
+		if updater.has_signal("update_error"):
+			updater.connect("update_error", Callable(self, "_on_update_error"))
+	var voice := _voice_manager()
+	if voice != null and voice.has_signal("backend_status"):
+		voice.connect("backend_status", Callable(self, "_on_voice_backend_status"))
+
+func _on_update_available(info: Dictionary) -> void:
+	if update_status != null:
+		update_status.text = "Доступна версия %s" % str(info.get("version", ""))
+		update_status.add_theme_color_override("font_color", CYAN)
+
+func _on_no_update(version: String) -> void:
+	if update_status != null:
+		update_status.text = "Установлена актуальная версия %s" % version
+		update_status.add_theme_color_override("font_color", GREEN)
+
+func _on_update_error(message: String) -> void:
+	if update_status != null and popup != null and popup.visible:
+		update_status.text = "Обновление сейчас недоступно • %s" % message
+		update_status.add_theme_color_override("font_color", WARNING)
+
+func _on_voice_backend_status(ready: bool, _info: Dictionary) -> void:
+	if voice_status != null:
+		voice_status.text = "Голосовой модуль: %s" % ("готов" if ready else "не подключён")
+		voice_status.add_theme_color_override("font_color", GREEN if ready else MUTED)
+
+func _voice_manager() -> Node:
+	return get_node_or_null("/root/AuroraVoice")
+
+func _update_manager() -> Node:
+	return get_node_or_null("/root/AuroraUpdate")
+
+func _desktop_features() -> bool:
+	return not _is_mobile_layout()
+
+func _voice_settings() -> Dictionary:
+	var voice := _voice_manager()
+	if voice == null:
+		return {}
+	var raw = voice.get("settings")
+	if raw is Dictionary:
+		return raw.duplicate(true)
+	return {}
+
+func _voice_value(key: String, fallback: Variant) -> Variant:
+	return _voice_settings().get(key, fallback)
+
+func _set_voice_setting(key: String, value: Variant) -> void:
+	var voice := _voice_manager()
+	if voice == null:
+		return
+	if voice.has_method("update_setting"):
+		voice.call("update_setting", key, value)
+
+func _set_voice_enabled(value: bool) -> void:
+	var voice := _voice_manager()
+	if voice != null and voice.has_method("set_enabled"):
+		voice.call("set_enabled", value)
+
+func _set_auto_speak(value: bool) -> void:
+	var voice := _voice_manager()
+	if voice != null and voice.has_method("set_auto_speak"):
+		voice.call("set_auto_speak", value)
+
+func _set_voice_volume(value: float) -> void:
+	var voice := _voice_manager()
+	if voice != null and voice.has_method("set_volume"):
+		voice.call("set_volume", value)
+
+func _set_mic_mode(value: String) -> void:
+	var voice := _voice_manager()
+	if voice != null and voice.has_method("set_mic_mode"):
+		voice.call("set_mic_mode", value)
 
 func show_settings(initial_page := "general") -> void:
 	await _sync_status()
@@ -63,8 +129,8 @@ func _fit_popup() -> void:
 	var viewport := get_viewport().get_visible_rect().size
 	if _is_mobile_layout():
 		popup.size = Vector2i(
-			maxi(340, int(viewport.x - 20.0)),
-			maxi(520, int(viewport.y - 28.0))
+			maxi(320, int(viewport.x - 16.0)),
+			maxi(500, int(viewport.y - 20.0))
 		)
 	else:
 		popup.size = Vector2i(
@@ -341,21 +407,31 @@ func _build_general_page(page: VBoxContainer) -> void:
 	local.add_child(refresh)
 
 func _build_voice_page(page: VBoxContainer) -> void:
-	var basic := _add_card(page, "Основные параметры")
+	var voice := _voice_manager()
+	var basic := _add_card(page, "Основные параметры", "Все параметры применяются к локальному голосовому модулю AuroraFox.")
+	if voice == null:
+		var unavailable := Label.new()
+		unavailable.text = "Голосовой runtime сейчас не подключён. Основной чат продолжает работать."
+		unavailable.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		unavailable.add_theme_color_override("font_color", WARNING)
+		basic.add_child(unavailable)
+
 	var voice_enabled := CheckButton.new()
 	voice_enabled.text = "Включить голос AuroraFox"
-	voice_enabled.button_pressed = bool(AuroraVoice.settings.get("enabled", true))
-	voice_enabled.toggled.connect(func(v): AuroraVoice.set_enabled(v))
+	voice_enabled.button_pressed = bool(_voice_value("enabled", true))
+	voice_enabled.disabled = voice == null
+	voice_enabled.toggled.connect(_set_voice_enabled)
 	basic.add_child(voice_enabled)
 
 	var speak := CheckButton.new()
 	speak.text = "Озвучивать ответы"
-	speak.button_pressed = bool(AuroraVoice.settings.get("auto_speak", true))
-	speak.toggled.connect(func(v): AuroraVoice.set_auto_speak(v))
+	speak.button_pressed = bool(_voice_value("auto_speak", true))
+	speak.disabled = voice == null
+	speak.toggled.connect(_set_auto_speak)
 	basic.add_child(speak)
-	basic.add_child(_slider_row("Громкость", float(AuroraVoice.settings.get("volume", 0.86)), 0.0, 1.0, 0.01, func(v): AuroraVoice.set_volume(v)))
-	basic.add_child(_slider_row("Скорость речи", float(AuroraVoice.settings.get("speed", 1.0)), 0.82, 1.20, 0.01, func(v): AuroraVoice.update_setting("speed", v)))
-	basic.add_child(_slider_row("Механический оттенок", float(AuroraVoice.settings.get("mechanical_amount", 0.035)), 0.0, 0.10, 0.005, func(v): AuroraVoice.update_setting("mechanical_amount", v)))
+	basic.add_child(_slider_row("Громкость", float(_voice_value("volume", 0.86)), 0.0, 1.0, 0.01, _set_voice_volume, voice == null))
+	basic.add_child(_slider_row("Скорость речи", float(_voice_value("speed", 1.0)), 0.82, 1.20, 0.01, func(v): _set_voice_setting("speed", v), voice == null))
+	basic.add_child(_slider_row("Механический оттенок", float(_voice_value("mechanical_amount", 0.035)), 0.0, 0.10, 0.005, func(v): _set_voice_setting("mechanical_amount", v), voice == null))
 
 	var mic := _add_card(page, "Микрофон")
 	var mic_row := HBoxContainer.new()
@@ -366,19 +442,20 @@ func _build_voice_page(page: VBoxContainer) -> void:
 	mic_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mic_row.add_child(mic_label)
 	var mic_mode := OptionButton.new()
+	mic_mode.disabled = voice == null
 	var modes := [["Выкл.", "off"], ["Fox / Лиса", "wake_word"], ["Постоянный диалог", "continuous"], ["Push-to-talk", "push_to_talk"]]
-	var current_mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
+	var current_mode := str(_voice_value("mic_mode", "wake_word"))
 	for i in range(modes.size()):
 		mic_mode.add_item(str(modes[i][0]))
 		mic_mode.set_item_metadata(i, modes[i][1])
 		if str(modes[i][1]) == current_mode:
 			mic_mode.selected = i
-	mic_mode.item_selected.connect(func(index): AuroraVoice.set_mic_mode(str(mic_mode.get_item_metadata(index))))
+	mic_mode.item_selected.connect(func(index): _set_mic_mode(str(mic_mode.get_item_metadata(index))))
 	mic_row.add_child(mic_mode)
 
 	var prepare := Button.new()
 	prepare.text = "Подготовить или восстановить голосовой модуль"
-	prepare.visible = OS.get_name() == "Windows"
+	prepare.visible = _desktop_features()
 	prepare.pressed.connect(func(): _show_setup_node("VoiceSetup"))
 	mic.add_child(prepare)
 
@@ -390,7 +467,7 @@ func _build_files_page(page: VBoxContainer) -> void:
 	files.add_child(file_buttons)
 	var prepare_files := Button.new()
 	prepare_files.text = "Подготовить модуль"
-	prepare_files.visible = OS.get_name() == "Windows"
+	prepare_files.visible = _desktop_features()
 	prepare_files.pressed.connect(func(): _show_setup_node("FileSetup"))
 	file_buttons.add_child(prepare_files)
 	var clear_files := Button.new()
@@ -410,7 +487,7 @@ func _build_files_page(page: VBoxContainer) -> void:
 	project_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	projects.add_child(project_status)
 	var project_buttons := HFlowContainer.new()
-	project_buttons.visible = OS.get_name() == "Windows"
+	project_buttons.visible = _desktop_features()
 	project_buttons.add_theme_constant_override("h_separation", 8)
 	project_buttons.add_theme_constant_override("v_separation", 8)
 	projects.add_child(project_buttons)
@@ -426,7 +503,7 @@ func _build_files_page(page: VBoxContainer) -> void:
 	remove_project.text = "Убрать доступ"
 	remove_project.pressed.connect(_remove_selected_project)
 	project_buttons.add_child(remove_project)
-	if OS.get_name() != "Windows":
+	if not _desktop_features():
 		var platform_hint := Label.new()
 		platform_hint.text = "Управление доверенными папками проекта выполняется в Windows-клиенте."
 		platform_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -492,7 +569,7 @@ func _build_tools_page(page: VBoxContainer) -> void:
 	knowledge_button.pressed.connect(func(): _open_surface("KnowledgeBase", "show_knowledge_base"))
 	knowledge.add_child(knowledge_button)
 
-	if OS.get_name() == "Windows":
+	if _desktop_features():
 		var computer := _add_card(page, "Компьютерный режим", "Отдельное явное разрешение на экран, мышь и клавиатуру. Без включения доступа действия запрещены.")
 		var computer_button := Button.new()
 		computer_button.text = "Настроить компьютерный режим"
@@ -519,34 +596,55 @@ func _build_tools_page(page: VBoxContainer) -> void:
 		mobile_note.add_child(note)
 
 func _build_updates_page(page: VBoxContainer) -> void:
-	var update_settings := AuroraUpdate.get_settings()
+	var updater := _update_manager()
+	var update_settings: Dictionary = {}
+	if updater != null and updater.has_method("get_settings"):
+		var raw = updater.call("get_settings")
+		if raw is Dictionary:
+			update_settings = raw
 	var card := _add_card(page, "Stable-канал", "Пакеты проходят проверку целостности и доверия. Ошибка сети не мешает работе текущей локальной версии.")
+	if updater == null:
+		var unavailable := Label.new()
+		unavailable.text = "Модуль обновлений сейчас не подключён. Текущая локальная версия продолжает работать."
+		unavailable.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		unavailable.add_theme_color_override("font_color", WARNING)
+		card.add_child(unavailable)
+
 	var auto_check := CheckButton.new()
 	auto_check.text = "Автоматически проверять обновления"
 	auto_check.button_pressed = bool(update_settings.get("auto_check", true))
-	auto_check.toggled.connect(func(v): AuroraUpdate.set_auto_check(v))
+	auto_check.disabled = updater == null
+	auto_check.toggled.connect(func(v): _set_update_option("set_auto_check", v))
 	card.add_child(auto_check)
 	var auto_download := CheckButton.new()
 	auto_download.text = "Автоматически скачивать проверенные обновления"
 	auto_download.button_pressed = bool(update_settings.get("auto_download", true))
-	auto_download.toggled.connect(func(v): AuroraUpdate.set_auto_download(v))
+	auto_download.disabled = updater == null
+	auto_download.toggled.connect(func(v): _set_update_option("set_auto_download", v))
 	card.add_child(auto_download)
 	var auto_apply := CheckButton.new()
 	auto_apply.text = "Автоматически применять проверенные обновления"
 	auto_apply.button_pressed = bool(update_settings.get("auto_apply", true))
-	auto_apply.toggled.connect(func(v): AuroraUpdate.set_auto_apply(v))
+	auto_apply.disabled = updater == null
+	auto_apply.toggled.connect(func(v): _set_update_option("set_auto_apply", v))
 	card.add_child(auto_apply)
 	update_status = Label.new()
-	update_status.text = "Канал: stable"
+	update_status.text = "Канал: stable" if updater != null else "Модуль обновлений не подключён"
 	update_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	update_status.add_theme_color_override("font_color", MUTED)
 	card.add_child(update_status)
 	var update_button := Button.new()
 	update_button.text = "Проверить обновления сейчас"
+	update_button.disabled = updater == null
 	update_button.pressed.connect(_check_updates)
 	card.add_child(update_button)
 
-func _slider_row(label_text: String, initial: float, minimum: float, maximum: float, step: float, changed: Callable) -> VBoxContainer:
+func _set_update_option(method_name: String, value: bool) -> void:
+	var updater := _update_manager()
+	if updater != null and updater.has_method(method_name):
+		updater.call(method_name, value)
+
+func _slider_row(label_text: String, initial: float, minimum: float, maximum: float, step: float, changed: Callable, disabled := false) -> VBoxContainer:
 	var root := VBoxContainer.new()
 	root.add_theme_constant_override("separation", 4)
 	var top := HBoxContainer.new()
@@ -566,6 +664,7 @@ func _slider_row(label_text: String, initial: float, minimum: float, maximum: fl
 	slider.max_value = maximum
 	slider.step = step
 	slider.value = initial
+	slider.editable = not disabled
 	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	slider.value_changed.connect(changed)
 	slider.value_changed.connect(func(v): value_label.text = "%.2f" % v)
@@ -599,8 +698,13 @@ func _open_surface(node_name: String, method_name: String) -> void:
 	node.call(method_name)
 
 func _sync_status() -> void:
+	var voice := _voice_manager()
 	if voice_status != null:
-		voice_status.text = "Голосовой модуль: %s" % ("готов" if AuroraVoice.backend_is_ready else "не подключён")
+		var ready := false
+		if voice != null:
+			ready = bool(voice.get("backend_is_ready"))
+		voice_status.text = "Голосовой модуль: %s" % ("готов" if ready else "не подключён")
+		voice_status.add_theme_color_override("font_color", GREEN if ready else MUTED)
 	await _sync_core_status()
 	await _refresh_file_status()
 	await _refresh_index_status()
@@ -633,9 +737,9 @@ func _refresh_file_status() -> void:
 		return
 	var result: Dictionary = await manager.intelligence.health()
 	if not result.get("ok", false):
-		file_status.text = "File Intelligence: требуется подготовка" if OS.get_name() == "Windows" else "File Intelligence: Android runtime недоступен"
+		file_status.text = "File Intelligence: требуется подготовка" if _desktop_features() else "File Intelligence: Android runtime недоступен"
 		return
-	if OS.get_name() == "Android":
+	if not _desktop_features():
 		file_status.text = "File Intelligence: Android native • PDF/DOCX/XLSX/PPTX/ZIP • image-only OCR пока ограничен"
 	else:
 		file_status.text = "File Intelligence: готов • vision %s • voice/STT %s" % [
@@ -651,7 +755,7 @@ func _clear_file_cache() -> void:
 	if manager is AttachmentManager:
 		var result: Dictionary = await manager.clear_file_cache()
 		if file_status != null:
-			file_status.text = ("Кэш файлов очищен" if OS.get_name() == "Android" else "Кэш очищен: %s" % str(result.get("removed", 0))) if result.get("ok", false) else "Не удалось очистить кэш"
+			file_status.text = ("Кэш файлов очищен" if not _desktop_features() else "Кэш очищен: %s" % str(result.get("removed", 0))) if result.get("ok", false) else "Не удалось очистить кэш"
 
 func _project_bridge() -> ProjectIndexToolBridge:
 	var main := get_parent()
@@ -676,7 +780,7 @@ func _refresh_project_list() -> void:
 		project_select.add_item("Нет доверенных папок")
 		project_select.set_item_disabled(0, true)
 		if project_status != null:
-			project_status.text = "Выбери локальную папку проекта для индексирования." if OS.get_name() == "Windows" else "Доверенные папки проекта настраиваются в Windows-клиенте."
+			project_status.text = "Выбери локальную папку проекта для индексирования." if _desktop_features() else "Доверенные папки проекта настраиваются в Windows-клиенте."
 	else:
 		_refresh_index_status()
 
@@ -763,12 +867,19 @@ func _sync_improvement_status() -> void:
 	if autonomy != null:
 		var state := autonomy.status()
 		mode = "автономность включена" if bool(state.get("master_enabled", true)) else "автономность полностью остановлена пользователем"
-	improvement_status.text = "%s • runtime-расширения %d/%d • sandbox-проверка: %s" % [mode, active, items.size(), "Godot 4.7.1 / Windows" if OS.get_name() == "Windows" else "кандидаты ядра не применяются на этой платформе"]
+	improvement_status.text = "%s • runtime-расширения %d/%d • sandbox-проверка: %s" % [mode, active, items.size(), "Godot 4.7.1 / Windows" if _desktop_features() else "кандидаты ядра не применяются на этой платформе"]
 
 func _open_self_improvement() -> void:
 	_open_surface("SelfImprovementCenter", "show_center")
 
 func _check_updates() -> void:
+	var updater := _update_manager()
+	if updater == null or not updater.has_method("check_for_updates"):
+		if update_status != null:
+			update_status.text = "Модуль обновлений не подключён"
+			update_status.add_theme_color_override("font_color", WARNING)
+		return
 	if update_status != null:
 		update_status.text = "Проверяю подписанный stable-релиз…"
-	await AuroraUpdate.check_for_updates(true)
+		update_status.add_theme_color_override("font_color", MUTED)
+	await updater.call("check_for_updates", true)
