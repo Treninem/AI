@@ -20,6 +20,119 @@ UNIX_PATH = re.compile(r"(?<!\w)/(?:[^/\s]+/)+[^/\s]+")
 LINE_MARKUP = re.compile(r"(?m)^[ \t]{0,3}(?:#{1,6}\s+|>\s*|[-+*]\s+)")
 INLINE_MARKUP = re.compile(r"[*_~]{1,3}")
 EMOJI = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF]", re.UNICODE)
+VERSION_NUMBER = re.compile(r"(?<!\w)-?\d+(?:\.\d+){2,}(?!\w)")
+NUMBER_TOKEN = re.compile(r"(?<!\w)(-?\d+)(?:([.,])(\d+))?(?!\w)")
+
+_ONES_M = ("", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
+_ONES_F = ("", "одна", "две", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
+_TEENS = (
+    "десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать",
+    "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать",
+)
+_TENS = ("", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто")
+_HUNDREDS = ("", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот")
+_SCALES = (
+    (1_000_000_000_000, ("триллион", "триллиона", "триллионов"), False),
+    (1_000_000_000, ("миллиард", "миллиарда", "миллиардов"), False),
+    (1_000_000, ("миллион", "миллиона", "миллионов"), False),
+    (1_000, ("тысяча", "тысячи", "тысяч"), True),
+)
+_DIGIT_WORDS = ("ноль", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
+
+
+def _plural_form(value: int, forms: tuple[str, str, str]) -> str:
+    value = abs(int(value))
+    last_two = value % 100
+    if 11 <= last_two <= 14:
+        return forms[2]
+    last = value % 10
+    if last == 1:
+        return forms[0]
+    if 2 <= last <= 4:
+        return forms[1]
+    return forms[2]
+
+
+def _triad_to_words(value: int, feminine: bool = False) -> list[str]:
+    value = int(value) % 1000
+    if value == 0:
+        return []
+    out: list[str] = []
+    hundreds = value // 100
+    if hundreds:
+        out.append(_HUNDREDS[hundreds])
+    remainder = value % 100
+    if 10 <= remainder <= 19:
+        out.append(_TEENS[remainder - 10])
+        return out
+    tens = remainder // 10
+    if tens:
+        out.append(_TENS[tens])
+    ones = remainder % 10
+    if ones:
+        out.append((_ONES_F if feminine else _ONES_M)[ones])
+    return out
+
+
+def _integer_to_words(value: int, feminine_units: bool = False) -> str:
+    value = int(value)
+    if value == 0:
+        return "ноль"
+    sign = "минус " if value < 0 else ""
+    number = abs(value)
+    if number >= 1_000_000_000_000_000:
+        # Huge IDs are clearer when read digit by digit than when a TTS engine guesses them.
+        digits = " ".join(_DIGIT_WORDS[int(ch)] for ch in str(number))
+        return sign + digits
+
+    out: list[str] = []
+    for scale, forms, feminine in _SCALES:
+        group = number // scale
+        if group:
+            out.extend(_triad_to_words(group, feminine=feminine))
+            out.append(_plural_form(group, forms))
+            number %= scale
+    out.extend(_triad_to_words(number, feminine=feminine_units))
+    return sign + " ".join(out)
+
+
+def _decimal_to_words(integer_text: str, fraction_text: str) -> str:
+    integer_value = int(integer_text)
+    fraction_digits = fraction_text[:6]
+    fraction_value = int(fraction_digits or "0")
+    if len(fraction_digits) <= 3:
+        integer_words = _integer_to_words(integer_value, feminine_units=True)
+        whole_form = "целая" if abs(integer_value) % 10 == 1 and abs(integer_value) % 100 != 11 else "целых"
+        numerator = _integer_to_words(fraction_value, feminine_units=True)
+        denominator_forms = {
+            1: ("десятая", "десятых", "десятых"),
+            2: ("сотая", "сотых", "сотых"),
+            3: ("тысячная", "тысячных", "тысячных"),
+        }[len(fraction_digits)]
+        denominator = _plural_form(fraction_value, denominator_forms)
+        return f"{integer_words} {whole_form} {numerator} {denominator}"
+
+    sign = "минус " if integer_value < 0 else ""
+    base = _integer_to_words(abs(integer_value))
+    fractional = " ".join(_DIGIT_WORDS[int(ch)] for ch in fraction_digits)
+    return f"{sign}{base} запятая {fractional}"
+
+
+def _version_to_words(match: re.Match[str]) -> str:
+    token = match.group(0)
+    sign = "минус " if token.startswith("-") else ""
+    if token.startswith("-"):
+        token = token[1:]
+    parts = [_integer_to_words(int(part)) for part in token.split(".")]
+    return sign + " точка ".join(parts)
+
+
+def _number_to_words(match: re.Match[str]) -> str:
+    integer_text = match.group(1)
+    fraction_text = match.group(3)
+    if fraction_text is not None:
+        return _decimal_to_words(integer_text, fraction_text)
+    return _integer_to_words(int(integer_text))
 
 
 def prepare_for_speech(text: str, read_code: bool = False) -> str:
@@ -35,11 +148,16 @@ def prepare_for_speech(text: str, read_code: bool = False) -> str:
     text = UNIX_PATH.sub("путь к файлу", text)
     text = EMOJI.sub("", text)
 
-    # Remove formatting without eating a real minus sign such as "-5".
+    # Remove formatting before verbalizing values. The numeric pass runs after
+    # URLs/paths are hidden so it never starts reading IDs from technical links.
     text = LINE_MARKUP.sub("", text)
     text = INLINE_MARKUP.sub("", text)
     text = re.sub(r"[{}\[\]]", " ", text)
     text = text.replace("|", ", ")
+    text = re.sub(r"(?i)°\s*[cс]", " градусов Цельсия", text)
+    text = re.sub(r"(?<=\d)\s*%", " процентов", text)
+    text = VERSION_NUMBER.sub(_version_to_words, text)
+    text = NUMBER_TOKEN.sub(_number_to_words, text)
 
     # Give local TTS punctuation it can turn into natural short/long pauses.
     text = re.sub(r"\n{2,}", ". ", text)

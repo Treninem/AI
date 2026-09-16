@@ -25,18 +25,28 @@ def test_prepare_for_speech_hides_code_url_and_emoji():
     assert "ссылка в сообщении" in spoken
 
 
-def test_prepare_for_speech_keeps_human_labels_minus_and_hides_paths():
+def test_prepare_for_speech_verbalizes_minus_and_hides_paths():
     src = (
         "**Важно:** температура -5. "
         "[Документация](https://example.com/manual) лежит "
         r"C:\AuroraFox\voice\manual.txt и /opt/aurorafox/voice/model.bin"
     )
     spoken = prepare_for_speech(src)
-    assert "-5" in spoken
+    assert "минус пять" in spoken
+    assert "-5" not in spoken
     assert "Документация" in spoken
     assert "example.com" not in spoken
     assert spoken.count("путь к файлу") == 2
     assert "**" not in spoken
+
+
+def test_prepare_for_speech_verbalizes_integer_decimal_percent_and_version():
+    spoken = prepare_for_speech("Температура 23 °C, давление 2,4 бара, прогресс 75%, версия 1.3.0.")
+    assert "двадцать три градусов Цельсия" in spoken
+    assert "две целых четыре десятых бара" in spoken
+    assert "семьдесят пять процентов" in spoken
+    assert "один точка три точка ноль" in spoken
+    assert not any(ch.isdigit() for ch in spoken)
 
 
 def test_streaming_split_is_sentence_based():
