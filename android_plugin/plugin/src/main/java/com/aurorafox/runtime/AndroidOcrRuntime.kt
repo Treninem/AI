@@ -28,6 +28,7 @@ class AndroidOcrRuntime(private val context: Context) {
             "eng.traineddata" to "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
             "rus.traineddata" to "e16e5e036cce1d9ec2b00063cf8b54472625b9e14d893a169e2b0dedeb4df225",
         )
+        @Volatile private var modelsVerified = false
     }
 
     private val dataRoot = File(context.filesDir, "ocr").apply { mkdirs() }
@@ -36,17 +37,14 @@ class AndroidOcrRuntime(private val context: Context) {
     fun health(): JSONObject = JSONObject().apply {
         var ready = false
         var healthError = ""
+        var api: TessBaseAPI? = null
         try {
-            ensureModels()
-            val api = TessBaseAPI()
-            try {
-                ready = api.init(dataRoot.absolutePath, LANGUAGES)
-                if (!ready) healthError = "Tesseract native init failed"
-            } finally {
-                api.recycle()
-            }
+            api = newInitializedApi()
+            ready = true
         } catch (t: Throwable) {
             healthError = t.message ?: t.javaClass.simpleName
+        } finally {
+            api?.recycle()
         }
         put("available", ready)
         put("engine", "tesseract4android")
@@ -78,30 +76,51 @@ class AndroidOcrRuntime(private val context: Context) {
     }
 
     private fun ensureModels() {
-        MODEL_SHA.forEach { (name, expected) ->
-            val target = File(tessdata, name)
-            if (!target.isFile || sha256(target) != expected) {
-                val tmp = File(tessdata, "$name.tmp")
-                context.assets.open("tessdata/$name").use { input -> tmp.outputStream().use { input.copyTo(it) } }
-                val actual = sha256(tmp)
-                require(actual == expected) { "Bundled OCR model hash mismatch for $name" }
-                if (target.exists()) target.delete()
-                if (!tmp.renameTo(target)) { tmp.copyTo(target, overwrite = true); tmp.delete() }
+        if (modelsVerified) return
+        synchronized(AndroidOcrRuntime::class.java) {
+            if (modelsVerified) return
+            MODEL_SHA.forEach { (name, expected) ->
+                val target = File(tessdata, name)
+                if (!target.isFile || sha256(target) != expected) {
+                    val tmp = File(tessdata, "$name.tmp")
+                    context.assets.open("tessdata/$name").use { input -> tmp.outputStream().use { input.copyTo(it) } }
+                    val actual = sha256(tmp)
+                    require(actual == expected) { "Bundled OCR model hash mismatch for $name" }
+                    if (target.exists()) target.delete()
+                    if (!tmp.renameTo(target)) { tmp.copyTo(target, overwrite = true); tmp.delete() }
+                }
             }
+            modelsVerified = true
         }
     }
 
-    private fun recognize(bitmap: Bitmap): String {
+    private fun newInitializedApi(): TessBaseAPI {
         ensureModels()
-        val prepared = limitBitmap(bitmap)
         val api = TessBaseAPI()
-        return try {
+        try {
             check(api.init(dataRoot.absolutePath, LANGUAGES)) { "Tesseract init failed" }
             api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO)
+            return api
+        } catch (t: Throwable) {
+            modelsVerified = false
+            api.recycle()
+            throw t
+        }
+    }
+
+    private fun recognize(bitmap: Bitmap, sharedApi: TessBaseAPI? = null): String {
+        val prepared = limitBitmap(bitmap)
+        var api: TessBaseAPI? = sharedApi
+        var ownsApi = false
+        return try {
+            if (api == null) {
+                api = newInitializedApi()
+                ownsApi = true
+            }
             api.setImage(prepared)
             api.getUTF8Text()?.replace("\u000c", "")?.trim().orEmpty()
         } finally {
-            api.recycle()
+            if (ownsApi) api?.recycle()
             if (prepared !== bitmap) prepared.recycle()
         }
     }
@@ -137,8 +156,19 @@ class AndroidOcrRuntime(private val context: Context) {
             val pageSources = JSONArray()
             val warnings = JSONArray()
             val ocrHealth = health()
-            val ocrReady = ocrHealth.optBoolean("available", false)
-            if (!ocrReady) {
+            var ocrReady = ocrHealth.optBoolean("available", false)
+            var sharedApi: TessBaseAPI? = null
+            if (ocrReady) {
+                try {
+                    sharedApi = newInitializedApi()
+                } catch (t: Throwable) {
+                    ocrReady = false
+                    val message = t.message ?: t.javaClass.simpleName
+                    ocrHealth.put("available", false)
+                    ocrHealth.put("error", message.take(500))
+                    warnings.put("Android local OCR could not initialize for this document; text-layer pages will still be imported safely.")
+                }
+            } else {
                 warnings.put("Android local OCR is unavailable; usable PDF text layers will still be imported and scanned pages will be skipped safely.")
             }
             var ocrPages = 0
@@ -148,64 +178,68 @@ class AndroidOcrRuntime(private val context: Context) {
             var pagesProcessed = 0
             var outputTruncated = false
             var ocrLimitReached = false
-            for (index in 0 until document.numberOfPages) {
-                if (out.length >= MAX_OUTPUT_CHARS) {
-                    outputTruncated = true
-                    break
+            try {
+                for (index in 0 until document.numberOfPages) {
+                    if (out.length >= MAX_OUTPUT_CHARS) {
+                        outputTruncated = true
+                        break
+                    }
+                    val pageNo = index + 1
+                    pagesProcessed = pageNo
+                    val layer = try {
+                        PDFTextStripper().apply { sortByPosition = true; startPage = pageNo; endPage = pageNo }.getText(document).trim()
+                    } catch (_: Throwable) { "" }
+                    if (usable(layer)) {
+                        textPages++
+                        val complete = appendPage(out, pageNo, layer)
+                        pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "text_layer", "chars" to layer.length)))
+                        if (!complete) { outputTruncated = true; break }
+                        continue
+                    }
+                    if (!ocrReady) {
+                        if (layer.isBlank()) emptyPages++
+                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                        pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_unavailable", "chars" to layer.length)))
+                        if (!complete) { outputTruncated = true; break }
+                        continue
+                    }
+                    if (ocrPages >= MAX_OCR_PAGES) {
+                        ocrLimitReached = true
+                        if (layer.isBlank()) emptyPages++
+                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                        pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_limit", "chars" to layer.length)))
+                        if (!complete) { outputTruncated = true; break }
+                        continue
+                    }
+                    ocrPages++
+                    try {
+                        val bitmap = renderBoundedPdfPage(document, renderer, index)
+                        val recognized = try { recognize(bitmap, sharedApi) } finally { bitmap.recycle() }
+                        val chosen = if (recognized.isNotBlank()) recognized else layer
+                        if (chosen.isBlank()) emptyPages++
+                        val complete = if (chosen.isNotBlank()) appendPage(out, pageNo, chosen) else true
+                        pageSources.put(JSONObject(mapOf(
+                            "page" to pageNo,
+                            "source" to if (recognized.isNotBlank()) "ocr" else if (layer.isNotBlank()) "text_layer_sparse" else "empty",
+                            "chars" to chosen.length,
+                        )))
+                        if (!complete) { outputTruncated = true; break }
+                    } catch (t: Throwable) {
+                        ocrFailedPages++
+                        if (layer.isBlank()) emptyPages++
+                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                        pageSources.put(JSONObject(mapOf(
+                            "page" to pageNo,
+                            "source" to "ocr_error",
+                            "chars" to layer.length,
+                            "error" to (t.message ?: t.javaClass.simpleName).take(500),
+                        )))
+                        warnings.put("Page $pageNo local OCR failed; continuing safely with the remaining document.")
+                        if (!complete) { outputTruncated = true; break }
+                    }
                 }
-                val pageNo = index + 1
-                pagesProcessed = pageNo
-                val layer = try {
-                    PDFTextStripper().apply { sortByPosition = true; startPage = pageNo; endPage = pageNo }.getText(document).trim()
-                } catch (_: Throwable) { "" }
-                if (usable(layer)) {
-                    textPages++
-                    val complete = appendPage(out, pageNo, layer)
-                    pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "text_layer", "chars" to layer.length)))
-                    if (!complete) { outputTruncated = true; break }
-                    continue
-                }
-                if (!ocrReady) {
-                    if (layer.isBlank()) emptyPages++
-                    val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
-                    pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_unavailable", "chars" to layer.length)))
-                    if (!complete) { outputTruncated = true; break }
-                    continue
-                }
-                if (ocrPages >= MAX_OCR_PAGES) {
-                    ocrLimitReached = true
-                    if (layer.isBlank()) emptyPages++
-                    val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
-                    pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_limit", "chars" to layer.length)))
-                    if (!complete) { outputTruncated = true; break }
-                    continue
-                }
-                ocrPages++
-                try {
-                    val bitmap = renderBoundedPdfPage(document, renderer, index)
-                    val recognized = try { recognize(bitmap) } finally { bitmap.recycle() }
-                    val chosen = if (recognized.isNotBlank()) recognized else layer
-                    if (chosen.isBlank()) emptyPages++
-                    val complete = if (chosen.isNotBlank()) appendPage(out, pageNo, chosen) else true
-                    pageSources.put(JSONObject(mapOf(
-                        "page" to pageNo,
-                        "source" to if (recognized.isNotBlank()) "ocr" else if (layer.isNotBlank()) "text_layer_sparse" else "empty",
-                        "chars" to chosen.length,
-                    )))
-                    if (!complete) { outputTruncated = true; break }
-                } catch (t: Throwable) {
-                    ocrFailedPages++
-                    if (layer.isBlank()) emptyPages++
-                    val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
-                    pageSources.put(JSONObject(mapOf(
-                        "page" to pageNo,
-                        "source" to "ocr_error",
-                        "chars" to layer.length,
-                        "error" to (t.message ?: t.javaClass.simpleName).take(500),
-                    )))
-                    warnings.put("Page $pageNo local OCR failed; continuing safely with the remaining document.")
-                    if (!complete) { outputTruncated = true; break }
-                }
+            } finally {
+                sharedApi?.recycle()
             }
             if (outputTruncated) warnings.put("Local OCR output truncated at $MAX_OUTPUT_CHARS characters")
             if (ocrLimitReached) warnings.put("OCR page limit reached at $MAX_OCR_PAGES pages")
@@ -226,6 +260,7 @@ class AndroidOcrRuntime(private val context: Context) {
                     "output_truncated" to outputTruncated,
                     "streaming_pages" to true,
                     "pdf_buffering" to "temp_file",
+                    "ocr_engine_reused" to (ocrReady && sharedApi != null),
                 ),
                 warnings,
                 outputTruncated,
