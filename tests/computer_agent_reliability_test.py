@@ -3,7 +3,9 @@ from __future__ import annotations
 import importlib.util
 import os
 import sys
+import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -119,10 +121,57 @@ def test_action_validation_idempotency_and_retry_safety(tmp_path: Path, monkeypa
     assert second["deduplicated"] is True
     assert len([item for item in calls if item[0] == "action"]) == 1
 
-    out_of_bounds = client.post("/action", headers=_headers(), json={"type": "click", "x": 201, "y": 20})
+    out_of_bounds = client.post("/action", headers=_headers(), json={"type": "click", "x": 201, "y": 20, "action_id": "bounds"})
     assert out_of_bounds.status_code == 400
-    malformed = client.post("/action", headers=_headers(), json={"type": "hotkey", "keys": []})
+    malformed = client.post("/action", headers=_headers(), json={"type": "hotkey", "keys": [], "action_id": "keys"})
     assert malformed.status_code == 400
+
+
+def test_unsafe_action_requires_idempotency_key(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    service = _load_service(tmp_path)
+    service.IS_WINDOWS = True
+    monkeypatch.setattr(service, "_desktop_bounds", lambda: {"left": 0, "top": 0, "width": 100, "height": 100, "right": 100, "bottom": 100})
+    client = TestClient(service.app)
+    response = client.post("/action", headers=_headers(), json={"type": "click", "x": 10, "y": 10})
+    assert response.status_code == 400
+    assert "action_id" in response.json()["detail"]
+
+
+def test_concurrent_duplicate_action_id_executes_only_once(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    service = _load_service(tmp_path)
+    service.IS_WINDOWS = True
+    monkeypatch.setattr(service, "_desktop_bounds", lambda: {"left": 0, "top": 0, "width": 100, "height": 100, "right": 100, "bottom": 100})
+    started = threading.Event()
+    release = threading.Event()
+    calls: list[str] = []
+
+    def blocking_worker(kind, payload=None, timeout=0):
+        del timeout
+        if kind == "action":
+            calls.append(str((payload or {}).get("action_id", "")))
+            started.set()
+            assert release.wait(2.0)
+            return {"ok": True, "done": False}
+        return {"ok": True, "sha256": "screen"}
+
+    monkeypatch.setattr(service, "_run_worker", blocking_worker)
+    request = service.Action(type="click", x=10, y=10, action_id="single-flight")
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first_future = pool.submit(service._execute_action, request)
+        assert started.wait(1.0)
+        duplicate = service._execute_action(request)
+        assert duplicate["ok"] is False
+        assert duplicate["error"] == "action_in_progress"
+        assert duplicate["uncertain_external_state"] is True
+        assert duplicate["retry_safety"] == "unsafe"
+        release.set()
+        first = first_future.result(timeout=2.0)
+    assert first["ok"] is True
+    assert calls == ["single-flight"]
+    cached = service._execute_action(request)
+    assert cached["ok"] is True
+    assert cached["deduplicated"] is True
+    assert calls == ["single-flight"]
 
 
 def test_timeout_response_never_marks_unsafe_action_retryable(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
@@ -136,6 +185,7 @@ def test_timeout_response_never_marks_unsafe_action_retryable(tmp_path: Path, mo
     assert body["error"] == "timeout"
     assert body["retryable"] is False
     assert body["retry_safety"] == "unsafe"
+    assert body["uncertain_external_state"] is True
 
 
 def test_sandbox_rejects_traversal_absolute_and_symlink_escape(tmp_path: Path):
