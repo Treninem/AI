@@ -12,6 +12,8 @@ $androidBase64 = Join-Path $privateDir 'AURORA_ANDROID_KEYSTORE_BASE64.txt'
 $updatePrivate = Join-Path $privateDir 'aurora_update_signing_private.pem'
 $updateBase64 = Join-Path $privateDir 'AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64.txt'
 $updatePublic = Join-Path $root 'update/release_public.pub'
+$releaseIdentity = Join-Path $root 'update/release_identity.json'
+$androidPackage = 'com.aurorafox.ai'
 
 function Convert-SecureToPlain([Security.SecureString]$Secure) {
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($Secure)
@@ -45,9 +47,13 @@ function Read-MatchingPassword {
 function Find-Keytool {
     $cmd = Get-Command keytool.exe -ErrorAction SilentlyContinue
     if ($cmd) { return $cmd.Source }
+    $cmd = Get-Command keytool -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
     if ($env:JAVA_HOME) {
-        $candidate = Join-Path $env:JAVA_HOME 'bin/keytool.exe'
-        if (Test-Path -LiteralPath $candidate) { return $candidate }
+        foreach ($leaf in @('keytool.exe', 'keytool')) {
+            $candidate = Join-Path $env:JAVA_HOME "bin/$leaf"
+            if (Test-Path -LiteralPath $candidate) { return $candidate }
+        }
     }
     foreach ($candidate in @(
         'C:\Program Files\Android\Android Studio\jbr\bin\keytool.exe',
@@ -57,7 +63,33 @@ function Find-Keytool {
         $match = Get-Item $candidate -ErrorAction SilentlyContinue | Select-Object -First 1
         if ($match) { return $match.FullName }
     }
-    throw 'keytool.exe was not found. Install JDK 17 (or Android Studio) and run this script again.'
+    throw 'keytool was not found. Install JDK 17 (or Android Studio) and run this script again.'
+}
+
+function Get-Sha256Hex([byte[]]$Bytes) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($sha.ComputeHash($Bytes))).Replace('-', '').ToLowerInvariant() }
+    finally { $sha.Dispose() }
+}
+
+function Get-PublicKeyFingerprint([string]$Path) {
+    $pem = Get-Content -LiteralPath $Path -Raw
+    $base64 = ($pem -replace '-----BEGIN PUBLIC KEY-----', '' -replace '-----END PUBLIC KEY-----', '' -replace '\s', '')
+    if ([string]::IsNullOrWhiteSpace($base64)) { throw 'Pinned update public key PEM is empty' }
+    return Get-Sha256Hex ([Convert]::FromBase64String($base64))
+}
+
+function Get-AndroidCertificateFingerprint([string]$Keytool, [string]$Keystore, [string]$Alias, [string]$Password) {
+    $certPath = Join-Path ([IO.Path]::GetTempPath()) ("aurorafox-release-cert-{0}.der" -f [Guid]::NewGuid().ToString('N'))
+    try {
+        & $Keytool -exportcert -keystore $Keystore -storepass $Password -alias $Alias -file $certPath | Out-Null
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $certPath)) {
+            throw 'Could not export Android release certificate from keystore'
+        }
+        return Get-Sha256Hex ([IO.File]::ReadAllBytes($certPath))
+    } finally {
+        Remove-Item -LiteralPath $certPath -Force -ErrorAction SilentlyContinue
+    }
 }
 
 function Set-GitHubSecret([string]$Name, [string]$Value) {
@@ -85,7 +117,40 @@ function Set-GitHubSecret([string]$Name, [string]$Value) {
     }
 }
 
-New-Item -ItemType Directory -Force -Path $privateDir | Out-Null
+function Write-OrVerifyReleaseIdentity([string]$UpdateFingerprint, [string]$AndroidFingerprint) {
+    if (Test-Path -LiteralPath $releaseIdentity) {
+        $existing = Get-Content -LiteralPath $releaseIdentity -Raw | ConvertFrom-Json
+        if ([string]$existing.update_manifest_public_key_sha256 -ne $UpdateFingerprint) {
+            throw 'Existing release_identity.json pins a different update signing key. Restore the original private/public key pair; do not rotate silently.'
+        }
+        if ([string]$existing.android_signing_cert_sha256 -ne $AndroidFingerprint) {
+            throw 'Existing release_identity.json pins a different Android signing certificate. Restore the original Android release keystore; do not rotate silently.'
+        }
+        if ([string]$existing.android_package -ne $androidPackage) {
+            throw "Existing release_identity.json pins a different Android package: $($existing.android_package)"
+        }
+        if ([string]$existing.android_alias -ne $AndroidAlias) {
+            throw "Existing release_identity.json pins Android alias '$($existing.android_alias)', not '$AndroidAlias'"
+        }
+        Write-Host 'Existing public release identity matches both permanent signing keys.' -ForegroundColor Green
+        return
+    }
+
+    $identity = [ordered]@{
+        schema_version = 1
+        update_manifest_public_key_sha256 = $UpdateFingerprint
+        android_package = $androidPackage
+        android_signing_cert_sha256 = $AndroidFingerprint
+        android_alias = $AndroidAlias
+        signed_update_floor = '1.3.0.0'
+        initialized_at = [DateTime]::UtcNow.ToString('o')
+    }
+    $json = ($identity | ConvertTo-Json -Depth 4) + [Environment]::NewLine
+    [IO.File]::WriteAllText($releaseIdentity, $json, (New-Object Text.UTF8Encoding($false)))
+    Write-Host "Created public release identity pin: $releaseIdentity" -ForegroundColor Green
+}
+
+New-Item -ItemType Directory -Force -Path $privateDir,(Split-Path -Parent $releaseIdentity) | Out-Null
 
 # 1. Permanent updater trust root. The helper refuses accidental rotation.
 if (-not (Test-Path -LiteralPath $updatePublic)) {
@@ -123,7 +188,14 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Existing Android keystore/password/alias validation failed. Do not overwrite the keystore.' }
     }
 
+    $updateFingerprint = Get-PublicKeyFingerprint $updatePublic
+    $androidFingerprint = Get-AndroidCertificateFingerprint $keytool $androidKeystore $AndroidAlias $password
+    Write-OrVerifyReleaseIdentity $updateFingerprint $androidFingerprint
+
     [Convert]::ToBase64String([IO.File]::ReadAllBytes($androidKeystore)) | Set-Content -LiteralPath $androidBase64 -Encoding ASCII -NoNewline
+
+    Write-Host "Update public-key SHA-256: $updateFingerprint" -ForegroundColor Cyan
+    Write-Host "Android signing-cert SHA-256: $androidFingerprint" -ForegroundColor Cyan
 
     if (-not $SkipGitHubSecrets) {
         $gh = Get-Command gh.exe -ErrorAction SilentlyContinue
@@ -146,13 +218,15 @@ try {
 
 Write-Host ''
 Write-Host 'AuroraFox permanent release signing bootstrap is ready.' -ForegroundColor Green
-Write-Host "Commit ONLY the public updater key: $updatePublic" -ForegroundColor Cyan
+Write-Host "Commit ONLY public identity files:" -ForegroundColor Cyan
+Write-Host "  $updatePublic"
+Write-Host "  $releaseIdentity"
 Write-Host "Keep this Android keystore private and backed up: $androidKeystore" -ForegroundColor Yellow
 Write-Host "Keep this updater private key private and backed up: $updatePrivate" -ForegroundColor Yellow
 Write-Host 'Do not regenerate either identity for normal updates.' -ForegroundColor Yellow
 Write-Host ''
 Write-Host 'Next steps:' -ForegroundColor Cyan
-Write-Host '  git add update/release_public.pub'
-Write-Host '  git commit -m "release: initialize AuroraFox update trust root"'
+Write-Host '  git add update/release_public.pub update/release_identity.json'
+Write-Host '  git commit -m "release: initialize AuroraFox permanent signing identity"'
 Write-Host '  git push'
-Write-Host 'Then run the AuroraFox Release workflow (or push the matching v<version> tag).'
+Write-Host 'Then run build/bridge_release_readiness.ps1 and the AuroraFox Release workflow (or push the matching v<version> tag).'
