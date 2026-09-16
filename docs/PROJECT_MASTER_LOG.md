@@ -736,7 +736,7 @@ NEXT:
 - Статус: **ACTIVE — coordinator acceptance; Android female TTS candidate isolated before integration**.
 - Fresh main checked through: `b6cdcaa76f51649ffa1f0302fc987ee05b17e423`; existing voice coordinator acceptance remains under the same CLAIM and intended bump remains **PATCH** only after relevant green gates.
 - Ownership extension for this substage: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`, `android_plugin/setup_native.ps1`, `tests/test_android_contract.py`, plus already claimed voice acceptance files. `android_plugin/plugin/build.gradle.kts`, `android_plugin/settings.gradle.kts`, `AndroidFileRuntime.kt` and OCR/package metadata remain owned by `CHAT-2026-09-16-LOCAL-OCR` and must not be modified by VOICE-QUALITY.
-- Evidence/blocker: current Android local TTS packages `vits-piper-ru_RU-denis-medium` and reports `sherpa-onnx-piper-denis`; this is a male voice and therefore does not satisfy the coordinator requirement for Russian female voice evidence on both platforms. Current Android package/install/launch proof validates the local Piper path but not that requirement.
+- Evidence/blocker: current Android local TTS packages `vits-piper-ru_RU-denis-medium` and reports `sherpa-onnx-piper-denis`; это is a male voice and therefore does not satisfy the coordinator requirement for Russian female voice evidence on both platforms. Current Android package/install/launch proof validates the local Piper path but not that requirement.
 - Candidate selection: Piper `ru_RU-irina-medium` is not accepted for a distributable AuroraFox baseline because its upstream model metadata leaves the dataset/license status unclear. Supertonic 3 is evaluated instead as a fully local ONNX candidate. The existing pinned `sherpa-onnx 1.13.4` already contains `OfflineTtsSupertonicModelConfig`, so this candidate does **not** require touching OCR-owned Gradle/settings or changing the sherpa version.
 - Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
 - Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
@@ -937,3 +937,41 @@ BLOCKERS:
 
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
+
+## 38. SERVER/API/DB takeover and reconcile claim — 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-SERVER-API-DB`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
+- Started from fresh `main` HEAD: `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9`.
+- Branch: `chat-2026-09-17-server-api-db`.
+- Режим: Chat.
+- Наследует: `CHAT-2026-09-16-SERVER-DB` и только фактически подтверждённые server/API/DB/auth/guest/sync/mail/deployment изменения, уже присутствующие на свежем `main`. Старый PR #25 — исторический источник для сравнения, не source of truth и не кандидат на blind merge.
+- Цель: довести текущий server/API/SQLite/account/auth/guest/device-sync/mail/privacy/request-limits/deployment/rollback контур до production-ready acceptance без превращения server в интеллект AuroraFox и без автоматического Ollama/remote-AI fallback в normal `auto/agent` path.
+- Предполагаемый bump после зелёных acceptance-gates: **MINOR**, сохраняя решение старого server lane из-за уже введённого account/guest/device-sync server contract. Каноническую версию и Android `versionCode` этот lane не меняет; финальный bump/merge/release остаётся координатору.
+- Собственные production paths: `api/database.py`, `api/auth.py`, `api/account_store.py`, `api/sync_store.py`, `api/conversation_store.py`, `api/learning_store.py`, `api/learning_sync.py`, `api/server.py`, `api/account_mailer.py`, `api/request_limits.py`, `api/public_auth_limits.py`, `api/persistence_maintenance.py`, `api/backup_service.py`, server-only deployment helpers under `deploy/reg_ru/**`, related server/API tests and `.github/workflows/api-ci.yml`, плюс этот canonical master log. `api/core_candidate_queue.py` изменять только при доказанном server-owned defect и отсутствии нового ownership конфликта.
+- Не изменять самостоятельно: UI/UX, Core/Coder/Research, Voice, Knowledge/Memory/OCR, Work/Computer/Autonomy, updater/platform/release production paths. Cross-lane дефекты маршрутизировать через master log с exact SHA/run/job/test evidence.
+- Source of truth для takeover: fresh `main` exact SHA, exact diffs, tests и workflow runs. Полезные старые commits сохраняются только если они уже на current main или повторно подтверждены; stale unrelated branch/PR deltas не переносятся.
+- Acceptance: fresh/legacy/repeated SQLite migration; WAL/busy-timeout/FK/integrity/concurrency/restart/corruption/backup/restore; Account A != Account B и Guest A != Guest B даже при одинаковых conversation/entity IDs; login/invalid-login/access-expiry/refresh-rotation/replay/revoke/device/family revoke; guest→account migration/collision/conflict/rollback; sync push/pull/cursor/tombstone/idempotency/stale conflicts/preservation/resolution; SMTP STARTTLS+SSL/provider failure/send failure/token revoke/immediate retry; malformed/oversized body rejection before full JSON materialization; invalid auth/rate/capacity pressure; sanitized owner backup vs explicit root-only operational snapshot contract; no raw long-lived secret logging/persistence beyond intended hashed/operational contracts; personal data not automatically promoted to shared learning/Core knowledge.
+- Production boundary: без реального SSH/terminal доступа physical REG.RU deployment **не считать проверенным**. Public `/health`/`/ready` можно учитывать только если endpoint однозначно идентифицирован как этот проект.
+- Initial reconciliation evidence: fresh `main` contains post-checkpoint server hardening including early body-limit/capacity responses, production account mail transport, public-auth limiting, persistence retention/capacity, storage-pressure readiness and explicit SMTP security checks. Latest inspected API CI `35152298583` is green across python/windows/godot with Python suite `103 passed`, но checkout был PR merge SHA `6d210d3377dc379b7f12035a43868644c1472e33`; поэтому этот run не подменяет требуемое exact-main/exact-branch evidence.
+
+PROGRESS_COMPLETE: 25%
+PROGRESS_REMAINING: 75%
+
+DONE:
+- Fresh main/AGENTS/full canonical master log прочитаны; старый SERVER-DB ownership и final seven-lane rollover reconciled.
+- Новая отдельная branch создана от exact fresh main; stale PR #25 исключён как источник истины.
+- Текущая server commit/CI линия начала проверяться по exact SHA/diff/run/job evidence; implementation ещё не изменялась.
+
+REMAINING:
+- Полный source-level audit текущего `main` по DB/auth/account/guest/sync/mail/request/deployment contracts и старым server commits.
+- Добить недостающие regression gaps только в server-owned paths, затем получить exact-branch API CI и same-SHA evidence.
+- Проверить доступный production/public endpoint только при надёжной идентификации; physical deployment оставить external boundary без SSH/terminal.
+
+BLOCKERS:
+- Реального SSH/terminal connector к production REG.RU host в этом чате нет; production deployment не считается проверенным.
+- Exact-main API CI для текущего fresh main пока не доказан: найденный новый green API run относится к PR merge SHA, а не к standalone `8feed40...`.
+
+NEXT:
+- Продолжить audit фактических current-main server files/tests, проверить PR #25 только как historical delta, локализовать первый непринятый server gap и закрывать его минимальным server-owned patch с exact tests/workflow evidence.
