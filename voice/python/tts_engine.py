@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import html
 import os
 from pathlib import Path
 import numpy as np
@@ -65,6 +66,8 @@ class TTSEngine(ABC):
 
 class SileroEngine(TTSEngine):
     name = "silero"
+    _SSML_RATES = {"x-slow", "slow", "medium", "fast", "x-fast"}
+    _SSML_PITCHES = {"x-low", "low", "medium", "high", "x-high"}
 
     def __init__(self, config: dict, device: str):
         self.config = config
@@ -81,10 +84,47 @@ class SileroEngine(TTSEngine):
             self.model = model
         return self.model
 
+    def _use_native_slow_prosody(self, emotion: str, intensity: float) -> bool:
+        if not bool(self.config.get("native_prosody", False)):
+            return False
+        allowed = {
+            str(item).strip().lower()
+            for item in self.config.get("native_slow_emotions", ["sleepy", "serious"])
+            if str(item).strip()
+        }
+        threshold = max(0.0, min(float(self.config.get("native_slow_min_intensity", 0.30)), 1.0))
+        return str(emotion).strip().lower() in allowed and float(intensity) >= threshold
+
+    def _native_ssml(self, text: str) -> str:
+        rate = str(self.config.get("native_slow_rate", "slow")).strip().lower()
+        pitch = str(self.config.get("native_slow_pitch", "medium")).strip().lower()
+        if rate not in self._SSML_RATES:
+            rate = "slow"
+        if pitch not in self._SSML_PITCHES:
+            pitch = "medium"
+        # User/model text is data, never SSML authority. Escaping prevents a
+        # spoken answer from injecting prosody/break tags into the local model.
+        safe_text = html.escape(str(text), quote=False)
+        return f'<speak><prosody rate="{rate}" pitch="{pitch}">{safe_text}</prosody></speak>'
+
     def synthesize(self, text: str, emotion: str = "neutral", intensity: float = 0.5,
                    speed: float = 1.0) -> tuple[np.ndarray, int]:
         sr = int(self.config.get("sample_rate", 48000))
-        audio = self._load().apply_tts(text=text, speaker=self.config.get("speaker", "xenia"), sample_rate=sr)
+        model = self._load()
+        speaker = self.config.get("speaker", "xenia")
+        if self._use_native_slow_prosody(emotion, intensity):
+            try:
+                audio = model.apply_tts(
+                    ssml_text=self._native_ssml(text),
+                    speaker=speaker,
+                    sample_rate=sr,
+                )
+            except Exception:
+                # Voice must remain available even if a future Silero build
+                # rejects SSML. Plain local synthesis is the safe fallback.
+                audio = model.apply_tts(text=text, speaker=speaker, sample_rate=sr)
+        else:
+            audio = model.apply_tts(text=text, speaker=speaker, sample_rate=sr)
         if isinstance(audio, torch.Tensor):
             audio = audio.detach().cpu().numpy()
         return np.asarray(audio, dtype=np.float32), sr
@@ -186,9 +226,9 @@ class EngineRouter:
     def synthesize(self, text: str, emotion: str, intensity: float, speed: float, requested: str = "auto"):
         first = self.choose(requested)
         try:
-            # AuroraVoiceProcessor is the single normal-path tempo/pitch authority.
-            # XTTS has its own speed control, so route it at neutral speed here to
-            # avoid applying the same requested tempo twice.
+            # Silero owns only the validated sleepy/serious native-slow contour.
+            # The shared processor remains neutral by default, and XTTS gets
+            # neutral synthesis speed to avoid double-applying requested tempo.
             synthesis_speed = 1.0 if first.name == "xtts" else speed
             audio, sr = first.synthesize(text, emotion, intensity, synthesis_speed)
             return audio, sr, first.name, None
@@ -201,9 +241,12 @@ class EngineRouter:
 
     def diagnostics(self) -> dict:
         xtts = self.engines["xtts"]
+        silero_cfg = self.config.get("silero", {})
         return {
             "silero_available": self.engines["silero"].available(),
+            "silero_native_prosody": bool(silero_cfg.get("native_prosody", False)),
+            "silero_native_slow_emotions": list(silero_cfg.get("native_slow_emotions", [])),
             "xtts_available": xtts.available(),
             "xtts": xtts.diagnostics() if isinstance(xtts, XTTSVoiceEngine) else {},
-            "prosody_authority": "shared_processor",
+            "prosody_authority": "silero_native_slow_with_neutral_shared_processor",
         }
