@@ -17,7 +17,7 @@ var page_stack: TabContainer
 var nav_buttons: Array[Button] = []
 var nav_keys: Array[String] = []
 var nav_indices: Dictionary = {}
-var mobile_nav: HFlowContainer
+var mobile_nav: OptionButton
 
 var core_status: Label
 var update_status: Label
@@ -259,18 +259,21 @@ func _build_desktop_navigation(root: VBoxContainer) -> void:
 	body.add_child(page_stack)
 
 func _build_mobile_navigation(root: VBoxContainer) -> void:
-	var nav_scroll := ScrollContainer.new()
-	nav_scroll.name = "SettingsMobileNavigationScroll"
-	nav_scroll.custom_minimum_size.y = 54
-	nav_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	nav_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	root.add_child(nav_scroll)
-	mobile_nav = HFlowContainer.new()
+	mobile_nav = OptionButton.new()
 	mobile_nav.name = "SettingsMobileNavigation"
-	mobile_nav.add_theme_constant_override("h_separation", 6)
-	mobile_nav.add_theme_constant_override("v_separation", 6)
-	nav_scroll.add_child(mobile_nav)
-	_build_nav_buttons(mobile_nav)
+	mobile_nav.custom_minimum_size = Vector2(0, 48)
+	mobile_nav.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mobile_nav.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	mobile_nav.tooltip_text = "Выбрать раздел настроек"
+	mobile_nav.add_theme_font_size_override("font_size", 15)
+	mobile_nav.add_theme_stylebox_override("normal", _style(Color(0.035, 0.041, 0.068, 0.98), Color(0.30, 0.42, 0.62, 0.70), 12))
+	mobile_nav.add_theme_stylebox_override("hover", _style(SURFACE_HOVER, Color(CYAN.r, CYAN.g, CYAN.b, 0.72), 12))
+	mobile_nav.add_theme_stylebox_override("focus", _style(Color(0.055, 0.048, 0.09, 0.99), Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.88), 12))
+	for item in [["general", "Основное"], ["voice", "Голос"], ["files", "Файлы и проекты"], ["autonomy", "Автономность"], ["tools", "Инструменты"], ["updates", "Обновления"]]:
+		mobile_nav.add_item(str(item[1]))
+		mobile_nav.set_item_metadata(mobile_nav.item_count - 1, str(item[0]))
+	mobile_nav.item_selected.connect(_on_mobile_nav_selected)
+	root.add_child(mobile_nav)
 
 	page_stack = TabContainer.new()
 	page_stack.name = "SettingsPages"
@@ -278,6 +281,11 @@ func _build_mobile_navigation(root: VBoxContainer) -> void:
 	page_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	page_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	root.add_child(page_stack)
+
+func _on_mobile_nav_selected(index: int) -> void:
+	if mobile_nav == null or index < 0 or index >= mobile_nav.item_count:
+		return
+	_select_page(str(mobile_nav.get_item_metadata(index)))
 
 func _build_nav_buttons(parent: Container) -> void:
 	_add_nav_button(parent, "general", "Основное")
@@ -291,9 +299,9 @@ func _add_nav_button(parent: Container, key: String, text: String) -> void:
 	var button := Button.new()
 	button.name = "SettingsNav_" + key
 	button.text = text
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT if not _is_mobile_layout() else HORIZONTAL_ALIGNMENT_CENTER
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	button.custom_minimum_size = Vector2(0, 44)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL if not _is_mobile_layout() else Control.SIZE_SHRINK_BEGIN
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(func(): _select_page(key))
 	parent.add_child(button)
 	nav_buttons.append(button)
@@ -358,6 +366,11 @@ func _select_page(key: String) -> void:
 	page_stack.current_tab = int(nav_indices[key])
 	for i in range(nav_buttons.size()):
 		_style_nav_button(nav_buttons[i], nav_keys[i] == key)
+	if mobile_nav != null:
+		for i in range(mobile_nav.item_count):
+			if str(mobile_nav.get_item_metadata(i)) == key:
+				mobile_nav.select(i)
+				break
 
 func _add_card(parent: VBoxContainer, title_text: String, subtitle_text := "") -> VBoxContainer:
 	var panel := PanelContainer.new()
