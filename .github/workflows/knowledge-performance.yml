@@ -64,6 +64,7 @@ jobs:
           benchmarks/knowledge/validate_performance_report.py
           benchmarks/knowledge/run_memory_scaling.py
           benchmarks/knowledge/run_search_scaling.py
+          benchmarks/knowledge/run_registry_scaling.py
 
   smoke-linux:
     if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
@@ -92,6 +93,13 @@ jobs:
           --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
           --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
           --report artifacts/knowledge-performance/dedupe-alias-removal.json
+      - name: Verify record-level dedupe and shared-source lifecycle
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/record_dedupe_shared_source_probe.gd
+          --prefix AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=
+          --report artifacts/knowledge-performance/record-dedupe-shared-source.json
       - name: Verify pre-registry rollback safety
         run: >-
           python benchmarks/knowledge/run_godot_probe.py
@@ -145,6 +153,14 @@ jobs:
           --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
           --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
           --report artifacts/knowledge-performance/dedupe-alias-removal-windows.json
+      - name: Verify record-level dedupe and shared-source lifecycle
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/record_dedupe_shared_source_probe.gd
+          --prefix AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=
+          --report artifacts/knowledge-performance/record-dedupe-shared-source-windows.json
       - name: Verify pre-registry rollback safety
         shell: powershell
         run: >-
@@ -201,12 +217,15 @@ jobs:
         run: python benchmarks/knowledge/run_memory_scaling.py --godot ./godot --counts 125,250,500 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-memory-scaling.json
       - name: Measure search N-2N-4N scaling
         run: python benchmarks/knowledge/run_search_scaling.py --godot ./godot --sizes-mb 1,2,4 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-search-scaling.json
+      - name: Measure registry-only N-2N-4N scaling
+        run: python benchmarks/knowledge/run_registry_scaling.py --godot ./godot --counts 16,32,64 --source-kb 4 --timeout-seconds 300 --report artifacts/knowledge-performance/linux-registry-scaling.json
       - name: Enforce relative performance blockers
         run: >-
           python benchmarks/knowledge/validate_performance_report.py
           artifacts/knowledge-performance/linux-standard.json
           artifacts/knowledge-performance/linux-memory-scaling.json
           artifacts/knowledge-performance/linux-search-scaling.json
+          artifacts/knowledge-performance/linux-registry-scaling.json
           --enforce-performance
           --output artifacts/knowledge-performance/linux-standard-gate.json
       - name: Upload standard benchmark report
