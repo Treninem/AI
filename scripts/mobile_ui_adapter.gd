@@ -65,11 +65,19 @@ func _process(delta: float) -> void:
 
 func _configure_mobile_scale() -> void:
 	var screen := DisplayServer.screen_get_size()
-	if _mobile_preview_enabled():
-		var viewport := get_viewport().get_visible_rect().size
-		screen = Vector2i(int(viewport.x), int(viewport.y))
-	var base := PORTRAIT_BASE if screen.y >= screen.x else LANDSCAPE_BASE
 	var window := get_window()
+	if _mobile_preview_enabled():
+		# The acceptance harness sets the intended logical canvas before the scene
+		# is instantiated. Preserve that orientation instead of re-deriving it from
+		# the host/headless physical viewport, which can stay landscape even while
+		# testing Android portrait.
+		var requested := window.content_scale_size
+		if requested.x > 0 and requested.y > 0:
+			screen = requested
+		else:
+			var viewport := get_viewport().get_visible_rect().size
+			screen = Vector2i(int(viewport.x), int(viewport.y))
+	var base := PORTRAIT_BASE if screen.y >= screen.x else LANDSCAPE_BASE
 	window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
 	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
 	window.content_scale_size = base
