@@ -1,0 +1,103 @@
+name: AuroraFox Knowledge Concurrency Race
+
+on:
+  pull_request:
+    paths:
+      - 'benchmarks/knowledge/concurrency_race_probe.gd'
+      - 'benchmarks/knowledge/run_godot_probe.py'
+      - 'benchmarks/knowledge/run_knowledge_benchmark.py'
+      - 'benchmarks/knowledge/run_knowledge_benchmark_portable.py'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/knowledge_store.gd'
+      - '.github/workflows/knowledge-performance-concurrency.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/knowledge/concurrency_race_probe.gd'
+      - 'benchmarks/knowledge/run_godot_probe.py'
+      - 'benchmarks/knowledge/run_knowledge_benchmark.py'
+      - 'benchmarks/knowledge/run_knowledge_benchmark_portable.py'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/knowledge_store.gd'
+      - '.github/workflows/knowledge-performance-concurrency.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-knowledge-concurrency-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  race-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Verify duplicate-import and search-remove races
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/concurrency_race_probe.gd
+          --prefix AURORA_KNOWLEDGE_CONCURRENCY_RESULT=
+          --timeout-seconds 240
+          --report artifacts/knowledge-performance/concurrency-race-linux.json
+      - name: Upload Linux race evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-concurrency-linux-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
+
+  race-windows:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri 'https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip' -OutFile godot.zip
+          Expand-Archive -Path godot.zip -DestinationPath godot-bin -Force
+          $godot = Get-ChildItem -Path godot-bin -Filter 'Godot_v4.7.1-stable_win64.exe' -Recurse | Select-Object -First 1
+          if (-not $godot) { throw 'Godot executable missing' }
+          Copy-Item $godot.FullName '.\godot.exe'
+          .\godot.exe --version
+      - name: Import and parse project
+        shell: powershell
+        run: .\godot.exe --headless --editor --path . --quit
+      - name: Verify duplicate-import and search-remove races
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/concurrency_race_probe.gd
+          --prefix AURORA_KNOWLEDGE_CONCURRENCY_RESULT=
+          --timeout-seconds 240
+          --report artifacts/knowledge-performance/concurrency-race-windows.json
+      - name: Upload Windows race evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-concurrency-windows-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
