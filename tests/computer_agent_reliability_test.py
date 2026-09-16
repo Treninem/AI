@@ -24,6 +24,7 @@ def _spawn_safe_hanging_worker(kind, payload, queue):
 def _load_service(tmp_path: Path):
     os.environ["AURORAFOX_COMPUTER_TOKEN"] = TOKEN
     os.environ["AURORAFOX_SANDBOX_ROOT"] = str(tmp_path / "sandbox")
+    os.environ.pop("AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX", None)
     name = f"aurora_computer_service_test_{time.time_ns()}"
     spec = importlib.util.spec_from_file_location(name, SERVICE_PATH)
     assert spec and spec.loader
@@ -62,10 +63,12 @@ def test_health_and_capability_contract_are_local_first(tmp_path: Path):
     assert health["service_side_ai_planning"] is False
     assert health["external_ai_required"] is False
     assert health["network_required"] is False
+    assert health["degraded_local_sandbox_enabled"] is False
     caps = client.get("/capabilities", headers=_headers(autonomous=False)).json()
     assert caps["ok"] is True
     assert caps["service_side_planning"] is False
     assert caps["local_core_planning_required"] is True
+    assert caps["degraded_local_sandbox_enabled"] is False
 
 
 def test_sensitive_endpoints_require_private_channel_and_master_permission(tmp_path: Path):
@@ -219,6 +222,31 @@ def test_sandbox_write_is_bounded_atomic_and_channel_protected(tmp_path: Path):
     assert leftovers == []
     too_large = client.post("/sandbox/write", headers=_headers(), json={"path": "large.txt", "content": "x" * (service.MAX_WRITE_BYTES + 1)})
     assert too_large.status_code == 413
+
+
+def test_degraded_local_process_sandbox_fails_closed_until_operator_opt_in(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    service = _load_service(tmp_path)
+    client = TestClient(service.app)
+    calls: list[list[str]] = []
+
+    def fake_run_process(command, cwd, timeout, *, allow_network):
+        del cwd, timeout, allow_network
+        calls.append(list(command))
+        return {"ok": True, "code": 0, "output": "ok", "mode": "local", "retryable": False}
+
+    monkeypatch.setattr(service, "_run_process", fake_run_process)
+    payload = {"command": ["python", "-c", "print('ok')"], "cwd": ".", "timeout": 5, "allow_network": False}
+    blocked = client.post("/sandbox/exec", headers=_headers(), json=payload)
+    assert blocked.status_code == 403
+    assert "disabled by default" in blocked.json()["detail"]
+    assert calls == []
+
+    service.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    allowed = client.post("/sandbox/exec", headers=_headers(), json=payload)
+    assert allowed.status_code == 200
+    assert allowed.json()["ok"] is True
+    assert allowed.json()["network_isolation_enforced"] is False
+    assert calls == [["python", "-c", "print('ok')"]]
 
 
 def test_command_allowlist_rejects_shell_escape_shapes(tmp_path: Path):
