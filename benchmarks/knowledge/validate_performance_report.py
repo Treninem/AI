@@ -2,8 +2,8 @@
 """Validate AuroraFox Knowledge/Memory performance reports.
 
 Absolute GitHub-hosted-runner timings remain informational. The gate fails on
-hard correctness/self-reliance regressions and on reproducible N->2N scaling
-that the benchmark already classified as a quadratic/superlinear blocker.
+hard correctness/self-reliance regressions, malformed/missing evidence, and on
+reproducible N->2N scaling classified as a quadratic/superlinear blocker.
 """
 from __future__ import annotations
 
@@ -11,6 +11,20 @@ import argparse
 import json
 from pathlib import Path
 from typing import Any
+
+SUPPORTED_SCHEMAS = {
+    "aurorafox_knowledge_performance_v1",
+    "aurorafox_memory_scaling_v1",
+    "aurorafox_knowledge_search_scaling_v1",
+    "aurorafox_knowledge_registry_scaling_v1",
+}
+SELF_RELIANCE_KEYS = ("network_required", "external_runtime_required", "ollama_required")
+BLOCKER_FIELDS = (
+    "suspected_quadratic",
+    "suspected_quadratic_write",
+    "suspected_quadratic_registry",
+    "suspected_superlinear_search",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -32,47 +46,76 @@ def _load(path: str) -> dict[str, Any]:
     return data
 
 
+def _float(value: Any, *, field: str, errors: list[str]) -> float:
+    try:
+        return float(value or 0.0)
+    except (TypeError, ValueError):
+        errors.append(f"malformed numeric field: {field}")
+        return 0.0
+
+
 def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     schema = str(report.get("schema", ""))
+    if schema not in SUPPORTED_SCHEMAS:
+        errors.append(f"unsupported or missing schema: {schema or '<empty>'}")
 
     hard = report.get("hard_correctness")
-    if isinstance(hard, dict) and not bool(hard.get("passed", False)):
+    if not isinstance(hard, dict):
+        errors.append("hard correctness section missing or malformed")
+    elif hard.get("passed") is not True:
         errors.append("hard correctness gate failed")
-    elif "hard_correctness" in report and not isinstance(hard, dict):
-        errors.append("hard correctness section malformed")
 
     self_reliance = report.get("self_reliance_contract")
-    if isinstance(self_reliance, dict):
-        for key in ("network_required", "external_runtime_required", "ollama_required"):
-            if bool(self_reliance.get(key, True)):
+    if not isinstance(self_reliance, dict):
+        errors.append("self-reliance section missing or malformed")
+    else:
+        for key in SELF_RELIANCE_KEYS:
+            if key not in self_reliance:
+                errors.append(f"self-reliance field missing: {key}")
+            elif self_reliance.get(key) is not False:
                 errors.append(f"self-reliance regression: {key}=true")
 
     relative = report.get("relative_performance")
     blocker_fields: list[str] = []
-    if isinstance(relative, dict):
-        for key in (
-            "suspected_quadratic",
-            "suspected_quadratic_write",
-            "suspected_quadratic_registry",
-            "suspected_superlinear_search",
-        ):
+    if not isinstance(relative, dict):
+        errors.append("relative performance section missing or malformed")
+    else:
+        for key in BLOCKER_FIELDS:
             if bool(relative.get(key, False)):
                 blocker_fields.append(key)
+        pairs = relative.get("n_2n_4n")
+        if pairs is not None and not isinstance(pairs, list):
+            errors.append("relative performance n_2n_4n malformed")
+
+    results = report.get("results")
+    if not isinstance(results, list):
+        errors.append("results section missing or malformed")
+        results = []
 
     # Search absolute latency is runner-dependent, but retain a visible risk
     # summary rather than silently normalizing it with larger timeouts.
     max_search_p95 = 0.0
-    for result in report.get("results", []) if isinstance(report.get("results"), list) else []:
+    for result_index, result in enumerate(results):
         if not isinstance(result, dict):
+            errors.append(f"result row malformed: index={result_index}")
             continue
         search = result.get("search")
         if not isinstance(search, dict):
             continue
-        for case in search.get("cases", []) if isinstance(search.get("cases"), list) else []:
-            if isinstance(case, dict):
-                max_search_p95 = max(max_search_p95, float(case.get("p95_ms", 0.0) or 0.0))
+        cases = search.get("cases")
+        if not isinstance(cases, list):
+            errors.append(f"search cases malformed: result={result_index}")
+            continue
+        for case_index, case in enumerate(cases):
+            if not isinstance(case, dict):
+                errors.append(f"search case malformed: result={result_index} case={case_index}")
+                continue
+            max_search_p95 = max(
+                max_search_p95,
+                _float(case.get("p95_ms", 0.0), field=f"results[{result_index}].search.cases[{case_index}].p95_ms", errors=errors),
+            )
     if max_search_p95 >= 1000.0:
         warnings.append(
             f"informational CI search latency >=1s (max p95={max_search_p95:.3f} ms); "
@@ -100,7 +143,7 @@ def main() -> int:
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             load_errors.append(f"{path}: {exc}")
 
-    correctness_passed = not load_errors and all(row["correctness_passed"] for row in evaluations)
+    correctness_passed = bool(evaluations) and not load_errors and all(row["correctness_passed"] for row in evaluations)
     blockers = [
         {"path": row["path"], "fields": row["performance_blockers"]}
         for row in evaluations
@@ -117,7 +160,7 @@ def main() -> int:
         "load_errors": load_errors,
         "blockers": blockers,
         "reports": evaluations,
-        "rule": "absolute hosted-runner timings are informational; reproducible N->2N near-4x scaling is blocking",
+        "rule": "missing/malformed evidence fails closed; absolute hosted-runner timings are informational; reproducible N->2N near-4x scaling is blocking",
     }
     if args.output:
         output = Path(args.output)
