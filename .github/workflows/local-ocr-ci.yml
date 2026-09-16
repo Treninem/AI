@@ -156,6 +156,11 @@ jobs:
           grep -R "TessBaseAPI" android_plugin/plugin/src/main/java/com/aurorafox/runtime
           grep -R "untrusted_document" android_plugin/plugin/src/main/java/com/aurorafox/runtime
           grep -q "AndroidOcrRuntime" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt
+          grep -q 'fun extractDocumentText' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'files.analyze(path, "", false)' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q '"ocr_unavailable"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
+          grep -q '"ocr_error"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
+          grep -q '"ocr_failed_pages"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
           grep -q "cz.adaptech.tesseract4android:tesseract4android:4.9.0" addons/AuroraFoxRuntime/export_plugin.gd
           grep -q "https://jitpack.io" addons/AuroraFoxRuntime/export_plugin.gd
           ! grep -R -E "OpenAI|Gemini|Claude|Ollama" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
