@@ -22,6 +22,7 @@ PUBLIC_AUTH_PATHS = {
     "/reset-password",
 }
 DEFAULT_MAX_BUCKETS = 10_000
+DEFAULT_GLOBAL_LIMIT = 120
 
 
 class PublicAuthRateLimitMiddleware:
@@ -35,6 +36,11 @@ class PublicAuthRateLimitMiddleware:
     Bucket state is deliberately bounded. A stream of unique client identities
     must not be able to grow the process dictionary without limit; when the cap is
     full we first reap expired buckets and then fail closed for a new identity.
+
+    A second process-wide budget protects the small 1-vCPU server from distributed
+    public-auth bursts where every request arrives from a different IP and would
+    therefore evade a per-client limiter. It is intentionally shared by all public
+    auth paths, including guest creation, registration and password hashing.
     """
 
     def __init__(
@@ -43,12 +49,15 @@ class PublicAuthRateLimitMiddleware:
         limit: int = 20,
         window_seconds: float = 60.0,
         max_buckets: int = DEFAULT_MAX_BUCKETS,
+        global_limit: int = DEFAULT_GLOBAL_LIMIT,
     ):
         self.app = app
         self.limit = max(1, int(limit))
         self.window_seconds = max(1.0, float(window_seconds))
         self.max_buckets = max(1, int(max_buckets))
+        self.global_limit = max(self.limit, int(global_limit))
         self._hits: dict[str, deque[float]] = defaultdict(deque)
+        self._global_hits: deque[float] = deque()
         self._lock = threading.Lock()
         self._checks = 0
 
@@ -81,6 +90,8 @@ class PublicAuthRateLimitMiddleware:
         return str(peer_ip)
 
     def _reap_expired_locked(self, now: float) -> None:
+        while self._global_hits and now - self._global_hits[0] >= self.window_seconds:
+            self._global_hits.popleft()
         expired: list[str] = []
         for key, queue in self._hits.items():
             while queue and now - queue[0] >= self.window_seconds:
@@ -94,6 +105,11 @@ class PublicAuthRateLimitMiddleware:
         now = time.monotonic()
         with self._lock:
             self._checks += 1
+            while self._global_hits and now - self._global_hits[0] >= self.window_seconds:
+                self._global_hits.popleft()
+            if len(self._global_hits) >= self.global_limit:
+                return False
+
             queue = self._hits.get(key)
             if queue is not None:
                 while queue and now - queue[0] >= self.window_seconds:
@@ -107,6 +123,8 @@ class PublicAuthRateLimitMiddleware:
             if self._checks % 256 == 0:
                 self._reap_expired_locked(now)
                 queue = self._hits.get(key)
+                if len(self._global_hits) >= self.global_limit:
+                    return False
             if queue is None and len(self._hits) >= self.max_buckets:
                 self._reap_expired_locked(now)
                 queue = self._hits.get(key)
@@ -119,6 +137,7 @@ class PublicAuthRateLimitMiddleware:
             if len(queue) >= self.limit:
                 return False
             queue.append(now)
+            self._global_hits.append(now)
             return True
 
     async def _reject(self, send: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
