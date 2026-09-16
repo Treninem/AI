@@ -10,6 +10,7 @@ def test_android_probe_uses_exact_native_core_and_has_no_network_permission() ->
     manifest = (PROBE / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
     app_gradle = (PROBE / "app/build.gradle.kts").read_text(encoding="utf-8")
     settings = (PROBE / "settings.gradle.kts").read_text(encoding="utf-8")
+    gradle_properties = (PROBE / "gradle.properties").read_text(encoding="utf-8")
 
     assert "com.aurorafox.runtime.NativeRuntime" in activity
     assert "native.chat(" in activity
@@ -23,6 +24,7 @@ def test_android_probe_uses_exact_native_core_and_has_no_network_permission() ->
     assert "android.permission.INTERNET" not in manifest
     assert 'abiFilters += listOf("x86_64")' in app_gradle
     assert 'project(":runtime").projectDir = file("../../../android_plugin/plugin")' in settings
+    assert "android.useAndroidX=true" in gradle_properties
 
 
 def test_android_benchmark_workflow_enforces_real_emulator_inference() -> None:
@@ -35,7 +37,7 @@ def test_android_benchmark_workflow_enforces_real_emulator_inference() -> None:
     assert "adb push" in workflow
 
     # The workflow intentionally stores the package name in a shell variable so
-    # every sandbox operation targets the same application id.  Assert that
+    # every sandbox operation targets the same application id. Assert that
     # contract instead of requiring a brittle literal `run-as <package>` line.
     assert "pkg='com.aurorafox.corebenchmark'" in workflow
     assert 'adb shell run-as "$pkg" mkdir -p files' in workflow
