@@ -31,7 +31,8 @@ func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictiona
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	var preserve_existing_source := not existing.is_empty() or not _registry_is_valid_authority()
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
@@ -55,7 +56,8 @@ func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: St
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	var preserve_existing_source := not existing.is_empty() or not _registry_is_valid_authority()
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
@@ -86,6 +88,20 @@ func _prepare_file(path: String, metadata: Dictionary) -> Dictionary:
 		meta["streaming_json"] = true
 		meta["parser_version"] = "aurora_json_stream_v1"
 	return {"ok": true, "inspection": inspection, "metadata": meta}
+
+func _registry_is_valid_authority() -> bool:
+	if not FileAccess.file_exists(REGISTRY_PATH):
+		return false
+	var file := FileAccess.open(REGISTRY_PATH, FileAccess.READ)
+	if file == null:
+		return false
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if not parsed is Dictionary:
+		return false
+	if int(parsed.get("schema_version", 0)) != KnowledgeSourceRegistry.REGISTRY_VERSION:
+		return false
+	return parsed.get("sources", null) is Array
 
 func _finish_import(path: String, result: Dictionary, inspection: Dictionary, metadata: Dictionary, snapshot: Dictionary) -> Dictionary:
 	if bool(result.get("ok", false)):
