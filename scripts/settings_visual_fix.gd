@@ -21,6 +21,7 @@ func _apply() -> void:
 	panel.transparent_bg = false
 	if overlay.has_method("_fit_popup"):
 		overlay.call("_fit_popup")
+	_fix_mobile_navigation(panel)
 	_apply_controls(panel)
 	# Generic visual normalization must not flatten the selected state of
 	# the category navigation. Ask the settings controller to repaint it last.
@@ -34,6 +35,44 @@ func _apply() -> void:
 					current_key = str(key)
 					break
 			overlay.call("_select_page", current_key)
+
+func _is_mobile_layout() -> bool:
+	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
+
+func _fix_mobile_navigation(panel: PopupPanel) -> void:
+	if not _is_mobile_layout():
+		return
+	var scroll := panel.find_child("SettingsMobileNavigationScroll", true, false) as ScrollContainer
+	var nav := panel.find_child("SettingsMobileNavigation", true, false) as HFlowContainer
+	if scroll == null or nav == null:
+		return
+
+	# HFlowContainer inside ScrollContainer otherwise receives the viewport's
+	# minimum width and wraps every category into a narrow vertical column.
+	# Give the category strip a deterministic content width so it remains one
+	# horizontal row and the ScrollContainer handles the overflow naturally.
+	scroll.custom_minimum_size.y = 52
+	scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	nav.custom_minimum_size = Vector2(930, 46)
+	nav.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	nav.add_theme_constant_override("h_separation", 7)
+	nav.add_theme_constant_override("v_separation", 0)
+
+	var widths := {
+		"SettingsNav_general": 132.0,
+		"SettingsNav_voice": 112.0,
+		"SettingsNav_files": 168.0,
+		"SettingsNav_autonomy": 154.0,
+		"SettingsNav_tools": 144.0,
+		"SettingsNav_updates": 146.0
+	}
+	for child in nav.get_children():
+		if child is Button:
+			var button := child as Button
+			button.custom_minimum_size = Vector2(float(widths.get(button.name, 140.0)), 44)
+			button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			button.clip_text = false
 
 func _apply_controls(node: Node) -> void:
 	for child in node.get_children():
@@ -62,7 +101,7 @@ func _apply_controls(node: Node) -> void:
 				button.add_theme_stylebox_override("pressed", _button_style(Color(0.14, 0.07, 0.22, 1.0), Color(0.66, 0.53, 1.0, 0.94)))
 				button.add_theme_stylebox_override("focus", _button_style(Color(0.10, 0.08, 0.18, 1.0), Color(0.38, 0.82, 1.0, 0.90)))
 				button.add_theme_color_override("font_color", Color("f4f7ff"))
-			button.clip_text = true
+			button.clip_text = true if not button.name.begins_with("SettingsNav_") else false
 		_apply_controls(child)
 
 func _panel_style() -> StyleBoxFlat:
