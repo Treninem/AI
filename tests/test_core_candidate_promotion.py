@@ -147,15 +147,18 @@ def test_promotion_workflow_keeps_candidate_untrusted_until_verified() -> None:
         assert secret_name not in workflow
 
 
-def test_signed_release_enforces_v12_repair_and_v13_signed_update_floor() -> None:
-    # This test file is part of release.yml/core-gates, so these assertions run
-    # before Windows/Android artifacts or update signatures may be published.
+def test_signed_release_enforces_v12_v13_repair_and_v14_signed_update_floor() -> None:
+    # This file is part of release.yml/core-gates. Keep the bridge pointed at
+    # the current compatibility contract instead of duplicating or weakening it.
     update_compat.test_current_updater_keeps_permanent_latest_manifest_url()
-    update_compat.test_manifest_template_is_legacy_readable_but_does_not_claim_legacy_direct_update()
-    update_compat.test_release_keeps_stable_asset_names_and_latest_update_json()
-    update_compat.test_release_manifest_generator_preserves_legacy_top_level_and_asset_fields()
-    update_compat.test_update_signature_is_required_for_signed_generation()
-    update_compat.test_android_identity_and_windows_full_zip_strategy_are_stable()
-    update_compat.test_public_update_key_is_embedded_in_signed_generation_exports()
-    update_compat.test_windows_v12_repair_uses_same_inno_identity_and_is_ci_verified()
-    update_compat.test_documentation_states_v12_repair_and_android_signing_boundary()
+    update_compat.test_manifest_template_requires_repair_through_v13_and_signed_v14_floor()
+    update_compat.test_release_keeps_stable_asset_names_and_signed_latest_contract()
+    update_compat.test_repair_releases_are_separate_prereleases_not_stable_latest()
+    update_compat.test_repair_assets_publish_only_from_signed_v14_or_newer_floor()
+    update_compat.test_windows_package_is_only_artifact_producer_not_repair_release_writer()
+    update_compat.test_public_update_key_is_embedded_in_windows_and_android()
+    update_compat.test_production_android_release_identity_is_pinned_end_to_end()
+    update_compat.test_private_signing_material_is_git_ignored()
+    update_compat.test_windows_v12_and_v13_repairs_share_same_inno_identity()
+    update_compat.test_old_clients_missing_trust_root_get_repair_state_not_unsigned_install()
+    update_compat.test_documentation_names_v12_v13_repair_and_v14_floor()

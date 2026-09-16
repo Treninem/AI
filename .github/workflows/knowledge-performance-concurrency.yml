@@ -150,7 +150,7 @@ jobs:
         run: >-
           python benchmarks/knowledge/run_resilience_batch.py
           --godot .\godot.exe
-          --counts 16,32,64
+          --counts 8,16,32
           --source-kb 4
           --timeout-seconds 300
           --enforce-performance

@@ -51,11 +51,25 @@ class AccountMailConfig:
     def public_url_is_secure(self) -> bool:
         try:
             parsed = urlsplit(self.public_url)
-        except Exception:
+            port = parsed.port
+        except (ValueError, TypeError):
             return False
-        # Verification/reset links carry one-time bearer credentials. Production
-        # transport must never emit them onto a clear-text external HTTP link.
-        return parsed.scheme.lower() == "https" and bool(parsed.hostname) and not parsed.username and not parsed.password
+        # Verification/reset links carry one-time bearer credentials. Accept only
+        # a clean HTTPS origin here, not merely an arbitrary HTTPS URL. This keeps
+        # action-link construction deterministic and prevents an accidental path,
+        # query, fragment, credential component or alternate port from becoming a
+        # token-bearing redirect surface in deployments that do not run the REG.RU
+        # verifier.
+        return bool(
+            parsed.scheme.lower() == "https"
+            and parsed.hostname
+            and not parsed.username
+            and not parsed.password
+            and port in {None, 443}
+            and parsed.path in {"", "/"}
+            and not parsed.query
+            and not parsed.fragment
+        )
 
     @property
     def configured(self) -> bool:

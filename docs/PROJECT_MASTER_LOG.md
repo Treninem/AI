@@ -478,7 +478,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Инженерная причина: normal `latest` release отсутствует, а historical V1.3 использует RSA updater, но не содержит pinned `release_public.pub`; поэтому публикация одного `update.json` не может исправить уже установленный бинарник. Нужен one-time repair на новый signed floor и permanent version/release discipline.
 - Acceptance: V1.2 repair остаётся рабочим; V1.3 repair проверен in-place на Windows с сохранением `user://`; новый floor содержит pinned public key; updater contract на floor видит версию выше себя и отклоняет неверную подпись/hash; release workflow обязан формировать `latest` assets; version bump выполняется только после зелёных Core/Windows/Android/update/release gates.
 
-
 Код: draft [PR #29](https://github.com/Treninem/AI/pull/29), commit `13b5a948363688eb0b38429330e127a9a52ea7a4`. Эта запись публикует только координацию; код и полный текст 56 пунктов ТЗ находятся в PR до CI/интеграции.
 
 ## 18. Core Quality / Performance Benchmark & Regression Gate — active lane
@@ -695,3 +694,111 @@ ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the det
 - Android: machine-readable bounded/private/local-only contract сохраняется; `physical_device_proof=false`. Desktop/Linux/Windows CI не выдаётся за Android device proof.
 - Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe без потери provenance/shared-source removal. Если registry-only doubling `>=3.5×` — исправить свободный registry path и повторить 16/32/64. Если interrupted-removal падает — исправлять только transaction/manager/recovery path. После этого закрыть Windows current-runtime proof и 100/250 MiB stress; OCR 100-page scanned/mixed stress добавлять только после интеграции `LOCAL-OCR`.
 - Освобождённые файлы: нет; `benchmarks/knowledge/**`, related Knowledge performance/stress tests/workflow, `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd` и performance-follow-up `scripts/memory_store.gd` остаются в ACTIVE CLAIM. `scripts/knowledge_store.gd` по-прежнему не трогать до освобождения `LOCAL-OCR`.
+
+## 32. Large Knowledge / Memory Performance — Wave-B resilience preparation, 2026-09-16
+
+### `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` — checkpoint
+
+- Статус: **ACTIVE — benchmark/CI-only Wave-B пакет собран; runtime gate удерживается координатором до завершения UI Wave A**.
+- Base HEAD подготовки: `ab2103acf6667eb3812f969b4c926902a37ccece`; перед этой записью свежий `main` проверен до `1e9503537493b9cdd29d164005d3a12c3b59e17f`. Изменения между ними не затрагивают Knowledge-owned paths этого пакета.
+- Branch: `chat-knowledge-races-v2-20260916`; draft PR #64 существует, но **временно CLOSED без merge** по явному coordinator CI wave control. Coordinator comment `5702362208`: продолжать эту же ветку, не создавать replacement PR, закончить consolidated race/scaling/failure-injection batch и переоткрыть **тот же PR #64** только после сигнала Wave B.
+- Commits текущего пакета: `886ae50eaabf889c8822d6d87c4642bcee441f92` — deterministic duplicate-import + search/remove race proof; `d11b9f59e72f85e6f659b9948f3d3379339d87ba` + `e5562e6f6f9135cce7466047e280703803abaffe` — consolidated resilience runner; `180680bfd125ba7b463cf799d2c93dca47f983f0` — isolated Windows profile warm-up для registry scaling; `1ee5beb6d641b305b135f81b2aa865c186c68e88`, `242a4d83dcb6a05a3aba8868a219216b9cbfb5d4`, `4c43a503b23df85bca23e4c8734961ea97fb3265` — regression contracts; `e1ba76e35f96d2cd3bb25bd0ca4100c4f55c680f` + `5d3719421aeaf77e48155e1c2c6360ed3d3cdae4` — isolated Linux/Windows resilience workflow.
+- Consolidated batch одним machine-readable JSON объединяет: concurrent byte-identical import; search + canonical remove race; record-level/shared-source dedupe; alias-preservation; legacy pre-registry rollback; registry write-failure rollback; truncated registry temp rejection; real process-kill interrupted import recovery; real process-kill interrupted removal recovery; registry N→2N→4N scaling. Self-reliance contract фиксирует `network_required=false`, `external_runtime_required=false`, `ollama_required=false`; absolute hosted-runner timings остаются informational, registry quadratic finding является relative blocker.
+- Windows benchmark infrastructure дополнительно выровнена с существующим portable contract: `run_registry_scaling.py` теперь прогревает тот же isolated Windows Godot profile до запуска probe, чтобы ранее известный fresh-profile class-resolution дефект не выдавался за production scaling regression.
+- Production code этим пакетом **не изменялся**. В частности, OCR-owned `scripts/knowledge_store.gd` не трогался. Static audit показывает, что duplicate-import сериализуется `KnowledgeImportTransaction` static mutex; потенциальный Windows search/remove риск остаётся на стыке открытого reader и file replacement в OCR-owned Store и не объявляется blocker без runtime artifact.
+- Старый auxiliary run `35133333541` на раннем head `1a6e2b8b...` остался QUEUED после coordinator closure и **не считается green/runtime evidence**. Новый consolidated batch ещё не запускался из-за Wave-A CI control.
+- Каноническая версия остаётся **V1.3.0.0**; intended lane bump по-прежнему **PATCH только после acceptance**, Android `versionCode` не менялся.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+
+DONE:
+- Доказанный Linux baseline, alias correctness, near-linear MemoryStore/search scaling и прежние durability fixes остаются валидным baseline section 31.
+- На текущей Wave-B ветке собран единый race/scaling/failure-injection пакет, отдельный Linux/Windows workflow и machine-readable aggregate verdict; production-файлы не затронуты.
+- Добавлены duplicate-import и search/remove concurrency proofs, Windows isolated-profile warm-up для registry scaling и fail-closed regression contracts.
+- Coordinator wave-control соблюдён: новый replacement PR после закрытия #64 не создавался, #64 не переоткрывался самовольно.
+
+REMAINING:
+- После coordinator Wave-B signal переоткрыть **тот же PR #64** и получить exact Linux + Windows artifacts для consolidated resilience batch.
+- Если runtime выявит дефект в `knowledge_import_transaction.gd`/registry — исправить в этом CLAIM и повторить exact batch; если root cause потребует `scripts/knowledge_store.gd`, оформить точный `PERFORMANCE-BLOCKER` в `CHAT-2026-09-16-LOCAL-OCR`, не менять занятый файл.
+- После same-SHA green resilience evidence интегрировать пакет без ослабления relative gates и запустить существующий `[knowledge-large]` main stress path для 100/250 MiB memory-pressure evidence.
+- Записать финальные run/job/artifact/digest, timings/RSS и Android physical-device limitation; только после этого закрывать CLAIM/освобождать пути.
+
+BLOCKERS:
+- `COORDINATOR CI WAVE CONTROL`: PR #64 временно закрыт до завершения UI Wave A; evidence — PR #64 comment `5702362208`. Это scheduling blocker, не code failure.
+- Runtime verdict нового consolidated batch отсутствует по той же причине. `35133333541` остаётся queued и не является доказательством прохождения.
+- Потенциальный cross-lane blocker в OCR-owned `scripts/knowledge_store.gd` объявлять только если search/remove или record-dedupe probe воспроизведёт его на runtime.
+
+NEXT:
+- Сохранять `chat-knowledge-races-v2-20260916` без нового PR и синхронизировать только при релевантном Knowledge overlap. На coordinator Wave-B signal переоткрыть PR #64, выполнить consolidated Linux/Windows batch, разобрать JSON artifacts и либо исправить доказанный owned-path defect, либо выписать точный OCR `PERFORMANCE-BLOCKER`; после green same-SHA evidence запустить 100/250 MiB stress gate.
+
+- Освобождённые файлы: нет; CLAIM остаётся ACTIVE до runtime/large-stress acceptance.
+
+## 33. Voice Quality — Android female local TTS candidate, 2026-09-16
+
+### `CHAT-2026-09-16-VOICE-QUALITY` — ownership extension
+
+- Статус: **ACTIVE — coordinator acceptance; Android female TTS candidate isolated before integration**.
+- Fresh main checked through: `b6cdcaa76f51649ffa1f0302fc987ee05b17e423`; existing voice coordinator acceptance remains under the same CLAIM and intended bump remains **PATCH** only after relevant green gates.
+- Ownership extension for this substage: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`, `android_plugin/setup_native.ps1`, `tests/test_android_contract.py`, plus already claimed voice acceptance files. `android_plugin/plugin/build.gradle.kts`, `android_plugin/settings.gradle.kts`, `AndroidFileRuntime.kt` and OCR/package metadata remain owned by `CHAT-2026-09-16-LOCAL-OCR` and must not be modified by VOICE-QUALITY.
+- Evidence/blocker: current Android local TTS packages `vits-piper-ru_RU-denis-medium` and reports `sherpa-onnx-piper-denis`; this is a male voice and therefore does not satisfy the coordinator requirement for Russian female voice evidence on both platforms. Current Android package/install/launch proof validates the local Piper path but not that requirement.
+- Candidate selection: Piper `ru_RU-irina-medium` is not accepted for a distributable AuroraFox baseline because its upstream model metadata leaves the dataset/license status unclear. Supertonic 3 is evaluated instead as a fully local ONNX candidate. The existing pinned `sherpa-onnx 1.13.4` already contains `OfflineTtsSupertonicModelConfig`, so this candidate does **not** require touching OCR-owned Gradle/settings or changing the sherpa version.
+- Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
+- Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
+- Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1–F5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
+- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially regresses intelligibility, clipping, latency/memory/package limits or local-only operation.
+
+## 34. Integration Gate — release-train delta and routed status, 2026-09-16
+
+- Fresh release-train code checkpoint: `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` (`test: tighten integration updater and branding gates`) on parent `5bca4a1353ff66731073515533414ab1d0369e15`. Integration-owned changes only: `.github/workflows/integration-gate.yml` and new `tests/test_release_branding_contract.py`; production UI/Core/updater files and canonical version were not modified.
+- Integration workflow stale updater selector was corrected to `test_signed_release_enforces_v12_v13_repair_and_v14_signed_update_floor`, matching updater fix commit `99b2c144dbeb675caafb527ad528f5db18a32b50` and current `tests/test_core_candidate_promotion.py`.
+- Owner-approved immutable branding source masters are now release-gated by Git blob identity: `assets/ui/aurorafox_avatar_master.png` = `89ff783b171733f88b5153acd24c6a28fb2953dd`; `assets/ui/aurorafox_background_master.png` = `ed17e933244b7ce0f520b28897c0ca1ad50a5347`. The contract also requires runtime use of those paths and forbids active legacy `fox_logo.svg` / `aurora_background.svg` substitution.
+- Exact-head Integration Gate run `35147689311` on `cc44cce8...` remains **PENDING** with no jobs at this checkpoint; it is explicitly not green evidence. Exact-head Updater Repair Validation run `35147697509` remains **QUEUED**. Per coordinator NO-QUEUE policy no duplicate rerun was started.
+- Current `scripts/code_specialist.gd` after `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` no longer reads `AIClient.base_url` or directly calls Ollama in the normal path; `_chat_code()` delegates to `general_ai.chat()`. This is static fix evidence only; section 29 is not closed until runtime/real-Core proof is green.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: BLOCKER
+EVIDENCE: Exact main checkpoint `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` contains byte-exact owner masters above, while active runtime `scripts/main.gd` still preloads `res://assets/ui/aurora_background.svg` and `res://assets/ui/fox_logo.svg`. Integration commit `cc44cce8...` adds `tests/test_release_branding_contract.py` and the `Owner-approved branding identity contract` step so this mismatch cannot silently ship. Run `35147689311` is still pending, therefore this blocker is based on deterministic source/runtime mismatch, not a claimed CI failure.
+ACTION: In UI-owned runtime/package surfaces, make Windows and Android use `assets/ui/aurorafox_avatar_master.png` and `assets/ui/aurorafox_background_master.png` as the active canonical branding without modifying their source bytes; remove legacy `fox_logo.svg` / `aurora_background.svg` from active runtime substitution. If any derived platform asset is unavoidable, prove exact-pixel identity from the canonical master and keep the master bytes unchanged. Extend UI/package smoke/capture evidence and rerun Integration Gate on the same resulting SHA.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UPDATER-VERSIONING
+TYPE: NEXT
+EVIDENCE: Updater bridge selector drift from section 25 is statically reconciled by updater commit `99b2c144dbeb675caafb527ad528f5db18a32b50` plus integration commit `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b`; current composite function name and Integration workflow selector both target the V1.2/V1.3 repair + V1.4 signed-floor contract. Exact-head Integration run `35147689311` is PENDING and Updater Repair Validation `35147697509` is QUEUED, so runtime acceptance is not yet proven.
+ACTION: Do not reopen the stale function-name fix. Keep section 25 runtime blocker open only until an exact-head updater compatibility step plus repair/signing validation is green; preserve V1.2/V1.3 repair, pinned trust root and V1.4 signed floor without weakening signing/version discipline.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-CORE-BENCHMARKS
+TYPE: NEXT
+EVIDENCE: CodeSpecialist production fix `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` removes the stale `AIClient.base_url` access and direct normal-path Ollama `/api/chat` call; current `scripts/code_specialist.gd::_chat_code()` delegates to `general_ai.chat()`. Exact runtime Work Mode / real bundled-Core CodeSpecialist proof after this fix has not yet been accepted by Integration Gate.
+ACTION: Preserve the bundled-Core-only CodeSpecialist path, add/retain a real bundled-Core CodeSpecialist smoke/benchmark, and close section 29 only with same-SHA runtime evidence that setup + analyze/review/explain work without Ollama/remote AI.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT_MAIN-2026-09-16-RESEARCH-QUALITY
+TYPE: READY
+EVIDENCE: AuroraFox Research Quality CI run `35112565080` on exact SHA `adb5ae35b19b2e5412b565133c820d3be7d1437c` completed SUCCESS. The landed Integration Gate retains Research evidence-lifecycle, collector-privacy and source-resilience contracts/smokes so future cross-subsystem regression remains covered.
+ACTION: Coordinator-authorized Research source-resilience acceptance is satisfied. Mark the Research lane DONE/free its production/test paths unless a newer coordinator assignment exists; preserve collector→curator single-authority, provenance/privacy and source-resilience coverage in the final release candidate gate.
+
+PROGRESS_COMPLETE: 66%
+PROGRESS_REMAINING: 34%
+
+DONE:
+- Integration workflow/test infrastructure is on main and its stale updater selector is corrected.
+- Byte-exact canonical branding release contract is on main and routes the current runtime mismatch to UI ownership.
+- Research Quality source-resilience gate has exact successful run evidence and is routed READY.
+- Updater and CodeSpecialist old findings are separated into static-fix vs runtime-acceptance status rather than being falsely marked green.
+
+REMAINING:
+- Obtain a non-pending exact-head Integration Gate run after queue wave execution and triage each step independently.
+- Obtain exact updater repair/signing validation before closing section 25.
+- Obtain real bundled-Core CodeSpecialist runtime evidence before closing section 29.
+- Recheck UI branding/login-guest/memory/Work-Computer fixes after UI lane lands, then Windows/Android package/device boundaries and final release matrix.
+
+BLOCKERS:
+- UI canonical branding mismatch is a current source/runtime release blocker.
+- Integration run `35147689311` and updater repair run `35147697509` are queued/pending and therefore cannot be counted as green.
+- Physical Windows/Android device + human visual/listening acceptance remains a separate evidence boundary.
+
+NEXT:
+- Follow coordinator CI wave control without duplicate reruns. On the next executable exact-main gate, inspect updater, branding, Research, Work/Computer, Core/CodeSpecialist, Account/Guest, OCR, Voice and package steps separately; route only reproducible failures to the exact owning CLAIM and do not change their production files.

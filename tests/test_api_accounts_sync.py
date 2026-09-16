@@ -39,6 +39,52 @@ def test_accounts_are_case_insensitive_and_passwords_are_not_stored_plaintext(tm
     assert "scrypt" in str(params)
 
 
+def test_missing_and_disabled_login_take_dummy_password_check_path(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    store = AccountStore(root)
+    created = store.register("timing@example.com", "timing oracle secure password", "Timing")
+    store.verify_email(created["verification_token"])
+
+    with sqlite3.connect(root / "aurorafox.sqlite3") as connection:
+        real_salt = connection.execute(
+            "SELECT password_salt FROM accounts WHERE id=?",
+            (created["account"]["id"],),
+        ).fetchone()[0]
+
+    calls: list[tuple[str, str, str]] = []
+
+    def observed(password: str, salt_hex: str, digest_hex: str, params_json: str) -> bool:
+        calls.append((salt_hex, digest_hex, params_json))
+        return False
+
+    monkeypatch.setattr(store, "_password_matches", observed)
+
+    with pytest.raises(AuthenticationError, match="Invalid email or password"):
+        store.login("missing@example.com", "timing oracle secure password", "PC", "pytest")
+    assert len(calls) == 1
+    assert calls[0][0] == store.DUMMY_PASSWORD_SALT_HEX
+    assert calls[0][1] == store.DUMMY_PASSWORD_HASH_HEX
+
+    calls.clear()
+    with pytest.raises(AuthenticationError, match="Invalid email or password"):
+        store.login("timing@example.com", "wrong but sufficiently long password", "PC", "pytest")
+    assert len(calls) == 1
+    assert calls[0][0] == real_salt
+    assert calls[0][0] != store.DUMMY_PASSWORD_SALT_HEX
+
+    with sqlite3.connect(root / "aurorafox.sqlite3") as connection:
+        connection.execute(
+            "UPDATE accounts SET disabled_at=1 WHERE id=?",
+            (created["account"]["id"],),
+        )
+        connection.commit()
+    calls.clear()
+    with pytest.raises(AuthenticationError, match="Invalid email or password"):
+        store.login("timing@example.com", "timing oracle secure password", "PC", "pytest")
+    assert len(calls) == 1
+    assert calls[0][0] == store.DUMMY_PASSWORD_SALT_HEX
+
+
 def test_account_token_resend_cooldown_preserves_active_links(tmp_path: Path, monkeypatch):
     store = AccountStore(tmp_path / "api", account_token_cooldown=300)
     now = [1_000]
@@ -69,6 +115,30 @@ def test_account_token_resend_cooldown_preserves_active_links(tmp_path: Path, mo
     store.reset_password(first_reset, "updated account links password")
     with pytest.raises(AuthenticationError):
         store.reset_password(second_reset, "should never be accepted")
+
+
+def test_undelivered_account_token_revoke_allows_immediate_retry_inside_cooldown(tmp_path: Path):
+    store = AccountStore(tmp_path / "api", account_token_cooldown=300)
+    registered = store.register("delivery@example.com", "delivery recovery secure password", "Delivery")
+    first_verify = registered["verification_token"]
+
+    assert store.revoke_account_token(first_verify, "verify_email") is True
+    replacement_verify = store.resend_verification("delivery@example.com")
+    assert replacement_verify is not None
+    assert replacement_verify != first_verify
+    with pytest.raises(AuthenticationError):
+        store.verify_email(first_verify)
+    assert store.verify_email(replacement_verify)["email_verified"] is True
+
+    first_reset = store.request_password_reset("delivery@example.com")
+    assert first_reset is not None
+    assert store.revoke_account_token(first_reset, "reset_password") is True
+    replacement_reset = store.request_password_reset("delivery@example.com")
+    assert replacement_reset is not None
+    assert replacement_reset != first_reset
+    with pytest.raises(AuthenticationError):
+        store.reset_password(first_reset, "never accepted old reset password")
+    store.reset_password(replacement_reset, "replacement reset secure password")
 
 
 def test_concurrent_password_reset_requests_issue_one_token_inside_cooldown(tmp_path: Path):
