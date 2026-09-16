@@ -239,7 +239,7 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 	if old_state == new_state:
 		return _patch_task(location, patch)
 	if explicit_retry:
-		if bool(task.get("requires_user_action", false)):
+		if bool(task.get("requires_user_action", false)) or not bool(task.get("retryable", true)):
 			return false
 		if old_state not in RETRYABLE_STATES or new_state != STATE_QUEUED:
 			return false
@@ -316,7 +316,7 @@ func finalize_cancel(project_id: String, task_id: String, message: String = "Can
 
 func retry_task(project_id: String, task_id: String) -> bool:
 	var task := get_task(project_id, task_id)
-	if task.is_empty() or bool(task.get("requires_user_action", false)):
+	if task.is_empty() or bool(task.get("requires_user_action", false)) or not bool(task.get("retryable", true)):
 		return false
 	return transition_task(project_id, task_id, STATE_QUEUED, {}, true)
 
