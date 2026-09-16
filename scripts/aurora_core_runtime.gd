@@ -276,7 +276,7 @@ func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
 	var result: Array = await request_node.request_completed
 	request_node.queue_free()
 	if int(result[1]) < 200 or int(result[1]) >= 300:
-		return {"ok": false, "runtime": "ollama_legacy", "error": "compatibility adapter HTTP %d" % int(result[1])
+		return {"ok": false, "runtime": "ollama_legacy", "error": "compatibility adapter HTTP %d" % int(result[1])}
 	var data = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
 	if not data is Dictionary:
 		return {"ok": false, "runtime": "ollama_legacy", "error": "invalid compatibility adapter response"}
