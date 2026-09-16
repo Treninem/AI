@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -17,6 +18,7 @@ class ConversationStore:
         self.root.mkdir(parents=True, exist_ok=True)
         self.max_messages = max(20, max_messages)
         self.database = AuroraDatabase(self.root.parent / "aurorafox.sqlite3")
+        self._write_lock = threading.RLock()
         self._migrate_legacy_once()
 
     def _path(self, owner: str, conversation_id: str) -> Path:
@@ -157,43 +159,45 @@ class ConversationStore:
             raise ValueError(f"Unsupported conversation role: {role}")
         now = int(time.time())
         safe_metadata = metadata if isinstance(metadata, dict) else {}
-        with self.database.connection(write=True) as connection:
-            connection.execute(
-                "INSERT INTO conversations(owner, conversation_id, created_at, updated_at) VALUES(?, ?, ?, ?) "
-                "ON CONFLICT(owner, conversation_id) DO UPDATE SET updated_at=excluded.updated_at",
-                (owner, conversation_id, now, now),
-            )
-            connection.execute(
-                "INSERT INTO conversation_messages(owner, conversation_id, role, content, metadata_json, created_at) "
-                "VALUES(?, ?, ?, ?, ?, ?)",
-                (
-                    owner,
-                    conversation_id,
-                    role,
-                    content,
-                    json.dumps(safe_metadata, ensure_ascii=False, separators=(",", ":")),
-                    now,
-                ),
-            )
-            connection.execute(
-                "DELETE FROM conversation_messages WHERE id IN ("
-                "SELECT id FROM conversation_messages WHERE owner=? AND conversation_id=? "
-                "ORDER BY id DESC LIMIT -1 OFFSET ?)",
-                (owner, conversation_id, self.max_messages),
-            )
-        data = self.get(owner, conversation_id)
-        self._write_legacy_mirror(owner, conversation_id, data)
-        return data
+        with self._write_lock:
+            with self.database.connection(write=True) as connection:
+                connection.execute(
+                    "INSERT INTO conversations(owner, conversation_id, created_at, updated_at) VALUES(?, ?, ?, ?) "
+                    "ON CONFLICT(owner, conversation_id) DO UPDATE SET updated_at=excluded.updated_at",
+                    (owner, conversation_id, now, now),
+                )
+                connection.execute(
+                    "INSERT INTO conversation_messages(owner, conversation_id, role, content, metadata_json, created_at) "
+                    "VALUES(?, ?, ?, ?, ?, ?)",
+                    (
+                        owner,
+                        conversation_id,
+                        role,
+                        content,
+                        json.dumps(safe_metadata, ensure_ascii=False, separators=(",", ":")),
+                        now,
+                    ),
+                )
+                connection.execute(
+                    "DELETE FROM conversation_messages WHERE id IN ("
+                    "SELECT id FROM conversation_messages WHERE owner=? AND conversation_id=? "
+                    "ORDER BY id DESC LIMIT -1 OFFSET ?)",
+                    (owner, conversation_id, self.max_messages),
+                )
+            data = self.get(owner, conversation_id)
+            self._write_legacy_mirror(owner, conversation_id, data)
+            return data
 
     def clear(self, owner: str, conversation_id: str) -> bool:
-        with self.database.connection(write=True) as connection:
-            cursor = connection.execute(
-                "DELETE FROM conversations WHERE owner=? AND conversation_id=?",
-                (owner, conversation_id),
-            )
-            changed = cursor.rowcount > 0
-        self._path(owner, conversation_id).unlink(missing_ok=True)
-        return changed
+        with self._write_lock:
+            with self.database.connection(write=True) as connection:
+                cursor = connection.execute(
+                    "DELETE FROM conversations WHERE owner=? AND conversation_id=?",
+                    (owner, conversation_id),
+                )
+                changed = cursor.rowcount > 0
+            self._path(owner, conversation_id).unlink(missing_ok=True)
+            return changed
 
     def context(self, owner: str, conversation_id: str, limit: int = 24) -> list[dict[str, Any]]:
         with self.database.connection() as connection:
