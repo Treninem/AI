@@ -427,6 +427,9 @@ class AccountStore:
     def refresh(self, refresh_token: str) -> dict[str, Any]:
         digest = self._hash_token(refresh_token)
         now = self._now()
+        failure: AuthenticationError | None = None
+        access = ""
+        refresh = ""
         with self.database.connection(write=True) as connection:
             row = connection.execute(
                 "SELECT r.id AS refresh_id, r.session_id, r.family_id, r.generation, r.expires_at, "
@@ -442,44 +445,46 @@ class AccountStore:
             family_id = str(row["family_id"])
             if row["consumed_at"] is not None or row["refresh_revoked"] is not None:
                 self._revoke_family(connection, family_id, now)
-                raise RefreshReplayError("Refresh token replay detected; session family revoked")
-            if (
+                failure = RefreshReplayError("Refresh token replay detected; session family revoked")
+            elif (
                 int(row["expires_at"]) < now
                 or row["session_revoked"] is not None
                 or row["device_revoked"] is not None
                 or row["disabled_at"] is not None
             ):
                 self._revoke_family(connection, family_id, now)
-                raise AuthenticationError("Refresh token expired or revoked")
-
-            access = self._token("af_access")
-            refresh = self._token("af_refresh")
-            generation = int(row["generation"]) + 1
-            connection.execute(
-                "UPDATE refresh_tokens SET consumed_at=? WHERE id=?",
-                (now, str(row["refresh_id"])),
-            )
-            connection.execute(
-                "UPDATE auth_sessions SET access_hash=?, access_expires_at=?, last_seen_at=? WHERE id=?",
-                (self._hash_token(access), now + self.access_ttl, now, str(row["session_id"])),
-            )
-            connection.execute(
-                "UPDATE devices SET last_seen_at=? WHERE id=?",
-                (now, str(row["device_id"])),
-            )
-            connection.execute(
-                "INSERT INTO refresh_tokens(id, session_id, family_id, token_hash, generation, created_at, expires_at) "
-                "VALUES(?, ?, ?, ?, ?, ?, ?)",
-                (
-                    secrets.token_hex(16),
-                    str(row["session_id"]),
-                    family_id,
-                    self._hash_token(refresh),
-                    generation,
-                    now,
-                    now + self.refresh_ttl,
-                ),
-            )
+                failure = AuthenticationError("Refresh token expired or revoked")
+            else:
+                access = self._token("af_access")
+                refresh = self._token("af_refresh")
+                generation = int(row["generation"]) + 1
+                connection.execute(
+                    "UPDATE refresh_tokens SET consumed_at=? WHERE id=?",
+                    (now, str(row["refresh_id"])),
+                )
+                connection.execute(
+                    "UPDATE auth_sessions SET access_hash=?, access_expires_at=?, last_seen_at=? WHERE id=?",
+                    (self._hash_token(access), now + self.access_ttl, now, str(row["session_id"])),
+                )
+                connection.execute(
+                    "UPDATE devices SET last_seen_at=? WHERE id=?",
+                    (now, str(row["device_id"])),
+                )
+                connection.execute(
+                    "INSERT INTO refresh_tokens(id, session_id, family_id, token_hash, generation, created_at, expires_at) "
+                    "VALUES(?, ?, ?, ?, ?, ?, ?)",
+                    (
+                        secrets.token_hex(16),
+                        str(row["session_id"]),
+                        family_id,
+                        self._hash_token(refresh),
+                        generation,
+                        now,
+                        now + self.refresh_ttl,
+                    ),
+                )
+        if failure is not None:
+            raise failure
         return {
             "access_token": access,
             "access_expires_at": now + self.access_ttl,
