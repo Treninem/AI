@@ -13,8 +13,9 @@ const OLLAMA_MAX_RETRY_SECONDS := 300.0
 var model_path := DEFAULT_MODEL_PATH
 var android_runtime := AndroidLocalRuntime.new()
 var desktop_runtime := DesktopLocalRuntime.new()
-# Ollama is never a required provider. The built-in Core remains primary even
-# when the compatibility switch is enabled.
+# Legacy Ollama is an optional compatibility adapter only. AuroraFox-owned
+# inference is exposed separately through chat_local_only() and remains the
+# normal intelligence path regardless of this switch.
 var allow_ollama_fallback := false
 var ollama_base_url := "http://127.0.0.1:11434"
 var ollama_model := "qwen3:8b"
@@ -43,18 +44,26 @@ func set_ollama_fallback_enabled(enabled: bool) -> void:
 	if not enabled:
 		_reset_ollama_circuit()
 
-func chat(messages: Array, temperature := 0.2) -> Dictionary:
-	# Local inference always gets the first chance. If the preferred GGUF is
-	# unavailable or fails to load, other verified/local GGUF files are tried
-	# before any external compatibility adapter.
+# Official AuroraFox-owned inference API. It never calls Ollama or any other
+# external AI provider, even when a compatibility adapter is enabled.
+func chat_local_only(messages: Array, temperature := 0.2) -> Dictionary:
 	var local := await _chat_local(messages, temperature)
 	if bool(local.get("ok", false)):
 		_last_runtime = str(local.get("runtime", "aurora_core"))
 		_last_model_path = str(local.get("model_path", model_path))
 		_last_local_error = ""
+	else:
+		_last_local_error = str(local.get("error", "local runtime unavailable"))
+	return local
+
+# Explicit compatibility-capable API. Normal AIClient.chat(), AgentCore and
+# self-improvement do not use this method. It exists only for callers that
+# deliberately request the legacy compatibility behavior.
+func chat(messages: Array, temperature := 0.2) -> Dictionary:
+	var local := await chat_local_only(messages, temperature)
+	if bool(local.get("ok", false)):
 		return local
 
-	_last_local_error = str(local.get("error", "local runtime unavailable"))
 	if allow_ollama_fallback and OS.get_name() != "Android" and not _ollama_circuit_open():
 		var legacy := await _chat_ollama(messages, temperature)
 		if bool(legacy.get("ok", false)):
@@ -267,7 +276,7 @@ func _chat_ollama(messages: Array, temperature: float) -> Dictionary:
 	var result: Array = await request_node.request_completed
 	request_node.queue_free()
 	if int(result[1]) < 200 or int(result[1]) >= 300:
-		return {"ok": false, "runtime": "ollama_legacy", "error": "compatibility adapter HTTP %d" % int(result[1])}
+		return {"ok": false, "runtime": "ollama_legacy", "error": "compatibility adapter HTTP %d" % int(result[1])
 	var data = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
 	if not data is Dictionary:
 		return {"ok": false, "runtime": "ollama_legacy", "error": "invalid compatibility adapter response"}
@@ -301,6 +310,7 @@ func runtime_info() -> Dictionary:
 	var info := {
 		"runtime": "AuroraFox Core",
 		"local_first": true,
+		"self_primary": true,
 		"model_path": model_path,
 		"model_installed": not local_models.is_empty(),
 		"available_local_models": local_models,
@@ -309,14 +319,15 @@ func runtime_info() -> Dictionary:
 		"quarantined_local_model_count": quarantined,
 		"last_model_path": _last_model_path,
 		"ollama_required": false,
-		"ollama_fallback": allow_ollama_fallback,
+		"external_ai_required": false,
+		"ollama_fallback_enabled": allow_ollama_fallback,
+		"ollama_failures": _ollama_failures,
 		"ollama_circuit_open": _ollama_circuit_open(),
 		"ollama_retry_after_unix": _ollama_retry_after_unix,
-		"ollama_failures": _ollama_failures,
 		"last_runtime": _last_runtime,
 		"last_local_error": _last_local_error,
-		"last_ollama_error": _last_ollama_error
+		"last_ollama_error": _last_ollama_error,
+		"android": android_runtime.capabilities(),
+		"desktop": desktop_runtime.runtime_info()
 	}
-	if OS.get_name() == "Windows": info["desktop"] = desktop_runtime.runtime_info()
-	elif OS.get_name() == "Android": info["android"] = android_runtime.capabilities()
 	return info
