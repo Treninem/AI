@@ -63,6 +63,7 @@ jobs:
           tests.test_knowledge_stress_gates
           tests.test_knowledge_stress_removal_transaction
           tests.test_knowledge_stress_workflow_contract
+          tests.test_knowledge_concurrency_contract
           -v
       - name: Compile Python tools
         run: >-
@@ -112,6 +113,13 @@ jobs:
           --script benchmarks/knowledge/record_dedupe_shared_source_probe.gd
           --prefix AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=
           --report artifacts/knowledge-performance/record-dedupe-shared-source.json
+      - name: Verify duplicate-import and search-remove concurrency safety
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/concurrency_race_probe.gd
+          --prefix AURORA_KNOWLEDGE_CONCURRENCY_RESULT=
+          --report artifacts/knowledge-performance/concurrency-races.json
       - name: Verify pre-registry rollback safety
         run: >-
           python benchmarks/knowledge/run_godot_probe.py
@@ -187,6 +195,14 @@ jobs:
           --script benchmarks/knowledge/record_dedupe_shared_source_probe.gd
           --prefix AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=
           --report artifacts/knowledge-performance/record-dedupe-shared-source-windows.json
+      - name: Verify duplicate-import and search-remove concurrency safety
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/concurrency_race_probe.gd
+          --prefix AURORA_KNOWLEDGE_CONCURRENCY_RESULT=
+          --report artifacts/knowledge-performance/concurrency-races-windows.json
       - name: Verify pre-registry rollback safety
         shell: powershell
         run: >-
