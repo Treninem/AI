@@ -18,6 +18,7 @@ func _ready() -> void:
 	if main == null:
 		return
 	_build_panel()
+	_sync_computer_permission()
 	await _refresh_health()
 
 func _style(fill: Color, border: Color) -> StyleBoxFlat:
@@ -84,7 +85,7 @@ func _build_panel() -> void:
 	box.add_child(title)
 
 	var hint := Label.new()
-	hint.text = "Доступ к экрану, мыши и клавиатуре включается только здесь. Пока доступ выключен, AuroraFox не может выполнять компьютерные действия."
+	hint.text = "Высокоуровневую задачу планирует только локальный AuroraFox Core. Computer Agent выполняет уже выбранные действия и остаётся выключенным, пока доступ не разрешён здесь."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_color_override("font_color", Color("b9c7dc"))
 	box.add_child(hint)
@@ -95,13 +96,14 @@ func _build_panel() -> void:
 	enabled_toggle.button_pressed = enabled
 	enabled_toggle.toggled.connect(func(value):
 		enabled = value
+		_sync_computer_permission()
 		_refresh_control_state()
 	)
 	box.add_child(enabled_toggle)
 
 	auto_toggle = CheckButton.new()
 	auto_toggle.name = "ComputerAgentAuto"
-	auto_toggle.text = "Выполнять разрешённую цепочку действий без подтверждения каждого шага"
+	auto_toggle.text = "Разрешать локальному AuroraFox Core продолжать безопасную цепочку без подтверждения каждого шага"
 	auto_toggle.button_pressed = auto_execute
 	auto_toggle.toggled.connect(func(value):
 		auto_execute = value
@@ -152,6 +154,13 @@ func _fit_popup() -> void:
 		maxi(420, mini(470, int(viewport.y - 40.0)))
 	)
 
+func _sync_computer_permission() -> void:
+	# ComputerClient in the reliability lane owns the process-wide permission.
+	# Keep feature detection so this UI branch remains parse/runtime-compatible
+	# until that lane is merged into main.
+	if computer != null and computer.has_method("set_computer_control_enabled"):
+		computer.call("set_computer_control_enabled", enabled)
+
 func _refresh_control_state() -> void:
 	if enabled_toggle != null:
 		enabled_toggle.set_pressed_no_signal(enabled)
@@ -163,7 +172,7 @@ func _refresh_health() -> void:
 	var health := await computer.health()
 	var ok := bool(health.get("ok", false))
 	if status_label != null:
-		status_label.text = "Локальный Computer Agent готов." if ok else "Локальный Computer Agent не запущен. Основной чат AuroraFox продолжает работать без него."
+		status_label.text = "Локальный Computer Agent готов. Планирование выполняет AuroraFox Core." if ok else "Локальный Computer Agent не запущен. Основной чат AuroraFox продолжает работать без него."
 		status_label.add_theme_color_override("font_color", Color("64ff9d") if ok else Color("ffbd75"))
 	if setup_button != null:
 		setup_button.visible = not ok and OS.get_name() == "Windows" and not computer.installer_path().is_empty()
@@ -207,18 +216,68 @@ func _setup_runtime() -> void:
 	setup_button.text = "Повторить подготовку"
 	status_label.text = "Подготовка не завершилась. Можно повторить — основной чат не затронут."
 
+func _agent_core() -> AgentCore:
+	if main == null:
+		return null
+	var candidate = main.get("agent")
+	return candidate as AgentCore if candidate is AgentCore else null
+
+func _local_ai() -> AIClient:
+	if main == null:
+		return null
+	var candidate = main.get("ai")
+	return candidate as AIClient if candidate is AIClient else null
+
 func execute_goal(goal: String, max_steps: int = 30) -> Dictionary:
 	if not enabled:
 		return {"ok": false, "error": "Компьютерный режим выключен пользователем"}
+	var clean_goal := goal.strip_edges()
+	if clean_goal.is_empty():
+		return {"ok": false, "error": "empty_goal"}
+	var core := _agent_core()
+	if core == null:
+		return {"ok": false, "error": "aurorafox_core_unavailable"}
+	_sync_computer_permission()
 	if status_label != null:
-		status_label.text = "AuroraFox выполняет компьютерную задачу…"
-	var result := await computer.run(goal, max_steps, auto_execute)
-	_refresh_control_state()
+		status_label.text = "AuroraFox Core планирует и выполняет компьютерную задачу…"
+	var bounded_steps := clampi(max_steps, 1, 100)
+	var confirmation_rule := (
+		"Продолжай безопасную цепочку без отдельного подтверждения каждого шага, но соблюдай все permission/master-stop ограничения."
+		if auto_execute else
+		"Не продолжай неоднозначное, потенциально опасное или необратимое действие без подтверждения пользователя."
+	)
+	var task := """Выполни текущую задачу пользователя на компьютере: %s
+Планирование выполняй только собственным AuroraFox Core. Не используй sidecar/service-side AI planning. Используй доступные Computer primitives через ToolRegistry. Максимум логических шагов: %d. %s""" % [clean_goal, bounded_steps, confirmation_rule]
+	var response := await core.run_task(task, [])
+	var ok := not response.begins_with("Ошибка модели:") and not response.begins_with("__AURORA_WORK_CONTROL__:")
 	if status_label != null:
-		status_label.text = "Компьютерная задача завершена." if result.get("ok", false) else "Компьютерная задача завершилась ошибкой."
-	return result
+		status_label.text = "Компьютерная задача завершена." if ok else "AuroraFox Core остановил компьютерную задачу."
+	return {
+		"ok": ok,
+		"response": response,
+		"planning_owner": "aurorafox_core",
+		"service_side_planning": false,
+	}
 
 func preview_next_action(goal: String) -> Dictionary:
-	if not enabled:
-		return {"ok": false, "error": "Компьютерный режим выключен пользователем"}
-	return await computer.plan(goal)
+	var clean_goal := goal.strip_edges()
+	if clean_goal.is_empty():
+		return {"ok": false, "error": "empty_goal"}
+	var local_ai := _local_ai()
+	if local_ai == null:
+		return {"ok": false, "error": "aurorafox_core_unavailable"}
+	var result := await local_ai.chat([
+		{
+			"role": "system",
+			"content": "Ты локальный AuroraFox Core. Составь только краткий план следующего компьютерного действия. Ничего не выполняй, не вызывай инструменты и не выдавай JSON tool-call. Учитывай, что Computer Agent — только исполнитель проверенных primitives."
+		},
+		{"role": "user", "content": clean_goal},
+	])
+	if not result.get("ok", false):
+		return {"ok": false, "error": str(result.get("error", "core_preview_failed"))}
+	return {
+		"ok": true,
+		"plan": str(result.get("content", "")),
+		"planning_owner": "aurorafox_core",
+		"executed": false,
+	}
