@@ -107,6 +107,8 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
       - name: Run explicit self-reliance local-only isolation smoke test
         run: timeout 30s ./godot --headless --path . --script tests/self_reliance_smoke.gd
+      - name: Run full offline autonomy chat memory planning and local-tool smoke test
+        run: timeout 30s ./godot --headless --path . --script tests/offline_autonomy_smoke.gd
       - name: Run per-chat attachment context smoke test
         run: timeout 30s ./godot --headless --path . --script tests/chat_context_smoke.gd
       - name: Run autonomous coordinator smoke test
