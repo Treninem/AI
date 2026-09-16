@@ -121,14 +121,22 @@ func _start_backend_if_installed() -> void:
 	var found := _find_runtime()
 	if found.is_empty(): return
 	runtime_root = str(found.get("root", ""))
-	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
-	var vendor := str(found.get("vendor", ""))
-	if not vendor.is_empty() and DirAccess.dir_exists_absolute(vendor):
-		OS.set_environment("PYTHONPATH", vendor)
 	var executable := str(found.get("pythonw", ""))
 	if executable.is_empty() or not FileAccess.file_exists(executable): executable = str(found.get("python", ""))
 	if executable.is_empty() or not FileAccess.file_exists(executable): return
+	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
+	var vendor := str(found.get("vendor", ""))
+	var inject_vendor := not vendor.is_empty() and DirAccess.dir_exists_absolute(vendor)
+	var had_pythonpath := OS.has_environment("PYTHONPATH")
+	var previous_pythonpath := OS.get_environment("PYTHONPATH") if had_pythonpath else ""
+	if inject_vendor:
+		OS.set_environment("PYTHONPATH", vendor)
 	backend_pid = OS.create_process(executable, PackedStringArray([str(found.get("service", ""))]), false)
+	if inject_vendor:
+		if had_pythonpath:
+			OS.set_environment("PYTHONPATH", previous_pythonpath)
+		else:
+			OS.unset_environment("PYTHONPATH")
 
 func _find_runtime() -> Dictionary:
 	for root in _candidate_roots():
