@@ -10,11 +10,14 @@ const SIDEBAR_COMPACT := 228.0
 var _root: Control
 var _last_size := Vector2.ZERO
 
+func _mobile_preview() -> bool:
+	return bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
+
 func _ready() -> void:
 	_root = get_parent() as Control
 	if _root == null:
 		return
-	if OS.get_name() != "Android":
+	if OS.get_name() != "Android" and not _mobile_preview():
 		get_window().min_size = MIN_WINDOW
 	if not get_viewport().size_changed.is_connected(_apply_responsive_layout):
 		get_viewport().size_changed.connect(_apply_responsive_layout)
@@ -54,7 +57,7 @@ func _remove_temporary_avatar_art(node: Node) -> void:
 		_remove_temporary_avatar_art(child)
 
 func _remove_redundant_quick_controls() -> void:
-	for node_name in ["VoiceSpeakButton", "VoiceSettingsButton"]:
+	for node_name in ["VoiceSpeakButton", "VoiceSettingsButton", "KnowledgeBaseButton", "ComputerAgentButton", "UpdateStatusButton"]:
 		var control := _root.find_child(node_name, true, false) as Control
 		if control != null:
 			control.visible = false
@@ -123,13 +126,14 @@ func _apply_responsive_layout() -> void:
 		return
 	_last_size = viewport
 	var compact := viewport.x < 1180.0
+	var desktop_layout := OS.get_name() != "Android" and not _mobile_preview()
 
 	var sidebar := _root.find_child("Sidebar", true, false) as Control
-	if sidebar != null and OS.get_name() != "Android":
+	if sidebar != null and desktop_layout:
 		sidebar.custom_minimum_size.x = SIDEBAR_COMPACT if compact else SIDEBAR_WIDE
 
 	var header_margin := _root.find_child("HeaderMargin", true, false) as MarginContainer
-	if header_margin != null and OS.get_name() != "Android":
+	if header_margin != null and desktop_layout:
 		header_margin.add_theme_constant_override("margin_left", 14 if compact else 24)
 		header_margin.add_theme_constant_override("margin_right", 14 if compact else 20)
 
@@ -138,13 +142,13 @@ func _apply_responsive_layout() -> void:
 		main_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var composer := _root.find_child("ComposerMargin", true, false) as MarginContainer
-	if composer != null and OS.get_name() != "Android":
+	if composer != null and desktop_layout:
 		composer.add_theme_constant_override("margin_left", 18 if compact else 34)
 		composer.add_theme_constant_override("margin_right", 18 if compact else 34)
 		composer.add_theme_constant_override("margin_bottom", 12 if compact else 22)
 
 	var messages := _root.find_child("MessagesMargin", true, false) as MarginContainer
-	if messages != null and OS.get_name() != "Android":
+	if messages != null and desktop_layout:
 		messages.add_theme_constant_override("margin_left", 22 if compact else 42)
 		messages.add_theme_constant_override("margin_right", 22 if compact else 42)
 
