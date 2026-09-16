@@ -1,14 +1,11 @@
 extends Node
 
-const ICON_COMPUTER: Texture2D = preload("res://assets/ui/icon_computer.svg")
-
 var computer := ComputerClient.new()
 var enabled := false
 var auto_execute := false
 var main: Control
 var status_label: Label
 var setup_button: Button
-var open_button: Button
 var enabled_toggle: CheckButton
 var auto_toggle: CheckButton
 var popup: PopupPanel
@@ -20,7 +17,7 @@ func _ready() -> void:
 	main = get_parent() as Control
 	if main == null:
 		return
-	_build_controls()
+	_build_panel()
 	await _refresh_health()
 
 func _style(fill: Color, border: Color) -> StyleBoxFlat:
@@ -31,14 +28,14 @@ func _style(fill: Color, border: Color) -> StyleBoxFlat:
 	style.border_width_right = 1
 	style.border_width_top = 1
 	style.border_width_bottom = 1
-	style.corner_radius_top_left = 11
-	style.corner_radius_top_right = 11
-	style.corner_radius_bottom_left = 11
-	style.corner_radius_bottom_right = 11
-	style.content_margin_left = 10
-	style.content_margin_right = 10
-	style.content_margin_top = 7
-	style.content_margin_bottom = 7
+	style.corner_radius_top_left = 12
+	style.corner_radius_top_right = 12
+	style.corner_radius_bottom_left = 12
+	style.corner_radius_bottom_right = 12
+	style.content_margin_left = 12
+	style.content_margin_right = 12
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
 	return style
 
 func _apply_button(button: Button, active := false) -> void:
@@ -50,9 +47,8 @@ func _apply_button(button: Button, active := false) -> void:
 	button.add_theme_stylebox_override("pressed", _style(Color(0.13, 0.12, 0.19, 1.0), Color(0.66, 0.54, 1.0, 0.86)))
 	button.add_theme_stylebox_override("focus", _style(Color(0.10, 0.12, 0.18, 1.0), Color(0.66, 0.54, 1.0, 0.86)))
 	button.add_theme_color_override("font_color", Color("eef5ff"))
-	button.add_theme_font_size_override("font_size", 13)
+	button.add_theme_font_size_override("font_size", 14)
 	button.expand_icon = true
-	button.icon_max_width = 18
 	button.clip_text = true
 
 func _panel_style() -> StyleBoxFlat:
@@ -65,25 +61,10 @@ func _panel_style() -> StyleBoxFlat:
 	style.shadow_size = 18
 	return style
 
-func _build_controls() -> void:
-	var host := main.find_child("MainHeaderActions", true, false) as HBoxContainer
-	if host == null:
-		return
-
-	open_button = Button.new()
-	open_button.name = "ComputerAgentButton"
-	open_button.text = "Компьютер"
-	open_button.icon = ICON_COMPUTER
-	open_button.tooltip_text = "Компьютерный режим AuroraFox"
-	open_button.custom_minimum_size = Vector2(112, 40)
-	open_button.visible = OS.get_name() != "Android"
-	open_button.pressed.connect(_open_panel)
-	_apply_button(open_button, false)
-	host.add_child(open_button)
-
+func _build_panel() -> void:
 	popup = PopupPanel.new()
 	popup.name = "ComputerAgentPopup"
-	popup.size = Vector2i(560, 440)
+	popup.size = Vector2i(590, 470)
 	popup.add_theme_stylebox_override("panel", _panel_style())
 	main.add_child(popup)
 
@@ -103,7 +84,7 @@ func _build_controls() -> void:
 	box.add_child(title)
 
 	var hint := Label.new()
-	hint.text = "Здесь явно задаётся, может ли AuroraFox видеть экран и выполнять действия мышью и клавиатурой. Без включения доступа компьютерные действия запрещены."
+	hint.text = "Доступ к экрану, мыши и клавиатуре включается только здесь. Пока доступ выключен, AuroraFox не может выполнять компьютерные действия."
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_color_override("font_color", Color("b9c7dc"))
 	box.add_child(hint)
@@ -150,16 +131,26 @@ func _build_controls() -> void:
 	box.add_child(spacer)
 
 	var close := Button.new()
-	close.text = "Закрыть"
+	close.text = "Готово"
 	close.pressed.connect(func(): popup.hide())
 	_apply_button(close, false)
 	box.add_child(close)
 	_refresh_control_state()
 
-func _open_panel() -> void:
+func show_computer_panel() -> void:
+	if OS.get_name() != "Windows" or popup == null:
+		return
 	_refresh_control_state()
+	_fit_popup()
 	popup.popup_centered()
 	_refresh_health()
+
+func _fit_popup() -> void:
+	var viewport := get_viewport().get_visible_rect().size
+	popup.size = Vector2i(
+		maxi(360, mini(590, int(viewport.x - 40.0))),
+		maxi(420, mini(470, int(viewport.y - 40.0)))
+	)
 
 func _refresh_control_state() -> void:
 	if enabled_toggle != null:
@@ -167,9 +158,6 @@ func _refresh_control_state() -> void:
 	if auto_toggle != null:
 		auto_toggle.set_pressed_no_signal(auto_execute)
 		auto_toggle.disabled = not enabled
-	if open_button != null:
-		_apply_button(open_button, enabled)
-		open_button.tooltip_text = "Компьютерный режим включён" if enabled else "Компьютерный режим выключен"
 
 func _refresh_health() -> void:
 	var health := await computer.health()
@@ -177,8 +165,6 @@ func _refresh_health() -> void:
 	if status_label != null:
 		status_label.text = "Локальный Computer Agent готов." if ok else "Локальный Computer Agent не запущен. Основной чат AuroraFox продолжает работать без него."
 		status_label.add_theme_color_override("font_color", Color("64ff9d") if ok else Color("ffbd75"))
-	if open_button != null:
-		open_button.tooltip_text = ("Computer Agent готов" if ok else "Computer Agent требует подготовки") + (" • доступ включён" if enabled else " • доступ выключен")
 	if setup_button != null:
 		setup_button.visible = not ok and OS.get_name() == "Windows" and not computer.installer_path().is_empty()
 
