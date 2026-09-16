@@ -18,6 +18,11 @@ SUPPORTED_SCHEMAS = {
     "aurorafox_knowledge_search_scaling_v1",
     "aurorafox_knowledge_registry_scaling_v1",
 }
+SCALING_SCHEMAS = {
+    "aurorafox_memory_scaling_v1",
+    "aurorafox_knowledge_search_scaling_v1",
+    "aurorafox_knowledge_registry_scaling_v1",
+}
 SELF_RELIANCE_KEYS = ("network_required", "external_runtime_required", "ollama_required")
 BLOCKER_FIELDS = (
     "suspected_quadratic",
@@ -54,6 +59,40 @@ def _float(value: Any, *, field: str, errors: list[str]) -> float:
         return 0.0
 
 
+def _valid_scaling_pairs(schema: str, pairs: Any, errors: list[str]) -> int:
+    if not isinstance(pairs, list):
+        errors.append("relative performance n_2n_4n missing or malformed")
+        return 0
+    valid = 0
+    for index, pair in enumerate(pairs):
+        if not isinstance(pair, dict):
+            errors.append(f"scaling pair malformed: index={index}")
+            continue
+        if schema == "aurorafox_knowledge_search_scaling_v1":
+            start = _float(pair.get("from_mb"), field=f"n_2n_4n[{index}].from_mb", errors=errors)
+            end = _float(pair.get("to_mb"), field=f"n_2n_4n[{index}].to_mb", errors=errors)
+            ratio = _float(pair.get("time_ratio"), field=f"n_2n_4n[{index}].time_ratio", errors=errors)
+            if start <= 0 or end <= 0 or not (1.8 <= end / start <= 2.2) or ratio <= 0:
+                errors.append(f"invalid search scaling pair: index={index}")
+                continue
+        else:
+            try:
+                start = int(pair.get("from_n", 0) or 0)
+                end = int(pair.get("to_n", 0) or 0)
+            except (TypeError, ValueError):
+                errors.append(f"invalid count scaling pair: index={index}")
+                continue
+            ratio_key = "write_time_ratio" if schema == "aurorafox_memory_scaling_v1" else "time_ratio"
+            ratio = _float(pair.get(ratio_key), field=f"n_2n_4n[{index}].{ratio_key}", errors=errors)
+            if start <= 0 or end != start * 2 or ratio <= 0:
+                errors.append(f"invalid count scaling pair: index={index}")
+                continue
+        valid += 1
+    if len(pairs) < 2 or valid < 2:
+        errors.append(f"incomplete N->2N->4N evidence: valid_pairs={valid}")
+    return valid
+
+
 def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
@@ -86,7 +125,9 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
             if bool(relative.get(key, False)):
                 blocker_fields.append(key)
         pairs = relative.get("n_2n_4n")
-        if pairs is not None and not isinstance(pairs, list):
+        if schema in SCALING_SCHEMAS:
+            _valid_scaling_pairs(schema, pairs, errors)
+        elif pairs is not None and not isinstance(pairs, list):
             errors.append("relative performance n_2n_4n malformed")
 
     results = report.get("results")
@@ -160,7 +201,7 @@ def main() -> int:
         "load_errors": load_errors,
         "blockers": blockers,
         "reports": evaluations,
-        "rule": "missing/malformed evidence fails closed; absolute hosted-runner timings are informational; reproducible N->2N near-4x scaling is blocking",
+        "rule": "missing/malformed evidence fails closed; scaling reports require complete N->2N->4N evidence; absolute hosted-runner timings are informational; reproducible near-4x scaling is blocking",
     }
     if args.output:
         output = Path(args.output)
