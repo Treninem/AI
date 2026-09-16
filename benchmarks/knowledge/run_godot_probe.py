@@ -11,6 +11,7 @@ import tempfile
 import time
 
 import run_knowledge_benchmark as base
+import run_knowledge_benchmark_portable as portable
 
 
 def parse_args() -> argparse.Namespace:
@@ -31,10 +32,38 @@ def main() -> int:
     root = Path(tempfile.mkdtemp(prefix="aurora-knowledge-probe-"))
     try:
         env = base.base_environment(root, {"scenario": "probe"})
+        warm = portable.warm_isolated_windows_profile(
+            args.godot,
+            repo,
+            root,
+            env,
+            args.timeout_seconds,
+            report.parent,
+            report.stem,
+        )
+        if not warm.get("ok"):
+            parsed = {
+                "ok": False,
+                "error": warm.get("error", "isolated Windows Godot warm-up failed"),
+                "isolated_profile_warmup": warm,
+            }
+            report.write_text(json.dumps(parsed, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(json.dumps({"report": str(report), "ok": False, "warmup_failed": True}, ensure_ascii=False))
+            return 1
+
         command = [args.godot, "--headless", "--path", str(repo), "--script", args.script]
         started = time.perf_counter()
         peak_rss = 0
-        proc = subprocess.Popen(command, cwd=repo, env=env, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", errors="replace")
+        proc = subprocess.Popen(
+            command,
+            cwd=repo,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+        )
         timed_out = False
         while proc.poll() is None:
             peak_rss = max(peak_rss, base.process_rss_bytes(proc.pid))
@@ -62,6 +91,7 @@ def main() -> int:
             "peak_rss_bytes": peak_rss,
             "timed_out": timed_out,
             "stderr": stderr[-4000:],
+            "isolated_profile_warmup": warm,
         })
         report.write_text(json.dumps(parsed, ensure_ascii=False, indent=2), encoding="utf-8")
         print(json.dumps({"report": str(report), "ok": bool(parsed.get("ok", False)), "return_code": proc.returncode}, ensure_ascii=False))

@@ -3,7 +3,9 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from api.account_store import AccountStore
+import pytest
+
+from api.account_store import AccountStore, RefreshReplayError
 from api.conversation_store import ConversationStore
 from api.learning_store import LearningStore
 from api.persistence_maintenance import PersistenceMaintenance
@@ -52,7 +54,11 @@ def test_capacity_status_is_observational_and_flags_thresholds(tmp_path: Path, m
     assert status["counts"]["sync_conflicts_open"] == 1
     assert status["counts"]["learning_pending"] == 1
     assert status["capacity_policy"]["database_warning_precedes_backup_cap"] is True
+    assert status["capacity_policy"]["database_warning_includes_wal"] is True
     assert status["capacity_policy"]["database_warn_bytes"] < status["capacity_policy"]["backup_max_source_bytes"]
+    assert status["sizes"]["database_effective_bytes"] == (
+        status["sizes"]["database_bytes"] + status["sizes"]["wal_bytes"]
+    )
     assert status["retention_policy"]["sync_changes_auto_pruned"] is False
     assert status["retention_policy"]["sync_conflicts_auto_pruned"] is False
     assert status["retention_policy"]["pending_learning_protected"] is True
@@ -67,6 +73,33 @@ def test_capacity_status_is_observational_and_flags_thresholds(tmp_path: Path, m
     assert "disk_free_critical" in pressure["warnings"]
     assert LearningStore(root).pending(10)[0]["payload"] == {"private": "pending"}
     assert sync.pull(principal)["changes"][0]["payload"] == {"value": 1}
+
+
+def test_capacity_warning_includes_uncheckpointed_wal_bytes(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    AccountStore(root)
+    monkeypatch.setenv("AURORAFOX_DATABASE_WARN_BYTES", "100")
+    monkeypatch.setenv("AURORAFOX_BACKUP_MAX_BYTES", "1000")
+    monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "1")
+    maintenance = PersistenceMaintenance(root)
+    db_path = maintenance.database.path
+
+    def fake_size(path: Path) -> int:
+        text = str(path)
+        if path == db_path:
+            return 40
+        if text.endswith("-wal"):
+            return 70
+        if text.endswith("-shm"):
+            return 32
+        return 0
+
+    monkeypatch.setattr(maintenance, "_size", fake_size)
+    status = maintenance.status()
+    assert status["sizes"]["database_bytes"] == 40
+    assert status["sizes"]["wal_bytes"] == 70
+    assert status["sizes"]["database_effective_bytes"] == 110
+    assert "database_size" in status["warnings"]
 
 
 def test_prune_removes_only_terminal_auth_rows_and_keeps_sync_audit(tmp_path: Path, monkeypatch):
@@ -170,6 +203,54 @@ def test_prune_removes_only_terminal_auth_rows_and_keeps_sync_audit(tmp_path: Pa
         "sync_conflicts_unresolved",
         "sync_conflicts_resolved",
     } <= protected
+
+
+def test_prune_preserves_revoked_refresh_family_until_tokens_expire(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "1")
+    accounts = AccountStore(root)
+    login = _verified(accounts)
+
+    # Rotation consumes the first token. Replaying it revokes the whole family,
+    # including the current refresh token and its session. Those rows must remain
+    # until token expiry so any further replay is still recognized as a replay,
+    # rather than silently degrading into an unknown-token path after retention.
+    accounts.refresh(login["refresh_token"])
+    with pytest.raises(RefreshReplayError):
+        accounts.refresh(login["refresh_token"])
+
+    db_path = root / "aurorafox.sqlite3"
+    with sqlite3.connect(db_path) as connection:
+        session_id, revoked_at = connection.execute(
+            "SELECT id, revoked_at FROM auth_sessions WHERE family_id=(SELECT family_id FROM refresh_tokens LIMIT 1) LIMIT 1"
+        ).fetchone()
+        assert revoked_at is not None
+        rows = connection.execute(
+            "SELECT id, expires_at, revoked_at FROM refresh_tokens WHERE session_id=? ORDER BY generation",
+            (session_id,),
+        ).fetchall()
+        assert len(rows) >= 2
+        assert all(row[1] > 1 for row in rows)
+        assert all(row[2] is not None for row in rows)
+        token_ids = [row[0] for row in rows]
+
+    pruned = PersistenceMaintenance(root).prune_ephemeral(retention_seconds=0)
+    assert pruned["removed"]["refresh_tokens"] == 0
+    with sqlite3.connect(db_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM auth_sessions WHERE id=?", (session_id,)).fetchone()[0] == 1
+        remaining = [
+            row[0]
+            for row in connection.execute(
+                "SELECT id FROM refresh_tokens WHERE session_id=? ORDER BY generation",
+                (session_id,),
+            ).fetchall()
+        ]
+    assert remaining == token_ids
+
+    # Replay detection remains semantically strong after maintenance because the
+    # revoked family sentinel still exists until its original validity window ends.
+    with pytest.raises(RefreshReplayError):
+        accounts.refresh(login["refresh_token"])
 
 
 def test_prune_if_due_persists_cadence_across_process_instances(tmp_path: Path, monkeypatch):

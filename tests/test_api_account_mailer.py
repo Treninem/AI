@@ -38,6 +38,36 @@ def test_transport_requires_configuration_and_rejects_unknown_security():
         AccountMailer(config())._message("user@example.test", "other", "token")
 
 
+def test_account_action_url_must_be_https_and_have_no_embedded_credentials():
+    assert config().configured is True
+    assert config(public_url="http://auth.aurorafox.ru").configured is False
+    assert config(public_url="https://user:password@auth.aurorafox.ru").configured is False
+    assert config(public_url="not-a-url").configured is False
+    with pytest.raises(AccountMailError, match="not configured|not secure"):
+        AccountMailer(config(public_url="http://auth.aurorafox.ru")).send_token(
+            "user@example.test", "reset_password", "one-time"
+        )
+
+
+def test_malformed_recipient_header_fails_closed_before_smtp_connect(monkeypatch):
+    connected = False
+
+    class UnexpectedSMTP:
+        def __init__(self, *args, **kwargs):
+            nonlocal connected
+            connected = True
+            raise AssertionError("SMTP must not be reached for an invalid header")
+
+    monkeypatch.setattr("api.account_mailer.smtplib.SMTP", UnexpectedSMTP)
+    with pytest.raises(AccountMailError, match="delivery failed"):
+        AccountMailer(config()).send_token(
+            "user@example.test\r\nBcc: attacker@example.test",
+            "verify_email",
+            "one-time",
+        )
+    assert connected is False
+
+
 def test_starttls_happens_before_authentication(monkeypatch):
     events: list[str] = []
 
