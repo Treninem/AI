@@ -40,7 +40,7 @@ class KnowledgePerformanceContractTests(unittest.TestCase):
         self.assertNotIn("https://", text.lower())
 
     def test_report_contract_contains_scale_memory_restart_and_correctness(self) -> None:
-        text = RUNNER_PATH.read_text(encoding="utf-8")
+        text = RUNNER_PATH.read_text(encoding="utf-8") + "\n" + HARNESS_PATH.read_text(encoding="utf-8")
         for required in (
             '"schema": "aurorafox_knowledge_performance_v1"',
             '"peak_rss_bytes"',

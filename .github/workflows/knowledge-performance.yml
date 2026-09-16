@@ -1,0 +1,146 @@
+name: AuroraFox Knowledge Performance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'tests/*knowledge_performance*'
+      - 'tests/*knowledge_stress*'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/json_stream_reader.gd'
+      - 'scripts/memory_store.gd'
+      - 'scripts/local_semantic_vectorizer.gd'
+      - '.github/workflows/knowledge-performance.yml'
+  pull_request:
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'tests/*knowledge_performance*'
+      - 'tests/*knowledge_stress*'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/json_stream_reader.gd'
+      - 'scripts/memory_store.gd'
+      - 'scripts/local_semantic_vectorizer.gd'
+      - '.github/workflows/knowledge-performance.yml'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Benchmark profile
+        required: true
+        default: standard
+        type: choice
+        options:
+          - smoke
+          - standard
+          - stress
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate benchmark contract
+        run: python -m unittest tests.test_knowledge_performance_contract -v
+      - name: Compile Python runner
+        run: python -m py_compile benchmarks/knowledge/run_knowledge_benchmark.py
+
+  smoke-linux:
+    if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run bounded knowledge smoke benchmark
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
+      - name: Upload Linux benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-linux-smoke-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
+
+  smoke-windows:
+    if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
+    needs: contract
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri 'https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip' -OutFile godot.zip
+          Expand-Archive -Path godot.zip -DestinationPath godot-bin -Force
+          $godot = Get-ChildItem -Path godot-bin -Filter 'Godot_v4.7.1-stable_win64.exe' -Recurse | Select-Object -First 1
+          if (-not $godot) { throw 'Godot executable missing' }
+          Copy-Item $godot.FullName '.\godot.exe'
+          .\godot.exe --version
+      - name: Import and parse project
+        shell: powershell
+        run: .\godot.exe --headless --editor --path . --quit
+      - name: Run bounded Windows knowledge smoke benchmark
+        shell: powershell
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot .\godot.exe --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/windows-smoke.json
+      - name: Upload Windows benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-windows-smoke-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
+
+  manual-large:
+    if: github.event_name == 'workflow_dispatch' && inputs.profile != 'smoke'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run selected large profile
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile '${{ inputs.profile }}' --timeout-seconds 900 --report artifacts/knowledge-performance/linux-${{ inputs.profile }}.json
+      - name: Upload large benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-linux-${{ inputs.profile }}-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
