@@ -457,23 +457,43 @@ func _load() -> void:
 	recovered_from_backup = false
 	recovery_notes.clear()
 	_ensure_directories()
+	var primary_exists := FileAccess.file_exists(store_path)
 	var loaded := _read_store(store_path)
-	if loaded.is_empty() and FileAccess.file_exists(store_path):
+	var temp_needs_persist := false
+	if not loaded.is_empty():
+		if FileAccess.file_exists(_temp_path()):
+			recovery_notes.append("discarded_stale_temp")
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(_temp_path()))
+	elif primary_exists:
 		recovery_notes.append("primary_store_invalid")
 		_preserve_corrupt_primary()
 		loaded = _read_store(_backup_path())
 		if not loaded.is_empty():
 			recovered_from_backup = true
 			recovery_notes.append("recovered_from_backup")
-	elif loaded.is_empty() and FileAccess.file_exists(_backup_path()):
-		loaded = _read_store(_backup_path())
-		if not loaded.is_empty():
-			recovered_from_backup = true
-			recovery_notes.append("primary_missing_recovered_from_backup")
+	else:
+		var temp_loaded := _read_store(_temp_path())
+		if not temp_loaded.is_empty():
+			loaded = temp_loaded
+			recovery_notes.append("primary_missing_recovered_from_temp")
+			var promote_error := DirAccess.rename_absolute(
+				ProjectSettings.globalize_path(_temp_path()),
+				ProjectSettings.globalize_path(store_path)
+			)
+			if promote_error != OK:
+				recovery_notes.append("temp_promotion_failed")
+				temp_needs_persist = true
+		elif FileAccess.file_exists(_temp_path()):
+			recovery_notes.append("temp_store_invalid")
+		if loaded.is_empty() and FileAccess.file_exists(_backup_path()):
+			loaded = _read_store(_backup_path())
+			if not loaded.is_empty():
+				recovered_from_backup = true
+				recovery_notes.append("primary_missing_recovered_from_backup")
 	if loaded.is_empty():
 		return
 	var migrated := _sanitize_loaded(loaded)
-	if migrated or recovered_from_backup:
+	if migrated or recovered_from_backup or temp_needs_persist:
 		_save()
 
 func _read_store(path: String) -> Dictionary:

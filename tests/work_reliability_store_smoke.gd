@@ -226,6 +226,49 @@ func _run() -> void:
 		_fail("Corrupt primary was not preserved for diagnosis", 34)
 		return
 
+	# Crash after primary removal but before verified temp rename must preserve the
+	# newest verified state. Temp is newer than backup in this exact crash window.
+	var temp_store := _store("temp_recovery")
+	var temp_project := temp_store.create_project("Initial")
+	var temp_id := str(temp_project.get("id", ""))
+	temp_store.update_project(temp_id, "Committed primary", "old committed state")
+	var temp_primary := temp_store.store_path
+	var temp_backup := temp_primary + ".bak"
+	var temp_path := temp_primary + ".tmp"
+	if not FileAccess.file_exists(temp_backup):
+		_fail("Temp recovery fixture did not create backup", 45)
+		return
+	var newest_projects := temp_store.all_projects()
+	var newest_project: Dictionary = newest_projects[0]
+	newest_project["title"] = "Newest verified temp"
+	newest_project["instructions"] = "must survive crash window"
+	newest_projects[0] = newest_project
+	var temp_payload := {
+		"schema_version": AuroraWorkStore.SCHEMA_VERSION,
+		"active_project_id": temp_id,
+		"projects": newest_projects,
+		"saved_at": Time.get_datetime_string_from_system(true),
+	}
+	if not _write_json(temp_path, temp_payload):
+		_fail("Could not write verified temp crash fixture", 46)
+		return
+	if DirAccess.remove_absolute(ProjectSettings.globalize_path(temp_primary)) != OK:
+		_fail("Could not simulate primary-removal crash window", 47)
+		return
+	temp_store.queue_free()
+	await process_frame
+	var temp_recovered := _store("temp_recovery")
+	var newest_loaded := temp_recovered.get_project(temp_id)
+	if str(newest_loaded.get("title", "")) != "Newest verified temp":
+		_fail("Verified temp did not win over stale backup after primary loss", 48)
+		return
+	if "primary_missing_recovered_from_temp" not in temp_recovered.recovery_notes:
+		_fail("Verified temp recovery was not observable", 49)
+		return
+	if not FileAccess.file_exists(temp_primary) or FileAccess.file_exists(temp_path):
+		_fail("Recovered temp was not promoted atomically to primary", 50)
+		return
+
 	# Stress: dozens of projects / hundreds of tasks with one batched durable save.
 	var stress := _store("stress")
 	stress.begin_batch()
