@@ -37,8 +37,8 @@ func _init() -> void:
 		push_error("Updater failed older-version comparison")
 		quit(9)
 		return
-	for legacy in ["0.0.1", "0.1", "0.4.0", "1.0.0", "1.2.0.0", "v1.1.9"]:
-		if updater._compare_versions("1.3.0.0", legacy) != 1:
+	for legacy in ["0.0.1", "0.1", "0.4.0", "1.0.0", "1.2.0.0", "1.3.0.0", "v1.1.9"]:
+		if updater._compare_versions("1.4.0.0", legacy) != 1:
 			push_error("Version comparison failed for repair source " + legacy)
 			quit(21)
 			return
@@ -109,21 +109,25 @@ func _init() -> void:
 		push_error("Manifest incorrectly claims legacy direct update is safe")
 		quit(27)
 		return
-	if str(compatibility.get("legacy_repair_required_through", "")) != "1.2.0.0":
-		push_error("V1.2 repair boundary changed")
+	if str(compatibility.get("legacy_repair_required_through", "")) != "1.3.0.0":
+		push_error("V1.3 repair boundary changed")
 		quit(30)
 		return
-	if not bool(compatibility.get("signed_direct_update", false)) or str(compatibility.get("signed_update_floor", "")) != "1.3.0.0":
-		push_error("V1.3 signed direct-update floor changed")
+	if not bool(compatibility.get("signed_direct_update", false)) or str(compatibility.get("signed_update_floor", "")) != "1.4.0.0":
+		push_error("V1.4 signed direct-update floor changed")
 		quit(31)
 		return
-	if not str(compatibility.get("windows_strategy", "")).contains("repair_installer"):
+	if not str(compatibility.get("windows_strategy", "")).contains("repair"):
 		push_error("Windows repair strategy missing")
 		quit(32)
 		return
-	if str(compatibility.get("android_strategy", "")) != "same_package_same_signing_identity_required":
+	if str(compatibility.get("android_strategy", "")) != "same_package_same_permanent_signing_identity_required":
 		push_error("Android signing continuity contract changed")
 		quit(33)
+		return
+	if not FileAccess.file_exists("res://update/release_public.pub"):
+		push_error("Permanent update trust root is missing from project resources")
+		quit(34)
 		return
 
 	# Exercise the same RSA-SHA256 primitives used by the production updater.
@@ -159,7 +163,7 @@ func _init() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(public_path))
 
 	updater.free()
-	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true legacy_repair_through=1.2.0.0 signed_floor=1.3.0.0")
+	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true legacy_repair_through=1.3.0.0 signed_floor=1.4.0.0")
 	quit(0)
 
 func _sha256(data: PackedByteArray) -> PackedByteArray:
