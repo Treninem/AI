@@ -129,6 +129,27 @@ func _press(button: Button, label: String) -> bool:
 	await create_timer(0.08).timeout
 	return true
 
+func _select_option(option: OptionButton, key: String, label: String) -> bool:
+	if option == null:
+		_fail("UI page selector missing: %s" % label, 15)
+		return false
+	var target := -1
+	for i in range(option.item_count):
+		if str(option.get_item_metadata(i)) == key:
+			target = i
+			break
+	if target < 0:
+		_fail("UI page selector item missing: %s" % label, 16)
+		return false
+	_click_trail.append(label)
+	print("UI_SELECT %s" % label)
+	option.select(target)
+	option.emit_signal("item_selected", target)
+	await process_frame
+	await process_frame
+	await create_timer(0.08).timeout
+	return true
+
 func _wait_popup_visible(popup: Window, label: String, timeout_seconds := 5.0) -> bool:
 	if popup == null:
 		_fail("Popup missing: %s" % label, 9)
@@ -148,8 +169,6 @@ func _populate_chat(main: Control, mobile: bool) -> bool:
 		_fail("ChatStore missing during visual capture", 10)
 		return false
 
-	# Structural smoke may leave local test chats behind in the same workspace.
-	# Visual review must represent a deterministic clean product surface.
 	store.chats.clear()
 	store.active_chat_id = ""
 	store.save_all()
@@ -167,9 +186,6 @@ func _populate_chat(main: Control, mobile: bool) -> bool:
 
 func _instantiate(packed: PackedScene, size: Vector2i, mobile: bool) -> Control:
 	ProjectSettings.set_setting("aurorafox/testing/mobile_preview", mobile)
-	# The visual gate controls the physical window size. Content scaling remains
-	# production-like, but X11/test-runner minimum-size drift must not silently
-	# turn a 480 px test into a 960 px screenshot.
 	root.wrap_controls = false
 	root.min_size = Vector2i(1, 1)
 	root.size = size
@@ -181,9 +197,6 @@ func _instantiate(packed: PackedScene, size: Vector2i, mobile: bool) -> Control:
 	root.add_child(main)
 	await create_timer(1.25).timeout
 	await process_frame
-	# MobileUI may update virtual content scale after _ready(); restore only the
-	# physical window requested by the acceptance scenario and let its production
-	# scaling policy continue to determine content_scale_size.
 	root.wrap_controls = false
 	root.min_size = Vector2i(1, 1)
 	root.size = size
@@ -206,8 +219,13 @@ func _open_settings_by_click(main: Control) -> AuroraSettingsOverlay:
 
 func _capture_settings_page(settings: AuroraSettingsOverlay, key: String, click_label: String, image_name: String, surface: String) -> bool:
 	var nav := _button_by_name(settings.popup, "SettingsNav_" + key)
-	if not await _press(nav, click_label):
-		return false
+	if nav != null:
+		if not await _press(nav, click_label):
+			return false
+	else:
+		var selector := settings.popup.find_child("SettingsMobileNavigation", true, false) as OptionButton
+		if not await _select_option(selector, key, click_label):
+			return false
 	return await _capture(image_name, surface)
 
 func _open_knowledge_by_click(settings: AuroraSettingsOverlay) -> KnowledgeBaseOverlay:
