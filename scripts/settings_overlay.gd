@@ -101,10 +101,6 @@ func _build_ui() -> void:
 	popup.add_theme_stylebox_override("panel", _panel_style())
 	layer.add_child(popup)
 
-	# Older integration overlays used to inject controls into the first large VBox
-	# they could find. Keep a hidden compatibility sink so those legacy injections
-	# never break the paged settings layout while their real entry points live on
-	# the Tools page below.
 	var legacy_sink := VBoxContainer.new()
 	legacy_sink.name = "LegacySettingsInjectionSink"
 	legacy_sink.visible = false
@@ -621,7 +617,7 @@ func _sync_core_status() -> void:
 	if not ai is AIClient:
 		core_status.text = "AuroraFox Core: клиент не подключён"
 		return
-	var available := await ai.is_available()
+	var available: bool = bool(await ai.is_available())
 	core_status.text = "AuroraFox Core: готов и используется как основной локальный интеллект" if available else "AuroraFox Core: запускается; внешний AI не подменяет основной режим"
 	core_status.add_theme_color_override("font_color", GREEN if available else WARNING)
 
