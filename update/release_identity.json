@@ -3,7 +3,7 @@
   "android_package": "com.aurorafox.ai",
   "android_alias": "aurorafox",
   "android_signing_cert_sha256": "79:B9:45:19:12:D7:4E:D9:BF:FB:1B:40:70:79:57:86:47:0E:6A:26:D1:BC:28:33:21:3D:E3:09:2D:79:3C:93",
-  "update_signing_public_key_sha256": "1ecc01d6d7664c5c9d4c3a8116f1ef4d1ee555f57781dd843fb3ad2ca0717b0f",
+  "update_signing_public_key_sha256": "9cd72647edfa647a2988cc094080597860de8ce386bcfb1b40c2360e363d8ae7",
   "signed_update_floor": "1.4.0.0",
   "legacy_repair_required_through": "1.3.0.0",
   "notes": "Permanent release identity. Private keys are owner-controlled secrets and must never be committed."
