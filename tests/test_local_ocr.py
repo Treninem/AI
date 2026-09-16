@@ -96,6 +96,38 @@ def test_mixed_pdf_only_ocrs_deficient_page(tmp_path, monkeypatch):
     assert "Embedded text page" in text and "OCR SECOND" in text
 
 
+def test_pdf_output_budget_stops_further_ocr_work(tmp_path, monkeypatch):
+    pdf = tmp_path / "bounded.pdf"
+    writer = PdfWriter()
+    for _ in range(4):
+        writer.add_blank_page(width=612, height=792)
+    with pdf.open("wb") as f:
+        writer.write(f)
+    monkeypatch.setattr(file_service, "local_ocr_health", lambda: {"available": True, "engine": "test"})
+    calls = []
+    monkeypatch.setattr(
+        file_service,
+        "local_ocr_image",
+        lambda _im, page_number=None: (calls.append(page_number) or {"ok": True, "text": "X" * 500}),
+    )
+    text, meta, warnings = file_service._pdf_extract(pdf, False, "", max_chars=120)
+    assert calls == [1]
+    assert len(text) == 120
+    assert meta["pages"] == 4
+    assert meta["pages_processed"] == 1
+    assert meta["output_limit_chars"] == 120
+    assert meta["output_truncated"] is True
+    assert any("120" in warning for warning in warnings)
+
+
+def test_cache_key_separates_output_budgets(tmp_path):
+    source = tmp_path / "cache.txt"
+    source.write_text("AuroraFox cache budget", encoding="utf-8")
+    small = file_service._cache_key(source, "", False, 2000)
+    large = file_service._cache_key(source, "", False, 160000)
+    assert small != large
+
+
 def test_empty_page_and_missing_runtime_degrade_without_crash(tmp_path, monkeypatch):
     pdf = tmp_path / "empty.pdf"
     writer = PdfWriter(); writer.add_blank_page(width=612, height=792)
