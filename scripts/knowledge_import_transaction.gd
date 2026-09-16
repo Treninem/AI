@@ -7,6 +7,7 @@ const REGISTRY_PATH := KnowledgeSourceRegistry.REGISTRY_PATH
 const DB_BACKUP := "user://knowledge/.knowledge_source.txn.jsonl"
 const STRUCTURED_BACKUP := "user://knowledge/.structured_source.txn.jsonl"
 const REGISTRY_BACKUP := "user://knowledge/.sources.json.txn"
+const REGISTRY_RECOVERY_MARKER := "user://knowledge/.registry_recovery_required"
 
 # Transaction journals use fixed user:// paths. Multiple imports in one process
 # therefore cannot safely mutate them concurrently. Serialize the full
@@ -14,6 +15,7 @@ const REGISTRY_BACKUP := "user://knowledge/.sources.json.txn"
 # files and registry writes to race. Callers may still launch imports from
 # different threads; they are explicitly queued here.
 static var _transaction_mutex: Mutex = Mutex.new()
+static var _registry_recovery_required_in_process := false
 
 var registry := KnowledgeSourceRegistry.new()
 var large_json_importer := LargeJsonKnowledgeImporter.new()
@@ -31,7 +33,7 @@ func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictiona
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var preserve_existing_source := not existing.is_empty() or not _registry_is_valid_authority()
+	var preserve_existing_source := not existing.is_empty() or not _registry_fast_path_allowed()
 	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
@@ -56,7 +58,7 @@ func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: St
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var preserve_existing_source := not existing.is_empty() or not _registry_is_valid_authority()
+	var preserve_existing_source := not existing.is_empty() or not _registry_fast_path_allowed()
 	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
@@ -89,19 +91,41 @@ func _prepare_file(path: String, metadata: Dictionary) -> Dictionary:
 		meta["parser_version"] = "aurora_json_stream_v1"
 	return {"ok": true, "inspection": inspection, "metadata": meta}
 
-func _registry_is_valid_authority() -> bool:
-	if not FileAccess.file_exists(REGISTRY_PATH):
+func _registry_fast_path_allowed() -> bool:
+	if _registry_recovery_required_in_process or FileAccess.file_exists(REGISTRY_RECOVERY_MARKER):
 		return false
-	var file := FileAccess.open(REGISTRY_PATH, FileAccess.READ)
+	if registry.storage_is_valid():
+		return true
+	if _store_has_persistent_rows():
+		_mark_registry_recovery_required()
+	return false
+
+func _store_has_persistent_rows() -> bool:
+	return _file_has_nonempty_line(DB_PATH) or _file_has_nonempty_line(STRUCTURED_PATH)
+
+func _file_has_nonempty_line(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return false
-	var parsed = JSON.parse_string(file.get_as_text())
+		return true
+	while not file.eof_reached():
+		if not file.get_line().strip_edges().is_empty():
+			file.close()
+			return true
 	file.close()
-	if not parsed is Dictionary:
-		return false
-	if int(parsed.get("schema_version", 0)) != KnowledgeSourceRegistry.REGISTRY_VERSION:
-		return false
-	return parsed.get("sources", null) is Array
+	return false
+
+func _mark_registry_recovery_required() -> void:
+	_registry_recovery_required_in_process = true
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REGISTRY_RECOVERY_MARKER.get_base_dir()))
+	var file := FileAccess.open(REGISTRY_RECOVERY_MARKER, FileAccess.WRITE)
+	if file != null:
+		file.store_string(JSON.stringify({
+			"reason": "registry_missing_or_invalid_with_existing_store_rows",
+			"created_at": Time.get_datetime_string_from_system(true)
+		}))
+		file.close()
 
 func _finish_import(path: String, result: Dictionary, inspection: Dictionary, metadata: Dictionary, snapshot: Dictionary) -> Dictionary:
 	if bool(result.get("ok", false)):
