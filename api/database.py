@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import threading
 import time
 from contextlib import contextmanager
 from pathlib import Path
@@ -173,7 +174,7 @@ def atomic_write_text(path: Path, text: str, *, mode: int | None = None) -> None
     """Crash-safe same-directory text replacement used by rollback mirrors."""
 
     path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(path.name + f".{os.getpid()}.tmp")
+    temporary = path.with_name(path.name + f".{os.getpid()}.{threading.get_ident()}.{time.time_ns()}.tmp")
     try:
         with temporary.open("w", encoding="utf-8", newline="\n") as stream:
             stream.write(text)
