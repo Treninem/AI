@@ -10,7 +10,7 @@ import pytest
 
 from api.account_store import AccountStore
 from api.auth import KeyStore
-from api.backup_service import BackupService, BackupTooLarge
+from api.backup_service import BackupService, BackupStoragePressure, BackupTooLarge
 
 
 def _sha256(data: bytes) -> str:
@@ -72,6 +72,8 @@ def test_backup_excludes_credential_files_and_manifest_is_verifiable(tmp_path: P
         assert manifest["schema"] == "aurorafox.backup.v1"
         assert manifest["credential_files_included"] is False
         assert manifest["database_credentials_sanitized"] is True
+        assert manifest["storage_maintenance"] is not None
+        assert manifest["storage_maintenance"]["hard_pressure"] is False
         assert manifest["file_count"] == 4
         api_item = next(item for item in manifest["files"] if item["path"] == "data/api/aurorafox.sqlite3")
         assert api_item["credentials_sanitized"] is True
@@ -111,6 +113,16 @@ def test_backup_size_limit_fails_closed(tmp_path: Path):
     (root / "memory.json").write_text('{"payload":"too large"}\n', encoding="utf-8")
     with pytest.raises(BackupTooLarge):
         BackupService(root, tmp_path / "cache", max_source_bytes=4).create_archive()
+
+
+def test_backup_fails_before_snapshot_when_disk_pressure_is_critical(tmp_path: Path, monkeypatch):
+    root = tmp_path / "user"
+    api_root = root / "api"
+    AccountStore(api_root)
+    monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", str(10**18))
+    with pytest.raises(BackupStoragePressure, match="critically low free space"):
+        BackupService(root, tmp_path / "cache").create_archive()
+    assert not list((tmp_path / "cache").glob("AuroraFox-Server-Backup-*.zip"))
 
 
 def test_latest_export_is_atomic_and_has_detached_hash(tmp_path: Path):
