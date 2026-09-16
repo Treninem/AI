@@ -33,12 +33,27 @@ class AndroidOcrRuntime(private val context: Context) {
     private val tessdata = File(dataRoot, "tessdata").apply { mkdirs() }
 
     fun health(): JSONObject = JSONObject().apply {
-        val ready = try { ensureModels(); true } catch (_: Throwable) { false }
+        var ready = false
+        var healthError = ""
+        try {
+            ensureModels()
+            val api = TessBaseAPI()
+            try {
+                ready = api.init(dataRoot.absolutePath, LANGUAGES)
+                if (!ready) healthError = "Tesseract native init failed"
+            } finally {
+                api.recycle()
+            }
+        } catch (t: Throwable) {
+            healthError = t.message ?: t.javaClass.simpleName
+        }
         put("available", ready)
         put("engine", "tesseract4android")
         put("languages", JSONArray(listOf("rus", "eng")))
         put("network_required", false)
         put("external_ai_required", false)
+        put("native_init_checked", true)
+        if (healthError.isNotBlank()) put("error", healthError.take(500))
         put("max_pdf_bytes", MAX_PDF_BYTES)
         put("max_pages", MAX_PAGES)
         put("max_ocr_pages", MAX_OCR_PAGES)
