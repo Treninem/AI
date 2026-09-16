@@ -7,14 +7,119 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from api.database import AuroraDatabase, atomic_write_text
+
 
 class LearningStore:
+    LEGACY_MIGRATION_KEY = "migration.learning_events.jsonl.v1"
+
     def __init__(self, root: Path, max_events: int = 10000):
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "learning_events.jsonl"
         self.max_events = max(1000, max_events)
-        self._lock = threading.Lock()
+        self.database = AuroraDatabase(self.root / "aurorafox.sqlite3")
+        self._mirror_lock = threading.Lock()
+        self._migrate_legacy_once()
+
+    @staticmethod
+    def _row_event(row: Any) -> dict[str, Any]:
+        try:
+            payload = json.loads(str(row["payload_json"]))
+        except Exception:
+            payload = {}
+        if not isinstance(payload, dict):
+            payload = {}
+        return {
+            "id": str(row["id"]),
+            "kind": str(row["kind"]),
+            "time": int(row["created_at"]),
+            "synced": bool(row["synced"]),
+            "payload": payload,
+        }
+
+    def _migrate_legacy_once(self) -> None:
+        if self.database.get_meta(self.LEGACY_MIGRATION_KEY) is not None:
+            return
+        imported = 0
+        malformed = 0
+        lines: list[str] = []
+        if self.path.is_file():
+            try:
+                lines = self.path.read_text(encoding="utf-8").splitlines()
+            except Exception:
+                lines = []
+        with self.database.connection(write=True) as connection:
+            for line in lines[-self.max_events :]:
+                try:
+                    event = json.loads(line)
+                except Exception:
+                    malformed += 1
+                    continue
+                if not isinstance(event, dict):
+                    malformed += 1
+                    continue
+                event_id = str(event.get("id", "")).strip()
+                kind = str(event.get("kind", "")).strip()
+                payload = event.get("payload", {})
+                if not event_id or not kind or not isinstance(payload, dict):
+                    malformed += 1
+                    continue
+                before = connection.total_changes
+                connection.execute(
+                    "INSERT OR IGNORE INTO learning_events(id, kind, created_at, synced, payload_json) "
+                    "VALUES(?, ?, ?, ?, ?)",
+                    (
+                        event_id,
+                        kind,
+                        int(event.get("time", int(time.time()))),
+                        1 if bool(event.get("synced", False)) else 0,
+                        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                    ),
+                )
+                if connection.total_changes > before:
+                    imported += 1
+            connection.execute(
+                "INSERT INTO metadata(key, value, updated_at) VALUES(?, ?, ?) "
+                "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
+                (
+                    self.LEGACY_MIGRATION_KEY,
+                    json.dumps({"imported": imported, "malformed": malformed}, separators=(",", ":")),
+                    int(time.time()),
+                ),
+            )
+        self._rewrite_legacy_mirror()
+
+    def _all_events(self) -> list[dict[str, Any]]:
+        with self.database.connection() as connection:
+            rows = connection.execute(
+                "SELECT id, kind, created_at, synced, payload_json FROM learning_events "
+                "ORDER BY created_at, rowid"
+            ).fetchall()
+        return [self._row_event(row) for row in rows]
+
+    def _rewrite_legacy_mirror(self) -> None:
+        events = self._all_events()[-self.max_events :]
+        payload = "".join(
+            json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
+            for event in events
+        )
+        with self._mirror_lock:
+            atomic_write_text(self.path, payload, mode=0o600)
+
+    def _append_legacy_mirror(self, event: dict[str, Any]) -> None:
+        line = json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
+        with self._mirror_lock:
+            self.path.parent.mkdir(parents=True, exist_ok=True)
+            with self.path.open("a", encoding="utf-8", newline="\n") as stream:
+                stream.write(line)
+                stream.flush()
+            # Occasional compaction is bounded and keeps rollback format aligned.
+            try:
+                if self.path.stat().st_size > 32 * 1024 * 1024:
+                    self._rewrite_legacy_mirror()
+            except OSError:
+                pass
 
     def append(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         event = {
@@ -24,57 +129,58 @@ class LearningStore:
             "synced": False,
             "payload": payload,
         }
-        line = json.dumps(event, ensure_ascii=False, separators=(",", ":"))
-        with self._lock:
-            with self.path.open("a", encoding="utf-8", newline="\n") as fh:
-                fh.write(line + "\n")
+        compacted = False
+        with self.database.connection(write=True) as connection:
+            connection.execute(
+                "INSERT INTO learning_events(id, kind, created_at, synced, payload_json) VALUES(?, ?, ?, 0, ?)",
+                (
+                    event["id"],
+                    kind,
+                    event["time"],
+                    json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                ),
+            )
+            count = int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0])
+            overflow = count - self.max_events
+            if overflow > 0:
+                connection.execute(
+                    "DELETE FROM learning_events WHERE id IN ("
+                    "SELECT id FROM learning_events ORDER BY created_at, rowid LIMIT ?)",
+                    (overflow,),
+                )
+                compacted = True
+        if compacted:
+            self._rewrite_legacy_mirror()
+        else:
+            self._append_legacy_mirror(event)
         return event
 
     def pending(self, limit: int = 100) -> list[dict[str, Any]]:
-        if not self.path.is_file():
-            return []
-        out: list[dict[str, Any]] = []
-        with self._lock:
-            try:
-                lines = self.path.read_text(encoding="utf-8").splitlines()
-            except Exception:
-                return []
-        for line in lines:
-            try:
-                event = json.loads(line)
-            except Exception:
-                continue
-            if not isinstance(event, dict) or event.get("synced", False):
-                continue
-            out.append(event)
-            if len(out) >= max(1, limit):
-                break
-        return out
+        with self.database.connection() as connection:
+            rows = connection.execute(
+                "SELECT id, kind, created_at, synced, payload_json FROM learning_events "
+                "WHERE synced=0 ORDER BY created_at, rowid LIMIT ?",
+                (max(1, limit),),
+            ).fetchall()
+        return [self._row_event(row) for row in rows]
 
     def mark_synced(self, event_ids: set[str]) -> int:
-        if not event_ids or not self.path.is_file():
+        normalized = sorted({str(value) for value in event_ids if str(value)})
+        if not normalized:
             return 0
-        with self._lock:
-            try:
-                lines = self.path.read_text(encoding="utf-8").splitlines()
-            except Exception:
-                return 0
-            changed = 0
-            kept: list[str] = []
-            for line in lines:
-                try:
-                    event = json.loads(line)
-                except Exception:
-                    kept.append(line)
-                    continue
-                if isinstance(event, dict) and str(event.get("id", "")) in event_ids:
-                    event["synced"] = True
-                    changed += 1
-                kept.append(json.dumps(event, ensure_ascii=False, separators=(",", ":")))
-            # Keep the recent tail so the file remains bounded.
-            if len(kept) > self.max_events:
-                kept = kept[-self.max_events :]
-            tmp = self.path.with_suffix(".tmp")
-            tmp.write_text("\n".join(kept) + ("\n" if kept else ""), encoding="utf-8")
-            tmp.replace(self.path)
-            return changed
+        placeholders = ",".join("?" for _ in normalized)
+        with self.database.connection(write=True) as connection:
+            cursor = connection.execute(
+                f"UPDATE learning_events SET synced=1 WHERE synced=0 AND id IN ({placeholders})",
+                tuple(normalized),
+            )
+            changed = cursor.rowcount
+        if changed:
+            self._rewrite_legacy_mirror()
+        return int(changed)
+
+    def status(self) -> dict[str, Any]:
+        with self.database.connection() as connection:
+            total = int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0])
+            pending = int(connection.execute("SELECT COUNT(*) FROM learning_events WHERE synced=0").fetchone()[0])
+        return {"ok": True, "total": total, "pending": pending, "database": str(self.database.path)}
