@@ -10,7 +10,9 @@ const CONTROL_PREFIX := "__AURORA_WORK_CONTROL__:"
 const SAFE_TOOL_NAMES := [
 	"workspace_read", "workspace_list", "workspace_status", "workspace_snapshot_list",
 	"project_index_status", "search_project", "search_symbols", "project_compare_file",
-	"trusted_projects", "file_read", "file_stat", "computer_screenshot", "computer_windows",
+	"trusted_projects", "read_file", "list_dir", "file_tree", "search_file_cache",
+	"git_status", "git_diff", "system_info", "screen_snapshot", "computer_screenshot",
+	"computer_windows", "sandbox_read",
 ]
 
 var store := AuroraWorkStore.new()
@@ -68,6 +70,7 @@ func execute_task(project_id: String, task_id: String) -> Dictionary:
 		"execution_id": execution_id,
 		"cancel_requested": false,
 		"pause_requested": false,
+		"unsafe_action_inflight": false,
 	}
 	_action_sequence[task_id] = 0
 	_sync_running_flag()
@@ -165,6 +168,14 @@ func _execution_guard(stage: String, details: Dictionary, project_id: String, ta
 		_action_sequence[task_id] = seq
 		var action_id := "%s:%d" % [execution_id, seq]
 		store.note_action(project_id, task_id, tool_name, action_id, safety)
+		if _running_tasks.has(task_id):
+			var control: Dictionary = _running_tasks[task_id]
+			control["unsafe_action_inflight"] = safety == "unsafe"
+			_running_tasks[task_id] = control
+	elif stage == "after_tool" and _running_tasks.has(task_id):
+		var control: Dictionary = _running_tasks[task_id]
+		control["unsafe_action_inflight"] = false
+		_running_tasks[task_id] = control
 	return {"allowed": true}
 
 func _control_reason(project_id: String, task_id: String, execution_id: String) -> String:
@@ -188,19 +199,40 @@ func _finish_controlled(project_id: String, task_id: String, execution_id: Strin
 	var reason := reason_override.strip_edges()
 	if reason.is_empty():
 		reason = _control_reason(project_id, task_id, execution_id)
+	var control: Dictionary = _running_tasks.get(task_id, {})
+	var unsafe_inflight := bool(control.get("unsafe_action_inflight", false))
 	if reason == "cancelled":
+		if unsafe_inflight:
+			store.transition_task(project_id, task_id, AuroraWorkStore.STATE_CANCELLED, {
+				"message": "Cancelled after a potentially unsafe action; verify the observed result before any retry",
+				"cancel_requested": true,
+				"requires_user_action": true,
+				"retryable": false,
+				"last_error": "A potentially unsafe action may have completed before cancellation was observed",
+			}, false)
+			_cleanup_execution(task_id)
+			task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_CANCELLED)
+			return {"ok": false, "error": "Задача отменена после потенциально опасного действия; требуется проверка результата", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_CANCELLED, "task_id": task_id}
 		store.finalize_cancel(project_id, task_id, "Cancelled by user")
 		_cleanup_execution(task_id)
 		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_CANCELLED)
 		return {"ok": false, "error": "Задача отменена", "retryable": true, "state": AuroraWorkStore.STATE_CANCELLED, "task_id": task_id}
 	if reason in ["paused", "master_stop"]:
+		if unsafe_inflight:
+			store.interrupt_task(project_id, task_id, "A potentially unsafe action may have completed before pause/master stop was observed", true)
+			store.update_task(project_id, task_id, {"retryable": false})
+			_cleanup_execution(task_id)
+			task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_INTERRUPTED)
+			return {"ok": false, "error": "Автономное выполнение остановлено после потенциально опасного действия; требуется проверка результата", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
 		store.pause_task(project_id, task_id, "Paused" if reason == "paused" else "Master stop active")
 		_cleanup_execution(task_id)
 		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_PAUSED)
 		return {"ok": false, "error": "Задача приостановлена" if reason == "paused" else "Master stop активен", "retryable": false, "state": AuroraWorkStore.STATE_PAUSED, "task_id": task_id}
 	var task := store.get_task(project_id, task_id)
-	var unsafe := str(task.get("last_action_retry_safety", "safe")) == "unsafe"
+	var unsafe := unsafe_inflight or str(task.get("last_action_retry_safety", "safe")) == "unsafe"
 	store.interrupt_task(project_id, task_id, "Execution interrupted before a confirmed completion", unsafe)
+	if unsafe:
+		store.update_task(project_id, task_id, {"retryable": false})
 	_cleanup_execution(task_id)
 	task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_INTERRUPTED)
 	return {"ok": false, "error": "Выполнение прервано", "retryable": not unsafe, "requires_user_action": unsafe, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
