@@ -17,7 +17,7 @@ func _ready() -> void:
 	_load_core_settings()
 	# Normal users never select/download a model. The application ships its own
 	# AuroraFox Core weights. Windows uses the packaged file directly; Android
-	# silently provisions the signed APK asset into private storage once.
+	# silently provisions the APK asset into private storage once.
 	var bundled := AuroraBundledCoreModel.runtime_candidate()
 	if not bundled.is_empty():
 		android_model_path = bundled
@@ -45,6 +45,32 @@ func ollama_fallback_enabled() -> bool:
 
 func core_engine_installer() -> String:
 	return core_runtime.core_engine_installer()
+
+func warmup() -> Dictionary:
+	# Warm the shipped Core without sending a synthetic user prompt. On Windows
+	# this starts llama-server and loads the built-in weights before the first
+	# real chat message. Android provisioning already happens while AIClient is
+	# created, so warmup only verifies runtime readiness there.
+	var bundled := AuroraBundledCoreModel.runtime_candidate()
+	if not bundled.is_empty():
+		android_model_path = bundled
+		core_runtime.configure_model(bundled)
+	if OS.get_name() == "Windows":
+		if bundled.is_empty():
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core отсутствует в установленном пакете"}
+		if not core_runtime.desktop_runtime.is_available():
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует в установленном пакете"}
+		var absolute := ProjectSettings.globalize_path(bundled) if bundled.begins_with("user://") or bundled.begins_with("res://") else bundled
+		return await core_runtime.desktop_runtime.ensure_server(absolute)
+	if OS.get_name() == "Android":
+		var caps := core_runtime.android_runtime.capabilities()
+		return {
+			"ok": not bundled.is_empty() and bool(caps.get("llama_cpp", false)),
+			"runtime": "aurora_core_android",
+			"bundled_core": not bundled.is_empty(),
+			"capabilities": caps
+		}
+	return {"ok": not bundled.is_empty(), "runtime": "aurora_core", "bundled_core": not bundled.is_empty()}
 
 func chat(messages: Array, temperature: float = 0.2) -> Dictionary:
 	return await core_runtime.chat(_with_knowledge(messages), temperature)
