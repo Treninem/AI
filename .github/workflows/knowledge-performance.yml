@@ -58,6 +58,7 @@ jobs:
           python -m py_compile
           benchmarks/knowledge/run_knowledge_benchmark.py
           benchmarks/knowledge/run_knowledge_benchmark_portable.py
+          benchmarks/knowledge/run_godot_probe.py
           benchmarks/knowledge/compare_reports.py
           benchmarks/knowledge/validate_performance_report.py
           benchmarks/knowledge/run_memory_scaling.py
@@ -83,6 +84,13 @@ jobs:
           ./godot --version
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Reproduce dedupe alias removal safety
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
+          --report artifacts/knowledge-performance/dedupe-alias-removal.json
       - name: Run bounded knowledge smoke benchmark
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
       - name: Validate smoke correctness
