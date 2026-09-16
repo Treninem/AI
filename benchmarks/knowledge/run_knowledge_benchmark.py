@@ -289,8 +289,20 @@ def memory_scaling_findings(results: list[dict[str, Any]]) -> list[dict[str, Any
     return out
 
 
-def comparable_identity() -> dict[str, Any]:
-    return {
+def _godot_version(runtime: dict[str, Any]) -> str:
+    value = runtime.get("godot", {})
+    if not isinstance(value, dict):
+        return str(value or "")
+    if value.get("string"):
+        return str(value.get("string"))
+    major, minor, patch = value.get("major", ""), value.get("minor", ""), value.get("patch", "")
+    status = str(value.get("status", ""))
+    version = ".".join(str(part) for part in (major, minor, patch) if str(part) != "")
+    return version + (f"-{status}" if status else "")
+
+
+def comparable_identity(results: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+    identity: dict[str, Any] = {
         "os": platform.system(),
         "os_release": platform.release(),
         "machine": platform.machine(),
@@ -301,6 +313,45 @@ def comparable_identity() -> dict[str, Any]:
         "runner_os": os.environ.get("RUNNER_OS", ""),
         "runner_arch": os.environ.get("RUNNER_ARCH", ""),
         "git_sha": os.environ.get("GITHUB_SHA", ""),
+    }
+    for row in results or []:
+        runtime = row.get("runtime", {}) if isinstance(row, dict) else {}
+        if not isinstance(runtime, dict) or not runtime:
+            continue
+        identity["processor_name"] = str(runtime.get("processor_name", ""))
+        identity["godot_architecture"] = str(runtime.get("architecture", ""))
+        identity["godot_version"] = _godot_version(runtime)
+        break
+    return identity
+
+
+def aggregate_counts(results: list[dict[str, Any]], hard_errors: list[dict[str, Any]]) -> dict[str, int]:
+    dataset_bytes = 0
+    records = 0
+    chunks = 0
+    duplicate_count = 0
+    for row in results:
+        if not isinstance(row, dict):
+            continue
+        dataset = row.get("dataset", {})
+        if isinstance(dataset, dict):
+            dataset_bytes += int(dataset.get("bytes", 0) or 0)
+        records += int(row.get("records", 0) or 0)
+        chunks += int(row.get("chunks", 0) or 0)
+        if row.get("scenario") == "dedupe_reimport":
+            for key in ("same_path_duplicate", "renamed_duplicate"):
+                event = row.get(key, {})
+                if isinstance(event, dict) and bool(event.get("duplicate", False)) and bool(event.get("skipped", False)):
+                    duplicate_count += 1
+        elif bool(row.get("duplicate", False)):
+            duplicate_count += 1
+    return {
+        "case_count": len(results),
+        "dataset_bytes_total": dataset_bytes,
+        "records_reported_total": records,
+        "chunks_reported_total": chunks,
+        "duplicate_count": duplicate_count,
+        "error_count": len(hard_errors),
     }
 
 
@@ -373,11 +424,15 @@ def main() -> int:
             shutil.rmtree(user_root, ignore_errors=True)
 
     scaling = scaling_findings(results)
+    counts = aggregate_counts(results, hard_errors)
     report: dict[str, Any] = {
         "schema": "aurorafox_knowledge_performance_v1",
         "generated_at_unix": time.time(),
         "profile": args.profile,
-        "platform_runtime_identity": comparable_identity(),
+        "platform_runtime_identity": comparable_identity(results),
+        "summary_counts": counts,
+        "error_count": counts["error_count"],
+        "duplicate_count": counts["duplicate_count"],
         "self_reliance_contract": {
             "network_required": False,
             "external_runtime_required": False,
@@ -406,7 +461,7 @@ def main() -> int:
         "results": results,
     }
     report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(json.dumps({"report": str(report_path), "passed": not hard_errors, "cases": len(results), "suspected_quadratic": report["relative_performance"]["suspected_quadratic"]}, ensure_ascii=False))
+    print(json.dumps({"report": str(report_path), "passed": not hard_errors, "cases": len(results), "error_count": counts["error_count"], "duplicate_count": counts["duplicate_count"], "suspected_quadratic": report["relative_performance"]["suspected_quadratic"]}, ensure_ascii=False))
     return 0 if not hard_errors else 1
 
 
