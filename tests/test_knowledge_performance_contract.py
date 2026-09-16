@@ -83,6 +83,18 @@ class KnowledgePerformanceContractTests(unittest.TestCase):
         self.assertIn("ratio >= 3.5", text)
         self.assertIn("bounded execution timeout", text)
 
+    def test_windows_isolated_profile_bootstraps_project_before_benchmark(self) -> None:
+        text = RUNNER_PATH.read_text(encoding="utf-8")
+        self.assertIn("def prepare_isolated_project(", text)
+        self.assertIn('if sys.platform != "win32":', text)
+        self.assertIn('"--headless", "--editor", "--path", str(repo), "--quit"', text)
+        self.assertIn(".godot-isolated-project-prepared", text)
+        self.assertIn("bootstrap_error = prepare_isolated_project", text)
+        # Keep isolation: the fix must not fall back to the developer/runner's
+        # normal APPDATA and accidentally write benchmark state there.
+        self.assertIn('"APPDATA": str(appdata)', text)
+        self.assertIn('"LOCALAPPDATA": str(localappdata)', text)
+
 
 if __name__ == "__main__":
     unittest.main()
