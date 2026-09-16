@@ -114,6 +114,11 @@ func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary
 		return {"ok": false, "http": code, "error": str(response.get("error", "http_error")), "message": str(response.get("detail", response.get("message", "Computer service error"))).substr(0, 2048), "retryable": code in [408, 429, 502, 503, 504]}
 	return response
 
+func _computer_permission() -> Dictionary:
+	if ComputerClient.computer_control_enabled():
+		return {"ok": true}
+	return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
+
 func _http_get(args: Dictionary) -> Dictionary:
 	var url := str(args.get("url", ""))
 	if not (url.begins_with("http://") or url.begins_with("https://")):
@@ -223,12 +228,18 @@ func _computer_goal(_args: Dictionary) -> Dictionary:
 	return {"ok": false, "error": "local_core_planning_required", "message": "Computer goals must be planned by local AuroraFox Core and executed as explicit computer_action primitives.", "retryable": false}
 
 func _computer_action(args: Dictionary) -> Dictionary:
+	var permission := _computer_permission()
+	if not permission.get("ok", false):
+		return permission
 	var payload := args.duplicate(true)
 	if str(payload.get("action_id", "")).strip_edges().is_empty():
 		payload["action_id"] = "%d:%d" % [OS.get_process_id(), Time.get_ticks_usec()]
 	return await _computer_json("/action", HTTPClient.METHOD_POST, payload, 16.0)
 
 func _computer_screenshot(_args: Dictionary) -> Dictionary:
+	var permission := _computer_permission()
+	if not permission.get("ok", false):
+		return permission
 	return await _computer_json("/screen", HTTPClient.METHOD_GET, {}, 16.0)
 
 func _sandbox_exec(args: Dictionary) -> Dictionary:
@@ -244,4 +255,7 @@ func _sandbox_read(args: Dictionary) -> Dictionary:
 	return await _computer_json("/sandbox/read?path=" + encoded, HTTPClient.METHOD_GET, {}, 12.0)
 
 func _screen_snapshot(_args: Dictionary) -> Dictionary:
+	var permission := _computer_permission()
+	if not permission.get("ok", false):
+		return permission
 	return await _computer_json("/windows", HTTPClient.METHOD_GET, {}, 16.0)
