@@ -217,6 +217,30 @@ def test_public_account_links_and_auth_limits_are_same_sha_covered() -> None:
     assert "test_forwarded_for_is_trusted_only_from_loopback_proxy" in auth_limits
 
 
+def test_code_specialist_normal_path_is_bundled_core_only() -> None:
+    source = read("scripts/code_specialist.gd")
+    setup_start = source.find("func setup(")
+    chat_start = source.find("func _chat_code(")
+    assert setup_start >= 0
+    assert chat_start >= 0
+    setup_end = source.find("\nfunc ", setup_start + 1)
+    chat_end = source.find("\nfunc ", chat_start + 1)
+    setup = source[setup_start:] if setup_end < 0 else source[setup_start:setup_end]
+    chat = source[chat_start:] if chat_end < 0 else source[chat_start:chat_end]
+    lower = chat.lower()
+
+    assert "ai_client.base_url" not in setup, (
+        "CodeSpecialist.setup must not read the removed AIClient.base_url transport field; this crashes "
+        "normal scene/Work startup after the bundled-Core migration."
+    )
+    assert "await general_ai.chat(messages, temperature)" in chat, (
+        "CodeSpecialist normal generation must delegate to AIClient.chat(), whose normal path is bundled AuroraFox Core."
+    )
+    assert "httprequest.new()" not in lower
+    assert "ollama" not in lower
+    assert "/api/chat" not in lower
+
+
 def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
