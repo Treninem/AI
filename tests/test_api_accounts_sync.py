@@ -39,6 +39,54 @@ def test_accounts_are_case_insensitive_and_passwords_are_not_stored_plaintext(tm
     assert "scrypt" in str(params)
 
 
+def test_account_token_resend_cooldown_preserves_active_links(tmp_path: Path, monkeypatch):
+    store = AccountStore(tmp_path / "api", account_token_cooldown=300)
+    now = [1_000]
+    monkeypatch.setattr(store, "_now", lambda: now[0])
+
+    registered = store.register("links@example.com", "account links secure password", "Links")
+    first_verification = registered["verification_token"]
+    # A rapid resend is accepted by the public API but produces no replacement
+    # token, so an attacker cannot immediately invalidate the delivered link.
+    assert store.resend_verification("links@example.com") is None
+
+    now[0] += 301
+    second_verification = store.resend_verification("links@example.com")
+    assert second_verification is not None
+    assert second_verification != first_verification
+    assert store.verify_email(first_verification)["email_verified"] is True
+    with pytest.raises(AuthenticationError):
+        store.verify_email(second_verification)
+
+    first_reset = store.request_password_reset("links@example.com")
+    assert first_reset is not None
+    assert store.request_password_reset("links@example.com") is None
+    now[0] += 301
+    second_reset = store.request_password_reset("links@example.com")
+    assert second_reset is not None
+    assert second_reset != first_reset
+
+    store.reset_password(first_reset, "updated account links password")
+    with pytest.raises(AuthenticationError):
+        store.reset_password(second_reset, "should never be accepted")
+
+
+def test_concurrent_password_reset_requests_issue_one_token_inside_cooldown(tmp_path: Path):
+    store = AccountStore(tmp_path / "api", account_token_cooldown=300)
+    _verified_account(store, "reset-race@example.com", "concurrent reset password", "PC")
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        tokens = list(executor.map(lambda _index: store.request_password_reset("reset-race@example.com"), range(8)))
+    assert sum(token is not None for token in tokens) == 1
+
+    with sqlite3.connect(tmp_path / "api" / "aurorafox.sqlite3") as connection:
+        active = connection.execute(
+            "SELECT COUNT(*) FROM account_tokens WHERE purpose='reset_password' "
+            "AND used_at IS NULL AND revoked_at IS NULL"
+        ).fetchone()[0]
+    assert active == 1
+
+
 def test_access_refresh_rotation_replay_and_device_revoke(tmp_path: Path):
     store = AccountStore(tmp_path / "api", access_ttl=120, refresh_ttl=3600)
     session = _verified_account(store, "rotate@example.com", "very secure password", "Windows")
