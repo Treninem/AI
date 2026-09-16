@@ -16,10 +16,24 @@ import local_ocr
 import file_service
 
 
+def _font(size: int = 42):
+    candidates = [
+        Path("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"),
+        Path("C:/Windows/Fonts/arial.ttf"),
+    ]
+    for candidate in candidates:
+        if candidate.is_file():
+            return ImageFont.truetype(str(candidate), size=size)
+    try:
+        return ImageFont.truetype("DejaVuSans.ttf", size=size)
+    except OSError:
+        return ImageFont.load_default(size=size)
+
+
 def _image(text: str, size=(1400, 300)) -> Image.Image:
     im = Image.new("RGB", size, "white")
     draw = ImageDraw.Draw(im)
-    draw.text((40, 80), text, fill="black", font=ImageFont.load_default(size=42) if hasattr(ImageFont.load_default, "__call__") else None)
+    draw.text((40, 80), text, fill="black", font=_font(42))
     return im
 
 
