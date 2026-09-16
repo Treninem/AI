@@ -27,11 +27,13 @@ OUT.mkdir(parents=True, exist_ok=True)
 
 SAMPLES = [
     ("neutral_short", "neutral", 0.45, "Привет. Я Аврора Фокс. Чем я могу помочь тебе сегодня?"),
-    ("neutral_numbers", "neutral", 0.45, "Температура двадцать три градуса. Давление две целых четыре десятых бара."),
+    ("neutral_numbers", "neutral", 0.45, "Температура 23 градуса. Давление 2,4 бара."),
     ("thinking_long", "thinking", 0.65, "Сейчас проверю данные, сравню несколько вариантов и спокойно объясню, какой результат получился."),
     ("success", "success", 0.70, "Готово! Проверка завершена успешно, ошибок не обнаружено."),
     ("warning", "warning", 0.70, "Внимание. Давление выше заданного значения, лучше проверить линию подачи воздуха."),
 ]
+FEMALE_SPEAKERS = ("xenia", "baya", "kseniya")
+SPEAKER_SWEEP_TEXTS = (SAMPLES[0][3], SAMPLES[2][3], SAMPLES[4][3])
 
 
 def normalized(text: str) -> str:
@@ -90,6 +92,37 @@ def emotion_values(name: str, intensity: float) -> tuple[float, float, float]:
     return speed, pitch_factor - 1.0, mech
 
 
+def score_mos(model: UTMOSScoreTorch, audio: np.ndarray, sr: int) -> float:
+    with torch.inference_mode():
+        return float(model.score(resample_16k(audio, sr)).reshape(-1)[0].cpu())
+
+
+def synthesize_with_speaker(engine: SileroEngine, text: str, speaker: str) -> np.ndarray:
+    with torch.inference_mode():
+        audio = engine.model.apply_tts(text=prepare_for_speech(text), speaker=speaker, sample_rate=engine.sample_rate)
+    if isinstance(audio, torch.Tensor):
+        audio = audio.detach().cpu().numpy()
+    return np.asarray(audio, dtype=np.float32).reshape(-1)
+
+
+def speaker_sweep(engine: SileroEngine, mos_model: UTMOSScoreTorch) -> dict:
+    result: dict[str, dict] = {}
+    for speaker in FEMALE_SPEAKERS:
+        scores: list[float] = []
+        try:
+            preview: np.ndarray | None = None
+            for text in SPEAKER_SWEEP_TEXTS:
+                audio = synthesize_with_speaker(engine, text, speaker)
+                preview = audio if preview is None else preview
+                scores.append(score_mos(mos_model, audio, engine.sample_rate))
+            if preview is not None:
+                sf.write(OUT / f"speaker_{speaker}.wav", preview, engine.sample_rate, subtype="PCM_16")
+            result[speaker] = {"mean_utmos": float(np.mean(scores)), "scores": scores}
+        except Exception as exc:
+            result[speaker] = {"error": str(exc)}
+    return result
+
+
 def main() -> int:
     # Keep measurements repeatable across reruns so prosody changes can be
     # compared against a stable baseline rather than random execution noise.
@@ -104,7 +137,7 @@ def main() -> int:
     asr = pipeline(
         "automatic-speech-recognition",
         model="openai/whisper-tiny",
-        torch_dtype=torch.float32,
+        dtype=torch.float32,
         device=-1,
     )
 
@@ -135,9 +168,8 @@ def main() -> int:
 
         raw_16 = resample_16k(raw, sr)
         final_16 = resample_16k(final, sr)
-        with torch.inference_mode():
-            raw_score = float(mos_model.score(raw_16).reshape(-1)[0].cpu())
-            final_score = float(mos_model.score(final_16).reshape(-1)[0].cpu())
+        raw_score = score_mos(mos_model, raw, sr)
+        final_score = score_mos(mos_model, final, sr)
         recognized = str(asr({"array": final_16.squeeze(0).numpy(), "sampling_rate": 16000}, generate_kwargs={"language": "ru", "task": "transcribe"}).get("text", "")).strip()
         similarity = char_similarity(clean, recognized)
         metrics = audio_metrics(final, sr)
@@ -177,11 +209,29 @@ def main() -> int:
         if similarity < 0.62:
             failures.append(f"{sample_id}: ASR similarity {similarity:.3f} recognized={recognized!r}")
 
+    sweep = speaker_sweep(engine, mos_model)
+    report["speaker_sweep"] = sweep
+    configured_speaker = str(CONFIG["silero"].get("speaker", "xenia"))
+    valid_sweep = {
+        name: float(data["mean_utmos"])
+        for name, data in sweep.items()
+        if "mean_utmos" in data
+    }
+    if configured_speaker in valid_sweep and valid_sweep:
+        best_speaker, best_mos = max(valid_sweep.items(), key=lambda item: item[1])
+        configured_mos = valid_sweep[configured_speaker]
+        if best_speaker != configured_speaker and best_mos > configured_mos + 0.12:
+            failures.append(
+                f"speaker candidate {best_speaker} scores materially higher than {configured_speaker}: "
+                f"{best_mos:.3f} vs {configured_mos:.3f}"
+            )
+
     report["summary"] = {
         "raw_utmos_mean": float(np.mean(raw_mos)),
         "aurora_utmos_mean": float(np.mean(processed_mos)),
         "utmos_delta_mean": float(np.mean(processed_mos) - np.mean(raw_mos)),
         "asr_similarity_mean": float(np.mean(similarities)),
+        "speaker_sweep": valid_sweep,
         "failures": failures,
     }
     (OUT / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
