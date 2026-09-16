@@ -4,15 +4,17 @@
   "channel": "stable",
   "mandatory": false,
   "published_at": "",
-  "notes": "AuroraFox V1.3.0.0 local-first Core, knowledge, memory, Android document intelligence and updater hardening",
+  "notes": "AuroraFox V1.3.0.0 local-first Core and updater hardening",
   "compatibility": {
     "legacy_manifest": true,
-    "direct_update": true,
-    "oldest_direct_update_version": "1.0.0.0",
-    "oldest_embedded_updater_date": "2026-08-19",
+    "legacy_manifest_readable": true,
+    "legacy_direct_update": false,
+    "legacy_repair_required_through": "1.2.0.0",
+    "signed_direct_update": true,
+    "signed_update_floor": "1.3.0.0",
     "manifest_url_contract": "github_latest_update_json",
-    "windows_strategy": "full_zip_replace",
-    "android_strategy": "same_package_signed_apk"
+    "windows_strategy": "repair_installer_then_signed_full_zip_replace",
+    "android_strategy": "same_package_same_signing_identity_required"
   },
   "assets": {
     "windows": {
