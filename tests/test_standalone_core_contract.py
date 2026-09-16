@@ -30,14 +30,42 @@ def test_bundled_core_has_pinned_integrity_contract() -> None:
     assert "copied_hash != EXPECTED_SHA256" in source
 
 
-def test_normal_ai_client_uses_bundled_core_and_does_not_require_ollama() -> None:
+def test_normal_ai_client_is_self_primary_and_does_not_require_external_ai() -> None:
     client = read("scripts/ai_client.gd")
     runtime = read("scripts/aurora_core_runtime.gd")
+
+    # AuroraFox-owned Core is the product default.
     assert "AuroraBundledCoreModel.runtime_candidate()" in client
+    assert 'info["self_primary"] = true' in client
+    assert 'info["external_ai_required"] = false' in client
     assert 'info["operational_without_ollama"] = true' in client
+
+    # A third-party compatibility model must never be represented as the
+    # product's DEFAULT_MODEL. Legacy naming makes its limited role explicit.
+    assert 'const LEGACY_OLLAMA_DEFAULT_MODEL := "qwen3:8b"' in client
+    assert 'const LEGACY_OLLAMA_DEFAULT_URL := "http://127.0.0.1:11434"' in client
+    assert "const DEFAULT_MODEL" not in client
+    assert 'var model_source := "aurora_core"' not in client
+    assert "configure_ollama_compatibility" in client
+
+    # Local inference always runs before any explicitly enabled compatibility
+    # path, and that compatibility path is disabled by default and absent on Android.
     assert "var allow_ollama_fallback := false" in runtime
     assert runtime.index("var local := await _chat_local") < runtime.index("if allow_ollama_fallback")
     assert 'OS.get_name() != "Android"' in runtime
+
+
+def test_hard_self_reliance_requirement_is_documented_for_all_agents() -> None:
+    agents = read("AGENTS.md")
+    master = read("docs/PROJECT_MASTER_LOG.md")
+    readme = read("README.md")
+    assert "self-primary and self-reliant" in agents
+    assert "HARD PRODUCT INVARIANT" in agents
+    assert "depend and rely on its own Core" in agents
+    assert "External systems may be used only as **optional tools or information sources**" in agents
+    assert "самостоятель" in master.lower()
+    assert "внешн" in master.lower()
+    assert "AuroraFox Core" in readme
 
 
 def test_normal_scene_has_no_model_setup_wizard() -> None:
@@ -49,8 +77,8 @@ def test_normal_scene_has_no_model_setup_wizard() -> None:
 def test_windows_build_requires_engine_and_bundled_weights() -> None:
     build = read("build/build_windows.ps1")
     assert "prepare_bundled_windows_core.ps1" in build
-    assert 'llama-server.exe' in build
-    assert 'aurorafox-core.gguf' in build
+    assert "llama-server.exe" in build
+    assert "aurorafox-core.gguf" in build
     assert MODEL_BYTES in build
     assert MODEL_SHA in build
     assert "bundled AuroraFox Core remains mandatory" in build
