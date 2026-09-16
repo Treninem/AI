@@ -76,7 +76,10 @@ def test_repair_releases_are_separate_prereleases_not_stable_latest() -> None:
     assert "repair-v1.3-windows" in workflow
     assert "--prerelease" in workflow
     assert "--latest=false" in workflow
-    assert "releases/latest" not in workflow
+    # Querying releases/latest is required to prove isolation. The repair
+    # workflow must never publish or download repair payloads through that URL.
+    assert "releases/latest/download" not in workflow
+    assert "Verify repair tags cannot be stable latest" in workflow
     assert "Repair release illegally occupies stable latest" in workflow
 
 
@@ -96,6 +99,7 @@ def test_windows_package_is_only_artifact_producer_not_repair_release_writer() -
     workflow = (ROOT / ".github/workflows/windows-package-ci.yml").read_text(encoding="utf-8")
     assert "publish-v12-repair" not in workflow
     assert "gh release create" not in workflow
+    assert "gh release upload" not in workflow
     assert "tests/windows_v13_bridge_smoke.ps1" in workflow
     assert "update\\release_public.pub" in workflow
 
