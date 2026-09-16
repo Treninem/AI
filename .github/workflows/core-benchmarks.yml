@@ -133,6 +133,9 @@ jobs:
 
       - name: Prepare verified bundled AuroraFox Core
         shell: pwsh
+        env:
+          AURORAFOX_GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File build/prepare_bundled_windows_core.ps1 -CacheDir "$PWD\.ci\core-model-cache"
           if ($LASTEXITCODE -ne 0) { throw 'Bundled Core preparation failed' }
