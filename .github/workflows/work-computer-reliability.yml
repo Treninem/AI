@@ -35,6 +35,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: aurorafox-work-computer-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   computer-contract:
     runs-on: ubuntu-24.04
@@ -93,6 +97,8 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/work_mode_store_smoke.gd
       - name: Work reliability lifecycle and recovery smoke
         run: timeout 60s ./godot --headless --path . --script tests/work_reliability_store_smoke.gd
+      - name: Work fail-closed corruption and restart smoke
+        run: timeout 40s ./godot --headless --path . --script tests/work_reliability_fail_closed_smoke.gd
       - name: Work cancel and master-stop unsafe-action race smoke
         run: timeout 40s ./godot --headless --path . --script tests/work_computer_e2e_control_smoke.gd
       - name: Work whole-attempt destructive retry smoke
@@ -120,6 +126,7 @@ jobs:
           grep -q 'STATE_INTERRUPTED' work/work_store.gd
           grep -q 'requires_user_action' work/work_store.gd
           grep -q 'attempt_retry_safety' work/work_store.gd
+          grep -q 'unrecoverable_state_fail_closed' work/work_store.gd
           grep -q 'unsafe_action_seen' work/work_manager.gd
           grep -q 'shared_service_token' scripts/computer_client.gd
           grep -q 'computer_action' scripts/tool_registry.gd
