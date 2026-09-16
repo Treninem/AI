@@ -103,13 +103,20 @@ func _build_panel() -> void:
 
 	auto_toggle = CheckButton.new()
 	auto_toggle.name = "ComputerAgentAuto"
-	auto_toggle.text = "Разрешать локальному AuroraFox Core продолжать безопасную цепочку без подтверждения каждого шага"
+	auto_toggle.text = "Автопродолжение безопасной цепочки"
+	auto_toggle.tooltip_text = "Разрешить локальному AuroraFox Core продолжать безопасную цепочку без подтверждения каждого шага"
 	auto_toggle.button_pressed = auto_execute
 	auto_toggle.toggled.connect(func(value):
 		auto_execute = value
 		_refresh_control_state()
 	)
 	box.add_child(auto_toggle)
+	var auto_hint := Label.new()
+	auto_hint.text = "Работает только после явного разрешения компьютерного режима; permission и master stop продолжают действовать."
+	auto_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	auto_hint.add_theme_font_size_override("font_size", 12)
+	auto_hint.add_theme_color_override("font_color", Color("9fabc0"))
+	box.add_child(auto_hint)
 
 	status_label = Label.new()
 	status_label.name = "ComputerAgentStatus"
