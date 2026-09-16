@@ -1,5 +1,8 @@
 extends SceneTree
 
+const OWNER_AVATAR_MASTER := "res://assets/ui/aurorafox_avatar_master.png"
+const OWNER_BACKGROUND_MASTER := "res://assets/ui/aurorafox_background_master.png"
+
 func _init() -> void:
 	call_deferred("_run")
 
@@ -76,6 +79,43 @@ func _assert_knowledge_surfaces(main: Control) -> bool:
 			return false
 	return true
 
+func _assert_owner_art(main: Control, mobile: bool) -> bool:
+	var avatar := main.find_child("OwnerAvatar", true, false) as TextureRect
+	var background := main.find_child("OwnerBackground", true, false) as TextureRect
+	var brand_row := main.find_child("BrandRow", true, false) as HBoxContainer
+	var avatar_slot := main.find_child("AvatarSlot", true, false) as Control
+	if avatar == null or background == null or brand_row == null:
+		_fail("Owner-approved AuroraFox art is missing", 59)
+		return false
+	if avatar.texture == null or avatar.texture.resource_path != OWNER_AVATAR_MASTER:
+		_fail("Owner avatar is not the canonical master asset", 63)
+		return false
+	if not background.texture is AtlasTexture:
+		_fail("Owner background is not using focal AtlasTexture cropping", 64)
+		return false
+	var atlas := background.texture as AtlasTexture
+	if atlas.atlas == null or atlas.atlas.resource_path != OWNER_BACKGROUND_MASTER:
+		_fail("Owner background is not sourced from the canonical master asset", 65)
+		return false
+	if mobile:
+		if atlas.region.position.x <= 0.0:
+			_fail("Portrait owner background is not right-biased", 66)
+			return false
+	else:
+		if atlas.region.position.y <= 0.0:
+			_fail("Wide owner background is not bottom-biased", 67)
+			return false
+	if not brand_row.is_ancestor_of(avatar):
+		_fail("Owner avatar must remain in the brand surface", 68)
+		return false
+	if avatar_slot == null or avatar_slot.visible or avatar_slot.custom_minimum_size.x > 1.0:
+		_fail("Header avatar slot must stay empty to avoid duplicate owner art", 69)
+		return false
+	if _visible_placeholder_fox(main):
+		_fail("Legacy placeholder fox is visible with owner artwork", 76)
+		return false
+	return true
+
 func _assert_core_layout(main: Control, mobile := false) -> bool:
 	var required := [
 		"RootLayout", "Sidebar", "SidebarMobileNavSlot", "NewChatButton", "ChatSearch", "ChatHistoryScroll", "ChatList",
@@ -104,7 +144,7 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 
 	var avatar_slot := main.find_child("AvatarSlot", true, false) as Control
 	if avatar_slot == null or avatar_slot.visible or avatar_slot.custom_minimum_size.x > 1.0:
-		_fail("Avatar placeholder slot must stay hidden until owner artwork is supplied", 25)
+		_fail("Header avatar slot must stay empty because owner art belongs to the brand surface", 25)
 		return false
 
 	if main.find_child("VoiceSpeakButton", true, false) != null or main.find_child("VoiceSettingsButton", true, false) != null or main.find_child("VoiceSettingsPopup", true, false) != null:
@@ -141,6 +181,8 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if not _assert_personal_surfaces(main):
 		return false
 	if not _assert_knowledge_surfaces(main):
+		return false
+	if not _assert_owner_art(main, mobile):
 		return false
 
 	var computer_toggle := main.find_child("ComputerAgentToggle", true, false) as CheckButton
@@ -206,6 +248,40 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 				return false
 	return true
 
+func _exercise_computer_contract(main: Control) -> bool:
+	var overlay := main.get_node_or_null("ComputerOverlay")
+	var toggle := main.find_child("ComputerAgentToggle", true, false) as CheckButton
+	if overlay == null or toggle == null:
+		_fail("Computer overlay is missing for routing regression", 77)
+		return false
+	if bool(overlay.get("enabled")) or toggle.button_pressed:
+		_fail("Computer control must be default OFF", 78)
+		return false
+	toggle.toggled.emit(true)
+	await process_frame
+	if not bool(overlay.get("enabled")):
+		_fail("Computer enable toggle is not wired to overlay permission state", 79)
+		return false
+	toggle.toggled.emit(false)
+	await process_frame
+	if bool(overlay.get("enabled")):
+		_fail("Computer disable toggle did not revoke overlay permission state", 85)
+		return false
+	var disabled_result = overlay.call("execute_goal", "UI smoke must not execute while disabled", 1)
+	if not disabled_result is Dictionary or bool(disabled_result.get("ok", true)):
+		_fail("Disabled Computer mode did not fail closed", 86)
+		return false
+	var source := FileAccess.get_file_as_string("res://scripts/computer_overlay.gd")
+	for forbidden in ["computer.run(", "computer.plan("]:
+		if source.contains(forbidden):
+			_fail("Computer UI restored forbidden sidecar planning call: " + forbidden, 87)
+			return false
+	for required in ["core.run_task", "set_computer_control_enabled", "_computer_primitives_ready", "computer_action", "computer_screenshot", "computer_windows", "protected_computer_primitives_unavailable"]:
+		if not source.contains(required):
+			_fail("Computer UI missing Core-routing/fail-closed contract: " + required, 88)
+			return false
+	return true
+
 func _exercise_chat(main: Control) -> bool:
 	var store = main.get("chats")
 	if not store is ChatStore:
@@ -226,6 +302,13 @@ func _exercise_chat(main: Control) -> bool:
 	if _visible_placeholder_fox(main):
 		_fail("Assistant message rendered temporary avatar artwork", 62)
 		return false
+	var messages := main.find_child("MessageList", true, false)
+	if messages != null:
+		for node in messages.find_children("*", "TextureRect", true, false):
+			var rect := node as TextureRect
+			if rect.texture != null and rect.texture.resource_path == OWNER_AVATAR_MASTER:
+				_fail("Owner avatar was duplicated beside an assistant message", 89)
+				return false
 	store.rename_chat(store.active_chat_id, "UI smoke chat")
 	return str(store.get_active_chat().get("title", "")) == "UI smoke chat"
 
@@ -236,6 +319,8 @@ func _run_desktop(packed: PackedScene) -> bool:
 	root.add_child(main)
 	await create_timer(1.1).timeout
 	if not _assert_core_layout(main, false):
+		return false
+	if not await _exercise_computer_contract(main):
 		return false
 
 	var new_chat := main.find_child("NewChatButton", true, false) as Button
@@ -310,9 +395,9 @@ func _run_mobile_preview(packed: PackedScene) -> bool:
 	return true
 
 func _run() -> void:
-	for asset in ["res://assets/ui/aurora_background_final.svg"]:
+	for asset in [OWNER_AVATAR_MASTER, OWNER_BACKGROUND_MASTER]:
 		if load(asset) == null:
-			_fail("AuroraFox background asset cannot be loaded: " + asset, 2)
+			_fail("Owner-approved AuroraFox asset cannot be loaded: " + asset, 2)
 			return
 	for forbidden_asset in ["res://assets/ui/aurora_fox_user.jpg", "res://assets/ui/aurora_button_user.jpg"]:
 		if FileAccess.file_exists(forbidden_asset):
@@ -320,7 +405,7 @@ func _run() -> void:
 			return
 
 	var scene_text := FileAccess.get_file_as_string("res://main.tscn")
-	for node_name in ["DesktopVisualTheme", "SettingsVisualFix", "WindowsStartupCoordinator", "ApiAgentBridge", "ApiGatewayManager", "ApiSettings", "WorkManager", "WorkOverlay"]:
+	for node_name in ["DesktopVisualTheme", "SettingsVisualFix", "WindowsStartupCoordinator", "ApiAgentBridge", "ApiGatewayManager", "ApiSettings", "WorkManager", "WorkOverlay", "ComputerOverlay"]:
 		if not scene_text.contains(node_name):
 			_fail("main.tscn is missing integrated node: " + node_name, 4)
 			return
