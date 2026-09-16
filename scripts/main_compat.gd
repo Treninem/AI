@@ -31,16 +31,35 @@ func _build_ui() -> void:
 	super._build_ui()
 	_apply_owner_background()
 	_apply_owner_brand_art()
+	_ensure_work_entry()
 	var avatar_slot := find_child("AvatarSlot", true, false) as Control
 	if avatar_slot != null:
 		avatar_slot.visible = false
 		avatar_slot.custom_minimum_size = Vector2.ZERO
 
+func _ensure_work_entry() -> void:
+	if OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)):
+		return
+	if find_child("WorkButton", true, false) != null:
+		return
+	var sidebar := find_child("SidebarContent", true, false) as VBoxContainer
+	var work_overlay := get_node_or_null("WorkOverlay")
+	if sidebar == null or work_overlay == null or not work_overlay.has_method("show_work"):
+		return
+	var button := Button.new()
+	button.name = "WorkButton"
+	button.text = "Работа"
+	button.tooltip_text = "Проекты и длинные задачи AuroraFox"
+	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	button.custom_minimum_size.y = 44
+	button.pressed.connect(Callable(work_overlay, "show_work"))
+	sidebar.add_child(button)
+	var settings_button := sidebar.get_node_or_null("SettingsButton") as Button
+	if settings_button != null:
+		sidebar.move_child(button, settings_button.get_index())
+	_apply_button(button, false, false, false)
+
 func _logical_background_viewport_size() -> Vector2:
-	# Root Window.content_scale_size is the canonical logical canvas used by the
-	# responsive UI. In headless/mobile-preview runs get_viewport_rect() may still
-	# report the host window's physical landscape dimensions for the first frame,
-	# which previously made portrait captures use a wide crop.
 	var window := get_tree().root
 	if window != null:
 		var logical := window.content_scale_size
@@ -57,14 +76,10 @@ func _owner_background_texture() -> Texture2D:
 	var viewport_ratio := viewport.x / viewport.y
 	var source_ratio := source_size.x / source_size.y
 	if viewport_ratio > source_ratio:
-		# Wide desktop/window: keep the lower part where the owner fox and bottom
-		# frame live, instead of center-cropping the paws away.
 		var target_height := source_size.x / viewport_ratio
 		region.position.y = maxf(0.0, source_size.y - target_height)
 		region.size.y = minf(source_size.y, target_height)
 	elif viewport_ratio < source_ratio:
-		# Portrait/mobile: keep the right side where the owner fox and right frame
-		# live, instead of center-cropping the character away.
 		var target_width := source_size.y * viewport_ratio
 		region.position.x = maxf(0.0, source_size.x - target_width)
 		region.size.x = minf(source_size.x, target_width)
@@ -84,8 +99,6 @@ func _apply_owner_background() -> void:
 			rect.texture = _owner_background_texture()
 			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			# Owner master pixels must not be dimmed, tinted, recolored or otherwise
-			# altered. Readability belongs to the independent UI panels/veil above it.
 			rect.modulate = Color(1, 1, 1, 1)
 
 func _on_viewport_resized() -> void:
