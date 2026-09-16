@@ -186,7 +186,11 @@ class EngineRouter:
     def synthesize(self, text: str, emotion: str, intensity: float, speed: float, requested: str = "auto"):
         first = self.choose(requested)
         try:
-            audio, sr = first.synthesize(text, emotion, intensity, speed)
+            # AuroraVoiceProcessor is the single normal-path tempo/pitch authority.
+            # XTTS has its own speed control, so route it at neutral speed here to
+            # avoid applying the same requested tempo twice.
+            synthesis_speed = 1.0 if first.name == "xtts" else speed
+            audio, sr = first.synthesize(text, emotion, intensity, synthesis_speed)
             return audio, sr, first.name, None
         except Exception as exc:
             if first.name != "silero":
@@ -201,4 +205,5 @@ class EngineRouter:
             "silero_available": self.engines["silero"].available(),
             "xtts_available": xtts.available(),
             "xtts": xtts.diagnostics() if isinstance(xtts, XTTSVoiceEngine) else {},
+            "prosody_authority": "shared_processor",
         }

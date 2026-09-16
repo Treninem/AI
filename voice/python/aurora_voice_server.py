@@ -160,6 +160,13 @@ def cache_key(req: SayRequest, clean: str, engine: str) -> str:
             "speed": req.speed,
             "pitch": req.pitch,
             "mechanical": req.mechanical_amount,
+            "voice_defaults": {
+                "speed": CONFIG.get("speed", 1.0),
+                "pitch": CONFIG.get("pitch", 1.0),
+                "mechanical_amount": CONFIG.get("mechanical_amount", 0.035),
+                "emotionality": CONFIG.get("emotionality", 0.78),
+            },
+            "emotions": EMOTIONS,
             "processor": CONFIG.get("processor", {}),
         },
         ensure_ascii=False,
@@ -187,17 +194,31 @@ def synthesize(req: SayRequest) -> dict:
     emotion = emo["emotion"] if emo["emotion"] in EMOTIONS else "neutral"
     intensity = float(req.intensity if req.emotion != "auto" else emo["intensity"])
     profile = EMOTIONS.get(emotion, EMOTIONS["neutral"])
-    base_speed = float(CONFIG.get("speed", 1.04))
-    speed = float(req.speed if req.speed is not None else base_speed * profile.get("speed", 1.0))
+    emotionality = float(CONFIG.get("emotionality", 0.78))
+    power = float(np.clip(intensity * emotionality, 0.0, 1.0))
+
+    base_speed = float(CONFIG.get("speed", 1.0))
+    profile_speed = float(profile.get("speed", 1.0))
+    speed = float(
+        req.speed
+        if req.speed is not None
+        else base_speed * (1.0 + (profile_speed - 1.0) * power)
+    )
+
+    base_pitch = float(CONFIG.get("pitch", 1.0))
+    profile_pitch = float(profile.get("pitch", 1.0))
     pitch = float(
         req.pitch
         if req.pitch is not None
-        else float(CONFIG.get("pitch", 1.02)) * profile.get("pitch", 1.0) - 1.0
+        else base_pitch * (1.0 + (profile_pitch - 1.0) * power) - 1.0
     )
+
+    base_mech = float(CONFIG.get("mechanical_amount", 0.035))
+    profile_mech = float(profile.get("mechanical", base_mech))
     mech = float(
         req.mechanical_amount
         if req.mechanical_amount is not None
-        else profile.get("mechanical", CONFIG.get("mechanical_amount", 0.035))
+        else base_mech + (profile_mech - base_mech) * power
     )
     selected = router.choose(req.backend).name
     key = cache_key(req, clean, selected)

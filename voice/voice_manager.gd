@@ -21,8 +21,8 @@ const DEFAULTS := {
 	"enabled": true,
 	"auto_speak": true,
 	"volume": 0.86,
-	"speed": 1.04,
-	"pitch": 1.02,
+	"speed": 1.0,
+	"pitch": 1.0,
 	"mechanical_amount": 0.035,
 	"emotionality": 0.78,
 	"system_sounds": true,
@@ -91,8 +91,8 @@ func say(text: String, emotion := "auto", intensity := -1.0, options: Dictionary
 	var profile_speed := float(profile.get("speed", 1.0))
 	var profile_pitch := float(profile.get("pitch", 1.0))
 	var profile_mech := float(profile.get("mechanical", settings.get("mechanical_amount", 0.035)))
-	var speech_speed := float(settings.get("speed", 1.04)) * (1.0 + (profile_speed - 1.0) * power)
-	var pitch_factor := float(settings.get("pitch", 1.02)) * (1.0 + (profile_pitch - 1.0) * power)
+	var speech_speed := float(settings.get("speed", 1.0)) * (1.0 + (profile_speed - 1.0) * power)
+	var pitch_factor := float(settings.get("pitch", 1.0)) * (1.0 + (profile_pitch - 1.0) * power)
 	var mechanical := lerpf(float(settings.get("mechanical_amount", 0.035)), profile_mech, power)
 
 	var opts := options.duplicate(true)

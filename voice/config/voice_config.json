@@ -4,8 +4,8 @@
   "quality": "balanced",
   "language": "ru",
   "volume": 0.86,
-  "speed": 1.04,
-  "pitch": 1.02,
+  "speed": 1.0,
+  "pitch": 1.0,
   "mechanical_amount": 0.035,
   "emotionality": 0.78,
   "system_sounds": true,
@@ -42,7 +42,11 @@
   },
   "wake": {
     "mode": "wake_word",
-    "words": ["fox", "фокс", "лиса"],
+    "words": [
+      "fox",
+      "фокс",
+      "лиса"
+    ],
     "conversation_window_sec": 25,
     "vosk_model": "voice/models/vosk-model-small-ru-0.22"
   },
@@ -51,8 +55,21 @@
     "compression": true,
     "limiter": true,
     "breathing_pauses": true,
+    "prosody_dsp": true,
     "highpass_hz": 58,
+    "speed_min": 0.82,
+    "speed_max": 1.18,
+    "pitch_min": 0.9,
+    "pitch_max": 1.12,
+    "stft_n_fft": 1024,
+    "stft_hop_length": 256,
+    "target_rms_dbfs": -19.0,
+    "min_gain_db": -8.0,
+    "max_gain_db": 6.0,
+    "peak_ceiling": 0.96,
+    "fade_ms": 6.0,
     "mechanical_frequency_hz": 1830,
-    "mechanical_mix": 0.035
+    "mechanical_mix": 0.035,
+    "mechanical_max": 0.08
   }
 }
