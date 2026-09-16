@@ -56,6 +56,16 @@ def test_godot_voice_defaults_match_neutral_dsp_and_android_does_not_retime_play
     assert "pitch_scale" in playback
 
 
+def test_speech_queue_forced_split_uses_natural_boundaries():
+    queue = (ROOT / "voice" / "speech_queue.gd").read_text(encoding="utf-8")
+    assert "MAX_SPEECH_CHUNK_CHARS := 220" in queue
+    assert "func _natural_prefix" in queue
+    assert 'window.rfind(", ")' not in queue  # boundaries are handled by the marker loop
+    assert 'for marker in [", ", "; ", ": ", " — ", " – "]' in queue
+    assert 'cut = window.rfind(" ")' in queue
+    assert "buf.length() >= 260" not in queue
+
+
 def test_direct_voice_server_scales_emotion_and_invalidates_profile_cache():
     server = (ROOT / "voice" / "python" / "aurora_voice_server.py").read_text(encoding="utf-8")
     assert "power = float(np.clip(intensity * emotionality, 0.0, 1.0))" in server
