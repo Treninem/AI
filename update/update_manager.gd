@@ -7,6 +7,7 @@ signal no_update(version: String)
 signal download_started(info: Dictionary)
 signal update_ready(info: Dictionary, package_path: String)
 signal update_error(message: String)
+signal update_attempt_failed(message: String, background: bool)
 signal update_applying(info: Dictionary)
 signal settings_changed(settings: Dictionary)
 
@@ -99,6 +100,7 @@ func check_for_updates(manual := true) -> Dictionary:
 		if _compare_versions(untrusted_remote, current_version) > 0:
 			var repair_message := "Обнаружена более новая версия AuroraFox %s, но эта установка не содержит доверенный ключ обновлений. Автоматическая установка заблокирована безопасностью. Выполните одноразовый Repair/Bridge переход и затем обновления будут работать штатно." % untrusted_remote
 			_log("repair required current=%s remote=%s release=%s" % [current_version, untrusted_remote, RELEASE_PAGE_URL])
+			update_attempt_failed.emit(repair_message, not manual)
 			if manual: update_error.emit(repair_message)
 			return {
 				"ok": false,
@@ -393,6 +395,7 @@ func _save_settings() -> void:
 
 func _fail(message: String, visible: bool) -> Dictionary:
 	_log("ERROR " + message)
+	update_attempt_failed.emit(message, not visible)
 	if visible: update_error.emit(message)
 	return {"ok": false, "error": message, "background": not visible}
 
