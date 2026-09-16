@@ -6,6 +6,7 @@
 
 - Base implementation/release trigger: `a00d0b2d07cbcde0fee686ba735933a7959ec7ff`.
 - Shared coordination file added by commit `f3ed9c1ccfb3b00fd2cda5f5fdde8253f563aee3`.
+- Chat workstream journal added by commit `d96323353ed5e2054a2fef8348738a6ef19fd496`.
 - Current release: `V1.3.0.0`.
 - Android versionCode: `100005`.
 
@@ -33,12 +34,34 @@
 - Agent Sync CI `35006665083`: success.
 - Evolution Progress push run `35006665037`: success.
 
+### Verified V1.3.0.0 delivery artifacts
+
+Downloaded directly from the successful V1.3 workflows and independently re-hashed after extraction.
+
+Windows workflow artifact `10412017819`:
+
+- `AuroraFox-V1.3.0.0-Setup-Windows.exe`
+  - SHA-256: `8dc88d5dcbed12d81daf1ce14d2149207092d97421b85c8c0e5e7d0f5fba6f15`
+- `AuroraFox-V1.3.0.0-Windows-Portable.zip`
+  - SHA-256: `96aac3962f5d8aa8669144b7a632b48720fc6ca33e8205d13e1645e33e275c6a`
+
+The independently computed Windows hashes match the workflow-generated `SHA256SUMS.txt` exactly.
+
+Android workflow artifact `10412014222`:
+
+- `AuroraFox-V1.3.0.0-Android-Test.apk`
+  - SHA-256: `c02fef0e7d58eb4eeb999f7a1ec3c71074250c4993711d003c8ebd939328676c`
+  - package: `com.aurorafox.ai`
+  - built, validated, installed and launched by the successful Android 35 emulator workflow.
+
+The Android artifact is CI/test-signed. It is suitable for installation/testing, but it is not a production signing identity replacement.
+
 ### Active chat-mode scope
 
-1. Download and independently verify the V1.3 Windows and Android artifacts.
-2. Keep V1.0+ direct-update manifest/asset compatibility intact.
-3. Finish production signing bootstrap/readiness without exposing private keys.
-4. Keep release/version files synchronized.
+1. Keep V1.0+ direct-update manifest/asset compatibility intact.
+2. Finish production signing/bootstrap/readiness without exposing private keys.
+3. Keep release/version files synchronized.
+4. Prepare public production release only after owner-controlled signing identity is initialized.
 5. Update `docs/DEVELOPMENT_LOG.md` only after factual verification.
 
 ### Reserved files for this lane
@@ -62,4 +85,4 @@ Work mode may take another subsystem and should record its claim in `docs/workst
 
 ### Release status
 
-V1.3.0.0 application packages are CI-verified. Production public release/update publication still must retain the owner-controlled Android signing identity and RSA update-signing trust root; private signing material must never be committed to Git.
+V1.3.0.0 Windows and Android application packages are CI-verified and independently hashed. Production public release/update publication still must retain the owner-controlled Android signing identity and RSA update-signing trust root; private signing material must never be committed to Git.
