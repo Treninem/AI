@@ -17,13 +17,48 @@ func _visible_placeholder_fox(node: Node) -> bool:
 			return true
 	return false
 
+func _assert_personal_surfaces(main: Control) -> bool:
+	var api := main.get_node_or_null("ApiSettings") as AuroraApiSettingsOverlay
+	if api == null:
+		_fail("Personal account transport is missing", 46)
+		return false
+	for method_name in ["login_personal", "enter_guest", "refresh_personal_session", "logout_personal", "fetch_personal_memories", "delete_personal_memory", "retry_guest_migration"]:
+		if not api.has_method(method_name):
+			_fail("Personal account transport missing method: %s" % method_name, 47)
+			return false
+	var state := api.personal_state()
+	for secret_key in ["access_token", "refresh_token", "guest_token", "pending_guest_token"]:
+		if state.has(secret_key):
+			_fail("Personal state leaked secret into UI-facing state: %s" % secret_key, 48)
+			return false
+	if not api.personal_base_url().begins_with("https://"):
+		_fail("Personal sync must default to HTTPS", 49)
+		return false
+	for node_name in ["PersonalSessionStatus", "PersonalLoginForm", "PersonalEmail", "PersonalPassword", "PersonalLoginButton", "PersonalGuestButton", "PersonalSessionActions", "PersonalMemoryRefreshButton", "PersonalLogoutButton", "PersonalMemoryStatus", "PersonalMemoryList"]:
+		if main.find_child(node_name, true, false) == null:
+			_fail("Account/memory UI missing node: %s" % node_name, 50)
+			return false
+	var password := main.find_child("PersonalPassword", true, false) as LineEdit
+	if password == null or not password.secret:
+		_fail("Personal password field must stay secret", 51)
+		return false
+	var login := main.find_child("PersonalLoginButton", true, false) as Button
+	var guest := main.find_child("PersonalGuestButton", true, false) as Button
+	if login == null or guest == null or login.text.strip_edges().is_empty() or guest.text.strip_edges().is_empty():
+		_fail("Account/guest entry actions are ambiguous", 52)
+		return false
+	if login.pressed.get_connections().is_empty() or guest.pressed.get_connections().is_empty():
+		_fail("Account/guest buttons are not wired to real actions", 53)
+		return false
+	return true
+
 func _assert_core_layout(main: Control, mobile := false) -> bool:
 	var required := [
 		"RootLayout", "Sidebar", "SidebarMobileNavSlot", "NewChatButton", "ChatSearch", "ChatHistoryScroll", "ChatList",
 		"MainPanel", "HeaderPanel", "HeaderMargin", "MobileNavSlot", "MainHeaderActions", "AvatarSlot", "MessageScroll", "MessageList", "MessagesMargin", "ComposerMargin",
 		"MessageInput", "AttachmentBar", "AttachButton", "VoiceDock", "SendButton", "ComposerHint", "SettingsButton",
 		"VoiceMicButton", "ComputerAgentToggle", "ComputerAgentAuto", "ComputerAgentPopup",
-		"SettingsPopup", "SettingsPages", "KnowledgeBasePopup", "SelfImprovementPopup"
+		"SettingsPopup", "SettingsPages", "SettingsPage_account", "KnowledgeBasePopup", "SelfImprovementPopup"
 	]
 	for node_name in required:
 		if main.find_child(str(node_name), true, false) == null:
@@ -66,18 +101,21 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 		return false
 
 	var settings_pages := main.find_child("SettingsPages", true, false) as TabContainer
-	if settings_pages == null or settings_pages.tabs_visible or settings_pages.get_child_count() < 6:
-		_fail("Settings must be category pages, not one long scrolling ribbon", 30)
+	if settings_pages == null or settings_pages.tabs_visible or settings_pages.get_child_count() < 7:
+		_fail("Settings must contain seven category pages including account/memory", 30)
 		return false
 	var settings_overlay := main.get_node_or_null("SettingsOverlay") as AuroraSettingsOverlay
 	if settings_overlay == null:
 		_fail("Settings controller missing", 31)
 		return false
-	settings_overlay.call("_select_page", "voice")
-	if settings_pages.current_tab != int(settings_overlay.nav_indices.get("voice", -1)):
-		_fail("Settings navigation does not switch pages", 32)
+	settings_overlay.call("_select_page", "account")
+	if settings_pages.current_tab != int(settings_overlay.nav_indices.get("account", -1)):
+		_fail("Account/memory navigation does not switch pages", 32)
 		return false
 	settings_overlay.call("_select_page", "general")
+
+	if not _assert_personal_surfaces(main):
+		return false
 
 	var computer_toggle := main.find_child("ComputerAgentToggle", true, false) as CheckButton
 	var computer_auto := main.find_child("ComputerAgentAuto", true, false) as CheckButton
@@ -99,11 +137,11 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 			_fail("Dead model-management button leaked into normal UI", 36)
 			return false
 
-	var nav_names := ["SettingsNav_general", "SettingsNav_voice", "SettingsNav_files", "SettingsNav_autonomy", "SettingsNav_tools", "SettingsNav_updates"]
+	var nav_names := ["SettingsNav_general", "SettingsNav_voice", "SettingsNav_files", "SettingsNav_autonomy", "SettingsNav_tools", "SettingsNav_updates", "SettingsNav_account"]
 	if mobile:
 		var selector := main.find_child("SettingsMobileNavigation", true, false) as OptionButton
-		if selector == null or selector.item_count != 6:
-			_fail("Mobile settings must expose one six-page category selector", 37)
+		if selector == null or selector.item_count != 7:
+			_fail("Mobile settings must expose one seven-page category selector", 37)
 			return false
 		if main.find_child("SettingsMobileNavigationScroll", true, false) != null:
 			_fail("Legacy horizontally scrolling settings ribbon leaked back into mobile UI", 38)
@@ -111,7 +149,7 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 		if selector.custom_minimum_size.y < 44.0 or selector.custom_minimum_size.y > 60.0 or selector.size_flags_horizontal != Control.SIZE_EXPAND_FILL:
 			_fail("Mobile settings page selector has unsafe geometry", 39)
 			return false
-		var expected_keys := ["general", "voice", "files", "autonomy", "tools", "updates"]
+		var expected_keys := ["general", "voice", "files", "autonomy", "tools", "updates", "account"]
 		for i in range(selector.item_count):
 			if selector.get_item_text(i).strip_edges().is_empty() or str(selector.get_item_metadata(i)) != expected_keys[i]:
 				_fail("Mobile settings selector contains an unreadable or mismatched page", 40)
@@ -145,13 +183,13 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 func _exercise_chat(main: Control) -> bool:
 	var store = main.get("chats")
 	if not store is ChatStore:
-		_fail("Main UI is not connected to ChatStore", 50)
+		_fail("Main UI is not connected to ChatStore", 60)
 		return false
 	var before: String = str(store.active_chat_id)
 	main.call("_new_chat")
 	await process_frame
 	if store.active_chat_id.is_empty() or store.active_chat_id == before:
-		_fail("New chat action did not create/activate a chat", 51)
+		_fail("New chat action did not create/activate a chat", 61)
 		return false
 	store.add_message("user", "Проверка ровной пользовательской карточки")
 	store.add_message("assistant", "Проверка ответа AuroraFox без временной картинки рядом с сообщением.")
@@ -160,7 +198,7 @@ func _exercise_chat(main: Control) -> bool:
 	await process_frame
 	await process_frame
 	if _visible_placeholder_fox(main):
-		_fail("Assistant message rendered temporary avatar artwork", 52)
+		_fail("Assistant message rendered temporary avatar artwork", 62)
 		return false
 	store.rename_chat(store.active_chat_id, "UI smoke chat")
 	return str(store.get_active_chat().get("title", "")) == "UI smoke chat"
@@ -176,7 +214,7 @@ func _run_desktop(packed: PackedScene) -> bool:
 
 	var new_chat := main.find_child("NewChatButton", true, false) as Button
 	if new_chat == null or not (new_chat.get_theme_stylebox("normal") is StyleBoxFlat) or new_chat.get_theme_stylebox("normal") is StyleBoxTexture:
-		_fail("Desktop buttons are not using safe rounded flat states", 60)
+		_fail("Desktop buttons are not using safe rounded flat states", 70)
 		return false
 
 	var sidebar := main.find_child("Sidebar", true, false) as Control
@@ -189,20 +227,20 @@ func _run_desktop(packed: PackedScene) -> bool:
 		await process_frame
 		var viewport_size := main.get_viewport().get_visible_rect().size
 		if target_size.x == 960 and sidebar.custom_minimum_size.x > 240.0:
-			_fail("Compact sidebar remained too wide at 960px", 61)
+			_fail("Compact sidebar remained too wide at 960px", 71)
 			return false
 		if composer.position.y + composer.size.y > viewport_size.y + 2.0:
-			_fail("Composer exceeds desktop viewport at %s" % str(target_size), 62)
+			_fail("Composer exceeds desktop viewport at %s" % str(target_size), 72)
 			return false
 		if panel.size.x < 1.0 or composer.size.x < 1.0:
-			_fail("Main desktop region collapsed at %s" % str(target_size), 63)
+			_fail("Main desktop region collapsed at %s" % str(target_size), 73)
 			return false
 		if header_actions != null and header_actions.visible:
-			_fail("Empty desktop header actions container should not consume space", 64)
+			_fail("Empty desktop header actions container should not consume space", 74)
 			return false
 
 	if not await _exercise_chat(main):
-		_fail("Desktop chat behavior regression", 65)
+		_fail("Desktop chat behavior regression", 75)
 		return false
 	main.queue_free()
 	await process_frame
@@ -221,23 +259,23 @@ func _run_mobile_preview(packed: PackedScene) -> bool:
 	var input := main.find_child("MessageInput", true, false) as TextEdit
 	var viewport_size := main.get_viewport().get_visible_rect().size
 	if composer == null or input == null:
-		_fail("Mobile composer controls missing", 70)
+		_fail("Mobile composer controls missing", 80)
 		return false
 	if composer.position.y + composer.size.y > viewport_size.y + 2.0:
-		_fail("Mobile composer exceeds portrait viewport", 71)
+		_fail("Mobile composer exceeds portrait viewport", 81)
 		return false
 	if input.custom_minimum_size.y > 90.0:
-		_fail("Mobile composer input is unnecessarily tall", 72)
+		_fail("Mobile composer input is unnecessarily tall", 82)
 		return false
 	if not await _exercise_chat(main):
-		_fail("Mobile chat behavior regression", 73)
+		_fail("Mobile chat behavior regression", 83)
 		return false
 
 	var settings := main.get_node_or_null("SettingsOverlay") as AuroraSettingsOverlay
 	settings.call("_fit_popup")
 	var settings_popup := main.find_child("SettingsPopup", true, false) as PopupPanel
 	if settings_popup == null or settings_popup.size.x > int(viewport_size.x) or settings_popup.size.y > int(viewport_size.y):
-		_fail("Mobile settings popup exceeds portrait viewport", 74)
+		_fail("Mobile settings popup exceeds portrait viewport", 84)
 		return false
 
 	main.queue_free()
@@ -261,9 +299,15 @@ func _run() -> void:
 			_fail("main.tscn is missing integrated node: " + node_name, 4)
 			return
 
+	var api_text := FileAccess.get_file_as_string("res://api/settings_overlay.gd")
+	for endpoint in ["/v1/auth/login", "/v1/auth/guest", "/v1/auth/refresh", "/v1/account/devices/", "/v1/account/migrate-guest", "/v1/sync/pull", "/v1/sync/push"]:
+		if not api_text.contains(endpoint):
+			_fail("Personal account UI is missing real server contract: " + endpoint, 5)
+			return
+
 	var packed := load("res://main.tscn") as PackedScene
 	if packed == null:
-		_fail("main.tscn could not be loaded", 5)
+		_fail("main.tscn could not be loaded", 6)
 		return
 	if not await _run_desktop(packed):
 		return
