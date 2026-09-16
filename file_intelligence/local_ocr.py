@@ -116,6 +116,7 @@ def health() -> dict[str, Any]:
 
 
 def _prepare_image(image: Image.Image) -> Image.Image:
+    # Always own an independent frame so callers can close/reuse their source.
     frame = image.copy()
     if getattr(frame, "n_frames", 1) > 1:
         try:
@@ -124,18 +125,27 @@ def _prepare_image(image: Image.Image) -> Image.Image:
             pass
     if frame.mode not in ("L", "RGB"):
         if "A" in frame.getbands():
+            previous = frame
             background = Image.new("RGB", frame.size, "white")
             alpha = frame.getchannel("A")
-            background.paste(frame.convert("RGB"), mask=alpha)
+            try:
+                background.paste(frame.convert("RGB"), mask=alpha)
+            finally:
+                alpha.close()
             frame = background
+            previous.close()
         else:
-            frame = frame.convert("RGB")
+            previous = frame
+            frame = previous.convert("RGB")
+            previous.close()
     pixels = max(1, frame.width * frame.height)
     if pixels > OCR_MAX_PIXELS:
         ratio = (OCR_MAX_PIXELS / float(pixels)) ** 0.5
         width = max(1, int(frame.width * ratio))
         height = max(1, int(frame.height * ratio))
-        frame = frame.resize((width, height), Image.Resampling.LANCZOS)
+        previous = frame
+        frame = previous.resize((width, height), Image.Resampling.LANCZOS)
+        previous.close()
     return frame
 
 
@@ -157,40 +167,43 @@ def recognize_image(image: Image.Image, *, page_number: int | None = None) -> di
         }
 
     frame = _prepare_image(image)
-    env = os.environ.copy()
-    env["TESSDATA_PREFIX"] = str(rt.tessdata_dir)
-    env.setdefault("OMP_THREAD_LIMIT", "2")
-    with tempfile.TemporaryDirectory(prefix="aurorafox-ocr-") as tmp:
-        input_path = Path(tmp) / "page.png"
-        frame.save(input_path, format="PNG", optimize=False)
-        command = [
-            str(rt.executable), str(input_path), "stdout", "--tessdata-dir", str(rt.tessdata_dir),
-            "-l", OCR_LANGUAGES, "--psm", str(OCR_PSM),
-        ]
-        try:
-            proc = subprocess.run(
-                command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                timeout=OCR_TIMEOUT_SECONDS, check=False, shell=False, env=env,
-            )
-        except subprocess.TimeoutExpired:
-            return {"ok": False, "available": True, "text": "", "error": f"Local OCR timed out after {OCR_TIMEOUT_SECONDS}s", "page": page_number, "engine": "tesseract-local", "languages": list(rt.languages), "network_required": False, "external_ai_required": False}
-        except OSError as exc:
-            return {"ok": False, "available": False, "text": "", "error": f"Local OCR could not start: {exc}", "page": page_number, "engine": "tesseract-local", "languages": list(rt.languages), "network_required": False, "external_ai_required": False}
+    try:
+        env = os.environ.copy()
+        env["TESSDATA_PREFIX"] = str(rt.tessdata_dir)
+        env.setdefault("OMP_THREAD_LIMIT", "2")
+        with tempfile.TemporaryDirectory(prefix="aurorafox-ocr-") as tmp:
+            input_path = Path(tmp) / "page.png"
+            frame.save(input_path, format="PNG", optimize=False)
+            command = [
+                str(rt.executable), str(input_path), "stdout", "--tessdata-dir", str(rt.tessdata_dir),
+                "-l", OCR_LANGUAGES, "--psm", str(OCR_PSM),
+            ]
+            try:
+                proc = subprocess.run(
+                    command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    timeout=OCR_TIMEOUT_SECONDS, check=False, shell=False, env=env,
+                )
+            except subprocess.TimeoutExpired:
+                return {"ok": False, "available": True, "text": "", "error": f"Local OCR timed out after {OCR_TIMEOUT_SECONDS}s", "page": page_number, "engine": "tesseract-local", "languages": list(rt.languages), "network_required": False, "external_ai_required": False}
+            except OSError as exc:
+                return {"ok": False, "available": False, "text": "", "error": f"Local OCR could not start: {exc}", "page": page_number, "engine": "tesseract-local", "languages": list(rt.languages), "network_required": False, "external_ai_required": False}
 
-    stderr = proc.stderr.decode("utf-8", errors="replace").strip()[:2000]
-    if proc.returncode != 0:
-        return {"ok": False, "available": True, "text": "", "error": f"Local OCR exited with code {proc.returncode}: {stderr}", "page": page_number, "engine": "tesseract-local", "languages": list(rt.languages), "network_required": False, "external_ai_required": False}
+        stderr = proc.stderr.decode("utf-8", errors="replace").strip()[:2000]
+        if proc.returncode != 0:
+            return {"ok": False, "available": True, "text": "", "error": f"Local OCR exited with code {proc.returncode}: {stderr}", "page": page_number, "engine": "tesseract-local", "languages": list(rt.languages), "network_required": False, "external_ai_required": False}
 
-    text = proc.stdout.decode("utf-8", errors="replace").replace("\x0c", "").strip()
-    truncated = len(text) > OCR_MAX_OUTPUT_CHARS
-    if truncated:
-        text = text[:OCR_MAX_OUTPUT_CHARS]
-    return {
-        "ok": True, "available": True, "text": text, "page": page_number,
-        "engine": "tesseract-local", "languages": list(rt.languages),
-        "width": frame.width, "height": frame.height, "truncated": truncated,
-        "network_required": False, "external_ai_required": False, "stderr": stderr,
-    }
+        text = proc.stdout.decode("utf-8", errors="replace").replace("\x0c", "").strip()
+        truncated = len(text) > OCR_MAX_OUTPUT_CHARS
+        if truncated:
+            text = text[:OCR_MAX_OUTPUT_CHARS]
+        return {
+            "ok": True, "available": True, "text": text, "page": page_number,
+            "engine": "tesseract-local", "languages": list(rt.languages),
+            "width": frame.width, "height": frame.height, "truncated": truncated,
+            "network_required": False, "external_ai_required": False, "stderr": stderr,
+        }
+    finally:
+        frame.close()
 
 
 def recognize_path(path: Path, *, page_number: int | None = None) -> dict[str, Any]:
