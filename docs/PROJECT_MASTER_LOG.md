@@ -78,8 +78,29 @@ AuroraFox — существующий локальный AI-помощник н
 - большие базы обрабатываются потоково;
 - voice/files/Computer Agent/Work/API не должны ломать основной chat при своей недоступности;
 - updates проверяют целостность и поддерживают безопасный migration/rollback contract;
-- V1.2→V1.3 имеет repair bridge; V1.3+ использует постоянную подписанную цепочку;
+- исторические V1.2/V1.3 с неполной trust-chain должны иметь one-time Repair/Bridge на новый подписанный floor; после signed floor обновления обязаны работать автоматически;
 - все решения/проверки/планы ведутся только здесь.
+
+### 1.3. ЖЁСТКОЕ ПРАВИЛО ВЕРСИОНИРОВАНИЯ
+
+AuroraFox использует формат `MAJOR.MINOR.PATCH.BUILD` (`A.B.C.D`). Нельзя выпускать функционально изменённый продукт под тем же номером, что уже был собран/передан пользователям.
+
+- `MAJOR` (`A`) — несовместимая архитектурная миграция или крупная смена продукта/данных/API, требующая осознанного перехода.
+- `MINOR` (`B`) — крупная новая возможность, самостоятельный крупный блок, заметная переработка нескольких подсистем или новый release floor.
+- `PATCH` (`C`) — завершённое улучшение/переработка существующего блока: UI, голос, память, knowledge, updater, Core quality, Computer Agent и т.п., если совместимость сохраняется.
+- `BUILD` (`D`) — точечный исправленный дефект/hotfix/packaging fix без изменения общего пользовательского контракта.
+
+Обязательный процесс:
+
+1. При начале изменения исполнитель записывает в CLAIM предполагаемый уровень bump, но **не меняет каноническую версию заранее**.
+2. Сначала код/ресурсы проходят относящиеся к ним unit/smoke/integration/package/device/release-gates.
+3. Блок считается принятым только когда relevant tests зелёные и для изменённого блока нет известного P0/P1 дефекта, делающего новую реализацию хуже/неработоспособной.
+4. Только после этого выполняется version bump отдельным завершающим этапом и синхронизируются `project/version.json`, `project.godot`, Android `versionCode`, installer/update metadata, CHANGELOG и release manifest/contracts.
+5. После bump обязательны повторные version-sync + package/update/release tests. Если они красные, новая версия не считается готовой.
+6. Если в одном релизе накопилось несколько законченных изменений, применяется **наибольший** требуемый bump. Не нужно искусственно повышать номер после каждого внутреннего commit, но нельзя отдать/опубликовать изменённый бинарник под старым номером.
+7. Любое функциональное изменение после уже опубликованного normal release обязательно ведёт к версии строго выше опубликованной.
+8. Android `versionCode` увеличивается для каждого installable Android release и никогда не уменьшается/не повторяется.
+9. Слова «идеально/готово» в журнале означают проверяемый acceptance gate: все относящиеся тесты зелёные и нет известного блокирующего дефекта; абсолютное отсутствие будущих улучшений не подразумевается.
 
 ## 2. Текущий baseline
 
@@ -175,7 +196,7 @@ P0-аудит внешней модели закрыт: normal self-improvement 
 
 ## 8. Update/signing
 
-Windows V1.0–V1.2: one-time Repair/Bridge к V1.3. Windows V1.3+: signed automatic chain. Android in-place update требует стабильные package ID + certificate.
+Windows V1.2 имеет опубликованный one-time Repair Bridge. Исторические V1.2/V1.3 binaries были собраны до корректного закрепления `release_public.pub`, поэтому они не могут безопасно начать signed auto-update задним числом только публикацией `update.json`. Для них требуется one-time repair на новый signed floor. После нового signed floor updater обязан автоматически видеть все последующие версии через стабильный `releases/latest/download/update.json` + `update.sig`.
 
 Production release signing identities — owner-controlled boundary. Private signing keys запрещено коммитить/выдавать клиентскому Core. Это намеренная граница доверия, а не external AI dependency.
 
@@ -193,7 +214,7 @@ Aurora Core primary; Ollama optional; local model quarantine/failover; расш�
 
 ### 2026-09-16 — updater/signing
 
-Историческая V1.2 проверена; обнаружен отсутствующий trust root; сделан Windows V1.2→V1.3 repair; contract исправлен на repair-through-V1.2 / signed-floor-V1.3; permanent signing identity tooling усилен.
+Историческая V1.2 проверена; обнаружен отсутствующий trust root; сделан Windows V1.2→V1.3 repair; contract исправлен на repair-through-V1.2; дальнейший аудит показал, что историческая V1.3 также не содержит закреплённого trust root, поэтому новый signed floor должен быть выше V1.3.
 
 ### 2026-09-16 — bundled Core
 
@@ -246,6 +267,7 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 4. Benchmark-driven Core intelligence/memory/planning quality.
 5. Real Windows/Android device regressions.
 6. Owner signing bootstrap + production release end-to-end verification.
+7. Repair historical V1.3 onto the new signed update floor, then verify latest-update detection end-to-end.
 
 ## 12. Внешние границы, не являющиеся зависимостью интеллекта
 
@@ -272,9 +294,17 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - [ACTIVE] regression smoke для rejected/duplicate/local-document vs promoted web item;
 - [NEXT] contradiction/corroboration model для нескольких независимых источников.
 
+### P0 — updater/versioning repair
+
+- [ACTIVE] historical V1.3 one-time repair path на новый signed floor;
+- [ACTIVE] закрепить permanent public update trust root в приложении;
+- [ACTIVE] CI contract: normal latest release обязан содержать `update.json`, `update.sig`, platform assets и версию выше клиента;
+- [ACTIVE] versioning policy + automated version-discipline contract;
+- [NEXT] после зелёных gates поднять версию по правилу максимального требуемого bump и пересобрать Windows/Android.
+
 ### P1 — release readiness
 
-- [WAITING OWNER BOUNDARY] production update key + Android release identity;
+- [WAITING OWNER BOUNDARY] private production update key secret + Android release identity;
 - после bootstrap owner identity проверить signed release/update end-to-end.
 
 ### P2 — качество
@@ -287,6 +317,18 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Core benchmarks.
 
 ## 14. Активные работы и занятые файлы
+
+### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `e7760a71d484d6a3d5c5578e90b152e79850b878`
+- Режим: Chat
+- Цель: исправить update visibility/repair для исторических V1.2/V1.3, создать новый signed update floor, закрепить permanent trust root, автоматизировать проверку `latest`-manifest и жёсткое versioning policy.
+- Предполагаемый bump после зелёных acceptance-gates: **MINOR** (новый signed release floor + крупный updater/release contract), то есть следующий normal release должен быть не ниже `V1.4.0.0`; каноническая версия меняется только после тестов.
+- Файлы/подсистема: `update/update_manager.gd`, `update/manifest.template.json`, `update/release_public.pub`, `.github/workflows/release.yml`, `.github/workflows/windows-package-ci.yml`/repair workflow при необходимости, `build/*release*`, `project/version.json`, `project.godot`, `export_presets.cfg`, `CHANGELOG.md`, `tests/update*`, `tests/version_sync_test.ps1`, новые version/release contracts, `AGENTS.md`, `docs/PROJECT_MASTER_LOG.md`.
+- Не пересекается с UI claim: `update/update_overlay.gd` остаётся за UI lane; с research/voice/server claims их файлы не трогаются. Перед каждой записью сверять свежий `main` и интегрировать параллельные изменения.
+- Инженерная причина: normal `latest` release отсутствует, а historical V1.3 использует RSA updater, но не содержит pinned `release_public.pub`; поэтому публикация одного `update.json` не может исправить уже установленный бинарник. Нужен one-time repair на новый signed floor и permanent version/release discipline.
+- Acceptance: V1.2 repair остаётся рабочим; V1.3 repair проверен in-place на Windows с сохранением `user://`; новый floor содержит pinned public key; updater contract на floor видит версию выше себя и отклоняет неверную подпись/hash; release workflow обязан формировать `latest` assets; version bump выполняется только после зелёных Core/Windows/Android/update/release gates.
 
 ### CLAIM `CHAT-2026-09-16-UI-POLISH`
 
