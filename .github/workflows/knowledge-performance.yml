@@ -1,0 +1,134 @@
+name: AuroraFox Knowledge Performance
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'tests/knowledge_performance_contract.py'
+      - '.github/workflows/knowledge-performance.yml'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/memory_store.gd'
+  pull_request:
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'tests/knowledge_performance_contract.py'
+      - '.github/workflows/knowledge-performance.yml'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/memory_store.gd'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Benchmark size profile
+        required: true
+        default: ci
+        type: choice
+        options:
+          - smoke
+          - ci
+          - stress
+      include_500mb:
+        description: Include optional 500 MiB synthetic JSONL case in stress profile
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate benchmark contract
+        run: python tests/knowledge_performance_contract.py
+
+  linux-knowledge-performance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run knowledge benchmark
+        shell: bash
+        env:
+          DISPATCH_PROFILE: ${{ inputs.profile }}
+          DISPATCH_500: ${{ inputs.include_500mb }}
+        run: |
+          set -euo pipefail
+          profile="${DISPATCH_PROFILE:-smoke}"
+          args=(--godot ./godot --profile "$profile" --output knowledge-benchmark-report-linux.json)
+          if [[ "${DISPATCH_500:-false}" == "true" ]]; then args+=(--include-500mb); fi
+          python benchmarks/knowledge/run_knowledge_benchmark.py "${args[@]}"
+      - name: Upload Linux machine-readable report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-benchmark-report-linux
+          path: knowledge-benchmark-report-linux.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  windows-knowledge-performance:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Invoke-WebRequest -Uri 'https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip' -OutFile 'godot.zip'
+          Expand-Archive -Path 'godot.zip' -DestinationPath 'godot-dist' -Force
+          $candidate = Get-ChildItem -Path 'godot-dist' -Recurse -File -Filter '*console.exe' | Select-Object -First 1
+          if (-not $candidate) { throw 'Godot console executable not found' }
+          Copy-Item $candidate.FullName '.\godot.exe'
+          .\godot.exe --version
+      - name: Import and parse project
+        shell: powershell
+        run: |
+          $process = Start-Process -FilePath '.\godot.exe' -ArgumentList '--headless','--editor','--path','.', '--quit' -NoNewWindow -PassThru
+          if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Godot import timed out' }
+          if ($process.ExitCode -ne 0) { throw "Godot import failed: $($process.ExitCode)" }
+      - name: Run knowledge benchmark
+        shell: powershell
+        env:
+          DISPATCH_PROFILE: ${{ inputs.profile }}
+          DISPATCH_500: ${{ inputs.include_500mb }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $profile = if ($env:DISPATCH_PROFILE) { $env:DISPATCH_PROFILE } else { 'smoke' }
+          $args = @('benchmarks/knowledge/run_knowledge_benchmark.py','--godot','.\godot.exe','--profile',$profile,'--output','knowledge-benchmark-report-windows.json')
+          if ($env:DISPATCH_500 -eq 'true') { $args += '--include-500mb' }
+          & python @args
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload Windows machine-readable report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-benchmark-report-windows
+          path: knowledge-benchmark-report-windows.json
+          if-no-files-found: warn
+          retention-days: 14
