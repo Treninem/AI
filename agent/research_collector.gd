@@ -9,6 +9,7 @@ const MAX_ITEMS_PER_SOURCE := 5
 const MAX_SUMMARY_CHARS := 1800
 const MAX_RESPONSE_BYTES := 2 * 1024 * 1024
 const MAX_LOG_BYTES := 8 * 1024 * 1024
+const MAX_SOURCE_ERRORS := 16
 const REQUEST_TIMEOUT_SECONDS := 20.0
 
 # Kept for setup/API compatibility with AutonomousCoordinator. The collector
@@ -17,6 +18,7 @@ const REQUEST_TIMEOUT_SECONDS := 20.0
 var memory: MemoryStore
 var tools: ToolRegistry
 var _busy := false
+var _request_errors: Array = []
 
 func setup(memory_store: MemoryStore, tool_registry: ToolRegistry) -> void:
 	memory = memory_store
@@ -27,6 +29,7 @@ func collect(query: String) -> Dictionary:
 	if _busy:
 		return {"ok": false, "error": "Research collector is already running"}
 	_busy = true
+	_request_errors.clear()
 	var clean_query := query.strip_edges()
 	if clean_query.is_empty():
 		clean_query = "local AI Godot LLM context optimization"
@@ -47,8 +50,12 @@ func collect(query: String) -> Dictionary:
 	for item in items:
 		if item is Dictionary:
 			_append_log(item)
+	var source_errors := _request_errors.duplicate(true)
+	var complete_failure := items.is_empty() and not source_errors.is_empty()
+	var partial := not items.is_empty() and not source_errors.is_empty()
 	var report := {
-		"ok": true,
+		"ok": not complete_failure,
+		"partial": partial,
 		"query": clean_query,
 		"items": items,
 		"count": items.size(),
@@ -58,12 +65,16 @@ func collect(query: String) -> Dictionary:
 		"personal_files_scanned": false,
 		"network_response_limit_bytes": MAX_RESPONSE_BYTES,
 		"audit_log_limit_bytes": MAX_LOG_BYTES,
+		"source_error_count": source_errors.size(),
+		"source_errors": source_errors,
 		# Backward-compatible field. Automatic promotion happens asynchronously in
 		# LearningCurator after research_completed, so nothing is learned here.
 		"learned": 0,
 		"sources": _source_counts(items),
 		"timestamp_unix": int(Time.get_unix_time_from_system())
 	}
+	if complete_failure:
+		report["error"] = "All autonomous research sources failed"
 	_busy = false
 	research_completed.emit(report)
 	return report
@@ -116,7 +127,9 @@ func _collect_arxiv(query: String) -> Array:
 		return out
 	var xml := str(result.get("text", ""))
 	var parser := XMLParser.new()
-	if parser.open_buffer(xml.to_utf8_buffer()) != OK:
+	var parse_error := parser.open_buffer(xml.to_utf8_buffer())
+	if parse_error != OK:
+		_record_request_error("arxiv_xml", "", 0, parse_error, "Invalid arXiv XML")
 		return out
 	var current_title := ""
 	var current_summary := ""
@@ -156,6 +169,7 @@ func _request_json(url: String) -> Dictionary:
 		return result
 	var parsed = JSON.parse_string(str(result.get("text", "")))
 	if not parsed is Dictionary:
+		_record_request_error("json_parse", url, 0, 0, "Invalid JSON")
 		return {"ok": false, "error": "Invalid JSON", "url": url}
 	return {"ok": true, "data": parsed}
 
@@ -168,6 +182,7 @@ func _request_text(url: String) -> Dictionary:
 	var err := req.request(url, headers, HTTPClient.METHOD_GET)
 	if err != OK:
 		req.queue_free()
+		_record_request_error("request_start", url, 0, err, error_string(err))
 		return {"ok": false, "error": error_string(err), "url": url}
 	var response: Array = await req.request_completed
 	req.queue_free()
@@ -175,10 +190,23 @@ func _request_text(url: String) -> Dictionary:
 	var code := int(response[1])
 	var body := (response[3] as PackedByteArray).get_string_from_utf8()
 	if request_result != HTTPRequest.RESULT_SUCCESS:
+		_record_request_error("request_result", url, code, request_result, "Research request did not complete successfully")
 		return {"ok": false, "result": request_result, "http": code, "error": "Research request did not complete successfully", "url": url}
 	if code < 200 or code >= 300:
+		_record_request_error("http", url, code, request_result, body.substr(0, 240))
 		return {"ok": false, "http": code, "error": body.substr(0, 500), "url": url}
 	return {"ok": true, "text": body.substr(0, MAX_RESPONSE_BYTES), "url": url}
+
+func _record_request_error(stage: String, url: String, http_code: int, result_code: int, message: String) -> void:
+	if _request_errors.size() >= MAX_SOURCE_ERRORS:
+		return
+	_request_errors.append({
+		"stage": stage.substr(0, 64),
+		"url": url.substr(0, 500),
+		"http": http_code,
+		"result": result_code,
+		"error": _clean(message, 240)
+	})
 
 func _item(source: String, title: String, summary: String, url: String = "", metadata: Dictionary = {}) -> Dictionary:
 	return {
