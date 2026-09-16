@@ -57,6 +57,7 @@ jobs:
         run: >-
           python -m py_compile
           benchmarks/knowledge/run_knowledge_benchmark.py
+          benchmarks/knowledge/run_knowledge_benchmark_portable.py
           benchmarks/knowledge/compare_reports.py
           benchmarks/knowledge/validate_performance_report.py
           benchmarks/knowledge/run_memory_scaling.py
@@ -83,7 +84,7 @@ jobs:
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run bounded knowledge smoke benchmark
-        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
+        run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
       - name: Validate smoke correctness
         run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/linux-smoke.json --output artifacts/knowledge-performance/linux-smoke-gate.json
       - name: Upload Linux benchmark report
@@ -115,7 +116,7 @@ jobs:
         run: .\godot.exe --headless --editor --path . --quit
       - name: Run bounded Windows knowledge smoke benchmark
         shell: powershell
-        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot .\godot.exe --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/windows-smoke.json
+        run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot .\godot.exe --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/windows-smoke.json
       - name: Validate Windows smoke correctness
         shell: powershell
         run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/windows-smoke.json --output artifacts/knowledge-performance/windows-smoke-gate.json
@@ -148,7 +149,7 @@ jobs:
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run standard knowledge scale gate
-        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile standard --timeout-seconds 900 --report artifacts/knowledge-performance/linux-standard.json
+        run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile standard --timeout-seconds 900 --report artifacts/knowledge-performance/linux-standard.json
       - name: Measure persistent memory N-2N-4N scaling
         run: python benchmarks/knowledge/run_memory_scaling.py --godot ./godot --counts 125,250,500 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-memory-scaling.json
       - name: Measure search N-2N-4N scaling
@@ -189,7 +190,7 @@ jobs:
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run selected large profile
-        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile '${{ inputs.profile }}' --timeout-seconds 900 --report artifacts/knowledge-performance/linux-${{ inputs.profile }}.json
+        run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile '${{ inputs.profile }}' --timeout-seconds 900 --report artifacts/knowledge-performance/linux-${{ inputs.profile }}.json
       - name: Enforce large-profile relative performance blockers
         run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/linux-${{ inputs.profile }}.json --enforce-performance --output artifacts/knowledge-performance/linux-${{ inputs.profile }}-gate.json
       - name: Upload large benchmark report
