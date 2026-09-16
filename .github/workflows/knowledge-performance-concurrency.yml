@@ -1,12 +1,19 @@
-name: AuroraFox Knowledge Concurrency Race
+name: AuroraFox Knowledge Resilience Batch
 
 on:
   pull_request:
     paths:
       - 'benchmarks/knowledge/concurrency_race_probe.gd'
+      - 'benchmarks/knowledge/run_resilience_batch.py'
       - 'benchmarks/knowledge/run_godot_probe.py'
-      - 'benchmarks/knowledge/run_knowledge_benchmark.py'
-      - 'benchmarks/knowledge/run_knowledge_benchmark_portable.py'
+      - 'benchmarks/knowledge/run_interrupted_import_recovery.py'
+      - 'benchmarks/knowledge/run_interrupted_removal_recovery.py'
+      - 'benchmarks/knowledge/run_registry_scaling.py'
+      - 'benchmarks/knowledge/record_dedupe_shared_source_probe.gd'
+      - 'benchmarks/knowledge/dedupe_alias_removal_probe.gd'
+      - 'benchmarks/knowledge/write_failure_rollback_probe.gd'
+      - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
+      - 'tests/test_knowledge_resilience_batch.py'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_source_registry.gd'
       - 'scripts/knowledge_manager.gd'
@@ -16,9 +23,16 @@ on:
     branches: [main]
     paths:
       - 'benchmarks/knowledge/concurrency_race_probe.gd'
+      - 'benchmarks/knowledge/run_resilience_batch.py'
       - 'benchmarks/knowledge/run_godot_probe.py'
-      - 'benchmarks/knowledge/run_knowledge_benchmark.py'
-      - 'benchmarks/knowledge/run_knowledge_benchmark_portable.py'
+      - 'benchmarks/knowledge/run_interrupted_import_recovery.py'
+      - 'benchmarks/knowledge/run_interrupted_removal_recovery.py'
+      - 'benchmarks/knowledge/run_registry_scaling.py'
+      - 'benchmarks/knowledge/record_dedupe_shared_source_probe.gd'
+      - 'benchmarks/knowledge/dedupe_alias_removal_probe.gd'
+      - 'benchmarks/knowledge/write_failure_rollback_probe.gd'
+      - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
+      - 'tests/test_knowledge_resilience_batch.py'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_source_registry.gd'
       - 'scripts/knowledge_manager.gd'
@@ -30,15 +44,19 @@ permissions:
   contents: read
 
 concurrency:
-  group: aurorafox-knowledge-concurrency-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  group: aurorafox-knowledge-resilience-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
-  race-linux:
+  resilience-linux:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
+      - name: Validate consolidated batch contract
+        run: python -m unittest tests.test_knowledge_resilience_batch -v
+      - name: Compile batch runner
+        run: python -m py_compile benchmarks/knowledge/run_resilience_batch.py
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -52,27 +70,34 @@ jobs:
           ./godot --version
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
-      - name: Verify duplicate-import and search-remove races
+      - name: Run consolidated race scaling and failure injection batch
         run: >-
-          python benchmarks/knowledge/run_godot_probe.py
+          python benchmarks/knowledge/run_resilience_batch.py
           --godot ./godot
-          --script benchmarks/knowledge/concurrency_race_probe.gd
-          --prefix AURORA_KNOWLEDGE_CONCURRENCY_RESULT=
-          --timeout-seconds 240
-          --report artifacts/knowledge-performance/concurrency-race-linux.json
-      - name: Upload Linux race evidence
+          --counts 16,32,64
+          --source-kb 4
+          --timeout-seconds 300
+          --enforce-performance
+          --report artifacts/knowledge-performance/resilience-linux.json
+      - name: Upload Linux resilience evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: knowledge-concurrency-linux-${{ github.sha }}
+          name: knowledge-resilience-linux-${{ github.sha }}
           path: artifacts/knowledge-performance/
           if-no-files-found: error
 
-  race-windows:
+  resilience-windows:
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
+      - name: Validate consolidated batch contract
+        shell: powershell
+        run: python -m unittest tests.test_knowledge_resilience_batch -v
+      - name: Compile batch runner
+        shell: powershell
+        run: python -m py_compile benchmarks/knowledge/run_resilience_batch.py
       - name: Download Godot 4.7.1
         shell: powershell
         run: |
@@ -85,19 +110,20 @@ jobs:
       - name: Import and parse project
         shell: powershell
         run: .\godot.exe --headless --editor --path . --quit
-      - name: Verify duplicate-import and search-remove races
+      - name: Run consolidated race scaling and failure injection batch
         shell: powershell
         run: >-
-          python benchmarks/knowledge/run_godot_probe.py
+          python benchmarks/knowledge/run_resilience_batch.py
           --godot .\godot.exe
-          --script benchmarks/knowledge/concurrency_race_probe.gd
-          --prefix AURORA_KNOWLEDGE_CONCURRENCY_RESULT=
-          --timeout-seconds 240
-          --report artifacts/knowledge-performance/concurrency-race-windows.json
-      - name: Upload Windows race evidence
+          --counts 8,16,32
+          --source-kb 4
+          --timeout-seconds 300
+          --enforce-performance
+          --report artifacts/knowledge-performance/resilience-windows.json
+      - name: Upload Windows resilience evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: knowledge-concurrency-windows-${{ github.sha }}
+          name: knowledge-resilience-windows-${{ github.sha }}
           path: artifacts/knowledge-performance/
           if-no-files-found: error
