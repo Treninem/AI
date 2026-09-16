@@ -5,6 +5,7 @@ on:
     paths:
       - 'benchmarks/knowledge/concurrency_race_probe.gd'
       - 'benchmarks/knowledge/run_resilience_batch.py'
+      - 'benchmarks/knowledge/validate_resilience_batch.py'
       - 'benchmarks/knowledge/run_godot_probe.py'
       - 'benchmarks/knowledge/run_interrupted_import_recovery.py'
       - 'benchmarks/knowledge/run_interrupted_removal_recovery.py'
@@ -15,6 +16,7 @@ on:
       - 'benchmarks/knowledge/write_failure_rollback_probe.gd'
       - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
       - 'tests/test_knowledge_resilience_batch.py'
+      - 'tests/test_knowledge_resilience_gate.py'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_source_registry.gd'
       - 'scripts/knowledge_manager.gd'
@@ -25,6 +27,7 @@ on:
     paths:
       - 'benchmarks/knowledge/concurrency_race_probe.gd'
       - 'benchmarks/knowledge/run_resilience_batch.py'
+      - 'benchmarks/knowledge/validate_resilience_batch.py'
       - 'benchmarks/knowledge/run_godot_probe.py'
       - 'benchmarks/knowledge/run_interrupted_import_recovery.py'
       - 'benchmarks/knowledge/run_interrupted_removal_recovery.py'
@@ -35,6 +38,7 @@ on:
       - 'benchmarks/knowledge/write_failure_rollback_probe.gd'
       - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
       - 'tests/test_knowledge_resilience_batch.py'
+      - 'tests/test_knowledge_resilience_gate.py'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_source_registry.gd'
       - 'scripts/knowledge_manager.gd'
@@ -56,11 +60,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate consolidated batch contract
-        run: python -m unittest tests.test_knowledge_resilience_batch -v
+        run: >-
+          python -m unittest
+          tests.test_knowledge_resilience_batch
+          tests.test_knowledge_resilience_gate
+          -v
       - name: Compile batch runners
         run: >-
           python -m py_compile
           benchmarks/knowledge/run_resilience_batch.py
+          benchmarks/knowledge/validate_resilience_batch.py
           benchmarks/knowledge/run_registry_scaling.py
       - name: Download Godot 4.7.1
         shell: bash
@@ -84,6 +93,11 @@ jobs:
           --timeout-seconds 300
           --enforce-performance
           --report artifacts/knowledge-performance/resilience-linux.json
+      - name: Validate consolidated resilience evidence
+        run: >-
+          python benchmarks/knowledge/validate_resilience_batch.py
+          artifacts/knowledge-performance/resilience-linux.json
+          --output artifacts/knowledge-performance/resilience-linux-gate.json
       - name: Upload Linux resilience evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -99,12 +113,17 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate consolidated batch contract
         shell: powershell
-        run: python -m unittest tests.test_knowledge_resilience_batch -v
+        run: >-
+          python -m unittest
+          tests.test_knowledge_resilience_batch
+          tests.test_knowledge_resilience_gate
+          -v
       - name: Compile batch runners
         shell: powershell
         run: >-
           python -m py_compile
           benchmarks/knowledge/run_resilience_batch.py
+          benchmarks/knowledge/validate_resilience_batch.py
           benchmarks/knowledge/run_registry_scaling.py
       - name: Download Godot 4.7.1
         shell: powershell
@@ -128,6 +147,12 @@ jobs:
           --timeout-seconds 300
           --enforce-performance
           --report artifacts/knowledge-performance/resilience-windows.json
+      - name: Validate consolidated resilience evidence
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/validate_resilience_batch.py
+          artifacts/knowledge-performance/resilience-windows.json
+          --output artifacts/knowledge-performance/resilience-windows-gate.json
       - name: Upload Windows resilience evidence
         if: always()
         uses: actions/upload-artifact@v4
