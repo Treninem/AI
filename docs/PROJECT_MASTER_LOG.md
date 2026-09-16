@@ -566,7 +566,7 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Не изменять production-файлы и тесты/workflows, занятые `CHAT-2026-09-16-LOCAL-OCR`, `CHAT-2026-09-16-CORE-BENCHMARKS`, `CHAT-2026-09-16-INTEGRATION-GATE`, `CHAT-2026-09-16-SERVER-DB`, `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`, `CHAT-2026-09-16-UPDATER-VERSIONING`.
 - Особая граница: `scripts/knowledge_store.gd`, `scripts/knowledge_document_importer.gd`, `scripts/file_intelligence_client.gd`, OCR/File Intelligence и Android document/OCR paths принадлежат `CHAT-2026-09-16-LOCAL-OCR` до освобождения; найденные bottleneck в них фиксировать воспроизводимым benchmark/report и передавать владельцу через `PERFORMANCE-BLOCKER`, не править самостоятельно.
 - Performance-follow-up ownership extension: после двух независимых standard Linux CI подтверждено накопительное N→2N near-4x scaling; `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd`, `scripts/memory_store.gd` свободны от других ACTIVE CLAIM и зарезервированы этим lane для адресных исправлений после соответствующего benchmark evidence. `scripts/knowledge_store.gd` по-прежнему не трогать до освобождения `LOCAL-OCR`.
-- Acceptance: детерминированно генерируемые datasets без огромных Git fixtures; machine-readable JSON report с dataset/record/chunk counts, duration/throughput, peak RSS, DB/index size, search p50/p95/p99, restart/removal/rollback, duplicate/error counts и runtime identity; N/2N/4N scaling; correctness gates для restart/dedup/source removal/failure rollback; self-reliance flags `network_required=false`, `external_runtime_required=false`, `ollama_required=false`; Android-appropriate bounded-memory contract с честной отметкой, если physical device недоступен.
+- Acceptance: детерминированно генерируемые datasets без огромных Git fixtures; machine-readable JSON report с dataset/record/chunk counts, duration/throughput, peak RSS/RAM, DB/index size, search p50/p95/p99, restart/removal/rollback, duplicate/error counts и runtime identity; N/2N/4N scaling; correctness gates для restart/dedup/source removal/failure rollback; self-reliance flags `network_required=false`, `external_runtime_required=false`, `ollama_required=false`; Android-appropriate bounded-memory contract с честной отметкой, если physical device недоступен.
 
 ## 24. Work / Computer Agent Reliability & Recovery — active lane
 
@@ -937,3 +937,41 @@ BLOCKERS:
 
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
+
+## 38. Voice Audio — fresh executor takeover/reconcile, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-VOICE-AUDIO`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
+- Started from fresh `main`: `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`.
+- Branch: `chat-2026-09-17-voice-audio`.
+- Режим: Chat.
+- Наследует: `CHAT-2026-09-16-VOICE-QUALITY`, закрытый/superseded PR #34 (`voice-quality-native-prosody-20260916`, head `cea8142818b9d612adc468dc522332ad8ceb3304`) и Android female/local candidate work. Валидированный 4-файловый Windows Silero/native-prosody пакет уже интегрирован в `main` коммитом `d3abfc224caaa108e749be8185302b31deccec9e`; PR #34 не будет оживляться или blind-cherry-pick'аться.
+- Первичный audit Android candidate branches: `voice-android-female-supertonic-20260916` tip `758961b2bd93be994e5299e8f2051d09688b2832`; `voice-quality-android-female-supertonic-20260916` tip `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393`; `chat-voice-android-female-20260916` tip `7e81c373e4190567b7b5370de257aad5b8b2972f`. Первичный GitHub code/commit search не нашёл committed `Supertonic` implementation/assets, поэтому запись section 33 не считается доказательством готового candidate: exact asset identity/SHA, license, sid mapping, package integration, runtime WAV и метрики должны быть перепроверены фактически.
+- Доказанный inherited Windows evidence сохраняется как baseline, не как новый результат этого CLAIM: acoustic `35087402062` SUCCESS; Windows Package `35087442349` SUCCESS; Android APK `35087442318` SUCCESS; Agent Sync `35087442413` SUCCESS; production acoustic `35086438499` SUCCESS с mean UTMOS `3.702`, mean ASR `0.964`, synthesis ~`0.258 s`, mean RTF ~`0.0507`, clipping `0`. Core/Voice `35087442366` имел unrelated shared updater failure; не выдавать его за полностью green Voice run.
+- Предполагаемый bump после полного acceptance: **PATCH**; каноническую версию и Android `versionCode` этот lane не меняет. Финальный bump/merge/release остаётся у координатора.
+- Собственные production/test paths после takeover: `voice/**` кроме UI-owned surfaces; voice-specific tests/tools/benchmarks; `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`; `android_plugin/setup_native.ps1`; voice-owned additions в `tests/test_android_contract.py` только при отсутствии нового takeover overlap. `scripts/voice_overlay*.gd`, UI layout, Core, OCR/Knowledge, Server, Updater, `android_plugin/plugin/build.gradle.kts`, `android_plugin/settings.gradle.kts`, `AndroidFileRuntime.kt` и чужие package metadata не изменять без explicit handoff.
+- Цель: production-ready полностью локальный Voice Windows+Android: TTS/STT/VAD, microphone/playback lifecycle, interruption/barge-in/cancellation, cache/repeated synthesis, cold/warm model load, natural female persona, RU/EN/mixed, numbers/dates/units/abbreviations/long text, offline operation and graceful missing/corrupt device/model failure. Обязательное evidence для candidate: exact model/version/assets SHA + license/notice + footprint + load/synthesis/RTF + peak/RMS/clipping + intelligibility/ASR round-trip + WAV artifacts; automated metrics не выдаются за human listening.
+- Android female candidate принимается только после measured F1–F5 (или другого фактически подтверждённого набора) на одинаковом corpus и выбора по метрикам/прослушиванию, а не по имени speaker. Если используется Supertonic, отдельно подтвердить upstream asset identity, sherpa compatibility/sid mapping, Russian language path, bundled/staged local-only supply chain, integrity and notices.
+- Acceptance corpus: neutral, morning, sleepy/night, playful, serious, calm, long-neutral, numbers, dates, measurements, abbreviations; RU, EN, RU+EN. Reliability: repeated and rapid consecutive synthesis, cancel/interruption/barge-in, missing microphone/output, missing/corrupt model, restart, cold/warm start. Windows требует real local synthesis/package/playback/interruption/restart; Android требует build/package/install/launch/local TTS invocation с actual produced WAV. Physical Android human listening остаётся отдельным честным gate, если физическое устройство недоступно.
+
+PROGRESS_COMPLETE: 30%
+PROGRESS_REMAINING: 70%
+
+DONE:
+- Fresh main/AGENTS/full master log прочитаны; rollover ownership reconciled.
+- PR #34 и его exact 4-file delta проверены; accepted Windows native-prosody block уже находится в main через `d3abfc22...`, повторно переносить его не нужно.
+- Старые Android-female branch tips найдены; отсутствие найденного committed `Supertonic` кода/asset evidence зафиксировано как unaccepted state, а не как выполненная работа.
+
+REMAINING:
+- Проверить current-main Voice/Android runtime, tests, package staging, exact current CI and inherited WAV/report artifact metadata/content.
+- Перепроверить официальный Supertonic/sherpa asset/version/license/hash/sid mapping и фактическую возможность local Android integration без чужих Gradle/OCR paths; либо выбрать другой лицензируемый female candidate по измерениям.
+- Добавить/прогнать недостающий acoustic/lifecycle/language/failure matrix, получить same-SHA Windows+Android package/runtime evidence и actual WAV artifacts.
+- После software acceptance освободить production paths, отметить physical listen/device boundary и перейти helper'ом на final integrated Voice regression/package evidence без самостоятельного final merge/release.
+
+BLOCKERS:
+- Android female local candidate пока не имеет принятого exact model/asset SHA + package/runtime WAV evidence на свежем main.
+- Physical Android human listening не считается доказанным до фактического device evidence; emulator/metrics не заменяют human listen proof.
+
+NEXT:
+- Сначала factual audit current `main` Voice runtime/assets/tests/workflows + old run artifacts и branch deltas. Затем менять только voice-owned paths для первого воспроизводимого unaccepted gap; не возвращать роботизирующий DSP и не затрагивать UI/Core/OCR/Knowledge/Server/Updater.
