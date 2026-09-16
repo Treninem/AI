@@ -26,7 +26,8 @@ def test_bundled_core_has_pinned_integrity_contract() -> None:
     assert f"const EXPECTED_BYTES := {MODEL_BYTES}" in source
     assert f'const EXPECTED_SHA256 := "{MODEL_SHA}"' in source
     assert "ensure_android_private_copy" in source
-    assert "bundled AuroraFox Core integrity check failed" in source
+    assert "FileAccess.get_sha256(temp).to_lower()" in source
+    assert "copied_hash != EXPECTED_SHA256" in source
 
 
 def test_normal_ai_client_uses_bundled_core_and_does_not_require_ollama() -> None:
