@@ -31,10 +31,13 @@ func capabilities() -> Dictionary:
 		"embedded_runtime": false,
 		"computer_control": os_name == "Windows",
 		"local_network_isolation": false,
-		"strict_network_isolation": false
+		"strict_network_isolation": false,
+		"degraded_local_process_opt_in": false,
 	}
 	if os_name == "Windows":
-		base.native_processes = true
+		var local_opt_in := OS.get_environment("AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX").strip_edges() == "1"
+		base.native_processes = local_opt_in
+		base.degraded_local_process_opt_in = local_opt_in
 		base.container_runtime = _command_exists("podman") or _command_exists("docker")
 		base.strict_network_isolation = bool(base.container_runtime)
 	elif os_name == "Android":
@@ -211,19 +214,19 @@ func _execute_windows(command: Array, cwd: String, timeout: int, mode: String) -
 		rel_cwd += "/" + safe_cwd
 	var bounded_timeout := clampi(timeout, 1, MAX_WINDOWS_EXEC_TIMEOUT)
 	var payload := {"command": command, "cwd": rel_cwd, "timeout": bounded_timeout, "allow_network": false}
-	if requested_mode == "container":
-		var strict_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
-		if int(strict_result.get("http", 0)) == 404:
-			return {"ok": false, "error": "container_runtime_unavailable", "message": "Strict container sandbox requested but Docker/Podman is unavailable", "retryable": false, "network_isolation_enforced": false}
-		return strict_result
-	if requested_mode == "auto" and bool(capabilities().get("container_runtime", false)):
+	if requested_mode in ["auto", "container"]:
+		if requested_mode == "auto" and not bool(capabilities().get("container_runtime", false)):
+			return {"ok": false, "error": "container_runtime_unavailable", "message": "Automatic execution requires the strict Docker/Podman sandbox; degraded local fallback is disabled", "retryable": false, "network_isolation_enforced": false}
 		var container_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
-		if container_result.get("ok", false) or int(container_result.get("http", 0)) != 404:
-			return container_result
+		if int(container_result.get("http", 0)) == 404:
+			return {"ok": false, "error": "container_runtime_unavailable", "message": "Strict container sandbox requested but Docker/Podman or the required local image is unavailable", "retryable": false, "network_isolation_enforced": false}
+		return container_result
+	# "local" is an explicit degraded operator mode. The sidecar independently
+	# rejects this endpoint unless AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX=1.
 	var local_result := await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
 	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
 		local_result["degraded_isolation"] = true
-		local_result["isolation_note"] = "Local process sandbox enforces workspace/path/auth/timeouts but cannot guarantee network isolation; request mode=container for strict isolation."
+		local_result["isolation_note"] = "Explicit local mode lacks strict filesystem/network isolation. Prefer mode=container."
 	return local_result
 
 func _test_commands(language: String) -> Array:
