@@ -18,8 +18,8 @@ def test_voice_config_has_required_local_paths():
     assert set(cfg["wake"]["words"]) >= {"fox", "фокс", "лиса"}
     assert 0.0 <= cfg["mechanical_amount"] <= 0.10
     assert cfg["cache_limit_mb"] > 0
-    assert 0.95 <= float(cfg["speed"]) <= 1.05
-    assert 0.95 <= float(cfg["pitch"]) <= 1.05
+    assert float(cfg["speed"]) == 1.0
+    assert float(cfg["pitch"]) == 1.0
 
 
 def test_quality_processor_settings_are_safe_and_bounded():
@@ -37,6 +37,19 @@ def test_quality_processor_settings_are_safe_and_bounded():
     assert 0.80 <= float(processor["peak_ceiling"]) <= 1.0
     assert 0.0 <= float(processor["fade_ms"]) <= 20.0
     assert 0.0 <= float(processor["mechanical_max"]) <= 0.10
+
+
+def test_godot_voice_defaults_match_neutral_dsp_and_android_does_not_retime_playback():
+    manager = (ROOT / "voice" / "voice_manager.gd").read_text(encoding="utf-8")
+    queue = (ROOT / "voice" / "speech_queue.gd").read_text(encoding="utf-8")
+    assert '"speed": 1.0' in manager
+    assert '"pitch": 1.0' in manager
+    assert 'settings.get("speed", 1.0)' in manager
+    assert 'settings.get("pitch", 1.0)' in manager
+    assert "requested * 1.055" not in queue
+    playback = queue.split("func _playback_pitch", 1)[1].split("func _prefetch_next", 1)[0]
+    assert "return 1.0" in playback
+    assert "pitch_scale" in playback
 
 
 def test_all_required_emotions_exist_and_are_bounded():

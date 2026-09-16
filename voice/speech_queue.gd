@@ -126,11 +126,9 @@ func _pump() -> void:
 	speech_started.emit(current_item)
 	_prefetch_next(my_generation)
 
-func _playback_pitch(result: Dictionary, options: Dictionary) -> float:
-	var engine := str(result.get("engine", ""))
-	if OS.get_name() == "Android" and engine.begins_with("sherpa-onnx-piper"):
-		var requested := 1.0 + float(options.get("pitch", 0.0))
-		return clampf(requested * 1.055, 1.0, 1.14)
+func _playback_pitch(_result: Dictionary, _options: Dictionary) -> float:
+	# Tempo/prosody is already applied by the synthesis backend. Godot pitch_scale
+	# also retimes playback, so changing it here would make Android speech robotic.
 	return 1.0
 
 func _prefetch_next(my_generation: int) -> void:
