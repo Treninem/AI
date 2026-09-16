@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 
@@ -12,9 +13,12 @@ def read(path: str) -> str:
 
 def test_server_metadata_is_versioned_and_backup_is_not_exposed_over_http():
     server = read("api/server.py")
-    version = read("project/version.json")
+    version = json.loads(read("project/version.json"))
     assert 'version=_canonical_version()' in server
-    assert '"numeric": "1.2.0.0"' in version
+    assert version["numeric"] == ".".join(
+        str(version[key]) for key in ("major", "minor", "patch", "build")
+    )
+    assert version["version"] == f'V{version["numeric"]}'
     assert '"build_sha": os.getenv("AURORAFOX_BUILD_SHA", "local")' in server
     assert '"deployment": os.getenv("AURORAFOX_DEPLOYMENT", "local")' in server
     assert '"ollama_required": False' in server
