@@ -18,6 +18,9 @@ on:
       - 'project.godot'
       - 'main.tscn'
       - 'export_presets.cfg'
+      - 'AGENTS.md'
+      - 'README.md'
+      - 'docs/PROJECT_MASTER_LOG.md'
       - '.github/workflows/voice-ci.yml'
       - '.github/workflows/release.yml'
       - '.github/workflows/core-candidate-promotion.yml'
@@ -37,6 +40,9 @@ on:
       - 'project.godot'
       - 'main.tscn'
       - 'export_presets.cfg'
+      - 'AGENTS.md'
+      - 'README.md'
+      - 'docs/PROJECT_MASTER_LOG.md'
       - '.github/workflows/voice-ci.yml'
       - '.github/workflows/release.yml'
       - '.github/workflows/core-candidate-promotion.yml'
@@ -54,8 +60,18 @@ jobs:
         run: python -m compileall -q agent api voice/python voice/voice_service.py file_intelligence/file_service.py file_intelligence/project_index_service.py build/verify_core_candidate_bundle.py tests
       - name: Install lightweight voice test dependencies
         run: python -m pip install --disable-pip-version-check pytest==8.4.1 numpy==2.2.6 requests==2.32.5
-      - name: Run voice autonomous-evolution promotion release and provider-independence tests
-        run: PYTHONPATH="$PWD" pytest -q tests/test_voice_text.py tests/test_voice_configs.py tests/test_xtts_contract.py tests/test_autonomous_evolution_contract.py tests/test_core_candidate_promotion.py tests/test_release_core_gates.py tests/test_api_runtime_resilience.py
+      - name: Run voice autonomous-evolution promotion release provider-independence and project contracts
+        run: >-
+          PYTHONPATH="$PWD" pytest -q
+          tests/test_voice_text.py
+          tests/test_voice_configs.py
+          tests/test_xtts_contract.py
+          tests/test_autonomous_evolution_contract.py
+          tests/test_core_candidate_promotion.py
+          tests/test_release_core_gates.py
+          tests/test_api_runtime_resilience.py
+          tests/test_project_master_contract.py
+          tests/test_standalone_core_contract.py
 
   file-intelligence:
     runs-on: ubuntu-latest
