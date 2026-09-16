@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import hmac
 import json
 import multiprocessing as mp
 import os
@@ -14,7 +15,7 @@ import time
 import uuid
 from collections import OrderedDict
 from pathlib import Path, PurePath
-from typing import Any, Literal
+from typing import Any
 
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
@@ -42,9 +43,11 @@ ACTION_CACHE_LIMIT = 512
 
 SANDBOX_ROOT.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.0.0")
+app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.1.0")
 _action_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_action_inflight: set[str] = set()
 _action_cache_lock = threading.Lock()
+_action_execution_lock = threading.Lock()
 
 
 class Action(BaseModel):
@@ -97,7 +100,7 @@ class WorkspaceRollbackRequest(BaseModel):
 def _auth(token: str | None) -> None:
     if not SERVICE_TOKEN:
         raise HTTPException(status_code=503, detail="Computer service authentication is not configured")
-    if token != SERVICE_TOKEN:
+    if not hmac.compare_digest(token or "", SERVICE_TOKEN):
         raise HTTPException(status_code=401, detail="Computer service authentication failed")
 
 
@@ -353,33 +356,86 @@ def _store_action_result(action_id: str, result: dict[str, Any]) -> None:
             _action_cache.popitem(last=False)
 
 
+def _claim_action(action_id: str) -> tuple[str, dict[str, Any] | None]:
+    if not action_id:
+        return "owner", None
+    with _action_cache_lock:
+        cached = _action_cache.get(action_id)
+        if cached is not None:
+            _action_cache.move_to_end(action_id)
+            result = dict(cached)
+            result["deduplicated"] = True
+            return "cached", result
+        if action_id in _action_inflight:
+            return "inflight", None
+        _action_inflight.add(action_id)
+    return "owner", None
+
+
+def _release_action_claim(action_id: str) -> None:
+    if not action_id:
+        return
+    with _action_cache_lock:
+        _action_inflight.discard(action_id)
+
+
 def _execute_action(req: Action) -> dict[str, Any]:
     action = _validate_action(req)
     action_id = str(action.get("action_id", "")).strip()
-    cached = _cached_action(action_id)
-    if cached is not None:
-        return cached
     action_type = str(action["type"])
-    before_hash = ""
-    if bool(action.get("verify", False)):
-        before = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
-        if before.get("ok"):
-            before_hash = str(before.get("sha256", ""))
-    result = _run_worker("action", action, ACTION_TIMEOUT_SECONDS)
-    result["action_id"] = action_id
-    result["retryable"] = _retryable(action_type)
-    result["retry_safety"] = "safe" if _retryable(action_type) else "unsafe"
-    if result.get("ok") and bool(action.get("verify", False)):
-        after = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
-        if after.get("ok"):
-            after_hash = str(after.get("sha256", ""))
-            result["verified"] = bool(before_hash and after_hash and before_hash != after_hash)
-            result["verification"] = "screen_changed" if result["verified"] else "screen_unchanged"
-        else:
-            result["verified"] = False
-            result["verification"] = "verification_unavailable"
-    _store_action_result(action_id, result)
-    return result
+    retry_safety = "safe" if _retryable(action_type) else "unsafe"
+    if retry_safety == "unsafe" and not action_id:
+        raise HTTPException(status_code=400, detail="Unsafe Computer actions require action_id for idempotency")
+
+    claim, cached = _claim_action(action_id)
+    if claim == "cached" and cached is not None:
+        return cached
+    if claim == "inflight":
+        return _error(
+            "action_in_progress",
+            "An action with this action_id is already executing; external state is not yet known",
+            retryable=False,
+            action_id=action_id,
+            retry_safety=retry_safety,
+            uncertain_external_state=True,
+        )
+
+    if not _action_execution_lock.acquire(blocking=False):
+        _release_action_claim(action_id)
+        return _error(
+            "computer_busy",
+            "Another Computer action is executing. This action was not started; retry after it finishes.",
+            retryable=False,
+            action_id=action_id,
+            executed=False,
+        )
+
+    try:
+        before_hash = ""
+        if bool(action.get("verify", False)):
+            before = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+            if before.get("ok"):
+                before_hash = str(before.get("sha256", ""))
+        result = _run_worker("action", action, ACTION_TIMEOUT_SECONDS)
+        result["action_id"] = action_id
+        result["retryable"] = _retryable(action_type)
+        result["retry_safety"] = retry_safety
+        if not result.get("ok") and retry_safety == "unsafe":
+            result["uncertain_external_state"] = True
+        if result.get("ok") and bool(action.get("verify", False)):
+            after = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+            if after.get("ok"):
+                after_hash = str(after.get("sha256", ""))
+                result["verified"] = bool(before_hash and after_hash and before_hash != after_hash)
+                result["verification"] = "screen_changed" if result["verified"] else "screen_unchanged"
+            else:
+                result["verified"] = False
+                result["verification"] = "verification_unavailable"
+        _store_action_result(action_id, result)
+        return result
+    finally:
+        _action_execution_lock.release()
+        _release_action_claim(action_id)
 
 
 def _container_engine() -> str | None:
@@ -541,7 +597,7 @@ def health() -> dict[str, Any]:
     return {
         "ok": True,
         "service": "aurorafox_computer_primitives",
-        "version": "1.0.0",
+        "version": "1.1.0",
         "platform": "windows" if IS_WINDOWS else os.name,
         "computer_supported": IS_WINDOWS,
         "planning_owner": "aurorafox_core",
