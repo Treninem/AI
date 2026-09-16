@@ -1,0 +1,72 @@
+name: AuroraFox UI Visual CI
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/**'
+      - 'work/**'
+      - 'api/settings_overlay.gd'
+      - 'update/update_overlay.gd'
+      - 'assets/ui/**'
+      - 'tests/desktop_ui_smoke.gd'
+      - 'tests/ui_visual_capture.gd'
+      - 'main.tscn'
+      - 'project.godot'
+      - '.github/workflows/ui-visual-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  render-ui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Import project and parse scripts
+        shell: bash
+        run: timeout 90s ./godot --headless --editor --path . --quit
+
+      - name: Structural desktop and Android portrait UI gate
+        shell: bash
+        run: timeout 45s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
+
+      - name: Render real UI review images
+        shell: bash
+        env:
+          GODOT_AUDIO_DRIVER: Dummy
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/ui
+          xvfb-run -a -s '-screen 0 1600x1400x24' timeout 60s ./godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tests/ui_visual_capture.gd
+          for image in \
+            artifacts/ui/desktop_chat_1440x900.png \
+            artifacts/ui/desktop_settings_1440x900.png \
+            artifacts/ui/android_portrait_chat_720x1280.png \
+            artifacts/ui/android_portrait_settings_720x1280.png; do
+            test -s "$image"
+            file "$image"
+          done
+
+      - name: Upload UI review images
+        uses: actions/upload-artifact@v4
+        with:
+          name: AuroraFox-UI-Visual-Review
+          path: artifacts/ui/*.png
+          if-no-files-found: error
+          retention-days: 14
