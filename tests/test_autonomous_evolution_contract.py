@@ -55,11 +55,30 @@ def test_coordinator_starts_learning_and_evolution_without_manual_trigger():
     assert "extensions.activate_staged" in text
 
 
-def test_autonomous_research_is_promoted_to_long_term_knowledge():
-    text = read("agent/research_collector.gd")
-    assert "memory.learn(" in text
-    assert '"research_knowledge"' in text
-    assert '"learned": learned' in text
+def test_autonomous_research_is_promoted_only_through_curator():
+    collector = read("agent/research_collector.gd")
+    curator = read("agent/learning_curator.gd")
+
+    # The collector is observation-only. Durable automatic learning in this
+    # layer would bypass provenance, quality, dedupe and local-document gates.
+    assert "memory.learn(" not in collector
+    assert '"curation_required": true' in collector
+    assert '"learned": 0' in collector
+    assert "research_completed.emit(report)" in collector
+
+    # LearningCurator is the single automatic promotion authority and stores
+    # accepted observations as explicitly untrusted, provenance-bearing Core
+    # Knowledge only after its gates have run.
+    assert "research_completed.connect(_on_research_completed)" in curator
+    assert 'if source == "local_documents":' in curator
+    assert "_valid_external_url" in curator
+    assert "MIN_PROMOTION_SCORE" in curator
+    assert "_seen_content" in curator
+    assert "ai.import_knowledge_text(" in curator
+    assert '"kind": "research_knowledge"' in curator
+    assert '"untrusted_external": true' in curator
+    assert '"provenance_fingerprint": fingerprint' in curator
+    assert '"quality_score": score' in curator
 
 
 def test_verified_release_updates_are_applied_automatically_by_default():
