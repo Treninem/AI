@@ -61,11 +61,54 @@ def test_normal_ai_client_is_self_primary_and_does_not_require_external_ai() -> 
     assert 'OS.get_name() != "Android"' in runtime
 
 
+def test_agent_core_uses_only_normal_self_primary_ai_path() -> None:
+    agent = read("scripts/agent_core.gd")
+    assert "await ai.chat(messages)" in agent
+    assert "chat_with_compatibility" not in agent
+
+
 def test_core_improvement_uses_normal_self_primary_ai_path() -> None:
     pipeline = read("scripts/core_improvement_pipeline.gd")
     assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.12)' in pipeline
     assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)' in pipeline
     assert "chat_with_compatibility" not in pipeline
+
+
+def test_core_improvement_deterministic_gates_are_authoritative() -> None:
+    pipeline = read("scripts/core_improvement_pipeline.gd")
+    benchmark = read("scripts/core_candidate_benchmark.gd")
+
+    # A candidate must pass source contracts, a healthy baseline, the same
+    # target-specific candidate benchmarks and an explicit no-regression
+    # comparison before the local model is even allowed to perform its final
+    # qualitative review. The review may reject an otherwise safe candidate,
+    # but it cannot override failed deterministic evidence.
+    assert "benchmark.source_contract(original, content, target)" in pipeline
+    assert "benchmark.commands_for_target(target)" in pipeline
+    assert "benchmark.summarize_runs(baseline_runs)" in pipeline
+    assert "benchmark.summarize_runs(candidate_runs)" in pipeline
+    assert "benchmark.compare_runtime(baseline_summary, candidate_summary)" in pipeline
+
+    source_contract_pos = pipeline.index("benchmark.source_contract(original, content, target)")
+    baseline_pos = pipeline.index("benchmark.summarize_runs(baseline_runs)")
+    candidate_pos = pipeline.index("benchmark.summarize_runs(candidate_runs)")
+    comparison_pos = pipeline.index("benchmark.compare_runtime(baseline_summary, candidate_summary)")
+    review_call_pos = pipeline.index("await _comparative_review")
+    assert source_contract_pos < baseline_pos < candidate_pos < comparison_pos < review_call_pos
+
+    assert 'return {"ok": false, "stage": "baseline_benchmark"' in pipeline
+    assert 'return {"ok": false, "stage": "candidate_benchmark"' in pipeline
+    assert '"benchmark_verified": true' in pipeline
+    assert '"promotion": "signed_update"' in pipeline
+
+    assert '"scripts/memory_store.gd"' in benchmark
+    assert '"scripts/agent_core.gd"' in benchmark
+    assert '"scripts/cognition_layer.gd"' in benchmark
+    assert '"agent/goals.gd"' in benchmark
+    assert "candidate_passed >= baseline_passed" in benchmark
+    assert "missing_public.is_empty()" in benchmark
+    assert "missing_signals.is_empty()" in benchmark
+    assert "risky_increases.is_empty()" in benchmark
 
 
 def test_web_research_is_local_untrusted_knowledge_not_remote_authority() -> None:
