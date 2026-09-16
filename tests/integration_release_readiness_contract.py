@@ -29,6 +29,8 @@ def test_representative_subsystems_are_aggregated_without_owning_production_code
         "tests/test_api_privacy_contract.py",
         "tests/test_api_request_limits.py",
         "tests/test_api_server_hardening.py",
+        "tests/test_api_persistence_maintenance.py",
+        "tests/test_deployment_contract.py",
         "tests/test_release_core_gates.py",
         "tests/test_android_contract.py",
         "tests/test_voice_text.py",
@@ -36,6 +38,9 @@ def test_representative_subsystems_are_aggregated_without_owning_production_code
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
         "tests/test_knowledge_stress_gates.py",
+        "tests/test_knowledge_stress_workflow_contract.py",
+        "tests/test_knowledge_stress_registry_durability.py",
+        "tests/test_knowledge_stress_removal_transaction.py",
         "tests/test_core_candidate_promotion.py",
         "tests/test_api_runtime_resilience.py",
         "tests/test_project_master_contract.py",
@@ -100,6 +105,45 @@ def test_research_source_resilience_is_same_sha_covered() -> None:
     assert "source" in smoke.lower()
 
 
+def test_knowledge_registry_durability_and_removal_are_same_sha_covered() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert "Large Knowledge durability and removal contracts" in workflow
+    for marker in (
+        "tests/test_knowledge_stress_workflow_contract.py",
+        "tests/test_knowledge_stress_registry_durability.py",
+        "tests/test_knowledge_stress_removal_transaction.py",
+        "benchmarks/knowledge/write_failure_rollback_probe.gd",
+        "benchmarks/knowledge/registry_truncated_temp_probe.gd",
+        "AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=",
+        "AURORA_KNOWLEDGE_TRUNCATED_REGISTRY_RESULT=",
+    ):
+        assert marker in workflow
+
+    durability = read("tests/test_knowledge_stress_registry_durability.py")
+    removal = read("tests/test_knowledge_stress_removal_transaction.py")
+    assert "temp" in durability.lower()
+    assert "rollback" in durability.lower() or "failure" in durability.lower()
+    assert "remov" in removal.lower()
+    assert "transaction" in removal.lower() or "rollback" in removal.lower()
+
+
+def test_server_persistence_and_reg_ru_release_contracts_are_same_sha_covered() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert "API persistence maintenance contract" in workflow
+    assert "Deployment REG.RU release contract" in workflow
+    assert "tests/test_api_persistence_maintenance.py" in workflow
+    assert "tests/test_deployment_contract.py" in workflow
+
+    maintenance = read("tests/test_api_persistence_maintenance.py")
+    deployment = read("tests/test_deployment_contract.py")
+    assert "sync" in maintenance.lower()
+    assert "ready" in maintenance.lower()
+    assert "verify_production.py" in deployment
+    assert "sqlite" in deployment.lower()
+    assert "backup" in deployment.lower()
+    assert "rollback" in deployment.lower()
+
+
 def test_code_specialist_does_not_restore_direct_external_provider_path() -> None:
     source = read("scripts/code_specialist.gd")
     lower = source.lower()
@@ -119,15 +163,11 @@ def test_work_computer_landing_makes_ui_core_routing_mandatory() -> None:
     registry = read("scripts/tool_registry.gd")
     overlay = read("scripts/computer_overlay.gd")
 
-    # Once the reliability lane lands, service-side goal planning must stay
-    # fail-closed and the only executable surface is the protected primitive set.
     assert "local_core_planning_required" in client
     assert "set_computer_control_enabled" in client
     for primitive in ("computer_action", "computer_screenshot", "computer_windows"):
         assert primitive in registry
 
-    # The UI must then be compatible on that same SHA: high-level planning is
-    # owned by bundled AuroraFox Core, never by ComputerClient.run()/plan().
     assert "computer.run(" not in overlay
     assert "computer.plan(" not in overlay
     assert "set_computer_control_enabled" in overlay
