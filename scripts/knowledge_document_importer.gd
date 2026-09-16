@@ -39,6 +39,19 @@ func extract(path: String) -> Dictionary:
 		"odt": return _extract_zip_xml(path, ext, "content.xml", ["</text:p>", "</text:h>", "</table:table-row>"])
 		"rtf": return _extract_rtf(path)
 		"epub": return _extract_epub(path)
+	# OCR can be expensive on large scans. Always route PDF/images through the
+	# async FileIntelligenceClient path so Android can poll/cancel instead of
+	# blocking the Godot thread via the compatibility extractDocumentText call.
+	if ext == "pdf" or ext in IMAGE_EXTENSIONS:
+		return {
+			"ok": false,
+			"error": "Для формата %s требуется асинхронный File Intelligence AuroraFox" % ext,
+			"path": path,
+			"extension": ext,
+			"requires_extractor": true,
+			"async_extractor_required": true,
+			"kind_hint": _kind_hint(ext)
+		}
 	var native := _extract_native(path, ext)
 	if bool(native.get("ok", false)): return native
 	return {"ok": false, "error": "Для формата %s требуется File Intelligence AuroraFox" % ext, "path": path, "extension": ext, "requires_extractor": true, "kind_hint": _kind_hint(ext)}
