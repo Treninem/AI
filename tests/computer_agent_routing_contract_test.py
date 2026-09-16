@@ -72,12 +72,12 @@ def test_sandbox_exec_is_container_first_and_local_process_fails_closed_by_defau
     service = _text("computer/computer_service.py")
     assert '"mode":"string"' in tools
     assert 'mode not in ["auto", "container", "local"]' in tools
+    assert 'if mode in ["auto", "container"]' in tools
     assert '"/sandbox/container_exec"' in tools
     assert '"/sandbox/exec"' in tools
     assert tools.index('"/sandbox/container_exec"') < tools.index('"/sandbox/exec"')
-    assert 'container_runtime_unavailable' in tools
-    assert 'degraded_isolation' in tools
-    assert 'network_isolation_enforced' in tools
+    assert 'Automatic/strict sandbox execution requires Docker/Podman' in tools
+    assert 'AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX=1' in tools
     assert 'ALLOW_DEGRADED_LOCAL_SANDBOX' in service
     assert 'AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX' in service
     assert 'Degraded local process sandbox is disabled by default' in service
@@ -91,7 +91,7 @@ def test_strict_container_cannot_implicitly_pull_images_from_network():
     assert '"image_pull_allowed": False' in service
 
 
-def test_windows_workspace_bridge_cannot_bypass_private_channel_or_master_stop():
+def test_windows_workspace_bridge_auto_mode_is_container_only():
     sandbox = _text("scripts/sandbox_manager.gd")
     assert 'ComputerClient.master_enabled_from(self)' in sandbox
     assert 'ComputerClient.shared_service_token()' in sandbox
@@ -103,10 +103,12 @@ def test_windows_workspace_bridge_cannot_bypass_private_channel_or_master_stop()
     assert '"allow_network": false' in sandbox
     assert '"strict_network_isolation": false' in sandbox
     assert 'base.strict_network_isolation = bool(base.container_runtime)' in sandbox
-    assert 'requested_mode == "container"' in sandbox
-    assert 'container_runtime_unavailable' in sandbox
-    assert 'degraded_isolation' in sandbox
-    assert 'request mode=container for strict isolation' in sandbox
+    assert 'degraded_local_process_opt_in' in sandbox
+    assert 'AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX' in sandbox
+    assert 'if requested_mode in ["auto", "container"]' in sandbox
+    assert 'Automatic execution requires the strict Docker/Podman sandbox' in sandbox
+    assert 'degraded local fallback is disabled' in sandbox
+    assert 'Explicit local mode lacks strict filesystem/network isolation' in sandbox
 
 
 def test_work_guard_owns_action_id_and_tracks_whole_attempt_side_effects():
