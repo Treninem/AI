@@ -7,6 +7,15 @@ from typing import Any, Awaitable, Callable
 
 DEFAULT_MAX_BODY_BYTES = 24 * 1024 * 1024
 DEFAULT_MAX_IN_FLIGHT_BODY_BYTES = DEFAULT_MAX_BODY_BYTES * 4
+REQUEST_TOO_LARGE_RESPONSE = {
+    "status": 413,
+    "detail": "AuroraFox API request body too large",
+}
+REQUEST_CAPACITY_RESPONSE = {
+    "status": 503,
+    "detail": "AuroraFox API request body capacity temporarily exhausted",
+    "retry_after": 1,
+}
 
 
 class RequestBodyTooLarge(RuntimeError):
@@ -98,19 +107,10 @@ class RequestBodyLimitMiddleware:
         await send({"type": "http.response.body", "body": payload, "more_body": False})
 
     async def _reject_too_large(self, send: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
-        await self._json_response(
-            send,
-            status=413,
-            detail="AuroraFox API request body too large",
-        )
+        await self._json_response(send, **REQUEST_TOO_LARGE_RESPONSE)
 
     async def _reject_capacity(self, send: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
-        await self._json_response(
-            send,
-            status=503,
-            detail="AuroraFox API request body capacity temporarily exhausted",
-            retry_after=1,
-        )
+        await self._json_response(send, **REQUEST_CAPACITY_RESPONSE)
 
     async def __call__(self, scope, receive, send) -> None:
         if scope.get("type") != "http":
