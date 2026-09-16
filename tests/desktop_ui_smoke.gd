@@ -23,8 +23,7 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 		"MainPanel", "HeaderPanel", "HeaderMargin", "MobileNavSlot", "MainHeaderActions", "AvatarSlot", "MessageScroll", "MessageList", "MessagesMargin", "ComposerMargin",
 		"MessageInput", "AttachmentBar", "AttachButton", "VoiceDock", "SendButton", "ComposerHint", "SettingsButton",
 		"VoiceMicButton", "ComputerAgentToggle", "ComputerAgentAuto", "ComputerAgentPopup",
-		"SettingsPopup", "SettingsPages", "SettingsNav_general", "SettingsNav_voice", "SettingsNav_files", "SettingsNav_autonomy", "SettingsNav_tools", "SettingsNav_updates",
-		"KnowledgeBasePopup", "SelfImprovementPopup"
+		"SettingsPopup", "SettingsPages", "KnowledgeBasePopup", "SelfImprovementPopup"
 	]
 	for node_name in required:
 		if main.find_child(str(node_name), true, false) == null:
@@ -100,19 +99,26 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 			_fail("Dead model-management button leaked into normal UI", 36)
 			return false
 
+	var nav_names := ["SettingsNav_general", "SettingsNav_voice", "SettingsNav_files", "SettingsNav_autonomy", "SettingsNav_tools", "SettingsNav_updates"]
 	if mobile:
-		var mobile_nav := main.find_child("SettingsMobileNavigation", true, false) as Control
-		var mobile_nav_scroll := main.find_child("SettingsMobileNavigationScroll", true, false) as ScrollContainer
-		if mobile_nav == null or mobile_nav_scroll == null:
-			_fail("Mobile settings do not expose compact category navigation", 37)
+		var selector := main.find_child("SettingsMobileNavigation", true, false) as OptionButton
+		if selector == null or selector.item_count != 6:
+			_fail("Mobile settings must expose one six-page category selector", 37)
 			return false
-		if mobile_nav.custom_minimum_size.x < 700.0 or mobile_nav.custom_minimum_size.y > 60.0 or mobile_nav_scroll.custom_minimum_size.y > 64.0:
-			_fail("Mobile settings categories collapsed into a vertical/empty strip", 38)
+		if main.find_child("SettingsMobileNavigationScroll", true, false) != null:
+			_fail("Legacy horizontally scrolling settings ribbon leaked back into mobile UI", 38)
 			return false
-		for nav_name in ["SettingsNav_general", "SettingsNav_voice", "SettingsNav_files", "SettingsNav_autonomy", "SettingsNav_tools", "SettingsNav_updates"]:
-			var nav_button := main.find_child(nav_name, true, false) as Button
-			if nav_button == null or nav_button.custom_minimum_size.x < 100.0 or nav_button.text.strip_edges().is_empty():
-				_fail("Mobile settings category label is collapsed or unreadable: %s" % nav_name, 39)
+		if selector.custom_minimum_size.y < 44.0 or selector.custom_minimum_size.y > 60.0 or selector.size_flags_horizontal != Control.SIZE_EXPAND_FILL:
+			_fail("Mobile settings page selector has unsafe geometry", 39)
+			return false
+		var expected_keys := ["general", "voice", "files", "autonomy", "tools", "updates"]
+		for i in range(selector.item_count):
+			if selector.get_item_text(i).strip_edges().is_empty() or str(selector.get_item_metadata(i)) != expected_keys[i]:
+				_fail("Mobile settings selector contains an unreadable or mismatched page", 40)
+				return false
+		for nav_name in nav_names:
+			if main.find_child(nav_name, true, false) != null:
+				_fail("Desktop settings button leaked into compact mobile selector: %s" % nav_name, 41)
 				return false
 
 		var sidebar := main.find_child("Sidebar", true, false) as Control
@@ -120,11 +126,20 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 		var menu := main.find_child("MobileMenuButton", true, false) as Button
 		var header_actions := main.find_child("MainHeaderActions", true, false) as Control
 		if sidebar == null or panel == null or sidebar.visible or not panel.visible or menu == null or not menu.visible:
-			_fail("Mobile chat/sidebar navigation state is incorrect", 40)
+			_fail("Mobile chat/sidebar navigation state is incorrect", 42)
 			return false
 		if header_actions != null and header_actions.visible:
-			_fail("Mobile header still contains unrelated action clutter", 41)
+			_fail("Mobile header still contains unrelated action clutter", 43)
 			return false
+	else:
+		if main.find_child("SettingsMobileNavigation", true, false) != null:
+			_fail("Mobile settings selector leaked into desktop navigation", 44)
+			return false
+		for nav_name in nav_names:
+			var nav_button := main.find_child(nav_name, true, false) as Button
+			if nav_button == null or nav_button.text.strip_edges().is_empty():
+				_fail("Desktop settings category is missing or unreadable: %s" % nav_name, 45)
+				return false
 	return true
 
 func _exercise_chat(main: Control) -> bool:
