@@ -1,6 +1,8 @@
 class_name AuroraSettingsVisualFix
 extends Node
 
+const BUNDLED_CORE_NOTE := "AuroraFox Core встроен в приложение"
+
 func _ready() -> void:
 	call_deferred("_apply")
 
@@ -21,6 +23,7 @@ func _apply() -> void:
 	panel.transparent_bg = false
 	if overlay.has_method("_fit_popup"):
 		overlay.call("_fit_popup")
+	_hide_legacy_model_management(panel)
 	_fix_mobile_navigation(panel)
 	_apply_controls(panel)
 	# Generic visual normalization must not flatten the selected state of
@@ -36,21 +39,43 @@ func _apply() -> void:
 					break
 			overlay.call("_select_page", current_key)
 
+func _hide_legacy_model_management(panel: PopupPanel) -> void:
+	# Bundled AuroraFox Core is the normal self-contained product path. New UI
+	# does not create a model-management button at all; this guard only neutralizes
+	# a legacy/compatibility control if an older overlay injects one at runtime.
+	for node in panel.find_children("*", "Button", true, false):
+		var button := node as Button
+		var normalized := button.text.to_lower()
+		var legacy_model_control := (
+			button.name == "ModelSetupButton"
+			or normalized.contains("локальные модели")
+			or normalized.contains("gguf")
+			or (normalized.contains("модел") and normalized.contains("измен"))
+		)
+		if legacy_model_control:
+			button.visible = false
+			button.disabled = true
+			button.focus_mode = Control.FOCUS_NONE
+			button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Keep a truthful built-in-Core fallback description available if a future
+	# compatibility layout exposes an otherwise-empty Core status label.
+	var core_status := panel.find_child("CoreStatus", true, false) as Label
+	if core_status != null and core_status.text.strip_edges().is_empty():
+		core_status.text = BUNDLED_CORE_NOTE
+
 func _is_mobile_layout() -> bool:
 	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
 
 func _fix_mobile_navigation(panel: PopupPanel) -> void:
 	if not _is_mobile_layout():
 		return
+	# Current mobile settings use one OptionButton selector. Keep this legacy
+	# ribbon guard only for older compatibility layouts; it must never create one.
 	var scroll := panel.find_child("SettingsMobileNavigationScroll", true, false) as ScrollContainer
 	var nav := panel.find_child("SettingsMobileNavigation", true, false) as HFlowContainer
 	if scroll == null or nav == null:
 		return
 
-	# HFlowContainer inside ScrollContainer otherwise receives the viewport's
-	# minimum width and wraps every category into a narrow vertical column.
-	# Give the category strip a deterministic content width so it remains one
-	# horizontal row and the ScrollContainer handles the overflow naturally.
 	scroll.custom_minimum_size.y = 52
 	scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	nav.custom_minimum_size = Vector2(930, 46)
@@ -101,9 +126,6 @@ func _apply_controls(node: Node) -> void:
 				button.add_theme_stylebox_override("pressed", _button_style(Color(0.14, 0.07, 0.22, 1.0), Color(0.66, 0.53, 1.0, 0.94)))
 				button.add_theme_stylebox_override("focus", _button_style(Color(0.10, 0.08, 0.18, 1.0), Color(0.38, 0.82, 1.0, 0.90)))
 				button.add_theme_color_override("font_color", Color("f4f7ff"))
-			# clip_text removes the text contribution from Button minimum width.
-			# In HFlowContainer this collapsed action buttons into empty pills.
-			# Keep labels visible and let flow containers wrap them naturally.
 			button.clip_text = false
 			if button.get_parent() is HFlowContainer:
 				button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 40.0)
