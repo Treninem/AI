@@ -45,6 +45,14 @@ func _capture(name: String, surface: String) -> bool:
 	if image == null or image.is_empty():
 		_fail("Viewport image is empty for %s" % name, 4)
 		return false
+	var window_size := root.size
+	var content_scale_size := root.content_scale_size
+	if window_size != _requested_size:
+		_fail("Physical window mismatch for %s: requested=%s actual=%s content_scale=%s" % [name, str(_requested_size), str(window_size), str(content_scale_size)], 13)
+		return false
+	if image.get_width() != _requested_size.x or image.get_height() != _requested_size.y:
+		_fail("Framebuffer mismatch for %s: requested=%s captured=%dx%d window=%s content_scale=%s" % [name, str(_requested_size), image.get_width(), image.get_height(), str(window_size), str(content_scale_size)], 14)
+		return false
 	var path := "%s/%s.png" % [OUT_DIR, name]
 	var err := image.save_png(ProjectSettings.globalize_path(path))
 	if err != OK:
@@ -56,11 +64,13 @@ func _capture(name: String, surface: String) -> bool:
 		"platform": _platform,
 		"scenario": _scenario,
 		"requested_viewport": {"width": _requested_size.x, "height": _requested_size.y},
+		"window_size": {"width": window_size.x, "height": window_size.y},
+		"content_scale_size": {"width": content_scale_size.x, "height": content_scale_size.y},
 		"captured_viewport": {"width": image.get_width(), "height": image.get_height()},
 		"clicks": _click_trail.duplicate(),
 		"head_sha": _head_sha
 	})
-	print("UI_VISUAL_CAPTURE %s %s %dx%d clicks=%s" % [name, surface, image.get_width(), image.get_height(), JSON.stringify(_click_trail)])
+	print("UI_VISUAL_CAPTURE %s %s %dx%d window=%s scale=%s clicks=%s" % [name, surface, image.get_width(), image.get_height(), str(window_size), str(content_scale_size), JSON.stringify(_click_trail)])
 	return true
 
 func _write_manifest() -> bool:
@@ -157,6 +167,11 @@ func _populate_chat(main: Control, mobile: bool) -> bool:
 
 func _instantiate(packed: PackedScene, size: Vector2i, mobile: bool) -> Control:
 	ProjectSettings.set_setting("aurorafox/testing/mobile_preview", mobile)
+	# The visual gate controls the physical window size. Content scaling remains
+	# production-like, but X11/test-runner minimum-size drift must not silently
+	# turn a 480 px test into a 960 px screenshot.
+	root.wrap_controls = false
+	root.min_size = Vector2i(1, 1)
 	root.size = size
 	root.content_scale_size = size
 	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
@@ -166,6 +181,15 @@ func _instantiate(packed: PackedScene, size: Vector2i, mobile: bool) -> Control:
 	root.add_child(main)
 	await create_timer(1.25).timeout
 	await process_frame
+	# MobileUI may update virtual content scale after _ready(); restore only the
+	# physical window requested by the acceptance scenario and let its production
+	# scaling policy continue to determine content_scale_size.
+	root.wrap_controls = false
+	root.min_size = Vector2i(1, 1)
+	root.size = size
+	await process_frame
+	await process_frame
+	print("UI_WINDOW_READY requested=%s actual=%s content_scale=%s" % [str(size), str(root.size), str(root.content_scale_size)])
 	return main
 
 func _open_settings_by_click(main: Control) -> AuroraSettingsOverlay:
