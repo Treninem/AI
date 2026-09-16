@@ -46,7 +46,7 @@ def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_defau
 
 def test_silero_native_prosody_is_allowlisted_intensity_gated_and_markup_safe():
     engine = (ROOT / "voice" / "python" / "tts_engine.py").read_text(encoding="utf-8")
-    assert '"happy": {"min_intensity": 0.50' in engine
+    assert '"happy": {"min_intensity"' not in engine
     assert '"sleepy": {"min_intensity": 0.45' in engine
     assert '"playful": {"min_intensity": 0.55' in engine
     assert '"serious": {"min_intensity": 0.55' in engine
