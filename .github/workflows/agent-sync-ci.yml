@@ -13,12 +13,9 @@ on:
       - 'file_intelligence/**'
       - 'models/**'
       - 'voice/**'
+      - 'tests/**'
       - 'main.tscn'
       - 'project.godot'
-      - 'tests/autonomous_coordinator_smoke.gd'
-      - 'tests/self_improver_smoke.gd'
-      - 'tests/runtime_extension_smoke.gd'
-      - 'tests/update_smoke.gd'
       - '.github/workflows/agent-sync-ci.yml'
   pull_request:
     paths:
@@ -29,20 +26,13 @@ on:
       - 'file_intelligence/**'
       - 'models/**'
       - 'voice/**'
+      - 'tests/**'
       - 'main.tscn'
       - 'project.godot'
-      - 'tests/autonomous_coordinator_smoke.gd'
-      - 'tests/self_improver_smoke.gd'
-      - 'tests/runtime_extension_smoke.gd'
-      - 'tests/update_smoke.gd'
       - '.github/workflows/agent-sync-ci.yml'
 
 permissions:
   contents: read
-
-concurrency:
-  group: aurorafox-agent-sync-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
   godot-sync:
