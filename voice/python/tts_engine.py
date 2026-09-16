@@ -69,12 +69,10 @@ class SileroEngine(TTSEngine):
     name = "silero"
 
     # Narrow model-native profiles accepted by acoustic A/B on the configured
-    # kseniya voice. Pitch stays native/medium: high/low pitch candidates
-    # measurably reduced naturalness. Coarse fast tempo is also excluded from
-    # the product profile even though it passed the exploratory gate, because
-    # it shortened the playful sample by roughly a quarter.
+    # kseniya voice. Morning/happy stays plain because every tested SSML morning
+    # treatment reduced measured naturalness or intelligibility. High/low pitch
+    # and coarse fast tempo are also excluded from the product profile.
     _NATIVE_PROSODY = {
-        "happy": {"min_intensity": 0.50, "rate": "medium", "pitch": "medium", "break_ms": 70},
         "sleepy": {"min_intensity": 0.45, "rate": "slow", "pitch": "medium", "break_ms": 110},
         "playful": {"min_intensity": 0.55, "rate": None, "pitch": None, "break_ms": 70},
         "serious": {"min_intensity": 0.55, "rate": "slow", "pitch": "medium", "break_ms": 0},
