@@ -47,6 +47,21 @@ class KnowledgeRemovalTransactionContractTests(unittest.TestCase):
         self.assertIn("portable.warm_isolated_windows_profile(", runner)
         self.assertIn('"schema": "aurorafox_knowledge_interrupted_removal_v1"', runner)
 
+    def test_registry_write_failure_probe_exercises_post_store_transaction_rollback(self) -> None:
+        probe = (BENCH / "write_failure_rollback_probe.gd").read_text(encoding="utf-8")
+        self.assertIn('REGISTRY_TEMP', probe)
+        self.assertIn("DirAccess.make_dir_recursive_absolute(temp_abs)", probe)
+        self.assertIn('txn.call("import_file", store, SOURCE', probe)
+        self.assertIn('str(failed.get("transaction", "")) == "rolled_back"', probe)
+        self.assertIn('"candidate_partial_absent": candidate_gone', probe)
+        self.assertIn('"fingerprint_restored": fp_restored', probe)
+        self.assertIn('"revision_restored": revision_restored', probe)
+        self.assertIn('"journals_clean": journals_clean', probe)
+        self.assertIn('"write_failure_injected": true', probe)
+        self.assertIn('"network_required": false', probe)
+        self.assertIn('"external_runtime_required": false', probe)
+        self.assertIn('"ollama_required": false', probe)
+
 
 if __name__ == "__main__":
     unittest.main()
