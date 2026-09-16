@@ -33,10 +33,10 @@ $baseCode = [int]$base.android_version_code
 
 try {
     $cases = @(
-        @{ bump='build'; expected=@($baseParts[0],$baseParts[1],$baseParts[2],$baseParts[3]+1) },
-        @{ bump='patch'; expected=@($baseParts[0],$baseParts[1],$baseParts[2]+1,0) },
-        @{ bump='minor'; expected=@($baseParts[0],$baseParts[1]+1,0,0) },
-        @{ bump='major'; expected=@($baseParts[0]+1,0,0,0) }
+        @{ bump='build'; expected=@($baseParts[0], $baseParts[1], $baseParts[2], ($baseParts[3] + 1)) },
+        @{ bump='patch'; expected=@($baseParts[0], $baseParts[1], ($baseParts[2] + 1), 0) },
+        @{ bump='minor'; expected=@($baseParts[0], ($baseParts[1] + 1), 0, 0) },
+        @{ bump='major'; expected=@(($baseParts[0] + 1), 0, 0, 0) }
     )
 
     foreach ($case in $cases) {
