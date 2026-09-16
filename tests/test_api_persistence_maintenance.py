@@ -52,6 +52,7 @@ def test_capacity_status_is_observational_and_flags_thresholds(tmp_path: Path, m
     assert status["counts"]["sync_conflicts_open"] == 1
     assert status["counts"]["learning_pending"] == 1
     assert status["retention_policy"]["sync_changes_auto_pruned"] is False
+    assert status["retention_policy"]["sync_conflicts_auto_pruned"] is False
     assert status["retention_policy"]["pending_learning_protected"] is True
     assert status["retention_policy"]["refresh_replay_sentinel_kept_until_expiry"] is True
 
@@ -66,7 +67,7 @@ def test_capacity_status_is_observational_and_flags_thresholds(tmp_path: Path, m
     assert sync.pull(principal)["changes"][0]["payload"] == {"value": 1}
 
 
-def test_prune_removes_only_terminal_rows_and_resolved_conflicts(tmp_path: Path, monkeypatch):
+def test_prune_removes_only_terminal_auth_rows_and_keeps_sync_audit(tmp_path: Path, monkeypatch):
     root = tmp_path / "api"
     monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "1")
     accounts = AccountStore(root)
@@ -115,25 +116,29 @@ def test_prune_removes_only_terminal_rows_and_resolved_conflicts(tmp_path: Path,
             "VALUES('old-account-token', ?, 'reset_password', ?, 1, 1, 1)",
             (principal["principal_id"], "f" * 64),
         )
+        # Even an ancient resolved conflict remains an audit record until there is
+        # an explicit sync snapshot/cursor-reset compaction protocol.
         connection.execute(
             "UPDATE sync_conflicts SET resolved_at=1 WHERE id=?",
             (resolved["conflict_id"],),
         )
         before_changes = int(connection.execute("SELECT COUNT(*) FROM sync_changes").fetchone()[0])
+        before_conflicts = int(connection.execute("SELECT COUNT(*) FROM sync_conflicts").fetchone()[0])
         before_pending = int(connection.execute("SELECT COUNT(*) FROM learning_events WHERE synced=0").fetchone()[0])
         connection.commit()
 
     maintenance = PersistenceMaintenance(root)
     first_prune = maintenance.prune_ephemeral(retention_seconds=0)
     assert first_prune["removed"]["account_tokens"] >= 1
-    assert first_prune["removed"]["resolved_sync_conflicts"] == 1
+    assert "resolved_sync_conflicts" not in first_prune["removed"]
     with sqlite3.connect(db_path) as connection:
         # Consumed refresh token is deliberately retained until it expires, so
         # replay detection cannot be weakened by maintenance.
         assert connection.execute("SELECT COUNT(*) FROM refresh_tokens WHERE id=?", (consumed_id,)).fetchone()[0] == 1
+        assert int(connection.execute("SELECT COUNT(*) FROM sync_conflicts").fetchone()[0]) == before_conflicts
         assert connection.execute(
             "SELECT COUNT(*) FROM sync_conflicts WHERE id=?", (resolved["conflict_id"],)
-        ).fetchone()[0] == 0
+        ).fetchone()[0] == 1
         assert connection.execute(
             "SELECT COUNT(*) FROM sync_conflicts WHERE id=?", (unresolved["conflict_id"],)
         ).fetchone()[0] == 1
@@ -155,7 +160,14 @@ def test_prune_removes_only_terminal_rows_and_resolved_conflicts(tmp_path: Path,
     assert sync.conflicts(principal)[0]["id"] == unresolved["conflict_id"]
     assert [item["id"] for item in LearningStore(root).pending(10)] == [pending["id"]]
     protected = set(second_prune["protected"])
-    assert {"conversations", "learning_events_pending", "sync_entities", "sync_changes", "sync_conflicts_unresolved"} <= protected
+    assert {
+        "conversations",
+        "learning_events_pending",
+        "sync_entities",
+        "sync_changes",
+        "sync_conflicts_unresolved",
+        "sync_conflicts_resolved",
+    } <= protected
 
 
 def test_prune_if_due_persists_cadence_across_process_instances(tmp_path: Path, monkeypatch):
@@ -170,3 +182,16 @@ def test_prune_if_due_persists_cadence_across_process_instances(tmp_path: Path, 
     assert first["ran"] is True
     assert second["ran"] is False
     assert 0 < second["next_in_seconds"] <= 3600
+
+
+def test_malformed_capacity_environment_falls_back_safely(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    AccountStore(root)
+    monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "not-a-number")
+    monkeypatch.setenv("AURORAFOX_STORAGE_MAINTENANCE_INTERVAL_SECONDS", "bad")
+    monkeypatch.setenv("AURORAFOX_DATABASE_WARN_BYTES", "invalid")
+    maintenance = PersistenceMaintenance(root)
+    status = maintenance.status()
+    assert isinstance(status["hard_pressure"], bool)
+    assert maintenance.maintenance_interval_seconds >= 60
+    assert maintenance.warn_database_bytes > 0
