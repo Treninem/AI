@@ -61,7 +61,7 @@ func _remove_temporary_avatar_art(node: Node) -> void:
 		_remove_temporary_avatar_art(child)
 
 func _remove_redundant_quick_controls() -> void:
-	for node_name in ["VoiceSpeakButton", "VoiceSettingsButton", "KnowledgeBaseButton", "ComputerAgentButton", "UpdateStatusButton", "WorkButton"]:
+	for node_name in ["VoiceSpeakButton", "VoiceSettingsButton", "KnowledgeBaseButton", "ComputerAgentButton", "UpdateStatusButton"]:
 		var control := _root.find_child(node_name, true, false) as Control
 		if control != null:
 			control.visible = false
