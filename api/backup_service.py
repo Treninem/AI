@@ -46,7 +46,7 @@ class BackupResult:
 
 
 class BackupService:
-    """Create a verifiable data snapshot without dedicated credential files."""
+    """Create a verifiable data snapshot without dedicated credential material."""
 
     def __init__(self, user_root: Path, cache_root: Path | None = None, max_source_bytes: int | None = None):
         self.user_root = user_root.resolve()
@@ -92,19 +92,40 @@ class BackupService:
             sources.append((source, relative))
         return sorted(sources, key=lambda item: item[1].as_posix())
 
-    def _copy_source(self, source: Path, destination: Path) -> None:
+    @staticmethod
+    def _sanitize_api_database(destination_db: sqlite3.Connection) -> bool:
+        tables = {
+            str(row[0])
+            for row in destination_db.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        }
+        if "api_keys" not in tables:
+            return False
+        destination_db.execute("DELETE FROM api_keys")
+        if "metadata" in tables:
+            destination_db.execute("DELETE FROM metadata WHERE key LIKE 'migration.api_keys.%'")
+        destination_db.commit()
+        # DELETE alone can leave credential hashes in free pages. VACUUM rebuilds
+        # the snapshot so excluded hashes cannot be recovered from the archive.
+        destination_db.execute("VACUUM")
+        return True
+
+    def _copy_source(self, source: Path, destination: Path) -> bool:
         destination.parent.mkdir(parents=True, exist_ok=True)
         if self._is_sqlite(source):
             source_uri = source.resolve().as_uri() + "?mode=ro"
             source_db = sqlite3.connect(source_uri, uri=True, timeout=30)
             destination_db = sqlite3.connect(destination)
+            sanitized = False
             try:
                 source_db.backup(destination_db)
+                if source.name.lower() == "aurorafox.sqlite3":
+                    sanitized = self._sanitize_api_database(destination_db)
             finally:
                 destination_db.close()
                 source_db.close()
-            return
+            return sanitized
         shutil.copyfile(source, destination)
+        return False
 
     def create_archive(self) -> BackupResult:
         backup_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + "-" + uuid.uuid4().hex[:10]
@@ -121,13 +142,14 @@ class BackupService:
                         f"AuroraFox backup data exceeds limit of {self.max_source_bytes} bytes"
                     )
                 destination = snapshot_root / "data" / relative
-                self._copy_source(source, destination)
+                credentials_sanitized = self._copy_source(source, destination)
                 actual_size = destination.stat().st_size
                 source_bytes += actual_size
                 manifest_files.append({
                     "path": (Path("data") / relative).as_posix(),
                     "bytes": actual_size,
                     "sha256": self._sha256(destination),
+                    "credentials_sanitized": credentials_sanitized,
                 })
 
             manifest = {
@@ -136,6 +158,7 @@ class BackupService:
                 "created_at_utc": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                 "source": "AuroraFox server persistent data",
                 "credential_files_included": False,
+                "database_credentials_sanitized": True,
                 "file_count": len(manifest_files),
                 "source_bytes": source_bytes,
                 "files": manifest_files,
