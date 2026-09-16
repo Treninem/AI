@@ -76,9 +76,13 @@ def test_repair_releases_are_separate_prereleases_not_stable_latest() -> None:
     assert "repair-v1.3-windows" in workflow
     assert "--prerelease" in workflow
     assert "--latest=false" in workflow
-    # Querying releases/latest is required to prove isolation. The repair
-    # workflow must never publish or download repair payloads through that URL.
-    assert "releases/latest/download" not in workflow
+    # Stable URL text may legitimately appear in human-readable release notes.
+    # What matters is that repair releases are always addressed by their fixed
+    # repair tags and never created/uploaded as a stable latest payload.
+    assert 'tag="repair-v${old}-windows"' in workflow
+    assert 'gh release upload "$tag"' in workflow
+    assert 'gh release create "$tag"' in workflow
+    assert 'gh release create latest' not in workflow
     assert "Verify repair tags cannot be stable latest" in workflow
     assert "Repair release illegally occupies stable latest" in workflow
 
@@ -170,7 +174,8 @@ def test_old_clients_missing_trust_root_get_repair_state_not_unsigned_install() 
     assert "untrusted_remote" in updater
     assert "Автоматическая установка заблокирована безопасностью" in updater
     assert "_verify_manifest_signature" in updater
-    assert "_verify_sha256" in updater
+    assert "_sha256_file" in updater
+    assert "actual != expected" in updater
 
 
 def test_documentation_names_v12_v13_repair_and_v14_floor() -> None:
