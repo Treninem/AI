@@ -233,6 +233,8 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 	var tasks: Array = project.get("tasks", [])
 	var task: Dictionary = tasks[task_index]
 	var old_state := str(task.get("status", STATE_QUEUED))
+	if new_state == STATE_RUNNING and bool(task.get("requires_user_action", false)):
+		return false
 	if old_state == new_state:
 		return _patch_task(location, patch)
 	if explicit_retry:
@@ -262,6 +264,10 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 		task["finished_at"] = ""
 		task["execution_id"] = ""
 		task["cancel_requested"] = false
+		task["requires_user_action"] = false
+		task["last_action"] = ""
+		task["last_action_id"] = ""
+		task["last_action_retry_safety"] = "safe"
 
 	_apply_safe_patch(task, patch)
 	tasks[task_index] = task
