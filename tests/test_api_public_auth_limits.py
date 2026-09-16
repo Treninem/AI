@@ -58,6 +58,41 @@ def test_public_auth_path_is_limited_per_client_and_endpoint():
     assert other[0]["status"] == 204
 
 
+def test_bucket_state_is_bounded_and_expired_capacity_is_reclaimed(monkeypatch):
+    calls = 0
+    clock = [100.0]
+    monkeypatch.setattr("api.public_auth_limits.time.monotonic", lambda: clock[0])
+
+    async def app(scope, receive, send):
+        nonlocal calls
+        calls += 1
+        await send({"type": "http.response.start", "status": 204, "headers": []})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+    middleware = PublicAuthRateLimitMiddleware(
+        app,
+        limit=5,
+        window_seconds=60,
+        max_buckets=2,
+    )
+    first = asyncio.run(_run_once(middleware, _scope(client=("203.0.113.1", 1))))
+    second = asyncio.run(_run_once(middleware, _scope(client=("203.0.113.2", 1))))
+    blocked = asyncio.run(_run_once(middleware, _scope(client=("203.0.113.3", 1))))
+    assert first[0]["status"] == 204
+    assert second[0]["status"] == 204
+    assert blocked[0]["status"] == 429
+    assert len(middleware._hits) == 2
+    assert calls == 2
+
+    # Once the old window has elapsed, a new identity reaps stale buckets before
+    # it is admitted. The hard state bound remains intact.
+    clock[0] = 161.0
+    reclaimed = asyncio.run(_run_once(middleware, _scope(client=("203.0.113.3", 1))))
+    assert reclaimed[0]["status"] == 204
+    assert len(middleware._hits) <= 2
+    assert calls == 3
+
+
 def test_unrelated_api_path_is_not_public_auth_limited():
     calls = 0
 
