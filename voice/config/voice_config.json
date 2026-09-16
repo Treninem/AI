@@ -16,7 +16,7 @@
   "cache_limit_mb": 512,
   "silero": {
     "model": "v5_5_ru",
-    "speaker": "xenia",
+    "speaker": "kseniya",
     "sample_rate": 48000,
     "license": "CC-BY-NC",
     "note": "Optional non-commercial voice model. Use a project-compatible backend for commercial distribution."
