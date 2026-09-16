@@ -68,6 +68,8 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+      - name: Install release identity test runner
+        run: python -m pip install --disable-pip-version-check pytest==8.4.1
       - name: Verify OpenSSL availability
         run: openssl version
       - name: Run release identity versioning and legacy update contracts
