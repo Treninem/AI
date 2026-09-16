@@ -31,7 +31,12 @@ func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictiona
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	# The first-import fast path is safe only while the registry is a valid
+	# authority for source presence. If sources.json is missing/corrupt, old JSONL
+	# rows may still exist and must be journaled so a failed re-import cannot erase
+	# the last valid Knowledge state.
+	var preserve_existing_source := not existing.is_empty() or not registry.storage_is_valid()
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
@@ -55,7 +60,8 @@ func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: St
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	var preserve_existing_source := not existing.is_empty() or not registry.storage_is_valid()
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
