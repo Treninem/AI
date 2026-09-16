@@ -15,7 +15,8 @@ func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {})
 	var prepared := _prepare_file(path, metadata)
 	if not bool(prepared.get("ok", false)) or bool(prepared.get("skipped", false)):
 		return prepared
-	var snapshot := _snapshot(path)
+	var inspection: Dictionary = prepared.get("inspection", {})
+	var snapshot := _snapshot(path, _source_rows_may_exist(path, inspection))
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
@@ -24,18 +25,19 @@ func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {})
 		result = large_json_importer.import_file(store, path, meta)
 	else:
 		result = store.import_file(path, meta)
-	return _finish_import(path, result, prepared.get("inspection", {}), meta, snapshot)
+	return _finish_import(path, result, inspection, meta, snapshot)
 
 func import_extracted_file(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
 	var prepared := _prepare_file(path, metadata)
 	if not bool(prepared.get("ok", false)) or bool(prepared.get("skipped", false)):
 		return prepared
-	var snapshot := _snapshot(path)
+	var inspection: Dictionary = prepared.get("inspection", {})
+	var snapshot := _snapshot(path, _source_rows_may_exist(path, inspection))
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
 	var result := store.import_extracted_file(path, text, meta)
-	return _finish_import(path, result, prepared.get("inspection", {}), meta, snapshot)
+	return _finish_import(path, result, inspection, meta, snapshot)
 
 func _prepare_file(path: String, metadata: Dictionary) -> Dictionary:
 	var inspection := registry.inspect_file(path)
@@ -73,6 +75,7 @@ func _finish_import(path: String, result: Dictionary, inspection: Dictionary, me
 		_cleanup_backups()
 		result["transaction"] = "committed"
 		result["transaction_mode"] = "source_scoped_journal"
+		result["snapshot_scan_skipped"] = bool(snapshot.get("snapshot_scan_skipped", false))
 		result["source_registry"] = registered.get("record", {})
 		result["source_id"] = inspection.get("source_id", "")
 		result["fingerprint_sha256"] = inspection.get("fingerprint_sha256", "")
@@ -84,21 +87,42 @@ func _rollback_result(result: Dictionary, snapshot: Dictionary) -> Dictionary:
 	var restored := _restore(snapshot)
 	result["transaction"] = "rolled_back" if restored else "rollback_failed"
 	result["transaction_mode"] = "source_scoped_journal"
+	result["snapshot_scan_skipped"] = bool(snapshot.get("snapshot_scan_skipped", false))
 	if not restored:
 		result["rollback_error"] = "Не удалось полностью восстановить предыдущую базу знаний после ошибки импорта"
 	return result
 
-func _snapshot(source: String) -> Dictionary:
+func _source_rows_may_exist(path: String, inspection: Dictionary) -> bool:
+	var existing = inspection.get("existing_source", {})
+	if not existing is Dictionary or existing.is_empty():
+		return false
+	# Registry aliases share their canonical source's stored rows. Reindexing an
+	# alias therefore has no pre-existing rows under the alias path itself.
+	return str(existing.get("source", "")) == path
+
+func _snapshot(source: String, preserve_existing_rows := true) -> Dictionary:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://knowledge"))
 	_cleanup_backups()
-	var db := _journal_source(DB_PATH, DB_BACKUP, source)
-	if not bool(db.get("ok", false)):
-		_cleanup_backups()
-		return db
-	var structured := _journal_source(STRUCTURED_PATH, STRUCTURED_BACKUP, source)
-	if not bool(structured.get("ok", false)):
-		_cleanup_backups()
-		return structured
+	var db: Dictionary
+	var structured: Dictionary
+	if preserve_existing_rows:
+		db = _journal_source(DB_PATH, DB_BACKUP, source)
+		if not bool(db.get("ok", false)):
+			_cleanup_backups()
+			return db
+		structured = _journal_source(STRUCTURED_PATH, STRUCTURED_BACKUP, source)
+		if not bool(structured.get("ok", false)):
+			_cleanup_backups()
+			return structured
+	else:
+		db = _create_empty_journal(DB_BACKUP)
+		if not bool(db.get("ok", false)):
+			_cleanup_backups()
+			return db
+		structured = _create_empty_journal(STRUCTURED_BACKUP)
+		if not bool(structured.get("ok", false)):
+			_cleanup_backups()
+			return structured
 	var registry_existed := FileAccess.file_exists(REGISTRY_PATH)
 	if registry_existed:
 		var err := DirAccess.copy_absolute(ProjectSettings.globalize_path(REGISTRY_PATH), ProjectSettings.globalize_path(REGISTRY_BACKUP))
@@ -111,8 +135,16 @@ func _snapshot(source: String) -> Dictionary:
 		"db_rows": int(db.get("rows", 0)),
 		"structured_rows": int(structured.get("rows", 0)),
 		"registry_existed": registry_existed,
+		"snapshot_scan_skipped": not preserve_existing_rows,
 		"mode": "source_scoped_journal"
 	}
+
+func _create_empty_journal(path: String) -> Dictionary:
+	var output := FileAccess.open(path, FileAccess.WRITE)
+	if output == null:
+		return {"ok": false, "error": "Не удалось создать пустой журнал отката", "path": path}
+	output.close()
+	return {"ok": true, "rows": 0, "scan_skipped": true}
 
 func _journal_source(path: String, backup: String, source: String) -> Dictionary:
 	var output := FileAccess.open(backup, FileAccess.WRITE)
