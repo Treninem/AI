@@ -30,6 +30,8 @@ MAX_WRITE_BYTES = 2_000_000
 MAX_READ_BYTES = 5_000_000
 MAX_TEXT_CHARS = 20_000
 MAX_KEYS = 12
+MAX_SNAPSHOT_ENTRIES = int(os.getenv("AURORAFOX_SNAPSHOT_MAX_ENTRIES", "5000"))
+MAX_SNAPSHOT_BYTES = int(os.getenv("AURORAFOX_SNAPSHOT_MAX_BYTES", str(512 * 1024 * 1024)))
 GUI_TIMEOUT_SECONDS = float(os.getenv("AURORAFOX_GUI_TIMEOUT_SECONDS", "8"))
 ACTION_TIMEOUT_SECONDS = float(os.getenv("AURORAFOX_ACTION_TIMEOUT_SECONDS", "10"))
 IS_WINDOWS = os.name == "nt"
@@ -161,6 +163,54 @@ def _safe_workspace_id(value: str) -> str:
     if not cleaned or len(cleaned) > 96 or cleaned in {".", ".."}:
         raise HTTPException(status_code=400, detail="Invalid workspace id")
     return cleaned
+
+
+def _snapshot_tree_stats(root: Path) -> dict[str, int]:
+    if not root.exists() or not root.is_dir():
+        raise HTTPException(status_code=404, detail="Snapshot source directory not found")
+    entries = 0
+    total_bytes = 0
+    stack = [root]
+    while stack:
+        current = stack.pop()
+        try:
+            with os.scandir(current) as iterator:
+                children = list(iterator)
+        except OSError as exc:
+            raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot tree: {type(exc).__name__}") from exc
+        for entry in children:
+            entries += 1
+            if entries > MAX_SNAPSHOT_ENTRIES:
+                raise HTTPException(status_code=413, detail="Snapshot contains too many filesystem entries")
+            if entry.is_symlink():
+                raise HTTPException(status_code=400, detail="Symlinks are not allowed in workspace snapshots")
+            try:
+                if entry.is_dir(follow_symlinks=False):
+                    stack.append(Path(entry.path))
+                elif entry.is_file(follow_symlinks=False):
+                    total_bytes += int(entry.stat(follow_symlinks=False).st_size)
+                    if total_bytes > MAX_SNAPSHOT_BYTES:
+                        raise HTTPException(status_code=413, detail="Snapshot exceeds the configured byte limit")
+                else:
+                    raise HTTPException(status_code=400, detail="Special filesystem entries are not allowed in workspace snapshots")
+            except HTTPException:
+                raise
+            except OSError as exc:
+                raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot entry: {type(exc).__name__}") from exc
+    return {"entries": entries, "bytes": total_bytes}
+
+
+def _copy_snapshot_tree(source: Path, target: Path) -> dict[str, int]:
+    _snapshot_tree_stats(source)
+    try:
+        # Never follow a link introduced after preflight. The post-copy validation
+        # below then rejects and removes any raced-in link rather than persisting it.
+        shutil.copytree(source, target, symlinks=True)
+        return _snapshot_tree_stats(target)
+    except Exception:
+        if target.exists():
+            shutil.rmtree(target, ignore_errors=True)
+        raise
 
 
 def _desktop_bounds() -> dict[str, int]:
@@ -534,7 +584,7 @@ def health() -> dict[str, Any]:
 @app.get("/capabilities")
 def capabilities(x_aurorafox_computer_token: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, "1", require_autonomy=False)
-    return {"ok": True, "computer_supported": IS_WINDOWS, "platform": "windows" if IS_WINDOWS else os.name, "screen": IS_WINDOWS, "windows": IS_WINDOWS, "mouse": IS_WINDOWS, "keyboard": IS_WINDOWS, "clipboard": False, "service_side_planning": False, "local_core_planning_required": True, "sandbox": True, "degraded_local_sandbox_enabled": ALLOW_DEGRADED_LOCAL_SANDBOX}
+    return {"ok": True, "computer_supported": IS_WINDOWS, "platform": "windows" if IS_WINDOWS else os.name, "screen": IS_WINDOWS, "windows": IS_WINDOWS, "mouse": IS_WINDOWS, "keyboard": IS_WINDOWS, "clipboard": False, "service_side_planning": False, "local_core_planning_required": True, "sandbox": True, "degraded_local_sandbox_enabled": ALLOW_DEGRADED_LOCAL_SANDBOX, "snapshot_max_entries": MAX_SNAPSHOT_ENTRIES, "snapshot_max_bytes": MAX_SNAPSHOT_BYTES}
 
 
 @app.get("/screen")
@@ -592,22 +642,22 @@ def workspace_tree(workspace: str, area: str = "work", x_aurorafox_computer_toke
 @app.post("/sandbox/workspace/snapshot")
 def workspace_snapshot(req: WorkspaceSnapshotRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(req.workspace); work = _safe_sandbox_path(f"{wid}/work"); snapshots = _safe_sandbox_path(f"{wid}/snapshots"); snapshots.mkdir(parents=True, exist_ok=True)
-    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"; snapshot_id = f"{int(time.time())}_{safe_label}_{uuid.uuid4().hex[:6]}"; target = snapshots / snapshot_id; shutil.copytree(work, target)
-    return {"ok": True, "workspace": wid, "snapshot": snapshot_id, "path": f"{wid}/snapshots/{snapshot_id}"}
+    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"; snapshot_id = f"{int(time.time())}_{safe_label}_{uuid.uuid4().hex[:6]}"; target = snapshots / snapshot_id; stats = _copy_snapshot_tree(work, target)
+    return {"ok": True, "workspace": wid, "snapshot": snapshot_id, "path": f"{wid}/snapshots/{snapshot_id}", "entries": stats["entries"], "bytes": stats["bytes"]}
 
 
 @app.post("/sandbox/workspace/rollback")
 def workspace_rollback(req: WorkspaceRollbackRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(req.workspace); sid = _safe_workspace_id(req.snapshot); work = _safe_sandbox_path(f"{wid}/work"); source = _safe_sandbox_path(f"{wid}/snapshots/{sid}", must_exist=True)
     if not source.is_dir(): raise HTTPException(status_code=404, detail="Snapshot not found")
-    replacement = _safe_sandbox_path(f"{wid}/work.rollback.{uuid.uuid4().hex}"); shutil.copytree(source, replacement)
+    replacement = _safe_sandbox_path(f"{wid}/work.rollback.{uuid.uuid4().hex}"); stats = _copy_snapshot_tree(source, replacement)
     if work.exists():
         backup = _safe_sandbox_path(f"{wid}/work.pre_rollback.{uuid.uuid4().hex}"); os.replace(work, backup)
         try: os.replace(replacement, work)
         except Exception: os.replace(backup, work); raise
         shutil.rmtree(backup, ignore_errors=True)
     else: os.replace(replacement, work)
-    return {"ok": True, "workspace": wid, "snapshot": sid}
+    return {"ok": True, "workspace": wid, "snapshot": sid, "entries": stats["entries"], "bytes": stats["bytes"]}
 
 
 @app.get("/sandbox/list")

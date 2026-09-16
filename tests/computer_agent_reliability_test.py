@@ -74,6 +74,8 @@ def test_health_and_capability_contract_are_local_first(tmp_path: Path):
     assert caps["service_side_planning"] is False
     assert caps["local_core_planning_required"] is True
     assert caps["degraded_local_sandbox_enabled"] is False
+    assert caps["snapshot_max_entries"] > 0
+    assert caps["snapshot_max_bytes"] > 0
 
 
 def test_sensitive_endpoints_require_private_channel_and_master_permission(tmp_path: Path):
@@ -234,6 +236,51 @@ def test_sandbox_write_is_bounded_atomic_and_channel_protected(tmp_path: Path):
     assert leftovers == []
     too_large = client.post("/sandbox/write", headers=_headers(), json={"path": "large.txt", "content": "x" * (service.MAX_WRITE_BYTES + 1)})
     assert too_large.status_code == 413
+
+
+def test_workspace_snapshot_is_bounded_and_leaves_no_partial_copy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    service = _load_service(tmp_path)
+    client = TestClient(service.app)
+    created = client.post("/sandbox/workspace/create", headers=_headers(), json={"id": "bounded", "task": "snapshot budget"})
+    assert created.status_code == 200
+    work = service.SANDBOX_ROOT / "bounded" / "work"
+    (work / "too-big.bin").write_bytes(b"12345")
+    monkeypatch.setattr(service, "MAX_SNAPSHOT_BYTES", 4)
+    response = client.post("/sandbox/workspace/snapshot", headers=_headers(), json={"workspace": "bounded", "label": "too-big"})
+    assert response.status_code == 413
+    snapshots = service.SANDBOX_ROOT / "bounded" / "snapshots"
+    assert list(snapshots.iterdir()) == []
+
+
+def test_workspace_snapshot_and_rollback_reject_symlink_escape(tmp_path: Path):
+    service = _load_service(tmp_path)
+    client = TestClient(service.app)
+    created = client.post("/sandbox/workspace/create", headers=_headers(), json={"id": "links", "task": "symlink boundary"})
+    assert created.status_code == 200
+    outside = tmp_path / "outside-secret.txt"
+    outside.write_text("host secret", encoding="utf-8")
+    work = service.SANDBOX_ROOT / "links" / "work"
+    link = work / "escape"
+    try:
+        link.symlink_to(outside)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks unavailable on this runner")
+    blocked = client.post("/sandbox/workspace/snapshot", headers=_headers(), json={"workspace": "links", "label": "link"})
+    assert blocked.status_code == 400
+    assert "Symlinks" in blocked.json()["detail"]
+    assert list((service.SANDBOX_ROOT / "links" / "snapshots").iterdir()) == []
+
+    link.unlink()
+    legacy = service.SANDBOX_ROOT / "links" / "snapshots" / "legacy-link"
+    legacy.mkdir()
+    try:
+        (legacy / "escape").symlink_to(outside)
+    except (OSError, NotImplementedError):
+        pytest.skip("symlinks unavailable on this runner")
+    rollback = client.post("/sandbox/workspace/rollback", headers=_headers(), json={"workspace": "links", "snapshot": "legacy-link"})
+    assert rollback.status_code == 400
+    assert "Symlinks" in rollback.json()["detail"]
+    assert list((service.SANDBOX_ROOT / "links").glob("work.rollback.*")) == []
 
 
 def test_degraded_local_process_sandbox_fails_closed_until_operator_opt_in(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
