@@ -28,6 +28,13 @@ on:
       - '.github/workflows/local-ocr-ci.yml'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-local-ocr-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   python-ocr:
     runs-on: ubuntu-latest
@@ -135,11 +142,15 @@ jobs:
       - name: Build Android OCR plugin
         working-directory: android_plugin
         shell: bash
-        run: gradle :plugin:assembleDebug --stacktrace
-      - name: Verify OCR assets, bridge, and final APK dependency contract
+        run: gradle :plugin:assembleRelease --stacktrace
+      - name: Verify OCR assets, packaged AAR, bridge, and final APK dependency contract
         run: |
           test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/eng.traineddata
           test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/rus.traineddata
+          aar='android_plugin/plugin/build/outputs/aar/AuroraFoxRuntime-release.aar'
+          test -f "$aar"
+          unzip -l "$aar" | grep -q 'assets/tessdata/eng.traineddata'
+          unzip -l "$aar" | grep -q 'assets/tessdata/rus.traineddata'
           grep -R "TessBaseAPI" android_plugin/plugin/src/main/java/com/aurorafox/runtime
           grep -R "untrusted_document" android_plugin/plugin/src/main/java/com/aurorafox/runtime
           grep -q "AndroidOcrRuntime" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt
