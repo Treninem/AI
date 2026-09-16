@@ -6,7 +6,8 @@ import sys
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-VALIDATOR = ROOT / "benchmarks" / "knowledge" / "validate_performance_report.py"
+BENCH = ROOT / "benchmarks" / "knowledge"
+VALIDATOR = BENCH / "validate_performance_report.py"
 
 
 def load_validator():
@@ -125,6 +126,16 @@ class KnowledgePerformanceValidatorTests(unittest.TestCase):
         ):
             result = module.evaluate_report(report(schema), schema)
             self.assertTrue(result["correctness_passed"], (schema, result["errors"]))
+
+    def test_memory_scaling_requires_valid_measured_baseline(self) -> None:
+        text = (BENCH / "run_memory_scaling.py").read_text(encoding="utf-8")
+        self.assertIn('"phase": "rss_baseline"', text)
+        self.assertIn('"baseline peak RSS was not measured"', text)
+        self.assertIn('baseline.get(key) is not False', text)
+        self.assertLess(text.index('hard_errors: list[dict[str, Any]] = []'), text.index('baseline_root = Path('))
+        self.assertIn('"network_required": baseline.get("network_required", None)', text)
+        self.assertIn('"external_runtime_required": baseline.get("external_runtime_required", None)', text)
+        self.assertIn('"ollama_required": baseline.get("ollama_required", None)', text)
 
 
 if __name__ == "__main__":
