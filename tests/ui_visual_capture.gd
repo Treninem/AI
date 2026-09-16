@@ -52,9 +52,11 @@ func _populate_chat(main: Control, mobile: bool) -> bool:
 	main.call("_refresh_chat_list")
 	main.call("_new_chat")
 	await process_frame
-	store.rename_chat(store.active_chat_id, "Интерфейс AuroraFox" if mobile else "Проверка интерфейса AuroraFox")
 	store.add_message("user", "Покажи, как теперь выглядит аккуратный интерфейс без лишних элементов.")
 	store.add_message("assistant", "Готово. Основной чат оставляет только нужные действия, а расширенные функции собраны по понятным разделам настроек.")
+	# The first user message intentionally auto-generates a title in ChatStore.
+	# Rename after populating so screenshots exercise a stable, readable title.
+	store.rename_chat(store.active_chat_id, "Интерфейс AuroraFox" if mobile else "Проверка интерфейса AuroraFox")
 	main.call("_render_active_chat")
 	main.call("_refresh_chat_list")
 	await process_frame
