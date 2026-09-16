@@ -72,6 +72,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "systemctl restart aurorafox-api.service" in updater
     gates = (
         "tests/test_api_gateway.py",
+        "tests/test_api_database.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
         "tests/test_core_candidate_queue.py",
@@ -98,6 +99,20 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "ForceCommand internal-sftp" in install
     assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
     assert "chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup" in install
+
+    # Production switching is data-aware: the current SQLite state must be
+    # healthy, a verifiable snapshot must exist before checkout, and the new
+    # process must pass integrity again before the update is accepted.
+    assert "python -m api.database --path" in updater
+    assert "python -m api.database --path" in install
+    assert "systemctl start aurorafox-backup.service" in updater
+    assert "latest.zip" in updater and "latest.sha256" in updater
+    assert "sha256sum -c" in updater
+    assert "preupdate_backup_sha=" in updater
+    assert updater.index("systemctl start aurorafox-backup.service") < updater.index('git checkout --detach "${candidate}"')
+    assert updater.rindex("python -m api.database --path") > updater.index("systemctl restart aurorafox-api.service")
+    assert "sha256sum -c latest.sha256" in install
+    assert "db=sqlite-wal" in install
 
 
 def test_api_provider_independence_is_packaged_and_deployed():
