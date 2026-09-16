@@ -141,10 +141,22 @@ def test_production_android_release_identity_is_pinned_end_to_end() -> None:
         assert needle in android_build
 
     assert "update/release_identity.json" in readiness
-    assert "Android signing certificate SHA-256" in readiness or "Android cert=" in readiness
+    assert "Android cert=" in readiness
     assert "AURORA_ANDROID_KEYSTORE_BASE64" in workflow
     assert "GODOT_ANDROID_KEYSTORE_RELEASE_PATH" in workflow
     assert "build_android.ps1" in workflow
+
+
+def test_release_private_material_is_git_ignored_and_only_public_pins_are_committed() -> None:
+    ignore = (ROOT / ".gitignore").read_text(encoding="utf-8")
+    setup = (ROOT / "build" / "setup_release_signing.ps1").read_text(encoding="utf-8")
+    assert "build/private/" in ignore
+    assert "*.keystore" in ignore
+    assert "*.jks" in ignore
+    assert "aurora_update_signing_private.pem" in setup
+    assert "aurorafox-android-release.jks" in setup
+    assert "git add update/release_public.pub update/release_identity.json" in setup
+    assert "git add build/private" not in setup
 
 
 def test_windows_v12_repair_uses_same_inno_identity_and_is_ci_verified() -> None:
