@@ -91,6 +91,12 @@ def emotion_values(name: str, intensity: float) -> tuple[float, float, float]:
 
 
 def main() -> int:
+    # Keep measurements repeatable across reruns so prosody changes can be
+    # compared against a stable baseline rather than random execution noise.
+    torch.manual_seed(0)
+    np.random.seed(0)
+    torch.set_num_threads(4)
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     engine = SileroEngine(CONFIG["silero"], device)
     processor = AuroraVoiceProcessor(CONFIG["processor"])
