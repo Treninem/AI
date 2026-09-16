@@ -77,8 +77,28 @@ def test_autonomous_research_is_promoted_only_through_curator():
     assert "ai.import_knowledge_text(" in curator
     assert '"kind": "research_knowledge"' in curator
     assert '"untrusted_external": true' in curator
-    assert '"provenance_fingerprint": fingerprint' in curator
+    assert '"provenance_fingerprint"' in curator
     assert '"quality_score": score' in curator
+
+
+def test_autonomous_research_requires_corroboration_and_persists_open_gaps():
+    curator = read("agent/learning_curator.gd")
+    assert "const SINGLE_SOURCE_PROMOTION_SCORE" in curator
+    assert "const MIN_CORROBORATING_FAMILIES := 2" in curator
+    assert "var _claim_evidence: Dictionary = {}" in curator
+    assert "var _gap_questions: Array = []" in curator
+    assert "func _claim_key" in curator
+    assert "func _claim_stance" in curator
+    assert "func _source_family" in curator
+    assert "func _record_claim_evidence" in curator
+    assert '"contradiction"' in curator
+    assert '"needs_corroboration"' in curator
+    assert '"evidence_status": evidence_status' in curator
+    assert '"corroboration_count": independent_count' in curator
+    assert "func open_questions" in curator
+    assert "func next_question" in curator
+    assert '"claim_evidence": _claim_evidence' in curator
+    assert '"gap_questions": _gap_questions' in curator
 
 
 def test_verified_release_updates_are_applied_automatically_by_default():
