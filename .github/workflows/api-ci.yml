@@ -11,6 +11,7 @@ on:
       - 'tests/test_api_database.py'
       - 'tests/test_api_accounts_sync.py'
       - 'tests/test_api_account_network.py'
+      - 'tests/test_api_schema_migrations.py'
       - 'tests/test_api_privacy_contract.py'
       - 'tests/test_api_runtime_resilience.py'
       - 'tests/test_core_candidate_queue.py'
@@ -31,6 +32,7 @@ on:
       - 'tests/test_api_database.py'
       - 'tests/test_api_accounts_sync.py'
       - 'tests/test_api_account_network.py'
+      - 'tests/test_api_schema_migrations.py'
       - 'tests/test_api_privacy_contract.py'
       - 'tests/test_api_runtime_resilience.py'
       - 'tests/test_core_candidate_queue.py'
@@ -67,6 +69,7 @@ jobs:
             tests/test_api_database.py \
             tests/test_api_accounts_sync.py \
             tests/test_api_account_network.py \
+            tests/test_api_schema_migrations.py \
             tests/test_api_privacy_contract.py \
             tests/test_api_runtime_resilience.py \
             tests/test_core_candidate_queue.py \
