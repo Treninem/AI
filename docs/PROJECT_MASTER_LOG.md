@@ -814,7 +814,7 @@ FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UI-POLISH
 TYPE: REGRESSION
 EVIDENCE: UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b` has unique non-UI patches against current main that delete SERVER-DB-owned resilience behavior: `api/account_store.py::revoke_account_token`, the `_deliver_account_token` SMTP-failure revocation path in `api/server.py`, and the regressions `test_smtp_failure_revokes_issued_token_and_immediate_resend_is_not_cooldown_blocked` plus `test_undelivered_account_token_revoke_allows_immediate_retry_inside_cooldown`. These paths are explicitly owned by `CHAT-2026-09-16-SERVER-DB`; removing them would reintroduce an undelivered-token cooldown/retry defect unrelated to UI work.
-ACTION: Re-sync/reconcile PR #27 non-force with fresh `main` and preserve the current SERVER-DB token revoke/retry implementation plus both regression tests. Any intentional server semantic change must be coordinated with `CHAT-2026-09-16-SERVER-DB`; иначе eliminate эти API/test diffs from the UI branch. Require API CI + UI Visual CI + Integration Gate on one same SHA before merge.
+ACTION: Re-sync/reconcile PR #27 non-force with fresh `main` and preserve the current SERVER-DB token revoke/retry implementation plus both regression tests. Any intentional server semantic change must be coordinated with `CHAT-2026-09-16-SERVER-DB`; otherwise eliminate эти API/test diffs from the UI branch. Require API CI + UI Visual CI + Integration Gate on one same SHA before merge.
 
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UI-POLISH
