@@ -15,7 +15,7 @@ APP_ID = "8C21F024-53DE-4FA3-A150-78C80829B6BF"
 
 
 def legacy_manifest_parser_accepts(manifest: dict) -> bool:
-    """Model the stable manifest fields; readability never bypasses trust verification."""
+    """Model stable manifest fields; readability never bypasses trust verification."""
     if not isinstance(manifest, dict) or not str(manifest.get("version", "")):
         return False
     if str(manifest.get("channel", "stable")) != "stable":
@@ -77,16 +77,27 @@ def test_repair_releases_are_separate_prereleases_not_stable_latest() -> None:
     assert "--prerelease" in workflow
     assert "--latest=false" in workflow
     assert "releases/latest" not in workflow
+    assert "Repair release illegally occupies stable latest" in workflow
 
 
-def test_repair_assets_publish_before_v14_signed_floor() -> None:
+def test_repair_assets_publish_only_from_signed_v14_or_newer_floor() -> None:
     workflow = (ROOT / ".github/workflows/updater-repair-validation.yml").read_text(encoding="utf-8")
+    assert "Check signed-floor repair publication eligibility" in workflow
+    assert "eligible = ver(current) >= ver(floor) and ver(current) > ver(legacy)" in workflow
+    assert "if: steps.floor.outputs.eligible == 'true'" in workflow
     assert 'for old in 1.2 1.3' in workflow
     assert 'source="dist/AuroraFox-V${version}-Setup-Windows.exe"' in workflow
     assert 'stable="dist/AuroraFox-V${old}-Repair-Windows.exe"' in workflow
     assert 'gh release upload "$tag" "$stable" "$sums" --clobber' in workflow
-    assert "Canonical version has not reached the signed floor yet" not in workflow
-    assert "bootstrap_version=$version signed_floor=1.4.0.0" in workflow
+    assert "AURORA_REPAIR_RELEASES_READY" in workflow
+
+
+def test_windows_package_is_only_artifact_producer_not_repair_release_writer() -> None:
+    workflow = (ROOT / ".github/workflows/windows-package-ci.yml").read_text(encoding="utf-8")
+    assert "publish-v12-repair" not in workflow
+    assert "gh release create" not in workflow
+    assert "tests/windows_v13_bridge_smoke.ps1" in workflow
+    assert "update\\release_public.pub" in workflow
 
 
 def test_public_update_key_is_embedded_in_windows_and_android() -> None:
