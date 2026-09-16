@@ -850,7 +850,7 @@ NEXT:
 - Fresh verified `main` before this coordination update: `047fe827c5dfee6aad967767d4d1a46f6487228b` (`server: satisfy explicit SMTP security contract`). `AGENTS.md` and the full canonical master log were reread before this write.
 - Reason for rollover: old executor conversations are approaching maximum conversation length. The owner will stop using those old conversations and create fresh executor chats. This is a **chat-session rollover**, not permission to discard their branches, commits, PRs, artifacts or unresolved defects.
 - Target operating set: **10 concurrent chats total = this coordinator + 9 fresh executor chats.** Creating an additional coordinator is explicitly unnecessary.
-- Old executor chats are retired as active human/chat sessions after the rollover. Their old CLAIM names remain historical evidence and their occupied production paths remain protected until a fresh replacement executor explicitly performs TAKEOVER/RECONCILE in this master log. No fresh executor may assume an old claim is free merely because the old conversation is no longer used.
+- Old executor chats are retired as active human/chat sessions after the rollover. Their old CLAIM names remain historical evidence and their occupied production paths remain protected until a fresh replacement executor explicitly performs TAKEOVER/RECONCILE in this master log. No fresh executor may assume an old claim is free merely потому что старый разговор больше не используется.
 - A replacement executor MUST start from fresh `main`, read `AGENTS.md`, read this full master log, inspect current open PRs/heads/workflow runs, identify the old lane it replaces, and create a new takeover CLAIM before changing implementation. The takeover entry must state the old CLAIM/PR/branch/head being inherited and whether it will continue, reconcile or supersede that candidate. No blind merge of stale branches.
 - Canonical version and Android `versionCode` are unchanged by this coordination-only update. Intended bump: **NONE**.
 
@@ -1046,3 +1046,52 @@ BLOCKERS:
 
 NEXT:
 - Restore the five unrelated workflows from fresh main, verify net diff, then trigger draft-PR CI and classify failures by exact run/job/test before further implementation.
+
+## 40. UI / UX / Visual — TAKEOVER/RECONCILE, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-UI-VISUAL`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
+- Fresh main / Started from HEAD: `bc0b7d83665c54a561fec060b95dc9f0bc20acdd`.
+- Working branch: `chat-2026-09-17-ui-visual`, non-force fast-forwarded to exact fresh main before this claim.
+- Режим: Chat. Intended bump after acceptance: **PATCH**; canonical version, Android `versionCode`, final merge/release remain coordinator-only and version-last.
+- Inherits/reconciles retired `CHAT-2026-09-16-UI-POLISH`; draft PR #27; branch `fix/ui-polish-2026-09-16`; exact inherited head `5336e8388e745dbffa3e460e74296bde09c132ce`.
+- PR #27 is OPEN/DRAFT and diverged from this fresh main: `ahead 128 / behind 19`, merge base `047fe827c5dfee6aad967767d4d1a46f6487228b`. It will **not** be blindly merged/cherry-picked as a 128-commit history.
+- Continue only useful relevant UI deltas: responsive Windows/Android layout/navigation; canonical owner artwork; account/login/guest/personal-memory surfaces; Knowledge progress/cancel/error presentation; Files/Voice/Work/Computer/updater presentation; loading/offline/retry/error states; touch/mouse/keyboard navigation/accessibility; and deterministic structural/pointer/render evidence.
+- Explicitly drop stale/unrelated deltas: any Server/API semantic changes; old SERVER-DB token revoke/retry regressions; Work/Computer backend changes already accepted into fresh main; Android platform/NDK/package fixes; Knowledge storage/threading/transaction/cancel semantics; Core/Voice/OCR backend or updater trust/signing changes; stale non-UI workflows.
+- UI-owned implementation/test surface for reconciliation: `scripts/main.gd`, `scripts/main_compat.gd`, `scripts/mobile_ui_adapter.gd`, `scripts/desktop_visual_theme.gd`, `scripts/settings_overlay.gd`, `scripts/settings_visual_fix.gd`, `scripts/voice_overlay.gd`, `scripts/voice_overlay_compat.gd`, `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd`, `scripts/knowledge_base_overlay.gd`, `scripts/self_improvement_overlay.gd`, `work/work_overlay.gd`, `update/update_overlay.gd`, `api/settings_overlay.gd` client/UI-only behavior, `.github/workflows/ui-visual-ci.yml`, `tests/desktop_ui_smoke.gd`, `tests/ui_owner_assets_smoke.gd`, `tests/ui_real_input_smoke.gd`, `tests/ui_state_smoke.gd`, `tests/ui_state_visual_capture.gd`, `tests/ui_visual_capture.gd`, `tests/ui_work_computer_visual_capture.gd`, and this master log. Voice/Work/Updater/API backend semantics remain with their owning lanes.
+- Branding invariant: immutable owner masters remain `assets/ui/aurorafox_avatar_master.png` blob `89ff783b171733f88b5153acd24c6a28fb2953dd` and `assets/ui/aurorafox_background_master.png` blob `ed17e933244b7ce0f520b28897c0ca1ad50a5347`; their bytes are not to be modified. Portrait/narrow rendering must keep the owner-background focal region right-biased and active runtime must not substitute legacy primitive art.
+- Work/Computer invariant from fresh main: visible permission toggle must propagate to `ComputerClient.set_computer_control_enabled(enabled)` with default-OFF/master-stop preserved; high-level goals remain planned by bundled AuroraFox Core / AgentCore through ToolRegistry primitives; `ComputerClient.plan()/run()` and sidecar planning are not restored.
+- Account/Knowledge invariants: login + explicit guest + personal-memory management remain visible client surfaces without changing Server semantics; large Knowledge UI must expose progress/cancel/error and remain responsive, while storage-level streaming/cancel/threading semantics stay with `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR`.
+- Exact inherited UI evidence on PR #27 head `5336e838...`: UI Visual run `35152857400`, job `104985180291` — Godot parse, structural Windows/Android matrix, canonical owner-art and safe-area/keyboard/loading/offline/error/cancel steps passed; real pointer navigation failed when Computer popup geometry became `(626, 8217)` at viewport `(1440, 900)`, so downstream render/capture matrix was skipped. Same head had API CI `35152857415` SUCCESS, Work Mode `35152857475` SUCCESS, Windows Package `35152857407` SUCCESS, Core/Voice `35152857442` SUCCESS, Agent Sync `35152857436` SUCCESS, Core Bootstrap `35152857535` SUCCESS and Release Identity `35152857605` SUCCESS; Integration Gate and Android APK were red and require separate classification.
+- Fresh-main integration evidence: Integration Gate `35161784100` on `7be54b6a0ee6bb8a20ef410ef0b6af3e64ece956` still reports the owner-approved branding contract red while its headless UI regression smoke succeeds. Therefore current UI work starts from branding/runtime reconciliation plus the inherited Computer popup geometry failure, not from a full UI rewrite.
+
+FROM: CHAT-2026-09-17-UI-VISUAL
+TO: CHAT-2026-09-17-PLATFORM-UPDATER-INTEGRATION
+TYPE: BLOCKER
+EVIDENCE: PR #27 exact head `5336e8388e745dbffa3e460e74296bde09c132ce`, Android APK run `35152857384`, job `104985179749`: the workflow installs/pins NDK `28.1.13356709`, while Gradle requests NDK `27.0.12077973`; attempted install of `27.0.12077973` fails with `java.util.zip.ZipException: Archive is not a ZIP archive`, so APK/sign/install steps never execute.
+ACTION: Align the Android package/toolchain NDK contract and rerun the APK/package gate. UI lane will not edit Gradle/platform/package backend files. This does not block fast UI parse/interaction/render work but blocks final Android package acceptance for this lane.
+
+PROGRESS_COMPLETE: 20%
+PROGRESS_REMAINING: 80%
+
+DONE:
+- Fresh main, updated `AGENTS.md`, full master log, old UI claim, PR #27 exact head/diff and current workflow evidence audited.
+- Clean takeover branch established from exact `bc0b7d83665c54a561fec060b95dc9f0bc20acdd`; no implementation file was changed before this claim.
+- Useful UI deltas separated from stale/unrelated Server/Work-backend/Platform/Knowledge-backend history.
+- First actionable UI runtime defect localized to Computer popup geometry; fresh-main branding release blocker retained as a separate UI-owned gate.
+
+REMAINING:
+- Reconcile the minimum verified UI-only deltas onto current main, beginning with canonical branding/runtime crop and bounded Computer popup layout while preserving current Work/Computer backend contracts.
+- Run gates in required order: Godot parse → structural/UI smoke → interaction/navigation → pointer/touch → responsive matrix → render/screenshots → same-SHA Work/API integration.
+- Capture Windows 1440x900, 1280x720, 960x640 and Android portrait/narrow/safe-area/soft-keyboard/transient states, including long chat/list/filename cases.
+- Run Windows/Android packages only after fast UI gates are green; Android package/toolchain defect remains Platform-owned.
+- Keep physical Windows/Android/manual visual acceptance explicitly separate if no physical device/human evidence is available.
+
+BLOCKERS:
+- UI-owned candidate blocker: Computer popup geometry `(626, 8217)` exceeds `(1440, 900)` in `35152857400/104985180291`.
+- UI-owned release blocker: canonical branding integration remains red on fresh-main Integration Gate `35161784100` even though headless UI regression is green.
+- Cross-lane Android package blocker: NDK contract/download failure `35152857384/104985179749`, routed above to `CHAT-2026-09-17-PLATFORM-UPDATER-INTEGRATION`; safe UI fast-gate work can continue.
+
+NEXT:
+- Inspect fresh-main UI production files against the exact relevant PR #27 patches, then reconcile only the minimal UI-only branding + Computer presentation package and execute fast parse/structural/pointer gates before any broader visual change.
