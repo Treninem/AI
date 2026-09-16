@@ -62,6 +62,7 @@ jobs:
           tests.test_knowledge_performance_compare
           tests.test_knowledge_stress_gates
           tests.test_knowledge_stress_removal_transaction
+          tests.test_knowledge_stress_registry_durability
           tests.test_knowledge_stress_workflow_contract
           -v
       - name: Compile Python tools
@@ -126,6 +127,13 @@ jobs:
           --script benchmarks/knowledge/write_failure_rollback_probe.gd
           --prefix AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=
           --report artifacts/knowledge-performance/write-failure-rollback.json
+      - name: Reject truncated registry temp before promotion
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/registry_truncated_temp_probe.gd
+          --prefix AURORA_KNOWLEDGE_TRUNCATED_REGISTRY_RESULT=
+          --report artifacts/knowledge-performance/registry-truncated-temp.json
       - name: Reproduce interrupted reimport restart recovery
         run: >-
           python benchmarks/knowledge/run_interrupted_import_recovery.py
@@ -203,6 +211,14 @@ jobs:
           --script benchmarks/knowledge/write_failure_rollback_probe.gd
           --prefix AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=
           --report artifacts/knowledge-performance/write-failure-rollback-windows.json
+      - name: Reject truncated registry temp before promotion
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/registry_truncated_temp_probe.gd
+          --prefix AURORA_KNOWLEDGE_TRUNCATED_REGISTRY_RESULT=
+          --report artifacts/knowledge-performance/registry-truncated-temp-windows.json
       - name: Reproduce interrupted reimport restart recovery
         shell: powershell
         run: >-
