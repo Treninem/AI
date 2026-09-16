@@ -2,7 +2,8 @@ param(
     [string]$Godot = "godot",
     [string]$Gradle = "gradle",
     [switch]$ReleaseOnly,
-    [switch]$AllowUnsignedRelease
+    [switch]$AllowUnsignedRelease,
+    [string]$CoreModelCacheDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -12,6 +13,10 @@ $outDir = Join-Path $root "build/android"
 $exportPresetPath = Join-Path $root "export_presets.cfg"
 $versionTest = Join-Path $root "tests/version_sync_test.ps1"
 $releaseIdentityPath = Join-Path $root "update/release_identity.json"
+$bundledModelHelper = Join-Path $PSScriptRoot "prepare_bundled_core_model.ps1"
+$bundledModelPath = Join-Path $root "models/aurorafox-core.gguf"
+$bundledModelBytes = 1282439264
+$bundledModelSha = 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
 function Get-Sha256Hex([byte[]]$Bytes) {
@@ -86,6 +91,24 @@ if (-not (Test-Path -LiteralPath $exportPresetPath)) {
 if (Test-Path -LiteralPath $versionTest) {
     & $versionTest
 }
+
+# AuroraFox is shipped as a complete AI application. The user must never be
+# asked to choose or download a GGUF/provider after installation. Every APK
+# build therefore stages the pinned Core weights before Godot export.
+if (-not (Test-Path -LiteralPath $bundledModelHelper)) {
+    throw 'build/prepare_bundled_core_model.ps1 is missing'
+}
+$prepareModelArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$bundledModelHelper,'-Destination',$bundledModelPath)
+if (-not [string]::IsNullOrWhiteSpace($CoreModelCacheDir)) {
+    $prepareModelArgs += @('-CacheDir',$CoreModelCacheDir)
+}
+& powershell @prepareModelArgs
+if ($LASTEXITCODE -ne 0) { throw 'Bundled AuroraFox Core preparation failed' }
+if (-not (Test-Path -LiteralPath $bundledModelPath)) { throw 'Bundled AuroraFox Core weights are missing before Android export' }
+if ((Get-Item -LiteralPath $bundledModelPath).Length -ne $bundledModelBytes) { throw 'Bundled AuroraFox Core size mismatch before Android export' }
+$bundledActualSha = (Get-FileHash -LiteralPath $bundledModelPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($bundledActualSha -ne $bundledModelSha) { throw "Bundled AuroraFox Core SHA-256 mismatch before Android export: $bundledActualSha" }
+Write-Host "Bundled AuroraFox Core verified for Android: $bundledActualSha" -ForegroundColor Green
 
 $enforcePinnedReleaseIdentity = $false
 $pinnedAndroidFingerprint = ''
@@ -173,17 +196,14 @@ try {
         if (Test-Path -LiteralPath $apkPath) {
             Remove-Item -LiteralPath $apkPath -Force
         }
-        # This flag is an export modifier, not a standalone one-shot command.
-        # Invoking it alone starts the project after installing the template and
-        # leaves CI running indefinitely. Keep installation and export in the
-        # same Godot process so the editor exits when the APK is produced.
         & $Godot --headless --path $root --install-android-build-template --export-release "Android" $apkPath
         if ($LASTEXITCODE -ne 0) { throw "Android export failed" }
         if (-not (Test-Path -LiteralPath $apkPath)) { throw "Android APK was not produced" }
 
         $apk = Get-Item -LiteralPath $apkPath
-        if ($apk.Length -lt 1048576) {
-            throw "Android APK is unexpectedly small ($($apk.Length) bytes)"
+        # A complete AuroraFox APK contains >1.2 GiB of verified Core weights.
+        if ($apk.Length -lt 1200000000) {
+            throw "Android APK is too small to contain bundled AuroraFox Core ($($apk.Length) bytes)"
         }
 
         if ($enforcePinnedReleaseIdentity) {
@@ -205,6 +225,7 @@ try {
             Write-Host "Built APK signing identity verified: $apkFingerprint" -ForegroundColor Green
         }
 
+        Write-Host "AURORAFOX_ANDROID_BUNDLED_CORE_OK sha256=$bundledActualSha" -ForegroundColor Green
         Write-Host "AuroraFox Android build: $apkPath ($($apk.Length) bytes)" -ForegroundColor Green
     } finally {
         Pop-Location
