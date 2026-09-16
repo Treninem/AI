@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from email.message import EmailMessage
+from pathlib import Path
 
 import pytest
 
 from api.account_mailer import AccountMailConfig, AccountMailError, AccountMailer
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def config(**overrides) -> AccountMailConfig:
@@ -97,3 +101,12 @@ def test_starttls_happens_before_authentication(monkeypatch):
     monkeypatch.setattr("api.account_mailer.smtplib.SMTP", FakeSMTP)
     AccountMailer(config()).send_token("user@example.test", "verify_email", "one-time")
     assert events.index("starttls") < events.index("login") < events.index("send")
+
+
+def test_reg_ru_verifier_binds_account_action_url_to_trusted_origin():
+    verifier = (ROOT / "deploy/reg_ru/verify.sh").read_text(encoding="utf-8")
+    assert "from urllib.parse import urlsplit" in verifier
+    assert 'expected_action_host = "auth.aurorafox.ru" if api_url.hostname == "api.aurorafox.ru" else api_url.hostname' in verifier
+    assert 'action_url.hostname == expected_action_host' in verifier
+    assert 'action_url.port in {None, 443}' in verifier
+    assert 'action_url.path in {"", "/"} and not action_url.query and not action_url.fragment' in verifier

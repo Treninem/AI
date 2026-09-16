@@ -1,0 +1,397 @@
+name: AuroraFox Integration Gate
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-integration-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-subsystem-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install integration contract dependencies
+        shell: bash
+        run: >-
+          python -m pip install --disable-pip-version-check
+          -r api/requirements.txt
+          pytest==8.4.1 numpy==2.2.6 requests==2.32.5
+
+      - name: Run same-SHA cross-subsystem contracts
+        shell: bash
+        run: >-
+          PYTHONPATH="$PWD" python -m pytest -q
+          tests/integration_release_readiness_contract.py
+          tests/test_standalone_core_contract.py
+          tests/test_autonomous_evolution_contract.py
+          tests/test_api_accounts_sync.py
+          tests/test_api_privacy_contract.py
+          tests/test_release_core_gates.py
+          tests/test_android_contract.py
+
+      - name: Research evidence lifecycle contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_research_evidence_lifecycle_contract.py
+
+      - name: Research collector privacy contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_research_collector_privacy_contract.py
+
+      - name: Research source resilience contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_research_source_resilience_contract.py
+
+      - name: Voice text contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_voice_text.py
+
+      - name: Voice config and acoustic-evidence contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_voice_configs.py
+
+      - name: Voice optional XTTS contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_xtts_contract.py
+
+      - name: Large Knowledge performance contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_knowledge_performance_contract.py
+
+      - name: Large Knowledge comparable regression contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_knowledge_performance_compare.py
+
+      - name: Large Knowledge scaling blocker contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_knowledge_stress_gates.py
+
+      - name: Large Knowledge durability and removal contracts
+        if: always()
+        shell: bash
+        run: >-
+          PYTHONPATH="$PWD" python -m pytest -q
+          tests/test_knowledge_stress_workflow_contract.py
+          tests/test_knowledge_stress_registry_durability.py
+          tests/test_knowledge_stress_removal_transaction.py
+
+      - name: Candidate verified bundle application contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_verified_bundle_is_rechecked_and_applied
+
+      - name: Candidate stale base rejection contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_stale_base_hash_is_rejected
+
+      - name: Candidate protected target rejection contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_protected_target_is_rejected_before_access
+
+      - name: Candidate comparative review contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_missing_comparative_review_is_rejected
+
+      - name: Candidate dangerous primitive contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_independent_contract_rejects_new_process_primitive
+
+      - name: Candidate public API preservation contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_independent_contract_rejects_removed_public_api
+
+      - name: Candidate promotion workflow trust-boundary contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_promotion_workflow_keeps_candidate_untrusted_until_verified
+
+      - name: Updater repair and signed-floor compatibility contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_signed_release_enforces_v12_repair_and_v13_signed_update_floor
+
+      - name: API runtime resilience contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_runtime_resilience.py
+
+      - name: API early request body limit contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_request_limits.py
+
+      - name: API server hardening contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_server_hardening.py
+
+      - name: API public account web contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_account_web.py
+
+      - name: API public authentication rate limit contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_public_auth_limits.py
+
+      - name: API persistence maintenance contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_persistence_maintenance.py
+
+      - name: Deployment REG.RU release contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_deployment_contract.py
+
+      - name: Master-log coordination contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_project_master_contract.py
+
+      - name: Report independently active lane handoff visibility
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          for path in \
+            .github/workflows/local-ocr-ci.yml \
+            .github/workflows/core-benchmarks.yml \
+            .github/workflows/work-computer-reliability.yml \
+            tests/test_local_ocr.py
+          do
+            if [ -e "$path" ]; then
+              echo "LANE_ARTIFACT_PRESENT $path"
+            else
+              echo "LANE_ARTIFACT_PENDING $path"
+            fi
+          done
+          if [ -d benchmarks/core ]; then
+            echo 'LANE_ARTIFACT_PRESENT benchmarks/core/**'
+          else
+            echo 'LANE_ARTIFACT_PENDING benchmarks/core/**'
+          fi
+          test -f .github/workflows/work-mode-ci.yml
+          test -f tests/work_mode_store_smoke.gd
+          test -f .github/workflows/research-quality-ci.yml
+          test -f tests/test_research_evidence_lifecycle_contract.py
+          test -f tests/research_evidence_lifecycle_smoke.gd
+          test -f tests/test_research_collector_privacy_contract.py
+          test -f tests/research_collector_privacy_smoke.gd
+          test -f tests/test_research_source_resilience_contract.py
+          test -f tests/research_source_resilience_smoke.gd
+          test -d benchmarks/knowledge
+          test -f benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          test -f benchmarks/knowledge/record_dedupe_shared_source_probe.gd
+          test -f benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
+          test -f benchmarks/knowledge/write_failure_rollback_probe.gd
+          test -f benchmarks/knowledge/registry_truncated_temp_probe.gd
+          test -f benchmarks/knowledge/run_godot_probe.py
+          test -f benchmarks/knowledge/run_interrupted_import_recovery.py
+          test -f benchmarks/knowledge/run_interrupted_removal_recovery.py
+          test -f tests/test_knowledge_performance_contract.py
+          test -f tests/test_knowledge_performance_compare.py
+          test -f tests/test_knowledge_stress_gates.py
+          test -f tests/test_knowledge_stress_workflow_contract.py
+          test -f tests/test_knowledge_stress_registry_durability.py
+          test -f tests/test_knowledge_stress_removal_transaction.py
+          test -f tests/test_api_persistence_maintenance.py
+          test -f tests/test_deployment_contract.py
+          test -f .github/workflows/knowledge-performance.yml
+
+  godot-cross-subsystem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Parse the integrated Godot project
+        shell: bash
+        run: timeout 90s ./godot --headless --editor --path . --quit
+
+      - name: Run Knowledge dedupe alias removal safety probe
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
+          --report artifacts/integration-gate/dedupe-alias-removal.json
+
+      - name: Run Knowledge record dedupe and shared-source lifecycle probe
+        if: always()
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/record_dedupe_shared_source_probe.gd
+          --prefix AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=
+          --report artifacts/integration-gate/record-dedupe-shared-source.json
+
+      - name: Run legacy unregistered Knowledge rollback safety probe
+        if: always()
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=
+          --report artifacts/integration-gate/legacy-unregistered-rollback.json
+
+      - name: Run Knowledge registry write-failure rollback probe
+        if: always()
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/write_failure_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=
+          --report artifacts/integration-gate/write-failure-rollback.json
+
+      - name: Run Knowledge truncated registry temp rejection probe
+        if: always()
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/registry_truncated_temp_probe.gd
+          --prefix AURORA_KNOWLEDGE_TRUNCATED_REGISTRY_RESULT=
+          --report artifacts/integration-gate/registry-truncated-temp.json
+
+      - name: Run interrupted Knowledge reimport restart recovery
+        if: always()
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_interrupted_import_recovery.py
+          --godot ./godot
+          --target-mb 32
+          --timeout-seconds 240
+          --report artifacts/integration-gate/interrupted-reimport-recovery.json
+
+      - name: Run interrupted canonical Knowledge removal restart recovery
+        if: always()
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_interrupted_removal_recovery.py
+          --godot ./godot
+          --target-mb 8
+          --timeout-seconds 300
+          --report artifacts/integration-gate/interrupted-removal-recovery.json
+
+      - name: Run offline Core Agent memory Knowledge Work API and safety smokes
+        if: always()
+        shell: bash
+        run: |
+          set -uo pipefail
+          status=0
+          for smoke in \
+            tests/self_reliance_smoke.gd \
+            tests/offline_autonomy_smoke.gd \
+            tests/autonomy_learning_smoke.gd \
+            tests/research_evidence_lifecycle_smoke.gd \
+            tests/research_collector_privacy_smoke.gd \
+            tests/research_source_resilience_smoke.gd \
+            tests/knowledge_registry_smoke.gd \
+            tests/knowledge_transaction_rollback_smoke.gd \
+            tests/api_gateway_smoke.gd \
+            tests/work_mode_smoke.gd \
+            tests/work_mode_store_smoke.gd \
+            tests/runtime_extension_smoke.gd \
+            tests/core_candidate_benchmark_smoke.gd \
+            tests/core_candidate_submitter_smoke.gd
+          do
+            echo "INTEGRATION_SMOKE_START $smoke"
+            if timeout 60s ./godot --headless --path . --script "$smoke"; then
+              echo "INTEGRATION_SMOKE_OK $smoke"
+            else
+              echo "INTEGRATION_SMOKE_FAILED $smoke"
+              status=1
+            fi
+          done
+          exit "$status"
+
+      - name: Run headless UI regression smoke (not visual acceptance)
+        if: always()
+        shell: bash
+        run: timeout 60s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
+
+      - name: Record acceptance boundary
+        if: always()
+        shell: bash
+        run: |
+          echo 'Headless UI smoke is not human visual acceptance.'
+          echo 'Android emulator is not a physical Android device.'
+          echo 'CI Windows runner is not owner hardware.'
+          echo 'physical-device acceptance is separate'
+
+      - name: Upload integration gate diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-gate-godot-${{ github.sha }}
+          path: artifacts/integration-gate/
+          if-no-files-found: warn
+
+  integration-gate:
+    if: always()
+    needs: [cross-subsystem-contracts, godot-cross-subsystem]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all integration jobs
+        shell: bash
+        env:
+          CONTRACT_RESULT: ${{ needs.cross-subsystem-contracts.result }}
+          GODOT_RESULT: ${{ needs.godot-cross-subsystem.result }}
+        run: |
+          set -euo pipefail
+          echo "cross-subsystem-contracts=$CONTRACT_RESULT"
+          echo "godot-cross-subsystem=$GODOT_RESULT"
+          test "$CONTRACT_RESULT" = success
+          test "$GODOT_RESULT" = success

@@ -329,7 +329,15 @@ func _save_rows(rows: Array) -> bool:
 		"updated_at": Time.get_datetime_string_from_system(true),
 		"sources": rows
 	}, "  "))
+	file.flush()
+	var write_error := file.get_error()
 	file.close()
+	# Never promote a partial/truncated registry. Disk-full and interrupted writes
+	# must fail before the last committed target is moved out of the way.
+	if write_error != OK or not _valid_registry_file(REGISTRY_TEMP):
+		_remove_if_exists(REGISTRY_TEMP)
+		_cache_valid = false
+		return false
 	if not _replace_registry_file():
 		_cache_valid = false
 		return false
@@ -342,6 +350,11 @@ func _replace_registry_file() -> bool:
 	var temp_abs := ProjectSettings.globalize_path(REGISTRY_TEMP)
 	var original_abs := ProjectSettings.globalize_path(REGISTRY_ORIGINAL)
 	if not FileAccess.file_exists(REGISTRY_TEMP):
+		return false
+	# Defensive second gate for callers/recovery probes that reach replacement
+	# directly. A malformed temp can never replace the last committed registry.
+	if not _valid_registry_file(REGISTRY_TEMP):
+		_remove_if_exists(REGISTRY_TEMP)
 		return false
 	if FileAccess.file_exists(REGISTRY_PATH):
 		if DirAccess.rename_absolute(target_abs, original_abs) != OK:

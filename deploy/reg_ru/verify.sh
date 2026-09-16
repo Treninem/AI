@@ -70,6 +70,7 @@ public_url="$(PYTHONPATH="${REPOSITORY}" "${VENV}/bin/python" - "${api_pid}" "${
 import os
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from api.account_mailer import AccountMailConfig
 
@@ -95,6 +96,21 @@ assert config.configured, "account mail transport is not production-configured"
 assert config.public_url_is_secure, "account action URL is not secure"
 public_url = runtime.get("AURORAFOX_PUBLIC_URL", "").rstrip("/")
 assert public_url.startswith("https://"), "public API URL must be HTTPS"
+
+# A valid TLS URL is not sufficient for one-time account credentials: an owner
+# typo must never redirect verification/reset links to an unrelated HTTPS host.
+# Default sslip.io deployments use the same public origin for API + account
+# actions. The canonical aurorafox.ru deployment intentionally separates them
+# into api.aurorafox.ru and auth.aurorafox.ru.
+api_url = urlsplit(public_url)
+action_url = urlsplit(config.public_url.rstrip("/"))
+assert api_url.scheme == "https" and api_url.hostname, "public API URL is invalid"
+assert api_url.path in {"", "/"} and not api_url.query and not api_url.fragment, "public API URL must be an origin"
+expected_action_host = "auth.aurorafox.ru" if api_url.hostname == "api.aurorafox.ru" else api_url.hostname
+assert action_url.scheme == "https", "account action URL must use HTTPS"
+assert action_url.hostname == expected_action_host, "account action URL host is not trusted for this deployment"
+assert action_url.port in {None, 443}, "account action URL must use the default HTTPS port"
+assert action_url.path in {"", "/"} and not action_url.query and not action_url.fragment, "account action URL must be an origin"
 print(public_url)
 PY
 )" || fail 'runtime_environment_validation_failed'
