@@ -9,7 +9,10 @@ on:
       - 'update/update_overlay.gd'
       - 'assets/ui/**'
       - 'tests/desktop_ui_smoke.gd'
+      - 'tests/ui_owner_assets_smoke.gd'
+      - 'tests/ui_state_smoke.gd'
       - 'tests/ui_visual_capture.gd'
+      - 'tests/ui_state_visual_capture.gd'
       - 'main.tscn'
       - 'project.godot'
       - '.github/workflows/ui-visual-ci.yml'
@@ -45,6 +48,14 @@ jobs:
       - name: Structural desktop and Android portrait UI gate
         shell: bash
         run: timeout 45s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
+
+      - name: Canonical owner-art UI gate
+        shell: bash
+        run: timeout 45s ./godot --headless --path . --script tests/ui_owner_assets_smoke.gd
+
+      - name: Safe-area keyboard loading offline error cancel gate
+        shell: bash
+        run: timeout 45s ./godot --headless --path . --script tests/ui_state_smoke.gd
 
       - name: Render real UI acceptance matrix
         shell: bash
@@ -103,6 +114,44 @@ jobs:
               assert required in surfaces, (required, sorted(surfaces))
           assert any(item['requested_viewport'] == {'width': 960, 'height': 640} for item in data['captures'])
           assert any(item['requested_viewport'] == {'width': 480, 'height': 960} for item in data['captures'])
+          print(json.dumps(data, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Render transient responsive states
+        shell: bash
+        env:
+          GODOT_AUDIO_DRIVER: Dummy
+          AURORA_UI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1600x1400x24' timeout 90s ./godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tests/ui_state_visual_capture.gd
+
+          images=(
+            artifacts/ui/android_state_safe_area_720x1280.png
+            artifacts/ui/android_state_keyboard_480x960.png
+            artifacts/ui/desktop_state_account_loading_960x640.png
+            artifacts/ui/android_state_account_offline_error_720x1280.png
+            artifacts/ui/desktop_state_knowledge_cancel_1440x900.png
+          )
+          for image in "${images[@]}"; do
+            test -s "$image"
+            file "$image"
+          done
+
+          test -s artifacts/ui/state_acceptance_manifest.json
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path('artifacts/ui/state_acceptance_manifest.json').read_text(encoding='utf-8'))
+          expected_sha = os.environ['AURORA_UI_HEAD_SHA']
+          assert data['head_sha'] == expected_sha, (data['head_sha'], expected_sha)
+          assert len(data['states']) == 5, len(data['states'])
+          states = {item['state'] for item in data['states']}
+          assert states == {'safe_area', 'keyboard', 'loading', 'offline_error', 'cancel'}, states
+          for item in data['states']:
+              assert item['head_sha'] == expected_sha, item
           print(json.dumps(data, ensure_ascii=False, indent=2))
           PY
 
