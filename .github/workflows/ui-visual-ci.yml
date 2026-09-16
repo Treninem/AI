@@ -46,27 +46,64 @@ jobs:
         shell: bash
         run: timeout 45s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
 
-      - name: Render real UI review images
+      - name: Render real UI acceptance matrix
         shell: bash
         env:
           GODOT_AUDIO_DRIVER: Dummy
+          AURORA_UI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: |
           set -euo pipefail
           mkdir -p artifacts/ui
-          xvfb-run -a -s '-screen 0 1600x1400x24' timeout 60s ./godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tests/ui_visual_capture.gd
-          for image in \
-            artifacts/ui/desktop_chat_1440x900.png \
-            artifacts/ui/desktop_settings_1440x900.png \
-            artifacts/ui/android_portrait_chat_720x1280.png \
-            artifacts/ui/android_portrait_settings_720x1280.png; do
+          xvfb-run -a -s '-screen 0 1600x1400x24' timeout 120s ./godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tests/ui_visual_capture.gd
+
+          images=(
+            artifacts/ui/desktop_chat_1440x900.png
+            artifacts/ui/desktop_settings_general_1440x900.png
+            artifacts/ui/desktop_files_projects_1440x900.png
+            artifacts/ui/desktop_tools_1440x900.png
+            artifacts/ui/desktop_knowledge_base_1440x900.png
+            artifacts/ui/desktop_updates_1440x900.png
+            artifacts/ui/desktop_compact_chat_960x640.png
+            artifacts/ui/desktop_compact_settings_960x640.png
+            artifacts/ui/android_portrait_chat_720x1280.png
+            artifacts/ui/android_portrait_chat_drawer_720x1280.png
+            artifacts/ui/android_portrait_settings_general_720x1280.png
+            artifacts/ui/android_portrait_files_projects_720x1280.png
+            artifacts/ui/android_portrait_tools_720x1280.png
+            artifacts/ui/android_portrait_knowledge_base_720x1280.png
+            artifacts/ui/android_portrait_updates_720x1280.png
+            artifacts/ui/android_narrow_chat_480x960.png
+            artifacts/ui/android_narrow_settings_480x960.png
+          )
+          for image in "${images[@]}"; do
             test -s "$image"
             file "$image"
           done
 
-      - name: Upload UI review images
+          test -s artifacts/ui/acceptance_manifest.json
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          manifest = Path('artifacts/ui/acceptance_manifest.json')
+          data = json.loads(manifest.read_text(encoding='utf-8'))
+          expected_sha = os.environ['AURORA_UI_HEAD_SHA']
+          assert data['head_sha'] == expected_sha, (data['head_sha'], expected_sha)
+          assert len(data['captures']) == 17, len(data['captures'])
+          assert {item['surface'] for item in data['known_missing_client_surfaces']} == {'login_guest', 'user_memory_management'}
+          assert any(item['surface'] == 'files_projects' for item in data['captures'])
+          assert any(item['surface'] == 'knowledge_base' for item in data['captures'])
+          assert any(item['surface'] == 'updates_error_resilience' for item in data['captures'])
+          assert any(item['requested_viewport'] == {'width': 960, 'height': 640} for item in data['captures'])
+          assert any(item['requested_viewport'] == {'width': 480, 'height': 960} for item in data['captures'])
+          print(json.dumps(data, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Upload UI acceptance evidence
         uses: actions/upload-artifact@v4
         with:
-          name: AuroraFox-UI-Visual-Review
-          path: artifacts/ui/*.png
+          name: AuroraFox-UI-Visual-Acceptance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/ui/*
           if-no-files-found: error
           retention-days: 14
