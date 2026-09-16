@@ -98,8 +98,25 @@ class LearningStore:
             ).fetchall()
         return [self._row_event(row) for row in rows]
 
+    def _events_for_legacy_mirror(self) -> list[dict[str, Any]]:
+        """Keep every pending event in the rollback mirror.
+
+        ``max_events`` is a history cap, never a durability cap. If the server is
+        offline long enough to accumulate more pending events than the nominal
+        limit, all of them remain recoverable and the store reports over-capacity
+        until synchronization makes safe compaction possible.
+        """
+
+        events = self._all_events()
+        pending = [event for event in events if not bool(event.get("synced", False))]
+        synced = [event for event in events if bool(event.get("synced", False))]
+        synced_budget = max(0, self.max_events - len(pending))
+        keep_synced = synced[-synced_budget:] if synced_budget else []
+        keep_ids = {str(event.get("id", "")) for event in pending + keep_synced}
+        return [event for event in events if str(event.get("id", "")) in keep_ids]
+
     def _rewrite_legacy_mirror(self) -> None:
-        events = self._all_events()[-self.max_events :]
+        events = self._events_for_legacy_mirror()
         payload = "".join(
             json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
             for event in events
@@ -118,6 +135,19 @@ class LearningStore:
         except OSError:
             pass
 
+    def _compact_synced_history(self, connection: Any) -> int:
+        total = int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0])
+        overflow = max(0, total - self.max_events)
+        if overflow <= 0:
+            return 0
+        cursor = connection.execute(
+            "DELETE FROM learning_events WHERE id IN ("
+            "SELECT id FROM learning_events WHERE synced=1 "
+            "ORDER BY created_at, rowid LIMIT ?)",
+            (overflow,),
+        )
+        return max(0, int(cursor.rowcount))
+
     def append(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         event = {
             "id": uuid.uuid4().hex,
@@ -127,7 +157,6 @@ class LearningStore:
             "payload": payload,
         }
         with self._write_lock:
-            compacted = False
             with self.database.connection(write=True) as connection:
                 connection.execute(
                     "INSERT INTO learning_events(id, kind, created_at, synced, payload_json) VALUES(?, ?, ?, 0, ?)",
@@ -138,15 +167,7 @@ class LearningStore:
                         json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
                     ),
                 )
-                count = int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0])
-                overflow = count - self.max_events
-                if overflow > 0:
-                    connection.execute(
-                        "DELETE FROM learning_events WHERE id IN ("
-                        "SELECT id FROM learning_events ORDER BY created_at, rowid LIMIT ?)",
-                        (overflow,),
-                    )
-                    compacted = True
+                compacted = self._compact_synced_history(connection) > 0
             if compacted:
                 self._rewrite_legacy_mirror()
             else:
@@ -173,13 +194,22 @@ class LearningStore:
                     f"UPDATE learning_events SET synced=1 WHERE synced=0 AND id IN ({placeholders})",
                     tuple(normalized),
                 )
-                changed = cursor.rowcount
-            if changed:
+                changed = int(cursor.rowcount)
+                compacted = self._compact_synced_history(connection)
+            if changed or compacted:
                 self._rewrite_legacy_mirror()
-            return int(changed)
+            return changed
 
     def status(self) -> dict[str, Any]:
         with self.database.connection() as connection:
             total = int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0])
             pending = int(connection.execute("SELECT COUNT(*) FROM learning_events WHERE synced=0").fetchone()[0])
-        return {"ok": True, "total": total, "pending": pending, "database": str(self.database.path)}
+        return {
+            "ok": True,
+            "total": total,
+            "pending": pending,
+            "max_events": self.max_events,
+            "over_capacity": max(0, total - self.max_events),
+            "pending_protected": True,
+            "database": str(self.database.path),
+        }
