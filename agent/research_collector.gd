@@ -4,9 +4,11 @@ extends Node
 signal research_completed(report: Dictionary)
 
 const LOG_PATH := "user://agent/research.jsonl"
+const LOG_BACKUP_PATH := "user://agent/research.jsonl.1"
 const MAX_ITEMS_PER_SOURCE := 5
 const MAX_SUMMARY_CHARS := 1800
 const MAX_RESPONSE_BYTES := 2 * 1024 * 1024
+const MAX_LOG_BYTES := 8 * 1024 * 1024
 const REQUEST_TIMEOUT_SECONDS := 20.0
 
 # Kept for setup/API compatibility with AutonomousCoordinator. The collector
@@ -54,6 +56,8 @@ func collect(query: String) -> Dictionary:
 		"curation_required": true,
 		"research_scope": "external_observations_only",
 		"personal_files_scanned": false,
+		"network_response_limit_bytes": MAX_RESPONSE_BYTES,
+		"audit_log_limit_bytes": MAX_LOG_BYTES,
 		# Backward-compatible field. Automatic promotion happens asynchronously in
 		# LearningCurator after research_completed, so nothing is learned here.
 		"learned": 0,
@@ -167,8 +171,11 @@ func _request_text(url: String) -> Dictionary:
 		return {"ok": false, "error": error_string(err), "url": url}
 	var response: Array = await req.request_completed
 	req.queue_free()
+	var request_result := int(response[0])
 	var code := int(response[1])
 	var body := (response[3] as PackedByteArray).get_string_from_utf8()
+	if request_result != HTTPRequest.RESULT_SUCCESS:
+		return {"ok": false, "result": request_result, "http": code, "error": "Research request did not complete successfully", "url": url}
 	if code < 200 or code >= 300:
 		return {"ok": false, "http": code, "error": body.substr(0, 500), "url": url}
 	return {"ok": true, "text": body.substr(0, MAX_RESPONSE_BYTES), "url": url}
@@ -187,6 +194,7 @@ func _clean(value: String, limit: int) -> String:
 	return " ".join(value.split(" ", false)).strip_edges().substr(0, limit)
 
 func _append_log(item: Dictionary) -> void:
+	_rotate_log_if_needed()
 	var file := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE)
 	if file == null:
 		file = FileAccess.open(LOG_PATH, FileAccess.WRITE)
@@ -195,6 +203,22 @@ func _append_log(item: Dictionary) -> void:
 	file.seek_end()
 	file.store_line(JSON.stringify(item))
 	file.close()
+
+func _rotate_log_if_needed() -> void:
+	if not FileAccess.file_exists(LOG_PATH):
+		return
+	var file := FileAccess.open(LOG_PATH, FileAccess.READ)
+	if file == null:
+		return
+	var size := file.get_length()
+	file.close()
+	if size < MAX_LOG_BYTES:
+		return
+	var log_abs := ProjectSettings.globalize_path(LOG_PATH)
+	var backup_abs := ProjectSettings.globalize_path(LOG_BACKUP_PATH)
+	if FileAccess.file_exists(LOG_BACKUP_PATH):
+		DirAccess.remove_absolute(backup_abs)
+	DirAccess.rename_absolute(log_abs, backup_abs)
 
 func _source_counts(items: Array) -> Dictionary:
 	var counts: Dictionary = {}
