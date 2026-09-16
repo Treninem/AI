@@ -23,6 +23,7 @@ def test_progress_json_is_utf8_even_under_legacy_windows_console_encoding():
     )
     assert result.returncode in {0, 2}, result.stderr.decode("utf-8", errors="replace")
     payload = json.loads(result.stdout.decode("utf-8"))
-    assert payload["version"] == "V1.2.0.0"
+    canonical = json.loads((ROOT / "project/version.json").read_text(encoding="utf-8"))
+    assert payload["version"] == canonical["version"]
     assert isinstance(payload["percent"], int)
 
