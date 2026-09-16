@@ -26,7 +26,6 @@ func _ready() -> void:
 	manager.task_progress.connect(_on_task_progress)
 	manager.task_finished.connect(_on_task_finished)
 	manager.task_failed.connect(_on_task_failed)
-	call_deferred("_inject_work_button")
 
 func show_work() -> void:
 	if popup == null:
@@ -174,26 +173,6 @@ func _build_ui() -> void:
 	file_dialog.files_selected.connect(_on_files_selected)
 	add_child(file_dialog)
 
-func _inject_work_button() -> void:
-	var main := get_parent()
-	if main == null or main.find_child("WorkButton", true, false) != null:
-		return
-	var new_chat := main.find_child("NewChatButton", true, false) as Button
-	if new_chat == null or new_chat.get_parent() == null:
-		return
-	var button := Button.new()
-	button.name = "WorkButton"
-	button.text = "Работа"
-	button.tooltip_text = "Длинные задачи и рабочие пространства"
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.custom_minimum_size.y = 46
-	button.pressed.connect(show_work)
-	button.add_theme_stylebox_override("normal", _button_style(Color(0.07, 0.055, 0.12, 0.98), Color(0.36, 0.75, 1.0, 0.66)))
-	button.add_theme_stylebox_override("hover", _button_style(Color(0.12, 0.07, 0.20, 1.0), Color(0.65, 0.52, 1.0, 0.92)))
-	button.add_theme_color_override("font_color", Color("f4f6ff"))
-	new_chat.get_parent().add_child(button)
-	new_chat.get_parent().move_child(button, new_chat.get_index() + 1)
-
 func _refresh_projects() -> void:
 	project_select.clear()
 	var projects := manager.store.all_projects()
@@ -299,16 +278,4 @@ func _panel_style() -> StyleBoxFlat:
 	style.set_corner_radius_all(18)
 	style.shadow_color = Color(0, 0, 0, 0.72)
 	style.shadow_size = 18
-	return style
-
-func _button_style(fill: Color, border: Color) -> StyleBoxFlat:
-	var style := StyleBoxFlat.new()
-	style.bg_color = fill
-	style.border_color = border
-	style.set_border_width_all(1)
-	style.set_corner_radius_all(12)
-	style.content_margin_left = 12
-	style.content_margin_right = 12
-	style.content_margin_top = 8
-	style.content_margin_bottom = 8
 	return style
