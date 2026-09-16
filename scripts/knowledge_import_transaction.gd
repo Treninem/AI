@@ -270,22 +270,26 @@ func _source_has_persisted_rows(source: String) -> bool:
 	var signature := _data_signature()
 	if not _source_presence_cache_valid or signature != _source_presence_signature:
 		_rebuild_source_presence_cache()
+	# A failed presence scan must never be interpreted as proof that a source is
+	# absent. Fail safe by preserving/journaling it; the journal read can then
+	# return an explicit error instead of risking deletion of unknown old rows.
+	if not _source_presence_cache_valid:
+		return true
 	return bool(_source_presence_cache.get(source, false))
 
 func _rebuild_source_presence_cache() -> void:
 	_source_presence_cache.clear()
-	_scan_source_presence(DB_PATH)
-	_scan_source_presence(STRUCTURED_PATH)
+	var db_ok := _scan_source_presence(DB_PATH)
+	var structured_ok := _scan_source_presence(STRUCTURED_PATH)
 	_source_presence_signature = _data_signature()
-	_source_presence_cache_valid = true
+	_source_presence_cache_valid = db_ok and structured_ok
 
-func _scan_source_presence(path: String) -> void:
+func _scan_source_presence(path: String) -> bool:
 	if not FileAccess.file_exists(path):
-		return
+		return true
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		_source_presence_cache_valid = false
-		return
+		return false
 	while not file.eof_reached():
 		var line := file.get_line()
 		if line.strip_edges().is_empty():
@@ -297,6 +301,7 @@ func _scan_source_presence(path: String) -> void:
 		if not source.is_empty():
 			_source_presence_cache[source] = true
 	file.close()
+	return true
 
 func _remember_source_presence(source: String, present: bool) -> void:
 	if source.is_empty() or not _source_presence_cache_valid:
