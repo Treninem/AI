@@ -14,6 +14,7 @@ var status_label: Label
 var result_edit: TextEdit
 var file_dialog: FileDialog
 var run_button: Button
+var work_button: Button
 
 func _ready() -> void:
 	if OS.get_name() == "Android":
@@ -23,9 +24,35 @@ func _ready() -> void:
 	if manager == null:
 		return
 	_build_ui()
+	_inject_work_button()
 	manager.task_progress.connect(_on_task_progress)
 	manager.task_finished.connect(_on_task_finished)
 	manager.task_failed.connect(_on_task_failed)
+
+func _inject_work_button() -> void:
+	var main := get_parent()
+	if main == null:
+		return
+	var existing := main.find_child("WorkButton", true, false) as Button
+	if existing != null:
+		work_button = existing
+		return
+	var host := main.find_child("SidebarContent", true, false) as VBoxContainer
+	if host == null:
+		return
+	work_button = Button.new()
+	work_button.name = "WorkButton"
+	work_button.text = "Работа"
+	work_button.tooltip_text = "Проекты и длинные задачи AuroraFox"
+	work_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	work_button.custom_minimum_size.y = 44
+	work_button.pressed.connect(show_work)
+	host.add_child(work_button)
+	var settings_button := host.get_node_or_null("SettingsButton") as Button
+	if settings_button != null:
+		host.move_child(work_button, settings_button.get_index())
+	if main.has_method("_apply_button"):
+		main.call("_apply_button", work_button, false, false, false)
 
 func show_work() -> void:
 	if popup == null:
