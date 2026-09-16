@@ -18,6 +18,7 @@ from pydantic import BaseModel, Field
 
 from api.account_mailer import AccountMailConfig, AccountMailError, AccountMailer
 from api.account_store import AccountError, AuthenticationError, ConflictError, RefreshReplayError
+from api.account_web import create_account_web_router
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.conversation_store import ConversationStore
 from api.core_candidate_queue import CoreCandidateQueue, CoreCandidateQueueError
@@ -25,6 +26,7 @@ from api.database import SCHEMA_VERSION
 from api.file_client import FileIntelligenceClient
 from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
+from api.public_auth_limits import PublicAuthRateLimitMiddleware
 from api.request_limits import DEFAULT_MAX_BODY_BYTES, RequestBodyLimitMiddleware
 from api.runtime_bridge import AuroraRuntimeBridge
 from api.sync_store import SyncStore
@@ -40,6 +42,10 @@ try:
     MAX_API_BODY_BYTES = max(1, int(os.getenv("AURORAFOX_API_MAX_BODY_BYTES", str(DEFAULT_MAX_BODY_BYTES))))
 except ValueError:
     MAX_API_BODY_BYTES = DEFAULT_MAX_BODY_BYTES
+try:
+    PUBLIC_AUTH_RPM = max(1, int(os.getenv("AURORAFOX_PUBLIC_AUTH_RPM", "20")))
+except ValueError:
+    PUBLIC_AUTH_RPM = 20
 
 keys = KeyStore(API_ROOT)
 keys.ensure_bootstrap_key()
@@ -78,6 +84,8 @@ app = FastAPI(
     description="External gateway to AuroraFox AgentCore, personal sync, tools, files and local models.",
 )
 app.add_middleware(RequestBodyLimitMiddleware, max_bytes=MAX_API_BODY_BYTES)
+app.add_middleware(PublicAuthRateLimitMiddleware, limit=PUBLIC_AUTH_RPM, window_seconds=60.0)
+app.include_router(create_account_web_router(accounts))
 
 origins = [x.strip() for x in os.getenv("AURORAFOX_API_CORS", "").split(",") if x.strip()]
 if origins:

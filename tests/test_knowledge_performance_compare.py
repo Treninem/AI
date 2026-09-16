@@ -16,7 +16,7 @@ def load_compare():
     return module
 
 
-def report(*, runner_name: str = "runner-a", records_per_sec: float = 100.0, search_p95: float = 10.0, rss: int = 1000):
+def report(*, runner_name: str = "runner-a", records_per_sec: float = 100.0, search_p95: float = 10.0, rss: int = 1000, processor_name: str = "Example CPU"):
     return {
         "schema": "aurorafox_knowledge_performance_v1",
         "platform_runtime_identity": {
@@ -36,6 +36,11 @@ def report(*, runner_name: str = "runner-a", records_per_sec: float = 100.0, sea
                 "dataset": {"bytes": 10 * 1024 * 1024},
                 "case": {"scenario": "import_jsonl", "target_mb": 10},
                 "search": {"cases": [{"name": "exact", "p95_ms": search_p95}]},
+                "runtime": {
+                    "processor_name": processor_name,
+                    "architecture": "x86_64",
+                    "godot": {"string": "4.7.1-stable"},
+                },
             }
         ],
     }
@@ -68,6 +73,13 @@ class KnowledgePerformanceCompareTests(unittest.TestCase):
         self.assertTrue(result["comparison_skipped"])
         self.assertTrue(result["passed"])
         self.assertIn("cpu_count", result["identity_mismatches"])
+
+    def test_same_architecture_but_different_cpu_model_is_not_comparable(self) -> None:
+        module = load_compare()
+        result = module.compare_reports(report(processor_name="CPU A"), report(processor_name="CPU B"))
+        self.assertFalse(result["comparable"])
+        self.assertTrue(result["comparison_skipped"])
+        self.assertIn("processor_name", result["identity_mismatches"])
 
     def test_commit_sha_and_runner_name_are_not_identity_gates(self) -> None:
         module = load_compare()

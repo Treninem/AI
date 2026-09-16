@@ -396,6 +396,8 @@ class AccountStore:
                 str(row["password_params_json"]),
             ):
                 raise AuthenticationError("Invalid email or password")
+            if row["email_verified_at"] is None:
+                raise AuthenticationError("Email verification required")
             resolved_device = self._create_or_reuse_device(
                 connection, str(row["id"]), device_name, platform, device_id, now
             )
@@ -434,7 +436,7 @@ class AccountStore:
             row = connection.execute(
                 "SELECT r.id AS refresh_id, r.session_id, r.family_id, r.generation, r.expires_at, "
                 "r.consumed_at, r.revoked_at AS refresh_revoked, s.account_id, s.device_id, "
-                "s.revoked_at AS session_revoked, d.revoked_at AS device_revoked, a.disabled_at "
+                "s.revoked_at AS session_revoked, d.revoked_at AS device_revoked, a.disabled_at, a.email_verified_at "
                 "FROM refresh_tokens r JOIN auth_sessions s ON s.id=r.session_id "
                 "JOIN devices d ON d.id=s.device_id JOIN accounts a ON a.id=s.account_id "
                 "WHERE r.token_hash=? LIMIT 1",
@@ -451,6 +453,7 @@ class AccountStore:
                 or row["session_revoked"] is not None
                 or row["device_revoked"] is not None
                 or row["disabled_at"] is not None
+                or row["email_verified_at"] is None
             ):
                 self._revoke_family(connection, family_id, now)
                 failure = AuthenticationError("Refresh token expired or revoked")
@@ -502,7 +505,7 @@ class AccountStore:
         with self.database.connection() as connection:
             row = connection.execute(
                 "SELECT s.id AS session_id, s.account_id, s.device_id, s.access_hash, s.access_expires_at, "
-                "s.revoked_at AS session_revoked, a.email_norm, a.display_name, a.disabled_at, "
+                "s.revoked_at AS session_revoked, a.email_norm, a.display_name, a.disabled_at, a.email_verified_at, "
                 "d.revoked_at AS device_revoked FROM auth_sessions s "
                 "JOIN accounts a ON a.id=s.account_id JOIN devices d ON d.id=s.device_id "
                 "WHERE s.access_hash=? LIMIT 1",
@@ -514,6 +517,7 @@ class AccountStore:
             row["session_revoked"] is not None
             or row["device_revoked"] is not None
             or row["disabled_at"] is not None
+            or row["email_verified_at"] is None
             or int(row["access_expires_at"]) < now
             or not hmac.compare_digest(digest, str(row["access_hash"]))
         ):
