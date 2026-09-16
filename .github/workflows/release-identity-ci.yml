@@ -25,6 +25,7 @@ on:
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
+      - '.github/workflows/windows-package-ci.yml'
       - '.github/workflows/updater-repair-validation.yml'
       - '.github/workflows/release-identity-ci.yml'
   pull_request:
@@ -50,6 +51,7 @@ on:
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
+      - '.github/workflows/windows-package-ci.yml'
       - '.github/workflows/updater-repair-validation.yml'
       - '.github/workflows/release-identity-ci.yml'
   workflow_dispatch:
