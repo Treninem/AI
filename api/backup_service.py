@@ -14,6 +14,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from api.database import AuroraDatabase
+from api.storage_maintenance import StorageMaintenance
+
 
 DATA_SUFFIXES = {".db", ".json", ".jsonl", ".sqlite", ".sqlite3"}
 SECRET_NAMES = {
@@ -33,6 +36,10 @@ SKIP_DIRECTORIES = {
 
 
 class BackupTooLarge(RuntimeError):
+    pass
+
+
+class BackupStoragePressure(RuntimeError):
     pass
 
 
@@ -71,6 +78,22 @@ class BackupService:
                 return stream.read(16) == b"SQLite format 3\x00"
         except OSError:
             return False
+
+    def _maintain_api_database(self) -> dict[str, Any] | None:
+        database_path = self.user_root / "api" / "aurorafox.sqlite3"
+        if not database_path.is_file():
+            return None
+        database = AuroraDatabase(database_path)
+        maintenance = StorageMaintenance.from_env(database, database_path.parent)
+        retention = maintenance.maybe_prune()
+        capacity = maintenance.status()
+        if not bool(capacity.get("ok", False)):
+            raise BackupStoragePressure("AuroraFox storage has critically low free space")
+        return {
+            "retention_ran": bool(retention.get("ran", False)),
+            "pressure": bool(capacity.get("pressure", False)),
+            "hard_pressure": bool(capacity.get("hard_pressure", False)),
+        }
 
     def _iter_sources(self) -> list[tuple[Path, Path]]:
         sources: list[tuple[Path, Path]] = []
@@ -152,6 +175,7 @@ class BackupService:
         return False
 
     def create_archive(self) -> BackupResult:
+        maintenance = self._maintain_api_database()
         backup_id = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime()) + "-" + uuid.uuid4().hex[:10]
         archive_path = self.cache_root / f"AuroraFox-Server-Backup-{backup_id}.zip"
         manifest_files: list[dict[str, Any]] = []
@@ -183,6 +207,7 @@ class BackupService:
                 "source": "AuroraFox server persistent data",
                 "credential_files_included": False,
                 "database_credentials_sanitized": True,
+                "storage_maintenance": maintenance,
                 "file_count": len(manifest_files),
                 "source_bytes": source_bytes,
                 "files": manifest_files,
