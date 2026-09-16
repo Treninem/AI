@@ -17,6 +17,10 @@ def _client(tmp_path: Path):
     return accounts, TestClient(app)
 
 
+def _bearer(token: str) -> dict[str, str]:
+    return {"Authorization": f"Bearer {token}"}
+
+
 def test_email_verification_get_is_non_mutating_and_post_consumes_token(tmp_path: Path):
     accounts, client = _client(tmp_path)
     password = "verification page password"
@@ -108,3 +112,45 @@ def test_reset_page_rejects_non_form_payload_and_invalid_token(tmp_path: Path):
     )
     assert invalid.status_code == 400
     assert "Не удалось сменить пароль" in invalid.text
+
+
+def test_personal_logout_revokes_account_family_and_guest_identity(tmp_path: Path):
+    accounts, client = _client(tmp_path)
+
+    created = accounts.register("logout@example.com", "logout account password", "Logout")
+    accounts.verify_email(created["verification_token"])
+    session = accounts.login("logout@example.com", "logout account password", "PC", "pytest")
+    account_logout = client.post("/v1/auth/logout", headers=_bearer(session["access_token"]))
+    assert account_logout.status_code == 200, account_logout.text
+    assert account_logout.json() == {"ok": True, "revoked": True}
+    assert accounts.verify_access(session["access_token"]) is None
+    with pytest.raises(AuthenticationError):
+        accounts.refresh(session["refresh_token"])
+
+    guest = accounts.create_guest("Guest", "pytest")
+    assert accounts.verify_guest(guest["guest_token"]) is not None
+    guest_logout = client.post("/v1/auth/logout", headers=_bearer(guest["guest_token"]))
+    assert guest_logout.status_code == 200, guest_logout.text
+    assert guest_logout.json() == {"ok": True, "revoked": True}
+    assert accounts.verify_guest(guest["guest_token"]) is None
+    with accounts.database.connection() as connection:
+        guest_row = connection.execute(
+            "SELECT revoked_at FROM guests WHERE id=?",
+            (guest["guest_id"],),
+        ).fetchone()
+        device_row = connection.execute(
+            "SELECT revoked_at FROM devices WHERE id=?",
+            (guest["device_id"],),
+        ).fetchone()
+    assert guest_row["revoked_at"] is not None
+    assert device_row["revoked_at"] is not None
+
+    missing = client.post("/v1/auth/logout")
+    assert missing.status_code == 401
+    stale = client.post("/v1/auth/logout", headers=_bearer(guest["guest_token"]))
+    assert stale.status_code == 401
+
+    schema_paths = client.get("/openapi.json").json()["paths"]
+    assert "/v1/auth/logout" in schema_paths
+    assert "/verify-email" not in schema_paths
+    assert "/reset-password" not in schema_paths
