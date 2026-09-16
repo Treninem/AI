@@ -2,7 +2,30 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE = ROOT / "benchmarks" / "core" / "code_specialist_smoke.gd"
+CODE_SPECIALIST = ROOT / "scripts" / "code_specialist.gd"
 WORKFLOW = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
+
+EXPECTED_OPERATIONS = (
+    "analyze_request",
+    "generate_code",
+    "debug_code",
+    "review_code",
+    "explain_code",
+    "refactor_code",
+    "generate_tests",
+    "reason_across_files",
+)
+
+
+def test_code_specialist_exposes_complete_local_coding_surface() -> None:
+    code = CODE_SPECIALIST.read_text(encoding="utf-8")
+    for operation in EXPECTED_OPERATIONS:
+        assert f"func {operation}(" in code
+    assert "return await general_ai.chat(messages, temperature)" in code
+    assert "HTTPRequest" not in code
+    assert "/api/chat" not in code
+    assert "qwen3-coder" not in code.lower()
+    assert "ollama" not in code.lower()
 
 
 def test_specialist_team_runtime_smoke_uses_real_owned_code_specialist_path() -> None:
@@ -10,18 +33,17 @@ def test_specialist_team_runtime_smoke_uses_real_owned_code_specialist_path() ->
     assert "SpecialistTeam.new()" in smoke
     assert "team.setup(client)" in smoke
     assert "specialist := team.coder" in smoke
-    assert "specialist.analyze_request(" in smoke
-    assert "specialist.review_code(" in smoke
-    assert "specialist.explain_code(" in smoke
+    for operation in EXPECTED_OPERATIONS:
+        assert f"specialist.{operation}(" in smoke
+        assert f'"{operation}":' in smoke or f'"{operation}"' in smoke
     assert "team_setup_ok" in smoke
     assert "specialist.get_parent() == team" in smoke
     assert "specialist.general_ai == client" in smoke
     assert 'str(info.get("last_runtime", "")) == "aurora_core_desktop"' in smoke
     assert 'int(info.get("ollama_failures", -1)) == 0' in smoke
-    assert '"after_analyze": _runtime_evidence(runtime_after_analyze)' in smoke
-    assert '"after_review": _runtime_evidence(runtime_after_review)' in smoke
-    assert '"after_explain": _runtime_evidence(runtime_after_explain)' in smoke
-    assert '"bounded_operations": ["analyze_request", "review_code", "explain_code"]' in smoke
+    assert '"per_operation_runtime": runtime_evidence' in smoke
+    assert 'client.configure_ollama_compatibility("http://127.0.0.1:9", "benchmark-must-not-run")' in smoke
+    assert "client.set_ollama_fallback(true)" in smoke
     assert "http://1.1.1.1/" in smoke
 
 
