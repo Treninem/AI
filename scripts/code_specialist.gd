@@ -3,12 +3,9 @@ extends Node
 
 var general_ai: AIClient
 var registry := CodeLanguageRegistry.new()
-var ollama_url := "http://127.0.0.1:11434"
-var code_model := "qwen3-coder:30b"
 
 func setup(ai_client: AIClient) -> void:
 	general_ai = ai_client
-	ollama_url = ai_client.base_url
 
 func analyze_request(task: String, files: Array = []) -> Dictionary:
 	var hints: Array = []
@@ -83,22 +80,11 @@ Code:
 	return parsed
 
 func _chat_code(messages: Array, temperature: float) -> Dictionary:
-	var request := HTTPRequest.new()
-	request.timeout = 300.0
-	add_child(request)
-	var payload := {"model":code_model,"messages":messages,"stream":false,"options":{"temperature":temperature}}
-	var err := request.request(ollama_url + "/api/chat", PackedStringArray(["Content-Type: application/json"]), HTTPClient.METHOD_POST, JSON.stringify(payload))
-	if err != OK:
-		request.queue_free()
-		return await general_ai.chat(messages, temperature)
-	var result: Array = await request.request_completed
-	request.queue_free()
-	var code := int(result[1])
-	if code < 200 or code >= 300:
-		return await general_ai.chat(messages, temperature)
-	var data = JSON.parse_string((result[3] as PackedByteArray).get_string_from_utf8())
-	if data is Dictionary:
-		return {"ok":true,"content":str(data.get("message", {}).get("content", "")),"model":code_model}
+	if general_ai == null:
+		return {"ok":false,"error":"AuroraFox Core client is not configured"}
+	# Code reasoning is part of AuroraFox intelligence and must use the same
+	# bundled-Core normal path as chat/planning. Provider-specific compatibility
+	# is explicit elsewhere and must never precede this path.
 	return await general_ai.chat(messages, temperature)
 
 func _parse_json(text: String) -> Dictionary:

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import html
+import time
 from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from api.account_store import AccountError, AccountStore, AuthenticationError
@@ -39,11 +40,51 @@ main{{border:1px solid currentColor;border-radius:18px;padding:24px}}label{{disp
     return HTMLResponse(document, status_code=status_code, headers=SECURITY_HEADERS)
 
 
-def create_account_web_router(accounts: AccountStore) -> APIRouter:
-    router = APIRouter(include_in_schema=False)
+async def _form_fields(request: Request) -> dict[str, list[str]] | None:
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/x-www-form-urlencoded":
+        return None
+    raw = await request.body()
+    try:
+        return parse_qs(raw.decode("utf-8"), keep_blank_values=True, strict_parsing=False)
+    except UnicodeDecodeError:
+        return {}
 
-    @router.get("/verify-email", response_class=HTMLResponse)
+
+def create_account_web_router(accounts: AccountStore) -> APIRouter:
+    # Web action pages remain hidden from OpenAPI individually. The same router
+    # also owns the small personal-session logout endpoint so it can use the
+    # AccountStore already injected by api.server without duplicating auth state.
+    router = APIRouter()
+
+    @router.get("/verify-email", response_class=HTMLResponse, include_in_schema=False)
     def verify_email_page(token: str = Query(min_length=16, max_length=512)) -> HTMLResponse:
+        # GET is deliberately non-mutating. Mail security scanners and link preview
+        # bots commonly prefetch URLs; consuming a verification credential on GET
+        # could otherwise confirm an address without a deliberate user action.
+        escaped = html.escape(token, quote=True)
+        return _page(
+            "AuroraFox — подтверждение email",
+            f"""<h1>Подтвердите email</h1>
+<p>Нажмите кнопку, чтобы подтвердить адрес для аккаунта AuroraFox.</p>
+<form method="post" action="/verify-email" autocomplete="off">
+<input type="hidden" name="token" value="{escaped}">
+<button type="submit">Подтвердить email</button>
+</form>""",
+        )
+
+    @router.post("/verify-email", response_class=HTMLResponse, include_in_schema=False)
+    async def verify_email_submit(request: Request) -> HTMLResponse:
+        fields = await _form_fields(request)
+        if fields is None:
+            return _page("AuroraFox — ошибка", "<h1>Неверный формат запроса</h1>", status_code=415)
+        token = str((fields.get("token") or [""])[0])
+        if not token or len(token) > 512:
+            return _page(
+                "AuroraFox — подтверждение email",
+                "<h1>Ссылка недействительна</h1><p>Ссылка истекла, уже использована или была отозвана.</p>",
+                status_code=400,
+            )
         try:
             accounts.verify_email(token)
         except AuthenticationError:
@@ -57,7 +98,7 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
             "<h1>Email подтверждён</h1><p>Аккаунт AuroraFox готов к использованию.</p>",
         )
 
-    @router.get("/reset-password", response_class=HTMLResponse)
+    @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
     def reset_password_page(token: str = Query(min_length=16, max_length=512)) -> HTMLResponse:
         escaped = html.escape(token, quote=True)
         return _page(
@@ -72,16 +113,11 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
 <p class="muted">После смены пароля активные сеансы аккаунта будут отозваны.</p>""",
         )
 
-    @router.post("/reset-password", response_class=HTMLResponse)
+    @router.post("/reset-password", response_class=HTMLResponse, include_in_schema=False)
     async def reset_password_submit(request: Request) -> HTMLResponse:
-        content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
-        if content_type != "application/x-www-form-urlencoded":
+        fields = await _form_fields(request)
+        if fields is None:
             return _page("AuroraFox — ошибка", "<h1>Неверный формат запроса</h1>", status_code=415)
-        raw = await request.body()
-        try:
-            fields = parse_qs(raw.decode("utf-8"), keep_blank_values=True, strict_parsing=False)
-        except UnicodeDecodeError:
-            return _page("AuroraFox — ошибка", "<h1>Неверный формат запроса</h1>", status_code=400)
         token = str((fields.get("token") or [""])[0])
         password = str((fields.get("new_password") or [""])[0])
         confirmation = str((fields.get("confirm_password") or [""])[0])
@@ -103,5 +139,41 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
             "AuroraFox — пароль изменён",
             "<h1>Пароль изменён</h1><p>Теперь можно войти в AuroraFox с новым паролем.</p>",
         )
+
+    @router.post("/v1/auth/logout")
+    def logout_personal_session(authorization: str = Header(default="")) -> dict[str, bool]:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(401, "Missing AuroraFox personal bearer token")
+        token = authorization[7:].strip()
+        record = accounts.verify_personal_token(token)
+        if record is None:
+            raise HTTPException(401, "Invalid or revoked AuroraFox personal bearer token")
+
+        auth_kind = str(record.get("auth_kind", ""))
+        if auth_kind == "account_session":
+            return {"ok": True, "revoked": bool(accounts.revoke_access(token))}
+        if auth_kind != "guest_session":
+            raise HTTPException(403, "Personal account or guest session required")
+
+        guest_id = str(record.get("principal_id", ""))
+        now = int(time.time())
+        with accounts.database.connection(write=True) as connection:
+            row = connection.execute(
+                "SELECT revoked_at FROM guests WHERE id=?",
+                (guest_id,),
+            ).fetchone()
+            if row is None or row["revoked_at"] is not None:
+                revoked = False
+            else:
+                connection.execute(
+                    "UPDATE guests SET revoked_at=?, updated_at=? WHERE id=?",
+                    (now, now, guest_id),
+                )
+                connection.execute(
+                    "UPDATE devices SET revoked_at=COALESCE(revoked_at, ?) WHERE guest_id=?",
+                    (now, guest_id),
+                )
+                revoked = True
+        return {"ok": True, "revoked": revoked}
 
     return router

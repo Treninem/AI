@@ -59,6 +59,7 @@ class AccountStore:
         refresh_ttl: int = 30 * 24 * 60 * 60,
         verification_ttl: int = 24 * 60 * 60,
         reset_ttl: int = 60 * 60,
+        account_token_cooldown: int = 5 * 60,
     ):
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True)
@@ -67,6 +68,7 @@ class AccountStore:
         self.refresh_ttl = max(self.access_ttl, int(refresh_ttl))
         self.verification_ttl = max(300, int(verification_ttl))
         self.reset_ttl = max(300, int(reset_ttl))
+        self.account_token_cooldown = max(0, int(account_token_cooldown))
 
     @staticmethod
     def _now() -> int:
@@ -151,11 +153,6 @@ class AccountStore:
         now = self._now()
         token = self._token("af_verify" if purpose == "verify_email" else "af_reset")
         connection.execute(
-            "UPDATE account_tokens SET revoked_at=? WHERE account_id=? AND purpose=? "
-            "AND used_at IS NULL AND revoked_at IS NULL",
-            (now, account_id, purpose),
-        )
-        connection.execute(
             "INSERT INTO account_tokens(id, account_id, purpose, token_hash, created_at, expires_at) "
             "VALUES(?, ?, ?, ?, ?, ?)",
             (
@@ -168,6 +165,25 @@ class AccountStore:
             ),
         )
         return token
+
+    def _request_account_token(
+        self,
+        connection: sqlite3.Connection,
+        account_id: str,
+        purpose: str,
+        ttl: int,
+    ) -> str | None:
+        now = self._now()
+        if self.account_token_cooldown:
+            recent = connection.execute(
+                "SELECT created_at FROM account_tokens WHERE account_id=? AND purpose=? "
+                "AND used_at IS NULL AND revoked_at IS NULL AND expires_at>=? "
+                "ORDER BY created_at DESC LIMIT 1",
+                (account_id, purpose, now),
+            ).fetchone()
+            if recent is not None and now - int(recent["created_at"]) < self.account_token_cooldown:
+                return None
+        return self._issue_account_token(connection, account_id, purpose, ttl)
 
     def register(self, email: str, password: str, display_name: str = "") -> dict[str, Any]:
         email_norm = self._normalize_email(email)
@@ -213,12 +229,19 @@ class AccountStore:
                 raise AuthenticationError("Invalid or already used verification token")
             if int(row["expires_at"]) < now:
                 raise AuthenticationError("Verification token expired")
-            connection.execute("UPDATE account_tokens SET used_at=? WHERE id=?", (now, str(row["id"])))
+            account_id = str(row["account_id"])
+            token_id = str(row["id"])
+            connection.execute("UPDATE account_tokens SET used_at=? WHERE id=?", (now, token_id))
+            connection.execute(
+                "UPDATE account_tokens SET revoked_at=? WHERE account_id=? AND purpose='verify_email' "
+                "AND id<>? AND used_at IS NULL AND revoked_at IS NULL",
+                (now, account_id, token_id),
+            )
             connection.execute(
                 "UPDATE accounts SET email_verified_at=COALESCE(email_verified_at, ?), updated_at=? WHERE id=?",
-                (now, now, str(row["account_id"])),
+                (now, now, account_id),
             )
-            account = connection.execute("SELECT * FROM accounts WHERE id=?", (str(row["account_id"]),)).fetchone()
+            account = connection.execute("SELECT * FROM accounts WHERE id=?", (account_id,)).fetchone()
         return self._account_public(account)
 
     def resend_verification(self, email: str) -> str | None:
@@ -230,7 +253,7 @@ class AccountStore:
             ).fetchone()
             if row is None or row["disabled_at"] is not None or row["email_verified_at"] is not None:
                 return None
-            return self._issue_account_token(
+            return self._request_account_token(
                 connection, str(row["id"]), "verify_email", self.verification_ttl
             )
 
@@ -243,7 +266,7 @@ class AccountStore:
             ).fetchone()
             if row is None or row["disabled_at"] is not None:
                 return None
-            return self._issue_account_token(connection, str(row["id"]), "reset_password", self.reset_ttl)
+            return self._request_account_token(connection, str(row["id"]), "reset_password", self.reset_ttl)
 
     def reset_password(self, token: str, new_password: str) -> None:
         salt, digest, params = self._new_password(new_password)

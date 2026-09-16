@@ -52,7 +52,7 @@ class PersistenceMaintenance:
         # Backups fail closed at their source-size cap. Warn while there is still
         # operating room even when an older deployment configured a looser DB
         # warning. Other durable files can consume the remaining headroom, so 75%
-        # of the backup cap is the latest acceptable DB-only warning threshold.
+        # of the backup cap is the latest acceptable SQLite-state warning threshold.
         backup_guard_warning = max(1, (self.backup_max_bytes * 3) // 4)
         self.warn_database_bytes = min(configured_database_warning, backup_guard_warning)
         self.warn_sync_changes = _env_int(
@@ -119,13 +119,18 @@ class PersistenceMaintenance:
             "wal_bytes": self._size(Path(str(db_path) + "-wal")),
             "shm_bytes": self._size(Path(str(db_path) + "-shm")),
         }
+        # Committed pages may still live in WAL until checkpoint. A DB-only size
+        # warning can therefore lag behind the materialized SQLite backup size.
+        # SHM is coordination metadata and is intentionally not counted as durable
+        # SQLite content for the capacity threshold.
+        sizes["database_effective_bytes"] = sizes["database_bytes"] + sizes["wal_bytes"]
         try:
             disk_free_bytes = int(shutil.disk_usage(self.root).free)
         except OSError:
             # Capacity inspection is fail-closed when the filesystem cannot be inspected.
             disk_free_bytes = 0
         warnings: list[str] = []
-        if sizes["database_bytes"] >= self.warn_database_bytes:
+        if sizes["database_effective_bytes"] >= self.warn_database_bytes:
             warnings.append("database_size")
         if counts["sync_changes"] >= self.warn_sync_changes:
             warnings.append("sync_change_history")
@@ -150,6 +155,7 @@ class PersistenceMaintenance:
                 "database_warn_bytes": self.warn_database_bytes,
                 "backup_max_source_bytes": self.backup_max_bytes,
                 "database_warning_precedes_backup_cap": self.warn_database_bytes < self.backup_max_bytes,
+                "database_warning_includes_wal": True,
                 "min_free_bytes": self.min_free_bytes,
             },
             "retention_policy": {
