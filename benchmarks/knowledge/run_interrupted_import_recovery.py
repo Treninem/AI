@@ -13,6 +13,7 @@ import time
 from typing import Any
 
 import run_knowledge_benchmark as base
+import run_knowledge_benchmark_portable as portable
 
 RESULT_PREFIX = "AURORA_KNOWLEDGE_INTERRUPT_RESULT="
 SCRIPT = "benchmarks/knowledge/interrupted_import_probe.gd"
@@ -86,10 +87,32 @@ def main() -> int:
     try:
         env = base.base_environment(root, {"scenario": "interrupted_import"})
         env["AURORA_INTERRUPT_TARGET_MB"] = str(max(16, args.target_mb))
+        warm = portable.warm_isolated_windows_profile(
+            godot,
+            repo,
+            root,
+            env,
+            args.timeout_seconds,
+            log_dir,
+            "interrupted-recovery",
+        )
+        if not warm.get("ok"):
+            report = {
+                "schema": "aurorafox_knowledge_interrupted_recovery_v1",
+                "ok": False,
+                "phase": "profile_warmup",
+                "isolated_profile_warmup": warm,
+                "network_required": False,
+                "external_runtime_required": False,
+                "ollama_required": False,
+            }
+            report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+            print(json.dumps({"report": str(report_path), "ok": False, "phase": "profile_warmup"}))
+            return 1
 
         seed = run_phase(godot, repo, env, "seed", args.timeout_seconds)
         if not seed.get("ok"):
-            report = {"ok": False, "phase": "seed", "seed": seed}
+            report = {"ok": False, "phase": "seed", "seed": seed, "isolated_profile_warmup": warm}
             report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
             print(json.dumps({"report": str(report_path), "ok": False, "phase": "seed"}))
             return 1
@@ -161,6 +184,7 @@ def main() -> int:
                 "stderr_tail": import_stderr,
             },
             "restart_verify": verify,
+            "isolated_profile_warmup": warm,
             "wall_ms": (time.perf_counter() - started) * 1000.0,
             "network_required": False,
             "external_runtime_required": False,

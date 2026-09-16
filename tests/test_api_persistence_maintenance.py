@@ -3,7 +3,9 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from api.account_store import AccountStore
+import pytest
+
+from api.account_store import AccountStore, RefreshReplayError
 from api.conversation_store import ConversationStore
 from api.learning_store import LearningStore
 from api.persistence_maintenance import PersistenceMaintenance
@@ -170,6 +172,54 @@ def test_prune_removes_only_terminal_auth_rows_and_keeps_sync_audit(tmp_path: Pa
         "sync_conflicts_unresolved",
         "sync_conflicts_resolved",
     } <= protected
+
+
+def test_prune_preserves_revoked_refresh_family_until_tokens_expire(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "1")
+    accounts = AccountStore(root)
+    login = _verified(accounts)
+
+    # Rotation consumes the first token. Replaying it revokes the whole family,
+    # including the current refresh token and its session. Those rows must remain
+    # until token expiry so any further replay is still recognized as a replay,
+    # rather than silently degrading into an unknown-token path after retention.
+    accounts.refresh(login["refresh_token"])
+    with pytest.raises(RefreshReplayError):
+        accounts.refresh(login["refresh_token"])
+
+    db_path = root / "aurorafox.sqlite3"
+    with sqlite3.connect(db_path) as connection:
+        session_id, revoked_at = connection.execute(
+            "SELECT id, revoked_at FROM auth_sessions WHERE family_id=(SELECT family_id FROM refresh_tokens LIMIT 1) LIMIT 1"
+        ).fetchone()
+        assert revoked_at is not None
+        rows = connection.execute(
+            "SELECT id, expires_at, revoked_at FROM refresh_tokens WHERE session_id=? ORDER BY generation",
+            (session_id,),
+        ).fetchall()
+        assert len(rows) >= 2
+        assert all(row[1] > 1 for row in rows)
+        assert all(row[2] is not None for row in rows)
+        token_ids = [row[0] for row in rows]
+
+    pruned = PersistenceMaintenance(root).prune_ephemeral(retention_seconds=0)
+    assert pruned["removed"]["refresh_tokens"] == 0
+    with sqlite3.connect(db_path) as connection:
+        assert connection.execute("SELECT COUNT(*) FROM auth_sessions WHERE id=?", (session_id,)).fetchone()[0] == 1
+        remaining = [
+            row[0]
+            for row in connection.execute(
+                "SELECT id FROM refresh_tokens WHERE session_id=? ORDER BY generation",
+                (session_id,),
+            ).fetchall()
+        ]
+    assert remaining == token_ids
+
+    # Replay detection remains semantically strong after maintenance because the
+    # revoked family sentinel still exists until its original validity window ends.
+    with pytest.raises(RefreshReplayError):
+        accounts.refresh(login["refresh_token"])
 
 
 def test_prune_if_due_persists_cadence_across_process_instances(tmp_path: Path, monkeypatch):
