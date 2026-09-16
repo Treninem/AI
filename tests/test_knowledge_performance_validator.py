@@ -88,6 +88,16 @@ class KnowledgePerformanceValidatorTests(unittest.TestCase):
         self.assertFalse(result["correctness_passed"])
         self.assertIn("self-reliance regression: network_required=true", result["errors"])
 
+    def test_nested_runtime_requirement_cannot_contradict_aggregate_contract(self) -> None:
+        module = load_validator()
+        for key in ("network_required", "external_runtime_required", "ollama_required", "external_ai_required", "remote_inference"):
+            payload = report()
+            payload["results"] = [{"runtime": {key: True}}]
+            result = module.evaluate_report(payload, f"nested-{key}.json")
+            self.assertFalse(result["correctness_passed"], key)
+            self.assertTrue(result["self_reliance_true_requirement_paths"], key)
+            self.assertTrue(any("nested self-reliance regression" in error for error in result["errors"]), key)
+
     def test_malformed_relative_pairs_fail_closed(self) -> None:
         module = load_validator()
         payload = report()
