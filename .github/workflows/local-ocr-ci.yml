@@ -108,6 +108,7 @@ jobs:
         run: |
           grep -q "imported documents.*data\|документов.*данными\|документов является данными" scripts/ai_client.gd
           grep -q "restart_retrieval=true" tests/local_ocr_knowledge_smoke.gd
+          grep -q "async_extractor_required" scripts/knowledge_document_importer.gd
           grep -q "external_ai_required" scripts/file_intelligence_client.gd
           grep -q "cancel_active_analysis" scripts/file_intelligence_client.gd
           grep -q "startAnalyzeLocalFile" scripts/file_intelligence_client.gd
