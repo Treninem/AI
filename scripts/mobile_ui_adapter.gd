@@ -21,8 +21,22 @@ var _last_safe_area := Rect2i()
 var _last_screen_size := Vector2i()
 var _last_chat_id := ""
 
+func _mobile_preview_enabled() -> bool:
+	return bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
+
 func _is_mobile_context() -> bool:
-	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
+	return OS.get_name() == "Android" or _mobile_preview_enabled()
+
+func _testing_safe_insets() -> Vector4:
+	if not _mobile_preview_enabled() or OS.get_name() == "Android":
+		return Vector4.ZERO
+	var value = ProjectSettings.get_setting("aurorafox/testing/safe_insets", Vector4.ZERO)
+	return value as Vector4 if value is Vector4 else Vector4.ZERO
+
+func _testing_keyboard_inset() -> int:
+	if not _mobile_preview_enabled() or OS.get_name() == "Android":
+		return 0
+	return maxi(0, int(ProjectSettings.get_setting("aurorafox/testing/keyboard_inset", 0)))
 
 func _ready() -> void:
 	if not _is_mobile_context():
@@ -42,7 +56,7 @@ func _process(delta: float) -> void:
 	if _poll_left > 0.0:
 		return
 	_poll_left = KEYBOARD_POLL_SECONDS
-	var keyboard_height := DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else 0
+	var keyboard_height := DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else _testing_keyboard_inset()
 	var safe_area := DisplayServer.get_display_safe_area()
 	var screen_size := DisplayServer.screen_get_size()
 	if keyboard_height != _last_keyboard_height or safe_area != _last_safe_area or screen_size != _last_screen_size:
@@ -51,7 +65,7 @@ func _process(delta: float) -> void:
 
 func _configure_mobile_scale() -> void:
 	var screen := DisplayServer.screen_get_size()
-	if bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)):
+	if _mobile_preview_enabled():
 		var viewport := get_viewport().get_visible_rect().size
 		screen = Vector2i(int(viewport.x), int(viewport.y))
 	var base := PORTRAIT_BASE if screen.y >= screen.x else LANDSCAPE_BASE
@@ -84,7 +98,7 @@ func _on_viewport_size_changed() -> void:
 func _apply_mobile_layout() -> void:
 	if not _is_mobile_context() or root_row == null:
 		return
-	_last_keyboard_height = DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else 0
+	_last_keyboard_height = DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else _testing_keyboard_inset()
 	_last_safe_area = DisplayServer.get_display_safe_area()
 	_last_screen_size = DisplayServer.screen_get_size()
 	var insets := _safe_insets_logical()
@@ -118,8 +132,8 @@ func _apply_mobile_layout() -> void:
 	_apply_keyboard_inset()
 
 func _safe_insets_logical() -> Vector4:
-	if bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)) and OS.get_name() != "Android":
-		return Vector4.ZERO
+	if _mobile_preview_enabled() and OS.get_name() != "Android":
+		return _testing_safe_insets()
 	var screen := DisplayServer.screen_get_size()
 	var safe := DisplayServer.get_display_safe_area()
 	if screen.x <= 0 or screen.y <= 0:
@@ -145,14 +159,17 @@ func _physical_to_logical_scale() -> float:
 func _apply_keyboard_inset() -> void:
 	if composer_margin == null:
 		return
-	var keyboard_px := DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else 0
 	var extra := 0
-	if keyboard_px > 0:
-		var screen_px := DisplayServer.screen_get_size()
-		var window_px := DisplayServer.window_get_size()
-		var already_resized := screen_px.y > 0 and window_px.y <= screen_px.y - int(float(keyboard_px) * 0.55)
-		if not already_resized:
-			extra = int(ceil(float(keyboard_px) / _physical_to_logical_scale()))
+	if _mobile_preview_enabled() and OS.get_name() != "Android":
+		extra = _testing_keyboard_inset()
+	else:
+		var keyboard_px := DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else 0
+		if keyboard_px > 0:
+			var screen_px := DisplayServer.screen_get_size()
+			var window_px := DisplayServer.window_get_size()
+			var already_resized := screen_px.y > 0 and window_px.y <= screen_px.y - int(float(keyboard_px) * 0.55)
+			if not already_resized:
+				extra = int(ceil(float(keyboard_px) / _physical_to_logical_scale()))
 	composer_margin.add_theme_constant_override("margin_bottom", _base_composer_bottom + extra)
 
 func _ensure_navigation_buttons() -> void:
