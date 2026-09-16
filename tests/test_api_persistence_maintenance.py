@@ -54,7 +54,11 @@ def test_capacity_status_is_observational_and_flags_thresholds(tmp_path: Path, m
     assert status["counts"]["sync_conflicts_open"] == 1
     assert status["counts"]["learning_pending"] == 1
     assert status["capacity_policy"]["database_warning_precedes_backup_cap"] is True
+    assert status["capacity_policy"]["database_warning_includes_wal"] is True
     assert status["capacity_policy"]["database_warn_bytes"] < status["capacity_policy"]["backup_max_source_bytes"]
+    assert status["sizes"]["database_effective_bytes"] == (
+        status["sizes"]["database_bytes"] + status["sizes"]["wal_bytes"]
+    )
     assert status["retention_policy"]["sync_changes_auto_pruned"] is False
     assert status["retention_policy"]["sync_conflicts_auto_pruned"] is False
     assert status["retention_policy"]["pending_learning_protected"] is True
@@ -69,6 +73,33 @@ def test_capacity_status_is_observational_and_flags_thresholds(tmp_path: Path, m
     assert "disk_free_critical" in pressure["warnings"]
     assert LearningStore(root).pending(10)[0]["payload"] == {"private": "pending"}
     assert sync.pull(principal)["changes"][0]["payload"] == {"value": 1}
+
+
+def test_capacity_warning_includes_uncheckpointed_wal_bytes(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    AccountStore(root)
+    monkeypatch.setenv("AURORAFOX_DATABASE_WARN_BYTES", "100")
+    monkeypatch.setenv("AURORAFOX_BACKUP_MAX_BYTES", "1000")
+    monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "1")
+    maintenance = PersistenceMaintenance(root)
+    db_path = maintenance.database.path
+
+    def fake_size(path: Path) -> int:
+        text = str(path)
+        if path == db_path:
+            return 40
+        if text.endswith("-wal"):
+            return 70
+        if text.endswith("-shm"):
+            return 32
+        return 0
+
+    monkeypatch.setattr(maintenance, "_size", fake_size)
+    status = maintenance.status()
+    assert status["sizes"]["database_bytes"] == 40
+    assert status["sizes"]["wal_bytes"] == 70
+    assert status["sizes"]["database_effective_bytes"] == 110
+    assert "database_size" in status["warnings"]
 
 
 def test_prune_removes_only_terminal_auth_rows_and_keeps_sync_audit(tmp_path: Path, monkeypatch):
