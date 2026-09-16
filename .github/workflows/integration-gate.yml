@@ -1,0 +1,150 @@
+name: AuroraFox Integration Gate
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-integration-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cross-subsystem-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install integration contract dependencies
+        shell: bash
+        run: python -m pip install --disable-pip-version-check -r api/requirements.txt pytest==8.4.1
+
+      - name: Run same-SHA cross-subsystem contracts
+        shell: bash
+        run: >-
+          PYTHONPATH="$PWD" python -m pytest -q
+          tests/integration_release_readiness_contract.py
+          tests/test_standalone_core_contract.py
+          tests/test_autonomous_evolution_contract.py
+          tests/test_api_accounts_sync.py
+          tests/test_api_privacy_contract.py
+          tests/test_release_core_gates.py
+          tests/test_android_contract.py
+
+      - name: Report independently active lane handoff visibility
+        shell: bash
+        run: |
+          set -euo pipefail
+          # These paths are owned by independently ACTIVE lanes. Absence is
+          # PENDING, not failure; once they land, subsequent main pushes pass
+          # through this integration workflow as well as their lane-specific CI.
+          for path in \
+            .github/workflows/local-ocr-ci.yml \
+            .github/workflows/core-benchmarks.yml \
+            .github/workflows/knowledge-performance.yml \
+            tests/test_local_ocr.py
+          do
+            if [ -e "$path" ]; then
+              echo "LANE_ARTIFACT_PRESENT $path"
+            else
+              echo "LANE_ARTIFACT_PENDING $path"
+            fi
+          done
+          if [ -d benchmarks/core ]; then
+            echo 'LANE_ARTIFACT_PRESENT benchmarks/core/**'
+          else
+            echo 'LANE_ARTIFACT_PENDING benchmarks/core/**'
+          fi
+          if [ -d benchmarks/knowledge ]; then
+            echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/**'
+          else
+            echo 'LANE_ARTIFACT_PENDING benchmarks/knowledge/**'
+          fi
+
+  godot-cross-subsystem:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+
+      - name: Parse the integrated Godot project
+        shell: bash
+        run: timeout 90s ./godot --headless --editor --path . --quit
+
+      - name: Run offline Core Agent memory Knowledge Work API and safety smokes
+        shell: bash
+        run: |
+          set -euo pipefail
+          for smoke in \
+            tests/self_reliance_smoke.gd \
+            tests/offline_autonomy_smoke.gd \
+            tests/autonomy_learning_smoke.gd \
+            tests/knowledge_registry_smoke.gd \
+            tests/knowledge_transaction_rollback_smoke.gd \
+            tests/api_gateway_smoke.gd \
+            tests/work_mode_smoke.gd \
+            tests/runtime_extension_smoke.gd \
+            tests/core_candidate_benchmark_smoke.gd \
+            tests/core_candidate_submitter_smoke.gd
+          do
+            echo "INTEGRATION_SMOKE_START $smoke"
+            timeout 60s ./godot --headless --path . --script "$smoke"
+            echo "INTEGRATION_SMOKE_OK $smoke"
+          done
+
+      - name: Run headless UI regression smoke (not visual acceptance)
+        shell: bash
+        run: timeout 60s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
+
+      - name: Record acceptance boundary
+        shell: bash
+        run: |
+          echo 'Headless UI smoke is not human visual acceptance.'
+          echo 'Android emulator is not a physical Android device.'
+          echo 'CI Windows runner is not owner hardware.'
+          echo 'physical-device acceptance is separate'
+
+  integration-gate:
+    if: always()
+    needs: [cross-subsystem-contracts, godot-cross-subsystem]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require all integration jobs
+        shell: bash
+        env:
+          CONTRACT_RESULT: ${{ needs.cross-subsystem-contracts.result }}
+          GODOT_RESULT: ${{ needs.godot-cross-subsystem.result }}
+        run: |
+          set -euo pipefail
+          echo "cross-subsystem-contracts=$CONTRACT_RESULT"
+          echo "godot-cross-subsystem=$GODOT_RESULT"
+          test "$CONTRACT_RESULT" = success
+          test "$GODOT_RESULT" = success
