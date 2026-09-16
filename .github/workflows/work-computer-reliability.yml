@@ -49,6 +49,27 @@ jobs:
       - name: Computer reliability and routing contracts
         run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py
 
+  computer-contract-windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install production Computer dependencies and tests
+        shell: pwsh
+        run: python -m pip install --disable-pip-version-check -r computer/requirements.txt pytest 'httpx==0.28.1'
+      - name: Import Windows desktop runtime dependencies
+        shell: pwsh
+        run: python -c "import pyautogui, pywinauto; from PIL import ImageGrab; print('WINDOWS_COMPUTER_RUNTIME_IMPORT_OK')"
+      - name: Python syntax
+        shell: pwsh
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py
+      - name: Computer reliability and routing contracts on Windows
+        shell: pwsh
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py
+
   work-godot:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
