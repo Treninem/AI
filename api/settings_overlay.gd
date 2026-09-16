@@ -189,6 +189,10 @@ func _inject_settings_button() -> void:
 	var settings_popup = settings.get("popup")
 	if not settings_popup is PopupPanel:
 		return
+	# The current settings UI has a dedicated Tools page with the API entry.
+	# Never inject legacy controls into that paged layout.
+	if settings_popup.find_child("SettingsPages", true, false) != null:
+		return
 	var box := _find_main_vbox(settings_popup)
 	if box == null:
 		return
