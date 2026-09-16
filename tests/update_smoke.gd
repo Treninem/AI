@@ -37,11 +37,9 @@ func _init() -> void:
 		push_error("Updater failed older-version comparison")
 		quit(9)
 		return
-	# A client that already contains the updater must be able to jump straight
-	# from an arbitrarily old semantic version to a current multi-part version.
-	for legacy in ["0.0.1", "0.1", "0.4.0", "1.0.0", "v1.1.9"]:
-		if updater._compare_versions("9.8.7.6", legacy) != 1:
-			push_error("Direct legacy-to-current version jump failed for " + legacy)
+	for legacy in ["0.0.1", "0.1", "0.4.0", "1.0.0", "1.2.0.0", "v1.1.9"]:
+		if updater._compare_versions("1.3.0.0", legacy) != 1:
+			push_error("Version comparison failed for repair source " + legacy)
 			quit(21)
 			return
 
@@ -59,12 +57,20 @@ func _init() -> void:
 		quit(12)
 		return
 	if not source.contains('const MANIFEST_URL := "https://github.com/Treninem/AI/releases/latest/download/update.json"'):
-		push_error("Permanent legacy update manifest URL changed")
+		push_error("Permanent update manifest URL changed")
 		quit(22)
 		return
 	if not source.contains('const MANIFEST_SIG_URL := "https://github.com/Treninem/AI/releases/latest/download/update.sig"'):
-		push_error("Current signed manifest sidecar URL changed")
+		push_error("Signed manifest sidecar URL changed")
 		quit(23)
+		return
+	if not source.contains('"repair_required": true'):
+		push_error("Updater does not expose repair-required state when trust root is missing")
+		quit(28)
+		return
+	if not source.contains("untrusted_remote"):
+		push_error("Updater no longer separates untrusted version discovery from trusted assets")
+		quit(29)
 		return
 
 	var file := FileAccess.open("res://update/manifest.template.json", FileAccess.READ)
@@ -87,21 +93,37 @@ func _init() -> void:
 	for platform in ["windows", "android"]:
 		var asset = assets.get(platform, {})
 		if not asset is Dictionary or not asset.has("url") or not asset.has("sha256"):
-			push_error("Legacy manifest asset contract missing for " + platform)
+			push_error("Stable manifest asset contract missing for " + platform)
 			quit(24)
 			return
 	var compatibility = parsed.get("compatibility", {})
-	if not compatibility is Dictionary or not bool(compatibility.get("legacy_manifest", false)) or not bool(compatibility.get("direct_update", false)):
-		push_error("Manifest no longer declares direct legacy updater compatibility")
+	if not compatibility is Dictionary:
+		push_error("Update compatibility metadata is missing")
 		quit(25)
 		return
-	if str(compatibility.get("windows_strategy", "")) != "full_zip_replace":
-		push_error("Windows legacy update strategy changed")
+	if not bool(compatibility.get("legacy_manifest", false)) or not bool(compatibility.get("legacy_manifest_readable", false)):
+		push_error("Legacy manifest readability contract changed")
 		quit(26)
 		return
-	if str(compatibility.get("android_strategy", "")) != "same_package_signed_apk":
-		push_error("Android legacy update strategy changed")
+	if bool(compatibility.get("legacy_direct_update", true)):
+		push_error("Manifest incorrectly claims legacy direct update is safe")
 		quit(27)
+		return
+	if str(compatibility.get("legacy_repair_required_through", "")) != "1.2.0.0":
+		push_error("V1.2 repair boundary changed")
+		quit(30)
+		return
+	if not bool(compatibility.get("signed_direct_update", false)) or str(compatibility.get("signed_update_floor", "")) != "1.3.0.0":
+		push_error("V1.3 signed direct-update floor changed")
+		quit(31)
+		return
+	if not str(compatibility.get("windows_strategy", "")).contains("repair_installer"):
+		push_error("Windows repair strategy missing")
+		quit(32)
+		return
+	if str(compatibility.get("android_strategy", "")) != "same_package_same_signing_identity_required":
+		push_error("Android signing continuity contract changed")
+		quit(33)
 		return
 
 	# Exercise the same RSA-SHA256 primitives used by the production updater.
@@ -137,7 +159,7 @@ func _init() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(public_path))
 
 	updater.free()
-	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true legacy_direct_update=true signed_current=true")
+	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true legacy_repair_through=1.2.0.0 signed_floor=1.3.0.0")
 	quit(0)
 
 func _sha256(data: PackedByteArray) -> PackedByteArray:
