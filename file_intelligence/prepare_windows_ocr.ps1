@@ -12,6 +12,8 @@ $RuntimeRoot = [IO.Path]::GetFullPath($RuntimeRoot)
 $CacheRoot = [IO.Path]::GetFullPath($CacheRoot)
 New-Item -ItemType Directory -Force -Path $CacheRoot | Out-Null
 
+# Official Tesseract 5.5.3 Windows release asset. The release itself publishes
+# the same SHA-256 digest, and AuroraFox verifies the bytes before execution.
 $installerName = 'tesseract-ocr-w64-setup-5.5.3.20260724.exe'
 $installerUrl = "https://github.com/tesseract-ocr/tesseract/releases/download/5.5.3/$installerName"
 $installerSha = 'bee9e3434bd94fd65387d9be28cd467a41f61b1275383b55b0f59a1331270ae4'
@@ -37,8 +39,14 @@ if (-not (Test-Path -LiteralPath $tesseract)) {
     Get-Verified $installerUrl $installer $installerSha
     if (Test-Path -LiteralPath $RuntimeRoot) { Remove-Item -LiteralPath $RuntimeRoot -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
-    & $installer /S "/D=$RuntimeRoot"
-    if ($LASTEXITCODE -ne 0) { throw "Tesseract installer failed with exit code $LASTEXITCODE" }
+
+    # The NSIS installer is a GUI-subsystem executable. Invoking it with '&'
+    # can leave $LASTEXITCODE unset before the child installer has finished.
+    # Start-Process -Wait gives us a deterministic completion and exit code.
+    $installArgs = @('/S', "/D=`"$RuntimeRoot`"")
+    $installProcess = Start-Process -FilePath $installer -ArgumentList $installArgs -Wait -PassThru
+    if ($null -eq $installProcess) { throw 'Tesseract installer did not return a process handle' }
+    if ($installProcess.ExitCode -ne 0) { throw "Tesseract installer failed with exit code $($installProcess.ExitCode)" }
     if (-not (Test-Path -LiteralPath $tesseract)) { throw "Tesseract runtime was not created: $tesseract" }
 }
 
