@@ -50,8 +50,6 @@ class AndroidVoiceRuntime(private val context: Context) {
             val spokenText = prepareSpeechText(text)
             if (spokenText.isBlank()) return error("Speech text is empty after normalization")
 
-            // Piper changes tempo during generation, which is preferable to
-            // playback pitch scaling, but large deviations still sound synthetic.
             val safeSpeed = speed.coerceIn(0.92f, 1.08f)
             val power = intensity.coerceIn(0.0f, 1.0f)
             val targetSilence = when (emotion) {
@@ -61,7 +59,7 @@ class AndroidVoiceRuntime(private val context: Context) {
                 else -> 0.20f
             }
             val silenceScale = 0.20f + (targetSilence - 0.20f) * power
-            val key = sha256("$spokenText|$safeSpeed|$emotion|$power|piper-denis-v3")
+            val key = sha256("$spokenText|$safeSpeed|$emotion|$power|piper-denis-v4")
             val wav = File(cacheDir, "$key.wav")
             val meta = File(cacheDir, "$key.json")
             if (wav.isFile && meta.isFile) {
@@ -139,7 +137,6 @@ class AndroidVoiceRuntime(private val context: Context) {
         text = Regex("\\[([^]]+)]\\([^)]+\\)").replace(text) { it.groupValues[1] }
         text = Regex("https?://\\S+").replace(text, "ссылка в сообщении")
 
-        // Preserve exact technical values while giving Piper pronounceable text.
         text = Regex("(?<![\\p{L}\\d])-?\\d+(?:\\.\\d+){2,}(?![\\p{L}\\d])").replace(text) {
             val negative = it.value.startsWith('-')
             val body = if (negative) it.value.substring(1) else it.value
@@ -147,10 +144,18 @@ class AndroidVoiceRuntime(private val context: Context) {
             (if (negative) "минус " else "") + spoken
         }
         text = Regex("(?<![\\p{L}\\d])(-?\\d+(?:[,.]\\d+)?)\\s*°\\s*[CcСс](?![\\p{L}])").replace(text) {
-            speakNumberToken(it.groupValues[1]) + " градусов Цельсия"
+            val token = it.groupValues[1]
+            speakNumberToken(token) + " " + unitForm(
+                token,
+                "градус Цельсия",
+                "градуса Цельсия",
+                "градусов Цельсия",
+                "градуса Цельсия",
+            )
         }
         text = Regex("(?<![\\p{L}\\d])(-?\\d+(?:[,.]\\d+)?)\\s*%(?![\\p{L}\\d])").replace(text) {
-            speakNumberToken(it.groupValues[1]) + " процентов"
+            val token = it.groupValues[1]
+            speakNumberToken(token) + " " + unitForm(token, "процент", "процента", "процентов", "процента")
         }
         text = Regex("(?<![\\p{L}\\d])-?\\d+[,.]\\d+(?![\\p{L}\\d])").replace(text) {
             speakNumberToken(it.value)
@@ -165,6 +170,27 @@ class AndroidVoiceRuntime(private val context: Context) {
         text = Regex("\\n").replace(text, ", ")
         text = Regex("\\s+").replace(text, " ").trim(' ', ',')
         return text
+    }
+
+    private fun unitForm(token: String, one: String, few: String, many: String, decimal: String): String {
+        val body = token.removePrefix("-").replace(',', '.')
+        if (body.contains('.')) {
+            val fractional = body.substringAfter('.').trimEnd('0')
+            if (fractional.isNotEmpty()) return decimal
+        }
+        val value = body.substringBefore('.').toLongOrNull() ?: 0L
+        return pluralForm(value, one, few, many)
+    }
+
+    private fun pluralForm(value: Long, one: String, few: String, many: String): String {
+        val positive = if (value < 0L) -value else value
+        val mod100 = positive % 100L
+        if (mod100 in 11L..14L) return many
+        return when (positive % 10L) {
+            1L -> one
+            2L, 3L, 4L -> few
+            else -> many
+        }
     }
 
     private fun speakNumberToken(token: String): String {
@@ -242,10 +268,10 @@ class AndroidVoiceRuntime(private val context: Context) {
                 out += teens[tail - 10]
             } else {
                 out += tens[tail / 10]
-                val one = tail % 10
-                if (feminineUnits && one == 1) out += "одна"
-                else if (feminineUnits && one == 2) out += "две"
-                else out += ones[one]
+                val unit = tail % 10
+                if (feminineUnits && unit == 1) out += "одна"
+                else if (feminineUnits && unit == 2) out += "две"
+                else out += ones[unit]
             }
             return out.filter { it.isNotBlank() }
         }
