@@ -52,6 +52,30 @@ func _assert_personal_surfaces(main: Control) -> bool:
 		return false
 	return true
 
+func _assert_knowledge_surfaces(main: Control) -> bool:
+	var popup := main.find_child("KnowledgeBasePopup", true, false) as PopupPanel
+	var close := main.find_child("KnowledgeCloseButton", true, false) as Button
+	var cancel := main.find_child("KnowledgeCancelImportButton", true, false) as Button
+	var actions := main.find_child("KnowledgeActions", true, false)
+	if popup == null or close == null or cancel == null or actions == null:
+		_fail("Knowledge responsive controls are incomplete", 54)
+		return false
+	if close.text != "Готово" or close.custom_minimum_size.y < 40.0:
+		_fail("Knowledge close action is not a stable top-level Done control", 55)
+		return false
+	if not actions is HFlowContainer:
+		_fail("Knowledge actions must wrap instead of overflowing", 56)
+		return false
+	if cancel.text.findn("текущего файла") < 0:
+		_fail("Knowledge cancel action overpromises mid-transaction cancellation", 57)
+		return false
+	for node in popup.find_children("*", "Button", true, false):
+		var button := node as Button
+		if button.text.strip_edges() == "Закрыть":
+			_fail("Legacy bottom Knowledge close button leaked back into the surface", 58)
+			return false
+	return true
+
 func _assert_core_layout(main: Control, mobile := false) -> bool:
 	var required := [
 		"RootLayout", "Sidebar", "SidebarMobileNavSlot", "NewChatButton", "ChatSearch", "ChatHistoryScroll", "ChatList",
@@ -115,6 +139,8 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	settings_overlay.call("_select_page", "general")
 
 	if not _assert_personal_surfaces(main):
+		return false
+	if not _assert_knowledge_surfaces(main):
 		return false
 
 	var computer_toggle := main.find_child("ComputerAgentToggle", true, false) as CheckButton
