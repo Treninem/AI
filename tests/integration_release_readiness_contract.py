@@ -44,6 +44,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/knowledge_transaction_rollback_smoke.gd",
         "tests/api_gateway_smoke.gd",
         "tests/work_mode_smoke.gd",
+        "tests/work_mode_store_smoke.gd",
         "tests/desktop_ui_smoke.gd",
         "tests/runtime_extension_smoke.gd",
         "tests/core_candidate_benchmark_smoke.gd",
@@ -147,6 +148,21 @@ def test_knowledge_alias_removal_safety_is_part_of_same_sha_gate() -> None:
     assert 'base.base_environment(root, {"scenario": "probe"})' in runner
 
 
+def test_work_persistence_and_self_reliance_are_same_sha_covered() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+    work_store = read("tests/work_mode_store_smoke.gd")
+    work_ci = read(".github/workflows/work-mode-ci.yml")
+
+    assert "tests/work_mode_smoke.gd" in workflow
+    assert "tests/work_mode_store_smoke.gd" in workflow
+    assert "tests/offline_autonomy_smoke.gd" in workflow
+    assert ".github/workflows/work-mode-ci.yml" in workflow
+    assert '"status":"completed"' in work_store
+    assert '"progress":100' in work_store
+    assert "AuroraFox Core offline self-reliance smoke" in work_ci
+    assert "tests/offline_autonomy_smoke.gd" in work_ci
+
+
 def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
@@ -177,6 +193,9 @@ def test_godot_failure_does_not_hide_followup_smokes_or_diagnostics() -> None:
     ):
         assert f"- name: {step_name}\n        if: always()" in workflow
 
+    assert "status=0" in workflow
+    assert "INTEGRATION_SMOKE_FAILED" in workflow
+    assert 'exit "$status"' in workflow
     assert "uses: actions/upload-artifact@v4" in workflow
     assert "path: artifacts/integration-gate/" in workflow
     assert "if-no-files-found: warn" in workflow
@@ -195,6 +214,7 @@ def test_active_lane_workflows_become_visible_to_integration_when_they_land() ->
         "local-ocr-ci.yml",
         "core-benchmarks.yml",
         "work-computer-reliability.yml",
+        "work-mode-ci.yml",
         "research-quality-ci.yml",
         "tests/test_local_ocr.py",
         "benchmarks/core/**",
@@ -206,5 +226,6 @@ def test_active_lane_workflows_become_visible_to_integration_when_they_land() ->
         "tests/test_knowledge_stress_gates.py",
         "tests/test_research_collector_privacy_contract.py",
         "tests/research_collector_privacy_smoke.gd",
+        "tests/work_mode_store_smoke.gd",
     ):
         assert marker in workflow
