@@ -264,4 +264,5 @@ func _new_service_token() -> String:
 
 func _new_action_id() -> String:
 	_request_sequence += 1
-	return "%d:%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), _request_sequence, shared_service_token().substr(0, 16)]
+	var nonce := Crypto.new().generate_random_bytes(16).hex_encode()
+	return "%d:%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), _request_sequence, nonce]

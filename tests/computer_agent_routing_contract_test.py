@@ -151,3 +151,10 @@ def test_ui_owned_overlay_is_not_changed_into_a_service_side_planner_contract():
     assert 'func plan(_goal: String)' in client
     assert 'func run(_goal: String' in client
     assert client.count('local_core_planning_required') >= 2
+
+
+def test_action_ids_do_not_derive_from_private_service_token():
+    client = _text("scripts/computer_client.gd")
+    action_id_body = client.split("func _new_action_id() -> String:", 1)[1]
+    assert "shared_service_token()" not in action_id_body
+    assert "generate_random_bytes(16)" in action_id_body
