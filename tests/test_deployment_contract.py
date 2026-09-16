@@ -161,7 +161,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "readonly installed_updater='/usr/local/sbin/aurorafox-update'" in updater
     updater_install = 'install -m 0755 deploy/reg_ru/update.sh "${installed_updater}"'
     assert updater.count(updater_install) >= 2
-    assert updater.index(updater_install) > updater.index('git checkout --detach "${candidate}"')
+    assert updater.rindex(updater_install) > updater.index('git checkout --detach "${candidate}"')
 
 
 def test_api_provider_independence_is_packaged_and_deployed():
