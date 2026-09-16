@@ -24,10 +24,13 @@ def test_representative_subsystems_are_aggregated_without_owning_production_code
         "tests/test_autonomous_evolution_contract.py",
         "tests/test_research_evidence_lifecycle_contract.py",
         "tests/test_research_collector_privacy_contract.py",
+        "tests/test_research_source_resilience_contract.py",
         "tests/test_api_accounts_sync.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_request_limits.py",
         "tests/test_api_server_hardening.py",
+        "tests/test_api_persistence_maintenance.py",
+        "tests/test_deployment_contract.py",
         "tests/test_release_core_gates.py",
         "tests/test_android_contract.py",
         "tests/test_voice_text.py",
@@ -35,6 +38,9 @@ def test_representative_subsystems_are_aggregated_without_owning_production_code
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
         "tests/test_knowledge_stress_gates.py",
+        "tests/test_knowledge_stress_workflow_contract.py",
+        "tests/test_knowledge_stress_registry_durability.py",
+        "tests/test_knowledge_stress_removal_transaction.py",
         "tests/test_core_candidate_promotion.py",
         "tests/test_api_runtime_resilience.py",
         "tests/test_project_master_contract.py",
@@ -51,6 +57,7 @@ def test_godot_cross_subsystem_smokes_remain_visible_after_one_failure() -> None
         "tests/autonomy_learning_smoke.gd",
         "tests/research_evidence_lifecycle_smoke.gd",
         "tests/research_collector_privacy_smoke.gd",
+        "tests/research_source_resilience_smoke.gd",
         "tests/knowledge_registry_smoke.gd",
         "tests/knowledge_transaction_rollback_smoke.gd",
         "tests/api_gateway_smoke.gd",
@@ -85,6 +92,58 @@ def test_research_promotion_keeps_untrusted_authority_boundary() -> None:
     assert "memory.learn(" not in collector
 
 
+def test_research_source_resilience_is_same_sha_covered() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    contract = read("tests/test_research_source_resilience_contract.py")
+    smoke = read("tests/research_source_resilience_smoke.gd")
+
+    assert "Research source resilience contract" in workflow
+    assert "tests/test_research_source_resilience_contract.py" in workflow
+    assert "tests/research_source_resilience_smoke.gd" in workflow
+    assert "backoff" in contract.lower() or "retry" in contract.lower()
+    assert "query" in contract.lower()
+    assert "source" in smoke.lower()
+
+
+def test_knowledge_registry_durability_and_removal_are_same_sha_covered() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert "Large Knowledge durability and removal contracts" in workflow
+    for marker in (
+        "tests/test_knowledge_stress_workflow_contract.py",
+        "tests/test_knowledge_stress_registry_durability.py",
+        "tests/test_knowledge_stress_removal_transaction.py",
+        "benchmarks/knowledge/write_failure_rollback_probe.gd",
+        "benchmarks/knowledge/registry_truncated_temp_probe.gd",
+        "AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=",
+        "AURORA_KNOWLEDGE_TRUNCATED_REGISTRY_RESULT=",
+    ):
+        assert marker in workflow
+
+    durability = read("tests/test_knowledge_stress_registry_durability.py")
+    removal = read("tests/test_knowledge_stress_removal_transaction.py")
+    assert "temp" in durability.lower()
+    assert "rollback" in durability.lower() or "failure" in durability.lower()
+    assert "remov" in removal.lower()
+    assert "transaction" in removal.lower() or "rollback" in removal.lower()
+
+
+def test_server_persistence_and_reg_ru_release_contracts_are_same_sha_covered() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert "API persistence maintenance contract" in workflow
+    assert "Deployment REG.RU release contract" in workflow
+    assert "tests/test_api_persistence_maintenance.py" in workflow
+    assert "tests/test_deployment_contract.py" in workflow
+
+    maintenance = read("tests/test_api_persistence_maintenance.py")
+    deployment = read("tests/test_deployment_contract.py")
+    assert "sync" in maintenance.lower()
+    assert "ready" in maintenance.lower()
+    assert "verify_production.py" in deployment
+    assert "sqlite" in deployment.lower()
+    assert "backup" in deployment.lower()
+    assert "rollback" in deployment.lower()
+
+
 def test_code_specialist_does_not_restore_direct_external_provider_path() -> None:
     source = read("scripts/code_specialist.gd")
     lower = source.lower()
@@ -92,6 +151,77 @@ def test_code_specialist_does_not_restore_direct_external_provider_path() -> Non
     assert "/api/chat" not in lower
     assert "httprequest.new()" not in lower
     assert "await general_ai.chat(" in source
+
+
+def test_work_computer_landing_makes_ui_core_routing_mandatory() -> None:
+    lane_workflow_path = ROOT / ".github" / "workflows" / "work-computer-reliability.yml"
+    if not lane_workflow_path.exists():
+        return
+
+    lane_workflow = lane_workflow_path.read_text(encoding="utf-8")
+    client = read("scripts/computer_client.gd")
+    registry = read("scripts/tool_registry.gd")
+    overlay = read("scripts/computer_overlay.gd")
+
+    assert "local_core_planning_required" in client
+    assert "set_computer_control_enabled" in client
+    for primitive in ("computer_action", "computer_screenshot", "computer_windows"):
+        assert primitive in registry
+
+    assert "computer.run(" not in overlay
+    assert "computer.plan(" not in overlay
+    assert "set_computer_control_enabled" in overlay
+    assert "run_task(" in overlay
+
+    for required_gate in (
+        "tests/computer_agent_reliability_test.py",
+        "tests/computer_agent_routing_contract_test.py",
+        "tests/work_reliability_store_smoke.gd",
+        "tests/work_computer_e2e_control_smoke.gd",
+        "tests/work_computer_attempt_safety_smoke.gd",
+        "tests/work_computer_e2e_uncertain_result_smoke.gd",
+        "tests/work_computer_master_stop_smoke.gd",
+    ):
+        assert required_gate in lane_workflow
+
+
+def test_local_ocr_landing_keeps_offline_packaging_and_knowledge_gates() -> None:
+    lane_workflow_path = ROOT / ".github" / "workflows" / "local-ocr-ci.yml"
+    if not lane_workflow_path.exists():
+        return
+
+    lane_workflow = lane_workflow_path.read_text(encoding="utf-8")
+    for required in (
+        "pytest -q tests/test_local_ocr.py",
+        "tests/local_ocr_knowledge_smoke.gd",
+        "windows-portable-ocr",
+        "android-ocr",
+        "rus.traineddata",
+        "eng.traineddata",
+        "network_required",
+        "external_ai_required",
+    ):
+        assert required in lane_workflow
+    assert "OpenAI|Gemini|Claude|Ollama" in lane_workflow
+
+
+def test_core_benchmark_landing_keeps_real_offline_code_specialist_proof() -> None:
+    lane_workflow_path = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
+    if not lane_workflow_path.exists():
+        return
+
+    lane_workflow = lane_workflow_path.read_text(encoding="utf-8")
+    runner = read("benchmarks/core/run_windows_code_specialist_smoke.ps1")
+    smoke = read("benchmarks/core/code_specialist_smoke.gd")
+
+    assert "Run Work Mode startup regression smoke" in lane_workflow
+    assert "Run real CodeSpecialist through bundled Core offline" in lane_workflow
+    assert "Enforce real Core gate" in lane_workflow
+    assert "New-NetFirewallRule" in runner
+    assert "ollama" in runner.lower()
+    assert "CodeSpecialist.new()" in smoke
+    assert "analyze_request" in smoke
+    assert "aurora_core_desktop" in smoke
 
 
 def test_release_safety_boundaries_are_present() -> None:

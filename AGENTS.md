@@ -31,6 +31,22 @@ Work in coherent batches. After each completed batch, update `docs/PROJECT_MASTE
 - exact next step;
 - files/subsystem released from the claim.
 
+Every substantial progress update and every handoff/stop report MUST also include a numeric completion estimate in this exact form:
+
+- `PROGRESS_COMPLETE: XX%`
+- `PROGRESS_REMAINING: YY%`
+
+`XX + YY` must equal `100`. Percentages must reflect the lane's acceptance criteria, not just how much code was written. Pending CI, unresolved P0/P1 defects, unverified packaging/device gates, cross-lane integration blockers, and missing evidence must remain counted in `PROGRESS_REMAINING`.
+
+Under the percentages, report four compact sections:
+
+- `DONE:` concrete completed items, commits, and green tests/CI evidence;
+- `REMAINING:` concrete unfinished acceptance items;
+- `BLOCKERS:` exact blocker owner/CLAIM plus SHA/run/test evidence, or `none`;
+- `NEXT:` the exact next executable step.
+
+When a lane reaches `PROGRESS_COMPLETE: 100%`, do not idle. Mark the claim DONE, release its owned files, fetch fresh `main`/master log, and take the declared POST-DONE/next free large package or help another active lane through independent tests, benchmarks, audit, or integration evidence without editing that lane's occupied production files.
+
 When stopping, mark the claim DONE or clearly state what remains so the next Chat/Work/Codex session can continue directly from the repository without repeating completed work.
 
 ## HARD VERSIONING INVARIANT — test first, version last

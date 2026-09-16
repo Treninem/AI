@@ -53,9 +53,54 @@ def test_public_auth_path_is_limited_per_client_and_endpoint():
     assert len(calls) == 2
     assert json.loads(third[1]["body"])["detail"].startswith("AuroraFox public authentication")
 
-    # A different public auth endpoint has a separate bucket.
+    # A different public auth endpoint has a separate per-client bucket.
     other = asyncio.run(_run_once(middleware, _scope(path="/v1/auth/password-reset/request")))
     assert other[0]["status"] == 204
+
+
+def test_global_budget_blocks_distributed_auth_burst_and_recovers(monkeypatch):
+    calls = 0
+    clock = [100.0]
+    monkeypatch.setattr("api.public_auth_limits.time.monotonic", lambda: clock[0])
+
+    async def app(scope, receive, send):
+        nonlocal calls
+        calls += 1
+        await send({"type": "http.response.start", "status": 204, "headers": []})
+        await send({"type": "http.response.body", "body": b"", "more_body": False})
+
+    middleware = PublicAuthRateLimitMiddleware(
+        app,
+        limit=2,
+        window_seconds=60,
+        max_buckets=10,
+        global_limit=2,
+    )
+    first = asyncio.run(
+        _run_once(middleware, _scope(path="/v1/auth/guest", client=("203.0.113.1", 1)))
+    )
+    second = asyncio.run(
+        _run_once(middleware, _scope(path="/v1/auth/register", client=("203.0.113.2", 1)))
+    )
+    blocked = asyncio.run(
+        _run_once(middleware, _scope(path="/v1/auth/login", client=("203.0.113.3", 1)))
+    )
+    assert first[0]["status"] == 204
+    assert second[0]["status"] == 204
+    assert blocked[0]["status"] == 429
+    assert calls == 2
+    assert len(middleware._global_hits) == 2
+    assert len(middleware._hits) == 2
+
+    # Expired global capacity is reclaimed just like per-client buckets; a
+    # distributed burst cannot permanently wedge public authentication.
+    clock[0] = 161.0
+    recovered = asyncio.run(
+        _run_once(middleware, _scope(path="/v1/auth/login", client=("203.0.113.3", 1)))
+    )
+    assert recovered[0]["status"] == 204
+    assert calls == 3
+    assert len(middleware._global_hits) == 1
 
 
 def test_bucket_state_is_bounded_and_expired_capacity_is_reclaimed(monkeypatch):
