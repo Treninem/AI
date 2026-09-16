@@ -584,7 +584,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Acceptance: create/save/execute/progress/complete/restart/load; pause/resume/cancel/retry/failed/interrupted/partial; atomic resilient store + migration/dedup; invalid transitions rejected; safe/unsafe retry distinction; no blind destructive replay after uncertain result; Computer unavailable/timeout/malformed/permission/screenshot/platform failures не ломают chat; bounded calls; path traversal/symlink/command-injection/master-stop/untrusted-authority/privacy regressions; concurrency/stress; Windows contracts зелёные; Android Work + explicit unsupported Computer capability зелёный; physical Windows/Android gates отмечаются отдельно, если устройства недоступны; нет известного P0/P1 в собственном scope.
 
 ## 25. Integration Gate — routed findings and checkpoint, 2026-09-16
-
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UPDATER-VERSIONING
 TYPE: BLOCKER
@@ -741,7 +740,7 @@ NEXT:
 - Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
 - Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
 - Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1–F5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
-- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially регресes intelligibility, clipping, latency/memory/package limits or local-only operation.
+- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially регрессирует intelligibility, clipping, latency/memory/package limits or local-only operation.
 
 ## 34. Integration Gate — release-train delta and routed status, 2026-09-16
 
@@ -938,41 +937,80 @@ BLOCKERS:
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
 
-## 38. Platform / updater / integration takeover — 2026-09-17
+## 38. Mandatory blocked/waiting escalation through coordinator, 2026-09-17
 
-### CLAIM `CHAT-2026-09-17-PLATFORM-INTEGRATION`
+This section is a **mandatory coordination rule** for all seven executor lanes and supersedes any older habit of silently waiting on another lane, a queued check, ownership conflict or unknown next step.
 
-- Статус: **ACTIVE — TAKEOVER/RECONCILE**
-- Started from fresh `main`: `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`
-- Branch: `chat-2026-09-17-platform-integration-v2`
-- Topology mapping: этот exact CLAIM является активной реализацией объединённой canonical lane из section 37 `CHAT-2026-09-17-PLATFORM-UPDATER-INTEGRATION`; отдельное дублирующее ownership не создаётся.
-- Наследует: `CHAT-2026-09-16-UPDATER-VERSIONING` и `CHAT-2026-09-16-INTEGRATION-GATE`.
-- Исторические heads/candidates после reconcile-аудита:
-  - updater PR #70 merge `99b2c144dbeb675caafb527ad528f5db18a32b50` полностью landed в current `main` и не требует отдельного merge;
-  - `release/v1.4-integration` = `99b2c144dbeb675caafb527ad528f5db18a32b50`, stale и не является candidate;
-  - closed PR #32 / `chat-2026-09-16-integration-gate` = `c08aa335bce30978199ed3ea2727e64fa511095e`, diverged от current `main`, не переносится целиком;
-  - draft PR #69 / `coord/work-ui-integration-20260916` = `218a5a83d1e7d0a90ad612415e6aae02fad28045`, diverged stale integration probe, не является и не будет использоваться как final merge candidate.
-- Ownership: Windows export/package/installer/ZIP/runtime/Core assets/hashes; Android APK/export/plugin/native package/signing continuity/versionCode/package hash; updater/signature/trust/repair/latest/release assets/version discipline; release-engineering workflows/tests; независимый same-SHA integration/regression/release-readiness gate.
-- Cross-lane rule: UI/Core/Voice/Knowledge/Work/Computer/Server production defects маршрутизируются их новым takeover CLAIM с exact SHA/run/job/test evidence; production-файлы другой активной lane молча не исправляются.
-- Intended bump: **MINOR** из-за унаследованного нового signed update floor не ниже `1.4.0.0`; canonical version, Android `versionCode` и final release metadata не меняются до явного release-stage решения координатора.
+### Executor rule
 
-PROGRESS_COMPLETE: 12%
-PROGRESS_REMAINING: 88%
+If an executor chat reaches **any state that prevents useful forward progress**, it MUST report the condition in this `docs/PROJECT_MASTER_LOG.md` immediately instead of waiting indefinitely, starting duplicate work or crossing another lane's ownership boundary. This includes, but is not limited to:
+
+- a failing test/workflow that belongs to another lane;
+- waiting for another lane's code, API, artifact or merge;
+- ownership/file conflict;
+- stale/incompatible branch or PR state;
+- CI queue/scheduling blocker that prevents the next required gate;
+- missing external/device/credential/access boundary;
+- architectural decision requiring coordinator arbitration;
+- uncertainty about whether a candidate can be merged;
+- any other condition where the executor has no safe independent next action inside its own scope.
+
+The executor records a `COORDINATOR-BLOCKER` entry using this minimum format:
+
+```text
+COORDINATOR-BLOCKER:
+FROM: <current CLAIM>
+STATUS: BLOCKED | WAITING | OWNERSHIP-CONFLICT | CI-BLOCKED | DECISION-REQUIRED
+CURRENT_SHA: <exact branch/head SHA>
+BLOCKED_ON: <claim/pr/run/job/file/external boundary>
+EVIDENCE: <exact failing test/workflow/run/job/artifact/diff or factual reason>
+ALREADY_TRIED: <only factual attempts already made>
+SAFE_PARALLEL_WORK: <independent work that can still continue, or NONE>
+NEEDS_COORDINATOR: <specific decision/routing needed>
+```
+
+After writing the escalation, the executor MUST NOT silently take another active lane's production files or weaken/remove a failing acceptance test merely to continue. If `SAFE_PARALLEL_WORK` exists, it should continue that independent work while waiting for coordinator routing. If none exists, it waits for the coordinator decision recorded in this journal rather than inventing a new ownership scope.
+
+### Coordinator rule
+
+The coordinator continuously reads these `COORDINATOR-BLOCKER` entries and resolves them through the same journal. For each unresolved escalation the coordinator must verify the available Git/CI evidence and write a `COORDINATOR-DECISION` entry with:
+
+```text
+COORDINATOR-DECISION:
+FOR: <blocked CLAIM>
+DECISION: CONTINUE | REROUTE | HANDOFF | MERGE-FIRST | REBASE/RECONCILE | WAIT-EXTERNAL | DROP-STALE | SPLIT-WORK | OTHER
+OWNER: <claim responsible for next action>
+ACTION: <exact next safe action>
+DEPENDENCY: <what must become true before the original lane resumes, or NONE>
+EVIDENCE: <SHA/run/job/diff/contract supporting the decision>
+PARALLEL_ACTION: <what the blocked lane should do meanwhile, or NONE>
+```
+
+The coordinator is responsible for preventing queue deadlocks: if a dependency can be removed by changing merge order, reconciling a stale candidate, routing a defect to its true owner, splitting an independent test wave, or moving an idle/finished executor to an unowned bottleneck, the coordinator does so and records that decision here.
+
+### No-idle / no-deadlock rule
+
+- No executor should remain in an undefined `waiting` state without a journal escalation and coordinator decision.
+- A red aggregate Integration gate does not force unrelated green lanes to stop when the failing subsystem has been identified and isolated by exact evidence.
+- A finished executor releases its files and may be reassigned by the coordinator to independent regression, evidence collection, packaging or another unowned bottleneck.
+- A blocked executor may continue only explicitly safe parallel work; it must not duplicate the blocker owner's implementation.
+- Every blocker must have an owner, evidence, a coordinator decision and a next action. `Ждём`, `непонятно кто делает`, `проверим потом` are not valid terminal states.
+- Final merge, final version bump and release authority remain coordinator-only.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
 
 DONE:
-- Получен свежий `main`, полностью перечитаны `AGENTS.md` и canonical master log.
-- Сверены наследуемые updater/integration branches и PR heads с current main; updater PR #70 уже landed, PR #32 и PR #69 divergent/stale.
-- Создана fresh takeover branch от exact current main; stale branch от прежнего HEAD не используется.
-- Начат аудит version identity, updater trust/release contract, workflow inventory и опубликованных release assets.
+- Mandatory executor→coordinator escalation protocol is defined for blockers, waits, ownership conflicts, CI scheduling and architecture/merge decisions.
+- Mandatory coordinator→executor decision protocol is defined in the same canonical journal.
+- No-idle/no-deadlock behavior is explicit: executors continue safe independent work where possible and do not cross ownership boundaries while blocked.
+- This coordination-only change does not modify production code, canonical product version or Android versionCode.
 
 REMAINING:
-- Закончить exact workflow run/job/artifact audit и stale-probe cleanup.
-- Проверить fast/version/package contracts на exact takeover SHA.
-- Исправить только release-engineering-owned дефекты и перепроверить их CI.
-- Получить Windows package/install evidence, Android APK/emulator evidence, updater/signing evidence и один same-SHA integration candidate package.
+- Product lanes continue normally under section 37; every new blocker/wait condition must now use this section 38 protocol.
 
 BLOCKERS:
-- Owner-controlled private production signing key и physical Windows/Android device proof остаются внешними boundaries; полный список product blockers ещё уточняется по current exact CI.
+- none for this coordination rule.
 
 NEXT:
-- Закрыть PR #69 как stale superseded probe с evidence; затем проверить current Windows/Android/updater/integration workflows и последние run/job/artifact результаты, после чего запускать/чинить только необходимые fast gates без duplicate CI waves.
+- Coordinator continues monitoring all seven lanes. On the first `COORDINATOR-BLOCKER` entry, verify its exact evidence, publish a `COORDINATOR-DECISION` here, reroute ownership/merge order/CI as needed, and keep all independent lanes moving.
