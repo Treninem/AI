@@ -62,13 +62,14 @@ def test_computer_timeout_budgets_cover_bounded_service_execution():
 def test_agent_cannot_bypass_sandbox_with_public_arbitrary_process_tool():
     tools = _text("scripts/tool_registry.gd")
     assert 'register_tool("run_process"' not in tools
-    assert 'func _run_process(args: Dictionary)' in tools  # fixed git helpers may reuse it internally
+    assert 'func _run_process(args: Dictionary)' in tools
     assert 'register_tool("git_status"' in tools
     assert 'register_tool("git_diff"' in tools
 
 
-def test_sandbox_exec_is_container_first_and_explicit_container_fails_closed():
+def test_sandbox_exec_is_container_first_and_local_process_fails_closed_by_default():
     tools = _text("scripts/tool_registry.gd")
+    service = _text("computer/computer_service.py")
     assert '"mode":"string"' in tools
     assert 'mode not in ["auto", "container", "local"]' in tools
     assert '"/sandbox/container_exec"' in tools
@@ -77,6 +78,10 @@ def test_sandbox_exec_is_container_first_and_explicit_container_fails_closed():
     assert 'container_runtime_unavailable' in tools
     assert 'degraded_isolation' in tools
     assert 'network_isolation_enforced' in tools
+    assert 'ALLOW_DEGRADED_LOCAL_SANDBOX' in service
+    assert 'AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX' in service
+    assert 'Degraded local process sandbox is disabled by default' in service
+    assert 'degraded_local_sandbox_enabled' in service
 
 
 def test_strict_container_cannot_implicitly_pull_images_from_network():
@@ -104,22 +109,26 @@ def test_windows_workspace_bridge_cannot_bypass_private_channel_or_master_stop()
     assert 'request mode=container for strict isolation' in sandbox
 
 
-def test_work_guard_owns_computer_action_id_and_stops_uncertain_unsafe_results():
+def test_work_guard_owns_action_id_and_tracks_whole_attempt_side_effects():
     agent = _text("scripts/agent_core.gd")
     work = _text("work/work_manager.gd")
+    store = _text("work/work_store.gd")
     assert '"before_tool", {"step": step + 1, "tool": tool_name, "args": _safe_args(args)}, args' in agent
     assert '"after_tool", {"step": step + 1, "tool": tool_name, "result": _guard_result(tool_result)}' in agent
     assert 'decision.get("args_patch", {})' in agent
     assert 'tool_args[key] = patch[key]' in agent
     assert 'if tool_name == "computer_action"' in work
     assert 'decision["args_patch"] = {"action_id": action_id}' in work
-    assert 'unsafe_action_uncertain' in work
+    assert 'unsafe_action_seen' in work
+    assert 'store.mark_attempt_unsafe(project_id, task_id)' in work
+    assert 'func _attempt_is_unsafe(' in work
+    assert 'func _finish_failed_execution(' in work
     assert 'func _tool_result_uncertain' in work
-    assert 'str(result.get("retry_safety", "")).strip_edges().to_lower() == "unsafe"' in work
-    assert '"transport_failure"' in work
-    assert '"service_unavailable"' in work
-    assert '"malformed_worker_response"' in work
-    assert 'http >= 500 or http in [408, 429]' in work
+    assert 'http in [400, 401, 403, 404, 405, 409, 422, 423]' in work
+    assert 'const SCHEMA_VERSION := 3' in store
+    assert '"attempt_retry_safety": "safe"' in store
+    assert 'func mark_attempt_unsafe(' in store
+    assert 'legacy_attempt_retry_safety_unknown' in store
 
 
 def test_uncertain_action_requires_explicit_user_acknowledgement_before_retry():
@@ -130,12 +139,12 @@ def test_uncertain_action_requires_explicit_user_acknowledgement_before_retry():
     assert '"requires_user_action": false' in work
     assert '"retryable": allow_retry' in work
     assert 'if task.is_empty() or bool(task.get("requires_user_action", false))' in store
+    assert 'if new_state == STATE_RUNNING and bool(task.get("requires_user_action", false))' in store
+    assert 'task["attempt_retry_safety"] = "safe"' in store
     assert 'return transition_task(project_id, task_id, STATE_QUEUED, {}, true)' in store
 
 
 def test_ui_owned_overlay_is_not_changed_into_a_service_side_planner_contract():
-    # UI remains a separate claim. This lane only records the integration blocker;
-    # it must not solve the blocker by reintroducing a remote/service planner.
     client = _text("scripts/computer_client.gd")
     assert 'func plan(_goal: String)' in client
     assert 'func run(_goal: String' in client
