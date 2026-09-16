@@ -4,6 +4,9 @@ set -Eeuo pipefail
 readonly repository='/opt/aurorafox/repository'
 readonly environment_file='/etc/aurorafox/aurorafox.env'
 readonly build_environment='/etc/aurorafox/build.env'
+readonly database_path='/var/lib/aurorafox/api/aurorafox.sqlite3'
+readonly backup_archive='/srv/aurorafox-sftp/exports/latest.zip'
+readonly backup_hash='/srv/aurorafox-sftp/exports/latest.sha256'
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo 'AuroraFox updater must run as root.' >&2
@@ -33,6 +36,22 @@ if ! git merge-base --is-ancestor "${previous}" "${candidate}"; then
   exit 4
 fi
 
+# Fail closed before changing code. The data snapshot intentionally strips API
+# credential material, but preserves conversations/learning/SQLite data and is
+# independently hashed. The live DB itself must also be internally consistent.
+if [[ -f "${database_path}" ]]; then
+  PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.database --path "${database_path}"
+fi
+systemctl start aurorafox-backup.service
+systemctl is-failed --quiet aurorafox-backup.service && exit 5 || true
+test -s "${backup_archive}"
+test -s "${backup_hash}"
+(
+  cd "$(dirname "${backup_archive}")"
+  sha256sum -c "$(basename "${backup_hash}")"
+)
+readonly preupdate_backup_sha="$(sha256sum "${backup_archive}" | awk '{print $1}')"
+
 rollback() {
   status=$?
   trap - ERR
@@ -51,6 +70,7 @@ git checkout --detach "${candidate}"
 /opt/aurorafox/venv/bin/python -m compileall -q api
 PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_api_gateway.py \
+  tests/test_api_database.py \
   tests/test_api_privacy_contract.py \
   tests/test_api_runtime_resilience.py \
   tests/test_core_candidate_queue.py \
@@ -74,5 +94,6 @@ for _ in {1..30}; do
   sleep 2
 done
 test "${healthy}" = 'yes'
+PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.database --path "${database_path}"
 trap - ERR
-echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref}"
+echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref} preupdate_backup_sha=${preupdate_backup_sha}"
