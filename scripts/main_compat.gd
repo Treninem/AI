@@ -1,7 +1,7 @@
 extends "res://scripts/main.gd"
 
-const OWNER_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_owner.webp")
-const OWNER_AVATAR: Texture2D = preload("res://assets/ui/aurora_avatar_owner.webp")
+const OWNER_BACKGROUND_MASTER: Texture2D = preload("res://assets/ui/aurorafox_background_master.png")
+const OWNER_AVATAR_MASTER: Texture2D = preload("res://assets/ui/aurorafox_avatar_master.png")
 
 func _apply_button(button: Button, accent := false, danger := false, compact := false) -> void:
 	var normal := SURFACE_2 if not accent else Color(0.15, 0.09, 0.25, 0.98)
@@ -36,18 +36,47 @@ func _build_ui() -> void:
 		avatar_slot.visible = false
 		avatar_slot.custom_minimum_size = Vector2.ZERO
 
+func _owner_background_texture() -> Texture2D:
+	var source_size := OWNER_BACKGROUND_MASTER.get_size()
+	var viewport := get_viewport_rect().size
+	if source_size.x <= 0.0 or source_size.y <= 0.0 or viewport.x <= 0.0 or viewport.y <= 0.0:
+		return OWNER_BACKGROUND_MASTER
+	var region := Rect2(Vector2.ZERO, source_size)
+	var viewport_ratio := viewport.x / viewport.y
+	var source_ratio := source_size.x / source_size.y
+	if viewport_ratio > source_ratio:
+		# Wide desktop/window: keep the lower part where the owner fox and bottom
+		# frame live, instead of center-cropping the paws away.
+		var target_height := source_size.x / viewport_ratio
+		region.position.y = maxf(0.0, source_size.y - target_height)
+		region.size.y = minf(source_size.y, target_height)
+	elif viewport_ratio < source_ratio:
+		# Portrait/mobile: keep the right side where the owner fox and right frame
+		# live, instead of center-cropping the character away.
+		var target_width := source_size.y * viewport_ratio
+		region.position.x = maxf(0.0, source_size.x - target_width)
+		region.size.x = minf(source_size.x, target_width)
+	var cropped := AtlasTexture.new()
+	cropped.atlas = OWNER_BACKGROUND_MASTER
+	cropped.region = region
+	return cropped
+
 func _apply_owner_background() -> void:
 	for node in find_children("*", "TextureRect", true, false):
 		var rect := node as TextureRect
 		if rect.texture == null:
 			continue
 		var path := rect.texture.resource_path
-		if path.ends_with("aurora_background.svg") or path.ends_with("aurora_background_final.svg"):
+		if rect.name == "OwnerBackground" or path.ends_with("aurora_background.svg") or path.ends_with("aurora_background_final.svg"):
 			rect.name = "OwnerBackground"
-			rect.texture = OWNER_BACKGROUND
+			rect.texture = _owner_background_texture()
 			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 			rect.modulate = Color(1, 1, 1, 0.88)
+
+func _on_viewport_resized() -> void:
+	super._on_viewport_resized()
+	call_deferred("_apply_owner_background")
 
 func _apply_owner_brand_art() -> void:
 	var brand_row := find_child("BrandRow", true, false) as HBoxContainer
@@ -62,7 +91,7 @@ func _apply_owner_brand_art() -> void:
 				image.queue_free()
 	var owner := TextureRect.new()
 	owner.name = "OwnerAvatar"
-	owner.texture = OWNER_AVATAR
+	owner.texture = OWNER_AVATAR_MASTER
 	owner.custom_minimum_size = Vector2(52, 52)
 	owner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	owner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
