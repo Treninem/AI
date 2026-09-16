@@ -101,7 +101,13 @@ func _apply_controls(node: Node) -> void:
 				button.add_theme_stylebox_override("pressed", _button_style(Color(0.14, 0.07, 0.22, 1.0), Color(0.66, 0.53, 1.0, 0.94)))
 				button.add_theme_stylebox_override("focus", _button_style(Color(0.10, 0.08, 0.18, 1.0), Color(0.38, 0.82, 1.0, 0.90)))
 				button.add_theme_color_override("font_color", Color("f4f7ff"))
-			button.clip_text = true if not button.name.begins_with("SettingsNav_") else false
+			# clip_text removes the text contribution from Button minimum width.
+			# In HFlowContainer this collapsed action buttons into empty pills.
+			# Keep labels visible and let flow containers wrap them naturally.
+			button.clip_text = false
+			if button.get_parent() is HFlowContainer:
+				button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 40.0)
+				button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		_apply_controls(child)
 
 func _panel_style() -> StyleBoxFlat:
