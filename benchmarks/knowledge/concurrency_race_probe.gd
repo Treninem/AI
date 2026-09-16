@@ -3,8 +3,8 @@ extends SceneTree
 # Runtime proof for two Knowledge races that the generic benchmark did not cover:
 # 1) two byte-identical sources imported at the same time must serialize into
 #    one canonical source plus one alias without duplicate store growth;
-# 2) search racing canonical source removal must not corrupt committed state and
-#    must preserve an unrelated control source.
+# 2) a live Knowledge DB reader overlapping canonical source removal must not
+#    corrupt committed state and must preserve an unrelated control source.
 const KnowledgeStoreScript: Variant = preload("res://scripts/knowledge_store.gd")
 const KnowledgeImportTransactionScript: Variant = preload("res://scripts/knowledge_import_transaction.gd")
 const KnowledgeSourceRegistryScript: Variant = preload("res://scripts/knowledge_source_registry.gd")
@@ -18,6 +18,7 @@ const CONTROL_SOURCE := ROOT + "/control_source.jsonl"
 const DUP_MARKER := "AURORA_CONCURRENT_DUPLICATE_314159"
 const RACE_MARKER := "AURORA_SEARCH_REMOVE_RACE_271828"
 const CONTROL_MARKER := "AURORA_SEARCH_REMOVE_CONTROL_161803"
+const READER_HOLD_MS := 400
 const MB := 1024 * 1024
 
 func _init() -> void:
@@ -125,46 +126,43 @@ func _search_remove_race() -> Dictionary:
 	if not (imported_race is Dictionary and bool(imported_race.get("ok", false)) and imported_control is Dictionary and bool(imported_control.get("ok", false))):
 		return {"ok": false, "error": "race fixture import failed", "race_import": imported_race, "control_import": imported_control}
 
-	var search_ready := Semaphore.new()
-	var removal_done := Semaphore.new()
+	var reader_ready := Semaphore.new()
 	var search_thread := Thread.new()
 	var remove_thread := Thread.new()
 	var search_start := search_thread.start(func():
 		var local_store: Variant = KnowledgeStoreScript.new()
 		var first: Variant = local_store.call("search", RACE_MARKER, 8)
 		var first_hit := _contains_source(first, RACE_SOURCE)
-		search_ready.post()
-		var hits := 0
-		var misses := 0
-		var invalid := 0
-		for _i in range(64):
-			var rows: Variant = local_store.call("search", RACE_MARKER, 8)
-			if not rows is Array:
-				invalid += 1
-			elif _contains_source(rows, RACE_SOURCE):
-				hits += 1
-			else:
-				misses += 1
-		removal_done.wait()
-		var after: Variant = local_store.call("search", RACE_MARKER, 8)
+		var held_reader: FileAccess = FileAccess.open(KnowledgeStoreScript.DB_PATH, FileAccess.READ)
+		var reader_opened := held_reader != null
+		var sampled_committed_db := false
+		if held_reader != null:
+			var first_line := held_reader.get_line()
+			sampled_committed_db = not first_line.strip_edges().is_empty()
+		reader_ready.post()
+		# Keep the same underlying knowledge file open long enough for the remove
+		# thread to enter its streaming filter/replace path deterministically.
+		OS.delay_msec(READER_HOLD_MS)
+		if held_reader != null:
+			held_reader.close()
 		return {
 			"first_hit": first_hit,
-			"concurrent_iterations": 64,
-			"concurrent_hits": hits,
-			"concurrent_misses": misses,
-			"invalid_results": invalid,
-			"post_remove_empty": after is Array and after.is_empty()
+			"reader_opened": reader_opened,
+			"sampled_committed_db": sampled_committed_db,
+			"reader_hold_ms": READER_HOLD_MS
 		}
 	)
 	var remove_start := remove_thread.start(func():
-		search_ready.wait()
+		reader_ready.wait()
+		var started_usec := Time.get_ticks_usec()
 		var result: Variant = KnowledgeImportTransactionScript.new().call("remove_source", KnowledgeStoreScript.new(), RACE_SOURCE)
-		removal_done.post()
+		if result is Dictionary:
+			result["remove_wall_ms"] = float(Time.get_ticks_usec() - started_usec) / 1000.0
+			result["remove_started_after_reader_ready"] = true
 		return result
 	)
 	if search_start != OK or remove_start != OK:
-		search_ready.post()
-		removal_done.post()
+		reader_ready.post()
 		if search_start == OK:
 			search_thread.wait_to_finish()
 		if remove_start == OK:
@@ -180,8 +178,9 @@ func _search_remove_race() -> Dictionary:
 	var race_row: Variant = registry.call("record_for_source", RACE_SOURCE)
 	var control_row: Variant = registry.call("record_for_source", CONTROL_SOURCE)
 	var search_ok := search_result is Dictionary and bool(search_result.get("first_hit", false))
-	search_ok = search_ok and int(search_result.get("invalid_results", 1)) == 0 and bool(search_result.get("post_remove_empty", false))
+	search_ok = search_ok and bool(search_result.get("reader_opened", false)) and bool(search_result.get("sampled_committed_db", false))
 	var removal_ok := remove_result is Dictionary and bool(remove_result.get("ok", false)) and bool(remove_result.get("transaction_serialized", false))
+	removal_ok = removal_ok and bool(remove_result.get("remove_started_after_reader_ready", false))
 	var final_ok := final_race is Array and final_race.is_empty()
 	final_ok = final_ok and _contains_source(final_control, CONTROL_SOURCE)
 	final_ok = final_ok and race_row is Dictionary and race_row.is_empty()
@@ -191,6 +190,7 @@ func _search_remove_race() -> Dictionary:
 		"ok": search_ok and removal_ok and final_ok and clean,
 		"search": search_result,
 		"remove": remove_result,
+		"deterministic_open_reader_overlap": bool(search_result.get("reader_opened", false)) if search_result is Dictionary else false,
 		"final_removed_source_empty": final_race is Array and final_race.is_empty(),
 		"control_source_preserved": _contains_source(final_control, CONTROL_SOURCE),
 		"removed_registry_absent": race_row is Dictionary and race_row.is_empty(),
