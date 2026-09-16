@@ -114,6 +114,39 @@ def test_public_update_key_is_embedded_in_signed_generation_exports() -> None:
     assert 'const PUBLIC_KEY_PATH := "res://update/release_public.pub"' in updater
 
 
+def test_production_android_release_identity_is_pinned_end_to_end() -> None:
+    setup = (ROOT / "build" / "setup_release_signing.ps1").read_text(encoding="utf-8")
+    android_build = (ROOT / "build" / "build_android.ps1").read_text(encoding="utf-8")
+    readiness = (ROOT / "build" / "bridge_release_readiness.ps1").read_text(encoding="utf-8")
+    workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
+
+    for needle in (
+        "update/release_identity.json",
+        "android_signing_cert_sha256",
+        "update_manifest_public_key_sha256",
+        "signed_update_floor = '1.3.0.0'",
+        "Do not regenerate either identity for normal updates",
+    ):
+        assert needle in setup
+
+    for needle in (
+        "update/release_identity.json",
+        "GODOT_ANDROID_KEYSTORE_RELEASE_PATH",
+        "GODOT_ANDROID_KEYSTORE_RELEASE_USER",
+        "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD",
+        "Built APK signing certificate mismatch",
+        "AURORAFOX_ANDROID_RELEASE_IDENTITY_OK",
+        "certificate SHA-256 digest",
+    ):
+        assert needle in android_build
+
+    assert "update/release_identity.json" in readiness
+    assert "Android signing certificate SHA-256" in readiness or "Android cert=" in readiness
+    assert "AURORA_ANDROID_KEYSTORE_BASE64" in workflow
+    assert "GODOT_ANDROID_KEYSTORE_RELEASE_PATH" in workflow
+    assert "build_android.ps1" in workflow
+
+
 def test_windows_v12_repair_uses_same_inno_identity_and_is_ci_verified() -> None:
     current_iss = (ROOT / "build" / "AuroraFox.iss").read_text(encoding="utf-8")
     fixture_iss = (ROOT / "build" / "AuroraFox_V12_BridgeFixture.iss").read_text(encoding="utf-8")
