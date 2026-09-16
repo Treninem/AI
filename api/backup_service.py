@@ -82,7 +82,10 @@ class BackupService:
         database_path = self.user_root / "api" / "aurorafox.sqlite3"
         if not database_path.is_file():
             return None
-        maintenance = PersistenceMaintenance(database_path.parent)
+        maintenance = PersistenceMaintenance(
+            database_path.parent,
+            backup_max_bytes=self.max_source_bytes,
+        )
         retention = maintenance.prune_if_due()
         capacity = maintenance.status()
         if not bool(capacity.get("ok", False)):
@@ -183,6 +186,13 @@ class BackupService:
                 destination = snapshot_root / "data" / relative
                 credentials_sanitized = self._copy_source(source, destination)
                 actual_size = destination.stat().st_size
+                # SQLite online-backup/VACUUM and future transforms can change the
+                # copied size. Enforce the cap again on the materialized snapshot,
+                # never only on the live source stat observed before transformation.
+                if source_bytes + actual_size > self.max_source_bytes:
+                    raise BackupTooLarge(
+                        f"AuroraFox materialized backup data exceeds limit of {self.max_source_bytes} bytes"
+                    )
                 source_bytes += actual_size
                 manifest_files.append({
                     "path": (Path("data") / relative).as_posix(),
