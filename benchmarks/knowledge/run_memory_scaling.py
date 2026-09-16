@@ -83,9 +83,12 @@ def main() -> int:
     report_path.parent.mkdir(parents=True, exist_ok=True)
     log_dir = report_path.parent / "memory-scaling-logs"
     log_dir.mkdir(parents=True, exist_ok=True)
+    hard_errors: list[dict[str, Any]] = []
 
     # Count=1 includes Godot + harness + MemoryStore startup and is a more useful
-    # hosted-runner baseline than dividing raw process RSS by dataset bytes.
+    # hosted-runner baseline than dividing raw process RSS by dataset bytes. This
+    # baseline is evidence, not an optional convenience: if it is invalid, a
+    # baseline-adjusted RSS report must fail closed instead of silently using 0.
     baseline_root = Path(tempfile.mkdtemp(prefix="aurora-memory-baseline-"))
     try:
         baseline = runner.run_godot_case(
@@ -99,10 +102,17 @@ def main() -> int:
         )
     finally:
         shutil.rmtree(baseline_root, ignore_errors=True)
-    baseline_rss = int(baseline.get("peak_rss_bytes", 0)) if baseline.get("ok") else 0
+    baseline_ok = bool(baseline.get("ok", False))
+    baseline_rss = int(baseline.get("peak_rss_bytes", 0)) if baseline_ok else 0
+    if not baseline_ok:
+        hard_errors.append({"count": 1, "phase": "rss_baseline", "error": baseline.get("error", "baseline case failed")})
+    if baseline_ok and baseline_rss <= 0:
+        hard_errors.append({"count": 1, "phase": "rss_baseline", "error": "baseline peak RSS was not measured"})
+    for key in ("network_required", "external_runtime_required", "ollama_required"):
+        if baseline.get(key) is not False:
+            hard_errors.append({"count": 1, "phase": "rss_baseline", "error": f"self-reliance regression: {key}=true_or_missing"})
 
     results: list[dict[str, Any]] = []
-    hard_errors: list[dict[str, Any]] = []
     for count in counts:
         user_root = Path(tempfile.mkdtemp(prefix=f"aurora-memory-{count}-"))
         try:
@@ -124,8 +134,8 @@ def main() -> int:
         if not result.get("ok"):
             hard_errors.append({"count": count, "error": result.get("error", "case failed")})
         for key in ("network_required", "external_runtime_required", "ollama_required"):
-            if bool(result.get(key, True)):
-                hard_errors.append({"count": count, "error": f"self-reliance regression: {key}=true"})
+            if result.get(key) is not False:
+                hard_errors.append({"count": count, "error": f"self-reliance regression: {key}=true_or_missing"})
 
     findings = pair_findings(results)
     suspected = any(bool(row.get("suspected_quadratic_write")) for row in findings)
@@ -135,9 +145,12 @@ def main() -> int:
         "baseline": {
             "scenario": "semantic_memory",
             "records": 1,
-            "ok": bool(baseline.get("ok", False)),
+            "ok": baseline_ok,
             "peak_rss_bytes": baseline_rss,
-            "note": "baseline includes Godot/harness/MemoryStore startup plus one record",
+            "network_required": baseline.get("network_required", None),
+            "external_runtime_required": baseline.get("external_runtime_required", None),
+            "ollama_required": baseline.get("ollama_required", None),
+            "note": "baseline includes Godot/harness/MemoryStore startup plus one record and is required for baseline-adjusted RSS evidence",
         },
         "self_reliance_contract": {
             "network_required": False,
