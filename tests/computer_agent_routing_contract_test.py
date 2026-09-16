@@ -66,6 +66,12 @@ def test_windows_workspace_bridge_cannot_bypass_private_channel_or_master_stop()
     assert 'MAX_WINDOWS_HTTP_TIMEOUT := 320.0' in sandbox
     assert 'clampi(timeout, 1, MAX_WINDOWS_EXEC_TIMEOUT)' in sandbox
     assert '"allow_network": false' in sandbox
+    assert '"strict_network_isolation": false' in sandbox
+    assert 'base.strict_network_isolation = bool(base.container_runtime)' in sandbox
+    assert 'requested_mode == "container"' in sandbox
+    assert 'container_runtime_unavailable' in sandbox
+    assert 'degraded_isolation' in sandbox
+    assert 'request mode=container for strict isolation' in sandbox
 
 
 def test_ui_owned_overlay_is_not_changed_into_a_service_side_planner_contract():
