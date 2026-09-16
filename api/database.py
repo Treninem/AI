@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 
 class AuroraDatabase:
@@ -253,6 +253,7 @@ class AuroraDatabase:
                     incoming_base_revision INTEGER NOT NULL,
                     incoming_payload_json TEXT NOT NULL,
                     incoming_checksum TEXT NOT NULL,
+                    incoming_deleted INTEGER NOT NULL DEFAULT 0 CHECK (incoming_deleted IN (0, 1)),
                     origin_device_id TEXT NOT NULL,
                     created_at INTEGER NOT NULL,
                     resolved_at INTEGER,
@@ -262,6 +263,16 @@ class AuroraDatabase:
                     ON sync_conflicts(principal_kind, principal_id, resolved_at, created_at);
                 """
             )
+            if current < 3:
+                columns = {
+                    str(row[1])
+                    for row in connection.execute("PRAGMA table_info(sync_conflicts)").fetchall()
+                }
+                if "incoming_deleted" not in columns:
+                    connection.execute(
+                        "ALTER TABLE sync_conflicts ADD COLUMN incoming_deleted INTEGER NOT NULL DEFAULT 0 "
+                        "CHECK (incoming_deleted IN (0, 1))"
+                    )
             if current < SCHEMA_VERSION:
                 connection.execute(f"PRAGMA user_version={SCHEMA_VERSION}")
             connection.execute(
