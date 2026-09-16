@@ -814,7 +814,7 @@ FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UI-POLISH
 TYPE: REGRESSION
 EVIDENCE: UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b` has unique non-UI patches against current main that delete SERVER-DB-owned resilience behavior: `api/account_store.py::revoke_account_token`, the `_deliver_account_token` SMTP-failure revocation path in `api/server.py`, and the regressions `test_smtp_failure_revokes_issued_token_and_immediate_resend_is_not_cooldown_blocked` plus `test_undelivered_account_token_revoke_allows_immediate_retry_inside_cooldown`. These paths are explicitly owned by `CHAT-2026-09-16-SERVER-DB`; removing them would reintroduce an undelivered-token cooldown/retry defect unrelated to UI work.
-ACTION: Re-sync/reconcile PR #27 non-force with fresh `main` and preserve the current SERVER-DB token revoke/retry implementation plus both regression tests. Any intentional server semantic change must be coordinated with `CHAT-2026-09-16-SERVER-DB`; otherwise eliminate these API/test diffs from the UI branch. Require API CI + UI Visual CI + Integration Gate on one same SHA before merge.
+ACTION: Re-sync/reconcile PR #27 non-force with fresh `main` and preserve the current SERVER-DB token revoke/retry implementation plus both regression tests. Any intentional server semantic change must be coordinated with `CHAT-2026-09-16-SERVER-DB`; otherwise eliminate эти API/test diffs from the UI branch. Require API CI + UI Visual CI + Integration Gate on one same SHA before merge.
 
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UI-POLISH
@@ -893,3 +893,47 @@ BLOCKERS:
 
 NEXT:
 - Owner creates the nine fresh executor chats using their assigned prompts. Each replacement chat immediately fetches current `main`, reads `AGENTS.md` + this journal, creates its takeover/reconcile CLAIM, inspects its inherited PR/branch/run evidence and resumes from the first unaccepted item. Coordinator then tracks their new CLAIMs and prevents duplicate/stale work.
+
+## 37. Coordinator topology correction — seven fresh executors, 2026-09-17
+
+- This section **supersedes only the executor-count/topology instructions in section 36**. All historical Git/CI/PR evidence and the takeover/reconcile safety rules from section 36 remain valid.
+- Coordinator remains this current chat. No replacement coordinator is created.
+- Final operating set is **8 chats total = this coordinator + 7 fresh executor chats**. This consolidation is chosen to reduce ownership handoffs and duplicated CI while retaining independent parallel work.
+- Old executor conversations are retired as active sessions, but their branches, PRs, commits, artifacts, failures and useful work are not discarded. Old production ownership remains protected until the corresponding new executor writes an explicit TAKEOVER/RECONCILE claim from fresh `main`.
+- Canonical product version and Android `versionCode` remain unchanged. This is coordination-only; intended bump **NONE**.
+
+### Final seven executor lanes
+
+1. `CHAT-2026-09-17-UI-VISUAL-UX` — UI + UX + Visual for Windows/Android. Takes over/reconciles old UI-POLISH / PR #27 and UI sync candidates. Owns responsive layout, navigation, canonical owner artwork integration, account/guest/memory surfaces, Work/Computer presentation, accessibility and visual regression. Must preserve Server-owned semantics while reconciling stale UI diffs.
+2. `CHAT-2026-09-17-CORE-CODER-RESEARCH` — bundled AuroraFox Core + CodeSpecialist/SpecialistTeam + real offline benchmarks + Research/Self-Improvement. Takes over/reconciles CORE-BENCHMARKS / PR #30, CodeSpecialist runtime acceptance, accepted Research Quality evidence (including run `35112565080`), and remaining candidate-queue/tournament/promotion/corroboration work. Already-green research work must not be redone. External AI remains optional/non-authoritative.
+3. `CHAT-2026-09-17-VOICE-AUDIO` — local Voice/STT/TTS/audio for Windows/Android. Takes over/reconciles VOICE-QUALITY / PR #34 and Android female-voice candidate work. Owns voice quality, prosody, latency, interruption/cache/device degradation and acoustic/package evidence.
+4. `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY` — Work + Computer Agent + Agent/Autonomy reliability. Takes over/reconciles WORK-COMPUTER-RELIABILITY / PR #40 and autonomy-state durability / PR #72 where applicable. Owns lifecycle/recovery/idempotency/concurrency, Computer primitives, sandbox/master-stop/permission/rollback and autonomy-state durability. UI overlays remain with UI lane unless explicitly handed off.
+5. `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR` — unified Knowledge + Memory + OCR/document intelligence. Takes over/reconciles LOCAL-OCR / PR #66 and LARGE-KNOWLEDGE-PERF / PR #64, intentionally removing the former `knowledge_store.gd` ownership bottleneck. Owns local OCR, streaming import, dedupe/provenance/aliases/removal/recovery, large-data stress/performance, bounded memory and Windows/Android document paths.
+6. `CHAT-2026-09-17-SERVER-API-DB` — Server + API + accounts/auth/guest/device sync + SQLite + mail + privacy + deployment/rollback. Takes over current SERVER-DB state and starts from current server-updated `main`; stale PR #25 is historical input only, never a blind merge source.
+7. `CHAT-2026-09-17-PLATFORM-UPDATER-INTEGRATION` — Windows/Android packaging + installer/APK + signing continuity + updater/repair/trust-root + deterministic build supply chain + same-SHA integration/regression/release-readiness. This consolidates the former PLATFORM/UPDATER and separate INTEGRATION lanes because their current work is tightly coupled at package/release gates. It inherits UPDATER-VERSIONING, integration-gate history and current package workflows. Old probe PR #69 remains stale and must never be merged as a final candidate. This executor may classify product failures but must route production fixes to the owning lane rather than silently taking its files. Final merge/version bump/release authority stays with the coordinator.
+
+### Consolidated rollover rules
+
+- Section 36 roles `RESEARCH-SELF-IMPROVEMENT` and `INTEGRATION-REGRESSION` are **not separate fresh chats anymore**: Research/Self-Improvement is absorbed into `CORE-CODER-RESEARCH`; Integration/Regression is absorbed into `PLATFORM-UPDATER-INTEGRATION`.
+- All seven fresh executors must first fetch current `main`, read `AGENTS.md` and the complete master log, inspect inherited PR/branch/head/workflow evidence, and write an explicit takeover/reconcile CLAIM before touching implementation.
+- A fresh executor must continue from the first unaccepted item, not restart already-proven work. Stale unrelated diffs are excluded; verified useful deltas may be reconciled onto fresh `main` non-force.
+- Exact-head evidence remains mandatory: commit SHA + relevant tests/workflow run IDs/artifacts. Static inspection alone is not runtime proof.
+- Finished/blocked executors do not idle: after releasing owned files they help an independent bottleneck, regression or release evidence without editing another active lane's occupied production files.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+
+DONE:
+- Final rollover topology corrected to one continuing coordinator + seven fresh executor chats.
+- Research is consolidated with Core/Coder; Integration is consolidated with Platform/Updater; OCR and Large Knowledge remain consolidated.
+- Old work/PR/CI evidence is preserved through explicit takeover/reconcile instead of being discarded.
+- No production code or public version metadata changed.
+
+REMAINING:
+- Coordination topology: none. Product work continues under the seven fresh takeover claims.
+
+BLOCKERS:
+- none for this coordination correction; subsystem blockers remain those proven by current Git/CI evidence.
+
+NEXT:
+- Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
