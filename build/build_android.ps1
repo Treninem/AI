@@ -98,12 +98,15 @@ if (Test-Path -LiteralPath $versionTest) {
 if (-not (Test-Path -LiteralPath $bundledModelHelper)) {
     throw 'build/prepare_bundled_core_model.ps1 is missing'
 }
-$prepareModelArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$bundledModelHelper,'-Destination',$bundledModelPath)
+$prepareModelParams = @{ Destination = $bundledModelPath }
 if (-not [string]::IsNullOrWhiteSpace($CoreModelCacheDir)) {
-    $prepareModelArgs += @('-CacheDir',$CoreModelCacheDir)
+    $prepareModelParams['CacheDir'] = $CoreModelCacheDir
 }
-& powershell @prepareModelArgs
-if ($LASTEXITCODE -ne 0) { throw 'Bundled AuroraFox Core preparation failed' }
+# Invoke the helper in the current PowerShell host. CI runs this script under
+# pwsh on Linux, while Windows uses PowerShell/pwsh; no platform-specific
+# executable name is required here.
+& $bundledModelHelper @prepareModelParams
+if (-not $?) { throw 'Bundled AuroraFox Core preparation failed' }
 if (-not (Test-Path -LiteralPath $bundledModelPath)) { throw 'Bundled AuroraFox Core weights are missing before Android export' }
 if ((Get-Item -LiteralPath $bundledModelPath).Length -ne $bundledModelBytes) { throw 'Bundled AuroraFox Core size mismatch before Android export' }
 $bundledActualSha = (Get-FileHash -LiteralPath $bundledModelPath -Algorithm SHA256).Hash.ToLowerInvariant()
