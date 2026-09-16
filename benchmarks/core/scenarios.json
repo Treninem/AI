@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "suite": "aurorafox_core_quality_v1",
+  "required_scenarios": [
+    "clean_start_state",
+    "offline_network_guard",
+    "ollama_absent",
+    "bundled_core_identity",
+    "cold_start_first_response",
+    "warm_followup",
+    "russian_dialog",
+    "english_dialog",
+    "instruction_following",
+    "multi_turn_context",
+    "local_memory_retrieval",
+    "core_knowledge_retrieval",
+    "simple_planning",
+    "safe_tool_selection",
+    "text_generation",
+    "code_generation_explanation",
+    "basic_reasoning",
+    "corrupted_input",
+    "long_context",
+    "compatibility_switch_isolation",
+    "repeatability"
+  ],
+  "local_runtime_required_scenarios": [
+    "cold_start_first_response",
+    "warm_followup",
+    "russian_dialog",
+    "english_dialog",
+    "instruction_following",
+    "multi_turn_context",
+    "local_memory_retrieval",
+    "core_knowledge_retrieval",
+    "simple_planning",
+    "safe_tool_selection",
+    "text_generation",
+    "code_generation_explanation",
+    "basic_reasoning",
+    "corrupted_input",
+    "long_context",
+    "compatibility_switch_isolation",
+    "repeatability"
+  ],
+  "allowed_local_runtimes_by_platform": {
+    "Windows": ["aurora_core_desktop", "aurora_core_native"],
+    "Android": ["aurora_core_android"]
+  },
+  "notes": {
+    "normal_path": "All inference scenarios use AIClient.chat(), CognitionLayer, or AgentCore and therefore AuroraCoreRuntime.chat_local_only(). Inference rows must also name an allowed local runtime for the measured platform; blank/unknown runtimes fail closed.",
+    "network": "The measured phase must run under an OS outbound-Internet block for Godot and llama-server; localhost remains available for the bundled Core engine.",
+    "external_ai": "Ollama and remote AI are forbidden. Compatibility is enabled deliberately in one scenario to prove it cannot reroute normal chat.",
+    "fixture_policy": "Synthetic/fake-core smoke tests are contract tests only and never count as LLM quality evidence."
+  }
+}
