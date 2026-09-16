@@ -78,16 +78,7 @@ func _write_manifest() -> bool:
 		"head_sha": _head_sha,
 		"generated_at_utc": Time.get_datetime_string_from_system(true),
 		"captures": _records,
-		"known_missing_client_surfaces": [
-			{
-				"surface": "login_guest",
-				"reason": "No dedicated login/guest client surface exists in the current Godot main scene; visual acceptance does not fabricate one."
-			},
-			{
-				"surface": "user_memory_management",
-				"reason": "MemoryStore is present in runtime, but there is no dedicated user memory-management screen in the current client; visual acceptance reports the gap instead of inventing UI."
-			}
-		]
+		"known_missing_client_surfaces": []
 	}
 	var file := FileAccess.open(MANIFEST_PATH, FileAccess.WRITE)
 	if file == null:
@@ -168,7 +159,6 @@ func _populate_chat(main: Control, mobile: bool) -> bool:
 	if not store is ChatStore:
 		_fail("ChatStore missing during visual capture", 10)
 		return false
-
 	store.chats.clear()
 	store.active_chat_id = ""
 	store.save_all()
@@ -228,6 +218,47 @@ func _capture_settings_page(settings: AuroraSettingsOverlay, key: String, click_
 			return false
 	return await _capture(image_name, surface)
 
+func _seed_personal_guest_preview(main: Control) -> bool:
+	var api := main.get_node_or_null("ApiSettings") as AuroraApiSettingsOverlay
+	if api == null:
+		_fail("ApiSettings missing for personal memory preview", 17)
+		return false
+	api.set("_personal_session", {
+		"kind": "guest",
+		"guest_id": "preview-guest-4f21",
+		"device_id": "preview-device"
+	})
+	api.set("_personal_memory_cache", [
+		{
+			"entity_type": "memory",
+			"entity_id": "pref_work",
+			"revision": 3,
+			"payload": {"content": "Предпочитает короткие понятные ответы без лишних повторов."},
+			"updated_at": 1789551000,
+			"deleted": false
+		},
+		{
+			"entity_type": "memory",
+			"entity_id": "project_aurora",
+			"revision": 2,
+			"payload": {"content": "AuroraFox — основной локальный AI-проект пользователя."},
+			"updated_at": 1789550900,
+			"deleted": false
+		}
+	])
+	api.call("_refresh_personal_ui")
+	await process_frame
+	await process_frame
+	return true
+
+func _clear_personal_preview(main: Control) -> void:
+	var api := main.get_node_or_null("ApiSettings") as AuroraApiSettingsOverlay
+	if api == null:
+		return
+	api.set("_personal_session", {})
+	api.set("_personal_memory_cache", [])
+	api.call("_refresh_personal_ui")
+
 func _open_knowledge_by_click(settings: AuroraSettingsOverlay) -> KnowledgeBaseOverlay:
 	var open_button := _button_by_text(settings.popup, "Открыть базу знаний")
 	if not await _press(open_button, "Инструменты → Открыть базу знаний"):
@@ -267,6 +298,13 @@ func _capture_desktop_full(packed: PackedScene) -> bool:
 		return false
 	if not await _capture("desktop_settings_general_1440x900", "settings/degraded_runtime"):
 		return false
+	if not await _capture_settings_page(settings, "account", "Настройки → Аккаунт и память", "desktop_account_login_1440x900", "login_guest"):
+		return false
+	if not await _seed_personal_guest_preview(main):
+		return false
+	if not await _capture("desktop_personal_memory_guest_1440x900", "user_memory_management"):
+		return false
+	_clear_personal_preview(main)
 	if not await _capture_settings_page(settings, "files", "Настройки → Файлы и проекты", "desktop_files_projects_1440x900", "files_projects"):
 		return false
 	if not await _capture_settings_page(settings, "tools", "Настройки → Инструменты", "desktop_tools_1440x900", "tools"):
@@ -306,6 +344,8 @@ func _capture_desktop_compact(packed: PackedScene) -> bool:
 		return false
 	if not await _capture("desktop_compact_settings_960x640", "settings_compact"):
 		return false
+	if not await _capture_settings_page(settings, "account", "Настройки → Аккаунт и память", "desktop_compact_account_960x640", "login_guest_compact"):
+		return false
 	if not await _close_settings_by_click(settings):
 		return false
 	main.queue_free()
@@ -335,6 +375,13 @@ func _capture_mobile_full(packed: PackedScene) -> bool:
 		return false
 	if not await _capture("android_portrait_settings_general_720x1280", "settings/degraded_runtime"):
 		return false
+	if not await _capture_settings_page(settings, "account", "Настройки → Аккаунт и память", "android_portrait_account_login_720x1280", "login_guest"):
+		return false
+	if not await _seed_personal_guest_preview(main):
+		return false
+	if not await _capture("android_portrait_personal_memory_guest_720x1280", "user_memory_management"):
+		return false
+	_clear_personal_preview(main)
 	if not await _capture_settings_page(settings, "files", "Настройки → Файлы и проекты", "android_portrait_files_projects_720x1280", "files_projects"):
 		return false
 	if not await _capture_settings_page(settings, "tools", "Настройки → Инструменты", "android_portrait_tools_720x1280", "tools"):
@@ -380,6 +427,8 @@ func _capture_mobile_narrow(packed: PackedScene) -> bool:
 	if settings == null:
 		return false
 	if not await _capture("android_narrow_settings_480x960", "settings_narrow"):
+		return false
+	if not await _capture_settings_page(settings, "account", "Настройки → Аккаунт и память", "android_narrow_account_480x960", "login_guest_narrow"):
 		return false
 	if not await _close_settings_by_click(settings):
 		return false
