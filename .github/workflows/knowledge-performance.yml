@@ -114,6 +114,13 @@ jobs:
           --script benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
           --prefix AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=
           --report artifacts/knowledge-performance/legacy-unregistered-rollback.json
+      - name: Verify registry write failure rollback
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/write_failure_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=
+          --report artifacts/knowledge-performance/write-failure-rollback.json
       - name: Reproduce interrupted reimport restart recovery
         run: >-
           python benchmarks/knowledge/run_interrupted_import_recovery.py
@@ -183,6 +190,14 @@ jobs:
           --script benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
           --prefix AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=
           --report artifacts/knowledge-performance/legacy-unregistered-rollback-windows.json
+      - name: Verify registry write failure rollback
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/write_failure_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=
+          --report artifacts/knowledge-performance/write-failure-rollback-windows.json
       - name: Reproduce interrupted reimport restart recovery
         shell: powershell
         run: >-
