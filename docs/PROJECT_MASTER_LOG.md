@@ -321,6 +321,17 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Инженерная причина: текущий Silero baseline не использует переданные `emotion/intensity/speed`, а постпроцессор связывает темп и высоту через простой ресемплинг, что ухудшает естественность; конфигурация `breathing_pauses` заявлена, но фактически не реализована.
 - Следующий шаг: проверить server call path и текущие voice tests, затем внести совместимый local-only DSP/text-prosody refactor и прогнать unit/voice CI.
 
+### CLAIM `CHAT-2026-09-16-SERVER-DB`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `996adb626416df2529f78f339dd9a6acf9c72b01`
+- Режим: Chat
+- Цель: довести серверный контур AuroraFox и постоянное хранилище до транзакционного production-ready baseline: единая SQLite БД без внешней СУБД, безопасная миграция существующих JSON/JSONL, конкурентная запись, integrity/readiness, резервное копирование и rollback-safe обновление REG.RU.
+- Файлы/подсистема: `api/database.py` (new), `api/auth.py`, `api/conversation_store.py`, `api/learning_store.py`, `api/learning_sync.py`, `api/server.py`, `tests/test_api_gateway.py`, `tests/test_api_database.py` (new), `tests/test_backup_service.py`, `tests/test_deployment_contract.py`, `deploy/reg_ru/install.sh`, `deploy/reg_ru/update.sh`, `.github/workflows/api-ci.yml`, `docs/PROJECT_MASTER_LOG.md`.
+- Не пересекается с: `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`; их занятые UI/research/voice paths не изменять.
+- Инженерная причина: flat JSON/JSONL stores имеют race/scale/corruption-риск при параллельном FastAPI access и не дают единый transactional integrity contract. Python `sqlite3` встроен, не создаёт внешней runtime-зависимости и уже корректно snapshot-ится существующим `BackupService`.
+- План проверки: миграция legacy stores → SQLite с идемпотентностью; WAL/busy-timeout/foreign keys/integrity checks; сохранение rollback-совместимых mirrors там, где это необходимо; `/ready` должен проверять БД; updater делает pre-update data snapshot и откатывает код при failed readiness; API/deployment/backup tests + exact-head API CI.
+
 ### CLAIM `CHAT_MAIN-2026-09-16-MASTER-CORE`
 
 - Статус: **DONE**
