@@ -104,10 +104,15 @@ jobs:
         run: timeout 90s ./godot --headless --editor --path . --quit
       - name: Run local OCR Knowledge boundary and duplicate smoke
         run: timeout 45s ./godot --headless --path . --script tests/local_ocr_knowledge_smoke.gd
-      - name: Verify untrusted and process-environment contracts
+      - name: Verify untrusted, restart, cancellation and process-environment contracts
         run: |
           grep -q "imported documents.*data\|документов.*данными\|документов является данными" scripts/ai_client.gd
+          grep -q "restart_retrieval=true" tests/local_ocr_knowledge_smoke.gd
           grep -q "external_ai_required" scripts/file_intelligence_client.gd
+          grep -q "cancel_active_analysis" scripts/file_intelligence_client.gd
+          grep -q "startAnalyzeLocalFile" scripts/file_intelligence_client.gd
+          grep -q "pollAnalyzeLocalFile" scripts/file_intelligence_client.gd
+          grep -q "cancelAnalyzeLocalFile" scripts/file_intelligence_client.gd
           grep -q 'OS.has_environment("PYTHONPATH")' scripts/file_intelligence_client.gd
           grep -q 'OS.unset_environment("PYTHONPATH")' scripts/file_intelligence_client.gd
 
@@ -145,7 +150,7 @@ jobs:
         working-directory: android_plugin
         shell: bash
         run: gradle :plugin:assembleRelease --stacktrace
-      - name: Verify OCR assets, packaged AAR, bridge, and final APK dependency contract
+      - name: Verify OCR assets, packaged AAR, bridge, cancellation, and final APK dependency contract
         run: |
           test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/eng.traineddata
           test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/rus.traineddata
@@ -158,6 +163,12 @@ jobs:
           grep -q "AndroidOcrRuntime" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt
           grep -q 'fun extractDocumentText' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
           grep -q 'files.analyze(path, "", false)' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'fun startAnalyzeLocalFile' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'fun pollAnalyzeLocalFile' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'fun cancelAnalyzeLocalFile' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'file_analysis_cancel' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'CancellationException' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
+          grep -q 'cancellation_supported' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
           grep -q '"ocr_unavailable"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
           grep -q '"ocr_error"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
           grep -q '"ocr_failed_pages"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt

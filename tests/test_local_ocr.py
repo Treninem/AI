@@ -52,6 +52,26 @@ def _text_pdf(path: Path, text: str):
     c.save()
 
 
+class _TrackedFrame:
+    active = 0
+    max_active = 0
+
+    def __init__(self):
+        type(self).active += 1
+        type(self).max_active = max(type(self).max_active, type(self).active)
+        self.closed = False
+
+    def close(self):
+        if not self.closed:
+            self.closed = True
+            type(self).active -= 1
+
+    @classmethod
+    def reset(cls):
+        cls.active = 0
+        cls.max_active = 0
+
+
 def test_runtime_contract_is_local_only():
     status = local_ocr.health()
     assert status["engine"] == "tesseract-local"
@@ -196,6 +216,88 @@ def test_pdf_ocr_limit_counts_render_failures(tmp_path, monkeypatch):
     assert meta["ocr_failed_pages"] == 2
     assert [p["source"] for p in meta["page_sources"]] == ["ocr_error", "ocr_error", "ocr_limit", "ocr_limit"]
     assert any("2" in warning and "OCR" in warning for warning in warnings)
+
+
+def test_100_page_scanned_pipeline_is_streaming_and_bounded(tmp_path, monkeypatch):
+    pdf = tmp_path / "scan-100.pdf"
+    writer = PdfWriter()
+    for _ in range(100):
+        writer.add_blank_page(width=612, height=792)
+    with pdf.open("wb") as f:
+        writer.write(f)
+    _TrackedFrame.reset()
+    calls = []
+    monkeypatch.setattr(file_service, "local_ocr_health", lambda: {"available": True, "engine": "test"})
+    monkeypatch.setattr(file_service, "_render_pdf_page", lambda _pdf, _idx: _TrackedFrame())
+    monkeypatch.setattr(
+        file_service,
+        "local_ocr_image",
+        lambda _frame, page_number=None: (calls.append(page_number) or {"ok": True, "text": f"SCAN {page_number}"}),
+    )
+    text, meta, warnings = file_service._pdf_extract(pdf, False, "", max_chars=500_000)
+    assert len(calls) == 100 and calls[0] == 1 and calls[-1] == 100
+    assert meta["pages"] == 100 and meta["pages_processed"] == 100 and meta["ocr_pages"] == 100
+    assert meta["streaming_pages"] is True
+    assert _TrackedFrame.active == 0 and _TrackedFrame.max_active == 1
+    assert "SCAN 100" in text
+    assert warnings == []
+
+
+def test_100_page_mixed_pdf_ocrs_only_50_deficient_pages(tmp_path, monkeypatch):
+    source = tmp_path / "text-source.pdf"
+    mixed = tmp_path / "mixed-100.pdf"
+    _text_pdf(source, "Embedded mixed text page should stay local 12345")
+    source_reader = PdfReader(str(source))
+    writer = PdfWriter()
+    for _ in range(50):
+        writer.add_page(source_reader.pages[0])
+        writer.add_blank_page(width=612, height=792)
+    with mixed.open("wb") as f:
+        writer.write(f)
+    _TrackedFrame.reset()
+    calls = []
+    monkeypatch.setattr(file_service, "local_ocr_health", lambda: {"available": True, "engine": "test"})
+    monkeypatch.setattr(file_service, "_render_pdf_page", lambda _pdf, _idx: _TrackedFrame())
+    monkeypatch.setattr(
+        file_service,
+        "local_ocr_image",
+        lambda _frame, page_number=None: (calls.append(page_number) or {"ok": True, "text": f"OCR MIXED {page_number}"}),
+    )
+    text, meta, warnings = file_service._pdf_extract(mixed, False, "", max_chars=500_000)
+    assert calls == list(range(2, 101, 2))
+    assert meta["pages"] == 100 and meta["pages_processed"] == 100
+    assert meta["text_layer_pages"] == 50 and meta["ocr_pages"] == 50
+    assert _TrackedFrame.active == 0 and _TrackedFrame.max_active == 1
+    assert "Embedded mixed text page" in text and "OCR MIXED 100" in text
+    assert warnings == []
+
+
+def test_partial_ocr_failure_is_page_scoped_and_processing_continues(tmp_path, monkeypatch):
+    pdf = tmp_path / "partial-failure.pdf"
+    writer = PdfWriter()
+    for _ in range(10):
+        writer.add_blank_page(width=612, height=792)
+    with pdf.open("wb") as f:
+        writer.write(f)
+    calls = []
+    monkeypatch.setattr(file_service, "local_ocr_health", lambda: {"available": True, "engine": "test"})
+    monkeypatch.setattr(file_service, "_render_pdf_page", lambda _pdf, _idx: _TrackedFrame())
+
+    def fake_ocr(_frame, page_number=None):
+        calls.append(page_number)
+        if page_number == 3:
+            return {"ok": False, "text": "", "error": "synthetic OCR failure"}
+        return {"ok": True, "text": f"RECOVERED {page_number}"}
+
+    _TrackedFrame.reset()
+    monkeypatch.setattr(file_service, "local_ocr_image", fake_ocr)
+    text, meta, warnings = file_service._pdf_extract(pdf, False, "", max_chars=500_000)
+    assert calls == list(range(1, 11))
+    assert meta["ocr_pages"] == 10 and meta["ocr_failed_pages"] == 1
+    assert meta["page_sources"][2]["source"] == "ocr_error"
+    assert "RECOVERED 4" in text and "RECOVERED 10" in text
+    assert _TrackedFrame.active == 0 and _TrackedFrame.max_active == 1
+    assert warnings == []
 
 
 def test_cache_key_separates_output_budgets(tmp_path):

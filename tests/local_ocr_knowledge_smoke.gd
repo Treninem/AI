@@ -70,13 +70,18 @@ func _run() -> void:
 	if search.is_empty():
 		_fail("OCR text is not searchable after Knowledge import", 9)
 		return
+	var restarted_store := KnowledgeStore.new()
+	var restart_search := restarted_store.search("локальный OCR AuroraFox", 4)
+	if restart_search.is_empty():
+		_fail("OCR Knowledge is not retrievable after store recreation/restart boundary", 10)
+		return
 	if not _stored_boundary_is_safe():
-		_fail("OCR metadata lost untrusted/data-only/offline boundary or page provenance", 10)
+		_fail("OCR metadata lost untrusted/data-only/offline boundary or page provenance", 11)
 		return
 
 	manager.remove_source(SOURCE)
 	_cleanup()
-	print("AURORA_LOCAL_OCR_KNOWLEDGE_SMOKE_OK images=true duplicate=true searchable=true untrusted=true page_sources=true offline=true")
+	print("AURORA_LOCAL_OCR_KNOWLEDGE_SMOKE_OK images=true duplicate=true searchable=true restart_retrieval=true untrusted=true page_sources=true offline=true")
 	quit(0)
 
 func _stored_boundary_is_safe() -> bool:
