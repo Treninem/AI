@@ -7,6 +7,9 @@ signal autonomous_cycle_failed(report: Dictionary)
 
 const STATE_DIR := "user://agent"
 const STATE_PATH := "user://agent/autonomy_state.json"
+const STATE_TEMP_PATH := STATE_PATH + ".tmp"
+const STATE_BACKUP_PATH := STATE_PATH + ".bak"
+const STATE_SCHEMA_VERSION := 1
 
 @export var autonomous_enabled := true
 @export var autonomous_hot_improvements := true
@@ -34,6 +37,7 @@ var _last_report: Dictionary = {}
 var _last_improvement_unix := 0
 var _last_research_unix := 0
 var _events: Array = []
+var _state_recovery_blocked := false
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STATE_DIR))
@@ -60,7 +64,7 @@ func _bootstrap() -> void:
 			"missing_components": report.get("missing_components", []),
 			"missing_required_tools": report.get("missing_required_tools", [])
 		})
-	if autonomous_enabled:
+	if autonomous_enabled and not _state_recovery_blocked:
 		_timer.start()
 		call_deferred("_run_initial_cycle")
 
@@ -205,6 +209,7 @@ func synchronize_all() -> Dictionary:
 	report["research_cooldown_seconds"] = research_cooldown_seconds
 	report["last_improvement_unix"] = _last_improvement_unix
 	report["last_research_unix"] = _last_research_unix
+	report["state_recovery_blocked"] = _state_recovery_blocked
 	report["events"] = _events.slice(maxi(0, _events.size() - 20), _events.size())
 	_last_report = report.duplicate(true)
 	_save_state()
@@ -257,6 +262,14 @@ func _collect_observations() -> Dictionary:
 	return result
 
 func run_autonomous_cycle() -> Dictionary:
+	if _state_recovery_blocked:
+		var recovery_blocked := {
+			"ok": false,
+			"stage": "state_recovery",
+			"error": "Autonomous state recovery failed; automatic cycle is blocked to avoid duplicate actions"
+		}
+		autonomous_cycle_failed.emit(recovery_blocked)
+		return recovery_blocked
 	if _cycle_running:
 		return {"ok": false, "error": "Autonomous cycle is already running"}
 	_cycle_running = true
@@ -428,27 +441,46 @@ func _record_event(kind: String, details: Dictionary) -> void:
 	_save_state()
 
 func _save_state() -> void:
-	var file := FileAccess.open(STATE_PATH, FileAccess.WRITE)
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STATE_DIR))
+	if not _repair_interrupted_state_save():
+		_state_recovery_blocked = true
+		return
+	_remove_state_file(STATE_TEMP_PATH)
+	var file := FileAccess.open(STATE_TEMP_PATH, FileAccess.WRITE)
 	if file == null:
+		_state_recovery_blocked = true
 		return
 	file.store_string(JSON.stringify({
+		"schema_version": STATE_SCHEMA_VERSION,
 		"last_improvement_unix": _last_improvement_unix,
 		"last_research_unix": _last_research_unix,
 		"mutation_population_size": mutation_population_size,
 		"events": _events,
 		"last_report": _last_report
 	}))
+	file.flush()
+	var write_error := file.get_error()
 	file.close()
+	if write_error != OK or not _valid_state_file(STATE_TEMP_PATH):
+		_remove_state_file(STATE_TEMP_PATH)
+		_state_recovery_blocked = true
+		return
+	if not _replace_state_file():
+		_remove_state_file(STATE_TEMP_PATH)
+		_state_recovery_blocked = true
+		return
+	_state_recovery_blocked = false
 
 func _load_state() -> void:
+	if not _repair_interrupted_state_save():
+		_state_recovery_blocked = true
+		return
 	if not FileAccess.file_exists(STATE_PATH):
+		_state_recovery_blocked = false
 		return
-	var file := FileAccess.open(STATE_PATH, FileAccess.READ)
-	if file == null:
-		return
-	var parsed: Variant = JSON.parse_string(file.get_as_text())
-	file.close()
-	if not parsed is Dictionary:
+	var parsed := _read_state_file(STATE_PATH)
+	if parsed.is_empty():
+		_state_recovery_blocked = true
 		return
 	_last_improvement_unix = int(parsed.get("last_improvement_unix", 0))
 	_last_research_unix = int(parsed.get("last_research_unix", 0))
@@ -459,6 +491,93 @@ func _load_state() -> void:
 	var saved_report: Variant = parsed.get("last_report", {})
 	if saved_report is Dictionary:
 		_last_report = saved_report
+	_state_recovery_blocked = false
+
+func _replace_state_file() -> bool:
+	if not FileAccess.file_exists(STATE_TEMP_PATH) or not _valid_state_file(STATE_TEMP_PATH):
+		return false
+	var target_abs := ProjectSettings.globalize_path(STATE_PATH)
+	var temp_abs := ProjectSettings.globalize_path(STATE_TEMP_PATH)
+	var backup_abs := ProjectSettings.globalize_path(STATE_BACKUP_PATH)
+	_remove_state_file(STATE_BACKUP_PATH)
+	if FileAccess.file_exists(STATE_PATH):
+		if DirAccess.rename_absolute(target_abs, backup_abs) != OK:
+			return false
+	if DirAccess.rename_absolute(temp_abs, target_abs) != OK:
+		if FileAccess.file_exists(STATE_BACKUP_PATH) and not FileAccess.file_exists(STATE_PATH):
+			DirAccess.rename_absolute(backup_abs, target_abs)
+		return false
+	if not _valid_state_file(STATE_PATH):
+		_remove_state_file(STATE_PATH)
+		if FileAccess.file_exists(STATE_BACKUP_PATH):
+			DirAccess.rename_absolute(backup_abs, target_abs)
+		return false
+	_remove_state_file(STATE_BACKUP_PATH)
+	return true
+
+func _repair_interrupted_state_save() -> bool:
+	var target_exists := FileAccess.file_exists(STATE_PATH)
+	var backup_exists := FileAccess.file_exists(STATE_BACKUP_PATH)
+	var temp_exists := FileAccess.file_exists(STATE_TEMP_PATH)
+	var target_abs := ProjectSettings.globalize_path(STATE_PATH)
+	var backup_abs := ProjectSettings.globalize_path(STATE_BACKUP_PATH)
+	var temp_abs := ProjectSettings.globalize_path(STATE_TEMP_PATH)
+
+	if backup_exists:
+		if target_exists and _valid_state_file(STATE_PATH):
+			if DirAccess.remove_absolute(backup_abs) != OK:
+				return false
+			backup_exists = false
+		else:
+			if target_exists and DirAccess.remove_absolute(target_abs) != OK:
+				return false
+			if DirAccess.rename_absolute(backup_abs, target_abs) != OK:
+				return false
+			target_exists = true
+			backup_exists = false
+
+	if temp_exists:
+		if target_exists and _valid_state_file(STATE_PATH):
+			if DirAccess.remove_absolute(temp_abs) != OK:
+				return false
+		elif _valid_state_file(STATE_TEMP_PATH):
+			if target_exists and DirAccess.remove_absolute(target_abs) != OK:
+				return false
+			if DirAccess.rename_absolute(temp_abs, target_abs) != OK:
+				return false
+			target_exists = true
+		else:
+			if DirAccess.remove_absolute(temp_abs) != OK:
+				return false
+
+	return not target_exists or _valid_state_file(STATE_PATH)
+
+func _read_state_file(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
+	return parsed if parsed is Dictionary else {}
+
+func _valid_state_file(path: String) -> bool:
+	var parsed := _read_state_file(path)
+	if parsed.is_empty():
+		return false
+	if parsed.has("schema_version") and int(parsed.get("schema_version", 0)) != STATE_SCHEMA_VERSION:
+		return false
+	if parsed.has("events") and not parsed.get("events") is Array:
+		return false
+	if parsed.has("last_report") and not parsed.get("last_report") is Dictionary:
+		return false
+	return true
+
+func _remove_state_file(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return true
+	return DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK
 
 func _compact(value: Variant) -> Variant:
 	if value is Dictionary:
