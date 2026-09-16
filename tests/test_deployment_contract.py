@@ -66,6 +66,53 @@ def test_server_rate_limit_is_thread_safe_and_covers_websocket_messages():
     assert "code=4429" in websocket
 
 
+def test_server_has_pre_parser_body_limit_and_secure_account_mail_boundary():
+    server = read("api/server.py")
+    limits = read("api/request_limits.py")
+    mailer = read("api/account_mailer.py")
+    account_web = read("api/account_web.py")
+    public_auth_limits = read("api/public_auth_limits.py")
+    assert "RequestBodyLimitMiddleware" in server
+    assert 'AURORAFOX_API_MAX_BODY_BYTES' in server
+    assert 'status": 413' in limits
+    assert 'content-length' in limits
+    assert 'received > self.max_bytes' in limits
+    assert 'scope.get("type") != "http"' in limits
+    assert "AccountMailConfig.from_env()" in server
+    assert "AURORAFOX_SMTP_PASSWORD" in mailer
+    assert 'self.config.security in {"starttls", "ssl"}' in mailer
+    assert 'client.starttls(context=context)' in mailer
+    assert '"plain"' not in mailer.split("def send_token", 1)[1]
+    assert 'AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS' in server
+    assert "create_account_web_router(accounts)" in server
+    assert '@router.get("/verify-email"' in account_web
+    assert '@router.get("/reset-password"' in account_web
+    assert '@router.post("/reset-password"' in account_web
+    assert 'Content-Security-Policy' in account_web
+    assert 'Referrer-Policy' in account_web
+    assert "PublicAuthRateLimitMiddleware" in server
+    assert 'AURORAFOX_PUBLIC_AUTH_RPM' in server
+    assert 'x-forwarded-for' in public_auth_limits
+    assert 'peer_ip.is_loopback' in public_auth_limits
+    assert 'status": 429' in public_auth_limits
+
+
+def test_persistence_capacity_policy_never_auto_prunes_private_or_offline_sync_state():
+    maintenance = read("api/persistence_maintenance.py")
+    assert '"sync_changes_auto_pruned": False' in maintenance
+    assert '"pending_learning_protected": True' in maintenance
+    assert '"conversation_data_auto_pruned": False' in maintenance
+    prune = maintenance.split("def prune_ephemeral", 1)[1]
+    assert "DELETE FROM account_tokens" in prune
+    assert "DELETE FROM refresh_tokens" in prune
+    assert "DELETE FROM auth_sessions" in prune
+    assert "DELETE FROM sync_entities" not in prune
+    assert "DELETE FROM sync_changes" not in prune
+    assert "DELETE FROM sync_conflicts" not in prune
+    assert "DELETE FROM conversations" not in prune
+    assert "DELETE FROM learning_events" not in prune
+
+
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
     sync = read("deploy/windows/sync_server_backup.ps1")
     installer = read("deploy/windows/install_server_backup.ps1")
@@ -100,6 +147,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "caddy-stable-archive-keyring.asc" in install
     assert "pydantic==2.13.4" in requirements
     assert "api.aurorafox.ru" in install
+    assert "auth.aurorafox.ru" in install
     assert "ws.aurorafox.ru" in install
     assert "files.aurorafox.ru" in install
     assert "update.aurorafox.ru" in install
@@ -115,6 +163,12 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
         "tests/test_api_accounts_sync.py",
         "tests/test_api_account_network.py",
         "tests/test_api_account_restore.py",
+        "tests/test_api_account_mailer.py",
+        "tests/test_api_account_web.py",
+        "tests/test_api_server_hardening.py",
+        "tests/test_api_request_limits.py",
+        "tests/test_api_public_auth_limits.py",
+        "tests/test_api_persistence_maintenance.py",
         "tests/test_api_schema_migrations.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
@@ -142,6 +196,26 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "ForceCommand internal-sftp" in install
     assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
     assert "chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup" in install
+
+    # HTTP/body and account-mail production settings are explicit. SMTP secrets
+    # live in their own root-only file, are not overwritten on reinstall, and are
+    # only read by the API service. The application stays healthy without SMTP,
+    # while production account creation fails closed until the owner configures it.
+    assert "AURORAFOX_API_MAX_BODY_BYTES=25165824" in install
+    assert "AURORAFOX_PUBLIC_AUTH_RPM=20" in install
+    assert "AURORAFOX_DATABASE_WARN_BYTES=536870912" in install
+    assert "AURORAFOX_SYNC_CHANGES_WARN=1000000" in install
+    assert "AURORAFOX_SYNC_CONFLICTS_WARN=10000" in install
+    assert "if [[ ! -e /etc/aurorafox/account-mail.env ]]" in install
+    assert "chmod 0600 /etc/aurorafox/account-mail.env" in install
+    assert "AURORAFOX_SMTP_PASSWORD=" in install
+    assert "AURORAFOX_SMTP_SECURITY=starttls" in install
+    assert "EnvironmentFile=-/etc/aurorafox/account-mail.env" in install
+    assert "account_public_host='auth.aurorafox.ru'" in install
+    assert "python -m api.persistence_maintenance" in install
+    assert "python -m api.persistence_maintenance" in updater
+    assert "--prune-ephemeral" not in install
+    assert "--prune-ephemeral" not in updater
 
     # Production switching is data-aware: the current SQLite state must be
     # healthy, a verifiable snapshot must exist before checkout, and the new

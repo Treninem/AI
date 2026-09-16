@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import threading
 import time
@@ -15,7 +16,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
+from api.account_mailer import AccountMailConfig, AccountMailError, AccountMailer
 from api.account_store import AccountError, AuthenticationError, ConflictError, RefreshReplayError
+from api.account_web import create_account_web_router
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.conversation_store import ConversationStore
 from api.core_candidate_queue import CoreCandidateQueue, CoreCandidateQueueError
@@ -23,6 +26,8 @@ from api.database import SCHEMA_VERSION
 from api.file_client import FileIntelligenceClient
 from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
+from api.public_auth_limits import PublicAuthRateLimitMiddleware
+from api.request_limits import DEFAULT_MAX_BODY_BYTES, RequestBodyLimitMiddleware
 from api.runtime_bridge import AuroraRuntimeBridge
 from api.sync_store import SyncStore
 
@@ -31,10 +36,21 @@ PORT = int(os.getenv("AURORAFOX_API_PORT", "8768"))
 USER_ROOT = Path(os.getenv("AURORAFOX_USER_DIR", str(Path.home() / ".aurorafox"))).resolve()
 API_ROOT = USER_ROOT / "api"
 API_ROOT.mkdir(parents=True, exist_ok=True)
+LOGGER = logging.getLogger("aurorafox.api")
+DEV_ACCOUNT_TOKENS = os.getenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "0") == "1"
+try:
+    MAX_API_BODY_BYTES = max(1, int(os.getenv("AURORAFOX_API_MAX_BODY_BYTES", str(DEFAULT_MAX_BODY_BYTES))))
+except ValueError:
+    MAX_API_BODY_BYTES = DEFAULT_MAX_BODY_BYTES
+try:
+    PUBLIC_AUTH_RPM = max(1, int(os.getenv("AURORAFOX_PUBLIC_AUTH_RPM", "20")))
+except ValueError:
+    PUBLIC_AUTH_RPM = 20
 
 keys = KeyStore(API_ROOT)
 keys.ensure_bootstrap_key()
 accounts = keys.personal
+account_mailer = AccountMailer(AccountMailConfig.from_env())
 database = keys.database
 sync = SyncStore(API_ROOT)
 conversations = ConversationStore(API_ROOT / "conversations")
@@ -67,6 +83,9 @@ app = FastAPI(
     version=_canonical_version(),
     description="External gateway to AuroraFox AgentCore, personal sync, tools, files and local models.",
 )
+app.add_middleware(RequestBodyLimitMiddleware, max_bytes=MAX_API_BODY_BYTES)
+app.add_middleware(PublicAuthRateLimitMiddleware, limit=PUBLIC_AUTH_RPM, window_seconds=60.0)
+app.include_router(create_account_web_router(accounts))
 
 origins = [x.strip() for x in os.getenv("AURORAFOX_API_CORS", "").split(",") if x.strip()]
 if origins:
@@ -250,9 +269,29 @@ def _account(record: dict[str, Any]) -> dict[str, Any]:
 
 
 def _dev_token(payload: dict[str, Any], key: str, token: str | None) -> dict[str, Any]:
-    if token and os.getenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "0") == "1":
+    if token and DEV_ACCOUNT_TOKENS:
         payload[key] = token
     return payload
+
+
+def _require_account_mail_or_dev() -> None:
+    if DEV_ACCOUNT_TOKENS:
+        return
+    if not account_mailer.config.configured:
+        raise HTTPException(503, "AuroraFox account email delivery is not configured")
+
+
+def _deliver_account_token(email: str, purpose: str, token: str | None) -> bool:
+    if not token:
+        return False
+    if not account_mailer.config.configured:
+        return False
+    try:
+        account_mailer.send_token(email, purpose, token)
+        return True
+    except AccountMailError:
+        LOGGER.warning("AuroraFox account email delivery failed for purpose=%s", purpose)
+        return False
 
 
 def _core_candidate_visible(record: dict[str, Any], row: dict[str, Any]) -> bool:
@@ -465,14 +504,22 @@ def ready() -> dict[str, Any]:
 
 @app.post("/v1/auth/register")
 def register_account(req: AccountRegisterRequest) -> dict[str, Any]:
+    _require_account_mail_or_dev()
     try:
         created = accounts.register(req.email, req.password, req.display_name)
     except ConflictError as exc:
         raise HTTPException(409, str(exc)) from exc
     except AccountError as exc:
         raise HTTPException(422, str(exc)) from exc
-    payload = {"ok": True, "account": created["account"], "email_verification_required": True}
-    return _dev_token(payload, "verification_token", str(created.get("verification_token", "")))
+    token = str(created.get("verification_token", ""))
+    delivered = _deliver_account_token(str(created["account"]["email"]), "verify_email", token)
+    payload = {
+        "ok": True,
+        "account": created["account"],
+        "email_verification_required": True,
+        "email_delivery": "sent" if delivered else ("developer_token" if DEV_ACCOUNT_TOKENS else "retry_required"),
+    }
+    return _dev_token(payload, "verification_token", token)
 
 
 @app.post("/v1/auth/verify-email")
@@ -485,10 +532,12 @@ def verify_account_email(req: AccountVerifyRequest) -> dict[str, Any]:
 
 @app.post("/v1/auth/resend-verification")
 def resend_account_verification(req: AccountEmailRequest) -> dict[str, Any]:
+    _require_account_mail_or_dev()
     try:
         token = accounts.resend_verification(req.email)
     except AccountError as exc:
         raise HTTPException(422, str(exc)) from exc
+    _deliver_account_token(req.email, "verify_email", token)
     payload = {"ok": True, "accepted": True}
     return _dev_token(payload, "verification_token", token)
 
@@ -515,10 +564,12 @@ def refresh_account(req: AccountRefreshRequest) -> dict[str, Any]:
 
 @app.post("/v1/auth/password-reset/request")
 def request_account_password_reset(req: AccountEmailRequest) -> dict[str, Any]:
+    _require_account_mail_or_dev()
     try:
         token = accounts.request_password_reset(req.email)
     except AccountError as exc:
         raise HTTPException(422, str(exc)) from exc
+    _deliver_account_token(req.email, "reset_password", token)
     payload = {"ok": True, "accepted": True}
     return _dev_token(payload, "reset_token", token)
 

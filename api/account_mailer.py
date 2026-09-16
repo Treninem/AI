@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import smtplib
 import ssl
 from dataclasses import dataclass
@@ -22,9 +23,41 @@ class AccountMailConfig:
     security: str = "starttls"
     timeout: float = 10.0
 
+    @classmethod
+    def from_env(cls) -> "AccountMailConfig":
+        try:
+            port = int(os.getenv("AURORAFOX_SMTP_PORT", "587"))
+        except ValueError:
+            port = 587
+        try:
+            timeout = float(os.getenv("AURORAFOX_SMTP_TIMEOUT_SECONDS", "10"))
+        except ValueError:
+            timeout = 10.0
+        return cls(
+            host=os.getenv("AURORAFOX_SMTP_HOST", "").strip(),
+            port=max(1, min(65535, port)),
+            username=os.getenv("AURORAFOX_SMTP_USERNAME", "").strip(),
+            password=os.getenv("AURORAFOX_SMTP_PASSWORD", ""),
+            sender=os.getenv("AURORAFOX_SMTP_SENDER", "").strip(),
+            public_url=(
+                os.getenv("AURORAFOX_ACCOUNT_PUBLIC_URL", "").strip()
+                or os.getenv("AURORAFOX_PUBLIC_URL", "").strip()
+            ),
+            security=os.getenv("AURORAFOX_SMTP_SECURITY", "starttls").strip().lower() or "starttls",
+            timeout=max(1.0, min(60.0, timeout)),
+        )
+
     @property
     def configured(self) -> bool:
-        return bool(self.host and self.port and self.sender and self.public_url)
+        credentials_ready = not self.username or bool(self.password)
+        return bool(
+            self.host
+            and self.port
+            and self.sender
+            and self.public_url
+            and credentials_ready
+            and self.security in {"starttls", "ssl"}
+        )
 
 
 class AccountMailer:
@@ -73,13 +106,12 @@ class AccountMailer:
                     self._authenticate(client)
                     client.send_message(message)
                 return
+            if self.config.security != "starttls":
+                raise AccountMailError("Unsupported SMTP security mode")
             with smtplib.SMTP(self.config.host, self.config.port, timeout=self.config.timeout) as client:
                 client.ehlo()
-                if self.config.security == "starttls":
-                    client.starttls(context=context)
-                    client.ehlo()
-                elif self.config.security != "plain":
-                    raise AccountMailError("Unsupported SMTP security mode")
+                client.starttls(context=context)
+                client.ehlo()
                 self._authenticate(client)
                 client.send_message(message)
         except AccountMailError:

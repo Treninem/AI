@@ -7,6 +7,16 @@ var registry := KnowledgeSourceRegistry.new()
 var _scan_cache: Dictionary = {}
 var _scan_size := -1
 var _scan_mtime := -1
+var _recovery_status: Dictionary = {}
+
+func _init() -> void:
+	# KnowledgeStore streaming imports mutate source rows before the final registry
+	# commit. Recover any manifest-backed interrupted transaction before manager
+	# reads expose those files after an application restart.
+	_recovery_status = KnowledgeImportTransaction.new().recover_interrupted_transaction()
+
+func recovery_status() -> Dictionary:
+	return _recovery_status.duplicate(true)
 
 func sources() -> Array:
 	var scan := _scan_db()
@@ -41,11 +51,31 @@ func stats() -> Dictionary:
 		"source_aliases": int(registry_stats.get("aliases", 0)),
 		"source_revisions_total": int(registry_stats.get("revisions_total", 0)),
 		"registry": registry_stats,
+		"startup_recovery": _recovery_status.duplicate(true),
 		"streaming_index": true
 	}
 
 func remove_source(source: String) -> Dictionary:
-	var canonical := registry.canonical_source(source)
+	var row := registry.record_for_source(source)
+	var canonical := str(row.get("source", source)) if not row.is_empty() else source
+	var aliases: Array = row.get("aliases", []) if not row.is_empty() and row.get("aliases", []) is Array else []
+	var alias_only := not row.is_empty() and canonical != source and source in aliases
+	if alias_only:
+		# A byte-identical renamed source is an alias of one canonical set of
+		# chunks. Removing only that alias must not delete shared canonical data.
+		var alias_result := registry.remove_source(source)
+		_invalidate_scan()
+		return {
+			"ok": bool(alias_result.get("ok", false)),
+			"source": source,
+			"canonical_source": canonical,
+			"alias_only": true,
+			"removed": 0,
+			"structured_removed": 0,
+			"registry_removed": alias_result.get("removed", 0),
+			"aliases_removed": alias_result.get("aliases_removed", 0),
+			"canonical_preserved": true
+		}
 	var store := KnowledgeStore.new()
 	var removed := store.remove_source(canonical)
 	if canonical != source and int(removed.get("removed", 0)) == 0 and int(removed.get("structured_removed", 0)) == 0:
@@ -56,9 +86,12 @@ func remove_source(source: String) -> Dictionary:
 		"ok": bool(removed.get("ok", false)) and bool(registry_result.get("ok", false)),
 		"source": source,
 		"canonical_source": canonical,
+		"alias_only": false,
 		"removed": removed.get("removed", 0),
 		"structured_removed": removed.get("structured_removed", 0),
-		"registry_removed": registry_result.get("removed", 0)
+		"registry_removed": registry_result.get("removed", 0),
+		"aliases_removed": registry_result.get("aliases_removed", 0),
+		"canonical_preserved": false
 	}
 
 func compact() -> Dictionary:

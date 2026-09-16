@@ -38,10 +38,12 @@ if [[ ! "${ssh_port}" =~ ^[0-9]+$ ]] || (( ssh_port < 1024 || ssh_port > 65535 )
 fi
 site_hosts="${public_host}"
 api_public_host="${public_host}"
+account_public_host="${public_host}"
 if [[ "${public_host}" == 'aurorafox.ru' ]]; then
   site_hosts='aurorafox.ru, www.aurorafox.ru, api.aurorafox.ru, auth.aurorafox.ru, ws.aurorafox.ru, files.aurorafox.ru, update.aurorafox.ru, cloud.aurorafox.ru'
   site_hosts+=", ${public_ip}.sslip.io"
   api_public_host='api.aurorafox.ru'
+  account_public_host='auth.aurorafox.ru'
 fi
 
 export DEBIAN_FRONTEND=noninteractive
@@ -151,6 +153,12 @@ PYTHONPATH=/opt/aurorafox/repository /opt/aurorafox/venv/bin/python -m pytest -q
   /opt/aurorafox/repository/tests/test_api_accounts_sync.py \
   /opt/aurorafox/repository/tests/test_api_account_network.py \
   /opt/aurorafox/repository/tests/test_api_account_restore.py \
+  /opt/aurorafox/repository/tests/test_api_account_mailer.py \
+  /opt/aurorafox/repository/tests/test_api_account_web.py \
+  /opt/aurorafox/repository/tests/test_api_server_hardening.py \
+  /opt/aurorafox/repository/tests/test_api_request_limits.py \
+  /opt/aurorafox/repository/tests/test_api_public_auth_limits.py \
+  /opt/aurorafox/repository/tests/test_api_persistence_maintenance.py \
   /opt/aurorafox/repository/tests/test_api_schema_migrations.py \
   /opt/aurorafox/repository/tests/test_api_privacy_contract.py \
   /opt/aurorafox/repository/tests/test_api_runtime_resilience.py \
@@ -164,14 +172,38 @@ AURORAFOX_USER_DIR=/var/lib/aurorafox
 AURORAFOX_API_HOST=127.0.0.1
 AURORAFOX_API_PORT=8768
 AURORAFOX_API_RPM=60
+AURORAFOX_PUBLIC_AUTH_RPM=20
+AURORAFOX_API_MAX_BODY_BYTES=25165824
 AURORAFOX_API_LOG_LEVEL=warning
 AURORAFOX_DEPLOYMENT=reg-ru
 AURORAFOX_BACKUP_MAX_BYTES=268435456
+AURORAFOX_DATABASE_WARN_BYTES=536870912
+AURORAFOX_SYNC_CHANGES_WARN=1000000
+AURORAFOX_SYNC_CONFLICTS_WARN=10000
 AURORAFOX_GITHUB_REPO=${AURORAFOX_GITHUB_REPO}
 AURORAFOX_GITHUB_REF=${AURORAFOX_GITHUB_REF}
 AURORAFOX_PUBLIC_URL=https://${api_public_host}
 EOF
 chmod 0600 /etc/aurorafox/aurorafox.env
+
+# SMTP credentials are an owner-controlled deployment secret. Keep them in a
+# separate root-only file and never overwrite an existing configured secret on
+# reinstall. Registration fails closed until either this transport is configured
+# or explicit developer-token mode is enabled outside production.
+if [[ ! -e /etc/aurorafox/account-mail.env ]]; then
+  cat > /etc/aurorafox/account-mail.env <<EOF
+AURORAFOX_ACCOUNT_PUBLIC_URL=https://${account_public_host}
+AURORAFOX_SMTP_HOST=
+AURORAFOX_SMTP_PORT=587
+AURORAFOX_SMTP_USERNAME=
+AURORAFOX_SMTP_PASSWORD=
+AURORAFOX_SMTP_SENDER=
+AURORAFOX_SMTP_SECURITY=starttls
+AURORAFOX_SMTP_TIMEOUT_SECONDS=10
+EOF
+  chmod 0600 /etc/aurorafox/account-mail.env
+fi
+
 current_sha="$(git -C /opt/aurorafox/repository rev-parse HEAD)"
 printf 'AURORAFOX_BUILD_SHA=%s\n' "${current_sha}" > /etc/aurorafox/build.env
 
@@ -187,6 +219,7 @@ User=aurorafox
 Group=aurorafox
 WorkingDirectory=/opt/aurorafox/repository
 EnvironmentFile=/etc/aurorafox/aurorafox.env
+EnvironmentFile=-/etc/aurorafox/account-mail.env
 EnvironmentFile=/etc/aurorafox/build.env
 ExecStart=/opt/aurorafox/venv/bin/uvicorn api.server:app --host 127.0.0.1 --port 8768
 Restart=on-failure
@@ -288,6 +321,8 @@ systemctl enable --now aurorafox-update.timer aurorafox-backup.timer
 curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 2 http://127.0.0.1:8768/health >/dev/null
 runuser -u aurorafox -- env PYTHONPATH=/opt/aurorafox/repository \
   /opt/aurorafox/venv/bin/python -m api.database --path /var/lib/aurorafox/api/aurorafox.sqlite3
+runuser -u aurorafox -- env PYTHONPATH=/opt/aurorafox/repository \
+  /opt/aurorafox/venv/bin/python -m api.persistence_maintenance --user-root /var/lib/aurorafox/api
 systemctl start aurorafox-backup.service
 test -s /srv/aurorafox-backup/exports/latest.zip
 test -s /srv/aurorafox-backup/exports/latest.sha256
@@ -299,3 +334,4 @@ test -s /srv/aurorafox-backup/exports/latest.sha256
 echo "AURORAFOX_REG_RU_OK url=https://${public_host} api=https://${api_public_host} sha=${current_sha} updates=github/main ssh_port=${ssh_port} db=sqlite-wal"
 echo 'Bootstrap admin key (read it once, then remove the file): /var/lib/aurorafox/api/bootstrap_key.txt'
 echo 'Owner PC backup transport: key-pinned, chrooted internal SFTP user aurorafox-backup.'
+echo 'Account email: configure /etc/aurorafox/account-mail.env, then restart aurorafox-api.service.'

@@ -100,6 +100,12 @@ PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_api_accounts_sync.py \
   tests/test_api_account_network.py \
   tests/test_api_account_restore.py \
+  tests/test_api_account_mailer.py \
+  tests/test_api_account_web.py \
+  tests/test_api_server_hardening.py \
+  tests/test_api_request_limits.py \
+  tests/test_api_public_auth_limits.py \
+  tests/test_api_persistence_maintenance.py \
   tests/test_api_schema_migrations.py \
   tests/test_api_privacy_contract.py \
   tests/test_api_runtime_resilience.py \
@@ -131,5 +137,9 @@ test "${ready}" = 'yes'
 # Defense in depth: deployment acceptance also validates the live file directly,
 # independently of the HTTP process that reported /ready.
 PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.database --path "${database_path}"
+# Capacity inspection is observational. It may emit warnings but never removes
+# user/private/sync state during deployment; explicit pruning is a separate CLI.
+PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.persistence_maintenance \
+  --user-root "$(dirname "${database_path}")"
 trap - ERR
 echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref} preupdate_backup_sha=${preupdate_backup_sha} rollback_db=${rollback_database}"

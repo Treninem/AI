@@ -4,6 +4,12 @@
 Uses the existing isolated Godot stress harness and reports write/index/search/
 restart scaling plus raw and baseline-adjusted process RSS. Performance findings
 are recorded here; validate_performance_report.py decides whether CI enforces them.
+
+`MemoryStore.reindex_semantic()` is also an explicit persistence boundary: it
+flushes pending canonical memory/knowledge JSON before rebuilding vectors. The
+blocking N->2N->4N ratio therefore uses learn-loop + reindex/flush duration so
+coalesced persistence cannot make the benchmark appear faster by merely moving
+I/O outside the measured durable path.
 """
 from __future__ import annotations
 
@@ -44,17 +50,26 @@ def pair_findings(results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         n2 = int(right.get("records_requested", 0))
         if n1 <= 0 or n2 != n1 * 2:
             continue
-        write1 = float(left.get("write_duration_ms", 0.0) or 0.0)
-        write2 = float(right.get("write_duration_ms", 0.0) or 0.0)
+        learn1 = float(left.get("write_duration_ms", 0.0) or 0.0)
+        learn2 = float(right.get("write_duration_ms", 0.0) or 0.0)
         index1 = float(left.get("semantic_index_build_ms", 0.0) or 0.0)
         index2 = float(right.get("semantic_index_build_ms", 0.0) or 0.0)
+        durable1 = learn1 + index1
+        durable2 = learn2 + index2
+        durable_ratio = (durable2 / durable1) if durable1 > 0 else 0.0
         findings.append(
             {
                 "from_n": n1,
                 "to_n": n2,
-                "write_time_ratio": (write2 / write1) if write1 > 0 else 0.0,
-                "index_time_ratio": (index2 / index1) if index1 > 0 else 0.0,
-                "suspected_quadratic_write": write1 > 0 and (write2 / write1) >= 3.5,
+                "learn_loop_time_ratio": (learn2 / learn1) if learn1 > 0 else 0.0,
+                "index_and_flush_time_ratio": (index2 / index1) if index1 > 0 else 0.0,
+                "durable_write_path_ms_from": durable1,
+                "durable_write_path_ms_to": durable2,
+                "durable_write_path_ratio": durable_ratio,
+                # Kept for schema/gate compatibility. This now means the full
+                # durable write path, not just the pre-flush learn loop.
+                "write_time_ratio": durable_ratio,
+                "suspected_quadratic_write": durable1 > 0 and durable_ratio >= 3.5,
             }
         )
     return findings
@@ -102,6 +117,9 @@ def main() -> int:
         finally:
             shutil.rmtree(user_root, ignore_errors=True)
         result["incremental_peak_rss_bytes"] = max(0, int(result.get("peak_rss_bytes", 0)) - baseline_rss)
+        result["durable_write_path_ms"] = float(result.get("write_duration_ms", 0.0) or 0.0) + float(
+            result.get("semantic_index_build_ms", 0.0) or 0.0
+        )
         results.append(result)
         if not result.get("ok"):
             hard_errors.append({"count": count, "error": result.get("error", "case failed")})
@@ -133,6 +151,7 @@ def main() -> int:
         "relative_performance": {
             "n_2n_4n": findings,
             "suspected_quadratic_write": suspected,
+            "write_scaling_contract": "learn loop + reindex/flush is the durable write path",
             "absolute_ci_timings_are_informational": True,
         },
         "results": results,

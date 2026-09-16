@@ -7,6 +7,8 @@ const REGISTRY_PATH := KnowledgeSourceRegistry.REGISTRY_PATH
 const DB_BACKUP := "user://knowledge/.knowledge_source.txn.jsonl"
 const STRUCTURED_BACKUP := "user://knowledge/.structured_source.txn.jsonl"
 const REGISTRY_BACKUP := "user://knowledge/.sources.json.txn"
+const TXN_MANIFEST := "user://knowledge/.knowledge_import.txn.json"
+const TXN_MANIFEST_TMP := TXN_MANIFEST + ".tmp"
 
 # Transaction journals use fixed user:// paths. Multiple imports in one process
 # therefore cannot safely mutate them concurrently. Serialize the full
@@ -15,14 +17,60 @@ const REGISTRY_BACKUP := "user://knowledge/.sources.json.txn"
 # different threads; they are explicitly queued here.
 static var _transaction_mutex: Mutex = Mutex.new()
 
+# Registry presence is normally enough to decide whether an old source needs a
+# rollback journal, but pre-registry/direct KnowledgeStore data can exist without
+# sources.json. Build a streaming source-presence index once per stable pair of
+# JSONL files, then maintain it after transaction mutations. This preserves
+# upgrade safety without returning to one full-store scan for every new source.
+static var _source_presence_cache: Dictionary = {}
+static var _source_presence_signature := ""
+static var _source_presence_cache_valid := false
+
 var registry := KnowledgeSourceRegistry.new()
 var large_json_importer := LargeJsonKnowledgeImporter.new()
 
 func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {}) -> Dictionary:
 	_transaction_mutex.lock()
-	var result := _import_file_locked(store, path, metadata)
+	var recovery := _recover_interrupted_transaction_locked()
+	var result: Dictionary
+	if not bool(recovery.get("ok", false)):
+		result = {
+			"ok": false,
+			"error": "Не удалось безопасно восстановить прерванный импорт знаний",
+			"transaction": "recovery_failed",
+			"startup_recovery": recovery
+		}
+	else:
+		result = _import_file_locked(store, path, metadata)
+		if bool(recovery.get("recovered", false)) or bool(recovery.get("cleaned_committed", false)):
+			result["startup_recovery"] = recovery
 	_transaction_mutex.unlock()
 	result["transaction_serialized"] = true
+	return result
+
+func import_extracted_file(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
+	_transaction_mutex.lock()
+	var recovery := _recover_interrupted_transaction_locked()
+	var result: Dictionary
+	if not bool(recovery.get("ok", false)):
+		result = {
+			"ok": false,
+			"error": "Не удалось безопасно восстановить прерванный импорт знаний",
+			"transaction": "recovery_failed",
+			"startup_recovery": recovery
+		}
+	else:
+		result = _import_extracted_file_locked(store, path, text, metadata)
+		if bool(recovery.get("recovered", false)) or bool(recovery.get("cleaned_committed", false)):
+			result["startup_recovery"] = recovery
+	_transaction_mutex.unlock()
+	result["transaction_serialized"] = true
+	return result
+
+func recover_interrupted_transaction() -> Dictionary:
+	_transaction_mutex.lock()
+	var result := _recover_interrupted_transaction_locked()
+	_transaction_mutex.unlock()
 	return result
 
 func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictionary = {}) -> Dictionary:
@@ -31,7 +79,8 @@ func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictiona
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	var preserve_existing_source := not existing.is_empty() or _source_has_persisted_rows(path)
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
@@ -42,20 +91,14 @@ func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictiona
 		result = store.import_file(path, meta)
 	return _finish_import(path, result, inspection, meta, snapshot)
 
-func import_extracted_file(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
-	_transaction_mutex.lock()
-	var result := _import_extracted_file_locked(store, path, text, metadata)
-	_transaction_mutex.unlock()
-	result["transaction_serialized"] = true
-	return result
-
 func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
 	var prepared := _prepare_file(path, metadata)
 	if not bool(prepared.get("ok", false)) or bool(prepared.get("skipped", false)):
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	var preserve_existing_source := not existing.is_empty() or _source_has_persisted_rows(path)
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
@@ -95,7 +138,15 @@ func _finish_import(path: String, result: Dictionary, inspection: Dictionary, me
 			failed["ok"] = false
 			failed["error"] = str(registered.get("error", "Не удалось записать реестр источников"))
 			return _rollback_result(failed, snapshot)
-		_cleanup_backups()
+		# The registry write is the final logical commit. Persist that phase before
+		# deleting journals so a crash during cleanup never rolls back committed data.
+		if not _write_transaction_manifest(snapshot, "committed"):
+			var manifest_failed := result.duplicate(true)
+			manifest_failed["ok"] = false
+			manifest_failed["error"] = "Не удалось зафиксировать commit-marker импорта знаний"
+			return _rollback_result(manifest_failed, snapshot)
+		_cleanup_backups(true)
+		_remember_source_presence(path, int(result.get("chunks", 0)) > 0 or int(result.get("records", result.get("structured_records", 0))) > 0)
 		result["transaction"] = "committed"
 		result["transaction_mode"] = "source_scoped_journal"
 		result["source_snapshot"] = snapshot.get("data_journal", "source_rows")
@@ -108,6 +159,8 @@ func _finish_import(path: String, result: Dictionary, inspection: Dictionary, me
 
 func _rollback_result(result: Dictionary, snapshot: Dictionary) -> Dictionary:
 	var restored := _restore(snapshot)
+	var had_rows := int(snapshot.get("db_rows", 0)) > 0 or int(snapshot.get("structured_rows", 0)) > 0
+	_remember_source_presence(str(snapshot.get("source", "")), had_rows if restored else false)
 	result["transaction"] = "rolled_back" if restored else "rollback_failed"
 	result["transaction_mode"] = "source_scoped_journal"
 	result["source_snapshot"] = snapshot.get("data_journal", "source_rows")
@@ -117,7 +170,7 @@ func _rollback_result(result: Dictionary, snapshot: Dictionary) -> Dictionary:
 
 func _snapshot(source: String, preserve_existing_source: bool = true) -> Dictionary:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://knowledge"))
-	_cleanup_backups()
+	_cleanup_backups(true)
 	var db := {"ok": true, "rows": 0}
 	var structured := {"ok": true, "rows": 0}
 	var data_journal := "filter_partial_on_failure"
@@ -125,27 +178,32 @@ func _snapshot(source: String, preserve_existing_source: bool = true) -> Diction
 		data_journal = "source_rows"
 		db = _journal_source(DB_PATH, DB_BACKUP, source)
 		if not bool(db.get("ok", false)):
-			_cleanup_backups()
+			_cleanup_backups(true)
 			return db
 		structured = _journal_source(STRUCTURED_PATH, STRUCTURED_BACKUP, source)
 		if not bool(structured.get("ok", false)):
-			_cleanup_backups()
+			_cleanup_backups(true)
 			return structured
 	var registry_existed := FileAccess.file_exists(REGISTRY_PATH)
 	if registry_existed:
 		var err := DirAccess.copy_absolute(ProjectSettings.globalize_path(REGISTRY_PATH), ProjectSettings.globalize_path(REGISTRY_BACKUP))
 		if err != OK:
-			_cleanup_backups()
+			_cleanup_backups(true)
 			return {"ok": false, "error": "Не удалось создать резервную копию реестра источников", "code": err}
-	return {
+	var snapshot := {
 		"ok": true,
 		"source": source,
 		"db_rows": int(db.get("rows", 0)),
 		"structured_rows": int(structured.get("rows", 0)),
 		"registry_existed": registry_existed,
+		"preserve_existing_source": preserve_existing_source,
 		"data_journal": data_journal,
 		"mode": "source_scoped_journal"
 	}
+	if not _write_transaction_manifest(snapshot, "prepared"):
+		_cleanup_backups(true)
+		return {"ok": false, "error": "Не удалось записать manifest транзакции импорта знаний"}
+	return snapshot
 
 func _journal_source(path: String, backup: String, source: String) -> Dictionary:
 	var output := FileAccess.open(backup, FileAccess.WRITE)
@@ -171,6 +229,136 @@ func _journal_source(path: String, backup: String, source: String) -> Dictionary
 	output.close()
 	return {"ok": true, "rows": rows}
 
+func _recover_interrupted_transaction_locked() -> Dictionary:
+	if not FileAccess.file_exists(TXN_MANIFEST):
+		return _recover_legacy_journals_without_manifest()
+	var manifest := _read_transaction_manifest()
+	if not bool(manifest.get("ok", false)):
+		return manifest
+	var source := str(manifest.get("source", ""))
+	if source.is_empty():
+		return {"ok": false, "recovered": false, "error": "Transaction manifest does not identify a source"}
+	var phase := str(manifest.get("phase", "prepared"))
+	if phase == "committed":
+		_cleanup_backups(true)
+		KnowledgeSourceRegistry.invalidate_runtime_cache()
+		_source_presence_cache_valid = false
+		return {"ok": true, "recovered": false, "cleaned_committed": true, "source": source, "phase": phase}
+	if phase != "prepared":
+		return {"ok": false, "recovered": false, "error": "Unknown transaction manifest phase", "phase": phase, "source": source}
+	var restored := _restore(manifest)
+	if not restored:
+		return {"ok": false, "recovered": false, "error": "Interrupted knowledge transaction rollback failed", "source": source, "phase": phase}
+	var had_rows := int(manifest.get("db_rows", 0)) > 0 or int(manifest.get("structured_rows", 0)) > 0
+	_source_presence_cache_valid = false
+	if had_rows:
+		_rebuild_source_presence_cache()
+	return {"ok": true, "recovered": true, "source": source, "phase": phase, "restored_previous_rows": had_rows}
+
+func _recover_legacy_journals_without_manifest() -> Dictionary:
+	var has_db_backup := FileAccess.file_exists(DB_BACKUP)
+	var has_structured_backup := FileAccess.file_exists(STRUCTURED_BACKUP)
+	var has_registry_backup := FileAccess.file_exists(REGISTRY_BACKUP)
+	if not has_db_backup and not has_structured_backup and not has_registry_backup:
+		return {"ok": true, "recovered": false}
+	# Current manifest-aware code cannot mutate storage before manifest creation.
+	# Therefore a lone registry backup is an abandoned read-only snapshot and is
+	# safe to clean. Data journals without a manifest may come from older builds.
+	if not has_db_backup and not has_structured_backup:
+		_cleanup_backups(true)
+		return {"ok": true, "recovered": false, "cleaned_abandoned_snapshot": true}
+	var source := _infer_source_from_backup(DB_BACKUP)
+	if source.is_empty():
+		source = _infer_source_from_backup(STRUCTURED_BACKUP)
+	if source.is_empty():
+		return {
+			"ok": false,
+			"recovered": false,
+			"legacy_journals": true,
+			"error": "Legacy transaction journals exist without a manifest and source cannot be inferred; refusing destructive cleanup"
+		}
+	var snapshot := {
+		"source": source,
+		"db_rows": _count_nonempty_lines(DB_BACKUP),
+		"structured_rows": _count_nonempty_lines(STRUCTURED_BACKUP),
+		"registry_existed": has_registry_backup,
+		"preserve_existing_source": true,
+		"data_journal": "source_rows",
+		"mode": "source_scoped_journal"
+	}
+	var restored := _restore(snapshot)
+	_source_presence_cache_valid = false
+	return {
+		"ok": restored,
+		"recovered": restored,
+		"legacy_journals": true,
+		"source": source,
+		"error": "" if restored else "Legacy transaction journal rollback failed"
+	}
+
+func _read_transaction_manifest() -> Dictionary:
+	var file := FileAccess.open(TXN_MANIFEST, FileAccess.READ)
+	if file == null:
+		return {"ok": false, "recovered": false, "error": "Cannot read knowledge transaction manifest"}
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	if not parsed is Dictionary:
+		return {"ok": false, "recovered": false, "error": "Knowledge transaction manifest is malformed"}
+	var manifest: Dictionary = parsed
+	manifest["ok"] = true
+	return manifest
+
+func _write_transaction_manifest(snapshot: Dictionary, phase: String) -> bool:
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(TXN_MANIFEST.get_base_dir()))
+	var payload := snapshot.duplicate(true)
+	payload.erase("ok")
+	payload["phase"] = phase
+	payload["updated_at"] = Time.get_datetime_string_from_system(true)
+	var file := FileAccess.open(TXN_MANIFEST_TMP, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(payload, "  "))
+	file.close()
+	var target_abs := ProjectSettings.globalize_path(TXN_MANIFEST)
+	var temp_abs := ProjectSettings.globalize_path(TXN_MANIFEST_TMP)
+	if FileAccess.file_exists(TXN_MANIFEST):
+		if DirAccess.remove_absolute(target_abs) != OK:
+			DirAccess.remove_absolute(temp_abs)
+			return false
+	return DirAccess.rename_absolute(temp_abs, target_abs) == OK
+
+func _infer_source_from_backup(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return ""
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return ""
+	while not file.eof_reached():
+		var line := file.get_line()
+		if line.strip_edges().is_empty():
+			continue
+		var parsed = JSON.parse_string(line)
+		if parsed is Dictionary:
+			var source := str(parsed.get("source", ""))
+			if not source.is_empty():
+				file.close()
+				return source
+	file.close()
+	return ""
+
+func _count_nonempty_lines(path: String) -> int:
+	if not FileAccess.file_exists(path):
+		return 0
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return 0
+	var count := 0
+	while not file.eof_reached():
+		if not file.get_line().strip_edges().is_empty():
+			count += 1
+	file.close()
+	return count
+
 func _restore(snapshot: Dictionary) -> bool:
 	var source := str(snapshot.get("source", ""))
 	if source.is_empty():
@@ -179,7 +367,7 @@ func _restore(snapshot: Dictionary) -> bool:
 	ok = _restore_source_file(DB_PATH, DB_BACKUP, source) and ok
 	ok = _restore_source_file(STRUCTURED_PATH, STRUCTURED_BACKUP, source) and ok
 	ok = _restore_registry(bool(snapshot.get("registry_existed", false))) and ok
-	_cleanup_backups()
+	_cleanup_backups(true)
 	return ok
 
 func _restore_source_file(path: String, backup: String, source: String) -> bool:
@@ -249,7 +437,75 @@ func _restore_registry(existed: bool) -> bool:
 		KnowledgeSourceRegistry.invalidate_runtime_cache()
 	return restored
 
-func _cleanup_backups() -> void:
-	for path in [DB_BACKUP, STRUCTURED_BACKUP, REGISTRY_BACKUP, DB_PATH + ".rollback.tmp", STRUCTURED_PATH + ".rollback.tmp"]:
+func _source_has_persisted_rows(source: String) -> bool:
+	if source.is_empty():
+		return false
+	var signature := _data_signature()
+	if not _source_presence_cache_valid or signature != _source_presence_signature:
+		_rebuild_source_presence_cache()
+	# A failed presence scan must never be interpreted as proof that a source is
+	# absent. Fail safe by preserving/journaling it; the journal read can then
+	# return an explicit error instead of risking deletion of unknown old rows.
+	if not _source_presence_cache_valid:
+		return true
+	return bool(_source_presence_cache.get(source, false))
+
+func _rebuild_source_presence_cache() -> void:
+	_source_presence_cache.clear()
+	var db_ok := _scan_source_presence(DB_PATH)
+	var structured_ok := _scan_source_presence(STRUCTURED_PATH)
+	_source_presence_signature = _data_signature()
+	_source_presence_cache_valid = db_ok and structured_ok
+
+func _scan_source_presence(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return true
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return false
+	while not file.eof_reached():
+		var line := file.get_line()
+		if line.strip_edges().is_empty():
+			continue
+		var parsed = JSON.parse_string(line)
+		if not parsed is Dictionary:
+			continue
+		var source := str(parsed.get("source", ""))
+		if not source.is_empty():
+			_source_presence_cache[source] = true
+	file.close()
+	return true
+
+func _remember_source_presence(source: String, present: bool) -> void:
+	if source.is_empty() or not _source_presence_cache_valid:
+		return
+	if present:
+		_source_presence_cache[source] = true
+	else:
+		_source_presence_cache.erase(source)
+	_source_presence_signature = _data_signature()
+
+func _data_signature() -> String:
+	return "%s|%s" % [_file_signature(DB_PATH), _file_signature(STRUCTURED_PATH)]
+
+func _file_signature(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return "0:0"
+	return "%d:%d" % [_file_size(path), int(FileAccess.get_modified_time(path))]
+
+func _file_size(path: String) -> int:
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return 0
+	var size := file.get_length()
+	file.close()
+	return size
+
+func _cleanup_backups(include_manifest: bool = true) -> void:
+	var paths: Array = [DB_BACKUP, STRUCTURED_BACKUP, REGISTRY_BACKUP, DB_PATH + ".rollback.tmp", STRUCTURED_PATH + ".rollback.tmp", TXN_MANIFEST_TMP]
+	if include_manifest:
+		paths.append(TXN_MANIFEST)
+	for value in paths:
+		var path := str(value)
 		if FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
