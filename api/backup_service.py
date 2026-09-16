@@ -14,8 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from api.database import AuroraDatabase
-from api.storage_maintenance import StorageMaintenance
+from api.persistence_maintenance import PersistenceMaintenance
 
 
 DATA_SUFFIXES = {".db", ".json", ".jsonl", ".sqlite", ".sqlite3"}
@@ -83,15 +82,14 @@ class BackupService:
         database_path = self.user_root / "api" / "aurorafox.sqlite3"
         if not database_path.is_file():
             return None
-        database = AuroraDatabase(database_path)
-        maintenance = StorageMaintenance.from_env(database, database_path.parent)
-        retention = maintenance.maybe_prune()
+        maintenance = PersistenceMaintenance(database_path.parent)
+        retention = maintenance.prune_if_due()
         capacity = maintenance.status()
         if not bool(capacity.get("ok", False)):
-            raise BackupStoragePressure("AuroraFox storage has critically low free space")
+            raise BackupStoragePressure("AuroraFox storage has critically low free space or failed integrity")
         return {
             "retention_ran": bool(retention.get("ran", False)),
-            "pressure": bool(capacity.get("pressure", False)),
+            "attention_required": bool(capacity.get("attention_required", False)),
             "hard_pressure": bool(capacity.get("hard_pressure", False)),
         }
 
@@ -128,9 +126,6 @@ class BackupService:
         if "auth_sessions" in tables:
             destination_db.execute("DELETE FROM auth_sessions")
             sensitive = True
-        # auth_sessions cascades refresh rows with foreign keys only when the
-        # connection has FK enforcement enabled; delete explicitly as well so
-        # sanitized exports never depend on connection PRAGMA state.
         if "refresh_tokens" in tables:
             destination_db.execute("DELETE FROM refresh_tokens")
             sensitive = True
@@ -143,16 +138,12 @@ class BackupService:
             )
             sensitive = True
         if "guests" in tables:
-            # Preserve guest principal IDs/data ownership in the owner backup but
-            # make every copied bearer hash unusable and deterministic per row.
             destination_db.execute("UPDATE guests SET token_hash='redacted:' || id")
             sensitive = True
         if "metadata" in tables:
             destination_db.execute("DELETE FROM metadata WHERE key LIKE 'migration.api_keys.%'")
         destination_db.commit()
         if sensitive:
-            # DELETE/UPDATE can leave old hashes in free pages. VACUUM rebuilds
-            # the snapshot so excluded credentials cannot be recovered from ZIP.
             destination_db.execute("VACUUM")
         return sensitive
 
