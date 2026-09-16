@@ -1,0 +1,43 @@
+name: AuroraFox Voice Acoustic Quality
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "voice/python/**"
+      - "voice/config/**"
+      - "voice/tools/acoustic_benchmark.py"
+      - ".github/workflows/voice-acoustic-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  acoustic-quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install CPU acoustic benchmark dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.9.0 torchaudio==2.9.0 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install silero==0.5.5 soundfile==0.13.1 numpy==2.2.6 transformers==4.57.1 accelerate==1.10.1 utmos-pytorch
+
+      - name: Synthesize, score naturalness and round-trip intelligibility
+        run: python voice/tools/acoustic_benchmark.py
+
+      - name: Upload voice samples and acoustic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurorafox-voice-acoustic-${{ github.sha }}
+          path: artifacts/voice_acoustic/
+          if-no-files-found: warn
+          retention-days: 14
