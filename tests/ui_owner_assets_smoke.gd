@@ -44,35 +44,38 @@ func _assert_owner_surface(main: Control, mobile := false) -> bool:
 	if not background.texture is AtlasTexture:
 		_fail("Owner background must use focal AtlasTexture cropping", 13)
 		return false
+	if not background.modulate.is_equal_approx(Color(1, 1, 1, 1)):
+		_fail("Owner background must render with neutral modulate; owner pixels may not be dimmed or tinted", 14)
+		return false
 	var atlas := background.texture as AtlasTexture
 	var viewport := main.get_viewport().get_visible_rect().size
 	if viewport.x >= viewport.y and atlas.region.position.y <= 0.0:
-		_fail("Wide owner background is not bottom-biased; fox/paws may be cropped", 14)
+		_fail("Wide owner background is not bottom-biased; fox/paws may be cropped", 15)
 		return false
 	if viewport.y > viewport.x and atlas.region.position.x <= 0.0:
-		_fail("Portrait owner background is not right-biased; fox may be cropped", 15)
+		_fail("Portrait owner background is not right-biased; fox may be cropped", 16)
 		return false
 	if not brand_row.is_ancestor_of(avatar):
-		_fail("Owner avatar must stay in the AuroraFox brand row", 16)
+		_fail("Owner avatar must stay in the AuroraFox brand row", 17)
 		return false
 	if avatar.custom_minimum_size.x < 44.0 or avatar.custom_minimum_size.y < 44.0:
-		_fail("Owner avatar is too small for a clear brand mark", 17)
+		_fail("Owner avatar is too small for a clear brand mark", 18)
 		return false
 	if avatar_slot == null or avatar_slot.visible or avatar_slot.custom_minimum_size.x > 1.0:
-		_fail("Header avatar slot must remain empty to avoid duplicate owner artwork", 18)
+		_fail("Header avatar slot must remain empty to avoid duplicate owner artwork", 19)
 		return false
 	if _tree_contains_texture(main, "fox_logo.svg", true):
-		_fail("Legacy placeholder fox is visible together with owner artwork", 19)
+		_fail("Legacy placeholder fox is visible together with owner artwork", 20)
 		return false
 	if not mobile and not avatar.is_visible_in_tree():
-		_fail("Owner avatar is not visible in the desktop brand surface", 20)
+		_fail("Owner avatar is not visible in the desktop brand surface", 21)
 		return false
 	return true
 
 func _assert_messages_stay_clean(main: Control) -> bool:
 	var store = main.get("chats")
 	if not store is ChatStore:
-		_fail("ChatStore is unavailable for owner-art regression", 21)
+		_fail("ChatStore is unavailable for owner-art regression", 22)
 		return false
 	main.call("_new_chat")
 	await process_frame
@@ -82,13 +85,13 @@ func _assert_messages_stay_clean(main: Control) -> bool:
 	await process_frame
 	var messages := main.find_child("MessageList", true, false)
 	if messages == null:
-		_fail("MessageList is missing", 22)
+		_fail("MessageList is missing", 23)
 		return false
 	if _tree_contains_texture(messages, "aurorafox_avatar_master.png", false):
-		_fail("Owner avatar was duplicated beside an assistant message", 23)
+		_fail("Owner avatar was duplicated beside an assistant message", 24)
 		return false
 	if _tree_contains_texture(messages, "fox_logo.svg", false):
-		_fail("Legacy placeholder fox remained in a message row", 24)
+		_fail("Legacy placeholder fox remained in a message row", 25)
 		return false
 	return true
 
