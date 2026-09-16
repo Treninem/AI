@@ -9,6 +9,5 @@ func _apply_button(button: Button, accent: bool) -> void:
 	button.add_theme_stylebox_override("pressed", _style(Color(0.14, 0.11, 0.22, 1.0), Color(0.66, 0.54, 1.0, 0.85)))
 	button.add_theme_stylebox_override("focus", _style(Color(0.10, 0.12, 0.18, 1.0), Color(0.66, 0.54, 1.0, 0.85)))
 	button.add_theme_color_override("font_color", Color("eef5ff"))
-	button.expand_icon = true
-	button.icon_max_width = 19
+	button.expand_icon = false
 	button.clip_text = true
