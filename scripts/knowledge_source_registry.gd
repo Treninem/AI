@@ -5,6 +5,21 @@ const REGISTRY_PATH := "user://knowledge/sources.json"
 const REGISTRY_VERSION := 1
 const HASH_CHUNK_BYTES := 1024 * 1024
 
+# Each registry instance keeps a deep-copied read cache. The static generation
+# invalidates sibling instances after any successful in-process write while
+# size/mtime catches ordinary external/process changes. This avoids reparsing
+# the whole registry for inspect -> mark -> stats sequences without changing the
+# on-disk schema or allowing callers to mutate cached state before an atomic save.
+static var _registry_write_generation := 0
+var _cached_rows: Array = []
+var _cache_size := -1
+var _cache_mtime := -1
+var _cache_generation := -1
+var _cache_valid := false
+
+static func invalidate_runtime_cache() -> void:
+	_registry_write_generation += 1
+
 func inspect_file(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return {"ok": false, "error": "Файл не найден", "path": path}
@@ -249,16 +264,33 @@ func _file_size(path: String) -> int:
 
 func _load_rows() -> Array:
 	if not FileAccess.file_exists(REGISTRY_PATH):
+		_remember_cache([], 0, 0)
 		return []
+	var size := _file_size(REGISTRY_PATH)
+	var mtime := int(FileAccess.get_modified_time(REGISTRY_PATH))
+	if _cache_valid and _cache_generation == _registry_write_generation and size == _cache_size and mtime == _cache_mtime:
+		return _cached_rows.duplicate(true)
 	var file := FileAccess.open(REGISTRY_PATH, FileAccess.READ)
 	if file == null:
+		_cache_valid = false
 		return []
 	var parsed = JSON.parse_string(file.get_as_text())
 	file.close()
 	if not parsed is Dictionary:
+		_cache_valid = false
 		return []
 	var rows = parsed.get("sources", [])
-	return rows if rows is Array else []
+	if not rows is Array:
+		rows = []
+	_remember_cache(rows, size, mtime)
+	return _cached_rows.duplicate(true)
+
+func _remember_cache(rows: Array, size: int, mtime: int) -> void:
+	_cached_rows = rows.duplicate(true)
+	_cache_size = size
+	_cache_mtime = mtime
+	_cache_generation = _registry_write_generation
+	_cache_valid = true
 
 func _save_rows(rows: Array) -> bool:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REGISTRY_PATH.get_base_dir()))
@@ -278,5 +310,12 @@ func _save_rows(rows: Array) -> bool:
 		var remove_error := DirAccess.remove_absolute(target_abs)
 		if remove_error != OK:
 			DirAccess.remove_absolute(temp_abs)
+			_cache_valid = false
 			return false
-	return DirAccess.rename_absolute(temp_abs, target_abs) == OK
+	var renamed := DirAccess.rename_absolute(temp_abs, target_abs) == OK
+	if not renamed:
+		_cache_valid = false
+		return false
+	_registry_write_generation += 1
+	_remember_cache(rows, _file_size(REGISTRY_PATH), int(FileAccess.get_modified_time(REGISTRY_PATH)))
+	return true

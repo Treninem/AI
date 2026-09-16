@@ -5,13 +5,15 @@ Fresh Windows Godot runners can statically resolve a preloaded GDScript resource
 as an external script class and reject dynamic production methods before the
 benchmark starts. The production scripts are valid (the project/editor parse is
 already green); this adapter writes an untracked runtime copy of the benchmark
-script whose preloaded production-script handles are explicitly Variant-typed.
-That keeps all calls dynamic without changing any production source.
+script whose preloaded production-script handles and inferred locals are
+explicitly Variant-typed. That keeps all calls dynamic without changing any
+production source.
 """
 from __future__ import annotations
 
 import os
 from pathlib import Path
+import re
 import subprocess
 import time
 from typing import Any
@@ -30,6 +32,7 @@ SCRIPT_NAMES = (
     "MemoryStoreScript",
 )
 RUNTIME_NAME = ".knowledge_stress_benchmark.portable.gd"
+UNTYPED_INFERRED_VAR = re.compile(r"\bvar\s+([A-Za-z_][A-Za-z0-9_]*)\s*:=")
 
 
 def portable_harness(repo: Path) -> Path:
@@ -50,6 +53,15 @@ def portable_harness(repo: Path) -> Path:
         raise RuntimeError(
             f"portable harness transform incomplete: {changed}/{len(SCRIPT_NAMES)} script handles found"
         )
+
+    # Once a Script handle is Variant-typed, expressions such as
+    # `var store := KnowledgeStoreScript.new()` also become Variant at runtime.
+    # Godot 4.7 refuses to infer a static type from those dynamic expressions.
+    # Make only otherwise-untyped inferred locals explicit Variant in the
+    # generated runtime copy. The canonical benchmark source remains strongly
+    # inferred/typed and production sources are never rewritten.
+    text = UNTYPED_INFERRED_VAR.sub(r"var \1: Variant =", text)
+
     target.write_text(text, encoding="utf-8")
     return target
 
