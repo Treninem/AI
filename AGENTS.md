@@ -45,6 +45,20 @@ Under the percentages, report four compact sections:
 - `BLOCKERS:` exact blocker owner/CLAIM plus SHA/run/test evidence, or `none`;
 - `NEXT:` the exact next executable step.
 
+### Mandatory readiness footer in every chat response
+
+Every executor chat response to the owner MUST end with exactly one explicit readiness line:
+
+`ГОТОВНОСТЬ LANE: XX%`
+
+The footer value MUST match the latest evidence-backed `PROGRESS_COMPLETE` for that lane. If no acceptance gate changed since the previous response, repeat the last verified percentage; do not increase it merely because more code was written. A lane may report `100%` only after all lane-owned acceptance gates are green, no known P0/P1 blocker remains in its scope, and any remaining external/device or cross-lane boundary is explicitly handed off rather than silently ignored.
+
+The main coordinator MUST end every owner-facing progress response with:
+
+`ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: XX%`
+
+The coordinator percentage is release-train readiness, not an optimistic average of executor percentages. It cannot reach `100%` before final same-SHA release acceptance, canonical version/versionCode bump, Windows/Android package gates and update/release checks are green. Missing the footer is a coordination-protocol violation and must be corrected in the next response.
+
 When a lane reaches `PROGRESS_COMPLETE: 100%`, do not idle. Mark the claim DONE, release its owned files, fetch fresh `main`/master log, and take the declared POST-DONE/next free large package or help another active lane through independent tests, benchmarks, audit, or integration evidence without editing that lane's occupied production files.
 
 When stopping, mark the claim DONE or clearly state what remains so the next Chat/Work/Codex session can continue directly from the repository without repeating completed work.
