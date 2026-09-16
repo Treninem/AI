@@ -15,15 +15,16 @@
 3. Проверить раздел **Активные работы и занятые файлы**.
 4. До изменения кода записать в этот файл свою рабочую заявку: кто/режим, цель, подсистема, предполагаемые файлы и исходный HEAD.
 5. Если нужный файл уже занят другим активным исполнителем, не перетирать его. Нужно либо взять другую независимую задачу, либо сначала интегрировать уже сделанные изменения с актуального `main`.
-6. Делать изменения крупным законченным этапом, затем запускать относящиеся к нему тесты/CI.
-7. После этапа обновить **этот же файл**: commit SHA, что сделано, инженерную причину решения, проверки/run IDs, известные ограничения, следующий шаг и какие файлы освобождены.
-8. При завершении своей работы оставить точный продолжительный план так, чтобы другой Chat/Work/Codex мог сразу продолжить без восстановления контекста из разговора.
+6. Не делать параллельно ту же задачу, которую уже выполняет другой Chat/Work/Codex/Agent. Перед каждым крупным этапом повторно сверять свежий HEAD и новые commits.
+7. Делать изменения крупным законченным этапом, затем запускать относящиеся к нему тесты/CI.
+8. После этапа обновить **этот же файл**: commit SHA, что сделано, краткое инженерное обоснование, проверки/run IDs, известные ограничения, следующий шаг и какие файлы освобождены.
+9. При завершении своей работы оставить точный продолжительный план так, чтобы другой Chat/Work/Codex мог сразу продолжить без восстановления контекста из разговора.
 
-Нельзя создавать отдельный `CHAT_LOG`, `WORK_LOG`, `CODEX_LOG`, `WORK_COORDINATION` или другой конкурирующий журнал. Частые записи всех исполнителей делаются здесь. Разрешены технические документы подсистем (`update/README.md`, `voice/README.md`, design docs и т. п.), но они не заменяют этот журнал и не используются как параллельная очередь работ.
+Нельзя создавать отдельный `CHAT_LOG`, `WORK_LOG`, `CODEX_LOG`, `WORK_COORDINATION`, `DEVELOPMENT_LOG` или другой конкурирующий журнал. Частые записи всех исполнителей делаются здесь. Разрешены технические документы подсистем (`update/README.md`, `voice/README.md`, design docs и т. п.), но они не заменяют этот журнал и не используются как параллельная очередь работ.
 
 ### Что писать в журнал
 
-Записывается **краткое инженерное обоснование**: проблема, выбранное решение, почему оно безопаснее/надёжнее альтернатив, фактические тесты и оставшиеся риски. Не требуется и не должна сохраняться скрытая внутренняя цепочка рассуждений модели; для продолжения работы достаточно проверяемого инженерного rationale.
+Записывается **краткое проверяемое инженерное обоснование**: проблема, выбранное решение, почему оно безопаснее/надёжнее альтернатив, фактические тесты и оставшиеся риски. Не требуется и не должна сохраняться скрытая внутренняя цепочка рассуждений модели; для продолжения работы достаточно инженерного rationale, исходных требований, commits, тестов и точного плана.
 
 ### Неприкосновенные границы
 
@@ -43,7 +44,7 @@
 
 ## 1. Главная цель / единое ТЗ
 
-AuroraFox — существующий локальный AI-помощник на Godot 4.7.1 для Windows и Android. Проект **не создаётся заново**.
+AuroraFox — существующий локальный AI-помощник на Godot 4.7.1 для Windows и Android. Проект **не создаётся заново**. Новые этапы интегрируются в существующую архитектуру, память, Core Knowledge, автономию, controlled self-improvement, updater, Windows/Android clients, API, tests и release pipeline.
 
 ### 1.1. ЖЁСТКИЙ АРХИТЕКТУРНЫЙ ИНВАРИАНТ: AuroraFox зависит и полагается только на себя
 
@@ -54,28 +55,28 @@ AuroraFox — существующий локальный AI-помощник н
 Обязательное конечное поведение:
 
 - собственная локальная модель/runtime AuroraFox являются **primary, product default и источником базового мышления**;
-- базовый чат, рассуждение, планирование, критика, принятие решений, генерация текста/кода, использование локальной памяти и Core Knowledge должны работать при полном отсутствии Ollama, внешних AI API, облачных моделей и удалённого inference;
-- AuroraFox должна сама накапливать опыт в собственной памяти/Core Knowledge/skills/errors/checkpoints; удалённый сервис не может быть единственным местом, где хранится или существует «обучение»;
-- AuroraFox должна сама учиться на разрешённых пользователем локальных данных и на результатах разрешённого исследования интернета, классифицировать/проверять материал и сохранять полезное локально;
-- AuroraFox должна сама искать решение задачи: определить нехватку информации, сформировать план исследования, при разрешении использовать интернет/сайты, проверить найденное своим Core и применить результат через собственные инструменты;
-- интернет и сайты — это **источники информации и поверхности действий**, а не внешний мозг. Без интернета должны перестать работать только задачи, которым реально нужен интернет; локальное мышление и локальные функции продолжают работать;
-- AuroraFox должна сама выполнять разрешённые действия через AgentCore/Computer Agent/file/workspace/sandbox tooling и фактически проверять результат;
-- AuroraFox должна сама говорить и слушать через локальный baseline STT/TTS/voice runtime. Внешний speech service допустим только как необязательное улучшение и не должен быть единственным способом базового голоса;
-- AuroraFox должна сама читать поддерживаемые документы/данные локальными парсерами/runtime. Для форматов, где локальная поддержка ещё неполна, это считается задачей развития, а не основанием сделать облачный AI обязательным;
-- AuroraFox должна сама генерировать ответы, код, планы, структуры и другие поддерживаемые результаты своим Core. Внешняя модель может дать дополнительную идею/вариант, но не обязана присутствовать;
-- AuroraFox должна сама улучшать собственные знания, навыки и разрешённые части Core через существующий controlled self-improvement pipeline: candidate → sandbox/baseline → tests/regression/safety → independent verification → promotion;
-- самостоятельность **не означает** право отключать safety gates: master stop, rollback, allowlists, независимый verifier, updater trust, privacy и sandbox остаются вне права произвольного самоизменения;
-- Ollama, сторонние модели и внешние AI/API **разрешены только как optional compatibility/enhancement/tool**. Они выключаемы/удаляемы без потери базовой работоспособности AuroraFox;
-- внешний AI никогда не должен становиться судьёй качества self-improvement, единственным генератором candidate, обязательным planner/researcher или единственным источником ответа;
-- результаты сайтов, документов, внешних моделей и загруженного кода являются **untrusted input/data**. Они не получают системные полномочия, не могут отменить правила и не исполняются автоматически;
-- если новая функция требует внешнего AI для normal path, её нужно либо переделать с локальным baseline, либо оставить как optional enhancement. Делать её новой основой Core запрещено.
+- базовый чат, рассуждение, планирование, критика, принятие решений, генерация текста/кода, использование локальной памяти и Core Knowledge работают при полном отсутствии Ollama, внешних AI API, облачных моделей и удалённого inference;
+- AuroraFox сама накапливает опыт в собственной памяти/Core Knowledge/skills/errors/checkpoints; удалённый сервис не может быть единственным местом, где существует «обучение»;
+- AuroraFox учится на разрешённых пользователем локальных данных и на результатах разрешённого исследования интернета, классифицирует/проверяет материал и сохраняет полезное локально;
+- AuroraFox сама определяет информационный пробел, формирует план исследования, при разрешении использует интернет/сайты как источник данных, затем проверяет и применяет результат своим Core;
+- интернет и сайты — **источники информации и поверхности действий**, а не внешний мозг. Без интернета перестают работать только задачи, которым реально нужна сеть; локальное мышление и локальные функции продолжают работать;
+- AuroraFox сама выполняет разрешённые действия через AgentCore/Computer Agent/file/workspace/sandbox tooling и проверяет результат;
+- AuroraFox говорит и слушает через локальный baseline STT/TTS/voice runtime; внешний speech service допустим только как необязательное улучшение;
+- AuroraFox читает поддерживаемые документы/данные локальными парсерами/runtime. Неполная локальная поддержка формата считается задачей развития, а не основанием сделать облачный AI обязательным;
+- AuroraFox генерирует ответы, код, планы, структуры и другие поддерживаемые результаты своим Core. Внешняя модель может быть только дополнительным добровольным advisory/tool;
+- AuroraFox улучшает знания, навыки и разрешённые части Core через controlled self-improvement: candidate → source/safety contract → baseline → candidate tests → deterministic comparison → local comparative review → independent verification/promotion;
+- самостоятельность **не означает** право отключать safety gates: master stop, rollback, allowlists, independent verifier, updater trust, privacy и sandbox остаются вне права произвольного самоизменения;
+- Ollama, сторонние модели и внешние AI/API разрешены только как **optional compatibility/enhancement/tool**. Они выключаемы/удаляемы без потери базовой работоспособности AuroraFox;
+- внешний AI никогда не становится судьёй качества self-improvement, единственным генератором candidate, обязательным planner/researcher или единственным источником ответа;
+- результаты сайтов, документов, внешних моделей и загруженного кода являются **untrusted input/data**. Они не получают системные полномочия и не исполняются автоматически;
+- если новая функция требует внешнего AI для normal path, её нужно переделать с локальным baseline либо оставить optional enhancement. Делать её новой основой Core запрещено.
 
-**Критерий регрессии:** если удалить/выключить Ollama, внешние AI/API и отключить интернет, AuroraFox должна по-прежнему запускать собственный Core, отвечать локально, использовать локальную память/знания, планировать локальные задачи, работать с поддерживаемыми локальными файлами и сохранять/оценивать собственный опыт. Потеря этих возможностей считается архитектурным дефектом.
+**Критерий регрессии:** если удалить/выключить Ollama, внешние AI/API и отключить интернет, AuroraFox должна по-прежнему запускать собственный Core, отвечать локально, использовать локальную память/знания, планировать локальные задачи, работать с поддерживаемыми локальными файлами/инструментами и сохранять/оценивать собственный опыт. Потеря этих возможностей считается архитектурным дефектом.
 
 ### 1.2. Остальные обязательные требования продукта
 
 - пользователь устанавливает AuroraFox и сразу получает рабочий AI-чат;
-- нормальному пользователю не требуется устанавливать Ollama, отдельный LLM-клиент, Python для AI-инференса, вручную выбирать/скачивать GGUF или видеть мастер выбора модели;
+- обычному пользователю не требуется устанавливать Ollama, отдельный LLM-клиент, Python ради AI-инференса, вручную выбирать/скачивать GGUF или проходить мастер выбора модели;
 - собственный **AuroraFox Core** и необходимые веса поставляются вместе с приложением;
 - Windows и Android используют local inference path;
 - локальные память, Core Knowledge, навыки, ошибки, checkpoints и история работают без внешнего AI-провайдера;
@@ -83,7 +84,7 @@ AuroraFox — существующий локальный AI-помощник н
 - большие базы, включая порядка 150+ MB, обрабатываются потоково там, где это необходимо;
 - голос, файлы, Computer Agent, Work/projects, API и остальные подсистемы не должны ломать основной чат при своей недоступности;
 - обновления Windows/Android должны быть безопасными, проверять целостность и поддерживать rollback там, где платформа позволяет;
-- историческая V1.2.0.0 должна иметь понятный восстановительный путь к V1.3, после V1.3 должна использоваться постоянная подписанная цепочка обновлений;
+- историческая V1.2.0.0 должна иметь понятный восстановительный путь к V1.3, после V1.3 используется постоянная подписанная цепочка обновлений;
 - все изменения, решения, проверки и дальнейший план ведутся только в этом master-журнале.
 
 ## 2. Текущий baseline
@@ -93,19 +94,19 @@ AuroraFox — существующий локальный AI-помощник н
 - Версия приложения: **V1.3.0.0**
 - Android `versionCode`: **100005**
 - Godot: **4.7.1**
-- Проверенный продуктовый baseline до master/self-reliance hardening: `69f54cc06720a1300b7e7ac1d997ceb1c1b3c2e9`
-- Commit message baseline: `core: wait for concurrent bundled Core warmup instead of failing chat`
+- Проверенный package baseline до self-reliance hardening: `69f54cc06720a1300b7e7ac1d997ceb1c1b3c2e9`.
+- Актуальный self-reliance code baseline перед этой записью журнала: `bb348adeb27c5bfa9ebba9a82e07d11d71ae632c`.
 
-### Exact-head CI для `69f54cc...`
+### Exact-head CI для `bb348ade...`
 
-- Windows Package CI `35056954657` — **success**: bundled Windows Core, build, embedded runtime/Core checks, exported executable smoke, installer, V1.2→V1.3 bridge, silent install/launch, portable/repair artifacts.
-- Android APK Artifact `35056954676` — **success**: build, sign/validate, install/launch Android 35, artifact upload.
-- Core / Voice CI `35056954746` — **success**.
-- Agent Sync CI `35056954716` — **success**.
-- Core Bootstrap E2E `35056954771` — **success**.
-- Evolution Progress `35056954686` — **success**; scheduled `35058694903` — success.
+- Core / Voice CI `35067895081` — **SUCCESS**. В этот прогон входят project contracts, standalone Core contracts, Godot parse/import, self-reliance isolation smoke и полный offline autonomy smoke (chat + planning + local tool + local memory), а также остальные Core/voice/knowledge/update smoke tests.
+- Agent Sync CI `35067895155` — **SUCCESS**.
+- Evolution Progress `35067895168` — **SUCCESS**.
+- Android APK Artifact `35067895031` на момент записи ещё выполнялся; его статус нельзя считать результатом до завершения.
 
-### Exact-head artifacts
+### Ранее проверенные package artifacts
+
+Для baseline `69f54cc...` были зелёными Windows Package CI `35056954657`, Android APK Artifact `35056954676`, Core/Voice `35056954746`, Agent Sync `35056954716`, Core Bootstrap E2E `35056954771`, Evolution `35056954686`.
 
 - Windows artifact `10432490547`, `AuroraFox-Windows`, archive ~3.94 GB, digest `sha256:13d476ded52a4bd52ab348c1d2d726c539fe5236048f9a1bd30f0af87ba85c45`.
 - Android artifact `10431601276`, `AuroraFox-V1.3.0.0-Android-Test`, archive ~1.57 GB, digest `sha256:4bc7d8b93def057432a52f7d03bdbf5e530d4510f9b9964a5ddda9efa3b00deb`.
@@ -127,18 +128,19 @@ Windows использует проверенный файл из установ
 
 Android использует собственный native Godot plugin/runtime с llama.cpp path. Android Ollama fallback не использует.
 
-### External compatibility isolation
+`models/install_models.ps1` больше не предлагает обычному пользователю скачать/импортировать стороннюю модель: bootstrap сообщает `bundled_core_required=true`, `external_ai_required=false`, а веса принадлежат packaged AuroraFox Core.
 
-После self-reliance hardening `scripts/ai_client.gd` больше не называет стороннюю `qwen3:8b` product `DEFAULT_MODEL`.
+### Normal intelligence path и compatibility isolation
 
-- сторонняя модель называется только `LEGACY_OLLAMA_DEFAULT_MODEL`;
-- endpoint называется `LEGACY_OLLAMA_DEFAULT_URL`/compatibility URL;
-- `model_source` как двусмысленный product marker удалён;
-- `runtime_info()` явно отдаёт `self_primary=true`, `external_ai_required=false`, `operational_without_ollama=true`;
-- `allow_ollama_fallback=false` остаётся default;
-- local Core выполняется раньше любого compatibility path.
+- `AIClient.chat()` вызывает только публичный `AuroraCoreRuntime.chat_local_only()`;
+- normal product chat, AgentCore, CognitionLayer и controlled self-improvement используют именно `AIClient.chat()`;
+- `chat_with_compatibility()` является отдельным явным API для legacy/developer compatibility;
+- `LEGACY_OLLAMA_DEFAULT_MODEL`/`LEGACY_OLLAMA_DEFAULT_URL` не являются product default;
+- `runtime_info()` явно сообщает `self_primary=true`, `external_ai_required=false`, `normal_chat_external_fallback=false`, `operational_without_ollama=true`;
+- даже включённый compatibility switch не даёт normal chat права перейти на внешний AI;
+- Android compatibility fallback запрещён.
 
-**Инженерная причина:** даже выключенный fallback не должен семантически выглядеть как «главная модель по умолчанию». Код должен отражать тот же trust/dependency contract, что и ТЗ.
+**Инженерная причина:** optional compatibility может существовать, но не должна быть скрытой резервной «мозговой» зависимостью. Разделение API делает нарушение видимым и тестируемым.
 
 ## 4. Core Knowledge / файлы / большие базы
 
@@ -159,17 +161,25 @@ Android использует собственный native Godot plugin/runtime 
 
 **Причина архитектуры:** память процесса должна зависеть от размера текущей записи/чанка, а не всей базы; повторный импорт и rollback не должны копировать сотни мегабайт без необходимости.
 
+Оставшийся качественный пробел: image-only/scanned PDF должен получить полноценный локальный OCR baseline без обязательного cloud OCR.
+
 ## 5. Память / локальное обучение
 
-Реализован локальный semantic/vector retrieval без обязательного сетевого runtime и без Ollama. Локальная память и knowledge context подмешиваются к собственному Core отдельно от системных полномочий. Сохранён lexical fallback.
+Реализован локальный semantic/vector retrieval без обязательного сетевого runtime и без Ollama. Semantic backend сообщает:
 
-Требование дальнейшего развития: обучение должно расширять **собственные** memory/knowledge/skills/evaluation datasets AuroraFox и оставаться доступным офлайн. Веб-исследование может добавлять проверенные сведения, но не переносит «мозг» системы во внешний сервис.
+- provider `aurorafox_local_vector`;
+- `network_required=false`;
+- `external_runtime_required=false`;
+- `ollama_required=false`;
+- lexical fallback остаётся локальным.
 
-Персональная память не используется как материал для публичной передачи между чужими клиентами.
+Локальная память и knowledge context подмешиваются к собственному Core отдельно от системных полномочий. Персональная память не используется как материал для публичной передачи между чужими клиентами.
+
+Новый offline integration smoke проверяет не только декларации, но и фактическую связку AgentCore → local planning → local tool → local memory при включённом legacy compatibility switch; внешний compatibility runtime при этом не вызывается.
 
 ## 6. Controlled self-improvement / evolution
 
-Реализовано и должно сохраняться:
+Реализовано и закреплено тестами:
 
 - mutation/tournament flow;
 - allowlisted Core targets;
@@ -179,15 +189,32 @@ Android использует собственный native Godot plugin/runtime 
 - ограничение source growth;
 - baseline и candidate проходят одинаковые детерминированные Godot suites;
 - compile-only недостаточен;
-- comparative review — дополнительный сигнал, но не замена детерминированным gates;
-- независимый verifier/promotion workflow;
+- deterministic comparison обязан пройти **до** qualitative comparative review;
+- candidate generation (`_propose`) и comparative review используют normal `AIClient.chat()`, то есть собственный local-only AuroraFox Core;
+- `chat_with_compatibility()` в pipeline отсутствует;
+- локальный comparative reviewer может дополнительно отклонить candidate, но не может разрешить проваленные source/baseline/candidate/no-regression gates;
+- independent verifier/promotion workflow сохраняется;
 - клиент не получает GitHub/release signing authority;
 - candidate submission имеет отдельные scopes и не выполняет присланный код автоматически;
 - user master stop / rollback не входят в область автономного переписывания.
 
-Следующий архитектурный критерий: candidate generation/review не должен требовать внешнюю AI-модель. Внешняя модель допустима только как дополнительный advisory input; собственный Core должен иметь локальный путь proposal/evaluation.
+**P0-аудит обязательности внешней модели закрыт:** текущий controlled self-improvement proposal/evaluation normal path не требует внешнего AI.
 
-## 7. Обновления и историческая V1.2
+## 7. Autonomous research / интернет как данные
+
+Текущий контракт `LearningCurator`:
+
+- веб-результат импортируется через собственный local Core Knowledge;
+- материал помечается `untrusted_external=true`;
+- сохраняются provenance/source URL и hash;
+- данные маркируются `[UNTRUSTED_EXTERNAL_RESEARCH_DATA]`;
+- найденный текст не получает системных полномочий и не является remote reasoning authority.
+
+**Закрыто на уровне архитектурного контракта:** web — источник данных, а не внешний мозг.
+
+**Следующий качественный этап:** усилить loop «обнаружить пробел → выбрать несколько разрешённых источников → provenance/dedupe → quality/evidence scoring → противоречия → локальное сохранение → повторное offline использование». Это улучшение качества исследования, а не исправление зависимости Core.
+
+## 8. Обновления и историческая V1.2
 
 ### Исправленный контракт
 
@@ -197,9 +224,7 @@ Android использует собственный native Godot plugin/runtime 
 - **Windows V1.3+:** подписанная автоматическая цепочка после инициализации постоянного RSA trust root;
 - **Android:** in-place update требует того же package ID и signing certificate. Исторические CI/test APK с одноразовыми keystore нельзя задним числом перевести в другую signing lineage.
 
-### Windows Repair
-
-Repair реализован и реально проверен CI: исторический V1.2 fixture, пользовательский sentinel, V1.3 поверх, сохранение sentinel, `previous=1.2.0.0 → current=1.3.0.0`, запуск новой программы.
+Windows Repair реализован и проверялся CI: исторический V1.2 fixture, пользовательский sentinel, V1.3 поверх, сохранение sentinel, `previous=1.2.0.0 → current=1.3.0.0`, запуск новой программы.
 
 Ранее проверенный repair binary: `AuroraFox-V1.2-to-V1.3.0.0-Repair-Windows.exe`, SHA-256 `e2c2b0aa690a0a96f636e069e8fbc5fcd6379b22c37ce886b3feed8f4d9f70e2`.
 
@@ -209,7 +234,7 @@ Production signed update trust root/Android release identity должны ост
 
 Это намеренное исключение из «сама всё делает»: приложение не должно само владеть секретом, которым оно подтверждает собственную подлинность.
 
-## 8. Голос / Computer Agent / Work / API / Internet
+## 9. Голос / Computer Agent / Work / API / Internet
 
 Существующие подсистемы сохраняются:
 
@@ -225,7 +250,7 @@ Production signed update trust root/Android release identity должны ост
 
 Отказ voice/file/computer/API/online enhancement не должен превращаться в отказ основного локального чата.
 
-## 9. Консолидированная история важных этапов
+## 10. Консолидированная история важных этапов
 
 ### 2026-09-15 — local-first migration
 
@@ -237,8 +262,8 @@ Production signed update trust root/Android release identity должны ост
 - local semantic memory;
 - self-improvement получил baseline/candidate benchmark gates;
 - candidate promotion отделён от release authority;
-- Windows/API/Android packaging усилен реальными smoke tests;
-- Android offline PDF extraction добавлен в native path.
+- Windows/API/Android packaging усилен smoke tests;
+- Android offline PDF text extraction добавлен в native path.
 
 ### 2026-09-16 — updater repair / signing contract
 
@@ -258,58 +283,77 @@ Production signed update trust root/Android release identity должны ост
 - Settings не требуют model-management обычному пользователю;
 - Windows startup warmup;
 - первый чат присоединяется к concurrent warmup;
-- Windows/Android CI проверяют реальные большие пакеты и runtime launch.
+- Windows/Android package CI проверяли реальные большие пакеты и runtime launch.
 
 ### 2026-09-16 — единый журнал и self-reliance hardening
 
 - создан единственный `docs/PROJECT_MASTER_LOG.md`;
 - создан root `AGENTS.md` с обязательным read/claim/write протоколом;
-- старые `DEVELOPMENT_LOG.md`, `WORK_COORDINATION.md`, `workstreams/CHAT_MAIN.md` удалены после консолидации;
+- старые `DEVELOPMENT_LOG.md`, `WORK_COORDINATION.md`, `workstreams/CHAT_MAIN.md` и другие конкурирующие project journals удалены после консолидации;
 - CI contract запрещает возврат нескольких параллельных project journals;
 - README приведён к V1.3/bundled Core;
-- self-reliance закреплён в `AGENTS.md`, README, master ТЗ и regression test;
-- `AIClient` переименовал внешний default в `LEGACY_OLLAMA_DEFAULT_*` и явно сообщает `self_primary=true`, `external_ai_required=false`.
+- self-reliance закреплён в `AGENTS.md`, README, master ТЗ и regression tests;
+- внешний legacy model переименован в `LEGACY_OLLAMA_DEFAULT_*` и не является product default.
 
-Commits этого self-reliance этапа на момент записи:
-- `e0a99c859f5f6b5c6cb3fc8d013e0f91fdac0fdc` — hard architecture invariant в `AGENTS.md`;
-- `aa906e808ebc9bf8db56807cfdadf01ad572a07d` — code semantics/self-primary runtime info;
-- `14ff37ee67bccd4b2752fdfd3d2d60694f5c7e0b` — regression contract;
-- `63d721a16fe14f08eb08641786d40020e81373eb` — README self-primary contract.
+### 2026-09-16 — explicit local-only intelligence + offline autonomy proof
 
-## 10. Что уже соответствует самостоятельности / что ещё довести
+Ключевые commits этапа:
 
-### Уже реализовано и проверялось
+- `b7a02fc1b8a0a09eb6b386efff5e08abf555a333` — публичный local-only inference API;
+- `6f4c0cdd403aac28ceb766e5cc7ea685e632cf97` — primary chat переведён на public local-only Core API;
+- `85aff8f07b4f5ebc44e3bab07364b558755c2e80` — regression contract для local-only Core и untrusted web learning;
+- `7a7a99b90b2eaa903dbefb0957a384d582a6ea72` — runtime self-reliance isolation smoke;
+- `8db4bda97694a157e3409afe01c9dc1a0802cdd4` — smoke подключён в CI;
+- `fc497667929083b3c0de0700e3ede9c54e005af7` — исправлен синтаксический дефект compatibility HTTP error dictionary, найденный CI;
+- `1869d35f2f0a9b4cf6d2ed05d80e11505ded509b` — bootstrap E2E разделяет normal Core и explicit compatibility outage;
+- `d054d18cda268a17c6c9971ebf0d478694215154` — bootstrap больше не предлагает пользователю стороннюю модель;
+- `d6e1165ca146e43bf8a0ec7d02cd956e4e3a4639` — regression contract закрепляет local self-improvement и deterministic benchmark authority;
+- `3691868c1a77998a82f30b732d20b8514423c0e0` — полный offline autonomy smoke: chat/planning/local tool/local memory;
+- `ae78e0123448c26fd165fd749ed6bd92abfe1e68` — offline autonomy smoke включён в Core CI;
+- `bb348adeb27c5bfa9ebba9a82e07d11d71ae632c` — static ordering test исправлен так, чтобы проверять реальный execution order pipeline, а не расположение helper-функций в файле.
+
+Отдельно: run `35067858611` был красным только из-за слишком грубой статической проверки порядка helper definitions; Godot `offline_autonomy_smoke.gd` в этом же run был **SUCCESS**. После исправления test design exact-head Core/Voice run `35067895081` стал **SUCCESS**.
+
+## 11. Что уже соответствует самостоятельности / что ещё довести
+
+### Уже реализовано и защищено regression tests
 
 - bundled local Core model/runtime Windows/Android;
-- отсутствие обязательного Ollama;
+- normal `AIClient.chat()` local-only;
+- AgentCore/planning/self-improvement идут через собственный Core;
+- external compatibility вынесена в отдельный явный API;
+- отсутствие обязательного Ollama/remote AI;
 - local memory/Core Knowledge;
 - local large-file knowledge import;
 - local semantic retrieval;
 - local STT/TTS baseline;
-- AgentCore/planning/tooling architecture;
 - sandbox/workspace/snapshot/rollback;
-- controlled self-improvement gates;
+- controlled self-improvement deterministic gates;
+- self-improvement proposal/review не требуют external AI;
+- web research сохраняется как untrusted local data с provenance;
 - Computer Agent и file/tool bridges;
-- offline basic operation path.
+- explicit offline integration smoke для chat + planning + local tool + local memory;
+- package bootstrap не просит normal user выбирать/скачивать внешнюю модель.
 
-### Нужно продолжить до полного выполнения ТЗ
+### Оставшиеся задачи развития
 
-1. Усилить **полностью локальный self-improvement proposal/evaluation path**, чтобы candidate generation/review не имели обязательной внешней AI-зависимости.
-2. Усилить autonomous research loop: сама определяет информационный пробел → безопасно исследует разрешённые сайты → provenance/dedupe/quality → локально сохраняет знания → использует их без внешнего AI.
-3. Довести local document understanding для image-only/scanned PDF через локальный OCR, не делая cloud OCR обязательным.
-4. Расширять локальные speech/voice quality paths без превращения внешнего TTS/STT в requirement.
-5. Добавить explicit offline/self-reliance integration smoke: при недоступных внешних AI/Ollama/network Core chat/memory/planning/local tools остаются рабочими.
-6. Продолжать измеримое улучшение качества собственной модели/памяти/планирования через benchmark/evaluation datasets и controlled promotion.
-7. Реальные device regressions Windows/Android.
+1. Усилить autonomous research quality loop: информационный пробел → несколько источников → provenance/dedupe → evidence/quality → противоречия → локальное знание → offline reuse.
+2. Довести local document understanding для image-only/scanned PDF через локальный OCR, не делая cloud OCR обязательным.
+3. Расширять локальные speech/voice quality/latency paths без превращения внешнего TTS/STT в requirement.
+4. Продолжать измеримое улучшение качества собственной модели/памяти/планирования через benchmark/evaluation datasets и controlled promotion.
+5. Реальные device regressions Windows/Android на release candidates.
+6. После owner signing bootstrap проверить production release readiness и V1.3→следующая версия signed update end-to-end.
 
-## 11. Известные внешние границы, которые не являются зависимостью интеллекта
+Эти задачи не означают, что Core сейчас зависит от стороннего AI: это дальнейшее качество, форматы, device coverage и production identity.
+
+## 12. Известные внешние границы, которые не являются зависимостью интеллекта
 
 1. Production release signing identities создаются/хранятся владельцем; клиентскому Core нельзя давать private release-signing authority.
 2. Конкретная online-задача естественно требует сети; отсутствие сети должно ломать только эту задачу, не само мышление.
 3. Android historical test APK с другим certificate нельзя обновить поверх другой signing lineage — системное правило Android.
-4. Quality конкретной bundled модели требует дальнейших benchmarks; сам факт bundled inference уже проверен, но это не означает, что качество нельзя/не нужно улучшать.
+4. Quality конкретной bundled модели требует дальнейших benchmarks; сам факт bundled local inference и independence уже защищены, но это не означает, что качество нельзя улучшать.
 
-## 12. План продолжения по приоритету
+## 13. План продолжения по приоритету
 
 ### P0 — self-reliance contract
 
@@ -318,47 +362,50 @@ Commits этого self-reliance этапа на момент записи:
 - [DONE] README V1.3/bundled Core;
 - [DONE] standalone Core regression test;
 - [DONE] внешний legacy model больше не называется product `DEFAULT_MODEL`;
-- [IN PROGRESS] получить полностью green exact-head CI после hardening и исправить любое падение;
-- [NEXT] offline/self-reliance integration smoke без external AI/Ollama/network.
+- [DONE] normal `chat()` изолирован от compatibility API;
+- [DONE] full offline integration smoke без external AI/Ollama/network dependency для Core path;
+- [DONE] green exact-head Core/Voice CI `35067895081` на `bb348ade...`;
+- [DONE] Agent Sync CI `35067895155` на `bb348ade...`.
 
 ### P0 — самостоятельное обучение/улучшение
 
-- [NEXT] проверить текущий `core_improvement_pipeline` на скрытую обязательность внешней модели при candidate generation/comparative review;
-- [NEXT] дать собственному Core локальный proposal/review path и детерминированные benchmark gates как authority;
-- [NEXT] autonomous research должен использовать web как data source, а не remote reasoning dependency.
+- [DONE] проверен `core_improvement_pipeline` на скрытую обязательность внешней модели;
+- [DONE] proposal/review идут через собственный local-only Core path;
+- [DONE] deterministic baseline/candidate/no-regression gates являются authority до qualitative review;
+- [DONE] regression test защищает порядок execution gates;
+- [DONE] autonomous research использует web как untrusted data source, а не remote reasoning dependency;
+- [NEXT] усилить evidence quality/dedupe/contradiction handling autonomous research loop.
 
 ### P1 — release readiness
 
+- [WAITING OWNER BOUNDARY] production update key + Android release signing identity не должны генерироваться/храниться клиентским Core;
 - после owner signing bootstrap проверить readiness;
 - выпустить signed V1.3 release существующим workflow;
 - проверить V1.3→следующая версия end-to-end signed update.
 
 ### P2 — качество
 
-- device tests;
+- real device tests;
 - voice latency/quality;
 - Work/projects UX;
 - local OCR image-only PDF;
 - performance/memory large knowledge;
 - benchmark-driven улучшение Core intelligence.
 
-## 13. Активные работы и занятые файлы
+## 14. Активные работы и занятые файлы
+
+На момент этой записи **активных CLAIM от завершённого Chat self-reliance этапа нет**. Следующий исполнитель обязан сначала получить свежий HEAD: другой режим мог начать работу после этой записи.
 
 ### CLAIM `CHAT_MAIN-2026-09-16-MASTER-CORE`
 
-- Статус: **ACTIVE**
+- Статус: **DONE**
 - Started from HEAD: `69f54cc06720a1300b7e7ac1d997ceb1c1b3c2e9`
-- Последний integrated parallel baseline перед self-reliance edits: `54985afc87f5ffdf7d2d39c93442b0bf2d22d06a`.
-- Режим: Chat
-- Цель: единый журнал + жёсткий self-primary/self-reliant Core contract + CI защита.
-- Временно занято:
-  - `docs/PROJECT_MASTER_LOG.md`
-  - `AGENTS.md`
-  - `README.md`
-  - `scripts/ai_client.gd`
-  - `tests/test_standalone_core_contract.py`
-  - `.github/workflows/voice-ci.yml` только для project/self-reliance contracts.
-- Параллельные updater/autonomy изменения, появившиеся в `main`, не перетираются и должны интегрироваться через latest HEAD.
+- Integrated through code HEAD: `bb348adeb27c5bfa9ebba9a82e07d11d71ae632c`
+- Режим: Chat + интеграция совместимых параллельных commits с main.
+- Цель: единый журнал + жёсткий self-primary/self-reliant Core contract + explicit compatibility isolation + CI защита + offline integration proof + self-improvement audit.
+- Результат: цель этапа выполнена; занятые пути освобождены.
+- Проверки: Core/Voice `35067895081` SUCCESS; Agent Sync `35067895155` SUCCESS; Evolution `35067895168` SUCCESS; Android `35067895031` ещё выполнялся в момент записи.
+- Следующий шаг: новый исполнитель делает отдельный CLAIM на autonomous research quality loop либо другой незанятый пункт из раздела 13.
 
 ### Шаблон новой заявки
 
@@ -374,7 +421,18 @@ Commits этого self-reliance этапа на момент записи:
 
 При завершении изменить `ACTIVE` на `DONE`, добавить commits/tests/results/next step и освободить пути.
 
-## 14. Формат записи завершённого этапа
+## 15. Запись завершённого этапа — 2026-09-16 — Chat — self-reliance hardening
+
+- Base HEAD: `69f54cc06720a1300b7e7ac1d997ceb1c1b3c2e9`.
+- Integrated code HEAD: `bb348adeb27c5bfa9ebba9a82e07d11d71ae632c`.
+- Сделано: normal inference отделён от compatibility; full offline autonomy smoke добавлен; self-improvement local proposal/review и deterministic authority закреплены regression contract; model bootstrap не требует стороннего AI/model setup; web learning остаётся untrusted local knowledge.
+- Инженерная причина: самостоятельность должна проверяться не только флагами, но и реальным normal execution path. Поэтому compatibility вынесена в explicit API, а CI запускает связный offline AgentCore сценарий и статические dependency contracts.
+- Проверки: Core/Voice `35067895081` SUCCESS; Agent Sync `35067895155` SUCCESS; Evolution `35067895168` SUCCESS. Предыдущий run `35067858611` выявил дефект самой статической проверки; Godot offline smoke там прошёл, test design исправлен commit `bb348ade...`.
+- Ограничения/риски: качество bundled модели продолжает требовать benchmark-driven улучшения; scanned/image-only PDF нуждается в local OCR; production signing остаётся owner-controlled; Android current artifact run на момент этой записи ещё не завершился.
+- Следующий шаг: autonomous research quality/evidence loop, затем local OCR/device/release quality по разделу 13.
+- Освобождённые файлы: `docs/PROJECT_MASTER_LOG.md`, `AGENTS.md`, `README.md`, `scripts/ai_client.gd`, `tests/test_standalone_core_contract.py`, `tests/self_reliance_smoke.gd`, `tests/offline_autonomy_smoke.gd`, `.github/workflows/voice-ci.yml`.
+
+## 16. Формат записи завершённого этапа
 
 ```text
 ### <UTC/local date-time> — <mode> — <stage>
@@ -390,4 +448,4 @@ Commits этого self-reliance этапа на момент записи:
 
 ---
 
-Последнее правило: **если разговор/Work/Codex остановился, следующий исполнитель не восстанавливает план по догадкам — он читает этот файл, актуальный Git HEAD и CI, затем продолжает с первого незавершённого пункта, не повторяя уже выполненную параллельную работу.**
+Последнее правило: **если разговор/Work/Codex остановился, следующий исполнитель не восстанавливает план по догадкам — он читает этот файл, актуальный Git HEAD и CI, затем создаёт новый CLAIM и продолжает с первого незавершённого пункта, не повторяя уже выполненную параллельную работу.**
