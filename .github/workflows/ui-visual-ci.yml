@@ -13,6 +13,7 @@ on:
       - 'tests/ui_state_smoke.gd'
       - 'tests/ui_visual_capture.gd'
       - 'tests/ui_state_visual_capture.gd'
+      - 'tests/ui_work_computer_visual_capture.gd'
       - 'main.tscn'
       - 'project.godot'
       - '.github/workflows/ui-visual-ci.yml'
@@ -118,6 +119,46 @@ jobs:
               assert required in surfaces, (required, sorted(surfaces))
           assert any(item['requested_viewport'] == {'width': 960, 'height': 640} for item in data['captures'])
           assert any(item['requested_viewport'] == {'width': 480, 'height': 960} for item in data['captures'])
+          print(json.dumps(data, ensure_ascii=False, indent=2))
+          PY
+
+      - name: Render Work and Computer desktop surfaces
+        shell: bash
+        env:
+          GODOT_AUDIO_DRIVER: Dummy
+          AURORA_UI_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          xvfb-run -a -s '-screen 0 1600x1000x24' timeout 90s ./godot --path . --rendering-method gl_compatibility --audio-driver Dummy --script tests/ui_work_computer_visual_capture.gd
+
+          images=(
+            artifacts/ui/desktop_wide_work_1440x900.png
+            artifacts/ui/desktop_wide_computer_1440x900.png
+            artifacts/ui/desktop_compact_work_960x640.png
+            artifacts/ui/desktop_compact_computer_960x640.png
+          )
+          for image in "${images[@]}"; do
+            test -s "$image"
+            file "$image"
+          done
+
+          test -s artifacts/ui/work_computer_acceptance_manifest.json
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          data = json.loads(Path('artifacts/ui/work_computer_acceptance_manifest.json').read_text(encoding='utf-8'))
+          expected_sha = os.environ['AURORA_UI_HEAD_SHA']
+          assert data['head_sha'] == expected_sha, (data['head_sha'], expected_sha)
+          assert len(data['captures']) == 4, len(data['captures'])
+          assert {item['surface'] for item in data['captures']} == {'work', 'computer'}
+          assert any(item['viewport'] == {'width': 1440, 'height': 900} for item in data['captures'])
+          assert any(item['viewport'] == {'width': 960, 'height': 640} for item in data['captures'])
+          for item in data['captures']:
+              assert item['head_sha'] == expected_sha, item
+              assert item['popup_size']['width'] <= item['viewport']['width'], item
+              assert item['popup_size']['height'] <= item['viewport']['height'], item
           print(json.dumps(data, ensure_ascii=False, indent=2))
           PY
 
