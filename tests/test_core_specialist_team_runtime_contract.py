@@ -36,6 +36,17 @@ def test_specialist_team_runtime_smoke_is_fail_fast_before_full_benchmark() -> N
     assert start < end
 
 
+def test_core_engine_resolution_uses_actions_token_without_weakening_verification() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    start = workflow.index("- name: Prepare verified bundled AuroraFox Core")
+    end = workflow.index("- name: Save bundled Core weights cache")
+    prepare_step = workflow[start:end]
+    assert "AURORAFOX_GITHUB_TOKEN: ${{ github.token }}" in prepare_step
+    assert "GH_TOKEN: ${{ github.token }}" in prepare_step
+    assert "prepare_bundled_windows_core.ps1" in prepare_step
+    assert "if ($LASTEXITCODE -ne 0)" in prepare_step
+
+
 def test_performance_baseline_comes_only_from_successful_main_benchmark_runs() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
     assert "actions: read" in workflow
