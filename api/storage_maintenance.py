@@ -16,6 +16,7 @@ DEFAULT_WARN_DATABASE_BYTES = 192 * 1024 * 1024
 DEFAULT_MIN_FREE_BYTES = 256 * 1024 * 1024
 DEFAULT_WARN_SYNC_CHANGES = 500_000
 DEFAULT_WARN_OPEN_CONFLICTS = 10_000
+MAINTENANCE_META_KEY = "storage_maintenance.last_run_epoch"
 
 
 class StorageMaintenance:
@@ -49,7 +50,6 @@ class StorageMaintenance:
         self.warn_sync_changes = max(1, int(warn_sync_changes))
         self.warn_open_conflicts = max(1, int(warn_open_conflicts))
         self._lock = threading.Lock()
-        self._last_run_monotonic = 0.0
 
     @classmethod
     def from_env(cls, database: AuroraDatabase, root: Path) -> "StorageMaintenance":
@@ -135,15 +135,24 @@ class StorageMaintenance:
             ],
         }
 
-    def maybe_prune(self, *, force: bool = False) -> dict[str, Any]:
-        now_monotonic = time.monotonic()
+    def maybe_prune(self, *, force: bool = False, now: int | None = None) -> dict[str, Any]:
+        current = int(time.time()) if now is None else int(now)
         with self._lock:
-            if not force and self._last_run_monotonic > 0:
-                elapsed = now_monotonic - self._last_run_monotonic
-                if elapsed < self.interval_seconds:
-                    return {"ok": True, "ran": False, "next_in_seconds": int(self.interval_seconds - elapsed)}
-            result = self.prune_safe()
-            self._last_run_monotonic = now_monotonic
+            if not force:
+                raw_last = self.database.get_meta(MAINTENANCE_META_KEY)
+                try:
+                    last_run = int(raw_last) if raw_last is not None else 0
+                except ValueError:
+                    last_run = 0
+                elapsed = current - last_run
+                if last_run > 0 and elapsed < self.interval_seconds:
+                    return {
+                        "ok": True,
+                        "ran": False,
+                        "next_in_seconds": max(1, self.interval_seconds - max(0, elapsed)),
+                    }
+            result = self.prune_safe(now=current)
+            self.database.set_meta(MAINTENANCE_META_KEY, str(current))
             return {"ok": True, "ran": True, **result}
 
     def status(self) -> dict[str, Any]:
