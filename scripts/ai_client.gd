@@ -87,7 +87,7 @@ func warmup() -> Dictionary:
 # AgentCore, self-improvement and normal product chat therefore depend only on
 # AuroraFox-owned local inference.
 func chat(messages: Array, temperature: float = 0.2) -> Dictionary:
-	return await core_runtime._chat_local(_with_knowledge(messages), temperature)
+	return await core_runtime.chat_local_only(_with_knowledge(messages), temperature)
 
 # Explicit optional path for legacy/developer integrations. Callers must choose
 # it intentionally; it is never the normal product or autonomous-intelligence path.
