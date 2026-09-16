@@ -60,12 +60,19 @@ func _init() -> void:
 			store.free()
 			return
 
-	var duplicates: Array = [
-		{"kind":"preference", "content":"Короткие ответы", "source":"dialog"},
-		{"kind":"preference", "content":"Другая запись", "source":"dialog"}
-	]
-	if store._find_exact(duplicates, "  КОРОТКИЕ   ответы ", "preference") != 0:
-		_fail("Exact normalized deduplication failed", 6)
+	# Exact dedupe is a public learn() behavior. Keep this smoke independent from
+	# the private index representation so internal performance refactors do not
+	# invalidate the contract test while normalized duplicates still must collapse.
+	var before_dedupe := store.knowledge.size()
+	store.learn("Короткие ответы", "dialog", 0.70, 0.80, "preference")
+	store.learn("  КОРОТКИЕ   ответы ", "dialog", 0.75, 0.85, "preference")
+	if store.knowledge.size() != before_dedupe + 1:
+		_fail("Exact normalized deduplication through learn() failed", 6)
+		store.free()
+		return
+	var deduped: Dictionary = store.knowledge[store.knowledge.size() - 1]
+	if int(deduped.get("usage_count", 0)) != 1:
+		_fail("Duplicate learn() did not touch the existing item", 6)
 		store.free()
 		return
 

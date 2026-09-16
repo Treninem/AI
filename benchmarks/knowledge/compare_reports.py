@@ -8,7 +8,16 @@ from pathlib import Path
 import sys
 from typing import Any
 
-IDENTITY_FIELDS = ("os", "machine", "cpu_count", "runner_os", "runner_arch")
+IDENTITY_FIELDS = (
+    "os",
+    "machine",
+    "cpu_count",
+    "runner_os",
+    "runner_arch",
+    "processor_name",
+    "godot_version",
+    "godot_architecture",
+)
 THROUGHPUT_MIN_RATIO = 0.75
 LATENCY_MAX_RATIO = 1.50
 RSS_MAX_RATIO = 1.35
@@ -29,9 +38,42 @@ def load(path: str) -> dict[str, Any]:
     return value
 
 
+def _godot_version(value: Any) -> str:
+    if not isinstance(value, dict):
+        return str(value or "")
+    if value.get("string"):
+        return str(value.get("string"))
+    parts = [str(value.get(key, "")) for key in ("major", "minor", "patch", "status")]
+    return ".".join(part for part in parts[:3] if part) + (f"-{parts[3]}" if parts[3] else "")
+
+
+def resolved_identity(report: dict[str, Any]) -> dict[str, Any]:
+    """Return report identity enriched from the actual Godot child runtime.
+
+    GitHub hosted runners can expose the same OS/arch/cpu-count while landing on
+    different CPU models. Absolute timing comparison is therefore allowed only
+    when the child process also reports the same processor and Godot runtime.
+    Older reports remain readable; missing runtime fields simply compare as
+    missing and should not be mixed with newly enriched reports.
+    """
+    raw = report.get("platform_runtime_identity", {})
+    identity = dict(raw) if isinstance(raw, dict) else {}
+    for row in report.get("results", []):
+        if not isinstance(row, dict):
+            continue
+        runtime = row.get("runtime", {})
+        if not isinstance(runtime, dict) or not runtime:
+            continue
+        identity.setdefault("processor_name", str(runtime.get("processor_name", "")))
+        identity.setdefault("godot_architecture", str(runtime.get("architecture", "")))
+        identity.setdefault("godot_version", _godot_version(runtime.get("godot", {})))
+        break
+    return identity
+
+
 def comparable_identity(baseline: dict[str, Any], candidate: dict[str, Any]) -> tuple[bool, list[str]]:
-    left = baseline.get("platform_runtime_identity", {})
-    right = candidate.get("platform_runtime_identity", {})
+    left = resolved_identity(baseline)
+    right = resolved_identity(candidate)
     mismatches = []
     for field in IDENTITY_FIELDS:
         if left.get(field) != right.get(field):
@@ -83,6 +125,8 @@ def compare_reports(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict
         "schema": "aurorafox_knowledge_performance_comparison_v1",
         "comparable": comparable,
         "identity_mismatches": mismatches,
+        "baseline_identity": resolved_identity(baseline),
+        "candidate_identity": resolved_identity(candidate),
         "thresholds": {
             "throughput_candidate_to_baseline_min": THROUGHPUT_MIN_RATIO,
             "latency_candidate_to_baseline_max": LATENCY_MAX_RATIO,
@@ -94,7 +138,7 @@ def compare_reports(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict
     if not comparable:
         output["passed"] = True
         output["comparison_skipped"] = True
-        output["reason"] = "machine/platform identity differs; absolute cross-run timings are not comparable"
+        output["reason"] = "machine/platform/runtime identity differs; absolute cross-run timings are not comparable"
         return output
 
     base_rows = {case_key(row): row for row in baseline.get("results", []) if isinstance(row, dict)}
