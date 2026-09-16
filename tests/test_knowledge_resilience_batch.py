@@ -68,6 +68,16 @@ class KnowledgeResilienceBatchTests(unittest.TestCase):
         for marker in required:
             self.assertIn(marker, text)
 
+    def test_registry_scaling_warms_same_isolated_windows_profile(self) -> None:
+        text = (BENCH / "run_registry_scaling.py").read_text(encoding="utf-8")
+        self.assertIn("import run_knowledge_benchmark_portable as portable", text)
+        self.assertIn("portable.warm_isolated_windows_profile(", text)
+        self.assertIn('"isolated_profile_warmup": warm', text)
+        self.assertLess(
+            text.index("portable.warm_isolated_windows_profile("),
+            text.index("subprocess.Popen("),
+        )
+
     def test_missing_child_report_fails_closed(self) -> None:
         batch = load_batch()
         with tempfile.TemporaryDirectory() as tmp:
