@@ -38,9 +38,10 @@ func _run() -> void:
 	if not initial is Dictionary or not bool(initial.get("ok", false)):
 		_emit({"ok": false, "error": "stable seed import failed", "initial": initial}, 3)
 		return
-	var old_fp := str(initial.get("fingerprint_sha256", ""))
-	var old_revision := int(initial.get("revision", 0))
-	var stable_before := not store.call("search", STABLE_MARKER, 5).is_empty()
+	var old_fp: String = str(initial.get("fingerprint_sha256", ""))
+	var old_revision: int = int(initial.get("revision", 0))
+	var stable_before_results: Variant = store.call("search", STABLE_MARKER, 5)
+	var stable_before: bool = stable_before_results is Array and not (stable_before_results as Array).is_empty()
 
 	var changed := FileAccess.open(SOURCE, FileAccess.WRITE)
 	if changed == null:
@@ -49,11 +50,11 @@ func _run() -> void:
 	changed.store_string(JSON.stringify({"kind": "fact", "content": CANDIDATE_MARKER}))
 	changed.close()
 
-	var registry_constants := KnowledgeSourceRegistryScript.get_script_constant_map()
-	var temp_path := str(registry_constants.get("REGISTRY_TEMP", KnowledgeSourceRegistryScript.REGISTRY_PATH + ".tmp"))
+	var registry_constants: Dictionary = KnowledgeSourceRegistryScript.get_script_constant_map()
+	var temp_path: String = str(registry_constants.get("REGISTRY_TEMP", KnowledgeSourceRegistryScript.REGISTRY_PATH + ".tmp"))
 	_remove_path(temp_path)
-	var temp_abs := ProjectSettings.globalize_path(temp_path)
-	var temp_dir_error := DirAccess.make_dir_recursive_absolute(temp_abs)
+	var temp_abs: String = ProjectSettings.globalize_path(temp_path)
+	var temp_dir_error: Error = DirAccess.make_dir_recursive_absolute(temp_abs)
 	if temp_dir_error != OK:
 		_emit({"ok": false, "error": "cannot create registry temp collision", "code": temp_dir_error, "path": temp_path}, 2)
 		return
@@ -65,16 +66,18 @@ func _run() -> void:
 	KnowledgeSourceRegistryScript.invalidate_runtime_cache()
 	var restarted_store: Variant = KnowledgeStoreScript.new()
 	var restarted_registry: Variant = KnowledgeSourceRegistryScript.new()
-	var stable_after := not restarted_store.call("search", STABLE_MARKER, 5).is_empty()
-	var candidate_gone := restarted_store.call("search", CANDIDATE_MARKER, 5).is_empty()
+	var stable_after_results: Variant = restarted_store.call("search", STABLE_MARKER, 5)
+	var candidate_after_results: Variant = restarted_store.call("search", CANDIDATE_MARKER, 5)
+	var stable_after: bool = stable_after_results is Array and not (stable_after_results as Array).is_empty()
+	var candidate_gone: bool = candidate_after_results is Array and (candidate_after_results as Array).is_empty()
 	var row: Variant = restarted_registry.call("record_for_source", SOURCE)
-	var fp_restored := row is Dictionary and str(row.get("fingerprint_sha256", "")) == old_fp
-	var revision_restored := row is Dictionary and int(row.get("revision", 0)) == old_revision
+	var fp_restored: bool = row is Dictionary and str(row.get("fingerprint_sha256", "")) == old_fp
+	var revision_restored: bool = row is Dictionary and int(row.get("revision", 0)) == old_revision
 	var manager: Variant = KnowledgeManagerScript.new()
 	var recovery: Variant = manager.call("recovery_status")
-	var journals_clean := _journals_clean()
-	var rolled_back := failed is Dictionary and not bool(failed.get("ok", false)) and str(failed.get("transaction", "")) == "rolled_back"
-	var ok := stable_before and rolled_back and stable_after and candidate_gone and fp_restored and revision_restored
+	var journals_clean: bool = _journals_clean()
+	var rolled_back: bool = failed is Dictionary and not bool(failed.get("ok", false)) and str(failed.get("transaction", "")) == "rolled_back"
+	var ok: bool = stable_before and rolled_back and stable_after and candidate_gone and fp_restored and revision_restored
 	ok = ok and recovery is Dictionary and bool(recovery.get("ok", false)) and journals_clean
 	_emit({
 		"ok": ok,
@@ -109,9 +112,9 @@ func _journals_clean() -> bool:
 	return true
 
 func _reset_state() -> void:
-	var registry_constants := KnowledgeSourceRegistryScript.get_script_constant_map()
-	var registry_temp := str(registry_constants.get("REGISTRY_TEMP", KnowledgeSourceRegistryScript.REGISTRY_PATH + ".tmp"))
-	var registry_original := str(registry_constants.get("REGISTRY_ORIGINAL", KnowledgeSourceRegistryScript.REGISTRY_PATH + ".write.original"))
+	var registry_constants: Dictionary = KnowledgeSourceRegistryScript.get_script_constant_map()
+	var registry_temp: String = str(registry_constants.get("REGISTRY_TEMP", KnowledgeSourceRegistryScript.REGISTRY_PATH + ".tmp"))
+	var registry_original: String = str(registry_constants.get("REGISTRY_ORIGINAL", KnowledgeSourceRegistryScript.REGISTRY_PATH + ".write.original"))
 	for path in [
 		KnowledgeStoreScript.DB_PATH,
 		KnowledgeStoreScript.STRUCTURED_PATH,
