@@ -14,15 +14,18 @@ var menu_button: Button
 var back_button: Button
 var composer_margin: MarginContainer
 var sidebar_open := false
-var _base_composer_bottom := 20
+var _base_composer_bottom := 12
 var _poll_left := 0.0
 var _last_keyboard_height := -1
 var _last_safe_area := Rect2i()
 var _last_screen_size := Vector2i()
 var _last_chat_id := ""
 
+func _is_mobile_context() -> bool:
+	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
+
 func _ready() -> void:
-	if OS.get_name() != "Android":
+	if not _is_mobile_context():
 		return
 	_configure_mobile_scale()
 	await get_tree().process_frame
@@ -33,13 +36,13 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(delta: float) -> void:
-	if OS.get_name() != "Android":
+	if not _is_mobile_context():
 		return
 	_poll_left -= delta
 	if _poll_left > 0.0:
 		return
 	_poll_left = KEYBOARD_POLL_SECONDS
-	var keyboard_height := DisplayServer.virtual_keyboard_get_height()
+	var keyboard_height := DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else 0
 	var safe_area := DisplayServer.get_display_safe_area()
 	var screen_size := DisplayServer.screen_get_size()
 	if keyboard_height != _last_keyboard_height or safe_area != _last_safe_area or screen_size != _last_screen_size:
@@ -48,6 +51,9 @@ func _process(delta: float) -> void:
 
 func _configure_mobile_scale() -> void:
 	var screen := DisplayServer.screen_get_size()
+	if bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)):
+		var viewport := get_viewport().get_visible_rect().size
+		screen = Vector2i(int(viewport.x), int(viewport.y))
 	var base := PORTRAIT_BASE if screen.y >= screen.x else LANDSCAPE_BASE
 	var window := get_window()
 	window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
@@ -65,7 +71,7 @@ func _find_layout() -> void:
 	sidebar_nav_slot = parent.find_child("SidebarMobileNavSlot", true, false) as HBoxContainer
 	composer_margin = parent.find_child("ComposerMargin", true, false) as MarginContainer
 	if composer_margin != null:
-		_base_composer_bottom = maxi(12, composer_margin.get_theme_constant("margin_bottom"))
+		_base_composer_bottom = maxi(10, composer_margin.get_theme_constant("margin_bottom"))
 	var store = parent.get("chats")
 	if store is ChatStore:
 		_last_chat_id = store.active_chat_id
@@ -76,9 +82,9 @@ func _on_viewport_size_changed() -> void:
 	call_deferred("_apply_mobile_layout")
 
 func _apply_mobile_layout() -> void:
-	if OS.get_name() != "Android" or root_row == null:
+	if not _is_mobile_context() or root_row == null:
 		return
-	_last_keyboard_height = DisplayServer.virtual_keyboard_get_height()
+	_last_keyboard_height = DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else 0
 	_last_safe_area = DisplayServer.get_display_safe_area()
 	_last_screen_size = DisplayServer.screen_get_size()
 	var insets := _safe_insets_logical()
@@ -112,6 +118,8 @@ func _apply_mobile_layout() -> void:
 	_apply_keyboard_inset()
 
 func _safe_insets_logical() -> Vector4:
+	if bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)) and OS.get_name() != "Android":
+		return Vector4.ZERO
 	var screen := DisplayServer.screen_get_size()
 	var safe := DisplayServer.get_display_safe_area()
 	if screen.x <= 0 or screen.y <= 0:
@@ -137,7 +145,7 @@ func _physical_to_logical_scale() -> float:
 func _apply_keyboard_inset() -> void:
 	if composer_margin == null:
 		return
-	var keyboard_px := DisplayServer.virtual_keyboard_get_height()
+	var keyboard_px := DisplayServer.virtual_keyboard_get_height() if OS.get_name() == "Android" else 0
 	var extra := 0
 	if keyboard_px > 0:
 		var screen_px := DisplayServer.screen_get_size()
@@ -153,7 +161,7 @@ func _ensure_navigation_buttons() -> void:
 		menu_button.name = "MobileMenuButton"
 		menu_button.text = "Чаты"
 		menu_button.tooltip_text = "Открыть список чатов"
-		menu_button.custom_minimum_size = Vector2(72, 48)
+		menu_button.custom_minimum_size = Vector2(70, 44)
 		menu_button.pressed.connect(func(): set_sidebar_open(true))
 		main_nav_slot.add_child(menu_button)
 		_apply_main_button_style(menu_button)
@@ -162,7 +170,7 @@ func _ensure_navigation_buttons() -> void:
 		back_button.name = "MobileBackButton"
 		back_button.text = "Назад"
 		back_button.tooltip_text = "Вернуться в текущий чат"
-		back_button.custom_minimum_size = Vector2(78, 48)
+		back_button.custom_minimum_size = Vector2(74, 44)
 		back_button.pressed.connect(func(): set_sidebar_open(false))
 		sidebar_nav_slot.add_child(back_button)
 		_apply_main_button_style(back_button)
@@ -203,14 +211,14 @@ func _make_touch_friendly(node: Node) -> void:
 		return
 	for child in node.get_children():
 		if child is Button:
-			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, 48.0)
-			child.add_theme_font_size_override("font_size", 16)
+			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, 44.0)
+			child.add_theme_font_size_override("font_size", 15)
 		elif child is LineEdit:
-			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, 50.0)
-			child.add_theme_font_size_override("font_size", 16)
+			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, 46.0)
+			child.add_theme_font_size_override("font_size", 15)
 		elif child is TextEdit:
-			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, 82.0)
-			child.add_theme_font_size_override("font_size", 17)
+			child.custom_minimum_size.y = maxf(child.custom_minimum_size.y, 66.0)
+			child.add_theme_font_size_override("font_size", 16)
 		_make_touch_friendly(child)
 
 func _adjust_mobile_surfaces(node: Node) -> void:
@@ -221,10 +229,10 @@ func _adjust_mobile_surfaces(node: Node) -> void:
 			var margin := child as MarginContainer
 			var left := margin.get_theme_constant("margin_left")
 			var right := margin.get_theme_constant("margin_right")
-			if left > 18:
-				margin.add_theme_constant_override("margin_left", 14)
-			if right > 18:
-				margin.add_theme_constant_override("margin_right", 14)
+			if left > 16:
+				margin.add_theme_constant_override("margin_left", 12)
+			if right > 16:
+				margin.add_theme_constant_override("margin_right", 12)
 		_adjust_mobile_surfaces(child)
 
 	var hint := get_parent().find_child("ComposerHint", true, false) as Label
@@ -233,25 +241,43 @@ func _adjust_mobile_surfaces(node: Node) -> void:
 	var voice_status := get_parent().find_child("VoiceStatus", true, false) as Label
 	if voice_status != null:
 		voice_status.visible = false
+	for redundant in ["VoiceSpeakButton", "VoiceSettingsButton", "ComputerAgentButton"]:
+		var control := get_parent().find_child(redundant, true, false) as Control
+		if control != null:
+			control.visible = false
 	var avatar_slot := get_parent().find_child("AvatarSlot", true, false) as Control
 	if avatar_slot != null:
-		avatar_slot.custom_minimum_size = Vector2(44, 40)
+		avatar_slot.visible = false
+		avatar_slot.custom_minimum_size = Vector2.ZERO
+	var header_actions := get_parent().find_child("MainHeaderActions", true, false) as HBoxContainer
+	if header_actions != null:
+		header_actions.visible = false
 	var header_margin := get_parent().find_child("HeaderMargin", true, false) as MarginContainer
 	if header_margin != null:
 		header_margin.add_theme_constant_override("margin_left", 10)
 		header_margin.add_theme_constant_override("margin_right", 10)
+		header_margin.add_theme_constant_override("margin_top", 8)
+		header_margin.add_theme_constant_override("margin_bottom", 8)
 	var messages_margin := get_parent().find_child("MessagesMargin", true, false) as MarginContainer
 	if messages_margin != null:
-		messages_margin.add_theme_constant_override("margin_left", 12)
-		messages_margin.add_theme_constant_override("margin_right", 12)
-		messages_margin.add_theme_constant_override("margin_top", 12)
+		messages_margin.add_theme_constant_override("margin_left", 10)
+		messages_margin.add_theme_constant_override("margin_right", 10)
+		messages_margin.add_theme_constant_override("margin_top", 10)
+	var composer := get_parent().find_child("ComposerMargin", true, false) as MarginContainer
+	if composer != null:
+		composer.add_theme_constant_override("margin_left", 10)
+		composer.add_theme_constant_override("margin_right", 10)
+		composer.add_theme_constant_override("margin_top", 6)
+	var input := get_parent().find_child("MessageInput", true, false) as TextEdit
+	if input != null:
+		input.custom_minimum_size.y = 66
 
 func _fit_popups(node: Node) -> void:
 	if node == null:
 		return
 	var viewport_size := get_viewport().get_visible_rect().size
-	var max_width := maxi(320, int(viewport_size.x - 28.0))
-	var max_height := maxi(360, int(viewport_size.y - 36.0))
+	var max_width := maxi(320, int(viewport_size.x - 20.0))
+	var max_height := maxi(420, int(viewport_size.y - 28.0))
 	for child in node.get_children():
 		if child is PopupPanel or child is AcceptDialog:
 			var popup := child as Window
