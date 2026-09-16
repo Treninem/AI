@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import math
 import re
@@ -22,34 +23,40 @@ from processor import AuroraVoiceProcessor, prepare_for_speech
 from tts_engine import SileroEngine
 
 CONFIG = json.loads((ROOT / "voice" / "config" / "voice_config.json").read_text(encoding="utf-8"))
-EMOTIONS = json.loads((ROOT / "voice" / "config" / "emotions.json").read_text(encoding="utf-8"))
 OUT = ROOT / "artifacts" / "voice_acoustic"
 OUT.mkdir(parents=True, exist_ok=True)
 
-BASE_SAMPLES = [
-    ("neutral_short", "neutral", 0.45, "Привет. Я Аврора Фокс. Чем я могу помочь тебе сегодня?"),
-    ("neutral_numbers", "neutral", 0.45, "Температура 23 градуса. Давление 2,4 бара."),
-    ("thinking_long", "thinking", 0.65, "Сейчас проверю данные, сравню несколько вариантов и спокойно объясню, какой результат получился."),
-    ("success", "success", 0.70, "Готово! Проверка завершена успешно, ошибок не обнаружено."),
-    ("warning", "warning", 0.70, "Внимание. Давление выше заданного значения, лучше проверить линию подачи воздуха."),
+# This file is intentionally a candidate-only A/B experiment on the isolated
+# voice-quality-targeted-prosody branch. Runtime code stays untouched until the
+# candidate wins the quality gate.
+CASES = [
+    {
+        "id": "persona_morning",
+        "emotion": "happy",
+        "text": "Доброе утро. Я уже здесь и готова спокойно помочь тебе начать день.",
+        "candidate_text": "Доброе утро! Я уже здесь и готова спокойно помочь тебе начать день.",
+        "mode": "punctuation",
+    },
+    {
+        "id": "persona_night",
+        "emotion": "sleepy",
+        "text": "Доброй ночи. Давай закончим последние дела спокойно, без спешки и лишнего шума.",
+        "mode": "ssml_slow",
+    },
+    {
+        "id": "persona_playful",
+        "emotion": "playful",
+        "text": "Ну что, проверим эту идею? Мне уже интересно, какой вариант окажется самым удачным!",
+        "candidate_text": "Ну что? Проверим эту идею! Мне уже интересно, какой вариант окажется самым удачным!",
+        "mode": "punctuation",
+    },
+    {
+        "id": "persona_serious",
+        "emotion": "serious",
+        "text": "Сейчас важно проверить факты, не торопиться с выводами и подтвердить результат.",
+        "mode": "ssml_slow",
+    },
 ]
-
-# Coordinator acceptance set: these WAVs are retained as artifacts so the same
-# female voice can be audited in four deliberately different conversational
-# moods without changing the normal local-only TTS architecture.
-PERSONA_SAMPLES = [
-    ("persona_morning", "happy", 0.58, "Доброе утро. Я уже здесь и готова спокойно помочь тебе начать день."),
-    ("persona_night", "sleepy", 0.58, "Доброй ночи. Давай закончим последние дела спокойно, без спешки и лишнего шума."),
-    ("persona_playful", "playful", 0.72, "Ну что, проверим эту идею? Мне уже интересно, какой вариант окажется самым удачным!"),
-    ("persona_serious", "serious", 0.76, "Сейчас важно проверить факты, не торопиться с выводами и подтвердить результат."),
-]
-
-SAMPLES = BASE_SAMPLES + PERSONA_SAMPLES
-FEMALE_SPEAKERS = ("xenia", "baya", "kseniya")
-# The five stable baseline phrases are enough to detect a speaker regression;
-# persona phrases are evaluated by the full quality gate below instead of
-# tripling their synthesis cost in the speaker sweep.
-SPEAKER_SWEEP_TEXTS = tuple(sample[3] for sample in BASE_SAMPLES)
 
 
 def normalized(text: str) -> str:
@@ -62,45 +69,24 @@ def char_similarity(a: str, b: str) -> float:
     b = normalized(b)
     if not a or not b:
         return 0.0
-    previous = list(range(len(b) + 1))
+    prev = list(range(len(b) + 1))
     for i, ca in enumerate(a, 1):
-        current = [i]
+        cur = [i]
         for j, cb in enumerate(b, 1):
-            current.append(min(current[-1] + 1, previous[j] + 1, previous[j - 1] + (ca != cb)))
-        previous = current
-    distance = previous[-1]
-    return 1.0 - distance / max(len(a), len(b), 1)
+            cur.append(min(cur[-1] + 1, prev[j] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return 1.0 - prev[-1] / max(len(a), len(b), 1)
 
 
-def intelligibility_similarity(original: str, spoken_form: str, recognized: str) -> float:
-    """Accept ASR's normal written form as well as the literal spoken form.
-
-    Russian ASR commonly writes spoken number words back as digits. That is a
-    successful round trip, not a loss of intelligibility, so compare against
-    both the user-visible source and the normalized TTS form.
-    """
-    return max(
-        char_similarity(original, recognized),
-        char_similarity(spoken_form, recognized),
-    )
-
-
-def audio_metrics(audio: np.ndarray, sr: int) -> dict:
+def metrics(audio: np.ndarray, sr: int) -> dict:
     x = np.asarray(audio, dtype=np.float32).reshape(-1)
     peak = float(np.max(np.abs(x))) if x.size else 0.0
     rms = float(np.sqrt(np.mean(np.square(x), dtype=np.float64))) if x.size else 0.0
-    rms_db = 20.0 * math.log10(max(rms, 1e-9))
-    clipping = float(np.mean(np.abs(x) >= 0.999)) if x.size else 0.0
-    dc = float(abs(np.mean(x))) if x.size else 0.0
-    edge_n = max(1, min(x.size // 8, int(sr * 0.01))) if x.size else 1
-    edge_peak = float(max(np.max(np.abs(x[:edge_n])), np.max(np.abs(x[-edge_n:])))) if x.size else 0.0
     return {
         "duration_sec": float(x.size / sr) if sr else 0.0,
         "peak": peak,
-        "rms_dbfs": rms_db,
-        "clipping_ratio": clipping,
-        "dc_offset": dc,
-        "edge_peak_10ms": edge_peak,
+        "rms_dbfs": 20.0 * math.log10(max(rms, 1e-9)),
+        "clipping_ratio": float(np.mean(np.abs(x) >= 0.999)) if x.size else 0.0,
     }
 
 
@@ -111,53 +97,58 @@ def resample_16k(audio: np.ndarray, sr: int) -> torch.Tensor:
     return wav
 
 
-def emotion_values(name: str, intensity: float) -> tuple[float, float, float]:
-    profile = EMOTIONS.get(name, EMOTIONS["neutral"])
-    power = max(0.0, min(1.0, intensity * float(CONFIG.get("emotionality", 0.55))))
-    speed = float(CONFIG.get("speed", 1.0)) * (1.0 + (float(profile.get("speed", 1.0)) - 1.0) * power)
-    pitch_factor = float(CONFIG.get("pitch", 1.0)) * (1.0 + (float(profile.get("pitch", 1.0)) - 1.0) * power)
-    base_mech = float(CONFIG.get("mechanical_amount", 0.0))
-    mech = base_mech + (float(profile.get("mechanical", base_mech)) - base_mech) * power
-    return speed, pitch_factor - 1.0, mech
-
-
 def score_mos(model: UTMOSScoreTorch, audio: np.ndarray, sr: int) -> float:
     with torch.inference_mode():
         return float(model.score(resample_16k(audio, sr)).reshape(-1)[0].cpu())
 
 
-def synthesize_with_speaker(engine: SileroEngine, text: str, speaker: str) -> tuple[np.ndarray, int]:
+def process(processor: AuroraVoiceProcessor, audio: np.ndarray, sr: int, emotion: str) -> np.ndarray:
+    # Production currently keeps prosody_dsp disabled. Preserve exactly that
+    # signal path here so A/B isolates model-native punctuation/SSML effects.
+    return processor.process(
+        audio,
+        sr,
+        emotion=emotion,
+        intensity=0.65,
+        mechanical_amount=float(CONFIG.get("mechanical_amount", 0.0)),
+        pitch_shift=0.0,
+        speed=1.0,
+    )
+
+
+def synth_plain(engine: SileroEngine, text: str) -> tuple[np.ndarray, int, float]:
+    started = time.perf_counter()
+    audio, sr = engine.synthesize(prepare_for_speech(text), speed=1.0)
+    return np.asarray(audio, dtype=np.float32).reshape(-1), sr, time.perf_counter() - started
+
+
+def synth_candidate(engine: SileroEngine, case: dict) -> tuple[np.ndarray, int, float, str]:
+    mode = str(case["mode"])
+    if mode == "punctuation":
+        candidate = prepare_for_speech(str(case["candidate_text"]))
+        audio, sr, elapsed = synth_plain(engine, candidate)
+        return audio, sr, elapsed, candidate
+
+    clean = prepare_for_speech(str(case["text"]))
+    ssml = f'<speak><prosody rate="slow" pitch="medium">{html.escape(clean)}</prosody></speak>'
     sr = int(engine.config.get("sample_rate", 48000))
-    model = engine._load()
+    started = time.perf_counter()
     with torch.inference_mode():
-        audio = model.apply_tts(text=prepare_for_speech(text), speaker=speaker, sample_rate=sr)
+        audio = engine._load().apply_tts(
+            ssml_text=ssml,
+            speaker=engine.config.get("speaker", "xenia"),
+            sample_rate=sr,
+        )
     if isinstance(audio, torch.Tensor):
         audio = audio.detach().cpu().numpy()
-    return np.asarray(audio, dtype=np.float32).reshape(-1), sr
+    return np.asarray(audio, dtype=np.float32).reshape(-1), sr, time.perf_counter() - started, ssml
 
 
-def speaker_sweep(engine: SileroEngine, mos_model: UTMOSScoreTorch) -> dict:
-    result: dict[str, dict] = {}
-    for speaker in FEMALE_SPEAKERS:
-        scores: list[float] = []
-        try:
-            preview: np.ndarray | None = None
-            preview_sr = int(engine.config.get("sample_rate", 48000))
-            for text in SPEAKER_SWEEP_TEXTS:
-                audio, sr = synthesize_with_speaker(engine, text, speaker)
-                preview = audio if preview is None else preview
-                preview_sr = sr
-                scores.append(score_mos(mos_model, audio, sr))
-            if preview is not None:
-                sf.write(OUT / f"speaker_{speaker}.wav", preview, preview_sr, subtype="PCM_16")
-            result[speaker] = {
-                "mean_utmos": float(np.mean(scores)),
-                "min_utmos": float(np.min(scores)),
-                "scores": scores,
-            }
-        except Exception as exc:
-            result[speaker] = {"error": str(exc)}
-    return result
+def waveform_delta(a: np.ndarray, b: np.ndarray) -> float:
+    n = min(len(a), len(b))
+    if n <= 0:
+        return 0.0
+    return float(np.sqrt(np.mean(np.square(a[:n] - b[:n]), dtype=np.float64)))
 
 
 def main() -> int:
@@ -165,8 +156,7 @@ def main() -> int:
     np.random.seed(0)
     torch.set_num_threads(4)
 
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    engine = SileroEngine(CONFIG["silero"], device)
+    engine = SileroEngine(CONFIG["silero"], "cpu")
     processor = AuroraVoiceProcessor(CONFIG["processor"])
     mos_model = UTMOSScoreTorch(device="cpu")
     asr = pipeline(
@@ -176,169 +166,118 @@ def main() -> int:
         device=-1,
     )
 
-    model_load_started = time.perf_counter()
+    load_started = time.perf_counter()
     engine._load()
-    model_load_sec = time.perf_counter() - model_load_started
+    model_load_sec = time.perf_counter() - load_started
 
-    report = {
-        "device": device,
-        "model_load_sec": model_load_sec,
-        "configured_speaker": str(CONFIG["silero"].get("speaker", "xenia")),
-        "samples": [],
-    }
+    rows: list[dict] = []
     failures: list[str] = []
-    processed_mos: list[float] = []
-    raw_mos: list[float] = []
-    similarities: list[float] = []
-    synthesis_times: list[float] = []
-    processing_times: list[float] = []
-    realtime_factors: list[float] = []
 
-    for sample_id, emotion, intensity, text in SAMPLES:
-        clean = prepare_for_speech(text)
+    for case in CASES:
+        sample_id = str(case["id"])
+        text = str(case["text"])
+        emotion = str(case["emotion"])
 
-        synth_started = time.perf_counter()
-        raw, sr = engine.synthesize(clean, emotion=emotion, intensity=intensity, speed=1.0)
-        synthesis_wall_sec = time.perf_counter() - synth_started
+        plain_raw, sr, plain_synth = synth_plain(engine, text)
+        candidate_raw, candidate_sr, candidate_synth, candidate_form = synth_candidate(engine, case)
+        if candidate_sr != sr:
+            failures.append(f"{sample_id}: sample-rate mismatch {sr} vs {candidate_sr}")
 
-        speed, pitch_shift, mech = emotion_values(emotion, intensity)
-        process_started = time.perf_counter()
-        final = processor.process(
-            raw,
-            sr,
-            emotion=emotion,
-            intensity=intensity,
-            mechanical_amount=mech,
-            pitch_shift=pitch_shift,
-            speed=speed,
-        )
-        processor_wall_sec = time.perf_counter() - process_started
-        total_wall_sec = synthesis_wall_sec + processor_wall_sec
+        plain_started = time.perf_counter()
+        plain = process(processor, plain_raw, sr, emotion)
+        plain_dsp = time.perf_counter() - plain_started
+        cand_started = time.perf_counter()
+        candidate = process(processor, candidate_raw, sr, emotion)
+        candidate_dsp = time.perf_counter() - cand_started
 
-        raw_path = OUT / f"{sample_id}_raw.wav"
-        final_path = OUT / f"{sample_id}_aurora.wav"
-        sf.write(raw_path, raw, sr, subtype="PCM_16")
-        sf.write(final_path, final, sr, subtype="PCM_16")
+        sf.write(OUT / f"{sample_id}_plain.wav", plain, sr, subtype="PCM_16")
+        sf.write(OUT / f"{sample_id}_candidate.wav", candidate, sr, subtype="PCM_16")
 
-        final_16 = resample_16k(final, sr)
-        raw_score = score_mos(mos_model, raw, sr)
-        final_score = score_mos(mos_model, final, sr)
+        plain_m = metrics(plain, sr)
+        cand_m = metrics(candidate, sr)
+        plain_mos = score_mos(mos_model, plain, sr)
+        cand_mos = score_mos(mos_model, candidate, sr)
         recognized = str(asr(
-            {"array": final_16.squeeze(0).numpy(), "sampling_rate": 16000},
+            {"array": resample_16k(candidate, sr).squeeze(0).numpy(), "sampling_rate": 16000},
             generate_kwargs={"language": "ru", "task": "transcribe"},
         ).get("text", "")).strip()
-        similarity = intelligibility_similarity(text, clean, recognized)
-        metrics = audio_metrics(final, sr)
-        duration = float(metrics["duration_sec"])
-        real_time_factor = total_wall_sec / max(duration, 1e-6)
+        similarity = char_similarity(text, recognized)
+        duration_ratio = cand_m["duration_sec"] / max(plain_m["duration_sec"], 1e-6)
+        wave_delta = waveform_delta(plain, candidate)
 
-        raw_mos.append(raw_score)
-        processed_mos.append(final_score)
-        similarities.append(similarity)
-        synthesis_times.append(synthesis_wall_sec)
-        processing_times.append(processor_wall_sec)
-        realtime_factors.append(real_time_factor)
         row = {
             "id": sample_id,
             "emotion": emotion,
-            "intensity": intensity,
+            "mode": case["mode"],
             "source_text": text,
-            "spoken_text": clean,
+            "candidate_form": candidate_form,
             "recognized": recognized,
-            "char_similarity": similarity,
-            "raw_utmos": raw_score,
-            "aurora_utmos": final_score,
-            "mos_delta": final_score - raw_score,
-            "speed": speed,
-            "pitch_shift": pitch_shift,
-            "mechanical": mech,
-            "synthesis_wall_sec": synthesis_wall_sec,
-            "processor_wall_sec": processor_wall_sec,
-            "total_wall_sec": total_wall_sec,
-            "real_time_factor": real_time_factor,
-            **metrics,
+            "asr_similarity": similarity,
+            "plain_utmos": plain_mos,
+            "candidate_utmos": cand_mos,
+            "utmos_delta": cand_mos - plain_mos,
+            "plain_duration_sec": plain_m["duration_sec"],
+            "candidate_duration_sec": cand_m["duration_sec"],
+            "duration_ratio": duration_ratio,
+            "waveform_delta_rms": wave_delta,
+            "plain_synthesis_wall_sec": plain_synth,
+            "candidate_synthesis_wall_sec": candidate_synth,
+            "plain_processor_wall_sec": plain_dsp,
+            "candidate_processor_wall_sec": candidate_dsp,
+            "candidate_clipping_ratio": cand_m["clipping_ratio"],
+            "candidate_peak": cand_m["peak"],
+            "candidate_rms_dbfs": cand_m["rms_dbfs"],
         }
-        report["samples"].append(row)
+        rows.append(row)
 
-        if metrics["clipping_ratio"] > 0.0001:
-            failures.append(f"{sample_id}: clipping {metrics['clipping_ratio']:.6f}")
-        if not (-27.0 <= metrics["rms_dbfs"] <= -14.0):
-            failures.append(f"{sample_id}: RMS {metrics['rms_dbfs']:.2f} dBFS")
-        if metrics["dc_offset"] > 0.015:
-            failures.append(f"{sample_id}: DC offset {metrics['dc_offset']:.4f}")
-        if metrics["edge_peak_10ms"] > 0.35:
-            failures.append(f"{sample_id}: hard edge {metrics['edge_peak_10ms']:.3f}")
-        if final_score < 2.9:
-            failures.append(f"{sample_id}: UTMOS {final_score:.3f}")
-        if final_score + 0.18 < raw_score:
-            failures.append(f"{sample_id}: processing degraded UTMOS {raw_score:.3f}->{final_score:.3f}")
-        if similarity < 0.62:
-            failures.append(f"{sample_id}: ASR similarity {similarity:.3f} recognized={recognized!r}")
+        if cand_m["clipping_ratio"] > 0.0001:
+            failures.append(f"{sample_id}: clipping {cand_m['clipping_ratio']:.6f}")
+        if cand_mos < plain_mos - 0.08:
+            failures.append(f"{sample_id}: UTMOS degraded {plain_mos:.3f}->{cand_mos:.3f}")
+        if similarity < 0.92:
+            failures.append(f"{sample_id}: ASR similarity {similarity:.3f}")
+        if wave_delta < 0.005:
+            failures.append(f"{sample_id}: candidate waveform is not meaningfully different")
+        if case["mode"] == "ssml_slow" and duration_ratio < 1.10:
+            failures.append(f"{sample_id}: slow prosody not measurable ({duration_ratio:.3f}x)")
 
-    sweep = speaker_sweep(engine, mos_model)
-    report["speaker_sweep"] = sweep
-    configured_speaker = str(CONFIG["silero"].get("speaker", "xenia"))
-    valid_sweep = {
-        name: float(data["mean_utmos"])
-        for name, data in sweep.items()
-        if "mean_utmos" in data
-    }
-    if not valid_sweep:
-        failures.append("speaker sweep produced no valid voice candidates")
-    if configured_speaker in valid_sweep and valid_sweep:
-        best_speaker, best_mos = max(valid_sweep.items(), key=lambda item: item[1])
-        configured_mos = valid_sweep[configured_speaker]
-        if best_speaker != configured_speaker and best_mos > configured_mos + 0.03:
-            failures.append(
-                f"speaker candidate {best_speaker} scores higher than {configured_speaker}: "
-                f"{best_mos:.3f} vs {configured_mos:.3f}"
-            )
-
-    persona_rows = {
-        row["id"]: {
-            "emotion": row["emotion"],
-            "aurora_utmos": row["aurora_utmos"],
-            "asr_similarity": row["char_similarity"],
-            "duration_sec": row["duration_sec"],
-            "synthesis_wall_sec": row["synthesis_wall_sec"],
-            "processor_wall_sec": row["processor_wall_sec"],
-            "real_time_factor": row["real_time_factor"],
-            "peak": row["peak"],
-            "clipping_ratio": row["clipping_ratio"],
-        }
-        for row in report["samples"]
-        if row["id"].startswith("persona_")
-    }
-
-    report["summary"] = {
+    report = {
         "model_load_sec": model_load_sec,
-        "raw_utmos_mean": float(np.mean(raw_mos)),
-        "aurora_utmos_mean": float(np.mean(processed_mos)),
-        "utmos_delta_mean": float(np.mean(processed_mos) - np.mean(raw_mos)),
-        "asr_similarity_mean": float(np.mean(similarities)),
-        "synthesis_wall_sec_mean": float(np.mean(synthesis_times)),
-        "processor_wall_sec_mean": float(np.mean(processing_times)),
-        "real_time_factor_mean": float(np.mean(realtime_factors)),
-        "real_time_factor_max": float(np.max(realtime_factors)),
-        "persona_samples": persona_rows,
-        "speaker_sweep": valid_sweep,
-        "failures": failures,
+        "candidate_policy": {
+            "morning": "punctuation only",
+            "night": "Silero SSML slow + medium pitch",
+            "playful": "punctuation only",
+            "serious": "Silero SSML slow + medium pitch",
+            "runtime_changed": False,
+        },
+        "samples": rows,
+        "summary": {
+            "mean_plain_utmos": float(np.mean([r["plain_utmos"] for r in rows])),
+            "mean_candidate_utmos": float(np.mean([r["candidate_utmos"] for r in rows])),
+            "mean_candidate_synthesis_wall_sec": float(np.mean([r["candidate_synthesis_wall_sec"] for r in rows])),
+            "max_candidate_clipping_ratio": float(max(r["candidate_clipping_ratio"] for r in rows)),
+            "min_asr_similarity": float(min(r["asr_similarity"] for r in rows)),
+            "failures": failures,
+        },
     }
-    (OUT / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    (OUT / "targeted_prosody_report.json").write_text(
+        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
+
     print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
-    for row in report["samples"]:
+    for row in rows:
         print(
-            f"{row['id']}: MOS raw={row['raw_utmos']:.3f} aurora={row['aurora_utmos']:.3f} "
-            f"ASR={row['char_similarity']:.3f} RMS={row['rms_dbfs']:.1f}dBFS peak={row['peak']:.3f} "
-            f"synth={row['synthesis_wall_sec']:.3f}s dsp={row['processor_wall_sec']:.3f}s "
-            f"RTF={row['real_time_factor']:.3f}"
+            f"{row['id']}: {row['mode']} MOS={row['plain_utmos']:.3f}->{row['candidate_utmos']:.3f} "
+            f"ASR={row['asr_similarity']:.3f} duration={row['duration_ratio']:.3f}x "
+            f"wave={row['waveform_delta_rms']:.4f} clip={row['candidate_clipping_ratio']:.6f}"
         )
+
     if failures:
-        print("QUALITY GATE FAILED")
-        for item in failures:
-            print(" -", item)
+        print("TARGETED PROSODY GATE FAILED")
+        for failure in failures:
+            print(" -", failure)
         return 1
-    print("QUALITY GATE PASSED")
+    print("TARGETED PROSODY GATE PASSED")
     return 0
 
 
