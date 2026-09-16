@@ -55,6 +55,8 @@ func execute_task(project_id: String, task_id: String) -> Dictionary:
 		return {"ok": false, "error": "Work-задача не найдена", "retryable": false, "task_id": task_id}
 	if _running_tasks.has(task_id):
 		return {"ok": false, "error": "Эта Work-задача уже выполняется", "retryable": false, "task_id": task_id}
+	if bool(task.get("requires_user_action", false)):
+		return {"ok": false, "error": "Перед запуском требуется явная проверка пользователя", "retryable": false, "requires_user_action": true, "task_id": task_id}
 	if str(task.get("status", "")) != AuroraWorkStore.STATE_QUEUED:
 		return {"ok": false, "error": "Задача не находится в состоянии queued", "retryable": false, "task_id": task_id}
 	if not _master_enabled():
@@ -72,6 +74,7 @@ func execute_task(project_id: String, task_id: String) -> Dictionary:
 		"pause_requested": false,
 		"unsafe_action_inflight": false,
 		"unsafe_action_uncertain": false,
+		"unsafe_action_seen": false,
 	}
 	_action_sequence[task_id] = 0
 	_sync_running_flag()
@@ -93,22 +96,15 @@ func execute_task(project_id: String, task_id: String) -> Dictionary:
 	if not reason.is_empty():
 		return _finish_controlled(project_id, task_id, execution_id, reason)
 	if result.begins_with("Ошибка модели:"):
-		store.fail_task(project_id, task_id, result, true)
-		_cleanup_execution(task_id)
-		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_FAILED)
-		task_failed.emit(project_id, task_id, result)
-		return {"ok": false, "error": result, "retryable": true, "task_id": task_id, "state": AuroraWorkStore.STATE_FAILED}
+		return _finish_failed_execution(project_id, task_id, result, result)
 
 	_update(project_id, task_id, 82, "Сохраняю результат")
 	var artifact_path := _write_artifact(project_id, task_id, str(task.get("output_name", "")), str(task.get("prompt", "")), result)
 	if artifact_path.is_empty():
-		store.fail_task(project_id, task_id, "artifact write failed", true)
-		_cleanup_execution(task_id)
-		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_FAILED)
-		task_failed.emit(project_id, task_id, "Не удалось сохранить Work-результат")
-		return {"ok": false, "error": "Не удалось сохранить Work-результат", "retryable": true, "task_id": task_id, "state": AuroraWorkStore.STATE_FAILED}
+		return _finish_failed_execution(project_id, task_id, "artifact write failed", "Не удалось сохранить Work-результат")
 	if not store.complete_task(project_id, task_id, result, artifact_path):
 		store.interrupt_task(project_id, task_id, "Результат создан, но подтверждение завершения не сохранено", true)
+		store.update_task(project_id, task_id, {"retryable": false})
 		_cleanup_execution(task_id)
 		return {"ok": false, "error": "Не удалось подтвердить завершение Work-задачи", "retryable": false, "requires_user_action": true, "task_id": task_id}
 	_cleanup_execution(task_id)
@@ -124,6 +120,9 @@ func pause_task(project_id: String, task_id: String) -> bool:
 		_running_tasks[task_id] = control
 		store.update_task(project_id, task_id, {"message": "Pause requested"})
 		return true
+	var task := store.get_task(project_id, task_id)
+	if bool(task.get("requires_user_action", false)):
+		return false
 	var ok := store.pause_task(project_id, task_id)
 	if ok:
 		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_PAUSED)
@@ -150,7 +149,7 @@ func retry_task(project_id: String, task_id: String) -> Dictionary:
 	if task.is_empty():
 		return {"ok": false, "error": "Work-задача не найдена", "retryable": false, "task_id": task_id}
 	if bool(task.get("requires_user_action", false)):
-		return {"ok": false, "error": "Повтор требует явного решения пользователя из-за неопределённого потенциально опасного действия", "retryable": false, "requires_user_action": true, "task_id": task_id}
+		return {"ok": false, "error": "Повтор требует явного решения пользователя из-за потенциально уже выполненного опасного действия", "retryable": false, "requires_user_action": true, "task_id": task_id}
 	if not bool(task.get("retryable", true)) or not store.retry_task(project_id, task_id):
 		return {"ok": false, "error": "Эту задачу нельзя повторить", "retryable": false, "task_id": task_id}
 	return await execute_task(project_id, task_id)
@@ -160,7 +159,7 @@ func acknowledge_uncertain_action(project_id: String, task_id: String, allow_ret
 	if task.is_empty():
 		return {"ok": false, "error": "Work-задача не найдена", "retryable": false, "task_id": task_id}
 	var state := str(task.get("status", ""))
-	if state not in [AuroraWorkStore.STATE_INTERRUPTED, AuroraWorkStore.STATE_CANCELLED, AuroraWorkStore.STATE_PARTIAL]:
+	if state not in [AuroraWorkStore.STATE_INTERRUPTED, AuroraWorkStore.STATE_CANCELLED, AuroraWorkStore.STATE_PARTIAL, AuroraWorkStore.STATE_FAILED]:
 		return {"ok": false, "error": "Подтверждение допустимо только для остановленной terminal-задачи", "retryable": false, "task_id": task_id}
 	if not bool(task.get("requires_user_action", false)):
 		return {"ok": false, "error": "Эта задача не ожидает пользовательской проверки", "retryable": bool(task.get("retryable", false)), "task_id": task_id}
@@ -197,21 +196,29 @@ func _execution_guard(stage: String, details: Dictionary, project_id: String, ta
 			_running_tasks[task_id] = control
 		var decision := {"allowed": true}
 		if tool_name == "computer_action":
-			# The model cannot select/recycle this key. Work owns the idempotency
-			# key and AgentCore applies it to the actual tool arguments.
 			decision["args_patch"] = {"action_id": action_id}
 		return decision
 	if stage == "after_tool" and _running_tasks.has(task_id):
 		var control: Dictionary = _running_tasks[task_id]
 		var unsafe_inflight := bool(control.get("unsafe_action_inflight", false))
-		if unsafe_inflight and _tool_result_uncertain(details.get("result", {})):
-			control["unsafe_action_uncertain"] = true
-			_running_tasks[task_id] = control
-			return {"allowed": false, "reason": "unsafe_action_uncertain"}
+		if unsafe_inflight:
+			var tool_result = details.get("result", {})
+			if _tool_result_uncertain(tool_result):
+				control["unsafe_action_seen"] = true
+				control["unsafe_action_uncertain"] = true
+				store.mark_attempt_unsafe(project_id, task_id)
+				_running_tasks[task_id] = control
+				return {"allowed": false, "reason": "unsafe_action_uncertain"}
+			if _tool_result_confirms_effect(tool_result):
+				control["unsafe_action_seen"] = true
+				store.mark_attempt_unsafe(project_id, task_id)
 		control["unsafe_action_inflight"] = false
 		control["unsafe_action_uncertain"] = false
 		_running_tasks[task_id] = control
 	return {"allowed": true}
+
+func _tool_result_confirms_effect(value: Variant) -> bool:
+	return value is Dictionary and bool((value as Dictionary).get("ok", false))
 
 func _tool_result_uncertain(value: Variant) -> bool:
 	if not value is Dictionary:
@@ -219,18 +226,16 @@ func _tool_result_uncertain(value: Variant) -> bool:
 	var result: Dictionary = value
 	if bool(result.get("ok", false)):
 		return false
-	# Validation/permission errors do not carry retry_safety. Once the Computer
-	# service has accepted an unsafe primitive, any failed result may have happened
-	# after a partial external side effect and therefore must never be replayed blind.
-	if str(result.get("retry_safety", "")).strip_edges().to_lower() == "unsafe":
-		return true
 	var error := str(result.get("error", "")).strip_edges().to_lower()
 	var http := int(result.get("http", 0))
-	if error in ["timeout", "transport_failure", "service_unavailable", "empty_response", "malformed_response", "malformed_worker_response", "worker_failed", "worker_crashed", "non_dictionary_tool_result"]:
-		return true
-	if http >= 500 or http in [408, 429]:
-		return true
-	return bool(result.get("retryable", false))
+	# These responses are produced before an external primitive is started.
+	if error in ["computer_busy", "permission_denied", "unsupported_platform", "local_core_planning_required"]:
+		return false
+	if http in [400, 401, 403, 404, 405, 409, 422, 423]:
+		return false
+	# For an unsafe tool, every other failed/malformed result is conservative:
+	# it may have happened after a partial side effect.
+	return true
 
 func _control_reason(project_id: String, task_id: String, execution_id: String) -> String:
 	if not _running_tasks.has(task_id):
@@ -249,53 +254,73 @@ func _control_reason(project_id: String, task_id: String, execution_id: String) 
 		return "master_stop"
 	return ""
 
+func _attempt_is_unsafe(project_id: String, task_id: String, control: Dictionary = {}) -> bool:
+	if bool(control.get("unsafe_action_inflight", false)) or bool(control.get("unsafe_action_uncertain", false)) or bool(control.get("unsafe_action_seen", false)):
+		return true
+	var task := store.get_task(project_id, task_id)
+	return str(task.get("attempt_retry_safety", "safe")) == "unsafe"
+
 func _finish_controlled(project_id: String, task_id: String, execution_id: String, reason_override: String = "") -> Dictionary:
 	var reason := reason_override.strip_edges()
 	if reason.is_empty():
 		reason = _control_reason(project_id, task_id, execution_id)
 	var control: Dictionary = _running_tasks.get(task_id, {})
-	var unsafe_inflight := bool(control.get("unsafe_action_inflight", false))
+	var unsafe_attempt := _attempt_is_unsafe(project_id, task_id, control)
 	if reason == "cancelled":
-		if unsafe_inflight:
+		if unsafe_attempt:
 			store.transition_task(project_id, task_id, AuroraWorkStore.STATE_CANCELLED, {
-				"message": "Cancelled after a potentially unsafe action; verify the observed result before any retry",
+				"message": "Cancelled after an unsafe side effect; verify observed state before retry",
 				"cancel_requested": true,
 				"requires_user_action": true,
 				"retryable": false,
-				"last_error": "A potentially unsafe action may have completed before cancellation was observed",
+				"last_error": "This attempt may already have changed external state before cancellation",
 			}, false)
 			_cleanup_execution(task_id)
 			task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_CANCELLED)
-			return {"ok": false, "error": "Задача отменена после потенциально опасного действия; требуется проверка результата", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_CANCELLED, "task_id": task_id}
+			return {"ok": false, "error": "Задача отменена после потенциально уже выполненного опасного действия; требуется проверка результата", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_CANCELLED, "task_id": task_id}
 		store.finalize_cancel(project_id, task_id, "Cancelled by user")
 		_cleanup_execution(task_id)
 		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_CANCELLED)
 		return {"ok": false, "error": "Задача отменена", "retryable": true, "state": AuroraWorkStore.STATE_CANCELLED, "task_id": task_id}
 	if reason in ["paused", "master_stop"]:
-		if unsafe_inflight:
-			store.interrupt_task(project_id, task_id, "A potentially unsafe action may have completed before pause/master stop was observed", true)
+		if unsafe_attempt:
+			store.interrupt_task(project_id, task_id, "This attempt already had or may have had an unsafe side effect before pause/master stop", true)
 			store.update_task(project_id, task_id, {"retryable": false})
 			_cleanup_execution(task_id)
 			task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_INTERRUPTED)
-			return {"ok": false, "error": "Автономное выполнение остановлено после потенциально опасного действия; требуется проверка результата", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
+			return {"ok": false, "error": "Автономное выполнение остановлено после потенциально уже выполненного опасного действия; требуется проверка результата", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
 		store.pause_task(project_id, task_id, "Paused" if reason == "paused" else "Master stop active")
 		_cleanup_execution(task_id)
 		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_PAUSED)
 		return {"ok": false, "error": "Задача приостановлена" if reason == "paused" else "Master stop активен", "retryable": false, "state": AuroraWorkStore.STATE_PAUSED, "task_id": task_id}
 	if reason == "unsafe_action_uncertain":
-		store.interrupt_task(project_id, task_id, "A potentially unsafe action returned an uncertain timeout/transport result; verify external state before any retry", true)
+		store.mark_attempt_unsafe(project_id, task_id)
+		store.interrupt_task(project_id, task_id, "A potentially unsafe action returned an uncertain result; verify external state before any retry", true)
 		store.update_task(project_id, task_id, {"retryable": false})
 		_cleanup_execution(task_id)
 		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_INTERRUPTED)
 		return {"ok": false, "error": "Неопределённый результат потенциально опасного действия; перед повтором требуется проверить фактическое состояние", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
-	var task := store.get_task(project_id, task_id)
-	var unsafe := unsafe_inflight or str(task.get("last_action_retry_safety", "safe")) == "unsafe"
-	store.interrupt_task(project_id, task_id, "Execution interrupted before a confirmed completion", unsafe)
-	if unsafe:
+	store.interrupt_task(project_id, task_id, "Execution interrupted before a confirmed completion", unsafe_attempt)
+	if unsafe_attempt:
 		store.update_task(project_id, task_id, {"retryable": false})
 	_cleanup_execution(task_id)
 	task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_INTERRUPTED)
-	return {"ok": false, "error": "Выполнение прервано", "retryable": not unsafe, "requires_user_action": unsafe, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
+	return {"ok": false, "error": "Выполнение прервано", "retryable": not unsafe_attempt, "requires_user_action": unsafe_attempt, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
+
+func _finish_failed_execution(project_id: String, task_id: String, stored_error: String, user_error: String) -> Dictionary:
+	var control: Dictionary = _running_tasks.get(task_id, {})
+	if _attempt_is_unsafe(project_id, task_id, control):
+		store.interrupt_task(project_id, task_id, stored_error + "; unsafe side effect history requires external-state verification", true)
+		store.update_task(project_id, task_id, {"retryable": false})
+		_cleanup_execution(task_id)
+		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_INTERRUPTED)
+		task_failed.emit(project_id, task_id, user_error)
+		return {"ok": false, "error": user_error, "retryable": false, "requires_user_action": true, "task_id": task_id, "state": AuroraWorkStore.STATE_INTERRUPTED}
+	store.fail_task(project_id, task_id, stored_error, true)
+	_cleanup_execution(task_id)
+	task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_FAILED)
+	task_failed.emit(project_id, task_id, user_error)
+	return {"ok": false, "error": user_error, "retryable": true, "task_id": task_id, "state": AuroraWorkStore.STATE_FAILED}
 
 func _fail_without_execution(project_id: String, task_id: String, message: String, retryable: bool) -> Dictionary:
 	if not task_id.is_empty() and not store.get_task(project_id, task_id).is_empty():
