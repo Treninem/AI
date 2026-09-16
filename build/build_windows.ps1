@@ -25,6 +25,7 @@ $updateOut = Join-Path $outDir "update"
 $apiSource = Join-Path $root "api"
 $apiOut = Join-Path $outDir "api"
 $ensureUv = Join-Path $runtimeSource "ensure_uv.ps1"
+$filePortableInstaller = Join-Path $fileSource "install_files.ps1"
 $portableDist = Join-Path $root "build\voice_backend"
 $portableBuilt = $false
 $coreBundleHelper = Join-Path $PSScriptRoot "prepare_bundled_windows_core.ps1"
@@ -53,6 +54,14 @@ if ((Get-Item -LiteralPath $coreModelSource).Length -ne $coreModelBytes) { throw
 $coreActualSha = (Get-FileHash -LiteralPath $coreModelSource -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($coreActualSha -ne $coreModelSha) { throw "Bundled AuroraFox Core SHA-256 mismatch: $coreActualSha" }
 Write-Host "Complete AuroraFox Core prepared for Windows: $coreActualSha" -ForegroundColor Green
+
+# File Intelligence/OCR is also a bundled product capability. Build a verified
+# relocatable Python + parser + Tesseract rus/eng runtime now, so normal users
+# never need a first-run OCR download or setup wizard.
+if (-not (Test-Path -LiteralPath $filePortableInstaller)) { throw "File Intelligence installer is missing" }
+Write-Host "Preparing portable File Intelligence + local OCR runtime..." -ForegroundColor Cyan
+& powershell -NoProfile -ExecutionPolicy Bypass -File $filePortableInstaller -PreparePortable
+if ($LASTEXITCODE -ne 0) { throw "Failed to prepare portable File Intelligence/OCR runtime" }
 
 # SkipModelSetup remains only for compatibility with older CI invocations. It
 # no longer disables Core packaging because the user-facing model setup flow
@@ -164,16 +173,19 @@ foreach ($file in @("computer_service.py", "requirements.txt", "install_computer
 $computerVenv = Join-Path $computerSource ".venv"
 if (Test-Path $computerVenv) { Copy-Item $computerVenv (Join-Path $computerOut ".venv") -Recurse -Force }
 
-# Rich File Intelligence + source-project index bootstrap.
+# Rich File Intelligence + source-project index + complete local OCR runtime.
 if (Test-Path $fileOut) { Remove-Item $fileOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $fileOut | Out-Null
-foreach ($file in @("file_service.py", "project_index_service.py", "requirements.txt", "install_files.ps1")) {
+foreach ($file in @("file_service.py", "project_index_service.py", "local_ocr.py", "requirements.txt", "install_files.ps1", "prepare_windows_ocr.ps1")) {
     $source = Join-Path $fileSource $file
     if (-not (Test-Path $source)) { throw "File Intelligence bootstrap is missing: $file" }
     Copy-Item $source (Join-Path $fileOut $file) -Force
 }
-$fileVenv = Join-Path $fileSource ".venv"
-if (Test-Path $fileVenv) { Copy-Item $fileVenv (Join-Path $fileOut ".venv") -Recurse -Force }
+foreach ($dir in @("python", "vendor", "ocr_runtime")) {
+    $source = Join-Path $fileSource $dir
+    if (-not (Test-Path -LiteralPath $source)) { throw "Portable File Intelligence/OCR runtime is missing: $dir" }
+    Copy-Item $source (Join-Path $fileOut $dir) -Recurse -Force
+}
 
 # External API Gateway bootstrap.
 if (Test-Path $apiOut) { Remove-Item $apiOut -Recurse -Force }
@@ -217,10 +229,31 @@ if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "C
 if (-not (Test-Path (Join-Path $fileOut "file_service.py"))) { throw "File Intelligence service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "project_index_service.py"))) { throw "Project index service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "install_files.ps1"))) { throw "File Intelligence installer was not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "local_ocr.py"))) { throw "Local OCR adapter was not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "python\python.exe"))) { throw "Portable File Intelligence Python was not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "vendor"))) { throw "Portable File Intelligence dependencies were not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "ocr_runtime\tesseract.exe"))) { throw "Portable Tesseract OCR engine was not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "ocr_runtime\tessdata\eng.traineddata"))) { throw "English OCR model was not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "ocr_runtime\tessdata\rus.traineddata"))) { throw "Russian OCR model was not packaged" }
+$filePortablePython = Join-Path $fileOut "python\python.exe"
+$fileVendor = Join-Path $fileOut "vendor"
+$oldPythonPath = $env:PYTHONPATH
+try {
+    $env:PYTHONPATH = $fileVendor
+    Push-Location $fileOut
+    try {
+        & $filePortablePython -c "import pypdf,pypdfium2,PIL,fastapi,local_ocr; h=local_ocr.health(); assert h['available']; assert h['network_required'] is False; assert h['external_ai_required'] is False; print('AURORA_PACKAGED_OCR_READY')"
+        if ($LASTEXITCODE -ne 0) { throw "Packaged local OCR verification failed" }
+    } finally {
+        Pop-Location
+    }
+} finally {
+    $env:PYTHONPATH = $oldPythonPath
+}
 if (-not (Test-Path (Join-Path $modelsOut "install_models.ps1"))) { throw "Local AI compatibility bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $coreOut "install_core.ps1"))) { throw "AuroraFox Core recovery helper was not packaged" }
 if (-not (Test-Path (Join-Path $coreOut "engine\llama-server.exe"))) { throw "AuroraFox built-in Core Engine was not packaged" }
-if (-not (Test-Path (Join-Path $coreOut "engine\aurorafox-core.gguf"))) { throw "AuroraFox built-in Core weights were not packaged" }
+if (-not (Test-Path (Join-Path $coreOut "engine\aurorafox-core.gguf"))) { throw "AuroraFox built-in Core weights are missing" }
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $updateOut "windows_updater.ps1"))) { throw "Transactional Windows updater was not packaged" }
 if (-not (Test-Path (Join-Path $updateOut "release_public.pub"))) { throw "Pinned update public trust root was not packaged" }
@@ -239,7 +272,7 @@ Write-Host "AuroraFox built-in Core SHA-256: $packagedSha"
 Write-Host "Managed runtime bootstrap: $runtimeOut"
 Write-Host "Voice runtime/bootstrap: $voiceOut"
 Write-Host "Computer Agent bootstrap: $computerOut"
-Write-Host "File Intelligence + Project Index bootstrap: $fileOut"
+Write-Host "File Intelligence + bundled local OCR: $fileOut"
 Write-Host "External API Gateway bootstrap: $apiOut"
 Write-Host "Transactional updater: $updateOut"
 Write-Host ("Portable voice backend: " + ($(if ($portableBuilt) { "YES" } else { "NO - managed-Python fallback/setup wizard" })))

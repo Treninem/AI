@@ -8,6 +8,9 @@ const LARGE_TEXT_THRESHOLD_BYTES := 8 * 1024 * 1024
 const STREAM_BATCH_CHARS := 128 * 1024
 const SEARCH_BUFFER_LIMIT := 256
 var document_importer := KnowledgeDocumentImporter.new()
+var _source_presence_cache: Dictionary = {}
+var _source_presence_cache_valid := false
+var _source_presence_signature := ""
 
 func import_text(text: String, source := "manual", metadata: Dictionary = {}) -> Dictionary:
 	var clean := text.strip_edges()
@@ -16,7 +19,7 @@ func import_text(text: String, source := "manual", metadata: Dictionary = {}) ->
 	_ensure_dir()
 	var chunks := _chunk(clean)
 	var routed := _empty_routes()
-	var written := 0
+	var rows: Array = []
 	var explicit_kind := str(metadata.get("kind", "")).strip_edges()
 	for chunk in chunks:
 		var kind := explicit_kind if not explicit_kind.is_empty() else _classify_record(source, chunk)
@@ -24,11 +27,10 @@ func import_text(text: String, source := "manual", metadata: Dictionary = {}) ->
 		var meta := metadata.duplicate(true)
 		meta["kind"] = kind
 		meta["scope"] = str(meta.get("scope", "core_knowledge"))
-		if _append(DB_PATH, _knowledge_item(source, chunk, kind, meta)):
-			written += 1
-	if written != chunks.size():
-		return {"ok": false, "error": "Не удалось полностью записать базу знаний", "source": source, "written": written, "expected": chunks.size()}
-	return {"ok": true, "source": source, "chunks": written, "kind": _dominant_kind(routed), "routed": routed, "path": DB_PATH}
+		rows.append(_knowledge_item(source, chunk, kind, meta))
+	if not _append_many(DB_PATH, rows):
+		return {"ok": false, "error": "Не удалось полностью записать базу знаний", "source": source, "written": 0, "expected": chunks.size()}
+	return {"ok": true, "source": source, "chunks": chunks.size(), "kind": _dominant_kind(routed), "routed": routed, "path": DB_PATH}
 
 func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 	if not FileAccess.file_exists(path):
@@ -260,13 +262,18 @@ func _structured_result(source: String, format: String, state: Dictionary, strea
 	}
 
 func remove_source(source: String) -> Dictionary:
+	if source.is_empty():
+		return {"ok": true, "source": source, "removed": 0, "structured_removed": 0, "streaming": true, "filter_skipped": true}
+	if not _source_may_exist(source):
+		return {"ok": true, "source": source, "removed": 0, "structured_removed": 0, "streaming": true, "filter_skipped": true}
 	var db := _filter_source_jsonl(DB_PATH, source)
 	if not bool(db.get("ok", false)):
 		return db
 	var structured := _filter_source_jsonl(STRUCTURED_PATH, source)
 	if not bool(structured.get("ok", false)):
 		return structured
-	return {"ok": true, "source": source, "removed": db.get("removed", 0), "structured_removed": structured.get("removed", 0), "streaming": true}
+	_forget_source(source)
+	return {"ok": true, "source": source, "removed": db.get("removed", 0), "structured_removed": structured.get("removed", 0), "streaming": true, "filter_skipped": false}
 
 func search(query: String, limit := 6) -> Array:
 	var normalized_query := query.to_lower().strip_edges()
@@ -417,6 +424,11 @@ func _chunk(text: String) -> Array[String]:
 	return chunks
 
 func _append(path: String, value: Dictionary) -> bool:
+	return _append_many(path, [value])
+
+func _append_many(path: String, values: Array) -> bool:
+	if values.is_empty():
+		return true
 	_ensure_dir()
 	var file := FileAccess.open(path, FileAccess.READ_WRITE)
 	if file == null:
@@ -424,9 +436,72 @@ func _append(path: String, value: Dictionary) -> bool:
 	if file == null:
 		return false
 	file.seek_end()
-	file.store_line(JSON.stringify(value))
+	var sources: Dictionary = {}
+	for value in values:
+		if not value is Dictionary:
+			continue
+		file.store_line(JSON.stringify(value))
+		if file.get_error() != OK:
+			file.close()
+			_source_presence_cache_valid = false
+			return false
+		var source := str(value.get("source", ""))
+		if not source.is_empty():
+			sources[source] = true
 	file.close()
+	_remember_sources(sources)
 	return true
+
+func _source_may_exist(source: String) -> bool:
+	var signature := _data_signature()
+	if not _source_presence_cache_valid or signature != _source_presence_signature:
+		_rebuild_source_presence_cache()
+	return bool(_source_presence_cache.get(source, false))
+
+func _rebuild_source_presence_cache() -> void:
+	_source_presence_cache.clear()
+	_scan_source_presence(DB_PATH)
+	_scan_source_presence(STRUCTURED_PATH)
+	_source_presence_signature = _data_signature()
+	_source_presence_cache_valid = true
+
+func _scan_source_presence(path: String) -> void:
+	if not FileAccess.file_exists(path):
+		return
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		_source_presence_cache_valid = false
+		return
+	while not file.eof_reached():
+		var line := file.get_line().strip_edges()
+		if line.is_empty():
+			continue
+		var parsed = JSON.parse_string(line)
+		if parsed is Dictionary:
+			var source := str(parsed.get("source", ""))
+			if not source.is_empty():
+				_source_presence_cache[source] = true
+	file.close()
+
+func _remember_sources(sources: Dictionary) -> void:
+	if not _source_presence_cache_valid:
+		return
+	for source in sources.keys():
+		_source_presence_cache[str(source)] = true
+	_source_presence_signature = _data_signature()
+
+func _forget_source(source: String) -> void:
+	if _source_presence_cache_valid:
+		_source_presence_cache.erase(source)
+		_source_presence_signature = _data_signature()
+
+func _data_signature() -> String:
+	return "%s|%s" % [_file_signature(DB_PATH), _file_signature(STRUCTURED_PATH)]
+
+func _file_signature(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return "0:0"
+	return "%d:%d" % [_file_size(path), int(FileAccess.get_modified_time(path))]
 
 func _filter_source_jsonl(path: String, source: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
@@ -453,6 +528,7 @@ func _filter_source_jsonl(path: String, source: String) -> Dictionary:
 	input.close()
 	output.close()
 	if not _replace_file(temp, path):
+		_source_presence_cache_valid = false
 		return {"ok": false, "error": "Не удалось завершить потоковую замену индекса", "path": path}
 	return {"ok": true, "removed": removed}
 
@@ -482,7 +558,9 @@ func _write_jsonl(path: String, rows: Array) -> bool:
 	for row in rows:
 		file.store_line(JSON.stringify(row))
 	file.close()
-	return _replace_file(temp, path)
+	var replaced := _replace_file(temp, path)
+	_source_presence_cache_valid = false
+	return replaced
 
 func _replace_file(temp: String, target: String) -> bool:
 	var absolute := ProjectSettings.globalize_path(target)

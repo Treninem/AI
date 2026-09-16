@@ -33,8 +33,10 @@ func health() -> Dictionary:
 			"vision_model": "",
 			"voice_online": bool(caps.get("sherpa_stt", false)),
 			"local_tts": bool(caps.get("local_tts", false)),
+			"local_ocr": file_ready,
+			"external_ai_required": false,
 			"capabilities": caps,
-			"warnings": ["Android File Intelligence currently provides native document/media metadata and local STT, but no deep local vision/OCR backend."] if file_ready else []
+			"warnings": [] if file_ready else ["Android File Intelligence runtime is unavailable."]
 		}
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "File Intelligence is not available on this platform", "platform": OS.get_name()}
@@ -120,6 +122,9 @@ func _start_backend_if_installed() -> void:
 	if found.is_empty(): return
 	runtime_root = str(found.get("root", ""))
 	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
+	var vendor := str(found.get("vendor", ""))
+	if not vendor.is_empty() and DirAccess.dir_exists_absolute(vendor):
+		OS.set_environment("PYTHONPATH", vendor)
 	var executable := str(found.get("pythonw", ""))
 	if executable.is_empty() or not FileAccess.file_exists(executable): executable = str(found.get("python", ""))
 	if executable.is_empty() or not FileAccess.file_exists(executable): return
@@ -128,10 +133,23 @@ func _start_backend_if_installed() -> void:
 func _find_runtime() -> Dictionary:
 	for root in _candidate_roots():
 		var service := root.path_join("file_service.py")
+		if not FileAccess.file_exists(service):
+			continue
+		var portable_pythonw := root.path_join("python/pythonw.exe")
+		var portable_python := root.path_join("python/python.exe")
+		if FileAccess.file_exists(portable_pythonw) or FileAccess.file_exists(portable_python):
+			return {
+				"root": root,
+				"service": service,
+				"pythonw": portable_pythonw,
+				"python": portable_python,
+				"vendor": root.path_join("vendor"),
+				"portable": true
+			}
 		var pythonw := root.path_join(".venv/Scripts/pythonw.exe")
 		var python := root.path_join(".venv/Scripts/python.exe")
-		if FileAccess.file_exists(service) and (FileAccess.file_exists(pythonw) or FileAccess.file_exists(python)):
-			return {"root": root, "service": service, "pythonw": pythonw, "python": python}
+		if FileAccess.file_exists(pythonw) or FileAccess.file_exists(python):
+			return {"root": root, "service": service, "pythonw": pythonw, "python": python, "vendor": "", "portable": false}
 	return {}
 
 func _candidate_roots() -> Array[String]:
