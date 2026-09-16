@@ -70,6 +70,8 @@ def test_server_has_pre_parser_body_limit_and_secure_account_mail_boundary():
     server = read("api/server.py")
     limits = read("api/request_limits.py")
     mailer = read("api/account_mailer.py")
+    account_web = read("api/account_web.py")
+    public_auth_limits = read("api/public_auth_limits.py")
     assert "RequestBodyLimitMiddleware" in server
     assert 'AURORAFOX_API_MAX_BODY_BYTES' in server
     assert 'status": 413' in limits
@@ -82,6 +84,17 @@ def test_server_has_pre_parser_body_limit_and_secure_account_mail_boundary():
     assert 'client.starttls(context=context)' in mailer
     assert '"plain"' not in mailer.split("def send_token", 1)[1]
     assert 'AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS' in server
+    assert "create_account_web_router(accounts)" in server
+    assert '@router.get("/verify-email"' in account_web
+    assert '@router.get("/reset-password"' in account_web
+    assert '@router.post("/reset-password"' in account_web
+    assert 'Content-Security-Policy' in account_web
+    assert 'Referrer-Policy' in account_web
+    assert "PublicAuthRateLimitMiddleware" in server
+    assert 'AURORAFOX_PUBLIC_AUTH_RPM' in server
+    assert 'x-forwarded-for' in public_auth_limits
+    assert 'peer_ip.is_loopback' in public_auth_limits
+    assert 'status": 429' in public_auth_limits
 
 
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
@@ -135,8 +148,10 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
         "tests/test_api_account_network.py",
         "tests/test_api_account_restore.py",
         "tests/test_api_account_mailer.py",
+        "tests/test_api_account_web.py",
         "tests/test_api_server_hardening.py",
         "tests/test_api_request_limits.py",
+        "tests/test_api_public_auth_limits.py",
         "tests/test_api_schema_migrations.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
@@ -170,6 +185,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     # only read by the API service. The application stays healthy without SMTP,
     # while production account creation fails closed until the owner configures it.
     assert "AURORAFOX_API_MAX_BODY_BYTES=25165824" in install
+    assert "AURORAFOX_PUBLIC_AUTH_RPM=20" in install
     assert "if [[ ! -e /etc/aurorafox/account-mail.env ]]" in install
     assert "chmod 0600 /etc/aurorafox/account-mail.env" in install
     assert "AURORAFOX_SMTP_PASSWORD=" in install
