@@ -26,7 +26,9 @@ def test_voice_config_has_required_local_paths():
 
 def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_default():
     processor = load("voice_config.json")["processor"]
-    assert int(processor["profile_revision"]) >= 2
+    # cache_key() includes the processor profile; revision 3 intentionally
+    # invalidates WAVs synthesized before native Silero prosody was introduced.
+    assert int(processor["profile_revision"]) >= 3
     assert processor["prosody_dsp"] is False
     assert processor["compression"] is False
     assert float(processor["highpass_hz"]) == 0.0
@@ -42,6 +44,24 @@ def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_defau
     assert 0.0 <= float(processor["max_gain_db"]) <= 12.0
     assert 0.80 <= float(processor["peak_ceiling"]) <= 1.0
     assert 0.0 <= float(processor["fade_ms"]) <= 20.0
+
+
+def test_silero_native_prosody_is_allowlisted_intensity_gated_and_markup_safe():
+    engine = (ROOT / "voice" / "python" / "tts_engine.py").read_text(encoding="utf-8")
+    assert '"happy": {"min_intensity"' not in engine
+    assert '"sleepy": {"min_intensity": 0.45' in engine
+    assert '"playful": {"min_intensity": 0.55' in engine
+    assert '"serious": {"min_intensity": 0.55' in engine
+    assert '"rate": "slow", "pitch": "medium"' in engine
+    assert '"break_ms": 110' in engine
+    assert '"break_ms": 70' in engine
+    assert 'html.escape(str(text), quote=False)' in engine
+    assert 'if power < float(profile["min_intensity"]):' in engine
+    assert 'model.apply_tts(ssml_text=ssml' in engine
+    assert 'rate="high"' not in engine
+    assert '"rate": "fast"' not in engine
+    assert 'pitch="high"' not in engine
+    assert 'pitch="low"' not in engine
 
 
 def test_godot_voice_defaults_match_neutral_dsp_and_android_does_not_retime_playback():
