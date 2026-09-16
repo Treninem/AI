@@ -45,3 +45,19 @@ def test_implicit_fallback_learning_is_private_by_default():
     assert 'kind != "api_interaction"' in sync
     assert 'metadata.get("share_for_learning", False)' in sync
     assert '"skipped_private": True' in sync
+
+
+def test_personal_account_chat_cannot_enter_shared_learning_implicitly():
+    server = read("api/server.py")
+    assert 'str(record.get("auth_kind", "api_key")) == "api_key"' in server
+    assert '"auth_kind": "account_session"' in read("api/account_store.py")
+    assert '"auth_kind": "guest_session"' in read("api/account_store.py")
+    assert '"memory.write"' not in read("api/account_store.py").split("USER_SCOPES = [", 1)[1].split("]", 1)[0]
+
+
+def test_normal_server_chat_never_auto_falls_back_to_optional_ollama():
+    server = read("api/server.py")
+    assert 'if mode in {"auto", "agent"}:' in server
+    assert 'provider_policy": "agent_then_local_core_then_local_knowledge;ollama_explicit_compatibility_only"' in server
+    normal_block = server.split('if mode in {"auto", "agent"}:', 1)[1].split('messages = list(context)', 1)[0]
+    assert "ollama.chat" not in normal_block
