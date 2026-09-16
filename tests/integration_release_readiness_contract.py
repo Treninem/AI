@@ -26,6 +26,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/test_voice_text.py",
         "tests/test_voice_configs.py",
         "tests/test_xtts_contract.py",
+        "tests/test_knowledge_performance_contract.py",
         "tests/test_core_candidate_promotion.py",
         "tests/test_api_runtime_resilience.py",
         "tests/test_project_master_contract.py",
@@ -131,6 +132,7 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
         "Voice text contract",
         "Voice config and acoustic-evidence contract",
         "Voice optional XTTS contract",
+        "Large Knowledge performance contract",
         "Candidate promotion workflow trust-boundary contract",
         "Updater repair and signed-floor compatibility contract",
         "API runtime resilience contract",
@@ -152,15 +154,15 @@ def test_integration_gate_is_not_mistaken_for_visual_or_physical_device_acceptan
 def test_active_lane_workflows_become_visible_to_integration_when_they_land() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
 
-    # These lanes are independently ACTIVE. Their absence is PENDING, not a
-    # failure; the integration workflow watches their eventual artifacts without
-    # requiring unfinished files to exist prematurely.
+    # OCR and real-Core benchmark lanes are independently ACTIVE. Their absence
+    # is PENDING, not a failure. The Large Knowledge contract has already landed
+    # and is required immediately rather than merely reported as pending.
     for marker in (
         "local-ocr-ci.yml",
         "core-benchmarks.yml",
-        "knowledge-performance.yml",
         "tests/test_local_ocr.py",
         "benchmarks/core/**",
         "benchmarks/knowledge/**",
+        "tests/test_knowledge_performance_contract.py",
     ):
         assert marker in workflow
