@@ -33,6 +33,7 @@ MAX_KEYS = 12
 GUI_TIMEOUT_SECONDS = float(os.getenv("AURORAFOX_GUI_TIMEOUT_SECONDS", "8"))
 ACTION_TIMEOUT_SECONDS = float(os.getenv("AURORAFOX_ACTION_TIMEOUT_SECONDS", "10"))
 IS_WINDOWS = os.name == "nt"
+ALLOW_DEGRADED_LOCAL_SANDBOX = os.getenv("AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX", "").strip() == "1"
 
 SAFE_RETRY_ACTIONS = {"move", "scroll", "wait", "done"}
 UNSAFE_RETRY_ACTIONS = {"click", "double_click", "right_click", "mouse_down", "mouse_up", "type", "press", "hotkey"}
@@ -527,13 +528,13 @@ def _parent_watchdog() -> None:
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    return {"ok": True, "service": "aurorafox_computer_primitives", "version": "1.1.0", "platform": "windows" if IS_WINDOWS else os.name, "computer_supported": IS_WINDOWS, "planning_owner": "aurorafox_core", "service_side_ai_planning": False, "external_ai_required": False, "network_required": False, "authenticated_channel_configured": bool(SERVICE_TOKEN), "virtual_desktop": _desktop_bounds(), "failsafe": True, "container_engine_available": bool(_container_engine())}
+    return {"ok": True, "service": "aurorafox_computer_primitives", "version": "1.1.0", "platform": "windows" if IS_WINDOWS else os.name, "computer_supported": IS_WINDOWS, "planning_owner": "aurorafox_core", "service_side_ai_planning": False, "external_ai_required": False, "network_required": False, "authenticated_channel_configured": bool(SERVICE_TOKEN), "virtual_desktop": _desktop_bounds(), "failsafe": True, "container_engine_available": bool(_container_engine()), "degraded_local_sandbox_enabled": ALLOW_DEGRADED_LOCAL_SANDBOX}
 
 
 @app.get("/capabilities")
 def capabilities(x_aurorafox_computer_token: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, "1", require_autonomy=False)
-    return {"ok": True, "computer_supported": IS_WINDOWS, "platform": "windows" if IS_WINDOWS else os.name, "screen": IS_WINDOWS, "windows": IS_WINDOWS, "mouse": IS_WINDOWS, "keyboard": IS_WINDOWS, "clipboard": False, "service_side_planning": False, "local_core_planning_required": True, "sandbox": True}
+    return {"ok": True, "computer_supported": IS_WINDOWS, "platform": "windows" if IS_WINDOWS else os.name, "screen": IS_WINDOWS, "windows": IS_WINDOWS, "mouse": IS_WINDOWS, "keyboard": IS_WINDOWS, "clipboard": False, "service_side_planning": False, "local_core_planning_required": True, "sandbox": True, "degraded_local_sandbox_enabled": ALLOW_DEGRADED_LOCAL_SANDBOX}
 
 
 @app.get("/screen")
@@ -642,7 +643,10 @@ def sandbox_write(req: SandboxWriteRequest, x_aurorafox_computer_token: str | No
 
 @app.post("/sandbox/exec")
 def sandbox_exec(req: SandboxExecRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); command = _validate_command(req.command); cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); result = _run_process(command, cwd, req.timeout, allow_network=req.allow_network); result["network_requested"] = bool(req.allow_network); result["network_isolation_enforced"] = False; return result
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    if not ALLOW_DEGRADED_LOCAL_SANDBOX:
+        raise HTTPException(status_code=403, detail="Degraded local process sandbox is disabled by default; use container mode or explicit operator opt-in")
+    command = _validate_command(req.command); cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); result = _run_process(command, cwd, req.timeout, allow_network=req.allow_network); result["network_requested"] = bool(req.allow_network); result["network_isolation_enforced"] = False; return result
 
 
 @app.post("/sandbox/container_exec")
