@@ -153,7 +153,7 @@ func _button_label_width(button: Button) -> float:
 	var text_size := font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
 	var icon_extra := 0.0
 	if button.icon != null:
-		icon_extra = minf(float(button.icon.get_width()), float(button.icon_max_width if button.icon_max_width > 0 else button.icon.get_width())) + 8.0
+		icon_extra = float(button.icon.get_width()) + 8.0
 	return ceilf(text_size.x + icon_extra + 30.0)
 
 func _preserve_flow_button_label(button: Button) -> void:
