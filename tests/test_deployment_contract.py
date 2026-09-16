@@ -66,6 +66,24 @@ def test_server_rate_limit_is_thread_safe_and_covers_websocket_messages():
     assert "code=4429" in websocket
 
 
+def test_server_has_pre_parser_body_limit_and_secure_account_mail_boundary():
+    server = read("api/server.py")
+    limits = read("api/request_limits.py")
+    mailer = read("api/account_mailer.py")
+    assert "RequestBodyLimitMiddleware" in server
+    assert 'AURORAFOX_API_MAX_BODY_BYTES' in server
+    assert 'status": 413' in limits
+    assert 'content-length' in limits
+    assert 'received > self.max_bytes' in limits
+    assert 'scope.get("type") != "http"' in limits
+    assert "AccountMailConfig.from_env()" in server
+    assert "AURORAFOX_SMTP_PASSWORD" in mailer
+    assert 'self.config.security in {"starttls", "ssl"}' in mailer
+    assert 'client.starttls(context=context)' in mailer
+    assert '"plain"' not in mailer.split("def send_token", 1)[1]
+    assert 'AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS' in server
+
+
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
     sync = read("deploy/windows/sync_server_backup.ps1")
     installer = read("deploy/windows/install_server_backup.ps1")
@@ -100,6 +118,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "caddy-stable-archive-keyring.asc" in install
     assert "pydantic==2.13.4" in requirements
     assert "api.aurorafox.ru" in install
+    assert "auth.aurorafox.ru" in install
     assert "ws.aurorafox.ru" in install
     assert "files.aurorafox.ru" in install
     assert "update.aurorafox.ru" in install
@@ -115,6 +134,9 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
         "tests/test_api_accounts_sync.py",
         "tests/test_api_account_network.py",
         "tests/test_api_account_restore.py",
+        "tests/test_api_account_mailer.py",
+        "tests/test_api_server_hardening.py",
+        "tests/test_api_request_limits.py",
         "tests/test_api_schema_migrations.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
@@ -142,6 +164,18 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "ForceCommand internal-sftp" in install
     assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
     assert "chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup" in install
+
+    # HTTP/body and account-mail production settings are explicit. SMTP secrets
+    # live in their own root-only file, are not overwritten on reinstall, and are
+    # only read by the API service. The application stays healthy without SMTP,
+    # while production account creation fails closed until the owner configures it.
+    assert "AURORAFOX_API_MAX_BODY_BYTES=25165824" in install
+    assert "if [[ ! -e /etc/aurorafox/account-mail.env ]]" in install
+    assert "chmod 0600 /etc/aurorafox/account-mail.env" in install
+    assert "AURORAFOX_SMTP_PASSWORD=" in install
+    assert "AURORAFOX_SMTP_SECURITY=starttls" in install
+    assert "EnvironmentFile=-/etc/aurorafox/account-mail.env" in install
+    assert "account_public_host='auth.aurorafox.ru'" in install
 
     # Production switching is data-aware: the current SQLite state must be
     # healthy, a verifiable snapshot must exist before checkout, and the new
