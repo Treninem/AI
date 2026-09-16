@@ -24,6 +24,7 @@ def test_representative_subsystems_are_aggregated_without_owning_production_code
         "tests/test_autonomous_evolution_contract.py",
         "tests/test_research_evidence_lifecycle_contract.py",
         "tests/test_research_collector_privacy_contract.py",
+        "tests/test_research_source_resilience_contract.py",
         "tests/test_api_accounts_sync.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_request_limits.py",
@@ -51,6 +52,7 @@ def test_godot_cross_subsystem_smokes_remain_visible_after_one_failure() -> None
         "tests/autonomy_learning_smoke.gd",
         "tests/research_evidence_lifecycle_smoke.gd",
         "tests/research_collector_privacy_smoke.gd",
+        "tests/research_source_resilience_smoke.gd",
         "tests/knowledge_registry_smoke.gd",
         "tests/knowledge_transaction_rollback_smoke.gd",
         "tests/api_gateway_smoke.gd",
@@ -83,6 +85,19 @@ def test_research_promotion_keeps_untrusted_authority_boundary() -> None:
     assert "provenance_fingerprint" in curator
     assert "import_knowledge_text" in curator
     assert "memory.learn(" not in collector
+
+
+def test_research_source_resilience_is_same_sha_covered() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    contract = read("tests/test_research_source_resilience_contract.py")
+    smoke = read("tests/research_source_resilience_smoke.gd")
+
+    assert "Research source resilience contract" in workflow
+    assert "tests/test_research_source_resilience_contract.py" in workflow
+    assert "tests/research_source_resilience_smoke.gd" in workflow
+    assert "backoff" in contract.lower() or "retry" in contract.lower()
+    assert "query" in contract.lower()
+    assert "source" in smoke.lower()
 
 
 def test_code_specialist_does_not_restore_direct_external_provider_path() -> None:
