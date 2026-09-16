@@ -56,13 +56,35 @@ Android workflow artifact `10412014222`:
 
 The Android artifact is CI/test-signed. It is suitable for installation/testing, but it is not a production signing identity replacement.
 
+### V1.2.0.0 updater defect discovered
+
+Historical commit `976ffc175e3d3191af67a85c87a9ac789339e3ef` is the V1.2.0.0 version bump. Its updater already requests:
+
+- `https://github.com/Treninem/AI/releases/latest/download/update.json`
+- `https://github.com/Treninem/AI/releases/latest/download/update.sig`
+- local `res://update/release_public.pub`
+
+Current GitHub Releases for `Treninem/AI` are empty, so the V1.2 updater receives HTTP 404 for `update.json` and intentionally reports no published update.
+
+A second historical defect is more important: `update/release_public.pub` does not exist at the V1.2 commit. Therefore an already-installed V1.2 binary cannot authenticate a future signed `update.json` even after a release is published. This missing trust root is client-side and cannot be repaired remotely through the updater that requires that same trust root before downloading a package.
+
+Decision / migration path:
+
+- Do not pretend publishing an unsigned release solves V1.2; weakening signature verification would create an unsafe update channel.
+- Windows V1.2 requires one manual bridge installation of V1.3 (the installer preserves AuroraFox user data because application data lives outside the program directory). V1.3 and later must contain the initialized pinned public update key so subsequent updates can be automatic.
+- Android in-place bridge additionally requires continuity with the signing certificate of the already-installed V1.2 APK. A differently signed APK cannot replace it in place under Android package-signing rules. If the original signing identity is unavailable, one uninstall/install bootstrap may be required, with user-data migration handled separately if needed.
+- Production V1.3 publication still requires initialization of the owner-controlled RSA update trust root and the persistent Android signing identity. Private keys must remain outside Git.
+
+This defect and bridge path are release-sensitive. Work mode must not change updater trust behavior or claim that V1.2 can automatically self-repair without first integrating this finding.
+
 ### Active chat-mode scope
 
-1. Keep V1.0+ direct-update manifest/asset compatibility intact.
+1. Keep legacy manifest/asset URL compatibility intact where technically possible.
 2. Finish production signing/bootstrap/readiness without exposing private keys.
 3. Keep release/version files synchronized.
-4. Prepare public production release only after owner-controlled signing identity is initialized.
-5. Update `docs/DEVELOPMENT_LOG.md` only after factual verification.
+4. Prepare the V1.2 -> V1.3 one-time bridge path and ensure V1.3+ updates are genuinely automatic after trust-root initialization.
+5. Prepare public production release only after owner-controlled signing identity is initialized.
+6. Update `docs/DEVELOPMENT_LOG.md` only after factual verification.
 
 ### Reserved files for this lane
 
