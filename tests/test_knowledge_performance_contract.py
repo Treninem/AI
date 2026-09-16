@@ -78,6 +78,12 @@ class KnowledgePerformanceContractTests(unittest.TestCase):
         scaling = [int(row.get("count", 0)) for row in runner.scenario_matrix("standard") if row.get("scenario") == "scaling_many_sources"]
         self.assertEqual(scaling, [8, 16, 32])
 
+    def test_source_removal_hard_gate_rejects_orphan_registry(self) -> None:
+        text = HARNESS_PATH.read_text(encoding="utf-8")
+        self.assertIn("var orphan_registry := not KnowledgeSourceRegistryScript.new().record_for_source(paths[1]).is_empty()", text)
+        self.assertIn('"ok": bool(removed.get("ok", false)) and a_ok and b_gone and c_ok and not orphan_registry', text)
+        self.assertIn('"orphan_registry": orphan_registry', text)
+
     def test_runner_is_stdlib_only_and_keeps_absolute_ci_timings_informational(self) -> None:
         text = RUNNER_PATH.read_text(encoding="utf-8")
         self.assertNotIn("import psutil", text)
