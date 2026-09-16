@@ -17,6 +17,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/test_standalone_core_contract.py",
         "tests/test_autonomous_evolution_contract.py",
         "tests/test_research_evidence_lifecycle_contract.py",
+        "tests/test_research_collector_privacy_contract.py",
         "tests/test_api_accounts_sync.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_release_core_gates.py",
@@ -38,6 +39,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/offline_autonomy_smoke.gd",
         "tests/autonomy_learning_smoke.gd",
         "tests/research_evidence_lifecycle_smoke.gd",
+        "tests/research_collector_privacy_smoke.gd",
         "tests/knowledge_registry_smoke.gd",
         "tests/knowledge_transaction_rollback_smoke.gd",
         "tests/api_gateway_smoke.gd",
@@ -71,6 +73,8 @@ def test_research_to_knowledge_authority_is_part_of_same_sha_gate() -> None:
     assert "tests/test_autonomous_evolution_contract.py" in workflow
     assert "tests/test_research_evidence_lifecycle_contract.py" in workflow
     assert "tests/research_evidence_lifecycle_smoke.gd" in workflow
+    assert "tests/test_research_collector_privacy_contract.py" in workflow
+    assert "tests/research_collector_privacy_smoke.gd" in workflow
     assert "test_autonomous_research_is_promoted_only_through_curator" in contract
     assert 'assert "memory.learn(" not in collector' in contract
     assert 'assert \'if source == "local_documents":\' in curator' in contract
@@ -147,6 +151,7 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
         "Research evidence lifecycle contract",
+        "Research collector privacy contract",
         "Voice text contract",
         "Voice config and acoustic-evidence contract",
         "Voice optional XTTS contract",
@@ -159,6 +164,22 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
         "Master-log coordination contract",
     ):
         assert step_name in workflow
+
+
+def test_godot_failure_does_not_hide_followup_smokes_or_diagnostics() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+
+    for step_name in (
+        "Run offline Core Agent memory Knowledge Work API and safety smokes",
+        "Run headless UI regression smoke (not visual acceptance)",
+        "Record acceptance boundary",
+        "Upload integration gate diagnostics",
+    ):
+        assert f"- name: {step_name}\n        if: always()" in workflow
+
+    assert "uses: actions/upload-artifact@v4" in workflow
+    assert "path: artifacts/integration-gate/" in workflow
+    assert "if-no-files-found: warn" in workflow
 
 
 def test_integration_gate_is_not_mistaken_for_visual_or_physical_device_acceptance() -> None:
@@ -183,5 +204,7 @@ def test_active_lane_workflows_become_visible_to_integration_when_they_land() ->
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
         "tests/test_knowledge_stress_gates.py",
+        "tests/test_research_collector_privacy_contract.py",
+        "tests/research_collector_privacy_smoke.gd",
     ):
         assert marker in workflow
