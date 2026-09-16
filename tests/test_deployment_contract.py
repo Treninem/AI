@@ -134,6 +134,13 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "sha256sum -c latest.sha256" in install
     assert "db=sqlite-wal" in install
 
+    # Install and update must agree on the same restricted SFTP export root.
+    canonical_backup_root = "/srv/aurorafox-backup/exports"
+    assert canonical_backup_root in install
+    assert f"{canonical_backup_root}/latest.zip" in updater
+    assert f"{canonical_backup_root}/latest.sha256" in updater
+    assert "/srv/aurorafox-sftp/" not in updater
+
 
 def test_api_provider_independence_is_packaged_and_deployed():
     build = read("build/build_windows.ps1")
