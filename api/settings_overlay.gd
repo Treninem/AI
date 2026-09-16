@@ -8,6 +8,7 @@ signal personal_request_failed(message: String)
 const PERSONAL_SESSION_PATH := "user://personal_session.json"
 const DEFAULT_PUBLIC_API_URL := "https://api.aurorafox.ru"
 const PERSONAL_REQUEST_TIMEOUT := 12.0
+const MAX_VISIBLE_MEMORY_ROWS := 30
 
 var manager: AuroraApiGatewayManager
 var popup: PopupPanel
@@ -24,13 +25,29 @@ var _personal_memory_cache: Array = []
 var _personal_busy := false
 var _last_personal_error := ""
 
+var personal_page: VBoxContainer
+var personal_status_label: Label
+var personal_form: VBoxContainer
+var personal_email: LineEdit
+var personal_password: LineEdit
+var personal_login_button: Button
+var personal_guest_button: Button
+var personal_session_actions: HFlowContainer
+var personal_refresh_button: Button
+var personal_migrate_button: Button
+var personal_logout_button: Button
+var personal_memory_status: Label
+var personal_memory_box: VBoxContainer
+
 const BG := Color(0.025, 0.03, 0.05, 0.995)
 const SURFACE := Color(0.055, 0.065, 0.10, 0.98)
 const BORDER := Color(0.34, 0.39, 0.55, 0.55)
 const ACCENT := Color("a98aff")
+const CYAN := Color("45d8ff")
 const GREEN := Color("64ff9d")
 const WHITE := Color("f3f6ff")
 const MUTED := Color("8d98ad")
+const WARNING := Color("ffbd75")
 
 func _ready() -> void:
 	_load_personal_session()
@@ -45,12 +62,325 @@ func _bootstrap() -> void:
 		manager.status_changed.connect(_on_status_changed)
 		manager.key_created.connect(_on_key_created)
 		_refresh()
+	await get_tree().process_frame
+	_inject_personal_settings_page()
+	if not personal_session_changed.is_connected(_on_personal_session_changed):
+		personal_session_changed.connect(_on_personal_session_changed)
+	if not personal_memory_changed.is_connected(_on_personal_memory_changed):
+		personal_memory_changed.connect(_on_personal_memory_changed)
+	if not personal_request_failed.is_connected(_on_personal_request_failed):
+		personal_request_failed.connect(_on_personal_request_failed)
 	personal_session_changed.emit(personal_state())
 	if str(_personal_session.get("kind", "")) == "account" and _access_needs_refresh():
 		call_deferred("_refresh_personal_session_background")
 
-func _refresh_personal_session_background() -> void:
-	await refresh_personal_session()
+func _inject_personal_settings_page() -> void:
+	var settings = get_parent().get_node_or_null("SettingsOverlay")
+	if settings == null:
+		return
+	var pages = settings.get("page_stack")
+	if not pages is TabContainer:
+		return
+	if pages.find_child("SettingsPage_account", false, false) != null:
+		personal_page = _settings_page_box(pages.find_child("SettingsPage_account", false, false))
+		_refresh_personal_ui()
+		return
+
+	var nav_indices = settings.get("nav_indices")
+	if not nav_indices is Dictionary:
+		return
+	if _is_mobile_layout():
+		var mobile = settings.get("mobile_nav")
+		if mobile is OptionButton:
+			var selector := mobile as OptionButton
+			selector.add_item("Аккаунт и память")
+			selector.set_item_metadata(selector.item_count - 1, "account")
+	else:
+		var nav := settings.popup.find_child("SettingsNavigation", true, false) if settings.get("popup") is PopupPanel else null
+		if nav is Container and settings.has_method("_add_nav_button"):
+			settings.call("_add_nav_button", nav, "account", "Аккаунт и память")
+
+	if not settings.has_method("_page"):
+		return
+	var page = settings.call(
+		"_page",
+		"account",
+		"Аккаунт и память",
+		"Личная сессия и синхронизация памяти между твоими устройствами. Локальный AuroraFox Core продолжает работать без входа и без сети."
+	)
+	if not page is VBoxContainer:
+		return
+	personal_page = page as VBoxContainer
+	_build_personal_page(personal_page)
+	_refresh_personal_ui()
+
+func _settings_page_box(page_node: Node) -> VBoxContainer:
+	if page_node == null:
+		return null
+	for child in page_node.find_children("*", "VBoxContainer", true, false):
+		return child as VBoxContainer
+	return null
+
+func _build_personal_page(page: VBoxContainer) -> void:
+	var session_card := _personal_card(
+		page,
+		"Личная сессия",
+		"Аккаунт нужен только для личной синхронизации. Гостевой режим создаёт отдельную приватную сессию и не смешивается с другими пользователями."
+	)
+	personal_status_label = Label.new()
+	personal_status_label.name = "PersonalSessionStatus"
+	personal_status_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	personal_status_label.add_theme_color_override("font_color", MUTED)
+	session_card.add_child(personal_status_label)
+
+	personal_form = VBoxContainer.new()
+	personal_form.name = "PersonalLoginForm"
+	personal_form.add_theme_constant_override("separation", 8)
+	session_card.add_child(personal_form)
+
+	personal_email = LineEdit.new()
+	personal_email.name = "PersonalEmail"
+	personal_email.placeholder_text = "E-mail"
+	personal_email.keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	personal_email.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	personal_form.add_child(personal_email)
+
+	personal_password = LineEdit.new()
+	personal_password.name = "PersonalPassword"
+	personal_password.placeholder_text = "Пароль"
+	personal_password.secret = true
+	personal_password.secret_character = "•"
+	personal_password.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	personal_password.text_submitted.connect(func(_text): await _login_from_ui())
+	personal_form.add_child(personal_password)
+
+	var login_actions := HFlowContainer.new()
+	login_actions.add_theme_constant_override("h_separation", 8)
+	login_actions.add_theme_constant_override("v_separation", 8)
+	personal_form.add_child(login_actions)
+	personal_login_button = _button("Войти", true)
+	personal_login_button.name = "PersonalLoginButton"
+	personal_login_button.pressed.connect(_login_from_ui)
+	login_actions.add_child(personal_login_button)
+	personal_guest_button = _button("Продолжить как гость")
+	personal_guest_button.name = "PersonalGuestButton"
+	personal_guest_button.pressed.connect(_guest_from_ui)
+	login_actions.add_child(personal_guest_button)
+
+	var offline_hint := Label.new()
+	offline_hint.text = "Без входа можно закрыть настройки и пользоваться локальным Core, файлами и локальной памятью. Сеть нужна только для синхронизации между устройствами."
+	offline_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	offline_hint.add_theme_font_size_override("font_size", 12)
+	offline_hint.add_theme_color_override("font_color", MUTED)
+	personal_form.add_child(offline_hint)
+
+	personal_session_actions = HFlowContainer.new()
+	personal_session_actions.name = "PersonalSessionActions"
+	personal_session_actions.add_theme_constant_override("h_separation", 8)
+	personal_session_actions.add_theme_constant_override("v_separation", 8)
+	session_card.add_child(personal_session_actions)
+	personal_refresh_button = _button("Обновить личную память", true)
+	personal_refresh_button.name = "PersonalMemoryRefreshButton"
+	personal_refresh_button.pressed.connect(_refresh_memories_from_ui)
+	personal_session_actions.add_child(personal_refresh_button)
+	personal_migrate_button = _button("Перенести гостевые данные")
+	personal_migrate_button.name = "PersonalMigrateGuestButton"
+	personal_migrate_button.pressed.connect(_retry_migration_from_ui)
+	personal_session_actions.add_child(personal_migrate_button)
+	personal_logout_button = _button("Выйти на этом устройстве")
+	personal_logout_button.name = "PersonalLogoutButton"
+	personal_logout_button.pressed.connect(_logout_from_ui)
+	personal_session_actions.add_child(personal_logout_button)
+
+	var memory_card := _personal_card(
+		page,
+		"Личная память",
+		"Здесь показаны только personal-sync записи текущего аккаунта или гостя. Core Knowledge и общая база знаний сюда не смешиваются."
+	)
+	personal_memory_status = Label.new()
+	personal_memory_status.name = "PersonalMemoryStatus"
+	personal_memory_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	personal_memory_status.add_theme_color_override("font_color", MUTED)
+	memory_card.add_child(personal_memory_status)
+	personal_memory_box = VBoxContainer.new()
+	personal_memory_box.name = "PersonalMemoryList"
+	personal_memory_box.add_theme_constant_override("separation", 7)
+	memory_card.add_child(personal_memory_box)
+
+func _personal_card(parent: VBoxContainer, title_text: String, subtitle_text: String) -> VBoxContainer:
+	var panel := PanelContainer.new()
+	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	panel.add_theme_stylebox_override("panel", _style(SURFACE, Color(0.25, 0.30, 0.43, 0.54), 16))
+	parent.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 14)
+	panel.add_child(margin)
+	var box := VBoxContainer.new()
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.add_theme_constant_override("separation", 9)
+	margin.add_child(box)
+	var title := Label.new()
+	title.text = title_text
+	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_color_override("font_color", WHITE)
+	box.add_child(title)
+	var subtitle := Label.new()
+	subtitle.text = subtitle_text
+	subtitle.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	subtitle.add_theme_font_size_override("font_size", 12)
+	subtitle.add_theme_color_override("font_color", MUTED)
+	box.add_child(subtitle)
+	return box
+
+func _refresh_personal_ui() -> void:
+	if personal_status_label == null:
+		return
+	var state := personal_state()
+	var kind := str(state.get("kind", ""))
+	var signed_in := bool(state.get("signed_in", false))
+	personal_form.visible = not signed_in
+	personal_session_actions.visible = signed_in
+	personal_migrate_button.visible = kind == "account" and bool(state.get("pending_guest_migration", false))
+	if kind == "account":
+		var account: Dictionary = state.get("account", {})
+		var display_name := str(account.get("display_name", "")).strip_edges()
+		var email := str(account.get("email", "")).strip_edges()
+		personal_status_label.text = "Аккаунт: %s%s" % [display_name if not display_name.is_empty() else email, " • " + email if not display_name.is_empty() and display_name != email else ""]
+		personal_status_label.add_theme_color_override("font_color", GREEN)
+	elif kind == "guest":
+		var guest_id := str(state.get("guest_id", ""))
+		personal_status_label.text = "Гостевая личная сессия • %s" % (guest_id.substr(0, 8) if not guest_id.is_empty() else "активна")
+		personal_status_label.add_theme_color_override("font_color", CYAN)
+	else:
+		personal_status_label.text = "Вход не выполнен. Локальные функции AuroraFox доступны без аккаунта."
+		personal_status_label.add_theme_color_override("font_color", MUTED)
+	var last_error := str(state.get("last_error", "")).strip_edges()
+	if not last_error.is_empty():
+		personal_status_label.text += "\n" + last_error
+		personal_status_label.add_theme_color_override("font_color", WARNING)
+	_render_personal_memories()
+
+func _render_personal_memories() -> void:
+	if personal_memory_box == null or personal_memory_status == null:
+		return
+	for child in personal_memory_box.get_children():
+		child.queue_free()
+	var state := personal_state()
+	if not bool(state.get("signed_in", false)):
+		personal_memory_status.text = "Войди в аккаунт или продолжи как гость, чтобы увидеть синхронизируемую личную память."
+		return
+	var items := personal_memory_cache()
+	if items.is_empty():
+		personal_memory_status.text = "Личная синхронизируемая память пока пуста или ещё не загружена."
+		return
+	personal_memory_status.text = "Записей: %d%s" % [items.size(), " • показаны последние %d" % MAX_VISIBLE_MEMORY_ROWS if items.size() > MAX_VISIBLE_MEMORY_ROWS else ""]
+	var visible_count := mini(MAX_VISIBLE_MEMORY_ROWS, items.size())
+	for i in range(visible_count):
+		var item = items[i]
+		if item is Dictionary:
+			_add_personal_memory_row(item)
+
+func _add_personal_memory_row(item: Dictionary) -> void:
+	var panel := PanelContainer.new()
+	panel.add_theme_stylebox_override("panel", _style(Color(0.030, 0.036, 0.060, 0.96), Color(0.21, 0.27, 0.40, 0.50), 12))
+	personal_memory_box.add_child(panel)
+	var margin := MarginContainer.new()
+	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
+		margin.add_theme_constant_override(side, 10)
+	panel.add_child(margin)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 8)
+	margin.add_child(row)
+	var text := Label.new()
+	text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	text.text = _personal_memory_preview(item.get("payload", null))
+	text.tooltip_text = text.text
+	row.add_child(text)
+	var remove := _button("Удалить")
+	remove.custom_minimum_size.x = 88
+	var entity_id := str(item.get("entity_id", ""))
+	var revision := int(item.get("revision", 0))
+	var payload = item.get("payload", {})
+	remove.pressed.connect(func(): await _delete_memory_from_ui(entity_id, revision, payload, remove))
+	row.add_child(remove)
+
+func _personal_memory_preview(payload: Variant) -> String:
+	if payload is Dictionary:
+		var data := payload as Dictionary
+		for key in ["content", "text", "memory", "title", "value"]:
+			var candidate := str(data.get(key, "")).strip_edges()
+			if not candidate.is_empty():
+				return candidate.substr(0, 260)
+		return JSON.stringify(data).substr(0, 260)
+	if payload is Array:
+		return JSON.stringify(payload).substr(0, 260)
+	var text := str(payload).strip_edges()
+	return text.substr(0, 260) if not text.is_empty() else "Личная запись памяти"
+
+func _set_personal_controls_busy(value: bool) -> void:
+	for control in [personal_login_button, personal_guest_button, personal_refresh_button, personal_migrate_button, personal_logout_button]:
+		if control is BaseButton:
+			(control as BaseButton).disabled = value
+
+func _login_from_ui() -> void:
+	if personal_email == null or personal_password == null:
+		return
+	_set_personal_controls_busy(true)
+	var result := await login_personal(personal_email.text, personal_password.text)
+	personal_password.text = ""
+	if bool(result.get("ok", false)):
+		await fetch_personal_memories()
+	_set_personal_controls_busy(false)
+	_refresh_personal_ui()
+
+func _guest_from_ui() -> void:
+	_set_personal_controls_busy(true)
+	var result := await enter_guest()
+	if bool(result.get("ok", false)):
+		await fetch_personal_memories()
+	_set_personal_controls_busy(false)
+	_refresh_personal_ui()
+
+func _refresh_memories_from_ui() -> void:
+	_set_personal_controls_busy(true)
+	await fetch_personal_memories()
+	_set_personal_controls_busy(false)
+	_refresh_personal_ui()
+
+func _retry_migration_from_ui() -> void:
+	_set_personal_controls_busy(true)
+	var result := await retry_guest_migration()
+	if bool(result.get("ok", false)):
+		await fetch_personal_memories()
+	_set_personal_controls_busy(false)
+	_refresh_personal_ui()
+
+func _logout_from_ui() -> void:
+	_set_personal_controls_busy(true)
+	await logout_personal()
+	_set_personal_controls_busy(false)
+	_refresh_personal_ui()
+
+func _delete_memory_from_ui(entity_id: String, revision: int, payload: Variant, button: Button) -> void:
+	button.disabled = true
+	var result := await delete_personal_memory(entity_id, revision, payload)
+	if not bool(result.get("ok", false)):
+		button.disabled = false
+	_refresh_personal_ui()
+
+func _on_personal_session_changed(_state: Dictionary) -> void:
+	_refresh_personal_ui()
+
+func _on_personal_memory_changed(_items: Array) -> void:
+	_refresh_personal_ui()
+
+func _on_personal_request_failed(_message: String) -> void:
+	_refresh_personal_ui()
+
+func _is_mobile_layout() -> bool:
+	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
 
 func personal_base_url() -> String:
 	var configured := OS.get_environment("AURORAFOX_PUBLIC_URL").strip_edges()
@@ -169,6 +499,9 @@ func enter_guest() -> Dictionary:
 	personal_session_changed.emit(personal_state())
 	return {"ok": true, "state": personal_state()}
 
+func _refresh_personal_session_background() -> void:
+	await refresh_personal_session()
+
 func refresh_personal_session() -> Dictionary:
 	if str(_personal_session.get("kind", "")) != "account":
 		return {"ok": false, "error": "Аккаунт не активен"}
@@ -233,7 +566,8 @@ func logout_personal() -> Dictionary:
 				{},
 				bearer
 			)
-			remote_revoked = bool(response.get("ok", false)) and bool((response.get("data", {}) as Dictionary).get("revoked", false))
+			var response_data: Dictionary = response.get("data", {})
+			remote_revoked = bool(response.get("ok", false)) and bool(response_data.get("revoked", false))
 			if not remote_revoked:
 				warning = "Серверную сессию не удалось отозвать; локальные токены удалены"
 	elif kind == "guest":
@@ -274,7 +608,10 @@ func fetch_personal_memories() -> Dictionary:
 			if entity_id.is_empty():
 				continue
 			var previous = latest.get(entity_id, null)
-			if previous == null or int(item.get("revision", 0)) >= int((previous as Dictionary).get("revision", 0)):
+			var previous_revision := -1
+			if previous is Dictionary:
+				previous_revision = int((previous as Dictionary).get("revision", 0))
+			if previous == null or int(item.get("revision", 0)) >= previous_revision:
 				latest[entity_id] = item.duplicate(true)
 		cursor = int(data.get("cursor", cursor))
 		pages += 1
@@ -319,7 +656,8 @@ func delete_personal_memory(entity_id: String, revision: int, payload: Variant) 
 	var results: Array = data.get("results", [])
 	if results.is_empty() or not results[0] is Dictionary:
 		return {"ok": false, "error": "Сервер не подтвердил удаление памяти"}
-	var status := str((results[0] as Dictionary).get("status", ""))
+	var first: Dictionary = results[0]
+	var status := str(first.get("status", ""))
 	if status == "conflict":
 		return {"ok": false, "conflict": true, "error": "Память изменилась на другом устройстве. Обнови список и повтори."}
 	await fetch_personal_memories()
@@ -382,12 +720,13 @@ func _request_json(path: String, method: int, payload: Dictionary = {}, bearer :
 
 func _response_error(parsed: Variant, fallback: String) -> String:
 	if parsed is Dictionary:
-		var detail = (parsed as Dictionary).get("detail", "")
+		var data := parsed as Dictionary
+		var detail = data.get("detail", "")
 		if detail is String and not str(detail).strip_edges().is_empty():
 			return str(detail)
 		if detail is Dictionary:
 			return JSON.stringify(detail)
-		var error := str((parsed as Dictionary).get("error", "")).strip_edges()
+		var error := str(data.get("error", "")).strip_edges()
 		if not error.is_empty():
 			return error
 	return fallback.substr(0, 600) if not fallback.is_empty() else "Сервис аккаунта вернул ошибку"
@@ -401,10 +740,18 @@ func _personal_failure(response: Dictionary) -> Dictionary:
 	return {"ok": false, "status": int(response.get("status", 0)), "error": _last_personal_error}
 
 func _platform_name() -> String:
-	return "android" if OS.get_name() == "Android" else "windows" if OS.get_name() == "Windows" else OS.get_name().to_lower()
+	if OS.get_name() == "Android":
+		return "android"
+	if OS.get_name() == "Windows":
+		return "windows"
+	return OS.get_name().to_lower()
 
 func _device_name() -> String:
-	return "AuroraFox %s" % ("Android" if OS.get_name() == "Android" else "Windows" if OS.get_name() == "Windows" else OS.get_name())
+	if OS.get_name() == "Android":
+		return "AuroraFox Android"
+	if OS.get_name() == "Windows":
+		return "AuroraFox Windows"
+	return "AuroraFox " + OS.get_name()
 
 func _load_personal_session() -> void:
 	_personal_session = {}
@@ -577,7 +924,7 @@ func _build_popup() -> void:
 	root.add_child(close)
 
 func _inject_settings_button() -> void:
-	var settings := get_parent().get_node_or_null("SettingsOverlay")
+	var settings = get_parent().get_node_or_null("SettingsOverlay")
 	if settings == null:
 		return
 	var settings_popup = settings.get("popup")
@@ -641,7 +988,7 @@ func _on_status_changed(is_online: bool, details: Dictionary) -> void:
 		status_label.add_theme_color_override("font_color", GREEN)
 	else:
 		status_label.text = "API: запускается / не отвечает"
-		status_label.add_theme_color_override("font_color", Color("ffb36d"))
+		status_label.add_theme_color_override("font_color", WARNING)
 
 func _on_enabled_toggled(value: bool) -> void:
 	if manager != null:
