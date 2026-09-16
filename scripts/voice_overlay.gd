@@ -47,17 +47,28 @@ func _style(fill: Color, border: Color, radius := 11) -> StyleBoxFlat:
 	style.content_margin_bottom = 7
 	return style
 
+func _panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.022, 0.027, 0.048, 0.995)
+	style.border_color = Color(0.36, 0.65, 0.94, 0.80)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(18)
+	style.shadow_color = Color(0, 0, 0, 0.72)
+	style.shadow_size = 18
+	return style
+
 func _apply_button(button: Button, accent: bool) -> void:
 	var border := Color(0.30, 0.34, 0.46, 0.6)
 	if accent:
 		border = Color(0.27, 0.83, 1.0, 0.68)
 	button.add_theme_stylebox_override("normal", _style(Color(0.055, 0.066, 0.10, 0.96), border))
-	button.add_theme_stylebox_override("hover", _style(Color(0.10, 0.12, 0.18, 1.0), border))
+	button.add_theme_stylebox_override("hover", _style(Color(0.10, 0.12, 0.18, 1.0), Color(0.38, 0.83, 1.0, 0.78)))
 	button.add_theme_stylebox_override("pressed", _style(Color(0.14, 0.11, 0.22, 1.0), Color(0.66, 0.54, 1.0, 0.85)))
 	button.add_theme_stylebox_override("focus", _style(Color(0.10, 0.12, 0.18, 1.0), Color(0.66, 0.54, 1.0, 0.85)))
 	button.add_theme_color_override("font_color", Color("eef5ff"))
 	button.expand_icon = true
 	button.icon_max_width = 19
+	button.clip_text = true
 
 func _build_overlay() -> void:
 	var main := get_parent()
@@ -107,16 +118,28 @@ func _build_overlay() -> void:
 
 	status_label = Label.new()
 	status_label.name = "VoiceStatus"
-	status_label.custom_minimum_size.x = 56
+	status_label.custom_minimum_size.x = 52
 	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.clip_text = true
+	status_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	status_label.add_theme_font_size_override("font_size", 10)
 	status_label.add_theme_color_override("font_color", Color("8993aa"))
 	voice_dock.add_child(status_label)
 
 	settings_popup = PopupPanel.new()
-	settings_popup.size = Vector2i(560, 720)
+	settings_popup.name = "VoiceSettingsPopup"
+	settings_popup.size = Vector2i(580, 720)
+	settings_popup.add_theme_stylebox_override("panel", _panel_style())
 	main.add_child(settings_popup)
 	_build_settings(settings_popup)
+
+func _fit_settings_popup() -> void:
+	var viewport := get_viewport().get_visible_rect().size
+	var gap := 28.0 if OS.get_name() == "Android" else 48.0
+	settings_popup.size = Vector2i(
+		maxi(340, mini(580, int(viewport.x - gap))),
+		maxi(500, mini(720, int(viewport.y - gap)))
+	)
 
 func _build_settings(popup: PopupPanel) -> void:
 	var margin := MarginContainer.new()
@@ -127,6 +150,7 @@ func _build_settings(popup: PopupPanel) -> void:
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -138,7 +162,7 @@ func _build_settings(popup: PopupPanel) -> void:
 	box.add_child(title)
 	box.add_child(_check("Голос AuroraFox", "enabled"))
 	box.add_child(_check("Озвучивать ответы", "auto_speak"))
-	box.add_child(_option("Движок", "backend", ["auto", "silero", "xtts"], ["Автоматически", "Silero", "XTTS / Advanced"]))
+	box.add_child(_option("Движок", "backend", ["auto", "silero", "xtts"], ["Автоматически", "Silero", "XTTS / расширенный"]))
 	box.add_child(_option("Качество", "quality", ["fast", "balanced", "quality"], ["Быстро", "Сбалансировано", "Качество"]))
 	box.add_child(_slider("Громкость", "volume", 0.0, 1.0, 0.01))
 	box.add_child(_slider("Скорость", "speed", 0.85, 1.18, 0.01))
@@ -154,6 +178,7 @@ func _build_settings(popup: PopupPanel) -> void:
 	mic_title.add_theme_font_size_override("font_size", 19)
 	box.add_child(mic_title)
 	mic_device_option = OptionButton.new()
+	mic_device_option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	mic_device_option.add_item("Системный микрофон")
 	mic_device_option.set_item_metadata(0, -1)
 	mic_device_option.item_selected.connect(func(i): AuroraVoice.update_setting("mic_device", int(mic_device_option.get_item_metadata(i))))
@@ -173,8 +198,9 @@ func _build_settings(popup: PopupPanel) -> void:
 	clear.pressed.connect(_clear_cache)
 	box.add_child(clear)
 	var note := Label.new()
-	note.text = "Wake word, VAD, STT и TTS обрабатываются локально. XTTS включается при настроенном разрешённом speaker reference."
+	note.text = "Wake word, VAD, STT и TTS обрабатываются локально. Расширенный XTTS включается только при настроенном локальном speaker reference."
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.add_theme_font_size_override("font_size", 12)
 	box.add_child(note)
 
 func _check(text: String, key: String) -> CheckBox:
@@ -190,6 +216,7 @@ func _option(label_text: String, key: String, values: Array, labels: Array) -> V
 	label.text = label_text
 	box.add_child(label)
 	var option := OptionButton.new()
+	option.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	for i in range(values.size()):
 		option.add_item(str(labels[i]))
 		option.set_item_metadata(i, values[i])
@@ -287,6 +314,7 @@ func _toggle_speech() -> void:
 	_refresh_buttons()
 
 func _open_settings() -> void:
+	_fit_settings_popup()
 	settings_popup.popup_centered()
 	_refresh_devices()
 
@@ -324,9 +352,9 @@ func _refresh_buttons() -> void:
 	var mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
 	mic_button.tooltip_text = {
 		"off": "Микрофон выключен",
-		"wake_word": "Wake word: Fox / Фокс / Лиса",
+		"wake_word": "Активация голосом: Fox / Фокс / Лиса",
 		"continuous": "Постоянный диалог",
-		"push_to_talk": "Push-to-talk"
+		"push_to_talk": "Нажать и говорить"
 	}.get(mode, "Микрофон")
 	_apply_button(mic_button, mode != "off")
 	var auto_speak := bool(AuroraVoice.settings.get("auto_speak", true))
