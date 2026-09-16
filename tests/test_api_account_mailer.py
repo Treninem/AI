@@ -49,6 +49,25 @@ def test_account_action_url_must_be_https_and_have_no_embedded_credentials():
         )
 
 
+def test_malformed_recipient_header_fails_closed_before_smtp_connect(monkeypatch):
+    connected = False
+
+    class UnexpectedSMTP:
+        def __init__(self, *args, **kwargs):
+            nonlocal connected
+            connected = True
+            raise AssertionError("SMTP must not be reached for an invalid header")
+
+    monkeypatch.setattr("api.account_mailer.smtplib.SMTP", UnexpectedSMTP)
+    with pytest.raises(AccountMailError, match="delivery failed"):
+        AccountMailer(config()).send_token(
+            "user@example.test\r\nBcc: attacker@example.test",
+            "verify_email",
+            "one-time",
+        )
+    assert connected is False
+
+
 def test_starttls_happens_before_authentication(monkeypatch):
     events: list[str] = []
 
