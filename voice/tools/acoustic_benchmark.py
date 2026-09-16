@@ -97,12 +97,14 @@ def score_mos(model: UTMOSScoreTorch, audio: np.ndarray, sr: int) -> float:
         return float(model.score(resample_16k(audio, sr)).reshape(-1)[0].cpu())
 
 
-def synthesize_with_speaker(engine: SileroEngine, text: str, speaker: str) -> np.ndarray:
+def synthesize_with_speaker(engine: SileroEngine, text: str, speaker: str) -> tuple[np.ndarray, int]:
+    sr = int(engine.config.get("sample_rate", 48000))
+    model = engine._load()
     with torch.inference_mode():
-        audio = engine.model.apply_tts(text=prepare_for_speech(text), speaker=speaker, sample_rate=engine.sample_rate)
+        audio = model.apply_tts(text=prepare_for_speech(text), speaker=speaker, sample_rate=sr)
     if isinstance(audio, torch.Tensor):
         audio = audio.detach().cpu().numpy()
-    return np.asarray(audio, dtype=np.float32).reshape(-1)
+    return np.asarray(audio, dtype=np.float32).reshape(-1), sr
 
 
 def speaker_sweep(engine: SileroEngine, mos_model: UTMOSScoreTorch) -> dict:
@@ -111,12 +113,14 @@ def speaker_sweep(engine: SileroEngine, mos_model: UTMOSScoreTorch) -> dict:
         scores: list[float] = []
         try:
             preview: np.ndarray | None = None
+            preview_sr = int(engine.config.get("sample_rate", 48000))
             for text in SPEAKER_SWEEP_TEXTS:
-                audio = synthesize_with_speaker(engine, text, speaker)
+                audio, sr = synthesize_with_speaker(engine, text, speaker)
                 preview = audio if preview is None else preview
-                scores.append(score_mos(mos_model, audio, engine.sample_rate))
+                preview_sr = sr
+                scores.append(score_mos(mos_model, audio, sr))
             if preview is not None:
-                sf.write(OUT / f"speaker_{speaker}.wav", preview, engine.sample_rate, subtype="PCM_16")
+                sf.write(OUT / f"speaker_{speaker}.wav", preview, preview_sr, subtype="PCM_16")
             result[speaker] = {"mean_utmos": float(np.mean(scores)), "scores": scores}
         except Exception as exc:
             result[speaker] = {"error": str(exc)}
@@ -166,7 +170,6 @@ def main() -> int:
         sf.write(raw_path, raw, sr, subtype="PCM_16")
         sf.write(final_path, final, sr, subtype="PCM_16")
 
-        raw_16 = resample_16k(raw, sr)
         final_16 = resample_16k(final, sr)
         raw_score = score_mos(mos_model, raw, sr)
         final_score = score_mos(mos_model, final, sr)
@@ -217,6 +220,8 @@ def main() -> int:
         for name, data in sweep.items()
         if "mean_utmos" in data
     }
+    if not valid_sweep:
+        failures.append("speaker sweep produced no valid voice candidates")
     if configured_speaker in valid_sweep and valid_sweep:
         best_speaker, best_mos = max(valid_sweep.items(), key=lambda item: item[1])
         configured_mos = valid_sweep[configured_speaker]
