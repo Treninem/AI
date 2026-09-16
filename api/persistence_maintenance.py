@@ -14,6 +14,7 @@ from api.database import AuroraDatabase
 DEFAULT_RETENTION_SECONDS = 7 * 24 * 60 * 60
 DEFAULT_MAINTENANCE_INTERVAL_SECONDS = 6 * 60 * 60
 DEFAULT_WARN_DATABASE_BYTES = 512 * 1024 * 1024
+DEFAULT_BACKUP_MAX_BYTES = 256 * 1024 * 1024
 DEFAULT_WARN_SYNC_CHANGES = 1_000_000
 DEFAULT_WARN_OPEN_CONFLICTS = 10_000
 DEFAULT_MIN_FREE_BYTES = 256 * 1024 * 1024
@@ -41,9 +42,16 @@ class PersistenceMaintenance:
     def __init__(self, root: Path):
         self.root = root.resolve()
         self.database = AuroraDatabase(self.root / "aurorafox.sqlite3")
-        self.warn_database_bytes = _env_int(
+        configured_database_warning = _env_int(
             "AURORAFOX_DATABASE_WARN_BYTES", DEFAULT_WARN_DATABASE_BYTES
         )
+        self.backup_max_bytes = _env_int("AURORAFOX_BACKUP_MAX_BYTES", DEFAULT_BACKUP_MAX_BYTES)
+        # Backups fail closed at their source-size cap. Warn while there is still
+        # operating room even when an older deployment configured a looser DB
+        # warning. Other durable files can consume the remaining headroom, so 75%
+        # of the backup cap is the latest acceptable DB-only warning threshold.
+        backup_guard_warning = max(1, (self.backup_max_bytes * 3) // 4)
+        self.warn_database_bytes = min(configured_database_warning, backup_guard_warning)
         self.warn_sync_changes = _env_int(
             "AURORAFOX_SYNC_CHANGES_WARN", DEFAULT_WARN_SYNC_CHANGES
         )
@@ -135,6 +143,12 @@ class PersistenceMaintenance:
             "hard_pressure": hard_pressure,
             "warnings": warnings,
             "attention_required": bool(warnings),
+            "capacity_policy": {
+                "database_warn_bytes": self.warn_database_bytes,
+                "backup_max_source_bytes": self.backup_max_bytes,
+                "database_warning_precedes_backup_cap": self.warn_database_bytes < self.backup_max_bytes,
+                "min_free_bytes": self.min_free_bytes,
+            },
             "retention_policy": {
                 "retention_seconds": self.retention_seconds,
                 "maintenance_interval_seconds": self.maintenance_interval_seconds,
