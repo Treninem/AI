@@ -219,9 +219,14 @@ func _tool_result_uncertain(value: Variant) -> bool:
 	var result: Dictionary = value
 	if bool(result.get("ok", false)):
 		return false
+	# Validation/permission errors do not carry retry_safety. Once the Computer
+	# service has accepted an unsafe primitive, any failed result may have happened
+	# after a partial external side effect and therefore must never be replayed blind.
+	if str(result.get("retry_safety", "")).strip_edges().to_lower() == "unsafe":
+		return true
 	var error := str(result.get("error", "")).strip_edges().to_lower()
 	var http := int(result.get("http", 0))
-	if error in ["timeout", "transport_failure", "service_unavailable", "empty_response", "malformed_response", "worker_failed", "worker_crashed", "non_dictionary_tool_result"]:
+	if error in ["timeout", "transport_failure", "service_unavailable", "empty_response", "malformed_response", "malformed_worker_response", "worker_failed", "worker_crashed", "non_dictionary_tool_result"]:
 		return true
 	if http >= 500 or http in [408, 429]:
 		return true
