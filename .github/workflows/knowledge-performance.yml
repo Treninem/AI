@@ -62,6 +62,7 @@ jobs:
           benchmarks/knowledge/validate_performance_report.py
           benchmarks/knowledge/run_memory_scaling.py
           benchmarks/knowledge/run_search_scaling.py
+          benchmarks/knowledge/collect_probe_result.py
 
   smoke-linux:
     if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
@@ -87,6 +88,30 @@ jobs:
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
       - name: Validate smoke correctness
         run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/linux-smoke.json --output artifacts/knowledge-performance/linux-smoke-gate.json
+      - name: Verify transaction fast path and rollback
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/knowledge-performance
+          AURORA_KNOWLEDGE_BENCH_ALLOW_DESTRUCTIVE=1 timeout 180s ./godot --headless --path . --script benchmarks/knowledge/transaction_fast_path_probe.gd > artifacts/knowledge-performance/transaction-fast-path.log 2>&1
+          python benchmarks/knowledge/collect_probe_result.py \
+            --log artifacts/knowledge-performance/transaction-fast-path.log \
+            --prefix 'AURORA_TRANSACTION_FAST_PATH_PROBE=' \
+            --output artifacts/knowledge-performance/transaction-fast-path.json \
+            --require-true ok \
+            --require-true new_source_snapshot_scan_skipped \
+            --require-true existing_failure_rollback_ok \
+            --require-true new_failure_rollback_ok
+      - name: Collect record-level deduplication evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          AURORA_KNOWLEDGE_BENCH_ALLOW_DESTRUCTIVE=1 timeout 180s ./godot --headless --path . --script benchmarks/knowledge/record_dedup_probe.gd > artifacts/knowledge-performance/record-dedup-probe.log 2>&1
+          python benchmarks/knowledge/collect_probe_result.py \
+            --log artifacts/knowledge-performance/record-dedup-probe.log \
+            --prefix 'AURORA_RECORD_DEDUP_PROBE=' \
+            --output artifacts/knowledge-performance/record-dedup-probe.json \
+            --require-true diagnostic_completed
       - name: Upload Linux benchmark report
         if: always()
         uses: actions/upload-artifact@v4
@@ -120,6 +145,14 @@ jobs:
       - name: Validate Windows smoke correctness
         shell: powershell
         run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/windows-smoke.json --output artifacts/knowledge-performance/windows-smoke-gate.json
+      - name: Verify transaction fast path and rollback on Windows
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts/knowledge-performance | Out-Null
+          $env:AURORA_KNOWLEDGE_BENCH_ALLOW_DESTRUCTIVE = '1'
+          & .\godot.exe --headless --path . --script benchmarks/knowledge/transaction_fast_path_probe.gd *> artifacts/knowledge-performance/transaction-fast-path-windows.log
+          if ($LASTEXITCODE -ne 0) { Get-Content artifacts/knowledge-performance/transaction-fast-path-windows.log; exit $LASTEXITCODE }
+          python benchmarks/knowledge/collect_probe_result.py --log artifacts/knowledge-performance/transaction-fast-path-windows.log --prefix 'AURORA_TRANSACTION_FAST_PATH_PROBE=' --output artifacts/knowledge-performance/transaction-fast-path-windows.json --require-true ok --require-true new_source_snapshot_scan_skipped --require-true existing_failure_rollback_ok --require-true new_failure_rollback_ok
       - name: Upload Windows benchmark report
         if: always()
         uses: actions/upload-artifact@v4
@@ -129,7 +162,7 @@ jobs:
           if-no-files-found: error
 
   standard-linux:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -162,6 +195,26 @@ jobs:
           artifacts/knowledge-performance/linux-search-scaling.json
           --enforce-performance
           --output artifacts/knowledge-performance/linux-standard-gate.json
+      - name: Verify transaction fast path after scale run
+        shell: bash
+        run: |
+          set -euo pipefail
+          AURORA_KNOWLEDGE_BENCH_ALLOW_DESTRUCTIVE=1 timeout 180s ./godot --headless --path . --script benchmarks/knowledge/transaction_fast_path_probe.gd > artifacts/knowledge-performance/transaction-fast-path.log 2>&1
+          python benchmarks/knowledge/collect_probe_result.py \
+            --log artifacts/knowledge-performance/transaction-fast-path.log \
+            --prefix 'AURORA_TRANSACTION_FAST_PATH_PROBE=' \
+            --output artifacts/knowledge-performance/transaction-fast-path.json \
+            --require-true ok
+      - name: Collect record-level deduplication evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+          AURORA_KNOWLEDGE_BENCH_ALLOW_DESTRUCTIVE=1 timeout 180s ./godot --headless --path . --script benchmarks/knowledge/record_dedup_probe.gd > artifacts/knowledge-performance/record-dedup-probe.log 2>&1
+          python benchmarks/knowledge/collect_probe_result.py \
+            --log artifacts/knowledge-performance/record-dedup-probe.log \
+            --prefix 'AURORA_RECORD_DEDUP_PROBE=' \
+            --output artifacts/knowledge-performance/record-dedup-probe.json \
+            --require-true diagnostic_completed
       - name: Upload standard benchmark report
         if: always()
         uses: actions/upload-artifact@v4
