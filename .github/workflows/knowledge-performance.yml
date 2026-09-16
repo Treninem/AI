@@ -203,6 +203,12 @@ jobs:
         run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario import_jsonl --target-mb 100 --timeout-seconds 1800 --report artifacts/knowledge-performance/linux-jsonl-100.json
       - name: Measure JSONL 250 MiB
         run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario import_jsonl --target-mb 250 --timeout-seconds 1800 --report artifacts/knowledge-performance/linux-jsonl-250.json
+      - name: Measure semantic memory 250 records
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario semantic_memory --count 250 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-memory-250.json
+      - name: Measure semantic memory 500 records
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario semantic_memory --count 500 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-memory-500.json
+      - name: Measure semantic memory 1000 records
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario semantic_memory --count 1000 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-memory-1000.json
       - name: Upload branch stress evidence
         if: always()
         uses: actions/upload-artifact@v4
