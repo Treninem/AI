@@ -34,3 +34,15 @@ def test_specialist_team_runtime_smoke_is_fail_fast_before_full_benchmark() -> N
     assert "continue-on-error: true" not in specialist_step
     assert "run_windows_code_specialist_smoke.ps1" in specialist_step
     assert start < end
+
+
+def test_performance_baseline_comes_only_from_successful_main_benchmark_runs() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    assert "actions: read" in workflow
+    assert "Resolve latest successful main benchmark baseline" in workflow
+    assert "/actions/runs?branch=main&event=push&status=success&per_page=100" in workflow
+    assert "$_.name -eq 'AuroraFox Core Benchmarks'" in workflow
+    assert 'artifactName = "aurorafox-core-benchmark-$headSha"' in workflow
+    assert "AURORAFOX_CORE_BASELINE_BOOTSTRAP" in workflow
+    assert "steps.baseline.outputs.path" in workflow
+    assert "--baseline" in workflow
