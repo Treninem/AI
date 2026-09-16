@@ -33,7 +33,7 @@ SAMPLES = [
     ("warning", "warning", 0.70, "Внимание. Давление выше заданного значения, лучше проверить линию подачи воздуха."),
 ]
 FEMALE_SPEAKERS = ("xenia", "baya", "kseniya")
-SPEAKER_SWEEP_TEXTS = (SAMPLES[0][3], SAMPLES[2][3], SAMPLES[4][3])
+SPEAKER_SWEEP_TEXTS = tuple(sample[3] for sample in SAMPLES)
 
 
 def normalized(text: str) -> str:
@@ -54,6 +54,19 @@ def char_similarity(a: str, b: str) -> float:
         previous = current
     distance = previous[-1]
     return 1.0 - distance / max(len(a), len(b), 1)
+
+
+def intelligibility_similarity(original: str, spoken_form: str, recognized: str) -> float:
+    """Accept ASR's normal written form as well as the literal spoken form.
+
+    Russian ASR commonly writes spoken number words back as digits. That is a
+    successful round trip, not a loss of intelligibility, so compare against
+    both the user-visible source and the normalized TTS form.
+    """
+    return max(
+        char_similarity(original, recognized),
+        char_similarity(spoken_form, recognized),
+    )
 
 
 def audio_metrics(audio: np.ndarray, sr: int) -> dict:
@@ -121,15 +134,17 @@ def speaker_sweep(engine: SileroEngine, mos_model: UTMOSScoreTorch) -> dict:
                 scores.append(score_mos(mos_model, audio, sr))
             if preview is not None:
                 sf.write(OUT / f"speaker_{speaker}.wav", preview, preview_sr, subtype="PCM_16")
-            result[speaker] = {"mean_utmos": float(np.mean(scores)), "scores": scores}
+            result[speaker] = {
+                "mean_utmos": float(np.mean(scores)),
+                "min_utmos": float(np.min(scores)),
+                "scores": scores,
+            }
         except Exception as exc:
             result[speaker] = {"error": str(exc)}
     return result
 
 
 def main() -> int:
-    # Keep measurements repeatable across reruns so prosody changes can be
-    # compared against a stable baseline rather than random execution noise.
     torch.manual_seed(0)
     np.random.seed(0)
     torch.set_num_threads(4)
@@ -173,8 +188,11 @@ def main() -> int:
         final_16 = resample_16k(final, sr)
         raw_score = score_mos(mos_model, raw, sr)
         final_score = score_mos(mos_model, final, sr)
-        recognized = str(asr({"array": final_16.squeeze(0).numpy(), "sampling_rate": 16000}, generate_kwargs={"language": "ru", "task": "transcribe"}).get("text", "")).strip()
-        similarity = char_similarity(clean, recognized)
+        recognized = str(asr(
+            {"array": final_16.squeeze(0).numpy(), "sampling_rate": 16000},
+            generate_kwargs={"language": "ru", "task": "transcribe"},
+        ).get("text", "")).strip()
+        similarity = intelligibility_similarity(text, clean, recognized)
         metrics = audio_metrics(final, sr)
 
         raw_mos.append(raw_score)
@@ -184,7 +202,8 @@ def main() -> int:
             "id": sample_id,
             "emotion": emotion,
             "intensity": intensity,
-            "text": clean,
+            "source_text": text,
+            "spoken_text": clean,
             "recognized": recognized,
             "char_similarity": similarity,
             "raw_utmos": raw_score,
@@ -225,9 +244,9 @@ def main() -> int:
     if configured_speaker in valid_sweep and valid_sweep:
         best_speaker, best_mos = max(valid_sweep.items(), key=lambda item: item[1])
         configured_mos = valid_sweep[configured_speaker]
-        if best_speaker != configured_speaker and best_mos > configured_mos + 0.12:
+        if best_speaker != configured_speaker and best_mos > configured_mos + 0.03:
             failures.append(
-                f"speaker candidate {best_speaker} scores materially higher than {configured_speaker}: "
+                f"speaker candidate {best_speaker} scores higher than {configured_speaker}: "
                 f"{best_mos:.3f} vs {configured_mos:.3f}"
             )
 
