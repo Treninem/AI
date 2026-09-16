@@ -52,9 +52,15 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate benchmark contract
-        run: python -m unittest tests.test_knowledge_performance_contract tests.test_knowledge_performance_compare -v
+        run: python -m unittest tests.test_knowledge_performance_contract tests.test_knowledge_performance_compare tests.test_knowledge_stress_gates -v
       - name: Compile Python tools
-        run: python -m py_compile benchmarks/knowledge/run_knowledge_benchmark.py benchmarks/knowledge/compare_reports.py
+        run: >-
+          python -m py_compile
+          benchmarks/knowledge/run_knowledge_benchmark.py
+          benchmarks/knowledge/compare_reports.py
+          benchmarks/knowledge/run_memory_scaling.py
+          benchmarks/knowledge/run_search_scaling.py
+          benchmarks/knowledge/validate_performance_report.py
 
   smoke-linux:
     if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
@@ -138,10 +144,10 @@ jobs:
           if-no-files-found: error
 
   standard-linux:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
     needs: contract
     runs-on: ubuntu-latest
-    timeout-minutes: 75
+    timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
       - name: Download Godot 4.7.1
@@ -159,6 +165,18 @@ jobs:
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run standard knowledge scale gate
         run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile standard --timeout-seconds 900 --report artifacts/knowledge-performance/linux-standard.json
+      - name: Run persistent memory N-2N-4N gate
+        run: python benchmarks/knowledge/run_memory_scaling.py --godot ./godot --counts 125,250,500 --timeout-seconds 600 --report artifacts/knowledge-performance/memory-scaling.json
+      - name: Run search N-2N-4N gate
+        run: python benchmarks/knowledge/run_search_scaling.py --godot ./godot --sizes-mb 1,2,4 --timeout-seconds 600 --report artifacts/knowledge-performance/search-scaling.json
+      - name: Enforce relative performance and correctness
+        run: >-
+          python benchmarks/knowledge/validate_performance_report.py
+          artifacts/knowledge-performance/linux-standard.json
+          artifacts/knowledge-performance/memory-scaling.json
+          artifacts/knowledge-performance/search-scaling.json
+          --enforce-performance
+          --output artifacts/knowledge-performance/performance-gate.json
       - name: Probe record-level deduplication semantics
         shell: bash
         run: |
