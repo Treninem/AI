@@ -3,7 +3,7 @@ extends Node
 
 const STORE_PATH := "user://work/workspaces.json"
 const WORK_ROOT := "user://work/projects"
-const SCHEMA_VERSION := 2
+const SCHEMA_VERSION := 3
 
 const STATE_QUEUED := "queued"
 const STATE_RUNNING := "running"
@@ -182,6 +182,7 @@ func create_task(project_id: String, prompt: String, output_name := "", idempote
 		"last_action": "",
 		"last_action_id": "",
 		"last_action_retry_safety": "safe",
+		"attempt_retry_safety": "safe",
 		"requires_user_action": false,
 		"cancel_requested": false,
 		"retryable": true,
@@ -238,6 +239,8 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 	if old_state == new_state:
 		return _patch_task(location, patch)
 	if explicit_retry:
+		if bool(task.get("requires_user_action", false)):
+			return false
 		if old_state not in RETRYABLE_STATES or new_state != STATE_QUEUED:
 			return false
 	else:
@@ -268,6 +271,7 @@ func transition_task(project_id: String, task_id: String, new_state: String, pat
 		task["last_action"] = ""
 		task["last_action_id"] = ""
 		task["last_action_retry_safety"] = "safe"
+		task["attempt_retry_safety"] = "safe"
 
 	_apply_safe_patch(task, patch)
 	tasks[task_index] = task
@@ -290,12 +294,12 @@ func pause_task(project_id: String, task_id: String, message: String = "Paused")
 
 func resume_task(project_id: String, task_id: String) -> bool:
 	var task := get_task(project_id, task_id)
-	if task.is_empty():
+	if task.is_empty() or bool(task.get("requires_user_action", false)):
 		return false
 	var state := str(task.get("status", ""))
 	if state == STATE_PAUSED:
 		return transition_task(project_id, task_id, STATE_QUEUED, {"message": "Queued to resume"}, false)
-	if state == STATE_INTERRUPTED and not bool(task.get("requires_user_action", false)):
+	if state == STATE_INTERRUPTED:
 		return retry_task(project_id, task_id)
 	return false
 
@@ -367,6 +371,9 @@ func note_action(project_id: String, task_id: String, action_name: String, actio
 		"last_action_retry_safety": safety,
 	})
 
+func mark_attempt_unsafe(project_id: String, task_id: String) -> bool:
+	return update_task(project_id, task_id, {"attempt_retry_safety": "unsafe"})
+
 func project_dir(project_id: String) -> String:
 	return "%s/%s" % [work_root, project_id]
 
@@ -417,6 +424,8 @@ func _apply_safe_patch(task: Dictionary, patch: Dictionary) -> void:
 			value = _redact(str(value)).substr(0, MAX_SUMMARY_CHARS)
 		elif key_text == "progress":
 			value = clampi(int(value), 0, 100)
+		elif key_text in ["last_action_retry_safety", "attempt_retry_safety"]:
+			value = str(value) if str(value) in ["safe", "unsafe"] else "unsafe"
 		task[key_text] = value
 
 func _project_index(project_id: String) -> int:
@@ -576,15 +585,34 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 	if retry_safety not in ["safe", "unsafe"]:
 		retry_safety = "unsafe"
 		migrated = true
+	var attempt_safety_present := raw.has("attempt_retry_safety")
+	var attempt_safety := str(raw.get("attempt_retry_safety", "safe"))
+	if attempt_safety not in ["safe", "unsafe"]:
+		attempt_safety = "unsafe"
+		migrated = true
+	var attempts := maxi(0, int(raw.get("attempts", 0)))
 	var requires_user_action := bool(raw.get("requires_user_action", false))
+	var retryable := bool(raw.get("retryable", true))
 	var last_error := _redact(str(raw.get("last_error", raw.get("error", "")))).substr(0, MAX_ERROR_CHARS)
-	if state == STATE_RUNNING:
-		if not retry_safety_present:
-			retry_safety = "unsafe"
-			recovery_notes.append("legacy_running_task_retry_safety_unknown")
+	var executed_state := state in [STATE_RUNNING, STATE_PAUSED, STATE_FAILED, STATE_CANCELLED, STATE_INTERRUPTED, STATE_PARTIAL]
+	if not attempt_safety_present and (executed_state or attempts > 0):
+		attempt_safety = "unsafe"
+		requires_user_action = true
+		retryable = false
+		recovery_notes.append("legacy_attempt_retry_safety_unknown")
+		if state in [STATE_RUNNING, STATE_PAUSED, STATE_FAILED, STATE_QUEUED]:
+			state = STATE_INTERRUPTED
+		last_error = "Legacy Work attempt has unknown side-effect history. Verify external state before retry."
+		migrated = true
+	elif state == STATE_RUNNING:
+		if not retry_safety_present or retry_safety == "unsafe":
+			attempt_safety = "unsafe"
+			requires_user_action = true
+			retryable = false
+			if not retry_safety_present:
+				recovery_notes.append("legacy_running_task_retry_safety_unknown")
 		state = STATE_INTERRUPTED
 		last_error = "Application restarted while this task was running. No action was replayed automatically."
-		requires_user_action = retry_safety == "unsafe"
 		migrated = true
 	var created := str(raw.get("created_at", _now()))
 	return {
@@ -603,10 +631,11 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 		"last_action": _redact(str(raw.get("last_action", ""))).substr(0, MAX_SUMMARY_CHARS),
 		"last_action_id": str(raw.get("last_action_id", "")),
 		"last_action_retry_safety": retry_safety,
+		"attempt_retry_safety": attempt_safety,
 		"requires_user_action": requires_user_action,
 		"cancel_requested": false,
-		"retryable": bool(raw.get("retryable", true)),
-		"attempts": maxi(0, int(raw.get("attempts", 0))),
+		"retryable": retryable,
+		"attempts": attempts,
 		"execution_id": "" if state == STATE_INTERRUPTED else str(raw.get("execution_id", "")),
 		"idempotency_key": str(raw.get("idempotency_key", "")),
 		"created_at": created,
