@@ -13,9 +13,8 @@ func _stabilize_startup() -> void:
 	if main == null:
 		return
 
-	# Setup centers remain available from Settings, but they do not compete for
-	# the screen during normal application startup. Core readiness is reflected
-	# in the main status and can be configured explicitly by the user.
+	# Normal users never see model/provider setup. AuroraFox ships a complete
+	# Core and starts warming it as soon as the main window is available.
 	var model_setup: Node = main.get_node_or_null("ModelSetup")
 	if model_setup != null:
 		model_setup.set("shown_once", true)
@@ -29,6 +28,10 @@ func _stabilize_startup() -> void:
 		var voice_popup: Variant = voice_setup.get("popup")
 		if voice_popup is PopupPanel:
 			(voice_popup as PopupPanel).hide()
+
+	var ai_value = main.get("ai")
+	if ai_value is AIClient:
+		call_deferred("_warm_core", ai_value)
 
 	# Keep update UI inside the main header if an older overlay created a
 	# floating button before the header was available.
@@ -44,3 +47,17 @@ func _stabilize_startup() -> void:
 					if old_parent != null:
 						old_parent.remove_child(button)
 					header.add_child(button)
+
+func _warm_core(ai: AIClient) -> void:
+	var result: Dictionary = await ai.warmup()
+	if not bool(result.get("ok", false)):
+		# Do not interrupt startup with setup/error dialogs. The installed-package
+		# CI guarantees the Core assets; a damaged local install can still be
+		# repaired from Settings or by reinstalling the current release.
+		push_warning("AuroraFox Core warmup deferred: %s" % str(result.get("error", "runtime not ready")))
+		return
+	var main: Node = get_parent()
+	if main != null:
+		var status := main.get_node_or_null("CoreStatusCoordinator")
+		if status != null and status.has_method("refresh_now"):
+			status.call_deferred("refresh_now")
