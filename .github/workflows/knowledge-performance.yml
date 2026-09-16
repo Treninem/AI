@@ -78,6 +78,27 @@ jobs:
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run bounded knowledge smoke benchmark
         run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
+      - name: Probe record-level deduplication semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/knowledge-performance
+          AURORA_KNOWLEDGE_BENCH_ALLOW_DESTRUCTIVE=1 timeout 180s ./godot --headless --path . --script benchmarks/knowledge/record_dedup_probe.gd > artifacts/knowledge-performance/record-dedup-probe.log
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          prefix = "AURORA_RECORD_DEDUP_PROBE="
+          log = Path("artifacts/knowledge-performance/record-dedup-probe.log").read_text(encoding="utf-8", errors="replace")
+          payload = None
+          for line in reversed(log.splitlines()):
+              if line.startswith(prefix):
+                  payload = json.loads(line[len(prefix):])
+                  break
+          if not isinstance(payload, dict) or not payload.get("diagnostic_completed"):
+              raise SystemExit("record dedup diagnostic did not complete")
+          Path("artifacts/knowledge-performance/record-dedup-probe.json").write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+          print("record_dedup_contract_passed=", payload.get("dedupe_contract_passed"))
+          PY
       - name: Upload Linux benchmark report
         if: always()
         uses: actions/upload-artifact@v4
@@ -138,6 +159,27 @@ jobs:
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run standard knowledge scale gate
         run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile standard --timeout-seconds 900 --report artifacts/knowledge-performance/linux-standard.json
+      - name: Probe record-level deduplication semantics
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/knowledge-performance
+          AURORA_KNOWLEDGE_BENCH_ALLOW_DESTRUCTIVE=1 timeout 180s ./godot --headless --path . --script benchmarks/knowledge/record_dedup_probe.gd > artifacts/knowledge-performance/record-dedup-probe.log
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          prefix = "AURORA_RECORD_DEDUP_PROBE="
+          log = Path("artifacts/knowledge-performance/record-dedup-probe.log").read_text(encoding="utf-8", errors="replace")
+          payload = None
+          for line in reversed(log.splitlines()):
+              if line.startswith(prefix):
+                  payload = json.loads(line[len(prefix):])
+                  break
+          if not isinstance(payload, dict) or not payload.get("diagnostic_completed"):
+              raise SystemExit("record dedup diagnostic did not complete")
+          Path("artifacts/knowledge-performance/record-dedup-probe.json").write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+          print("record_dedup_contract_passed=", payload.get("dedupe_contract_passed"))
+          PY
       - name: Upload standard benchmark report
         if: always()
         uses: actions/upload-artifact@v4
