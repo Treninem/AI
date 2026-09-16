@@ -3,6 +3,11 @@ extends Node
 
 signal tool_called(name: String, args: Dictionary)
 
+const COMPUTER_TIMEOUT_MAX := 320.0
+const COMPUTER_ACTION_TIMEOUT := 32.0
+const COMPUTER_SCREEN_TIMEOUT := 20.0
+const COMPUTER_WINDOWS_TIMEOUT := 16.0
+
 var tools: Dictionary = {}
 var computer_base_url := "http://127.0.0.1:8766"
 var files_base_url := "http://127.0.0.1:8767"
@@ -15,13 +20,15 @@ func _ready() -> void:
 	register_tool("analyze_file", "Глубоко разобрать локальный файл: PDF, DOCX, XLS/XLSX, PPTX, ODT/ODS, изображение, аудио, видео, архив или исходный код", {"path":"string","question":"string","visual":"bool"}, Callable(self, "_analyze_file"))
 	register_tool("file_tree", "Построить дерево локальной папки проекта или user:// с размерами файлов", {"path":"string","max_items":"int"}, Callable(self, "_file_tree"))
 	register_tool("search_file_cache", "Найти ранее разобранные файлы и фрагменты по локальному индексу File Intelligence", {"query":"string","limit":"int"}, Callable(self, "_search_file_cache"))
-	register_tool("run_process", "Запустить разрешённую внешнюю программу", {"program":"string","args":"array"}, Callable(self, "_run_process"))
 	register_tool("git_status", "Проверить git status", {}, Callable(self, "_git_status"))
 	register_tool("git_diff", "Посмотреть git diff", {}, Callable(self, "_git_diff"))
 	register_tool("system_info", "Получить сведения о системе и Godot", {}, Callable(self, "_system_info"))
-	register_tool("computer_plan", "Посмотреть экран и предложить следующее действие мышью/клавиатурой без выполнения", {"goal":"string"}, Callable(self, "_computer_plan"))
-	register_tool("computer_goal", "Выполнить визуальную задачу на компьютере: видеть экран, управлять мышью, клавиатурой и окнами. Подходит для программ и локальных игр. Компьютерный сервис должен быть запущен.", {"goal":"string","max_steps":"int","auto_execute":"bool"}, Callable(self, "_computer_goal"))
-	register_tool("sandbox_exec", "Запустить Python/Git/Godot/pytest в изолированной рабочей папке AuroraFox", {"command":"array","cwd":"string","timeout":"int"}, Callable(self, "_sandbox_exec"))
+	register_tool("computer_plan", "Совместимый контракт: планирование Computer Agent выполняет только локальный AuroraFox Core", {"goal":"string"}, Callable(self, "_computer_plan"))
+	register_tool("computer_goal", "Совместимый контракт: цель должна быть разложена локальным AuroraFox Core на явные computer_action", {"goal":"string","max_steps":"int","auto_execute":"bool"}, Callable(self, "_computer_goal"))
+	register_tool("computer_action", "Выполнить одну уже выбранную локальным AuroraFox Core примитивную операцию мыши/клавиатуры с bounded execution и проверкой разрешений", {"type":"string","x":"int","y":"int","button":"string","clicks":"int","text":"string","keys":"array","amount":"int","seconds":"float","action_id":"string","verify":"bool"}, Callable(self, "_computer_action"))
+	register_tool("computer_screenshot", "Получить локальный screenshot Windows после проверки master stop и разрешений", {}, Callable(self, "_computer_screenshot"))
+	register_tool("computer_windows", "Получить локальное описание окон и UI Automation элементов Windows", {}, Callable(self, "_screen_snapshot"))
+	register_tool("sandbox_exec", "Запустить разрешённую команду: auto/container требуют строгий локальный контейнер; local доступен только как явный degraded operator mode", {"command":"array","cwd":"string","timeout":"int","mode":"string"}, Callable(self, "_sandbox_exec"))
 	register_tool("sandbox_write", "Создать текстовый файл внутри изолированной песочницы", {"path":"string","content":"string"}, Callable(self, "_sandbox_write"))
 	register_tool("sandbox_read", "Прочитать файл из изолированной песочницы", {"path":"string"}, Callable(self, "_sandbox_read"))
 	register_tool("screen_snapshot", "Получить описание текущих окон и элементов интерфейса Windows", {}, Callable(self, "_screen_snapshot"))
@@ -70,6 +77,49 @@ func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}
 	if parsed is Dictionary:
 		return parsed
 	return {"ok": false, "error": "Invalid JSON response"}
+
+func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout := 12.0) -> Dictionary:
+	if OS.get_name() != "Windows":
+		return {"ok": false, "error": "unsupported_platform", "message": "Desktop Computer Agent is not supported on %s" % OS.get_name(), "retryable": false}
+	if not ComputerClient.master_enabled_from(self):
+		return {"ok": false, "error": "master_stop", "message": "Master stop активен", "retryable": false}
+	var req := HTTPRequest.new()
+	req.timeout = clampf(timeout, 1.0, COMPUTER_TIMEOUT_MAX)
+	add_child(req)
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"X-AuroraFox-Computer-Token: " + ComputerClient.shared_service_token(),
+		"X-AuroraFox-Autonomy-Allowed: 1",
+	])
+	var body := "" if payload.is_empty() else JSON.stringify(payload)
+	var err := req.request(computer_base_url + path, headers, method, body)
+	if err != OK:
+		req.queue_free()
+		return {"ok": false, "error": "service_unavailable", "message": "Computer service request failed (%s)" % err, "retryable": true}
+	var completed: Array = await req.request_completed
+	req.queue_free()
+	if completed.size() < 4:
+		return {"ok": false, "error": "malformed_response", "message": "Computer service returned an incomplete response", "retryable": true}
+	var result_code := int(completed[0])
+	var code := int(completed[1])
+	var raw: PackedByteArray = completed[3]
+	if result_code != HTTPRequest.RESULT_SUCCESS:
+		return {"ok": false, "error": "transport_failure", "message": "Computer service transport failed (%s" % result_code, "retryable": true}
+	var text := raw.get_string_from_utf8().strip_edges()
+	if text.is_empty():
+		return {"ok": false, "error": "empty_response", "http": code, "retryable": code >= 500}
+	var parsed = JSON.parse_string(text)
+	if not parsed is Dictionary:
+		return {"ok": false, "error": "malformed_response", "http": code, "retryable": code >= 500}
+	var response: Dictionary = parsed
+	if code < 200 or code >= 300:
+		return {"ok": false, "http": code, "error": str(response.get("error", "http_error")), "message": str(response.get("detail", response.get("message", "Computer service error"))).substr(0, 2048), "retryable": code in [408, 429, 502, 503, 504]}
+	return response
+
+func _computer_permission() -> Dictionary:
+	if ComputerClient.computer_control_enabled():
+		return {"ok": true}
+	return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
 
 func _http_get(args: Dictionary) -> Dictionary:
 	var url := str(args.get("url", ""))
@@ -173,25 +223,56 @@ func _git_diff(_args: Dictionary) -> Dictionary:
 func _system_info(_args: Dictionary) -> Dictionary:
 	return {"ok": true, "godot": Engine.get_version_info(), "os": OS.get_name(), "cpu_count": OS.get_processor_count(), "locale": OS.get_locale()}
 
-func _computer_plan(args: Dictionary) -> Dictionary:
-	return await _http_json(computer_base_url + "/plan", HTTPClient.METHOD_POST, {"goal": str(args.get("goal", "")), "max_steps": 1, "auto_execute": false})
+func _computer_plan(_args: Dictionary) -> Dictionary:
+	return {"ok": false, "error": "local_core_planning_required", "message": "Computer planning belongs to local AuroraFox Core. Use computer_windows/computer_screenshot, decide locally, then call computer_action.", "retryable": false}
 
-func _computer_goal(args: Dictionary) -> Dictionary:
-	var goal := str(args.get("goal", ""))
-	var max_steps := clampi(int(args.get("max_steps", 30)), 1, 100)
-	var auto_execute := bool(args.get("auto_execute", true))
-	return await _http_json(computer_base_url + "/run", HTTPClient.METHOD_POST, {"goal": goal, "max_steps": max_steps, "auto_execute": auto_execute}, 600.0)
+func _computer_goal(_args: Dictionary) -> Dictionary:
+	return {"ok": false, "error": "local_core_planning_required", "message": "Computer goals must be planned by local AuroraFox Core and executed as explicit computer_action primitives.", "retryable": false}
+
+func _computer_action(args: Dictionary) -> Dictionary:
+	var permission := _computer_permission()
+	if not permission.get("ok", false):
+		return permission
+	var payload := args.duplicate(true)
+	if str(payload.get("action_id", "")).strip_edges().is_empty():
+		payload["action_id"] = "%d:%d" % [OS.get_process_id(), Time.get_ticks_usec()]
+	return await _computer_json("/action", HTTPClient.METHOD_POST, payload, COMPUTER_ACTION_TIMEOUT)
+
+func _computer_screenshot(_args: Dictionary) -> Dictionary:
+	var permission := _computer_permission()
+	if not permission.get("ok", false):
+		return permission
+	return await _computer_json("/screen", HTTPClient.METHOD_GET, {}, COMPUTER_SCREEN_TIMEOUT)
 
 func _sandbox_exec(args: Dictionary) -> Dictionary:
-	return await _http_json(computer_base_url + "/sandbox/exec", HTTPClient.METHOD_POST, {"command": args.get("command", []), "cwd": str(args.get("cwd", ".")), "timeout": clampi(int(args.get("timeout", 60)), 1, 600)}, 620.0)
+	var timeout := clampi(int(args.get("timeout", 60)), 1, 300)
+	var mode := str(args.get("mode", "auto")).strip_edges().to_lower()
+	if mode not in ["auto", "container", "local"]:
+		return {"ok": false, "error": "invalid_sandbox_mode", "message": "sandbox_exec mode must be auto, container, or local", "retryable": false}
+	var payload := {"command": args.get("command", []), "cwd": str(args.get("cwd", ".")), "timeout": timeout, "allow_network": false}
+	if mode in ["auto", "container"]:
+		var container_result := await _computer_json("/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
+		if int(container_result.get("http", 0)) == 404:
+			return {"ok": false, "error": "container_runtime_unavailable", "message": "Automatic/strict sandbox execution requires Docker/Podman and a preinstalled local image; degraded local fallback is disabled", "retryable": false, "network_isolation_enforced": false}
+		return container_result
+	# Explicit local mode is intentionally degraded and still fails closed at the
+	# sidecar unless AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX=1 was set by an operator.
+	var local_result := await _computer_json("/sandbox/exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
+	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
+		local_result["degraded_isolation"] = true
+		local_result["isolation_note"] = "Explicit local mode lacks strict filesystem/network isolation. Prefer mode=container."
+	return local_result
 
 func _sandbox_write(args: Dictionary) -> Dictionary:
-	return await _http_json(computer_base_url + "/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", ""))})
+	return await _computer_json("/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", ""))}, 12.0)
 
 func _sandbox_read(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))
 	var encoded := path.uri_encode()
-	return await _http_json(computer_base_url + "/sandbox/read?path=" + encoded, HTTPClient.METHOD_GET)
+	return await _computer_json("/sandbox/read?path=" + encoded, HTTPClient.METHOD_GET, {}, 12.0)
 
 func _screen_snapshot(_args: Dictionary) -> Dictionary:
-	return await _http_json(computer_base_url + "/windows", HTTPClient.METHOD_GET)
+	var permission := _computer_permission()
+	if not permission.get("ok", false):
+		return permission
+	return await _computer_json("/windows", HTTPClient.METHOD_GET, {}, COMPUTER_WINDOWS_TIMEOUT)
