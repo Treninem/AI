@@ -75,7 +75,15 @@ func _owner_background_texture() -> Texture2D:
 	var region := Rect2(Vector2.ZERO, source_size)
 	var viewport_ratio := viewport.x / viewport.y
 	var source_ratio := source_size.x / source_size.y
-	if viewport_ratio > source_ratio:
+	if viewport.y > viewport.x:
+		# Portrait is intentionally right-focal. Keep at least a one-pixel crop
+		# even when the source and target ratios are effectively equal so the
+		# character/right frame never falls back to centered/full-width framing.
+		var max_portrait_width := maxf(1.0, source_size.x - 1.0)
+		var target_width := minf(max_portrait_width, source_size.y * viewport_ratio)
+		region.position.x = maxf(0.0, source_size.x - target_width)
+		region.size.x = target_width
+	elif viewport_ratio > source_ratio:
 		var target_height := source_size.x / viewport_ratio
 		region.position.y = maxf(0.0, source_size.y - target_height)
 		region.size.y = minf(source_size.y, target_height)
