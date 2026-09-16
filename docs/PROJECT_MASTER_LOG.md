@@ -317,7 +317,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Core benchmarks.
 
 ## 14. Активные работы и занятые файлы
-
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
@@ -477,7 +476,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Не пересекается с UI claim: `update/update_overlay.gd` остаётся за UI lane; с research/voice/server claims их файлы не трогаются. Перед каждой записью сверять свежий `main` и интегрировать параллельные изменения.
 - Инженерная причина: normal `latest` release отсутствует, а historical V1.3 использует RSA updater, но не содержит pinned `release_public.pub`; поэтому публикация одного `update.json` не может исправить уже установленный бинарник. Нужен one-time repair на новый signed floor и permanent version/release discipline.
 - Acceptance: V1.2 repair остаётся рабочим; V1.3 repair проверен in-place на Windows с сохранением `user://`; новый floor содержит pinned public key; updater contract на floor видит версию выше себя и отклоняет неверную подпись/hash; release workflow обязан формировать `latest` assets; version bump выполняется только после зелёных Core/Windows/Android/update/release gates.
-
 Код: draft [PR #29](https://github.com/Treninem/AI/pull/29), commit `13b5a948363688eb0b38429330e127a9a52ea7a4`. Эта запись публикует только координацию; код и полный текст 56 пунктов ТЗ находятся в PR до CI/интеграции.
 
 ## 18. Core Quality / Performance Benchmark & Regression Gate — active lane
@@ -637,7 +635,6 @@ ACTION: Сохранить responsive UI/progress на large import и сдел�
 - Освобождённые файлы: нет; benchmark/test/workflow paths и три performance-follow-up production paths остаются занятыми этим ACTIVE CLAIM до завершения acceptance.
 
 ## 27. Integration Gate — Knowledge alias removal correctness blocker, 2026-09-16
-
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF
 TYPE: BLOCKER
@@ -677,7 +674,6 @@ ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the det
 ## 31. Large Knowledge / Memory Performance — durability and scaling checkpoint, 2026-09-16
 
 ### `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` — checkpoint
-
 - Статус: **ACTIVE — Linux correctness/scaling baseline подтверждён; durability hardening интегрирован; Windows/record-dedupe/registry-only/100–250 MiB exact runtime evidence ожидается**.
 - Каноническая версия остаётся **V1.3.0.0**; предполагаемый итоговый bump lane — **PATCH** только после зелёных acceptance-gates. Этот checkpoint версию и Android `versionCode` не меняет.
 - Последний доказанный exact Linux baseline: Knowledge Performance run `35105876229` на `35275e4c3a6b5cc7b3fa67f0aaebef84e43a903e`; contract `104826816228` SUCCESS, smoke-linux `104835749250` SUCCESS, standard-linux `104835749257` SUCCESS. Standard artifact `10453990990`, digest `sha256:1cfe0f08f35ef4605e9b5c7c1679ac09409140d0aefae795146b4a4254c9d88b`.
@@ -717,7 +713,6 @@ DONE:
 - На текущей Wave-B ветке собран единый race/scaling/failure-injection пакет, отдельный Linux/Windows workflow и machine-readable aggregate verdict; production-файлы не затронуты.
 - Добавлены duplicate-import и search/remove concurrency proofs, Windows isolated-profile warm-up для registry scaling и fail-closed regression contracts.
 - Coordinator wave-control соблюдён: новый replacement PR после закрытия #64 не создавался, #64 не переоткрывался самовольно.
-
 REMAINING:
 - После coordinator Wave-B signal переоткрыть **тот же PR #64** и получить exact Linux + Windows artifacts для consolidated resilience batch.
 - Если runtime выявит дефект в `knowledge_import_transaction.gd`/registry — исправить в этом CLAIM и повторить exact batch; если root cause потребует `scripts/knowledge_store.gd`, оформить точный `PERFORMANCE-BLOCKER` в `CHAT-2026-09-16-LOCAL-OCR`, не менять занятый файл.
@@ -746,7 +741,7 @@ NEXT:
 - Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
 - Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
 - Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1–F5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
-- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially регresses intelligibility, clipping, latency/memory/package limits or local-only operation.
+- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially регресes intelligibility, clipping, latency/memory/package limits or local-only operation.
 
 ## 34. Integration Gate — release-train delta and routed status, 2026-09-16
 
@@ -850,3 +845,51 @@ BLOCKERS:
 
 NEXT:
 - Do not merge or manually rerun the stale UI candidate. Let `CHAT-2026-09-16-UI-POLISH` reconcile the two routed blockers against fresh main; then inspect the next UI head's API/UI/Work exact-SHA results and feed only the reconciled candidate into the release-train Integration Gate. Preserve coordinator Wave-A/Wave-B queue control.
+
+## 36. Coordinator continuity and fresh executor-chat handoff, 2026-09-17
+
+- Coordinator decision: **the current coordinator chat remains the single main AuroraFox coordinator. No replacement coordinator chat will be created.** Merge authority, release-train sequencing, cross-lane arbitration, final version bump decision and final Windows/Android release acceptance remain with this coordinator.
+- Fresh verified `main` before this coordination update: `047fe827c5dfee6aad967767d4d1a46f6487228b` (`server: satisfy explicit SMTP security contract`). `AGENTS.md` and the full canonical master log were reread before this write.
+- Reason for rollover: old executor conversations are approaching maximum conversation length. The owner will stop using those old conversations and create fresh executor chats. This is a **chat-session rollover**, not permission to discard their branches, commits, PRs, artifacts or unresolved defects.
+- Target operating set: **10 concurrent chats total = this coordinator + 9 fresh executor chats.** Creating an additional coordinator is explicitly unnecessary.
+- Old executor chats are retired as active human/chat sessions after the rollover. Their old CLAIM names remain historical evidence and their occupied production paths remain protected until a fresh replacement executor explicitly performs TAKEOVER/RECONCILE in this master log. No fresh executor may assume an old claim is free merely because the old conversation is no longer used.
+- A replacement executor MUST start from fresh `main`, read `AGENTS.md`, read this full master log, inspect current open PRs/heads/workflow runs, identify the old lane it replaces, and create a new takeover CLAIM before changing implementation. The takeover entry must state the old CLAIM/PR/branch/head being inherited and whether it will continue, reconcile or supersede that candidate. No blind merge of stale branches.
+- Canonical version and Android `versionCode` are unchanged by this coordination-only update. Intended bump: **NONE**.
+
+### Fresh executor topology
+
+1. `CHAT-2026-09-17-UI-VISUAL` — UI/UX/Visual for Windows + Android: responsive layout, navigation, owner-approved art, account/guest/memory surfaces, Work/Computer UI integration, accessibility and visual regression. Inherits/reconciles `CHAT-2026-09-16-UI-POLISH` / PR #27 and any sync-only UI PRs; must preserve Server-owned fixes while reconciling.
+2. `CHAT-2026-09-17-VOICE-AUDIO` — local Voice/STT/TTS/audio quality on Windows + Android, female-voice acceptance, prosody, latency, cache/interruption and package assets. Inherits/reconciles `CHAT-2026-09-16-VOICE-QUALITY` / PR #34 and related voice candidate work.
+3. `CHAT-2026-09-17-CORE-CODER` — bundled AuroraFox Core intelligence, SpecialistTeam, CodeSpecialist, real offline benchmarks, Windows/Android local inference, quality/performance and candidate comparison. Inherits/reconciles `CHAT-2026-09-16-CORE-BENCHMARKS` / PR #30 and section 29 runtime acceptance.
+4. `CHAT-2026-09-17-WORK-COMPUTER-AGENT` — Work lifecycle/store, Computer Agent primitives, Agent reliability/autonomy-state durability, permission/master-stop/sandbox/rollback/idempotency/recovery. Inherits/reconciles `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / PR #40 and autonomy durability candidate PR #72 where relevant; must not take UI-owned overlays without handoff.
+5. `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR` — unified Knowledge/Memory/document/OCR ownership to remove the former KnowledgeStore handoff bottleneck: local OCR, import/streaming, dedupe/provenance/aliases/removal/recovery, large-scale performance/stress on Windows/Android. Inherits/reconciles both `CHAT-2026-09-16-LOCAL-OCR` / PR #66 (and prior OCR candidate history) and `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` / PR #64. This fresh lane must explicitly reconcile overlapping Store/transaction ownership before editing.
+6. `CHAT-2026-09-17-SERVER-API-DB` — Server/API/SQLite/account/auth/guest/device sync/mail/request limits/privacy/deployment/rollback. Inherits current `CHAT-2026-09-16-SERVER-DB` state and must start from the current server-updated main, not stale PR #25 history.
+7. `CHAT-2026-09-17-PLATFORM-RELEASE` — Windows + Android packaging/export/install/launch, Android signing continuity, updater/signatures/trust-root/repair bridge, deterministic build supply chain and release artifacts. Inherits/reconciles `CHAT-2026-09-16-UPDATER-VERSIONING` and current package workflows. Final canonical version bump remains coordinator-authorized only after global acceptance.
+8. `CHAT-2026-09-17-RESEARCH-SELF-IMPROVEMENT` — Research collector/curator, provenance/corroboration/retraction/privacy, controlled self-improvement/candidate queue/tournament/promotion safety. Inherits accepted Research Quality evidence including run `35112565080`; must not redo already green work and should continue from the first remaining research/self-improvement gap.
+9. `CHAT-2026-09-17-INTEGRATION-REGRESSION` — independent same-SHA integration/regression/release-readiness gate. It owns integration tests/workflow and failure classification, not other lanes' production code. Old probe PR #69 is stale and must never be treated as the final merge candidate; build fresh integration evidence from current main plus current accepted candidate heads.
+
+### Coordinator rules for the fresh topology
+
+- This coordinator continuously checks all nine executors, current `main`, open PR heads and exact-head CI. Idle/finished executors are reassigned to an independent bottleneck, integration evidence or final release regression instead of waiting.
+- Production ownership overlaps are intentionally minimized: UI+Visual together; Core+Coder together; Knowledge+Memory+OCR together; Work+Computer+Agent reliability together; Platform+Updater together. This replaces the less efficient old split where OCR/Knowledge and package/updater repeatedly blocked each other.
+- Fresh executors must preserve useful old work. A new branch from current `main` may cherry-pick/reimplement only verified relevant deltas from old PRs; stale unrelated diffs must not be carried forward.
+- A lane may be called READY only with exact commit SHA + relevant green tests/workflow run IDs/artifacts and no known P0/P1 blocker in its scope. Static source inspection is not runtime proof.
+- Final merge order is not predetermined. The coordinator chooses it from current overlap, CI and dependency evidence; no executor self-merges a red or stale integration candidate.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+
+DONE:
+- Fresh 10-chat operating topology is defined: one continuing coordinator plus nine replacement executor roles.
+- Old chat sessions are explicitly retired without discarding their Git/CI evidence, and takeover/reconciliation rules preserve file ownership until a replacement claim is recorded.
+- Coordinator/release authority and no-extra-coordinator rule are explicit.
+- No production code, product version or Android versionCode was changed by this coordination update.
+
+REMAINING:
+- Coordination rollover itself: none. Product acceptance work remains in the nine executor lanes and coordinator release train.
+
+BLOCKERS:
+- none for the chat-topology rollover. Individual product blockers remain documented in the preceding lane sections and current GitHub CI.
+
+NEXT:
+- Owner creates the nine fresh executor chats using their assigned prompts. Each replacement chat immediately fetches current `main`, reads `AGENTS.md` + this journal, creates its takeover/reconcile CLAIM, inspects its inherited PR/branch/run evidence and resumes from the first unaccepted item. Coordinator then tracks their new CLAIMs and prevents duplicate/stale work.
