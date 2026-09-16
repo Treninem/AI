@@ -32,6 +32,18 @@ def test_promotions_are_claim_scoped_and_revocable() -> None:
     assert '"contradiction"' in curator
     assert '"stance_reversed"' in curator
     assert '"evidence_expired_or_superseded"' in curator
+    assert 'replacement_reason = "evidence_superseded"' in curator
+    assert 'replacement_reason = "evidence_retracted"' in curator
+
+
+def test_retraction_notice_cannot_be_promoted_as_fresh_claim_evidence() -> None:
+    curator = read(CURATOR)
+    assert 'candidate["suppress_promotion"] = true' in curator
+    assert '"status": "retraction_notice" if retraction_notice else "active"' in curator
+    assert 'if bool(best.get("suppress_promotion", false)):' in curator
+    assert '_queue_gap(claim_key, "retracted_evidence"' in curator
+    assert '"retracted_evidence": return 100' in curator
+    assert 'question = "Перепроверить отозванное доказательство независимыми источниками: " + title' in curator
 
 
 def test_evidence_has_lifecycle_and_independent_source_model() -> None:
