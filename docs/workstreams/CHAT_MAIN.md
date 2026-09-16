@@ -90,12 +90,26 @@ Verified repair workflow artifact `10428734786`:
 
 The V1.2 repair boundary and V1.3 signed-update floor are therefore green in both the actual Windows bridge installation test and the normal Core/release contract suite.
 
+### V1.3+ permanent signing identity hardening
+
+This work is reserved to chat-main until explicitly released to Work mode.
+
+Implemented after the screenshots confirmed the real V1.2 user-facing update failure:
+
+- `5fe8e26910eaee0ab6329618747be03409f868f0` — `build/setup_release_signing.ps1` now creates/verifies public `update/release_identity.json` containing the SHA-256 fingerprint of the updater public key and the SHA-256 fingerprint of the permanent Android signing certificate. Existing pins must match; silent key rotation is rejected.
+- `59be220259938b1763ac9b1027e5800aab357c19` — production `build/build_android.ps1` now verifies the configured release keystore against the pinned Android certificate fingerprint before building, then verifies the signing certificate of the finished APK with `apksigner`. A mismatch rejects the production artifact.
+- `4fac3d7372785cc6b0147872b81c166a08a24ee7` — release readiness now requires both `release_public.pub` and `release_identity.json`, checks their update-key fingerprint relationship, and verifies that Android production identity gates remain present.
+- `0af867a67e990a5939d7ae933c3c45addaaf8c46` — regression contract added for the permanent V1.3+ Android signing identity. Core/Voice run `35053993479` on this head completed **success** for `python-voice`, `windows-integration`, `godot-core`, and `file-intelligence`.
+- `6c1385c4012f910328ec9012f1a5204da05e5656` — regression contract additionally asserts private signing material remains under Git-ignored `build/private/` and that setup instructions commit only public identity pins.
+
+Owner-controlled initialization still has to be done once on a trusted Windows machine because GitHub connector access cannot create repository secrets and private signing material must not be committed. The one-time command remains `build\setup_release_signing.ps1`; after it runs, only `update/release_public.pub` and `update/release_identity.json` are committed, while the private RSA key and Android keystore are backed up outside Git and stored in GitHub Actions secrets.
+
 ### Supported update boundary after repair
 
 - Windows V1.0-V1.2: one-time V1.2->V1.3 Repair/Bridge installation is the supported recovery path for the historical trust-root defect.
 - Windows V1.3+: signed automatic update path after the owner-controlled RSA trust root is initialized.
 - Android: in-place update requires the same package ID **and the same signing certificate**. Historical CI/test APKs used ephemeral signing identities and cannot be repaired into a different signing lineage retroactively.
-- Production Android V1.3+ must use one persistent owner-controlled signing keystore.
+- Production Android V1.3+ must use one persistent owner-controlled signing keystore; its public certificate fingerprint is pinned by `update/release_identity.json` after initialization.
 - Never weaken signature verification or publish an unsigned stable release just to make V1.2 appear updateable.
 
 ### Active chat-mode scope
@@ -117,9 +131,12 @@ Until this entry is explicitly changed to RELEASED, avoid parallel edits to:
 - `update/manifest.template.json`
 - `update/update_manager.gd`
 - `update/README.md`
+- `update/release_public.pub`
+- `update/release_identity.json`
 - `CHANGELOG.md`
 - `build/AuroraFox.iss`
 - `build/AuroraFox_V12_BridgeFixture.iss`
+- `build/build_android.ps1`
 - `build/bridge_release_readiness.ps1`
 - `build/setup_release_signing.ps1`
 - `build/create_update_signing_key.ps1`
