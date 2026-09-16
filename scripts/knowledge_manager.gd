@@ -45,11 +45,26 @@ func stats() -> Dictionary:
 	}
 
 func remove_source(source: String) -> Dictionary:
-	var canonical := registry.canonical_source(source)
+	var registry_record := registry.record_for_source(source)
+	var canonical := str(registry_record.get("source", source)) if not registry_record.is_empty() else source
+	# Byte-identical copies are aliases of one canonical stored source. Removing
+	# only an alias must never delete the canonical JSONL rows shared by the other
+	# path. Detach the alias in the registry and leave the store untouched.
+	if not registry_record.is_empty() and canonical != source:
+		var alias_registry_result := registry.remove_source(source)
+		_invalidate_scan()
+		return {
+			"ok": bool(alias_registry_result.get("ok", false)),
+			"source": source,
+			"canonical_source": canonical,
+			"removed": 0,
+			"structured_removed": 0,
+			"registry_removed": alias_registry_result.get("removed", 0),
+			"alias_detached": bool(alias_registry_result.get("alias_detached", false)),
+			"shared_knowledge_preserved": true
+		}
 	var store := KnowledgeStore.new()
 	var removed := store.remove_source(canonical)
-	if canonical != source and int(removed.get("removed", 0)) == 0 and int(removed.get("structured_removed", 0)) == 0:
-		removed = store.remove_source(source)
 	var registry_result := registry.remove_source(source)
 	_invalidate_scan()
 	return {
@@ -58,7 +73,9 @@ func remove_source(source: String) -> Dictionary:
 		"canonical_source": canonical,
 		"removed": removed.get("removed", 0),
 		"structured_removed": removed.get("structured_removed", 0),
-		"registry_removed": registry_result.get("removed", 0)
+		"registry_removed": registry_result.get("removed", 0),
+		"alias_detached": false,
+		"shared_knowledge_preserved": false
 	}
 
 func compact() -> Dictionary:
