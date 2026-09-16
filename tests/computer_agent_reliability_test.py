@@ -14,6 +14,11 @@ SERVICE_PATH = ROOT / "computer" / "computer_service.py"
 TOKEN = "test-local-channel-token-1234567890"
 
 
+def _spawn_safe_hanging_worker(kind, payload, queue):
+    del kind, payload, queue
+    time.sleep(5)
+
+
 def _load_service(tmp_path: Path):
     os.environ["AURORAFOX_COMPUTER_TOKEN"] = TOKEN
     os.environ["AURORAFOX_SANDBOX_ROOT"] = str(tmp_path / "sandbox")
@@ -192,11 +197,7 @@ def test_privacy_redaction_removes_common_secret_surfaces(tmp_path: Path):
 def test_worker_timeout_contract_terminates_hung_process(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     service = _load_service(tmp_path)
     service.IS_WINDOWS = True
-
-    def hanging_worker(kind, payload, queue):
-        time.sleep(5)
-
-    monkeypatch.setattr(service, "_worker_entry", hanging_worker)
+    monkeypatch.setattr(service, "_worker_entry", _spawn_safe_hanging_worker)
     start = time.monotonic()
     result = service._run_worker("action", {"type": "wait"}, timeout=0.2)
     elapsed = time.monotonic() - start
