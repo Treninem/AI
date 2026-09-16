@@ -37,10 +37,7 @@ on:
         required: true
         default: standard
         type: choice
-        options:
-          - smoke
-          - standard
-          - stress
+        options: [smoke, standard, stress]
 
 permissions:
   contents: read
@@ -55,14 +52,7 @@ jobs:
         run: python -m unittest tests.test_knowledge_performance_contract tests.test_knowledge_performance_compare tests.test_knowledge_stress_gates -v
       - name: Compile Python tools
         run: >-
-          python -m py_compile
-          benchmarks/knowledge/run_knowledge_benchmark.py
-          benchmarks/knowledge/run_knowledge_benchmark_portable.py
-          benchmarks/knowledge/run_godot_probe.py
-          benchmarks/knowledge/compare_reports.py
-          benchmarks/knowledge/validate_performance_report.py
-          benchmarks/knowledge/run_memory_scaling.py
-          benchmarks/knowledge/run_search_scaling.py
+          python -m py_compile benchmarks/knowledge/run_knowledge_benchmark.py benchmarks/knowledge/run_knowledge_benchmark_portable.py benchmarks/knowledge/run_godot_probe.py benchmarks/knowledge/compare_reports.py benchmarks/knowledge/validate_performance_report.py benchmarks/knowledge/run_memory_scaling.py benchmarks/knowledge/run_search_scaling.py
 
   smoke-linux:
     if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
@@ -85,12 +75,9 @@ jobs:
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Reproduce dedupe alias removal safety
-        run: >-
-          python benchmarks/knowledge/run_godot_probe.py
-          --godot ./godot
-          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
-          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
-          --report artifacts/knowledge-performance/dedupe-alias-removal.json
+        run: python benchmarks/knowledge/run_godot_probe.py --godot ./godot --script benchmarks/knowledge/dedupe_alias_removal_probe.gd --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT= --report artifacts/knowledge-performance/dedupe-alias-removal.json
+      - name: Verify lost-registry rollback safety
+        run: python benchmarks/knowledge/run_godot_probe.py --godot ./godot --script benchmarks/knowledge/lost_registry_rollback_probe.gd --prefix AURORA_KNOWLEDGE_LOST_REGISTRY_ROLLBACK_RESULT= --report artifacts/knowledge-performance/lost-registry-rollback.json
       - name: Run bounded knowledge smoke benchmark
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
       - name: Validate smoke correctness
@@ -122,6 +109,12 @@ jobs:
       - name: Import and parse project
         shell: powershell
         run: .\godot.exe --headless --editor --path . --quit
+      - name: Reproduce dedupe alias removal safety on Windows
+        shell: powershell
+        run: python benchmarks/knowledge/run_godot_probe.py --godot .\godot.exe --script benchmarks/knowledge/dedupe_alias_removal_probe.gd --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT= --report artifacts/knowledge-performance/dedupe-alias-removal-windows.json
+      - name: Verify lost-registry rollback safety on Windows
+        shell: powershell
+        run: python benchmarks/knowledge/run_godot_probe.py --godot .\godot.exe --script benchmarks/knowledge/lost_registry_rollback_probe.gd --prefix AURORA_KNOWLEDGE_LOST_REGISTRY_ROLLBACK_RESULT= --report artifacts/knowledge-performance/lost-registry-rollback-windows.json
       - name: Run bounded Windows knowledge smoke benchmark
         shell: powershell
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot .\godot.exe --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/windows-smoke.json
@@ -163,13 +156,7 @@ jobs:
       - name: Measure search N-2N-4N scaling
         run: python benchmarks/knowledge/run_search_scaling.py --godot ./godot --sizes-mb 1,2,4 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-search-scaling.json
       - name: Enforce relative performance blockers
-        run: >-
-          python benchmarks/knowledge/validate_performance_report.py
-          artifacts/knowledge-performance/linux-standard.json
-          artifacts/knowledge-performance/linux-memory-scaling.json
-          artifacts/knowledge-performance/linux-search-scaling.json
-          --enforce-performance
-          --output artifacts/knowledge-performance/linux-standard-gate.json
+        run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/linux-standard.json artifacts/knowledge-performance/linux-memory-scaling.json artifacts/knowledge-performance/linux-search-scaling.json --enforce-performance --output artifacts/knowledge-performance/linux-standard-gate.json
       - name: Upload standard benchmark report
         if: always()
         uses: actions/upload-artifact@v4
