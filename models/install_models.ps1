@@ -20,7 +20,9 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message, [hashtable]$
         message = $Message
         profile = $Profile
         ollama_required = $false
+        external_ai_required = $false
         model_managed_by_app = $true
+        bundled_core_required = $true
         time = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
     }
     foreach ($key in $Extra.Keys) { $payload[$key] = $Extra[$key] }
@@ -28,7 +30,7 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message, [hashtable]$
 }
 
 try {
-    Set-Stage 'core' 5 'Preparing AuroraFox Core Engine. Ollama is not required.'
+    Set-Stage 'core' 5 'Preparing AuroraFox Core Engine. Ollama and external AI services are not required.'
     if (-not (Test-Path -LiteralPath $CoreInstaller)) {
         throw "AuroraFox Core installer not found: $CoreInstaller"
     }
@@ -39,15 +41,21 @@ try {
     & powershell @args
     if ($LASTEXITCODE -ne 0) { throw "AuroraFox Core Engine setup failed with code $LASTEXITCODE" }
 
-    Set-Stage 'model' 92 'Core Engine is ready. GGUF model is managed by AuroraFox LocalModelManager and can be downloaded or imported in the application.' @{
+    # This helper prepares the engine/bootstrap contract. Production Windows and
+    # Android packages supply the pinned AuroraFox Core weights themselves; the
+    # normal user is never asked to select, download or import a model.
+    Set-Stage 'model' 92 'Core Engine is ready. AuroraFox application packages provide and manage the bundled AuroraFox Core weights automatically.' @{
         active_model = 'user://models/aurorafox-main.gguf'
         core_installer = $CoreInstaller
+        model_source = 'bundled_aurorafox_core'
     }
-    Set-Stage 'ready' 100 'AuroraFox Core bootstrap is ready without Ollama. Open Local AI settings to download or import a GGUF model.' @{
+    Set-Stage 'ready' 100 'AuroraFox Core bootstrap is ready without Ollama or external AI. Bundled Core weights are managed by the application.' @{
         active_model = 'user://models/aurorafox-main.gguf'
+        model_source = 'bundled_aurorafox_core'
         ollama_required = $false
+        external_ai_required = $false
     }
-    Write-Host 'AuroraFox Core bootstrap completed. Ollama was not installed or started.' -ForegroundColor Green
+    Write-Host 'AuroraFox Core bootstrap completed. Ollama/external AI were not installed or started; application packages own the Core weights.' -ForegroundColor Green
 } catch {
     Set-Stage 'error' 0 $_.Exception.Message
     throw
