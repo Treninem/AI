@@ -299,6 +299,17 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Инженерная причина: сейчас `ResearchCollector._learn()` пишет данные в memory до curator gate, поэтому rejected content уже оказывается выученным. Gate должен быть единственной точкой automatic promotion.
 - Следующий шаг: внести минимальный совместимый refactor, затем deterministic GDScript smoke и Core CI.
 
+### CLAIM `CHAT-2026-09-16-VOICE-QUALITY`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `4a013aa31142443192ab5bcd52cf1e00950e5467`
+- Режим: Chat
+- Цель: улучшить естественность, разборчивость и задержку локальной русской озвучки AuroraFox без превращения внешнего TTS/STT в обязательную зависимость.
+- Файлы/подсистема: `voice/python/tts_engine.py`, `voice/python/processor.py`, `voice/config/voice_config.json`, `voice/config/emotions.json` при необходимости, `tests/test_voice_text.py`, `tests/test_voice_configs.py`, `tests/test_xtts_contract.py` при необходимости, `voice/README.md`, `docs/PROJECT_MASTER_LOG.md` только для интеграции статуса CLAIM.
+- Не пересекается с `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`: research files и `.github/workflows/voice-ci.yml` не трогаются; master log всегда обновляется только поверх свежего HEAD с сохранением чужого CLAIM.
+- Инженерная причина: текущий Silero baseline не использует переданные `emotion/intensity/speed`, а постпроцессор связывает темп и высоту через простой ресемплинг, что ухудшает естественность; конфигурация `breathing_pauses` заявлена, но фактически не реализована.
+- Следующий шаг: проверить server call path и текущие voice tests, затем внести совместимый local-only DSP/text-prosody refactor и прогнать unit/voice CI.
+
 ### CLAIM `CHAT_MAIN-2026-09-16-MASTER-CORE`
 
 - Статус: **DONE**
