@@ -24,11 +24,7 @@ fun sha256(file: File): String {
     val md = MessageDigest.getInstance("SHA-256")
     file.inputStream().use { input ->
         val buffer = ByteArray(64 * 1024)
-        while (true) {
-            val read = input.read(buffer)
-            if (read <= 0) break
-            md.update(buffer, 0, read)
-        }
+        while (true) { val read = input.read(buffer); if (read <= 0) break; md.update(buffer, 0, read) }
     }
     return md.digest().joinToString("") { "%02x".format(it) }
 }
@@ -61,26 +57,13 @@ android {
         manifestPlaceholders["godotPluginPackageName"] = pluginPackageName
         buildConfigField("String", "GODOT_PLUGIN_NAME", "\"${pluginName}\"")
         setProperty("archivesBaseName", pluginName)
-        externalNativeBuild {
-            cmake {
-                cppFlags += listOf("-std=c++17")
-                arguments += listOf("-DANDROID_STL=c++_shared")
-            }
-        }
+        externalNativeBuild { cmake { cppFlags += listOf("-std=c++17"); arguments += listOf("-DANDROID_STL=c++_shared") } }
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
     }
     sourceSets.getByName("main").assets.srcDir(generatedOcrAssets)
-    compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+    compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
-    externalNativeBuild {
-        cmake {
-            path = file("src/main/cpp/CMakeLists.txt")
-            version = "3.22.1"
-        }
-    }
+    externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
 }
 
 tasks.named("preBuild").configure { dependsOn(prepareOcrAssets) }
@@ -113,7 +96,6 @@ tasks.register("installGodotPluginRelease") {
         val releaseSherpa = file("$godotAddonDir/bin/release/sherpa-onnx-$sherpaVersion.aar")
         check(releasePlugin.exists()) { "AuroraFoxRuntime release AAR build output is missing" }
         check(releaseSherpa.exists()) { "sherpa-onnx release AAR was not installed into Godot addon" }
-        println("AuroraFoxRuntime release + sherpa-onnx AARs copied to ${godotAddonDir.absolutePath}")
     }
 }
 
@@ -126,6 +108,5 @@ tasks.register("installGodotPlugin") {
         val releaseSherpa = file("$godotAddonDir/bin/release/sherpa-onnx-$sherpaVersion.aar")
         check(debugPlugin.exists() && releasePlugin.exists()) { "AuroraFoxRuntime AAR build output is missing" }
         check(debugSherpa.exists() && releaseSherpa.exists()) { "sherpa-onnx AAR was not installed into Godot addon" }
-        println("AuroraFoxRuntime + sherpa-onnx AARs copied to ${godotAddonDir.absolutePath}")
     }
 }
