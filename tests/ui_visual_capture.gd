@@ -328,6 +328,28 @@ func _capture_desktop_full(packed: PackedScene) -> bool:
 	await process_frame
 	return true
 
+func _capture_desktop_mid(packed: PackedScene) -> bool:
+	var size := Vector2i(1280, 720)
+	_start_scenario("Windows", "mid_responsive", size)
+	var main := await _instantiate(packed, size, false)
+	if main == null:
+		_fail("Mid-size desktop scene instantiate failed", 21)
+		return false
+	if not await _populate_chat(main, false):
+		return false
+	if not await _capture("desktop_mid_chat_1280x720", "chat_mid"):
+		return false
+	var settings := await _open_settings_by_click(main)
+	if settings == null:
+		return false
+	if not await _capture("desktop_mid_settings_1280x720", "settings_mid"):
+		return false
+	if not await _close_settings_by_click(settings):
+		return false
+	main.queue_free()
+	await process_frame
+	return true
+
 func _capture_desktop_compact(packed: PackedScene) -> bool:
 	var size := Vector2i(960, 640)
 	_start_scenario("Windows", "compact_responsive", size)
@@ -445,6 +467,8 @@ func _run() -> void:
 		_fail("main.tscn could not be loaded", 40)
 		return
 	if not await _capture_desktop_full(packed):
+		return
+	if not await _capture_desktop_mid(packed):
 		return
 	if not await _capture_desktop_compact(packed):
 		return
