@@ -46,16 +46,18 @@ def test_normal_ai_client_is_self_primary_and_does_not_require_external_ai() -> 
     assert 'var model_source := "aurora_core"' not in client
     assert "configure_ollama_compatibility" in client
 
-    # The normal intelligence path must be local-only. Compatibility is a
-    # separate explicit method and therefore cannot silently become AgentCore's base.
+    # The normal intelligence path must use the public local-only Core API.
+    # Compatibility is separate and therefore cannot silently become AgentCore's base.
     chat_block = client.split("func chat(messages:", 1)[1].split("func chat_with_compatibility", 1)[0]
     compatibility_block = client.split("func chat_with_compatibility", 1)[1].split("func import_knowledge_text", 1)[0]
-    assert "core_runtime._chat_local" in chat_block
+    assert "core_runtime.chat_local_only" in chat_block
     assert "core_runtime.chat(" not in chat_block
     assert "core_runtime.chat(" in compatibility_block
 
+    assert "func chat_local_only" in runtime
     assert "var allow_ollama_fallback := false" in runtime
-    assert runtime.index("var local := await _chat_local") < runtime.index("if allow_ollama_fallback")
+    local_api = runtime.split("func chat_local_only", 1)[1].split("func chat(messages:", 1)[0]
+    assert "_chat_ollama" not in local_api
     assert 'OS.get_name() != "Android"' in runtime
 
 
@@ -64,6 +66,16 @@ def test_core_improvement_uses_normal_self_primary_ai_path() -> None:
     assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.12)' in pipeline
     assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)' in pipeline
     assert "chat_with_compatibility" not in pipeline
+
+
+def test_web_research_is_local_untrusted_knowledge_not_remote_authority() -> None:
+    curator = read("agent/learning_curator.gd")
+    assert 'ai.import_knowledge_text(text, "autonomous_research:" + source' in curator
+    assert '"scope": "core_knowledge"' in curator
+    assert '"untrusted_external": true' in curator
+    assert '"source_url": str(item.get("url", ""))' in curator
+    assert "[UNTRUSTED_EXTERNAL_RESEARCH_DATA]" in curator
+    assert "sha256_text()" in curator
 
 
 def test_hard_self_reliance_requirement_is_documented_for_all_agents() -> None:
