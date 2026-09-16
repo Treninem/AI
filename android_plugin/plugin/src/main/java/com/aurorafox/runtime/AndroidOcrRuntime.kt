@@ -110,17 +110,13 @@ class AndroidOcrRuntime(private val context: Context) {
 
     private fun recognize(bitmap: Bitmap, sharedApi: TessBaseAPI? = null): String {
         val prepared = limitBitmap(bitmap)
-        var api: TessBaseAPI? = sharedApi
-        var ownsApi = false
+        var ownedApi: TessBaseAPI? = null
         return try {
-            if (api == null) {
-                api = newInitializedApi()
-                ownsApi = true
-            }
-            api.setImage(prepared)
-            api.getUTF8Text()?.replace("\u000c", "")?.trim().orEmpty()
+            val activeApi = sharedApi ?: newInitializedApi().also { ownedApi = it }
+            activeApi.setImage(prepared)
+            activeApi.getUTF8Text()?.replace("\u000c", "")?.trim().orEmpty()
         } finally {
-            if (ownsApi) api?.recycle()
+            ownedApi?.recycle()
             if (prepared !== bitmap) prepared.recycle()
         }
     }
