@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -86,6 +88,26 @@ def test_duplicate_submission_is_idempotent_but_id_reuse_with_other_bytes_is_rej
     other_encoded = base64.b64encode(b"different").decode("ascii")
     with pytest.raises(CoreCandidateQueueError, match="candidate_id already exists"):
         queue.submit(other_manifest, other_encoded, owner="two")
+
+
+def test_concurrent_duplicate_submission_is_serialized_and_idempotent(tmp_path: Path) -> None:
+    queue = CoreCandidateQueue(tmp_path / "api")
+    manifest, encoded, _ = _submission("candidate_parallel")
+    start = threading.Barrier(8)
+
+    def submit(index: int):
+        start.wait(timeout=3)
+        return queue.submit(manifest, encoded, owner=f"device-{index}")
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(submit, range(8)))
+
+    assert sum(1 for item in results if item["duplicate"] is False) == 1
+    assert sum(1 for item in results if item["duplicate"] is True) == 7
+    assert len([path for path in queue.queue_root.iterdir() if path.is_dir()]) == 1
+    row = queue.get("candidate_parallel")
+    assert row["state"] == "queued"
+    assert row["candidate_sha256"] == manifest["candidate_sha256"]
 
 
 def test_submission_rejects_protected_target_bad_sha_and_unverified_evidence(tmp_path: Path) -> None:
