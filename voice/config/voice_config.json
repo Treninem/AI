@@ -55,8 +55,8 @@
     "compression": false,
     "limiter": true,
     "breathing_pauses": true,
-    "prosody_dsp": true,
-    "highpass_hz": 45,
+    "prosody_dsp": false,
+    "highpass_hz": 0,
     "speed_min": 0.9,
     "speed_max": 1.08,
     "pitch_min": 0.96,
@@ -70,6 +70,6 @@
     "fade_ms": 5.0,
     "mechanical_frequency_hz": 1830,
     "mechanical_mix": 0.0,
-    "mechanical_max": 0.02
+    "mechanical_max": 0.0
   }
 }
