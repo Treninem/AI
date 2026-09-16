@@ -8,18 +8,46 @@ var recording := false
 var mic_button: Button
 var status_label: Label
 
+func _voice() -> Node:
+	return get_node_or_null("/root/AuroraVoice")
+
+func _voice_settings() -> Dictionary:
+	var voice := _voice()
+	if voice == null:
+		return {}
+	var raw = voice.get("settings")
+	return raw if raw is Dictionary else {}
+
 func _ready() -> void:
 	await get_tree().process_frame
 	_build_overlay()
 	_setup_microphone()
-	AuroraVoice.bind_avatar(null)
-	AuroraVoice.transcript_ready.connect(_submit_transcript)
-	AuroraVoice.backend_status.connect(_on_backend_status)
-	AuroraVoice.listening_started.connect(func(): status_label.text = "Слушаю")
-	AuroraVoice.listening_finished.connect(func(): status_label.text = "")
-	AuroraVoice.speech_started.connect(func(): status_label.text = "Говорю")
-	AuroraVoice.speech_finished.connect(func(): status_label.text = "")
+	_bind_voice_runtime()
 	_refresh_buttons()
+
+func _bind_voice_runtime() -> void:
+	var voice := _voice()
+	if voice == null:
+		if mic_button != null:
+			mic_button.disabled = true
+			mic_button.tooltip_text = "Голосовой модуль сейчас не подключён"
+		if status_label != null:
+			status_label.text = ""
+		return
+	if voice.has_method("bind_avatar"):
+		voice.call("bind_avatar", null)
+	if voice.has_signal("transcript_ready"):
+		voice.connect("transcript_ready", Callable(self, "_submit_transcript"))
+	if voice.has_signal("backend_status"):
+		voice.connect("backend_status", Callable(self, "_on_backend_status"))
+	if voice.has_signal("listening_started"):
+		voice.connect("listening_started", func(): if status_label != null: status_label.text = "Слушаю")
+	if voice.has_signal("listening_finished"):
+		voice.connect("listening_finished", func(): if status_label != null: status_label.text = "")
+	if voice.has_signal("speech_started"):
+		voice.connect("speech_started", func(): if status_label != null: status_label.text = "Говорю")
+	if voice.has_signal("speech_finished"):
+		voice.connect("speech_finished", func(): if status_label != null: status_label.text = "")
 
 func _style(fill: Color, border: Color, radius := 12) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -97,28 +125,39 @@ func _setup_microphone() -> void:
 	add_child(mic_player)
 
 func _mic_pressed() -> void:
-	var mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
+	var voice := _voice()
+	if voice == null:
+		_refresh_buttons()
+		return
+	var mode := str(_voice_settings().get("mic_mode", "wake_word"))
 	if mode == "push_to_talk":
 		if recording:
 			await _stop_ptt()
 		else:
 			_start_ptt()
 	elif mode == "off":
-		AuroraVoice.set_mic_mode("wake_word")
+		if voice.has_method("set_mic_mode"):
+			voice.call("set_mic_mode", "wake_word")
 	else:
-		AuroraVoice.start_listening()
+		if voice.has_method("start_listening"):
+			voice.call("start_listening")
 	_refresh_buttons()
 
 func _start_ptt() -> void:
-	if record_effect == null:
+	var voice := _voice()
+	if record_effect == null or voice == null:
 		return
 	record_effect.set_recording_active(true)
 	mic_player.play()
 	recording = true
 	status_label.text = "Говорите"
-	AuroraVoice.stop()
+	if voice.has_method("stop"):
+		voice.call("stop")
 
 func _stop_ptt() -> void:
+	var voice := _voice()
+	if voice == null:
+		return
 	record_effect.set_recording_active(false)
 	mic_player.stop()
 	recording = false
@@ -131,8 +170,12 @@ func _stop_ptt() -> void:
 	if rec.save_to_wav("user://aurorafox_voice_input") != OK:
 		_refresh_buttons()
 		return
-	var result := await AuroraVoice.bridge.transcribe_file(path)
-	if result.get("ok", false):
+	var bridge = voice.get("bridge")
+	if bridge == null or not bridge.has_method("transcribe_file"):
+		_refresh_buttons()
+		return
+	var result = await bridge.call("transcribe_file", path)
+	if result is Dictionary and result.get("ok", false):
 		_submit_transcript(str(result.get("text", "")))
 	_refresh_buttons()
 
@@ -144,12 +187,22 @@ func _submit_transcript(text: String) -> void:
 		main.call("submit_voice_text", text.strip_edges())
 
 func _on_backend_status(ready: bool, _info: Dictionary) -> void:
-	status_label.text = "Голос готов" if ready else ""
+	if status_label != null:
+		status_label.text = "Голос готов" if ready else ""
+	if mic_button != null:
+		mic_button.disabled = not ready
+	_refresh_buttons()
 
 func _refresh_buttons() -> void:
 	if mic_button == null:
 		return
-	var mode := str(AuroraVoice.settings.get("mic_mode", "wake_word"))
+	var voice := _voice()
+	if voice == null:
+		mic_button.disabled = true
+		mic_button.tooltip_text = "Голосовой модуль сейчас не подключён"
+		_apply_button(mic_button, false)
+		return
+	var mode := str(_voice_settings().get("mic_mode", "wake_word"))
 	mic_button.tooltip_text = {
 		"off": "Микрофон выключен — нажмите, чтобы включить",
 		"wake_word": "Микрофон: Fox / Фокс / Лиса",
