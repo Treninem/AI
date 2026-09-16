@@ -6,6 +6,7 @@ extends SceneTree
 const KnowledgeStoreScript: Variant = preload("res://scripts/knowledge_store.gd")
 const KnowledgeImportTransactionScript: Variant = preload("res://scripts/knowledge_import_transaction.gd")
 const KnowledgeSourceRegistryScript: Variant = preload("res://scripts/knowledge_source_registry.gd")
+const KnowledgeManagerScript: Variant = preload("res://scripts/knowledge_manager.gd")
 
 const RESULT_PREFIX := "AURORA_KNOWLEDGE_INTERRUPT_RESULT="
 const PROBE_ROOT := "user://knowledge_interrupt_probe"
@@ -87,32 +88,61 @@ func _live_import() -> void:
 	}, 4)
 
 func _verify_after_restart() -> void:
-	# Creating the transaction object is intentional: production recovery belongs
-	# to the transaction layer and must run before any new mutation after restart.
-	var txn: Variant = KnowledgeImportTransactionScript.new()
-	var recovery: Variant = txn.call("recover_interrupted_transaction") if txn.has_method("recover_interrupted_transaction") else {"ok": false, "recovered": false, "error": "recovery API missing"}
+	# Production restart contract: creating KnowledgeManager must recover before
+	# any manager scan can expose partial rows. Do not invoke recovery manually here.
+	var manager: Variant = KnowledgeManagerScript.new()
+	var recovery: Variant = manager.call("recovery_status") if manager.has_method("recovery_status") else {"ok": false, "recovered": false, "error": "manager recovery status missing"}
 	var store: Variant = KnowledgeStoreScript.new()
 	var stable: Variant = store.call("search", STABLE_MARKER, 8)
 	var uncommitted: Variant = store.call("search", NEW_MARKER, 8)
 	var registry: Variant = KnowledgeSourceRegistryScript.new().call("record_for_source", SOURCE)
-	var journals_clean: bool = not FileAccess.file_exists(KnowledgeImportTransactionScript.DB_BACKUP)
-	journals_clean = journals_clean and not FileAccess.file_exists(KnowledgeImportTransactionScript.STRUCTURED_BACKUP)
-	journals_clean = journals_clean and not FileAccess.file_exists(KnowledgeImportTransactionScript.REGISTRY_BACKUP)
-	var constants: Dictionary = KnowledgeImportTransactionScript.get_script_constant_map()
-	if constants.has("TXN_MANIFEST"):
-		journals_clean = journals_clean and not FileAccess.file_exists(str(constants.get("TXN_MANIFEST", "")))
+	var journals_clean := _transaction_artifacts_clean()
 	var ok: bool = recovery is Dictionary and bool(recovery.get("ok", false)) and bool(recovery.get("recovered", false))
 	ok = ok and not stable.is_empty() and uncommitted.is_empty() and not registry.is_empty() and journals_clean
 	_emit({
 		"ok": ok,
 		"phase": "verify",
 		"recovery": recovery,
+		"automatic_manager_recovery": true,
 		"stable_committed_marker_present": not stable.is_empty(),
 		"uncommitted_marker_absent": uncommitted.is_empty(),
 		"registry_present": not registry.is_empty(),
 		"journals_clean": journals_clean,
 		"expected_contract": "process kill during reimport must restore last committed source on next process"
 	}, 0 if ok else 5)
+
+func _transaction_artifacts_clean() -> bool:
+	for path in _transaction_artifact_paths():
+		if FileAccess.file_exists(path):
+			return false
+	return true
+
+func _transaction_artifact_paths() -> Array[String]:
+	var paths: Array[String] = [
+		str(KnowledgeImportTransactionScript.DB_BACKUP),
+		str(KnowledgeImportTransactionScript.STRUCTURED_BACKUP),
+		str(KnowledgeImportTransactionScript.REGISTRY_BACKUP),
+		str(KnowledgeStoreScript.DB_PATH) + ".rollback.tmp",
+		str(KnowledgeStoreScript.STRUCTURED_PATH) + ".rollback.tmp",
+		str(KnowledgeStoreScript.DB_PATH) + ".filter.tmp",
+		str(KnowledgeStoreScript.STRUCTURED_PATH) + ".filter.tmp",
+		str(KnowledgeStoreScript.DB_PATH) + ".recovery.original",
+		str(KnowledgeStoreScript.STRUCTURED_PATH) + ".recovery.original"
+	]
+	var constants: Dictionary = KnowledgeImportTransactionScript.get_script_constant_map()
+	for name in [
+		"TXN_MANIFEST",
+		"TXN_MANIFEST_TMP",
+		"TXN_SNAPSHOT_MARKER",
+		"TXN_SNAPSHOT_MARKER_TMP",
+		"TXN_COMMIT_MARKER",
+		"TXN_COMMIT_MARKER_TMP"
+	]:
+		if constants.has(name):
+			var value := str(constants.get(name, ""))
+			if not value.is_empty():
+				paths.append(value)
+	return paths
 
 func _write_large_replacement(target_bytes: int) -> Dictionary:
 	var file: FileAccess = FileAccess.open(SOURCE, FileAccess.WRITE)
@@ -140,22 +170,12 @@ func _file_size(path: String) -> int:
 	return size
 
 func _reset_state() -> void:
-	var paths: Array = [
-		KnowledgeStoreScript.DB_PATH,
-		KnowledgeStoreScript.STRUCTURED_PATH,
-		KnowledgeSourceRegistryScript.REGISTRY_PATH,
-		KnowledgeImportTransactionScript.DB_BACKUP,
-		KnowledgeImportTransactionScript.STRUCTURED_BACKUP,
-		KnowledgeImportTransactionScript.REGISTRY_BACKUP,
-		KnowledgeStoreScript.DB_PATH + ".rollback.tmp",
-		KnowledgeStoreScript.STRUCTURED_PATH + ".rollback.tmp",
-		SOURCE
-	]
-	var constants: Dictionary = KnowledgeImportTransactionScript.get_script_constant_map()
-	if constants.has("TXN_MANIFEST"):
-		paths.append(constants.get("TXN_MANIFEST", ""))
-	for value in paths:
-		var path := str(value)
+	var paths := _transaction_artifact_paths()
+	paths.append(str(KnowledgeStoreScript.DB_PATH))
+	paths.append(str(KnowledgeStoreScript.STRUCTURED_PATH))
+	paths.append(str(KnowledgeSourceRegistryScript.REGISTRY_PATH))
+	paths.append(SOURCE)
+	for path in paths:
 		if not path.is_empty() and FileAccess.file_exists(path):
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 

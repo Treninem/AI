@@ -122,7 +122,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
     needs: contract
     runs-on: windows-latest
-    timeout-minutes: 40
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
       - name: Download Godot 4.7.1
@@ -137,6 +137,14 @@ jobs:
       - name: Import and parse project
         shell: powershell
         run: .\godot.exe --headless --editor --path . --quit
+      - name: Verify dedupe alias removal safety
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
+          --report artifacts/knowledge-performance/dedupe-alias-removal-windows.json
       - name: Verify pre-registry rollback safety
         shell: powershell
         run: >-
@@ -145,6 +153,14 @@ jobs:
           --script benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
           --prefix AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=
           --report artifacts/knowledge-performance/legacy-unregistered-rollback-windows.json
+      - name: Reproduce interrupted reimport restart recovery
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_interrupted_import_recovery.py
+          --godot .\godot.exe
+          --target-mb 32
+          --timeout-seconds 240
+          --report artifacts/knowledge-performance/interrupted-reimport-recovery-windows.json
       - name: Run bounded Windows knowledge smoke benchmark
         shell: powershell
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot .\godot.exe --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/windows-smoke.json
@@ -160,7 +176,7 @@ jobs:
           if-no-files-found: error
 
   standard-linux:
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && !contains(github.event.head_commit.message, '[knowledge-large]')
     needs: contract
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -198,6 +214,38 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: knowledge-performance-linux-standard-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
+
+  large-linux-push:
+    if: github.event_name == 'push' && contains(github.event.head_commit.message, '[knowledge-large]')
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run 10-50-100-250 MiB stress profile
+        run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile stress --timeout-seconds 900 --report artifacts/knowledge-performance/linux-stress.json
+      - name: Enforce large-profile blockers
+        run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/linux-stress.json --enforce-performance --output artifacts/knowledge-performance/linux-stress-gate.json
+      - name: Upload large benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-linux-stress-${{ github.sha }}
           path: artifacts/knowledge-performance/
           if-no-files-found: error
 
