@@ -41,20 +41,71 @@ def load_report(path: Path) -> dict[str, Any]:
 
 def report_passed(payload: dict[str, Any]) -> bool:
     if "ok" in payload:
-        return bool(payload.get("ok"))
+        return payload.get("ok") is True
     hard = payload.get("hard_correctness")
-    return bool(hard.get("passed", False)) if isinstance(hard, dict) else False
+    return hard.get("passed") is True if isinstance(hard, dict) else False
 
 
 def registry_performance_blockers(payload: dict[str, Any]) -> list[str]:
+    """Independently validate registry relative evidence before aggregate verdict.
+
+    The child report's precomputed boolean is useful evidence but not sufficient:
+    incomplete/malformed pairs or a hidden >=3.5x ratio must fail closed even if
+    the boolean is absent or incorrectly false. The separate final validator
+    repeats this check so runner and gate do not share one failure mode.
+    """
     relative = payload.get("relative_performance")
     if not isinstance(relative, dict):
-        return []
-    return ["suspected_quadratic_registry"] if bool(relative.get("suspected_quadratic_registry", False)) else []
+        return ["registry_relative_performance_missing"]
+    blockers: list[str] = []
+    if bool(relative.get("suspected_quadratic_registry", False)):
+        blockers.append("suspected_quadratic_registry")
+    pairs = relative.get("n_2n_4n")
+    if not isinstance(pairs, list):
+        blockers.append("registry_doubling_evidence_missing")
+        return blockers
+    valid_pairs = 0
+    for index, pair in enumerate(pairs):
+        if not isinstance(pair, dict):
+            blockers.append(f"registry_pair_{index}_malformed")
+            continue
+        try:
+            from_n = int(pair.get("from_n", 0) or 0)
+            to_n = int(pair.get("to_n", 0) or 0)
+            ratio = float(pair.get("time_ratio", 0.0) or 0.0)
+        except (TypeError, ValueError):
+            blockers.append(f"registry_pair_{index}_malformed")
+            continue
+        if from_n <= 0 or to_n != from_n * 2 or ratio <= 0.0:
+            blockers.append(f"registry_pair_{index}_invalid")
+            continue
+        valid_pairs += 1
+        if ratio >= 3.5 and "suspected_quadratic_registry" not in blockers:
+            blockers.append("suspected_quadratic_registry")
+    if len(pairs) < 2 or valid_pairs < 2:
+        blockers.append("registry_doubling_evidence_incomplete")
+    return blockers
 
 
 def run_child(name: str, command: list[str], report_path: Path, repo: Path, timeout: int) -> dict[str, Any]:
     report_path.parent.mkdir(parents=True, exist_ok=True)
+    # Never allow a previous/manual/retry report to satisfy a fresh child run.
+    # A child must create its own current evidence after this point.
+    try:
+        report_path.unlink(missing_ok=True)
+    except OSError as exc:
+        return {
+            "name": name,
+            "ok": False,
+            "return_code": -2,
+            "timed_out": False,
+            "wall_ms": 0.0,
+            "report_path": str(report_path),
+            "stdout_tail": "",
+            "stderr_tail": "",
+            "fresh_report": False,
+            "report": {"ok": False, "error": f"cannot clear stale child report: {exc}"},
+        }
     started = time.perf_counter()
     try:
         proc = subprocess.run(
@@ -78,11 +129,12 @@ def run_child(name: str, command: list[str], report_path: Path, repo: Path, time
         stdout_tail = (exc.stdout or "")[-4000:] if isinstance(exc.stdout, str) else ""
         stderr_tail = (exc.stderr or "")[-4000:] if isinstance(exc.stderr, str) else ""
 
-    payload = load_report(report_path) if report_path.exists() else {
+    fresh_report = report_path.exists()
+    payload = load_report(report_path) if fresh_report else {
         "ok": False,
-        "error": "child report missing",
+        "error": "fresh child report missing",
     }
-    ok = not timed_out and return_code == 0 and report_passed(payload)
+    ok = fresh_report and not timed_out and return_code == 0 and report_passed(payload)
     return {
         "name": name,
         "ok": ok,
@@ -90,6 +142,7 @@ def run_child(name: str, command: list[str], report_path: Path, repo: Path, time
         "timed_out": timed_out,
         "wall_ms": (time.perf_counter() - started) * 1000.0,
         "report_path": str(report_path),
+        "fresh_report": fresh_report,
         "stdout_tail": stdout_tail,
         "stderr_tail": stderr_tail,
         "report": payload,
