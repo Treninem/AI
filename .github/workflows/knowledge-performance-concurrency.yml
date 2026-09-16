@@ -11,6 +11,7 @@ on:
       - 'benchmarks/knowledge/run_registry_scaling.py'
       - 'benchmarks/knowledge/record_dedupe_shared_source_probe.gd'
       - 'benchmarks/knowledge/dedupe_alias_removal_probe.gd'
+      - 'benchmarks/knowledge/legacy_unregistered_rollback_probe.gd'
       - 'benchmarks/knowledge/write_failure_rollback_probe.gd'
       - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
       - 'tests/test_knowledge_resilience_batch.py'
@@ -30,6 +31,7 @@ on:
       - 'benchmarks/knowledge/run_registry_scaling.py'
       - 'benchmarks/knowledge/record_dedupe_shared_source_probe.gd'
       - 'benchmarks/knowledge/dedupe_alias_removal_probe.gd'
+      - 'benchmarks/knowledge/legacy_unregistered_rollback_probe.gd'
       - 'benchmarks/knowledge/write_failure_rollback_probe.gd'
       - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
       - 'tests/test_knowledge_resilience_batch.py'
@@ -55,8 +57,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate consolidated batch contract
         run: python -m unittest tests.test_knowledge_resilience_batch -v
-      - name: Compile batch runner
-        run: python -m py_compile benchmarks/knowledge/run_resilience_batch.py
+      - name: Compile batch runners
+        run: >-
+          python -m py_compile
+          benchmarks/knowledge/run_resilience_batch.py
+          benchmarks/knowledge/run_registry_scaling.py
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -95,9 +100,12 @@ jobs:
       - name: Validate consolidated batch contract
         shell: powershell
         run: python -m unittest tests.test_knowledge_resilience_batch -v
-      - name: Compile batch runner
+      - name: Compile batch runners
         shell: powershell
-        run: python -m py_compile benchmarks/knowledge/run_resilience_batch.py
+        run: >-
+          python -m py_compile
+          benchmarks/knowledge/run_resilience_batch.py
+          benchmarks/knowledge/run_registry_scaling.py
       - name: Download Godot 4.7.1
         shell: powershell
         run: |
