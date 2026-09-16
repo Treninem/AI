@@ -161,6 +161,8 @@ jobs:
           grep -q '"ocr_unavailable"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
           grep -q '"ocr_error"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
           grep -q '"ocr_failed_pages"' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
+          grep -q 'MIN_RENDER_SCALE' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
+          grep -q 'safe local OCR render limit' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
           grep -q "cz.adaptech.tesseract4android:tesseract4android:4.9.0" addons/AuroraFoxRuntime/export_plugin.gd
           grep -q "https://jitpack.io" addons/AuroraFoxRuntime/export_plugin.gd
           ! grep -R -E "OpenAI|Gemini|Claude|Ollama" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt

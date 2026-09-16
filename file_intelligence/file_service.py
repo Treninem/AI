@@ -42,6 +42,7 @@ MAX_PDF_BYTES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_BYTES", str(256 * 1024 * 10
 MAX_PDF_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_PAGES", "1000"))
 MAX_OCR_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PAGES", "500"))
 MAX_PDF_RENDER_PIXELS = int(os.getenv("AURORAFOX_OCR_MAX_RENDER_PIXELS", str(8_000_000)))
+MIN_PDF_RENDER_SCALE = 0.01
 
 logging.basicConfig(filename=LOG_DIR / "aurora_files.log", level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", encoding="utf-8")
 log = logging.getLogger("aurora_files")
@@ -210,9 +211,21 @@ def _usable_pdf_text(text: str) -> bool:
 def _render_pdf_page(pdf: Any, index: int):
     page = pdf[index]
     try:
-        width, height = page.get_size(); scale = 2.0; projected = max(1.0, width * height * scale * scale)
-        if projected > MAX_PDF_RENDER_PIXELS: scale *= (MAX_PDF_RENDER_PIXELS / projected) ** 0.5
-        bitmap = page.render(scale=max(0.5, scale))
+        width, height = page.get_size()
+        width = float(width); height = float(height)
+        if not (width > 0.0 and height > 0.0):
+            raise ValueError("PDF page has invalid dimensions for local OCR")
+        default_scale = 2.0
+        projected = width * height * default_scale * default_scale
+        scale = default_scale
+        if projected > MAX_PDF_RENDER_PIXELS:
+            scale *= (MAX_PDF_RENDER_PIXELS / projected) ** 0.5
+        if not (scale >= MIN_PDF_RENDER_SCALE):
+            raise ValueError("PDF page dimensions exceed safe local OCR render limit")
+        bounded_pixels = width * height * scale * scale
+        if not (bounded_pixels <= MAX_PDF_RENDER_PIXELS * 1.01):
+            raise ValueError("PDF page render budget could not be bounded safely")
+        bitmap = page.render(scale=scale)
         try: return bitmap.to_pil().copy()
         finally: bitmap.close()
     finally: page.close()
@@ -240,7 +253,7 @@ def _pdf_extract(path: Path, visual: bool, question: str, max_chars: int = MAX_T
     output_limit = max(1, int(max_chars))
     warnings: list[str] = []; out = io.StringIO(); page_sources: list[dict[str, Any]] = []
     ocr_status = local_ocr_health(); pdfium_doc = None; ocr_pages = text_pages = empty_pages = failed_ocr_pages = 0
-    pages_processed = 0; output_truncated = False
+    pages_processed = 0; output_truncated = False; ocr_limit_reached = False
     try:
         for idx, page in enumerate(reader.pages):
             if out.tell() >= output_limit:
@@ -258,6 +271,7 @@ def _pdf_extract(path: Path, visual: bool, question: str, max_chars: int = MAX_T
                     break
                 continue
             if ocr_pages >= MAX_OCR_PAGES:
+                ocr_limit_reached = True
                 empty_pages += int(not bool(layer_text)); page_sources.append({"page": page_no, "source": "ocr_limit", "chars": len(layer_text)})
                 if layer_text and not _append_pdf_page(out, page_no, layer_text, output_limit):
                     output_truncated = True
@@ -269,6 +283,7 @@ def _pdf_extract(path: Path, visual: bool, question: str, max_chars: int = MAX_T
                     output_truncated = True
                     break
                 continue
+            ocr_pages += 1
             try:
                 if pdfium_doc is None:
                     import pypdfium2 as pdfium
@@ -276,7 +291,7 @@ def _pdf_extract(path: Path, visual: bool, question: str, max_chars: int = MAX_T
                 image = _render_pdf_page(pdfium_doc, idx)
                 try: result = local_ocr_image(image, page_number=page_no)
                 finally: image.close()
-                ocr_pages += 1; ocr_text = str(result.get("text", "")).strip() if result.get("ok") else ""
+                ocr_text = str(result.get("text", "")).strip() if result.get("ok") else ""
                 if ocr_text:
                     complete = _append_pdf_page(out, page_no, ocr_text, output_limit)
                     page_sources.append({"page": page_no, "source": "ocr", "chars": len(ocr_text)})
@@ -302,7 +317,7 @@ def _pdf_extract(path: Path, visual: bool, question: str, max_chars: int = MAX_T
     finally:
         if pdfium_doc is not None: pdfium_doc.close()
     if failed_ocr_pages and not bool(ocr_status.get("available", False)): warnings.append("Локальный OCR-компонент отсутствует: text-layer страницы импортированы, сканированные страницы пропущены без падения приложения.")
-    if ocr_pages >= MAX_OCR_PAGES and page_count > pages_processed: warnings.append(f"OCR ограничен первыми {MAX_OCR_PAGES} страницами без usable text layer.")
+    if ocr_limit_reached: warnings.append(f"OCR ограничен первыми {MAX_OCR_PAGES} страницами без usable text layer.")
     if output_truncated: warnings.append(f"Извлечение остановлено на лимите {output_limit} символов; необработанные страницы не рендерились и не отправлялись в OCR.")
     return out.getvalue(), {
         "pages": page_count, "pages_processed": pages_processed, "text_layer_pages": text_pages, "ocr_pages": ocr_pages,

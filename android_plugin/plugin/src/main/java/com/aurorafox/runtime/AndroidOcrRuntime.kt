@@ -22,6 +22,7 @@ class AndroidOcrRuntime(private val context: Context) {
         private const val MAX_OUTPUT_CHARS = 160_000
         private const val MAX_PIXELS = 8_000_000L
         private const val MAX_INPUT_PIXELS = 64_000_000L
+        private const val MIN_RENDER_SCALE = 0.01
         private const val LANGUAGES = "rus+eng"
         private val MODEL_SHA = mapOf(
             "eng.traineddata" to "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
@@ -146,6 +147,7 @@ class AndroidOcrRuntime(private val context: Context) {
             var emptyPages = 0
             var pagesProcessed = 0
             var outputTruncated = false
+            var ocrLimitReached = false
             for (index in 0 until document.numberOfPages) {
                 if (out.length >= MAX_OUTPUT_CHARS) {
                     outputTruncated = true
@@ -171,6 +173,7 @@ class AndroidOcrRuntime(private val context: Context) {
                     continue
                 }
                 if (ocrPages >= MAX_OCR_PAGES) {
+                    ocrLimitReached = true
                     if (layer.isBlank()) emptyPages++
                     val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
                     pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_limit", "chars" to layer.length)))
@@ -205,7 +208,7 @@ class AndroidOcrRuntime(private val context: Context) {
                 }
             }
             if (outputTruncated) warnings.put("Local OCR output truncated at $MAX_OUTPUT_CHARS characters")
-            if (ocrPages >= MAX_OCR_PAGES && pagesProcessed < document.numberOfPages) warnings.put("OCR page limit reached at $MAX_OCR_PAGES pages")
+            if (ocrLimitReached) warnings.put("OCR page limit reached at $MAX_OCR_PAGES pages")
             return payload(
                 out.toString(),
                 mapOf(
@@ -269,12 +272,24 @@ class AndroidOcrRuntime(private val context: Context) {
 
     private fun renderBoundedPdfPage(document: PDDocument, renderer: PDFRenderer, index: Int): Bitmap {
         val box = document.getPage(index).cropBox
+        val width = box.width.toDouble()
+        val height = box.height.toDouble()
+        require(width.isFinite() && height.isFinite() && width > 0.0 && height > 0.0) {
+            "PDF page has invalid dimensions for local OCR"
+        }
         val defaultScale = 180.0 / 72.0
-        val projected = maxOf(1.0, box.width.toDouble() * box.height.toDouble() * defaultScale * defaultScale)
+        val projected = width * height * defaultScale * defaultScale
         val scale = if (projected > MAX_PIXELS.toDouble()) {
             defaultScale * kotlin.math.sqrt(MAX_PIXELS.toDouble() / projected)
         } else defaultScale
-        return renderer.renderImage(index, scale.coerceAtLeast(0.1).toFloat())
+        require(scale.isFinite() && scale >= MIN_RENDER_SCALE) {
+            "PDF page dimensions exceed safe local OCR render limit"
+        }
+        val boundedPixels = width * height * scale * scale
+        require(boundedPixels.isFinite() && boundedPixels <= MAX_PIXELS.toDouble() * 1.01) {
+            "PDF page render budget could not be bounded safely"
+        }
+        return renderer.renderImage(index, scale.toFloat())
     }
 
     private fun limitBitmap(bitmap: Bitmap): Bitmap {

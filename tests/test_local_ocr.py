@@ -148,6 +148,56 @@ def test_pdf_output_budget_stops_further_ocr_work(tmp_path, monkeypatch):
     assert any("120" in warning for warning in warnings)
 
 
+def test_pathological_pdf_page_dimensions_rejected_before_render():
+    rendered = []
+    closed = []
+
+    class FakePage:
+        def get_size(self):
+            return (1_000_000_000.0, 1_000_000_000.0)
+
+        def render(self, **_kwargs):
+            rendered.append(True)
+            raise AssertionError("pathological page must be rejected before bitmap rendering")
+
+        def close(self):
+            closed.append(True)
+
+    class FakePdf:
+        def __getitem__(self, _index):
+            return FakePage()
+
+    with pytest.raises(ValueError, match="safe local OCR render limit"):
+        file_service._render_pdf_page(FakePdf(), 0)
+    assert rendered == []
+    assert closed == [True]
+
+
+def test_pdf_ocr_limit_counts_render_failures(tmp_path, monkeypatch):
+    pdf = tmp_path / "render-errors.pdf"
+    writer = PdfWriter()
+    for _ in range(4):
+        writer.add_blank_page(width=612, height=792)
+    with pdf.open("wb") as f:
+        writer.write(f)
+    monkeypatch.setattr(file_service, "MAX_OCR_PAGES", 2)
+    monkeypatch.setattr(file_service, "local_ocr_health", lambda: {"available": True, "engine": "test"})
+    calls = []
+
+    def fail_render(_pdf, index):
+        calls.append(index)
+        raise RuntimeError("synthetic render failure")
+
+    monkeypatch.setattr(file_service, "_render_pdf_page", fail_render)
+    text, meta, warnings = file_service._pdf_extract(pdf, False, "")
+    assert text == ""
+    assert calls == [0, 1]
+    assert meta["ocr_pages"] == 2
+    assert meta["ocr_failed_pages"] == 2
+    assert [p["source"] for p in meta["page_sources"]] == ["ocr_error", "ocr_error", "ocr_limit", "ocr_limit"]
+    assert any("2" in warning and "OCR" in warning for warning in warnings)
+
+
 def test_cache_key_separates_output_budgets(tmp_path):
     source = tmp_path / "cache.txt"
     source.write_text("AuroraFox cache budget", encoding="utf-8")
