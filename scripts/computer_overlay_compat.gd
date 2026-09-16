@@ -10,6 +10,5 @@ func _apply_button(button: Button, active := false) -> void:
 	button.add_theme_stylebox_override("focus", _style(Color(0.10, 0.12, 0.18, 1.0), Color(0.66, 0.54, 1.0, 0.86)))
 	button.add_theme_color_override("font_color", Color("eef5ff"))
 	button.add_theme_font_size_override("font_size", 13)
-	button.expand_icon = true
-	button.icon_max_width = 18
+	button.expand_icon = false
 	button.clip_text = true
