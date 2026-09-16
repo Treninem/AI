@@ -20,6 +20,8 @@ jobs:
           fetch-depth: 0
       - name: Append takeover claim if missing
         shell: bash
+        env:
+          CLAIM_B64: CiMjIDQwLiBWb2ljZSAvIEF1ZGlvIOKAlCBUQUtFT1ZFUi9SRUNPTkNJTEUsIDIwMjYtMDktMTcKCiMjIyBDTEFJTSBgQ0hBVC0yMDI2LTA5LTE3LVZPSUNFLUFVRElPYAoKLSDQodGC0LDRgtGD0YE6ICoqQUNUSVZFIOKAlCBUQUtFT1ZFUi9SRUNPTkNJTEUqKi4KLSBGcmVzaCBiYXNlbGluZTogYDdiZTU0YjZhMGVlNmJiOGEyMGVmNDEwZWYwYjZhZjNlNjRlY2U5NTZgOyB3b3JraW5nIGJyYW5jaDogYGNoYXQtMjAyNi0wOS0xNy12b2ljZS1hdWRpby1yMmAuCi0g0KDQtdC20LjQvDogQ2hhdC4gSW50ZW5kZWQgYnVtcCBhZnRlciBhY2NlcHRhbmNlOiAqKlBBVENIKio7IGNhbm9uaWNhbCB2ZXJzaW9uLCBBbmRyb2lkIGB2ZXJzaW9uQ29kZWAsIGZpbmFsIG1lcmdlIGFuZCByZWxlYXNlIHJlbWFpbiBjb29yZGluYXRvci1vbmx5LgotIEluaGVyaXRzIGBDSEFULTIwMjYtMDktMTYtVk9JQ0UtUVVBTElUWWAgLyBQUiAjMzQgYW5kIEFuZHJvaWQgZmVtYWxlLXZvaWNlIGNhbmRpZGF0ZSBzZWN0aW9uIDMzLiBPbGQgcmVwbGFjZW1lbnQgYnJhbmNoIGBjaGF0LTIwMjYtMDktMTctdm9pY2UtYXVkaW9gIGlzIHN1cGVyc2VkZWQgZm9yIGltcGxlbWVudGF0aW9uIGJlY2F1c2UgZnJlc2ggYG1haW5gIGFkdmFuY2VkOyBpdHMgdmVyaWZpZWQgYXNzZXQtYXVkaXQgZXZpZGVuY2UgcmVtYWlucyB2YWxpZCBhbmQgaXMgbm90IGRpc2NhcmRlZC4KLSBWZXJpZmllZCBTdXBlcnRvbmljIDMgc3VwcGx5IGV2aWRlbmNlOiBWb2ljZSBBc3NldCBBdWRpdCBydW4gYDM1MTU5ODE2NDU5YCBvbiBgN2Q2ZDA3NGVjNTk3YjIxZmYwYTBhOTA2ZTNhMDQ4NzFjYWUyMTU4YWAgU1VDQ0VTUzsgb2ZmaWNpYWwgYHNoZXJwYS1vbm54LXN1cGVydG9uaWMtMy10dHMtaW50OC0yMDI2LTA1LTExLnRhci5iejJgID0gYDEyODc3NDMxOGAgYnl0ZXMsIFNIQS0yNTYgYDgyZmE5NmY5MWM0ZWY4YWJhYWUzYTE0YTNmNDE1M2ZhY2Y4OGJlZDgyMWQxZjczMzFjZWMyNzAwZjQzMmM0MjdgLCB3aXRoIHJlcXVpcmVkIGBkdXJhdGlvbl9wcmVkaWN0b3IuaW50OC5vbm54YCwgYHRleHRfZW5jb2Rlci5pbnQ4Lm9ubnhgLCBgdmVjdG9yX2VzdGltYXRvci5pbnQ4Lm9ubnhgLCBgdm9jb2Rlci5pbnQ4Lm9ubnhgLCBgdHRzLmpzb25gLCBgdW5pY29kZV9pbmRleGVyLmJpbmAsIGB2b2ljZS5iaW5gLiBBdWRpdCBhcnRpZmFjdCBgMTA0NzMxNjAzNzFgLgotIE93bmVkIGltcGxlbWVudGF0aW9uIHNjb3BlIGZvciB0aGlzIHRha2VvdmVyIHN0YWdlOiBgYW5kcm9pZF9wbHVnaW4vcGx1Z2luL3NyYy9tYWluL2phdmEvY29tL2F1cm9yYWZveC9ydW50aW1lL0FuZHJvaWRWb2ljZVJ1bnRpbWUua3RgLCBgYW5kcm9pZF9wbHVnaW4vc2V0dXBfbmF0aXZlLnBzMWAsIG5ldyBWb2ljZS1zcGVjaWZpYyBBbmRyb2lkIHRlc3RzL3dvcmtmbG93cy9iZW5jaG1hcmtzIGFuZCBgZG9jcy9QUk9KRUNUX01BU1RFUl9MT0cubWRgLiBEbyBub3QgZWRpdCBPQ1Itb3duZWQgYEFuZHJvaWRGaWxlUnVudGltZS5rdGAsIGBwbHVnaW4vYnVpbGQuZ3JhZGxlLmt0c2AsIGBzZXR0aW5ncy5ncmFkbGUua3RzYDsgZG8gbm90IGVkaXQgVUktb3duZWQgb3ZlcmxheXM7IGRvIG5vdCBlZGl0IG9sZCBXaW5kb3dzIFZvaWNlL1B5dGhvbiBmaWxlcyB1bnRpbCBvbGQgVm9pY2UtUXVhbGl0eSBvd25lcnNoaXAgaXMgZXhwbGljaXRseSByZWNvbmNpbGVkL3JlbGVhc2VkLgotIEFyY2hpdGVjdHVyZSBpbnZhcmlhbnQ6IEFuZHJvaWQgc3BlZWNoIHJlbWFpbnMgZnVsbHkgbG9jYWwgYXQgcnVudGltZS4gUmVxdWlyZWQgVFRTL1NUVCBtb2RlbCBhc3NldHMgYXJlIHN0YWdlZCBpbnRvIHRoZSBBUEsvYnVpbGQgYmVmb3JlIGRlbGl2ZXJ5OyBub3JtYWwgcnVudGltZSBtdXN0IG5vdCBkb3dubG9hZCBtb2RlbHMuIHNoZXJwYS1vbm54IHN0YXlzIHBpbm5lZCBhdCBgMS4xMy40YCB1bmxlc3MgaW5kZXBlbmRlbnQgZXZpZGVuY2UgcmVxdWlyZXMgYSBjb29yZGluYXRlZCBkZXBlbmRlbmN5IGNoYW5nZS4KLSBJbW1lZGlhdGUgYWNjZXB0YW5jZSB0YXJnZXQ6IHJlcGxhY2UgbWFsZSBQaXBlciBEZW5pcyBBbmRyb2lkIFRUUyB3aXRoIGludGVncml0eS1waW5uZWQgU3VwZXJ0b25pYyAzOyBwYXNzIFJ1c3NpYW4gdmlhIGBHZW5lcmF0aW9uQ29uZmlnLmV4dHJhWyJsYW5nIl09InJ1ImA7IGtlZXAgY2FjaGUvaW50ZXJydXB0aW9uL2RlZ3JhZGF0aW9uIGJlaGF2aW9yOyBjb21waWxlL3BhY2thZ2Ugd2l0aG91dCBHcmFkbGUvc2V0dGluZ3MgY2hhbmdlczsgdGhlbiBtZWFzdXJlIEYxLUY1IGZlbWFsZSBjYW5kaWRhdGVzIHdpdGggcmVwcm9kdWNpYmxlIFdBVi9SVEYvY2xpcHBpbmcvQVNSIGV2aWRlbmNlIGJlZm9yZSBzZWxlY3RpbmcgYSByZWxlYXNlIHNwZWFrZXIuCgpQUk9HUkVTU19DT01QTEVURTogNDIlClBST0dSRVNTX1JFTUFJTklORzogNTglCgpET05FOgotIEZyZXNoIG1haW4vQUdFTlRTL2Z1bGwgbWFzdGVyIGxvZyBhbmQgYWN0aXZlIG93bmVyc2hpcCBhdWRpdGVkLgotIEN1cnJlbnQgQW5kcm9pZCBydW50aW1lIGNvbmZpcm1lZCB0byB1c2UgbWFsZSBgdml0cy1waXBlci1ydV9SVS1kZW5pcy1tZWRpdW1gIC8gYHNoZXJwYS1vbm54LXBpcGVyLWRlbmlzYCwgc28gZmVtYWxlIGFjY2VwdGFuY2UgaXMgZ2VudWluZWx5IG9wZW4uCi0gc2hlcnBhLW9ubnggYHYxLjEzLjRgIEtvdGxpbiBBUEkgdmVyaWZpZWQgdG8gY29udGFpbiBgT2ZmbGluZVR0c1N1cGVydG9uaWNNb2RlbENvbmZpZ2AgYW5kIGBHZW5lcmF0aW9uQ29uZmlnLmV4dHJhOiBNYXA8U3RyaW5nLFN0cmluZz4/YC4KLSBPZmZpY2lhbCBTdXBlcnRvbmljIDMgYXNzZXQgaWRlbnRpdHkvbGF5b3V0IHByb3ZlbiBieSBleGFjdCBDSSBkb3dubG9hZCBhbmQgU0hBIGF1ZGl0IGFib3ZlLgoKUkVNQUlOSU5HOgotIEltcGxlbWVudCBmYWlsLWNsb3NlZCBidWlsZCBzdGFnaW5nICsgU3VwZXJ0b25pYyBBbmRyb2lkIHJ1bnRpbWUvY29uZmlnIGFuZCBWb2ljZS1zcGVjaWZpYyBjb250cmFjdHMuCi0gT2J0YWluIGV4YWN0LWhlYWQgY29tcGlsZS9wYWNrYWdlIENJOyB0aGVuIGdlbmVyYXRlL21lYXN1cmUgRjEtRjUgUnVzc2lhbiBvdXRwdXRzLCBzZWxlY3QgYSBmZW1hbGUgY2FuZGlkYXRlIGZyb20gZXZpZGVuY2UsIGFuZCByZXJ1biBBbmRyb2lkIEFQSyBpbnN0YWxsL2xhdW5jaCArIHJlYWwgVFRTIGludm9jYXRpb24uCi0gUHJlc2VydmUgbW9kZWwgbGljZW5zZS9ub3RpY2UgaW4gcmVsZWFzZSBwYWNrYWdpbmcgYW5kIHJlY29yZCBwaHlzaWNhbC1kZXZpY2UgaHVtYW4gbGlzdGVuaW5nIHNlcGFyYXRlbHkgaWYgbm8gcmVhbCBkZXZpY2UgaXMgYXZhaWxhYmxlLgoKQkxPQ0tFUlM6Ci0gbm9uZSBmb3Igb3duZWQtc2NvcGUgaW1wbGVtZW50YXRpb24gbm93LiBQaHlzaWNhbCBBbmRyb2lkIGh1bWFuLWxpc3RlbiBwcm9vZiByZW1haW5zIGEgbGF0ZXIgZGV2aWNlIGJvdW5kYXJ5LCBub3QgYSBibG9ja2VyIGZvciBjb21waWxlL3BhY2thZ2UvYWNvdXN0aWMgQ0kuCgpORVhUOgotIFBhdGNoIG9ubHkgdGhlIG93bmVkIEFuZHJvaWQgVm9pY2UgcnVudGltZS9zZXR1cCBwbHVzIGlzb2xhdGVkIFZvaWNlIGNvbnRyYWN0cywgdGhlbiBydW4gZXhhY3QtaGVhZCBDSSBhbmQgY2xhc3NpZnkgYW55IGZhaWx1cmUgYnkgam9iL3Rlc3QgYmVmb3JlIHRvdWNoaW5nIGFkZGl0aW9uYWwgZmlsZXMuCg==
         run: |
           set -euo pipefail
           log='docs/PROJECT_MASTER_LOG.md'
@@ -27,41 +29,7 @@ jobs:
             echo 'Voice takeover claim already present.'
             exit 0
           fi
-          cat >> "$log" <<'EOF'
-
-## 40. Voice / Audio — TAKEOVER/RECONCILE, 2026-09-17
-
-### CLAIM `CHAT-2026-09-17-VOICE-AUDIO`
-
-- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
-- Fresh baseline: `7be54b6a0ee6bb8a20ef410ef0b6af3e64ece956`; working branch: `chat-2026-09-17-voice-audio-r2`.
-- Режим: Chat. Intended bump after acceptance: **PATCH**; canonical version, Android `versionCode`, final merge and release remain coordinator-only.
-- Inherits `CHAT-2026-09-16-VOICE-QUALITY` / PR #34 and Android female-voice candidate section 33. Old replacement branch `chat-2026-09-17-voice-audio` is superseded for implementation because fresh `main` advanced; its verified asset-audit evidence remains valid and is not discarded.
-- Verified Supertonic 3 supply evidence: Voice Asset Audit run `35159816459` on `7d6d074ec597b21ff0a0a906e3a04871cae2158a` SUCCESS; official `sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2` = `128774318` bytes, SHA-256 `82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427`, with required `duration_predictor.int8.onnx`, `text_encoder.int8.onnx`, `vector_estimator.int8.onnx`, `vocoder.int8.onnx`, `tts.json`, `unicode_indexer.bin`, `voice.bin`. Audit artifact `10473160371`.
-- Owned implementation scope for this takeover stage: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`, `android_plugin/setup_native.ps1`, new Voice-specific Android tests/workflows/benchmarks and `docs/PROJECT_MASTER_LOG.md`. Do not edit OCR-owned `AndroidFileRuntime.kt`, `plugin/build.gradle.kts`, `settings.gradle.kts`; do not edit UI-owned overlays; do not edit old Windows Voice/Python files until old Voice-Quality ownership is explicitly reconciled/released.
-- Architecture invariant: Android speech remains fully local at runtime. Required TTS/STT model assets are staged into the APK/build before delivery; normal runtime must not download models. sherpa-onnx stays pinned at `1.13.4` unless independent evidence requires a coordinated dependency change.
-- Immediate acceptance target: replace male Piper Denis Android TTS with integrity-pinned Supertonic 3; pass Russian via `GenerationConfig.extra["lang"]="ru"`; keep cache/interruption/degradation behavior; compile/package without Gradle/settings changes; then measure F1-F5 female candidates with reproducible WAV/RTF/clipping/ASR evidence before selecting a release speaker.
-
-PROGRESS_COMPLETE: 42%
-PROGRESS_REMAINING: 58%
-
-DONE:
-- Fresh main/AGENTS/full master log and active ownership audited.
-- Current Android runtime confirmed to use male `vits-piper-ru_RU-denis-medium` / `sherpa-onnx-piper-denis`, so female acceptance is genuinely open.
-- sherpa-onnx `v1.13.4` Kotlin API verified to contain `OfflineTtsSupertonicModelConfig` and `GenerationConfig.extra: Map<String,String>?`.
-- Official Supertonic 3 asset identity/layout proven by exact CI download and SHA audit above.
-
-REMAINING:
-- Implement fail-closed build staging + Supertonic Android runtime/config and Voice-specific contracts.
-- Obtain exact-head compile/package CI; then generate/measure F1-F5 Russian outputs, select a female candidate from evidence, and rerun Android APK install/launch + real TTS invocation.
-- Preserve model license/notice in release packaging and record physical-device human listening separately if no real device is available.
-
-BLOCKERS:
-- none for owned-scope implementation now. Physical Android human-listen proof remains a later device boundary, not a blocker for compile/package/acoustic CI.
-
-NEXT:
-- Patch only the owned Android Voice runtime/setup plus isolated Voice contracts, then run exact-head CI and classify any failure by job/test before touching additional files.
-EOF
+          printf '%s' "$CLAIM_B64" | base64 --decode >> "$log"
           git config user.name 'aurorafox-voice-bot'
           git config user.email 'actions@users.noreply.github.com'
           git add "$log"
