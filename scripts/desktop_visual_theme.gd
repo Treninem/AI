@@ -30,6 +30,7 @@ func _apply_after_build() -> void:
 		_replace_background(_root)
 	_remove_temporary_avatar_art(_root)
 	_remove_redundant_quick_controls()
+	await get_tree().process_frame
 	_apply_safe_button_styles(_root)
 	_apply_popup_styles(_root)
 	_apply_responsive_layout()
@@ -54,18 +55,21 @@ func _remove_temporary_avatar_art(node: Node) -> void:
 			if rect.texture != null and rect.texture.resource_path.ends_with("fox_logo.svg"):
 				rect.visible = false
 				rect.custom_minimum_size = Vector2.ZERO
+				rect.queue_free()
+				continue
 		_remove_temporary_avatar_art(child)
 
 func _remove_redundant_quick_controls() -> void:
-	for node_name in ["VoiceSpeakButton", "VoiceSettingsButton", "KnowledgeBaseButton", "ComputerAgentButton", "UpdateStatusButton"]:
+	for node_name in ["VoiceSpeakButton", "VoiceSettingsButton", "KnowledgeBaseButton", "ComputerAgentButton", "UpdateStatusButton", "WorkButton"]:
 		var control := _root.find_child(node_name, true, false) as Control
 		if control != null:
 			control.visible = false
+			control.queue_free()
 	var header_actions := _root.find_child("MainHeaderActions", true, false) as HBoxContainer
 	if header_actions != null:
 		var has_visible := false
 		for child in header_actions.get_children():
-			if child is Control and child.visible:
+			if child is Control and child.visible and not child.is_queued_for_deletion():
 				has_visible = true
 				break
 		header_actions.visible = has_visible
