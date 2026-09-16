@@ -51,7 +51,7 @@
     "vosk_model": "voice/models/vosk-model-small-ru-0.22"
   },
   "processor": {
-    "profile_revision": 2,
+    "profile_revision": 3,
     "normalize": true,
     "compression": false,
     "limiter": true,

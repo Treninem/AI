@@ -31,6 +31,23 @@ Work in coherent batches. After each completed batch, update `docs/PROJECT_MASTE
 - exact next step;
 - files/subsystem released from the claim.
 
+### Mandatory progress percentage report for every active lane
+
+Every active Chat / Work / Codex / agent must include a progress report in **every substantial master-log checkpoint and before stopping or handing off**. This is mandatory for all current and future claims.
+
+Use this compact format:
+
+- `PROGRESS_COMPLETE: <0-100>%`
+- `PROGRESS_REMAINING: <0-100>%`
+- `DONE:` concrete completed scope, commits and green evidence.
+- `REMAINING:` concrete unfinished scope required for the lane's acceptance criteria.
+- `BLOCKERS:` exact blocker(s), owner/claim if cross-lane, and evidence/run/commit when available; write `none` if there is no known blocker.
+- `NEXT:` the exact next executable step.
+
+`PROGRESS_COMPLETE + PROGRESS_REMAINING` must equal `100%`. Percentages are engineering progress estimates against the lane's written acceptance criteria, not guesses based on elapsed time. Do not inflate progress because code was written: failed/queued required gates, unresolved P0/P1 defects, missing package/device evidence, or an unverified cross-lane dependency must remain in `PROGRESS_REMAINING` until satisfied. A lane may report `100% / 0%` only when its own acceptance criteria are actually complete and the claim can be marked DONE; device-only checks that are explicitly outside the lane must still be stated honestly as external/unverified gates when relevant.
+
+When a coordinator record addresses a lane (`TO: <exact CLAIM-ID>`), that lane's next checkpoint must also answer it and refresh the percentage report. If the estimate changes materially, briefly state why (for example: a new blocker was discovered, a required gate passed, or scope was reconciled after fresh `main`).
+
 When stopping, mark the claim DONE or clearly state what remains so the next Chat/Work/Codex session can continue directly from the repository without repeating completed work.
 
 ## HARD VERSIONING INVARIANT — test first, version last

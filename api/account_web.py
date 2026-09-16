@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import html
+import time
 from urllib.parse import parse_qs
 
-from fastapi import APIRouter, Query, Request
+from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from api.account_store import AccountError, AccountStore, AuthenticationError
@@ -51,9 +52,12 @@ async def _form_fields(request: Request) -> dict[str, list[str]] | None:
 
 
 def create_account_web_router(accounts: AccountStore) -> APIRouter:
-    router = APIRouter(include_in_schema=False)
+    # Web action pages remain hidden from OpenAPI individually. The same router
+    # also owns the small personal-session logout endpoint so it can use the
+    # AccountStore already injected by api.server without duplicating auth state.
+    router = APIRouter()
 
-    @router.get("/verify-email", response_class=HTMLResponse)
+    @router.get("/verify-email", response_class=HTMLResponse, include_in_schema=False)
     def verify_email_page(token: str = Query(min_length=16, max_length=512)) -> HTMLResponse:
         # GET is deliberately non-mutating. Mail security scanners and link preview
         # bots commonly prefetch URLs; consuming a verification credential on GET
@@ -69,7 +73,7 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
 </form>""",
         )
 
-    @router.post("/verify-email", response_class=HTMLResponse)
+    @router.post("/verify-email", response_class=HTMLResponse, include_in_schema=False)
     async def verify_email_submit(request: Request) -> HTMLResponse:
         fields = await _form_fields(request)
         if fields is None:
@@ -94,7 +98,7 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
             "<h1>Email подтверждён</h1><p>Аккаунт AuroraFox готов к использованию.</p>",
         )
 
-    @router.get("/reset-password", response_class=HTMLResponse)
+    @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)
     def reset_password_page(token: str = Query(min_length=16, max_length=512)) -> HTMLResponse:
         escaped = html.escape(token, quote=True)
         return _page(
@@ -109,7 +113,7 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
 <p class="muted">После смены пароля активные сеансы аккаунта будут отозваны.</p>""",
         )
 
-    @router.post("/reset-password", response_class=HTMLResponse)
+    @router.post("/reset-password", response_class=HTMLResponse, include_in_schema=False)
     async def reset_password_submit(request: Request) -> HTMLResponse:
         fields = await _form_fields(request)
         if fields is None:
@@ -135,5 +139,41 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
             "AuroraFox — пароль изменён",
             "<h1>Пароль изменён</h1><p>Теперь можно войти в AuroraFox с новым паролем.</p>",
         )
+
+    @router.post("/v1/auth/logout")
+    def logout_personal_session(authorization: str = Header(default="")) -> dict[str, bool]:
+        if not authorization.startswith("Bearer "):
+            raise HTTPException(401, "Missing AuroraFox personal bearer token")
+        token = authorization[7:].strip()
+        record = accounts.verify_personal_token(token)
+        if record is None:
+            raise HTTPException(401, "Invalid or revoked AuroraFox personal bearer token")
+
+        auth_kind = str(record.get("auth_kind", ""))
+        if auth_kind == "account_session":
+            return {"ok": True, "revoked": bool(accounts.revoke_access(token))}
+        if auth_kind != "guest_session":
+            raise HTTPException(403, "Personal account or guest session required")
+
+        guest_id = str(record.get("principal_id", ""))
+        now = int(time.time())
+        with accounts.database.connection(write=True) as connection:
+            row = connection.execute(
+                "SELECT revoked_at FROM guests WHERE id=?",
+                (guest_id,),
+            ).fetchone()
+            if row is None or row["revoked_at"] is not None:
+                revoked = False
+            else:
+                connection.execute(
+                    "UPDATE guests SET revoked_at=?, updated_at=? WHERE id=?",
+                    (now, now, guest_id),
+                )
+                connection.execute(
+                    "UPDATE devices SET revoked_at=COALESCE(revoked_at, ?) WHERE guest_id=?",
+                    (now, guest_id),
+                )
+                revoked = True
+        return {"ok": True, "revoked": revoked}
 
     return router

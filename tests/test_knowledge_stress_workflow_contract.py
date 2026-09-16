@@ -73,6 +73,24 @@ class KnowledgeStressWorkflowContractTests(unittest.TestCase):
         self.assertNotIn("releases/download/4.7.1-stable_linux.x86_64.zip", large)
         self.assertNotIn("releases/download/4.7.1-stable_linux.x86_64.zip", manual)
 
+    def test_concurrency_does_not_let_regular_push_cancel_large_evidence(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        concurrency = text.split("concurrency:\n", 1)[1].split("\njobs:\n", 1)[0]
+        self.assertIn("contains(github.event.head_commit.message, '[knowledge-large]')", concurrency)
+        self.assertIn(
+            "format('aurorafox-knowledge-performance-{0}-{1}', github.workflow, github.ref)",
+            concurrency,
+        )
+        self.assertIn(
+            "format('aurorafox-knowledge-performance-{0}-{1}-regular', github.workflow, github.ref)",
+            concurrency,
+        )
+        self.assertIn(
+            "format('aurorafox-knowledge-performance-{0}-{1}-manual-{2}', github.workflow, github.ref, inputs.profile)",
+            concurrency,
+        )
+        self.assertIn("cancel-in-progress: true", concurrency)
+
 
 if __name__ == "__main__":
     unittest.main()

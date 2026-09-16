@@ -14,6 +14,7 @@ PUBLIC_AUTH_PATHS = {
     "/v1/auth/resend-verification",
     "/v1/auth/login",
     "/v1/auth/refresh",
+    "/v1/auth/logout",
     "/v1/auth/password-reset/request",
     "/v1/auth/password-reset/confirm",
     "/v1/auth/guest",
