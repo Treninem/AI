@@ -174,3 +174,39 @@ jobs:
           name: knowledge-performance-linux-${{ inputs.profile }}-${{ github.sha }}
           path: artifacts/knowledge-performance/
           if-no-files-found: error
+
+  branch-stress-evidence:
+    if: github.event_name == 'pull_request' && github.head_ref == 'chat-large-knowledge-stress-evidence'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Measure JSONL 10 MiB
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario import_jsonl --target-mb 10 --timeout-seconds 1800 --report artifacts/knowledge-performance/linux-jsonl-10.json
+      - name: Measure JSONL 50 MiB
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario import_jsonl --target-mb 50 --timeout-seconds 1800 --report artifacts/knowledge-performance/linux-jsonl-50.json
+      - name: Measure JSONL 100 MiB
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario import_jsonl --target-mb 100 --timeout-seconds 1800 --report artifacts/knowledge-performance/linux-jsonl-100.json
+      - name: Measure JSONL 250 MiB
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile stress --scenario import_jsonl --target-mb 250 --timeout-seconds 1800 --report artifacts/knowledge-performance/linux-jsonl-250.json
+      - name: Upload branch stress evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-branch-stress-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
