@@ -123,9 +123,11 @@ def main() -> int:
     child_dir = final_report.parent / "resilience-batch"
     child_dir.mkdir(parents=True, exist_ok=True)
     child_timeout = max(60, args.timeout_seconds)
-    outer_timeout = child_timeout + 90
+    probe_outer_timeout = child_timeout + 90
+    recovery_outer_timeout = child_timeout * 3 + 120
+    scaling_outer_timeout = child_timeout * 4 + 120
 
-    specs: list[tuple[str, list[str], Path]] = []
+    specs: list[tuple[str, list[str], Path, int]] = []
 
     race_report = child_dir / "concurrency-race.json"
     specs.append((
@@ -139,6 +141,7 @@ def main() -> int:
             child_timeout,
         ),
         race_report,
+        probe_outer_timeout,
     ))
 
     dedupe_report = child_dir / "record-dedupe-shared-source.json"
@@ -153,6 +156,7 @@ def main() -> int:
             child_timeout,
         ),
         dedupe_report,
+        probe_outer_timeout,
     ))
 
     alias_report = child_dir / "dedupe-alias-removal.json"
@@ -167,6 +171,22 @@ def main() -> int:
             child_timeout,
         ),
         alias_report,
+        probe_outer_timeout,
+    ))
+
+    legacy_report = child_dir / "legacy-unregistered-rollback.json"
+    specs.append((
+        "legacy_unregistered_rollback",
+        probe_command(
+            python,
+            godot,
+            "benchmarks/knowledge/legacy_unregistered_rollback_probe.gd",
+            "AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=",
+            legacy_report,
+            child_timeout,
+        ),
+        legacy_report,
+        probe_outer_timeout,
     ))
 
     write_failure_report = child_dir / "write-failure-rollback.json"
@@ -181,6 +201,7 @@ def main() -> int:
             child_timeout,
         ),
         write_failure_report,
+        probe_outer_timeout,
     ))
 
     truncated_report = child_dir / "registry-truncated-temp.json"
@@ -195,6 +216,7 @@ def main() -> int:
             child_timeout,
         ),
         truncated_report,
+        probe_outer_timeout,
     ))
 
     interrupted_import_report = child_dir / "interrupted-import-recovery.json"
@@ -213,6 +235,7 @@ def main() -> int:
             str(interrupted_import_report),
         ],
         interrupted_import_report,
+        recovery_outer_timeout,
     ))
 
     interrupted_remove_report = child_dir / "interrupted-removal-recovery.json"
@@ -231,6 +254,7 @@ def main() -> int:
             str(interrupted_remove_report),
         ],
         interrupted_remove_report,
+        recovery_outer_timeout,
     ))
 
     registry_report = child_dir / "registry-scaling.json"
@@ -251,10 +275,11 @@ def main() -> int:
             str(registry_report),
         ],
         registry_report,
+        scaling_outer_timeout,
     ))
 
     started = time.perf_counter()
-    cases = [run_child(name, command, report, repo, outer_timeout) for name, command, report in specs]
+    cases = [run_child(name, command, report, repo, timeout) for name, command, report, timeout in specs]
     correctness_errors = [
         {"case": row["name"], "error": row["report"].get("error", "child failed"), "return_code": row["return_code"]}
         for row in cases
