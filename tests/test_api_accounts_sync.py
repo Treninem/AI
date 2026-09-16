@@ -117,6 +117,30 @@ def test_account_token_resend_cooldown_preserves_active_links(tmp_path: Path, mo
         store.reset_password(second_reset, "should never be accepted")
 
 
+def test_undelivered_account_token_revoke_allows_immediate_retry_inside_cooldown(tmp_path: Path):
+    store = AccountStore(tmp_path / "api", account_token_cooldown=300)
+    registered = store.register("delivery@example.com", "delivery recovery secure password", "Delivery")
+    first_verify = registered["verification_token"]
+
+    assert store.revoke_account_token(first_verify, "verify_email") is True
+    replacement_verify = store.resend_verification("delivery@example.com")
+    assert replacement_verify is not None
+    assert replacement_verify != first_verify
+    with pytest.raises(AuthenticationError):
+        store.verify_email(first_verify)
+    assert store.verify_email(replacement_verify)["email_verified"] is True
+
+    first_reset = store.request_password_reset("delivery@example.com")
+    assert first_reset is not None
+    assert store.revoke_account_token(first_reset, "reset_password") is True
+    replacement_reset = store.request_password_reset("delivery@example.com")
+    assert replacement_reset is not None
+    assert replacement_reset != first_reset
+    with pytest.raises(AuthenticationError):
+        store.reset_password(first_reset, "never accepted old reset password")
+    store.reset_password(replacement_reset, "replacement reset secure password")
+
+
 def test_concurrent_password_reset_requests_issue_one_token_inside_cooldown(tmp_path: Path):
     store = AccountStore(tmp_path / "api", account_token_cooldown=300)
     _verified_account(store, "reset-race@example.com", "concurrent reset password", "PC")
