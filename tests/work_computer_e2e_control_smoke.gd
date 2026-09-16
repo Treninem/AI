@@ -59,6 +59,24 @@ func _init() -> void:
 		_fail("store allowed blind retry after unsafe uncertain result", 10)
 		return
 
+	# User acknowledgement may explicitly keep retry blocked after observing that
+	# a potentially unsafe side effect already happened. Acknowledgement itself
+	# must not enqueue or execute anything.
+	var blocked_ack := manager.acknowledge_uncertain_action(project_id, unsafe_id, false, "Verified external side effect; do not replay")
+	if not bool(blocked_ack.get("ok", false)):
+		_fail("explicit retry-block acknowledgement failed", 27)
+		return
+	var blocked_saved := store.get_task(project_id, unsafe_id)
+	if bool(blocked_saved.get("requires_user_action", true)) or bool(blocked_saved.get("retryable", true)):
+		_fail("retry-block acknowledgement did not persist conservative state", 28)
+		return
+	if str(blocked_saved.get("status", "")) != AuroraWorkStore.STATE_CANCELLED:
+		_fail("acknowledgement changed terminal task state", 29)
+		return
+	if store.retry_task(project_id, unsafe_id):
+		_fail("blocked acknowledgement unexpectedly enabled retry", 30)
+		return
+
 	# Safe read-like action: cancellation after the action is deterministic and
 	# does not create destructive replay risk, so explicit retry may remain safe.
 	var safe_task := store.create_task(project_id, "safe race")
@@ -157,6 +175,35 @@ func _init() -> void:
 		return
 	if bool(timeout_finish.get("retryable", true)) or not bool(timeout_finish.get("requires_user_action", false)):
 		_fail("uncertain computer action response allowed blind retry", 24)
+		return
+	if store.retry_task(project_id, timeout_id):
+		_fail("uncertain action became retryable before acknowledgement", 31)
+		return
+
+	# After the user verifies the real external state, they may explicitly allow
+	# a future retry. Acknowledgement only changes recovery metadata; it does not
+	# start the task. The explicit retry operation remains a separate step.
+	var retry_ack := manager.acknowledge_uncertain_action(project_id, timeout_id, true, "Verified no external state change")
+	if not bool(retry_ack.get("ok", false)) or not bool(retry_ack.get("retryable", false)):
+		_fail("explicit retry acknowledgement failed", 32)
+		return
+	var acknowledged := store.get_task(project_id, timeout_id)
+	if bool(acknowledged.get("requires_user_action", true)) or not bool(acknowledged.get("retryable", false)):
+		_fail("retry acknowledgement did not persist verified state", 33)
+		return
+	if str(acknowledged.get("status", "")) != AuroraWorkStore.STATE_INTERRUPTED:
+		_fail("retry acknowledgement started or changed task state", 34)
+		return
+	if not store.retry_task(project_id, timeout_id):
+		_fail("explicitly acknowledged task could not be queued for retry", 35)
+		return
+	var queued_after_ack := store.get_task(project_id, timeout_id)
+	if str(queued_after_ack.get("status", "")) != AuroraWorkStore.STATE_QUEUED:
+		_fail("acknowledged retry did not enter queued state", 36)
+		return
+	var invalid_second_ack := manager.acknowledge_uncertain_action(project_id, timeout_id, true)
+	if bool(invalid_second_ack.get("ok", false)):
+		_fail("acknowledgement unexpectedly accepted a non-terminal queued task", 37)
 		return
 
 	# Deterministic validation failure is not an uncertain external side effect;
