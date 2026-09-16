@@ -46,7 +46,7 @@ func _connect_signals() -> void:
 	if not updater.download_started.is_connected(_on_download_started): updater.download_started.connect(_on_download_started)
 	if not updater.update_ready.is_connected(_on_update_ready): updater.update_ready.connect(_on_update_ready)
 	if not updater.update_applying.is_connected(_on_update_applying): updater.update_applying.connect(_on_update_applying)
-	if not updater.update_error.is_connected(_on_update_error): updater.update_error.connect(_on_update_error)
+	if not updater.update_attempt_failed.is_connected(_on_update_attempt_failed): updater.update_attempt_failed.connect(_on_update_attempt_failed)
 
 func _reconcile_current_state() -> void:
 	if updater == null:
@@ -84,9 +84,10 @@ func _on_update_ready(_info: Dictionary, _path: String) -> void:
 func _on_update_applying(_info: Dictionary) -> void:
 	_pause(true, true, "signed update applying")
 
-func _on_update_error(_message: String) -> void:
-	# Update transport failures never stop AuroraFox. Resume autonomous work on
-	# the currently verified local version and let the updater retry later.
+func _on_update_attempt_failed(_message: String, _background: bool) -> void:
+	# Both visible/manual failures and silent background failures resume autonomous
+	# work on the currently verified local version. UI visibility is a separate
+	# concern handled by update_error; it must not control internal recovery.
 	_resume_all("update unavailable; continue current local version")
 
 func _pause(pause_hot: bool, pause_core: bool, reason: String) -> void:
