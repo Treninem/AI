@@ -15,6 +15,12 @@ var knowledge_transaction := KnowledgeImportTransaction.new()
 func _ready() -> void:
 	if core_runtime.get_parent() == null: add_child(core_runtime)
 	_load_core_settings()
+	# Normal users never select/download a model. The application ships its own
+	# AuroraFox Core weights. Windows uses the packaged file directly; Android
+	# silently provisions the signed APK asset into private storage once.
+	var bundled := AuroraBundledCoreModel.runtime_candidate()
+	if not bundled.is_empty():
+		android_model_path = bundled
 	core_runtime.configure_model(android_model_path)
 	core_runtime.configure_legacy_ollama(base_url, model)
 
@@ -166,6 +172,7 @@ func runtime_info() -> Dictionary:
 	info["knowledge"] = knowledge_manager.stats()
 	info["learning_file_types"] = Array(knowledge.supported_import_extensions())
 	info["operational_without_ollama"] = true
+	info["bundled_core"] = AuroraBundledCoreModel.bundled_available()
 	return info
 
 func _load_core_settings() -> void:
