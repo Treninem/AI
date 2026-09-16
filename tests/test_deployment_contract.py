@@ -28,19 +28,42 @@ def test_server_metadata_is_versioned_and_backup_is_not_exposed_over_http():
     assert '/v1/backups/latest' not in server
 
 
-def test_server_readiness_is_database_integrity_backed():
+def test_server_readiness_is_database_integrity_backed_and_privacy_safe():
     server = read("api/server.py")
     database = read("api/database.py")
     assert '@app.get("/ready")' in server
     assert "database.integrity_check()" in server
-    assert 'status.pop("path", None)' in server
-    assert 'status["backend"] = "sqlite"' in server
     assert "HTTPException(status_code=503, detail=payload)" in server
     assert 'database_status.get("ok", False)' in server
-    assert 'database_status.get("journal_mode")' not in server or '"journal_mode"' in database
     assert 'PRAGMA integrity_check' in database
     assert 'PRAGMA foreign_key_check' in database
     assert 'PRAGMA journal_mode=WAL' in database
+
+    database_projection = server.split("def _public_database_status()", 1)[1].split("@app.get", 1)[0]
+    component_projection = server.split("def _public_component_status", 1)[1].split(
+        "def _public_database_status", 1
+    )[0]
+    assert '"backend": "sqlite"' in database_projection
+    assert '"schema_version"' in database_projection
+    assert '"journal_mode"' in database_projection
+    assert '"integrity"' in database_projection
+    assert '"foreign_key_errors"' in database_projection
+    assert '"path"' not in database_projection
+    assert '"counts"' not in database_projection
+    assert '"error"' not in component_projection
+    assert '"value"' not in component_projection
+    assert '"root"' not in component_projection
+
+
+def test_server_rate_limit_is_thread_safe_and_covers_websocket_messages():
+    server = read("api/server.py")
+    limiter = server.split("class RateLimiter", 1)[1].split("rate_limiter =", 1)[0]
+    websocket = server.split('@app.websocket("/v1/ws")', 1)[1]
+    assert "import threading" in server
+    assert "self._lock = threading.Lock()" in limiter
+    assert "with self._lock:" in limiter
+    assert "rate_limiter.check(key_id)" in websocket
+    assert "code=4429" in websocket
 
 
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
