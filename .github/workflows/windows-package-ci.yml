@@ -17,6 +17,7 @@ on:
       - 'update/**'
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
+      - 'tests/windows_v13_bridge_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -36,6 +37,7 @@ on:
       - 'update/**'
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
+      - 'tests/windows_v13_bridge_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -63,7 +65,8 @@ jobs:
             '.\build\bridge_release_readiness.ps1',
             '.\build\create_update_signing_key.ps1',
             '.\build\setup_release_signing.ps1',
-            '.\tests\windows_v12_bridge_smoke.ps1'
+            '.\tests\windows_v12_bridge_smoke.ps1',
+            '.\tests\windows_v13_bridge_smoke.ps1'
           )) {
             if (-not (Test-Path $script)) { throw "Required Windows/release helper missing: $script" }
             $tokens = $null
@@ -142,7 +145,8 @@ jobs:
             'build\windows\api\install_api.ps1',
             'build\windows\api\start_api.ps1',
             'build\windows\api\requirements.txt',
-            'build\windows\update\windows_updater.ps1'
+            'build\windows\update\windows_updater.ps1',
+            'build\windows\update\release_public.pub'
           )
           foreach ($path in $required) {
             if (-not (Test-Path $path)) { throw "Packaged runtime asset missing: $path" }
@@ -171,9 +175,13 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
           if (-not (Test-Path build\release\AuroraFox_Setup_Windows.exe)) { throw 'Installer was not produced' }
 
-      - name: Verify V1.2 to V1.3 in-place bridge
+      - name: Verify historical V1.2 and V1.3 in-place bridge mechanics
         shell: pwsh
-        run: .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
+        run: |
+          $state = Get-Content project\version.json -Raw | ConvertFrom-Json
+          $current = [string]$state.numeric
+          .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
+          .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $current
 
       - name: Silent install and installed-app smoke
         shell: pwsh
@@ -190,7 +198,8 @@ jobs:
             'core_runtime\install_core.ps1',
             'core_runtime\engine\llama-server.exe',
             'core_runtime\engine\aurorafox-core.gguf',
-            'update\windows_updater.ps1'
+            'update\windows_updater.ps1',
+            'update\release_public.pub'
           )) {
             if (-not (Test-Path (Join-Path $installDir $relative))) { throw "Installed runtime asset missing: $relative" }
           }
@@ -204,7 +213,7 @@ jobs:
           $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
           if ($un.ExitCode -ne 0) { throw "Uninstaller exited with $($un.ExitCode)" }
 
-      - name: Create portable ZIP, V1.2 repair installer and hashes
+      - name: Create portable ZIP, setup and hashes
         shell: pwsh
         run: |
           $text = Get-Content project.godot -Raw
@@ -213,12 +222,9 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           $portable = "dist\AuroraFox-V$version-Windows-Portable.zip"
           $setup = "dist\AuroraFox-V$version-Setup-Windows.exe"
-          $repair = "dist\AuroraFox-V1.2-to-V$version-Repair-Windows.exe"
           Compress-Archive -Path build\windows\* -DestinationPath $portable -CompressionLevel Optimal -Force
           Copy-Item build\release\AuroraFox_Setup_Windows.exe $setup -Force
-          Copy-Item build\release\AuroraFox_Setup_Windows.exe $repair -Force
           Get-FileHash $setup -Algorithm SHA256 | ForEach-Object { "SETUP  $($_.Hash.ToLower())" } | Set-Content dist\SHA256SUMS.txt
-          Get-FileHash $repair -Algorithm SHA256 | ForEach-Object { "V12_REPAIR  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
           Get-FileHash $portable -Algorithm SHA256 | ForEach-Object { "PORTABLE  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
           Get-ChildItem dist | Select-Object Name,Length
@@ -229,70 +235,7 @@ jobs:
           name: AuroraFox-Windows
           path: |
             dist/AuroraFox-V*-Setup-Windows.exe
-            dist/AuroraFox-V1.2-to-V*-Repair-Windows.exe
             dist/AuroraFox-V*-Windows-Portable.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 14
-
-  publish-v12-repair:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: package-windows
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Download verified Windows artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: AuroraFox-Windows
-          path: dist
-
-      - name: Prepare stable V1.2 repair assets
-        id: repair
-        shell: bash
-        run: |
-          set -euo pipefail
-          version="$(python3 - <<'PY'
-          import json
-          print(json.load(open('project/version.json', encoding='utf-8'))['numeric'])
-          PY
-          )"
-          source="dist/AuroraFox-V1.2-to-V${version}-Repair-Windows.exe"
-          stable='dist/AuroraFox-V1.2-Repair-Windows.exe'
-          test -s "$source"
-          cp "$source" "$stable"
-          sha256sum "$stable" | tee dist/AuroraFox-V1.2-Repair-Windows-SHA256.txt
-          echo "version=$version" >> "$GITHUB_OUTPUT"
-          echo "AURORA_V12_REPAIR_PERMANENT_ASSET_READY version=$version"
-
-      - name: Publish or refresh permanent V1.2 repair release
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          tag='repair-v1.2-windows'
-          stable='dist/AuroraFox-V1.2-Repair-Windows.exe'
-          sums='dist/AuroraFox-V1.2-Repair-Windows-SHA256.txt'
-          if gh release view "$tag" >/dev/null 2>&1; then
-            gh release upload "$tag" "$stable" "$sums" --clobber
-          else
-            cat > "$RUNNER_TEMP/v12-repair-notes.md" <<'EOF'
-          # AuroraFox V1.2 Windows Repair Bridge
-
-          This is the one-time recovery installer for historical AuroraFox V1.2 Windows installations whose embedded signed-update trust root was incomplete.
-
-          Run `AuroraFox-V1.2-Repair-Windows.exe` over the existing V1.2 installation. The verified bridge keeps Godot `user://` data and moves the installation onto the V1.3+ signed-update line.
-
-          This repair release is intentionally **not** the AuroraFox `latest` release and does not replace the normal signed `update.json` channel.
-          EOF
-            gh release create "$tag" "$stable" "$sums" \
-              --title 'AuroraFox V1.2 Windows Repair Bridge' \
-              --notes-file "$RUNNER_TEMP/v12-repair-notes.md" \
-              --latest=false
-          fi
-          echo "AURORA_V12_REPAIR_RELEASE_READY https://github.com/${GITHUB_REPOSITORY}/releases/tag/${tag}"
