@@ -22,6 +22,23 @@ def load_validator():
 
 
 def report(schema: str = "aurorafox_knowledge_performance_v1"):
+    if schema == "aurorafox_memory_scaling_v1":
+        pairs = [
+            {"from_n": 125, "to_n": 250, "write_time_ratio": 2.0},
+            {"from_n": 250, "to_n": 500, "write_time_ratio": 2.1},
+        ]
+    elif schema == "aurorafox_knowledge_search_scaling_v1":
+        pairs = [
+            {"from_mb": 1.0, "to_mb": 2.0, "time_ratio": 2.0},
+            {"from_mb": 2.0, "to_mb": 4.0, "time_ratio": 2.1},
+        ]
+    elif schema == "aurorafox_knowledge_registry_scaling_v1":
+        pairs = [
+            {"from_n": 16, "to_n": 32, "time_ratio": 2.0},
+            {"from_n": 32, "to_n": 64, "time_ratio": 2.1},
+        ]
+    else:
+        pairs = []
     return {
         "schema": schema,
         "hard_correctness": {"passed": True, "errors": []},
@@ -30,7 +47,7 @@ def report(schema: str = "aurorafox_knowledge_performance_v1"):
             "external_runtime_required": False,
             "ollama_required": False,
         },
-        "relative_performance": {"n_2n_4n": [], "suspected_quadratic": False},
+        "relative_performance": {"n_2n_4n": pairs, "suspected_quadratic": False},
         "results": [],
     }
 
@@ -77,6 +94,19 @@ class KnowledgePerformanceValidatorTests(unittest.TestCase):
         result = module.evaluate_report(payload, "pairs.json")
         self.assertFalse(result["correctness_passed"])
         self.assertIn("relative performance n_2n_4n malformed", result["errors"])
+
+    def test_scaling_schema_requires_two_valid_doubling_pairs(self) -> None:
+        module = load_validator()
+        for schema in (
+            "aurorafox_memory_scaling_v1",
+            "aurorafox_knowledge_search_scaling_v1",
+            "aurorafox_knowledge_registry_scaling_v1",
+        ):
+            payload = report(schema)
+            payload["relative_performance"]["n_2n_4n"] = payload["relative_performance"]["n_2n_4n"][:1]
+            result = module.evaluate_report(payload, f"incomplete-{schema}.json")
+            self.assertFalse(result["correctness_passed"], schema)
+            self.assertTrue(any("incomplete N->2N->4N evidence" in error for error in result["errors"]))
 
     def test_malformed_search_latency_fails_closed_without_crash(self) -> None:
         module = load_validator()
