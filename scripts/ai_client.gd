@@ -1,11 +1,14 @@
 class_name AIClient
 extends Node
 
-const DEFAULT_MODEL := "qwen3:8b"
+# These values belong only to the optional legacy Ollama compatibility adapter.
+# They are deliberately not named/defaulted as the AuroraFox model: the product
+# default is the bundled AuroraFox Core selected by AuroraBundledCoreModel.
+const LEGACY_OLLAMA_DEFAULT_MODEL := "qwen3:8b"
+const LEGACY_OLLAMA_DEFAULT_URL := "http://127.0.0.1:11434"
 const CORE_SETTINGS_PATH := "user://aurora_core_settings.json"
-var base_url := "http://127.0.0.1:11434"
-var model := DEFAULT_MODEL
-var model_source := "aurora_core"
+var compatibility_url := LEGACY_OLLAMA_DEFAULT_URL
+var compatibility_model := LEGACY_OLLAMA_DEFAULT_MODEL
 var android_model_path := "user://models/aurorafox-main.gguf"
 var core_runtime := AuroraCoreRuntime.new()
 var knowledge := KnowledgeStore.new()
@@ -22,12 +25,17 @@ func _ready() -> void:
 	if not bundled.is_empty():
 		android_model_path = bundled
 	core_runtime.configure_model(android_model_path)
-	core_runtime.configure_legacy_ollama(base_url, model)
+	core_runtime.configure_legacy_ollama(compatibility_url, compatibility_model)
 
+# Backward-compatible API for old developer tooling. This configures ONLY the
+# optional legacy compatibility adapter and can never replace AuroraFox Core.
 func configure(url: String, model_name: String) -> void:
-	base_url = url.trim_suffix("/")
-	model = model_name.strip_edges() if not model_name.strip_edges().is_empty() else DEFAULT_MODEL
-	core_runtime.configure_legacy_ollama(base_url, model)
+	configure_ollama_compatibility(url, model_name)
+
+func configure_ollama_compatibility(url: String, model_name: String) -> void:
+	compatibility_url = url.trim_suffix("/")
+	compatibility_model = model_name.strip_edges() if not model_name.strip_edges().is_empty() else LEGACY_OLLAMA_DEFAULT_MODEL
+	core_runtime.configure_legacy_ollama(compatibility_url, compatibility_model)
 
 func configure_android_model(path: String) -> void:
 	android_model_path = path
@@ -133,8 +141,8 @@ func _with_knowledge(messages: Array) -> Array:
 	return copied
 
 func is_available() -> bool:
-	# Availability means AuroraFox itself can answer locally. Ollama is not used
-	# to decide whether the product is operational.
+	# Availability means AuroraFox itself can answer locally. External AI and
+	# Ollama are never used to decide whether the product is operational.
 	var info := core_runtime.runtime_info()
 	var model_installed := bool(info.get("model_installed", false))
 	if not model_installed:
@@ -159,7 +167,7 @@ func compatibility_available() -> bool:
 		return false
 	return bool((await ollama_status()).get("ok", false))
 
-# Compatibility API. Ollama never gates AuroraFox Core startup.
+# Compatibility API. Ollama never gates AuroraFox Core startup or intelligence.
 func ensure_ollama_model(force_refresh := false) -> Dictionary:
 	var status := await ollama_status()
 	status["required"] = false
@@ -182,7 +190,7 @@ func ollama_status() -> Dictionary:
 	var request_node := HTTPRequest.new()
 	request_node.timeout = 3.0
 	add_child(request_node)
-	var err := request_node.request(base_url + "/api/tags")
+	var err := request_node.request(compatibility_url + "/api/tags")
 	if err != OK:
 		request_node.queue_free()
 		return {"ok": false, "required": false, "server": false, "compatibility_only": true}
@@ -190,13 +198,15 @@ func ollama_status() -> Dictionary:
 	request_node.queue_free()
 	if int(result[1]) != 200:
 		return {"ok": false, "required": false, "server": false, "compatibility_only": true, "http": int(result[1])}
-	return {"ok": true, "required": false, "server": true, "compatibility_only": true, "configured_model": model}
+	return {"ok": true, "required": false, "server": true, "compatibility_only": true, "configured_model": compatibility_model}
 
 func runtime_info() -> Dictionary:
 	var info := core_runtime.runtime_info()
 	info["platform"] = OS.get_name()
 	info["knowledge"] = knowledge_manager.stats()
 	info["learning_file_types"] = Array(knowledge.supported_import_extensions())
+	info["self_primary"] = true
+	info["external_ai_required"] = false
 	info["operational_without_ollama"] = true
 	info["bundled_core"] = AuroraBundledCoreModel.bundled_available()
 	return info
