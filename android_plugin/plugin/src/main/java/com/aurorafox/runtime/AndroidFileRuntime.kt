@@ -1,11 +1,7 @@
 package com.aurorafox.runtime
 
 import android.content.Context
-import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
-import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
-import com.tom_roush.pdfbox.pdmodel.PDDocument
-import com.tom_roush.pdfbox.text.PDFTextStripper
 import org.json.JSONArray
 import org.json.JSONObject
 import org.w3c.dom.Element
@@ -19,6 +15,7 @@ class AndroidFileRuntime(
     private val voice: AndroidVoiceRuntime,
 ) {
     private val cacheDir = File(context.filesDir, "file_cache").apply { mkdirs() }
+    private val ocr = AndroidOcrRuntime(context)
     private val textExt = setOf(
         "txt", "md", "json", "csv", "tsv", "gd", "py", "js", "ts", "tsx", "jsx", "html", "css",
         "xml", "yaml", "yml", "toml", "ini", "cfg", "log", "shader", "glsl", "cpp", "c", "h", "hpp",
@@ -37,8 +34,9 @@ class AndroidFileRuntime(
                 ext == "xlsx" -> analyzeXlsx(file)
                 ext == "pptx" -> analyzePptx(file)
                 ext == "odt" || ext == "ods" -> analyzeOpenDocument(file, ext)
-                ext == "pdf" -> analyzePdf(file)
-                ext in setOf("png", "jpg", "jpeg", "webp", "bmp", "gif") -> analyzeImage(file, visual)
+                ext == "pdf" -> analyzeOcr(file, "pdf", visual)
+                ext in setOf("png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff") -> analyzeOcr(file, "image", visual)
+                ext == "gif" -> payload("image", "GIF принят; покадровый OCR пока не выполняется.", warnings = listOf("Для OCR сохраните нужный кадр как PNG/JPEG/WebP/BMP/TIFF."))
                 ext in setOf("wav", "mp3", "ogg", "flac", "m4a", "aac", "opus") -> analyzeAudio(file)
                 ext in setOf("mp4", "mkv", "webm", "mov", "avi", "m4v") -> analyzeVideo(file, visual)
                 ext == "zip" -> analyzeZip(file)
@@ -154,55 +152,21 @@ class AndroidFileRuntime(
         }
     }
 
-    private fun analyzePdf(file: File): String {
-        // PDFBox runs entirely on-device and extracts the embedded text layer.
-        // No network, Ollama, cloud OCR or external AI is involved here.
-        if (file.length() > 128L * 1024L * 1024L) {
-            return error("PDF is larger than the 128 MB Android local-extraction limit")
-        }
-        PDFBoxResourceLoader.init(context.applicationContext)
-        PDDocument.load(file).use { document ->
-            val pages = document.numberOfPages
-            val pagesToRead = minOf(pages, 200)
-            val stripper = PDFTextStripper().apply {
-                sortByPosition = true
-                startPage = 1
-                endPage = maxOf(1, pagesToRead)
-            }
-            val extracted = if (pages > 0) stripper.getText(document).trim() else ""
-            val warnings = mutableListOf<String>()
-            if (pages > pagesToRead) {
-                warnings += "PDF содержит $pages стр.; для безопасного мобильного импорта прочитаны первые $pagesToRead стр."
-            }
-            if (extracted.isBlank()) {
-                warnings += "В PDF не найден текстовый слой. Локальный OCR для сканированных PDF на Android пока не подключён; пустой результат не будет записан в Core Knowledge."
-            }
-            return payload(
-                "pdf",
-                extracted.take(160_000),
-                mapOf(
-                    "pages" to pages,
-                    "pages_extracted" to pagesToRead,
-                    "text_layer" to extracted.isNotBlank(),
-                    "engine" to "pdfbox-android",
-                    "offline" to true,
-                ),
-                warnings = warnings,
-                truncated = extracted.length > 160_000 || pages > pagesToRead,
-            )
-        }
-    }
-
-    private fun analyzeImage(file: File, visual: Boolean): String {
-        val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        BitmapFactory.decodeFile(file.absolutePath, opts)
-        val meta = mapOf("width" to opts.outWidth, "height" to opts.outHeight, "mime" to (opts.outMimeType ?: ""))
-        return payload(
-            "image",
-            "Изображение ${opts.outWidth}×${opts.outHeight}${if (opts.outMimeType != null) ", ${opts.outMimeType}" else ""}.",
-            meta,
-            warnings = if (visual) listOf("Локальный Android vision/OCR backend для содержимого изображения пока не подключён.") else emptyList()
-        )
+    private fun analyzeOcr(file: File, kind: String, visual: Boolean): String {
+        val raw = ocr.extract(file.absolutePath)
+        val obj = try { JSONObject(raw) } catch (_: Throwable) { return error("Invalid local OCR response") }
+        if (!obj.optBoolean("ok", false)) return raw
+        obj.put("kind", kind)
+        val meta = obj.optJSONObject("metadata") ?: JSONObject()
+        meta.put("visual_requested", visual)
+        meta.put("local_ocr", true)
+        meta.put("untrusted_document", true)
+        meta.put("content_authority", "data_only")
+        meta.put("offline", true)
+        meta.put("external_ai_required", false)
+        obj.put("metadata", meta)
+        obj.put("cached", false)
+        return obj.toString()
     }
 
     private fun analyzeAudio(file: File): String {
