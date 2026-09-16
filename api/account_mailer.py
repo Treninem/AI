@@ -106,9 +106,13 @@ class AccountMailer:
     def send_token(self, recipient: str, purpose: str, token: str) -> None:
         if not self.config.configured:
             raise AccountMailError("Account email transport is not configured or action URL is not secure")
-        message = self._message(recipient, purpose, token)
         context = ssl.create_default_context()
         try:
+            # Header construction is inside the protected boundary too. Python's
+            # email package rejects CR/LF header injection and other malformed
+            # address/header values; normalize those failures into AccountMailError
+            # so public account routes fail closed instead of surfacing a 500.
+            message = self._message(recipient, purpose, token)
             if self.config.security == "ssl":
                 with smtplib.SMTP_SSL(
                     self.config.host, self.config.port, timeout=self.config.timeout, context=context
