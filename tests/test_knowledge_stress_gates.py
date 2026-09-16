@@ -152,6 +152,31 @@ class KnowledgeStressGateTests(unittest.TestCase):
         self.assertIn("var ok: bool =", text)
         self.assertIn("var after: Variant =", text)
 
+    def test_interrupted_recovery_contract_is_retry_safe(self) -> None:
+        transaction = (ROOT / "scripts" / "knowledge_import_transaction.gd").read_text(encoding="utf-8")
+        manager = (ROOT / "scripts" / "knowledge_manager.gd").read_text(encoding="utf-8")
+        probe = (BENCH / "interrupted_import_probe.gd").read_text(encoding="utf-8")
+
+        self.assertIn("TXN_SNAPSHOT_MARKER", transaction)
+        self.assertIn("TXN_COMMIT_MARKER", transaction)
+        self.assertIn("if FileAccess.file_exists(TXN_COMMIT_MARKER):", transaction)
+        self.assertIn("actual_rows != expected_rows", transaction)
+        self.assertIn("_repair_interrupted_filter_swap(path)", transaction)
+        self.assertIn("_repair_recovery_swap(path)", transaction)
+        self.assertIn("DirAccess.copy_absolute(ProjectSettings.globalize_path(REGISTRY_BACKUP)", transaction)
+        self.assertNotIn("DirAccess.rename_absolute(backup_abs, target_abs)", transaction)
+
+        restore = transaction.split("func _restore(snapshot: Dictionary) -> bool:", 1)[1].split("func _restore_source_file", 1)[0]
+        self.assertTrue(restore.rstrip().endswith("_cleanup_backups(true)\n\treturn true"))
+        cleanup = transaction.split("func _cleanup_backups", 1)[1]
+        self.assertLess(cleanup.index("paths.append(TXN_MANIFEST)"), cleanup.index("paths.append(TXN_COMMIT_MARKER)"))
+
+        self.assertIn("recover_interrupted_transaction()", manager)
+        self.assertIn("KnowledgeManagerScript.new()", probe)
+        self.assertIn('"automatic_manager_recovery": true', probe)
+        for marker in ("TXN_MANIFEST", "TXN_SNAPSHOT_MARKER", "TXN_COMMIT_MARKER"):
+            self.assertIn(f'"{marker}"', probe)
+
 
 if __name__ == "__main__":
     unittest.main()
