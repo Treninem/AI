@@ -72,7 +72,9 @@ func _apply_owner_background() -> void:
 			rect.texture = _owner_background_texture()
 			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			rect.modulate = Color(1, 1, 1, 0.88)
+			# Owner master pixels must not be dimmed, tinted, recolored or otherwise
+			# altered. Readability belongs to the independent UI panels/veil above it.
+			rect.modulate = Color(1, 1, 1, 1)
 
 func _on_viewport_resized() -> void:
 	super._on_viewport_resized()
