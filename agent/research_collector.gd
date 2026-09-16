@@ -7,6 +7,9 @@ const LOG_PATH := "user://agent/research.jsonl"
 const MAX_ITEMS_PER_SOURCE := 5
 const MAX_SUMMARY_CHARS := 1800
 
+# Kept for setup/API compatibility with AutonomousCoordinator. The collector
+# deliberately never writes to MemoryStore: durable automatic learning is owned
+# by AuroraLearningCurator after quality/provenance/deduplication checks.
 var memory: MemoryStore
 var tools: ToolRegistry
 var _busy := false
@@ -31,17 +34,22 @@ func collect(query: String) -> Dictionary:
 	items.append_array(await _collect_reddit("MachineLearning"))
 	items.append_array(await _collect_arxiv(clean_query))
 
-	var learned := 0
+	# Observation-only boundary: every item is logged for audit/curation, but no
+	# item is allowed to reach long-term memory/Core Knowledge here. This avoids
+	# bypassing LearningCurator with low-quality, duplicate or personal local data.
 	for item in items:
 		if item is Dictionary:
-			if _learn(item): learned += 1
 			_append_log(item)
 	var report := {
 		"ok": true,
 		"query": clean_query,
 		"items": items,
 		"count": items.size(),
-		"learned": learned,
+		"queued_for_curation": items.size(),
+		"curation_required": true,
+		# Backward-compatible field. Automatic promotion happens asynchronously in
+		# LearningCurator after research_completed, so nothing is learned here.
+		"learned": 0,
 		"sources": _source_counts(items),
 		"timestamp_unix": int(Time.get_unix_time_from_system())
 	}
@@ -182,7 +190,7 @@ func _request_text(url: String) -> Dictionary:
 	var req := HTTPRequest.new()
 	req.timeout = 20.0
 	add_child(req)
-	var headers := PackedStringArray(["User-Agent: AuroraFox-Learning/1.2", "Accept: application/json, application/atom+xml, text/xml, text/plain;q=0.9"])
+	var headers := PackedStringArray(["User-Agent: AuroraFox-Learning/1.3", "Accept: application/json, application/atom+xml, text/xml, text/plain;q=0.9"])
 	var err := req.request(url, headers, HTTPClient.METHOD_GET)
 	if err != OK:
 		req.queue_free()
@@ -207,32 +215,6 @@ func _item(source: String, title: String, summary: String, url: String = "", met
 
 func _clean(value: String, limit: int) -> String:
 	return " ".join(value.split(" ", false)).strip_edges().substr(0, limit)
-
-func _learn(item: Dictionary) -> bool:
-	if memory == null:
-		return false
-	var source := str(item.get("source", "source"))
-	var title := str(item.get("title", "")).strip_edges()
-	var summary := str(item.get("summary", "")).strip_edges()
-	if title.is_empty() and summary.is_empty():
-		return false
-	var content := "%s | %s | %s | %s" % [source, title, summary, str(item.get("url", ""))]
-	var confidence := 0.58
-	var importance := 0.56
-	if source == "local_documents":
-		confidence = 0.78
-		importance = 0.72
-	elif source == "arxiv":
-		confidence = 0.70
-		importance = 0.66
-	elif source == "stackoverflow":
-		confidence = 0.62
-		importance = 0.58
-	elif source.begins_with("reddit/"):
-		confidence = 0.42
-		importance = 0.44
-	memory.learn(content.substr(0, 5000), "autonomous_research:" + source, importance, confidence, "research_knowledge")
-	return true
 
 func _append_log(item: Dictionary) -> void:
 	var file := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE)
