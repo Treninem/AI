@@ -153,10 +153,7 @@ jobs:
 
       - name: Verify V1.2 to V1.3 in-place bridge
         shell: pwsh
-        run: |
-          .\tests\windows_v12_bridge_smoke.ps1 \
-            -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' \
-            -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
+        run: .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
 
       - name: Silent install and installed-app smoke
         shell: pwsh
@@ -177,7 +174,7 @@ jobs:
           $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
           if ($un.ExitCode -ne 0) { throw "Uninstaller exited with $($un.ExitCode)" }
 
-      - name: Create portable ZIP and hashes
+      - name: Create portable ZIP, V1.2 repair installer and hashes
         shell: pwsh
         run: |
           $text = Get-Content project.godot -Raw
@@ -186,9 +183,12 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           $portable = "dist\AuroraFox-V$version-Windows-Portable.zip"
           $setup = "dist\AuroraFox-V$version-Setup-Windows.exe"
+          $repair = "dist\AuroraFox-V1.2-to-V$version-Repair-Windows.exe"
           Compress-Archive -Path build\windows\* -DestinationPath $portable -CompressionLevel Optimal -Force
           Copy-Item build\release\AuroraFox_Setup_Windows.exe $setup -Force
+          Copy-Item build\release\AuroraFox_Setup_Windows.exe $repair -Force
           Get-FileHash $setup -Algorithm SHA256 | ForEach-Object { "SETUP  $($_.Hash.ToLower())" } | Set-Content dist\SHA256SUMS.txt
+          Get-FileHash $repair -Algorithm SHA256 | ForEach-Object { "V12_REPAIR  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
           Get-FileHash $portable -Algorithm SHA256 | ForEach-Object { "PORTABLE  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
           Get-ChildItem dist | Select-Object Name,Length
@@ -199,6 +199,7 @@ jobs:
           name: AuroraFox-Windows
           path: |
             dist/AuroraFox-V*-Setup-Windows.exe
+            dist/AuroraFox-V1.2-to-V*-Repair-Windows.exe
             dist/AuroraFox-V*-Windows-Portable.zip
             dist/SHA256SUMS.txt
           if-no-files-found: error
