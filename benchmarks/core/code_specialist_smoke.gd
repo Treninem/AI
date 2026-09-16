@@ -79,6 +79,10 @@ func _run() -> void:
 	var explain := await specialist.explain_code(SAMPLE_CODE, "python")
 	var explain_ms := float(Time.get_ticks_usec() - explain_started) / 1000.0
 	var runtime_after_explain := client.runtime_info()
+	# Keep an explicit final snapshot for the top-level gate while retaining the
+	# per-operation snapshots above. This is the final observed runtime state,
+	# not a synthetic compatibility marker.
+	var runtime_after := runtime_after_explain
 	var data_flow_value = explain.get("data_flow", [])
 	var data_flow: Array = data_flow_value if data_flow_value is Array else []
 	var explain_purpose := str(explain.get("purpose", "")).strip_edges()
@@ -98,7 +102,10 @@ func _run() -> void:
 		and review_ok
 		and explain_ok
 		and client.ollama_fallback_enabled()
-		and _runtime_is_local(runtime_after_explain)
+		and str(runtime_after.get("last_runtime", "")) == "aurora_core_desktop"
+		and int(runtime_after.get("ollama_failures", -1)) == 0
+		and bool(runtime_after.get("self_primary", false))
+		and not bool(runtime_after.get("external_ai_required", true))
 	)
 
 	var report := {
@@ -114,11 +121,11 @@ func _run() -> void:
 			"probe_error": str(network_probe.get("error", "")).substr(0, 300)
 		},
 		"core": {
-			"self_primary": runtime_after_explain.get("self_primary", false),
-			"external_ai_required": runtime_after_explain.get("external_ai_required", true),
+			"self_primary": runtime_after.get("self_primary", false),
+			"external_ai_required": runtime_after.get("external_ai_required", true),
 			"compatibility_enabled": client.ollama_fallback_enabled(),
-			"ollama_failures": runtime_after_explain.get("ollama_failures", -1),
-			"last_runtime": runtime_after_explain.get("last_runtime", ""),
+			"ollama_failures": runtime_after.get("ollama_failures", -1),
+			"last_runtime": runtime_after.get("last_runtime", ""),
 			"after_analyze": _runtime_evidence(runtime_after_analyze),
 			"after_review": _runtime_evidence(runtime_after_review),
 			"after_explain": _runtime_evidence(runtime_after_explain)
