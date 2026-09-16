@@ -144,6 +144,16 @@ jobs:
         shell: bash
         run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_server_hardening.py
 
+      - name: API public account web contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_account_web.py
+
+      - name: API public authentication rate limit contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_public_auth_limits.py
+
       - name: Master-log coordination contract
         if: always()
         shell: bash
