@@ -7,9 +7,10 @@ on:
       - 'scripts/settings_visual_fix.gd'
       - 'scripts/desktop_visual_theme.gd'
       - 'scripts/ai_client.gd'
+      - 'scripts/agent_core.gd'
       - 'tests/work_mode_smoke.gd'
       - 'tests/work_mode_store_smoke.gd'
-      - 'tests/ollama_model_selection_smoke.gd'
+      - 'tests/offline_autonomy_smoke.gd'
       - 'main.tscn'
       - '.github/workflows/work-mode-ci.yml'
   push:
@@ -19,10 +20,12 @@ on:
       - 'scripts/settings_visual_fix.gd'
       - 'scripts/desktop_visual_theme.gd'
       - 'scripts/ai_client.gd'
+      - 'scripts/agent_core.gd'
       - 'tests/work_mode_smoke.gd'
       - 'tests/work_mode_store_smoke.gd'
-      - 'tests/ollama_model_selection_smoke.gd'
+      - 'tests/offline_autonomy_smoke.gd'
       - 'main.tscn'
+      - '.github/workflows/work-mode-ci.yml'
   workflow_dispatch:
 
 permissions:
@@ -50,5 +53,5 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/work_mode_store_smoke.gd
       - name: Work mode and settings smoke
         run: timeout 40s ./godot --headless --path . --script tests/work_mode_smoke.gd
-      - name: Ollama fallback selection smoke
-        run: timeout 30s ./godot --headless --path . --script tests/ollama_model_selection_smoke.gd
+      - name: AuroraFox Core offline self-reliance smoke
+        run: timeout 45s ./godot --headless --path . --script tests/offline_autonomy_smoke.gd

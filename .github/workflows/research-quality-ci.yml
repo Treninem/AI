@@ -7,18 +7,24 @@ on:
       - 'agent/research_collector.gd'
       - 'agent/learning_curator.gd'
       - 'tests/research_evidence_lifecycle_smoke.gd'
+      - 'tests/research_collector_privacy_smoke.gd'
       - 'tests/test_research_evidence_lifecycle_contract.py'
+      - 'tests/test_research_collector_privacy_contract.py'
       - 'tests/autonomy_learning_smoke.gd'
       - 'tests/test_autonomous_evolution_contract.py'
+      - 'tests/test_standalone_core_contract.py'
       - '.github/workflows/research-quality-ci.yml'
   pull_request:
     paths:
       - 'agent/research_collector.gd'
       - 'agent/learning_curator.gd'
       - 'tests/research_evidence_lifecycle_smoke.gd'
+      - 'tests/research_collector_privacy_smoke.gd'
       - 'tests/test_research_evidence_lifecycle_contract.py'
+      - 'tests/test_research_collector_privacy_contract.py'
       - 'tests/autonomy_learning_smoke.gd'
       - 'tests/test_autonomous_evolution_contract.py'
+      - 'tests/test_standalone_core_contract.py'
       - '.github/workflows/research-quality-ci.yml'
   workflow_dispatch:
 
@@ -33,7 +39,12 @@ jobs:
       - name: Install contract test dependency
         run: python -m pip install --disable-pip-version-check pytest==8.4.1
       - name: Run research quality contracts
-        run: python -m pytest -q tests/test_research_evidence_lifecycle_contract.py tests/test_autonomous_evolution_contract.py
+        run: >-
+          python -m pytest -q
+          tests/test_research_evidence_lifecycle_contract.py
+          tests/test_research_collector_privacy_contract.py
+          tests/test_autonomous_evolution_contract.py
+          tests/test_standalone_core_contract.py
 
   godot-research-lifecycle:
     runs-on: ubuntu-latest
@@ -54,3 +65,5 @@ jobs:
         run: timeout 45s ./godot --headless --path . --script tests/autonomy_learning_smoke.gd
       - name: Run evidence lifecycle invalidation smoke
         run: timeout 45s ./godot --headless --path . --script tests/research_evidence_lifecycle_smoke.gd
+      - name: Run external-only collector privacy smoke
+        run: timeout 45s ./godot --headless --path . --script tests/research_collector_privacy_smoke.gd
