@@ -13,6 +13,7 @@ const VECTOR_DIMENSIONS := AuroraLocalSemanticVectorizer.DIMENSIONS
 const MAX_MEMORY := 5000
 const MAX_KNOWLEDGE := 10000
 const LOCAL_INDEX_BATCH := 64
+const EXACT_DEDUPE_WINDOW := 1000
 
 var memory: Array = []
 var knowledge: Array = []
@@ -23,6 +24,11 @@ var _index_queue: Array = []
 var _queued_ids: Dictionary = {}
 var _index_busy := false
 var _semantic_ready := false
+var _memory_exact_index: Dictionary = {}
+var _knowledge_exact_index: Dictionary = {}
+var _memory_dirty := false
+var _knowledge_dirty := false
+var _persistence_flush_scheduled := false
 # Kept only as compatibility state for settings/UI. Memory retrieval no longer
 # contacts Ollama even when the general Ollama compatibility switch is enabled.
 var _legacy_semantic_compat_enabled := false
@@ -37,6 +43,8 @@ func _ready() -> void:
 	if changed:
 		_save_array(MEMORY_PATH, memory)
 		_save_array(KNOWLEDGE_PATH, knowledge)
+	_rebuild_exact_index(memory, _memory_exact_index)
+	_rebuild_exact_index(knowledge, _knowledge_exact_index)
 	_queue_missing_vectors(memory, "memory")
 	_queue_missing_vectors(knowledge, "knowledge")
 	_semantic_ready = vectors.size() > 0 or (_index_queue.is_empty() and memory.is_empty() and knowledge.is_empty())
@@ -45,6 +53,9 @@ func _ready() -> void:
 		call_deferred("_drain_local_index")
 	else:
 		semantic_backend_status.emit(true, VECTOR_MODEL)
+
+func _exit_tree() -> void:
+	flush_persistence()
 
 func _process(_delta: float) -> void:
 	if _index_busy or _index_queue.is_empty():
@@ -64,35 +75,65 @@ func remember(kind: String, content: String, source: String = "", importance: fl
 	var clean := content.strip_edges()
 	if clean.is_empty():
 		return
-	var duplicate := _find_exact(memory, clean, kind)
+	var duplicate := _find_exact(_memory_exact_index, clean, kind)
 	if duplicate >= 0:
 		_touch_existing(memory[duplicate], importance, confidence, source)
-		_save_array(MEMORY_PATH, memory)
+		_schedule_persistence(true, false)
 		_queue_item_vector(memory[duplicate], "memory")
 		return
 	var item := _make_item("memory", kind, clean, source, importance, confidence)
 	memory.append(item)
 	if memory.size() > MAX_MEMORY:
 		_trim_collection(memory, MAX_MEMORY)
-	_save_array(MEMORY_PATH, memory)
+		_rebuild_exact_index(memory, _memory_exact_index)
+	else:
+		_index_exact_item(memory, _memory_exact_index, item)
+	_schedule_persistence(true, false)
 	_queue_item_vector(item, "memory")
 
 func learn(content: String, source: String = "", importance: float = 0.65, confidence: float = 0.80, kind: String = "knowledge") -> void:
 	var clean := content.strip_edges()
 	if clean.is_empty():
 		return
-	var duplicate := _find_exact(knowledge, clean, kind)
+	var duplicate := _find_exact(_knowledge_exact_index, clean, kind)
 	if duplicate >= 0:
 		_touch_existing(knowledge[duplicate], importance, confidence, source)
-		_save_array(KNOWLEDGE_PATH, knowledge)
+		_schedule_persistence(false, true)
 		_queue_item_vector(knowledge[duplicate], "knowledge")
 		return
 	var item := _make_item("knowledge", kind, clean, source, importance, confidence)
 	knowledge.append(item)
 	if knowledge.size() > MAX_KNOWLEDGE:
 		_trim_collection(knowledge, MAX_KNOWLEDGE)
-	_save_array(KNOWLEDGE_PATH, knowledge)
+		_rebuild_exact_index(knowledge, _knowledge_exact_index)
+	else:
+		_index_exact_item(knowledge, _knowledge_exact_index, item)
+	_schedule_persistence(false, true)
 	_queue_item_vector(item, "knowledge")
+
+func flush_persistence() -> void:
+	_persistence_flush_scheduled = false
+	if _memory_dirty:
+		_save_array(MEMORY_PATH, memory)
+		_memory_dirty = false
+	if _knowledge_dirty:
+		_save_array(KNOWLEDGE_PATH, knowledge)
+		_knowledge_dirty = false
+
+func _schedule_persistence(memory_changed: bool, knowledge_changed: bool) -> void:
+	_memory_dirty = _memory_dirty or memory_changed
+	_knowledge_dirty = _knowledge_dirty or knowledge_changed
+	if not _memory_dirty and not _knowledge_dirty:
+		return
+	# Coalesce burst imports to one canonical JSON rewrite in the next idle turn.
+	# Detached/test instances keep the old immediate durability behaviour.
+	if not is_inside_tree():
+		flush_persistence()
+		return
+	if _persistence_flush_scheduled:
+		return
+	_persistence_flush_scheduled = true
+	call_deferred("flush_persistence")
 
 func recent(limit: int = 12) -> Array:
 	if memory.is_empty():
@@ -149,6 +190,7 @@ func semantic_status() -> Dictionary:
 	}
 
 func reindex_semantic() -> Dictionary:
+	flush_persistence()
 	vectors.clear()
 	_index_queue.clear()
 	_queued_ids.clear()
@@ -204,18 +246,33 @@ func _migrate_collection(items: Array, collection: String) -> bool:
 		items[i] = item
 	return changed
 
-func _find_exact(items: Array, content: String, kind: String) -> int:
-	var needle := _normalize_text(content)
-	var start := maxi(0, items.size() - 1000)
-	for i in range(items.size() - 1, start - 1, -1):
+func _exact_key(kind: String, content: String) -> String:
+	return kind + "\n" + _normalize_text(content)
+
+func _find_exact(index: Dictionary, content: String, kind: String) -> int:
+	return int(index.get(_exact_key(kind, content), -1))
+
+func _rebuild_exact_index(items: Array, index: Dictionary) -> void:
+	index.clear()
+	var start := maxi(0, items.size() - EXACT_DEDUPE_WINDOW)
+	for i in range(start, items.size()):
 		if not items[i] is Dictionary:
 			continue
 		var item: Dictionary = items[i]
-		if str(item.get("kind", "")) != kind:
-			continue
-		if _normalize_text(str(item.get("content", ""))) == needle:
-			return i
-	return -1
+		index[_exact_key(str(item.get("kind", "")), str(item.get("content", "")))] = i
+
+func _index_exact_item(items: Array, index: Dictionary, item: Dictionary) -> void:
+	var item_index := items.size() - 1
+	if item_index < 0:
+		return
+	index[_exact_key(str(item.get("kind", "")), str(item.get("content", "")))] = item_index
+	var expired_index := item_index - EXACT_DEDUPE_WINDOW
+	if expired_index < 0 or expired_index >= items.size() or not items[expired_index] is Dictionary:
+		return
+	var expired: Dictionary = items[expired_index]
+	var expired_key := _exact_key(str(expired.get("kind", "")), str(expired.get("content", "")))
+	if int(index.get(expired_key, -1)) == expired_index:
+		index.erase(expired_key)
 
 func _touch_existing(item: Dictionary, importance: float, confidence: float, source: String) -> void:
 	item["importance"] = maxf(float(item.get("importance", 0.0)), clampf(importance, 0.0, 1.0))
@@ -411,10 +468,7 @@ func _touch_results(items: Array) -> void:
 			item["last_used"] = now
 			item["usage_count"] = int(item.get("usage_count", 0)) + 1
 			knowledge_changed = true
-	if memory_changed:
-		_save_array(MEMORY_PATH, memory)
-	if knowledge_changed:
-		_save_array(KNOWLEDGE_PATH, knowledge)
+	_schedule_persistence(memory_changed, knowledge_changed)
 
 func _tokens(text: String) -> Array[String]:
 	var normalized := _normalize_text(text)
