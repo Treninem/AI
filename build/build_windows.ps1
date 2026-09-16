@@ -1,7 +1,8 @@
 param(
     [string]$Godot = "godot",
     [switch]$SkipModelSetup,
-    [switch]$SkipVoiceSetup
+    [switch]$SkipVoiceSetup,
+    [string]$CoreModelCacheDir = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -26,20 +27,38 @@ $apiOut = Join-Path $outDir "api"
 $ensureUv = Join-Path $runtimeSource "ensure_uv.ps1"
 $portableDist = Join-Path $root "build\voice_backend"
 $portableBuilt = $false
+$coreBundleHelper = Join-Path $PSScriptRoot "prepare_bundled_windows_core.ps1"
+$coreEngineSource = Join-Path $coreSource "engine"
+$coreServerSource = Join-Path $coreEngineSource "llama-server.exe"
+$coreModelSource = Join-Path $coreEngineSource "aurorafox-core.gguf"
+$coreModelBytes = 1282439264
+$coreModelSha = 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-# AuroraFox owns its auxiliary Python runtime. This is unrelated to inference;
-# the actual LLM path is AuroraFox Core Engine + user-managed GGUF.
+# AuroraFox owns its auxiliary runtime and its inference stack. A normal user
+# must never install Ollama, choose GGUF files, or install a separate Core
+# Engine. Every Windows build therefore prepares a complete verified Core.
 if (-not (Test-Path -LiteralPath $ensureUv)) { throw "runtime/ensure_uv.ps1 is missing" }
 & powershell -NoProfile -ExecutionPolicy Bypass -File $ensureUv -RuntimeRoot (Join-Path $runtimeSource "windows") -SkipPythonInstall | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "Failed to prepare bundled uv runtime" }
 
-# IMPORTANT: a Windows build never installs Ollama and never downloads a
-# multi-gigabyte model. The packaged Core setup center performs explicit,
-# verified engine/model setup for the user. SkipModelSetup is retained only
-# for command-line compatibility with older build jobs.
-if (-not $SkipModelSetup) {
-    Write-Host "AuroraFox Core model setup is deferred to the application (no Ollama bootstrap)." -ForegroundColor DarkCyan
+if (-not (Test-Path -LiteralPath $coreBundleHelper)) { throw "build/prepare_bundled_windows_core.ps1 is missing" }
+$coreArgs = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$coreBundleHelper)
+if (-not [string]::IsNullOrWhiteSpace($CoreModelCacheDir)) { $coreArgs += @('-CacheDir',$CoreModelCacheDir) }
+& powershell @coreArgs
+if ($LASTEXITCODE -ne 0) { throw "Failed to prepare complete bundled AuroraFox Core" }
+if (-not (Test-Path -LiteralPath $coreServerSource)) { throw "Bundled AuroraFox Core Engine was not prepared" }
+if (-not (Test-Path -LiteralPath $coreModelSource)) { throw "Bundled AuroraFox Core weights were not prepared" }
+if ((Get-Item -LiteralPath $coreModelSource).Length -ne $coreModelBytes) { throw "Bundled AuroraFox Core weights have the wrong size" }
+$coreActualSha = (Get-FileHash -LiteralPath $coreModelSource -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($coreActualSha -ne $coreModelSha) { throw "Bundled AuroraFox Core SHA-256 mismatch: $coreActualSha" }
+Write-Host "Complete AuroraFox Core prepared for Windows: $coreActualSha" -ForegroundColor Green
+
+# SkipModelSetup remains only for compatibility with older CI invocations. It
+# no longer disables Core packaging because the user-facing model setup flow
+# has been removed from normal operation.
+if ($SkipModelSetup) {
+    Write-Host "SkipModelSetup is deprecated; bundled AuroraFox Core remains mandatory." -ForegroundColor DarkGray
 }
 
 if (-not $SkipVoiceSetup) {
@@ -82,27 +101,31 @@ Get-ChildItem -LiteralPath $uvSource -File | ForEach-Object {
     Copy-Item $_.FullName (Join-Path $runtimeOut "windows\uv\$($_.Name)") -Force
 }
 
-# AuroraFox Core Engine installer. A verified prebuilt engine is also copied
-# when present in the build workspace, but its absence is valid: the app can
-# install it explicitly on first setup.
+# Complete AuroraFox Core: engine + internal weights. These are mandatory
+# application assets, not an optional user setup component.
 if (Test-Path $coreOut) { Remove-Item $coreOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $coreOut | Out-Null
 $coreInstaller = Join-Path $coreSource "install_core.ps1"
-if (-not (Test-Path $coreInstaller)) { throw "AuroraFox Core installer is missing" }
+if (-not (Test-Path $coreInstaller)) { throw "AuroraFox Core installer/recovery helper is missing" }
 Copy-Item $coreInstaller (Join-Path $coreOut "install_core.ps1") -Force
-$coreEngine = Join-Path $coreSource "engine"
-if (Test-Path (Join-Path $coreEngine "llama-server.exe")) {
-    Copy-Item $coreEngine (Join-Path $coreOut "engine") -Recurse -Force
-    $coreMeta = Join-Path $coreSource "engine.json"
-    if (Test-Path $coreMeta) { Copy-Item $coreMeta (Join-Path $coreOut "engine.json") -Force }
-}
+Copy-Item $coreEngineSource (Join-Path $coreOut "engine") -Recurse -Force
+$coreMeta = Join-Path $coreSource "engine.json"
+if (Test-Path $coreMeta) { Copy-Item $coreMeta (Join-Path $coreOut "engine.json") -Force }
 
-# Compatibility model bootstrap. It now prepares AuroraFox Core only and does
-# not install/start Ollama. GGUF download/import is handled by LocalModelManager.
+$packagedServer = Join-Path $coreOut "engine\llama-server.exe"
+$packagedModel = Join-Path $coreOut "engine\aurorafox-core.gguf"
+if (-not (Test-Path -LiteralPath $packagedServer)) { throw "Packaged AuroraFox Core Engine is missing" }
+if (-not (Test-Path -LiteralPath $packagedModel)) { throw "Packaged AuroraFox Core weights are missing" }
+if ((Get-Item -LiteralPath $packagedModel).Length -ne $coreModelBytes) { throw "Packaged AuroraFox Core weights have the wrong size" }
+$packagedSha = (Get-FileHash -LiteralPath $packagedModel -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($packagedSha -ne $coreModelSha) { throw "Packaged AuroraFox Core integrity verification failed: $packagedSha" }
+
+# Developer compatibility tools stay packaged, but normal operation never
+# requires a user-selected model or Ollama.
 if (Test-Path $modelsOut) { Remove-Item $modelsOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $modelsOut | Out-Null
 $modelInstaller = Join-Path $modelsSource "install_models.ps1"
-if (-not (Test-Path $modelInstaller)) { throw "Model bootstrap is missing" }
+if (-not (Test-Path $modelInstaller)) { throw "Model compatibility bootstrap is missing" }
 Copy-Item $modelInstaller (Join-Path $modelsOut "install_models.ps1") -Force
 
 # Voice runtime/bootstrap next to AuroraFox.exe.
@@ -189,7 +212,9 @@ if (-not (Test-Path (Join-Path $fileOut "file_service.py"))) { throw "File Intel
 if (-not (Test-Path (Join-Path $fileOut "project_index_service.py"))) { throw "Project index service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "install_files.ps1"))) { throw "File Intelligence installer was not packaged" }
 if (-not (Test-Path (Join-Path $modelsOut "install_models.ps1"))) { throw "Local AI compatibility bootstrap was not packaged" }
-if (-not (Test-Path (Join-Path $coreOut "install_core.ps1"))) { throw "AuroraFox Core Engine installer was not packaged" }
+if (-not (Test-Path (Join-Path $coreOut "install_core.ps1"))) { throw "AuroraFox Core recovery helper was not packaged" }
+if (-not (Test-Path (Join-Path $coreOut "engine\llama-server.exe"))) { throw "AuroraFox built-in Core Engine was not packaged" }
+if (-not (Test-Path (Join-Path $coreOut "engine\aurorafox-core.gguf"))) { throw "AuroraFox built-in Core weights were not packaged" }
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $updateOut "windows_updater.ps1"))) { throw "Transactional Windows updater was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "server.py"))) { throw "AuroraFox API server was not packaged" }
@@ -201,9 +226,10 @@ if (-not (Test-Path (Join-Path $apiOut "install_api.ps1"))) { throw "AuroraFox A
 if (-not (Test-Path (Join-Path $apiOut "requirements.txt"))) { throw "AuroraFox API requirements were not packaged" }
 
 Write-Host "AuroraFox Windows build: $outDir\AuroraFox.exe" -ForegroundColor Green
-Write-Host "AuroraFox Core Engine: $coreOut"
+Write-Host "AuroraFox built-in Core Engine: $packagedServer"
+Write-Host "AuroraFox built-in Core weights: $packagedModel"
+Write-Host "AuroraFox built-in Core SHA-256: $packagedSha"
 Write-Host "Managed runtime bootstrap: $runtimeOut"
-Write-Host "Local GGUF manager/bootstrap: $modelsOut"
 Write-Host "Voice runtime/bootstrap: $voiceOut"
 Write-Host "Computer Agent bootstrap: $computerOut"
 Write-Host "File Intelligence + Project Index bootstrap: $fileOut"
