@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import com.tom_roush.pdfbox.android.PDFBoxResourceLoader
+import com.tom_roush.pdfbox.io.MemoryUsageSetting
 import com.tom_roush.pdfbox.pdmodel.PDDocument
 import com.tom_roush.pdfbox.rendering.PDFRenderer
 import com.tom_roush.pdfbox.text.PDFTextStripper
@@ -37,6 +38,11 @@ class AndroidOcrRuntime(private val context: Context) {
         put("languages", JSONArray(listOf("rus", "eng")))
         put("network_required", false)
         put("external_ai_required", false)
+        put("max_pdf_bytes", MAX_PDF_BYTES)
+        put("max_pages", MAX_PAGES)
+        put("max_ocr_pages", MAX_OCR_PAGES)
+        put("max_output_chars", MAX_OUTPUT_CHARS)
+        put("max_pixels", MAX_PIXELS)
     }
 
     fun extract(path: String): String {
@@ -85,47 +91,87 @@ class AndroidOcrRuntime(private val context: Context) {
     private fun extractImage(file: File): String {
         val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return error("Image cannot be decoded")
         return try {
-            val text = recognize(bitmap)
-            payload(text, mapOf("engine" to "tesseract4android", "ocr" to true, "pages" to 1, "page_sources" to JSONArray().put(JSONObject(mapOf("page" to 1, "source" to "ocr", "chars" to text.length)))))
+            val raw = recognize(bitmap)
+            val truncated = raw.length > MAX_OUTPUT_CHARS
+            val text = raw.take(MAX_OUTPUT_CHARS)
+            payload(
+                text,
+                mapOf(
+                    "engine" to "tesseract4android",
+                    "ocr" to true,
+                    "pages" to 1,
+                    "pages_processed" to 1,
+                    "output_truncated" to truncated,
+                    "page_sources" to JSONArray().put(JSONObject(mapOf("page" to 1, "source" to "ocr", "chars" to raw.length, "stored_chars" to text.length))),
+                ),
+                truncated = truncated,
+            )
         } finally { bitmap.recycle() }
     }
 
     private fun extractPdf(file: File): String {
         if (file.length() > MAX_PDF_BYTES) return error("PDF is larger than the 128 MB Android OCR limit")
         PDFBoxResourceLoader.init(context.applicationContext)
-        PDDocument.load(file).use { document ->
+        PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()).use { document ->
             if (document.numberOfPages > MAX_PAGES) return error("PDF has ${document.numberOfPages} pages; Android OCR limit is $MAX_PAGES")
             val renderer = PDFRenderer(document)
-            val out = StringBuilder()
+            val out = StringBuilder(minOf(MAX_OUTPUT_CHARS, 32_768))
             val pageSources = JSONArray()
             val warnings = JSONArray()
             var ocrPages = 0
             var textPages = 0
+            var pagesProcessed = 0
+            var outputTruncated = false
             for (index in 0 until document.numberOfPages) {
+                if (out.length >= MAX_OUTPUT_CHARS) {
+                    outputTruncated = true
+                    break
+                }
                 val pageNo = index + 1
+                pagesProcessed = pageNo
                 val layer = try {
                     PDFTextStripper().apply { sortByPosition = true; startPage = pageNo; endPage = pageNo }.getText(document).trim()
                 } catch (_: Throwable) { "" }
                 if (usable(layer)) {
                     textPages++
-                    appendPage(out, pageNo, layer)
+                    val complete = appendPage(out, pageNo, layer)
                     pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "text_layer", "chars" to layer.length)))
+                    if (!complete) { outputTruncated = true; break }
                     continue
                 }
                 if (ocrPages >= MAX_OCR_PAGES) {
-                    if (layer.isNotBlank()) appendPage(out, pageNo, layer)
+                    val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
                     pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_limit", "chars" to layer.length)))
+                    if (!complete) { outputTruncated = true; break }
                     continue
                 }
                 val bitmap = renderer.renderImageWithDPI(index, 180f)
                 val recognized = try { recognize(bitmap) } finally { bitmap.recycle() }
                 ocrPages++
                 val chosen = if (recognized.isNotBlank()) recognized else layer
-                if (chosen.isNotBlank()) appendPage(out, pageNo, chosen)
+                val complete = if (chosen.isNotBlank()) appendPage(out, pageNo, chosen) else true
                 pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to if (recognized.isNotBlank()) "ocr" else if (layer.isNotBlank()) "text_layer_sparse" else "empty", "chars" to chosen.length)))
-                if (out.length >= MAX_OUTPUT_CHARS) { warnings.put("OCR output truncated at $MAX_OUTPUT_CHARS characters"); break }
+                if (!complete) { outputTruncated = true; break }
             }
-            return payload(out.toString().take(MAX_OUTPUT_CHARS), mapOf("engine" to "pdfbox+tesseract4android", "pages" to document.numberOfPages, "text_pages" to textPages, "ocr_pages" to ocrPages, "page_sources" to pageSources), warnings)
+            if (outputTruncated) warnings.put("Local OCR output truncated at $MAX_OUTPUT_CHARS characters")
+            if (ocrPages >= MAX_OCR_PAGES && pagesProcessed < document.numberOfPages) warnings.put("OCR page limit reached at $MAX_OCR_PAGES pages")
+            return payload(
+                out.toString(),
+                mapOf(
+                    "engine" to "pdfbox+tesseract4android",
+                    "pages" to document.numberOfPages,
+                    "pages_processed" to pagesProcessed,
+                    "text_pages" to textPages,
+                    "ocr_pages" to ocrPages,
+                    "page_sources" to pageSources,
+                    "output_limit_chars" to MAX_OUTPUT_CHARS,
+                    "output_truncated" to outputTruncated,
+                    "streaming_pages" to true,
+                    "pdf_buffering" to "temp_file",
+                ),
+                warnings,
+                outputTruncated,
+            )
         }
     }
 
@@ -134,9 +180,17 @@ class AndroidOcrRuntime(private val context: Context) {
         return compact.length >= 12 && compact.count { it.isLetterOrDigit() } >= 4
     }
 
-    private fun appendPage(out: StringBuilder, page: Int, text: String) {
-        if (out.isNotEmpty()) out.append("\n\n")
-        out.append("### Страница ").append(page).append('\n').append(text)
+    private fun appendPage(out: StringBuilder, page: Int, text: String): Boolean {
+        val prefix = if (out.isNotEmpty()) "\n\n" else ""
+        val block = "$prefix### Страница $page\n$text"
+        val remaining = MAX_OUTPUT_CHARS - out.length
+        if (remaining <= 0) return false
+        if (block.length <= remaining) {
+            out.append(block)
+            return true
+        }
+        out.append(block, 0, remaining)
+        return false
     }
 
     private fun limitBitmap(bitmap: Bitmap): Bitmap {
@@ -146,10 +200,25 @@ class AndroidOcrRuntime(private val context: Context) {
         return Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).toInt().coerceAtLeast(1), (bitmap.height * scale).toInt().coerceAtLeast(1), true)
     }
 
-    private fun payload(content: String, metadata: Map<String, Any?>, warnings: JSONArray = JSONArray()): String = JSONObject().apply {
-        put("ok", true); put("mode", "text"); put("content", content); put("text", content)
-        put("metadata", JSONObject(metadata).apply { put("untrusted_document", true); put("content_authority", "data_only"); put("offline", true); put("external_ai_required", false) })
-        put("warnings", warnings); put("truncated", content.length >= MAX_OUTPUT_CHARS); put("extractor", "aurora_android_local_ocr")
+    private fun payload(
+        content: String,
+        metadata: Map<String, Any?>,
+        warnings: JSONArray = JSONArray(),
+        truncated: Boolean = false,
+    ): String = JSONObject().apply {
+        put("ok", true)
+        put("mode", "text")
+        put("content", content)
+        put("text", content)
+        put("metadata", JSONObject(metadata).apply {
+            put("untrusted_document", true)
+            put("content_authority", "data_only")
+            put("offline", true)
+            put("external_ai_required", false)
+        })
+        put("warnings", warnings)
+        put("truncated", truncated)
+        put("extractor", "aurora_android_local_ocr")
     }.toString()
 
     private fun error(message: String): String = JSONObject(mapOf("ok" to false, "error" to message, "ocr_available" to false, "external_ai_required" to false)).toString()
