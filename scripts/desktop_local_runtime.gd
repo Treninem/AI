@@ -36,7 +36,7 @@ func installer_path() -> String:
 func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dictionary:
 	if OS.get_name() != "Windows": return {"ok": false, "runtime": "aurora_core_desktop", "error": "Desktop Core runtime is Windows-only"}
 	var absolute_model := ProjectSettings.globalize_path(model_path) if model_path.begins_with("user://") or model_path.begins_with("res://") else model_path
-	if not FileAccess.file_exists(absolute_model): return {"ok": false, "runtime": "aurora_core_desktop", "error": "Локальная GGUF-модель AuroraFox не найдена", "model_path": model_path}
+	if not FileAccess.file_exists(absolute_model): return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core отсутствует или повреждён. Восстановите установку AuroraFox.", "model_path": model_path}
 	var ready := await ensure_server(absolute_model)
 	if not bool(ready.get("ok", false)): return ready
 	var payload := {
@@ -59,12 +59,20 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 
 func ensure_server(model_absolute_path: String) -> Dictionary:
 	if not is_available():
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный Windows Core Engine не установлен", "installer": installer_path()}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует или повреждён", "installer": installer_path()}
+
+	# WindowsStartupCoordinator warms the Core in the background. A real user
+	# message can arrive while that same model is still loading. Never stop that
+	# startup or return "already starting"; join it and let the first message use
+	# the server as soon as /health becomes ready.
+	if starting:
+		return await _wait_for_existing_start(model_absolute_path)
+
 	if server_pid > 0 and OS.is_process_running(server_pid) and active_model == model_absolute_path:
 		var health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 2.0)
 		if bool(health.get("ok", false)): return {"ok": true, "runtime": "aurora_core_desktop", "reused": true}
-	stop()
-	if starting: return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine уже запускается"}
+		stop()
+
 	starting = true
 	var exe := engine_path()
 	var args := PackedStringArray([
@@ -84,7 +92,7 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		if server_pid <= 0 or not OS.is_process_running(server_pid):
 			starting = false
 			server_pid = 0
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки модели"}
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки встроенного AI"}
 		var health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 1.0)
 		if bool(health.get("ok", false)):
 			starting = false
@@ -92,7 +100,20 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		await get_tree().create_timer(0.25).timeout
 	starting = false
 	stop()
-	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine не успел загрузить модель за 120 секунд"}
+	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться за 120 секунд"}
+
+func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
+	for _attempt in range(STARTUP_ATTEMPTS):
+		if not starting:
+			if server_pid > 0 and OS.is_process_running(server_pid) and active_model == model_absolute_path:
+				var final_health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 2.0)
+				if bool(final_health.get("ok", false)):
+					return {"ok": true, "runtime": "aurora_core_desktop", "reused": true, "joined_warmup": true}
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "Фоновая подготовка AuroraFox Core завершилась неуспешно"}
+		if active_model != model_absolute_path and not active_model.is_empty():
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core занят подготовкой другого внутреннего профиля"}
+		await get_tree().create_timer(0.25).timeout
+	return {"ok": false, "runtime": "aurora_core_desktop", "error": "Ожидание фоновой подготовки AuroraFox Core превысило 120 секунд"}
 
 func stop() -> void:
 	if server_pid > 0 and OS.is_process_running(server_pid): OS.kill(server_pid)
@@ -107,6 +128,7 @@ func runtime_info() -> Dictionary:
 		"engine_path": engine_path(),
 		"installer": installer_path(),
 		"running": server_pid > 0 and OS.is_process_running(server_pid),
+		"starting": starting,
 		"pid": server_pid,
 		"active_model": active_model,
 		"endpoint": BASE_URL
