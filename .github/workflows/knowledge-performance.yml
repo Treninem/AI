@@ -62,6 +62,7 @@ jobs:
           tests.test_knowledge_performance_compare
           tests.test_knowledge_stress_gates
           tests.test_knowledge_stress_removal_transaction
+          tests.test_knowledge_stress_workflow_contract
           -v
       - name: Compile Python tools
         run: >-
@@ -288,7 +289,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable_linux.x86_64.zip
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
           unzip -q godot.zip
           godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
           test -n "$godot"
@@ -299,8 +300,21 @@ jobs:
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run 10-50-100-250 MiB stress profile
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile stress --timeout-seconds 900 --report artifacts/knowledge-performance/linux-stress.json
+      - name: Measure stress persistent memory N-2N-4N scaling
+        run: python benchmarks/knowledge/run_memory_scaling.py --godot ./godot --counts 250,500,1000 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-stress-memory-scaling.json
+      - name: Measure stress search N-2N-4N scaling
+        run: python benchmarks/knowledge/run_search_scaling.py --godot ./godot --sizes-mb 4,8,16 --timeout-seconds 600 --report artifacts/knowledge-performance/linux-stress-search-scaling.json
+      - name: Measure stress registry-only N-2N-4N scaling
+        run: python benchmarks/knowledge/run_registry_scaling.py --godot ./godot --counts 32,64,128 --source-kb 4 --timeout-seconds 300 --report artifacts/knowledge-performance/linux-stress-registry-scaling.json
       - name: Enforce large-profile blockers
-        run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/linux-stress.json --enforce-performance --output artifacts/knowledge-performance/linux-stress-gate.json
+        run: >-
+          python benchmarks/knowledge/validate_performance_report.py
+          artifacts/knowledge-performance/linux-stress.json
+          artifacts/knowledge-performance/linux-stress-memory-scaling.json
+          artifacts/knowledge-performance/linux-stress-search-scaling.json
+          artifacts/knowledge-performance/linux-stress-registry-scaling.json
+          --enforce-performance
+          --output artifacts/knowledge-performance/linux-stress-gate.json
       - name: Upload large benchmark report
         if: always()
         uses: actions/upload-artifact@v4
@@ -320,7 +334,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable_linux.x86_64.zip
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
           unzip -q godot.zip
           godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
           test -n "$godot"
@@ -330,8 +344,31 @@ jobs:
         run: timeout 120s ./godot --headless --editor --path . --quit
       - name: Run selected large profile
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile '${{ inputs.profile }}' --timeout-seconds 900 --report artifacts/knowledge-performance/linux-${{ inputs.profile }}.json
+      - name: Measure profile-matched N-2N-4N scaling
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ inputs.profile }}" = "stress" ]; then
+            memory_counts="250,500,1000"
+            search_sizes="4,8,16"
+            registry_counts="32,64,128"
+          else
+            memory_counts="125,250,500"
+            search_sizes="1,2,4"
+            registry_counts="16,32,64"
+          fi
+          python benchmarks/knowledge/run_memory_scaling.py --godot ./godot --counts "$memory_counts" --timeout-seconds 600 --report artifacts/knowledge-performance/linux-${{ inputs.profile }}-memory-scaling.json
+          python benchmarks/knowledge/run_search_scaling.py --godot ./godot --sizes-mb "$search_sizes" --timeout-seconds 600 --report artifacts/knowledge-performance/linux-${{ inputs.profile }}-search-scaling.json
+          python benchmarks/knowledge/run_registry_scaling.py --godot ./godot --counts "$registry_counts" --source-kb 4 --timeout-seconds 300 --report artifacts/knowledge-performance/linux-${{ inputs.profile }}-registry-scaling.json
       - name: Enforce large-profile relative performance blockers
-        run: python benchmarks/knowledge/validate_performance_report.py artifacts/knowledge-performance/linux-${{ inputs.profile }}.json --enforce-performance --output artifacts/knowledge-performance/linux-${{ inputs.profile }}-gate.json
+        run: >-
+          python benchmarks/knowledge/validate_performance_report.py
+          artifacts/knowledge-performance/linux-${{ inputs.profile }}.json
+          artifacts/knowledge-performance/linux-${{ inputs.profile }}-memory-scaling.json
+          artifacts/knowledge-performance/linux-${{ inputs.profile }}-search-scaling.json
+          artifacts/knowledge-performance/linux-${{ inputs.profile }}-registry-scaling.json
+          --enforce-performance
+          --output artifacts/knowledge-performance/linux-${{ inputs.profile }}-gate.json
       - name: Upload large benchmark report
         if: always()
         uses: actions/upload-artifact@v4
