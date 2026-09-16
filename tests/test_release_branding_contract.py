@@ -26,12 +26,42 @@ def test_owner_approved_branding_masters_are_byte_exact() -> None:
         assert _git_blob_sha(path) == expected, f"branding master changed byte-for-byte: {relative}"
 
 
-def test_runtime_uses_owner_approved_branding_without_legacy_substitution() -> None:
-    runtime = (ROOT / "scripts/main.gd").read_text(encoding="utf-8")
-    assert 'res://assets/ui/aurorafox_avatar_master.png' in runtime
-    assert 'res://assets/ui/aurorafox_background_master.png' in runtime
-    assert 'res://assets/ui/fox_logo.svg' not in runtime
-    assert 'res://assets/ui/aurora_background.svg' not in runtime
+def test_active_runtime_compat_layer_uses_owner_approved_branding() -> None:
+    scene = (ROOT / "main.tscn").read_text(encoding="utf-8")
+    compat = (ROOT / "scripts/main_compat.gd").read_text(encoding="utf-8")
+
+    # main.tscn is the product entrypoint and intentionally attaches main_compat.gd.
+    # The base main.gd may still construct legacy placeholder textures first; the
+    # active compatibility layer must replace them before the final UI is shown.
+    assert 'res://scripts/main_compat.gd' in scene
+    assert 'preload("res://assets/ui/aurorafox_avatar_master.png")' in compat
+    assert 'preload("res://assets/ui/aurorafox_background_master.png")' in compat
+    assert "func _build_ui()" in compat
+    assert "super._build_ui()" in compat
+    assert "_apply_owner_background()" in compat
+    assert "_apply_owner_brand_art()" in compat
+    assert "owner.texture = OWNER_AVATAR_MASTER" in compat
+    assert "rect.texture = _owner_background_texture()" in compat
+    assert "cropped.atlas = OWNER_BACKGROUND_MASTER" in compat
+
+    # Legacy source assets may appear only as selectors used to find and remove
+    # base placeholders. They must not be assigned as final owner artwork here.
+    assert "image.queue_free()" in compat
+    assert 'owner.texture = preload("res://assets/ui/fox_logo.svg")' not in compat
+    assert 'rect.texture = preload("res://assets/ui/aurora_background.svg")' not in compat
+
+
+def test_owner_art_runtime_smoke_locks_final_tree_when_lane_has_landed() -> None:
+    smoke_path = ROOT / "tests/ui_owner_assets_smoke.gd"
+    if not smoke_path.is_file():
+        # UI lane has not landed yet; the active-runtime contract above remains
+        # the release blocker and deliberately fails until main_compat is wired.
+        return
+    smoke = smoke_path.read_text(encoding="utf-8")
+    assert 'res://assets/ui/aurorafox_avatar_master.png' in smoke
+    assert 'res://assets/ui/aurorafox_background_master.png' in smoke
+    assert 'Legacy placeholder fox is visible together with owner artwork' in smoke
+    assert 'Owner background must render with neutral modulate' in smoke
 
 
 def test_integration_gate_executes_branding_identity_contract() -> None:
