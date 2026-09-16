@@ -65,6 +65,19 @@ def _candidate_tessdata(executable: Path | None) -> list[Path]:
     roots.append(_module_root() / "ocr_runtime" / "tessdata")
     if executable is not None:
         roots += [executable.parent / "tessdata", executable.parent.parent / "share" / "tessdata"]
+    # Linux distributions commonly keep traineddata under a versioned
+    # /usr/share/tesseract-ocr/<version>/tessdata directory instead of next to
+    # /usr/bin/tesseract. Discover those local directories without invoking the
+    # engine or requiring network access. Homebrew paths are included for
+    # developer/test hosts; production Windows uses the bundled runtime above.
+    distro_root = Path("/usr/share/tesseract-ocr")
+    if distro_root.is_dir():
+        roots.extend(sorted(distro_root.glob("*/tessdata"), reverse=True))
+    roots += [
+        Path("/usr/share/tessdata"),
+        Path("/usr/local/share/tessdata"),
+        Path("/opt/homebrew/share/tessdata"),
+    ]
     prefix = os.getenv("TESSDATA_PREFIX", "").strip()
     if prefix:
         p = Path(prefix).expanduser()
