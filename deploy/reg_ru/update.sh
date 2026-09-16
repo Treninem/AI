@@ -82,18 +82,20 @@ printf 'AURORAFOX_BUILD_SHA=%s\n' "${candidate}" > "${build_environment}.tmp"
 mv "${build_environment}.tmp" "${build_environment}"
 systemctl restart aurorafox-api.service
 
-healthy=''
+ready=''
 for _ in {1..30}; do
-  if payload="$(curl --fail --silent --show-error --max-time 3 http://127.0.0.1:8768/health 2>/dev/null)"; then
-    if HEALTH_PAYLOAD="${payload}" /opt/aurorafox/venv/bin/python -c \
-      'import json, os; data=json.loads(os.environ["HEALTH_PAYLOAD"]); assert data["ok"] is True'; then
-      healthy='yes'
+  if payload="$(curl --fail --silent --show-error --max-time 5 http://127.0.0.1:8768/ready 2>/dev/null)"; then
+    if READINESS_PAYLOAD="${payload}" /opt/aurorafox/venv/bin/python -c \
+      'import json, os; data=json.loads(os.environ["READINESS_PAYLOAD"]); assert data["ok"] is True; assert data["database"]["ok"] is True; assert data["database"]["journal_mode"] == "wal"'; then
+      ready='yes'
       break
     fi
   fi
   sleep 2
 done
-test "${healthy}" = 'yes'
+test "${ready}" = 'yes'
+# Defense in depth: deployment acceptance also validates the live file directly,
+# independently of the HTTP process that reported /ready.
 PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.database --path "${database_path}"
 trap - ERR
 echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref} preupdate_backup_sha=${preupdate_backup_sha}"
