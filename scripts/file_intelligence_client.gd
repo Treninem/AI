@@ -2,15 +2,27 @@ class_name FileIntelligenceClient
 extends Node
 
 const BASE_URL := "http://127.0.0.1:8767"
+const ANDROID_OCR_EXTENSIONS := ["pdf", "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"]
 
 var backend_pid := 0
 var runtime_root := ""
+var _active_request: HTTPRequest = null
+var _active_android_job_id := ""
+var _cancel_requested := false
 
 func _ready() -> void:
 	if OS.get_name() == "Windows":
 		_start_backend_if_installed()
 
 func _exit_tree() -> void:
+	if _active_request != null:
+		_active_request.cancel_request()
+		_active_request = null
+	if OS.get_name() == "Android" and not _active_android_job_id.is_empty() and Engine.has_singleton("AuroraFoxRuntime"):
+		var plugin := Engine.get_singleton("AuroraFoxRuntime")
+		if plugin != null and plugin.has_method("cancelAnalyzeLocalFile"):
+			plugin.call("cancelAnalyzeLocalFile", _active_android_job_id)
+		_active_android_job_id = ""
 	if OS.get_name() == "Windows" and backend_pid > 0:
 		OS.kill(backend_pid)
 		backend_pid = 0
@@ -41,15 +53,20 @@ func health() -> Dictionary:
 			"local_tts": bool(caps.get("local_tts", false)),
 			"local_ocr": ocr_ready,
 			"ocr": caps.get("local_ocr_health", {}),
+			"cancellation_supported": bool(caps.get("file_analysis_cancel", false)),
 			"external_ai_required": false,
 			"capabilities": caps,
 			"warnings": warnings
 		}
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "File Intelligence is not available on this platform", "platform": OS.get_name()}
-	return await _request("/health", HTTPClient.METHOD_GET, {}, 4.0)
+	var status := await _request("/health", HTTPClient.METHOD_GET, {}, 4.0)
+	if bool(status.get("ok", false)):
+		status["cancellation_supported"] = true
+	return status
 
 func analyze_file(path: String, question := "", visual := true, max_chars := 160000) -> Dictionary:
+	_cancel_requested = false
 	if OS.get_name() == "Android":
 		if not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": false, "error": "AuroraFoxRuntime Android plugin is unavailable"}
@@ -57,17 +74,16 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		if private_path.is_empty():
 			return {"ok": false, "error": "Не удалось скопировать выбранный файл в приватную песочницу AuroraFox"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
+		var extension := path.get_extension().to_lower()
+		if extension in ANDROID_OCR_EXTENSIONS and plugin.has_method("startAnalyzeLocalFile") and plugin.has_method("pollAnalyzeLocalFile") and plugin.has_method("cancelAnalyzeLocalFile"):
+			var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual)
+			return _decorate_android_result(async_result, path, private_path, max_chars)
 		if not plugin.has_method("analyzeLocalFile"):
 			return {"ok": false, "error": "Android runtime does not expose File Intelligence"}
 		var raw = plugin.call("analyzeLocalFile", private_path, question, visual)
 		var parsed = JSON.parse_string(str(raw))
 		if parsed is Dictionary:
-			parsed["path"] = path
-			parsed["private_copy"] = private_path
-			if str(parsed.get("content", "")).length() > max_chars:
-				parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars) + "\n[Обрезано AuroraFox]"
-				parsed["truncated"] = true
-			return parsed
+			return _decorate_android_result(parsed, path, private_path, max_chars)
 		return {"ok": false, "error": "Invalid Android File Intelligence response"}
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "Rich file analysis is not available on this platform", "platform": OS.get_name()}
@@ -77,7 +93,24 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		"question": question,
 		"visual": visual,
 		"max_chars": clampi(max_chars, 2000, 500000)
-	}, 600.0)
+	}, 600.0, true)
+
+func cancel_active_analysis() -> Dictionary:
+	_cancel_requested = true
+	if OS.get_name() == "Android":
+		if _active_android_job_id.is_empty() or not Engine.has_singleton("AuroraFoxRuntime"):
+			return {"ok": true, "cancel_requested": false, "reason": "no_active_analysis"}
+		var plugin := Engine.get_singleton("AuroraFoxRuntime")
+		if plugin == null or not plugin.has_method("cancelAnalyzeLocalFile"):
+			return {"ok": false, "cancel_requested": false, "error": "Android cancellation API is unavailable"}
+		var raw = plugin.call("cancelAnalyzeLocalFile", _active_android_job_id)
+		var parsed = JSON.parse_string(str(raw))
+		return parsed if parsed is Dictionary else {"ok": true, "cancel_requested": true}
+	if OS.get_name() == "Windows":
+		if _active_request == null:
+			return {"ok": true, "cancel_requested": false, "reason": "no_active_analysis"}
+		return {"ok": true, "cancel_requested": true, "mode": "client_request_cancel"}
+	return {"ok": true, "cancel_requested": false, "reason": "unsupported_platform"}
 
 func tree(path: String, max_items := 2000) -> Dictionary:
 	if OS.get_name() == "Android":
@@ -208,9 +241,49 @@ func _parse_native(raw: Variant) -> Dictionary:
 	var parsed = JSON.parse_string(str(raw))
 	return parsed if parsed is Dictionary else {"ok": false, "error": "Invalid Android native response"}
 
-func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0) -> Dictionary:
+func _decorate_android_result(parsed: Dictionary, original_path: String, private_path: String, max_chars: int) -> Dictionary:
+	parsed["path"] = original_path
+	parsed["private_copy"] = private_path
+	if str(parsed.get("content", "")).length() > max_chars:
+		parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars) + "\n[Обрезано AuroraFox]"
+		parsed["truncated"] = true
+	return parsed
+
+func _analyze_android_job(plugin: Object, private_path: String, question: String, visual: bool) -> Dictionary:
+	var start_raw = plugin.call("startAnalyzeLocalFile", private_path, question, visual)
+	var start = JSON.parse_string(str(start_raw))
+	if not start is Dictionary or not bool(start.get("ok", false)):
+		return start if start is Dictionary else {"ok": false, "error": "Invalid Android analysis job response"}
+	var job_id := str(start.get("job_id", ""))
+	if job_id.is_empty(): return {"ok": false, "error": "Android analysis job id is missing"}
+	_active_android_job_id = job_id
+	var started_ms := Time.get_ticks_msec()
+	var cancel_sent := false
+	while true:
+		if _cancel_requested and not cancel_sent:
+			plugin.call("cancelAnalyzeLocalFile", job_id)
+			cancel_sent = true
+		var poll_raw = plugin.call("pollAnalyzeLocalFile", job_id)
+		var poll = JSON.parse_string(str(poll_raw))
+		if not poll is Dictionary:
+			_active_android_job_id = ""
+			return {"ok": false, "error": "Invalid Android analysis poll response"}
+		if not bool(poll.get("pending", false)):
+			_active_android_job_id = ""
+			var result = poll.get("result", {})
+			if result is Dictionary: return result
+			return {"ok": false, "error": str(poll.get("error", "Android analysis job returned no result"))}
+		if Time.get_ticks_msec() - started_ms > 600000:
+			plugin.call("cancelAnalyzeLocalFile", job_id)
+			_active_android_job_id = ""
+			return {"ok": false, "cancelled": true, "error": "Android file analysis timed out"}
+		await get_tree().create_timer(0.05).timeout
+
+func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0, track_analysis := false) -> Dictionary:
 	var last_error := ""
 	for attempt in range(2):
+		if track_analysis and _cancel_requested:
+			return {"ok": false, "cancelled": true, "error": "File analysis cancelled"}
 		var req := HTTPRequest.new()
 		req.timeout = timeout
 		add_child(req)
@@ -221,18 +294,39 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 			last_error = "File Intelligence request error: %s" % error_string(err)
 			req.queue_free()
 		else:
-			var result: Array = await req.request_completed
+			var result: Array = []
+			if track_analysis:
+				_active_request = req
+				var state := {"done": false, "result": []}
+				req.request_completed.connect(func(result_code, response_code, response_headers, response_body):
+					state["done"] = true
+					state["result"] = [result_code, response_code, response_headers, response_body]
+				, CONNECT_ONE_SHOT)
+				while not bool(state.get("done", false)):
+					if _cancel_requested:
+						req.cancel_request()
+						if _active_request == req: _active_request = null
+						req.queue_free()
+						return {"ok": false, "cancelled": true, "error": "File analysis cancelled"}
+					await get_tree().process_frame
+				result = state.get("result", [])
+				if _active_request == req: _active_request = null
+			else:
+				result = await req.request_completed
 			req.queue_free()
-			var code := int(result[1])
-			var raw := (result[3] as PackedByteArray).get_string_from_utf8()
-			var parsed = JSON.parse_string(raw)
-			if code >= 200 and code < 300 and parsed is Dictionary:
-				return parsed
-			if code > 0:
-				if parsed is Dictionary:
-					return {"ok": false, "http": code, "error": str(parsed.get("detail", parsed.get("error", raw)))}
-				return {"ok": false, "http": code, "error": raw.substr(0, 4000)}
-			last_error = "File Intelligence backend is not ready"
+			if result.size() < 4:
+				last_error = "File Intelligence returned an incomplete HTTP response"
+			else:
+				var code := int(result[1])
+				var raw := (result[3] as PackedByteArray).get_string_from_utf8()
+				var parsed = JSON.parse_string(raw)
+				if code >= 200 and code < 300 and parsed is Dictionary:
+					return parsed
+				if code > 0:
+					if parsed is Dictionary:
+						return {"ok": false, "http": code, "error": str(parsed.get("detail", parsed.get("error", raw)))}
+					return {"ok": false, "http": code, "error": raw.substr(0, 4000)}
+				last_error = "File Intelligence backend is not ready"
 		if attempt == 0 and OS.get_name() == "Windows" and runtime_is_installed():
 			if backend_pid <= 0: _start_backend_if_installed()
 			await get_tree().create_timer(0.9).timeout
