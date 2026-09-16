@@ -28,7 +28,9 @@ def test_xtts_engine_resolves_portable_speaker_reference():
 def test_router_avoids_applying_xtts_speed_twice():
     engine = read("voice/python/tts_engine.py")
     assert 'synthesis_speed = 1.0 if first.name == "xtts" else speed' in engine
-    assert '"prosody_authority": "shared_processor"' in engine
+    assert '"prosody_authority": "silero_native_slow_with_neutral_shared_processor"' in engine
+    assert '"silero_native_prosody"' in engine
+    assert '"silero_native_slow_emotions"' in engine
 
 
 def test_voice_installer_can_enable_and_validate_xtts():
