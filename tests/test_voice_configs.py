@@ -52,6 +52,16 @@ def test_godot_voice_defaults_match_neutral_dsp_and_android_does_not_retime_play
     assert "pitch_scale" in playback
 
 
+def test_direct_voice_server_scales_emotion_and_invalidates_profile_cache():
+    server = (ROOT / "voice" / "python" / "aurora_voice_server.py").read_text(encoding="utf-8")
+    assert "power = float(np.clip(intensity * emotionality, 0.0, 1.0))" in server
+    assert "base_speed * (1.0 + (profile_speed - 1.0) * power)" in server
+    assert "base_pitch * (1.0 + (profile_pitch - 1.0) * power) - 1.0" in server
+    assert "base_mech + (profile_mech - base_mech) * power" in server
+    assert '"voice_defaults": {' in server
+    assert '"emotions": EMOTIONS' in server
+
+
 def test_all_required_emotions_exist_and_are_bounded():
     emotions = load("emotions.json")
     required = {"neutral","happy","excited","thinking","focused","serious","warning","sad","confused","sleepy","playful","success","error"}
