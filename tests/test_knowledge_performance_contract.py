@@ -42,6 +42,13 @@ class KnowledgePerformanceContractTests(unittest.TestCase):
         self.assertNotIn("http://", text.lower())
         self.assertNotIn("https://", text.lower())
 
+    def test_harness_avoids_platform_sensitive_external_member_resolution(self) -> None:
+        text = HARNESS_PATH.read_text(encoding="utf-8")
+        self.assertNotIn(".import_file(", text)
+        self.assertIn('_dict_call(txn, "import_file"', text)
+        self.assertIn("target.callv(method, args)", text)
+        self.assertIn("get_script_constant_map()", text)
+
     def test_report_contract_contains_scale_memory_restart_and_correctness(self) -> None:
         text = RUNNER_PATH.read_text(encoding="utf-8") + "\n" + HARNESS_PATH.read_text(encoding="utf-8")
         for required in (
@@ -80,7 +87,7 @@ class KnowledgePerformanceContractTests(unittest.TestCase):
 
     def test_source_removal_hard_gate_rejects_orphan_registry(self) -> None:
         text = HARNESS_PATH.read_text(encoding="utf-8")
-        self.assertIn("var orphan_registry := not KnowledgeSourceRegistryScript.new().record_for_source(paths[1]).is_empty()", text)
+        self.assertIn('var orphan_registry := not _dict_call(registry, "record_for_source", [paths[1]]).is_empty()', text)
         self.assertIn('"ok": bool(removed.get("ok", false)) and a_ok and b_gone and c_ok and not orphan_registry', text)
         self.assertIn('"orphan_registry": orphan_registry', text)
 
