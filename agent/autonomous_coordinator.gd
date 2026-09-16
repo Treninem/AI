@@ -37,6 +37,7 @@ var _last_report: Dictionary = {}
 var _last_improvement_unix := 0
 var _last_research_unix := 0
 var _events: Array = []
+var _state_recovery_blocked := false
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STATE_DIR))
@@ -63,7 +64,7 @@ func _bootstrap() -> void:
 			"missing_components": report.get("missing_components", []),
 			"missing_required_tools": report.get("missing_required_tools", [])
 		})
-	if autonomous_enabled:
+	if autonomous_enabled and not _state_recovery_blocked:
 		_timer.start()
 		call_deferred("_run_initial_cycle")
 
@@ -208,6 +209,7 @@ func synchronize_all() -> Dictionary:
 	report["research_cooldown_seconds"] = research_cooldown_seconds
 	report["last_improvement_unix"] = _last_improvement_unix
 	report["last_research_unix"] = _last_research_unix
+	report["state_recovery_blocked"] = _state_recovery_blocked
 	report["events"] = _events.slice(maxi(0, _events.size() - 20), _events.size())
 	_last_report = report.duplicate(true)
 	_save_state()
@@ -260,6 +262,14 @@ func _collect_observations() -> Dictionary:
 	return result
 
 func run_autonomous_cycle() -> Dictionary:
+	if _state_recovery_blocked:
+		var recovery_blocked := {
+			"ok": false,
+			"stage": "state_recovery",
+			"error": "Autonomous state recovery failed; automatic cycle is blocked to avoid duplicate actions"
+		}
+		autonomous_cycle_failed.emit(recovery_blocked)
+		return recovery_blocked
 	if _cycle_running:
 		return {"ok": false, "error": "Autonomous cycle is already running"}
 	_cycle_running = true
@@ -433,10 +443,12 @@ func _record_event(kind: String, details: Dictionary) -> void:
 func _save_state() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STATE_DIR))
 	if not _repair_interrupted_state_save():
+		_state_recovery_blocked = true
 		return
 	_remove_state_file(STATE_TEMP_PATH)
 	var file := FileAccess.open(STATE_TEMP_PATH, FileAccess.WRITE)
 	if file == null:
+		_state_recovery_blocked = true
 		return
 	file.store_string(JSON.stringify({
 		"schema_version": STATE_SCHEMA_VERSION,
@@ -451,17 +463,24 @@ func _save_state() -> void:
 	file.close()
 	if write_error != OK or not _valid_state_file(STATE_TEMP_PATH):
 		_remove_state_file(STATE_TEMP_PATH)
+		_state_recovery_blocked = true
 		return
 	if not _replace_state_file():
 		_remove_state_file(STATE_TEMP_PATH)
+		_state_recovery_blocked = true
+		return
+	_state_recovery_blocked = false
 
 func _load_state() -> void:
 	if not _repair_interrupted_state_save():
+		_state_recovery_blocked = true
 		return
 	if not FileAccess.file_exists(STATE_PATH):
+		_state_recovery_blocked = false
 		return
 	var parsed := _read_state_file(STATE_PATH)
 	if parsed.is_empty():
+		_state_recovery_blocked = true
 		return
 	_last_improvement_unix = int(parsed.get("last_improvement_unix", 0))
 	_last_research_unix = int(parsed.get("last_research_unix", 0))
@@ -472,6 +491,7 @@ func _load_state() -> void:
 	var saved_report: Variant = parsed.get("last_report", {})
 	if saved_report is Dictionary:
 		_last_report = saved_report
+	_state_recovery_blocked = false
 
 func _replace_state_file() -> bool:
 	if not FileAccess.file_exists(STATE_TEMP_PATH) or not _valid_state_file(STATE_TEMP_PATH):
