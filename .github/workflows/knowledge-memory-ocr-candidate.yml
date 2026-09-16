@@ -36,14 +36,29 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install pytest
-      - name: Knowledge and OCR static contracts
+      - name: Python syntax
+        run: python -m py_compile file_intelligence/local_ocr.py file_intelligence/file_service.py benchmarks/knowledge/run_godot_probe.py
+      - name: Knowledge and owned OCR static contracts
         run: >-
           python -m pytest -q
           tests/test_knowledge_record_dedupe_contract.py
           tests/test_knowledge_store_batch_contract.py
           tests/local_ocr_contract_static_test.py
-      - name: Python syntax
-        run: python -m py_compile file_intelligence/local_ocr.py file_intelligence/file_service.py benchmarks/knowledge/run_godot_probe.py
+          -k 'not windows_ocr_is_local_bundled_and_bilingual'
+
+  windows-release-packaging-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pytest
+      - name: Cross-lane Windows release packaging contract
+        run: >-
+          python -m pytest -q
+          tests/local_ocr_contract_static_test.py::test_windows_ocr_is_local_bundled_and_bilingual
 
   ocr-linux:
     runs-on: ubuntu-latest
@@ -201,11 +216,21 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.13'
+      - name: Setup Android SDK command-line tools
+        uses: android-actions/setup-android@v3
       - name: Install Android native toolchain
+        shell: bash
         run: |
+          set -euo pipefail
           test -n "${ANDROID_HOME:-}"
+          command -v sdkmanager
           yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.1' 'cmake;3.22.1' 'ndk;28.1.13356709'
+          sdkmanager \
+            'platform-tools' \
+            'platforms;android-35' \
+            'build-tools;35.0.1' \
+            'cmake;3.22.1' \
+            'ndk;28.1.13356709'
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
       - name: Prepare pinned native dependencies
         shell: pwsh
