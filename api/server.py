@@ -26,6 +26,7 @@ from api.database import SCHEMA_VERSION
 from api.file_client import FileIntelligenceClient
 from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
+from api.persistence_maintenance import PersistenceMaintenance
 from api.public_auth_limits import PublicAuthRateLimitMiddleware
 from api.request_limits import DEFAULT_MAX_BODY_BYTES, RequestBodyLimitMiddleware
 from api.runtime_bridge import AuroraRuntimeBridge
@@ -52,6 +53,7 @@ keys.ensure_bootstrap_key()
 accounts = keys.personal
 account_mailer = AccountMailer(AccountMailConfig.from_env())
 database = keys.database
+persistence = PersistenceMaintenance(API_ROOT)
 sync = SyncStore(API_ROOT)
 conversations = ConversationStore(API_ROOT / "conversations")
 bridge = AuroraRuntimeBridge(
@@ -457,6 +459,14 @@ def _public_database_status() -> dict[str, Any]:
     }
 
 
+def _public_storage_status() -> dict[str, Any]:
+    status = _component_status(persistence.status)
+    return {
+        "ok": bool(status.get("ok", False)),
+        "hard_pressure": bool(status.get("hard_pressure", False)),
+    }
+
+
 @app.get("/health")
 def health() -> dict[str, Any]:
     agent_status = _component_status(bridge.status)
@@ -494,7 +504,12 @@ def health() -> dict[str, Any]:
 def ready() -> dict[str, Any]:
     database_status = _public_database_status()
     learning_status = _public_component_status(learning.status)
-    ready_now = bool(database_status.get("ok", False)) and bool(learning_status.get("ok", False))
+    storage_status = _public_storage_status()
+    ready_now = (
+        bool(database_status.get("ok", False))
+        and bool(learning_status.get("ok", False))
+        and bool(storage_status.get("ok", False))
+    )
     payload = {
         "ok": ready_now,
         "service": "AuroraFox API",
@@ -503,6 +518,7 @@ def ready() -> dict[str, Any]:
         "deployment": os.getenv("AURORAFOX_DEPLOYMENT", "local"),
         "database": database_status,
         "learning": learning_status,
+        "storage": storage_status,
     }
     if not ready_now:
         raise HTTPException(status_code=503, detail=payload)
