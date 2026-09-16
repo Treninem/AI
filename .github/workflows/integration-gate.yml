@@ -35,7 +35,7 @@ jobs:
         run: >-
           python -m pip install --disable-pip-version-check
           -r api/requirements.txt
-          pytest==8.4.1 numpy==2.2.6 requests==2.32.5
+          pytest==8.4.1 numpy==2.2.6 requests==2.32.5 httpx==0.28.1
 
       - name: Run same-SHA cross-subsystem contracts
         shell: bash
