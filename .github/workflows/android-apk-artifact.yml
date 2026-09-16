@@ -14,6 +14,7 @@ on:
       - 'work/**'
       - 'api/**'
       - 'build/build_android.ps1'
+      - 'build/android_artifact_trigger.txt'
       - 'export_presets.cfg'
       - 'project.godot'
       - 'project/version.json'
@@ -30,6 +31,7 @@ on:
       - 'work/**'
       - 'api/**'
       - 'build/build_android.ps1'
+      - 'build/android_artifact_trigger.txt'
       - 'export_presets.cfg'
       - 'project.godot'
       - 'project/version.json'
@@ -68,30 +70,6 @@ jobs:
         with:
           gradle-version: '8.13'
           cache-cleanup: on-success
-
-      - name: Restore AuroraFox native build cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            android_plugin/plugin/src/main/cpp/third_party
-            android_plugin/plugin/libs
-            android_plugin/plugin/src/main/assets/voice
-            android_plugin/plugin/.cxx
-            .ci/native-cache
-          key: aurorafox-android-native-v3-${{ runner.os }}-${{ hashFiles('android_plugin/setup_native.ps1', 'android_plugin/plugin/build.gradle.kts', 'android_plugin/plugin/src/main/cpp/CMakeLists.txt', '.github/workflows/android-apk-artifact.yml') }}
-          restore-keys: |
-            aurorafox-android-native-v3-${{ runner.os }}-
-
-      - name: Restore Godot 4.7.1 cache
-        uses: actions/cache@v4
-        with:
-          path: |
-            .ci/godot
-            .ci/godot.zip
-            .ci/templates
-            .ci/templates.tpz
-            ~/.local/share/godot/export_templates/4.7.1.stable
-          key: aurorafox-godot-4.7.1-${{ runner.os }}
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
