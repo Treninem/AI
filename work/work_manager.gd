@@ -314,17 +314,7 @@ func _tool_retry_safety(tool_name: String) -> String:
 	return "safe" if tool_name in SAFE_TOOL_NAMES else "unsafe"
 
 func _master_enabled() -> bool:
-	var main := get_parent()
-	if main == null:
-		return false
-	var settings_manager = main.get_node_or_null("AutonomySettingsManager")
-	if settings_manager == null:
-		return true
-	if settings_manager.has_method("get_settings"):
-		var settings = settings_manager.call("get_settings")
-		if settings is Dictionary:
-			return bool(settings.get("master_enabled", true))
-	return true
+	return ComputerClient.master_enabled_from(self)
 
 func _new_execution_id(task_id: String) -> String:
 	return "%s:%d:%d" % [task_id, int(Time.get_unix_time_from_system() * 1000.0), Time.get_ticks_usec()]
