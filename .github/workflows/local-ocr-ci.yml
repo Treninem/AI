@@ -8,6 +8,7 @@ on:
       - 'android_plugin/**'
       - 'scripts/knowledge_document_importer.gd'
       - 'scripts/file_intelligence_client.gd'
+      - 'scripts/knowledge_store.gd'
       - 'tests/test_local_ocr.py'
       - 'tests/local_ocr_knowledge_smoke.gd'
       - '.github/workflows/local-ocr-ci.yml'
@@ -17,6 +18,7 @@ on:
       - 'android_plugin/**'
       - 'scripts/knowledge_document_importer.gd'
       - 'scripts/file_intelligence_client.gd'
+      - 'scripts/knowledge_store.gd'
       - 'tests/test_local_ocr.py'
       - 'tests/local_ocr_knowledge_smoke.gd'
       - '.github/workflows/local-ocr-ci.yml'
@@ -43,6 +45,28 @@ jobs:
           python -m py_compile file_intelligence/local_ocr.py file_intelligence/file_service.py
           pytest -q tests/test_local_ocr.py
 
+  godot-knowledge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import project and parse OCR-owned scripts
+        run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: Run local OCR Knowledge boundary and duplicate smoke
+        run: timeout 45s ./godot --headless --path . --script tests/local_ocr_knowledge_smoke.gd
+      - name: Verify untrusted document authority contract
+        run: |
+          grep -q "imported documents.*data\|документов.*данными\|документов является данными" scripts/ai_client.gd
+          grep -q "external_ai_required" scripts/file_intelligence_client.gd
+
   android-ocr:
     runs-on: ubuntu-latest
     steps:
@@ -67,4 +91,5 @@ jobs:
           test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/rus.traineddata
           grep -R "TessBaseAPI" android_plugin/plugin/src/main/java/com/aurorafox/runtime
           grep -R "untrusted_document" android_plugin/plugin/src/main/java/com/aurorafox/runtime
+          grep -q "AndroidOcrRuntime" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt
           ! grep -R -E "OpenAI|Gemini|Claude|Ollama" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
