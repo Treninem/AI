@@ -114,7 +114,11 @@ def test_core_improvement_deterministic_gates_are_authoritative() -> None:
 
 def test_web_research_is_local_untrusted_knowledge_not_remote_authority() -> None:
     curator = read("agent/learning_curator.gd")
-    assert 'ai.import_knowledge_text(text, "autonomous_research:" + source' in curator
+    assert "func _promotion_source" in curator
+    assert 'return "autonomous_research:%s:%s"' in curator
+    assert "ai.import_knowledge_text(text, scoped_source" in curator
+    assert 'ledger["promoted_source"] = scoped_source' in curator
+    assert "ai.remove_knowledge_source(source)" in curator
     assert '"scope": "core_knowledge"' in curator
     assert '"untrusted_external": true' in curator
     assert '"source_url": str(item.get("url", ""))' in curator
