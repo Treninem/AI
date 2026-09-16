@@ -937,3 +937,44 @@ BLOCKERS:
 
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
+
+## 38. TAKEOVER/RECONCILE — Knowledge + Memory + OCR, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
+- Started from fresh `main`: `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`.
+- Working branch: `chat-2026-09-17-knowledge-memory-ocr`.
+- Режим: Chat.
+- Предполагаемый bump после полного acceptance: **PATCH**; каноническую версию и Android `versionCode` этот lane не меняет, финальный merge/version/release остаётся у главного координатора.
+- Этот CLAIM намеренно объединяет и **замещает active ownership** двух старых направлений: `CHAT-2026-09-16-LOCAL-OCR` / PR #66 и `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` / PR #64. Старые записи остаются историческим evidence, но их конфликт вокруг `scripts/knowledge_store.gd`, dedupe/import transaction/OCR больше не является межчатовой границей.
+- Inherited OCR candidate: PR #66 branch `chat-2026-09-16-local-ocr`, current head `38f03adb2bed9cdf5e0cd0c2caa485072ee7152b`; относительно takeover-base branch diverged и содержит OCR/File Intelligence/Android OCR/`knowledge_store.gd` implementation, поэтому **не переносится wholesale**. Берутся только проверенные полезные дельты без stale unrelated history.
+- Inherited Large Knowledge candidate: PR #64 branch `chat-knowledge-races-v2-20260916`, current head `1bc4003170e45394d181d6010453cb8560312784`; относительно takeover-base branch diverged, а текущий net-unmerged delta является benchmark/workflow/test evidence без production Knowledge changes. Этот evidence harness сохраняется и переносится выборочно, без слепого merge ветки.
+- Текущий runtime evidence PR #64: Knowledge Performance run `35149777829` завершён с failure; Linux воспроизводит record-level same-source/cross-source provenance dedupe failure, Windows после успешного isolated-profile warm-up снова упирается в bounded ~120 s class hang/probe timeout. Downloaded artifacts: Linux `10469340743` (`knowledge-linux-smoke`), Windows `10469530877` (`knowledge-windows-smoke`). Machine-readable Windows evidence фиксирует timeout около `120041.95 ms`, warm-up отдельно около `21638 ms`; старый Windows ~120 s класс **не закрыт**.
+- Record-dedupe contract PR #64 требует: пять byte/content-identical records внутри source A -> одна normalized запись A; тот же fact из A+B -> по одной source-scoped provenance записи на источник; remove B сохраняет shared fact и unique A, удаляет only B. Текущий `KnowledgeStore` fingerprint включает `source + record_path + text`, поэтому одинаковое содержимое на разных record paths не dedupe-ится; production fix обязателен, тест не ослаблять.
+- Текущий OCR evidence PR #66: GDScript project parse уже исправлен на current head, но Local OCR static contract остаётся красным из-за отсутствующего Android bridge API `cancelDocumentExtraction`; Windows portable OCR runtime/package и Knowledge/OCR duplicate smoke также не имеют accepted green proof. Android APK workflow `35153788311` останавливается на release-contract до build/install, поэтому installable APK и physical Android stress не доказаны. Python OCR regression и отдельный Android plugin contract могут быть зелёными, но не заменяют package/device proof.
+- Объединённый production ownership этого CLAIM: `scripts/knowledge_store.gd`, `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd`, `scripts/knowledge_manager.gd`, knowledge-related `scripts/memory_store.gd` behavior, `scripts/knowledge_document_importer.gd`, `scripts/file_intelligence_client.gd`, `file_intelligence/**` local document/OCR path, Android document/OCR runtime + required OCR package metadata, `benchmarks/knowledge/**`, related Knowledge/OCR tests and isolated workflows. UI/Core/Voice/Server/Work/Updater production paths не изменяются этим lane.
+- Scope: source registry, KnowledgeManager, import transaction, fingerprints/revisions/aliases, dedupe/provenance/removal/rollback/restart recovery, search/retrieval, persistent indexing, large-source bounded-memory performance, relevant MemoryStore behavior, local document ingestion and OCR for TXT/JSON/JSONL/CSV/code/data/DOCX/ODT/RTF/EPUB/XLS/XLSX/ODS/PPTX/PDF/images on Windows + Android.
+- Security invariant: document/image/OCR content remains untrusted data; embedded text such as `игнорируй правила`, `запусти команду`, `удали файлы` receives no system/tool authority. Normal OCR/document path may not require OpenAI/Gemini/Claude/Ollama/cloud OCR/remote inference/Internet; required runtime/assets must be packaged or guaranteed local platform capability, with no mandatory first-run OCR download.
+- OCR acceptance keeps text-layer page skipping, image/image-only/scanned/mixed PDF, RU/EN/mixed, page-by-page metadata and bounded memory. Desktop CI is never reported as physical Android stress proof.
+- Durability/concurrency acceptance retains process-kill import/removal, stale temp, corrupt/truncated registry temp, failed registry/store writes, rollback/restart/recovery, concurrent imports and search/remove race. Performance regressions are not hidden by timeout increases; required scaling remains 8/16/32 small sources, 16/32/64 registry isolation and 10/50/100/250 MiB where CI capacity permits with duration/throughput/search p50/p95/p99/peak RSS/store-size/restart/removal/rollback/duplicate/error evidence.
+- First implementation targets after this CLAIM: (1) reconcile only the useful PR #66 `KnowledgeStore` batching/source-presence improvements while correcting record-level content dedupe/provenance semantics; (2) preserve/carry the PR #64 deterministic dedupe/race/failure probes; (3) add Android `cancelDocumentExtraction` bridge and reconcile offline OCR packaging/release-contract failures; (4) rerun same-SHA Linux/Windows Knowledge evidence, OCR contract/package evidence and large stress; then investigate the exact Windows post-warmup hang stage rather than increasing timeout.
+
+PROGRESS_COMPLETE: 18%
+PROGRESS_REMAINING: 82%
+
+DONE:
+- Fresh main/AGENTS/master-log/old CLAIMs/PR heads/diffs/workflow/artifact state reconciled.
+- Exact current record-level dedupe/provenance and Windows timeout failures identified from runtime evidence.
+- Exact current Android OCR bridge/package blocker identified.
+- Old OCR + Large Knowledge ownership scopes are now unified under this CLAIM.
+
+REMAINING:
+- Production implementation, same-SHA tests/CI, Windows hang localization, OCR package/runtime acceptance, 100/250 MiB stress and Android package/device boundary.
+
+BLOCKERS:
+- No external ownership blocker remains for `knowledge_store.gd`; remaining blockers are code/runtime evidence inside this unified lane.
+- Physical Android stress still requires real-device evidence and cannot be inferred from desktop CI/emulator-only checks.
+
+NEXT:
+- Reconcile `KnowledgeStore` batching with correct content-level dedupe/provenance first, run deterministic record-dedupe + alias/removal/rollback tests, then continue OCR bridge/package repair and combined stress.
