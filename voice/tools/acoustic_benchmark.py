@@ -4,6 +4,7 @@ import json
 import math
 import re
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
@@ -25,15 +26,30 @@ EMOTIONS = json.loads((ROOT / "voice" / "config" / "emotions.json").read_text(en
 OUT = ROOT / "artifacts" / "voice_acoustic"
 OUT.mkdir(parents=True, exist_ok=True)
 
-SAMPLES = [
+BASE_SAMPLES = [
     ("neutral_short", "neutral", 0.45, "Привет. Я Аврора Фокс. Чем я могу помочь тебе сегодня?"),
     ("neutral_numbers", "neutral", 0.45, "Температура 23 градуса. Давление 2,4 бара."),
     ("thinking_long", "thinking", 0.65, "Сейчас проверю данные, сравню несколько вариантов и спокойно объясню, какой результат получился."),
     ("success", "success", 0.70, "Готово! Проверка завершена успешно, ошибок не обнаружено."),
     ("warning", "warning", 0.70, "Внимание. Давление выше заданного значения, лучше проверить линию подачи воздуха."),
 ]
+
+# Coordinator acceptance set: these WAVs are retained as artifacts so the same
+# female voice can be audited in four deliberately different conversational
+# moods without changing the normal local-only TTS architecture.
+PERSONA_SAMPLES = [
+    ("persona_morning", "happy", 0.58, "Доброе утро. Я уже здесь и готова спокойно помочь тебе начать день."),
+    ("persona_night", "sleepy", 0.58, "Доброй ночи. Давай закончим последние дела спокойно, без спешки и лишнего шума."),
+    ("persona_playful", "playful", 0.72, "Ну что, проверим эту идею? Мне уже интересно, какой вариант окажется самым удачным!"),
+    ("persona_serious", "serious", 0.76, "Сейчас важно проверить факты, не торопиться с выводами и подтвердить результат."),
+]
+
+SAMPLES = BASE_SAMPLES + PERSONA_SAMPLES
 FEMALE_SPEAKERS = ("xenia", "baya", "kseniya")
-SPEAKER_SWEEP_TEXTS = tuple(sample[3] for sample in SAMPLES)
+# The five stable baseline phrases are enough to detect a speaker regression;
+# persona phrases are evaluated by the full quality gate below instead of
+# tripling their synthesis cost in the speaker sweep.
+SPEAKER_SWEEP_TEXTS = tuple(sample[3] for sample in BASE_SAMPLES)
 
 
 def normalized(text: str) -> str:
@@ -160,16 +176,33 @@ def main() -> int:
         device=-1,
     )
 
-    report = {"device": device, "samples": []}
+    model_load_started = time.perf_counter()
+    engine._load()
+    model_load_sec = time.perf_counter() - model_load_started
+
+    report = {
+        "device": device,
+        "model_load_sec": model_load_sec,
+        "configured_speaker": str(CONFIG["silero"].get("speaker", "xenia")),
+        "samples": [],
+    }
     failures: list[str] = []
     processed_mos: list[float] = []
     raw_mos: list[float] = []
     similarities: list[float] = []
+    synthesis_times: list[float] = []
+    processing_times: list[float] = []
+    realtime_factors: list[float] = []
 
     for sample_id, emotion, intensity, text in SAMPLES:
         clean = prepare_for_speech(text)
+
+        synth_started = time.perf_counter()
         raw, sr = engine.synthesize(clean, emotion=emotion, intensity=intensity, speed=1.0)
+        synthesis_wall_sec = time.perf_counter() - synth_started
+
         speed, pitch_shift, mech = emotion_values(emotion, intensity)
+        process_started = time.perf_counter()
         final = processor.process(
             raw,
             sr,
@@ -179,6 +212,8 @@ def main() -> int:
             pitch_shift=pitch_shift,
             speed=speed,
         )
+        processor_wall_sec = time.perf_counter() - process_started
+        total_wall_sec = synthesis_wall_sec + processor_wall_sec
 
         raw_path = OUT / f"{sample_id}_raw.wav"
         final_path = OUT / f"{sample_id}_aurora.wav"
@@ -194,10 +229,15 @@ def main() -> int:
         ).get("text", "")).strip()
         similarity = intelligibility_similarity(text, clean, recognized)
         metrics = audio_metrics(final, sr)
+        duration = float(metrics["duration_sec"])
+        real_time_factor = total_wall_sec / max(duration, 1e-6)
 
         raw_mos.append(raw_score)
         processed_mos.append(final_score)
         similarities.append(similarity)
+        synthesis_times.append(synthesis_wall_sec)
+        processing_times.append(processor_wall_sec)
+        realtime_factors.append(real_time_factor)
         row = {
             "id": sample_id,
             "emotion": emotion,
@@ -212,6 +252,10 @@ def main() -> int:
             "speed": speed,
             "pitch_shift": pitch_shift,
             "mechanical": mech,
+            "synthesis_wall_sec": synthesis_wall_sec,
+            "processor_wall_sec": processor_wall_sec,
+            "total_wall_sec": total_wall_sec,
+            "real_time_factor": real_time_factor,
             **metrics,
         }
         report["samples"].append(row)
@@ -250,11 +294,33 @@ def main() -> int:
                 f"{best_mos:.3f} vs {configured_mos:.3f}"
             )
 
+    persona_rows = {
+        row["id"]: {
+            "emotion": row["emotion"],
+            "aurora_utmos": row["aurora_utmos"],
+            "asr_similarity": row["char_similarity"],
+            "duration_sec": row["duration_sec"],
+            "synthesis_wall_sec": row["synthesis_wall_sec"],
+            "processor_wall_sec": row["processor_wall_sec"],
+            "real_time_factor": row["real_time_factor"],
+            "peak": row["peak"],
+            "clipping_ratio": row["clipping_ratio"],
+        }
+        for row in report["samples"]
+        if row["id"].startswith("persona_")
+    }
+
     report["summary"] = {
+        "model_load_sec": model_load_sec,
         "raw_utmos_mean": float(np.mean(raw_mos)),
         "aurora_utmos_mean": float(np.mean(processed_mos)),
         "utmos_delta_mean": float(np.mean(processed_mos) - np.mean(raw_mos)),
         "asr_similarity_mean": float(np.mean(similarities)),
+        "synthesis_wall_sec_mean": float(np.mean(synthesis_times)),
+        "processor_wall_sec_mean": float(np.mean(processing_times)),
+        "real_time_factor_mean": float(np.mean(realtime_factors)),
+        "real_time_factor_max": float(np.max(realtime_factors)),
+        "persona_samples": persona_rows,
         "speaker_sweep": valid_sweep,
         "failures": failures,
     }
@@ -263,7 +329,9 @@ def main() -> int:
     for row in report["samples"]:
         print(
             f"{row['id']}: MOS raw={row['raw_utmos']:.3f} aurora={row['aurora_utmos']:.3f} "
-            f"ASR={row['char_similarity']:.3f} RMS={row['rms_dbfs']:.1f}dBFS peak={row['peak']:.3f}"
+            f"ASR={row['char_similarity']:.3f} RMS={row['rms_dbfs']:.1f}dBFS peak={row['peak']:.3f} "
+            f"synth={row['synthesis_wall_sec']:.3f}s dsp={row['processor_wall_sec']:.3f}s "
+            f"RTF={row['real_time_factor']:.3f}"
         )
     if failures:
         print("QUALITY GATE FAILED")
