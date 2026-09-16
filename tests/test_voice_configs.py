@@ -16,15 +16,19 @@ def test_voice_config_has_required_local_paths():
     assert cfg["backend"] in {"auto", "silero", "xtts"}
     assert cfg["language"] == "ru"
     assert set(cfg["wake"]["words"]) >= {"fox", "фокс", "лиса"}
-    assert 0.0 <= cfg["mechanical_amount"] <= 0.10
+    assert float(cfg["mechanical_amount"]) == 0.0
+    assert 0.0 <= float(cfg["emotionality"]) <= 0.65
     assert cfg["cache_limit_mb"] > 0
     assert float(cfg["speed"]) == 1.0
     assert float(cfg["pitch"]) == 1.0
 
 
-def test_quality_processor_settings_are_safe_and_bounded():
+def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_default():
     processor = load("voice_config.json")["processor"]
-    assert processor["prosody_dsp"] is True
+    assert processor["prosody_dsp"] is False
+    assert processor["compression"] is False
+    assert float(processor["highpass_hz"]) == 0.0
+    assert float(processor["mechanical_max"]) == 0.0
     assert 0.75 <= float(processor["speed_min"]) < 1.0
     assert 1.0 < float(processor["speed_max"]) <= 1.30
     assert 0.85 <= float(processor["pitch_min"]) < 1.0
@@ -36,7 +40,6 @@ def test_quality_processor_settings_are_safe_and_bounded():
     assert 0.0 <= float(processor["max_gain_db"]) <= 12.0
     assert 0.80 <= float(processor["peak_ceiling"]) <= 1.0
     assert 0.0 <= float(processor["fade_ms"]) <= 20.0
-    assert 0.0 <= float(processor["mechanical_max"]) <= 0.10
 
 
 def test_godot_voice_defaults_match_neutral_dsp_and_android_does_not_retime_playback():
@@ -69,7 +72,7 @@ def test_all_required_emotions_exist_and_are_bounded():
     for name, profile in emotions.items():
         assert 0.75 <= float(profile["speed"]) <= 1.20, name
         assert 0.90 <= float(profile["pitch"]) <= 1.12, name
-        assert 0.0 <= float(profile["mechanical"]) <= 0.10, name
+        assert float(profile["mechanical"]) == 0.0, name
         assert 0.0 <= float(profile["paw_glow"]) <= 1.0, name
 
 
