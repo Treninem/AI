@@ -18,6 +18,14 @@
     "model": "v5_5_ru",
     "speaker": "kseniya",
     "sample_rate": 48000,
+    "native_prosody": true,
+    "native_slow_emotions": [
+      "sleepy",
+      "serious"
+    ],
+    "native_slow_min_intensity": 0.30,
+    "native_slow_rate": "slow",
+    "native_slow_pitch": "medium",
     "license": "CC-BY-NC",
     "note": "Optional non-commercial voice model. Use a project-compatible backend for commercial distribution."
   },
