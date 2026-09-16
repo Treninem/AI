@@ -1,7 +1,5 @@
 extends SceneTree
 
-const OWNER_AVATAR_PATH := "res://assets/ui/aurora_avatar_owner.webp"
-const OWNER_BACKGROUND_PATH := "res://assets/ui/aurora_background_owner.webp"
 const MASTER_AVATAR_PATH := "res://assets/ui/aurorafox_avatar_master.png"
 const MASTER_BACKGROUND_PATH := "res://assets/ui/aurorafox_background_master.png"
 
@@ -11,13 +9,6 @@ func _init() -> void:
 func _fail(message: String, code: int) -> void:
 	push_error(message)
 	quit(code)
-
-func _texture_path(node: Node) -> String:
-	if node is TextureRect:
-		var rect := node as TextureRect
-		if rect.texture != null:
-			return rect.texture.resource_path
-	return ""
 
 func _tree_contains_texture(node: Node, suffix: String, visible_only := false) -> bool:
 	if node is TextureRect:
@@ -30,6 +21,12 @@ func _tree_contains_texture(node: Node, suffix: String, visible_only := false) -
 			return true
 	return false
 
+func _background_master_path(rect: TextureRect) -> String:
+	if rect.texture is AtlasTexture:
+		var atlas := rect.texture as AtlasTexture
+		return atlas.atlas.resource_path if atlas.atlas != null else ""
+	return rect.texture.resource_path if rect.texture != null else ""
+
 func _assert_owner_surface(main: Control, mobile := false) -> bool:
 	var avatar := main.find_child("OwnerAvatar", true, false) as TextureRect
 	var background := main.find_child("OwnerBackground", true, false) as TextureRect
@@ -38,36 +35,44 @@ func _assert_owner_surface(main: Control, mobile := false) -> bool:
 	if avatar == null or background == null or brand_row == null:
 		_fail("Owner-approved AuroraFox art is missing from the UI tree", 10)
 		return false
-	if _texture_path(avatar) != OWNER_AVATAR_PATH:
-		_fail("Brand avatar is not using the owner-approved runtime asset", 11)
+	if avatar.texture == null or avatar.texture.resource_path != MASTER_AVATAR_PATH:
+		_fail("Brand avatar is not using the canonical owner master asset", 11)
 		return false
-	if _texture_path(background) != OWNER_BACKGROUND_PATH:
-		_fail("Application background is not using the owner-approved runtime asset", 12)
+	if _background_master_path(background) != MASTER_BACKGROUND_PATH:
+		_fail("Application background is not using the canonical owner master asset", 12)
+		return false
+	if not background.texture is AtlasTexture:
+		_fail("Owner background must use focal AtlasTexture cropping", 13)
+		return false
+	var atlas := background.texture as AtlasTexture
+	var viewport := main.get_viewport().get_visible_rect().size
+	if viewport.x >= viewport.y and atlas.region.position.y <= 0.0:
+		_fail("Wide owner background is not bottom-biased; fox/paws may be cropped", 14)
+		return false
+	if viewport.y > viewport.x and atlas.region.position.x <= 0.0:
+		_fail("Portrait owner background is not right-biased; fox may be cropped", 15)
 		return false
 	if not brand_row.is_ancestor_of(avatar):
-		_fail("Owner avatar must stay in the AuroraFox brand row", 13)
+		_fail("Owner avatar must stay in the AuroraFox brand row", 16)
 		return false
 	if avatar.custom_minimum_size.x < 44.0 or avatar.custom_minimum_size.y < 44.0:
-		_fail("Owner avatar is too small for a clear brand mark", 14)
-		return false
-	if background.stretch_mode != TextureRect.STRETCH_KEEP_ASPECT_COVERED:
-		_fail("Owner background must preserve aspect ratio without distortion", 15)
+		_fail("Owner avatar is too small for a clear brand mark", 17)
 		return false
 	if avatar_slot == null or avatar_slot.visible or avatar_slot.custom_minimum_size.x > 1.0:
-		_fail("Header avatar slot must remain empty to avoid duplicate owner artwork", 16)
+		_fail("Header avatar slot must remain empty to avoid duplicate owner artwork", 18)
 		return false
 	if _tree_contains_texture(main, "fox_logo.svg", true):
-		_fail("Legacy placeholder fox is visible together with owner artwork", 17)
+		_fail("Legacy placeholder fox is visible together with owner artwork", 19)
 		return false
 	if not mobile and not avatar.is_visible_in_tree():
-		_fail("Owner avatar is not visible in the desktop brand surface", 18)
+		_fail("Owner avatar is not visible in the desktop brand surface", 20)
 		return false
 	return true
 
 func _assert_messages_stay_clean(main: Control) -> bool:
 	var store = main.get("chats")
 	if not store is ChatStore:
-		_fail("ChatStore is unavailable for owner-art regression", 20)
+		_fail("ChatStore is unavailable for owner-art regression", 21)
 		return false
 	main.call("_new_chat")
 	await process_frame
@@ -77,13 +82,13 @@ func _assert_messages_stay_clean(main: Control) -> bool:
 	await process_frame
 	var messages := main.find_child("MessageList", true, false)
 	if messages == null:
-		_fail("MessageList is missing", 21)
+		_fail("MessageList is missing", 22)
 		return false
-	if _tree_contains_texture(messages, "aurora_avatar_owner.webp", false):
-		_fail("Owner avatar was duplicated beside an assistant message", 22)
+	if _tree_contains_texture(messages, "aurorafox_avatar_master.png", false):
+		_fail("Owner avatar was duplicated beside an assistant message", 23)
 		return false
 	if _tree_contains_texture(messages, "fox_logo.svg", false):
-		_fail("Legacy placeholder fox remained in a message row", 23)
+		_fail("Legacy placeholder fox remained in a message row", 24)
 		return false
 	return true
 
@@ -102,13 +107,13 @@ func _run_scene(packed: PackedScene, mobile: bool) -> bool:
 	return true
 
 func _run() -> void:
-	for path in [MASTER_AVATAR_PATH, MASTER_BACKGROUND_PATH, OWNER_AVATAR_PATH, OWNER_BACKGROUND_PATH]:
+	for path in [MASTER_AVATAR_PATH, MASTER_BACKGROUND_PATH]:
 		if not FileAccess.file_exists(path):
 			_fail("Required owner artwork is missing: " + path, 2)
 			return
-	if load(OWNER_AVATAR_PATH) == null or load(OWNER_BACKGROUND_PATH) == null:
-		_fail("Optimized owner artwork cannot be loaded by Godot", 3)
-		return
+		if load(path) == null:
+			_fail("Canonical owner artwork cannot be loaded by Godot: " + path, 3)
+			return
 	var packed := load("res://main.tscn") as PackedScene
 	if packed == null:
 		_fail("main.tscn could not be loaded", 4)
