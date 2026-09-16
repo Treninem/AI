@@ -22,6 +22,8 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/test_api_privacy_contract.py",
         "tests/test_api_request_limits.py",
         "tests/test_api_server_hardening.py",
+        "tests/test_api_account_web.py",
+        "tests/test_api_public_auth_limits.py",
         "tests/test_release_core_gates.py",
         "tests/test_android_contract.py",
         "tests/test_voice_text.py",
@@ -200,6 +202,21 @@ def test_api_server_hardening_is_owner_routable_and_same_sha_covered() -> None:
     assert "test_server_rejects_oversized_json_before_route_validation" in hardening
 
 
+def test_public_account_links_and_auth_limits_are_same_sha_covered() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+    account_web = read("tests/test_api_account_web.py")
+    auth_limits = read("tests/test_api_public_auth_limits.py")
+
+    assert "API public account web contract" in workflow
+    assert "API public authentication rate limit contract" in workflow
+    assert "tests/test_api_account_web.py" in workflow
+    assert "tests/test_api_public_auth_limits.py" in workflow
+    assert "test_email_verification_link_consumes_one_time_token" in account_web
+    assert "test_password_reset_link_renders_form_and_resets_password" in account_web
+    assert "test_public_auth_path_is_limited_per_client_and_endpoint" in auth_limits
+    assert "test_forwarded_for_is_trusted_only_from_loopback_proxy" in auth_limits
+
+
 def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
@@ -216,6 +233,8 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
         "API runtime resilience contract",
         "API early request body limit contract",
         "API server hardening contract",
+        "API public account web contract",
+        "API public authentication rate limit contract",
         "Master-log coordination contract",
     ):
         assert step_name in workflow
