@@ -7,6 +7,7 @@ on:
       - 'agent/research_collector.gd'
       - 'agent/learning_curator.gd'
       - 'tests/research_evidence_lifecycle_smoke.gd'
+      - 'tests/research_collector_privacy_smoke.gd'
       - 'tests/test_research_evidence_lifecycle_contract.py'
       - 'tests/test_research_collector_privacy_contract.py'
       - 'tests/autonomy_learning_smoke.gd'
@@ -18,6 +19,7 @@ on:
       - 'agent/research_collector.gd'
       - 'agent/learning_curator.gd'
       - 'tests/research_evidence_lifecycle_smoke.gd'
+      - 'tests/research_collector_privacy_smoke.gd'
       - 'tests/test_research_evidence_lifecycle_contract.py'
       - 'tests/test_research_collector_privacy_contract.py'
       - 'tests/autonomy_learning_smoke.gd'
@@ -63,3 +65,5 @@ jobs:
         run: timeout 45s ./godot --headless --path . --script tests/autonomy_learning_smoke.gd
       - name: Run evidence lifecycle invalidation smoke
         run: timeout 45s ./godot --headless --path . --script tests/research_evidence_lifecycle_smoke.gd
+      - name: Run external-only collector privacy smoke
+        run: timeout 45s ./godot --headless --path . --script tests/research_collector_privacy_smoke.gd
