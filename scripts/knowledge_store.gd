@@ -48,7 +48,9 @@ func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 	var extracted := document_importer.extract(path)
 	if not bool(extracted.get("ok", false)):
 		return extracted
-	remove_source(path)
+	var removed := remove_source(path)
+	if not bool(removed.get("ok", false)):
+		return removed
 	var meta := metadata.duplicate(true)
 	meta["format"] = ext
 	meta["original_file"] = path
@@ -61,7 +63,9 @@ func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 func import_extracted_file(path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
 	if text.strip_edges().is_empty():
 		return {"ok": false, "error": "Из документа не извлечён текст", "path": path}
-	remove_source(path)
+	var removed := remove_source(path)
+	if not bool(removed.get("ok", false)):
+		return removed
 	var meta := metadata.duplicate(true)
 	meta["format"] = path.get_extension().to_lower()
 	meta["original_file"] = path
@@ -484,22 +488,23 @@ func _source_may_exist(source: String) -> bool:
 	var signature := _data_signature()
 	if not _source_presence_cache_valid or signature != _source_presence_signature:
 		_rebuild_source_presence_cache()
+	if not _source_presence_cache_valid:
+		return true
 	return bool(_source_presence_cache.get(source, false))
 
 func _rebuild_source_presence_cache() -> void:
 	_source_presence_cache.clear()
-	_scan_source_presence(DB_PATH)
-	_scan_source_presence(STRUCTURED_PATH)
+	var db_ok := _scan_source_presence(DB_PATH)
+	var structured_ok := _scan_source_presence(STRUCTURED_PATH)
 	_source_presence_signature = _data_signature()
-	_source_presence_cache_valid = true
+	_source_presence_cache_valid = db_ok and structured_ok
 
-func _scan_source_presence(path: String) -> void:
+func _scan_source_presence(path: String) -> bool:
 	if not FileAccess.file_exists(path):
-		return
+		return true
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		_source_presence_cache_valid = false
-		return
+		return false
 	while not file.eof_reached():
 		var line := file.get_line().strip_edges()
 		if line.is_empty():
@@ -510,6 +515,7 @@ func _scan_source_presence(path: String) -> void:
 			if not source.is_empty():
 				_source_presence_cache[source] = true
 	file.close()
+	return true
 
 func _remember_sources(sources: Dictionary) -> void:
 	if not _source_presence_cache_valid:
