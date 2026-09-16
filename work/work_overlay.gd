@@ -86,8 +86,10 @@ func _build_ui() -> void:
 	root.add_child(body)
 
 	var left_scroll := ScrollContainer.new()
+	left_scroll.name = "WorkProjectScroll"
 	left_scroll.custom_minimum_size.x = 280
 	left_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	left_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	body.add_child(left_scroll)
 	var left := VBoxContainer.new()
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -122,15 +124,21 @@ func _build_ui() -> void:
 	add_files.pressed.connect(func(): file_dialog.popup_centered_ratio(0.75))
 	left.add_child(add_files)
 
+	var right_scroll := ScrollContainer.new()
+	right_scroll.name = "WorkTaskScroll"
+	right_scroll.custom_minimum_size.x = 360
+	right_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	right_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(right_scroll)
 	var right := VBoxContainer.new()
-	right.custom_minimum_size.x = 360
+	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right.add_theme_constant_override("separation", 9)
-	body.add_child(right)
+	right_scroll.add_child(right)
 	_add_label(right, "Длинная задача", 18)
 	prompt_edit = TextEdit.new()
 	prompt_edit.placeholder_text = "Опиши конечный результат. AuroraFox будет работать через AgentCore, память, инструменты и файлы проекта."
 	prompt_edit.custom_minimum_size.y = 160
-	prompt_edit.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	prompt_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	right.add_child(prompt_edit)
 	output_edit = LineEdit.new()
@@ -162,7 +170,6 @@ func _build_ui() -> void:
 	result_edit = TextEdit.new()
 	result_edit.editable = false
 	result_edit.custom_minimum_size.y = 170
-	result_edit.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	result_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	right.add_child(result_edit)
 
