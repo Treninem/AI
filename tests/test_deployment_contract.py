@@ -141,6 +141,28 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert f"{canonical_backup_root}/latest.sha256" in updater
     assert "/srv/aurorafox-sftp/" not in updater
 
+    # The sanitized owner backup cannot be the exact production rollback source:
+    # the full DB snapshot stays root-only, is made before candidate checkout,
+    # and rollback restores it together with the previous updater/code revision.
+    rollback_root = "/var/lib/aurorafox-rollback"
+    assert f"readonly rollback_dir='{rollback_root}'" in updater
+    assert 'readonly rollback_database="${rollback_dir}/preupdate.sqlite3"' in updater
+    assert '--snapshot-to "${rollback_database}"' in updater
+    assert 'install -d -o root -g root -m 0700 "${rollback_dir}"' in updater
+    assert 'chmod 0600 "${rollback_database}"' in updater
+    assert updater.index('--snapshot-to "${rollback_database}"') < updater.index('git checkout --detach "${candidate}"')
+    assert "systemctl stop aurorafox-api.service" in updater
+    assert 'install -o aurorafox -g aurorafox -m 0600 "${rollback_database}" "${database_path}"' in updater
+    assert 'rm -f "${database_path}-wal" "${database_path}-shm"' in updater
+    assert rollback_root not in canonical_backup_root
+
+    # /usr/local/sbin is the timer/service entry point. Candidate updater fixes
+    # must reach it on success, while rollback reinstalls the previous revision.
+    assert "readonly installed_updater='/usr/local/sbin/aurorafox-update'" in updater
+    updater_install = 'install -m 0755 deploy/reg_ru/update.sh "${installed_updater}"'
+    assert updater.count(updater_install) >= 2
+    assert updater.index(updater_install) > updater.index('git checkout --detach "${candidate}"')
+
 
 def test_api_provider_independence_is_packaged_and_deployed():
     build = read("build/build_windows.ps1")
