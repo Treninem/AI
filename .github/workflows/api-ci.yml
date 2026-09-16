@@ -60,6 +60,10 @@ on:
       - '.github/workflows/api-ci.yml'
   workflow_dispatch:
 
+concurrency:
+  group: aurorafox-api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
