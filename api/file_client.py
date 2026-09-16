@@ -5,6 +5,7 @@ import hashlib
 import os
 import re
 import time
+import uuid
 from pathlib import Path
 from typing import Any
 
@@ -66,8 +67,9 @@ class FileIntelligenceClient:
                 f"Decoded file exceeds AuroraFox API limit of {self.max_file_bytes} bytes"
             )
         digest = hashlib.sha256(raw).hexdigest()[:16]
+        request_id = uuid.uuid4().hex[:16]
         safe = self._safe_name(filename)
-        target = self.root / f"{digest}_{safe}"
+        target = self.root / f"{digest}_{request_id}_{safe}"
         target.write_bytes(raw)
         return target
 
