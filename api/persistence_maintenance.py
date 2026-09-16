@@ -164,6 +164,7 @@ class PersistenceMaintenance:
                 "conversation_data_auto_pruned": False,
                 "ephemeral_auth_rows_prunable": True,
                 "refresh_replay_sentinel_kept_until_expiry": True,
+                "session_kept_while_refresh_sentinel_unexpired": True,
             },
         }
 
@@ -185,12 +186,16 @@ class PersistenceMaintenance:
                 "OR (revoked_at IS NOT NULL AND revoked_at < ? AND expires_at < ?)",
                 (cutoff, cutoff, now),
             )
+            # auth_sessions is the FK parent of refresh_tokens. Deleting a stale
+            # session would cascade-delete an unexpired consumed/revoked refresh
+            # row and destroy replay evidence. Keep the parent until *all* refresh
+            # rows for it have expired, regardless of consumed/revoked state.
             session_cursor = connection.execute(
                 "DELETE FROM auth_sessions WHERE "
                 "((revoked_at IS NOT NULL AND revoked_at < ?) OR access_expires_at < ?) "
                 "AND NOT EXISTS ("
                 "SELECT 1 FROM refresh_tokens r WHERE r.session_id=auth_sessions.id "
-                "AND r.expires_at>=? AND r.revoked_at IS NULL AND r.consumed_at IS NULL"
+                "AND r.expires_at>=?"
                 ")",
                 (cutoff, cutoff, now),
             )
