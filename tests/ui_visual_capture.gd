@@ -223,8 +223,10 @@ func _open_knowledge_by_click(settings: AuroraSettingsOverlay) -> KnowledgeBaseO
 	return knowledge
 
 func _close_knowledge_by_click(knowledge: KnowledgeBaseOverlay) -> bool:
-	var close := _button_by_text(knowledge.popup, "Закрыть")
-	return await _press(close, "База знаний → Закрыть")
+	var close := _button_by_name(knowledge.popup, "KnowledgeCloseButton")
+	if close == null:
+		close = _button_by_text(knowledge.popup, "Готово")
+	return await _press(close, "База знаний → Готово")
 
 func _close_settings_by_click(settings: AuroraSettingsOverlay) -> bool:
 	var done := _button_by_name(settings.popup, "SettingsDoneButton")
