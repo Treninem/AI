@@ -24,6 +24,13 @@ SCALING_SCHEMAS = {
     "aurorafox_knowledge_registry_scaling_v1",
 }
 SELF_RELIANCE_KEYS = ("network_required", "external_runtime_required", "ollama_required")
+FORBIDDEN_TRUE_KEYS = {
+    "network_required",
+    "external_runtime_required",
+    "ollama_required",
+    "external_ai_required",
+    "remote_inference",
+}
 BLOCKER_FIELDS = (
     "suspected_quadratic",
     "suspected_quadratic_write",
@@ -57,6 +64,20 @@ def _float(value: Any, *, field: str, errors: list[str]) -> float:
     except (TypeError, ValueError):
         errors.append(f"malformed numeric field: {field}")
         return 0.0
+
+
+def _collect_forbidden_true(value: Any, path: str = "$") -> list[str]:
+    violations: list[str] = []
+    if isinstance(value, dict):
+        for key, child in value.items():
+            child_path = f"{path}.{key}"
+            if key in FORBIDDEN_TRUE_KEYS and child is True:
+                violations.append(child_path)
+            violations.extend(_collect_forbidden_true(child, child_path))
+    elif isinstance(value, list):
+        for index, child in enumerate(value):
+            violations.extend(_collect_forbidden_true(child, f"{path}[{index}]"))
+    return violations
 
 
 def _valid_scaling_pairs(schema: str, pairs: Any, errors: list[str]) -> int:
@@ -116,6 +137,12 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
             elif self_reliance.get(key) is not False:
                 errors.append(f"self-reliance regression: {key}=true")
 
+    # The aggregate contract is not allowed to contradict child/runtime evidence.
+    # Imported/benchmark result objects are untrusted evidence until verified.
+    true_requirement_paths = _collect_forbidden_true(report)
+    if true_requirement_paths:
+        errors.append("nested self-reliance regression: " + ",".join(true_requirement_paths))
+
     relative = report.get("relative_performance")
     blocker_fields: list[str] = []
     if not isinstance(relative, dict):
@@ -169,6 +196,7 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
         "correctness_passed": not errors,
         "performance_blockers": blocker_fields,
         "max_search_p95_ms": max_search_p95,
+        "self_reliance_true_requirement_paths": true_requirement_paths,
         "errors": errors,
         "warnings": warnings,
     }
@@ -201,7 +229,7 @@ def main() -> int:
         "load_errors": load_errors,
         "blockers": blockers,
         "reports": evaluations,
-        "rule": "missing/malformed evidence fails closed; scaling reports require complete N->2N->4N evidence; absolute hosted-runner timings are informational; reproducible near-4x scaling is blocking",
+        "rule": "missing/malformed evidence fails closed; nested runtime self-reliance must agree with aggregate contract; scaling reports require complete N->2N->4N evidence; absolute hosted-runner timings are informational; reproducible near-4x scaling is blocking",
     }
     if args.output:
         output = Path(args.output)
