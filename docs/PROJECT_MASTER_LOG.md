@@ -741,7 +741,7 @@ NEXT:
 - Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
 - Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
 - Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1–F5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
-- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially регресes intelligibility, clipping, latency/memory/package limits or local-only operation.
+- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, и reject the candidate if it materially регресes intelligibility, clipping, latency/memory/package limits or local-only operation.
 
 ## 34. Integration Gate — release-train delta and routed status, 2026-09-16
 
@@ -937,3 +937,42 @@ BLOCKERS:
 
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
+
+## 38. Work / Computer / Autonomy — takeover and reconcile, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY`
+
+- Статус: **TAKEOVER/RECONCILE — ACTIVE**.
+- Started from exact `main`: `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`.
+- Режим: Chat.
+- Предполагаемый bump после зелёных acceptance-gates: **PATCH** для совокупного Work/Computer reliability пакета; уже смерженный PR #72 остаётся BUILD-level durability baseline. Каноническая версия и Android `versionCode` этим CLAIM не меняются; final bump/merge/release принадлежат главному координатору.
+- Наследуется из `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / draft PR #40: branch `chat-work-computer-reliability-20260916`, exact head `f4ad58377752020823900fea107914af49021349`. Полезный verified scope: deterministic Work lifecycle/store/recovery, atomic persistence, safe/unsafe retry and uncertain-result policy, local bounded Computer primitives, auth/idempotency, default-OFF Computer permission, master-stop, sandbox/snapshot/rollback boundaries, deliberate `ComputerClient.plan()/run() -> local_core_planning_required`, and regression tests/workflow. Старые несвязанные workflow-diffs из PR #40 не переносятся вслепую: кандидат имеет 22 changed files и старую base `5bca4a1353ff66731073515533414ab1d0369e15`, поэтому reconcile выполняется только по current-main relevant deltas.
+- PR #40 exact-head evidence: Work Computer Reliability `35147796178` SUCCESS; Work Mode `35147796111` SUCCESS; Windows Package `35147796213` SUCCESS; Android APK `35147795977` SUCCESS; Agent Sync `35147796112` SUCCESS; Core/Voice `35147796205` SUCCESS. Integration `35147796307` FAILURE не считается Work/Computer failure: его Work/API safety smoke и headless UI regression были green, а recorded failures находились в Branding/API-server/Deployment/Knowledge checks других ownership lanes.
+- Наследуется из autonomy durability PR #72: branch `chat-autonomy-state-durability-20260916`, head `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa`, merge commit/current main `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`. Baseline включает schema-tagged autonomy state, temp + backup atomic replace, repair on startup, fail-closed `_state_recovery_blocked`, legacy schema compatibility and durability smoke. Exact-head Agent Sync `35150755820` SUCCESS (Autonomous coordinator smoke green), Core/Voice `35150755870` SUCCESS, Windows Package `35150755901` SUCCESS, Android APK `35150755919` SUCCESS. Windows artifact `10469683226`, digest `sha256:965ecd3670ca26bfc2ea478c1135deeda01c13ae87c3166ca90350ca26d05eaf`; Android artifact `10469586976`, digest `sha256:fa9c968aa8b54e2ad7e8770f8a6c25b60e5d8231b1d0863441fc15fb17431ca4`.
+- Собственные production paths после reconcile: `work/work_manager.gd`, `work/work_store.gd`, `computer/computer_service.py`, `computer/install_computer.ps1`, `computer/requirements.txt`, `scripts/computer_client.gd`, `agent/autonomous_coordinator.gd`; relevant Work/Computer/Autonomy tests and `.github/workflows/work-computer-reliability.yml`; этот master log. `scripts/agent_core.gd`, `scripts/tool_registry.gd`, `scripts/sandbox_manager.gd` изменять только после runtime-воспроизведения дефекта, проверки свежего master log и отдельной ownership-extension записи.
+- UI-owned paths НЕ изменять: `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd`, `work/work_overlay.gd` и другие UI files. UI contract findings маршрутизировать в `CHAT-2026-09-17-UI-VISUAL` форматом FROM/TO/TYPE/EVIDENCE/ACTION; section 37 canonical consolidated UI lane name остаётся `CHAT-2026-09-17-UI-VISUAL-UX`.
+- Архитектурный инвариант: high-level goal authority только bundled AuroraFox Core / AgentCore -> ToolRegistry -> bounded Computer primitives. `computer_service.py` не planner; `/plan` и `/run` не возвращаются как service-side planner; Ollama/OpenAI/Gemini/Claude/remote AI не являются обязательным Computer runtime. Computer permission default OFF, explicit user enable, master stop имеет высший приоритет, restart/recovery не обходят permission state, destructive side effect после uncertain result не replay-ится вслепую.
+- Acceptance matrix: Work create/save/load/execute/progress/complete/pause/resume/cancel/retry/failed/interrupted/partial/migration/recovery/concurrency/corruption; exact atomic-store cases clean save/temp/backup/stale temp+backup/interrupted write/corrupt primary+backup/both corrupt/duplicate IDs/invalid transition/pause-resume restart/safe-vs-unsafe retry; Computer unavailable/timeout/malformed/empty/permission/screenshot/platform/worker crash/idempotency/concurrency/cancel/uncertain destructive replay/path traversal/symlink/command injection/malicious filename/untrusted document-web authority/privacy; autonomy canonical/temp/backup/stale backup/interrupted replace/corrupt target/valid backup/unrecoverable both-corrupt/fail-closed boot/legacy schema/existing developer-state preservation/cooldown+event+report persistence and duplicate-action prevention. Static diff не считается acceptance.
+- Windows: Computer primitives должны иметь реальный supported-scope runtime evidence. Android: Work обязателен; desktop-only Computer должен возвращать ясный unsupported/capability contract и не ломать chat/Work/Core.
+
+PROGRESS_COMPLETE: 34%
+PROGRESS_REMAINING: 66%
+
+DONE:
+- Полностью прочитаны `AGENTS.md` и canonical master log на fresh main `5479a05...`; подтверждена section 37 ownership topology.
+- Фактически проверены PR #40 и PR #72 metadata, exact heads, changed-file scope, exact-head workflow outcomes; PR #72 подтверждён как merged current-main baseline.
+- Verified green evidence PR #40 и merged durability PR #72 сохранено; unrelated Integration failures не ошибочно приписаны этому lane.
+- Создана fresh branch `chat-work-computer-autonomy-20260917` от exact current main; implementation до этой CLAIM-записи не изменялся.
+
+REMAINING:
+- Reconcile только Work/Computer-owned useful deltas PR #40 onto fresh main, без stale unrelated workflow changes и без UI files.
+- Расширить runtime failure-injection для полного WorkStore и autonomy corruption/atomic-recovery matrix, включая both-corrupt/fail-closed и byte-preservation existing developer state.
+- Повторить Computer service runtime matrix, destructive uncertainty/idempotency/cancellation/concurrency, Windows supported scope и Android Work/unsupported Computer capability.
+- Получить exact-head same-SHA CI/artifacts после reconcile; затем обновить этот journal конкретными commit/run/job/artifact evidence.
+
+BLOCKERS:
+- Same-SHA UI-visible Work/Computer acceptance зависит от UI-owned overlay reconcile и не может исправляться этим lane; static UI candidate из section 35 ещё не является final runtime acceptance.
+- Physical Windows multi-monitor/DPI и physical Android могут остаться отдельной device-evidence boundary, если hardware недоступен; CI/package evidence не будет выдаваться за physical-device proof.
+
+NEXT:
+- Сравнить PR #40 с `5479a05...` по каждому Work/Computer-owned файлу, исключить stale workflow/server/UI deltas, перенести минимальный verified набор на эту branch; затем сначала запустить/получить targeted runtime gates и только после воспроизводимого дефекта менять production semantics.
