@@ -25,6 +25,12 @@ func health() -> Dictionary:
 		if not caps is Dictionary:
 			return {"ok": false, "error": "Invalid Android runtime capabilities"}
 		var file_ready := bool(caps.get("file_intelligence", false))
+		var ocr_ready := bool(caps.get("local_ocr", false))
+		var warnings: Array[String] = []
+		if not file_ready:
+			warnings.append("Android File Intelligence runtime is unavailable.")
+		elif not ocr_ready:
+			warnings.append("Android local OCR models/runtime are unavailable; non-OCR file parsing remains available.")
 		return {
 			"ok": file_ready,
 			"backend": "AuroraFileIntelligence",
@@ -33,10 +39,11 @@ func health() -> Dictionary:
 			"vision_model": "",
 			"voice_online": bool(caps.get("sherpa_stt", false)),
 			"local_tts": bool(caps.get("local_tts", false)),
-			"local_ocr": file_ready,
+			"local_ocr": ocr_ready,
+			"ocr": caps.get("local_ocr_health", {}),
 			"external_ai_required": false,
 			"capabilities": caps,
-			"warnings": [] if file_ready else ["Android File Intelligence runtime is unavailable."]
+			"warnings": warnings
 		}
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "File Intelligence is not available on this platform", "platform": OS.get_name()}
