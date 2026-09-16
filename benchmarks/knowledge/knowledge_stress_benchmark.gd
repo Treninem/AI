@@ -199,14 +199,15 @@ func _scenario_source_lifecycle(target_mb: int) -> Dictionary:
 	var a_ok := _contains_source(store.search(markers[0], 5), paths[0])
 	var b_gone := store.search(markers[1], 5).is_empty()
 	var c_ok := _contains_source(store.search(markers[2], 5), paths[2])
+	var orphan_registry := not KnowledgeSourceRegistryScript.new().record_for_source(paths[1]).is_empty()
 	return {
-		"ok": bool(removed.get("ok", false)) and a_ok and b_gone and c_ok,
+		"ok": bool(removed.get("ok", false)) and a_ok and b_gone and c_ok and not orphan_registry,
 		"removal_duration_ms": removal_ms,
 		"removed": removed,
 		"source_a_preserved": a_ok,
 		"source_b_removed": b_gone,
 		"source_c_preserved": c_ok,
-		"orphan_registry": not KnowledgeSourceRegistryScript.new().record_for_source(paths[1]).is_empty(),
+		"orphan_registry": orphan_registry,
 		"store": manager.stats()
 	}
 
