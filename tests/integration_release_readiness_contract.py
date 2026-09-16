@@ -20,6 +20,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/test_research_collector_privacy_contract.py",
         "tests/test_api_accounts_sync.py",
         "tests/test_api_privacy_contract.py",
+        "tests/test_api_request_limits.py",
         "tests/test_release_core_gates.py",
         "tests/test_android_contract.py",
         "tests/test_voice_text.py",
@@ -163,6 +164,17 @@ def test_work_persistence_and_self_reliance_are_same_sha_covered() -> None:
     assert "tests/offline_autonomy_smoke.gd" in work_ci
 
 
+def test_api_request_body_limit_is_owner_routable_and_same_sha_covered() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+    request_limit_tests = read("tests/test_api_request_limits.py")
+
+    assert "API early request body limit contract" in workflow
+    assert "tests/test_api_request_limits.py" in workflow
+    assert "test_content_length_over_limit_is_rejected_before_downstream" in request_limit_tests
+    assert "test_chunked_body_is_counted_and_rejected_without_content_length" in request_limit_tests
+    assert "test_body_within_limit_reaches_downstream_unchanged" in request_limit_tests
+
+
 def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
@@ -177,6 +189,7 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
         "Candidate promotion workflow trust-boundary contract",
         "Updater repair and signed-floor compatibility contract",
         "API runtime resilience contract",
+        "API early request body limit contract",
         "Master-log coordination contract",
     ):
         assert step_name in workflow
