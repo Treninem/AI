@@ -71,6 +71,7 @@ func execute_task(project_id: String, task_id: String) -> Dictionary:
 		"cancel_requested": false,
 		"pause_requested": false,
 		"unsafe_action_inflight": false,
+		"unsafe_action_uncertain": false,
 	}
 	_action_sequence[task_id] = 0
 	_sync_running_flag()
@@ -171,12 +172,39 @@ func _execution_guard(stage: String, details: Dictionary, project_id: String, ta
 		if _running_tasks.has(task_id):
 			var control: Dictionary = _running_tasks[task_id]
 			control["unsafe_action_inflight"] = safety == "unsafe"
+			control["unsafe_action_uncertain"] = false
 			_running_tasks[task_id] = control
-	elif stage == "after_tool" and _running_tasks.has(task_id):
+		var decision := {"allowed": true}
+		if tool_name == "computer_action":
+			# The model cannot select/recycle this key. Work owns the idempotency
+			# key and AgentCore applies it to the actual tool arguments.
+			decision["args_patch"] = {"action_id": action_id}
+		return decision
+	if stage == "after_tool" and _running_tasks.has(task_id):
 		var control: Dictionary = _running_tasks[task_id]
+		var unsafe_inflight := bool(control.get("unsafe_action_inflight", false))
+		if unsafe_inflight and _tool_result_uncertain(details.get("result", {})):
+			control["unsafe_action_uncertain"] = true
+			_running_tasks[task_id] = control
+			return {"allowed": false, "reason": "unsafe_action_uncertain"}
 		control["unsafe_action_inflight"] = false
+		control["unsafe_action_uncertain"] = false
 		_running_tasks[task_id] = control
 	return {"allowed": true}
+
+func _tool_result_uncertain(value: Variant) -> bool:
+	if not value is Dictionary:
+		return true
+	var result: Dictionary = value
+	if bool(result.get("ok", false)):
+		return false
+	var error := str(result.get("error", "")).strip_edges().to_lower()
+	var http := int(result.get("http", 0))
+	if error in ["timeout", "transport_failure", "service_unavailable", "empty_response", "malformed_response", "worker_failed", "worker_crashed", "non_dictionary_tool_result"]:
+		return true
+	if http >= 500 or http in [408, 429]:
+		return true
+	return bool(result.get("retryable", false))
 
 func _control_reason(project_id: String, task_id: String, execution_id: String) -> String:
 	if not _running_tasks.has(task_id):
@@ -228,6 +256,12 @@ func _finish_controlled(project_id: String, task_id: String, execution_id: Strin
 		_cleanup_execution(task_id)
 		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_PAUSED)
 		return {"ok": false, "error": "Задача приостановлена" if reason == "paused" else "Master stop активен", "retryable": false, "state": AuroraWorkStore.STATE_PAUSED, "task_id": task_id}
+	if reason == "unsafe_action_uncertain":
+		store.interrupt_task(project_id, task_id, "A potentially unsafe action returned an uncertain timeout/transport result; verify external state before any retry", true)
+		store.update_task(project_id, task_id, {"retryable": false})
+		_cleanup_execution(task_id)
+		task_state_changed.emit(project_id, task_id, AuroraWorkStore.STATE_INTERRUPTED)
+		return {"ok": false, "error": "Неопределённый результат потенциально опасного действия; перед повтором требуется проверить фактическое состояние", "retryable": false, "requires_user_action": true, "state": AuroraWorkStore.STATE_INTERRUPTED, "task_id": task_id}
 	var task := store.get_task(project_id, task_id)
 	var unsafe := unsafe_inflight or str(task.get("last_action_retry_safety", "safe")) == "unsafe"
 	store.interrupt_task(project_id, task_id, "Execution interrupted before a confirmed completion", unsafe)
