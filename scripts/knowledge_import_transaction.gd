@@ -8,13 +8,7 @@ const DB_BACKUP := "user://knowledge/.knowledge_source.txn.jsonl"
 const STRUCTURED_BACKUP := "user://knowledge/.structured_source.txn.jsonl"
 const REGISTRY_BACKUP := "user://knowledge/.sources.json.txn"
 
-# Transaction journals use fixed user:// paths. Multiple imports in one process
-# therefore cannot safely mutate them concurrently. Serialize the full
-# prepare/snapshot/import/register/cleanup lifecycle instead of allowing backup
-# files and registry writes to race. Callers may still launch imports from
-# different threads; they are explicitly queued here.
 static var _transaction_mutex: Mutex = Mutex.new()
-
 var registry := KnowledgeSourceRegistry.new()
 var large_json_importer := LargeJsonKnowledgeImporter.new()
 
@@ -31,15 +25,14 @@ func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictiona
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	var preserve_existing_source := not existing.is_empty() or not registry.storage_is_valid()
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
 	var result: Dictionary
-	if large_json_importer.should_stream(path):
-		result = large_json_importer.import_file(store, path, meta)
-	else:
-		result = store.import_file(path, meta)
+	if large_json_importer.should_stream(path): result = large_json_importer.import_file(store, path, meta)
+	else: result = store.import_file(path, meta)
 	return _finish_import(path, result, inspection, meta, snapshot)
 
 func import_extracted_file(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
@@ -55,7 +48,8 @@ func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: St
 		return prepared
 	var inspection: Dictionary = prepared.get("inspection", {})
 	var existing: Dictionary = inspection.get("existing_source", {}) if inspection.get("existing_source", {}) is Dictionary else {}
-	var snapshot := _snapshot(path, not existing.is_empty())
+	var preserve_existing_source := not existing.is_empty() or not registry.storage_is_valid()
+	var snapshot := _snapshot(path, preserve_existing_source)
 	if not bool(snapshot.get("ok", false)):
 		return snapshot
 	var meta: Dictionary = prepared.get("metadata", metadata)
@@ -64,8 +58,7 @@ func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: St
 
 func _prepare_file(path: String, metadata: Dictionary) -> Dictionary:
 	var inspection := registry.inspect_file(path)
-	if not bool(inspection.get("ok", false)):
-		return inspection
+	if not bool(inspection.get("ok", false)): return inspection
 	var existing: Dictionary = inspection.get("existing_source", {})
 	var matching: Dictionary = inspection.get("matching_source", {})
 	var same_path_same_hash := bool(inspection.get("same_path_same_hash", false))
@@ -111,8 +104,7 @@ func _rollback_result(result: Dictionary, snapshot: Dictionary) -> Dictionary:
 	result["transaction"] = "rolled_back" if restored else "rollback_failed"
 	result["transaction_mode"] = "source_scoped_journal"
 	result["source_snapshot"] = snapshot.get("data_journal", "source_rows")
-	if not restored:
-		result["rollback_error"] = "Не удалось полностью восстановить предыдущую базу знаний после ошибки импорта"
+	if not restored: result["rollback_error"] = "Не удалось полностью восстановить предыдущую базу знаний после ошибки импорта"
 	return result
 
 func _snapshot(source: String, preserve_existing_source: bool = true) -> Dictionary:
@@ -125,56 +117,38 @@ func _snapshot(source: String, preserve_existing_source: bool = true) -> Diction
 		data_journal = "source_rows"
 		db = _journal_source(DB_PATH, DB_BACKUP, source)
 		if not bool(db.get("ok", false)):
-			_cleanup_backups()
-			return db
+			_cleanup_backups(); return db
 		structured = _journal_source(STRUCTURED_PATH, STRUCTURED_BACKUP, source)
 		if not bool(structured.get("ok", false)):
-			_cleanup_backups()
-			return structured
+			_cleanup_backups(); return structured
 	var registry_existed := FileAccess.file_exists(REGISTRY_PATH)
 	if registry_existed:
 		var err := DirAccess.copy_absolute(ProjectSettings.globalize_path(REGISTRY_PATH), ProjectSettings.globalize_path(REGISTRY_BACKUP))
 		if err != OK:
-			_cleanup_backups()
-			return {"ok": false, "error": "Не удалось создать резервную копию реестра источников", "code": err}
-	return {
-		"ok": true,
-		"source": source,
-		"db_rows": int(db.get("rows", 0)),
-		"structured_rows": int(structured.get("rows", 0)),
-		"registry_existed": registry_existed,
-		"data_journal": data_journal,
-		"mode": "source_scoped_journal"
-	}
+			_cleanup_backups(); return {"ok": false, "error": "Не удалось создать резервную копию реестра источников", "code": err}
+	return {"ok": true, "source": source, "db_rows": int(db.get("rows", 0)), "structured_rows": int(structured.get("rows", 0)), "registry_existed": registry_existed, "data_journal": data_journal, "mode": "source_scoped_journal"}
 
 func _journal_source(path: String, backup: String, source: String) -> Dictionary:
 	var output := FileAccess.open(backup, FileAccess.WRITE)
-	if output == null:
-		return {"ok": false, "error": "Не удалось создать журнал отката", "path": backup}
+	if output == null: return {"ok": false, "error": "Не удалось создать журнал отката", "path": backup}
 	if not FileAccess.file_exists(path):
-		output.close()
-		return {"ok": true, "rows": 0}
+		output.close(); return {"ok": true, "rows": 0}
 	var input := FileAccess.open(path, FileAccess.READ)
 	if input == null:
-		output.close()
-		return {"ok": false, "error": "Не удалось прочитать индекс для журнала отката", "path": path}
+		output.close(); return {"ok": false, "error": "Не удалось прочитать индекс для журнала отката", "path": path}
 	var rows := 0
 	while not input.eof_reached():
 		var line := input.get_line()
-		if line.strip_edges().is_empty():
-			continue
+		if line.strip_edges().is_empty(): continue
 		var parsed = JSON.parse_string(line)
 		if parsed is Dictionary and str(parsed.get("source", "")) == source:
-			output.store_line(line)
-			rows += 1
-	input.close()
-	output.close()
+			output.store_line(line); rows += 1
+	input.close(); output.close()
 	return {"ok": true, "rows": rows}
 
 func _restore(snapshot: Dictionary) -> bool:
 	var source := str(snapshot.get("source", ""))
-	if source.is_empty():
-		return false
+	if source.is_empty(): return false
 	var ok := true
 	ok = _restore_source_file(DB_PATH, DB_BACKUP, source) and ok
 	ok = _restore_source_file(STRUCTURED_PATH, STRUCTURED_BACKUP, source) and ok
@@ -183,73 +157,53 @@ func _restore(snapshot: Dictionary) -> bool:
 	return ok
 
 func _restore_source_file(path: String, backup: String, source: String) -> bool:
-	if not _filter_source(path, source):
-		return false
-	if not FileAccess.file_exists(backup):
-		return true
+	if not _filter_source(path, source): return false
+	if not FileAccess.file_exists(backup): return true
 	var saved := FileAccess.open(backup, FileAccess.READ)
-	if saved == null:
-		return false
+	if saved == null: return false
 	var target := FileAccess.open(path, FileAccess.READ_WRITE)
+	if target == null: target = FileAccess.open(path, FileAccess.WRITE)
 	if target == null:
-		target = FileAccess.open(path, FileAccess.WRITE)
-	if target == null:
-		saved.close()
-		return false
+		saved.close(); return false
 	target.seek_end()
 	while not saved.eof_reached():
 		var line := saved.get_line()
-		if not line.strip_edges().is_empty():
-			target.store_line(line)
-	saved.close()
-	target.close()
-	return true
+		if not line.strip_edges().is_empty(): target.store_line(line)
+	saved.close(); target.close(); return true
 
 func _filter_source(path: String, source: String) -> bool:
-	if not FileAccess.file_exists(path):
-		return true
+	if not FileAccess.file_exists(path): return true
 	var input := FileAccess.open(path, FileAccess.READ)
-	if input == null:
-		return false
+	if input == null: return false
 	var temp := path + ".rollback.tmp"
 	var output := FileAccess.open(temp, FileAccess.WRITE)
 	if output == null:
-		input.close()
-		return false
+		input.close(); return false
 	while not input.eof_reached():
 		var line := input.get_line()
-		if line.strip_edges().is_empty():
-			continue
+		if line.strip_edges().is_empty(): continue
 		var parsed = JSON.parse_string(line)
-		if parsed is Dictionary and str(parsed.get("source", "")) == source:
-			continue
+		if parsed is Dictionary and str(parsed.get("source", "")) == source: continue
 		output.store_line(line)
-	input.close()
-	output.close()
+	input.close(); output.close()
 	var target_abs := ProjectSettings.globalize_path(path)
 	var temp_abs := ProjectSettings.globalize_path(temp)
 	if FileAccess.file_exists(path) and DirAccess.remove_absolute(target_abs) != OK:
-		DirAccess.remove_absolute(temp_abs)
-		return false
+		DirAccess.remove_absolute(temp_abs); return false
 	return DirAccess.rename_absolute(temp_abs, target_abs) == OK
 
 func _restore_registry(existed: bool) -> bool:
 	var target_abs := ProjectSettings.globalize_path(REGISTRY_PATH)
 	var backup_abs := ProjectSettings.globalize_path(REGISTRY_BACKUP)
 	if FileAccess.file_exists(REGISTRY_PATH):
-		if DirAccess.remove_absolute(target_abs) != OK:
-			return false
+		if DirAccess.remove_absolute(target_abs) != OK: return false
 	if not existed:
-		KnowledgeSourceRegistry.invalidate_runtime_cache()
-		return true
-	if not FileAccess.file_exists(REGISTRY_BACKUP):
-		return false
+		KnowledgeSourceRegistry.invalidate_runtime_cache(); return true
+	if not FileAccess.file_exists(REGISTRY_BACKUP): return false
 	var restored := DirAccess.rename_absolute(backup_abs, target_abs) == OK
-	if restored:
-		KnowledgeSourceRegistry.invalidate_runtime_cache()
+	if restored: KnowledgeSourceRegistry.invalidate_runtime_cache()
 	return restored
 
 func _cleanup_backups() -> void:
 	for path in [DB_BACKUP, STRUCTURED_BACKUP, REGISTRY_BACKUP, DB_PATH + ".rollback.tmp", STRUCTURED_PATH + ".rollback.tmp"]:
-		if FileAccess.file_exists(path):
-			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		if FileAccess.file_exists(path): DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
