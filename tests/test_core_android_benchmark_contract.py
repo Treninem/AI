@@ -48,3 +48,15 @@ def test_android_benchmark_workflow_enforces_real_emulator_inference() -> None:
     assert "prepared_sha256" in workflow
     assert "process_pss_mb" in workflow
     assert "passed is True" not in workflow
+
+
+def test_android_model_preparation_uses_terminating_errors_and_sha_not_stale_last_exit_code() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    start = workflow.index("- name: Prepare verified bundled Core weights")
+    end = workflow.index("- name: Save verified Core model cache")
+    prepare_step = workflow[start:end]
+    assert "$ErrorActionPreference = 'Stop'" in prepare_step
+    assert "prepare_bundled_core_model.ps1" in prepare_step
+    assert "Get-FileHash" in prepare_step
+    assert "Android benchmark model SHA mismatch" in prepare_step
+    assert "$LASTEXITCODE" not in prepare_step
