@@ -21,6 +21,7 @@ LINE_MARKUP = re.compile(r"(?m)^[ \t]{0,3}(?:#{1,6}\s+|>\s*|[-+*]\s+)")
 INLINE_MARKUP = re.compile(r"[*_~]{1,3}")
 EMOJI = re.compile("[\U0001F300-\U0001FAFF\u2600-\u27BF]", re.UNICODE)
 VERSION_NUMBER = re.compile(r"(?<!\w)-?\d+(?:\.\d+){2,}(?!\w)")
+MEASURE_TOKEN = re.compile(r"(?<!\w)(-?\d+)(?:([.,])(\d+))?\s*(°\s*[cс]|%)(?!\w)", re.I)
 NUMBER_TOKEN = re.compile(r"(?<!\w)(-?\d+)(?:([.,])(\d+))?(?!\w)")
 
 _ONES_M = ("", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
@@ -98,8 +99,10 @@ def _integer_to_words(value: int, feminine_units: bool = False) -> str:
 
 def _decimal_to_words(integer_text: str, fraction_text: str) -> str:
     integer_value = int(integer_text)
-    fraction_digits = fraction_text[:6]
-    fraction_value = int(fraction_digits or "0")
+    fraction_digits = fraction_text[:6].rstrip("0")
+    if not fraction_digits:
+        return _integer_to_words(integer_value)
+    fraction_value = int(fraction_digits)
     if len(fraction_digits) <= 3:
         integer_words = _integer_to_words(integer_value, feminine_units=True)
         whole_form = "целая" if abs(integer_value) % 10 == 1 and abs(integer_value) % 100 != 11 else "целых"
@@ -135,6 +138,27 @@ def _number_to_words(match: re.Match[str]) -> str:
     return _integer_to_words(int(integer_text))
 
 
+def _measure_to_words(match: re.Match[str]) -> str:
+    integer_text = match.group(1)
+    fraction_text = match.group(3)
+    unit = match.group(4).replace(" ", "").lower()
+    integer_value = int(integer_text)
+    has_fraction = bool(fraction_text and any(ch != "0" for ch in fraction_text))
+    spoken_value = (
+        _decimal_to_words(integer_text, fraction_text)
+        if fraction_text is not None
+        else _integer_to_words(integer_value)
+    )
+    if unit == "%":
+        suffix = "процента" if has_fraction else _plural_form(integer_value, ("процент", "процента", "процентов"))
+    else:
+        suffix = "градуса Цельсия" if has_fraction else _plural_form(
+            integer_value,
+            ("градус Цельсия", "градуса Цельсия", "градусов Цельсия"),
+        )
+    return f"{spoken_value} {suffix}"
+
+
 def prepare_for_speech(text: str, read_code: bool = False) -> str:
     text = (text or "").replace("\r\n", "\n").replace("\r", "\n")
     if not read_code:
@@ -148,14 +172,13 @@ def prepare_for_speech(text: str, read_code: bool = False) -> str:
     text = UNIX_PATH.sub("путь к файлу", text)
     text = EMOJI.sub("", text)
 
-    # Remove formatting before verbalizing values. The numeric pass runs after
-    # URLs/paths are hidden so it never starts reading IDs from technical links.
+    # Remove formatting before verbalizing values. Unit-aware values must be
+    # converted before the generic number pass so Russian morphology is correct.
     text = LINE_MARKUP.sub("", text)
     text = INLINE_MARKUP.sub("", text)
     text = re.sub(r"[{}\[\]]", " ", text)
     text = text.replace("|", ", ")
-    text = re.sub(r"(?i)°\s*[cс]", " градусов Цельсия", text)
-    text = re.sub(r"(?<=\d)\s*%", " процентов", text)
+    text = MEASURE_TOKEN.sub(_measure_to_words, text)
     text = VERSION_NUMBER.sub(_version_to_words, text)
     text = NUMBER_TOKEN.sub(_number_to_words, text)
 
