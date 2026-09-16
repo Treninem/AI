@@ -11,11 +11,17 @@ def test_specialist_team_runtime_smoke_uses_real_owned_code_specialist_path() ->
     assert "team.setup(client)" in smoke
     assert "specialist := team.coder" in smoke
     assert "specialist.analyze_request(" in smoke
+    assert "specialist.review_code(" in smoke
+    assert "specialist.explain_code(" in smoke
     assert "team_setup_ok" in smoke
     assert "specialist.get_parent() == team" in smoke
     assert "specialist.general_ai == client" in smoke
-    assert '"last_runtime", "")) == "aurora_core_desktop"' in smoke
-    assert 'int(runtime_after.get("ollama_failures", -1)) == 0' in smoke
+    assert 'str(info.get("last_runtime", "")) == "aurora_core_desktop"' in smoke
+    assert 'int(info.get("ollama_failures", -1)) == 0' in smoke
+    assert '"after_analyze": _runtime_evidence(runtime_after_analyze)' in smoke
+    assert '"after_review": _runtime_evidence(runtime_after_review)' in smoke
+    assert '"after_explain": _runtime_evidence(runtime_after_explain)' in smoke
+    assert '"bounded_operations": ["analyze_request", "review_code", "explain_code"]' in smoke
     assert "http://1.1.1.1/" in smoke
 
 
