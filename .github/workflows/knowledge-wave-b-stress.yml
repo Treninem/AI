@@ -1,0 +1,128 @@
+name: AuroraFox Knowledge Wave-B Stress
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'tests/*knowledge_performance*'
+      - 'tests/*knowledge_stress*'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/memory_store.gd'
+      - '.github/workflows/knowledge-performance.yml'
+      - '.github/workflows/knowledge-wave-b-stress.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-knowledge-wave-b-stress-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contract:
+    if: github.event_name == 'pull_request' && github.head_ref == 'chat-knowledge-races-v2-20260916'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate Wave-B stress contract
+        run: >-
+          python -m unittest
+          tests.test_knowledge_stress_workflow_contract
+          tests.test_knowledge_performance_validator
+          -v
+      - name: Compile benchmark tools
+        run: >-
+          python -m py_compile
+          benchmarks/knowledge/run_knowledge_benchmark_portable.py
+          benchmarks/knowledge/run_memory_scaling.py
+          benchmarks/knowledge/run_search_scaling.py
+          benchmarks/knowledge/run_registry_scaling.py
+          benchmarks/knowledge/validate_performance_report.py
+
+  wave-b-linux-stress:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run 10-50-100-250 MiB stress profile
+        run: >-
+          python benchmarks/knowledge/run_knowledge_benchmark_portable.py
+          --godot ./godot
+          --profile stress
+          --timeout-seconds 900
+          --report artifacts/knowledge-performance/wave-b-linux-stress.json
+      - name: Measure MemoryStore 250-500-1000 scaling
+        run: >-
+          python benchmarks/knowledge/run_memory_scaling.py
+          --godot ./godot
+          --counts 250,500,1000
+          --timeout-seconds 600
+          --report artifacts/knowledge-performance/wave-b-memory-scaling.json
+      - name: Measure search 4-8-16 MiB scaling
+        run: >-
+          python benchmarks/knowledge/run_search_scaling.py
+          --godot ./godot
+          --sizes-mb 4,8,16
+          --timeout-seconds 600
+          --report artifacts/knowledge-performance/wave-b-search-scaling.json
+      - name: Measure registry 32-64-128 scaling
+        run: >-
+          python benchmarks/knowledge/run_registry_scaling.py
+          --godot ./godot
+          --counts 32,64,128
+          --source-kb 4
+          --timeout-seconds 300
+          --report artifacts/knowledge-performance/wave-b-registry-scaling.json
+      - name: Enforce correctness self-reliance and relative performance
+        run: >-
+          python benchmarks/knowledge/validate_performance_report.py
+          artifacts/knowledge-performance/wave-b-linux-stress.json
+          artifacts/knowledge-performance/wave-b-memory-scaling.json
+          artifacts/knowledge-performance/wave-b-search-scaling.json
+          artifacts/knowledge-performance/wave-b-registry-scaling.json
+          --enforce-performance
+          --output artifacts/knowledge-performance/wave-b-stress-gate.json
+      - name: Record Android evidence boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/knowledge-performance
+          cat > artifacts/knowledge-performance/android-stress-boundary.json <<'JSON'
+          {
+            "schema": "aurorafox_android_knowledge_stress_boundary_v1",
+            "bounded_memory_required": true,
+            "incremental_processing_required": true,
+            "private_storage_required": true,
+            "giant_temporary_copies_forbidden": true,
+            "cancellation_and_failure_recovery_required": true,
+            "network_required": false,
+            "external_runtime_required": false,
+            "ollama_required": false,
+            "physical_device_proof": false,
+            "note": "Desktop CI is not Android-device stress proof; physical Android evidence remains a separate acceptance boundary."
+          }
+          JSON
+      - name: Upload Wave-B stress evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-wave-b-stress-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
