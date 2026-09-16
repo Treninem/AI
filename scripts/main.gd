@@ -21,7 +21,7 @@ var status: Label
 var active_title: Label
 var file_dialog: FileDialog
 var pending_attachments: Array = []
-var attachment_bar: HBoxContainer
+var attachment_bar: HFlowContainer
 var request_busy := false
 var file_processing_busy := false
 var queued_voice_text := ""
@@ -54,6 +54,7 @@ const WHITE := Color("f3f6ff")
 const BORDER := Color(0.34, 0.39, 0.55, 0.45)
 
 func _ready() -> void:
+	theme = _build_global_theme()
 	add_child(ai)
 	add_child(memory)
 	add_child(tools)
@@ -73,8 +74,8 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var available := await ai.is_available()
 	_set_status(
-		"Модель подключена • %s • %d инструментов" % [ai.model, tools.tools.size()] if available
-		else "Локальная модель не подключена — откройте подготовку AI",
+		"AuroraFox Core готов • %s • %d инструментов" % [ai.model, tools.tools.size()] if available
+		else "AuroraFox Core запускается — локальный чат останется основным режимом",
 		available
 	)
 
@@ -119,12 +120,38 @@ func _apply_button(button: Button, accent := false, danger := false, compact := 
 	button.add_theme_font_size_override("font_size", 14 if compact else 15)
 	button.expand_icon = true
 	button.icon_max_width = 19 if compact else 22
+	button.clip_text = true
 
 func _apply_input_style(control: Control) -> void:
 	control.add_theme_stylebox_override("normal", _style(Color(0.035, 0.043, 0.068, 0.98), BORDER, 15, 1))
 	control.add_theme_stylebox_override("focus", _style(Color(0.045, 0.052, 0.08, 1.0), Color(CYAN.r, CYAN.g, CYAN.b, 0.72), 15, 1))
 	control.add_theme_color_override("font_color", WHITE)
 	control.add_theme_color_override("font_placeholder_color", MUTED)
+
+func _build_global_theme() -> Theme:
+	var ui := Theme.new()
+	ui.set_stylebox("normal", "Button", _style(Color(0.06, 0.07, 0.11, 0.98), BORDER, 11, 1))
+	ui.set_stylebox("hover", "Button", _style(Color(0.10, 0.12, 0.18, 1.0), Color(CYAN.r, CYAN.g, CYAN.b, 0.56), 11, 1))
+	ui.set_stylebox("pressed", "Button", _style(Color(0.14, 0.10, 0.22, 1.0), Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.78), 11, 1))
+	ui.set_stylebox("focus", "Button", _style(Color(0.10, 0.11, 0.17, 1.0), Color(CYAN.r, CYAN.g, CYAN.b, 0.72), 11, 1))
+	ui.set_stylebox("disabled", "Button", _style(Color(0.04, 0.045, 0.07, 0.78), Color(0.18, 0.20, 0.28, 0.55), 11, 1))
+	ui.set_color("font_color", "Button", WHITE)
+	ui.set_color("font_hover_color", "Button", Color.WHITE)
+	ui.set_color("font_pressed_color", "Button", Color.WHITE)
+	ui.set_color("font_disabled_color", "Button", Color(0.48, 0.52, 0.60, 0.72))
+	ui.set_font_size("font_size", "Button", 15)
+	ui.set_stylebox("normal", "LineEdit", _style(Color(0.035, 0.043, 0.068, 0.98), BORDER, 11, 1))
+	ui.set_stylebox("focus", "LineEdit", _style(Color(0.045, 0.052, 0.08, 1.0), Color(CYAN.r, CYAN.g, CYAN.b, 0.72), 11, 1))
+	ui.set_color("font_color", "LineEdit", WHITE)
+	ui.set_color("font_placeholder_color", "LineEdit", MUTED)
+	ui.set_stylebox("normal", "TextEdit", _style(Color(0.035, 0.043, 0.068, 0.98), BORDER, 12, 1))
+	ui.set_stylebox("focus", "TextEdit", _style(Color(0.045, 0.052, 0.08, 1.0), Color(CYAN.r, CYAN.g, CYAN.b, 0.72), 12, 1))
+	ui.set_color("font_color", "TextEdit", WHITE)
+	ui.set_color("font_placeholder_color", "TextEdit", MUTED)
+	ui.set_color("font_color", "Label", WHITE)
+	ui.set_constant("separation", "HBoxContainer", 8)
+	ui.set_constant("separation", "VBoxContainer", 8)
+	return ui
 
 func _build_ui() -> void:
 	var base := ColorRect.new()
@@ -161,6 +188,7 @@ func _build_ui() -> void:
 	root.add_child(sidebar_bg)
 
 	var sidebar_margin := MarginContainer.new()
+	sidebar_margin.name = "SidebarMargin"
 	sidebar_margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	sidebar_margin.add_theme_constant_override("margin_left", 16)
 	sidebar_margin.add_theme_constant_override("margin_right", 16)
@@ -169,12 +197,18 @@ func _build_ui() -> void:
 	sidebar_bg.add_child(sidebar_margin)
 
 	var sidebar := VBoxContainer.new()
+	sidebar.name = "SidebarContent"
 	sidebar.add_theme_constant_override("separation", 10)
 	sidebar_margin.add_child(sidebar)
 
 	var brand_row := HBoxContainer.new()
+	brand_row.name = "BrandRow"
 	brand_row.add_theme_constant_override("separation", 10)
 	sidebar.add_child(brand_row)
+	var sidebar_mobile_slot := HBoxContainer.new()
+	sidebar_mobile_slot.name = "SidebarMobileNavSlot"
+	sidebar_mobile_slot.visible = false
+	brand_row.add_child(sidebar_mobile_slot)
 	var logo := TextureRect.new()
 	logo.texture = FOX_LOGO
 	logo.custom_minimum_size = Vector2(52, 52)
@@ -183,6 +217,7 @@ func _build_ui() -> void:
 	brand_row.add_child(logo)
 	var brand_text := VBoxContainer.new()
 	brand_text.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	brand_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brand_row.add_child(brand_text)
 	var brand := Label.new()
 	brand.text = "AuroraFox"
@@ -258,28 +293,42 @@ func _build_ui() -> void:
 	root.add_child(main_panel)
 
 	var header_panel := PanelContainer.new()
+	header_panel.name = "HeaderPanel"
 	header_panel.custom_minimum_size.y = 70
 	header_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.03, 0.05, 0.88), Color(0.24, 0.27, 0.38, 0.35), 0, 0))
 	main_panel.add_child(header_panel)
 	var header_margin := MarginContainer.new()
+	header_margin.name = "HeaderMargin"
 	header_margin.add_theme_constant_override("margin_left", 24)
 	header_margin.add_theme_constant_override("margin_right", 20)
 	header_margin.add_theme_constant_override("margin_top", 11)
 	header_margin.add_theme_constant_override("margin_bottom", 10)
 	header_panel.add_child(header_margin)
 	var header := HBoxContainer.new()
+	header.name = "HeaderContent"
 	header.add_theme_constant_override("separation", 12)
 	header_margin.add_child(header)
+	var mobile_nav_slot := HBoxContainer.new()
+	mobile_nav_slot.name = "MobileNavSlot"
+	mobile_nav_slot.visible = false
+	header.add_child(mobile_nav_slot)
 	var title_box := VBoxContainer.new()
+	title_box.name = "TitleBox"
 	title_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title_box)
 	active_title = Label.new()
+	active_title.name = "ActiveChatTitle"
 	active_title.text = "Новый чат"
+	active_title.clip_text = true
+	active_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	active_title.add_theme_font_size_override("font_size", 20)
 	active_title.add_theme_color_override("font_color", WHITE)
 	title_box.add_child(active_title)
 	status = Label.new()
+	status.name = "MainStatus"
 	status.text = "Инициализация…"
+	status.clip_text = true
+	status.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	status.add_theme_font_size_override("font_size", 12)
 	status.add_theme_color_override("font_color", MUTED)
 	title_box.add_child(status)
@@ -294,6 +343,7 @@ func _build_ui() -> void:
 	header_actions.add_child(avatar_slot)
 
 	var messages_margin := MarginContainer.new()
+	messages_margin.name = "MessagesMargin"
 	messages_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	messages_margin.add_theme_constant_override("margin_left", 26)
 	messages_margin.add_theme_constant_override("margin_right", 26)
@@ -320,6 +370,7 @@ func _build_ui() -> void:
 	composer_margin.add_theme_constant_override("margin_bottom", 20)
 	main_panel.add_child(composer_margin)
 	var composer_panel := PanelContainer.new()
+	composer_panel.name = "ComposerPanel"
 	composer_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.032, 0.052, 0.96), Color(0.28, 0.32, 0.46, 0.6), 20, 1))
 	composer_margin.add_child(composer_panel)
 	var composer_inner := MarginContainer.new()
@@ -332,12 +383,14 @@ func _build_ui() -> void:
 	composer.add_theme_constant_override("separation", 7)
 	composer_inner.add_child(composer)
 
-	attachment_bar = HBoxContainer.new()
+	attachment_bar = HFlowContainer.new()
 	attachment_bar.name = "AttachmentBar"
-	attachment_bar.add_theme_constant_override("separation", 6)
+	attachment_bar.add_theme_constant_override("h_separation", 6)
+	attachment_bar.add_theme_constant_override("v_separation", 6)
 	composer.add_child(attachment_bar)
 
 	var input_row := HBoxContainer.new()
+	input_row.name = "InputRow"
 	input_row.add_theme_constant_override("separation", 8)
 	composer.add_child(input_row)
 	var attach := Button.new()
@@ -375,7 +428,9 @@ func _build_ui() -> void:
 	input_row.add_child(send)
 
 	var hint := Label.new()
+	hint.name = "ComposerHint"
 	hint.text = "Enter — отправить   •   Shift+Enter — новая строка   •   файлы можно перетащить в окно"
+	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint.add_theme_font_size_override("font_size", 11)
 	hint.add_theme_color_override("font_color", Color(0.52, 0.56, 0.66, 0.9))
 	composer.add_child(hint)
@@ -388,20 +443,26 @@ func _build_ui() -> void:
 	add_child(file_dialog)
 
 	rename_dialog = AcceptDialog.new()
+	rename_dialog.name = "RenameChatDialog"
 	rename_dialog.title = "Переименовать чат"
 	rename_dialog.dialog_text = "Введите новое название чата:"
-	rename_dialog.min_size = Vector2i(460, 190)
+	rename_dialog.min_size = Vector2i(360, 190)
+	rename_dialog.size = Vector2i(480, 190)
 	rename_dialog.confirmed.connect(_confirm_rename_chat)
 	add_child(rename_dialog)
 	rename_input = LineEdit.new()
-	rename_input.position = Vector2(24, 72)
-	rename_input.size = Vector2(410, 42)
-	rename_input.custom_minimum_size = Vector2(410, 42)
+	rename_input.name = "RenameChatInput"
+	rename_input.custom_minimum_size.y = 44
 	rename_input.max_length = 60
 	rename_input.placeholder_text = "Название чата"
 	_apply_input_style(rename_input)
 	rename_input.text_submitted.connect(func(_text): rename_dialog.get_ok_button().emit_signal("pressed"))
 	rename_dialog.add_child(rename_input)
+	rename_input.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	rename_input.offset_left = 24
+	rename_input.offset_top = 82
+	rename_input.offset_right = -24
+	rename_input.offset_bottom = 126
 
 func _current_version() -> String:
 	var value := str(ProjectSettings.get_setting("application/config/version", "1.0.0.0"))
@@ -488,6 +549,8 @@ func _open_rename_chat(id: String, current_title: String) -> void:
 		return
 	rename_target_id = id
 	rename_input.text = current_title
+	var viewport := get_viewport_rect().size
+	rename_dialog.size = Vector2i(clampi(int(viewport.x - 40.0), 360, 480), 190)
 	rename_dialog.popup_centered()
 	await get_tree().process_frame
 	rename_input.grab_focus()
@@ -524,7 +587,7 @@ func _add_welcome_state() -> void:
 	var center := VBoxContainer.new()
 	center.alignment = BoxContainer.ALIGNMENT_CENTER
 	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	center.custom_minimum_size.y = maxf(360.0, get_viewport_rect().size.y * 0.52)
+	center.custom_minimum_size.y = maxf(300.0, get_viewport_rect().size.y * 0.48)
 	message_list.add_child(center)
 	var logo := TextureRect.new()
 	logo.texture = FOX_LOGO
@@ -547,8 +610,11 @@ func _add_welcome_state() -> void:
 	center.add_child(subtitle)
 
 func _bubble_width() -> float:
-	var width := get_viewport_rect().size.x
-	return clampf(width * 0.48, 360.0, 760.0)
+	var available := get_viewport_rect().size.x
+	if message_scroll != null and message_scroll.size.x > 0.0:
+		available = message_scroll.size.x
+	available = maxf(220.0, available - 18.0)
+	return minf(760.0, maxf(220.0, available * 0.72))
 
 func _add_message_card(message: Dictionary) -> void:
 	var role := str(message.get("role", "assistant"))
@@ -568,8 +634,9 @@ func _add_message_card(message: Dictionary) -> void:
 		avatar.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 		row.add_child(avatar)
 
+	var bubble_width := _bubble_width()
 	var card := PanelContainer.new()
-	card.custom_minimum_size.x = _bubble_width()
+	card.custom_minimum_size.x = bubble_width
 	card.size_flags_horizontal = Control.SIZE_SHRINK_END if is_user else Control.SIZE_SHRINK_BEGIN
 	card.add_theme_stylebox_override("panel", _style(USER_BUBBLE if is_user else ASSISTANT_BUBBLE, Color(CYAN.r, CYAN.g, CYAN.b, 0.34) if is_user else Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.38), 18, 1))
 	row.add_child(card)
@@ -591,7 +658,7 @@ func _add_message_card(message: Dictionary) -> void:
 	content.bbcode_enabled = false
 	content.fit_content = true
 	content.scroll_active = false
-	content.custom_minimum_size.x = _bubble_width() - 44.0
+	content.custom_minimum_size.x = maxf(176.0, bubble_width - 44.0)
 	content.text = str(message.get("content", ""))
 	content.add_theme_font_size_override("normal_font_size", 16)
 	content.add_theme_color_override("default_color", WHITE)
@@ -606,7 +673,8 @@ func _add_message_card(message: Dictionary) -> void:
 			if not item is Dictionary:
 				continue
 			var chip := Label.new()
-			chip.text = str(item.get("name", "file"))
+			chip.text = _short_file_name(str(item.get("name", "file")))
+			chip.tooltip_text = str(item.get("name", "file"))
 			chip.add_theme_font_size_override("font_size", 11)
 			chip.add_theme_color_override("font_color", Color(0.78, 0.84, 0.94, 0.94))
 			chip.add_theme_stylebox_override("normal", _style(Color(0.03, 0.04, 0.065, 0.72), Color(0.3, 0.35, 0.48, 0.55), 9, 1))
@@ -655,6 +723,11 @@ func _ingest_files(paths: PackedStringArray) -> void:
 	else:
 		_set_status("Не удалось разобрать %d файл(а/ов): %s" % [failures.size(), failures[0]], false, true)
 
+func _short_file_name(value: String) -> String:
+	if value.length() <= 34:
+		return value
+	return value.substr(0, 19) + "…" + value.substr(value.length() - 12)
+
 func _refresh_attachment_bar() -> void:
 	if attachment_bar == null:
 		return
@@ -662,12 +735,14 @@ func _refresh_attachment_bar() -> void:
 		child.queue_free()
 	for item in pending_attachments:
 		var chip := Button.new()
-		chip.text = str(item.get("name", "file"))
-		chip.tooltip_text = "%s • %s B%s" % [
-			item.get("kind", ""), item.get("size", 0),
+		var full_name := str(item.get("name", "file"))
+		chip.text = _short_file_name(full_name)
+		chip.tooltip_text = "%s\n%s • %s B%s\nНажмите, чтобы убрать вложение" % [
+			full_name, item.get("kind", ""), item.get("size", 0),
 			" • анализ готов" if bool(item.get("analyzed", false)) else " • анализ ограничен"
 		]
 		chip.icon = ICON_ATTACH
+		chip.custom_minimum_size.y = 36
 		_apply_button(chip, false, false, true)
 		var target = item
 		chip.pressed.connect(func(): pending_attachments.erase(target); _refresh_attachment_bar())
