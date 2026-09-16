@@ -22,3 +22,5 @@ func _apply_button(button: Button, accent := false, danger := false, compact := 
 	button.add_theme_color_override("font_disabled_color", Color(0.45, 0.48, 0.55, 0.75))
 	button.add_theme_font_size_override("font_size", 14 if compact else 15)
 	button.expand_icon = true
+	button.icon_max_width = 19 if compact else 22
+	button.clip_text = true
