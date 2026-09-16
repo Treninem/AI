@@ -100,18 +100,43 @@ func _run() -> void:
 		_fail("Core candidate SHA-256 helper is inconsistent", 15)
 		return
 
-	# Background updater failures must be logged/returned but must not emit the
-	# user-facing update_error signal. Manual failures remain visible.
+	# Background updater failures must stay silent to the UI but must always emit
+	# an internal attempt-failed signal so UpdateAutonomyGuard can resume work.
 	var updater := AuroraUpdateManager.new()
 	var visible_errors := [0]
+	var attempt_failures := [0]
+	var last_background := [false]
 	updater.update_error.connect(func(_message): visible_errors[0] = int(visible_errors[0]) + 1)
+	updater.update_attempt_failed.connect(func(_message, background):
+		attempt_failures[0] = int(attempt_failures[0]) + 1
+		last_background[0] = bool(background)
+	)
 	var background := updater._fail("offline background test", false)
-	if int(visible_errors[0]) != 0 or not bool(background.get("background", false)):
-		_fail("Background updater error became user-blocking", 16)
+	if int(visible_errors[0]) != 0 or int(attempt_failures[0]) != 1 or not bool(last_background[0]) or not bool(background.get("background", false)):
+		_fail("Background updater failure did not preserve silent internal recovery contract", 16)
 		return
 	var manual := updater._fail("manual update test", true)
-	if int(visible_errors[0]) != 1 or bool(manual.get("background", true)):
-		_fail("Manual updater error visibility contract failed", 17)
+	if int(visible_errors[0]) != 1 or int(attempt_failures[0]) != 2 or bool(last_background[0]) or bool(manual.get("background", true)):
+		_fail("Manual updater error visibility/internal recovery contract failed", 17)
+		return
+
+	# Regression: an update may pause hot/core improvements before a background
+	# download fails. The internal failure signal must restore the saved state.
+	coordinator.autonomous_hot_improvements = true
+	pipeline.autonomous_core_candidates = true
+	var guard := UpdateAutonomyGuard.new()
+	guard.coordinator = coordinator
+	guard.core_pipeline = pipeline
+	guard._pause(true, true, "test update selected")
+	if coordinator.autonomous_hot_improvements or pipeline.autonomous_core_candidates:
+		_fail("Update guard did not pause autonomous changes", 18)
+		return
+	guard._on_update_attempt_failed("offline", true)
+	if not coordinator.autonomous_hot_improvements or not pipeline.autonomous_core_candidates:
+		_fail("Silent updater failure left autonomy paused", 19)
+		return
+	if bool(guard.status().get("paused_hot_improvements", true)) or bool(guard.status().get("paused_core_candidates", true)):
+		_fail("Update guard status remained paused after updater failure", 20)
 		return
 
 	coordinator.free()
@@ -119,5 +144,6 @@ func _run() -> void:
 	curator.free()
 	settings.free()
 	updater.free()
+	guard.free()
 	print("AURORA_AUTONOMY_LEARNING_SMOKE_OK")
 	quit(0)
