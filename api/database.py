@@ -170,6 +170,66 @@ class AuroraDatabase:
                 "error": str(exc),
             }
 
+    def create_snapshot(self, destination: Path) -> dict[str, Any]:
+        """Create a full, verified SQLite snapshot for local operational rollback.
+
+        Unlike the exportable owner backup, this snapshot intentionally retains
+        API credential hashes so an automatic server rollback can restore the
+        exact pre-update authentication state. Callers must keep it outside any
+        exported backup root with owner-only permissions.
+        """
+
+        destination = destination.resolve()
+        if destination == self.path:
+            raise ValueError("Snapshot destination must differ from live database")
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        temporary = destination.with_name(
+            destination.name + f".{os.getpid()}.{threading.get_ident()}.{time.time_ns()}.tmp"
+        )
+        temporary.unlink(missing_ok=True)
+        try:
+            source = self._connect()
+            target = sqlite3.connect(temporary, timeout=30.0)
+            try:
+                source.backup(target)
+                target.commit()
+                target.execute("PRAGMA foreign_keys=ON")
+                integrity = str(target.execute("PRAGMA integrity_check").fetchone()[0])
+                foreign_key_errors = len(target.execute("PRAGMA foreign_key_check").fetchall())
+                schema_version = int(target.execute("PRAGMA user_version").fetchone()[0])
+                if integrity != "ok" or foreign_key_errors:
+                    raise RuntimeError(
+                        f"Refusing invalid SQLite snapshot: integrity={integrity}, "
+                        f"foreign_key_errors={foreign_key_errors}"
+                    )
+            finally:
+                target.close()
+                source.close()
+            if os.name != "nt":
+                os.chmod(temporary, 0o600)
+            with temporary.open("rb") as stream:
+                os.fsync(stream.fileno())
+            temporary.replace(destination)
+            if os.name != "nt":
+                try:
+                    directory_fd = os.open(destination.parent, os.O_RDONLY)
+                    try:
+                        os.fsync(directory_fd)
+                    finally:
+                        os.close(directory_fd)
+                except OSError:
+                    pass
+            return {
+                "ok": True,
+                "path": str(destination),
+                "bytes": destination.stat().st_size,
+                "schema_version": schema_version,
+                "integrity": integrity,
+                "foreign_key_errors": foreign_key_errors,
+            }
+        finally:
+            temporary.unlink(missing_ok=True)
+
 
 def atomic_write_text(path: Path, text: str, *, mode: int | None = None) -> None:
     """Crash-safe same-directory text replacement used by rollback mirrors."""
@@ -198,12 +258,25 @@ def atomic_write_text(path: Path, text: str, *, mode: int | None = None) -> None
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate AuroraFox API SQLite persistence")
+    parser = argparse.ArgumentParser(description="Validate or snapshot AuroraFox API SQLite persistence")
     parser.add_argument("--path", required=True, help="Path to aurorafox.sqlite3")
+    parser.add_argument(
+        "--snapshot-to",
+        default="",
+        help="Create a full local operational rollback snapshot at this path after validation",
+    )
     args = parser.parse_args()
-    status = AuroraDatabase(Path(args.path)).integrity_check()
+    database = AuroraDatabase(Path(args.path))
+    status = database.integrity_check()
+    if not bool(status.get("ok", False)) or status.get("journal_mode") != "wal":
+        print(json.dumps(status, ensure_ascii=False, sort_keys=True))
+        return 1
+    if args.snapshot_to:
+        snapshot = database.create_snapshot(Path(args.snapshot_to))
+        print(json.dumps({"database": status, "snapshot": snapshot}, ensure_ascii=False, sort_keys=True))
+        return 0
     print(json.dumps(status, ensure_ascii=False, sort_keys=True))
-    return 0 if bool(status.get("ok", False)) and status.get("journal_mode") == "wal" else 1
+    return 0
 
 
 if __name__ == "__main__":
