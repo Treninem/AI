@@ -105,6 +105,28 @@ class KnowledgeResilienceGateTests(unittest.TestCase):
         self.assertFalse(result["ok"])
         self.assertIn("case_failed:dedupe_alias_removal", result["errors"])
 
+    def test_workflow_runs_fail_closed_validator_on_linux_and_windows(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "knowledge-performance-concurrency.yml").read_text(encoding="utf-8")
+        self.assertIn("tests.test_knowledge_resilience_gate", workflow)
+        self.assertIn("benchmarks/knowledge/validate_resilience_batch.py", workflow)
+        self.assertIn("resilience-linux-gate.json", workflow)
+        self.assertIn("resilience-windows-gate.json", workflow)
+        self.assertGreaterEqual(workflow.count("Validate consolidated resilience evidence"), 2)
+
+    def test_search_remove_probe_forces_open_reader_overlap(self) -> None:
+        probe = (BENCH / "concurrency_race_probe.gd").read_text(encoding="utf-8")
+        required = [
+            "var reader_ready := Semaphore.new()",
+            "FileAccess.open(KnowledgeStoreScript.DB_PATH, FileAccess.READ)",
+            "reader_ready.post()",
+            "reader_ready.wait()",
+            "OS.delay_msec(READER_HOLD_MS)",
+            'result["remove_started_after_reader_ready"] = true',
+            '"deterministic_open_reader_overlap"',
+        ]
+        for marker in required:
+            self.assertIn(marker, probe)
+
 
 if __name__ == "__main__":
     unittest.main()
