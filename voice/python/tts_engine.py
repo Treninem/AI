@@ -68,10 +68,13 @@ class TTSEngine(ABC):
 class SileroEngine(TTSEngine):
     name = "silero"
 
-    # These discrete model-native profiles are intentionally narrow. They were
-    # accepted by acoustic A/B on the configured kseniya voice. High/fast pitch
-    # presets are deliberately absent because measured candidates regressed MOS.
+    # Narrow model-native profiles accepted by acoustic A/B on the configured
+    # kseniya voice. Pitch stays native/medium: high/low pitch candidates
+    # measurably reduced naturalness. Coarse fast tempo is also excluded from
+    # the product profile even though it passed the exploratory gate, because
+    # it shortened the playful sample by roughly a quarter.
     _NATIVE_PROSODY = {
+        "happy": {"min_intensity": 0.50, "rate": "medium", "pitch": "medium", "break_ms": 70},
         "sleepy": {"min_intensity": 0.45, "rate": "slow", "pitch": "medium", "break_ms": 110},
         "playful": {"min_intensity": 0.55, "rate": None, "pitch": None, "break_ms": 70},
         "serious": {"min_intensity": 0.55, "rate": "slow", "pitch": "medium", "break_ms": 0},
@@ -233,28 +236,36 @@ class EngineRouter:
                 return self.engines["xtts"]
         return self.engines["silero"]
 
+    def _processor_handles_prosody(self) -> bool:
+        return bool(self.config.get("processor", {}).get("prosody_dsp", False))
+
     def synthesize(self, text: str, emotion: str, intensity: float, speed: float, requested: str = "auto"):
         first = self.choose(requested)
+        processor_handles = self._processor_handles_prosody()
+        # Exactly one stage owns tempo/prosody. With the quality profile the
+        # destructive phase-vocoder is disabled, so local engines keep their
+        # native controls. If DSP is explicitly enabled, engines are neutralized
+        # and the processor becomes the sole authority, avoiding double tempo.
+        engine_emotion = "neutral" if processor_handles else emotion
+        engine_intensity = 0.0 if processor_handles else intensity
+        engine_speed = 1.0 if processor_handles else speed
         try:
-            # XTTS has its own speed control, while Silero uses only the narrow
-            # acoustically-approved native SSML profiles above. Shared processor
-            # remains responsible for neutral normalization/limiting.
-            synthesis_speed = 1.0 if first.name == "xtts" else speed
-            audio, sr = first.synthesize(text, emotion, intensity, synthesis_speed)
+            audio, sr = first.synthesize(text, engine_emotion, engine_intensity, engine_speed)
             return audio, sr, first.name, None
         except Exception as exc:
             if first.name != "silero":
                 fallback = self.engines["silero"]
-                audio, sr = fallback.synthesize(text, emotion, intensity, speed)
+                audio, sr = fallback.synthesize(text, engine_emotion, engine_intensity, engine_speed)
                 return audio, sr, fallback.name, str(exc)
             raise
 
     def diagnostics(self) -> dict:
         xtts = self.engines["xtts"]
+        processor_handles = self._processor_handles_prosody()
         return {
             "silero_available": self.engines["silero"].available(),
             "xtts_available": xtts.available(),
             "xtts": xtts.diagnostics() if isinstance(xtts, XTTSVoiceEngine) else {},
-            "prosody_authority": "silero_native_ssml+shared_processor",
-            "silero_native_prosody": True,
+            "prosody_authority": "shared_processor" if processor_handles else "model_native",
+            "silero_native_prosody": not processor_handles,
         }
