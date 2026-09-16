@@ -17,6 +17,7 @@ DEFAULT_WARN_DATABASE_BYTES = 512 * 1024 * 1024
 DEFAULT_BACKUP_MAX_BYTES = 256 * 1024 * 1024
 DEFAULT_WARN_SYNC_CHANGES = 1_000_000
 DEFAULT_WARN_OPEN_CONFLICTS = 10_000
+DEFAULT_WARN_GUESTS = 50_000
 DEFAULT_MIN_FREE_BYTES = 256 * 1024 * 1024
 MAINTENANCE_META_KEY = "persistence_maintenance.last_prune_epoch"
 
@@ -61,6 +62,7 @@ class PersistenceMaintenance:
         self.warn_open_conflicts = _env_int(
             "AURORAFOX_SYNC_CONFLICTS_WARN", DEFAULT_WARN_OPEN_CONFLICTS
         )
+        self.warn_guests = _env_int("AURORAFOX_GUESTS_WARN", DEFAULT_WARN_GUESTS)
         self.min_free_bytes = _env_int(
             "AURORAFOX_STORAGE_MIN_FREE_BYTES", DEFAULT_MIN_FREE_BYTES
         )
@@ -132,6 +134,8 @@ class PersistenceMaintenance:
         warnings: list[str] = []
         if sizes["database_effective_bytes"] >= self.warn_database_bytes:
             warnings.append("database_size")
+        if counts["guests"] >= self.warn_guests:
+            warnings.append("guest_population")
         if counts["sync_changes"] >= self.warn_sync_changes:
             warnings.append("sync_change_history")
         if counts["sync_conflicts_open"] >= self.warn_open_conflicts:
@@ -156,6 +160,7 @@ class PersistenceMaintenance:
                 "backup_max_source_bytes": self.backup_max_bytes,
                 "database_warning_precedes_backup_cap": self.warn_database_bytes < self.backup_max_bytes,
                 "database_warning_includes_wal": True,
+                "guest_warn_count": self.warn_guests,
                 "min_free_bytes": self.min_free_bytes,
             },
             "retention_policy": {
@@ -168,6 +173,7 @@ class PersistenceMaintenance:
                 "unresolved_conflicts_protected": True,
                 "resolved_conflicts_protected": True,
                 "conversation_data_auto_pruned": False,
+                "guest_principals_auto_pruned": False,
                 "ephemeral_auth_rows_prunable": True,
                 "refresh_replay_sentinel_kept_until_expiry": True,
                 "session_kept_while_refresh_sentinel_unexpired": True,
