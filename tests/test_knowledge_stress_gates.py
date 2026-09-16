@@ -44,6 +44,7 @@ class KnowledgeStressGateTests(unittest.TestCase):
     def test_validator_rejects_external_runtime_dependency(self) -> None:
         validator = load_module("knowledge_perf_validator_external", "validate_performance_report.py")
         report = {
+            "schema": "aurorafox_knowledge_performance_v1",
             "hard_correctness": {"passed": True, "errors": []},
             "self_reliance_contract": {
                 "network_required": False,
@@ -60,6 +61,7 @@ class KnowledgeStressGateTests(unittest.TestCase):
     def test_validator_keeps_absolute_search_latency_informational(self) -> None:
         validator = load_module("knowledge_perf_validator_latency", "validate_performance_report.py")
         report = {
+            "schema": "aurorafox_knowledge_performance_v1",
             "hard_correctness": {"passed": True, "errors": []},
             "self_reliance_contract": {
                 "network_required": False,
@@ -133,12 +135,19 @@ class KnowledgeStressGateTests(unittest.TestCase):
         validator = load_module("knowledge_perf_validator_registry", "validate_performance_report.py")
         result = validator.evaluate_report(
             {
+                "schema": "aurorafox_knowledge_registry_scaling_v1",
                 "hard_correctness": {"passed": True, "errors": []},
+                "self_reliance_contract": {
+                    "network_required": False,
+                    "external_runtime_required": False,
+                    "ollama_required": False,
+                },
                 "relative_performance": {"suspected_quadratic_registry": True},
                 "results": [],
             },
             "registry.json",
         )
+        self.assertTrue(result["correctness_passed"])
         self.assertEqual(result["performance_blockers"], ["suspected_quadratic_registry"])
 
     def test_portable_harness_makes_dynamic_script_locals_explicit_variant(self) -> None:
