@@ -34,25 +34,36 @@ def test_normal_ai_client_is_self_primary_and_does_not_require_external_ai() -> 
     client = read("scripts/ai_client.gd")
     runtime = read("scripts/aurora_core_runtime.gd")
 
-    # AuroraFox-owned Core is the product default.
     assert "AuroraBundledCoreModel.runtime_candidate()" in client
     assert 'info["self_primary"] = true' in client
     assert 'info["external_ai_required"] = false' in client
+    assert 'info["normal_chat_external_fallback"] = false' in client
     assert 'info["operational_without_ollama"] = true' in client
 
-    # A third-party compatibility model must never be represented as the
-    # product's DEFAULT_MODEL. Legacy naming makes its limited role explicit.
     assert 'const LEGACY_OLLAMA_DEFAULT_MODEL := "qwen3:8b"' in client
     assert 'const LEGACY_OLLAMA_DEFAULT_URL := "http://127.0.0.1:11434"' in client
     assert "const DEFAULT_MODEL" not in client
     assert 'var model_source := "aurora_core"' not in client
     assert "configure_ollama_compatibility" in client
 
-    # Local inference always runs before any explicitly enabled compatibility
-    # path, and that compatibility path is disabled by default and absent on Android.
+    # The normal intelligence path must be local-only. Compatibility is a
+    # separate explicit method and therefore cannot silently become AgentCore's base.
+    chat_block = client.split("func chat(messages:", 1)[1].split("func chat_with_compatibility", 1)[0]
+    compatibility_block = client.split("func chat_with_compatibility", 1)[1].split("func import_knowledge_text", 1)[0]
+    assert "core_runtime._chat_local" in chat_block
+    assert "core_runtime.chat(" not in chat_block
+    assert "core_runtime.chat(" in compatibility_block
+
     assert "var allow_ollama_fallback := false" in runtime
     assert runtime.index("var local := await _chat_local") < runtime.index("if allow_ollama_fallback")
     assert 'OS.get_name() != "Android"' in runtime
+
+
+def test_core_improvement_uses_normal_self_primary_ai_path() -> None:
+    pipeline = read("scripts/core_improvement_pipeline.gd")
+    assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.12)' in pipeline
+    assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)' in pipeline
+    assert "chat_with_compatibility" not in pipeline
 
 
 def test_hard_self_reliance_requirement_is_documented_for_all_agents() -> None:
@@ -63,9 +74,9 @@ def test_hard_self_reliance_requirement_is_documented_for_all_agents() -> None:
     assert "HARD PRODUCT INVARIANT" in agents
     assert "depend and rely on its own Core" in agents
     assert "External systems may be used only as **optional tools or information sources**" in agents
-    assert "самостоятель" in master.lower()
-    assert "внешн" in master.lower()
-    assert "AuroraFox Core" in readme
+    assert "зависит и полагается только на себя" in master
+    assert "ЖЁСТКИЙ АРХИТЕКТУРНЫЙ ИНВАРИАНТ" in master
+    assert "Жёсткий принцип самостоятельности" in readme
 
 
 def test_normal_scene_has_no_model_setup_wizard() -> None:
@@ -98,7 +109,5 @@ def test_android_build_and_export_require_bundled_weights() -> None:
 
 def test_windows_and_android_package_strategies_are_intentional() -> None:
     presets = read("export_presets.cfg")
-    # Windows copies the large model next to the engine instead of embedding it
-    # in the PCK. Android must embed it because it is provisioned from res://.
     assert 'exclude_filter="models/aurorafox-core.gguf"' in presets
     assert presets.count("models/aurorafox-core.gguf") >= 2
