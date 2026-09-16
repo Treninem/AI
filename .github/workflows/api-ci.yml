@@ -9,6 +9,7 @@ on:
       - 'agent/progress_tracker.py'
       - 'tests/test_api_gateway.py'
       - 'tests/test_api_database.py'
+      - 'tests/test_api_accounts_sync.py'
       - 'tests/test_api_privacy_contract.py'
       - 'tests/test_api_runtime_resilience.py'
       - 'tests/test_core_candidate_queue.py'
@@ -27,6 +28,7 @@ on:
       - 'agent/progress_tracker.py'
       - 'tests/test_api_gateway.py'
       - 'tests/test_api_database.py'
+      - 'tests/test_api_accounts_sync.py'
       - 'tests/test_api_privacy_contract.py'
       - 'tests/test_api_runtime_resilience.py'
       - 'tests/test_core_candidate_queue.py'
@@ -61,6 +63,7 @@ jobs:
           PYTHONPATH="$PWD" python -m pytest -q \
             tests/test_api_gateway.py \
             tests/test_api_database.py \
+            tests/test_api_accounts_sync.py \
             tests/test_api_privacy_contract.py \
             tests/test_api_runtime_resilience.py \
             tests/test_core_candidate_queue.py \
