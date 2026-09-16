@@ -15,24 +15,34 @@ func _ready() -> void:
 	AuroraUpdate.update_available.connect(func(info): update_status.text = "Доступна версия %s" % str(info.get("version", "")))
 	AuroraUpdate.no_update.connect(func(version): update_status.text = "Установлена актуальная версия %s" % version)
 	AuroraUpdate.update_error.connect(func(message):
-		# Background updater failures are logged/retried by the updater. The label
-		# is useful when Settings is open, but never gates AuroraFox operation.
 		if popup != null and popup.visible:
 			update_status.text = "Фоновое обновление будет повторено позже • %s" % message
 	)
-	AuroraVoice.backend_status.connect(func(ready, _info): voice_status.text = "Голосовой backend: %s" % ("готов" if ready else "не подключён"))
+	AuroraVoice.backend_status.connect(func(ready, _info): voice_status.text = "Голосовой модуль: %s" % ("готов" if ready else "не подключён"))
 
 func show_settings() -> void:
 	_sync_status()
 	_refresh_project_list()
+	_fit_popup()
 	popup.popup_centered()
+
+func _fit_popup() -> void:
+	if popup == null:
+		return
+	var viewport := get_viewport().get_visible_rect().size
+	var margin := 28.0 if OS.get_name() == "Android" else 48.0
+	popup.size = Vector2i(
+		maxi(360, mini(820, int(viewport.x - margin))),
+		maxi(520, mini(840, int(viewport.y - margin)))
+	)
 
 func _build_ui() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 110
 	add_child(layer)
 	popup = PopupPanel.new()
-	popup.size = Vector2i(800, 820)
+	popup.name = "SettingsPopup"
+	popup.size = Vector2i(820, 820)
 	layer.add_child(popup)
 
 	var margin := MarginContainer.new()
@@ -42,7 +52,9 @@ func _build_ui() -> void:
 	popup.add_child(margin)
 
 	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -56,6 +68,7 @@ func _build_ui() -> void:
 
 	var version := Label.new()
 	version.text = "Версия %s • Godot %s" % [ProjectSettings.get_setting("application/config/version", "0.0.0"), Engine.get_version_info().get("string", "4.7.1")]
+	version.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(version)
 	_add_separator(box)
 
@@ -77,6 +90,7 @@ func _build_ui() -> void:
 	box.add_child(_slider_row("Механический оттенок", float(AuroraVoice.settings.get("mechanical_amount", 0.035)), 0.0, 0.10, 0.005, func(v): AuroraVoice.update_setting("mechanical_amount", v)))
 
 	var mic_row := HBoxContainer.new()
+	mic_row.add_theme_constant_override("separation", 10)
 	var mic_label := Label.new()
 	mic_label.text = "Режим микрофона"
 	mic_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -87,12 +101,14 @@ func _build_ui() -> void:
 	for i in range(modes.size()):
 		mic_mode.add_item(str(modes[i][0]))
 		mic_mode.set_item_metadata(i, modes[i][1])
-		if str(modes[i][1]) == current_mode: mic_mode.selected = i
+		if str(modes[i][1]) == current_mode:
+			mic_mode.selected = i
 	mic_mode.item_selected.connect(func(index): AuroraVoice.set_mic_mode(str(mic_mode.get_item_metadata(index))))
 	mic_row.add_child(mic_mode)
 	box.add_child(mic_row)
 
 	voice_status = Label.new()
+	voice_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(voice_status)
 	var voice_prepare := Button.new()
 	voice_prepare.text = "Подготовить / восстановить голосовой модуль"
@@ -100,22 +116,20 @@ func _build_ui() -> void:
 	box.add_child(voice_prepare)
 	_add_separator(box)
 
-	_add_section(box, "Локальный AI")
+	_add_section(box, "AuroraFox Core")
 	var ai_hint := Label.new()
-	ai_hint.text = "AuroraFox Core всегда работает local-first. Основной GGUF и другие локальные GGUF используются раньше необязательного Ollama-адаптера; отказ Ollama не останавливает AuroraFox."
+	ai_hint.text = "AuroraFox Core встроен в приложение и является основным локальным интеллектом. Для обычной работы не требуется выбирать, скачивать или настраивать отдельную модель; внешние runtimes остаются только необязательной совместимостью."
 	ai_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ai_hint)
-	var ai_prepare := Button.new()
-	ai_prepare.text = "Установить / изменить локальные модели"
-	ai_prepare.pressed.connect(func(): _show_setup_node("ModelSetup"))
-	box.add_child(ai_prepare)
 	_add_separator(box)
 
 	_add_section(box, "Файлы")
 	file_status = Label.new()
 	file_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(file_status)
-	var file_buttons := HBoxContainer.new()
+	var file_buttons := HFlowContainer.new()
+	file_buttons.add_theme_constant_override("h_separation", 8)
+	file_buttons.add_theme_constant_override("v_separation", 8)
 	var prepare_files := Button.new()
 	prepare_files.text = "Подготовить File Intelligence"
 	prepare_files.pressed.connect(func(): _show_setup_node("FileSetup"))
@@ -126,7 +140,7 @@ func _build_ui() -> void:
 	clear_files.pressed.connect(_clear_file_cache)
 	file_buttons.add_child(clear_files)
 	var refresh_files := Button.new()
-	refresh_files.text = "Проверить"
+	refresh_files.text = "Проверить состояние"
 	refresh_files.pressed.connect(_refresh_file_status)
 	file_buttons.add_child(refresh_files)
 	box.add_child(file_buttons)
@@ -134,7 +148,7 @@ func _build_ui() -> void:
 
 	_add_section(box, "Проекты и кодовая база")
 	var project_hint := Label.new()
-	project_hint.text = "Папка становится доступной агенту только после явного выбора здесь. Индекс хранится локально и позволяет быстро находить классы, функции и связанные участки кода."
+	project_hint.text = "Папка становится доступной агенту только после явного выбора. Индекс хранится локально и помогает быстро находить классы, функции и связанные участки кода."
 	project_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(project_hint)
 	project_select = OptionButton.new()
@@ -143,64 +157,70 @@ func _build_ui() -> void:
 	project_status = Label.new()
 	project_status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(project_status)
-	var project_buttons := HBoxContainer.new()
+	var project_buttons := HFlowContainer.new()
+	project_buttons.visible = OS.get_name() == "Windows"
+	project_buttons.add_theme_constant_override("h_separation", 8)
+	project_buttons.add_theme_constant_override("v_separation", 8)
 	var add_project := Button.new()
 	add_project.text = "Добавить папку проекта"
-	add_project.disabled = OS.get_name() != "Windows"
 	add_project.pressed.connect(func(): project_picker.popup_centered_ratio(0.72))
 	project_buttons.add_child(add_project)
 	var reindex := Button.new()
 	reindex.text = "Обновить индекс"
-	reindex.disabled = OS.get_name() != "Windows"
 	reindex.pressed.connect(_index_selected_project)
 	project_buttons.add_child(reindex)
 	var remove_project := Button.new()
 	remove_project.text = "Убрать доступ"
-	remove_project.disabled = OS.get_name() != "Windows"
 	remove_project.pressed.connect(_remove_selected_project)
 	project_buttons.add_child(remove_project)
 	box.add_child(project_buttons)
+	if OS.get_name() != "Windows":
+		var platform_hint := Label.new()
+		platform_hint.text = "Управление доверенными папками проекта доступно в Windows-клиенте."
+		platform_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		platform_hint.add_theme_font_size_override("font_size", 12)
+		box.add_child(platform_hint)
 	_add_separator(box)
 
 	_add_section(box, "Обучение и самоулучшение")
 	var improvement_hint := Label.new()
-	improvement_hint.text = "AuroraFox может самостоятельно собирать знания, проводить турнир 3–10 изолированных мутаций и создавать проверенные кандидаты улучшения разрешённых частей ядра. Непрошедшие проверки изменения не применяются; рабочая версия и откат сохраняются."
+	improvement_hint.text = "AuroraFox может собирать знания, проверять изолированные варианты улучшений и сохранять только прошедшие обязательные проверки кандидаты. Рабочая версия и возможность отката сохраняются."
 	improvement_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(improvement_hint)
 	var autonomy := _autonomy_settings()
 	var autonomy_settings := autonomy.get_settings() if autonomy != null else {}
 	var master := CheckButton.new()
-	master.text = "Разрешить автономное обучение и развитие AuroraFox"
+	master.text = "Автономное обучение и развитие"
 	master.button_pressed = bool(autonomy_settings.get("master_enabled", true))
 	master.disabled = autonomy == null
 	master.toggled.connect(func(v): if autonomy != null: autonomy.set_master_enabled(v))
 	box.add_child(master)
 	var learning := CheckButton.new()
-	learning.text = "Самостоятельно пополнять Core Knowledge из проверяемых исследований"
+	learning.text = "Пополнять Core Knowledge из проверенных исследований"
 	learning.button_pressed = bool(autonomy_settings.get("autonomous_learning", true))
 	learning.disabled = autonomy == null
 	learning.toggled.connect(func(v): if autonomy != null: autonomy.set_autonomous_learning(v))
 	box.add_child(learning)
 	var cycles := CheckButton.new()
-	cycles.text = "Запускать автономные циклы целей и анализа"
+	cycles.text = "Запускать автономные циклы анализа"
 	cycles.button_pressed = bool(autonomy_settings.get("autonomous_cycles", true))
 	cycles.disabled = autonomy == null
 	cycles.toggled.connect(func(v): if autonomy != null: autonomy.set_autonomous_cycles(v))
 	box.add_child(cycles)
 	var hot := CheckButton.new()
-	hot.text = "Автоматически активировать прошедшие тесты безопасные runtime-мутации"
+	hot.text = "Автоматически активировать проверенные runtime-мутации"
 	hot.button_pressed = bool(autonomy_settings.get("hot_improvements", true))
 	hot.disabled = autonomy == null
 	hot.toggled.connect(func(v): if autonomy != null: autonomy.set_hot_improvements(v))
 	box.add_child(hot)
 	var core := CheckButton.new()
-	core.text = "Разрешить создание проверенных кандидатов переписывания ядра"
+	core.text = "Создавать проверенные кандидаты изменения ядра"
 	core.button_pressed = bool(autonomy_settings.get("core_candidates", true))
 	core.disabled = autonomy == null
 	core.toggled.connect(func(v): if autonomy != null: autonomy.set_core_candidates(v))
 	box.add_child(core)
 	var dev_apply := CheckButton.new()
-	dev_apply.text = "В dev/editor автоматически применять проверенный кандидат с резервной копией"
+	dev_apply.text = "В dev/editor автоматически применять проверенного кандидата"
 	dev_apply.button_pressed = bool(autonomy_settings.get("auto_apply_dev_checkout", true))
 	dev_apply.disabled = autonomy == null
 	dev_apply.visible = OS.has_feature("editor")
@@ -218,7 +238,7 @@ func _build_ui() -> void:
 	_add_section(box, "Обновления")
 	var update_settings := AuroraUpdate.get_settings()
 	var update_hint := Label.new()
-	update_hint.text = "Stable-обновления проверяются RSA-SHA256 и SHA-256 пакета. На Windows применяется health-check/rollback; на Android используется системный установщик. Ошибка сети не останавливает текущую локальную версию."
+	update_hint.text = "Stable-обновления проходят проверку целостности и доверия. Ошибка сети не останавливает текущую локальную версию AuroraFox."
 	update_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(update_hint)
 	var auto_check := CheckButton.new()
@@ -260,9 +280,10 @@ func _build_ui() -> void:
 
 func _slider_row(label_text: String, initial: float, minimum: float, maximum: float, step: float, changed: Callable) -> HBoxContainer:
 	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
 	var label := Label.new()
 	label.text = label_text
-	label.custom_minimum_size.x = 210
+	label.custom_minimum_size.x = 190
 	row.add_child(label)
 	var slider := HSlider.new()
 	slider.min_value = minimum
@@ -274,7 +295,7 @@ func _slider_row(label_text: String, initial: float, minimum: float, maximum: fl
 	row.add_child(slider)
 	var value_label := Label.new()
 	value_label.text = "%.2f" % initial
-	value_label.custom_minimum_size.x = 55
+	value_label.custom_minimum_size.x = 50
 	slider.value_changed.connect(func(v): value_label.text = "%.2f" % v)
 	row.add_child(value_label)
 	return row
@@ -290,24 +311,28 @@ func _add_separator(box: VBoxContainer) -> void:
 
 func _show_setup_node(name: String) -> void:
 	var main := get_parent()
-	if main == null: return
+	if main == null:
+		return
 	var node := main.get_node_or_null(name)
-	if node == null: return
+	if node == null:
+		return
 	if node.has_method("show_setup"):
 		node.call("show_setup")
 		return
 	var setup_popup = node.get("popup")
-	if setup_popup is PopupPanel: setup_popup.popup_centered()
+	if setup_popup is PopupPanel:
+		setup_popup.popup_centered()
 
 func _sync_status() -> void:
-	voice_status.text = "Голосовой backend: %s" % ("готов" if AuroraVoice.backend_is_ready else "не подключён")
+	voice_status.text = "Голосовой модуль: %s" % ("готов" if AuroraVoice.backend_is_ready else "не подключён")
 	_refresh_file_status()
 	_refresh_index_status()
 	_sync_improvement_status()
 
 func _refresh_file_status() -> void:
 	var main := get_parent()
-	if main == null: return
+	if main == null:
+		return
 	var manager = main.get("attachments")
 	if not manager is AttachmentManager:
 		file_status.text = "File Intelligence: менеджер не подключён"
@@ -326,7 +351,8 @@ func _refresh_file_status() -> void:
 
 func _clear_file_cache() -> void:
 	var main := get_parent()
-	if main == null: return
+	if main == null:
+		return
 	var manager = main.get("attachments")
 	if manager is AttachmentManager:
 		var result: Dictionary = await manager.clear_file_cache()
@@ -334,11 +360,13 @@ func _clear_file_cache() -> void:
 
 func _project_bridge() -> ProjectIndexToolBridge:
 	var main := get_parent()
-	if main == null: return null
+	if main == null:
+		return null
 	return main.get_node_or_null("ProjectIndexTools") as ProjectIndexToolBridge
 
 func _refresh_project_list() -> void:
-	if project_select == null: return
+	if project_select == null:
+		return
 	project_select.clear()
 	var bridge := _project_bridge()
 	if bridge == null:
@@ -351,18 +379,20 @@ func _refresh_project_list() -> void:
 	if roots.is_empty():
 		project_select.add_item("Нет доверенных папок")
 		project_select.set_item_disabled(0, true)
-		project_status.text = "Выбери локальную папку проекта, чтобы AuroraFox могла её индексировать."
+		project_status.text = "Выбери локальную папку проекта, чтобы AuroraFox могла её индексировать." if OS.get_name() == "Windows" else "Доверенные папки проекта настраиваются в Windows-клиенте."
 	else:
 		_refresh_index_status()
 
 func _selected_project() -> String:
-	if project_select == null or project_select.item_count == 0: return ""
+	if project_select == null or project_select.item_count == 0:
+		return ""
 	var value = project_select.get_item_metadata(project_select.selected)
 	return str(value) if value != null else ""
 
 func _on_project_selected(path: String) -> void:
 	var bridge := _project_bridge()
-	if bridge == null: return
+	if bridge == null:
+		return
 	if not bridge.access.add_root(path):
 		project_status.text = "Не удалось добавить папку проекта."
 		return
@@ -389,7 +419,8 @@ func _index_selected_project() -> void:
 func _refresh_index_status() -> void:
 	var root := _selected_project()
 	var bridge := _project_bridge()
-	if root.is_empty() or bridge == null: return
+	if root.is_empty() or bridge == null:
+		return
 	var result: Dictionary = await bridge.index.status(root)
 	if result.get("ok", false):
 		project_status.text = "Индекс: %d файлов • %s" % [int(result.get("files", 0)), JSON.stringify(result.get("languages", {}))]
@@ -397,23 +428,27 @@ func _refresh_index_status() -> void:
 func _remove_selected_project() -> void:
 	var root := _selected_project()
 	var bridge := _project_bridge()
-	if root.is_empty() or bridge == null: return
+	if root.is_empty() or bridge == null:
+		return
 	await bridge.index.clear(root)
 	bridge.access.remove_root(root)
 	_refresh_project_list()
 
 func _runtime_extensions() -> RuntimeExtensionManager:
 	var main := get_parent()
-	if main == null: return null
+	if main == null:
+		return null
 	return main.get_node_or_null("RuntimeExtensions") as RuntimeExtensionManager
 
 func _autonomy_settings() -> AutonomySettingsManager:
 	var main := get_parent()
-	if main == null: return null
+	if main == null:
+		return null
 	return main.get_node_or_null("AutonomySettings") as AutonomySettingsManager
 
 func _sync_improvement_status() -> void:
-	if improvement_status == null: return
+	if improvement_status == null:
+		return
 	var manager := _runtime_extensions()
 	var autonomy := _autonomy_settings()
 	if manager == null:
@@ -422,7 +457,8 @@ func _sync_improvement_status() -> void:
 	var items := manager.list_extensions()
 	var active := 0
 	for item in items:
-		if bool(item.get("active", false)): active += 1
+		if bool(item.get("active", false)):
+			active += 1
 	var mode := "управление автономностью ещё подключается"
 	if autonomy != null:
 		var a := autonomy.status()
@@ -431,7 +467,8 @@ func _sync_improvement_status() -> void:
 
 func _open_self_improvement() -> void:
 	var main := get_parent()
-	if main == null: return
+	if main == null:
+		return
 	var center := main.get_node_or_null("SelfImprovementCenter")
 	if center == null or not center.has_method("show_center"):
 		improvement_status.text = "Центр самоулучшения не подключён"
