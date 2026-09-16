@@ -8,6 +8,7 @@ const KnowledgeSourceRegistryScript: Variant = preload("res://scripts/knowledge_
 const RESULT_PREFIX := "AURORA_KNOWLEDGE_LOST_REGISTRY_ROLLBACK_RESULT="
 const PROBE_ROOT := "user://knowledge_lost_registry_probe"
 const SOURCE := PROBE_ROOT + "/source.json"
+const RECOVERY_MARKER := "user://knowledge/.registry_recovery_required"
 const STABLE_MARKER := "AURORA_LOST_REGISTRY_STABLE_MARKER"
 const PARTIAL_MARKER := "AURORA_LOST_REGISTRY_PARTIAL_MARKER"
 
@@ -56,9 +57,10 @@ func _run() -> void:
 	var after_chunks := int(KnowledgeManagerScript.new().call("stats").get("chunks", 0))
 	var failed_as_expected := not bool(failed.get("ok", false)) and str(failed.get("transaction", "")) == "rolled_back"
 	var conservative_snapshot := str(failed.get("source_snapshot", "")) == "source_rows"
+	var recovery_sticky := FileAccess.file_exists(RECOVERY_MARKER)
 	var preserved := not stable_after.is_empty() and after_chunks == before_chunks and partial_after.is_empty()
 	var ok := bool(initial.get("ok", false)) and not stable_before.is_empty() and not registry_before.is_empty()
-	ok = ok and failed_as_expected and conservative_snapshot and preserved
+	ok = ok and failed_as_expected and conservative_snapshot and recovery_sticky and preserved
 	_emit({
 		"ok": ok,
 		"initial_import_ok": bool(initial.get("ok", false)),
@@ -69,12 +71,13 @@ func _run() -> void:
 		"transaction": failed.get("transaction", ""),
 		"source_snapshot": failed.get("source_snapshot", ""),
 		"conservative_snapshot": conservative_snapshot,
+		"recovery_mode_sticky": recovery_sticky,
 		"stable_after": not stable_after.is_empty(),
 		"partial_after": not partial_after.is_empty(),
 		"chunks_before": before_chunks,
 		"chunks_after": after_chunks,
 		"previous_valid_state_preserved": preserved,
-		"expected_contract": "registry loss must disable first-import fast path so failed import cannot erase valid source rows"
+		"expected_contract": "registry loss with existing store rows must force persistent conservative journaling so failed import cannot erase valid Knowledge"
 	}, 0 if ok else 5)
 
 func _reset_state() -> void:
@@ -85,6 +88,7 @@ func _reset_state() -> void:
 		"user://knowledge/.knowledge_source.txn.jsonl",
 		"user://knowledge/.structured_source.txn.jsonl",
 		"user://knowledge/.sources.json.txn",
+		RECOVERY_MARKER,
 		SOURCE
 	]:
 		if FileAccess.file_exists(path):
