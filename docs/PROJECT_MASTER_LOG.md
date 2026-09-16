@@ -541,3 +541,17 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Найденный и исправленный test-infra дефект: первый network run `35084112647` падал при collection из-за отсутствующего `httpx`; production code не падал. CI/install/update теперь явно ставят `httpx==0.28.1` для FastAPI network contract.
 - Ограничения/риски: физический REG.RU host этим чатом не изменялся и не считается проверенным без доступного SSH/terminal connector. Email verification/reset one-time token storage реализован, но production delivery transport ещё не подключён; dev token exposure выключен по умолчанию. До полного server acceptance также нужен ingress request-body guard до полной JSON materialization и capacity/retention policy без удаления pending/private data.
 - Следующий шаг по указанию главного координатора: **не трогать UI/voice/research/OCR/Core/updater-owned paths**; внутри SERVER-DB lane реализовать production email verification/reset delivery boundary без хранения raw long-lived secrets, затем early HTTP body limit/capacity gates; после этого проверить доступный публичный REG.RU `/health`/`/ready` и оставить физический SSH deployment owner/access boundary, если connector по-прежнему отсутствует.
+
+## 22. Integration / Regression / Release Readiness Gate — active lane
+
+### CLAIM `CHAT-2026-09-16-INTEGRATION-GATE`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `6fd0539e8ee849487d9eb22b1615d4ab54ae4c20`
+- Режим: Chat
+- Цель: независимый cross-subsystem integration/regression/release-readiness gate для свежего `main`: рано находить несовместимости между Core/AgentCore/Knowledge/Research/Voice/OCR/API/accounts/UI/updater/package/safety lanes, не дублируя их реализацию.
+- Предполагаемый bump после зелёных acceptance-gates: **BUILD**, если изменения остаются только integration/CI/test infrastructure; каноническую версию и Android versionCode этот lane не меняет. Если найденный product fix требует большего bump, он маршрутизируется владельцу production CLAIM.
+- Собственные файлы/подсистема: только новые независимые `tests/integration_*`, `tests/release_readiness_*`, `tests/cross_subsystem_*`, новый `.github/workflows/integration-gate.yml` при отсутствии конфликта, integration scripts и `docs/PROJECT_MASTER_LOG.md`.
+- Не изменять production-файлы и workflow, занятые `CHAT-2026-09-16-UPDATER-VERSIONING`, `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`, `CHAT-2026-09-16-SERVER-DB`, `CHAT-2026-09-16-CORE-BENCHMARKS`, `CHAT-2026-09-16-LOCAL-OCR`.
+- Главный gate: normal AuroraFox path должен оставаться полностью работоспособным без Ollama/OpenAI/Gemini/Claude/remote inference/Internet и использовать bundled AuroraFox Core; external AI не может стать обязательным fallback.
+- Acceptance: offline Core; Knowledge/OCR after integration; collector→curator authority; Account A/B + Guest A/B isolation; Windows package; Android APK + bundled runtime/model/OCR; updater/version contract; UI integration smoke; master stop/snapshot/rollback/privacy/sandbox/candidate verification gates; Core benchmark without blocking regression; CI failures routed by exact CLAIM-ID with job/test/SHA evidence; physical-device tests reported honestly if unavailable.
