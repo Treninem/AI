@@ -36,9 +36,21 @@ func _build_ui() -> void:
 		avatar_slot.visible = false
 		avatar_slot.custom_minimum_size = Vector2.ZERO
 
+func _logical_background_viewport_size() -> Vector2:
+	# Root Window.content_scale_size is the canonical logical canvas used by the
+	# responsive UI. In headless/mobile-preview runs get_viewport_rect() may still
+	# report the host window's physical landscape dimensions for the first frame,
+	# which previously made portrait captures use a wide crop.
+	var window := get_tree().root
+	if window != null:
+		var logical := window.content_scale_size
+		if logical.x > 0 and logical.y > 0:
+			return Vector2(logical)
+	return get_viewport_rect().size
+
 func _owner_background_texture() -> Texture2D:
 	var source_size := OWNER_BACKGROUND_MASTER.get_size()
-	var viewport := get_viewport_rect().size
+	var viewport := _logical_background_viewport_size()
 	if source_size.x <= 0.0 or source_size.y <= 0.0 or viewport.x <= 0.0 or viewport.y <= 0.0:
 		return OWNER_BACKGROUND_MASTER
 	var region := Rect2(Vector2.ZERO, source_size)
