@@ -45,6 +45,8 @@ func configure_local_model(path: String) -> void:
 	configure_android_model(path)
 
 func set_ollama_fallback(enabled: bool) -> void:
+	# This switch only authorizes explicitly requested compatibility calls.
+	# Normal chat(), AgentCore and self-improvement remain AuroraFox-Core-only.
 	core_runtime.set_ollama_fallback_enabled(enabled)
 	_save_core_settings()
 
@@ -80,7 +82,16 @@ func warmup() -> Dictionary:
 		}
 	return {"ok": not bundled.is_empty(), "runtime": "aurora_core", "bundled_core": not bundled.is_empty()}
 
+# Primary intelligence path. This method deliberately bypasses every external
+# compatibility adapter even if a developer/user explicitly enabled one.
+# AgentCore, self-improvement and normal product chat therefore depend only on
+# AuroraFox-owned local inference.
 func chat(messages: Array, temperature: float = 0.2) -> Dictionary:
+	return await core_runtime._chat_local(_with_knowledge(messages), temperature)
+
+# Explicit optional path for legacy/developer integrations. Callers must choose
+# it intentionally; it is never the normal product or autonomous-intelligence path.
+func chat_with_compatibility(messages: Array, temperature: float = 0.2) -> Dictionary:
 	return await core_runtime.chat(_with_knowledge(messages), temperature)
 
 func import_knowledge_text(text: String, source := "manual", metadata: Dictionary = {}) -> Dictionary:
@@ -207,6 +218,7 @@ func runtime_info() -> Dictionary:
 	info["learning_file_types"] = Array(knowledge.supported_import_extensions())
 	info["self_primary"] = true
 	info["external_ai_required"] = false
+	info["normal_chat_external_fallback"] = false
 	info["operational_without_ollama"] = true
 	info["bundled_core"] = AuroraBundledCoreModel.bundled_available()
 	return info
