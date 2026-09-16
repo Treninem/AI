@@ -140,7 +140,8 @@ def test_server_persistence_and_reg_ru_release_contracts_are_same_sha_covered() 
     assert "sync" in maintenance.lower()
     assert "test_server_readiness_is_database_integrity_backed_and_privacy_safe" in deployment
     assert "http://127.0.0.1:8768/ready" in deployment
-    assert "verify_production.py" in deployment
+    assert "test_reg_ru_production_verifier_is_fail_closed_and_ci_is_self_cleaning" in deployment
+    assert "deploy/reg_ru/verify.sh" in deployment
     assert "sqlite" in deployment.lower()
     assert "backup" in deployment.lower()
     assert "rollback" in deployment.lower()
