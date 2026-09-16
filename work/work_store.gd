@@ -565,6 +565,7 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 	if state not in VALID_STATES:
 		state = STATE_FAILED
 		migrated = true
+	var retry_safety_present := raw.has("last_action_retry_safety")
 	var retry_safety := str(raw.get("last_action_retry_safety", "safe"))
 	if retry_safety not in ["safe", "unsafe"]:
 		retry_safety = "unsafe"
@@ -572,6 +573,9 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 	var requires_user_action := bool(raw.get("requires_user_action", false))
 	var last_error := _redact(str(raw.get("last_error", raw.get("error", "")))).substr(0, MAX_ERROR_CHARS)
 	if state == STATE_RUNNING:
+		if not retry_safety_present:
+			retry_safety = "unsafe"
+			recovery_notes.append("legacy_running_task_retry_safety_unknown")
 		state = STATE_INTERRUPTED
 		last_error = "Application restarted while this task was running. No action was replayed automatically."
 		requires_user_action = retry_safety == "unsafe"
