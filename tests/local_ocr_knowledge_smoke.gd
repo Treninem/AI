@@ -99,24 +99,25 @@ func _stored_boundary_is_safe() -> bool:
 		var line := file.get_line().strip_edges()
 		if line.is_empty():
 			continue
-		var row = JSON.parse_string(line)
+		var row: Variant = JSON.parse_string(line)
 		if not row is Dictionary or str(row.get("source", "")) != SOURCE:
 			continue
-		var meta = row.get("metadata", {})
+		var meta: Variant = row.get("metadata", {})
 		if not meta is Dictionary:
 			file.close()
 			return false
-		var doc = meta.get("document_metadata", {})
+		var doc: Variant = meta.get("document_metadata", {})
 		if not doc is Dictionary:
 			file.close()
 			return false
-		var pages = doc.get("page_sources", [])
-		var ok := bool(doc.get("untrusted_document", false)) \
+		var pages: Variant = doc.get("page_sources", [])
+		var has_pages: bool = pages is Array and not (pages as Array).is_empty()
+		var ok: bool = bool(doc.get("untrusted_document", false)) \
 			and str(doc.get("content_authority", "")) == "data_only" \
 			and bool(doc.get("offline", false)) \
 			and not bool(doc.get("external_ai_required", true)) \
 			and not bool(meta.get("external_ai_required", true)) \
-			and pages is Array and not pages.is_empty()
+			and has_pages
 		file.close()
 		return ok
 	file.close()
