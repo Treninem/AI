@@ -92,6 +92,27 @@ func _flat_state(fill: Color, border: Color, radius := 12) -> StyleBoxFlat:
 	style.content_margin_bottom = 8
 	return style
 
+func _button_label_width(button: Button) -> float:
+	if button.text.is_empty():
+		return 0.0
+	var font := button.get_theme_font("font")
+	var font_size := button.get_theme_font_size("font_size")
+	if font == null or font_size <= 0:
+		return float(button.text.length()) * 8.0 + 28.0
+	var text_size := font.get_string_size(button.text, HORIZONTAL_ALIGNMENT_LEFT, -1.0, font_size)
+	var icon_extra := 0.0
+	if button.icon != null:
+		icon_extra = minf(float(button.icon.get_width()), float(button.icon_max_width if button.icon_max_width > 0 else button.icon.get_width())) + 8.0
+	return ceilf(text_size.x + icon_extra + 30.0)
+
+func _preserve_flow_button_label(button: Button) -> void:
+	# Clipped buttons do not contribute their label to Button minimum width.
+	# Inside HFlowContainer that can collapse a text action into an empty pill.
+	button.clip_text = false
+	button.custom_minimum_size.x = maxf(button.custom_minimum_size.x, _button_label_width(button))
+	button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 40.0)
+	button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+
 func _apply_safe_button_styles(node: Node) -> void:
 	for child in node.get_children():
 		if child is Button:
@@ -103,7 +124,11 @@ func _apply_safe_button_styles(node: Node) -> void:
 			button.add_theme_stylebox_override("disabled", _flat_state(Color(0.04, 0.045, 0.07, 0.86), Color(0.20, 0.23, 0.31, 0.55)))
 			button.add_theme_color_override("font_color", Color("f4f6ff"))
 			button.add_theme_color_override("font_hover_color", Color.WHITE)
-			button.clip_text = true
+			if button.get_parent() is HFlowContainer:
+				_preserve_flow_button_label(button)
+			else:
+				# Fixed/expanding rows may intentionally clip long chat titles.
+				button.clip_text = true
 		_apply_safe_button_styles(child)
 
 func _popup_style() -> StyleBoxFlat:
