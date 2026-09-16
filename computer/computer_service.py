@@ -152,8 +152,6 @@ def _safe_sandbox_path(relative: str, *, must_exist: bool = False) -> Path:
         raise HTTPException(status_code=400, detail="Path escapes sandbox")
     if must_exist and not target.exists():
         raise HTTPException(status_code=404, detail="Sandbox path not found")
-    # resolve(strict=False) follows existing symlink/junction parents. Re-checking
-    # containment therefore blocks symlink/reparse escapes without forbidding safe links.
     return target
 
 
@@ -244,24 +242,13 @@ def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
                     break
                 try:
                     rect = window.rectangle()
-                    items.append({
-                        "kind": "window",
-                        "name": str(window.window_text())[:512],
-                        "control_type": str(getattr(window.element_info, "control_type", "Window"))[:64],
-                        "rect": [rect.left, rect.top, rect.right, rect.bottom],
-                    })
+                    items.append({"kind": "window", "name": str(window.window_text())[:512], "control_type": str(getattr(window.element_info, "control_type", "Window"))[:64], "rect": [rect.left, rect.top, rect.right, rect.bottom]})
                     for control in window.descendants()[:40]:
                         if len(items) >= limit:
                             break
                         try:
                             cr = control.rectangle()
-                            items.append({
-                                "kind": "control",
-                                "name": str(control.window_text() or getattr(control.element_info, "name", ""))[:512],
-                                "control_type": str(getattr(control.element_info, "control_type", ""))[:64],
-                                "automation_id": str(getattr(control.element_info, "automation_id", ""))[:256],
-                                "rect": [cr.left, cr.top, cr.right, cr.bottom],
-                            })
+                            items.append({"kind": "control", "name": str(control.window_text() or getattr(control.element_info, "name", ""))[:512], "control_type": str(getattr(control.element_info, "control_type", ""))[:64], "automation_id": str(getattr(control.element_info, "automation_id", ""))[:256], "rect": [cr.left, cr.top, cr.right, cr.bottom]})
                         except Exception:
                             continue
                 except Exception:
@@ -391,24 +378,11 @@ def _execute_action(req: Action) -> dict[str, Any]:
     if claim == "cached" and cached is not None:
         return cached
     if claim == "inflight":
-        return _error(
-            "action_in_progress",
-            "An action with this action_id is already executing; external state is not yet known",
-            retryable=False,
-            action_id=action_id,
-            retry_safety=retry_safety,
-            uncertain_external_state=True,
-        )
+        return _error("action_in_progress", "An action with this action_id is already executing; external state is not yet known", retryable=False, action_id=action_id, retry_safety=retry_safety, uncertain_external_state=True)
 
     if not _action_execution_lock.acquire(blocking=False):
         _release_action_claim(action_id)
-        return _error(
-            "computer_busy",
-            "Another Computer action is executing. This action was not started; retry after it finishes.",
-            retryable=False,
-            action_id=action_id,
-            executed=False,
-        )
+        return _error("computer_busy", "Another Computer action is executing. This action was not started; retry after it finishes.", retryable=False, action_id=action_id, executed=False)
 
     try:
         before_hash = ""
@@ -451,24 +425,12 @@ def _container_engine() -> str | None:
 def _container_profile(command: list[str]) -> tuple[str, list[str]]:
     exe = Path(command[0]).name.lower()
     image_map = {
-        "python": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"),
-        "python3": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"),
-        "pytest": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"),
-        "node": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"),
-        "npm": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"),
-        "npx": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"),
-        "go": os.getenv("AURORAFOX_IMAGE_GO", "golang:1-bookworm"),
-        "cargo": os.getenv("AURORAFOX_IMAGE_RUST", "rust:1-bookworm"),
-        "rustc": os.getenv("AURORAFOX_IMAGE_RUST", "rust:1-bookworm"),
-        "java": os.getenv("AURORAFOX_IMAGE_JAVA", "eclipse-temurin:21-jdk"),
-        "javac": os.getenv("AURORAFOX_IMAGE_JAVA", "eclipse-temurin:21-jdk"),
-        "gradle": os.getenv("AURORAFOX_IMAGE_GRADLE", "gradle:8-jdk21"),
-        "dotnet": os.getenv("AURORAFOX_IMAGE_DOTNET", "mcr.microsoft.com/dotnet/sdk:9.0"),
-        "gcc": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"),
-        "g++": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"),
-        "cmake": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"),
-        "ruby": os.getenv("AURORAFOX_IMAGE_RUBY", "ruby:3-slim"),
-        "php": os.getenv("AURORAFOX_IMAGE_PHP", "php:8-cli"),
+        "python": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"), "python3": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"), "pytest": os.getenv("AURORAFOX_IMAGE_PYTHON", "python:3-slim"),
+        "node": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"), "npm": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"), "npx": os.getenv("AURORAFOX_IMAGE_NODE", "node:22-bookworm-slim"),
+        "go": os.getenv("AURORAFOX_IMAGE_GO", "golang:1-bookworm"), "cargo": os.getenv("AURORAFOX_IMAGE_RUST", "rust:1-bookworm"), "rustc": os.getenv("AURORAFOX_IMAGE_RUST", "rust:1-bookworm"),
+        "java": os.getenv("AURORAFOX_IMAGE_JAVA", "eclipse-temurin:21-jdk"), "javac": os.getenv("AURORAFOX_IMAGE_JAVA", "eclipse-temurin:21-jdk"), "gradle": os.getenv("AURORAFOX_IMAGE_GRADLE", "gradle:8-jdk21"),
+        "dotnet": os.getenv("AURORAFOX_IMAGE_DOTNET", "mcr.microsoft.com/dotnet/sdk:9.0"), "gcc": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"), "g++": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"), "cmake": os.getenv("AURORAFOX_IMAGE_CPP", "gcc:latest"),
+        "ruby": os.getenv("AURORAFOX_IMAGE_RUBY", "ruby:3-slim"), "php": os.getenv("AURORAFOX_IMAGE_PHP", "php:8-cli"),
     }
     image = image_map.get(exe)
     if not image:
@@ -487,11 +449,7 @@ def _tree(root: Path, max_items: int = 2000) -> list[dict[str, Any]]:
             resolved = path.resolve(strict=False)
             if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
                 continue
-            items.append({
-                "path": path.relative_to(root).as_posix(),
-                "dir": path.is_dir(),
-                "size": path.stat().st_size if path.is_file() else 0,
-            })
+            items.append({"path": path.relative_to(root).as_posix(), "dir": path.is_dir(), "size": path.stat().st_size if path.is_file() else 0})
         except OSError:
             continue
     return items
@@ -505,14 +463,10 @@ def _validate_command(command: list[str]) -> list[str]:
         raise HTTPException(status_code=400, detail="Malformed command argument")
     exe = Path(clean[0]).name.lower()
     allowed = {
-        "python", "python.exe", "python3", "py", "pytest", "pytest.exe",
-        "git", "git.exe", "godot", "godot.exe", "godot4", "godot4.exe",
-        "node", "node.exe", "npm", "npm.cmd", "npx", "npx.cmd",
-        "go", "go.exe", "cargo", "cargo.exe", "rustc", "rustc.exe",
-        "dotnet", "dotnet.exe", "java", "java.exe", "javac", "javac.exe",
-        "gradle", "gradle.bat", "gradlew", "gradlew.bat",
-        "gcc", "gcc.exe", "g++", "g++.exe", "clang", "clang.exe", "cmake", "cmake.exe", "ninja", "ninja.exe",
-        "ruby", "ruby.exe", "php", "php.exe", "lua", "lua.exe",
+        "python", "python.exe", "python3", "py", "pytest", "pytest.exe", "git", "git.exe", "godot", "godot.exe", "godot4", "godot4.exe",
+        "node", "node.exe", "npm", "npm.cmd", "npx", "npx.cmd", "go", "go.exe", "cargo", "cargo.exe", "rustc", "rustc.exe", "dotnet", "dotnet.exe",
+        "java", "java.exe", "javac", "javac.exe", "gradle", "gradle.bat", "gradlew", "gradlew.bat", "gcc", "gcc.exe", "g++", "g++.exe", "clang", "clang.exe",
+        "cmake", "cmake.exe", "ninja", "ninja.exe", "ruby", "ruby.exe", "php", "php.exe", "lua", "lua.exe",
     }
     if exe not in allowed:
         raise HTTPException(status_code=403, detail=f"Executable not allowed in local sandbox: {exe}")
@@ -537,45 +491,28 @@ def _sanitized_environment(cwd: Path, allow_network: bool) -> dict[str, str]:
 
 def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool) -> dict[str, Any]:
     startup: dict[str, Any] = {}
-    if os.name == "nt":
-        startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    else:
-        startup["start_new_session"] = True
+    if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else: startup["start_new_session"] = True
     try:
-        process = subprocess.Popen(
-            command,
-            cwd=cwd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            shell=False,
-            env=_sanitized_environment(cwd, allow_network),
-            **startup,
-        )
+        process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
     try:
         stdout, stderr = process.communicate(timeout=timeout)
     except subprocess.TimeoutExpired:
-        if os.name == "nt":
-            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False)
+        if os.name == "nt": subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False)
         else:
-            try:
-                os.killpg(process.pid, signal.SIGKILL)
-            except OSError:
-                process.kill()
-        try:
-            process.communicate(timeout=2)
-        except Exception:
-            pass
+            try: os.killpg(process.pid, signal.SIGKILL)
+            except OSError: process.kill()
+        try: process.communicate(timeout=2)
+        except Exception: pass
         return _error("timeout", "Sandbox process timed out and was terminated", retryable=True)
     output = _redact((stdout or "") + (stderr or ""))
     return {"ok": process.returncode == 0, "code": process.returncode, "output": output[:MAX_OUTPUT], "mode": "local", "retryable": process.returncode != 0}
 
 
 def _parent_watchdog() -> None:
-    if PARENT_PID <= 0:
-        return
+    if PARENT_PID <= 0: return
     while True:
         time.sleep(2.0)
         try:
@@ -583,310 +520,142 @@ def _parent_watchdog() -> None:
                 result = subprocess.run(["tasklist", "/FI", f"PID eq {PARENT_PID}", "/NH"], capture_output=True, text=True, timeout=2)
                 alive = str(PARENT_PID) in result.stdout
             else:
-                os.kill(PARENT_PID, 0)
-                alive = True
-        except Exception:
-            alive = False
-        if not alive:
-            os._exit(0)
+                os.kill(PARENT_PID, 0); alive = True
+        except Exception: alive = False
+        if not alive: os._exit(0)
 
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    bounds = _desktop_bounds()
-    return {
-        "ok": True,
-        "service": "aurorafox_computer_primitives",
-        "version": "1.1.0",
-        "platform": "windows" if IS_WINDOWS else os.name,
-        "computer_supported": IS_WINDOWS,
-        "planning_owner": "aurorafox_core",
-        "service_side_ai_planning": False,
-        "external_ai_required": False,
-        "network_required": False,
-        "authenticated_channel_configured": bool(SERVICE_TOKEN),
-        "virtual_desktop": bounds,
-        "failsafe": True,
-        "container_engine_available": bool(_container_engine()),
-    }
+    return {"ok": True, "service": "aurorafox_computer_primitives", "version": "1.1.0", "platform": "windows" if IS_WINDOWS else os.name, "computer_supported": IS_WINDOWS, "planning_owner": "aurorafox_core", "service_side_ai_planning": False, "external_ai_required": False, "network_required": False, "authenticated_channel_configured": bool(SERVICE_TOKEN), "virtual_desktop": _desktop_bounds(), "failsafe": True, "container_engine_available": bool(_container_engine())}
 
 
 @app.get("/capabilities")
-def capabilities(
-    x_aurorafox_computer_token: str | None = Header(default=None),
-) -> dict[str, Any]:
+def capabilities(x_aurorafox_computer_token: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, "1", require_autonomy=False)
-    return {
-        "ok": True,
-        "computer_supported": IS_WINDOWS,
-        "platform": "windows" if IS_WINDOWS else os.name,
-        "screen": IS_WINDOWS,
-        "windows": IS_WINDOWS,
-        "mouse": IS_WINDOWS,
-        "keyboard": IS_WINDOWS,
-        "clipboard": False,
-        "service_side_planning": False,
-        "local_core_planning_required": True,
-        "sandbox": True,
-    }
+    return {"ok": True, "computer_supported": IS_WINDOWS, "platform": "windows" if IS_WINDOWS else os.name, "screen": IS_WINDOWS, "windows": IS_WINDOWS, "mouse": IS_WINDOWS, "keyboard": IS_WINDOWS, "clipboard": False, "service_side_planning": False, "local_core_planning_required": True, "sandbox": True}
 
 
 @app.get("/screen")
-def screen(
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
+def screen(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
     result = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
     if result.get("ok"):
         windows_result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS)
         result["uia"] = windows_result.get("items", []) if windows_result.get("ok") else []
-        result["virtual_desktop"] = _desktop_bounds()
-        result["retryable"] = True
+        result["virtual_desktop"] = _desktop_bounds(); result["retryable"] = True
     return result
 
 
 @app.get("/windows")
-def windows(
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
+def windows(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS)
-    result["retryable"] = True
-    return result
+    result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS); result["retryable"] = True; return result
 
 
 @app.post("/action")
-def action(
-    req: Action,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    return _execute_action(req)
+def action(req: Action, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); return _execute_action(req)
 
 
 @app.post("/plan")
-def plan(
-    req: GoalRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
+def plan(req: GoalRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    return _error(
-        "local_core_planning_required",
-        "Computer service does not plan goals. AuroraFox Core must plan and call primitive actions explicitly.",
-        retryable=False,
-        goal_received=bool(req.goal),
-    )
+    return _error("local_core_planning_required", "Computer service does not plan goals. AuroraFox Core must plan and call primitive actions explicitly.", retryable=False, goal_received=bool(req.goal))
 
 
 @app.post("/run")
-def run(
-    req: GoalRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
+def run(req: GoalRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    return _error(
-        "local_core_planning_required",
-        "Service-side goal execution is disabled. Use AuroraFox Core -> verified Computer primitives.",
-        retryable=False,
-        goal_received=bool(req.goal),
-        auto_execute_ignored=bool(req.auto_execute),
-    )
+    return _error("local_core_planning_required", "Service-side goal execution is disabled. Use AuroraFox Core -> verified Computer primitives.", retryable=False, goal_received=bool(req.goal), auto_execute_ignored=bool(req.auto_execute))
 
 
 @app.post("/sandbox/workspace/create")
-def workspace_create(
-    req: WorkspaceCreateRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
+def workspace_create(req: WorkspaceCreateRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
     workspace_id = _safe_workspace_id(req.id) if req.id else uuid.uuid4().hex[:16]
     root = _safe_sandbox_path(workspace_id)
-    for name in ("input", "work", "output", "logs", "snapshots"):
-        (root / name).mkdir(parents=True, exist_ok=True)
+    for name in ("input", "work", "output", "logs", "snapshots"): (root / name).mkdir(parents=True, exist_ok=True)
     manifest = {"id": workspace_id, "task": _redact(req.task), "created_at": int(time.time()), "root": workspace_id}
-    temp = root / f"manifest.{uuid.uuid4().hex}.tmp"
-    temp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    os.replace(temp, root / "manifest.json")
+    temp = root / f"manifest.{uuid.uuid4().hex}.tmp"; temp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8"); os.replace(temp, root / "manifest.json")
     return {"ok": True, "workspace": manifest}
 
 
 @app.get("/sandbox/workspace/tree")
-def workspace_tree(
-    workspace: str,
-    area: str = "work",
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    wid = _safe_workspace_id(workspace)
-    if area not in {"input", "work", "output", "logs", "snapshots"}:
-        raise HTTPException(status_code=400, detail="Invalid workspace area")
-    root = _safe_sandbox_path(f"{wid}/{area}")
-    return {"ok": True, "workspace": wid, "area": area, "items": _tree(root)}
+def workspace_tree(workspace: str, area: str = "work", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(workspace)
+    if area not in {"input", "work", "output", "logs", "snapshots"}: raise HTTPException(status_code=400, detail="Invalid workspace area")
+    return {"ok": True, "workspace": wid, "area": area, "items": _tree(_safe_sandbox_path(f"{wid}/{area}"))}
 
 
 @app.post("/sandbox/workspace/snapshot")
-def workspace_snapshot(
-    req: WorkspaceSnapshotRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    wid = _safe_workspace_id(req.workspace)
-    work = _safe_sandbox_path(f"{wid}/work")
-    snapshots = _safe_sandbox_path(f"{wid}/snapshots")
-    snapshots.mkdir(parents=True, exist_ok=True)
-    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"
-    snapshot_id = f"{int(time.time())}_{safe_label}_{uuid.uuid4().hex[:6]}"
-    target = snapshots / snapshot_id
-    shutil.copytree(work, target)
+def workspace_snapshot(req: WorkspaceSnapshotRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(req.workspace); work = _safe_sandbox_path(f"{wid}/work"); snapshots = _safe_sandbox_path(f"{wid}/snapshots"); snapshots.mkdir(parents=True, exist_ok=True)
+    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"; snapshot_id = f"{int(time.time())}_{safe_label}_{uuid.uuid4().hex[:6]}"; target = snapshots / snapshot_id; shutil.copytree(work, target)
     return {"ok": True, "workspace": wid, "snapshot": snapshot_id, "path": f"{wid}/snapshots/{snapshot_id}"}
 
 
 @app.post("/sandbox/workspace/rollback")
-def workspace_rollback(
-    req: WorkspaceRollbackRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    wid = _safe_workspace_id(req.workspace)
-    sid = _safe_workspace_id(req.snapshot)
-    work = _safe_sandbox_path(f"{wid}/work")
-    source = _safe_sandbox_path(f"{wid}/snapshots/{sid}", must_exist=True)
-    if not source.is_dir():
-        raise HTTPException(status_code=404, detail="Snapshot not found")
-    replacement = _safe_sandbox_path(f"{wid}/work.rollback.{uuid.uuid4().hex}")
-    shutil.copytree(source, replacement)
+def workspace_rollback(req: WorkspaceRollbackRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(req.workspace); sid = _safe_workspace_id(req.snapshot); work = _safe_sandbox_path(f"{wid}/work"); source = _safe_sandbox_path(f"{wid}/snapshots/{sid}", must_exist=True)
+    if not source.is_dir(): raise HTTPException(status_code=404, detail="Snapshot not found")
+    replacement = _safe_sandbox_path(f"{wid}/work.rollback.{uuid.uuid4().hex}"); shutil.copytree(source, replacement)
     if work.exists():
-        backup = _safe_sandbox_path(f"{wid}/work.pre_rollback.{uuid.uuid4().hex}")
-        os.replace(work, backup)
-        try:
-            os.replace(replacement, work)
-        except Exception:
-            os.replace(backup, work)
-            raise
+        backup = _safe_sandbox_path(f"{wid}/work.pre_rollback.{uuid.uuid4().hex}"); os.replace(work, backup)
+        try: os.replace(replacement, work)
+        except Exception: os.replace(backup, work); raise
         shutil.rmtree(backup, ignore_errors=True)
-    else:
-        os.replace(replacement, work)
+    else: os.replace(replacement, work)
     return {"ok": True, "workspace": wid, "snapshot": sid}
 
 
 @app.get("/sandbox/list")
-def sandbox_list(
-    path: str = ".",
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    p = _safe_sandbox_path(path)
-    if not p.exists():
-        return {"ok": True, "items": []}
-    if not p.is_dir():
-        raise HTTPException(status_code=400, detail="Not a directory")
+def sandbox_list(path: str = ".", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); p = _safe_sandbox_path(path)
+    if not p.exists(): return {"ok": True, "items": []}
+    if not p.is_dir(): raise HTTPException(status_code=400, detail="Not a directory")
     items = []
     for child in p.iterdir():
         resolved = child.resolve(strict=False)
-        if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
-            continue
+        if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents: continue
         items.append({"name": child.name, "dir": child.is_dir(), "size": child.stat().st_size if child.is_file() else 0})
     return {"ok": True, "items": items}
 
 
 @app.get("/sandbox/read")
-def sandbox_read(
-    path: str,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    p = _safe_sandbox_path(path, must_exist=True)
-    if not p.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
+def sandbox_read(path: str, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); p = _safe_sandbox_path(path, must_exist=True)
+    if not p.is_file(): raise HTTPException(status_code=404, detail="File not found")
     data = p.read_bytes()
-    if len(data) > MAX_READ_BYTES:
-        raise HTTPException(status_code=413, detail="File too large")
-    try:
-        return {"ok": True, "text": data.decode("utf-8")}
-    except UnicodeDecodeError:
-        return {"ok": True, "base64": base64.b64encode(data).decode("ascii")}
+    if len(data) > MAX_READ_BYTES: raise HTTPException(status_code=413, detail="File too large")
+    try: return {"ok": True, "text": data.decode("utf-8")}
+    except UnicodeDecodeError: return {"ok": True, "base64": base64.b64encode(data).decode("ascii")}
 
 
 @app.post("/sandbox/write")
-def sandbox_write(
-    req: SandboxWriteRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    encoded = req.content.encode("utf-8")
-    if len(encoded) > MAX_WRITE_BYTES:
-        raise HTTPException(status_code=413, detail="Write payload too large")
-    path = _safe_sandbox_path(req.path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temp = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
-    temp.write_bytes(encoded)
-    os.replace(temp, path)
+def sandbox_write(req: SandboxWriteRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); encoded = req.content.encode("utf-8")
+    if len(encoded) > MAX_WRITE_BYTES: raise HTTPException(status_code=413, detail="Write payload too large")
+    path = _safe_sandbox_path(req.path); path.parent.mkdir(parents=True, exist_ok=True); temp = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"; temp.write_bytes(encoded); os.replace(temp, path)
     return {"ok": True, "path": path.relative_to(SANDBOX_ROOT).as_posix()}
 
 
 @app.post("/sandbox/exec")
-def sandbox_exec(
-    req: SandboxExecRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    command = _validate_command(req.command)
-    cwd = _safe_sandbox_path(req.cwd)
-    cwd.mkdir(parents=True, exist_ok=True)
-    result = _run_process(command, cwd, req.timeout, allow_network=req.allow_network)
-    result["network_requested"] = bool(req.allow_network)
-    result["network_isolation_enforced"] = False
-    return result
+def sandbox_exec(req: SandboxExecRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); command = _validate_command(req.command); cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); result = _run_process(command, cwd, req.timeout, allow_network=req.allow_network); result["network_requested"] = bool(req.allow_network); result["network_isolation_enforced"] = False; return result
 
 
 @app.post("/sandbox/container_exec")
-def sandbox_container_exec(
-    req: SandboxExecRequest,
-    x_aurorafox_computer_token: str | None = Header(default=None),
-    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    command = _validate_command(req.command)
-    engine = _container_engine()
-    if not engine:
-        raise HTTPException(status_code=404, detail="Docker/Podman not installed")
-    cwd = _safe_sandbox_path(req.cwd)
-    cwd.mkdir(parents=True, exist_ok=True)
-    image, inner_command = _container_profile(command)
-    network_args = [] if req.allow_network else ["--network", "none"]
-    run_command = [
-        engine, "run", "--rm", *network_args, "--read-only",
-        "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"),
-        "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"),
-        "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"),
-        "--security-opt", "no-new-privileges",
-        "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m",
-        "-v", f"{cwd}:/workspace:rw",
-        "-w", "/workspace",
-        image,
-        *inner_command,
-    ]
-    result = _run_process(run_command, cwd, req.timeout, allow_network=req.allow_network)
-    result.update({"mode": "container", "engine": engine, "image": image, "network": "allowed" if req.allow_network else "none", "network_isolation_enforced": not req.allow_network})
-    return result
+def sandbox_container_exec(req: SandboxExecRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); command = _validate_command(req.command); engine = _container_engine()
+    if not engine: raise HTTPException(status_code=404, detail="Docker/Podman not installed")
+    cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); image, inner_command = _container_profile(command); network_args = [] if req.allow_network else ["--network", "none"]
+    run_command = [engine, "run", "--rm", "--pull=never", *network_args, "--read-only", "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"), "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"), "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"), "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m", "-v", f"{cwd}:/workspace:rw", "-w", "/workspace", image, *inner_command]
+    result = _run_process(run_command, cwd, req.timeout, allow_network=req.allow_network); result.update({"mode": "container", "engine": engine, "image": image, "network": "allowed" if req.allow_network else "none", "network_isolation_enforced": not req.allow_network, "image_pull_allowed": False}); return result
 
 
 if __name__ == "__main__":
     import uvicorn
 
-    if PARENT_PID > 0:
-        threading.Thread(target=_parent_watchdog, name="aurorafox-parent-watchdog", daemon=True).start()
+    if PARENT_PID > 0: threading.Thread(target=_parent_watchdog, name="aurorafox-parent-watchdog", daemon=True).start()
     uvicorn.run(app, host=HOST, port=PORT, access_log=False, log_level="warning")
