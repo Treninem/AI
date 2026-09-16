@@ -115,6 +115,25 @@ def test_backup_size_limit_fails_closed(tmp_path: Path):
         BackupService(root, tmp_path / "cache", max_source_bytes=4).create_archive()
 
 
+def test_backup_rechecks_materialized_size_after_transform(tmp_path: Path, monkeypatch):
+    root = tmp_path / "user"
+    root.mkdir()
+    (root / "memory.json").write_text("{}", encoding="utf-8")
+    cache = tmp_path / "cache"
+    service = BackupService(root, cache, max_source_bytes=8)
+
+    def inflate_copy(_source: Path, destination: Path) -> bool:
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"x" * 16)
+        return False
+
+    monkeypatch.setattr(service, "_copy_source", inflate_copy)
+    with pytest.raises(BackupTooLarge, match="materialized backup data"):
+        service.create_archive()
+    assert not list(cache.glob("AuroraFox-Server-Backup-*.zip"))
+    assert not list(cache.glob("*.tmp"))
+
+
 def test_backup_fails_before_snapshot_when_disk_pressure_is_critical(tmp_path: Path, monkeypatch):
     root = tmp_path / "user"
     api_root = root / "api"
