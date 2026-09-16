@@ -118,6 +118,11 @@ func _init() -> void:
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
 		quit(16)
 		return
+	if not source.contains("_state_recovery_blocked") or not source.contains('"stage": "state_recovery"'):
+		push_error("Coordinator does not fail closed when autonomy state cannot be recovered")
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(17)
+		return
 
 	var main_scene_text := FileAccess.get_file_as_string("res://main.tscn")
 	if not main_scene_text.contains("AutonomousCoordinator"):
@@ -127,7 +132,7 @@ func _init() -> void:
 		return
 
 	_cleanup([tools, agent_core, improver, extensions, memory, ai])
-	print("AURORA_AUTONOMOUS_COORDINATOR_SMOKE_OK tournament=3..10 startup=automatic state_recovery=atomic")
+	print("AURORA_AUTONOMOUS_COORDINATOR_SMOKE_OK tournament=3..10 startup=automatic state_recovery=atomic_fail_closed")
 	quit(0)
 
 func _test_state_durability(coordinator: Node) -> String:
@@ -148,6 +153,8 @@ func _test_state_durability(coordinator: Node) -> String:
 	var committed := _read_json_state(STATE_PATH)
 	if int(committed.get("schema_version", 0)) != 1 or int(committed.get("last_improvement_unix", 0)) != 111:
 		return _durability_fail(original_state, "Autonomous state save produced an invalid schema/payload")
+	if bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Successful state save unexpectedly blocked autonomous recovery")
 
 	# Simulate a crash after the previous committed target was moved to backup but
 	# before the new temp became the target. Recovery must prefer the last committed backup.
@@ -218,8 +225,25 @@ func _test_state_durability(coordinator: Node) -> String:
 	coordinator._load_state()
 	if int(coordinator._last_improvement_unix) != 444 or str(coordinator._last_report.get("marker", "")) != "backup-recovery":
 		return _durability_fail(original_state, "Corrupt canonical state did not recover from valid backup")
+	if bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Valid backup recovery unexpectedly left automatic cycles blocked")
 
-	# Legacy state did not contain schema_version. It must remain loadable.
+	# Corrupt canonical without backup must fail closed instead of resetting cooldowns
+	# and immediately running a duplicate autonomous cycle.
+	_cleanup_state_files()
+	var unrecoverable := FileAccess.open(STATE_PATH, FileAccess.WRITE)
+	if unrecoverable == null:
+		return _durability_fail(original_state, "Failed to prepare unrecoverable state scenario")
+	unrecoverable.store_string("{unrecoverable-json")
+	unrecoverable.flush()
+	unrecoverable.close()
+	coordinator._state_recovery_blocked = false
+	coordinator._load_state()
+	if not bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Unrecoverable autonomy state did not fail closed")
+
+	# Legacy state did not contain schema_version. It must remain loadable and clear
+	# the recovery block once a valid committed state exists again.
 	_cleanup_state_files()
 	if not _write_json_state(STATE_PATH, {
 		"last_improvement_unix": 555,
@@ -232,6 +256,8 @@ func _test_state_durability(coordinator: Node) -> String:
 	coordinator._load_state()
 	if int(coordinator._last_improvement_unix) != 555 or str(coordinator._last_report.get("marker", "")) != "legacy":
 		return _durability_fail(original_state, "Legacy autonomy state compatibility regressed")
+	if bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Valid legacy state did not clear the recovery block")
 
 	_restore_state_files(original_state)
 	return ""
