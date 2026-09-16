@@ -73,9 +73,9 @@ class AndroidOcrRuntime(private val context: Context) {
         val api = TessBaseAPI()
         return try {
             check(api.init(dataRoot.absolutePath, LANGUAGES)) { "Tesseract init failed" }
-            api.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
+            api.setPageSegMode(TessBaseAPI.PageSegMode.PSM_AUTO)
             api.setImage(prepared)
-            api.utF8Text?.replace("\u000c", "")?.trim().orEmpty()
+            api.getUTF8Text()?.replace("\u000c", "")?.trim().orEmpty()
         } finally {
             api.recycle()
             if (prepared !== bitmap) prepared.recycle()
