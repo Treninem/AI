@@ -13,6 +13,7 @@ import time
 from typing import Any
 
 import run_knowledge_benchmark as base
+import run_knowledge_benchmark_portable as portable
 
 PREFIX = "AURORA_KNOWLEDGE_REGISTRY_SCALING_RESULT="
 
@@ -47,6 +48,28 @@ def run_case(godot: str, repo: Path, count: int, source_kb: int, timeout: int, l
         env["AURORA_REGISTRY_SCALING_SOURCE_KB"] = str(source_kb)
         stdout_path = logs / f"registry_{count}.stdout.log"
         stderr_path = logs / f"registry_{count}.stderr.log"
+        warm = portable.warm_isolated_windows_profile(
+            godot,
+            repo,
+            root,
+            env,
+            timeout,
+            logs,
+            f"registry-{count}",
+        )
+        if not warm.get("ok"):
+            return {
+                "ok": False,
+                "source_count": count,
+                "error": warm.get("error", "isolated Windows Godot warm-up failed"),
+                "isolated_profile_warmup": warm,
+                "runner_return_code": int(warm.get("return_code", 1) or 1),
+                "runner_wall_ms": float(warm.get("wall_ms", 0.0)),
+                "peak_rss_bytes": 0,
+                "timed_out": bool(warm.get("timed_out", False)),
+                "stdout_log": str(stdout_path),
+                "stderr_log": str(stderr_path),
+            }
         command = [godot, "--headless", "--path", str(repo), "--script", "benchmarks/knowledge/registry_scaling_probe.gd"]
         peak_rss = 0
         started = time.perf_counter()
@@ -72,6 +95,7 @@ def run_case(godot: str, repo: Path, count: int, source_kb: int, timeout: int, l
                 "timed_out": timed_out,
                 "stdout_log": str(stdout_path),
                 "stderr_log": str(stderr_path),
+                "isolated_profile_warmup": warm,
             }
         )
         if timed_out or return_code != 0:
