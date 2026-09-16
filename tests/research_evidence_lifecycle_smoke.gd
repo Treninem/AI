@@ -114,6 +114,54 @@ func _run() -> void:
 		_fail("Source stance reversal did not invalidate the old promotion", 9)
 		return
 
+	# A same-stance revision is still a replacement, not corroboration. The old
+	# promoted text must be removed and the revised observation must be imported.
+	var revision_ai := FakeResearchAI.new()
+	var revision_gate := _fresh_gate(revision_ai)
+	var revision_original := strong_support.duplicate(true)
+	revision_original["url"] = "https://arxiv.org/abs/2609.50003"
+	revision_gate._on_research_completed({"query": "same stance revision", "items": [revision_original]})
+	var revision_old_source := str((revision_ai.imports[0] as Dictionary).get("source", ""))
+	var revision := revision_original.duplicate(true)
+	revision["summary"] = "A revised and expanded technical report still supports durable recovery journals, but updates the implementation guidance and evidence after a larger restart study."
+	revision["metadata"] = {"stance": "support", "evidence_action": "supersede"}
+	revision_gate._on_research_completed({"query": "same stance revision", "items": [revision]})
+	if revision_old_source not in revision_ai.removals:
+		_fail("Same-stance source revision left old promoted text authoritative", 18)
+		return
+	if revision_ai.imports.size() != 2 or not str((revision_ai.imports[1] as Dictionary).get("text", "")).contains("revised and expanded"):
+		_fail("Same-stance source revision did not replace promoted knowledge", 19)
+		return
+
+	# A retraction is control evidence about the previous observation, not a new
+	# supporting fact. It must revoke the old promotion and open a revalidation gap
+	# without importing the retraction notice as authoritative claim content.
+	var retract_ai := FakeResearchAI.new()
+	var retract_gate := _fresh_gate(retract_ai)
+	var retract_original := strong_support.duplicate(true)
+	retract_original["url"] = "https://arxiv.org/abs/2609.50004"
+	retract_gate._on_research_completed({"query": "retraction", "items": [retract_original]})
+	var retract_old_source := str((retract_ai.imports[0] as Dictionary).get("source", ""))
+	var retraction := retract_original.duplicate(true)
+	retraction["summary"] = "This publication has been withdrawn after the authors found a material flaw in the recovery experiment. The prior conclusion must not be treated as current evidence."
+	retraction["metadata"] = {"retracted": true, "evidence_action": "retract", "stance": "support"}
+	retract_gate._on_research_completed({"query": "retraction", "items": [retraction]})
+	if retract_old_source not in retract_ai.removals:
+		_fail("Explicit retraction did not revoke prior promoted knowledge", 20)
+		return
+	if retract_ai.imports.size() != 1:
+		_fail("Retraction notice was incorrectly promoted as fresh claim evidence", 21)
+		return
+	var retract_claim := retract_gate._claim_key(retraction)
+	var retract_gap := false
+	for question in retract_gate.open_questions(20):
+		if question is Dictionary and str(question.get("claim_key", "")) == retract_claim and str(question.get("reason", "")) == "retracted_evidence":
+			retract_gap = true
+			break
+	if not retract_gap:
+		_fail("Explicit retraction did not open a revalidation gap", 22)
+		return
+
 	# Evidence that has exceeded its lifecycle must lose promotion authority and
 	# open a revalidation gap. We force the timestamps old to keep this test fast.
 	var stale_ai := FakeResearchAI.new()
@@ -192,6 +240,10 @@ func _run() -> void:
 	gate.free()
 	update_ai.free()
 	update_gate.free()
+	revision_ai.free()
+	revision_gate.free()
+	retract_ai.free()
+	retract_gate.free()
 	stale_ai.free()
 	stale_gate.free()
 	reloaded.free()

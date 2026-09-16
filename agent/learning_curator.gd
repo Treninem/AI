@@ -161,7 +161,7 @@ func _on_research_completed(report: Dictionary) -> void:
 
 	# Second pass promotes at most one representative item per claim. A previously
 	# promoted claim is invalidated before it can remain authoritative when later
-	# evidence contradicts, supersedes or reverses its active stance.
+	# evidence contradicts, supersedes, retracts or reverses its active stance.
 	var processed_claims: Dictionary = {}
 	for value in candidates:
 		if not value is Dictionary:
@@ -177,6 +177,28 @@ func _on_research_completed(report: Dictionary) -> void:
 			continue
 		var ledger: Dictionary = _refresh_ledger(_claim_evidence.get(claim_key, {}), now)
 		_claim_evidence[claim_key] = ledger
+
+		# A changed/retracted source that replaced the exact evidence behind the active
+		# promotion must revoke that knowledge before the new observation is evaluated.
+		var replacement_reason := str(best.get("replacement_reason", ""))
+		if not replacement_reason.is_empty() and not str(ledger.get("promoted_source", "")).is_empty():
+			if not _invalidate_promoted_claim(claim_key, replacement_reason):
+				_queue_gap(claim_key, "invalidation_failed", best.get("item", {}), _claim_evidence.get(claim_key, ledger))
+				continue
+			ledger = _refresh_ledger(_claim_evidence.get(claim_key, {}), now)
+			_claim_evidence[claim_key] = ledger
+
+		if bool(best.get("suppress_promotion", false)):
+			deferred += group.size()
+			_stats["deferred"] = int(_stats.get("deferred", 0)) + group.size()
+			ledger["status"] = "retracted"
+			ledger["updated_at"] = Time.get_datetime_string_from_system(true)
+			ledger["updated_unix"] = now
+			_claim_evidence[claim_key] = ledger
+			_queue_gap(claim_key, "retracted_evidence", best.get("item", {}), ledger)
+			_record_audit("retraction_received", claim_key, {"fingerprint": str(best.get("fingerprint", ""))})
+			continue
+
 		var support_count := _family_count(ledger, "support_families")
 		var oppose_count := _family_count(ledger, "oppose_families")
 		if support_count > 0 and oppose_count > 0:
@@ -487,6 +509,9 @@ func _record_claim_evidence(candidate: Dictionary) -> void:
 	var retracts_fingerprint := str(metadata.get("retracts_fingerprint", ""))
 	var action := str(metadata.get("evidence_action", "")).to_lower().strip_edges()
 	var retracting := bool(metadata.get("retracted", false)) or action in ["retract", "retracted", "withdraw", "withdrawn"]
+	var retraction_notice := retracting or not retracts_fingerprint.is_empty()
+	var promoted_fingerprint := str(ledger.get("promoted_fingerprint", ""))
+	var replacement_reason := ""
 	for old_key in observations.keys():
 		var old: Dictionary = observations.get(old_key, {})
 		if str(old.get("status", "active")) != "active":
@@ -499,6 +524,8 @@ func _record_claim_evidence(candidate: Dictionary) -> void:
 			old["ended_unix"] = now
 			old["ended_by"] = fingerprint
 			observations[old_key] = old
+			if str(old_key) == promoted_fingerprint:
+				replacement_reason = "evidence_retracted"
 			_stats["retracted_evidence"] = int(_stats.get("retracted_evidence", 0)) + 1
 			_record_audit("evidence_retracted", claim_key, {"fingerprint": str(old_key), "by": fingerprint})
 		elif same_url_changed or explicit_supersede:
@@ -506,8 +533,15 @@ func _record_claim_evidence(candidate: Dictionary) -> void:
 			old["ended_unix"] = now
 			old["ended_by"] = fingerprint
 			observations[old_key] = old
+			if str(old_key) == promoted_fingerprint:
+				replacement_reason = "evidence_superseded"
 			_stats["superseded_evidence"] = int(_stats.get("superseded_evidence", 0)) + 1
 			_record_audit("evidence_superseded", claim_key, {"fingerprint": str(old_key), "by": fingerprint})
+
+	if not replacement_reason.is_empty():
+		candidate["replacement_reason"] = replacement_reason
+	if retraction_notice:
+		candidate["suppress_promotion"] = true
 
 	var evidence: Dictionary = candidate.get("evidence", {})
 	observations[fingerprint] = {
@@ -519,7 +553,7 @@ func _record_claim_evidence(candidate: Dictionary) -> void:
 		"stance": str(candidate.get("stance", "support")),
 		"score": float(candidate.get("score", 0.0)),
 		"evidence_tier": str(evidence.get("tier", "unknown")),
-		"status": "active",
+		"status": "retraction_notice" if retraction_notice else "active",
 		"observed_unix": int(candidate.get("observed_unix", now)),
 		"last_seen_unix": now,
 		"max_age_seconds": _max_age_for_evidence(evidence, metadata)
@@ -529,7 +563,7 @@ func _record_claim_evidence(candidate: Dictionary) -> void:
 	ledger["updated_at"] = Time.get_datetime_string_from_system(true)
 	ledger["updated_unix"] = now
 	_claim_evidence[claim_key] = _refresh_ledger(ledger, now)
-	_record_audit("evidence_observed", claim_key, {"fingerprint": fingerprint, "family": str(candidate.get("source_family", "unknown")), "stance": str(candidate.get("stance", "support"))})
+	_record_audit("evidence_observed", claim_key, {"fingerprint": fingerprint, "family": str(candidate.get("source_family", "unknown")), "stance": str(candidate.get("stance", "support")), "status": "retraction_notice" if retraction_notice else "active"})
 
 func _touch_observation(claim_key: String, fingerprint: String, now: int) -> void:
 	if claim_key.is_empty() or fingerprint.is_empty() or not _claim_evidence.has(claim_key):
@@ -703,6 +737,7 @@ func _best_candidate(candidates: Array) -> Dictionary:
 func _gap_priority(reason: String) -> int:
 	match reason:
 		"contradiction": return 100
+		"retracted_evidence": return 100
 		"invalidation_failed": return 95
 		"stale_evidence": return 90
 		"needs_corroboration": return 70
@@ -724,6 +759,8 @@ func _queue_gap(claim_key: String, reason: String, item: Dictionary, ledger: Dic
 		question = "Найти независимый источник для подтверждения: " + title
 	elif reason == "contradiction":
 		question = "Разрешить противоречие независимыми источниками: " + title
+	elif reason == "retracted_evidence":
+		question = "Перепроверить отозванное доказательство независимыми источниками: " + title
 	elif reason == "stale_evidence":
 		question = "Перепроверить устаревшие доказательства: " + title
 	elif reason == "invalidation_failed":
