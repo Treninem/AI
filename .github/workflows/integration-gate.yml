@@ -127,7 +127,12 @@ jobs:
       - name: Updater repair and signed-floor compatibility contract
         if: always()
         shell: bash
-        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_signed_release_enforces_v12_repair_and_v13_signed_update_floor
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_core_candidate_promotion.py::test_signed_release_enforces_v12_v13_repair_and_v14_signed_update_floor
+
+      - name: Owner-approved branding identity contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_release_branding_contract.py
 
       - name: API runtime resilience contract
         if: always()
