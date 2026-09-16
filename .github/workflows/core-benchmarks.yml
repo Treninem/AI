@@ -184,13 +184,15 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $root = Join-Path $PWD 'artifacts\baseline-download'
           New-Item -ItemType Directory -Force -Path $root | Out-Null
-          $runsJson = gh run list --workflow core-benchmarks.yml --branch main --event push --status success --limit 10 --json databaseId,headSha,createdAt
-          if ($LASTEXITCODE -ne 0) { throw 'Unable to query successful main Core benchmark runs.' }
-          $runs = @($runsJson | ConvertFrom-Json)
+          $repo = $env:GITHUB_REPOSITORY
+          $runsJson = gh api --method GET -H 'Accept: application/vnd.github+json' "/repos/$repo/actions/runs?branch=main&event=push&status=success&per_page=100"
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to query successful main Actions runs for Core baseline discovery.' }
+          $payload = $runsJson | ConvertFrom-Json
+          $runs = @($payload.workflow_runs | Where-Object { $_.name -eq 'AuroraFox Core Benchmarks' })
           $baselinePath = ''
           foreach ($run in $runs) {
-            $runId = [string]$run.databaseId
-            $headSha = [string]$run.headSha
+            $runId = [string]$run.id
+            $headSha = [string]$run.head_sha
             if ([string]::IsNullOrWhiteSpace($runId) -or [string]::IsNullOrWhiteSpace($headSha)) { continue }
             $candidateDir = Join-Path $root $runId
             New-Item -ItemType Directory -Force -Path $candidateDir | Out-Null
