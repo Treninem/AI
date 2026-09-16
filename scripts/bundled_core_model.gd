@@ -5,7 +5,7 @@ extends RefCounted
 # application, not a user-selected external provider/model.
 const ACTIVE_MODEL := "user://models/aurorafox-main.gguf"
 const BUNDLED_RESOURCE := "res://models/aurorafox-core.gguf"
-const BUNDLED_WINDOWS_RELATIVE := "models/aurorafox-core.gguf"
+const BUNDLED_WINDOWS_RELATIVE := "core_runtime/engine/aurorafox-core.gguf"
 const EXPECTED_BYTES := 1282439264
 const EXPECTED_SHA256 := "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5"
 const METADATA_PATH := "user://models/bundled_core.json"
