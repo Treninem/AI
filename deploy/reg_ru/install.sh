@@ -140,7 +140,7 @@ chown -R root:root /opt/aurorafox/repository
 python3 -m venv /opt/aurorafox/venv
 /opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check --upgrade pip
 /opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check \
-  -r /opt/aurorafox/repository/api/requirements.txt pytest==8.4.1
+  -r /opt/aurorafox/repository/api/requirements.txt pytest==8.4.1 httpx==0.28.1
 
 # First activation gets the same provider-independence/privacy/database/candidate
 # gates as every later GitHub update. A broken main commit is never started.
@@ -148,6 +148,9 @@ python3 -m venv /opt/aurorafox/venv
 PYTHONPATH=/opt/aurorafox/repository /opt/aurorafox/venv/bin/python -m pytest -q \
   /opt/aurorafox/repository/tests/test_api_gateway.py \
   /opt/aurorafox/repository/tests/test_api_database.py \
+  /opt/aurorafox/repository/tests/test_api_accounts_sync.py \
+  /opt/aurorafox/repository/tests/test_api_account_network.py \
+  /opt/aurorafox/repository/tests/test_api_schema_migrations.py \
   /opt/aurorafox/repository/tests/test_api_privacy_contract.py \
   /opt/aurorafox/repository/tests/test_api_runtime_resilience.py \
   /opt/aurorafox/repository/tests/test_core_candidate_queue.py \
