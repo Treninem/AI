@@ -135,8 +135,15 @@ class AndroidOcrRuntime(private val context: Context) {
             val out = StringBuilder(minOf(MAX_OUTPUT_CHARS, 32_768))
             val pageSources = JSONArray()
             val warnings = JSONArray()
+            val ocrHealth = health()
+            val ocrReady = ocrHealth.optBoolean("available", false)
+            if (!ocrReady) {
+                warnings.put("Android local OCR is unavailable; usable PDF text layers will still be imported and scanned pages will be skipped safely.")
+            }
             var ocrPages = 0
+            var ocrFailedPages = 0
             var textPages = 0
+            var emptyPages = 0
             var pagesProcessed = 0
             var outputTruncated = false
             for (index in 0 until document.numberOfPages) {
@@ -156,19 +163,46 @@ class AndroidOcrRuntime(private val context: Context) {
                     if (!complete) { outputTruncated = true; break }
                     continue
                 }
+                if (!ocrReady) {
+                    if (layer.isBlank()) emptyPages++
+                    val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                    pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_unavailable", "chars" to layer.length)))
+                    if (!complete) { outputTruncated = true; break }
+                    continue
+                }
                 if (ocrPages >= MAX_OCR_PAGES) {
+                    if (layer.isBlank()) emptyPages++
                     val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
                     pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_limit", "chars" to layer.length)))
                     if (!complete) { outputTruncated = true; break }
                     continue
                 }
-                val bitmap = renderBoundedPdfPage(document, renderer, index)
-                val recognized = try { recognize(bitmap) } finally { bitmap.recycle() }
                 ocrPages++
-                val chosen = if (recognized.isNotBlank()) recognized else layer
-                val complete = if (chosen.isNotBlank()) appendPage(out, pageNo, chosen) else true
-                pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to if (recognized.isNotBlank()) "ocr" else if (layer.isNotBlank()) "text_layer_sparse" else "empty", "chars" to chosen.length)))
-                if (!complete) { outputTruncated = true; break }
+                try {
+                    val bitmap = renderBoundedPdfPage(document, renderer, index)
+                    val recognized = try { recognize(bitmap) } finally { bitmap.recycle() }
+                    val chosen = if (recognized.isNotBlank()) recognized else layer
+                    if (chosen.isBlank()) emptyPages++
+                    val complete = if (chosen.isNotBlank()) appendPage(out, pageNo, chosen) else true
+                    pageSources.put(JSONObject(mapOf(
+                        "page" to pageNo,
+                        "source" to if (recognized.isNotBlank()) "ocr" else if (layer.isNotBlank()) "text_layer_sparse" else "empty",
+                        "chars" to chosen.length,
+                    )))
+                    if (!complete) { outputTruncated = true; break }
+                } catch (t: Throwable) {
+                    ocrFailedPages++
+                    if (layer.isBlank()) emptyPages++
+                    val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                    pageSources.put(JSONObject(mapOf(
+                        "page" to pageNo,
+                        "source" to "ocr_error",
+                        "chars" to layer.length,
+                        "error" to (t.message ?: t.javaClass.simpleName).take(500),
+                    )))
+                    warnings.put("Page $pageNo local OCR failed; continuing safely with the remaining document.")
+                    if (!complete) { outputTruncated = true; break }
+                }
             }
             if (outputTruncated) warnings.put("Local OCR output truncated at $MAX_OUTPUT_CHARS characters")
             if (ocrPages >= MAX_OCR_PAGES && pagesProcessed < document.numberOfPages) warnings.put("OCR page limit reached at $MAX_OCR_PAGES pages")
@@ -180,6 +214,10 @@ class AndroidOcrRuntime(private val context: Context) {
                     "pages_processed" to pagesProcessed,
                     "text_pages" to textPages,
                     "ocr_pages" to ocrPages,
+                    "ocr_failed_pages" to ocrFailedPages,
+                    "empty_pages" to emptyPages,
+                    "ocr_available" to ocrReady,
+                    "ocr" to ocrHealth,
                     "page_sources" to pageSources,
                     "output_limit_chars" to MAX_OUTPUT_CHARS,
                     "output_truncated" to outputTruncated,
