@@ -123,7 +123,7 @@ class SyncStore:
                     connection.execute(
                         "INSERT INTO sync_conflicts(id, principal_kind, principal_id, entity_type, entity_id, "
                         "current_revision, incoming_base_revision, incoming_payload_json, incoming_checksum, "
-                        "origin_device_id, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "incoming_deleted, origin_device_id, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
                             conflict_id,
                             kind,
@@ -134,6 +134,7 @@ class SyncStore:
                             base_revision,
                             payload_json,
                             checksum,
+                            1 if deleted else 0,
                             device_id,
                             now,
                         ),
@@ -249,7 +250,7 @@ class SyncStore:
         with self.database.connection() as connection:
             rows = connection.execute(
                 "SELECT id, entity_type, entity_id, current_revision, incoming_base_revision, "
-                "incoming_payload_json, incoming_checksum, origin_device_id, created_at "
+                "incoming_payload_json, incoming_checksum, incoming_deleted, origin_device_id, created_at "
                 "FROM sync_conflicts WHERE principal_kind=? AND principal_id=? AND resolved_at IS NULL "
                 "ORDER BY created_at, id LIMIT ?",
                 (kind, principal_id, min(500, max(1, int(limit)))),
@@ -270,6 +271,7 @@ class SyncStore:
                     "incoming": {
                         "payload": payload,
                         "checksum": str(row["incoming_checksum"]),
+                        "deleted": bool(row["incoming_deleted"]),
                         "origin_device_id": str(row["origin_device_id"]),
                     },
                     "created_at": int(row["created_at"]),
@@ -488,7 +490,7 @@ class SyncStore:
                     connection.execute(
                         "INSERT INTO sync_conflicts(id, principal_kind, principal_id, entity_type, entity_id, "
                         "current_revision, incoming_base_revision, incoming_payload_json, incoming_checksum, "
-                        "origin_device_id, created_at) VALUES(?, 'account', ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        "incoming_deleted, origin_device_id, created_at) VALUES(?, 'account', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                         (
                             secrets.token_hex(16),
                             account_id,
@@ -498,6 +500,7 @@ class SyncStore:
                             int(entity["revision"]),
                             str(entity["payload_json"]),
                             str(entity["checksum"]),
+                            int(entity["deleted"]),
                             guest_device_id,
                             now,
                         ),
