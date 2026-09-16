@@ -40,10 +40,11 @@ if (-not (Test-Path -LiteralPath $tesseract)) {
     if (Test-Path -LiteralPath $RuntimeRoot) { Remove-Item -LiteralPath $RuntimeRoot -Recurse -Force }
     New-Item -ItemType Directory -Force -Path $RuntimeRoot | Out-Null
 
-    # The NSIS installer is a GUI-subsystem executable. Invoking it with '&'
-    # can leave $LASTEXITCODE unset before the child installer has finished.
-    # Start-Process -Wait gives us a deterministic completion and exit code.
-    $installArgs = @('/S', "/D=`"$RuntimeRoot`"")
+    # The NSIS installer is a GUI-subsystem executable. Start-Process -Wait
+    # provides deterministic completion. /D= must be the final NSIS argument;
+    # nested quote characters become part of ArgumentList and can make NSIS
+    # ignore the requested directory on paths which do not need quoting.
+    $installArgs = @('/S', "/D=$RuntimeRoot")
     $installProcess = Start-Process -FilePath $installer -ArgumentList $installArgs -Wait -PassThru
     if ($null -eq $installProcess) { throw 'Tesseract installer did not return a process handle' }
     if ($installProcess.ExitCode -ne 0) { throw "Tesseract installer failed with exit code $($installProcess.ExitCode)" }
