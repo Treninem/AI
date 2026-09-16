@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import threading
 import time
 import uuid
 from collections import defaultdict, deque
@@ -79,15 +80,17 @@ class RateLimiter:
         self.limit = max(1, limit)
         self.window = max(1.0, window)
         self.hits: dict[str, deque[float]] = defaultdict(deque)
+        self._lock = threading.Lock()
 
     def check(self, key_id: str) -> None:
         now = time.monotonic()
-        q = self.hits[key_id]
-        while q and now - q[0] > self.window:
-            q.popleft()
-        if len(q) >= self.limit:
-            raise HTTPException(429, "AuroraFox API rate limit exceeded")
-        q.append(now)
+        with self._lock:
+            q = self.hits[key_id]
+            while q and now - q[0] > self.window:
+                q.popleft()
+            if len(q) >= self.limit:
+                raise HTTPException(429, "AuroraFox API rate limit exceeded")
+            q.append(now)
 
 
 rate_limiter = RateLimiter(int(os.getenv("AURORAFOX_API_RPM", "60")), 60.0)
@@ -318,33 +321,37 @@ def _component_status(callable_status) -> dict[str, Any]:
         return {"ok": False, "error": str(exc)}
 
 
+def _public_component_status(callable_status) -> dict[str, Any]:
+    status = _component_status(callable_status)
+    return {"ok": bool(status.get("ok", False))}
+
+
 def _public_database_status() -> dict[str, Any]:
     status = dict(database.integrity_check())
-    status.pop("path", None)
-    status["backend"] = "sqlite"
-    return status
+    return {
+        "ok": bool(status.get("ok", False)),
+        "backend": "sqlite",
+        "schema_version": int(status.get("schema_version", 0) or 0),
+        "journal_mode": str(status.get("journal_mode", "")),
+        "integrity": str(status.get("integrity", "error")),
+        "foreign_key_errors": int(status.get("foreign_key_errors", -1) or 0),
+    }
 
 
 @app.get("/health")
 def health() -> dict[str, Any]:
-    agent_online = False
-    agent_details: dict[str, Any] = {}
-    try:
-        status = bridge.status()
-        agent_online = bool(status.get("ok", False))
-        agent_details = status
-    except Exception:
-        pass
+    agent_status = _component_status(bridge.status)
+    agent_online = bool(agent_status.get("ok", False))
 
-    local_core: dict[str, Any] = {}
-    try:
-        local_core = bridge.local_core.status()
-    except Exception as exc:
-        local_core = {"ok": False, "runtime": "aurorafox-local-core", "error": str(exc)}
+    local_core_status = _component_status(bridge.local_core.status)
+    local_core = {
+        "ok": bool(local_core_status.get("ok", False)),
+        "runtime": str(local_core_status.get("runtime", "aurorafox-local-core")),
+    }
 
-    ollama_models: list[str] = []
+    ollama_online = False
     try:
-        ollama_models = ollama.models(timeout=0.75)
+        ollama_online = bool(ollama.models(timeout=0.75))
     except Exception:
         pass
 
@@ -356,23 +363,21 @@ def health() -> dict[str, Any]:
         "deployment": os.getenv("AURORAFOX_DEPLOYMENT", "local"),
         "chat_available": True,
         "agent_online": agent_online,
-        "agent": agent_details,
+        "agent": {"ok": agent_online},
         "local_core": local_core,
-        "ollama_online": bool(ollama_models),
-        "ollama_models": ollama_models,
+        "ollama_online": ollama_online,
         "ollama_required": False,
         "provider_policy": "agent_then_local_core_then_optional_ollama_then_local_knowledge",
-        "bridge": f"127.0.0.1:{bridge.port}",
         "database": {"backend": "sqlite", "schema_version": SCHEMA_VERSION},
-        "learning": _component_status(learning.status),
-        "core_candidates": _component_status(core_candidates.status),
+        "learning": _public_component_status(learning.status),
+        "core_candidates": _public_component_status(core_candidates.status),
     }
 
 
 @app.get("/ready")
 def ready() -> dict[str, Any]:
     database_status = _public_database_status()
-    learning_status = _component_status(learning.status)
+    learning_status = _public_component_status(learning.status)
     ready_now = bool(database_status.get("ok", False)) and bool(learning_status.get("ok", False))
     payload = {
         "ok": ready_now,
@@ -657,9 +662,16 @@ async def websocket_chat(websocket: WebSocket, api_key: str = Query(default=""))
         await websocket.close(code=4401)
         return
     await websocket.accept()
+    key_id = str(record.get("id", "unknown"))
     try:
         while True:
             payload = await websocket.receive_json()
+            try:
+                rate_limiter.check(key_id)
+            except HTTPException as exc:
+                await websocket.send_json({"ok": False, "status": exc.status_code, "error": str(exc.detail)})
+                await websocket.close(code=4429)
+                return
             req = ChatRequest.model_validate(payload)
             result = await asyncio.to_thread(_native_chat, req, record)
             await websocket.send_json(result)
