@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from api.account_store import AccountStore
+from api.account_store import AccountStore, AuthenticationError
 from api.account_web import create_account_web_router
 
 
@@ -16,10 +17,16 @@ def _client(tmp_path: Path):
     return accounts, TestClient(app)
 
 
-def test_email_verification_link_consumes_one_time_token(tmp_path: Path):
+def test_email_verification_link_consumes_one_time_token_and_unlocks_login(tmp_path: Path):
     accounts, client = _client(tmp_path)
-    created = accounts.register("web@example.com", "verification page password", "Web")
+    password = "verification page password"
+    created = accounts.register("web@example.com", password, "Web")
     token = created["verification_token"]
+
+    with pytest.raises(AuthenticationError, match="verification"):
+        accounts.login("web@example.com", password, "PC", "pytest")
+    with accounts.database.connection() as connection:
+        assert connection.execute("SELECT COUNT(*) FROM auth_sessions").fetchone()[0] == 0
 
     response = client.get("/verify-email", params={"token": token})
     assert response.status_code == 200
@@ -27,6 +34,7 @@ def test_email_verification_link_consumes_one_time_token(tmp_path: Path):
     assert response.headers["cache-control"] == "no-store"
     assert response.headers["referrer-policy"] == "no-referrer"
     assert "default-src 'none'" in response.headers["content-security-policy"]
+    assert accounts.login("web@example.com", password, "PC", "pytest")["access_token"]
 
     reused = client.get("/verify-email", params={"token": token})
     assert reused.status_code == 400
@@ -63,13 +71,8 @@ def test_password_reset_link_renders_form_and_resets_password(tmp_path: Path):
     assert changed.status_code == 200
     assert "Пароль изменён" in changed.text
 
-    old_login = False
-    try:
+    with pytest.raises(AuthenticationError):
         accounts.login("reset-web@example.com", "old reset page password", "PC", "pytest")
-        old_login = True
-    except Exception:
-        pass
-    assert old_login is False
     assert accounts.login("reset-web@example.com", "new reset page password", "PC", "pytest")["access_token"]
 
 
