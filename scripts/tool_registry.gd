@@ -4,6 +4,9 @@ extends Node
 signal tool_called(name: String, args: Dictionary)
 
 const COMPUTER_TIMEOUT_MAX := 320.0
+const COMPUTER_ACTION_TIMEOUT := 32.0
+const COMPUTER_SCREEN_TIMEOUT := 20.0
+const COMPUTER_WINDOWS_TIMEOUT := 16.0
 
 var tools: Dictionary = {}
 var computer_base_url := "http://127.0.0.1:8766"
@@ -233,13 +236,13 @@ func _computer_action(args: Dictionary) -> Dictionary:
 	var payload := args.duplicate(true)
 	if str(payload.get("action_id", "")).strip_edges().is_empty():
 		payload["action_id"] = "%d:%d" % [OS.get_process_id(), Time.get_ticks_usec()]
-	return await _computer_json("/action", HTTPClient.METHOD_POST, payload, 16.0)
+	return await _computer_json("/action", HTTPClient.METHOD_POST, payload, COMPUTER_ACTION_TIMEOUT)
 
 func _computer_screenshot(_args: Dictionary) -> Dictionary:
 	var permission := _computer_permission()
 	if not permission.get("ok", false):
 		return permission
-	return await _computer_json("/screen", HTTPClient.METHOD_GET, {}, 16.0)
+	return await _computer_json("/screen", HTTPClient.METHOD_GET, {}, COMPUTER_SCREEN_TIMEOUT)
 
 func _sandbox_exec(args: Dictionary) -> Dictionary:
 	var timeout := clampi(int(args.get("timeout", 60)), 1, 300)
@@ -275,4 +278,4 @@ func _screen_snapshot(_args: Dictionary) -> Dictionary:
 	var permission := _computer_permission()
 	if not permission.get("ok", false):
 		return permission
-	return await _computer_json("/windows", HTTPClient.METHOD_GET, {}, 16.0)
+	return await _computer_json("/windows", HTTPClient.METHOD_GET, {}, COMPUTER_WINDOWS_TIMEOUT)
