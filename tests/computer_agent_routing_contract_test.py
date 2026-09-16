@@ -74,6 +74,22 @@ def test_windows_workspace_bridge_cannot_bypass_private_channel_or_master_stop()
     assert 'request mode=container for strict isolation' in sandbox
 
 
+def test_work_guard_owns_computer_action_id_and_stops_uncertain_unsafe_results():
+    agent = _text("scripts/agent_core.gd")
+    work = _text("work/work_manager.gd")
+    assert '"before_tool", {"step": step + 1, "tool": tool_name, "args": _safe_args(args)}, args' in agent
+    assert '"after_tool", {"step": step + 1, "tool": tool_name, "result": _guard_result(tool_result)}' in agent
+    assert 'decision.get("args_patch", {})' in agent
+    assert 'tool_args[key] = patch[key]' in agent
+    assert 'if tool_name == "computer_action"' in work
+    assert 'decision["args_patch"] = {"action_id": action_id}' in work
+    assert 'unsafe_action_uncertain' in work
+    assert 'func _tool_result_uncertain' in work
+    assert '"transport_failure"' in work
+    assert '"service_unavailable"' in work
+    assert 'http >= 500 or http in [408, 429]' in work
+
+
 def test_ui_owned_overlay_is_not_changed_into_a_service_side_planner_contract():
     # UI remains a separate claim. This lane only records the integration blocker;
     # it must not solve the blocker by reintroducing a remote/service planner.
