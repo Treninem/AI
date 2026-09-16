@@ -55,6 +55,7 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
         for key in (
             "suspected_quadratic",
             "suspected_quadratic_write",
+            "suspected_quadratic_registry",
             "suspected_superlinear_search",
         ):
             if bool(relative.get(key, False)):
