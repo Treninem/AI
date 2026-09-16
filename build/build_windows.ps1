@@ -184,12 +184,18 @@ Get-ChildItem -LiteralPath $apiSource -File | Where-Object {
     Copy-Item $_.FullName (Join-Path $apiOut $_.Name) -Force
 }
 
-# Transactional Windows updater.
+# Transactional Windows updater + permanent public trust root. The public key
+# is also exported inside the Godot PCK, but the sidecar copy is intentionally
+# packaged beside windows_updater.ps1 for repair validation, diagnostics and
+# future updater helpers. Private signing material is never packaged.
 if (Test-Path $updateOut) { Remove-Item $updateOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $updateOut | Out-Null
 $windowsUpdater = Join-Path $updateSource "windows_updater.ps1"
+$releasePublicKey = Join-Path $updateSource "release_public.pub"
 if (-not (Test-Path $windowsUpdater)) { throw "Windows updater bootstrap is missing" }
+if (-not (Test-Path $releasePublicKey)) { throw "Pinned update public trust root is missing" }
 Copy-Item $windowsUpdater (Join-Path $updateOut "windows_updater.ps1") -Force
+Copy-Item $releasePublicKey (Join-Path $updateOut "release_public.pub") -Force
 
 $server = Join-Path $voiceOut "python\aurora_voice_server.py"
 $wake = Join-Path $voiceOut "models\vosk-model-small-ru-0.22"
@@ -217,6 +223,7 @@ if (-not (Test-Path (Join-Path $coreOut "engine\llama-server.exe"))) { throw "Au
 if (-not (Test-Path (Join-Path $coreOut "engine\aurorafox-core.gguf"))) { throw "AuroraFox built-in Core weights were not packaged" }
 if (-not (Test-Path (Join-Path $runtimeOut "windows\uv\uv.exe"))) { throw "AuroraFox managed runtime bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $updateOut "windows_updater.ps1"))) { throw "Transactional Windows updater was not packaged" }
+if (-not (Test-Path (Join-Path $updateOut "release_public.pub"))) { throw "Pinned update public trust root was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "server.py"))) { throw "AuroraFox API server was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "local_core_client.py"))) { throw "AuroraFox local Core API client was not packaged" }
 if (-not (Test-Path (Join-Path $apiOut "runtime_bridge.py"))) { throw "AuroraFox Agent/Core runtime bridge was not packaged" }
