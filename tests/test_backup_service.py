@@ -25,28 +25,42 @@ def test_backup_excludes_credential_files_and_manifest_is_verifiable(tmp_path: P
     (root / "models").mkdir()
     (root / "models" / "weights.json").write_text('{"large":"excluded"}\n', encoding="utf-8")
 
-    database = root / "project_index.sqlite3"
-    with sqlite3.connect(database) as connection:
+    project_database = root / "project_index.sqlite3"
+    with sqlite3.connect(project_database) as connection:
         connection.execute("CREATE TABLE files(path TEXT PRIMARY KEY, digest TEXT NOT NULL)")
         connection.execute("INSERT INTO files VALUES (?, ?)", ("README.md", "abc123"))
 
+    secret_hash = "f" * 64
+    api_database = root / "api" / "aurorafox.sqlite3"
+    with sqlite3.connect(api_database) as connection:
+        connection.execute("CREATE TABLE api_keys(id TEXT PRIMARY KEY, token_hash TEXT NOT NULL)")
+        connection.execute("CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)")
+        connection.execute("CREATE TABLE durable_data(value TEXT NOT NULL)")
+        connection.execute("INSERT INTO api_keys VALUES (?, ?)", ("secret-key", secret_hash))
+        connection.execute("INSERT INTO metadata VALUES (?, ?, ?)", ("migration.api_keys.keys_json.v1", "{}", 1))
+        connection.execute("INSERT INTO durable_data VALUES (?)", ("keep-me",))
+
     result = BackupService(root, tmp_path / "cache").create_archive()
-    assert result.file_count == 3
+    assert result.file_count == 4
     assert result.sha256 == hashlib.sha256(result.archive_path.read_bytes()).hexdigest()
 
     with zipfile.ZipFile(result.archive_path) as archive:
         names = set(archive.namelist())
         assert "manifest.json" in names
         assert "data/api/conversations/chat.json" in names
+        assert "data/api/aurorafox.sqlite3" in names
         assert "data/memory.json" in names
         assert "data/project_index.sqlite3" in names
-        assert not any("key" in name.lower() for name in names)
+        assert not any(name.endswith("keys.json") or name.endswith("bootstrap_key.txt") for name in names)
         assert not any("models" in name.lower() for name in names)
 
         manifest = json.loads(archive.read("manifest.json"))
         assert manifest["schema"] == "aurorafox.backup.v1"
         assert manifest["credential_files_included"] is False
-        assert manifest["file_count"] == 3
+        assert manifest["database_credentials_sanitized"] is True
+        assert manifest["file_count"] == 4
+        api_item = next(item for item in manifest["files"] if item["path"] == "data/api/aurorafox.sqlite3")
+        assert api_item["credentials_sanitized"] is True
         for item in manifest["files"]:
             payload = archive.read(item["path"])
             assert len(payload) == item["bytes"]
@@ -57,6 +71,18 @@ def test_backup_excludes_credential_files_and_manifest_is_verifiable(tmp_path: P
         with sqlite3.connect(extracted) as connection:
             assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
             assert connection.execute("SELECT path, digest FROM files").fetchone() == ("README.md", "abc123")
+
+        api_extracted = tmp_path / "restored-api.sqlite3"
+        api_payload = archive.read("data/api/aurorafox.sqlite3")
+        assert secret_hash.encode("ascii") not in api_payload
+        api_extracted.write_bytes(api_payload)
+        with sqlite3.connect(api_extracted) as connection:
+            assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+            assert connection.execute("SELECT COUNT(*) FROM api_keys").fetchone()[0] == 0
+            assert connection.execute("SELECT value FROM durable_data").fetchone()[0] == "keep-me"
+            assert connection.execute(
+                "SELECT COUNT(*) FROM metadata WHERE key LIKE 'migration.api_keys.%'"
+            ).fetchone()[0] == 0
 
 
 def test_backup_size_limit_fails_closed(tmp_path: Path):
