@@ -29,11 +29,14 @@ func capabilities() -> Dictionary:
 		"native_processes": false,
 		"container_runtime": false,
 		"embedded_runtime": false,
-		"computer_control": os_name == "Windows"
+		"computer_control": os_name == "Windows",
+		"local_network_isolation": false,
+		"strict_network_isolation": false
 	}
 	if os_name == "Windows":
 		base.native_processes = true
 		base.container_runtime = _command_exists("podman") or _command_exists("docker")
+		base.strict_network_isolation = bool(base.container_runtime)
 	elif os_name == "Android":
 		var android_caps := android_runtime.capabilities()
 		for key in android_caps.keys():
@@ -198,6 +201,9 @@ func status() -> Dictionary:
 
 func _execute_windows(command: Array, cwd: String, timeout: int, mode: String) -> Dictionary:
 	var ws := get_active()
+	var requested_mode := mode.strip_edges().to_lower()
+	if requested_mode not in ["auto", "container", "local"]:
+		return {"ok": false, "error": "invalid_sandbox_mode", "message": "Sandbox mode must be auto, container, or local", "retryable": false}
 	var rel_cwd := "%s/work" % ws.id
 	if cwd != "." and not cwd.is_empty():
 		var safe_cwd := _safe_relative(cwd)
@@ -205,10 +211,20 @@ func _execute_windows(command: Array, cwd: String, timeout: int, mode: String) -
 		rel_cwd += "/" + safe_cwd
 	var bounded_timeout := clampi(timeout, 1, MAX_WINDOWS_EXEC_TIMEOUT)
 	var payload := {"command": command, "cwd": rel_cwd, "timeout": bounded_timeout, "allow_network": false}
-	if mode == "container" or (mode == "auto" and bool(capabilities().get("container_runtime", false))):
+	if requested_mode == "container":
+		var strict_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
+		if int(strict_result.get("http", 0)) == 404:
+			return {"ok": false, "error": "container_runtime_unavailable", "message": "Strict container sandbox requested but Docker/Podman is unavailable", "retryable": false, "network_isolation_enforced": false}
+		return strict_result
+	if requested_mode == "auto" and bool(capabilities().get("container_runtime", false)):
 		var container_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
-		if container_result.get("ok", false) or int(container_result.get("http", 0)) != 404: return container_result
-	return await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
+		if container_result.get("ok", false) or int(container_result.get("http", 0)) != 404:
+			return container_result
+	var local_result := await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
+	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
+		local_result["degraded_isolation"] = true
+		local_result["isolation_note"] = "Local process sandbox enforces workspace/path/auth/timeouts but cannot guarantee network isolation; request mode=container for strict isolation."
+	return local_result
 
 func _test_commands(language: String) -> Array:
 	var l := language.to_lower()
