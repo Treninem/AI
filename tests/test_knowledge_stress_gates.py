@@ -142,7 +142,13 @@ class KnowledgeStressGateTests(unittest.TestCase):
                     "external_runtime_required": False,
                     "ollama_required": False,
                 },
-                "relative_performance": {"suspected_quadratic_registry": True},
+                "relative_performance": {
+                    "suspected_quadratic_registry": True,
+                    "n_2n_4n": [
+                        {"from_n": 16, "to_n": 32, "time_ratio": 3.6},
+                        {"from_n": 32, "to_n": 64, "time_ratio": 3.8611111111},
+                    ],
+                },
                 "results": [],
             },
             "registry.json",
