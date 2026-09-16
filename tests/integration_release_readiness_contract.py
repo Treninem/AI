@@ -94,6 +94,81 @@ def test_code_specialist_does_not_restore_direct_external_provider_path() -> Non
     assert "await general_ai.chat(" in source
 
 
+def test_work_computer_landing_makes_ui_core_routing_mandatory() -> None:
+    lane_workflow_path = ROOT / ".github" / "workflows" / "work-computer-reliability.yml"
+    if not lane_workflow_path.exists():
+        return
+
+    lane_workflow = lane_workflow_path.read_text(encoding="utf-8")
+    client = read("scripts/computer_client.gd")
+    registry = read("scripts/tool_registry.gd")
+    overlay = read("scripts/computer_overlay.gd")
+
+    # Once the reliability lane lands, service-side goal planning must stay
+    # fail-closed and the only executable surface is the protected primitive set.
+    assert "local_core_planning_required" in client
+    assert "set_computer_control_enabled" in client
+    for primitive in ("computer_action", "computer_screenshot", "computer_windows"):
+        assert primitive in registry
+
+    # The UI must then be compatible on that same SHA: high-level planning is
+    # owned by bundled AuroraFox Core, never by ComputerClient.run()/plan().
+    assert "computer.run(" not in overlay
+    assert "computer.plan(" not in overlay
+    assert "set_computer_control_enabled" in overlay
+    assert "run_task(" in overlay
+
+    for required_gate in (
+        "tests/computer_agent_reliability_test.py",
+        "tests/computer_agent_routing_contract_test.py",
+        "tests/work_reliability_store_smoke.gd",
+        "tests/work_computer_e2e_control_smoke.gd",
+        "tests/work_computer_attempt_safety_smoke.gd",
+        "tests/work_computer_e2e_uncertain_result_smoke.gd",
+        "tests/work_computer_master_stop_smoke.gd",
+    ):
+        assert required_gate in lane_workflow
+
+
+def test_local_ocr_landing_keeps_offline_packaging_and_knowledge_gates() -> None:
+    lane_workflow_path = ROOT / ".github" / "workflows" / "local-ocr-ci.yml"
+    if not lane_workflow_path.exists():
+        return
+
+    lane_workflow = lane_workflow_path.read_text(encoding="utf-8")
+    for required in (
+        "pytest -q tests/test_local_ocr.py",
+        "tests/local_ocr_knowledge_smoke.gd",
+        "windows-portable-ocr",
+        "android-ocr",
+        "rus.traineddata",
+        "eng.traineddata",
+        "network_required",
+        "external_ai_required",
+    ):
+        assert required in lane_workflow
+    assert "OpenAI|Gemini|Claude|Ollama" in lane_workflow
+
+
+def test_core_benchmark_landing_keeps_real_offline_code_specialist_proof() -> None:
+    lane_workflow_path = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
+    if not lane_workflow_path.exists():
+        return
+
+    lane_workflow = lane_workflow_path.read_text(encoding="utf-8")
+    runner = read("benchmarks/core/run_windows_code_specialist_smoke.ps1")
+    smoke = read("benchmarks/core/code_specialist_smoke.gd")
+
+    assert "Run Work Mode startup regression smoke" in lane_workflow
+    assert "Run real CodeSpecialist through bundled Core offline" in lane_workflow
+    assert "Enforce real Core gate" in lane_workflow
+    assert "New-NetFirewallRule" in runner
+    assert "ollama" in runner.lower()
+    assert "CodeSpecialist.new()" in smoke
+    assert "analyze_request" in smoke
+    assert "aurora_core_desktop" in smoke
+
+
 def test_release_safety_boundaries_are_present() -> None:
     release_contract = read("tests/test_release_core_gates.py")
     assert "test_promotion_workflow_cannot_access_release_signing_secrets" in release_contract
