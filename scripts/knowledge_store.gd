@@ -6,6 +6,7 @@ const STRUCTURED_PATH := "user://knowledge/structured.jsonl"
 const MAX_CHUNK_CHARS := 1800
 const LARGE_TEXT_THRESHOLD_BYTES := 8 * 1024 * 1024
 const STREAM_BATCH_CHARS := 128 * 1024
+const STRUCTURED_WRITE_BATCH := 128
 const SEARCH_BUFFER_LIMIT := 256
 var document_importer := KnowledgeDocumentImporter.new()
 var _source_presence_cache: Dictionary = {}
@@ -202,7 +203,14 @@ func _import_structured_records(source: String, records: Array, format: String, 
 	return _structured_result(source, format, state, false)
 
 func _structured_state() -> Dictionary:
-	return {"routed": _empty_routes(), "seen": {}, "structured_written": 0, "normalized_chunks": 0}
+	return {
+		"routed": _empty_routes(),
+		"seen": {},
+		"structured_written": 0,
+		"normalized_chunks": 0,
+		"structured_pending": [],
+		"normalized_pending": []
+	}
 
 func _import_structured_value(source: String, record_path: String, value: Variant, format: String, metadata: Dictionary, state: Dictionary) -> Dictionary:
 	var text := _record_text(value)
@@ -226,7 +234,8 @@ func _import_structured_value(source: String, record_path: String, value: Varian
 		"original_file": source,
 		"scope": "core_knowledge"
 	}, true)
-	if not _append(STRUCTURED_PATH, {
+	var structured_pending: Array = state.get("structured_pending", [])
+	structured_pending.append({
 		"id": fingerprint,
 		"kind": kind,
 		"source": source,
@@ -234,19 +243,38 @@ func _import_structured_value(source: String, record_path: String, value: Varian
 		"value": value,
 		"metadata": meta,
 		"created_at": Time.get_datetime_string_from_system(true)
-	}):
-		return {"ok": false, "error": "Не удалось записать структурированную запись", "source": source, "json_path": record_path}
-	state["structured_written"] = int(state.get("structured_written", 0)) + 1
-	var normalized := import_text(text, source, meta)
-	if not bool(normalized.get("ok", false)):
-		return normalized
-	state["normalized_chunks"] = int(state.get("normalized_chunks", 0)) + int(normalized.get("chunks", 0))
+	})
+	state["structured_pending"] = structured_pending
+	var normalized_pending: Array = state.get("normalized_pending", [])
+	for chunk in _chunk(text.strip_edges()):
+		normalized_pending.append(_knowledge_item(source, chunk, kind, meta.duplicate(true)))
+	state["normalized_pending"] = normalized_pending
+	if structured_pending.size() >= STRUCTURED_WRITE_BATCH or normalized_pending.size() >= STRUCTURED_WRITE_BATCH:
+		return _flush_structured_state(state, source, record_path)
+	return {"ok": true}
+
+func _flush_structured_state(state: Dictionary, source: String, record_path := "") -> Dictionary:
+	var structured_pending: Array = state.get("structured_pending", [])
+	var normalized_pending: Array = state.get("normalized_pending", [])
+	if not structured_pending.is_empty():
+		if not _append_many(STRUCTURED_PATH, structured_pending):
+			return {"ok": false, "error": "Не удалось записать пакет структурированных записей", "source": source, "json_path": record_path}
+		state["structured_written"] = int(state.get("structured_written", 0)) + structured_pending.size()
+		state["structured_pending"] = []
+	if not normalized_pending.is_empty():
+		if not _append_many(DB_PATH, normalized_pending):
+			return {"ok": false, "error": "Не удалось записать пакет нормализованной базы знаний", "source": source, "json_path": record_path}
+		state["normalized_chunks"] = int(state.get("normalized_chunks", 0)) + normalized_pending.size()
+		state["normalized_pending"] = []
 	return {"ok": true}
 
 func _structured_result(source: String, format: String, state: Dictionary, streaming: bool) -> Dictionary:
 	var seen: Dictionary = state.get("seen", {})
 	if seen.is_empty():
 		return {"ok": false, "error": "Источник не содержит структурированных записей", "source": source}
+	var flushed := _flush_structured_state(state, source)
+	if not bool(flushed.get("ok", false)):
+		return flushed
 	var structured_written := int(state.get("structured_written", 0))
 	if structured_written != seen.size():
 		return {"ok": false, "error": "Не удалось полностью записать структурированную базу", "source": source, "written": structured_written, "expected": seen.size()}
