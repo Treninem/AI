@@ -5,7 +5,7 @@ import smtplib
 import ssl
 from dataclasses import dataclass
 from email.message import EmailMessage
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 
 class AccountMailError(RuntimeError):
@@ -48,13 +48,23 @@ class AccountMailConfig:
         )
 
     @property
+    def public_url_is_secure(self) -> bool:
+        try:
+            parsed = urlsplit(self.public_url)
+        except Exception:
+            return False
+        # Verification/reset links carry one-time bearer credentials. Production
+        # transport must never emit them onto a clear-text external HTTP link.
+        return parsed.scheme.lower() == "https" and bool(parsed.hostname) and not parsed.username and not parsed.password
+
+    @property
     def configured(self) -> bool:
         credentials_ready = not self.username or bool(self.password)
         return bool(
             self.host
             and self.port
             and self.sender
-            and self.public_url
+            and self.public_url_is_secure
             and credentials_ready
             and self.security in {"starttls", "ssl"}
         )
@@ -95,10 +105,14 @@ class AccountMailer:
 
     def send_token(self, recipient: str, purpose: str, token: str) -> None:
         if not self.config.configured:
-            raise AccountMailError("Account email transport is not configured")
-        message = self._message(recipient, purpose, token)
+            raise AccountMailError("Account email transport is not configured or action URL is not secure")
         context = ssl.create_default_context()
         try:
+            # Header construction is inside the protected boundary too. Python's
+            # email package rejects CR/LF header injection and other malformed
+            # address/header values; normalize those failures into AccountMailError
+            # so public account routes fail closed instead of surfacing a 500.
+            message = self._message(recipient, purpose, token)
             if self.config.security == "ssl":
                 with smtplib.SMTP_SSL(
                     self.config.host, self.config.port, timeout=self.config.timeout, context=context

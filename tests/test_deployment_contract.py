@@ -265,6 +265,40 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert updater.rindex(updater_install) > updater.index('git checkout --detach "${candidate}"')
 
 
+def test_reg_ru_production_verifier_is_fail_closed_and_ci_is_self_cleaning():
+    verifier = read("deploy/reg_ru/verify.sh")
+    api_ci = read(".github/workflows/api-ci.yml")
+    assert b"\r" not in (ROOT / "deploy/reg_ru/verify.sh").read_bytes()
+    assert "AURORAFOX_REG_RU_VERIFY_OK" in verifier
+    assert "run_as_root_required" in verifier
+    assert "aurorafox-api.service" in verifier
+    assert "caddy.service" in verifier
+    assert "aurorafox-update.timer" in verifier
+    assert "aurorafox-backup.timer" in verifier
+    assert "AURORAFOX_BUILD_SHA" in verifier
+    assert "installed_updater_not_current" in verifier
+    assert "http://127.0.0.1:8768/ready" in verifier
+    assert '"${public_url}/ready"' in verifier
+    assert "?mode=ro" in verifier
+    assert "PRAGMA integrity_check" in verifier
+    assert "PRAGMA foreign_key_check" in verifier
+    assert "PRAGMA journal_mode" in verifier
+    assert "AccountMailConfig.from_env()" in verifier
+    assert "public_url_is_secure" in verifier
+    assert "sha256sum -c latest.sha256" in verifier
+    assert "strict-transport-security" in verifier
+    assert "x-content-type-options" in verifier
+    assert "x-frame-options" in verifier
+    assert "cache-control" in verifier
+    assert "systemctl restart" not in verifier
+    assert "systemctl stop" not in verifier
+    assert "git checkout" not in verifier
+    assert "--prune-ephemeral" not in verifier
+    assert "concurrency:" in api_ci
+    assert "cancel-in-progress: true" in api_ci
+    assert "deploy/reg_ru/verify.sh" in api_ci
+
+
 def test_api_provider_independence_is_packaged_and_deployed():
     build = read("build/build_windows.ps1")
     local_core = read("api/local_core_client.py")

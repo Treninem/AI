@@ -14,12 +14,14 @@ PUBLIC_AUTH_PATHS = {
     "/v1/auth/resend-verification",
     "/v1/auth/login",
     "/v1/auth/refresh",
+    "/v1/auth/logout",
     "/v1/auth/password-reset/request",
     "/v1/auth/password-reset/confirm",
     "/v1/auth/guest",
     "/verify-email",
     "/reset-password",
 }
+DEFAULT_MAX_BUCKETS = 10_000
 
 
 class PublicAuthRateLimitMiddleware:
@@ -29,6 +31,10 @@ class PublicAuthRateLimitMiddleware:
     deterministic and dependency-free. X-Forwarded-For is trusted only when the
     direct ASGI peer is loopback (the local Caddy reverse proxy); direct Internet
     clients cannot spoof their rate-limit identity with that header.
+
+    Bucket state is deliberately bounded. A stream of unique client identities
+    must not be able to grow the process dictionary without limit; when the cap is
+    full we first reap expired buckets and then fail closed for a new identity.
     """
 
     def __init__(
@@ -36,12 +42,15 @@ class PublicAuthRateLimitMiddleware:
         app: Callable[..., Awaitable[Any]],
         limit: int = 20,
         window_seconds: float = 60.0,
+        max_buckets: int = DEFAULT_MAX_BUCKETS,
     ):
         self.app = app
         self.limit = max(1, int(limit))
         self.window_seconds = max(1.0, float(window_seconds))
+        self.max_buckets = max(1, int(max_buckets))
         self._hits: dict[str, deque[float]] = defaultdict(deque)
         self._lock = threading.Lock()
+        self._checks = 0
 
     @staticmethod
     def _header(scope: dict[str, Any], name: bytes) -> str:
@@ -71,12 +80,42 @@ class PublicAuthRateLimitMiddleware:
                     pass
         return str(peer_ip)
 
+    def _reap_expired_locked(self, now: float) -> None:
+        expired: list[str] = []
+        for key, queue in self._hits.items():
+            while queue and now - queue[0] >= self.window_seconds:
+                queue.popleft()
+            if not queue:
+                expired.append(key)
+        for key in expired:
+            self._hits.pop(key, None)
+
     def _allowed(self, key: str) -> bool:
         now = time.monotonic()
         with self._lock:
-            queue = self._hits[key]
-            while queue and now - queue[0] >= self.window_seconds:
-                queue.popleft()
+            self._checks += 1
+            queue = self._hits.get(key)
+            if queue is not None:
+                while queue and now - queue[0] >= self.window_seconds:
+                    queue.popleft()
+                if not queue:
+                    self._hits.pop(key, None)
+                    queue = None
+
+            # Periodic cleanup keeps ordinary traffic compact. Capacity cleanup is
+            # also forced before rejecting a previously unseen identity.
+            if self._checks % 256 == 0:
+                self._reap_expired_locked(now)
+                queue = self._hits.get(key)
+            if queue is None and len(self._hits) >= self.max_buckets:
+                self._reap_expired_locked(now)
+                queue = self._hits.get(key)
+                if queue is None and len(self._hits) >= self.max_buckets:
+                    return False
+
+            if queue is None:
+                queue = deque()
+                self._hits[key] = queue
             if len(queue) >= self.limit:
                 return False
             queue.append(now)

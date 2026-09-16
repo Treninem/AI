@@ -74,24 +74,30 @@ func remove_source(source: String) -> Dictionary:
 			"structured_removed": 0,
 			"registry_removed": alias_result.get("removed", 0),
 			"aliases_removed": alias_result.get("aliases_removed", 0),
-			"canonical_preserved": true
+			"canonical_preserved": true,
+			"transaction": "alias_registry_only"
 		}
-	var store := KnowledgeStore.new()
-	var removed := store.remove_source(canonical)
-	if canonical != source and int(removed.get("removed", 0)) == 0 and int(removed.get("structured_removed", 0)) == 0:
-		removed = store.remove_source(source)
-	var registry_result := registry.remove_source(source)
+	# Canonical removal mutates the normalized store, structured store and source
+	# registry. Keep all three inside the same source-scoped snapshot so a process
+	# death between those writes restores the last fully committed state.
+	var removed := KnowledgeImportTransaction.new().remove_source(KnowledgeStore.new(), canonical)
 	_invalidate_scan()
 	return {
-		"ok": bool(removed.get("ok", false)) and bool(registry_result.get("ok", false)),
+		"ok": bool(removed.get("ok", false)),
 		"source": source,
 		"canonical_source": canonical,
 		"alias_only": false,
 		"removed": removed.get("removed", 0),
 		"structured_removed": removed.get("structured_removed", 0),
-		"registry_removed": registry_result.get("removed", 0),
-		"aliases_removed": registry_result.get("aliases_removed", 0),
-		"canonical_preserved": false
+		"registry_removed": removed.get("registry_removed", 0),
+		"aliases_removed": removed.get("aliases_removed", 0),
+		"canonical_preserved": false,
+		"transaction": removed.get("transaction", ""),
+		"transaction_mode": removed.get("transaction_mode", ""),
+		"transaction_serialized": removed.get("transaction_serialized", false),
+		"startup_recovery": removed.get("startup_recovery", {}),
+		"error": removed.get("error", ""),
+		"rollback_error": removed.get("rollback_error", "")
 	}
 
 func compact() -> Dictionary:

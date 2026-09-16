@@ -67,6 +67,25 @@ func import_extracted_file(store: KnowledgeStore, path: String, text: String, me
 	result["transaction_serialized"] = true
 	return result
 
+func remove_source(store: KnowledgeStore, source: String) -> Dictionary:
+	_transaction_mutex.lock()
+	var recovery := _recover_interrupted_transaction_locked()
+	var result: Dictionary
+	if not bool(recovery.get("ok", false)):
+		result = {
+			"ok": false,
+			"error": "Не удалось безопасно восстановить прерванную операцию Knowledge перед удалением источника",
+			"transaction": "recovery_failed",
+			"startup_recovery": recovery
+		}
+	else:
+		result = _remove_source_locked(store, source)
+		if _recovery_changed_state(recovery):
+			result["startup_recovery"] = recovery
+	_transaction_mutex.unlock()
+	result["transaction_serialized"] = true
+	return result
+
 func recover_interrupted_transaction() -> Dictionary:
 	_transaction_mutex.lock()
 	var result := _recover_interrupted_transaction_locked()
@@ -112,6 +131,63 @@ func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: St
 	var meta: Dictionary = prepared.get("metadata", metadata)
 	var result := store.import_extracted_file(path, text, meta)
 	return _finish_import(path, result, inspection, meta, snapshot)
+
+func _remove_source_locked(store: KnowledgeStore, source: String) -> Dictionary:
+	if source.strip_edges().is_empty():
+		return {"ok": false, "error": "Источник для удаления не указан", "transaction": "not_started"}
+	var row := registry.record_for_source(source)
+	var canonical := str(row.get("source", source)) if not row.is_empty() else source
+	if not row.is_empty() and canonical != source:
+		return {
+			"ok": false,
+			"error": "Alias-only removal must detach the alias through KnowledgeManager before canonical transaction",
+			"source": source,
+			"canonical_source": canonical,
+			"transaction": "not_started"
+		}
+	var snapshot := _snapshot(canonical, true)
+	if not bool(snapshot.get("ok", false)):
+		return snapshot
+	var removed := store.remove_source(canonical)
+	if not bool(removed.get("ok", false)):
+		var failed := removed.duplicate(true)
+		failed["source"] = canonical
+		failed["operation"] = "remove_source"
+		return _rollback_result(failed, snapshot)
+	var registry_result := registry.remove_source(canonical)
+	if not bool(registry_result.get("ok", false)):
+		var registry_failed := removed.duplicate(true)
+		registry_failed["ok"] = false
+		registry_failed["error"] = str(registry_result.get("error", "Не удалось удалить источник из реестра"))
+		registry_failed["source"] = canonical
+		registry_failed["operation"] = "remove_source"
+		return _rollback_result(registry_failed, snapshot)
+	if not _write_new_json_marker(TXN_COMMIT_MARKER, TXN_COMMIT_MARKER_TMP, {
+		"phase": "committed",
+		"operation": "remove_source",
+		"source": canonical,
+		"updated_at": Time.get_datetime_string_from_system(true)
+	}):
+		var marker_failed := removed.duplicate(true)
+		marker_failed["ok"] = false
+		marker_failed["error"] = "Не удалось записать durable commit-marker удаления источника знаний"
+		marker_failed["source"] = canonical
+		marker_failed["operation"] = "remove_source"
+		return _rollback_result(marker_failed, snapshot)
+	_cleanup_backups(true)
+	_remember_source_presence(canonical, false)
+	return {
+		"ok": true,
+		"source": canonical,
+		"operation": "remove_source",
+		"removed": int(removed.get("removed", 0)),
+		"structured_removed": int(removed.get("structured_removed", 0)),
+		"registry_removed": int(registry_result.get("removed", 0)),
+		"aliases_removed": int(registry_result.get("aliases_removed", 0)),
+		"transaction": "committed",
+		"transaction_mode": "source_scoped_journal",
+		"source_snapshot": snapshot.get("data_journal", "source_rows")
+	}
 
 func _prepare_file(path: String, metadata: Dictionary) -> Dictionary:
 	var inspection := registry.inspect_file(path)
