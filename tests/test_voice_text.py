@@ -54,10 +54,10 @@ def test_streaming_prefers_clause_boundaries_for_long_speech():
     chunks = split_for_streaming(src, max_chars=80)
     assert len(chunks) >= 2
     assert all(0 < len(chunk) <= 80 for chunk in chunks)
-    assert any(chunk.endswith(",") for chunk in chunks[:-1])
+    assert all(chunk[-1] in ",;:—–.!?…" for chunk in chunks[:-1])
 
 
-def test_numpy_fallback_keeps_voice_available_without_quality_dsp():
+def test_degraded_fallback_preserves_native_timbre_instead_of_resampling():
     processor = AuroraVoiceProcessor({
         "prosody_dsp": False,
         "highpass_hz": 0,
@@ -71,11 +71,12 @@ def test_numpy_fallback_keeps_voice_available_without_quality_dsp():
         audio,
         16000,
         mechanical_amount=0.0,
-        pitch_shift=0.0,
+        pitch_shift=0.04,
         speed=1.10,
     )
     assert out.dtype == np.float32
-    assert 880 <= out.size <= 930
+    assert out.size == audio.size
+    assert np.allclose(out, audio, atol=1e-6)
     assert np.isfinite(out).all()
 
 
@@ -85,7 +86,8 @@ def test_quality_dsp_contract_uses_separate_pitch_and_tempo_paths():
     assert "audio_functional.phase_vocoder" in source
     assert "_normalize_loudness" in source
     assert "_fade_edges" in source
-    assert "tempo * pitch_factor" in source  # degraded local fallback only
+    assert "tempo * pitch_factor" not in source
+    assert "return x" in source
 
 
 def test_emotion_success_warning_error():
