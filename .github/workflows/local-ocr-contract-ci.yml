@@ -1,0 +1,44 @@
+name: AuroraFox Local OCR Contract CI
+
+on:
+  push:
+    branches: [main, chat-2026-09-16-local-ocr]
+    paths:
+      - 'file_intelligence/**'
+      - 'scripts/file_intelligence_client.gd'
+      - 'scripts/knowledge_document_importer.gd'
+      - 'scripts/knowledge_store.gd'
+      - 'android_plugin/**'
+      - 'addons/AuroraFoxRuntime/**'
+      - 'build/build_windows.ps1'
+      - 'tests/local_ocr_knowledge_smoke.gd'
+      - 'tests/local_ocr_contract_static_test.py'
+      - '.github/workflows/local-ocr-contract-ci.yml'
+  pull_request:
+    paths:
+      - 'file_intelligence/**'
+      - 'scripts/file_intelligence_client.gd'
+      - 'scripts/knowledge_document_importer.gd'
+      - 'scripts/knowledge_store.gd'
+      - 'android_plugin/**'
+      - 'addons/AuroraFoxRuntime/**'
+      - 'build/build_windows.ps1'
+      - 'tests/local_ocr_knowledge_smoke.gd'
+      - 'tests/local_ocr_contract_static_test.py'
+      - '.github/workflows/local-ocr-contract-ci.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pytest
+      - run: python -m pytest -q tests/local_ocr_contract_static_test.py
