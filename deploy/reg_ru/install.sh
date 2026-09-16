@@ -142,11 +142,12 @@ python3 -m venv /opt/aurorafox/venv
 /opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check \
   -r /opt/aurorafox/repository/api/requirements.txt pytest==8.4.1
 
-# First activation gets the same provider-independence/privacy/candidate gates as
-# every later GitHub update. A broken main commit is never started as production.
+# First activation gets the same provider-independence/privacy/database/candidate
+# gates as every later GitHub update. A broken main commit is never started.
 /opt/aurorafox/venv/bin/python -m compileall -q /opt/aurorafox/repository/api
 PYTHONPATH=/opt/aurorafox/repository /opt/aurorafox/venv/bin/python -m pytest -q \
   /opt/aurorafox/repository/tests/test_api_gateway.py \
+  /opt/aurorafox/repository/tests/test_api_database.py \
   /opt/aurorafox/repository/tests/test_api_privacy_contract.py \
   /opt/aurorafox/repository/tests/test_api_runtime_resilience.py \
   /opt/aurorafox/repository/tests/test_core_candidate_queue.py \
@@ -281,10 +282,16 @@ systemctl enable aurorafox-api.service caddy.service
 systemctl restart aurorafox-api.service caddy.service
 systemctl enable --now aurorafox-update.timer aurorafox-backup.timer
 curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 2 http://127.0.0.1:8768/health >/dev/null
+runuser -u aurorafox -- env PYTHONPATH=/opt/aurorafox/repository \
+  /opt/aurorafox/venv/bin/python -m api.database --path /var/lib/aurorafox/api/aurorafox.sqlite3
 systemctl start aurorafox-backup.service
 test -s /srv/aurorafox-backup/exports/latest.zip
 test -s /srv/aurorafox-backup/exports/latest.sha256
+(
+  cd /srv/aurorafox-backup/exports
+  sha256sum -c latest.sha256
+)
 
-echo "AURORAFOX_REG_RU_OK url=https://${public_host} api=https://${api_public_host} sha=${current_sha} updates=github/main ssh_port=${ssh_port}"
+echo "AURORAFOX_REG_RU_OK url=https://${public_host} api=https://${api_public_host} sha=${current_sha} updates=github/main ssh_port=${ssh_port} db=sqlite-wal"
 echo 'Bootstrap admin key (read it once, then remove the file): /var/lib/aurorafox/api/bootstrap_key.txt'
 echo 'Owner PC backup transport: key-pinned, chrooted internal SFTP user aurorafox-backup.'

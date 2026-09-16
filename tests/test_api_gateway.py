@@ -1,9 +1,13 @@
 from __future__ import annotations
 
+import base64
 from pathlib import Path
+
+import pytest
 
 from api.auth import DEFAULT_SCOPES, KeyStore, allows
 from api.conversation_store import ConversationStore
+from api.file_client import FileIntelligenceClient
 from api.learning_sync import LearningSynchronizer
 
 
@@ -117,3 +121,42 @@ def test_feedback_replays_into_agent_experience_bridge(tmp_path: Path):
     flushed = sync.flush(100)
     assert flushed["synced"] == 1
     assert bridge.feedback_items[0]["corrected_answer"] == "correct answer"
+
+
+def test_file_upload_rejects_oversize_payload_before_disk_write(tmp_path: Path):
+    uploads = tmp_path / "uploads"
+    client = FileIntelligenceClient(uploads, max_file_bytes=8)
+    valid = base64.b64encode(b"12345678").decode("ascii")
+    path = client.save_base64("sample.bin", valid)
+    assert path.read_bytes() == b"12345678"
+    path.unlink()
+
+    oversized = base64.b64encode(b"123456789").decode("ascii")
+    with pytest.raises(ValueError, match="exceeds AuroraFox API limit"):
+        client.save_base64("too-large.bin", oversized)
+    assert list(uploads.iterdir()) == []
+
+
+def test_file_analysis_always_removes_transient_upload(tmp_path: Path, monkeypatch):
+    uploads = tmp_path / "uploads"
+    client = FileIntelligenceClient(uploads, max_file_bytes=64)
+    encoded = base64.b64encode(b"temporary document").decode("ascii")
+
+    def fake_analyze(path: Path, question: str = "", visual: bool = True):
+        assert path.is_file()
+        assert path.read_bytes() == b"temporary document"
+        return {"ok": True, "question": question, "visual": visual}
+
+    monkeypatch.setattr(client, "analyze_path", fake_analyze)
+    result = client.analyze_base64("document.txt", encoded, "inspect", False)
+    assert result == {"ok": True, "question": "inspect", "visual": False}
+    assert list(uploads.iterdir()) == []
+
+    def failing_analyze(path: Path, question: str = "", visual: bool = True):
+        assert path.is_file()
+        raise RuntimeError("analysis failed")
+
+    monkeypatch.setattr(client, "analyze_path", failing_analyze)
+    with pytest.raises(RuntimeError, match="analysis failed"):
+        client.analyze_base64("document.txt", encoded)
+    assert list(uploads.iterdir()) == []

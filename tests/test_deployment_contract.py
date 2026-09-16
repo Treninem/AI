@@ -24,7 +24,46 @@ def test_server_metadata_is_versioned_and_backup_is_not_exposed_over_http():
     assert '"ollama_required": False' in server
     assert '"chat_available": True' in server
     assert '"local_core": local_core' in server
+    assert '"database": {"backend": "sqlite", "schema_version": SCHEMA_VERSION}' in server
     assert '/v1/backups/latest' not in server
+
+
+def test_server_readiness_is_database_integrity_backed_and_privacy_safe():
+    server = read("api/server.py")
+    database = read("api/database.py")
+    assert '@app.get("/ready")' in server
+    assert "database.integrity_check()" in server
+    assert "HTTPException(status_code=503, detail=payload)" in server
+    assert 'database_status.get("ok", False)' in server
+    assert 'PRAGMA integrity_check' in database
+    assert 'PRAGMA foreign_key_check' in database
+    assert 'PRAGMA journal_mode=WAL' in database
+
+    database_projection = server.split("def _public_database_status()", 1)[1].split("@app.get", 1)[0]
+    component_projection = server.split("def _public_component_status", 1)[1].split(
+        "def _public_database_status", 1
+    )[0]
+    assert '"backend": "sqlite"' in database_projection
+    assert '"schema_version"' in database_projection
+    assert '"journal_mode"' in database_projection
+    assert '"integrity"' in database_projection
+    assert '"foreign_key_errors"' in database_projection
+    assert '"path"' not in database_projection
+    assert '"counts"' not in database_projection
+    assert '"error"' not in component_projection
+    assert '"value"' not in component_projection
+    assert '"root"' not in component_projection
+
+
+def test_server_rate_limit_is_thread_safe_and_covers_websocket_messages():
+    server = read("api/server.py")
+    limiter = server.split("class RateLimiter", 1)[1].split("rate_limiter =", 1)[0]
+    websocket = server.split('@app.websocket("/v1/ws")', 1)[1]
+    assert "import threading" in server
+    assert "self._lock = threading.Lock()" in limiter
+    assert "with self._lock:" in limiter
+    assert "rate_limiter.check(key_id)" in websocket
+    assert "code=4429" in websocket
 
 
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
@@ -72,6 +111,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "systemctl restart aurorafox-api.service" in updater
     gates = (
         "tests/test_api_gateway.py",
+        "tests/test_api_database.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
         "tests/test_core_candidate_queue.py",
@@ -98,6 +138,53 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     assert "ForceCommand internal-sftp" in install
     assert "chown root:aurorafox-backup /etc/ssh/authorized_keys/aurorafox-backup" in install
     assert "chmod 0640 /etc/ssh/authorized_keys/aurorafox-backup" in install
+
+    # Production switching is data-aware: the current SQLite state must be
+    # healthy, a verifiable snapshot must exist before checkout, and the new
+    # process must pass readiness plus direct integrity before acceptance.
+    assert "python -m api.database --path" in updater
+    assert "python -m api.database --path" in install
+    assert "systemctl start aurorafox-backup.service" in updater
+    assert "latest.zip" in updater and "latest.sha256" in updater
+    assert "sha256sum -c" in updater
+    assert "preupdate_backup_sha=" in updater
+    assert "http://127.0.0.1:8768/ready" in updater
+    assert 'data["database"]["ok"] is True' in updater
+    assert 'data["database"]["journal_mode"] == "wal"' in updater
+    assert updater.index("systemctl start aurorafox-backup.service") < updater.index('git checkout --detach "${candidate}"')
+    assert updater.rindex("python -m api.database --path") > updater.index("systemctl restart aurorafox-api.service")
+    assert updater.index("http://127.0.0.1:8768/ready") > updater.index("systemctl restart aurorafox-api.service")
+    assert "sha256sum -c latest.sha256" in install
+    assert "db=sqlite-wal" in install
+
+    # Install and update must agree on the same restricted SFTP export root.
+    canonical_backup_root = "/srv/aurorafox-backup/exports"
+    assert canonical_backup_root in install
+    assert f"{canonical_backup_root}/latest.zip" in updater
+    assert f"{canonical_backup_root}/latest.sha256" in updater
+    assert "/srv/aurorafox-sftp/" not in updater
+
+    # The sanitized owner backup cannot be the exact production rollback source:
+    # the full DB snapshot stays root-only, is made before candidate checkout,
+    # and rollback restores it together with the previous updater/code revision.
+    rollback_root = "/var/lib/aurorafox-rollback"
+    assert f"readonly rollback_dir='{rollback_root}'" in updater
+    assert 'readonly rollback_database="${rollback_dir}/preupdate.sqlite3"' in updater
+    assert '--snapshot-to "${rollback_database}"' in updater
+    assert 'install -d -o root -g root -m 0700 "${rollback_dir}"' in updater
+    assert 'chmod 0600 "${rollback_database}"' in updater
+    assert updater.index('--snapshot-to "${rollback_database}"') < updater.index('git checkout --detach "${candidate}"')
+    assert "systemctl stop aurorafox-api.service" in updater
+    assert 'install -o aurorafox -g aurorafox -m 0600 "${rollback_database}" "${database_path}"' in updater
+    assert 'rm -f "${database_path}-wal" "${database_path}-shm"' in updater
+    assert rollback_root not in canonical_backup_root
+
+    # /usr/local/sbin is the timer/service entry point. Candidate updater fixes
+    # must reach it on success, while rollback reinstalls the previous revision.
+    assert "readonly installed_updater='/usr/local/sbin/aurorafox-update'" in updater
+    updater_install = 'install -m 0755 deploy/reg_ru/update.sh "${installed_updater}"'
+    assert updater.count(updater_install) >= 2
+    assert updater.rindex(updater_install) > updater.index('git checkout --detach "${candidate}"')
 
 
 def test_api_provider_independence_is_packaged_and_deployed():

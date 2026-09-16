@@ -47,8 +47,21 @@ class AndroidVoiceRuntime(private val context: Context) {
         if (!isTtsAvailable()) return error("Android Russian TTS assets are missing")
         return try {
             val engine = ensureTts()
-            val safeSpeed = speed.coerceIn(0.82f, 1.20f)
-            val key = sha256("$text|$safeSpeed|$emotion|$intensity|piper-denis-v1")
+            val spokenText = prepareSpeechText(text)
+            if (spokenText.isBlank()) return error("Speech text is empty after normalization")
+
+            // Piper changes tempo during generation, which is preferable to
+            // playback pitch scaling, but large deviations still sound synthetic.
+            val safeSpeed = speed.coerceIn(0.92f, 1.08f)
+            val power = intensity.coerceIn(0.0f, 1.0f)
+            val targetSilence = when (emotion) {
+                "thinking", "serious", "sad" -> 0.24f
+                "excited", "success" -> 0.18f
+                "warning", "error" -> 0.19f
+                else -> 0.20f
+            }
+            val silenceScale = 0.20f + (targetSilence - 0.20f) * power
+            val key = sha256("$spokenText|$safeSpeed|$emotion|$power|piper-denis-v2")
             val wav = File(cacheDir, "$key.wav")
             val meta = File(cacheDir, "$key.json")
             if (wav.isFile && meta.isFile) {
@@ -57,15 +70,11 @@ class AndroidVoiceRuntime(private val context: Context) {
             }
 
             val generation = GenerationConfig(
-                silenceScale = when (emotion) {
-                    "thinking", "serious", "sad" -> 0.28f
-                    "excited", "success" -> 0.15f
-                    else -> 0.20f
-                },
+                silenceScale = silenceScale,
                 speed = safeSpeed,
                 sid = 0,
             )
-            val audio = synchronized(ttsLock) { engine.generateWithConfig(text, generation) }
+            val audio = synchronized(ttsLock) { engine.generateWithConfig(spokenText, generation) }
             if (audio.samples.isEmpty()) return error("Android TTS returned empty audio")
             if (!audio.save(wav.absolutePath)) return error("Cannot save Android TTS WAV")
 
@@ -77,10 +86,12 @@ class AndroidVoiceRuntime(private val context: Context) {
                 put("sample_rate", audio.sampleRate)
                 put("duration", audio.samples.size.toDouble() / audio.sampleRate.toDouble())
                 put("emotion", emotion)
-                put("intensity", intensity.toDouble())
+                put("intensity", power.toDouble())
+                put("speed", safeSpeed.toDouble())
                 put("cached", false)
                 put("amplitude", JSONArray(envelope))
-                put("spoken_text", text)
+                put("source_text", text)
+                put("spoken_text", spokenText)
             }
             meta.writeText(payload.toString())
             trimCache(256L * 1024L * 1024L)
@@ -119,6 +130,121 @@ class AndroidVoiceRuntime(private val context: Context) {
     fun clearCache(): String {
         cacheDir.listFiles()?.forEach { if (it.isFile) it.delete() }
         return JSONObject(mapOf("ok" to true)).toString()
+    }
+
+    private fun prepareSpeechText(source: String): String {
+        var text = source.replace("\r\n", "\n").replace('\r', '\n')
+        text = Regex("```[\\s\\S]*?```").replace(text, " Код я показала в сообщении. ")
+        text = Regex("`([^`]{1,80})`").replace(text) { it.groupValues[1] }
+        text = Regex("\\[([^]]+)]\\([^)]+\\)").replace(text) { it.groupValues[1] }
+        text = Regex("https?://\\S+").replace(text, "ссылка в сообщении")
+
+        // Preserve exact technical values while giving Piper pronounceable text.
+        text = Regex("(?<![\\p{L}\\d])-?\\d+(?:\\.\\d+){2,}(?![\\p{L}\\d])").replace(text) {
+            val negative = it.value.startsWith('-')
+            val body = if (negative) it.value.substring(1) else it.value
+            val spoken = body.split('.').joinToString(" точка ") { part -> integerToRussian(part.toLongOrNull() ?: 0L) }
+            (if (negative) "минус " else "") + spoken
+        }
+        text = Regex("(?<![\\p{L}\\d])(-?\\d+(?:[,.]\\d+)?)\\s*°\\s*[CcСс](?![\\p{L}])").replace(text) {
+            speakNumberToken(it.groupValues[1]) + " градусов Цельсия"
+        }
+        text = Regex("(?<![\\p{L}\\d])(-?\\d+(?:[,.]\\d+)?)\\s*%(?![\\p{L}\\d])").replace(text) {
+            speakNumberToken(it.groupValues[1]) + " процентов"
+        }
+        text = Regex("(?<![\\p{L}\\d])-?\\d+[,.]\\d+(?![\\p{L}\\d])").replace(text) {
+            speakNumberToken(it.value)
+        }
+        text = Regex("(?<![\\p{L}\\d])-?\\d+(?![\\p{L}\\d])").replace(text) {
+            speakNumberToken(it.value)
+        }
+
+        text = text.replace("**", "").replace("__", "").replace("~~", "")
+        text = text.replace('|', ',')
+        text = Regex("\\n{2,}").replace(text, ". ")
+        text = Regex("\\n").replace(text, ", ")
+        text = Regex("\\s+").replace(text, " ").trim(' ', ',')
+        return text
+    }
+
+    private fun speakNumberToken(token: String): String {
+        val negative = token.startsWith('-')
+        val body = if (negative) token.substring(1) else token
+        val parts = body.replace(',', '.').split('.', limit = 2)
+        val integer = integerToRussian(parts[0].toLongOrNull() ?: 0L)
+        val fraction = if (parts.size == 2) {
+            " запятая " + parts[1].map { digitToRussian(it) }.joinToString(" ")
+        } else ""
+        return (if (negative) "минус " else "") + integer + fraction
+    }
+
+    private fun digitToRussian(ch: Char): String = when (ch) {
+        '0' -> "ноль"
+        '1' -> "один"
+        '2' -> "два"
+        '3' -> "три"
+        '4' -> "четыре"
+        '5' -> "пять"
+        '6' -> "шесть"
+        '7' -> "семь"
+        '8' -> "восемь"
+        '9' -> "девять"
+        else -> ""
+    }
+
+    private fun integerToRussian(value: Long): String {
+        if (value == 0L) return "ноль"
+        if (value < 0L) return "минус " + integerToRussian(-value)
+        if (value > 999_999_999L) return value.toString().map { digitToRussian(it) }.joinToString(" ")
+
+        val ones = arrayOf("", "один", "два", "три", "четыре", "пять", "шесть", "семь", "восемь", "девять")
+        val teens = arrayOf("десять", "одиннадцать", "двенадцать", "тринадцать", "четырнадцать", "пятнадцать", "шестнадцать", "семнадцать", "восемнадцать", "девятнадцать")
+        val tens = arrayOf("", "", "двадцать", "тридцать", "сорок", "пятьдесят", "шестьдесят", "семьдесят", "восемьдесят", "девяносто")
+        val hundreds = arrayOf("", "сто", "двести", "триста", "четыреста", "пятьсот", "шестьсот", "семьсот", "восемьсот", "девятьсот")
+
+        fun underThousand(n: Int, feminine: Boolean = false): List<String> {
+            if (n == 0) return emptyList()
+            val out = ArrayList<String>()
+            out += hundreds[n / 100]
+            val tail = n % 100
+            if (tail in 10..19) {
+                out += teens[tail - 10]
+            } else {
+                out += tens[tail / 10]
+                val one = tail % 10
+                if (feminine && one == 1) out += "одна"
+                else if (feminine && one == 2) out += "две"
+                else out += ones[one]
+            }
+            return out.filter { it.isNotBlank() }
+        }
+
+        fun form(n: Int, one: String, few: String, many: String): String {
+            val mod100 = n % 100
+            if (mod100 in 11..14) return many
+            return when (n % 10) {
+                1 -> one
+                2, 3, 4 -> few
+                else -> many
+            }
+        }
+
+        var remaining = value
+        val words = ArrayList<String>()
+        val millions = (remaining / 1_000_000L).toInt()
+        if (millions > 0) {
+            words += underThousand(millions)
+            words += form(millions, "миллион", "миллиона", "миллионов")
+            remaining %= 1_000_000L
+        }
+        val thousands = (remaining / 1_000L).toInt()
+        if (thousands > 0) {
+            words += underThousand(thousands, feminine = true)
+            words += form(thousands, "тысяча", "тысячи", "тысяч")
+            remaining %= 1_000L
+        }
+        words += underThousand(remaining.toInt())
+        return words.joinToString(" ").trim()
     }
 
     @Synchronized

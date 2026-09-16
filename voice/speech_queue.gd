@@ -6,6 +6,9 @@ signal speech_finished(item: Dictionary)
 signal speech_amplitude(value: float)
 signal queue_empty
 
+const MAX_SPEECH_CHUNK_CHARS := 220
+const MIN_NATURAL_SPLIT_CHARS := 96
+
 var bridge: AuroraVoiceBridge
 var player := AudioStreamPlayer.new()
 var items: Array = []
@@ -163,6 +166,27 @@ func _process(delta: float) -> void:
 		speech_amplitude.emit(float(_amplitude[_amp_index]))
 		_amp_index += 1
 
+func _natural_prefix(buffer: String, out: Array) -> String:
+	if buffer.length() < MAX_SPEECH_CHUNK_CHARS:
+		return buffer
+	var window := buffer.substr(0, mini(buffer.length(), MAX_SPEECH_CHUNK_CHARS + 1))
+	var cut := -1
+	for marker in [", ", "; ", ": ", " — ", " – "]:
+		var found := window.rfind(marker)
+		if found >= MIN_NATURAL_SPLIT_CHARS:
+			# Keep punctuation/dash in the spoken chunk and leave whitespace outside it.
+			cut = maxi(cut, found + marker.length() - 1)
+	if cut < MIN_NATURAL_SPLIT_CHARS:
+		cut = window.rfind(" ")
+	if cut < MIN_NATURAL_SPLIT_CHARS:
+		cut = MAX_SPEECH_CHUNK_CHARS
+	var part := buffer.substr(0, cut).strip_edges()
+	if not part.is_empty():
+		if part[-1] not in [",", ";", ":", "—", "–", ".", "!", "?", "…"]:
+			part += ","
+		out.append(part)
+	return buffer.substr(cut).strip_edges()
+
 func _split_sentences(text: String) -> Array:
 	var clean := text.strip_edges()
 	if clean.is_empty(): return []
@@ -181,9 +205,8 @@ func _split_sentences(text: String) -> Array:
 		if not in_code and c in [".", "!", "?", "…"] and buf.length() >= 18:
 			out.append(buf.strip_edges())
 			buf = ""
-		elif buf.length() >= 260 and not in_code:
-			out.append(buf.strip_edges())
-			buf = ""
+		elif not in_code and buf.length() >= MAX_SPEECH_CHUNK_CHARS:
+			buf = _natural_prefix(buf, out)
 		i += 1
 	if not buf.strip_edges().is_empty(): out.append(buf.strip_edges())
 	return out

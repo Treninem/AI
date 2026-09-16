@@ -47,6 +47,7 @@ Filename: "{app}\{#MyAppExeName}"; Description: "Запустить AuroraFox"; 
 ; Only known installation-directory leftovers are removed. Godot user:// data lives
 ; outside {app} and is deliberately never touched by the bridge installer.
 Type: files; Name: "{app}\v1.2-marker.txt"
+Type: files; Name: "{app}\v1.3-marker.txt"
 Type: filesandordirs; Name: "{app}.__new_*"
 Type: filesandordirs; Name: "{app}.__old_*"
 
