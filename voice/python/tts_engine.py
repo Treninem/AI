@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+import html
 import os
 from pathlib import Path
+import re
 import numpy as np
 import torch
 from silero import silero_tts
@@ -66,6 +68,15 @@ class TTSEngine(ABC):
 class SileroEngine(TTSEngine):
     name = "silero"
 
+    # These discrete model-native profiles are intentionally narrow. They were
+    # accepted by acoustic A/B on the configured kseniya voice. High/fast pitch
+    # presets are deliberately absent because measured candidates regressed MOS.
+    _NATIVE_PROSODY = {
+        "sleepy": {"min_intensity": 0.45, "rate": "slow", "pitch": "medium", "break_ms": 110},
+        "playful": {"min_intensity": 0.55, "rate": None, "pitch": None, "break_ms": 70},
+        "serious": {"min_intensity": 0.55, "rate": "slow", "pitch": "medium", "break_ms": 0},
+    }
+
     def __init__(self, config: dict, device: str):
         self.config = config
         self.device = torch.device(device)
@@ -81,10 +92,49 @@ class SileroEngine(TTSEngine):
             self.model = model
         return self.model
 
+    @staticmethod
+    def _insert_first_sentence_break(escaped: str, break_ms: int) -> str:
+        if break_ms <= 0:
+            return escaped
+        match = re.match(r"^(.*?[.!?])\s+(.+)$", escaped)
+        if not match:
+            return escaped
+        return f'{match.group(1)}<break time="{break_ms}ms"/>{match.group(2)}'
+
+    def _native_ssml(self, text: str, emotion: str, intensity: float) -> str | None:
+        profile = self._NATIVE_PROSODY.get(str(emotion).strip().lower())
+        if profile is None:
+            return None
+        try:
+            power = max(0.0, min(1.0, float(intensity)))
+        except (TypeError, ValueError):
+            power = 0.0
+        if power < float(profile["min_intensity"]):
+            return None
+
+        # User/model text is data, never markup authority. Escaping happens
+        # before AuroraFox adds its own allowlisted SSML controls.
+        body = html.escape(str(text), quote=False)
+        body = self._insert_first_sentence_break(body, int(profile["break_ms"]))
+        attrs: list[str] = []
+        if profile["rate"]:
+            attrs.append(f'rate="{profile["rate"]}"')
+        if profile["pitch"]:
+            attrs.append(f'pitch="{profile["pitch"]}"')
+        if attrs:
+            body = f'<prosody {" ".join(attrs)}>{body}</prosody>'
+        return f"<speak>{body}</speak>"
+
     def synthesize(self, text: str, emotion: str = "neutral", intensity: float = 0.5,
                    speed: float = 1.0) -> tuple[np.ndarray, int]:
         sr = int(self.config.get("sample_rate", 48000))
-        audio = self._load().apply_tts(text=text, speaker=self.config.get("speaker", "xenia"), sample_rate=sr)
+        model = self._load()
+        speaker = self.config.get("speaker", "xenia")
+        ssml = self._native_ssml(text, emotion, intensity)
+        if ssml is None:
+            audio = model.apply_tts(text=text, speaker=speaker, sample_rate=sr)
+        else:
+            audio = model.apply_tts(ssml_text=ssml, speaker=speaker, sample_rate=sr)
         if isinstance(audio, torch.Tensor):
             audio = audio.detach().cpu().numpy()
         return np.asarray(audio, dtype=np.float32), sr
@@ -186,9 +236,9 @@ class EngineRouter:
     def synthesize(self, text: str, emotion: str, intensity: float, speed: float, requested: str = "auto"):
         first = self.choose(requested)
         try:
-            # AuroraVoiceProcessor is the single normal-path tempo/pitch authority.
-            # XTTS has its own speed control, so route it at neutral speed here to
-            # avoid applying the same requested tempo twice.
+            # XTTS has its own speed control, while Silero uses only the narrow
+            # acoustically-approved native SSML profiles above. Shared processor
+            # remains responsible for neutral normalization/limiting.
             synthesis_speed = 1.0 if first.name == "xtts" else speed
             audio, sr = first.synthesize(text, emotion, intensity, synthesis_speed)
             return audio, sr, first.name, None
@@ -205,5 +255,6 @@ class EngineRouter:
             "silero_available": self.engines["silero"].available(),
             "xtts_available": xtts.available(),
             "xtts": xtts.diagnostics() if isinstance(xtts, XTTSVoiceEngine) else {},
-            "prosody_authority": "shared_processor",
+            "prosody_authority": "silero_native_ssml+shared_processor",
+            "silero_native_prosody": True,
         }
