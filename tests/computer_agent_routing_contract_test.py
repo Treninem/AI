@@ -36,6 +36,26 @@ def test_tool_registry_uses_local_core_planning_and_protected_primitives():
     assert 'COMPUTER_TIMEOUT_MAX := 320.0' in tools
 
 
+def test_agent_cannot_bypass_sandbox_with_public_arbitrary_process_tool():
+    tools = _text("scripts/tool_registry.gd")
+    assert 'register_tool("run_process"' not in tools
+    assert 'func _run_process(args: Dictionary)' in tools  # fixed git helpers may reuse it internally
+    assert 'register_tool("git_status"' in tools
+    assert 'register_tool("git_diff"' in tools
+
+
+def test_sandbox_exec_is_container_first_and_explicit_container_fails_closed():
+    tools = _text("scripts/tool_registry.gd")
+    assert '"mode":"string"' in tools
+    assert 'mode not in ["auto", "container", "local"]' in tools
+    assert '"/sandbox/container_exec"' in tools
+    assert '"/sandbox/exec"' in tools
+    assert tools.index('"/sandbox/container_exec"') < tools.index('"/sandbox/exec"')
+    assert 'container_runtime_unavailable' in tools
+    assert 'degraded_isolation' in tools
+    assert 'network_isolation_enforced' in tools
+
+
 def test_windows_workspace_bridge_cannot_bypass_private_channel_or_master_stop():
     sandbox = _text("scripts/sandbox_manager.gd")
     assert 'ComputerClient.master_enabled_from(self)' in sandbox
