@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 from pathlib import Path
 import sys
+import tempfile
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -118,6 +119,38 @@ class KnowledgeStressGateTests(unittest.TestCase):
         findings = search.pair_findings(rows)
         self.assertEqual(len(findings), 1)
         self.assertTrue(findings[0]["suspected_superlinear_search"])
+
+    def test_portable_harness_makes_dynamic_script_locals_explicit_variant(self) -> None:
+        portable = load_module("knowledge_portable_runner", "run_knowledge_benchmark_portable.py")
+        with tempfile.TemporaryDirectory() as tmp:
+            repo = Path(tmp)
+            bench = repo / "benchmarks" / "knowledge"
+            bench.mkdir(parents=True)
+            lines = [
+                "extends SceneTree",
+                *[
+                    f'const {name} = preload("res://scripts/{index}.gd")'
+                    for index, name in enumerate(portable.SCRIPT_NAMES)
+                ],
+                "func _run() -> void:",
+                "\tvar store := KnowledgeStoreScript.new()",
+                "\tvar result := store.call(\"search\", \"x\", 1)",
+                "\tprint(result)",
+            ]
+            (bench / "knowledge_stress_benchmark.gd").write_text("\n".join(lines), encoding="utf-8")
+            generated = portable.portable_harness(repo).read_text(encoding="utf-8")
+            self.assertIn("const KnowledgeStoreScript: Variant = preload(", generated)
+            self.assertIn("var store: Variant = KnowledgeStoreScript.new()", generated)
+            self.assertIn('var result: Variant = store.call("search", "x", 1)', generated)
+            self.assertNotIn("var store :=", generated)
+            self.assertNotIn("var result :=", generated)
+
+    def test_alias_removal_probe_uses_explicit_dynamic_result_types(self) -> None:
+        text = (BENCH / "dedupe_alias_removal_probe.gd").read_text(encoding="utf-8")
+        self.assertIn("var canonical_survived: bool =", text)
+        self.assertIn("var alias_detached: bool =", text)
+        self.assertIn("var ok: bool =", text)
+        self.assertIn("var after: Variant =", text)
 
 
 if __name__ == "__main__":
