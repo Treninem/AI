@@ -1,0 +1,242 @@
+name: AuroraFox Knowledge Performance
+
+on:
+  pull_request:
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'tests/*knowledge_performance*'
+      - 'tests/*knowledge_stress*'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/json_stream_reader.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/memory_store.gd'
+      - '.github/workflows/knowledge-performance.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'tests/*knowledge_performance*'
+      - 'tests/*knowledge_stress*'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/json_stream_reader.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/memory_store.gd'
+      - '.github/workflows/knowledge-performance.yml'
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Synthetic stress profile (standard includes 10/50/100/250 MiB; extended adds 500 MiB)'
+        required: true
+        default: standard
+        type: choice
+        options:
+          - ci
+          - standard
+          - extended
+
+permissions:
+  contents: read
+
+concurrency:
+  group: knowledge-performance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GODOT_VERSION: '4.7.1'
+
+jobs:
+  contract:
+    name: Benchmark contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validate deterministic stress contract
+        run: python -m unittest tests.knowledge_performance_contract_test -v
+
+  linux-ci:
+    name: Linux N-2N-4N + comparable baseline
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name "Godot_v${GODOT_VERSION}-stable_linux.x86_64*" | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import candidate project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run candidate storage benchmark
+        run: |
+          python benchmarks/knowledge/run_benchmark.py \
+            --godot ./godot \
+            --project . \
+            --profile ci \
+            --git-sha "${GITHUB_SHA}" \
+            --report knowledge-candidate.json
+      - name: Checkout comparable PR baseline
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: baseline
+          fetch-depth: 1
+      - name: Run baseline with the exact same harness
+        if: github.event_name == 'pull_request'
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p baseline/benchmarks
+          rm -rf baseline/benchmarks/knowledge
+          cp -R benchmarks/knowledge baseline/benchmarks/knowledge
+          timeout 120s ./godot --headless --editor --path baseline --quit
+          python benchmarks/knowledge/run_benchmark.py \
+            --godot ./godot \
+            --project baseline \
+            --profile ci \
+            --git-sha "${{ github.event.pull_request.base.sha }}" \
+            --report knowledge-baseline.json
+          python benchmarks/knowledge/compare_reports.py \
+            knowledge-baseline.json knowledge-candidate.json \
+            --output knowledge-comparison.json
+      - name: Enforce hard correctness and comparable relative regressions
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          candidate = json.loads(pathlib.Path('knowledge-candidate.json').read_text(encoding='utf-8'))
+          failures = list(candidate.get('hard_gates', {}).get('failures', []))
+          if failures:
+              print('Hard correctness failures:', failures)
+              sys.exit(2)
+          comparison_path = pathlib.Path('knowledge-comparison.json')
+          if comparison_path.exists():
+              comparison = json.loads(comparison_path.read_text(encoding='utf-8'))
+              if comparison.get('comparable') and comparison.get('regression_detected'):
+                  print('Comparable performance regressions:', comparison.get('regressions'))
+                  sys.exit(3)
+          print('Knowledge hard gates and comparable relative performance gates passed')
+          PY
+      - name: Upload machine-readable benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-linux-${{ github.sha }}
+          path: |
+            knowledge-candidate.json
+            knowledge-baseline.json
+            knowledge-comparison.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  windows-ci:
+    name: Windows N-2N-4N storage gate
+    if: github.event_name != 'workflow_dispatch'
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download Godot 4.7.1
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $url = "https://github.com/godotengine/godot/releases/download/$env:GODOT_VERSION-stable/Godot_v$env:GODOT_VERSION-stable_win64.exe.zip"
+          Invoke-WebRequest -Uri $url -OutFile godot.zip
+          Expand-Archive -Path godot.zip -DestinationPath godot_dist -Force
+          $exe = Get-ChildItem -Path godot_dist -Recurse -Filter 'Godot*.exe' | Select-Object -First 1
+          if (-not $exe) { throw 'Godot executable not found' }
+          Copy-Item $exe.FullName .\godot.exe
+          .\godot.exe --version
+      - name: Import project
+        shell: pwsh
+        run: |
+          $process = Start-Process -FilePath .\godot.exe -ArgumentList '--headless','--editor','--path','.', '--quit' -PassThru -NoNewWindow
+          if (-not $process.WaitForExit(120000)) { $process.Kill(); throw 'Godot import timed out' }
+          if ($process.ExitCode -ne 0) { throw "Godot import failed: $($process.ExitCode)" }
+      - name: Run Windows storage benchmark
+        shell: pwsh
+        run: |
+          python benchmarks/knowledge/run_benchmark.py --godot .\godot.exe --project . --profile ci --git-sha "$env:GITHUB_SHA" --report knowledge-windows.json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python -c "import json,sys; r=json.load(open('knowledge-windows.json',encoding='utf-8')); print(r['hard_gates']); sys.exit(0 if r['hard_gates']['passed'] else 2)"
+      - name: Upload Windows benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-windows-${{ github.sha }}
+          path: knowledge-windows.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  dispatched-stress:
+    name: Generated ${{ inputs.profile }} stress
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name "Godot_v${GODOT_VERSION}-stable_linux.x86_64*" | head -n1)"
+          mv "$godot" godot
+          chmod +x godot
+      - name: Import project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run generated stress profile
+        run: |
+          python benchmarks/knowledge/run_benchmark.py \
+            --godot ./godot \
+            --project . \
+            --profile "${{ inputs.profile }}" \
+            --git-sha "${GITHUB_SHA}" \
+            --report "knowledge-${{ inputs.profile }}.json"
+      - name: Upload stress evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-${{ inputs.profile }}-${{ github.sha }}
+          path: knowledge-${{ inputs.profile }}.json
+          retention-days: 14
+      - name: Enforce hard correctness only (timings remain relative evidence)
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json, pathlib, sys
+          path = next(pathlib.Path('.').glob('knowledge-*.json'))
+          report = json.loads(path.read_text(encoding='utf-8'))
+          failures = report.get('hard_gates', {}).get('failures', [])
+          print('Hard failures:', failures)
+          sys.exit(0 if not failures else 2)
+          PY
