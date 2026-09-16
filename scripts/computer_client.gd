@@ -6,6 +6,8 @@ const SCREEN_TIMEOUT := 14.0
 const ACTION_TIMEOUT := 14.0
 const MAX_SANDBOX_TIMEOUT := 300
 
+static var _shared_service_token := ""
+
 var base_url := "http://127.0.0.1:8766"
 var backend_pid := 0
 var runtime_root := ""
@@ -13,7 +15,7 @@ var _service_token := ""
 var _request_sequence := 0
 
 func _ready() -> void:
-	_service_token = _new_service_token()
+	_service_token = shared_service_token()
 	if OS.get_name() == "Windows":
 		_start_backend_if_installed()
 
@@ -21,6 +23,30 @@ func _exit_tree() -> void:
 	if OS.get_name() == "Windows" and backend_pid > 0:
 		OS.kill(backend_pid)
 		backend_pid = 0
+
+static func shared_service_token() -> String:
+	if _shared_service_token.is_empty():
+		var crypto := Crypto.new()
+		_shared_service_token = crypto.generate_random_bytes(32).hex_encode()
+	return _shared_service_token
+
+static func master_enabled_from(node: Node) -> bool:
+	var current: Node = node
+	for _i in range(8):
+		if current == null:
+			break
+		for node_name in ["AutonomySettings", "AutonomySettingsManager"]:
+			var manager = current.get_node_or_null(node_name)
+			if manager != null and manager.has_method("get_settings"):
+				var settings = manager.call("get_settings")
+				if settings is Dictionary:
+					return bool(settings.get("master_enabled", true))
+		if current.has_method("get_settings"):
+			var own_settings = current.call("get_settings")
+			if own_settings is Dictionary and own_settings.has("master_enabled"):
+				return bool(own_settings.get("master_enabled", true))
+		current = current.get_parent()
+	return true
 
 func runtime_is_installed() -> bool:
 	return OS.get_name() == "Windows" and not _find_runtime().is_empty()
@@ -195,17 +221,7 @@ func sandbox_write(path: String, content: String) -> Dictionary:
 	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content}, DEFAULT_TIMEOUT, true)
 
 func _master_enabled() -> bool:
-	var current: Node = self
-	for _i in range(6):
-		if current == null:
-			break
-		var manager = current.get_node_or_null("AutonomySettingsManager")
-		if manager != null and manager.has_method("get_settings"):
-			var settings = manager.call("get_settings")
-			if settings is Dictionary:
-				return bool(settings.get("master_enabled", true))
-		current = current.get_parent()
-	return true
+	return master_enabled_from(self)
 
 func _unsupported(as_capability: bool = false) -> Dictionary:
 	var result := {
@@ -228,9 +244,8 @@ func _unsupported(as_capability: bool = false) -> Dictionary:
 	return result
 
 func _new_service_token() -> String:
-	var crypto := Crypto.new()
-	return crypto.generate_random_bytes(32).hex_encode()
+	return shared_service_token()
 
 func _new_action_id() -> String:
 	_request_sequence += 1
-	return "%d:%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), _request_sequence, _new_service_token().substr(0, 16)]
+	return "%d:%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), _request_sequence, shared_service_token().substr(0, 16)]
