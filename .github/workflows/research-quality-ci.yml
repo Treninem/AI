@@ -1,0 +1,54 @@
+name: AuroraFox Research Quality CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'agent/research_collector.gd'
+      - 'agent/learning_curator.gd'
+      - 'tests/research_evidence_lifecycle_smoke.gd'
+      - 'tests/test_research_evidence_lifecycle_contract.py'
+      - 'tests/autonomy_learning_smoke.gd'
+      - 'tests/test_autonomous_evolution_contract.py'
+      - '.github/workflows/research-quality-ci.yml'
+  pull_request:
+    paths:
+      - 'agent/research_collector.gd'
+      - 'agent/learning_curator.gd'
+      - 'tests/research_evidence_lifecycle_smoke.gd'
+      - 'tests/test_research_evidence_lifecycle_contract.py'
+      - 'tests/autonomy_learning_smoke.gd'
+      - 'tests/test_autonomous_evolution_contract.py'
+      - '.github/workflows/research-quality-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  python-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Run research quality contracts
+        run: python -m pytest -q tests/test_research_evidence_lifecycle_contract.py tests/test_autonomous_evolution_contract.py
+
+  godot-research-lifecycle:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Parse project
+        run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: Run existing autonomy learning smoke
+        run: timeout 45s ./godot --headless --path . --script tests/autonomy_learning_smoke.gd
+      - name: Run evidence lifecycle invalidation smoke
+        run: timeout 45s ./godot --headless --path . --script tests/research_evidence_lifecycle_smoke.gd
