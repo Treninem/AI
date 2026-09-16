@@ -26,7 +26,7 @@ def test_voice_config_has_required_local_paths():
 
 def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_default():
     processor = load("voice_config.json")["processor"]
-    assert int(processor["profile_revision"]) >= 2
+    assert int(processor["profile_revision"]) >= 3
     assert processor["prosody_dsp"] is False
     assert processor["compression"] is False
     assert float(processor["highpass_hz"]) == 0.0
@@ -42,6 +42,26 @@ def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_defau
     assert 0.0 <= float(processor["max_gain_db"]) <= 12.0
     assert 0.80 <= float(processor["peak_ceiling"]) <= 1.0
     assert 0.0 <= float(processor["fade_ms"]) <= 20.0
+
+
+def test_silero_native_prosody_is_limited_to_acoustically_validated_slow_modes():
+    cfg = load("voice_config.json")["silero"]
+    assert cfg["native_prosody"] is True
+    assert set(cfg["native_slow_emotions"]) == {"sleepy", "serious"}
+    assert "happy" not in cfg["native_slow_emotions"]
+    assert "playful" not in cfg["native_slow_emotions"]
+    assert 0.25 <= float(cfg["native_slow_min_intensity"]) <= 0.60
+    assert cfg["native_slow_rate"] == "slow"
+    assert cfg["native_slow_pitch"] == "medium"
+
+    engine = (ROOT / "voice" / "python" / "tts_engine.py").read_text(encoding="utf-8")
+    assert "import html" in engine
+    assert "html.escape(str(text), quote=False)" in engine
+    assert 'ssml_text=self._native_ssml(text)' in engine
+    assert 'model.apply_tts(text=text, speaker=speaker, sample_rate=sr)' in engine
+    assert 'native_slow_emotions' in engine
+    assert 'native_slow_min_intensity' in engine
+    assert 'rate=\"{rate}\" pitch=\"{pitch}\"' in engine
 
 
 def test_godot_voice_defaults_match_neutral_dsp_and_android_does_not_retime_playback():
