@@ -129,6 +129,20 @@ def test_safety_and_release_authority_contracts_are_aggregated() -> None:
     assert "test_signed_release_is_blocked_by_core_gates" in release_contract
 
 
+def test_knowledge_alias_removal_safety_is_part_of_same_sha_gate() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+    probe = read("benchmarks/knowledge/dedupe_alias_removal_probe.gd")
+    runner = read("benchmarks/knowledge/run_godot_probe.py")
+
+    assert "Run Knowledge dedupe alias removal safety probe" in workflow
+    assert "benchmarks/knowledge/dedupe_alias_removal_probe.gd" in workflow
+    assert "AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=" in workflow
+    assert '"canonical_survived": canonical_survived' in probe
+    assert '"alias_detached": alias_detached' in probe
+    assert "removing an alias/copy must not delete the canonical shared knowledge" in probe
+    assert 'base.base_environment(root, {"scenario": "probe"})' in runner
+
+
 def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
@@ -164,6 +178,8 @@ def test_active_lane_workflows_become_visible_to_integration_when_they_land() ->
         "tests/test_local_ocr.py",
         "benchmarks/core/**",
         "benchmarks/knowledge/**",
+        "benchmarks/knowledge/dedupe_alias_removal_probe.gd",
+        "benchmarks/knowledge/run_godot_probe.py",
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
         "tests/test_knowledge_stress_gates.py",
