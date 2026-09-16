@@ -6,6 +6,8 @@ signal research_completed(report: Dictionary)
 const LOG_PATH := "user://agent/research.jsonl"
 const MAX_ITEMS_PER_SOURCE := 5
 const MAX_SUMMARY_CHARS := 1800
+const MAX_RESPONSE_BYTES := 2 * 1024 * 1024
+const REQUEST_TIMEOUT_SECONDS := 20.0
 
 # Kept for setup/API compatibility with AutonomousCoordinator. The collector
 # deliberately never writes to MemoryStore: durable automatic learning is owned
@@ -27,16 +29,19 @@ func collect(query: String) -> Dictionary:
 	if clean_query.is_empty():
 		clean_query = "local AI Godot LLM context optimization"
 	var items: Array = []
-	items.append_array(await _collect_local_documents())
+
+	# Autonomous research is external-observation only. Personal/local documents
+	# are never scanned implicitly here; they enter AuroraFox only through the
+	# explicit user-controlled Knowledge/import flow.
 	items.append_array(await _collect_github(clean_query))
 	items.append_array(await _collect_stackoverflow(clean_query))
 	items.append_array(await _collect_reddit("LocalLLaMA"))
 	items.append_array(await _collect_reddit("MachineLearning"))
 	items.append_array(await _collect_arxiv(clean_query))
 
-	# Observation-only boundary: every item is logged for audit/curation, but no
-	# item is allowed to reach long-term memory/Core Knowledge here. This avoids
-	# bypassing LearningCurator with low-quality, duplicate or personal local data.
+	# Observation-only boundary: every external item is logged for audit/curation,
+	# but no item is allowed to reach long-term memory/Core Knowledge here. This
+	# avoids bypassing LearningCurator with low-quality or duplicate web data.
 	for item in items:
 		if item is Dictionary:
 			_append_log(item)
@@ -47,6 +52,8 @@ func collect(query: String) -> Dictionary:
 		"count": items.size(),
 		"queued_for_curation": items.size(),
 		"curation_required": true,
+		"research_scope": "external_observations_only",
+		"personal_files_scanned": false,
 		# Backward-compatible field. Automatic promotion happens asynchronously in
 		# LearningCurator after research_completed, so nothing is learned here.
 		"learned": 0,
@@ -56,44 +63,6 @@ func collect(query: String) -> Dictionary:
 	_busy = false
 	research_completed.emit(report)
 	return report
-
-func _collect_local_documents() -> Array:
-	var out: Array = []
-	if OS.get_name() != "Windows":
-		return out
-	var home := OS.get_environment("USERPROFILE")
-	if home.is_empty():
-		return out
-	var documents := home.path_join("Documents")
-	var dir := DirAccess.open(documents)
-	if dir == null:
-		return out
-	dir.list_dir_begin()
-	var count := 0
-	while count < 20:
-		var name := dir.get_next()
-		if name.is_empty():
-			break
-		if dir.current_is_dir():
-			continue
-		var lower := name.to_lower()
-		if not (lower.ends_with(".txt") or lower.ends_with(".pdf") or lower.ends_with(".epub")):
-			continue
-		var path := documents.path_join(name)
-		var summary := ""
-		if lower.ends_with(".txt"):
-			var file := FileAccess.open(path, FileAccess.READ)
-			if file != null:
-				summary = file.get_as_text().substr(0, MAX_SUMMARY_CHARS)
-				file.close()
-		elif tools != null and tools.tools.has("analyze_file"):
-			var analyzed = await tools.call_tool("analyze_file", {"path": path, "question": "Кратко выдели знания и факты, полезные AuroraFox", "visual": false, "max_chars": 5000})
-			if analyzed is Dictionary and analyzed.get("ok", false):
-				summary = str(analyzed.get("content", analyzed.get("summary", ""))).substr(0, MAX_SUMMARY_CHARS)
-		out.append(_item("local_documents", name, summary, path))
-		count += 1
-	dir.list_dir_end()
-	return out
 
 func _collect_github(query: String) -> Array:
 	var encoded := query.uri_encode()
@@ -188,7 +157,8 @@ func _request_json(url: String) -> Dictionary:
 
 func _request_text(url: String) -> Dictionary:
 	var req := HTTPRequest.new()
-	req.timeout = 20.0
+	req.timeout = REQUEST_TIMEOUT_SECONDS
+	req.body_size_limit = MAX_RESPONSE_BYTES
 	add_child(req)
 	var headers := PackedStringArray(["User-Agent: AuroraFox-Learning/1.3", "Accept: application/json, application/atom+xml, text/xml, text/plain;q=0.9"])
 	var err := req.request(url, headers, HTTPClient.METHOD_GET)
@@ -201,7 +171,7 @@ func _request_text(url: String) -> Dictionary:
 	var body := (response[3] as PackedByteArray).get_string_from_utf8()
 	if code < 200 or code >= 300:
 		return {"ok": false, "http": code, "error": body.substr(0, 500), "url": url}
-	return {"ok": true, "text": body.substr(0, 2 * 1024 * 1024), "url": url}
+	return {"ok": true, "text": body.substr(0, MAX_RESPONSE_BYTES), "url": url}
 
 func _item(source: String, title: String, summary: String, url: String = "", metadata: Dictionary = {}) -> Dictionary:
 	return {
