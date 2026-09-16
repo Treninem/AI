@@ -21,6 +21,11 @@ def _spawn_safe_hanging_worker(kind, payload, queue):
     time.sleep(5)
 
 
+def _spawn_safe_success_worker(kind, payload, queue):
+    del kind, payload
+    queue.put({"ok": True, "marker": "ready"})
+
+
 def _load_service(tmp_path: Path):
     os.environ["AURORAFOX_COMPUTER_TOKEN"] = TOKEN
     os.environ["AURORAFOX_SANDBOX_ROOT"] = str(tmp_path / "sandbox")
@@ -123,6 +128,13 @@ def test_action_validation_idempotency_and_retry_safety(tmp_path: Path, monkeypa
     assert first["retry_safety"] == "unsafe"
     assert second["deduplicated"] is True
     assert len([item for item in calls if item[0] == "action"]) == 1
+
+    scroll_without_id = client.post("/action", headers=_headers(), json={"type": "scroll", "amount": 1})
+    assert scroll_without_id.status_code == 400
+    scroll = client.post("/action", headers=_headers(), json={"type": "scroll", "amount": 1, "action_id": "scroll-1"}).json()
+    assert scroll["ok"] is True
+    assert scroll["retryable"] is False
+    assert scroll["retry_safety"] == "unsafe"
 
     out_of_bounds = client.post("/action", headers=_headers(), json={"type": "click", "x": 201, "y": 20, "action_id": "bounds"})
     assert out_of_bounds.status_code == 400
@@ -282,6 +294,17 @@ def test_worker_timeout_contract_terminates_hung_process(tmp_path: Path, monkeyp
     assert elapsed < 2.5
     assert result["ok"] is False
     assert result["error"] == "timeout"
+
+
+def test_worker_result_queue_waits_bounded_time_for_feeder_flush(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    service = _load_service(tmp_path)
+    service.IS_WINDOWS = True
+    monkeypatch.setattr(service, "_worker_entry", _spawn_safe_success_worker)
+    start = time.monotonic()
+    result = service._run_worker("action", {"type": "done"}, timeout=1.0)
+    elapsed = time.monotonic() - start
+    assert elapsed < 2.5
+    assert result == {"ok": True, "marker": "ready"}
 
 
 def test_client_contract_has_bounded_timeouts_master_stop_and_android_graceful():

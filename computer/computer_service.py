@@ -35,8 +35,8 @@ ACTION_TIMEOUT_SECONDS = float(os.getenv("AURORAFOX_ACTION_TIMEOUT_SECONDS", "10
 IS_WINDOWS = os.name == "nt"
 ALLOW_DEGRADED_LOCAL_SANDBOX = os.getenv("AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX", "").strip() == "1"
 
-SAFE_RETRY_ACTIONS = {"move", "scroll", "wait", "done"}
-UNSAFE_RETRY_ACTIONS = {"click", "double_click", "right_click", "mouse_down", "mouse_up", "type", "press", "hotkey"}
+SAFE_RETRY_ACTIONS = {"move", "wait", "done"}
+UNSAFE_RETRY_ACTIONS = {"scroll", "click", "double_click", "right_click", "mouse_down", "mouse_up", "type", "press", "hotkey"}
 VALID_ACTIONS = SAFE_RETRY_ACTIONS | UNSAFE_RETRY_ACTIONS
 VALID_BUTTONS = {"left", "right", "middle"}
 VALID_KEY = re.compile(r"^[A-Za-z0-9_+\-.,/\\\[\];'`]{1,32}$")
@@ -313,7 +313,7 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
             process.join(1.0)
         return _error("timeout", f"{kind} operation timed out", retryable=kind in {"screen", "windows"})
     try:
-        result = queue.get_nowait()
+        result = queue.get(timeout=0.5)
     except Exception:
         return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
     if not isinstance(result, dict):
