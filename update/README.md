@@ -9,7 +9,7 @@ If either verification fails, AuroraFox keeps the current installation running.
 
 ## Important V1.2.0.0 repair notice
 
-A historical audit found a defect in the already-built **V1.2.0.0** updater. V1.2 points at the permanent GitHub Releases manifest URL and already contains RSA-signature verification logic, but that build did **not** contain `res://update/release_public.pub`. In addition, the repository had no published GitHub Release carrying `update.json`.
+A historical audit found a defect in the already-built **V1.2.0.0** updater. V1.2 points at the permanent GitHub Releases manifest URL and already contains RSA-signature verification logic, but that build did **not** contain `res://update/release_public.pub`. In addition, the repository had no published stable GitHub Release carrying `update.json`.
 
 Therefore an already-installed V1.2.0.0 cannot repair its own trust root remotely. Publishing `update.json` alone is insufficient: V1.2 would still reject the update because its local public key is missing.
 
@@ -18,19 +18,25 @@ The supported recovery boundary is now explicit:
 - **V1.0.0.0 through V1.2.0.0:** one-time repair/bridge installation is required;
 - **V1.3.0.0 and later:** signed automatic updates are the supported normal path once the owner-controlled release trust root is initialized.
 
-The permanent discovery URL remains:
+The permanent discovery URL for the normal signed update channel remains:
 
 `https://github.com/Treninem/AI/releases/latest/download/update.json`
 
-Legacy manifest field names and stable asset names are still retained so the transport contract is not broken again, but legacy manifest readability must not be confused with a working cryptographic trust chain.
+Legacy manifest field names and stable asset names are retained so the transport contract is not broken again, but legacy manifest readability must not be confused with a working cryptographic trust chain.
 
 ## Windows V1.2 -> V1.3 repair
 
-Use the Windows artifact named:
+A separate non-latest GitHub Release is maintained specifically for the historical Windows repair:
 
-`AuroraFox-V1.2-to-V1.3.0.0-Repair-Windows.exe`
+`https://github.com/Treninem/AI/releases/tag/repair-v1.2-windows`
 
-It is the same verified V1.3 application installer with explicit in-place bridge behavior. It keeps the historical Inno Setup AppId and install location, detects the previous installed version, replaces application files, clears only known installation-directory leftovers, and writes `update/bridge_repair.txt` recording the repaired version transition.
+Stable repair asset name:
+
+`AuroraFox-V1.2-Repair-Windows.exe`
+
+The Windows Package CI creates the repair installer only after the real V1.2 -> current bridge test passes, then publishes or refreshes that stable asset and its SHA-256 file. The repair release is explicitly created with `latest=false`, so it never replaces the signed `latest/update.json` channel.
+
+The repair executable is the same verified current AuroraFox installer with explicit in-place bridge behavior. It keeps the historical Inno Setup AppId and install location, detects the previous installed version, replaces application files, clears only known installation-directory leftovers, and writes `update/bridge_repair.txt` recording the repaired version transition.
 
 Godot `user://` data is outside the application directory and is deliberately not deleted by the repair installer. CI verifies this by installing a V1.2 fixture with the historical AppId, creating a sentinel in `Godot/app_userdata/AuroraFox`, installing V1.3 on top, checking that the sentinel is unchanged, checking `previous=1.2.0.0` / `current=1.3.0.0`, and launching the upgraded application.
 
@@ -46,7 +52,9 @@ AuroraFox keeps package ID:
 
 However historical CI test artifacts, including V1.2 test APKs, generated a fresh temporary keystore inside each workflow run and did not retain that key. A V1.2 APK installed from such a test artifact **cannot** be upgraded in place by a differently signed V1.3 APK. Android itself rejects that package replacement; a new APK cannot change this rule retroactively.
 
-Production Android releases must therefore use one persistent owner-controlled keystore. The release workflow already requires:
+Production Android releases therefore use one persistent owner-controlled keystore. Its public certificate SHA-256 is pinned in `update/release_identity.json`. The production build verifies the configured keystore against that pin **before** export and then verifies the certificate of the finished APK with `apksigner`. A mismatch aborts the release.
+
+Required GitHub Actions secrets:
 
 - `AURORA_ANDROID_KEYSTORE_BASE64`
 - `AURORA_ANDROID_KEYSTORE_USER`
@@ -78,28 +86,48 @@ Stable-release invariants:
 - keep `update.json` legacy top-level and per-platform asset fields;
 - always publish `update.sig` for signed-generation releases;
 - Windows remains transactional full-package replacement with backup/rollback;
-- Android keeps package ID `com.aurorafox.ai` and the same persistent signing identity;
+- Android keeps package ID `com.aurorafox.ai` and the same persistent signing certificate;
+- `update/release_identity.json` pins both the update public-key fingerprint and Android signing-certificate fingerprint;
 - never rotate the RSA update key or Android signing identity without a deliberate migration release.
 
-## Update trust key
+## One-time production signing bootstrap
 
-Generate the release trust key once on a trusted owner Windows machine:
+Run the combined owner-only setup once on a trusted Windows machine:
 
 ```powershell
-./build/create_update_signing_key.ps1
+./build/setup_release_signing.ps1
 ```
 
-It creates:
+The helper creates or validates both permanent identities:
 
-- `update/release_public.pub` — public RSA key; this is committed;
-- `build/private/aurora_update_signing_private.pem` — private key; never commit it;
-- `build/private/AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64.txt` — value for the GitHub Actions secret.
+- `update/release_public.pub` — public RSA update-verification key; commit this;
+- `update/release_identity.json` — public fingerprints for the update key and Android signing certificate; commit this;
+- `build/private/aurora_update_signing_private.pem` — private update signing key; never commit;
+- `build/private/aurorafox-android-release.jks` — permanent Android release keystore; never commit;
+- base64 helper files under `build/private/` for GitHub Actions secrets.
 
-Configure:
+`build/private/`, `*.jks` and `*.keystore` are Git-ignored. The setup helper refuses silent identity rotation: if public pins already exist but the local private key/keystore do not match, it stops instead of generating replacements.
+
+When authenticated `gh` is available, the setup helper stores these repository secrets via stdin:
 
 - `AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64`
+- `AURORA_ANDROID_KEYSTORE_BASE64`
+- `AURORA_ANDROID_KEYSTORE_USER`
+- `AURORA_ANDROID_KEYSTORE_PASSWORD`
 
-The release workflow derives the public key from the secret and compares it with the committed trust root before signing. A mismatch aborts release publication.
+Only the two public files are committed:
+
+```powershell
+git add update/release_public.pub update/release_identity.json
+```
+
+Then run:
+
+```powershell
+./build/bridge_release_readiness.ps1
+```
+
+The readiness gate checks the V1.2 repair boundary, version synchronization, public update key, public release identity pins, Android production certificate gate and required GitHub secret names.
 
 ## Windows signed update flow
 
@@ -127,12 +155,6 @@ GitHub Release asset: `AuroraFox-Android.apk`.
 
 AuroraFox does not bypass Android installation security.
 
-Create the persistent Android key once with:
-
-```powershell
-./build/create_android_signing_key.ps1
-```
-
 ## Publishing a signed release
 
 Synchronize version fields with:
@@ -141,9 +163,9 @@ Synchronize version fields with:
 ./build/set_version.ps1 -Version 1.3.0.0
 ```
 
-Then publish tag `v1.3.0.0` only after CI is green and both persistent signing identities are configured.
+Then publish tag `v1.3.0.0` only after CI is green, `bridge_release_readiness.ps1` passes, and both permanent signing identities are initialized.
 
-`.github/workflows/release.yml` builds both targets, calculates SHA-256, creates the stable manifest, validates the update signing key pair, signs the exact `update.json` bytes, verifies that signature in CI and publishes:
+`.github/workflows/release.yml` builds both targets, calculates SHA-256, validates the Android production signing identity, creates the stable manifest, validates the update signing key pair, signs the exact `update.json` bytes, verifies that signature in CI and publishes:
 
 - `AuroraFox_Setup_Windows.exe`;
 - `AuroraFox-Windows.zip`;
@@ -154,9 +176,10 @@ Then publish tag `v1.3.0.0` only after CI is green and both persistent signing i
 
 ## Tests
 
-- `tests/test_update_backward_compat.py` protects the stable manifest/asset transport contract and explicitly enforces the V1.2 repair boundary;
+- `tests/test_update_backward_compat.py` protects the stable manifest/asset transport contract, V1.2 repair boundary, V1.3 signed-update floor and permanent signing-identity gates;
 - `tests/windows_v12_bridge_smoke.ps1` performs the in-place V1.2 -> V1.3 Windows repair simulation and verifies user data survival;
 - `tests/update_smoke.gd` checks version comparison, manifest URLs, RSA verification and tamper rejection;
 - `tests/version_sync_test.ps1` checks project/Android/manifest synchronization;
 - `tests/windows_updater_test.ps1` exercises the transactional Windows updater;
-- Android CI validates package metadata and installs/launches the produced test APK on Android 35.
+- Android CI validates package metadata and installs/launches the produced test APK on Android 35;
+- production Android build additionally verifies the pinned signing certificate of both the configured keystore and the finished APK.
