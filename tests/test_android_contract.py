@@ -5,6 +5,8 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+CORE_SHA = "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5"
+CORE_BYTES = 1282439264
 
 
 def require(condition: bool, message: str) -> None:
@@ -32,6 +34,10 @@ def main() -> None:
     require('architectures/x86_64=true' in preset, "Android x86_64 build is required for exact-APK emulator validation")
     require('permissions/internet=true' in preset, "Android internet permission is missing")
     require('permissions/record_audio=true' in preset, "Android microphone permission is missing")
+    require(
+        'include_filter="update/release_public.pub,models/aurorafox-core.gguf"' in preset,
+        "Android export no longer includes the built-in AuroraFox Core weights",
+    )
 
     project = read("project.godot")
     require(
@@ -51,6 +57,16 @@ def main() -> None:
         build_script.count("--install-android-build-template") == 1,
         "Android build template installation must not run as a standalone Godot process",
     )
+    require("prepare_bundled_core_model.ps1" in build_script, "Android build does not stage built-in AuroraFox Core")
+    require("models/aurorafox-core.gguf" in build_script, "Android bundled Core export path drifted")
+    require(str(CORE_BYTES) in build_script, "Android bundled Core byte contract is missing")
+    require(CORE_SHA in build_script, "Android bundled Core SHA-256 contract is missing")
+    require("Android APK is too small to contain bundled AuroraFox Core" in build_script, "APK size gate for bundled Core is missing")
+
+    model_helper = read("build/prepare_bundled_core_model.ps1")
+    require(CORE_SHA in model_helper, "Core preparation helper SHA-256 drifted")
+    require(str(CORE_BYTES) in model_helper, "Core preparation helper byte count drifted")
+    require("Test-CoreModel" in model_helper, "Core preparation helper no longer verifies the packaged weights")
 
     artifact = read(".github/workflows/android-apk-artifact.yml")
     require("-AllowUnsignedRelease" in artifact, "APK artifact workflow does not use controlled unsigned export")
@@ -98,9 +114,6 @@ def main() -> None:
         "production emulator smoke contains a multiline shell conditional",
     )
 
-    # AIClient is now a platform-neutral facade. Platform routing belongs to
-    # AuroraCoreRuntime, so the Android contract must verify the actual owner of
-    # the behavior instead of forcing platform code back into AIClient.
     ai_client = read("scripts/ai_client.gd")
     require(
         "return await core_runtime.chat(_with_knowledge(messages), temperature)" in ai_client,
@@ -110,6 +123,13 @@ def main() -> None:
         'info["operational_without_ollama"] = true' in ai_client,
         "AIClient no longer guarantees operation independent of Ollama",
     )
+    require("AuroraBundledCoreModel.runtime_candidate()" in ai_client, "AIClient does not select the built-in Core automatically")
+
+    bundled = read("scripts/bundled_core_model.gd")
+    require('BUNDLED_RESOURCE := "res://models/aurorafox-core.gguf"' in bundled, "Android built-in Core resource path drifted")
+    require(CORE_SHA in bundled, "Runtime built-in Core SHA-256 drifted")
+    require(str(CORE_BYTES) in bundled, "Runtime built-in Core byte count drifted")
+    require("ensure_android_private_copy" in bundled, "Android no longer silently provisions the bundled Core")
 
     core_runtime = read("scripts/aurora_core_runtime.gd")
     core_chat = core_runtime.split("func _chat_local(messages: Array, temperature: float) -> Dictionary:", 1)[1].split(
@@ -125,6 +145,14 @@ def main() -> None:
 
     first_run = read("scripts/android_first_run.gd")
     require("AuroraFox готов." not in first_run, "Android model installer still claims full AuroraFox readiness")
+    require("_ensure_bundled_core" in first_run, "Android first run does not silently provision built-in Core")
+    require("Скачать рекомендуемую модель" not in first_run, "Android still exposes a model download wizard")
+    require("Выбрать GGUF" not in first_run, "Android still exposes a GGUF chooser")
+    require("FileDialog" not in first_run, "Android first run still exposes a model file picker")
+
+    settings_fix = read("scripts/settings_visual_fix.gd")
+    require('button.visible = false' in settings_fix, "Normal settings no longer hide model-management controls")
+    require("AuroraFox Core встроен в приложение" in settings_fix, "Settings do not describe the built-in Core")
 
     manifest = read("android_plugin/plugin/src/main/AndroidManifest.xml")
     require("REQUEST_INSTALL_PACKAGES" in manifest, "Android updater install permission is missing")
@@ -158,7 +186,10 @@ def main() -> None:
     require('"offline" to true' in file_runtime, "Android PDF extraction must remain offline")
     require("PdfRenderer" not in file_runtime, "Android PDF path regressed to metadata-only PdfRenderer")
 
-    print(f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} abis=arm64-v8a,x86_64 pdf=offline")
+    print(
+        f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} "
+        f"abis=arm64-v8a,x86_64 pdf=offline core=bundled"
+    )
 
 
 if __name__ == "__main__":
