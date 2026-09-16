@@ -127,6 +127,21 @@ class KnowledgeResilienceGateTests(unittest.TestCase):
         for marker in required:
             self.assertIn(marker, probe)
 
+    def test_changed_revision_probe_locks_committed_read_visibility(self) -> None:
+        probe = (BENCH / "concurrency_race_probe.gd").read_text(encoding="utf-8")
+        required = [
+            "VISIBILITY_OLD_MARKER",
+            "VISIBILITY_NEW_MARKER",
+            "_changed_revision_visibility_race()",
+            "KnowledgeImportTransactionScript.TXN_MANIFEST",
+            '"changed_revision_visibility"',
+            '"old_committed_revision_preserved_until_commit"',
+            '"new_revision_hidden_until_commit"',
+            '"final_new_revision_visible"',
+        ]
+        for marker in required:
+            self.assertIn(marker, probe)
+
 
 if __name__ == "__main__":
     unittest.main()
