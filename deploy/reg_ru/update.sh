@@ -4,7 +4,10 @@ set -Eeuo pipefail
 readonly repository='/opt/aurorafox/repository'
 readonly environment_file='/etc/aurorafox/aurorafox.env'
 readonly build_environment='/etc/aurorafox/build.env'
+readonly installed_updater='/usr/local/sbin/aurorafox-update'
 readonly database_path='/var/lib/aurorafox/api/aurorafox.sqlite3'
+readonly rollback_dir='/var/lib/aurorafox-rollback'
+readonly rollback_database="${rollback_dir}/preupdate.sqlite3"
 readonly backup_archive='/srv/aurorafox-backup/exports/latest.zip'
 readonly backup_hash='/srv/aurorafox-backup/exports/latest.sha256'
 
@@ -36,12 +39,22 @@ if ! git merge-base --is-ancestor "${previous}" "${candidate}"; then
   exit 4
 fi
 
-# Fail closed before changing code. The data snapshot intentionally strips API
-# credential material, but preserves conversations/learning/SQLite data and is
-# independently hashed. The live DB itself must also be internally consistent.
+# Two different snapshots serve different trust boundaries:
+# 1) root-only rollback_database is a complete operational snapshot, including
+#    credential hashes, and never leaves this server;
+# 2) the SFTP owner backup is exportable and therefore sanitized by BackupService.
+install -d -o root -g root -m 0700 "${rollback_dir}"
+rm -f "${rollback_database}"
+database_existed='no'
 if [[ -f "${database_path}" ]]; then
-  PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.database --path "${database_path}"
+  database_existed='yes'
+  PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.database \
+    --path "${database_path}" --snapshot-to "${rollback_database}"
+  chmod 0600 "${rollback_database}"
+  test -s "${rollback_database}"
 fi
+readonly database_existed
+
 systemctl start aurorafox-backup.service
 systemctl is-failed --quiet aurorafox-backup.service && exit 5 || true
 test -s "${backup_archive}"
@@ -55,9 +68,21 @@ readonly preupdate_backup_sha="$(sha256sum "${backup_archive}" | awk '{print $1}
 rollback() {
   status=$?
   trap - ERR
-  echo "AuroraFox update failed; rollback to ${previous}." >&2
+  echo "AuroraFox update failed; rollback code, updater and database to ${previous}." >&2
+  systemctl stop aurorafox-api.service || true
   git checkout --detach "${previous}" || true
+  if [[ -f deploy/reg_ru/update.sh ]]; then
+    install -m 0755 deploy/reg_ru/update.sh "${installed_updater}" || true
+  fi
   /opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check -r api/requirements.txt >/dev/null || true
+
+  if [[ "${database_existed}" == 'yes' && -s "${rollback_database}" ]]; then
+    install -o aurorafox -g aurorafox -m 0600 "${rollback_database}" "${database_path}" || true
+    rm -f "${database_path}-wal" "${database_path}-shm"
+  elif [[ "${database_existed}" == 'no' ]]; then
+    rm -f "${database_path}" "${database_path}-wal" "${database_path}-shm"
+  fi
+
   printf 'AURORAFOX_BUILD_SHA=%s\n' "${previous}" > "${build_environment}.tmp"
   mv "${build_environment}.tmp" "${build_environment}"
   systemctl restart aurorafox-api.service || true
@@ -78,6 +103,10 @@ PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_deployment_contract.py \
   tests/test_network_json_contract.py
 
+# The installed updater must evolve with the checked-out release. The current
+# shell process can safely replace its on-disk file; rollback reinstalls the
+# previous revision if anything after this point fails.
+install -m 0755 deploy/reg_ru/update.sh "${installed_updater}"
 printf 'AURORAFOX_BUILD_SHA=%s\n' "${candidate}" > "${build_environment}.tmp"
 mv "${build_environment}.tmp" "${build_environment}"
 systemctl restart aurorafox-api.service
@@ -98,4 +127,4 @@ test "${ready}" = 'yes'
 # independently of the HTTP process that reported /ready.
 PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m api.database --path "${database_path}"
 trap - ERR
-echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref} preupdate_backup_sha=${preupdate_backup_sha}"
+echo "AURORAFOX_UPDATE_OK from=${previous} to=${candidate} source=github/${deploy_ref} preupdate_backup_sha=${preupdate_backup_sha} rollback_db=${rollback_database}"
