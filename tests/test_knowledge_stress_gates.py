@@ -145,6 +145,14 @@ class KnowledgeStressGateTests(unittest.TestCase):
             self.assertNotIn("var store :=", generated)
             self.assertNotIn("var result :=", generated)
 
+    def test_windows_portable_runner_warms_same_isolated_profile(self) -> None:
+        text = (BENCH / "run_knowledge_benchmark_portable.py").read_text(encoding="utf-8")
+        self.assertIn("warm_isolated_windows_profile", text)
+        self.assertIn('if sys.platform != "win32"', text)
+        self.assertIn('[godot, "--headless", "--editor", "--path", str(repo), "--quit"]', text)
+        self.assertLess(text.index("warm_isolated_windows_profile(godot"), text.index("runtime_script = portable_harness(repo)"))
+        self.assertIn('"isolated_profile_warmup": warm', text)
+
     def test_alias_removal_probe_uses_explicit_dynamic_result_types(self) -> None:
         text = (BENCH / "dedupe_alias_removal_probe.gd").read_text(encoding="utf-8")
         self.assertIn("var canonical_survived: bool =", text)
@@ -176,6 +184,26 @@ class KnowledgeStressGateTests(unittest.TestCase):
         self.assertIn('"automatic_manager_recovery": true', probe)
         for marker in ("TXN_MANIFEST", "TXN_SNAPSHOT_MARKER", "TXN_COMMIT_MARKER"):
             self.assertIn(f'"{marker}"', probe)
+
+    def test_registry_replacement_keeps_last_committed_copy_recoverable(self) -> None:
+        registry = (ROOT / "scripts" / "knowledge_source_registry.gd").read_text(encoding="utf-8")
+        self.assertIn('REGISTRY_ORIGINAL := REGISTRY_PATH + ".write.original"', registry)
+        self.assertIn("func _repair_interrupted_save() -> bool:", registry)
+        self.assertIn("func _valid_registry_file(path: String) -> bool:", registry)
+        self.assertIn("DirAccess.rename_absolute(target_abs, original_abs)", registry)
+        self.assertIn("DirAccess.rename_absolute(original_abs, target_abs)", registry)
+        self.assertIn("_valid_registry_file(REGISTRY_TEMP)", registry)
+        self.assertIn("if target_exists and not _valid_registry_file(REGISTRY_PATH):", registry)
+        self.assertNotIn("DirAccess.remove_absolute(target_abs)\n\t\tif remove_error", registry)
+
+    def test_record_dedupe_probe_checks_shared_source_lifecycle(self) -> None:
+        probe = (BENCH / "record_dedupe_shared_source_probe.gd").read_text(encoding="utf-8")
+        self.assertIn('"input_duplicate_records_in_a": 5', probe)
+        self.assertIn('"same_source_dedupe_ok"', probe)
+        self.assertIn('"cross_source_provenance_dedupe_ok"', probe)
+        self.assertIn('"source_removal_preserves_shared_fact"', probe)
+        self.assertIn("manager.call(\"remove_source\", SOURCE_B)", probe)
+        self.assertIn("int(before.get(\"a\", 0)) == 1", probe)
 
 
 if __name__ == "__main__":
