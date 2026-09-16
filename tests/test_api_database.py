@@ -83,6 +83,12 @@ def test_legacy_api_state_migrates_once_into_single_database(tmp_path: Path):
         "messages": 2,
         "learning_events": 1,
         "learning_pending": 1,
+        "accounts": 0,
+        "guests": 0,
+        "devices": 0,
+        "auth_sessions": 0,
+        "sync_entities": 0,
+        "sync_conflicts_open": 0,
     }
 
     # Re-instantiation is idempotent and does not duplicate legacy state.
