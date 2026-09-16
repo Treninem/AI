@@ -1,0 +1,83 @@
+name: AuroraFox Work Computer Reliability
+
+on:
+  pull_request:
+    paths:
+      - 'work/**'
+      - 'computer/**'
+      - 'scripts/computer_client.gd'
+      - 'scripts/agent_core.gd'
+      - 'tests/work_reliability_*'
+      - 'tests/computer_agent_*'
+      - 'tests/work_computer_e2e_*'
+      - '.github/workflows/work-computer-reliability.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'work/**'
+      - 'computer/**'
+      - 'scripts/computer_client.gd'
+      - 'scripts/agent_core.gd'
+      - 'tests/work_reliability_*'
+      - 'tests/computer_agent_*'
+      - 'tests/work_computer_e2e_*'
+      - '.github/workflows/work-computer-reliability.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  computer-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install contract-test dependencies
+        run: python -m pip install --disable-pip-version-check pytest fastapi 'uvicorn[standard]' 'pydantic>=2.11' 'httpx==0.28.1' python-multipart
+      - name: Python syntax
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py
+      - name: Computer reliability contracts
+        run: python -m pytest -q tests/computer_agent_reliability_test.py
+
+  work-godot:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 90s ./godot --headless --editor --path . --quit
+      - name: Existing Work persistence smoke
+        run: timeout 30s ./godot --headless --path . --script tests/work_mode_store_smoke.gd
+      - name: Work reliability lifecycle and recovery smoke
+        run: timeout 60s ./godot --headless --path . --script tests/work_reliability_store_smoke.gd
+
+  source-boundaries:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Local-only and UI ownership contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ! grep -Eiq 'ollama|openai|gemini|claude' computer/computer_service.py
+          ! grep -Eiq 'ollama pull|qwen3-vl' computer/install_computer.ps1
+          grep -q 'local_core_planning_required' computer/computer_service.py
+          grep -q 'EXECUTION_CONTROL_PREFIX' scripts/agent_core.gd
+          grep -q 'execution_guard' scripts/agent_core.gd
+          grep -q 'STATE_INTERRUPTED' work/work_store.gd
+          grep -q 'requires_user_action' work/work_store.gd

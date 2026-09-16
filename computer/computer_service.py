@@ -1,46 +1,64 @@
 from __future__ import annotations
 
 import base64
-import io
+import hashlib
 import json
+import multiprocessing as mp
 import os
+import re
 import shutil
+import signal
 import subprocess
+import threading
 import time
 import uuid
-from pathlib import Path
-from typing import Any
+from collections import OrderedDict
+from pathlib import Path, PurePath
+from typing import Any, Literal
 
-import pyautogui
-import requests
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
-from pywinauto import Desktop
 
 HOST = os.getenv("AURORAFOX_COMPUTER_HOST", "127.0.0.1")
 PORT = int(os.getenv("AURORAFOX_COMPUTER_PORT", "8766"))
-OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-VISION_MODEL = os.getenv("AURORAFOX_VISION_MODEL", "qwen3-vl:8b")
+SERVICE_TOKEN = os.getenv("AURORAFOX_COMPUTER_TOKEN", "").strip()
+PARENT_PID = int(os.getenv("AURORAFOX_PARENT_PID", "0") or "0")
 SANDBOX_ROOT = Path(os.getenv("AURORAFOX_SANDBOX_ROOT", str(Path.cwd() / "sandbox"))).resolve()
 MAX_OUTPUT = 120_000
+MAX_WRITE_BYTES = 2_000_000
+MAX_READ_BYTES = 5_000_000
+MAX_TEXT_CHARS = 20_000
+MAX_KEYS = 12
+GUI_TIMEOUT_SECONDS = float(os.getenv("AURORAFOX_GUI_TIMEOUT_SECONDS", "8"))
+ACTION_TIMEOUT_SECONDS = float(os.getenv("AURORAFOX_ACTION_TIMEOUT_SECONDS", "10"))
+IS_WINDOWS = os.name == "nt"
+
+SAFE_RETRY_ACTIONS = {"move", "scroll", "wait", "done"}
+UNSAFE_RETRY_ACTIONS = {"click", "double_click", "right_click", "mouse_down", "mouse_up", "type", "press", "hotkey"}
+VALID_ACTIONS = SAFE_RETRY_ACTIONS | UNSAFE_RETRY_ACTIONS
+VALID_BUTTONS = {"left", "right", "middle"}
+VALID_KEY = re.compile(r"^[A-Za-z0-9_+\-.,/\\\[\];'`]{1,32}$")
+ACTION_CACHE_LIMIT = 512
 
 SANDBOX_ROOT.mkdir(parents=True, exist_ok=True)
-pyautogui.FAILSAFE = True
-pyautogui.PAUSE = 0.12
 
-app = FastAPI(title="AuroraFox Computer Agent", version="0.4.0")
+app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.0.0")
+_action_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
+_action_cache_lock = threading.Lock()
 
 
 class Action(BaseModel):
-    type: str
+    type: str = Field(min_length=1, max_length=32)
+    action_id: str = Field(default="", max_length=160)
     x: int | None = None
     y: int | None = None
     button: str = "left"
-    clicks: int = 1
-    text: str = ""
-    keys: list[str] = Field(default_factory=list)
-    amount: int = 0
-    seconds: float = 0.2
+    clicks: int = Field(default=1, ge=1, le=3)
+    text: str = Field(default="", max_length=MAX_TEXT_CHARS)
+    keys: list[str] = Field(default_factory=list, max_length=MAX_KEYS)
+    amount: int = Field(default=0, ge=-100, le=100)
+    seconds: float = Field(default=0.2, ge=0.0, le=5.0)
+    verify: bool = False
 
 
 class GoalRequest(BaseModel):
@@ -50,170 +68,318 @@ class GoalRequest(BaseModel):
 
 
 class SandboxExecRequest(BaseModel):
-    command: list[str]
-    cwd: str = "."
-    timeout: int = Field(default=60, ge=1, le=600)
+    command: list[str] = Field(min_length=1, max_length=64)
+    cwd: str = Field(default=".", max_length=1024)
+    timeout: int = Field(default=60, ge=1, le=300)
+    allow_network: bool = False
 
 
 class SandboxWriteRequest(BaseModel):
-    path: str
+    path: str = Field(min_length=1, max_length=1024)
     content: str
 
 
 class WorkspaceCreateRequest(BaseModel):
-    id: str = ""
-    task: str = ""
+    id: str = Field(default="", max_length=96)
+    task: str = Field(default="", max_length=4000)
 
 
 class WorkspaceSnapshotRequest(BaseModel):
-    workspace: str
-    label: str = "checkpoint"
+    workspace: str = Field(min_length=1, max_length=96)
+    label: str = Field(default="checkpoint", max_length=64)
 
 
 class WorkspaceRollbackRequest(BaseModel):
-    workspace: str
-    snapshot: str
+    workspace: str = Field(min_length=1, max_length=96)
+    snapshot: str = Field(min_length=1, max_length=128)
 
 
-def _safe_sandbox_path(relative: str) -> Path:
-    target = (SANDBOX_ROOT / relative).resolve()
-    if SANDBOX_ROOT != target and SANDBOX_ROOT not in target.parents:
+def _auth(token: str | None) -> None:
+    if not SERVICE_TOKEN:
+        raise HTTPException(status_code=503, detail="Computer service authentication is not configured")
+    if token != SERVICE_TOKEN:
+        raise HTTPException(status_code=401, detail="Computer service authentication failed")
+
+
+def _autonomy_allowed(value: str | None) -> None:
+    if value != "1":
+        raise HTTPException(status_code=423, detail="Master stop or Computer permission is active")
+
+
+def _authorize(token: str | None, autonomy: str | None, *, require_autonomy: bool = True) -> None:
+    _auth(token)
+    if require_autonomy:
+        _autonomy_allowed(autonomy)
+
+
+def _retryable(action_type: str) -> bool:
+    return action_type in SAFE_RETRY_ACTIONS
+
+
+def _error(kind: str, message: str, *, retryable: bool = False, **extra: Any) -> dict[str, Any]:
+    result: dict[str, Any] = {"ok": False, "error": kind, "message": _redact(message), "retryable": retryable}
+    result.update(extra)
+    return result
+
+
+def _redact(value: str) -> str:
+    text = str(value)
+    text = re.sub(
+        r"(?i)(password|passwd|token|api[_-]?key|authorization|cookie|private[_-]?key)\s*[:=]\s*[^\s,;]+",
+        r"\1=[REDACTED]",
+        text,
+    )
+    text = re.sub(r"(?i)bearer\s+[A-Za-z0-9._~+/-]{8,}", "Bearer [REDACTED]", text)
+    if SERVICE_TOKEN:
+        text = text.replace(SERVICE_TOKEN, "[REDACTED]")
+    return text[:MAX_OUTPUT]
+
+
+def _safe_sandbox_path(relative: str, *, must_exist: bool = False) -> Path:
+    raw = str(relative).strip()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty sandbox path")
+    candidate_path = Path(raw)
+    if candidate_path.is_absolute() or PurePath(raw).anchor:
+        raise HTTPException(status_code=400, detail="Absolute paths are not allowed in sandbox")
+    if any(part == ".." for part in candidate_path.parts):
+        raise HTTPException(status_code=400, detail="Path traversal is not allowed")
+    target = (SANDBOX_ROOT / candidate_path).resolve(strict=False)
+    if target != SANDBOX_ROOT and SANDBOX_ROOT not in target.parents:
         raise HTTPException(status_code=400, detail="Path escapes sandbox")
+    if must_exist and not target.exists():
+        raise HTTPException(status_code=404, detail="Sandbox path not found")
+    # resolve(strict=False) follows existing symlink/junction parents. Re-checking
+    # containment therefore blocks symlink/reparse escapes without forbidding safe links.
     return target
 
 
 def _safe_workspace_id(value: str) -> str:
-    cleaned = "".join(ch for ch in value if ch.isalnum() or ch in "_-.").strip(".")
-    if not cleaned or len(cleaned) > 96:
+    cleaned = "".join(ch for ch in str(value) if ch.isalnum() or ch in "_-. ").strip().replace(" ", "_").strip(".")
+    if not cleaned or len(cleaned) > 96 or cleaned in {".", ".."}:
         raise HTTPException(status_code=400, detail="Invalid workspace id")
     return cleaned
 
 
-def _screen_png() -> bytes:
-    image = pyautogui.screenshot()
-    buf = io.BytesIO()
-    image.save(buf, format="PNG")
-    return buf.getvalue()
-
-
-def _screen_b64() -> str:
-    return base64.b64encode(_screen_png()).decode("ascii")
-
-
-def _uia_snapshot(limit: int = 250) -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
+def _desktop_bounds() -> dict[str, int]:
+    if not IS_WINDOWS:
+        return {"left": 0, "top": 0, "width": 0, "height": 0, "right": 0, "bottom": 0}
     try:
-        windows = Desktop(backend="uia").windows()
-        for w in windows[:30]:
+        import ctypes
+
+        user32 = ctypes.windll.user32
+        try:
+            ctypes.windll.shcore.SetProcessDpiAwareness(2)
+        except Exception:
             try:
-                rect = w.rectangle()
-                items.append({
-                    "kind": "window",
-                    "name": w.window_text(),
-                    "control_type": getattr(w.element_info, "control_type", "Window"),
-                    "rect": [rect.left, rect.top, rect.right, rect.bottom],
-                })
-                for c in w.descendants()[:40]:
-                    if len(items) >= limit:
-                        return items
-                    try:
-                        cr = c.rectangle()
-                        name = c.window_text() or getattr(c.element_info, "name", "")
-                        if not name and getattr(c.element_info, "control_type", "") not in {"Button", "Edit", "Text", "CheckBox", "MenuItem"}:
-                            continue
-                        items.append({
-                            "kind": "control",
-                            "name": name,
-                            "control_type": getattr(c.element_info, "control_type", ""),
-                            "automation_id": getattr(c.element_info, "automation_id", ""),
-                            "rect": [cr.left, cr.top, cr.right, cr.bottom],
-                        })
-                    except Exception:
-                        pass
+                user32.SetProcessDPIAware()
             except Exception:
                 pass
+        left = int(user32.GetSystemMetrics(76))
+        top = int(user32.GetSystemMetrics(77))
+        width = int(user32.GetSystemMetrics(78))
+        height = int(user32.GetSystemMetrics(79))
+        return {"left": left, "top": top, "width": width, "height": height, "right": left + width, "bottom": top + height}
     except Exception:
-        pass
-    return items
+        return {"left": 0, "top": 0, "width": 0, "height": 0, "right": 0, "bottom": 0}
 
 
-def _execute(action: Action) -> dict[str, Any]:
-    t = action.type.lower().strip()
+def _validate_coordinate(x: int | None, y: int | None) -> None:
+    if x is None or y is None:
+        raise HTTPException(status_code=400, detail="Action requires x and y coordinates")
+    bounds = _desktop_bounds()
+    if bounds["width"] <= 0 or bounds["height"] <= 0:
+        raise HTTPException(status_code=503, detail="Desktop coordinate space is unavailable")
+    if not (bounds["left"] <= x < bounds["right"] and bounds["top"] <= y < bounds["bottom"]):
+        raise HTTPException(status_code=400, detail="Coordinates are outside the virtual desktop")
+
+
+def _validate_action(req: Action) -> dict[str, Any]:
+    action = req.model_dump()
+    action_type = str(action["type"]).lower().strip()
+    if action_type not in VALID_ACTIONS:
+        raise HTTPException(status_code=400, detail=f"Unsupported action type: {action_type}")
+    action["type"] = action_type
+    button = str(action.get("button", "left")).lower().strip()
+    if button not in VALID_BUTTONS:
+        raise HTTPException(status_code=400, detail="Invalid mouse button")
+    action["button"] = button
+    if action_type in {"move", "click", "double_click", "right_click", "mouse_down", "mouse_up"}:
+        _validate_coordinate(action.get("x"), action.get("y"))
+    elif action_type == "scroll" and (action.get("x") is not None or action.get("y") is not None):
+        _validate_coordinate(action.get("x"), action.get("y"))
+    if action_type == "type" and not str(action.get("text", "")):
+        raise HTTPException(status_code=400, detail="Type action requires text")
+    if action_type in {"press", "hotkey"}:
+        keys = [str(key).lower().strip() for key in action.get("keys", [])]
+        if not keys or any(not VALID_KEY.match(key) for key in keys):
+            raise HTTPException(status_code=400, detail="Invalid key sequence")
+        action["keys"] = keys
+    return action
+
+
+def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
     try:
-        if t == "move":
-            pyautogui.moveTo(action.x, action.y, duration=max(0.0, action.seconds))
-        elif t == "click":
-            pyautogui.click(action.x, action.y, clicks=max(1, action.clicks), button=action.button)
-        elif t == "double_click":
-            pyautogui.doubleClick(action.x, action.y, button=action.button)
-        elif t == "right_click":
-            pyautogui.rightClick(action.x, action.y)
-        elif t == "drag":
-            pyautogui.moveTo(action.x, action.y, duration=0.1)
-            raise ValueError("drag requires dedicated start/end action; use move + mouse_down/move/mouse_up")
-        elif t == "mouse_down":
-            pyautogui.mouseDown(action.x, action.y, button=action.button)
-        elif t == "mouse_up":
-            pyautogui.mouseUp(action.x, action.y, button=action.button)
-        elif t == "scroll":
-            pyautogui.scroll(action.amount, x=action.x, y=action.y)
-        elif t == "type":
-            pyautogui.write(action.text, interval=0.02)
-        elif t == "press":
-            for key in action.keys:
-                pyautogui.press(key)
-        elif t == "hotkey":
-            pyautogui.hotkey(*action.keys)
-        elif t == "wait":
-            time.sleep(max(0.0, min(action.seconds, 30.0)))
-        elif t == "done":
-            return {"ok": True, "done": True}
+        if kind == "screen":
+            from PIL import ImageGrab
+
+            image = ImageGrab.grab(all_screens=True)
+            import io
+
+            buf = io.BytesIO()
+            image.save(buf, format="PNG")
+            data = buf.getvalue()
+            queue.put({"ok": True, "png_base64": base64.b64encode(data).decode("ascii"), "sha256": hashlib.sha256(data).hexdigest()})
+            return
+        if kind == "windows":
+            from pywinauto import Desktop
+
+            limit = max(1, min(int(payload.get("limit", 250)), 500))
+            items: list[dict[str, Any]] = []
+            for window in Desktop(backend="uia").windows()[:30]:
+                if len(items) >= limit:
+                    break
+                try:
+                    rect = window.rectangle()
+                    items.append({
+                        "kind": "window",
+                        "name": str(window.window_text())[:512],
+                        "control_type": str(getattr(window.element_info, "control_type", "Window"))[:64],
+                        "rect": [rect.left, rect.top, rect.right, rect.bottom],
+                    })
+                    for control in window.descendants()[:40]:
+                        if len(items) >= limit:
+                            break
+                        try:
+                            cr = control.rectangle()
+                            items.append({
+                                "kind": "control",
+                                "name": str(control.window_text() or getattr(control.element_info, "name", ""))[:512],
+                                "control_type": str(getattr(control.element_info, "control_type", ""))[:64],
+                                "automation_id": str(getattr(control.element_info, "automation_id", ""))[:256],
+                                "rect": [cr.left, cr.top, cr.right, cr.bottom],
+                            })
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+            queue.put({"ok": True, "items": items})
+            return
+        if kind == "action":
+            import pyautogui
+
+            pyautogui.FAILSAFE = True
+            pyautogui.PAUSE = 0.08
+            action_type = str(payload["type"])
+            x, y = payload.get("x"), payload.get("y")
+            button = str(payload.get("button", "left"))
+            if action_type == "move":
+                pyautogui.moveTo(x, y, duration=float(payload.get("seconds", 0.2)))
+            elif action_type == "click":
+                pyautogui.click(x, y, clicks=int(payload.get("clicks", 1)), button=button)
+            elif action_type == "double_click":
+                pyautogui.doubleClick(x, y, button=button)
+            elif action_type == "right_click":
+                pyautogui.rightClick(x, y)
+            elif action_type == "mouse_down":
+                pyautogui.mouseDown(x, y, button=button)
+            elif action_type == "mouse_up":
+                pyautogui.mouseUp(x, y, button=button)
+            elif action_type == "scroll":
+                pyautogui.scroll(int(payload.get("amount", 0)), x=x, y=y)
+            elif action_type == "type":
+                pyautogui.write(str(payload.get("text", "")), interval=0.02)
+            elif action_type == "press":
+                for key in payload.get("keys", []):
+                    pyautogui.press(key)
+            elif action_type == "hotkey":
+                pyautogui.hotkey(*payload.get("keys", []))
+            elif action_type == "wait":
+                time.sleep(float(payload.get("seconds", 0.2)))
+            elif action_type == "done":
+                queue.put({"ok": True, "done": True})
+                return
+            queue.put({"ok": True, "done": False})
+            return
+        raise RuntimeError(f"Unknown worker kind: {kind}")
+    except Exception as exc:
+        queue.put({"ok": False, "error": type(exc).__name__, "message": _redact(str(exc))})
+
+
+def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float = GUI_TIMEOUT_SECONDS) -> dict[str, Any]:
+    if not IS_WINDOWS:
+        return _error("unsupported_platform", "Desktop Computer Agent primitives are supported on Windows only", retryable=False)
+    context = mp.get_context("spawn")
+    queue = context.Queue(maxsize=1)
+    process = context.Process(target=_worker_entry, args=(kind, payload or {}, queue), daemon=True)
+    process.start()
+    process.join(timeout=max(0.1, timeout))
+    if process.is_alive():
+        process.terminate()
+        process.join(1.0)
+        if process.is_alive() and hasattr(process, "kill"):
+            process.kill()
+            process.join(1.0)
+        return _error("timeout", f"{kind} operation timed out", retryable=kind in {"screen", "windows"})
+    try:
+        result = queue.get_nowait()
+    except Exception:
+        return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
+    if not isinstance(result, dict):
+        return _error("malformed_worker_response", f"{kind} worker returned invalid data", retryable=False)
+    return result
+
+
+def _cached_action(action_id: str) -> dict[str, Any] | None:
+    if not action_id:
+        return None
+    with _action_cache_lock:
+        cached = _action_cache.get(action_id)
+        if cached is None:
+            return None
+        _action_cache.move_to_end(action_id)
+        result = dict(cached)
+        result["deduplicated"] = True
+        return result
+
+
+def _store_action_result(action_id: str, result: dict[str, Any]) -> None:
+    if not action_id:
+        return
+    with _action_cache_lock:
+        _action_cache[action_id] = dict(result)
+        _action_cache.move_to_end(action_id)
+        while len(_action_cache) > ACTION_CACHE_LIMIT:
+            _action_cache.popitem(last=False)
+
+
+def _execute_action(req: Action) -> dict[str, Any]:
+    action = _validate_action(req)
+    action_id = str(action.get("action_id", "")).strip()
+    cached = _cached_action(action_id)
+    if cached is not None:
+        return cached
+    action_type = str(action["type"])
+    before_hash = ""
+    if bool(action.get("verify", False)):
+        before = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+        if before.get("ok"):
+            before_hash = str(before.get("sha256", ""))
+    result = _run_worker("action", action, ACTION_TIMEOUT_SECONDS)
+    result["action_id"] = action_id
+    result["retryable"] = _retryable(action_type)
+    result["retry_safety"] = "safe" if _retryable(action_type) else "unsafe"
+    if result.get("ok") and bool(action.get("verify", False)):
+        after = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+        if after.get("ok"):
+            after_hash = str(after.get("sha256", ""))
+            result["verified"] = bool(before_hash and after_hash and before_hash != after_hash)
+            result["verification"] = "screen_changed" if result["verified"] else "screen_unchanged"
         else:
-            raise ValueError(f"Unsupported action type: {action.type}")
-        return {"ok": True, "done": False}
-    except pyautogui.FailSafeException:
-        raise HTTPException(status_code=409, detail="Emergency stop: mouse moved to top-left corner")
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-def _vision_plan(goal: str, history: list[dict[str, Any]]) -> dict[str, Any]:
-    image = _screen_b64()
-    uia = _uia_snapshot()
-    system = (
-        "You are AuroraFox Computer Agent on a Windows desktop. Analyze the current screenshot and UI Automation tree. "
-        "Choose exactly ONE next low-risk UI action that advances the user's stated goal. "
-        "Return ONLY strict JSON with keys: reasoning_short, action. "
-        "action must be one of: click, double_click, right_click, move, scroll, type, press, hotkey, wait, done. "
-        "For click actions provide x,y. For type provide text. For hotkey/press provide keys. "
-        "Do not attempt destructive actions, account/security bypass, credential extraction, purchases, or irreversible changes. "
-        "If the task is complete, choose done."
-    )
-    user_text = json.dumps({"goal": goal, "recent_history": history[-8:], "uia": uia[:250]}, ensure_ascii=False)
-    payload = {
-        "model": VISION_MODEL,
-        "stream": False,
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": user_text, "images": [image]},
-        ],
-        "options": {"temperature": 0.1},
-    }
-    r = requests.post(f"{OLLAMA_URL}/api/chat", json=payload, timeout=180)
-    if r.status_code != 200:
-        raise HTTPException(status_code=502, detail=f"Ollama error {r.status_code}: {r.text[:1000]}")
-    content = str(r.json().get("message", {}).get("content", "")).strip()
-    if content.startswith("```"):
-        content = content.strip("`")
-        if content.startswith("json"):
-            content = content[4:].strip()
-    try:
-        data = json.loads(content)
-        if not isinstance(data, dict) or "action" not in data:
-            raise ValueError("missing action")
-        return data
-    except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Vision model returned invalid JSON: {content[:1500]}") from exc
+            result["verified"] = False
+            result["verification"] = "verification_unavailable"
+    _store_action_result(action_id, result)
+    return result
 
 
 def _container_engine() -> str | None:
@@ -262,165 +428,26 @@ def _tree(root: Path, max_items: int = 2000) -> list[dict[str, Any]]:
         if len(items) >= max_items:
             break
         try:
+            resolved = path.resolve(strict=False)
+            if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
+                continue
             items.append({
                 "path": path.relative_to(root).as_posix(),
                 "dir": path.is_dir(),
                 "size": path.stat().st_size if path.is_file() else 0,
             })
         except OSError:
-            pass
+            continue
     return items
 
 
-@app.get("/health")
-def health():
-    return {
-        "ok": True,
-        "vision_model": VISION_MODEL,
-        "ollama_url": OLLAMA_URL,
-        "screen": list(pyautogui.size()),
-        "sandbox_root": str(SANDBOX_ROOT),
-        "failsafe": True,
-        "container_engine": _container_engine(),
-    }
-
-
-@app.get("/screen")
-def screen():
-    return {"ok": True, "png_base64": _screen_b64(), "uia": _uia_snapshot()}
-
-
-@app.get("/windows")
-def windows():
-    return {"ok": True, "items": _uia_snapshot()}
-
-
-@app.post("/action")
-def action(req: Action):
-    return _execute(req)
-
-
-@app.post("/plan")
-def plan(req: GoalRequest):
-    return {"ok": True, "step": _vision_plan(req.goal, [])}
-
-
-@app.post("/run")
-def run(req: GoalRequest):
-    history: list[dict[str, Any]] = []
-    for index in range(req.max_steps):
-        step = _vision_plan(req.goal, history)
-        action_data = step.get("action", {})
-        if not isinstance(action_data, dict):
-            raise HTTPException(status_code=502, detail="Invalid action")
-        history.append({"index": index + 1, "step": step})
-        if not req.auto_execute:
-            return {"ok": True, "needs_confirmation": True, "history": history, "next_action": action_data}
-        result = _execute(Action(**action_data))
-        history[-1]["result"] = result
-        if result.get("done"):
-            return {"ok": True, "done": True, "history": history}
-        time.sleep(0.25)
-    return {"ok": True, "done": False, "history": history, "reason": "max_steps reached"}
-
-
-@app.post("/sandbox/workspace/create")
-def workspace_create(req: WorkspaceCreateRequest):
-    workspace_id = _safe_workspace_id(req.id) if req.id else uuid.uuid4().hex[:16]
-    root = _safe_sandbox_path(workspace_id)
-    for name in ("input", "work", "output", "logs", "snapshots"):
-        (root / name).mkdir(parents=True, exist_ok=True)
-    manifest = {
-        "id": workspace_id,
-        "task": req.task,
-        "created_at": int(time.time()),
-        "root": workspace_id,
-    }
-    (root / "manifest.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
-    return {"ok": True, "workspace": manifest}
-
-
-@app.get("/sandbox/workspace/tree")
-def workspace_tree(workspace: str, area: str = "work"):
-    wid = _safe_workspace_id(workspace)
-    if area not in {"input", "work", "output", "logs", "snapshots"}:
-        raise HTTPException(status_code=400, detail="Invalid workspace area")
-    root = _safe_sandbox_path(f"{wid}/{area}")
-    return {"ok": True, "workspace": wid, "area": area, "items": _tree(root)}
-
-
-@app.post("/sandbox/workspace/snapshot")
-def workspace_snapshot(req: WorkspaceSnapshotRequest):
-    wid = _safe_workspace_id(req.workspace)
-    work = _safe_sandbox_path(f"{wid}/work")
-    snapshots = _safe_sandbox_path(f"{wid}/snapshots")
-    snapshots.mkdir(parents=True, exist_ok=True)
-    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"
-    snapshot_id = f"{int(time.time())}_{safe_label}"
-    target = snapshots / snapshot_id
-    if target.exists():
-        snapshot_id += "_" + uuid.uuid4().hex[:6]
-        target = snapshots / snapshot_id
-    shutil.copytree(work, target)
-    return {"ok": True, "workspace": wid, "snapshot": snapshot_id, "path": f"{wid}/snapshots/{snapshot_id}"}
-
-
-@app.post("/sandbox/workspace/rollback")
-def workspace_rollback(req: WorkspaceRollbackRequest):
-    wid = _safe_workspace_id(req.workspace)
-    sid = _safe_workspace_id(req.snapshot)
-    work = _safe_sandbox_path(f"{wid}/work")
-    source = _safe_sandbox_path(f"{wid}/snapshots/{sid}")
-    if not source.is_dir():
-        raise HTTPException(status_code=404, detail="Snapshot not found")
-    if work.exists():
-        shutil.rmtree(work)
-    shutil.copytree(source, work)
-    return {"ok": True, "workspace": wid, "snapshot": sid}
-
-
-@app.get("/sandbox/list")
-def sandbox_list(path: str = "."):
-    p = _safe_sandbox_path(path)
-    if not p.exists():
-        return {"ok": True, "items": []}
-    if not p.is_dir():
-        raise HTTPException(status_code=400, detail="Not a directory")
-    items = []
-    for c in p.iterdir():
-        items.append({"name": c.name, "dir": c.is_dir(), "size": c.stat().st_size if c.is_file() else 0})
-    return {"ok": True, "items": items}
-
-
-@app.get("/sandbox/read")
-def sandbox_read(path: str):
-    p = _safe_sandbox_path(path)
-    if not p.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
-    data = p.read_bytes()
-    if len(data) > 5_000_000:
-        raise HTTPException(status_code=413, detail="File too large")
-    try:
-        return {"ok": True, "text": data.decode("utf-8")}
-    except UnicodeDecodeError:
-        return {"ok": True, "base64": base64.b64encode(data).decode("ascii")}
-
-
-@app.post("/sandbox/write")
-def sandbox_write(req: SandboxWriteRequest):
-    p = _safe_sandbox_path(req.path)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(req.content, encoding="utf-8")
-    return {"ok": True, "path": str(p.relative_to(SANDBOX_ROOT))}
-
-
-@app.post("/sandbox/exec")
-def sandbox_exec(req: SandboxExecRequest):
-    if not req.command:
+def _validate_command(command: list[str]) -> list[str]:
+    if not command:
         raise HTTPException(status_code=400, detail="Empty command")
-    cwd = _safe_sandbox_path(req.cwd)
-    cwd.mkdir(parents=True, exist_ok=True)
-    exe = Path(req.command[0]).name.lower()
+    clean = [str(part) for part in command]
+    if any("\x00" in part or len(part) > 8192 for part in clean):
+        raise HTTPException(status_code=400, detail="Malformed command argument")
+    exe = Path(clean[0]).name.lower()
     allowed = {
         "python", "python.exe", "python3", "py", "pytest", "pytest.exe",
         "git", "git.exe", "godot", "godot.exe", "godot4", "godot4.exe",
@@ -433,28 +460,359 @@ def sandbox_exec(req: SandboxExecRequest):
     }
     if exe not in allowed:
         raise HTTPException(status_code=403, detail=f"Executable not allowed in local sandbox: {exe}")
+    for argument in clean[1:]:
+        if argument.startswith("-"):
+            continue
+        path = Path(argument)
+        if path.is_absolute() or ".." in path.parts:
+            raise HTTPException(status_code=400, detail="Command path argument may not escape sandbox")
+    return clean
+
+
+def _sanitized_environment(cwd: Path, allow_network: bool) -> dict[str, str]:
+    keep = {"PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "LC_ALL", "COMSPEC"}
+    env = {key: value for key, value in os.environ.items() if key.upper() in keep}
+    env["HOME"] = str(cwd)
+    env["USERPROFILE"] = str(cwd)
+    env["AURORAFOX_SANDBOX_ROOT"] = str(SANDBOX_ROOT)
+    env["AURORAFOX_NETWORK_ALLOWED"] = "1" if allow_network else "0"
+    return env
+
+
+def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool) -> dict[str, Any]:
+    startup: dict[str, Any] = {}
+    if os.name == "nt":
+        startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    else:
+        startup["start_new_session"] = True
     try:
-        cp = subprocess.run(req.command, cwd=cwd, capture_output=True, text=True, timeout=req.timeout, shell=False)
-        out = (cp.stdout or "") + (cp.stderr or "")
-        return {"ok": cp.returncode == 0, "code": cp.returncode, "output": out[:MAX_OUTPUT], "mode": "local"}
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            shell=False,
+            env=_sanitized_environment(cwd, allow_network),
+            **startup,
+        )
     except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"Executable not installed: {exe}") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise HTTPException(status_code=408, detail="Sandbox command timed out") from exc
+        raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
+    try:
+        stdout, stderr = process.communicate(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False)
+        else:
+            try:
+                os.killpg(process.pid, signal.SIGKILL)
+            except OSError:
+                process.kill()
+        try:
+            process.communicate(timeout=2)
+        except Exception:
+            pass
+        return _error("timeout", "Sandbox process timed out and was terminated", retryable=True)
+    output = _redact((stdout or "") + (stderr or ""))
+    return {"ok": process.returncode == 0, "code": process.returncode, "output": output[:MAX_OUTPUT], "mode": "local", "retryable": process.returncode != 0}
+
+
+def _parent_watchdog() -> None:
+    if PARENT_PID <= 0:
+        return
+    while True:
+        time.sleep(2.0)
+        try:
+            if os.name == "nt":
+                result = subprocess.run(["tasklist", "/FI", f"PID eq {PARENT_PID}", "/NH"], capture_output=True, text=True, timeout=2)
+                alive = str(PARENT_PID) in result.stdout
+            else:
+                os.kill(PARENT_PID, 0)
+                alive = True
+        except Exception:
+            alive = False
+        if not alive:
+            os._exit(0)
+
+
+@app.get("/health")
+def health() -> dict[str, Any]:
+    bounds = _desktop_bounds()
+    return {
+        "ok": True,
+        "service": "aurorafox_computer_primitives",
+        "version": "1.0.0",
+        "platform": "windows" if IS_WINDOWS else os.name,
+        "computer_supported": IS_WINDOWS,
+        "planning_owner": "aurorafox_core",
+        "service_side_ai_planning": False,
+        "external_ai_required": False,
+        "network_required": False,
+        "authenticated_channel_configured": bool(SERVICE_TOKEN),
+        "virtual_desktop": bounds,
+        "failsafe": True,
+        "container_engine_available": bool(_container_engine()),
+    }
+
+
+@app.get("/capabilities")
+def capabilities(
+    x_aurorafox_computer_token: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, "1", require_autonomy=False)
+    return {
+        "ok": True,
+        "computer_supported": IS_WINDOWS,
+        "platform": "windows" if IS_WINDOWS else os.name,
+        "screen": IS_WINDOWS,
+        "windows": IS_WINDOWS,
+        "mouse": IS_WINDOWS,
+        "keyboard": IS_WINDOWS,
+        "clipboard": False,
+        "service_side_planning": False,
+        "local_core_planning_required": True,
+        "sandbox": True,
+    }
+
+
+@app.get("/screen")
+def screen(
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    result = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+    if result.get("ok"):
+        windows_result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS)
+        result["uia"] = windows_result.get("items", []) if windows_result.get("ok") else []
+        result["virtual_desktop"] = _desktop_bounds()
+        result["retryable"] = True
+    return result
+
+
+@app.get("/windows")
+def windows(
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS)
+    result["retryable"] = True
+    return result
+
+
+@app.post("/action")
+def action(
+    req: Action,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    return _execute_action(req)
+
+
+@app.post("/plan")
+def plan(
+    req: GoalRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    return _error(
+        "local_core_planning_required",
+        "Computer service does not plan goals. AuroraFox Core must plan and call primitive actions explicitly.",
+        retryable=False,
+        goal_received=bool(req.goal),
+    )
+
+
+@app.post("/run")
+def run(
+    req: GoalRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    return _error(
+        "local_core_planning_required",
+        "Service-side goal execution is disabled. Use AuroraFox Core -> verified Computer primitives.",
+        retryable=False,
+        goal_received=bool(req.goal),
+        auto_execute_ignored=bool(req.auto_execute),
+    )
+
+
+@app.post("/sandbox/workspace/create")
+def workspace_create(
+    req: WorkspaceCreateRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    workspace_id = _safe_workspace_id(req.id) if req.id else uuid.uuid4().hex[:16]
+    root = _safe_sandbox_path(workspace_id)
+    for name in ("input", "work", "output", "logs", "snapshots"):
+        (root / name).mkdir(parents=True, exist_ok=True)
+    manifest = {"id": workspace_id, "task": _redact(req.task), "created_at": int(time.time()), "root": workspace_id}
+    temp = root / f"manifest.{uuid.uuid4().hex}.tmp"
+    temp.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+    os.replace(temp, root / "manifest.json")
+    return {"ok": True, "workspace": manifest}
+
+
+@app.get("/sandbox/workspace/tree")
+def workspace_tree(
+    workspace: str,
+    area: str = "work",
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    wid = _safe_workspace_id(workspace)
+    if area not in {"input", "work", "output", "logs", "snapshots"}:
+        raise HTTPException(status_code=400, detail="Invalid workspace area")
+    root = _safe_sandbox_path(f"{wid}/{area}")
+    return {"ok": True, "workspace": wid, "area": area, "items": _tree(root)}
+
+
+@app.post("/sandbox/workspace/snapshot")
+def workspace_snapshot(
+    req: WorkspaceSnapshotRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    wid = _safe_workspace_id(req.workspace)
+    work = _safe_sandbox_path(f"{wid}/work")
+    snapshots = _safe_sandbox_path(f"{wid}/snapshots")
+    snapshots.mkdir(parents=True, exist_ok=True)
+    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"
+    snapshot_id = f"{int(time.time())}_{safe_label}_{uuid.uuid4().hex[:6]}"
+    target = snapshots / snapshot_id
+    shutil.copytree(work, target)
+    return {"ok": True, "workspace": wid, "snapshot": snapshot_id, "path": f"{wid}/snapshots/{snapshot_id}"}
+
+
+@app.post("/sandbox/workspace/rollback")
+def workspace_rollback(
+    req: WorkspaceRollbackRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    wid = _safe_workspace_id(req.workspace)
+    sid = _safe_workspace_id(req.snapshot)
+    work = _safe_sandbox_path(f"{wid}/work")
+    source = _safe_sandbox_path(f"{wid}/snapshots/{sid}", must_exist=True)
+    if not source.is_dir():
+        raise HTTPException(status_code=404, detail="Snapshot not found")
+    replacement = _safe_sandbox_path(f"{wid}/work.rollback.{uuid.uuid4().hex}")
+    shutil.copytree(source, replacement)
+    if work.exists():
+        backup = _safe_sandbox_path(f"{wid}/work.pre_rollback.{uuid.uuid4().hex}")
+        os.replace(work, backup)
+        try:
+            os.replace(replacement, work)
+        except Exception:
+            os.replace(backup, work)
+            raise
+        shutil.rmtree(backup, ignore_errors=True)
+    else:
+        os.replace(replacement, work)
+    return {"ok": True, "workspace": wid, "snapshot": sid}
+
+
+@app.get("/sandbox/list")
+def sandbox_list(
+    path: str = ".",
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    p = _safe_sandbox_path(path)
+    if not p.exists():
+        return {"ok": True, "items": []}
+    if not p.is_dir():
+        raise HTTPException(status_code=400, detail="Not a directory")
+    items = []
+    for child in p.iterdir():
+        resolved = child.resolve(strict=False)
+        if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
+            continue
+        items.append({"name": child.name, "dir": child.is_dir(), "size": child.stat().st_size if child.is_file() else 0})
+    return {"ok": True, "items": items}
+
+
+@app.get("/sandbox/read")
+def sandbox_read(
+    path: str,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    p = _safe_sandbox_path(path, must_exist=True)
+    if not p.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+    data = p.read_bytes()
+    if len(data) > MAX_READ_BYTES:
+        raise HTTPException(status_code=413, detail="File too large")
+    try:
+        return {"ok": True, "text": data.decode("utf-8")}
+    except UnicodeDecodeError:
+        return {"ok": True, "base64": base64.b64encode(data).decode("ascii")}
+
+
+@app.post("/sandbox/write")
+def sandbox_write(
+    req: SandboxWriteRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    encoded = req.content.encode("utf-8")
+    if len(encoded) > MAX_WRITE_BYTES:
+        raise HTTPException(status_code=413, detail="Write payload too large")
+    path = _safe_sandbox_path(req.path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temp = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"
+    temp.write_bytes(encoded)
+    os.replace(temp, path)
+    return {"ok": True, "path": path.relative_to(SANDBOX_ROOT).as_posix()}
+
+
+@app.post("/sandbox/exec")
+def sandbox_exec(
+    req: SandboxExecRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    command = _validate_command(req.command)
+    cwd = _safe_sandbox_path(req.cwd)
+    cwd.mkdir(parents=True, exist_ok=True)
+    result = _run_process(command, cwd, req.timeout, allow_network=req.allow_network)
+    result["network_requested"] = bool(req.allow_network)
+    result["network_isolation_enforced"] = False
+    return result
 
 
 @app.post("/sandbox/container_exec")
-def sandbox_container_exec(req: SandboxExecRequest):
-    if not req.command:
-        raise HTTPException(status_code=400, detail="Empty command")
+def sandbox_container_exec(
+    req: SandboxExecRequest,
+    x_aurorafox_computer_token: str | None = Header(default=None),
+    x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    command = _validate_command(req.command)
     engine = _container_engine()
     if not engine:
         raise HTTPException(status_code=404, detail="Docker/Podman not installed")
     cwd = _safe_sandbox_path(req.cwd)
     cwd.mkdir(parents=True, exist_ok=True)
-    image, inner_command = _container_profile(req.command)
+    image, inner_command = _container_profile(command)
+    network_args = [] if req.allow_network else ["--network", "none"]
     run_command = [
-        engine, "run", "--rm", "--network", "none", "--read-only",
+        engine, "run", "--rm", *network_args, "--read-only",
         "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"),
         "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"),
         "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"),
@@ -465,22 +823,14 @@ def sandbox_container_exec(req: SandboxExecRequest):
         image,
         *inner_command,
     ]
-    try:
-        cp = subprocess.run(run_command, capture_output=True, text=True, timeout=req.timeout, shell=False)
-        out = (cp.stdout or "") + (cp.stderr or "")
-        return {
-            "ok": cp.returncode == 0,
-            "code": cp.returncode,
-            "output": out[:MAX_OUTPUT],
-            "mode": "container",
-            "engine": engine,
-            "image": image,
-            "network": "none",
-        }
-    except subprocess.TimeoutExpired as exc:
-        raise HTTPException(status_code=408, detail="Container command timed out") from exc
+    result = _run_process(run_command, cwd, req.timeout, allow_network=req.allow_network)
+    result.update({"mode": "container", "engine": engine, "image": image, "network": "allowed" if req.allow_network else "none", "network_isolation_enforced": not req.allow_network})
+    return result
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT)
+
+    if PARENT_PID > 0:
+        threading.Thread(target=_parent_watchdog, name="aurorafox-parent-watchdog", daemon=True).start()
+    uvicorn.run(app, host=HOST, port=PORT, access_log=False, log_level="warning")
