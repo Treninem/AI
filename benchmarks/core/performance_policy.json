@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "hard_limits": {
+    "scenario_timeout_ms": 120000,
+    "suite_timeout_ms": 1200000,
+    "cold_first_response_ms": 120000,
+    "warm_response_ms": 60000,
+    "peak_rss_mb": 6144,
+    "minimum_throughput_equivalent_tps": 0.2
+  },
+  "relative_regression": {
+    "cold_latency_ratio": 1.4,
+    "cold_latency_min_delta_ms": 5000,
+    "warm_median_ratio": 1.35,
+    "warm_median_min_delta_ms": 1000,
+    "throughput_floor_ratio": 0.7,
+    "throughput_min_delta_tps": 0.5,
+    "peak_rss_ratio": 1.3,
+    "peak_rss_min_delta_mb": 256,
+    "suite_wall_ratio": 1.35,
+    "suite_wall_min_delta_ms": 15000
+  },
+  "repeatability": {
+    "required_semantic_pass_ratio": 1.0,
+    "minimum_exact_fingerprint_ratio": 0.6666667
+  },
+  "baseline_compatibility": {
+    "require_same_os": true,
+    "require_same_arch": true,
+    "require_same_logical_processors": true,
+    "require_same_processor_identifier": true,
+    "require_same_core_model_sha": true,
+    "require_same_core_engine_version": true
+  }
+}

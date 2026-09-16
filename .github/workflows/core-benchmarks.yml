@@ -1,0 +1,213 @@
+name: AuroraFox Core Benchmarks
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - 'benchmarks/core/**'
+      - 'tests/test_core_benchmark_regression_gate.py'
+      - 'tests/test_core_specialist_team_runtime_contract.py'
+      - 'scripts/ai_client.gd'
+      - 'scripts/aurora_core_runtime.gd'
+      - 'scripts/desktop_local_runtime.gd'
+      - 'scripts/android_local_runtime.gd'
+      - 'scripts/bundled_core_model.gd'
+      - 'scripts/agent_core.gd'
+      - 'scripts/cognition_layer.gd'
+      - 'scripts/code_specialist.gd'
+      - 'scripts/specialist_team.gd'
+      - 'scripts/memory_store.gd'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/tool_registry.gd'
+      - 'build/prepare_bundled_windows_core.ps1'
+      - 'build/prepare_bundled_core_model.ps1'
+      - 'core_runtime/install_core.ps1'
+      - '.github/workflows/core-benchmarks.yml'
+  pull_request:
+    paths:
+      - 'benchmarks/core/**'
+      - 'tests/test_core_benchmark_regression_gate.py'
+      - 'tests/test_core_specialist_team_runtime_contract.py'
+      - 'scripts/ai_client.gd'
+      - 'scripts/aurora_core_runtime.gd'
+      - 'scripts/desktop_local_runtime.gd'
+      - 'scripts/android_local_runtime.gd'
+      - 'scripts/bundled_core_model.gd'
+      - 'scripts/agent_core.gd'
+      - 'scripts/cognition_layer.gd'
+      - 'scripts/code_specialist.gd'
+      - 'scripts/specialist_team.gd'
+      - 'scripts/memory_store.gd'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/tool_registry.gd'
+      - 'build/prepare_bundled_windows_core.ps1'
+      - 'build/prepare_bundled_core_model.ps1'
+      - 'core_runtime/install_core.ps1'
+      - '.github/workflows/core-benchmarks.yml'
+
+concurrency:
+  group: aurorafox-core-benchmarks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+
+      - name: Regression-gate unit tests
+        run: >-
+          python -m pytest -q
+          tests/test_core_benchmark_regression_gate.py
+          tests/test_core_specialist_team_runtime_contract.py
+
+  real-core-windows:
+    needs: gate-contract
+    runs-on: windows-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Restore bundled Core weights cache
+        id: core_model_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci/core-model-cache
+          key: aurorafox-core-win-v2-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+
+      - name: Download Godot 4.7.1
+        id: godot
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          New-Item -ItemType Directory -Force .ci\godot | Out-Null
+          Invoke-WebRequest "$base/Godot_v4.7.1-stable_win64.exe.zip" -OutFile .ci\godot.zip
+          Expand-Archive .ci\godot.zip .ci\godot -Force
+          $godot = (Get-ChildItem .ci\godot -Filter '*_console.exe' | Select-Object -First 1).FullName
+          if (-not $godot) { $godot = (Get-ChildItem .ci\godot -Filter '*.exe' | Select-Object -First 1).FullName }
+          if (-not $godot) { throw 'Godot executable not found' }
+          "path=$godot" >> $env:GITHUB_OUTPUT
+
+      - name: Import project before benchmark parse gate
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --import
+          if ($LASTEXITCODE -ne 0) { throw 'Godot import failed before Core benchmark parse gate' }
+
+      - name: Parse benchmark harness before model preparation
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --check-only --script benchmarks/core/core_benchmark.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Core benchmark GDScript parse gate failed' }
+          & '${{ steps.godot.outputs.path }}' --headless --path . --check-only --script benchmarks/core/code_specialist_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'SpecialistTeam/CodeSpecialist smoke GDScript parse gate failed' }
+
+      - name: Run Work Mode startup regression smoke
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/work_mode_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Work Mode startup regression smoke failed' }
+
+      - name: Prepare verified bundled AuroraFox Core
+        shell: pwsh
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File build/prepare_bundled_windows_core.ps1 -CacheDir "$PWD\.ci\core-model-cache"
+          if ($LASTEXITCODE -ne 0) { throw 'Bundled Core preparation failed' }
+
+      - name: Save bundled Core weights cache
+        if: steps.core_model_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .ci/core-model-cache
+          key: ${{ steps.core_model_cache.outputs.cache-primary-key }}
+
+      - name: Mirror package layout next to Godot benchmark host
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $godotDir = Split-Path -Parent '${{ steps.godot.outputs.path }}'
+          $target = Join-Path $godotDir 'core_runtime'
+          if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
+          New-Item -ItemType Junction -Path $target -Target (Resolve-Path core_runtime).Path | Out-Null
+          if (-not (Test-Path -LiteralPath (Join-Path $target 'engine/aurorafox-core.gguf'))) { throw 'Package-layout model junction failed' }
+          if (-not (Test-Path -LiteralPath (Join-Path $target 'engine/llama-server.exe'))) { throw 'Package-layout engine junction failed' }
+
+      - name: Run real SpecialistTeam / CodeSpecialist through bundled Core offline
+        id: code_specialist_smoke
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File benchmarks/core/run_windows_code_specialist_smoke.ps1 -GodotPath '${{ steps.godot.outputs.path }}' -ReportPath "$PWD\artifacts\code-specialist-smoke.json"
+          exit $LASTEXITCODE
+
+      - name: Run real bundled Core benchmark offline
+        id: real_benchmark
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          pwsh -NoProfile -File benchmarks/core/run_windows_benchmark.ps1 -GodotPath '${{ steps.godot.outputs.path }}' -ReportPath "$PWD\artifacts\core-benchmark-raw.json"
+          exit $LASTEXITCODE
+
+      - name: Evaluate quality and performance gates
+        id: evaluation
+        continue-on-error: true
+        shell: pwsh
+        run: |
+          $args = @(
+            'benchmarks/core/evaluate_report.py',
+            '--report', 'artifacts/core-benchmark-raw.json',
+            '--policy', 'benchmarks/core/performance_policy.json',
+            '--scenarios', 'benchmarks/core/scenarios.json',
+            '--output', 'artifacts/core-benchmark-report.json'
+          )
+          if (Test-Path 'benchmarks/core/baseline/windows-latest.json') {
+            $args += @('--baseline', 'benchmarks/core/baseline/windows-latest.json')
+          }
+          python @args
+          exit $LASTEXITCODE
+
+      - name: Upload benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurorafox-core-benchmark-${{ github.sha }}
+          path: |
+            artifacts/code-specialist-smoke.json
+            artifacts/code-specialist-smoke.stdout.log
+            artifacts/code-specialist-smoke.stderr.log
+            artifacts/core-benchmark-raw.json
+            artifacts/core-benchmark-report.json
+            artifacts/core-benchmark-godot.stdout.log
+            artifacts/core-benchmark-godot.stderr.log
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Enforce real Core gate
+        if: always()
+        shell: pwsh
+        run: |
+          if ('${{ steps.code_specialist_smoke.outcome }}' -ne 'success') { throw 'Real bundled-Core SpecialistTeam/CodeSpecialist offline smoke failed.' }
+          if ('${{ steps.real_benchmark.outcome }}' -ne 'success') { throw 'Real bundled Core benchmark execution failed.' }
+          if ('${{ steps.evaluation.outcome }}' -ne 'success') { throw 'Core quality/performance regression gate failed.' }
+          Write-Host 'AURORAFOX_REAL_CORE_GATE_OK' -ForegroundColor Green
