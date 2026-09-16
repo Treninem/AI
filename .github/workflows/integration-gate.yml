@@ -163,6 +163,8 @@ jobs:
           test -f tests/test_research_evidence_lifecycle_contract.py
           test -f tests/research_evidence_lifecycle_smoke.gd
           test -d benchmarks/knowledge
+          test -f benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          test -f benchmarks/knowledge/run_godot_probe.py
           test -f tests/test_knowledge_performance_contract.py
           test -f tests/test_knowledge_performance_compare.py
           test -f tests/test_knowledge_stress_gates.py
@@ -171,6 +173,8 @@ jobs:
           echo 'LANE_ARTIFACT_PRESENT tests/test_research_evidence_lifecycle_contract.py'
           echo 'LANE_ARTIFACT_PRESENT tests/research_evidence_lifecycle_smoke.gd'
           echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/**'
+          echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/dedupe_alias_removal_probe.gd'
+          echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/run_godot_probe.py'
           echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_performance_contract.py'
           echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_performance_compare.py'
           echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_stress_gates.py'
@@ -198,6 +202,15 @@ jobs:
       - name: Parse the integrated Godot project
         shell: bash
         run: timeout 90s ./godot --headless --editor --path . --quit
+
+      - name: Run Knowledge dedupe alias removal safety probe
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
+          --report artifacts/integration-gate/dedupe-alias-removal.json
 
       - name: Run offline Core Agent memory Knowledge Work API and safety smokes
         shell: bash
