@@ -17,7 +17,6 @@ func _ready() -> void:
 	register_tool("analyze_file", "Глубоко разобрать локальный файл: PDF, DOCX, XLS/XLSX, PPTX, ODT/ODS, изображение, аудио, видео, архив или исходный код", {"path":"string","question":"string","visual":"bool"}, Callable(self, "_analyze_file"))
 	register_tool("file_tree", "Построить дерево локальной папки проекта или user:// с размерами файлов", {"path":"string","max_items":"int"}, Callable(self, "_file_tree"))
 	register_tool("search_file_cache", "Найти ранее разобранные файлы и фрагменты по локальному индексу File Intelligence", {"query":"string","limit":"int"}, Callable(self, "_search_file_cache"))
-	register_tool("run_process", "Запустить разрешённую внешнюю программу", {"program":"string","args":"array"}, Callable(self, "_run_process"))
 	register_tool("git_status", "Проверить git status", {}, Callable(self, "_git_status"))
 	register_tool("git_diff", "Посмотреть git diff", {}, Callable(self, "_git_diff"))
 	register_tool("system_info", "Получить сведения о системе и Godot", {}, Callable(self, "_system_info"))
@@ -26,7 +25,7 @@ func _ready() -> void:
 	register_tool("computer_action", "Выполнить одну уже выбранную локальным AuroraFox Core примитивную операцию мыши/клавиатуры с bounded execution и проверкой разрешений", {"type":"string","x":"int","y":"int","button":"string","clicks":"int","text":"string","keys":"array","amount":"int","seconds":"float","action_id":"string","verify":"bool"}, Callable(self, "_computer_action"))
 	register_tool("computer_screenshot", "Получить локальный screenshot Windows после проверки master stop и разрешений", {}, Callable(self, "_computer_screenshot"))
 	register_tool("computer_windows", "Получить локальное описание окон и UI Automation элементов Windows", {}, Callable(self, "_screen_snapshot"))
-	register_tool("sandbox_exec", "Запустить Python/Git/Godot/pytest в изолированной рабочей папке AuroraFox", {"command":"array","cwd":"string","timeout":"int"}, Callable(self, "_sandbox_exec"))
+	register_tool("sandbox_exec", "Запустить разрешённую команду в рабочей папке AuroraFox; auto предпочитает контейнер, container не откатывается на local", {"command":"array","cwd":"string","timeout":"int","mode":"string"}, Callable(self, "_sandbox_exec"))
 	register_tool("sandbox_write", "Создать текстовый файл внутри изолированной песочницы", {"path":"string","content":"string"}, Callable(self, "_sandbox_write"))
 	register_tool("sandbox_read", "Прочитать файл из изолированной песочницы", {"path":"string"}, Callable(self, "_sandbox_read"))
 	register_tool("screen_snapshot", "Получить описание текущих окон и элементов интерфейса Windows", {}, Callable(self, "_screen_snapshot"))
@@ -244,7 +243,25 @@ func _computer_screenshot(_args: Dictionary) -> Dictionary:
 
 func _sandbox_exec(args: Dictionary) -> Dictionary:
 	var timeout := clampi(int(args.get("timeout", 60)), 1, 300)
-	return await _computer_json("/sandbox/exec", HTTPClient.METHOD_POST, {"command": args.get("command", []), "cwd": str(args.get("cwd", ".")), "timeout": timeout, "allow_network": false}, float(timeout + 5))
+	var mode := str(args.get("mode", "auto")).strip_edges().to_lower()
+	if mode not in ["auto", "container", "local"]:
+		return {"ok": false, "error": "invalid_sandbox_mode", "message": "sandbox_exec mode must be auto, container, or local", "retryable": false}
+	var payload := {"command": args.get("command", []), "cwd": str(args.get("cwd", ".")), "timeout": timeout, "allow_network": false}
+	if mode in ["auto", "container"]:
+		var container_result := await _computer_json("/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
+		if container_result.get("ok", false):
+			return container_result
+		if mode == "container":
+			if int(container_result.get("http", 0)) == 404:
+				return {"ok": false, "error": "container_runtime_unavailable", "message": "Strict container sandbox requested but Docker/Podman is unavailable", "retryable": false, "network_isolation_enforced": false}
+			return container_result
+		if int(container_result.get("http", 0)) != 404:
+			return container_result
+	var local_result := await _computer_json("/sandbox/exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
+	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
+		local_result["degraded_isolation"] = true
+		local_result["isolation_note"] = "Local process sandbox enforces path/auth/timeouts but cannot guarantee network isolation; use mode=container for strict isolation."
+	return local_result
 
 func _sandbox_write(args: Dictionary) -> Dictionary:
 	return await _computer_json("/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", ""))}, 12.0)
