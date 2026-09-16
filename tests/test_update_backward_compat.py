@@ -109,7 +109,11 @@ def test_android_identity_and_windows_full_zip_strategy_are_stable() -> None:
 
 def test_public_update_key_is_embedded_in_signed_generation_exports() -> None:
     presets = (ROOT / "export_presets.cfg").read_text(encoding="utf-8")
-    assert presets.count('include_filter="update/release_public.pub"') == 2
+    windows, android = presets.split("[preset.1]", 1)
+    assert 'include_filter="update/release_public.pub"' in windows
+    # Android additionally ships the built-in AuroraFox Core weights, but the
+    # pinned update trust root must remain in the same export.
+    assert 'include_filter="update/release_public.pub,models/aurorafox-core.gguf"' in android
     updater = (ROOT / "update" / "update_manager.gd").read_text(encoding="utf-8")
     assert 'const PUBLIC_KEY_PATH := "res://update/release_public.pub"' in updater
 
