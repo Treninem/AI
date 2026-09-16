@@ -59,6 +59,7 @@ jobs:
           benchmarks/knowledge/run_knowledge_benchmark.py
           benchmarks/knowledge/run_knowledge_benchmark_portable.py
           benchmarks/knowledge/run_godot_probe.py
+          benchmarks/knowledge/run_interrupted_import_recovery.py
           benchmarks/knowledge/compare_reports.py
           benchmarks/knowledge/validate_performance_report.py
           benchmarks/knowledge/run_memory_scaling.py
@@ -68,7 +69,7 @@ jobs:
     if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
     needs: contract
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - name: Download Godot 4.7.1
@@ -98,6 +99,13 @@ jobs:
           --script benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
           --prefix AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=
           --report artifacts/knowledge-performance/legacy-unregistered-rollback.json
+      - name: Reproduce interrupted reimport restart recovery
+        run: >-
+          python benchmarks/knowledge/run_interrupted_import_recovery.py
+          --godot ./godot
+          --target-mb 32
+          --timeout-seconds 240
+          --report artifacts/knowledge-performance/interrupted-reimport-recovery.json
       - name: Run bounded knowledge smoke benchmark
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot ./godot --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/linux-smoke.json
       - name: Validate smoke correctness
