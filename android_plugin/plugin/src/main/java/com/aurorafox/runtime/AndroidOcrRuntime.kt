@@ -13,6 +13,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.security.MessageDigest
+import java.util.concurrent.CancellationException
 
 class AndroidOcrRuntime(private val context: Context) {
     companion object {
@@ -70,6 +71,8 @@ class AndroidOcrRuntime(private val context: Context) {
                 "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff" -> extractImage(file)
                 else -> error("Local OCR supports PDF and image files only")
             }
+        } catch (_: CancellationException) {
+            cancelled()
         } catch (t: Throwable) {
             error("Local Android OCR failed: ${t.message ?: t.javaClass.simpleName}")
         }
@@ -108,13 +111,21 @@ class AndroidOcrRuntime(private val context: Context) {
         }
     }
 
+    private fun checkCancelled() {
+        if (Thread.currentThread().isInterrupted) throw CancellationException("Local OCR cancelled")
+    }
+
     private fun recognize(bitmap: Bitmap, sharedApi: TessBaseAPI? = null): String {
+        checkCancelled()
         val prepared = limitBitmap(bitmap)
         var ownedApi: TessBaseAPI? = null
         return try {
             val activeApi = sharedApi ?: newInitializedApi().also { ownedApi = it }
+            checkCancelled()
             activeApi.setImage(prepared)
-            activeApi.getUTF8Text()?.replace("\u000c", "")?.trim().orEmpty()
+            val text = activeApi.getUTF8Text()?.replace("\u000c", "")?.trim().orEmpty()
+            checkCancelled()
+            text
         } finally {
             ownedApi?.recycle()
             if (prepared !== bitmap) prepared.recycle()
@@ -122,9 +133,11 @@ class AndroidOcrRuntime(private val context: Context) {
     }
 
     private fun extractImage(file: File): String {
+        checkCancelled()
         val bitmap = decodeBoundedBitmap(file) ?: return error("Image cannot be decoded")
         return try {
             val raw = recognize(bitmap)
+            checkCancelled()
             val truncated = raw.length > MAX_OUTPUT_CHARS
             val text = raw.take(MAX_OUTPUT_CHARS)
             payload(
@@ -143,6 +156,7 @@ class AndroidOcrRuntime(private val context: Context) {
     }
 
     private fun extractPdf(file: File): String {
+        checkCancelled()
         if (file.length() > MAX_PDF_BYTES) return error("PDF is larger than the 128 MB Android OCR limit")
         PDFBoxResourceLoader.init(context.applicationContext)
         PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()).use { document ->
@@ -176,6 +190,7 @@ class AndroidOcrRuntime(private val context: Context) {
             var ocrLimitReached = false
             try {
                 for (index in 0 until document.numberOfPages) {
+                    checkCancelled()
                     if (out.length >= MAX_OUTPUT_CHARS) {
                         outputTruncated = true
                         break
@@ -185,6 +200,7 @@ class AndroidOcrRuntime(private val context: Context) {
                     val layer = try {
                         PDFTextStripper().apply { sortByPosition = true; startPage = pageNo; endPage = pageNo }.getText(document).trim()
                     } catch (_: Throwable) { "" }
+                    checkCancelled()
                     if (usable(layer)) {
                         textPages++
                         val complete = appendPage(out, pageNo, layer)
@@ -221,6 +237,7 @@ class AndroidOcrRuntime(private val context: Context) {
                         )))
                         if (!complete) { outputTruncated = true; break }
                     } catch (t: Throwable) {
+                        if (t is CancellationException) throw t
                         ocrFailedPages++
                         if (layer.isBlank()) emptyPages++
                         val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
@@ -257,6 +274,7 @@ class AndroidOcrRuntime(private val context: Context) {
                     "streaming_pages" to true,
                     "pdf_buffering" to "temp_file",
                     "ocr_engine_reused" to (ocrReady && sharedApi != null),
+                    "cancellation_supported" to true,
                 ),
                 warnings,
                 outputTruncated,
@@ -350,6 +368,16 @@ class AndroidOcrRuntime(private val context: Context) {
         put("truncated", truncated)
         put("extractor", "aurora_android_local_ocr")
     }.toString()
+
+    private fun cancelled(): String = JSONObject(
+        mapOf(
+            "ok" to false,
+            "cancelled" to true,
+            "error" to "Local OCR cancelled",
+            "ocr_available" to true,
+            "external_ai_required" to false,
+        )
+    ).toString()
 
     private fun error(message: String): String = JSONObject(mapOf("ok" to false, "error" to message, "ocr_available" to false, "external_ai_required" to false)).toString()
 
