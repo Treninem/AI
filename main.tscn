@@ -1,4 +1,4 @@
-[gd_scene load_steps=35 format=3]
+[gd_scene load_steps=34 format=3]
 
 [ext_resource path="res://scripts/main_compat.gd" type="Script" id="1_main"]
 [ext_resource path="res://scripts/voice_overlay_compat.gd" type="Script" id="2_voice"]
@@ -9,7 +9,6 @@
 [ext_resource path="res://voice/ai_activity_controller.gd" type="Script" id="7_activity"]
 [ext_resource path="res://voice/setup_wizard.gd" type="Script" id="8_voice_setup"]
 [ext_resource path="res://update/update_overlay.gd" type="Script" id="9_update"]
-[ext_resource path="res://models/model_setup_wizard.gd" type="Script" id="10_model_setup"]
 [ext_resource path="res://file_intelligence/setup_wizard.gd" type="Script" id="11_file_setup"]
 [ext_resource path="res://scripts/settings_overlay.gd" type="Script" id="12_settings"]
 [ext_resource path="res://scripts/android_file_tool_bridge.gd" type="Script" id="13_android_files"]
@@ -67,9 +66,6 @@ script = ExtResource("8_voice_setup")
 
 [node name="UpdateOverlay" type="Node" parent="."]
 script = ExtResource("9_update")
-
-[node name="ModelSetup" type="Node" parent="."]
-script = ExtResource("10_model_setup")
 
 [node name="FileSetup" type="Node" parent="."]
 script = ExtResource("11_file_setup")
