@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
+import multiprocessing
 from pathlib import Path
 
 import pytest
@@ -116,3 +118,80 @@ def test_terminal_state_cannot_be_reopened(tmp_path: Path) -> None:
     assert promoted["state"] == "promoted"
     with pytest.raises(CoreCandidateQueueError, match="terminal candidate state"):
         queue.set_state("candidate_terminal", "queued")
+
+
+@pytest.mark.parametrize("candidate_id", [".", ".."])
+def test_candidate_id_cannot_name_parent_directory(tmp_path, candidate_id):
+    queue = CoreCandidateQueue(tmp_path)
+    manifest, encoded, _ = _submission(candidate_id)
+    with pytest.raises(CoreCandidateQueueError, match="candidate_id"):
+        queue.submit(manifest, encoded, owner="a")
+    assert queue.get(candidate_id) == {}
+
+
+def test_duplicate_cannot_disclose_other_owner_or_change_base(tmp_path):
+    queue = CoreCandidateQueue(tmp_path)
+    manifest, encoded, _ = _submission()
+    queue.submit(manifest, encoded, owner="private-owner")
+    with pytest.raises(CoreCandidateQueueError):
+        queue.submit(manifest, encoded, owner="other-owner")
+    manifest["base_sha256"] = "1" * 64
+    with pytest.raises(CoreCandidateQueueError):
+        queue.submit(manifest, encoded, owner="private-owner")
+
+
+@pytest.mark.parametrize("field,value", [("target", "scripts/agent_core.gd"), ("base_sha256", "1" * 64), ("verified", False)])
+def test_materialization_revalidates_persistent_manifest(tmp_path, field, value):
+    queue = CoreCandidateQueue(tmp_path)
+    manifest, encoded, _ = _submission()
+    queue.submit(manifest, encoded, owner="a")
+    manifest[field] = value
+    (queue.queue_root / "candidate_001" / "candidate.json").write_text(json.dumps(manifest))
+    destination = tmp_path / "existing"
+    destination.mkdir()
+    (destination / "keep.txt").write_text("preserve")
+    with pytest.raises(CoreCandidateQueueError):
+        CoreCandidateQueue(tmp_path).materialize_submission("candidate_001", destination)
+    assert (destination / "keep.txt").read_text() == "preserve"
+
+
+def _concurrent_submit(root, index, result_queue):
+    queue = CoreCandidateQueue(Path(root), max_items=2)
+    manifest, encoded, _ = _submission("concurrent_" + str(index))
+    try:
+        queue.submit(manifest, encoded, owner="a")
+        result_queue.put("queued")
+    except CoreCandidateQueueError:
+        result_queue.put("full")
+
+
+def test_multiple_processes_cannot_overfill_queue(tmp_path):
+    context = multiprocessing.get_context("spawn")
+    results = context.Queue()
+    workers = [context.Process(target=_concurrent_submit, args=(str(tmp_path), i, results)) for i in range(6)]
+    for worker in workers:
+        worker.start()
+    try:
+        statuses = [results.get(timeout=30) for _ in workers]
+        for worker in workers:
+            worker.join(timeout=10)
+            assert worker.exitcode == 0
+        assert statuses.count("queued") == 2
+        assert statuses.count("full") == 4
+        assert CoreCandidateQueue(tmp_path).status()["items"] == 2
+    finally:
+        for worker in workers:
+            if worker.is_alive():
+                worker.terminate()
+                worker.join(timeout=5)
+        results.close()
+
+
+def test_materialization_cannot_delete_persistent_queue(tmp_path):
+    queue = CoreCandidateQueue(tmp_path / "api")
+    manifest, encoded, _ = _submission()
+    queue.submit(manifest, encoded, owner="a")
+    for destination in (tmp_path, queue.root, queue.queue_root, queue.queue_root / "candidate_001"):
+        with pytest.raises(CoreCandidateQueueError, match="overlaps"):
+            queue.materialize_submission("candidate_001", destination)
+    assert queue.get("candidate_001")["state"] == "queued"

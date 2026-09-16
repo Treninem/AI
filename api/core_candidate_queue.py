@@ -1,8 +1,11 @@
 from __future__ import annotations
 
 import base64
+from contextlib import contextmanager
+from functools import wraps
 import hashlib
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -27,6 +30,14 @@ VALID_STATES = {"received", "queued", "verifying", "promoted", "rejected", "expi
 
 class CoreCandidateQueueError(ValueError):
     pass
+
+
+def _serialized(method):
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        with self._mutation_lock():
+            return method(self, *args, **kwargs)
+    return call
 
 
 def _sha256(data: bytes) -> str:
@@ -65,7 +76,7 @@ def validate_submission(manifest: dict[str, Any], content_base64: str) -> tuple[
     if not isinstance(manifest, dict):
         raise CoreCandidateQueueError("candidate manifest must be an object")
     candidate_id = str(manifest.get("candidate_id", "")).strip()
-    if not CANDIDATE_ID_RE.fullmatch(candidate_id):
+    if candidate_id in {".", ".."} or not CANDIDATE_ID_RE.fullmatch(candidate_id):
         raise CoreCandidateQueueError("candidate_id is missing or unsafe")
     target = _safe_target(manifest.get("target"))
     base_sha = str(manifest.get("base_sha256", "")).lower()
@@ -106,6 +117,40 @@ class CoreCandidateQueue:
         self.queue_root.mkdir(parents=True, exist_ok=True)
         self.max_items = max(1, int(max_items))
 
+    @contextmanager
+    def _mutation_lock(self):
+        # Stable sidecar: do not lock queue.json, whose inode is replaced.
+        with (self.queue_root / ".mutation.lock").open("a+b") as stream:
+            if os.name == "nt":
+                import msvcrt
+                stream.seek(0, os.SEEK_END)
+                if stream.tell() == 0:
+                    stream.write(b"0")
+                    stream.flush()
+                deadline = time.monotonic() + 30
+                while True:
+                    stream.seek(0)
+                    try:
+                        msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                        break
+                    except OSError:
+                        if time.monotonic() >= deadline:
+                            raise CoreCandidateQueueError("candidate queue lock timeout")
+                        time.sleep(.05)
+                try:
+                    yield
+                finally:
+                    stream.seek(0)
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+                fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
+                try:
+                    yield
+                finally:
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+
+    @_serialized
     def submit(
         self,
         manifest: dict[str, Any],
@@ -119,7 +164,10 @@ class CoreCandidateQueue:
         target = clean["target"]
         existing = self.get(candidate_id)
         if existing:
-            if existing.get("candidate_sha256") == clean["candidate_sha256"]:
+            if (existing.get("owner") == str(owner)[:128]
+                    and existing.get("target") == target
+                    and existing.get("base_sha256") == clean["base_sha256"]
+                    and existing.get("candidate_sha256") == clean["candidate_sha256"]):
                 return {"ok": True, "duplicate": True, **existing}
             raise CoreCandidateQueueError("candidate_id already exists with different bytes")
         self._trim_if_needed()
@@ -143,18 +191,17 @@ class CoreCandidateQueue:
         with tempfile.TemporaryDirectory(prefix="aurora-core-candidate-", dir=str(self.queue_root)) as tmp_name:
             tmp = Path(tmp_name)
             (tmp / target).parent.mkdir(parents=True, exist_ok=True)
-            (tmp / target).write_bytes(raw)
-            (tmp / "candidate.json").write_text(
-                json.dumps(clean, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-            )
-            (tmp / "queue.json").write_text(
-                json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-            )
+            with (tmp / target).open("wb") as stream:
+                stream.write(raw)
+                stream.flush()
+                os.fsync(stream.fileno())
+            self._write_json(tmp / "candidate.json", clean)
+            self._write_json(tmp / "queue.json", record)
             tmp.rename(final_dir)
         return {"ok": True, "duplicate": False, **record}
 
     def get(self, candidate_id: str) -> dict[str, Any]:
-        if not CANDIDATE_ID_RE.fullmatch(str(candidate_id or "")):
+        if candidate_id in {".", ".."} or not CANDIDATE_ID_RE.fullmatch(str(candidate_id or "")):
             return {}
         path = self.queue_root / candidate_id / "queue.json"
         if not path.is_file():
@@ -180,6 +227,7 @@ class CoreCandidateQueue:
         rows.sort(key=lambda item: int(item.get("updated_at", 0)), reverse=True)
         return rows[: max(1, min(int(limit), 200))]
 
+    @_serialized
     def set_state(
         self,
         candidate_id: str,
@@ -207,6 +255,7 @@ class CoreCandidateQueue:
         self._write_json(self.queue_root / candidate_id / "queue.json", row)
         return {"ok": True, **row}
 
+    @_serialized
     def materialize_submission(self, candidate_id: str, destination: Path) -> dict[str, Any]:
         row = self.get(candidate_id)
         if not row:
@@ -217,9 +266,21 @@ class CoreCandidateQueue:
         source_path = bundle / target
         if not manifest_path.is_file() or not source_path.is_file():
             raise CoreCandidateQueueError("queued candidate bundle is incomplete")
-        if _sha256(source_path.read_bytes()) != str(row.get("candidate_sha256", "")):
+        raw = source_path.read_bytes()
+        if _sha256(raw) != str(row.get("candidate_sha256", "")):
             raise CoreCandidateQueueError("queued candidate bytes failed SHA-256 verification")
+        try:
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError) as exc:
+            raise CoreCandidateQueueError("queued candidate manifest is invalid") from exc
+        clean, _ = validate_submission(manifest, base64.b64encode(raw).decode("ascii"))
+        for field in ("candidate_id", "target", "base_sha256", "candidate_sha256"):
+            if clean[field] != row.get(field):
+                raise CoreCandidateQueueError("queued candidate manifest differs from queue record")
         destination = destination.resolve()
+        if (destination == self.root or self.root.is_relative_to(destination)
+                or destination.is_relative_to(self.queue_root)):
+            raise CoreCandidateQueueError("materialization destination overlaps persistent queue")
         if destination.exists():
             shutil.rmtree(destination)
         (destination / target).parent.mkdir(parents=True, exist_ok=True)
@@ -259,6 +320,13 @@ class CoreCandidateQueue:
 
     @staticmethod
     def _write_json(path: Path, payload: dict[str, Any]) -> None:
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        tmp.replace(path)
+        descriptor, name = tempfile.mkstemp(prefix=".queue-", suffix=".tmp", dir=path.parent)
+        tmp = Path(name)
+        try:
+            with os.fdopen(descriptor, "w", encoding="utf-8") as stream:
+                stream.write(json.dumps(payload, ensure_ascii=False, indent=2) + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
+            tmp.replace(path)
+        finally:
+            tmp.unlink(missing_ok=True)
