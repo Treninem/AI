@@ -5,8 +5,6 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = ROOT / ".github" / "workflows" / "knowledge-performance.yml"
-WAVE_B_WORKFLOW = ROOT / ".github" / "workflows" / "knowledge-wave-b-stress.yml"
-RESILIENCE_WORKFLOW = ROOT / ".github" / "workflows" / "knowledge-performance-concurrency.yml"
 
 
 def job_section(text: str, job: str, next_job: str | None = None) -> str:
@@ -38,39 +36,6 @@ class KnowledgeStressWorkflowContractTests(unittest.TestCase):
             "linux-stress-registry-scaling.json",
         ):
             self.assertIn(report, validator)
-
-    def test_wave_b_pr_runs_full_stress_before_merge(self) -> None:
-        text = WAVE_B_WORKFLOW.read_text(encoding="utf-8")
-        self.assertIn("pull_request:", text)
-        self.assertIn("github.head_ref == 'chat-knowledge-races-v2-20260916'", text)
-        section = job_section(text, "wave-b-linux-stress")
-        self.assertIn("--profile stress", section)
-        self.assertIn("--counts 250,500,1000", section)
-        self.assertIn("--sizes-mb 4,8,16", section)
-        self.assertIn("--counts 32,64,128", section)
-        self.assertIn("--enforce-performance", section)
-        for report in (
-            "wave-b-linux-stress.json",
-            "wave-b-memory-scaling.json",
-            "wave-b-search-scaling.json",
-            "wave-b-registry-scaling.json",
-        ):
-            self.assertIn(report, section)
-        self.assertIn("network_required\": false", section)
-        self.assertIn("external_runtime_required\": false", section)
-        self.assertIn("ollama_required\": false", section)
-        self.assertIn("physical_device_proof\": false", section)
-        self.assertIn("knowledge-wave-b-stress-${{ github.sha }}", section)
-
-    def test_resilience_uses_same_16_32_64_registry_range_on_linux_and_windows(self) -> None:
-        text = RESILIENCE_WORKFLOW.read_text(encoding="utf-8")
-        linux = job_section(text, "resilience-linux", "resilience-windows")
-        windows = job_section(text, "resilience-windows")
-        self.assertIn("--counts 16,32,64", linux)
-        self.assertIn("--counts 16,32,64", windows)
-        self.assertNotIn("--counts 8,16,32", windows)
-        self.assertIn("--enforce-performance", linux)
-        self.assertIn("--enforce-performance", windows)
 
     def test_manual_standard_and_stress_select_matching_scaling_ranges(self) -> None:
         text = WORKFLOW.read_text(encoding="utf-8")

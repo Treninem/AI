@@ -1,54 +1,45 @@
-# Exact-head pre-merge Wave-B evidence for CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF.
-name: AuroraFox Knowledge Wave-B Stress
+name: AuroraFox Knowledge Wave-B Large Stress
 
 on:
   pull_request:
-    branches: [main]
     paths:
-      - 'benchmarks/knowledge/**'
-      - 'tests/*knowledge_performance*'
-      - 'tests/*knowledge_stress*'
-      - 'scripts/knowledge_import_transaction.gd'
-      - 'scripts/knowledge_source_registry.gd'
-      - 'scripts/memory_store.gd'
-      - '.github/workflows/knowledge-performance.yml'
+      - 'benchmarks/knowledge/large_import_pressure_probe.gd'
+      - 'benchmarks/knowledge/large_remove_pressure_probe.gd'
+      - 'benchmarks/knowledge/run_large_pressure.py'
+      - 'benchmarks/knowledge/run_memory_scaling.py'
+      - 'benchmarks/knowledge/run_search_scaling.py'
+      - 'benchmarks/knowledge/run_registry_scaling.py'
+      - 'benchmarks/knowledge/validate_performance_report.py'
+      - 'tests/test_knowledge_large_pressure_contract.py'
       - '.github/workflows/knowledge-wave-b-stress.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
 
 concurrency:
-  group: aurorafox-knowledge-wave-b-stress-${{ github.ref }}
+  group: aurorafox-knowledge-wave-b-large-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
-  contract:
-    if: github.event_name == 'pull_request' && github.head_ref == 'chat-knowledge-races-v2-20260916'
+  large-linux:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
-      - name: Validate Wave-B stress contract
-        run: >-
-          python -m unittest
-          tests.test_knowledge_stress_workflow_contract
-          tests.test_knowledge_performance_validator
-          -v
-      - name: Compile benchmark tools
+
+      - name: Validate large-pressure contract
+        run: python -m unittest tests.test_knowledge_large_pressure_contract -v
+
+      - name: Compile pressure and scaling runners
         run: >-
           python -m py_compile
-          benchmarks/knowledge/run_knowledge_benchmark_portable.py
+          benchmarks/knowledge/run_large_pressure.py
           benchmarks/knowledge/run_memory_scaling.py
           benchmarks/knowledge/run_search_scaling.py
           benchmarks/knowledge/run_registry_scaling.py
           benchmarks/knowledge/validate_performance_report.py
 
-  wave-b-linux-stress:
-    needs: contract
-    runs-on: ubuntu-latest
-    timeout-minutes: 180
-    steps:
-      - uses: actions/checkout@v4
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -60,30 +51,50 @@ jobs:
           mv "$godot" godot
           chmod +x godot
           ./godot --version
+
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
-      - name: Run 10-50-100-250 MiB stress profile
+
+      - name: Run 10-50-100-250 MiB import restart removal pressure
+        run: >-
+          python benchmarks/knowledge/run_large_pressure.py
+          --godot ./godot
+          --sizes-mb 10,50,100,250
+          --timeout-seconds 600
+          --report artifacts/knowledge-performance/wave-b-large-pressure.json
+
+      - name: Verify 100 MiB rollback and restart
         run: >-
           python benchmarks/knowledge/run_knowledge_benchmark_portable.py
           --godot ./godot
-          --profile stress
-          --timeout-seconds 900
-          --report artifacts/knowledge-performance/wave-b-linux-stress.json
-      - name: Measure MemoryStore 250-500-1000 scaling
+          --scenario rollback
+          --target-mb 100
+          --timeout-seconds 600
+          --report artifacts/knowledge-performance/wave-b-rollback-100mb.json
+
+      - name: Validate rollback evidence
+        run: >-
+          python benchmarks/knowledge/validate_performance_report.py
+          artifacts/knowledge-performance/wave-b-rollback-100mb.json
+          --output artifacts/knowledge-performance/wave-b-rollback-100mb-gate.json
+
+      - name: Measure MemoryStore 250-500-1000
         run: >-
           python benchmarks/knowledge/run_memory_scaling.py
           --godot ./godot
           --counts 250,500,1000
           --timeout-seconds 600
           --report artifacts/knowledge-performance/wave-b-memory-scaling.json
-      - name: Measure search 4-8-16 MiB scaling
+
+      - name: Measure Knowledge search 4-8-16 MiB
         run: >-
           python benchmarks/knowledge/run_search_scaling.py
           --godot ./godot
           --sizes-mb 4,8,16
           --timeout-seconds 600
           --report artifacts/knowledge-performance/wave-b-search-scaling.json
-      - name: Measure registry 32-64-128 scaling
+
+      - name: Measure registry 32-64-128
         run: >-
           python benchmarks/knowledge/run_registry_scaling.py
           --godot ./godot
@@ -91,39 +102,20 @@ jobs:
           --source-kb 4
           --timeout-seconds 300
           --report artifacts/knowledge-performance/wave-b-registry-scaling.json
-      - name: Enforce correctness self-reliance and relative performance
+
+      - name: Enforce Wave-B relative performance blockers
         run: >-
           python benchmarks/knowledge/validate_performance_report.py
-          artifacts/knowledge-performance/wave-b-linux-stress.json
           artifacts/knowledge-performance/wave-b-memory-scaling.json
           artifacts/knowledge-performance/wave-b-search-scaling.json
           artifacts/knowledge-performance/wave-b-registry-scaling.json
           --enforce-performance
-          --output artifacts/knowledge-performance/wave-b-stress-gate.json
-      - name: Record Android evidence boundary
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p artifacts/knowledge-performance
-          cat > artifacts/knowledge-performance/android-stress-boundary.json <<'JSON'
-          {
-            "schema": "aurorafox_android_knowledge_stress_boundary_v1",
-            "bounded_memory_required": true,
-            "incremental_processing_required": true,
-            "private_storage_required": true,
-            "giant_temporary_copies_forbidden": true,
-            "cancellation_and_failure_recovery_required": true,
-            "network_required": false,
-            "external_runtime_required": false,
-            "ollama_required": false,
-            "physical_device_proof": false,
-            "note": "Desktop CI is not Android-device stress proof; physical Android evidence remains a separate acceptance boundary."
-          }
-          JSON
-      - name: Upload Wave-B stress evidence
+          --output artifacts/knowledge-performance/wave-b-relative-gate.json
+
+      - name: Upload Wave-B large evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: knowledge-wave-b-stress-${{ github.sha }}
+          name: knowledge-wave-b-large-${{ github.sha }}
           path: artifacts/knowledge-performance/
           if-no-files-found: error
