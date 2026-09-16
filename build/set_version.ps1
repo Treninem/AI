@@ -1,7 +1,7 @@
 param(
     [ValidatePattern('^[Vv]?[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$')][string]$Version = '',
     [ValidateSet('major','minor','patch','build')][string]$Bump = '',
-    [string]$Reason = 'AuroraFox evolution update'
+    [string]$Reason = 'AuroraFox verified update'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -31,6 +31,14 @@ $currentPatch = [int]$Matches[3]
 $currentBuild = [int]$Matches[4]
 $currentNumeric = "$currentMajor.$currentMinor.$currentPatch.$currentBuild"
 
+function Compare-VersionParts([int[]]$Left, [int[]]$Right) {
+    for ($i = 0; $i -lt 4; $i++) {
+        if ($Left[$i] -gt $Right[$i]) { return 1 }
+        if ($Left[$i] -lt $Right[$i]) { return -1 }
+    }
+    return 0
+}
+
 if (-not [string]::IsNullOrWhiteSpace($Version)) {
     $clean = $Version.TrimStart('V','v')
     if ($clean -notmatch '^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$') { throw 'Invalid four-part version' }
@@ -38,6 +46,8 @@ if (-not [string]::IsNullOrWhiteSpace($Version)) {
     $minor = [int]$Matches[2]
     $patch = [int]$Matches[3]
     $build = [int]$Matches[4]
+    $cmp = Compare-VersionParts @($major,$minor,$patch,$build) @($currentMajor,$currentMinor,$currentPatch,$currentBuild)
+    if ($cmp -le 0) { throw "Explicit version must be strictly newer than $currentNumeric" }
 } else {
     $major = $currentMajor
     $minor = $currentMinor
@@ -46,17 +56,16 @@ if (-not [string]::IsNullOrWhiteSpace($Version)) {
     switch ($Bump) {
         'major' { $major++; $minor = 0; $patch = 0; $build = 0 }
         'minor' { $minor++; $patch = 0; $build = 0 }
-        'patch' { $patch++; $build++ }
+        'patch' { $patch++; $build = 0 }
         'build' { $build++ }
     }
 }
 
 $numeric = "$major.$minor.$patch.$build"
 $display = "V$numeric"
-$changed = $numeric -ne $currentNumeric
 $androidCode = [int]$state.android_version_code
 if ($androidCode -le 0) { $androidCode = 1 }
-if ($changed) { $androidCode++ }
+$androidCode++
 if ($androidCode -gt 2100000000) { throw 'Android versionCode limit reached.' }
 
 function Write-AtomicUtf8([string]$Path, [string]$Text) {
