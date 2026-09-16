@@ -1,5 +1,8 @@
 extends "res://scripts/main.gd"
 
+const OWNER_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_owner.webp")
+const OWNER_AVATAR: Texture2D = preload("res://assets/ui/aurora_avatar_owner.webp")
+
 func _apply_button(button: Button, accent := false, danger := false, compact := false) -> void:
 	var normal := SURFACE_2 if not accent else Color(0.15, 0.09, 0.25, 0.98)
 	var hover := Color(0.105, 0.12, 0.18, 0.99)
@@ -26,14 +29,28 @@ func _apply_button(button: Button, accent := false, danger := false, compact := 
 
 func _build_ui() -> void:
 	super._build_ui()
-	_remove_placeholder_brand_art()
+	_apply_owner_background()
+	_apply_owner_brand_art()
 	var avatar_slot := find_child("AvatarSlot", true, false) as Control
 	if avatar_slot != null:
 		avatar_slot.visible = false
 		avatar_slot.custom_minimum_size = Vector2.ZERO
 
-func _remove_placeholder_brand_art() -> void:
-	var brand_row := find_child("BrandRow", true, false)
+func _apply_owner_background() -> void:
+	for node in find_children("*", "TextureRect", true, false):
+		var rect := node as TextureRect
+		if rect.texture == null:
+			continue
+		var path := rect.texture.resource_path
+		if path.ends_with("aurora_background.svg") or path.ends_with("aurora_background_final.svg"):
+			rect.name = "OwnerBackground"
+			rect.texture = OWNER_BACKGROUND
+			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+			rect.modulate = Color(1, 1, 1, 0.88)
+
+func _apply_owner_brand_art() -> void:
+	var brand_row := find_child("BrandRow", true, false) as HBoxContainer
 	if brand_row == null:
 		return
 	for child in brand_row.get_children():
@@ -43,6 +60,22 @@ func _remove_placeholder_brand_art() -> void:
 				image.visible = false
 				image.custom_minimum_size = Vector2.ZERO
 				image.queue_free()
+	var owner := TextureRect.new()
+	owner.name = "OwnerAvatar"
+	owner.texture = OWNER_AVATAR
+	owner.custom_minimum_size = Vector2(52, 52)
+	owner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	owner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	owner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	brand_row.add_child(owner)
+	var brand_text := brand_row.get_node_or_null("BrandText")
+	if brand_text == null:
+		for child in brand_row.get_children():
+			if child is VBoxContainer:
+				brand_text = child
+				break
+	if brand_text != null:
+		brand_row.move_child(owner, brand_text.get_index())
 
 func _add_welcome_state() -> void:
 	var center := VBoxContainer.new()
