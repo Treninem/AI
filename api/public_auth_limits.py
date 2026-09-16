@@ -102,12 +102,16 @@ class PublicAuthRateLimitMiddleware:
         await send({"type": "http.response.body", "body": payload, "more_body": False})
 
     async def __call__(self, scope, receive, send) -> None:
-        if scope.get("type") != "http" or str(scope.get("path", "")) not in PUBLIC_AUTH_PATHS:
+        path = str(scope.get("path", ""))
+        method = str(scope.get("method", "GET")).upper()
+        if (
+            scope.get("type") != "http"
+            or path not in PUBLIC_AUTH_PATHS
+            or method == "OPTIONS"
+        ):
             await self.app(scope, receive, send)
             return
         identity = self._client_identity(scope)
-        method = str(scope.get("method", "GET")).upper()
-        path = str(scope.get("path", ""))
         if not self._allowed(f"{method}:{path}:{identity}"):
             await self._reject(send)
             return
