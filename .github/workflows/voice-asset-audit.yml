@@ -1,0 +1,76 @@
+name: AuroraFox Voice Asset Audit
+
+on:
+  push:
+    branches: [chat-2026-09-17-voice-audio]
+    paths:
+      - '.github/workflows/voice-asset-audit.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-voice-asset-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit-supertonic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download and verify official Supertonic 3 asset
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          asset_name='sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2'
+          asset_url="https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${asset_name}"
+          archive="${RUNNER_TEMP}/${asset_name}"
+          list_file="${RUNNER_TEMP}/supertonic-files.txt"
+          report='voice-supertonic-asset-audit.txt'
+
+          curl -L --fail --retry 3 --retry-delay 2 -o "${archive}" "${asset_url}"
+
+          bytes="$(stat -c '%s' "${archive}")"
+          sha256="$(sha256sum "${archive}" | awk '{print $1}')"
+          tar -tjf "${archive}" | tee "${list_file}" >/dev/null
+
+          required=(
+            'duration_predictor.int8.onnx'
+            'text_encoder.int8.onnx'
+            'vector_estimator.int8.onnx'
+            'vocoder.int8.onnx'
+            'tts.json'
+            'unicode_indexer.bin'
+            'voice.bin'
+          )
+
+          for required_file in "${required[@]}"; do
+            if ! grep -Eq "(^|/)${required_file}$" "${list_file}"; then
+              echo "Missing required model file: ${required_file}" >&2
+              exit 1
+            fi
+          done
+
+          {
+            echo "asset_name=${asset_name}"
+            echo "asset_url=${asset_url}"
+            echo "bytes=${bytes}"
+            echo "sha256=${sha256}"
+            echo 'required_files=OK'
+            echo 'required_file_names:'
+            printf '  - %s\n' "${required[@]}"
+          } | tee "${report}"
+
+          echo "::notice title=Supertonic asset identity::sha256=${sha256} bytes=${bytes}"
+
+      - name: Upload audit evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: voice-supertonic-asset-audit
+          path: voice-supertonic-asset-audit.txt
+          if-no-files-found: error
+          retention-days: 30
