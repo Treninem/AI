@@ -91,7 +91,7 @@ class LearningSynchronizer:
                 failed += 1
                 break
         changed = self.store.mark_synced(synced_ids)
-        remaining = len(self.store.pending(max(1000, limit)))
+        remaining = int(self.store.status().get("pending", 0))
         return {
             "ok": failed == 0,
             "attempted": len(events),
@@ -101,5 +101,4 @@ class LearningSynchronizer:
         }
 
     def status(self) -> dict[str, Any]:
-        pending = self.store.pending(10000)
-        return {"ok": True, "pending": len(pending)}
+        return self.store.status()
