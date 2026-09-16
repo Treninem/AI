@@ -51,6 +51,8 @@ def test_capacity_status_is_observational_and_flags_thresholds(tmp_path: Path, m
     assert status["counts"]["sync_changes"] == 1
     assert status["counts"]["sync_conflicts_open"] == 1
     assert status["counts"]["learning_pending"] == 1
+    assert status["capacity_policy"]["database_warning_precedes_backup_cap"] is True
+    assert status["capacity_policy"]["database_warn_bytes"] < status["capacity_policy"]["backup_max_source_bytes"]
     assert status["retention_policy"]["sync_changes_auto_pruned"] is False
     assert status["retention_policy"]["sync_conflicts_auto_pruned"] is False
     assert status["retention_policy"]["pending_learning_protected"] is True
@@ -190,8 +192,10 @@ def test_malformed_capacity_environment_falls_back_safely(tmp_path: Path, monkey
     monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "not-a-number")
     monkeypatch.setenv("AURORAFOX_STORAGE_MAINTENANCE_INTERVAL_SECONDS", "bad")
     monkeypatch.setenv("AURORAFOX_DATABASE_WARN_BYTES", "invalid")
+    monkeypatch.setenv("AURORAFOX_BACKUP_MAX_BYTES", "invalid")
     maintenance = PersistenceMaintenance(root)
     status = maintenance.status()
     assert isinstance(status["hard_pressure"], bool)
     assert maintenance.maintenance_interval_seconds >= 60
     assert maintenance.warn_database_bytes > 0
+    assert status["capacity_policy"]["database_warning_precedes_backup_cap"] is True
