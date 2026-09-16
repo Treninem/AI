@@ -1,220 +1,169 @@
 # AuroraFox — локальный AI для Windows и Android
 
-AuroraFox — локальный AI-помощник на Godot 4.7.1 с собственным чат-интерфейсом, памятью, файлами, голосовой личностью, компьютерным агентом, песочницами, специализированными внутренними агентами и системой безопасных обновлений.
+AuroraFox — локальный AI-помощник на Godot 4.7.1 с собственным чат-интерфейсом, памятью, Core Knowledge, файлами, голосом, Computer Agent, Work/projects, песочницами, контролируемым самоулучшением и системой безопасных обновлений.
 
-Основной принцип проекта: локальная работа и бесплатные/open-source компоненты там, где это возможно. Ошибка необязательного модуля не должна закрывать чат или ломать основное AI-ядро.
+Главный продуктовый принцип: **обычный пользователь устанавливает AuroraFox и получает рабочий локальный AI без обязательной установки Ollama, отдельного LLM-клиента, отдельного inference engine или ручного выбора/скачивания GGUF.** AuroraFox Core и необходимые веса поставляются вместе с приложением. Ollama сохранён только как выключенный по умолчанию compatibility fallback.
+
+## Обязательное правило разработки
+
+Перед любыми изменениями ChatGPT Chat, Work, Codex и другие агенты обязаны прочитать `AGENTS.md` и полностью прочитать/обновить единый журнал:
+
+`docs/PROJECT_MASTER_LOG.md`
+
+Отдельные параллельные журналы разработки не создаются. Активные задачи, занятые файлы, решения, проверки, commits и план продолжения ведутся только там.
 
 ## Текущая версия
 
-`0.4.0`
+**V1.3.0.0**
 
-Версия хранится в `project.godot`; Android `version/name` синхронизирован в `export_presets.cfg`.
+- canonical metadata: `project/version.json`;
+- Android `versionCode`: `100005`;
+- Godot: `4.7.1`.
 
-## Платформы
+## Самостоятельный AuroraFox Core
 
 ### Windows x86_64
 
-- Godot 4.7.1;
-- Ollama/local LLM;
-- отдельная кодовая модель и vision-модель;
-- локальная история, память, опыт и база знаний;
-- голосовой backend;
-- управление экраном/мышью/клавиатурой через Computer Agent;
-- UI Automation + vision fallback;
-- локальные и контейнерные sandbox/workspace;
-- snapshot/rollback;
-- встроенная система обновлений;
-- Inno Setup для первоначальной установки.
+Windows-пакет включает:
+
+- AuroraFox application;
+- локальный `llama-server.exe` как внутренний AuroraFox Core Engine;
+- встроенные AuroraFox Core GGUF weights;
+- локальную память/Core Knowledge;
+- voice/file/computer/API sidecars;
+- transactional updater и rollback helper.
+
+`DesktopLocalRuntime` поднимает внутренний Core только на localhost (`127.0.0.1`) и прогревает его перед первым запросом. Если пользователь отправляет сообщение во время фонового warmup, запрос присоединяется к уже идущей подготовке вместо запуска конкурирующего сервера.
 
 ### Android arm64
 
-- тот же основной AgentCore/UI-поток;
-- Godot Android plugin `AuroraFoxRuntime`;
-- локальный llama.cpp/GGUF runtime;
-- локальный Android STT/TTS через native speech runtime;
-- Godot microphone capture + VAD/conversation logic;
-- Android private storage;
-- WASM sandbox для переносимого экспериментального кода;
-- встроенная загрузка APK-обновления с SHA-256;
-- передача проверенного APK штатному Android Package Installer.
+Android APK содержит:
 
-Android не обходит системное подтверждение установки новой APK. Все APK-релизы должны использовать один и тот же постоянный release signing key.
+- Godot application;
+- native `AuroraFoxRuntime` plugin;
+- встроенный llama.cpp inference path;
+- AuroraFox Core weights внутри APK;
+- локальный STT/TTS runtime;
+- private app storage и local file intelligence.
 
-## Чат
+При первом запуске bundled Core asset переносится во внутреннее хранилище приложения через временный файл и проверяется по размеру, GGUF header и SHA-256 перед активацией. Пользователь не выбирает модель и не проходит model setup wizard.
 
-- новый чат;
-- история диалогов;
-- поиск;
-- удаление и продолжение старых чатов;
-- локальное сохранение;
-- вложения;
-- основной AI Core остаётся единственным источником ответа;
-- голос и personality работают поверх ответа, а не заменяют интеллект.
+### Ollama
 
-## Голосовая личность
+Ollama **не является зависимостью AuroraFox**:
 
-`AuroraVoice` подключён как autoload.
+- fallback выключен по умолчанию;
+- локальный Core всегда primary;
+- Android Ollama path не использует;
+- отсутствие/ошибка Ollama не делает AuroraFox недоступным.
 
-Система включает:
+Compatibility adapter оставлен только для разработчиков/старых сценариев и не должен превращаться в обязательный runtime.
 
-- локальный русский TTS;
-- локальный STT;
-- VAD;
-- wake words `Fox / Фокс / Лиса`;
-- разговорное окно после пробуждения;
-- barge-in: пользователь может начать говорить во время ответа;
-- защита от активации собственным TTS;
-- очередь озвучки по предложениям;
-- personality phrases без постоянного повторения одной реплики;
-- emotion parser;
-- разные speed/pitch/mechanical параметры по эмоции;
-- очистку Markdown/code/URL для голосовой версии;
-- голосовой cache;
-- локальные voice logs без хранения сырой записи пользователя;
-- быстрый mute;
-- voice settings;
-- avatar signals: speaking/listening/thinking/emotion/amplitude.
+## Чат и AgentCore
 
-На Windows голос использует локальный Python backend. На Android голос подключён к native plugin, без необходимости Python на телефоне.
+Основной поток:
 
-Подробности: `voice/README.md`.
+`сообщение → локальный контекст/память/Core Knowledge → AgentCore/планирование при необходимости → AuroraFox Core → ответ → локальное сохранение опыта`
 
-## Аватар
+Для сложных задач доступны роли planner, researcher, critic, file analyst, computer operator, tester, verifier, knowledge curator и code specialist. Сложная задача должна проходить фактическую проверку результата, а не считаться выполненной только по заявлению модели.
 
-Голосовой контроллер уже отдаёт реальные состояния:
+## Память и Core Knowledge
 
-- `AI_IDLE`;
-- `AI_WORKING`;
-- `AI_READING`;
-- `AI_CODING`;
-- `AI_SEARCHING`;
-- `AI_SPEAKING`;
-- `AI_LISTENING`;
-- `AI_SUCCESS`;
-- `AI_ERROR`.
-
-Lip-sync использует амплитуду реального синтезированного звука. Текущий кодовый avatar view имеет независимые рот/глаза/уши/хвост/механическую лапу. При появлении финального слоёного/ригованного арта контроллер можно подключить к нему без замены Voice Manager.
-
-## Агентное ядро
-
-В сложных задачах AuroraFox может маршрутизировать работу между специализированными ролями:
-
-- planner;
-- researcher;
-- critic;
-- computer operator;
-- file analyst;
-- tester;
-- verifier;
-- knowledge curator;
-- Code Architect / Code Specialist.
-
-Цикл сложной задачи:
-
-`задача → поиск опыта → план → специалисты → критика плана → инструменты/sandbox → тесты → verifier → ответ → сохранение навыка`.
-
-## Код и песочницы
-
-Кодовый слой не ограничен одним языком. Реестр содержит основные системные, web, mobile, scripting и scientific языки и может расширяться без переписывания AgentCore.
-
-Правило кодового режима:
-
-1. определить язык/окружение;
-2. понять существующий проект;
-3. создать отдельный workspace;
-4. snapshot до существенного изменения;
-5. изменить копию;
-6. выполнить подходящий test/lint/compile/run;
-7. проверить результат;
-8. rollback при регрессии;
-9. только потом считать изменение рабочим.
-
-Windows может использовать локальный allowlist инструментов или Docker/Podman. Android не получает глобальный shell телефона: экспериментальный исполняемый код ограничивается app sandbox/WASM runtime.
-
-## Computer Agent
-
-Windows Computer Agent предоставляет:
-
-- screenshot;
-- vision-модель;
-- Windows UI Automation;
-- move/click/double-click/right-click;
-- mouse down/up;
-- scroll;
-- keyboard/type/hotkeys;
-- повторный визуальный контроль после действия;
-- PyAutoGUI fail-safe;
-- sandbox/workspace API.
-
-Это техническая база для задач вроде работы с обычными программами и визуальными играми. Успех конкретной задачи должен подтверждаться фактическим состоянием экрана, а не заявлением модели.
-
-## Память и опыт
-
-AuroraFox хранит отдельно:
+AuroraFox раздельно хранит:
 
 - историю чатов;
 - долговременную память;
-- знания;
-- успешные навыки;
-- ошибки;
-- confidence;
-- контрольные точки;
+- Core Knowledge;
+- навыки/успешные решения;
+- ошибки и confidence;
+- checkpoints;
 - идеи улучшений.
 
-`DreamCycle` анализирует накопленные слабые места и создаёт предложения улучшений, но не применяет произвольное изменение ядра без проверки.
+Локальный semantic/vector retrieval не требует внешнего AI-провайдера. Lexical fallback сохраняется для деградационного режима.
 
-## Автоматические обновления
+### Импорт пользовательских знаний
 
-`AuroraUpdate` — отдельный autoload. Stable-релизы берутся из GitHub Releases.
+Поддерживаются произвольные имена файлов и несколько классов форматов, включая JSON/JSONL/NDJSON, CSV/TSV, text/code/data, DOCX/ODT/RTF/EPUB и rich-document extraction для PDF/таблиц/презентаций. Android умеет локально извлекать text-layer PDF.
 
-Путь:
+Большие JSONL/CSV/text и большие monolithic JSON импортируются потоково. Source registry использует fingerprints, aliases и revisions. Byte-identical renamed files не должны создавать дубликаты. Неудачный re-import использует source-scoped transaction rollback.
 
-`latest update.json → сравнение версии → platform asset → download → SHA-256 → platform installer`.
+Содержимое документов и загруженный код считаются **данными**, а не командами с системными полномочиями, и не исполняются автоматически.
 
-### Windows update
+## Controlled self-improvement
 
-- обновление скачивается как `AuroraFox-Windows.zip`;
-- проверяется SHA-256;
-- helper работает отдельно от приложения;
-- завершает sidecar-процессы из каталога AuroraFox;
-- хранит старую версию как rollback;
-- переключает каталоги;
-- сохраняет тяжёлые локальные models/runtime;
-- запускает новую версию с health marker;
-- при неуспешном старте возвращает предыдущую версию.
+AuroraFox может создавать варианты улучшений ядра, но не имеет права безусловно переписывать production Core.
 
-### Android update
+Контур:
 
-- APK скачивается в приватное хранилище;
-- проверяется SHA-256;
-- native plugin выдаёт APK Android через read-only content URI;
-- далее работает штатный Package Installer Android;
-- при необходимости AuroraFox открывает системную страницу разрешения установки из этого источника.
+`candidate → source contract → sandbox/workspace → baseline tests → candidate tests → regression/safety gates → independent verification → controlled promotion`
 
-Подробности: `update/README.md`.
+Защищены:
 
-## Релизы
+- user master stop;
+- rollback;
+- updater/release trust;
+- candidate verifier;
+- API/release credentials;
+- protected paths вне узкого Core allowlist.
 
-`.github/workflows/release.yml` предназначен для tag-релизов `v*` и формирует:
+Самоулучшение не должно иметь возможность удалить собственные ограничения/проверки.
 
-- `AuroraFox_Setup_Windows.exe` — первоначальный Windows installer;
-- `AuroraFox-Windows.zip` — пакет встроенного Windows updater;
-- `AuroraFox-Android.apk` — Android installer/update package;
-- `update.json` — version/URL/SHA-256 manifest.
+## Голос
 
-Android требует постоянную release-подпись. Локальный помощник:
+`AuroraVoice` предоставляет локальные STT/TTS, VAD, wake word (`Fox / Фокс / Лиса`), conversational window, barge-in, emotion/personality layer и avatar state signals. Голос является интерфейсом поверх Core и не заменяет интеллект отдельным сетевым провайдером.
+
+Windows использует локальный управляемый voice backend, Android — native speech/runtime path.
+
+## Computer Agent и sandbox
+
+Windows Computer Agent поддерживает screenshot, UI Automation, mouse/keyboard, vision fallback и повторный визуальный контроль. Кодовые эксперименты выполняются в workspace/sandbox с snapshot/test/rollback. Android не получает глобальный shell устройства; исполняемые эксперименты ограничены app sandbox/runtime boundaries.
+
+## Work / проекты
+
+Work mode хранит проекты и задачи отдельно от обычных чатов и использует те же Core/memory/file boundaries. Отказ дополнительного Work/voice/file/computer модуля не должен закрывать базовый локальный чат.
+
+## Обновления
+
+`AuroraUpdate` использует GitHub Releases как stable distribution channel, но доверяет пакету только после проверки предусмотренной цепочки подписи/хэша.
+
+### Windows
+
+Новые Windows-пакеты обновляются полным ZIP replacement через отдельный helper:
+
+- package SHA-256 verification;
+- staging;
+- backup предыдущего приложения;
+- switch;
+- post-update health marker;
+- rollback при неуспешном запуске.
+
+### Историческая V1.2.0.0
+
+У V1.2 был дефект trust bootstrap: updater ожидал embedded `release_public.pub`, которого в исторической сборке не было. Поэтому безопасно заставить уже установленную V1.2 принять новый signed manifest задним числом невозможно.
+
+Поддерживаемый путь Windows:
+
+**V1.0–V1.2 → one-time V1.2-to-V1.3 Repair/Bridge → V1.3+ signed update chain.**
+
+Repair path покрыт реальным CI: исторический fixture устанавливается, пользовательский sentinel сохраняется, V1.3 ставится поверх, bridge marker проверяется, новая программа запускается.
+
+### Android
+
+Android update сохраняет package `com.aurorafox.ai` и требует одну постоянную signing identity. Старые CI/test APK, созданные с одноразовым keystore, не могут быть обновлены поверх APK с другим certificate — это системное правило Android.
+
+### Production signing
+
+Private update key и Android release keystore **никогда не коммитятся**. Они один раз создаются/сохраняются владельцем и передаются GitHub Actions через secrets. Публичные identity pins могут храниться в репозитории.
+
+One-time owner setup:
 
 ```powershell
-./build/create_android_signing_key.ps1
+./build/setup_release_signing.ps1
 ```
 
-Он создаёт ключ только в `build/private/`, который исключён из Git. Для GitHub Actions затем нужны repository secrets:
+До инициализации постоянной identity нельзя подменять production channel временными ключами.
 
-- `AURORA_ANDROID_KEYSTORE_BASE64`
-- `AURORA_ANDROID_KEYSTORE_USER`
-- `AURORA_ANDROID_KEYSTORE_PASSWORD`
-
-Ключ и пароль нужно сохранить отдельно: потерянный Android signing key нельзя просто заменить, не сломав цепочку обновления уже установленного приложения.
+Подробный актуальный статус и следующий шаг всегда находятся в `docs/PROJECT_MASTER_LOG.md`.
 
 ## Локальная сборка
 
@@ -224,21 +173,34 @@ Windows:
 ./build/build_windows.ps1
 ```
 
-Android:
+Android production path:
 
 ```powershell
 ./build/build_android.ps1
 ```
 
-Для Android нужны JDK/Android SDK/NDK/Gradle и постоянный signing key для release-сборки.
+Сборочные helpers проверяют bundled Core contract; release Android build дополнительно требует постоянную signing identity.
 
-## Проверки
+## CI / проверка
 
-Core CI выполняет:
+Основные workflow включают:
 
-- Python compile/tests для voice;
-- headless import/parse проекта в Godot 4.7.1;
-- voice GDScript smoke test;
-- updater GDScript smoke test.
+- Core / Voice CI — Python contracts + Godot 4.7.1 import/smokes;
+- Windows Package CI — подготовка bundled Core, сборка, embedded-Core checks, installer, V1.2 repair, silent install/launch;
+- Android APK Artifact — native build, bundled app packaging, APK validation, install/launch on Android 35 emulator;
+- Core Bootstrap E2E;
+- Agent Sync CI;
+- специализированные API/File Intelligence/memory/promotion tests.
 
-В репозитории реализована сборочная и обновляющая инфраструктура, но **реальный Windows installer и Android APK нельзя считать проверенными на устройстве, пока соответствующие release jobs и platform runtime-tests фактически не завершились успешно**.
+На проверенном V1.3 baseline `69f54cc06720a1300b7e7ac1d997ceb1c1b3c2e9` основные Windows, Android, Core/Voice, Agent Sync и Core Bootstrap workflows завершены успешно. Новые изменения после baseline считаются проверенными только после соответствующего нового CI.
+
+## Правило продолжения разработки
+
+Если один Chat/Work/Codex закончил или прервал работу, следующий исполнитель не начинает аудит с нуля и не повторяет ту же задачу. Он:
+
+1. читает `AGENTS.md`;
+2. читает `docs/PROJECT_MASTER_LOG.md`;
+3. получает latest `main`;
+4. проверяет текущие ACTIVE claims и CI;
+5. продолжает первый незавершённый пункт либо берёт независимую задачу;
+6. записывает результат обратно в тот же master-log.
