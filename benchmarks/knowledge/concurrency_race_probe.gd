@@ -1,10 +1,12 @@
 extends SceneTree
 
-# Runtime proof for two Knowledge races that the generic benchmark did not cover:
+# Runtime proof for Knowledge races that the generic benchmark did not cover:
 # 1) two byte-identical sources imported at the same time must serialize into
 #    one canonical source plus one alias without duplicate store growth;
 # 2) a live Knowledge DB reader overlapping canonical source removal must not
-#    corrupt committed state and must preserve an unrelated control source.
+#    corrupt committed state and must preserve an unrelated control source;
+# 3) a changed revision imported on a worker must not expose partial new rows or
+#    hide the previous committed revision before the source registry commits.
 const KnowledgeStoreScript: Variant = preload("res://scripts/knowledge_store.gd")
 const KnowledgeImportTransactionScript: Variant = preload("res://scripts/knowledge_import_transaction.gd")
 const KnowledgeSourceRegistryScript: Variant = preload("res://scripts/knowledge_source_registry.gd")
@@ -15,11 +17,15 @@ const DUP_A := ROOT + "/duplicate_A.jsonl"
 const DUP_B := ROOT + "/duplicate_B.jsonl"
 const RACE_SOURCE := ROOT + "/race_source.jsonl"
 const CONTROL_SOURCE := ROOT + "/control_source.jsonl"
+const VISIBILITY_SOURCE := ROOT + "/visibility_source.jsonl"
 const DUP_MARKER := "AURORA_CONCURRENT_DUPLICATE_314159"
 const RACE_MARKER := "AURORA_SEARCH_REMOVE_RACE_271828"
 const CONTROL_MARKER := "AURORA_SEARCH_REMOVE_CONTROL_161803"
+const VISIBILITY_OLD_MARKER := "AURORA_COMMITTED_OLD_REVISION_141421"
+const VISIBILITY_NEW_MARKER := "AURORA_PENDING_NEW_REVISION_173205"
 const READER_HOLD_MS := 400
 const MB := 1024 * 1024
+const VISIBILITY_TARGET_BYTES := 8 * MB
 
 func _init() -> void:
 	call_deferred("_run")
@@ -30,11 +36,13 @@ func _run() -> void:
 		return
 	var duplicate_result := _concurrent_duplicate_import()
 	var search_remove_result := _search_remove_race()
-	var ok := bool(duplicate_result.get("ok", false)) and bool(search_remove_result.get("ok", false))
+	var visibility_result := _changed_revision_visibility_race()
+	var ok := bool(duplicate_result.get("ok", false)) and bool(search_remove_result.get("ok", false)) and bool(visibility_result.get("ok", false))
 	_emit({
 		"ok": ok,
 		"concurrent_duplicate_import": duplicate_result,
 		"search_remove_race": search_remove_result,
+		"changed_revision_visibility": visibility_result,
 		"network_required": false,
 		"external_runtime_required": false,
 		"ollama_required": false,
@@ -140,8 +148,6 @@ func _search_remove_race() -> Dictionary:
 			var first_line := held_reader.get_line()
 			sampled_committed_db = not first_line.strip_edges().is_empty()
 		reader_ready.post()
-		# Keep the same underlying knowledge file open long enough for the remove
-		# thread to enter its streaming filter/replace path deterministically.
 		OS.delay_msec(READER_HOLD_MS)
 		if held_reader != null:
 			held_reader.close()
@@ -195,6 +201,74 @@ func _search_remove_race() -> Dictionary:
 		"control_source_preserved": _contains_source(final_control, CONTROL_SOURCE),
 		"removed_registry_absent": race_row is Dictionary and race_row.is_empty(),
 		"control_registry_present": control_row is Dictionary and not control_row.is_empty(),
+		"transaction_residue": _transaction_residue()
+	}
+
+func _changed_revision_visibility_race() -> Dictionary:
+	_reset_state()
+	if not _write_jsonl(VISIBILITY_SOURCE, VISIBILITY_OLD_MARKER, 256 * 1024):
+		return {"ok": false, "error": "cannot create committed visibility fixture"}
+	var initial: Variant = KnowledgeImportTransactionScript.new().call("import_file", KnowledgeStoreScript.new(), VISIBILITY_SOURCE, {"imported_by": "knowledge_concurrency_probe"})
+	if not (initial is Dictionary and bool(initial.get("ok", false))):
+		return {"ok": false, "error": "initial visibility fixture import failed", "initial": initial}
+	var registry: Variant = KnowledgeSourceRegistryScript.new()
+	var initial_row: Variant = registry.call("record_for_source", VISIBILITY_SOURCE)
+	var initial_revision := int(initial_row.get("revision", 0)) if initial_row is Dictionary else 0
+	if initial_revision <= 0:
+		return {"ok": false, "error": "initial visibility revision missing", "initial_row": initial_row}
+	if not _write_jsonl(VISIBILITY_SOURCE, VISIBILITY_NEW_MARKER, VISIBILITY_TARGET_BYTES):
+		return {"ok": false, "error": "cannot create changed visibility revision"}
+
+	var import_thread := Thread.new()
+	var start_error := import_thread.start(func():
+		return KnowledgeImportTransactionScript.new().call("import_file", KnowledgeStoreScript.new(), VISIBILITY_SOURCE, {"imported_by": "knowledge_concurrency_probe", "visibility_probe": true})
+	)
+	if start_error != OK:
+		return {"ok": false, "error": "visibility import thread start failed", "thread": start_error}
+
+	var saw_active_precommit := false
+	var precommit_samples := 0
+	var old_missing_precommit := false
+	var new_visible_precommit := false
+	while import_thread.is_alive():
+		var row: Variant = registry.call("record_for_source", VISIBILITY_SOURCE)
+		var revision := int(row.get("revision", 0)) if row is Dictionary else 0
+		var manifest_exists := FileAccess.file_exists(str(KnowledgeImportTransactionScript.TXN_MANIFEST))
+		if revision <= initial_revision and manifest_exists:
+			saw_active_precommit = true
+			precommit_samples += 1
+			var store: Variant = KnowledgeStoreScript.new()
+			var old_hits: Variant = store.call("search", VISIBILITY_OLD_MARKER, 8)
+			var new_hits: Variant = store.call("search", VISIBILITY_NEW_MARKER, 8)
+			if not _contains_source(old_hits, VISIBILITY_SOURCE):
+				old_missing_precommit = true
+			if _contains_source(new_hits, VISIBILITY_SOURCE):
+				new_visible_precommit = true
+		OS.delay_msec(10)
+
+	var import_result: Variant = import_thread.wait_to_finish()
+	var final_row: Variant = registry.call("record_for_source", VISIBILITY_SOURCE)
+	var final_revision := int(final_row.get("revision", 0)) if final_row is Dictionary else 0
+	var final_store: Variant = KnowledgeStoreScript.new()
+	var final_old: Variant = final_store.call("search", VISIBILITY_OLD_MARKER, 8)
+	var final_new: Variant = final_store.call("search", VISIBILITY_NEW_MARKER, 8)
+	var final_ok := final_revision == initial_revision + 1
+	final_ok = final_ok and final_old is Array and final_old.is_empty()
+	final_ok = final_ok and _contains_source(final_new, VISIBILITY_SOURCE)
+	var clean := _transaction_residue().is_empty()
+	var import_ok := import_result is Dictionary and bool(import_result.get("ok", false)) and bool(import_result.get("transaction_serialized", false))
+	var visibility_ok := saw_active_precommit and precommit_samples > 0 and not old_missing_precommit and not new_visible_precommit
+	return {
+		"ok": import_ok and visibility_ok and final_ok and clean,
+		"initial_revision": initial_revision,
+		"final_revision": final_revision,
+		"saw_active_precommit": saw_active_precommit,
+		"precommit_samples": precommit_samples,
+		"old_committed_revision_preserved_until_commit": not old_missing_precommit,
+		"new_revision_hidden_until_commit": not new_visible_precommit,
+		"final_old_revision_absent": final_old is Array and final_old.is_empty(),
+		"final_new_revision_visible": _contains_source(final_new, VISIBILITY_SOURCE),
+		"import": import_result,
 		"transaction_residue": _transaction_residue()
 	}
 
@@ -263,7 +337,8 @@ func _reset_state() -> void:
 		DUP_A,
 		DUP_B,
 		RACE_SOURCE,
-		CONTROL_SOURCE
+		CONTROL_SOURCE,
+		VISIBILITY_SOURCE
 	]
 	var transaction_constants: Dictionary = KnowledgeImportTransactionScript.get_script_constant_map()
 	for name in ["TXN_MANIFEST", "TXN_MANIFEST_TMP", "TXN_SNAPSHOT_MARKER", "TXN_SNAPSHOT_MARKER_TMP", "TXN_COMMIT_MARKER", "TXN_COMMIT_MARKER_TMP"]:
