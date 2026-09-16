@@ -59,6 +59,11 @@ jobs:
         shell: bash
         run: PYTHONPATH="$PWD" python -m pytest -q tests/test_research_collector_privacy_contract.py
 
+      - name: Research source resilience contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_research_source_resilience_contract.py
+
       - name: Voice text contract
         if: always()
         shell: bash
@@ -188,6 +193,8 @@ jobs:
           test -f tests/research_evidence_lifecycle_smoke.gd
           test -f tests/test_research_collector_privacy_contract.py
           test -f tests/research_collector_privacy_smoke.gd
+          test -f tests/test_research_source_resilience_contract.py
+          test -f tests/research_source_resilience_smoke.gd
           test -d benchmarks/knowledge
           test -f benchmarks/knowledge/dedupe_alias_removal_probe.gd
           test -f benchmarks/knowledge/record_dedupe_shared_source_probe.gd
@@ -284,6 +291,7 @@ jobs:
             tests/autonomy_learning_smoke.gd \
             tests/research_evidence_lifecycle_smoke.gd \
             tests/research_collector_privacy_smoke.gd \
+            tests/research_source_resilience_smoke.gd \
             tests/knowledge_registry_smoke.gd \
             tests/knowledge_transaction_rollback_smoke.gd \
             tests/api_gateway_smoke.gd \
