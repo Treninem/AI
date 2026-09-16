@@ -1,0 +1,66 @@
+name: Local OCR CI
+
+on:
+  push:
+    branches: [main, chat-2026-09-16-local-ocr]
+    paths:
+      - 'file_intelligence/**'
+      - 'android_plugin/**'
+      - 'scripts/knowledge_document_importer.gd'
+      - 'scripts/file_intelligence_client.gd'
+      - 'tests/test_local_ocr.py'
+      - 'tests/local_ocr_knowledge_smoke.gd'
+      - '.github/workflows/local-ocr-ci.yml'
+  pull_request:
+    paths:
+      - 'file_intelligence/**'
+      - 'android_plugin/**'
+      - 'scripts/knowledge_document_importer.gd'
+      - 'scripts/file_intelligence_client.gd'
+      - 'tests/test_local_ocr.py'
+      - 'tests/local_ocr_knowledge_smoke.gd'
+      - '.github/workflows/local-ocr-ci.yml'
+  workflow_dispatch:
+
+jobs:
+  python-ocr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install local OCR runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus
+          python -m pip install --upgrade pip
+          pip install -r file_intelligence/requirements.txt pytest reportlab
+      - name: Syntax and local OCR regression
+        env:
+          AURORAFOX_OCR_LANGUAGES: rus+eng
+        run: |
+          python -m py_compile file_intelligence/local_ocr.py file_intelligence/file_service.py
+          pytest -q tests/test_local_ocr.py
+
+  android-ocr:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: Build Android OCR plugin
+        working-directory: android_plugin
+        run: |
+          chmod +x gradlew
+          ./gradlew :plugin:assembleDebug --stacktrace
+      - name: Verify OCR assets and bridge contract
+        run: |
+          test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/eng.traineddata
+          test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/rus.traineddata
+          grep -R "TessBaseAPI" android_plugin/plugin/src/main/java/com/aurorafox/runtime
+          grep -R "untrusted_document" android_plugin/plugin/src/main/java/com/aurorafox/runtime
+          ! grep -R -E "OpenAI|Gemini|Claude|Ollama" android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
