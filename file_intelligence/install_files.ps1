@@ -24,6 +24,22 @@ function Set-Stage([string]$Name, [int]$Progress, [string]$Message) {
     }
 }
 
+function Test-FileIntelligencePython([string]$Python, [string]$PythonPath, [string]$ReadyMarker) {
+    $oldPath = $env:PYTHONPATH
+    try {
+        $env:PYTHONPATH = $PythonPath
+        Push-Location $Root
+        try {
+            & $Python -c "import pypdf,pypdfium2,PIL,fastapi; import local_ocr; h=local_ocr.health(); assert h['available']; assert h['network_required'] is False; assert h['external_ai_required'] is False; print('$ReadyMarker')"
+            if ($LASTEXITCODE -ne 0) { throw 'File Intelligence Python verification failed.' }
+        } finally {
+            Pop-Location
+        }
+    } finally {
+        $env:PYTHONPATH = $oldPath
+    }
+}
+
 try {
     Set-Stage 'runtime' 5 'Preparing AuroraFox managed Python runtime'
     if (-not (Test-Path -LiteralPath $RuntimeScript)) { throw "runtime/ensure_uv.ps1 was not found: $RuntimeScript" }
@@ -54,12 +70,7 @@ try {
         if ($LASTEXITCODE -ne 0) { throw 'Failed to build portable File Intelligence dependencies.' }
         $portableExe = Join-Path $portablePython 'python.exe'
         if (-not (Test-Path -LiteralPath $portableExe)) { throw "Portable Python missing: $portableExe" }
-        $oldPath = $env:PYTHONPATH
-        try {
-            $env:PYTHONPATH = $vendor
-            & $portableExe -c "import pypdf,pypdfium2,PIL,fastapi; import local_ocr; assert local_ocr.health()['available']; print('AURORA_FILE_PORTABLE_READY')"
-            if ($LASTEXITCODE -ne 0) { throw 'Portable File Intelligence verification failed.' }
-        } finally { $env:PYTHONPATH = $oldPath }
+        Test-FileIntelligencePython $portableExe $vendor 'AURORA_FILE_PORTABLE_READY'
     } else {
         Set-Stage 'venv' 35 'Creating isolated File Intelligence environment'
         if (-not (Test-Path -LiteralPath $VenvPython)) {
@@ -69,8 +80,7 @@ try {
         Set-Stage 'dependencies' 55 'Installing local document/image/video parsers'
         & $uv pip install --python $VenvPython --requirements $Requirements
         if ($LASTEXITCODE -ne 0) { throw 'Failed to install File Intelligence dependencies.' }
-        & $VenvPython -c "import pypdf,pypdfium2,PIL,fastapi; import local_ocr; assert local_ocr.health()['available']; print('AURORA_FILE_INTELLIGENCE_READY')"
-        if ($LASTEXITCODE -ne 0) { throw 'File Intelligence verification failed.' }
+        Test-FileIntelligencePython $VenvPython '' 'AURORA_FILE_INTELLIGENCE_READY'
     }
 
     Set-Stage 'ready' 100 'File Intelligence with offline OCR is ready'
