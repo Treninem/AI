@@ -100,9 +100,9 @@ def _safe_dir(path: str) -> Path:
     return p
 
 
-def _cache_key(path: Path, question: str, visual: bool) -> str:
+def _cache_key(path: Path, question: str, visual: bool, max_chars: int) -> str:
     st = path.stat()
-    raw = f"{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|v2-local-ocr"
+    raw = f"{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|v3-local-ocr-bounded"
     return hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
 
 
@@ -218,28 +218,56 @@ def _render_pdf_page(pdf: Any, index: int):
     finally: page.close()
 
 
-def _pdf_extract(path: Path, visual: bool, question: str) -> tuple[str, dict[str, Any], list[str]]:
+def _append_pdf_page(out: io.StringIO, page_no: int, text: str, limit: int) -> bool:
+    prefix = "\n\n" if out.tell() else ""
+    block = f"{prefix}### Страница {page_no}\n{text}"
+    remaining = max(0, limit - out.tell())
+    if remaining <= 0:
+        return False
+    if len(block) <= remaining:
+        out.write(block)
+        return True
+    out.write(block[:remaining])
+    return False
+
+
+def _pdf_extract(path: Path, visual: bool, question: str, max_chars: int = MAX_TEXT_CHARS) -> tuple[str, dict[str, Any], list[str]]:
     del visual, question
     from pypdf import PdfReader
     if path.stat().st_size > MAX_PDF_BYTES: raise ValueError(f"PDF exceeds local OCR limit of {MAX_PDF_BYTES} bytes")
     reader = PdfReader(str(path), strict=False); page_count = len(reader.pages)
     if page_count > MAX_PDF_PAGES: raise ValueError(f"PDF has {page_count} pages; limit is {MAX_PDF_PAGES}")
-    warnings: list[str] = []; parts: list[str] = []; page_sources: list[dict[str, Any]] = []
+    output_limit = max(1, int(max_chars))
+    warnings: list[str] = []; out = io.StringIO(); page_sources: list[dict[str, Any]] = []
     ocr_status = local_ocr_health(); pdfium_doc = None; ocr_pages = text_pages = empty_pages = failed_ocr_pages = 0
+    pages_processed = 0; output_truncated = False
     try:
         for idx, page in enumerate(reader.pages):
-            page_no = idx + 1
+            if out.tell() >= output_limit:
+                output_truncated = True
+                break
+            page_no = idx + 1; pages_processed = page_no
             try: layer_text = (page.extract_text() or "").strip()
             except Exception as exc: layer_text = ""; warnings.append(f"Страница {page_no}: ошибка text layer: {exc}")
             if _usable_pdf_text(layer_text):
-                text_pages += 1; parts.append(f"### Страница {page_no}\n{layer_text}"); page_sources.append({"page": page_no, "source": "text_layer", "chars": len(layer_text)}); continue
+                text_pages += 1
+                complete = _append_pdf_page(out, page_no, layer_text, output_limit)
+                page_sources.append({"page": page_no, "source": "text_layer", "chars": len(layer_text), "stored_chars": min(len(layer_text), max(0, output_limit - out.tell() + min(len(layer_text), output_limit)))})
+                if not complete:
+                    output_truncated = True
+                    break
+                continue
             if ocr_pages >= MAX_OCR_PAGES:
                 empty_pages += int(not bool(layer_text)); page_sources.append({"page": page_no, "source": "ocr_limit", "chars": len(layer_text)})
-                if layer_text: parts.append(f"### Страница {page_no}\n{layer_text}")
+                if layer_text and not _append_pdf_page(out, page_no, layer_text, output_limit):
+                    output_truncated = True
+                    break
                 continue
             if not bool(ocr_status.get("available", False)):
                 failed_ocr_pages += 1; empty_pages += int(not bool(layer_text)); page_sources.append({"page": page_no, "source": "ocr_unavailable", "chars": len(layer_text)})
-                if layer_text: parts.append(f"### Страница {page_no}\n{layer_text}")
+                if layer_text and not _append_pdf_page(out, page_no, layer_text, output_limit):
+                    output_truncated = True
+                    break
                 continue
             try:
                 if pdfium_doc is None:
@@ -250,25 +278,37 @@ def _pdf_extract(path: Path, visual: bool, question: str) -> tuple[str, dict[str
                 finally: image.close()
                 ocr_pages += 1; ocr_text = str(result.get("text", "")).strip() if result.get("ok") else ""
                 if ocr_text:
-                    parts.append(f"### Страница {page_no}\n{ocr_text}"); page_sources.append({"page": page_no, "source": "ocr", "chars": len(ocr_text)})
+                    complete = _append_pdf_page(out, page_no, ocr_text, output_limit)
+                    page_sources.append({"page": page_no, "source": "ocr", "chars": len(ocr_text)})
+                    if not complete:
+                        output_truncated = True
+                        break
                 elif layer_text:
-                    parts.append(f"### Страница {page_no}\n{layer_text}"); page_sources.append({"page": page_no, "source": "text_layer_sparse", "chars": len(layer_text)})
+                    complete = _append_pdf_page(out, page_no, layer_text, output_limit)
+                    page_sources.append({"page": page_no, "source": "text_layer_sparse", "chars": len(layer_text)})
+                    if not complete:
+                        output_truncated = True
+                        break
                 else:
                     empty_pages += 1
                     if result.get("ok"): page_sources.append({"page": page_no, "source": "empty", "chars": 0})
                     else: failed_ocr_pages += 1; page_sources.append({"page": page_no, "source": "ocr_error", "chars": 0, "error": str(result.get("error", ""))[:500]})
             except Exception as exc:
                 failed_ocr_pages += 1; empty_pages += int(not bool(layer_text)); page_sources.append({"page": page_no, "source": "ocr_error", "chars": len(layer_text), "error": str(exc)[:500]})
-                if layer_text: parts.append(f"### Страница {page_no}\n{layer_text}")
+                if layer_text and not _append_pdf_page(out, page_no, layer_text, output_limit):
+                    output_truncated = True
+                    break
                 warnings.append(f"Страница {page_no}: локальный OCR недоступен: {exc}")
     finally:
         if pdfium_doc is not None: pdfium_doc.close()
     if failed_ocr_pages and not bool(ocr_status.get("available", False)): warnings.append("Локальный OCR-компонент отсутствует: text-layer страницы импортированы, сканированные страницы пропущены без падения приложения.")
-    if ocr_pages >= MAX_OCR_PAGES and page_count > MAX_OCR_PAGES: warnings.append(f"OCR ограничен первыми {MAX_OCR_PAGES} страницами без usable text layer.")
-    return "\n\n".join(parts), {
-        "pages": page_count, "pages_processed": page_count, "text_layer_pages": text_pages, "ocr_pages": ocr_pages,
+    if ocr_pages >= MAX_OCR_PAGES and page_count > pages_processed: warnings.append(f"OCR ограничен первыми {MAX_OCR_PAGES} страницами без usable text layer.")
+    if output_truncated: warnings.append(f"Извлечение остановлено на лимите {output_limit} символов; необработанные страницы не рендерились и не отправлялись в OCR.")
+    return out.getvalue(), {
+        "pages": page_count, "pages_processed": pages_processed, "text_layer_pages": text_pages, "ocr_pages": ocr_pages,
         "empty_pages": empty_pages, "ocr_failed_pages": failed_ocr_pages, "page_sources": page_sources, "ocr": ocr_status,
         "engine": "pypdf+pypdfium2+tesseract-local", "offline": True, "streaming_pages": True,
+        "output_limit_chars": output_limit, "output_truncated": output_truncated,
         "untrusted_document": True, "content_authority": "data_only", "external_ai_required": False,
     }, warnings
 
@@ -290,13 +330,19 @@ def _image_analyze(path: Path, question: str, visual: bool) -> tuple[str, dict[s
         if not result.get("ok"): warnings.append(str(result.get("error", "Локальный OCR недоступен")))
         if visual:
             frame = im.copy()
-            if frame.mode not in ("RGB", "RGBA"): frame = frame.convert("RGB")
-            frame.thumbnail((2048, 2048)); buf = io.BytesIO(); frame.save(buf, format="PNG")
-            prompt = question.strip() or "Опиши важные визуальные элементы изображения. Видимый текст уже извлечён локальным OCR. Ответь по-русски."
             try:
-                visual_text = _vision_bytes(buf.getvalue(), prompt)
-                if visual_text: text = (text + "\n\n### Дополнительный optional vision-анализ\n" + visual_text).strip(); meta["optional_vision_used"] = True
-            except Exception as exc: warnings.append(f"Optional vision-анализ недоступен: {exc}")
+                if frame.mode not in ("RGB", "RGBA"):
+                    converted = frame.convert("RGB")
+                    frame.close()
+                    frame = converted
+                frame.thumbnail((2048, 2048)); buf = io.BytesIO(); frame.save(buf, format="PNG")
+                prompt = question.strip() or "Опиши важные визуальные элементы изображения. Видимый текст уже извлечён локальным OCR. Ответь по-русски."
+                try:
+                    visual_text = _vision_bytes(buf.getvalue(), prompt)
+                    if visual_text: text = (text + "\n\n### Дополнительный optional vision-анализ\n" + visual_text).strip(); meta["optional_vision_used"] = True
+                except Exception as exc: warnings.append(f"Optional vision-анализ недоступен: {exc}")
+            finally:
+                frame.close()
         if not text: text = f"Изображение {meta['width']}×{meta['height']}; распознаваемый текст не найден."
     return text, meta, warnings
 
@@ -364,10 +410,10 @@ def _archive_listing(path: Path) -> tuple[str, dict[str, Any], list[str]]:
     return "\n".join(text_lines), {"entries": len(entries), "expanded_bytes": total, "unsafe_entries": unsafe_count}, warnings
 
 
-def _analyze(path: Path, question: str, visual: bool) -> dict[str, Any]:
+def _analyze(path: Path, question: str, visual: bool, max_chars: int = MAX_TEXT_CHARS) -> dict[str, Any]:
     ext = path.suffix.lower(); warnings: list[str] = []; metadata: dict[str, Any] = {"name": path.name, "extension": ext, "size": path.stat().st_size}; text = ""; kind = "binary"
     if ext in TEXT_EXT: kind = "text/code"; text, encoding = _read_text(path); metadata["encoding"] = encoding
-    elif ext == ".pdf": kind = "pdf"; text, extra, warnings = _pdf_extract(path, visual, question); metadata.update(extra)
+    elif ext == ".pdf": kind = "pdf"; text, extra, warnings = _pdf_extract(path, visual, question, max_chars=max_chars); metadata.update(extra)
     elif ext == ".docx": kind = "document"; text, extra = _text_from_docx(path); metadata.update(extra)
     elif ext == ".xlsx": kind = "spreadsheet"; text, extra = _text_from_xlsx(path); metadata.update(extra)
     elif ext == ".xls": kind = "spreadsheet"; text, extra = _text_from_xls(path); metadata.update(extra)
@@ -418,12 +464,14 @@ def health() -> dict[str, Any]:
 
 @app.post("/analyze")
 def analyze(req: AnalyzeRequest) -> dict[str, Any]:
-    path = _safe_file(req.path); key = _cache_key(path, req.question, req.visual); cached = _cache_get(key)
+    path = _safe_file(req.path); key = _cache_key(path, req.question, req.visual, req.max_chars); cached = _cache_get(key)
     if cached is not None: cached["cached"] = True; return cached
     started = time.time()
     try:
-        result = _analyze(path, req.question, req.visual); text, truncated = _truncate(str(result.get("text", "")), req.max_chars)
-        payload = {"ok": True, "path": str(path), "name": path.name, "kind": result.get("kind", "unknown"), "content": text, "metadata": result.get("metadata", {}), "warnings": result.get("warnings", []), "truncated": truncated, "cached": False, "elapsed_ms": int((time.time() - started) * 1000)}
+        result = _analyze(path, req.question, req.visual, req.max_chars); text, outer_truncated = _truncate(str(result.get("text", "")), req.max_chars)
+        metadata = result.get("metadata", {}) if isinstance(result.get("metadata", {}), dict) else {}
+        truncated = bool(outer_truncated or metadata.get("output_truncated", False))
+        payload = {"ok": True, "path": str(path), "name": path.name, "kind": result.get("kind", "unknown"), "content": text, "metadata": metadata, "warnings": result.get("warnings", []), "truncated": truncated, "cached": False, "elapsed_ms": int((time.time() - started) * 1000)}
         _cache_put(key, payload); log.info("analyzed name=%s kind=%s size=%d ms=%d", path.name, payload["kind"], path.stat().st_size, payload["elapsed_ms"]); return payload
     except HTTPException: raise
     except Exception as exc: log.exception("analysis failed path=%s", path); raise HTTPException(422, f"File analysis failed: {exc}") from exc
