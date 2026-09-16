@@ -4,6 +4,7 @@ import hashlib
 import hmac
 import json
 import secrets
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,7 @@ class KeyStore:
         self.path = self.root / "keys.json"
         self.bootstrap_path = self.root / "bootstrap_key.txt"
         self.database = AuroraDatabase(self.root / "aurorafox.sqlite3")
+        self._write_lock = threading.RLock()
         self._migrate_legacy_once()
 
     @staticmethod
@@ -103,8 +105,6 @@ class KeyStore:
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
                 (self.LEGACY_MIGRATION_KEY, json.dumps({"imported": imported}), int(time.time())),
             )
-        # Preserve a rollback-readable mirror. It contains only token hashes,
-        # exactly like the legacy format; raw bearer secrets never enter SQLite.
         self._write_legacy_mirror()
 
     def _all_records(self) -> list[dict[str, Any]]:
@@ -120,15 +120,16 @@ class KeyStore:
         atomic_write_text(self.path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n", mode=0o600)
 
     def ensure_bootstrap_key(self) -> str | None:
-        with self.database.connection() as connection:
-            active = int(connection.execute("SELECT COUNT(*) FROM api_keys WHERE revoked=0").fetchone()[0])
-        if active:
-            return None
-        token, record = self._new_record("AuroraFox local admin", ADMIN_SCOPES, prefix="af_admin")
-        self._insert_record(record)
-        self._write_legacy_mirror()
-        atomic_write_text(self.bootstrap_path, token + "\n", mode=0o600)
-        return token
+        with self._write_lock:
+            with self.database.connection() as connection:
+                active = int(connection.execute("SELECT COUNT(*) FROM api_keys WHERE revoked=0").fetchone()[0])
+            if active:
+                return None
+            token, record = self._new_record("AuroraFox local admin", ADMIN_SCOPES, prefix="af_admin")
+            self._insert_record(record)
+            self._write_legacy_mirror()
+            atomic_write_text(self.bootstrap_path, token + "\n", mode=0o600)
+            return token
 
     def _new_record(self, name: str, scopes: list[str], prefix: str = "af_live") -> tuple[str, dict[str, Any]]:
         token = f"{prefix}_{secrets.token_urlsafe(32)}"
@@ -158,10 +159,11 @@ class KeyStore:
             )
 
     def create(self, name: str, scopes: list[str] | None = None) -> tuple[str, dict[str, Any]]:
-        token, record = self._new_record(name, scopes or DEFAULT_SCOPES)
-        self._insert_record(record)
-        self._write_legacy_mirror()
-        return token, record
+        with self._write_lock:
+            token, record = self._new_record(name, scopes or DEFAULT_SCOPES)
+            self._insert_record(record)
+            self._write_legacy_mirror()
+            return token, record
 
     def list(self) -> list[dict[str, Any]]:
         out: list[dict[str, Any]] = []
@@ -172,19 +174,18 @@ class KeyStore:
         return out
 
     def revoke(self, key_id: str) -> bool:
-        with self.database.connection(write=True) as connection:
-            cursor = connection.execute("UPDATE api_keys SET revoked=1 WHERE id=? AND revoked=0", (key_id,))
-            changed = cursor.rowcount > 0
-        if changed:
-            self._write_legacy_mirror()
-        return changed
+        with self._write_lock:
+            with self.database.connection(write=True) as connection:
+                cursor = connection.execute("UPDATE api_keys SET revoked=1 WHERE id=? AND revoked=0", (key_id,))
+                changed = cursor.rowcount > 0
+            if changed:
+                self._write_legacy_mirror()
+            return changed
 
     def verify(self, token: str) -> dict[str, Any] | None:
         if not token:
             return None
         digest = self._hash(token)
-        # Keep constant-time digest comparison even though SQLite already narrows
-        # the sensitive state to hashes rather than raw bearer tokens.
         with self.database.connection() as connection:
             rows = connection.execute(
                 "SELECT id, name, token_hash, scopes_json, created_at, revoked "
