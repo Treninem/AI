@@ -139,6 +139,11 @@ jobs:
         shell: bash
         run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_request_limits.py
 
+      - name: API server hardening contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_api_server_hardening.py
+
       - name: Master-log coordination contract
         if: always()
         shell: bash
@@ -178,6 +183,7 @@ jobs:
           test -f tests/research_collector_privacy_smoke.gd
           test -d benchmarks/knowledge
           test -f benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          test -f benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
           test -f benchmarks/knowledge/run_godot_probe.py
           test -f tests/test_knowledge_performance_contract.py
           test -f tests/test_knowledge_performance_compare.py
@@ -192,6 +198,7 @@ jobs:
           echo 'LANE_ARTIFACT_PRESENT tests/research_collector_privacy_smoke.gd'
           echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/**'
           echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/dedupe_alias_removal_probe.gd'
+          echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/legacy_unregistered_rollback_probe.gd'
           echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/run_godot_probe.py'
           echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_performance_contract.py'
           echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_performance_compare.py'
@@ -229,6 +236,16 @@ jobs:
           --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
           --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
           --report artifacts/integration-gate/dedupe-alias-removal.json
+
+      - name: Run legacy unregistered Knowledge rollback safety probe
+        if: always()
+        shell: bash
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/legacy_unregistered_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=
+          --report artifacts/integration-gate/legacy-unregistered-rollback.json
 
       - name: Run offline Core Agent memory Knowledge Work API and safety smokes
         if: always()
