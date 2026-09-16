@@ -12,7 +12,11 @@ def read(path: str) -> str:
 
 def test_integration_gate_is_same_sha_and_cancels_stale_runs() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    exact_ref = "ref: ${{ github.event.pull_request.head.sha || github.sha }}"
     assert "Checkout exact SHA" in workflow
+    assert workflow.count(exact_ref) == 2
+    assert workflow.count("INTEGRATION_HEAD_SHA=") == 2
+    assert "integration-gate-godot-${{ github.event.pull_request.head.sha || github.sha }}" in workflow
     assert "cancel-in-progress: true" in workflow
     assert "branches: [main]" in workflow
 
