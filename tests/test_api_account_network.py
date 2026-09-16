@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import importlib
 import os
+import sqlite3
 import sys
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+
+from api.account_mailer import AccountMailError
 
 
 def _load_server(monkeypatch, root: Path):
@@ -46,6 +49,70 @@ def _register_login(client: TestClient, email: str, password: str, device_name: 
 
 def _bearer(token: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {token}"}
+
+
+def test_smtp_failure_revokes_issued_token_and_immediate_resend_is_not_cooldown_blocked(
+    tmp_path: Path, monkeypatch
+):
+    root = tmp_path / "smtp-failure"
+    monkeypatch.setenv("AURORAFOX_USER_DIR", str(root))
+    monkeypatch.setenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "0")
+    monkeypatch.setenv("AURORAFOX_API_RPM", "10000")
+    monkeypatch.setenv("AURORAFOX_PUBLIC_AUTH_RPM", "10000")
+    monkeypatch.setenv("AURORAFOX_SMTP_HOST", "smtp.example.test")
+    monkeypatch.setenv("AURORAFOX_SMTP_PORT", "587")
+    monkeypatch.setenv("AURORAFOX_SMTP_USERNAME", "")
+    monkeypatch.setenv("AURORAFOX_SMTP_PASSWORD", "")
+    monkeypatch.setenv("AURORAFOX_SMTP_SENDER", "AuroraFox <no-reply@example.test>")
+    monkeypatch.setenv("AURORAFOX_SMTP_SECURITY", "starttls")
+    monkeypatch.setenv("AURORAFOX_ACCOUNT_PUBLIC_URL", "https://auth.example.test")
+    sys.modules.pop("api.server", None)
+    server = importlib.import_module("api.server")
+
+    attempts: list[tuple[str, str, str]] = []
+
+    def fail_delivery(recipient: str, purpose: str, token: str) -> None:
+        attempts.append((recipient, purpose, token))
+        raise AccountMailError("simulated SMTP outage")
+
+    monkeypatch.setattr(server.account_mailer, "send_token", fail_delivery)
+    client = TestClient(server.app)
+    email = "smtp-retry@example.com"
+
+    registered = client.post(
+        "/v1/auth/register",
+        json={"email": email, "password": "smtp retry secure password", "display_name": "SMTP Retry"},
+    )
+    assert registered.status_code == 200, registered.text
+    body = registered.json()
+    assert body["email_delivery"] == "retry_required"
+    assert "verification_token" not in body
+    assert len(attempts) == 1
+    first_token = attempts[0][2]
+
+    db_path = server.API_ROOT / "aurorafox.sqlite3"
+    with sqlite3.connect(db_path) as connection:
+        first_rows = connection.execute(
+            "SELECT token_hash, revoked_at FROM account_tokens WHERE purpose='verify_email'"
+        ).fetchall()
+    assert len(first_rows) == 1
+    assert first_rows[0][1] is not None
+
+    # The failed-delivery token is revoked, so the store's five-minute resend
+    # cooldown no longer hides a raw token the user never received. A retry can
+    # immediately issue a distinct token and reach SMTP again.
+    resent = client.post("/v1/auth/resend-verification", json={"email": email})
+    assert resent.status_code == 200, resent.text
+    assert resent.json() == {"ok": True, "accepted": True}
+    assert len(attempts) == 2
+    assert attempts[1][2] != first_token
+
+    with sqlite3.connect(db_path) as connection:
+        rows = connection.execute(
+            "SELECT token_hash, revoked_at FROM account_tokens WHERE purpose='verify_email' ORDER BY rowid"
+        ).fetchall()
+    assert len(rows) == 2
+    assert all(row[1] is not None for row in rows)
 
 
 def test_account_guest_network_isolation_rotation_conflict_migration_and_restart(tmp_path: Path, monkeypatch):

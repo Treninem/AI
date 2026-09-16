@@ -102,6 +102,32 @@ def test_capacity_warning_includes_uncheckpointed_wal_bytes(tmp_path: Path, monk
     assert "database_size" in status["warnings"]
 
 
+def test_guest_population_warning_is_observational_and_never_prunes_principals(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    monkeypatch.setenv("AURORAFOX_GUESTS_WARN", "2")
+    monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "1")
+    accounts = AccountStore(root)
+    first = accounts.create_guest("Guest one", "pytest")
+    second = accounts.create_guest("Guest two", "pytest")
+
+    maintenance = PersistenceMaintenance(root)
+    status = maintenance.status()
+    assert status["ok"] is True
+    assert status["attention_required"] is True
+    assert status["counts"]["guests"] == 2
+    assert "guest_population" in status["warnings"]
+    assert status["capacity_policy"]["guest_warn_count"] == 2
+    assert status["retention_policy"]["guest_principals_auto_pruned"] is False
+
+    pruned = maintenance.prune_ephemeral(retention_seconds=0)
+    assert "guests" in pruned["protected"]
+    assert "devices" in pruned["protected"]
+    assert accounts.verify_guest(first["guest_token"]) is not None
+    assert accounts.verify_guest(second["guest_token"]) is not None
+    with sqlite3.connect(root / "aurorafox.sqlite3") as connection:
+        assert connection.execute("SELECT COUNT(*) FROM guests").fetchone()[0] == 2
+
+
 def test_prune_removes_only_terminal_auth_rows_and_keeps_sync_audit(tmp_path: Path, monkeypatch):
     root = tmp_path / "api"
     monkeypatch.setenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", "1")
@@ -274,9 +300,11 @@ def test_malformed_capacity_environment_falls_back_safely(tmp_path: Path, monkey
     monkeypatch.setenv("AURORAFOX_STORAGE_MAINTENANCE_INTERVAL_SECONDS", "bad")
     monkeypatch.setenv("AURORAFOX_DATABASE_WARN_BYTES", "invalid")
     monkeypatch.setenv("AURORAFOX_BACKUP_MAX_BYTES", "invalid")
+    monkeypatch.setenv("AURORAFOX_GUESTS_WARN", "invalid")
     maintenance = PersistenceMaintenance(root)
     status = maintenance.status()
     assert isinstance(status["hard_pressure"], bool)
     assert maintenance.maintenance_interval_seconds >= 60
     assert maintenance.warn_database_bytes > 0
+    assert maintenance.warn_guests > 0
     assert status["capacity_policy"]["database_warning_precedes_backup_cap"] is True

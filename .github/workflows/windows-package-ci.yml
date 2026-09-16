@@ -47,6 +47,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: aurorafox-windows-package-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   package-windows:
     runs-on: windows-latest

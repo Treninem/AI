@@ -695,3 +695,56 @@ ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the det
 - Android: machine-readable bounded/private/local-only contract сохраняется; `physical_device_proof=false`. Desktop/Linux/Windows CI не выдаётся за Android device proof.
 - Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe без потери provenance/shared-source removal. Если registry-only doubling `>=3.5×` — исправить свободный registry path и повторить 16/32/64. Если interrupted-removal падает — исправлять только transaction/manager/recovery path. После этого закрыть Windows current-runtime proof и 100/250 MiB stress; OCR 100-page scanned/mixed stress добавлять только после интеграции `LOCAL-OCR`.
 - Освобождённые файлы: нет; `benchmarks/knowledge/**`, related Knowledge performance/stress tests/workflow, `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd` и performance-follow-up `scripts/memory_store.gd` остаются в ACTIVE CLAIM. `scripts/knowledge_store.gd` по-прежнему не трогать до освобождения `LOCAL-OCR`.
+
+## 32. Large Knowledge / Memory Performance — Wave-B resilience preparation, 2026-09-16
+
+### `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` — checkpoint
+
+- Статус: **ACTIVE — benchmark/CI-only Wave-B пакет собран; runtime gate удерживается координатором до завершения UI Wave A**.
+- Base HEAD подготовки: `ab2103acf6667eb3812f969b4c926902a37ccece`; перед этой записью свежий `main` проверен до `1e9503537493b9cdd29d164005d3a12c3b59e17f`. Изменения между ними не затрагивают Knowledge-owned paths этого пакета.
+- Branch: `chat-knowledge-races-v2-20260916`; draft PR #64 существует, но **временно CLOSED без merge** по явному coordinator CI wave control. Coordinator comment `5702362208`: продолжать эту же ветку, не создавать replacement PR, закончить consolidated race/scaling/failure-injection batch и переоткрыть **тот же PR #64** только после сигнала Wave B.
+- Commits текущего пакета: `886ae50eaabf889c8822d6d87c4642bcee441f92` — deterministic duplicate-import + search/remove race proof; `d11b9f59e72f85e6f659b9948f3d3379339d87ba` + `e5562e6f6f9135cce7466047e280703803abaffe` — consolidated resilience runner; `180680bfd125ba7b463cf799d2c93dca47f983f0` — isolated Windows profile warm-up для registry scaling; `1ee5beb6d641b305b135f81b2aa865c186c68e88`, `242a4d83dcb6a05a3aba8868a219216b9cbfb5d4`, `4c43a503b23df85bca23e4c8734961ea97fb3265` — regression contracts; `e1ba76e35f96d2cd3bb25bd0ca4100c4f55c680f` + `5d3719421aeaf77e48155e1c2c6360ed3d3cdae4` — isolated Linux/Windows resilience workflow.
+- Consolidated batch одним machine-readable JSON объединяет: concurrent byte-identical import; search + canonical remove race; record-level/shared-source dedupe; alias-preservation; legacy pre-registry rollback; registry write-failure rollback; truncated registry temp rejection; real process-kill interrupted import recovery; real process-kill interrupted removal recovery; registry N→2N→4N scaling. Self-reliance contract фиксирует `network_required=false`, `external_runtime_required=false`, `ollama_required=false`; absolute hosted-runner timings остаются informational, registry quadratic finding является relative blocker.
+- Windows benchmark infrastructure дополнительно выровнена с существующим portable contract: `run_registry_scaling.py` теперь прогревает тот же isolated Windows Godot profile до запуска probe, чтобы ранее известный fresh-profile class-resolution дефект не выдавался за production scaling regression.
+- Production code этим пакетом **не изменялся**. В частности, OCR-owned `scripts/knowledge_store.gd` не трогался. Static audit показывает, что duplicate-import сериализуется `KnowledgeImportTransaction` static mutex; потенциальный Windows search/remove риск остаётся на стыке открытого reader и file replacement в OCR-owned Store и не объявляется blocker без runtime artifact.
+- Старый auxiliary run `35133333541` на раннем head `1a6e2b8b...` остался QUEUED после coordinator closure и **не считается green/runtime evidence**. Новый consolidated batch ещё не запускался из-за Wave-A CI control.
+- Каноническая версия остаётся **V1.3.0.0**; intended lane bump по-прежнему **PATCH только после acceptance**, Android `versionCode` не менялся.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+
+DONE:
+- Доказанный Linux baseline, alias correctness, near-linear MemoryStore/search scaling и прежние durability fixes остаются валидным baseline section 31.
+- На текущей Wave-B ветке собран единый race/scaling/failure-injection пакет, отдельный Linux/Windows workflow и machine-readable aggregate verdict; production-файлы не затронуты.
+- Добавлены duplicate-import и search/remove concurrency proofs, Windows isolated-profile warm-up для registry scaling и fail-closed regression contracts.
+- Coordinator wave-control соблюдён: новый replacement PR после закрытия #64 не создавался, #64 не переоткрывался самовольно.
+
+REMAINING:
+- После coordinator Wave-B signal переоткрыть **тот же PR #64** и получить exact Linux + Windows artifacts для consolidated resilience batch.
+- Если runtime выявит дефект в `knowledge_import_transaction.gd`/registry — исправить в этом CLAIM и повторить exact batch; если root cause потребует `scripts/knowledge_store.gd`, оформить точный `PERFORMANCE-BLOCKER` в `CHAT-2026-09-16-LOCAL-OCR`, не менять занятый файл.
+- После same-SHA green resilience evidence интегрировать пакет без ослабления relative gates и запустить существующий `[knowledge-large]` main stress path для 100/250 MiB memory-pressure evidence.
+- Записать финальные run/job/artifact/digest, timings/RSS и Android physical-device limitation; только после этого закрывать CLAIM/освобождать пути.
+
+BLOCKERS:
+- `COORDINATOR CI WAVE CONTROL`: PR #64 временно закрыт до завершения UI Wave A; evidence — PR #64 comment `5702362208`. Это scheduling blocker, не code failure.
+- Runtime verdict нового consolidated batch отсутствует по той же причине. `35133333541` остаётся queued и не является доказательством прохождения.
+- Потенциальный cross-lane blocker в OCR-owned `scripts/knowledge_store.gd` объявлять только если search/remove или record-dedupe probe воспроизведёт его на runtime.
+
+NEXT:
+- Сохранять `chat-knowledge-races-v2-20260916` без нового PR и синхронизировать только при релевантном Knowledge overlap. На coordinator Wave-B signal переоткрыть PR #64, выполнить consolidated Linux/Windows batch, разобрать JSON artifacts и либо исправить доказанный owned-path defect, либо выписать точный OCR `PERFORMANCE-BLOCKER`; после green same-SHA evidence запустить 100/250 MiB stress gate.
+
+- Освобождённые файлы: нет; CLAIM остаётся ACTIVE до runtime/large-stress acceptance.
+
+## 33. Voice Quality — Android female local TTS candidate, 2026-09-16
+
+### `CHAT-2026-09-16-VOICE-QUALITY` — ownership extension
+
+- Статус: **ACTIVE — coordinator acceptance; Android female TTS candidate isolated before integration**.
+- Fresh main checked through: `b6cdcaa76f51649ffa1f0302fc987ee05b17e423`; existing voice coordinator acceptance remains under the same CLAIM and intended bump remains **PATCH** only after relevant green gates.
+- Ownership extension for this substage: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`, `android_plugin/setup_native.ps1`, `tests/test_android_contract.py`, plus already claimed voice acceptance files. `android_plugin/plugin/build.gradle.kts`, `android_plugin/settings.gradle.kts`, `AndroidFileRuntime.kt` and OCR/package metadata remain owned by `CHAT-2026-09-16-LOCAL-OCR` and must not be modified by VOICE-QUALITY.
+- Evidence/blocker: current Android local TTS packages `vits-piper-ru_RU-denis-medium` and reports `sherpa-onnx-piper-denis`; this is a male voice and therefore does not satisfy the coordinator requirement for Russian female voice evidence on both platforms. Current Android package/install/launch proof validates the local Piper path but not that requirement.
+- Candidate selection: Piper `ru_RU-irina-medium` is not accepted for a distributable AuroraFox baseline because its upstream model metadata leaves the dataset/license status unclear. Supertonic 3 is evaluated instead as a fully local ONNX candidate. The existing pinned `sherpa-onnx 1.13.4` already contains `OfflineTtsSupertonicModelConfig`, so this candidate does **not** require touching OCR-owned Gradle/settings or changing the sherpa version.
+- Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
+- Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
+- Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1–F5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
+- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially regresses intelligibility, clipping, latency/memory/package limits or local-only operation.
