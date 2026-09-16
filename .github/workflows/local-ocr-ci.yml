@@ -6,6 +6,7 @@ on:
     paths:
       - 'file_intelligence/**'
       - 'android_plugin/**'
+      - 'build/build_windows.ps1'
       - 'scripts/knowledge_document_importer.gd'
       - 'scripts/file_intelligence_client.gd'
       - 'scripts/knowledge_store.gd'
@@ -16,6 +17,7 @@ on:
     paths:
       - 'file_intelligence/**'
       - 'android_plugin/**'
+      - 'build/build_windows.ps1'
       - 'scripts/knowledge_document_importer.gd'
       - 'scripts/file_intelligence_client.gd'
       - 'scripts/knowledge_store.gd'
@@ -44,6 +46,36 @@ jobs:
         run: |
           python -m py_compile file_intelligence/local_ocr.py file_intelligence/file_service.py
           pytest -q tests/test_local_ocr.py
+
+  windows-portable-ocr:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build portable File Intelligence OCR runtime
+        shell: powershell
+        run: .\file_intelligence\install_files.ps1 -PreparePortable
+      - name: Verify packaged local-only OCR contract
+        shell: powershell
+        run: |
+          $root = Join-Path $PWD 'file_intelligence'
+          $python = Join-Path $root 'python\python.exe'
+          $vendor = Join-Path $root 'vendor'
+          $tesseract = Join-Path $root 'ocr_runtime\tesseract.exe'
+          if (-not (Test-Path $python)) { throw 'Portable Python missing' }
+          if (-not (Test-Path $tesseract)) { throw 'Bundled tesseract.exe missing' }
+          if (-not (Test-Path (Join-Path $root 'ocr_runtime\tessdata\eng.traineddata'))) { throw 'eng.traineddata missing' }
+          if (-not (Test-Path (Join-Path $root 'ocr_runtime\tessdata\rus.traineddata'))) { throw 'rus.traineddata missing' }
+          $old = $env:PYTHONPATH
+          try {
+            $env:PYTHONPATH = $vendor
+            Push-Location $root
+            & $python -c "import local_ocr; h=local_ocr.health(); assert h['available']; assert h['network_required'] is False; assert h['external_ai_required'] is False; assert set(h['requested_languages']) == {'rus','eng'}; print('AURORA_WINDOWS_PORTABLE_OCR_OK')"
+            if ($LASTEXITCODE -ne 0) { throw 'Portable OCR contract verification failed' }
+          } finally {
+            Pop-Location
+            $env:PYTHONPATH = $old
+          }
 
   godot-knowledge:
     runs-on: ubuntu-latest
