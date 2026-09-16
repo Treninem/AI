@@ -135,9 +135,15 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if main.find_child("UpdateStatusButton", true, false) != null:
 		_fail("Floating/header update control leaked back into the chat surface", 22)
 		return false
-	if main.find_child("WorkButton", true, false) != null:
-		_fail("Work shortcut leaked back into the primary chat sidebar", 23)
-		return false
+	var work_button := main.find_child("WorkButton", true, false) as Button
+	if mobile:
+		if work_button != null and work_button.is_visible_in_tree():
+			_fail("Desktop Work shortcut is visible on mobile", 23)
+			return false
+	else:
+		if work_button == null or work_button.text.strip_edges() != "Работа" or work_button.pressed.get_connections().is_empty():
+			_fail("Desktop Work entry is missing or not wired", 23)
+			return false
 	if _visible_placeholder_fox(main):
 		_fail("Temporary fox/cat placeholder artwork is visible in production UI", 24)
 		return false
@@ -332,7 +338,7 @@ func _run_desktop(packed: PackedScene) -> bool:
 	var panel := main.find_child("MainPanel", true, false) as Control
 	var composer := main.find_child("ComposerMargin", true, false) as Control
 	var header_actions := main.find_child("MainHeaderActions", true, false) as Control
-	for target_size in [Vector2i(960, 640), Vector2i(1180, 720), Vector2i(1440, 900)]:
+	for target_size in [Vector2i(960, 640), Vector2i(1280, 720), Vector2i(1440, 900)]:
 		root.content_scale_size = target_size
 		await process_frame
 		await process_frame
