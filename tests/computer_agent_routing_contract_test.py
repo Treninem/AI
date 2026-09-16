@@ -90,6 +90,17 @@ def test_work_guard_owns_computer_action_id_and_stops_uncertain_unsafe_results()
     assert 'http >= 500 or http in [408, 429]' in work
 
 
+def test_uncertain_action_requires_explicit_user_acknowledgement_before_retry():
+    work = _text("work/work_manager.gd")
+    store = _text("work/work_store.gd")
+    assert 'func acknowledge_uncertain_action(' in work
+    assert 'if not bool(task.get("requires_user_action", false))' in work
+    assert '"requires_user_action": false' in work
+    assert '"retryable": allow_retry' in work
+    assert 'if task.is_empty() or bool(task.get("requires_user_action", false))' in store
+    assert 'return transition_task(project_id, task_id, STATE_QUEUED, {}, true)' in store
+
+
 def test_ui_owned_overlay_is_not_changed_into_a_service_side_planner_contract():
     # UI remains a separate claim. This lane only records the integration blocker;
     # it must not solve the blocker by reintroducing a remote/service planner.
