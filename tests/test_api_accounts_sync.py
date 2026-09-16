@@ -39,6 +39,52 @@ def test_accounts_are_case_insensitive_and_passwords_are_not_stored_plaintext(tm
     assert "scrypt" in str(params)
 
 
+def test_missing_and_disabled_login_take_dummy_password_check_path(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    store = AccountStore(root)
+    created = store.register("timing@example.com", "timing oracle secure password", "Timing")
+    store.verify_email(created["verification_token"])
+
+    with sqlite3.connect(root / "aurorafox.sqlite3") as connection:
+        real_salt = connection.execute(
+            "SELECT password_salt FROM accounts WHERE id=?",
+            (created["account"]["id"],),
+        ).fetchone()[0]
+
+    calls: list[tuple[str, str, str]] = []
+
+    def observed(password: str, salt_hex: str, digest_hex: str, params_json: str) -> bool:
+        calls.append((salt_hex, digest_hex, params_json))
+        return False
+
+    monkeypatch.setattr(store, "_password_matches", observed)
+
+    with pytest.raises(AuthenticationError, match="Invalid email or password"):
+        store.login("missing@example.com", "timing oracle secure password", "PC", "pytest")
+    assert len(calls) == 1
+    assert calls[0][0] == store.DUMMY_PASSWORD_SALT_HEX
+    assert calls[0][1] == store.DUMMY_PASSWORD_HASH_HEX
+
+    calls.clear()
+    with pytest.raises(AuthenticationError, match="Invalid email or password"):
+        store.login("timing@example.com", "wrong but sufficiently long password", "PC", "pytest")
+    assert len(calls) == 1
+    assert calls[0][0] == real_salt
+    assert calls[0][0] != store.DUMMY_PASSWORD_SALT_HEX
+
+    with sqlite3.connect(root / "aurorafox.sqlite3") as connection:
+        connection.execute(
+            "UPDATE accounts SET disabled_at=1 WHERE id=?",
+            (created["account"]["id"],),
+        )
+        connection.commit()
+    calls.clear()
+    with pytest.raises(AuthenticationError, match="Invalid email or password"):
+        store.login("timing@example.com", "timing oracle secure password", "PC", "pytest")
+    assert len(calls) == 1
+    assert calls[0][0] == store.DUMMY_PASSWORD_SALT_HEX
+
+
 def test_account_token_resend_cooldown_preserves_active_links(tmp_path: Path, monkeypatch):
     store = AccountStore(tmp_path / "api", account_token_cooldown=300)
     now = [1_000]
