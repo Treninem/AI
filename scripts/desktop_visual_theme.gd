@@ -9,24 +9,28 @@ const SIDEBAR_WIDE := 286.0
 const SIDEBAR_COMPACT := 228.0
 
 var _root: Control
-var _last_width := -1.0
+var _last_size := Vector2.ZERO
 
 func _ready() -> void:
-	if OS.get_name() == "Android":
-		return
 	_root = get_parent() as Control
 	if _root == null:
 		return
-	get_window().min_size = MIN_WINDOW
-	get_viewport().size_changed.connect(_apply_responsive_layout)
+	if OS.get_name() != "Android":
+		get_window().min_size = MIN_WINDOW
+	if not get_viewport().size_changed.is_connected(_apply_responsive_layout):
+		get_viewport().size_changed.connect(_apply_responsive_layout)
 	call_deferred("_apply_after_build")
 
 func _apply_after_build() -> void:
-	for _i in range(3):
+	for _i in range(4):
 		await get_tree().process_frame
-	_replace_background(_root)
+	if OS.get_name() != "Android":
+		_replace_background(_root)
+		# Avatar intentionally stays on the repository fallback until the owner
+		# supplies the final AuroraFox artwork. Do not redesign it here.
+		_replace_header_avatar()
 	_apply_safe_button_styles(_root)
-	_replace_header_avatar()
+	_apply_popup_styles(_root)
 	_apply_responsive_layout()
 
 func _replace_background(node: Node) -> void:
@@ -38,7 +42,7 @@ func _replace_background(node: Node) -> void:
 				rect.modulate = Color(1, 1, 1, 0.96)
 		_replace_background(child)
 
-func _flat_state(fill: Color, border: Color) -> StyleBoxFlat:
+func _flat_state(fill: Color, border: Color, radius := 11) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = fill
 	style.border_color = border
@@ -46,10 +50,10 @@ func _flat_state(fill: Color, border: Color) -> StyleBoxFlat:
 	style.border_width_right = 1
 	style.border_width_top = 1
 	style.border_width_bottom = 1
-	style.corner_radius_top_left = 11
-	style.corner_radius_top_right = 11
-	style.corner_radius_bottom_left = 11
-	style.corner_radius_bottom_right = 11
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_left = radius
+	style.corner_radius_bottom_right = radius
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 8
@@ -69,6 +73,22 @@ func _apply_safe_button_styles(node: Node) -> void:
 			button.add_theme_color_override("font_hover_color", Color.WHITE)
 			button.clip_text = true
 		_apply_safe_button_styles(child)
+
+func _popup_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.022, 0.026, 0.045, 0.995)
+	style.border_color = Color(0.34, 0.56, 0.88, 0.82)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(18)
+	style.shadow_color = Color(0, 0, 0, 0.72)
+	style.shadow_size = 18
+	return style
+
+func _apply_popup_styles(node: Node) -> void:
+	for child in node.get_children():
+		if child is PopupPanel:
+			(child as PopupPanel).add_theme_stylebox_override("panel", _popup_style())
+		_apply_popup_styles(child)
 
 func _replace_header_avatar() -> void:
 	var slot := _root.find_child("AvatarSlot", true, false) as Control
@@ -90,19 +110,25 @@ func _replace_header_avatar() -> void:
 func _apply_responsive_layout() -> void:
 	if _root == null:
 		return
-	var width := get_viewport().get_visible_rect().size.x
-	if is_equal_approx(width, _last_width):
+	var viewport := get_viewport().get_visible_rect().size
+	if viewport.is_equal_approx(_last_size):
 		return
-	_last_width = width
-	var compact := width < 1180.0
+	_last_size = viewport
+	var compact := viewport.x < 1180.0
+	var tight := viewport.x < 1040.0
 
 	var sidebar := _root.find_child("Sidebar", true, false) as Control
-	if sidebar != null:
+	if sidebar != null and OS.get_name() != "Android":
 		sidebar.custom_minimum_size.x = SIDEBAR_COMPACT if compact else SIDEBAR_WIDE
 
 	var avatar_slot := _root.find_child("AvatarSlot", true, false) as Control
-	if avatar_slot != null:
-		avatar_slot.custom_minimum_size = Vector2(46, 42) if compact else Vector2(58, 48)
+	if avatar_slot != null and OS.get_name() != "Android":
+		avatar_slot.custom_minimum_size = Vector2(44, 40) if tight else (Vector2(46, 42) if compact else Vector2(58, 48))
+
+	var header_margin := _root.find_child("HeaderMargin", true, false) as MarginContainer
+	if header_margin != null and OS.get_name() != "Android":
+		header_margin.add_theme_constant_override("margin_left", 12 if compact else 24)
+		header_margin.add_theme_constant_override("margin_right", 12 if compact else 20)
 
 	var header_actions := _root.find_child("MainHeaderActions", true, false) as HBoxContainer
 	if header_actions != null:
@@ -110,12 +136,12 @@ func _apply_responsive_layout() -> void:
 		for child in header_actions.get_children():
 			if child is Button:
 				var button := child as Button
-				var max_width := 104.0 if compact else 132.0
-				if button.custom_minimum_size.x > max_width:
-					button.custom_minimum_size.x = max_width
+				button.clip_text = true
+				if OS.get_name() != "Android":
+					button.custom_minimum_size.x = minf(button.custom_minimum_size.x, 108.0 if compact else 132.0)
 
 	var voice_status := _root.find_child("VoiceStatus", true, false) as Label
-	if voice_status != null:
+	if voice_status != null and OS.get_name() != "Android":
 		voice_status.visible = not compact
 
 	var main_panel := _root.find_child("MainPanel", true, false) as Control
@@ -123,11 +149,29 @@ func _apply_responsive_layout() -> void:
 		main_panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 	var composer := _root.find_child("ComposerMargin", true, false) as MarginContainer
-	if composer != null:
+	if composer != null and OS.get_name() != "Android":
 		composer.add_theme_constant_override("margin_left", 12 if compact else 24)
 		composer.add_theme_constant_override("margin_right", 12 if compact else 24)
 		composer.add_theme_constant_override("margin_bottom", 10 if compact else 20)
 
+	var messages := _root.find_child("MessagesMargin", true, false) as MarginContainer
+	if messages != null and OS.get_name() != "Android":
+		messages.add_theme_constant_override("margin_left", 14 if compact else 26)
+		messages.add_theme_constant_override("margin_right", 14 if compact else 26)
+
 	var message_scroll := _root.find_child("MessageScroll", true, false) as ScrollContainer
 	if message_scroll != null:
 		message_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+
+	_fit_popups(_root, viewport)
+
+func _fit_popups(node: Node, viewport: Vector2) -> void:
+	var max_width := maxi(420, int(viewport.x - 48.0))
+	var max_height := maxi(420, int(viewport.y - 48.0))
+	for child in node.get_children():
+		if child is PopupPanel:
+			var popup := child as PopupPanel
+			var current := popup.size
+			if current.x > 0 and current.y > 0:
+				popup.size = Vector2i(mini(current.x, max_width), mini(current.y, max_height))
+		_fit_popups(child, viewport)
