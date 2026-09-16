@@ -12,6 +12,7 @@ on:
       - 'tests/work_reliability_*'
       - 'tests/computer_agent_*'
       - 'tests/work_computer_e2e_*'
+      - 'tests/work_computer_attempt_safety_smoke.gd'
       - 'tests/work_computer_master_stop_smoke.gd'
       - '.github/workflows/work-computer-reliability.yml'
   push:
@@ -26,6 +27,7 @@ on:
       - 'tests/work_reliability_*'
       - 'tests/computer_agent_*'
       - 'tests/work_computer_e2e_*'
+      - 'tests/work_computer_attempt_safety_smoke.gd'
       - 'tests/work_computer_master_stop_smoke.gd'
       - '.github/workflows/work-computer-reliability.yml'
   workflow_dispatch:
@@ -93,6 +95,8 @@ jobs:
         run: timeout 60s ./godot --headless --path . --script tests/work_reliability_store_smoke.gd
       - name: Work cancel and master-stop unsafe-action race smoke
         run: timeout 40s ./godot --headless --path . --script tests/work_computer_e2e_control_smoke.gd
+      - name: Work whole-attempt destructive retry smoke
+        run: timeout 35s ./godot --headless --path . --script tests/work_computer_attempt_safety_smoke.gd
       - name: Work unknown unsafe-result recovery smoke
         run: timeout 30s ./godot --headless --path . --script tests/work_computer_e2e_uncertain_result_smoke.gd
       - name: Work and Computer real master-stop binding smoke
@@ -110,10 +114,13 @@ jobs:
           ! grep -Eiq 'ollama|openai|gemini|claude' computer/computer_service.py
           ! grep -Eiq 'ollama pull|qwen3-vl' computer/install_computer.ps1
           grep -q 'local_core_planning_required' computer/computer_service.py
+          grep -q 'ALLOW_DEGRADED_LOCAL_SANDBOX' computer/computer_service.py
           grep -q 'EXECUTION_CONTROL_PREFIX' scripts/agent_core.gd
           grep -q 'execution_guard' scripts/agent_core.gd
           grep -q 'STATE_INTERRUPTED' work/work_store.gd
           grep -q 'requires_user_action' work/work_store.gd
+          grep -q 'attempt_retry_safety' work/work_store.gd
+          grep -q 'unsafe_action_seen' work/work_manager.gd
           grep -q 'shared_service_token' scripts/computer_client.gd
           grep -q 'computer_action' scripts/tool_registry.gd
           grep -q 'X-AuroraFox-Computer-Token' scripts/tool_registry.gd
