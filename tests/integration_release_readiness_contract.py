@@ -23,6 +23,12 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/test_api_privacy_contract.py",
         "tests/test_release_core_gates.py",
         "tests/test_android_contract.py",
+        "tests/test_voice_text.py",
+        "tests/test_voice_configs.py",
+        "tests/test_xtts_contract.py",
+        "tests/test_core_candidate_promotion.py",
+        "tests/test_api_runtime_resilience.py",
+        "tests/test_project_master_contract.py",
     ):
         assert test_path in workflow
 
@@ -117,6 +123,19 @@ def test_safety_and_release_authority_contracts_are_aggregated() -> None:
 
     assert "test_promotion_workflow_cannot_access_release_signing_secrets" in release_contract
     assert "test_signed_release_is_blocked_by_core_gates" in release_contract
+
+
+def test_python_regressions_are_split_into_owner_routable_steps() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+    for step_name in (
+        "Voice text contract",
+        "Voice config and acoustic-evidence contract",
+        "Voice optional XTTS contract",
+        "Candidate promotion and updater compatibility contract",
+        "API runtime resilience contract",
+        "Master-log coordination contract",
+    ):
+        assert step_name in workflow
 
 
 def test_integration_gate_is_not_mistaken_for_visual_or_physical_device_acceptance() -> None:
