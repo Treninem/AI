@@ -53,6 +53,7 @@ concurrency:
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   gate-contract:
@@ -169,6 +170,50 @@ jobs:
           pwsh -NoProfile -File benchmarks/core/run_windows_benchmark.ps1 -GodotPath '${{ steps.godot.outputs.path }}' -ReportPath "$PWD\artifacts\core-benchmark-raw.json"
           exit $LASTEXITCODE
 
+      # Baseline retrieval is intentionally outside the measured offline phase.
+      # Only a previously successful push to main may become a comparison source.
+      # The first successful main run bootstraps the artifact history; until then
+      # evaluate_report.py still enforces absolute hang/resource ceilings.
+      - name: Resolve latest successful main benchmark baseline
+        id: baseline
+        if: always()
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = Join-Path $PWD 'artifacts\baseline-download'
+          New-Item -ItemType Directory -Force -Path $root | Out-Null
+          $runsJson = gh run list --workflow core-benchmarks.yml --branch main --event push --status success --limit 10 --json databaseId,headSha,createdAt
+          if ($LASTEXITCODE -ne 0) { throw 'Unable to query successful main Core benchmark runs.' }
+          $runs = @($runsJson | ConvertFrom-Json)
+          $baselinePath = ''
+          foreach ($run in $runs) {
+            $runId = [string]$run.databaseId
+            $headSha = [string]$run.headSha
+            if ([string]::IsNullOrWhiteSpace($runId) -or [string]::IsNullOrWhiteSpace($headSha)) { continue }
+            $candidateDir = Join-Path $root $runId
+            New-Item -ItemType Directory -Force -Path $candidateDir | Out-Null
+            $artifactName = "aurorafox-core-benchmark-$headSha"
+            & gh run download $runId -n $artifactName -D $candidateDir
+            if ($LASTEXITCODE -ne 0) {
+              Remove-Item -LiteralPath $candidateDir -Recurse -Force -ErrorAction SilentlyContinue
+              continue
+            }
+            $candidate = Join-Path $candidateDir 'core-benchmark-report.json'
+            if (Test-Path -LiteralPath $candidate) {
+              $baselinePath = (Resolve-Path -LiteralPath $candidate).Path
+              break
+            }
+          }
+          if ([string]::IsNullOrWhiteSpace($baselinePath)) {
+            Write-Host 'AURORAFOX_CORE_BASELINE_BOOTSTRAP no successful main benchmark artifact is available yet; hard limits remain enforced.'
+            "path=" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "AURORAFOX_CORE_BASELINE_FOUND $baselinePath"
+            "path=$baselinePath" >> $env:GITHUB_OUTPUT
+          }
+
       - name: Evaluate quality and performance gates
         id: evaluation
         continue-on-error: true
@@ -181,8 +226,9 @@ jobs:
             '--scenarios', 'benchmarks/core/scenarios.json',
             '--output', 'artifacts/core-benchmark-report.json'
           )
-          if (Test-Path 'benchmarks/core/baseline/windows-latest.json') {
-            $args += @('--baseline', 'benchmarks/core/baseline/windows-latest.json')
+          $baseline = '${{ steps.baseline.outputs.path }}'
+          if (-not [string]::IsNullOrWhiteSpace($baseline) -and (Test-Path -LiteralPath $baseline)) {
+            $args += @('--baseline', $baseline)
           }
           python @args
           exit $LASTEXITCODE
