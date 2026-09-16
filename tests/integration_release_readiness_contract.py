@@ -164,6 +164,28 @@ def test_legacy_unregistered_rollback_is_part_of_same_sha_gate() -> None:
     assert "failed reimport must preserve legacy source rows that predate sources.json" in probe
 
 
+def test_knowledge_shared_lifecycle_and_crash_recovery_are_same_sha_covered() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+
+    required = (
+        "Run Knowledge record dedupe and shared-source lifecycle probe",
+        "benchmarks/knowledge/record_dedupe_shared_source_probe.gd",
+        "AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=",
+        "Run interrupted Knowledge reimport restart recovery",
+        "benchmarks/knowledge/run_interrupted_import_recovery.py",
+        "interrupted-reimport-recovery.json",
+        "Run interrupted canonical Knowledge removal restart recovery",
+        "benchmarks/knowledge/run_interrupted_removal_recovery.py",
+        "interrupted-removal-recovery.json",
+    )
+    for marker in required:
+        assert marker in workflow
+
+    assert "--target-mb 32" in workflow
+    assert "--target-mb 8" in workflow
+    assert "timeout-minutes: 35" in workflow
+
+
 def test_work_persistence_and_self_reliance_are_same_sha_covered() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     work_store = read("tests/work_mode_store_smoke.gd")
@@ -268,7 +290,10 @@ def test_godot_failure_does_not_hide_followup_smokes_or_diagnostics() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
 
     for step_name in (
+        "Run Knowledge record dedupe and shared-source lifecycle probe",
         "Run legacy unregistered Knowledge rollback safety probe",
+        "Run interrupted Knowledge reimport restart recovery",
+        "Run interrupted canonical Knowledge removal restart recovery",
         "Run offline Core Agent memory Knowledge Work API and safety smokes",
         "Run headless UI regression smoke (not visual acceptance)",
         "Record acceptance boundary",
@@ -303,8 +328,11 @@ def test_active_lane_workflows_become_visible_to_integration_when_they_land() ->
         "benchmarks/core/**",
         "benchmarks/knowledge/**",
         "benchmarks/knowledge/dedupe_alias_removal_probe.gd",
+        "benchmarks/knowledge/record_dedupe_shared_source_probe.gd",
         "benchmarks/knowledge/legacy_unregistered_rollback_probe.gd",
         "benchmarks/knowledge/run_godot_probe.py",
+        "benchmarks/knowledge/run_interrupted_import_recovery.py",
+        "benchmarks/knowledge/run_interrupted_removal_recovery.py",
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
         "tests/test_knowledge_stress_gates.py",
