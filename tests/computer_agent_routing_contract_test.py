@@ -21,6 +21,18 @@ def test_real_scene_master_stop_node_is_bound_by_work_and_computer_clients():
     assert 'get_node_or_null("AutonomySettingsManager")' not in work
 
 
+def test_computer_control_is_explicit_default_off_permission():
+    client = _text("scripts/computer_client.gd")
+    tools = _text("scripts/tool_registry.gd")
+    assert 'static var _computer_control_enabled := false' in client
+    assert 'static func set_computer_control_enabled(value: bool)' in client
+    assert 'static func computer_control_enabled() -> bool' in client
+    assert 'if require_computer_permission and not computer_control_enabled()' in client
+    assert 'func _computer_permission() -> Dictionary' in tools
+    assert 'if ComputerClient.computer_control_enabled()' in tools
+    assert tools.count('var permission := _computer_permission()') >= 3
+
+
 def test_tool_registry_uses_local_core_planning_and_protected_primitives():
     tools = _text("scripts/tool_registry.gd")
     assert 'register_tool("computer_action"' in tools
