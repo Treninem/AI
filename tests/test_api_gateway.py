@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import base64
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -123,13 +126,53 @@ def test_feedback_replays_into_agent_experience_bridge(tmp_path: Path):
     assert bridge.feedback_items[0]["corrected_answer"] == "correct answer"
 
 
-def test_file_upload_rejects_oversize_payload_before_disk_write(tmp_path: Path):
+def test_concurrent_learning_flush_does_not_duplicate_bridge_side_effects(tmp_path: Path):
+    bridge = FakeBridge()
+    sync = LearningSynchronizer(tmp_path / "api", bridge)
+    payloads = [
+        {"source": "fixture", "kind": "external_knowledge", "content": "one"},
+        {"source": "fixture", "kind": "external_knowledge", "content": "two"},
+    ]
+    for payload in payloads:
+        sync.record("external_knowledge", payload, try_sync=False)
+    assert sync.status()["pending"] == 2
+
+    bridge.online = True
+    original_learn = bridge.learn
+
+    def slow_learn(payload):
+        # Keep the first replay in-flight long enough that an unprotected second
+        # flush would read and deliver the same still-pending rows.
+        time.sleep(0.05)
+        return original_learn(payload)
+
+    bridge.learn = slow_learn
+    start = threading.Barrier(2)
+
+    def flush_worker():
+        start.wait(timeout=2)
+        return sync.flush(100)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(lambda _index: flush_worker(), range(2)))
+
+    assert sorted(item["attempted"] for item in results) == [0, 2]
+    assert len(bridge.learned) == 2
+    assert sorted(item["content"] for item in bridge.learned) == ["one", "two"]
+    assert sync.status()["pending"] == 0
+
+
+def test_file_upload_rejects_oversize_payload_before_disk_write_and_uses_unique_paths(tmp_path: Path):
     uploads = tmp_path / "uploads"
     client = FileIntelligenceClient(uploads, max_file_bytes=8)
     valid = base64.b64encode(b"12345678").decode("ascii")
-    path = client.save_base64("sample.bin", valid)
-    assert path.read_bytes() == b"12345678"
-    path.unlink()
+    first = client.save_base64("sample.bin", valid)
+    second = client.save_base64("sample.bin", valid)
+    assert first != second
+    assert first.read_bytes() == b"12345678"
+    assert second.read_bytes() == b"12345678"
+    first.unlink()
+    second.unlink()
 
     oversized = base64.b64encode(b"123456789").decode("ascii")
     with pytest.raises(ValueError, match="exceeds AuroraFox API limit"):

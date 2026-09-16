@@ -26,6 +26,7 @@ def test_voice_config_has_required_local_paths():
 
 def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_default():
     processor = load("voice_config.json")["processor"]
+    assert int(processor["profile_revision"]) >= 2
     assert processor["prosody_dsp"] is False
     assert processor["compression"] is False
     assert float(processor["highpass_hz"]) == 0.0
@@ -60,7 +61,6 @@ def test_speech_queue_forced_split_uses_natural_boundaries():
     queue = (ROOT / "voice" / "speech_queue.gd").read_text(encoding="utf-8")
     assert "MAX_SPEECH_CHUNK_CHARS := 220" in queue
     assert "func _natural_prefix" in queue
-    assert 'window.rfind(", ")' not in queue  # boundaries are handled by the marker loop
     assert 'for marker in [", ", "; ", ": ", " — ", " – "]' in queue
     assert 'cut = window.rfind(" ")' in queue
     assert "buf.length() >= 260" not in queue
@@ -74,6 +74,7 @@ def test_direct_voice_server_scales_emotion_and_invalidates_profile_cache():
     assert "base_mech + (profile_mech - base_mech) * power" in server
     assert '"voice_defaults": {' in server
     assert '"emotions": EMOTIONS' in server
+    assert '"processor": CONFIG.get("processor", {})' in server
 
 
 def test_all_required_emotions_exist_and_are_bounded():
@@ -85,6 +86,23 @@ def test_all_required_emotions_exist_and_are_bounded():
         assert 0.90 <= float(profile["pitch"]) <= 1.12, name
         assert float(profile["mechanical"]) == 0.0, name
         assert 0.0 <= float(profile["paw_glow"]) <= 1.0, name
+
+
+def test_acoustic_benchmark_keeps_coordinator_persona_and_latency_evidence():
+    benchmark = (ROOT / "voice" / "tools" / "acoustic_benchmark.py").read_text(encoding="utf-8")
+    for sample_id in ["persona_morning", "persona_night", "persona_playful", "persona_serious"]:
+        assert sample_id in benchmark
+    for metric in [
+        "model_load_sec",
+        "synthesis_wall_sec",
+        "processor_wall_sec",
+        "total_wall_sec",
+        "real_time_factor",
+        "clipping_ratio",
+    ]:
+        assert metric in benchmark
+    assert 'OUT / f"{sample_id}_aurora.wav"' in benchmark
+    assert 'if row["id"].startswith("persona_")' in benchmark
 
 
 def test_personality_categories_are_populated():

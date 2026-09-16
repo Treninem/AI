@@ -20,11 +20,37 @@ def test_android_voice_prepares_spoken_text_locally():
     assert "процентов" in text
 
 
+def test_android_decimal_speech_uses_natural_russian_forms():
+    text = source()
+    assert '"целая"' in text
+    assert '"целых"' in text
+    assert '"десятая"' in text
+    assert '"десятых"' in text
+    assert '"сотая"' in text
+    assert '"сотых"' in text
+    assert '"тысячная"' in text
+    assert '"тысячных"' in text
+    assert "integerToRussian(integerValue, feminine = true)" in text
+    assert "integerToRussian(fractionalValue, feminine = true)" in text
+
+
+def test_android_measurements_use_natural_unit_forms():
+    text = source()
+    assert "private fun unitForm" in text
+    assert "private fun pluralForm" in text
+    assert '"градус Цельсия"' in text
+    assert '"градуса Цельсия"' in text
+    assert '"градусов Цельсия"' in text
+    assert '"процент"' in text
+    assert '"процента"' in text
+    assert '"процентов"' in text
+
+
 def test_android_voice_avoids_robotic_playback_ranges():
     text = source()
     assert "speed.coerceIn(0.92f, 1.08f)" in text
     assert "val silenceScale = 0.20f + (targetSilence - 0.20f) * power" in text
-    assert "piper-denis-v2" in text
+    assert "piper-denis-v4" in text
     assert "pitch" not in text.lower()
 
 

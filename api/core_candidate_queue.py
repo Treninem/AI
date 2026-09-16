@@ -6,9 +6,12 @@ import json
 import re
 import shutil
 import tempfile
+import threading
 import time
 from pathlib import Path, PurePosixPath
 from typing import Any
+
+from api.database import atomic_write_text
 
 ALLOWED_TARGETS = {
     "scripts/cognition_layer.gd",
@@ -105,6 +108,10 @@ class CoreCandidateQueue:
         self.queue_root = self.root / "core_candidates"
         self.queue_root.mkdir(parents=True, exist_ok=True)
         self.max_items = max(1, int(max_items))
+        # The production REG.RU service currently uses one Uvicorn process with
+        # a thread pool. Serialize compound filesystem state transitions so two
+        # requests cannot both pass duplicate/capacity checks and race on rename.
+        self._write_lock = threading.RLock()
 
     def submit(
         self,
@@ -117,41 +124,46 @@ class CoreCandidateQueue:
         clean, raw = validate_submission(manifest, content_base64)
         candidate_id = clean["candidate_id"]
         target = clean["target"]
-        existing = self.get(candidate_id)
-        if existing:
-            if existing.get("candidate_sha256") == clean["candidate_sha256"]:
-                return {"ok": True, "duplicate": True, **existing}
-            raise CoreCandidateQueueError("candidate_id already exists with different bytes")
-        self._trim_if_needed()
-        now = int(time.time())
-        record = {
-            "candidate_id": candidate_id,
-            "target": target,
-            "base_sha256": clean["base_sha256"],
-            "candidate_sha256": clean["candidate_sha256"],
-            "state": "queued",
-            "owner": str(owner)[:128],
-            "source": str(source)[:128],
-            "received_at": now,
-            "updated_at": now,
-            "size_bytes": len(raw),
-            "promotion_ref": "",
-            "promotion_run": "",
-            "error": "",
-        }
-        final_dir = self.queue_root / candidate_id
-        with tempfile.TemporaryDirectory(prefix="aurora-core-candidate-", dir=str(self.queue_root)) as tmp_name:
-            tmp = Path(tmp_name)
-            (tmp / target).parent.mkdir(parents=True, exist_ok=True)
-            (tmp / target).write_bytes(raw)
-            (tmp / "candidate.json").write_text(
-                json.dumps(clean, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-            )
-            (tmp / "queue.json").write_text(
-                json.dumps(record, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-            )
-            tmp.rename(final_dir)
-        return {"ok": True, "duplicate": False, **record}
+        with self._write_lock:
+            existing = self.get(candidate_id)
+            if existing:
+                if existing.get("candidate_sha256") == clean["candidate_sha256"]:
+                    return {"ok": True, "duplicate": True, **existing}
+                raise CoreCandidateQueueError("candidate_id already exists with different bytes")
+            self._trim_if_needed()
+            now = int(time.time())
+            record = {
+                "candidate_id": candidate_id,
+                "target": target,
+                "base_sha256": clean["base_sha256"],
+                "candidate_sha256": clean["candidate_sha256"],
+                "state": "queued",
+                "owner": str(owner)[:128],
+                "source": str(source)[:128],
+                "received_at": now,
+                "updated_at": now,
+                "size_bytes": len(raw),
+                "promotion_ref": "",
+                "promotion_run": "",
+                "error": "",
+            }
+            final_dir = self.queue_root / candidate_id
+            with tempfile.TemporaryDirectory(prefix="aurora-core-candidate-", dir=str(self.queue_root)) as tmp_name:
+                tmp = Path(tmp_name)
+                (tmp / target).parent.mkdir(parents=True, exist_ok=True)
+                (tmp / target).write_bytes(raw)
+                atomic_write_text(
+                    tmp / "candidate.json",
+                    json.dumps(clean, ensure_ascii=False, indent=2) + "\n",
+                    mode=0o600,
+                )
+                atomic_write_text(
+                    tmp / "queue.json",
+                    json.dumps(record, ensure_ascii=False, indent=2) + "\n",
+                    mode=0o600,
+                )
+                tmp.rename(final_dir)
+            return {"ok": True, "duplicate": False, **record}
 
     def get(self, candidate_id: str) -> dict[str, Any]:
         if not CANDIDATE_ID_RE.fullmatch(str(candidate_id or "")):
@@ -191,47 +203,49 @@ class CoreCandidateQueue:
     ) -> dict[str, Any]:
         if state not in VALID_STATES:
             raise CoreCandidateQueueError("unknown candidate queue state")
-        row = self.get(candidate_id)
-        if not row:
-            raise CoreCandidateQueueError("candidate is not present in queue")
-        current = str(row.get("state", ""))
-        if current in TERMINAL_STATES and current != state:
-            raise CoreCandidateQueueError("terminal candidate state cannot be changed")
-        row["state"] = state
-        row["updated_at"] = int(time.time())
-        if promotion_ref:
-            row["promotion_ref"] = str(promotion_ref)[:512]
-        if promotion_run:
-            row["promotion_run"] = str(promotion_run)[:512]
-        row["error"] = str(error)[:4000]
-        self._write_json(self.queue_root / candidate_id / "queue.json", row)
-        return {"ok": True, **row}
+        with self._write_lock:
+            row = self.get(candidate_id)
+            if not row:
+                raise CoreCandidateQueueError("candidate is not present in queue")
+            current = str(row.get("state", ""))
+            if current in TERMINAL_STATES and current != state:
+                raise CoreCandidateQueueError("terminal candidate state cannot be changed")
+            row["state"] = state
+            row["updated_at"] = int(time.time())
+            if promotion_ref:
+                row["promotion_ref"] = str(promotion_ref)[:512]
+            if promotion_run:
+                row["promotion_run"] = str(promotion_run)[:512]
+            row["error"] = str(error)[:4000]
+            self._write_json(self.queue_root / candidate_id / "queue.json", row)
+            return {"ok": True, **row}
 
     def materialize_submission(self, candidate_id: str, destination: Path) -> dict[str, Any]:
-        row = self.get(candidate_id)
-        if not row:
-            raise CoreCandidateQueueError("candidate is not present in queue")
-        bundle = self.queue_root / candidate_id
-        target = _safe_target(row.get("target"))
-        manifest_path = bundle / "candidate.json"
-        source_path = bundle / target
-        if not manifest_path.is_file() or not source_path.is_file():
-            raise CoreCandidateQueueError("queued candidate bundle is incomplete")
-        if _sha256(source_path.read_bytes()) != str(row.get("candidate_sha256", "")):
-            raise CoreCandidateQueueError("queued candidate bytes failed SHA-256 verification")
-        destination = destination.resolve()
-        if destination.exists():
-            shutil.rmtree(destination)
-        (destination / target).parent.mkdir(parents=True, exist_ok=True)
-        shutil.copyfile(manifest_path, destination / "candidate.json")
-        shutil.copyfile(source_path, destination / target)
-        return {
-            "ok": True,
-            "candidate_id": candidate_id,
-            "target": target,
-            "destination": str(destination),
-            "candidate_sha256": row["candidate_sha256"],
-        }
+        with self._write_lock:
+            row = self.get(candidate_id)
+            if not row:
+                raise CoreCandidateQueueError("candidate is not present in queue")
+            bundle = self.queue_root / candidate_id
+            target = _safe_target(row.get("target"))
+            manifest_path = bundle / "candidate.json"
+            source_path = bundle / target
+            if not manifest_path.is_file() or not source_path.is_file():
+                raise CoreCandidateQueueError("queued candidate bundle is incomplete")
+            if _sha256(source_path.read_bytes()) != str(row.get("candidate_sha256", "")):
+                raise CoreCandidateQueueError("queued candidate bytes failed SHA-256 verification")
+            destination = destination.resolve()
+            if destination.exists():
+                shutil.rmtree(destination)
+            (destination / target).parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(manifest_path, destination / "candidate.json")
+            shutil.copyfile(source_path, destination / target)
+            return {
+                "ok": True,
+                "candidate_id": candidate_id,
+                "target": target,
+                "destination": str(destination),
+                "candidate_sha256": row["candidate_sha256"],
+            }
 
     def status(self) -> dict[str, Any]:
         rows = self.list(self.max_items)
@@ -259,6 +273,8 @@ class CoreCandidateQueue:
 
     @staticmethod
     def _write_json(path: Path, payload: dict[str, Any]) -> None:
-        tmp = path.with_suffix(path.suffix + ".tmp")
-        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-        tmp.replace(path)
+        atomic_write_text(
+            path,
+            json.dumps(payload, ensure_ascii=False, indent=2) + "\n",
+            mode=0o600,
+        )
