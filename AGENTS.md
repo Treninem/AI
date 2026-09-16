@@ -31,22 +31,21 @@ Work in coherent batches. After each completed batch, update `docs/PROJECT_MASTE
 - exact next step;
 - files/subsystem released from the claim.
 
-### Mandatory progress percentage report for every active lane
+Every substantial progress update and every handoff/stop report MUST also include a numeric completion estimate in this exact form:
 
-Every active Chat / Work / Codex / agent must include a progress report in **every substantial master-log checkpoint and before stopping or handing off**. This is mandatory for all current and future claims.
+- `PROGRESS_COMPLETE: XX%`
+- `PROGRESS_REMAINING: YY%`
 
-Use this compact format:
+`XX + YY` must equal `100`. Percentages must reflect the lane's acceptance criteria, not just how much code was written. Pending CI, unresolved P0/P1 defects, unverified packaging/device gates, cross-lane integration blockers, and missing evidence must remain counted in `PROGRESS_REMAINING`.
 
-- `PROGRESS_COMPLETE: <0-100>%`
-- `PROGRESS_REMAINING: <0-100>%`
-- `DONE:` concrete completed scope, commits and green evidence.
-- `REMAINING:` concrete unfinished scope required for the lane's acceptance criteria.
-- `BLOCKERS:` exact blocker(s), owner/claim if cross-lane, and evidence/run/commit when available; write `none` if there is no known blocker.
+Under the percentages, report four compact sections:
+
+- `DONE:` concrete completed items, commits, and green tests/CI evidence;
+- `REMAINING:` concrete unfinished acceptance items;
+- `BLOCKERS:` exact blocker owner/CLAIM plus SHA/run/test evidence, or `none`;
 - `NEXT:` the exact next executable step.
 
-`PROGRESS_COMPLETE + PROGRESS_REMAINING` must equal `100%`. Percentages are engineering progress estimates against the lane's written acceptance criteria, not guesses based on elapsed time. Do not inflate progress because code was written: failed/queued required gates, unresolved P0/P1 defects, missing package/device evidence, or an unverified cross-lane dependency must remain in `PROGRESS_REMAINING` until satisfied. A lane may report `100% / 0%` only when its own acceptance criteria are actually complete and the claim can be marked DONE; device-only checks that are explicitly outside the lane must still be stated honestly as external/unverified gates when relevant.
-
-When a coordinator record addresses a lane (`TO: <exact CLAIM-ID>`), that lane's next checkpoint must also answer it and refresh the percentage report. If the estimate changes materially, briefly state why (for example: a new blocker was discovered, a required gate passed, or scope was reconciled after fresh `main`).
+When a lane reaches `PROGRESS_COMPLETE: 100%`, do not idle. Mark the claim DONE, release its owned files, fetch fresh `main`/master log, and take the declared POST-DONE/next free large package or help another active lane through independent tests, benchmarks, audit, or integration evidence without editing that lane's occupied production files.
 
 When stopping, mark the claim DONE or clearly state what remains so the next Chat/Work/Codex session can continue directly from the repository without repeating completed work.
 
