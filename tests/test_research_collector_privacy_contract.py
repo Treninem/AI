@@ -57,3 +57,23 @@ def test_research_audit_log_has_bounded_rotation() -> None:
     assert "_rotate_log_if_needed()" in text
     assert "if size < MAX_LOG_BYTES:" in text
     assert "DirAccess.rename_absolute(log_abs, backup_abs)" in text
+
+
+def test_source_failures_are_visible_and_bounded() -> None:
+    text = _read()
+    collect = _collect_body(text)
+
+    assert "const MAX_SOURCE_ERRORS := 16" in text
+    assert "var _request_errors: Array = []" in text
+    assert "_request_errors.clear()" in collect
+    assert "var complete_failure := items.is_empty() and not source_errors.is_empty()" in collect
+    assert "var partial := not items.is_empty() and not source_errors.is_empty()" in collect
+    assert '"ok": not complete_failure' in collect
+    assert '"partial": partial' in collect
+    assert '"source_error_count": source_errors.size()' in collect
+    assert 'report["error"] = "All autonomous research sources failed"' in collect
+    assert "func _record_request_error" in text
+    assert "if _request_errors.size() >= MAX_SOURCE_ERRORS:" in text
+    assert '_record_request_error("json_parse"' in text
+    assert '_record_request_error("request_result"' in text
+    assert '_record_request_error("http"' in text
