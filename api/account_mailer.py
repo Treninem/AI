@@ -118,7 +118,11 @@ class AccountMailer:
         return message
 
     def send_token(self, recipient: str, purpose: str, token: str) -> None:
-        if self.config.security not in {"starttls", "ssl"}:
+        if self.config.security in {"starttls", "ssl"}:
+            security_allowed = True
+        else:
+            security_allowed = False
+        if not security_allowed:
             raise AccountMailError("Unsupported SMTP security mode")
         if not self.config.configured:
             raise AccountMailError("Account email transport is not configured or action URL is not secure")
