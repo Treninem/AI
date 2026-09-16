@@ -18,6 +18,25 @@ def test_voice_config_has_required_local_paths():
     assert set(cfg["wake"]["words"]) >= {"fox", "фокс", "лиса"}
     assert 0.0 <= cfg["mechanical_amount"] <= 0.10
     assert cfg["cache_limit_mb"] > 0
+    assert 0.95 <= float(cfg["speed"]) <= 1.05
+    assert 0.95 <= float(cfg["pitch"]) <= 1.05
+
+
+def test_quality_processor_settings_are_safe_and_bounded():
+    processor = load("voice_config.json")["processor"]
+    assert processor["prosody_dsp"] is True
+    assert 0.75 <= float(processor["speed_min"]) < 1.0
+    assert 1.0 < float(processor["speed_max"]) <= 1.30
+    assert 0.85 <= float(processor["pitch_min"]) < 1.0
+    assert 1.0 < float(processor["pitch_max"]) <= 1.20
+    assert 256 <= int(processor["stft_n_fft"]) <= 2048
+    assert 64 <= int(processor["stft_hop_length"]) < int(processor["stft_n_fft"])
+    assert -30.0 <= float(processor["target_rms_dbfs"]) <= -12.0
+    assert -18.0 <= float(processor["min_gain_db"]) <= 0.0
+    assert 0.0 <= float(processor["max_gain_db"]) <= 12.0
+    assert 0.80 <= float(processor["peak_ceiling"]) <= 1.0
+    assert 0.0 <= float(processor["fade_ms"]) <= 20.0
+    assert 0.0 <= float(processor["mechanical_max"]) <= 0.10
 
 
 def test_all_required_emotions_exist_and_are_bounded():
