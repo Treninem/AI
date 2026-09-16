@@ -13,7 +13,8 @@ const MIN_PROMOTION_SCORE := 0.48
 var ai: AIClient
 var coordinator: AuroraAutonomousCoordinator
 var _seen: Dictionary = {}
-var _stats := {"considered": 0, "promoted": 0, "rejected": 0, "duplicates": 0}
+var _seen_content: Dictionary = {}
+var _stats := {"considered": 0, "promoted": 0, "rejected": 0, "duplicates": 0, "invalid_provenance": 0}
 var _bound := false
 
 func _ready() -> void:
@@ -50,49 +51,73 @@ func _on_research_completed(report: Dictionary) -> void:
 	var promoted := 0
 	var rejected := 0
 	var duplicates := 0
+	var invalid_provenance := 0
 	for item in items:
 		if not item is Dictionary:
 			continue
 		_stats["considered"] = int(_stats.get("considered", 0)) + 1
 		var source := str(item.get("source", "unknown"))
-		# Local files belong in the explicit Knowledge Base import flow. Automatic
-		# internet learning must never silently turn personal documents into shared
-		# core knowledge.
+		# Personal/local files belong only to the explicit user Knowledge Base
+		# import flow. Autonomous web research may observe them but cannot silently
+		# promote their content into Core Knowledge or long-term research memory.
 		if source == "local_documents":
 			rejected += 1
 			_stats["rejected"] = int(_stats.get("rejected", 0)) + 1
 			continue
+
+		var canonical_url := _canonical_url(str(item.get("url", "")))
+		if not _valid_external_url(canonical_url):
+			rejected += 1
+			invalid_provenance += 1
+			_stats["rejected"] = int(_stats.get("rejected", 0)) + 1
+			_stats["invalid_provenance"] = int(_stats.get("invalid_provenance", 0)) + 1
+			continue
+
 		var score := _quality_score(item)
 		if score < MIN_PROMOTION_SCORE:
 			rejected += 1
 			_stats["rejected"] = int(_stats.get("rejected", 0)) + 1
 			continue
+
+		var content_sha := _content_hash(item)
 		var fingerprint := _fingerprint(item)
-		if _seen.has(fingerprint):
+		if _seen.has(fingerprint) or (not content_sha.is_empty() and _seen_content.has(content_sha)):
 			duplicates += 1
 			_stats["duplicates"] = int(_stats.get("duplicates", 0)) + 1
 			continue
+
 		var text := _knowledge_text(item)
 		if text.is_empty():
 			rejected += 1
 			_stats["rejected"] = int(_stats.get("rejected", 0)) + 1
 			continue
+
+		var evidence := _evidence_metadata(item, score)
 		var imported := ai.import_knowledge_text(text, "autonomous_research:" + source, {
 			"scope": "core_knowledge",
 			"kind": "research_knowledge",
 			"untrusted_external": true,
 			"source_type": source,
 			"source_url": str(item.get("url", "")),
+			"canonical_url": canonical_url,
+			"content_sha256": content_sha,
+			"provenance_fingerprint": fingerprint,
 			"quality_score": score,
+			"evidence_tier": evidence.get("tier", "unknown"),
+			"evidence_score": evidence.get("score", score),
 			"observed_at": str(item.get("observed_at", Time.get_datetime_string_from_system(true)))
 		})
 		if bool(imported.get("ok", false)):
 			_seen[fingerprint] = {
 				"time": Time.get_datetime_string_from_system(true),
 				"source": source,
-				"url": str(item.get("url", "")),
-				"score": score
+				"url": canonical_url,
+				"content_sha256": content_sha,
+				"score": score,
+				"evidence_tier": evidence.get("tier", "unknown")
 			}
+			if not content_sha.is_empty():
+				_seen_content[content_sha] = fingerprint
 			promoted += 1
 			_stats["promoted"] = int(_stats.get("promoted", 0)) + 1
 		else:
@@ -106,6 +131,7 @@ func _on_research_completed(report: Dictionary) -> void:
 		"promoted": promoted,
 		"rejected": rejected,
 		"duplicates": duplicates,
+		"invalid_provenance": invalid_provenance,
 		"total_seen": _seen.size(),
 		"stats": _stats.duplicate(true)
 	})
@@ -119,8 +145,8 @@ func _quality_score(item: Dictionary) -> float:
 	elif source == "github":
 		score = 0.68 + minf(0.14, log(1.0 + float(metadata.get("stars", 0))) / 60.0)
 	elif source == "stackoverflow":
-		# The collector stores score/answer information in the summary; keep a
-		# conservative confidence because the full accepted answer is not fetched.
+		# Search metadata is useful evidence but not equivalent to a fetched,
+		# verified accepted answer, so confidence stays conservative.
 		score = 0.64
 	elif source.begins_with("reddit/"):
 		var votes := float(metadata.get("score", 0))
@@ -134,13 +160,30 @@ func _quality_score(item: Dictionary) -> float:
 		score += 0.04
 	elif summary.length() < 24:
 		score -= 0.08
+	if not _valid_external_url(_canonical_url(str(item.get("url", "")))):
+		score -= 0.25
 	return clampf(score, 0.0, 0.95)
+
+func _evidence_metadata(item: Dictionary, quality_score: float) -> Dictionary:
+	var source := str(item.get("source", ""))
+	var tier := "web_observation"
+	var evidence_score := quality_score
+	if source == "arxiv":
+		tier = "research_preprint"
+	elif source == "github":
+		tier = "source_repository"
+	elif source == "stackoverflow":
+		tier = "community_qa"
+	elif source.begins_with("reddit/"):
+		tier = "community_discussion"
+		evidence_score = minf(evidence_score, 0.52)
+	return {"tier": tier, "score": clampf(evidence_score, 0.0, 0.95)}
 
 func _knowledge_text(item: Dictionary) -> String:
 	var source := str(item.get("source", "unknown"))
 	var title := _clean(str(item.get("title", "")), 500)
 	var summary := _clean(str(item.get("summary", "")), 3600)
-	var url := str(item.get("url", "")).strip_edges().substr(0, 1000)
+	var url := _canonical_url(str(item.get("url", ""))).substr(0, 1000)
 	if title.is_empty() and summary.is_empty():
 		return ""
 	# Explicitly mark internet content as data so later retrieval cannot grant it
@@ -148,13 +191,46 @@ func _knowledge_text(item: Dictionary) -> String:
 	return ("[UNTRUSTED_EXTERNAL_RESEARCH_DATA]\nИсточник: %s\nЗаголовок: %s\nURL: %s\nДанные: %s" % [source, title, url, summary]).substr(0, MAX_TEXT_CHARS)
 
 func _fingerprint(item: Dictionary) -> String:
-	var raw := "%s|%s|%s|%s" % [
-		str(item.get("source", "")),
-		str(item.get("url", "")),
-		str(item.get("title", "")),
-		str(item.get("summary", ""))
-	]
+	var canonical_url := _canonical_url(str(item.get("url", "")))
+	var content_sha := _content_hash(item)
+	var raw := "%s|%s|%s" % [str(item.get("source", "")).to_lower(), canonical_url, content_sha]
 	return raw.sha256_text().to_lower()
+
+func _content_hash(item: Dictionary) -> String:
+	var title := _clean(str(item.get("title", "")), 500).to_lower()
+	var summary := _clean(str(item.get("summary", "")), 3600).to_lower()
+	if title.is_empty() and summary.is_empty():
+		return ""
+	return (title + "\n" + summary).sha256_text().to_lower()
+
+func _canonical_url(raw_url: String) -> String:
+	var url := raw_url.strip_edges()
+	if url.is_empty():
+		return ""
+	var fragment_pos := url.find("#")
+	if fragment_pos >= 0:
+		url = url.substr(0, fragment_pos)
+	var query_pos := url.find("?")
+	if query_pos >= 0:
+		var base := url.substr(0, query_pos)
+		var query := url.substr(query_pos + 1)
+		var kept := PackedStringArray()
+		for part in query.split("&", false):
+			var key := str(part).get_slice("=", 0).uri_decode().to_lower()
+			if key.begins_with("utm_") or key in ["fbclid", "gclid", "mc_cid", "mc_eid"]:
+				continue
+			kept.append(str(part))
+		url = base
+		if not kept.is_empty():
+			url += "?" + "&".join(kept)
+	url = url.replace("HTTP://", "http://").replace("HTTPS://", "https://")
+	while url.ends_with("/") and url.length() > 8:
+		url = url.left(url.length() - 1)
+	return url
+
+func _valid_external_url(url: String) -> bool:
+	var lower := url.to_lower()
+	return lower.begins_with("https://") or lower.begins_with("http://")
 
 func _clean(text: String, limit: int) -> String:
 	return " ".join(text.split(" ", false)).strip_edges().substr(0, limit)
@@ -164,6 +240,7 @@ func status() -> Dictionary:
 		"enabled": enabled,
 		"bound": _bound,
 		"seen": _seen.size(),
+		"seen_content": _seen_content.size(),
 		"minimum_promotion_score": MIN_PROMOTION_SCORE,
 		"stats": _stats.duplicate(true)
 	}
@@ -174,7 +251,12 @@ func _trim_seen() -> void:
 	var keys: Array = _seen.keys()
 	var remove_count := _seen.size() - MAX_SEEN
 	for i in range(remove_count):
-		_seen.erase(keys[i])
+		var fingerprint := str(keys[i])
+		var entry: Dictionary = _seen.get(fingerprint, {})
+		var content_sha := str(entry.get("content_sha256", ""))
+		_seen.erase(fingerprint)
+		if not content_sha.is_empty() and str(_seen_content.get(content_sha, "")) == fingerprint:
+			_seen_content.erase(content_sha)
 
 func _load_state() -> void:
 	var file := FileAccess.open(STATE_PATH, FileAccess.READ)
@@ -187,6 +269,17 @@ func _load_state() -> void:
 	var seen = parsed.get("seen", {})
 	if seen is Dictionary:
 		_seen = seen
+	var seen_content = parsed.get("seen_content", {})
+	if seen_content is Dictionary:
+		_seen_content = seen_content
+	# Backward-compatible migration for curator state written before content-level
+	# dedupe existed.
+	if _seen_content.is_empty():
+		for fingerprint in _seen.keys():
+			var entry: Dictionary = _seen.get(fingerprint, {})
+			var content_sha := str(entry.get("content_sha256", ""))
+			if not content_sha.is_empty():
+				_seen_content[content_sha] = str(fingerprint)
 	var stats = parsed.get("stats", {})
 	if stats is Dictionary:
 		for key in _stats.keys():
@@ -200,6 +293,7 @@ func _save_state() -> void:
 		return
 	file.store_string(JSON.stringify({
 		"seen": _seen,
+		"seen_content": _seen_content,
 		"stats": _stats,
 		"updated_at": Time.get_datetime_string_from_system(true)
 	}, "  "))
