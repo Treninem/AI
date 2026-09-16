@@ -91,11 +91,15 @@ rollback() {
 trap rollback ERR
 
 git checkout --detach "${candidate}"
-/opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check -r api/requirements.txt pytest==8.4.1
+/opt/aurorafox/venv/bin/python -m pip install --disable-pip-version-check \
+  -r api/requirements.txt pytest==8.4.1 httpx==0.28.1
 /opt/aurorafox/venv/bin/python -m compileall -q api
 PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_api_gateway.py \
   tests/test_api_database.py \
+  tests/test_api_accounts_sync.py \
+  tests/test_api_account_network.py \
+  tests/test_api_schema_migrations.py \
   tests/test_api_privacy_contract.py \
   tests/test_api_runtime_resilience.py \
   tests/test_core_candidate_queue.py \
