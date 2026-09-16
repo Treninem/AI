@@ -42,6 +42,7 @@ func _remove_placeholder_brand_art() -> void:
 			if image.texture != null and image.texture.resource_path.ends_with("fox_logo.svg"):
 				image.visible = false
 				image.custom_minimum_size = Vector2.ZERO
+				image.queue_free()
 
 func _add_welcome_state() -> void:
 	var center := VBoxContainer.new()
@@ -95,3 +96,4 @@ func _add_message_card(message: Dictionary) -> void:
 		if child is TextureRect:
 			child.visible = false
 			child.custom_minimum_size = Vector2.ZERO
+			child.queue_free()
