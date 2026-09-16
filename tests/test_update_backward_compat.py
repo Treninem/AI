@@ -8,11 +8,13 @@ ROOT = Path(__file__).resolve().parents[1]
 LEGACY_MANIFEST_URL = "https://github.com/Treninem/AI/releases/latest/download/update.json"
 WINDOWS_ASSET = "AuroraFox-Windows.zip"
 ANDROID_ASSET = "AuroraFox-Android.apk"
-OLDEST_DIRECT_UPDATE_VERSION = "1.0.0.0"
+LEGACY_REPAIR_THROUGH = "1.2.0.0"
+SIGNED_UPDATE_FLOOR = "1.3.0.0"
+APP_ID = "8C21F024-53DE-4FA3-A150-78C80829B6BF"
 
 
-def legacy_updater_accepts(manifest: dict) -> bool:
-    """Model the V1.0.0.0 embedded AuroraFox updater manifest contract."""
+def legacy_manifest_parser_accepts(manifest: dict) -> bool:
+    """Model the legacy manifest fields. Parsing does not imply trust can succeed."""
     if not isinstance(manifest, dict):
         return False
     if not str(manifest.get("version", "")):
@@ -33,29 +35,32 @@ def legacy_updater_accepts(manifest: dict) -> bool:
     return True
 
 
-def test_current_updater_keeps_original_latest_manifest_url() -> None:
+def test_current_updater_keeps_permanent_latest_manifest_url() -> None:
     source = (ROOT / "update" / "update_manager.gd").read_text(encoding="utf-8")
     assert f'const MANIFEST_URL := "{LEGACY_MANIFEST_URL}"' in source
     assert "releases/latest/download/update.sig" in source
 
 
-def test_manifest_template_remains_readable_by_v1_updater() -> None:
+def test_manifest_template_is_legacy_readable_but_does_not_claim_legacy_direct_update() -> None:
     template = json.loads((ROOT / "update" / "manifest.template.json").read_text(encoding="utf-8"))
-    template["version"] = "9.9.9.9"
-    template["channel"] = "stable"
-    template["assets"]["windows"]["url"] = f"https://example.invalid/{WINDOWS_ASSET}"
-    template["assets"]["windows"]["sha256"] = "a" * 64
-    template["assets"]["android"]["url"] = f"https://example.invalid/{ANDROID_ASSET}"
-    template["assets"]["android"]["sha256"] = "b" * 64
-    assert legacy_updater_accepts(template)
-    assert template.get("schema_version") == 1
+    test_manifest = json.loads(json.dumps(template))
+    test_manifest["version"] = "9.9.9.9"
+    test_manifest["channel"] = "stable"
+    test_manifest["assets"]["windows"]["url"] = f"https://example.invalid/{WINDOWS_ASSET}"
+    test_manifest["assets"]["windows"]["sha256"] = "a" * 64
+    test_manifest["assets"]["android"]["url"] = f"https://example.invalid/{ANDROID_ASSET}"
+    test_manifest["assets"]["android"]["sha256"] = "b" * 64
+    assert legacy_manifest_parser_accepts(test_manifest)
     compatibility = template.get("compatibility", {})
     assert compatibility.get("legacy_manifest") is True
-    assert compatibility.get("direct_update") is True
-    assert compatibility.get("oldest_direct_update_version") == OLDEST_DIRECT_UPDATE_VERSION
+    assert compatibility.get("legacy_manifest_readable") is True
+    assert compatibility.get("legacy_direct_update") is False
+    assert compatibility.get("legacy_repair_required_through") == LEGACY_REPAIR_THROUGH
+    assert compatibility.get("signed_direct_update") is True
+    assert compatibility.get("signed_update_floor") == SIGNED_UPDATE_FLOOR
 
 
-def test_release_keeps_legacy_asset_names_and_latest_update_json() -> None:
+def test_release_keeps_stable_asset_names_and_latest_update_json() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert f"/{WINDOWS_ASSET}" in workflow
     assert f"/{ANDROID_ASSET}" in workflow
@@ -80,7 +85,7 @@ def test_release_manifest_generator_preserves_legacy_top_level_and_asset_fields(
         assert literal in workflow
 
 
-def test_update_signature_is_additive_not_a_replacement_for_legacy_manifest() -> None:
+def test_update_signature_is_required_for_signed_generation() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     generate = workflow.index("Generate verified update manifest and release evidence")
     sign = workflow.index("Sign update manifest with pinned AuroraFox release key")
@@ -94,27 +99,43 @@ def test_update_signature_is_additive_not_a_replacement_for_legacy_manifest() ->
 def test_android_identity_and_windows_full_zip_strategy_are_stable() -> None:
     workflow = (ROOT / ".github" / "workflows" / "release.yml").read_text(encoding="utf-8")
     assert "package: name='com.aurorafox.ai'" in workflow
-    # V1.0 Windows updater expands the ZIP and expects AuroraFox.exe at archive
-    # root (or one wrapping directory). Compressing build/windows/* preserves it.
     assert "Compress-Archive -Path build\\windows\\*" in workflow
     assert WINDOWS_ASSET in workflow
     template = json.loads((ROOT / "update" / "manifest.template.json").read_text(encoding="utf-8"))
     compatibility = template["compatibility"]
-    assert compatibility["windows_strategy"] == "full_zip_replace"
-    assert compatibility["android_strategy"] == "same_package_signed_apk"
+    assert "full_zip_replace" in compatibility["windows_strategy"]
+    assert compatibility["android_strategy"] == "same_package_same_signing_identity_required"
 
 
-def test_public_update_key_is_embedded_in_windows_and_android_exports() -> None:
+def test_public_update_key_is_embedded_in_signed_generation_exports() -> None:
     presets = (ROOT / "export_presets.cfg").read_text(encoding="utf-8")
-    # .pub is not a normal Godot resource, so it must be explicitly included
-    # in both exports for res://update/release_public.pub to exist at runtime.
     assert presets.count('include_filter="update/release_public.pub"') == 2
     updater = (ROOT / "update" / "update_manager.gd").read_text(encoding="utf-8")
     assert 'const PUBLIC_KEY_PATH := "res://update/release_public.pub"' in updater
 
 
-def test_pre_v1_builds_are_documented_as_one_time_manual_bootstrap() -> None:
+def test_windows_v12_repair_uses_same_inno_identity_and_is_ci_verified() -> None:
+    current_iss = (ROOT / "build" / "AuroraFox.iss").read_text(encoding="utf-8")
+    fixture_iss = (ROOT / "build" / "AuroraFox_V12_BridgeFixture.iss").read_text(encoding="utf-8")
+    for text in (current_iss, fixture_iss):
+        assert f"AppId={{{{{APP_ID}}}" in text
+    assert "bridge_repair.txt" in current_iss
+    assert "v1.2-marker.txt" in current_iss
+
+    bridge_test = (ROOT / "tests" / "windows_v12_bridge_smoke.ps1").read_text(encoding="utf-8")
+    assert "AURORA_WINDOWS_V12_TO_V13_BRIDGE_OK" in bridge_test
+    assert "bridge-v12-sentinel.txt" in bridge_test
+    assert "previous=1\\.2\\.0\\.0" in bridge_test
+    assert "current=1\\.3\\.0\\.0" in bridge_test
+
+    workflow = (ROOT / ".github" / "workflows" / "windows-package-ci.yml").read_text(encoding="utf-8")
+    assert "Verify V1.2 to V1.3 in-place bridge" in workflow
+    assert "AuroraFox-V1.2-to-V$version-Repair-Windows.exe" in workflow
+
+
+def test_documentation_states_v12_repair_and_android_signing_boundary() -> None:
     docs = (ROOT / "update" / "README.md").read_text(encoding="utf-8")
-    assert "V1.0.0.0" in docs
-    assert "2026-08-19" in docs
-    assert re.search(r"manual.+bootstrap|bootstrap.+manual", docs, re.IGNORECASE | re.DOTALL)
+    assert "V1.2.0.0" in docs
+    assert re.search(r"repair|bridge", docs, re.IGNORECASE)
+    assert re.search(r"same.+sign|signing.+same", docs, re.IGNORECASE | re.DOTALL)
+    assert "V1.3.0.0" in docs
