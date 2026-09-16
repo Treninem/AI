@@ -201,6 +201,13 @@ func canonical_source(source: String) -> String:
 	var row := record_for_source(source)
 	return str(row.get("source", source)) if not row.is_empty() else source
 
+func storage_is_valid() -> bool:
+	if not FileAccess.file_exists(REGISTRY_PATH):
+		_cache_valid = false
+		return false
+	_load_rows()
+	return _cache_valid
+
 func stats() -> Dictionary:
 	var rows := _load_rows()
 	var aliases := 0
@@ -276,7 +283,7 @@ func _file_size(path: String) -> int:
 
 func _load_rows() -> Array:
 	if not FileAccess.file_exists(REGISTRY_PATH):
-		_remember_cache([], 0, 0)
+		_cache_valid = false
 		return []
 	var size := _file_size(REGISTRY_PATH)
 	var mtime := int(FileAccess.get_modified_time(REGISTRY_PATH))
@@ -291,9 +298,13 @@ func _load_rows() -> Array:
 	if not parsed is Dictionary:
 		_cache_valid = false
 		return []
+	if int(parsed.get("schema_version", 0)) != REGISTRY_VERSION:
+		_cache_valid = false
+		return []
 	var rows = parsed.get("sources", [])
 	if not rows is Array:
-		rows = []
+		_cache_valid = false
+		return []
 	_remember_cache(rows, size, mtime)
 	return _cached_rows.duplicate(true)
 
