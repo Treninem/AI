@@ -76,10 +76,19 @@ Verified repair workflow artifact `10428734786`:
 - independently calculated SHA-256: `e2c2b0aa690a0a96f636e069e8fbc5fcd6379b22c37ce886b3feed8f4d9f70e2`
 - CI `SHA256SUMS.txt` reports the same SHA-256.
 
-Godot updater contract verification:
+### Final updater/release contract verification
 
 - Agent Sync run `35053017103`: success, including the updated `tests/update_smoke.gd`.
-- Core/Voice run `35053017088` initially failed only because `tests/test_core_candidate_promotion.py` referenced renamed old compatibility-test functions; product/Godot Core jobs were green. That stale test reference was fixed by `8bcd5d51ed828502a9b77e41e5019c536dd7fa71` and must be rechecked by the next Core/Voice run before declaring the latest test head fully green.
+- Core/Voice run `35053017088` exposed one stale Python test reference only; no product/Godot regression was present.
+- Stale release-gate calls were corrected by `8bcd5d51ed828502a9b77e41e5019c536dd7fa71`.
+- Core/Voice rerun `35053418709`: **success**.
+  - `python-voice`: success, including promotion/release/provider-independence contracts.
+  - `windows-integration`: success, including transactional updater integration.
+  - `godot-core`: success, including updater GDScript smoke and all Core/knowledge/autonomy gates.
+  - `file-intelligence`: success.
+- Agent Sync on the same `8bcd5d5...` head, run `35053418745`: success.
+
+The V1.2 repair boundary and V1.3 signed-update floor are therefore green in both the actual Windows bridge installation test and the normal Core/release contract suite.
 
 ### Supported update boundary after repair
 
@@ -127,4 +136,4 @@ Work mode may take another subsystem and should record its claim in `docs/workst
 
 ### Release status
 
-The Windows V1.2->V1.3 repair path is implemented and verified end-to-end by CI. The V1.3 application packages remain CI-verified. Production public signed update publication still requires the owner-controlled RSA update trust root and persistent Android signing identity; private signing material must never be committed to Git.
+The Windows V1.2->V1.3 repair path is implemented and verified end-to-end by CI. The corrected updater/release contract is fully green. V1.3 application packages remain CI-verified. Production public signed update publication still requires the owner-controlled RSA update trust root and persistent Android signing identity; private signing material must never be committed to Git.
