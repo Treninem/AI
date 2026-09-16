@@ -3,6 +3,7 @@ extends Node
 
 const BASE_URL := "http://127.0.0.1:8767"
 const ANDROID_OCR_EXTENSIONS := ["pdf", "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"]
+const ANDROID_ANALYSIS_TIMEOUT_MS := 600000
 
 var backend_pid := 0
 var runtime_root := ""
@@ -117,7 +118,8 @@ func tree(path: String, max_items := 2000) -> Dictionary:
 		if not path.begins_with("user://") or not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": false, "error": "Android directory tree is restricted to user://"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		if not plugin.has_method("treeLocal"): return {"ok": false, "error": "Android treeLocal is unavailable"}
+		if not plugin.has_method("treeLocal"):
+			return {"ok": false, "error": "Android treeLocal is unavailable"}
 		var raw = plugin.call("treeLocal", ProjectSettings.globalize_path(path), clampi(max_items, 1, 5000))
 		return _parse_native(raw)
 	if OS.get_name() != "Windows":
@@ -126,16 +128,20 @@ func tree(path: String, max_items := 2000) -> Dictionary:
 	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, 5000)}, 60.0)
 
 func search_cache(query: String, limit := 20) -> Dictionary:
-	if OS.get_name() != "Windows": return {"ok": false, "results": [], "error": "Cache search is currently Windows-only"}
+	if OS.get_name() != "Windows":
+		return {"ok": false, "results": [], "error": "Cache search is currently Windows-only"}
 	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, 100)}, 30.0)
 
 func clear_cache() -> Dictionary:
 	if OS.get_name() == "Android":
-		if not Engine.has_singleton("AuroraFoxRuntime"): return {"ok": false, "error": "Android runtime unavailable"}
+		if not Engine.has_singleton("AuroraFoxRuntime"):
+			return {"ok": false, "error": "Android runtime unavailable"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		if not plugin.has_method("clearFileCache"): return {"ok": false, "error": "clearFileCache unavailable"}
+		if not plugin.has_method("clearFileCache"):
+			return {"ok": false, "error": "clearFileCache unavailable"}
 		return _parse_native(plugin.call("clearFileCache"))
-	if OS.get_name() != "Windows": return {"ok": true, "removed": 0}
+	if OS.get_name() != "Windows":
+		return {"ok": true, "removed": 0}
 	return await _request("/cache/clear", HTTPClient.METHOD_POST, {}, 30.0)
 
 func runtime_is_installed() -> bool:
@@ -144,14 +150,17 @@ func runtime_is_installed() -> bool:
 	return not _find_runtime().is_empty()
 
 func installer_path() -> String:
-	if OS.get_name() != "Windows": return ""
+	if OS.get_name() != "Windows":
+		return ""
 	for root in _candidate_roots():
 		var path := root.path_join("install_files.ps1")
-		if FileAccess.file_exists(path): return path
+		if FileAccess.file_exists(path):
+			return path
 	return ""
 
 func restart_backend() -> void:
-	if OS.get_name() != "Windows": return
+	if OS.get_name() != "Windows":
+		return
 	if backend_pid > 0:
 		OS.kill(backend_pid)
 		backend_pid = 0
@@ -159,11 +168,14 @@ func restart_backend() -> void:
 
 func _start_backend_if_installed() -> void:
 	var found := _find_runtime()
-	if found.is_empty(): return
+	if found.is_empty():
+		return
 	runtime_root = str(found.get("root", ""))
 	var executable := str(found.get("pythonw", ""))
-	if executable.is_empty() or not FileAccess.file_exists(executable): executable = str(found.get("python", ""))
-	if executable.is_empty() or not FileAccess.file_exists(executable): return
+	if executable.is_empty() or not FileAccess.file_exists(executable):
+		executable = str(found.get("python", ""))
+	if executable.is_empty() or not FileAccess.file_exists(executable):
+		return
 	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
 	var vendor := str(found.get("vendor", ""))
 	var inject_vendor := not vendor.is_empty() and DirAccess.dir_exists_absolute(vendor)
@@ -209,10 +221,13 @@ func _candidate_roots() -> Array[String]:
 func _android_private_copy(path: String) -> String:
 	var user_root := ProjectSettings.globalize_path("user://")
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("user://") or path.begins_with("res://") else path
-	if absolute.begins_with(user_root): return absolute
+	if absolute.begins_with(user_root):
+		return absolute
 	var src := FileAccess.open(path, FileAccess.READ)
-	if src == null and absolute != path: src = FileAccess.open(absolute, FileAccess.READ)
-	if src == null: return ""
+	if src == null and absolute != path:
+		src = FileAccess.open(absolute, FileAccess.READ)
+	if src == null:
+		return ""
 	var target_dir := "user://file_inputs"
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target_dir))
 	var safe_name := _safe_filename(path.get_file())
@@ -234,7 +249,8 @@ func _safe_filename(value: String) -> String:
 	for bad in ["/", "\\", ":", "*", "?", "\"", "<", ">", "|"]:
 		out = out.replace(bad, "_")
 	out = out.strip_edges()
-	if out.is_empty(): out = "file.bin"
+	if out.is_empty():
+		out = "file.bin"
 	return out.substr(0, 120)
 
 func _parse_native(raw: Variant) -> Dictionary:
@@ -255,11 +271,12 @@ func _analyze_android_job(plugin: Object, private_path: String, question: String
 	if not start is Dictionary or not bool(start.get("ok", false)):
 		return start if start is Dictionary else {"ok": false, "error": "Invalid Android analysis job response"}
 	var job_id := str(start.get("job_id", ""))
-	if job_id.is_empty(): return {"ok": false, "error": "Android analysis job id is missing"}
+	if job_id.is_empty():
+		return {"ok": false, "error": "Android analysis job id is missing"}
 	_active_android_job_id = job_id
 	var started_ms := Time.get_ticks_msec()
 	var cancel_sent := false
-	while true:
+	while Time.get_ticks_msec() - started_ms <= ANDROID_ANALYSIS_TIMEOUT_MS:
 		if _cancel_requested and not cancel_sent:
 			plugin.call("cancelAnalyzeLocalFile", job_id)
 			cancel_sent = true
@@ -271,13 +288,13 @@ func _analyze_android_job(plugin: Object, private_path: String, question: String
 		if not bool(poll.get("pending", false)):
 			_active_android_job_id = ""
 			var result = poll.get("result", {})
-			if result is Dictionary: return result
+			if result is Dictionary:
+				return result
 			return {"ok": false, "error": str(poll.get("error", "Android analysis job returned no result"))}
-		if Time.get_ticks_msec() - started_ms > 600000:
-			plugin.call("cancelAnalyzeLocalFile", job_id)
-			_active_android_job_id = ""
-			return {"ok": false, "cancelled": true, "error": "Android file analysis timed out"}
 		await get_tree().create_timer(0.05).timeout
+	plugin.call("cancelAnalyzeLocalFile", job_id)
+	_active_android_job_id = ""
+	return {"ok": false, "cancelled": true, "error": "Android file analysis timed out"}
 
 func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0, track_analysis := false) -> Dictionary:
 	var last_error := ""
@@ -305,12 +322,14 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 				while not bool(state.get("done", false)):
 					if _cancel_requested:
 						req.cancel_request()
-						if _active_request == req: _active_request = null
+						if _active_request == req:
+							_active_request = null
 						req.queue_free()
 						return {"ok": false, "cancelled": true, "error": "File analysis cancelled"}
 					await get_tree().process_frame
 				result = state.get("result", [])
-				if _active_request == req: _active_request = null
+				if _active_request == req:
+					_active_request = null
 			else:
 				result = await req.request_completed
 			req.queue_free()
@@ -328,6 +347,7 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 					return {"ok": false, "http": code, "error": raw.substr(0, 4000)}
 				last_error = "File Intelligence backend is not ready"
 		if attempt == 0 and OS.get_name() == "Windows" and runtime_is_installed():
-			if backend_pid <= 0: _start_backend_if_installed()
+			if backend_pid <= 0:
+				_start_backend_if_installed()
 			await get_tree().create_timer(0.9).timeout
 	return {"ok": false, "error": last_error if not last_error.is_empty() else "File Intelligence unavailable"}
