@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import math
 import re
@@ -34,9 +35,6 @@ BASE_SAMPLES = [
     ("warning", "warning", 0.70, "Внимание. Давление выше заданного значения, лучше проверить линию подачи воздуха."),
 ]
 
-# Coordinator acceptance set: these WAVs are retained as artifacts so the same
-# female voice can be audited in four deliberately different conversational
-# moods without changing the normal local-only TTS architecture.
 PERSONA_SAMPLES = [
     ("persona_morning", "happy", 0.58, "Доброе утро. Я уже здесь и готова спокойно помочь тебе начать день."),
     ("persona_night", "sleepy", 0.58, "Доброй ночи. Давай закончим последние дела спокойно, без спешки и лишнего шума."),
@@ -44,11 +42,18 @@ PERSONA_SAMPLES = [
     ("persona_serious", "serious", 0.76, "Сейчас важно проверить факты, не торопиться с выводами и подтвердить результат."),
 ]
 
+# Benchmark-only native Silero SSML candidates. These are deliberately kept
+# out of the runtime until A/B evidence shows that model-native prosody is
+# safer than the disabled phase-vocoder path.
+SSML_PERSONA_PROFILES = {
+    "persona_morning": {"rate": "medium", "pitch": "high"},
+    "persona_night": {"rate": "slow", "pitch": "low"},
+    "persona_playful": {"rate": "fast", "pitch": "high"},
+    "persona_serious": {"rate": "slow", "pitch": "medium"},
+}
+
 SAMPLES = BASE_SAMPLES + PERSONA_SAMPLES
 FEMALE_SPEAKERS = ("xenia", "baya", "kseniya")
-# The five stable baseline phrases are enough to detect a speaker regression;
-# persona phrases are evaluated by the full quality gate below instead of
-# tripling their synthesis cost in the speaker sweep.
 SPEAKER_SWEEP_TEXTS = tuple(sample[3] for sample in BASE_SAMPLES)
 
 
@@ -73,12 +78,6 @@ def char_similarity(a: str, b: str) -> float:
 
 
 def intelligibility_similarity(original: str, spoken_form: str, recognized: str) -> float:
-    """Accept ASR's normal written form as well as the literal spoken form.
-
-    Russian ASR commonly writes spoken number words back as digits. That is a
-    successful round trip, not a loss of intelligibility, so compare against
-    both the user-visible source and the normalized TTS form.
-    """
     return max(
         char_similarity(original, recognized),
         char_similarity(spoken_form, recognized),
@@ -126,6 +125,14 @@ def score_mos(model: UTMOSScoreTorch, audio: np.ndarray, sr: int) -> float:
         return float(model.score(resample_16k(audio, sr)).reshape(-1)[0].cpu())
 
 
+def recognize(asr, audio: np.ndarray, sr: int) -> str:
+    wav = resample_16k(audio, sr)
+    return str(asr(
+        {"array": wav.squeeze(0).numpy(), "sampling_rate": 16000},
+        generate_kwargs={"language": "ru", "task": "transcribe"},
+    ).get("text", "")).strip()
+
+
 def synthesize_with_speaker(engine: SileroEngine, text: str, speaker: str) -> tuple[np.ndarray, int]:
     sr = int(engine.config.get("sample_rate", 48000))
     model = engine._load()
@@ -134,6 +141,38 @@ def synthesize_with_speaker(engine: SileroEngine, text: str, speaker: str) -> tu
     if isinstance(audio, torch.Tensor):
         audio = audio.detach().cpu().numpy()
     return np.asarray(audio, dtype=np.float32).reshape(-1), sr
+
+
+def build_ssml(text: str, sample_id: str) -> tuple[str, str]:
+    clean = prepare_for_speech(text)
+    profile = SSML_PERSONA_PROFILES[sample_id]
+    escaped = html.escape(clean, quote=False)
+    ssml = (
+        '<speak><prosody rate="%s" pitch="%s">%s</prosody></speak>'
+        % (profile["rate"], profile["pitch"], escaped)
+    )
+    return clean, ssml
+
+
+def synthesize_ssml(engine: SileroEngine, text: str, sample_id: str) -> tuple[np.ndarray, int, str, str]:
+    clean, ssml = build_ssml(text, sample_id)
+    sr = int(engine.config.get("sample_rate", 48000))
+    model = engine._load()
+    speaker = str(engine.config.get("speaker", "kseniya"))
+    with torch.inference_mode():
+        audio = model.apply_tts(ssml_text=ssml, speaker=speaker, sample_rate=sr)
+    if isinstance(audio, torch.Tensor):
+        audio = audio.detach().cpu().numpy()
+    return np.asarray(audio, dtype=np.float32).reshape(-1), sr, clean, ssml
+
+
+def waveform_delta_rms(a: np.ndarray, b: np.ndarray) -> float:
+    xa = np.asarray(a, dtype=np.float32).reshape(-1)
+    xb = np.asarray(b, dtype=np.float32).reshape(-1)
+    n = min(xa.size, xb.size)
+    if n == 0:
+        return 0.0
+    return float(np.sqrt(np.mean(np.square(xa[:n] - xb[:n]), dtype=np.float64)))
 
 
 def speaker_sweep(engine: SileroEngine, mos_model: UTMOSScoreTorch) -> dict:
@@ -157,6 +196,90 @@ def speaker_sweep(engine: SileroEngine, mos_model: UTMOSScoreTorch) -> dict:
             }
         except Exception as exc:
             result[speaker] = {"error": str(exc)}
+    return result
+
+
+def validate_audio(sample_id: str, score: float, similarity: float, metrics: dict, failures: list[str], *, baseline_score: float | None = None) -> None:
+    if metrics["clipping_ratio"] > 0.0001:
+        failures.append(f"{sample_id}: clipping {metrics['clipping_ratio']:.6f}")
+    if not (-27.0 <= metrics["rms_dbfs"] <= -14.0):
+        failures.append(f"{sample_id}: RMS {metrics['rms_dbfs']:.2f} dBFS")
+    if metrics["dc_offset"] > 0.015:
+        failures.append(f"{sample_id}: DC offset {metrics['dc_offset']:.4f}")
+    if metrics["edge_peak_10ms"] > 0.35:
+        failures.append(f"{sample_id}: hard edge {metrics['edge_peak_10ms']:.3f}")
+    if score < 2.9:
+        failures.append(f"{sample_id}: UTMOS {score:.3f}")
+    if baseline_score is not None and score + 0.18 < baseline_score:
+        failures.append(f"{sample_id}: candidate degraded UTMOS {baseline_score:.3f}->{score:.3f}")
+    if similarity < 0.62:
+        failures.append(f"{sample_id}: ASR similarity {similarity:.3f}")
+
+
+def run_ssml_ab(engine: SileroEngine, processor: AuroraVoiceProcessor, mos_model: UTMOSScoreTorch, asr, baseline_rows: dict[str, dict], failures: list[str]) -> dict:
+    result: dict[str, dict] = {}
+    for sample_id, emotion, intensity, text in PERSONA_SAMPLES:
+        baseline = baseline_rows[sample_id]
+        started = time.perf_counter()
+        raw, sr, clean, ssml = synthesize_ssml(engine, text, sample_id)
+        synthesis_wall_sec = time.perf_counter() - started
+
+        process_started = time.perf_counter()
+        final = processor.process(
+            raw,
+            sr,
+            emotion=emotion,
+            intensity=intensity,
+            mechanical_amount=0.0,
+            pitch_shift=0.0,
+            speed=1.0,
+        )
+        processor_wall_sec = time.perf_counter() - process_started
+        total_wall_sec = synthesis_wall_sec + processor_wall_sec
+        metrics = audio_metrics(final, sr)
+        score = score_mos(mos_model, final, sr)
+        recognized = recognize(asr, final, sr)
+        similarity = intelligibility_similarity(text, clean, recognized)
+        duration_ratio = float(metrics["duration_sec"] / max(float(baseline["duration_sec"]), 1e-6))
+        delta_rms = waveform_delta_rms(final, np.asarray(baseline["audio"], dtype=np.float32))
+        rtf = total_wall_sec / max(float(metrics["duration_sec"]), 1e-6)
+        profile = SSML_PERSONA_PROFILES[sample_id]
+
+        sf.write(OUT / f"{sample_id}_ssml.wav", final, sr, subtype="PCM_16")
+        result[sample_id] = {
+            "emotion": emotion,
+            "profile": profile,
+            "ssml": ssml,
+            "recognized": recognized,
+            "aurora_utmos": score,
+            "baseline_utmos": float(baseline["aurora_utmos"]),
+            "mos_delta_vs_plain": score - float(baseline["aurora_utmos"]),
+            "asr_similarity": similarity,
+            "duration_sec": metrics["duration_sec"],
+            "baseline_duration_sec": baseline["duration_sec"],
+            "duration_ratio_vs_plain": duration_ratio,
+            "waveform_delta_rms": delta_rms,
+            "synthesis_wall_sec": synthesis_wall_sec,
+            "processor_wall_sec": processor_wall_sec,
+            "real_time_factor": rtf,
+            "peak": metrics["peak"],
+            "clipping_ratio": metrics["clipping_ratio"],
+            "rms_dbfs": metrics["rms_dbfs"],
+        }
+        validate_audio(
+            f"{sample_id}_ssml",
+            score,
+            similarity,
+            metrics,
+            failures,
+            baseline_score=float(baseline["aurora_utmos"]),
+        )
+        if delta_rms < 0.002:
+            failures.append(f"{sample_id}_ssml: native prosody did not materially alter waveform ({delta_rms:.6f})")
+        if sample_id in {"persona_night", "persona_serious"} and duration_ratio < 1.03:
+            failures.append(f"{sample_id}_ssml: slow profile did not lengthen speech ({duration_ratio:.3f}x)")
+        if sample_id == "persona_playful" and duration_ratio > 0.97:
+            failures.append(f"{sample_id}_ssml: fast profile did not shorten speech ({duration_ratio:.3f}x)")
     return result
 
 
@@ -185,6 +308,7 @@ def main() -> int:
         "model_load_sec": model_load_sec,
         "configured_speaker": str(CONFIG["silero"].get("speaker", "xenia")),
         "samples": [],
+        "ssml_ab": {},
     }
     failures: list[str] = []
     processed_mos: list[float] = []
@@ -193,6 +317,7 @@ def main() -> int:
     synthesis_times: list[float] = []
     processing_times: list[float] = []
     realtime_factors: list[float] = []
+    baseline_rows: dict[str, dict] = {}
 
     for sample_id, emotion, intensity, text in SAMPLES:
         clean = prepare_for_speech(text)
@@ -215,18 +340,12 @@ def main() -> int:
         processor_wall_sec = time.perf_counter() - process_started
         total_wall_sec = synthesis_wall_sec + processor_wall_sec
 
-        raw_path = OUT / f"{sample_id}_raw.wav"
-        final_path = OUT / f"{sample_id}_aurora.wav"
-        sf.write(raw_path, raw, sr, subtype="PCM_16")
-        sf.write(final_path, final, sr, subtype="PCM_16")
+        sf.write(OUT / f"{sample_id}_raw.wav", raw, sr, subtype="PCM_16")
+        sf.write(OUT / f"{sample_id}_aurora.wav", final, sr, subtype="PCM_16")
 
-        final_16 = resample_16k(final, sr)
         raw_score = score_mos(mos_model, raw, sr)
         final_score = score_mos(mos_model, final, sr)
-        recognized = str(asr(
-            {"array": final_16.squeeze(0).numpy(), "sampling_rate": 16000},
-            generate_kwargs={"language": "ru", "task": "transcribe"},
-        ).get("text", "")).strip()
+        recognized = recognize(asr, final, sr)
         similarity = intelligibility_similarity(text, clean, recognized)
         metrics = audio_metrics(final, sr)
         duration = float(metrics["duration_sec"])
@@ -259,21 +378,10 @@ def main() -> int:
             **metrics,
         }
         report["samples"].append(row)
+        baseline_rows[sample_id] = {**row, "audio": final}
+        validate_audio(sample_id, final_score, similarity, metrics, failures, baseline_score=raw_score)
 
-        if metrics["clipping_ratio"] > 0.0001:
-            failures.append(f"{sample_id}: clipping {metrics['clipping_ratio']:.6f}")
-        if not (-27.0 <= metrics["rms_dbfs"] <= -14.0):
-            failures.append(f"{sample_id}: RMS {metrics['rms_dbfs']:.2f} dBFS")
-        if metrics["dc_offset"] > 0.015:
-            failures.append(f"{sample_id}: DC offset {metrics['dc_offset']:.4f}")
-        if metrics["edge_peak_10ms"] > 0.35:
-            failures.append(f"{sample_id}: hard edge {metrics['edge_peak_10ms']:.3f}")
-        if final_score < 2.9:
-            failures.append(f"{sample_id}: UTMOS {final_score:.3f}")
-        if final_score + 0.18 < raw_score:
-            failures.append(f"{sample_id}: processing degraded UTMOS {raw_score:.3f}->{final_score:.3f}")
-        if similarity < 0.62:
-            failures.append(f"{sample_id}: ASR similarity {similarity:.3f} recognized={recognized!r}")
+    report["ssml_ab"] = run_ssml_ab(engine, processor, mos_model, asr, baseline_rows, failures)
 
     sweep = speaker_sweep(engine, mos_model)
     report["speaker_sweep"] = sweep
@@ -321,10 +429,16 @@ def main() -> int:
         "real_time_factor_mean": float(np.mean(realtime_factors)),
         "real_time_factor_max": float(np.max(realtime_factors)),
         "persona_samples": persona_rows,
+        "ssml_ab": report["ssml_ab"],
         "speaker_sweep": valid_sweep,
         "failures": failures,
     }
-    (OUT / "report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    serializable = {
+        **report,
+        "samples": report["samples"],
+    }
+    (OUT / "report.json").write_text(json.dumps(serializable, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps(report["summary"], ensure_ascii=False, indent=2))
     for row in report["samples"]:
         print(
@@ -332,6 +446,12 @@ def main() -> int:
             f"ASR={row['char_similarity']:.3f} RMS={row['rms_dbfs']:.1f}dBFS peak={row['peak']:.3f} "
             f"synth={row['synthesis_wall_sec']:.3f}s dsp={row['processor_wall_sec']:.3f}s "
             f"RTF={row['real_time_factor']:.3f}"
+        )
+    for sample_id, row in report["ssml_ab"].items():
+        print(
+            f"{sample_id}_ssml: MOS={row['aurora_utmos']:.3f} delta={row['mos_delta_vs_plain']:+.3f} "
+            f"ASR={row['asr_similarity']:.3f} duration={row['duration_ratio_vs_plain']:.3f}x "
+            f"wave_delta={row['waveform_delta_rms']:.4f} clipping={row['clipping_ratio']:.6f}"
         )
     if failures:
         print("QUALITY GATE FAILED")
