@@ -21,6 +21,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/test_api_accounts_sync.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_request_limits.py",
+        "tests/test_api_server_hardening.py",
         "tests/test_release_core_gates.py",
         "tests/test_android_contract.py",
         "tests/test_voice_text.py",
@@ -149,6 +150,18 @@ def test_knowledge_alias_removal_safety_is_part_of_same_sha_gate() -> None:
     assert 'base.base_environment(root, {"scenario": "probe"})' in runner
 
 
+def test_legacy_unregistered_rollback_is_part_of_same_sha_gate() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+    probe = read("benchmarks/knowledge/legacy_unregistered_rollback_probe.gd")
+
+    assert "Run legacy unregistered Knowledge rollback safety probe" in workflow
+    assert "benchmarks/knowledge/legacy_unregistered_rollback_probe.gd" in workflow
+    assert "AURORA_KNOWLEDGE_LEGACY_ROLLBACK_RESULT=" in workflow
+    assert '"stable_after": stable_after' in probe
+    assert '"partial_removed": partial_gone' in probe
+    assert "failed reimport must preserve legacy source rows that predate sources.json" in probe
+
+
 def test_work_persistence_and_self_reliance_are_same_sha_covered() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     work_store = read("tests/work_mode_store_smoke.gd")
@@ -175,6 +188,18 @@ def test_api_request_body_limit_is_owner_routable_and_same_sha_covered() -> None
     assert "test_body_within_limit_reaches_downstream_unchanged" in request_limit_tests
 
 
+def test_api_server_hardening_is_owner_routable_and_same_sha_covered() -> None:
+    workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
+    hardening = read("tests/test_api_server_hardening.py")
+
+    assert "API server hardening contract" in workflow
+    assert "tests/test_api_server_hardening.py" in workflow
+    assert "test_production_account_routes_deliver_tokens_without_returning_them" in hardening
+    assert "test_mail_transport_failure_never_exposes_raw_token" in hardening
+    assert "test_production_account_creation_fails_closed_when_mail_is_unconfigured" in hardening
+    assert "test_server_rejects_oversized_json_before_route_validation" in hardening
+
+
 def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
@@ -190,6 +215,7 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
         "Updater repair and signed-floor compatibility contract",
         "API runtime resilience contract",
         "API early request body limit contract",
+        "API server hardening contract",
         "Master-log coordination contract",
     ):
         assert step_name in workflow
@@ -199,6 +225,7 @@ def test_godot_failure_does_not_hide_followup_smokes_or_diagnostics() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
 
     for step_name in (
+        "Run legacy unregistered Knowledge rollback safety probe",
         "Run offline Core Agent memory Knowledge Work API and safety smokes",
         "Run headless UI regression smoke (not visual acceptance)",
         "Record acceptance boundary",
@@ -233,6 +260,7 @@ def test_active_lane_workflows_become_visible_to_integration_when_they_land() ->
         "benchmarks/core/**",
         "benchmarks/knowledge/**",
         "benchmarks/knowledge/dedupe_alias_removal_probe.gd",
+        "benchmarks/knowledge/legacy_unregistered_rollback_probe.gd",
         "benchmarks/knowledge/run_godot_probe.py",
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
