@@ -49,32 +49,46 @@ class LearningStore:
                 lines = self.path.read_text(encoding="utf-8").splitlines()
             except Exception:
                 lines = []
+
+        parsed: list[tuple[int, dict[str, Any]]] = []
+        for sequence, line in enumerate(lines):
+            try:
+                event = json.loads(line)
+            except Exception:
+                malformed += 1
+                continue
+            if not isinstance(event, dict):
+                malformed += 1
+                continue
+            event_id = str(event.get("id", "")).strip()
+            kind = str(event.get("kind", "")).strip()
+            payload = event.get("payload", {})
+            if not event_id or not kind or not isinstance(payload, dict):
+                malformed += 1
+                continue
+            parsed.append((sequence, event))
+
+        # A migration must never turn a retention limit into data loss. Preserve
+        # every unsynced item, then spend any remaining history budget on the
+        # newest already-synced records.
+        pending = [(sequence, event) for sequence, event in parsed if not bool(event.get("synced", False))]
+        synced = [(sequence, event) for sequence, event in parsed if bool(event.get("synced", False))]
+        synced_budget = max(0, self.max_events - len(pending))
+        selected = pending + (synced[-synced_budget:] if synced_budget else [])
+        selected.sort(key=lambda item: item[0])
+
         with self.database.connection(write=True) as connection:
-            for line in lines[-self.max_events :]:
-                try:
-                    event = json.loads(line)
-                except Exception:
-                    malformed += 1
-                    continue
-                if not isinstance(event, dict):
-                    malformed += 1
-                    continue
-                event_id = str(event.get("id", "")).strip()
-                kind = str(event.get("kind", "")).strip()
-                payload = event.get("payload", {})
-                if not event_id or not kind or not isinstance(payload, dict):
-                    malformed += 1
-                    continue
+            for _, event in selected:
                 before = connection.total_changes
                 connection.execute(
                     "INSERT OR IGNORE INTO learning_events(id, kind, created_at, synced, payload_json) "
                     "VALUES(?, ?, ?, ?, ?)",
                     (
-                        event_id,
-                        kind,
+                        str(event.get("id", "")).strip(),
+                        str(event.get("kind", "")).strip(),
                         int(event.get("time", int(time.time()))),
                         1 if bool(event.get("synced", False)) else 0,
-                        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                        json.dumps(event.get("payload", {}), ensure_ascii=False, separators=(",", ":")),
                     ),
                 )
                 if connection.total_changes > before:
@@ -84,7 +98,14 @@ class LearningStore:
                 "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=excluded.updated_at",
                 (
                     self.LEGACY_MIGRATION_KEY,
-                    json.dumps({"imported": imported, "malformed": malformed}, separators=(",", ":")),
+                    json.dumps(
+                        {
+                            "imported": imported,
+                            "malformed": malformed,
+                            "pending_preserved": len(pending),
+                        },
+                        separators=(",", ":"),
+                    ),
                     int(time.time()),
                 ),
             )
