@@ -139,8 +139,11 @@ func _build_panel() -> void:
 	box.add_child(close)
 	_refresh_control_state()
 
+func _desktop_panel_available() -> bool:
+	return OS.get_name() == "Windows" or bool(ProjectSettings.get_setting("aurorafox/testing/desktop_preview", false))
+
 func show_computer_panel() -> void:
-	if OS.get_name() != "Windows" or popup == null:
+	if not _desktop_panel_available() or popup == null:
 		return
 	_refresh_control_state()
 	_fit_popup()
