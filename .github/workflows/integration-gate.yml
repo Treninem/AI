@@ -144,9 +144,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          # OCR, real-Core benchmark and Work/Computer paths are owned by
-          # independently ACTIVE lanes. Their absence is PENDING, not a failure.
-          # Research lifecycle/privacy and Large Knowledge have landed and are executed.
+          # OCR, real-Core benchmark and dedicated Work/Computer reliability paths
+          # are independently ACTIVE. Their absence is PENDING, not a failure.
+          # Existing Work mode, Research and Large Knowledge coverage is executed.
           for path in \
             .github/workflows/local-ocr-ci.yml \
             .github/workflows/core-benchmarks.yml \
@@ -164,6 +164,8 @@ jobs:
           else
             echo 'LANE_ARTIFACT_PENDING benchmarks/core/**'
           fi
+          test -f .github/workflows/work-mode-ci.yml
+          test -f tests/work_mode_store_smoke.gd
           test -f .github/workflows/research-quality-ci.yml
           test -f tests/test_research_evidence_lifecycle_contract.py
           test -f tests/research_evidence_lifecycle_smoke.gd
@@ -176,6 +178,8 @@ jobs:
           test -f tests/test_knowledge_performance_compare.py
           test -f tests/test_knowledge_stress_gates.py
           test -f .github/workflows/knowledge-performance.yml
+          echo 'LANE_ARTIFACT_PRESENT .github/workflows/work-mode-ci.yml'
+          echo 'LANE_ARTIFACT_PRESENT tests/work_mode_store_smoke.gd'
           echo 'LANE_ARTIFACT_PRESENT .github/workflows/research-quality-ci.yml'
           echo 'LANE_ARTIFACT_PRESENT tests/test_research_evidence_lifecycle_contract.py'
           echo 'LANE_ARTIFACT_PRESENT tests/research_evidence_lifecycle_smoke.gd'
@@ -225,7 +229,8 @@ jobs:
         if: always()
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          status=0
           for smoke in \
             tests/self_reliance_smoke.gd \
             tests/offline_autonomy_smoke.gd \
@@ -236,14 +241,20 @@ jobs:
             tests/knowledge_transaction_rollback_smoke.gd \
             tests/api_gateway_smoke.gd \
             tests/work_mode_smoke.gd \
+            tests/work_mode_store_smoke.gd \
             tests/runtime_extension_smoke.gd \
             tests/core_candidate_benchmark_smoke.gd \
             tests/core_candidate_submitter_smoke.gd
           do
             echo "INTEGRATION_SMOKE_START $smoke"
-            timeout 60s ./godot --headless --path . --script "$smoke"
-            echo "INTEGRATION_SMOKE_OK $smoke"
+            if timeout 60s ./godot --headless --path . --script "$smoke"; then
+              echo "INTEGRATION_SMOKE_OK $smoke"
+            else
+              echo "INTEGRATION_SMOKE_FAILED $smoke"
+              status=1
+            fi
           done
+          exit "$status"
 
       - name: Run headless UI regression smoke (not visual acceptance)
         if: always()
