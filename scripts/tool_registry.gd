@@ -28,7 +28,7 @@ func _ready() -> void:
 	register_tool("computer_action", "Выполнить одну уже выбранную локальным AuroraFox Core примитивную операцию мыши/клавиатуры с bounded execution и проверкой разрешений", {"type":"string","x":"int","y":"int","button":"string","clicks":"int","text":"string","keys":"array","amount":"int","seconds":"float","action_id":"string","verify":"bool"}, Callable(self, "_computer_action"))
 	register_tool("computer_screenshot", "Получить локальный screenshot Windows после проверки master stop и разрешений", {}, Callable(self, "_computer_screenshot"))
 	register_tool("computer_windows", "Получить локальное описание окон и UI Automation элементов Windows", {}, Callable(self, "_screen_snapshot"))
-	register_tool("sandbox_exec", "Запустить разрешённую команду в рабочей папке AuroraFox; auto предпочитает контейнер, container не откатывается на local", {"command":"array","cwd":"string","timeout":"int","mode":"string"}, Callable(self, "_sandbox_exec"))
+	register_tool("sandbox_exec", "Запустить разрешённую команду: auto/container требуют строгий локальный контейнер; local доступен только как явный degraded operator mode", {"command":"array","cwd":"string","timeout":"int","mode":"string"}, Callable(self, "_sandbox_exec"))
 	register_tool("sandbox_write", "Создать текстовый файл внутри изолированной песочницы", {"path":"string","content":"string"}, Callable(self, "_sandbox_write"))
 	register_tool("sandbox_read", "Прочитать файл из изолированной песочницы", {"path":"string"}, Callable(self, "_sandbox_read"))
 	register_tool("screen_snapshot", "Получить описание текущих окон и элементов интерфейса Windows", {}, Callable(self, "_screen_snapshot"))
@@ -104,7 +104,7 @@ func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary
 	var code := int(completed[1])
 	var raw: PackedByteArray = completed[3]
 	if result_code != HTTPRequest.RESULT_SUCCESS:
-		return {"ok": false, "error": "transport_failure", "message": "Computer service transport failed (%s)" % result_code, "retryable": true}
+		return {"ok": false, "error": "transport_failure", "message": "Computer service transport failed (%s" % result_code, "retryable": true}
 	var text := raw.get_string_from_utf8().strip_edges()
 	if text.is_empty():
 		return {"ok": false, "error": "empty_response", "http": code, "retryable": code >= 500}
@@ -252,18 +252,15 @@ func _sandbox_exec(args: Dictionary) -> Dictionary:
 	var payload := {"command": args.get("command", []), "cwd": str(args.get("cwd", ".")), "timeout": timeout, "allow_network": false}
 	if mode in ["auto", "container"]:
 		var container_result := await _computer_json("/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
-		if container_result.get("ok", false):
-			return container_result
-		if mode == "container":
-			if int(container_result.get("http", 0)) == 404:
-				return {"ok": false, "error": "container_runtime_unavailable", "message": "Strict container sandbox requested but Docker/Podman is unavailable", "retryable": false, "network_isolation_enforced": false}
-			return container_result
-		if int(container_result.get("http", 0)) != 404:
-			return container_result
+		if int(container_result.get("http", 0)) == 404:
+			return {"ok": false, "error": "container_runtime_unavailable", "message": "Automatic/strict sandbox execution requires Docker/Podman and a preinstalled local image; degraded local fallback is disabled", "retryable": false, "network_isolation_enforced": false}
+		return container_result
+	# Explicit local mode is intentionally degraded and still fails closed at the
+	# sidecar unless AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX=1 was set by an operator.
 	var local_result := await _computer_json("/sandbox/exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
 	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
 		local_result["degraded_isolation"] = true
-		local_result["isolation_note"] = "Local process sandbox enforces path/auth/timeouts but cannot guarantee network isolation; use mode=container for strict isolation."
+		local_result["isolation_note"] = "Explicit local mode lacks strict filesystem/network isolation. Prefer mode=container."
 	return local_result
 
 func _sandbox_write(args: Dictionary) -> Dictionary:
