@@ -46,10 +46,10 @@ def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_defau
 
 def test_silero_native_prosody_is_allowlisted_intensity_gated_and_markup_safe():
     engine = (ROOT / "voice" / "python" / "tts_engine.py").read_text(encoding="utf-8")
+    assert '"happy": {"min_intensity": 0.50' in engine
     assert '"sleepy": {"min_intensity": 0.45' in engine
     assert '"playful": {"min_intensity": 0.55' in engine
     assert '"serious": {"min_intensity": 0.55' in engine
-    assert '"happy": {"min_intensity"' not in engine
     assert '"rate": "slow", "pitch": "medium"' in engine
     assert '"break_ms": 110' in engine
     assert '"break_ms": 70' in engine
@@ -57,8 +57,9 @@ def test_silero_native_prosody_is_allowlisted_intensity_gated_and_markup_safe():
     assert 'if power < float(profile["min_intensity"]):' in engine
     assert 'model.apply_tts(ssml_text=ssml' in engine
     assert 'rate="high"' not in engine
-    assert 'rate="fast"' not in engine
+    assert '"rate": "fast"' not in engine
     assert 'pitch="high"' not in engine
+    assert 'pitch="low"' not in engine
 
 
 def test_godot_voice_defaults_match_neutral_dsp_and_android_does_not_retime_playback():
