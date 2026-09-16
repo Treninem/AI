@@ -26,7 +26,9 @@ def test_voice_config_has_required_local_paths():
 
 def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_default():
     processor = load("voice_config.json")["processor"]
-    assert int(processor["profile_revision"]) >= 2
+    # cache_key() includes the processor profile; revision 3 intentionally
+    # invalidates WAVs synthesized before native Silero prosody was introduced.
+    assert int(processor["profile_revision"]) >= 3
     assert processor["prosody_dsp"] is False
     assert processor["compression"] is False
     assert float(processor["highpass_hz"]) == 0.0
