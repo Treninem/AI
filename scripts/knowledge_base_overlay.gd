@@ -12,7 +12,6 @@ const MAX_FOLDER_FILES := 750
 
 func _ready() -> void:
 	_build_ui()
-	call_deferred("_inject_button")
 
 func show_knowledge_base() -> void:
 	_refresh()
@@ -45,30 +44,6 @@ func _apply_main_button(button: Button, danger := false) -> void:
 	var main := get_parent()
 	if main != null and main.has_method("_apply_button"):
 		main.call("_apply_button", button, false, danger, false)
-
-func _inject_button() -> void:
-	var main := get_parent()
-	if main == null:
-		return
-	var settings = main.find_child("SettingsButton", true, false)
-	if not settings is Button:
-		await get_tree().create_timer(0.2).timeout
-		settings = main.find_child("SettingsButton", true, false)
-	if not settings is Button:
-		return
-	var parent := settings.get_parent()
-	if parent == null or parent.has_node("KnowledgeBaseButton"):
-		return
-	var button := Button.new()
-	button.name = "KnowledgeBaseButton"
-	button.text = "База знаний"
-	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.custom_minimum_size.y = 44
-	button.tooltip_text = "Пополнить локальную базу знаний AuroraFox"
-	button.pressed.connect(show_knowledge_base)
-	parent.add_child(button)
-	parent.move_child(button, settings.get_index())
-	_apply_main_button(button)
 
 func _panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -179,216 +154,139 @@ func _build_ui() -> void:
 	add_child(folder_picker)
 
 func _on_files_selected(paths: PackedStringArray) -> void:
-	var selected: Array = []
+	if import_busy or paths.is_empty():
+		return
+	import_busy = true
+	var ai := _main_ai()
+	var attachments := _attachments()
+	var failures := 0
+	var imported := 0
 	for path in paths:
-		selected.append(path)
-	await _import_paths(selected)
+		progress_label.text = "Импортирую %s…" % path.get_file()
+		var result := await ai.import_knowledge_file(path, attachments) if ai != null else {"ok": false, "error": "AI client unavailable"}
+		if result.get("ok", false):
+			imported += 1
+		else:
+			failures += 1
+	progress_label.text = "Импорт завершён • успешно %d • ошибок %d" % [imported, failures]
+	import_busy = false
+	_refresh()
 
 func _on_folder_selected(path: String) -> void:
-	if import_busy:
+	if import_busy or path.is_empty():
 		return
-	var paths: Array = []
-	_collect_supported(path, paths, MAX_FOLDER_FILES)
-	if paths.is_empty():
-		progress_label.text = "В выбранной папке не найдено поддерживаемых файлов."
-		return
-	await _import_paths(paths)
+	import_busy = true
+	var files := _collect_files(path)
+	var ai := _main_ai()
+	var attachments := _attachments()
+	var imported := 0
+	var failures := 0
+	for i in range(files.size()):
+		var file_path := str(files[i])
+		progress_label.text = "Папка: %d/%d • %s" % [i + 1, files.size(), file_path.get_file()]
+		var result := await ai.import_knowledge_file(file_path, attachments) if ai != null else {"ok": false, "error": "AI client unavailable"}
+		if result.get("ok", false):
+			imported += 1
+		else:
+			failures += 1
+	progress_label.text = "Папка обработана • успешно %d • ошибок %d" % [imported, failures]
+	import_busy = false
+	_refresh()
 
-func _collect_supported(path: String, out: Array, limit: int) -> void:
-	if out.size() >= limit:
+func _collect_files(path: String) -> Array[String]:
+	var out: Array[String] = []
+	_collect_files_into(path, out)
+	return out
+
+func _collect_files_into(path: String, out: Array[String]) -> void:
+	if out.size() >= MAX_FOLDER_FILES:
 		return
 	var dir := DirAccess.open(path)
 	if dir == null:
 		return
 	dir.list_dir_begin()
-	while out.size() < limit:
+	while true:
 		var name := dir.get_next()
 		if name.is_empty():
 			break
-		if name in [".", ".."] or name.begins_with("."):
+		if name.begins_with("."):
 			continue
-		var is_directory := dir.current_is_dir()
 		var full := path.path_join(name)
-		if is_directory:
-			_collect_supported(full, out, limit)
-		elif _is_supported(full):
+		if dir.current_is_dir():
+			_collect_files_into(full, out)
+		elif _supported(full):
 			out.append(full)
+		if out.size() >= MAX_FOLDER_FILES:
+			break
 	dir.list_dir_end()
 
-func _is_supported(path: String) -> bool:
-	var ai := _main_ai()
-	return ai != null and ai.supported_learning_files().has(path.get_extension().to_lower())
-
-func _import_paths(paths: Array) -> void:
-	if import_busy:
-		return
-	var ai := _main_ai()
-	if ai == null:
-		progress_label.text = "AIClient не подключён."
-		return
-	import_busy = true
-	var ok_count := 0
-	var duplicate_count := 0
-	var failures: PackedStringArray = PackedStringArray()
-	for i in range(paths.size()):
-		var path := str(paths[i])
-		progress_label.text = "Импорт %d/%d • %s" % [i + 1, paths.size(), path.get_file()]
-		var result := await _import_one(path)
-		if bool(result.get("ok", false)):
-			ok_count += 1
-			if bool(result.get("duplicate", false)) or bool(result.get("skipped", false)):
-				duplicate_count += 1
-		else:
-			failures.append("%s: %s" % [path.get_file(), str(result.get("error", "ошибка"))])
-		await get_tree().process_frame
-	import_busy = false
-	var failure_text := ""
-	if not failures.is_empty():
-		failure_text = " • Ошибки: " + " | ".join(failures)
-	var duplicate_text := ""
-	if duplicate_count > 0:
-		duplicate_text = " • Уже были в базе: %d" % duplicate_count
-	progress_label.text = "Обработано: %d из %d%s%s" % [ok_count, paths.size(), duplicate_text, failure_text]
-	_refresh()
-
-func _import_one(path: String, force_reindex := false) -> Dictionary:
-	var ai := _main_ai()
-	if ai == null:
-		return {"ok": false, "error": "AIClient недоступен"}
-	if not _is_supported(path):
-		return {"ok": false, "error": "Формат не поддерживается для базы знаний"}
-	var base_meta := {"scope": "core_knowledge", "imported_by": "knowledge_base", "force_reindex": force_reindex}
-	var direct := ai.learn_from_file(path, base_meta)
-	if bool(direct.get("ok", false)):
-		return direct
-	if not bool(direct.get("requires_extractor", false)):
-		return direct
-	var files := _attachments()
-	if files == null:
-		return {"ok": false, "error": "File Intelligence не подключён"}
-	var analyzed: Dictionary = await files.extract_for_knowledge(path)
-	if not bool(analyzed.get("ok", false)) or not bool(analyzed.get("analyzed", false)):
-		return {"ok": false, "error": str(analyzed.get("analysis_error", analyzed.get("error", "Не удалось извлечь содержимое")))}
-	var content := str(analyzed.get("content", "")).strip_edges()
-	if content.is_empty():
-		return {"ok": false, "error": "File Intelligence не извлёк текст"}
-	return ai.learn_from_extracted_file(path, content, {
-		"scope": "core_knowledge",
-		"imported_by": "file_intelligence_local",
-		"detected_kind": analyzed.get("kind", "document"),
-		"document_metadata": analyzed.get("metadata", {}),
-		"truncated": analyzed.get("truncated", false),
-		"visual_used": false,
-		"external_ai_required": false,
-		"force_reindex": force_reindex
-	})
-
-func _refresh() -> void:
-	var ai := _main_ai()
-	if ai == null or stats_label == null:
-		return
-	var stats: Dictionary = ai.knowledge_stats()
-	stats_label.text = "Источников: %d • копий: %d • ревизий: %d • фрагментов: %d • структурированных записей: %d • хранилище: %s • категории: %s" % [
-		int(stats.get("sources", 0)), int(stats.get("source_aliases", 0)), int(stats.get("source_revisions_total", 0)), int(stats.get("chunks", 0)), int(stats.get("structured_records", 0)), _human_size(int(stats.get("bytes", 0))), _format_kinds(stats.get("kinds", {}))
-	]
-	for child in sources_box.get_children():
-		child.queue_free()
-	var sources: Array = ai.knowledge_sources()
-	if sources.is_empty():
-		var empty := Label.new()
-		empty.text = "База знаний пока пуста."
-		sources_box.add_child(empty)
-		return
-	for source in sources:
-		if source is Dictionary:
-			_add_source_card(source)
-
-func _add_source_card(source: Dictionary) -> void:
-	var source_path := str(source.get("source", "manual"))
-	var panel := PanelContainer.new()
-	panel.custom_minimum_size.y = 86
-	sources_box.add_child(panel)
-	var card := VBoxContainer.new()
-	card.add_theme_constant_override("separation", 8)
-	panel.add_child(card)
-	var text_box := VBoxContainer.new()
-	text_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	card.add_child(text_box)
-	var name := Label.new()
-	name.text = source_path.get_file() if source_path != "manual" else "Ручные знания"
-	name.add_theme_font_size_override("font_size", 16)
-	name.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text_box.add_child(name)
-	var registry_details := ""
-	var fingerprint := str(source.get("fingerprint_sha256", ""))
-	if not fingerprint.is_empty():
-		registry_details = " • rev:%d • SHA:%s" % [int(source.get("revision", 1)), fingerprint.substr(0, 10)]
-	var aliases = source.get("aliases", [])
-	if aliases is Array and not aliases.is_empty():
-		registry_details += " • копий:%d" % aliases.size()
-	var details := Label.new()
-	details.text = "%s\n%d фрагм. • %s%s" % [source_path, int(source.get("chunks", 0)), _format_kinds(source.get("kinds", {})), registry_details]
-	details.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	details.add_theme_font_size_override("font_size", 11)
-	details.add_theme_color_override("font_color", Color("a8b4c8"))
-	text_box.add_child(details)
-	var actions := HFlowContainer.new()
-	actions.add_theme_constant_override("h_separation", 8)
-	actions.add_theme_constant_override("v_separation", 8)
-	card.add_child(actions)
-	if source_path != "manual":
-		var reindex := Button.new()
-		reindex.text = "Переиндексировать"
-		reindex.disabled = not FileAccess.file_exists(source_path)
-		reindex.pressed.connect(_reindex.bind(source_path))
-		_apply_main_button(reindex)
-		actions.add_child(reindex)
-	var remove := Button.new()
-	remove.text = "Удалить источник"
-	remove.pressed.connect(_delete_source.bind(source_path))
-	_apply_main_button(remove, true)
-	actions.add_child(remove)
-
-func _delete_source(source: String) -> void:
-	var ai := _main_ai()
-	if ai == null:
-		return
-	var result := ai.remove_knowledge_source(source)
-	progress_label.text = "Источник удалён." if bool(result.get("ok", false)) else "Не удалось удалить источник."
-	_refresh()
-
-func _reindex(source: String) -> void:
-	if import_busy:
-		return
-	import_busy = true
-	progress_label.text = "Принудительная переиндексация • %s" % source.get_file()
-	var result := await _import_one(source, true)
-	import_busy = false
-	progress_label.text = "Переиндексация завершена." if bool(result.get("ok", false)) else "Ошибка переиндексации: %s" % str(result.get("error", ""))
-	_refresh()
+func _supported(path: String) -> bool:
+	var ext := path.get_extension().to_lower()
+	return ext in ["json", "jsonl", "txt", "md", "markdown", "csv", "tsv", "yaml", "yml", "xml", "docx", "odt", "rtf", "epub", "pdf", "xls", "xlsx", "ods", "pptx", "py", "gd", "cs", "js", "ts", "java", "kt", "kts", "c", "h", "cpp", "hpp", "cc", "rs", "go", "rb", "php", "sh", "bash", "zsh", "ps1", "sql", "html", "htm", "css", "scss", "sass", "less", "vue", "svelte", "jsx", "tsx", "toml", "ini", "cfg", "conf", "env", "log", "ndjson", "geojson", "json5"]
 
 func _compact() -> void:
 	var ai := _main_ai()
 	if ai == null:
+		progress_label.text = "AuroraFox Core недоступен."
 		return
 	var result := ai.compact_knowledge()
-	progress_label.text = "Удалено дубликатов: %d" % int(result.get("duplicates_removed", 0))
+	progress_label.text = "Дубликаты очищены." if result.get("ok", false) else "Не удалось очистить: %s" % str(result.get("error", "unknown"))
 	_refresh()
 
-func _format_kinds(value: Variant) -> String:
-	if not value is Dictionary or value.is_empty():
-		return "knowledge"
-	var parts: PackedStringArray = PackedStringArray()
-	for key in value.keys():
-		parts.append("%s:%d" % [str(key), int(value.get(key, 0))])
-	parts.sort()
-	return ", ".join(parts)
+func _refresh() -> void:
+	if stats_label == null or sources_box == null:
+		return
+	for child in sources_box.get_children():
+		child.queue_free()
+	var ai := _main_ai()
+	if ai == null:
+		stats_label.text = "AuroraFox Core не подключён."
+		return
+	var status := ai.knowledge_status()
+	var total := int(status.get("entries", 0))
+	var sources: Array = status.get("sources", [])
+	var registry: Dictionary = status.get("registry", {})
+	stats_label.text = "Знаний: %d • источников: %d • ревизия реестра: %s" % [total, sources.size(), str(registry.get("version", 1))]
+	if sources.is_empty():
+		var empty := Label.new()
+		empty.text = "База знаний пока пуста. Добавь файл или папку."
+		empty.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		sources_box.add_child(empty)
+		return
+	for item in sources:
+		if not item is Dictionary:
+			continue
+		var card := PanelContainer.new()
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color(0.04, 0.047, 0.075, 0.96)
+		style.border_color = Color(0.25, 0.31, 0.45, 0.62)
+		style.set_border_width_all(1)
+		style.set_corner_radius_all(11)
+		card.add_theme_stylebox_override("panel", style)
+		sources_box.add_child(card)
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 8)
+		card.add_child(row)
+		var label := Label.new()
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		var state := str(item.get("state", "active"))
+		label.text = "%s\n%s • %s • записей %d" % [str(item.get("display_name", item.get("source_id", "Источник"))), str(item.get("kind", "document")), state, int(item.get("entry_count", 0))]
+		row.add_child(label)
+		var remove := Button.new()
+		remove.text = "Удалить"
+		remove.tooltip_text = "Удалить знания только из этого источника"
+		_apply_main_button(remove, true)
+		var source_id := str(item.get("source_id", ""))
+		remove.pressed.connect(_remove_source.bind(source_id))
+		row.add_child(remove)
 
-func _human_size(bytes: int) -> String:
-	if bytes < 1024:
-		return "%d B" % bytes
-	if bytes < 1024 * 1024:
-		return "%.1f KB" % (float(bytes) / 1024.0)
-	if bytes < 1024 * 1024 * 1024:
-		return "%.1f MB" % (float(bytes) / 1048576.0)
-	return "%.2f GB" % (float(bytes) / 1073741824.0)
+func _remove_source(source_id: String) -> void:
+	if source_id.is_empty():
+		return
+	var ai := _main_ai()
+	if ai == null:
+		return
+	var result := ai.remove_knowledge_source(source_id)
+	progress_label.text = "Источник удалён." if result.get("ok", false) else "Не удалось удалить источник: %s" % str(result.get("error", "unknown"))
+	_refresh()
