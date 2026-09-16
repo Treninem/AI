@@ -64,6 +64,8 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/work_mode_store_smoke.gd
       - name: Work reliability lifecycle and recovery smoke
         run: timeout 60s ./godot --headless --path . --script tests/work_reliability_store_smoke.gd
+      - name: Work cancel and master-stop unsafe-action race smoke
+        run: timeout 40s ./godot --headless --path . --script tests/work_computer_e2e_control_smoke.gd
 
   source-boundaries:
     runs-on: ubuntu-24.04
