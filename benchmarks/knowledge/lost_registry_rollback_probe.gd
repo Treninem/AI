@@ -27,15 +27,25 @@ func _run() -> void:
 	initial_file.store_string(JSON.stringify({"fact": STABLE_MARKER, "description": "valid state before registry loss"}))
 	initial_file.close()
 
+	# Seed persisted JSONL directly so KnowledgeImportTransaction's static
+	# source-presence cache is still cold. Then create a normal registry row
+	# separately and delete it. The failing transaction must rediscover the old
+	# source from persisted data rather than succeeding because of a warm cache.
 	var store: Variant = KnowledgeStoreScript.new()
-	var txn: Variant = KnowledgeImportTransactionScript.new()
-	var initial: Variant = txn.call("import_file", store, SOURCE, {"imported_by": "lost_registry_rollback_probe"})
-	if not bool(initial.get("ok", false)):
-		_emit({"ok": false, "error": "initial import failed", "initial": initial}, 3)
+	var seed_result: Variant = store.call("import_file", SOURCE, {"imported_by": "lost_registry_seed"})
+	if not (seed_result is Dictionary and bool(seed_result.get("ok", false))):
+		_emit({"ok": false, "error": "seed import failed", "seed": seed_result}, 3)
 		return
+	var registry: Variant = KnowledgeSourceRegistryScript.new()
+	var inspection: Variant = registry.call("inspect_file", SOURCE)
+	var registered: Variant = registry.call("mark_imported", SOURCE, inspection, seed_result, {"imported_by": "lost_registry_seed"})
+	if not (registered is Dictionary and bool(registered.get("ok", false))):
+		_emit({"ok": false, "error": "registry seed failed", "inspection": inspection, "registered": registered}, 3)
+		return
+
 	var before_chunks := int(KnowledgeManagerScript.new().call("stats").get("chunks", 0))
 	var stable_before: Variant = store.call("search", STABLE_MARKER, 5)
-	var registry_before: Variant = KnowledgeSourceRegistryScript.new().call("record_for_source", SOURCE)
+	var registry_before: Variant = registry.call("record_for_source", SOURCE)
 
 	var registry_path := str(KnowledgeSourceRegistryScript.REGISTRY_PATH)
 	if FileAccess.file_exists(registry_path):
@@ -49,19 +59,24 @@ func _run() -> void:
 	broken.store_string('{"fact":"%s","broken":[1,2,' % PARTIAL_MARKER)
 	broken.close()
 
-	var failed: Variant = txn.call("import_file", store, SOURCE, {"imported_by": "lost_registry_rollback_probe"})
+	# First transaction instance is created only after registry loss. This forces
+	# the production path to rebuild source presence from JSONL on disk.
+	var txn: Variant = KnowledgeImportTransactionScript.new()
+	var failed: Variant = txn.call("import_file", KnowledgeStoreScript.new(), SOURCE, {"imported_by": "lost_registry_rollback_probe"})
 	var after_store: Variant = KnowledgeStoreScript.new()
 	var stable_after: Variant = after_store.call("search", STABLE_MARKER, 5)
 	var partial_after: Variant = after_store.call("search", PARTIAL_MARKER, 5)
 	var after_chunks := int(KnowledgeManagerScript.new().call("stats").get("chunks", 0))
+	var registry_after: Variant = KnowledgeSourceRegistryScript.new().call("record_for_source", SOURCE)
 	var failed_as_expected := not bool(failed.get("ok", false)) and str(failed.get("transaction", "")) == "rolled_back"
 	var conservative_snapshot := str(failed.get("source_snapshot", "")) == "source_rows"
 	var preserved := not stable_after.is_empty() and after_chunks == before_chunks and partial_after.is_empty()
-	var ok := bool(initial.get("ok", false)) and not stable_before.is_empty() and not registry_before.is_empty()
-	ok = ok and failed_as_expected and conservative_snapshot and preserved
+	var ok := not stable_before.is_empty() and not registry_before.is_empty()
+	ok = ok and failed_as_expected and conservative_snapshot and preserved and registry_after.is_empty()
 	_emit({
 		"ok": ok,
-		"initial_import_ok": bool(initial.get("ok", false)),
+		"seed_import_ok": seed_result is Dictionary and bool(seed_result.get("ok", false)),
+		"registry_seed_ok": registered is Dictionary and bool(registered.get("ok", false)),
 		"stable_before": not stable_before.is_empty(),
 		"registry_before": not registry_before.is_empty(),
 		"registry_deleted_before_failure": true,
@@ -71,10 +86,11 @@ func _run() -> void:
 		"conservative_snapshot": conservative_snapshot,
 		"stable_after": not stable_after.is_empty(),
 		"partial_after": not partial_after.is_empty(),
+		"registry_absent_after": registry_after.is_empty(),
 		"chunks_before": before_chunks,
 		"chunks_after": after_chunks,
 		"previous_valid_state_preserved": preserved,
-		"expected_contract": "registry loss must still preserve prior persisted rows during a failed re-import"
+		"expected_contract": "after registry loss, a cold transaction must rediscover persisted source rows and preserve them on failed re-import"
 	}, 0 if ok else 5)
 
 func _reset_state() -> void:
