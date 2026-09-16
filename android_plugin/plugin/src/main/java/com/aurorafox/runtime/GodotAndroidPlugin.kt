@@ -96,6 +96,13 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     @UsedByGodot
+    fun extractDocumentText(path: String): String {
+        if (!isInsideAppStorage(path)) return errorJson("Document must be inside AuroraFox private storage")
+        return try { files.analyze(path, "", false) }
+        catch (t: Throwable) { errorJson("Android local document extraction unavailable: ${t.message ?: t.javaClass.simpleName}") }
+    }
+
+    @UsedByGodot
     fun clearFileCache(): String {
         return try { files.clearCache() } catch (t: Throwable) { errorJson(t.message ?: "Cannot clear file cache") }
     }
