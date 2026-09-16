@@ -107,9 +107,9 @@ jobs:
       - name: Prepare verified bundled Core weights
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           New-Item -ItemType Directory -Force (Split-Path -Parent $env:CORE_MODEL) | Out-Null
           ./build/prepare_bundled_core_model.ps1 -Destination $env:CORE_MODEL -CacheDir "$PWD/.ci/core-model-cache"
-          if ($LASTEXITCODE -ne 0) { throw 'Android benchmark Core model preparation failed' }
           $sha = (Get-FileHash -LiteralPath $env:CORE_MODEL -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($sha -ne $env:CORE_SHA) { throw "Android benchmark model SHA mismatch: $sha" }
 
