@@ -8,6 +8,8 @@ from pathlib import Path
 
 import pytest
 
+from api.account_store import AccountStore
+from api.auth import KeyStore
 from api.backup_service import BackupService, BackupTooLarge
 
 
@@ -20,8 +22,6 @@ def test_backup_excludes_credential_files_and_manifest_is_verifiable(tmp_path: P
     (root / "api" / "conversations").mkdir(parents=True)
     (root / "api" / "conversations" / "chat.json").write_text('{"message":"hello"}\n', encoding="utf-8")
     (root / "memory.json").write_text('{"facts":["safe"]}\n', encoding="utf-8")
-    (root / "api" / "keys.json").write_text('{"token_hash":"secret"}\n', encoding="utf-8")
-    (root / "api" / "bootstrap_key.txt").write_text("af_admin_secret\n", encoding="utf-8")
     (root / "models").mkdir()
     (root / "models" / "weights.json").write_text('{"large":"excluded"}\n', encoding="utf-8")
 
@@ -30,15 +30,29 @@ def test_backup_excludes_credential_files_and_manifest_is_verifiable(tmp_path: P
         connection.execute("CREATE TABLE files(path TEXT PRIMARY KEY, digest TEXT NOT NULL)")
         connection.execute("INSERT INTO files VALUES (?, ?)", ("README.md", "abc123"))
 
-    secret_hash = "f" * 64
-    api_database = root / "api" / "aurorafox.sqlite3"
-    with sqlite3.connect(api_database) as connection:
-        connection.execute("CREATE TABLE api_keys(id TEXT PRIMARY KEY, token_hash TEXT NOT NULL)")
-        connection.execute("CREATE TABLE metadata(key TEXT PRIMARY KEY, value TEXT, updated_at INTEGER)")
+    api_root = root / "api"
+    key_store = KeyStore(api_root)
+    api_token, api_record = key_store.create("backup secret", ["chat"])
+    accounts = AccountStore(api_root)
+    registration = accounts.register("backup@example.com", "backup account password", "Backup")
+    accounts.verify_email(registration["verification_token"])
+    login = accounts.login("backup@example.com", "backup account password", "PC", "test")
+    guest = accounts.create_guest("Guest", "test")
+    with sqlite3.connect(api_root / "aurorafox.sqlite3") as connection:
         connection.execute("CREATE TABLE durable_data(value TEXT NOT NULL)")
-        connection.execute("INSERT INTO api_keys VALUES (?, ?)", ("secret-key", secret_hash))
-        connection.execute("INSERT INTO metadata VALUES (?, ?, ?)", ("migration.api_keys.keys_json.v1", "{}", 1))
         connection.execute("INSERT INTO durable_data VALUES (?)", ("keep-me",))
+        password_hash = connection.execute(
+            "SELECT password_hash FROM accounts WHERE id=?", (registration["account"]["id"],)
+        ).fetchone()[0]
+
+    secret_hashes = {
+        hashlib.sha256(api_token.encode("utf-8")).hexdigest(),
+        hashlib.sha256(login["access_token"].encode("utf-8")).hexdigest(),
+        hashlib.sha256(login["refresh_token"].encode("utf-8")).hexdigest(),
+        hashlib.sha256(guest["guest_token"].encode("utf-8")).hexdigest(),
+        str(password_hash),
+    }
+    assert api_record["token_hash"] in secret_hashes
 
     result = BackupService(root, tmp_path / "cache").create_archive()
     assert result.file_count == 4
@@ -74,11 +88,17 @@ def test_backup_excludes_credential_files_and_manifest_is_verifiable(tmp_path: P
 
         api_extracted = tmp_path / "restored-api.sqlite3"
         api_payload = archive.read("data/api/aurorafox.sqlite3")
-        assert secret_hash.encode("ascii") not in api_payload
+        for secret_hash in secret_hashes:
+            assert secret_hash.encode("ascii") not in api_payload
         api_extracted.write_bytes(api_payload)
         with sqlite3.connect(api_extracted) as connection:
             assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
             assert connection.execute("SELECT COUNT(*) FROM api_keys").fetchone()[0] == 0
+            assert connection.execute("SELECT COUNT(*) FROM auth_sessions").fetchone()[0] == 0
+            assert connection.execute("SELECT COUNT(*) FROM refresh_tokens").fetchone()[0] == 0
+            assert connection.execute("SELECT COUNT(*) FROM account_tokens").fetchone()[0] == 0
+            assert connection.execute("SELECT password_hash FROM accounts").fetchone()[0] == ""
+            assert connection.execute("SELECT token_hash FROM guests").fetchone()[0].startswith("redacted:")
             assert connection.execute("SELECT value FROM durable_data").fetchone()[0] == "keep-me"
             assert connection.execute(
                 "SELECT COUNT(*) FROM metadata WHERE key LIKE 'migration.api_keys.%'"
