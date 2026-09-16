@@ -91,6 +91,26 @@ def test_legacy_api_state_migrates_once_into_single_database(tmp_path: Path):
     assert AuroraDatabase(api_root / "aurorafox.sqlite3").integrity_check()["counts"] == status["counts"]
 
 
+def test_bootstrap_key_creation_is_atomic_across_store_instances(tmp_path: Path):
+    root = tmp_path / "api"
+    stores = [KeyStore(root) for _ in range(8)]
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        tokens = list(executor.map(lambda store: store.ensure_bootstrap_key(), stores))
+
+    created = [token for token in tokens if token]
+    assert len(created) == 1
+    assert stores[0].verify(created[0]) is not None
+    status = AuroraDatabase(root / "aurorafox.sqlite3").integrity_check()
+    assert status["ok"] is True
+    assert status["counts"]["api_keys"] == 1
+
+    mirror = json.loads((root / "keys.json").read_text(encoding="utf-8"))
+    assert len(mirror["keys"]) == 1
+    assert "token" not in mirror["keys"][0]
+    assert mirror["keys"][0]["token_hash"] == hashlib.sha256(created[0].encode("utf-8")).hexdigest()
+
+
 def test_concurrent_conversation_writes_do_not_lose_messages(tmp_path: Path):
     store = ConversationStore(tmp_path / "api" / "conversations", max_messages=200)
 
