@@ -13,6 +13,10 @@ import org.godotengine.godot.plugin.UsedByGodot
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.atomic.AtomicLong
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private val native = NativeRuntime()
@@ -23,6 +27,19 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private val files by lazy {
         val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
         AndroidFileRuntime(ctx, voice)
+    }
+
+    private class FileAnalysisJob {
+        val createdAtMs = System.currentTimeMillis()
+        @Volatile var result: String? = null
+        @Volatile var cancelled: Boolean = false
+        @Volatile var future: Future<*>? = null
+    }
+
+    private val fileJobCounter = AtomicLong()
+    private val fileJobs = ConcurrentHashMap<String, FileAnalysisJob>()
+    private val fileExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "AuroraFoxFileAnalysis").apply { isDaemon = true }
     }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
@@ -60,6 +77,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 "file_intelligence" to true,
                 "local_ocr" to ocrHealth.optBoolean("available", false),
                 "local_ocr_health" to ocrHealth,
+                "file_analysis_async" to true,
+                "file_analysis_cancel" to true,
                 "wasm" to (loaded && native.hasWasm()),
                 "app_update_install" to true,
                 "architecture" to Build.SUPPORTED_ABIS.joinToString(","),
@@ -93,6 +112,57 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         if (!isInsideAppStorage(path)) return errorJson("File must be inside AuroraFox private storage")
         return try { files.analyze(path, question, visual) }
         catch (t: Throwable) { errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}") }
+    }
+
+    @UsedByGodot
+    fun startAnalyzeLocalFile(path: String, question: String, visual: Boolean): String {
+        if (!isInsideAppStorage(path)) return errorJson("File must be inside AuroraFox private storage")
+        cleanupFinishedFileJobs()
+        if (fileJobs.size >= 8) return errorJson("Too many pending Android file-analysis jobs")
+        val runtime = try { files } catch (t: Throwable) {
+            return errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}")
+        }
+        val jobId = "file-${System.currentTimeMillis()}-${fileJobCounter.incrementAndGet()}"
+        val job = FileAnalysisJob()
+        fileJobs[jobId] = job
+        job.future = fileExecutor.submit {
+            val output = try {
+                runtime.analyze(path, question, visual)
+            } catch (t: Throwable) {
+                errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}")
+            }
+            if (!job.cancelled) job.result = output
+        }
+        return JSONObject(mapOf("ok" to true, "job_id" to jobId, "pending" to true)).toString()
+    }
+
+    @UsedByGodot
+    fun pollAnalyzeLocalFile(jobId: String): String {
+        val job = fileJobs[jobId] ?: return errorJson("Unknown Android file-analysis job")
+        val result = job.result
+        if (result == null) {
+            return JSONObject(mapOf("ok" to true, "job_id" to jobId, "pending" to true, "cancelled" to job.cancelled)).toString()
+        }
+        fileJobs.remove(jobId)
+        val parsed = try { JSONObject(result) } catch (_: Throwable) {
+            JSONObject(mapOf("ok" to false, "error" to "Invalid Android File Intelligence job result"))
+        }
+        return JSONObject()
+            .put("ok", true)
+            .put("job_id", jobId)
+            .put("pending", false)
+            .put("cancelled", job.cancelled || parsed.optBoolean("cancelled", false))
+            .put("result", parsed)
+            .toString()
+    }
+
+    @UsedByGodot
+    fun cancelAnalyzeLocalFile(jobId: String): String {
+        val job = fileJobs[jobId] ?: return JSONObject(mapOf("ok" to true, "cancelled" to false, "missing" to true)).toString()
+        job.cancelled = true
+        job.result = cancelledFileJson()
+        job.future?.cancel(true)
+        return JSONObject(mapOf("ok" to true, "job_id" to jobId, "cancelled" to true)).toString()
     }
 
     @UsedByGodot
@@ -190,6 +260,20 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         for (i in 2 until command.length()) args += command.optString(i)
         return native.runWasm(module.absolutePath, workspaceCanonical.absolutePath, args.toTypedArray())
     }
+
+    private fun cleanupFinishedFileJobs() {
+        val cutoff = System.currentTimeMillis() - 10L * 60L * 1000L
+        fileJobs.entries.removeIf { entry -> entry.value.result != null && entry.value.createdAtMs < cutoff }
+    }
+
+    private fun cancelledFileJson(): String = JSONObject(
+        mapOf(
+            "ok" to false,
+            "cancelled" to true,
+            "error" to "Android file analysis cancelled",
+            "external_ai_required" to false,
+        )
+    ).toString()
 
     private fun formatChatPrompt(messages: JSONArray): String {
         val out = StringBuilder()
