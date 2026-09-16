@@ -2,7 +2,6 @@ class_name AuroraUpdateOverlay
 extends Node
 
 var layer: CanvasLayer
-var open_button: Button
 var popup: PopupPanel
 var status_label: Label
 var details_label: Label
@@ -28,7 +27,7 @@ func _ready() -> void:
 func _panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.022, 0.027, 0.048, 0.995)
-	style.border_color = Color(0.37, 0.63, 0.94, 0.78)
+	style.border_color = Color(0.37, 0.63, 0.94, 0.72)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(18)
 	style.shadow_color = Color(0, 0, 0, 0.72)
@@ -36,20 +35,6 @@ func _panel_style() -> StyleBoxFlat:
 	return style
 
 func _build_ui() -> void:
-	var main := get_parent()
-	var header := main.find_child("MainHeaderActions", true, false) as HBoxContainer if main != null else null
-	if header != null:
-		open_button = Button.new()
-		open_button.name = "UpdateStatusButton"
-		open_button.text = "Обновление"
-		open_button.tooltip_text = "Открыть готовое обновление AuroraFox"
-		open_button.custom_minimum_size = Vector2(104, 40)
-		open_button.visible = false
-		open_button.pressed.connect(func(): popup.popup_centered())
-		header.add_child(open_button)
-		if main.has_method("_apply_button"):
-			main.call("_apply_button", open_button, true, false, true)
-
 	layer = CanvasLayer.new()
 	layer.layer = 75
 	add_child(layer)
@@ -124,9 +109,9 @@ func _build_ui() -> void:
 	var hint := Label.new()
 	hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if OS.get_name() == "Android":
-		hint.text = "Android показывает системное подтверждение установки APK. AuroraFox проверяет и подготавливает пакет, но не обходит подтверждение ОС."
+		hint.text = "Android показывает системное подтверждение установки APK. AuroraFox проверяет пакет, но не обходит подтверждение ОС."
 	else:
-		hint.text = "Windows-обновление устанавливается отдельным helper после закрытия AuroraFox. Если новая версия не проходит стартовую проверку, helper возвращает предыдущую версию."
+		hint.text = "Windows устанавливает обновление отдельным helper после закрытия AuroraFox и сохраняет возможность возврата при неудачном старте."
 	box.add_child(hint)
 
 	var actions := HFlowContainer.new()
@@ -144,6 +129,19 @@ func _build_ui() -> void:
 	apply_button.pressed.connect(_apply_or_download)
 	actions.add_child(apply_button)
 
+func show_updates() -> void:
+	if popup == null:
+		return
+	_fit_popup()
+	popup.popup_centered()
+
+func _fit_popup() -> void:
+	var viewport := get_viewport().get_visible_rect().size
+	popup.size = Vector2i(
+		maxi(340, mini(620, int(viewport.x - 36.0))),
+		maxi(460, mini(500, int(viewport.y - 36.0)))
+	)
+
 func _sync_settings(value: Dictionary) -> void:
 	if auto_check_box == null:
 		return
@@ -157,20 +155,14 @@ func _on_check_started() -> void:
 
 func _on_update_available(info: Dictionary) -> void:
 	var version := str(info.get("version", ""))
-	if open_button != null:
-		open_button.visible = true
-		open_button.text = "Обновление"
-		open_button.tooltip_text = "Доступна AuroraFox %s" % version
 	status_label.text = "Доступна версия %s" % version
 	details_label.text = str(info.get("notes", "Обновление готово к загрузке."))
 	apply_button.disabled = false
 	apply_button.text = "Загрузить обновление"
 	if bool(info.get("mandatory", false)):
-		popup.popup_centered()
+		show_updates()
 
 func _on_no_update(version: String) -> void:
-	if open_button != null:
-		open_button.visible = false
 	status_label.text = "Установлена актуальная версия %s" % version
 	details_label.text = "Новых stable-релизов нет."
 	apply_button.disabled = true
@@ -181,22 +173,16 @@ func _on_download_started(info: Dictionary) -> void:
 	apply_button.disabled = true
 
 func _on_update_ready(info: Dictionary, _path: String) -> void:
-	if open_button != null:
-		open_button.visible = true
-		open_button.text = "Установить"
-		open_button.tooltip_text = "AuroraFox %s проверена и готова к установке" % str(info.get("version", ""))
 	status_label.text = "Обновление проверено и готово"
 	details_label.text = "Версия %s загружена. Можно установить сейчас." % str(info.get("version", ""))
 	apply_button.disabled = false
 	apply_button.text = "Установить сейчас"
-	popup.popup_centered()
+	show_updates()
 
 func _on_update_error(message: String) -> void:
 	status_label.text = "Обновление не выполнено"
 	details_label.text = message
 	apply_button.disabled = AuroraUpdate.latest_info.is_empty()
-	if open_button != null and AuroraUpdate.latest_info.is_empty():
-		open_button.visible = false
 
 func _on_update_applying(info: Dictionary) -> void:
 	status_label.text = "Устанавливаю AuroraFox %s…" % str(info.get("version", ""))
