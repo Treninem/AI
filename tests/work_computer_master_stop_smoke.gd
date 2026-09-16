@@ -14,6 +14,21 @@ func _init() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
+	# Computer control is a separate explicit permission from the global master
+	# autonomy switch. Every fresh process must begin with it disabled.
+	ComputerClient.set_computer_control_enabled(false)
+	if ComputerClient.computer_control_enabled():
+		_fail("Computer control was not default-off", 1)
+		return
+	ComputerClient.set_computer_control_enabled(true)
+	if not ComputerClient.computer_control_enabled():
+		_fail("Computer control permission could not be enabled explicitly", 7)
+		return
+	ComputerClient.set_computer_control_enabled(false)
+	if ComputerClient.computer_control_enabled():
+		_fail("Computer control permission could not be revoked", 8)
+		return
+
 	var main := Node.new()
 	main.name = "FakeMain"
 	root.add_child(main)
@@ -47,6 +62,12 @@ func _run() -> void:
 		return
 	if not computer._master_enabled():
 		_fail("ComputerClient did not observe master resume", 6)
+		return
+
+	# Master resume never implicitly grants the more specific Computer control
+	# permission; the user must enable it separately through the UI contract.
+	if ComputerClient.computer_control_enabled():
+		_fail("Master resume implicitly enabled Computer control", 9)
 		return
 
 	main.queue_free()
