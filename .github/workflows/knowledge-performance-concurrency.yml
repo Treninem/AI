@@ -6,6 +6,7 @@ on:
       - 'benchmarks/knowledge/concurrency_race_probe.gd'
       - 'benchmarks/knowledge/run_resilience_batch.py'
       - 'benchmarks/knowledge/validate_resilience_batch.py'
+      - 'benchmarks/knowledge/validate_performance_report.py'
       - 'benchmarks/knowledge/run_godot_probe.py'
       - 'benchmarks/knowledge/run_interrupted_import_recovery.py'
       - 'benchmarks/knowledge/run_interrupted_removal_recovery.py'
@@ -17,6 +18,7 @@ on:
       - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
       - 'tests/test_knowledge_resilience_batch.py'
       - 'tests/test_knowledge_resilience_gate.py'
+      - 'tests/test_knowledge_performance_validator.py'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_source_registry.gd'
       - 'scripts/knowledge_manager.gd'
@@ -28,6 +30,7 @@ on:
       - 'benchmarks/knowledge/concurrency_race_probe.gd'
       - 'benchmarks/knowledge/run_resilience_batch.py'
       - 'benchmarks/knowledge/validate_resilience_batch.py'
+      - 'benchmarks/knowledge/validate_performance_report.py'
       - 'benchmarks/knowledge/run_godot_probe.py'
       - 'benchmarks/knowledge/run_interrupted_import_recovery.py'
       - 'benchmarks/knowledge/run_interrupted_removal_recovery.py'
@@ -39,6 +42,7 @@ on:
       - 'benchmarks/knowledge/registry_truncated_temp_probe.gd'
       - 'tests/test_knowledge_resilience_batch.py'
       - 'tests/test_knowledge_resilience_gate.py'
+      - 'tests/test_knowledge_performance_validator.py'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_source_registry.gd'
       - 'scripts/knowledge_manager.gd'
@@ -64,12 +68,14 @@ jobs:
           python -m unittest
           tests.test_knowledge_resilience_batch
           tests.test_knowledge_resilience_gate
+          tests.test_knowledge_performance_validator
           -v
       - name: Compile batch runners
         run: >-
           python -m py_compile
           benchmarks/knowledge/run_resilience_batch.py
           benchmarks/knowledge/validate_resilience_batch.py
+          benchmarks/knowledge/validate_performance_report.py
           benchmarks/knowledge/run_registry_scaling.py
       - name: Download Godot 4.7.1
         shell: bash
@@ -117,6 +123,7 @@ jobs:
           python -m unittest
           tests.test_knowledge_resilience_batch
           tests.test_knowledge_resilience_gate
+          tests.test_knowledge_performance_validator
           -v
       - name: Compile batch runners
         shell: powershell
@@ -124,6 +131,7 @@ jobs:
           python -m py_compile
           benchmarks/knowledge/run_resilience_batch.py
           benchmarks/knowledge/validate_resilience_batch.py
+          benchmarks/knowledge/validate_performance_report.py
           benchmarks/knowledge/run_registry_scaling.py
       - name: Download Godot 4.7.1
         shell: powershell
