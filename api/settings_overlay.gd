@@ -96,7 +96,8 @@ func _inject_personal_settings_page() -> void:
 			selector.add_item("Аккаунт и память")
 			selector.set_item_metadata(selector.item_count - 1, "account")
 	else:
-		var nav := settings.popup.find_child("SettingsNavigation", true, false) if settings.get("popup") is PopupPanel else null
+		var settings_popup = settings.get("popup")
+		var nav = settings_popup.find_child("SettingsNavigation", true, false) if settings_popup is PopupPanel else null
 		if nav is Container and settings.has_method("_add_nav_button"):
 			settings.call("_add_nav_button", nav, "account", "Аккаунт и память")
 
@@ -141,7 +142,7 @@ func _build_personal_page(page: VBoxContainer) -> void:
 	personal_email = LineEdit.new()
 	personal_email.name = "PersonalEmail"
 	personal_email.placeholder_text = "E-mail"
-	personal_email.keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
+	personal_email.virtual_keyboard_type = LineEdit.KEYBOARD_TYPE_EMAIL_ADDRESS
 	personal_email.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	personal_form.add_child(personal_email)
 
@@ -151,7 +152,7 @@ func _build_personal_page(page: VBoxContainer) -> void:
 	personal_password.secret = true
 	personal_password.secret_character = "•"
 	personal_password.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	personal_password.text_submitted.connect(func(_text): await _login_from_ui())
+	personal_password.text_submitted.connect(_on_personal_password_submitted)
 	personal_form.add_child(personal_password)
 
 	var login_actions := HFlowContainer.new()
@@ -323,6 +324,9 @@ func _set_personal_controls_busy(value: bool) -> void:
 	for control in [personal_login_button, personal_guest_button, personal_refresh_button, personal_migrate_button, personal_logout_button]:
 		if control is BaseButton:
 			(control as BaseButton).disabled = value
+
+func _on_personal_password_submitted(_text: String) -> void:
+	await _login_from_ui()
 
 func _login_from_ui() -> void:
 	if personal_email == null or personal_password == null:
@@ -610,7 +614,8 @@ func fetch_personal_memories() -> Dictionary:
 			var previous = latest.get(entity_id, null)
 			var previous_revision := -1
 			if previous is Dictionary:
-				previous_revision = int((previous as Dictionary).get("revision", 0))
+				var previous_dict: Dictionary = previous
+				previous_revision = int(previous_dict.get("revision", 0))
 			if previous == null or int(item.get("revision", 0)) >= previous_revision:
 				latest[entity_id] = item.duplicate(true)
 		cursor = int(data.get("cursor", cursor))
@@ -720,7 +725,7 @@ func _request_json(path: String, method: int, payload: Dictionary = {}, bearer :
 
 func _response_error(parsed: Variant, fallback: String) -> String:
 	if parsed is Dictionary:
-		var data := parsed as Dictionary
+		var data: Dictionary = parsed
 		var detail = data.get("detail", "")
 		if detail is String and not str(detail).strip_edges().is_empty():
 			return str(detail)
@@ -763,7 +768,8 @@ func _load_personal_session() -> void:
 	var parsed = JSON.parse_string(file.get_as_text())
 	file.close()
 	if parsed is Dictionary:
-		_personal_session = (parsed as Dictionary).duplicate(true)
+		var session: Dictionary = parsed
+		_personal_session = session.duplicate(true)
 
 func _save_personal_session() -> void:
 	var file := FileAccess.open(PERSONAL_SESSION_PATH, FileAccess.WRITE)
