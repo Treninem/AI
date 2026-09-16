@@ -67,8 +67,19 @@ func _run() -> void:
 	if not bool(recovered_task.get("requires_user_action", false)):
 		_fail("Unsafe uncertain action did not require user action", 8)
 		return
+	if str(recovered_task.get("attempt_retry_safety", "")) != "unsafe":
+		_fail("Restart did not persist unsafe attempt safety", 42)
+		return
 	if reloaded.retry_task(project_id, task_id):
 		_fail("Unsafe interrupted task was blindly retryable", 9)
+		return
+
+	# Defense in depth: a pending user-verification bit blocks direct RUNNING too.
+	var direct_blocked := reloaded.create_task(project_id, "must verify")
+	var direct_blocked_id := str(direct_blocked.get("id", ""))
+	reloaded.update_task(project_id, direct_blocked_id, {"requires_user_action": true})
+	if reloaded.start_task(project_id, direct_blocked_id, "must-not-run"):
+		_fail("requires_user_action task entered running directly", 43)
 		return
 
 	# deterministic state machine, pause/resume/cancel/retry and terminal behavior.
@@ -93,8 +104,13 @@ func _run() -> void:
 	if str(failed.get("last_error", "")).contains("hunter2") or str(failed.get("last_error", "")).contains("verysecret123"):
 		_fail("Secret leaked into Work error surface", 15)
 		return
+	reloaded.update_task(project_id, safe_id, {"last_action": "old", "last_action_id": "old:1", "last_action_retry_safety": "unsafe", "attempt_retry_safety": "unsafe"})
 	if not reloaded.retry_task(project_id, safe_id):
 		_fail("Safe failed task did not support explicit retry", 16)
+		return
+	var retried_meta := reloaded.get_task(project_id, safe_id)
+	if str(retried_meta.get("attempt_retry_safety", "")) != "safe" or not str(retried_meta.get("last_action_id", "")).is_empty():
+		_fail("Explicit retry did not reset previous attempt metadata", 44)
 		return
 	if not reloaded.start_task(project_id, safe_id, "exec-safe-2"):
 		_fail("Retried task did not start", 17)
@@ -117,7 +133,9 @@ func _run() -> void:
 		_fail("Cancellation terminal state incorrect", 22)
 		return
 
-	# Legacy migration, duplicate IDs, malformed records, stale active reference.
+	# Legacy migration: whole-attempt metadata is authoritative. A legacy task
+	# that explicitly says the whole attempt was safe can recover safely; if that
+	# field is absent, last-action="safe" is not enough to prove earlier steps.
 	var legacy_path := "%s/legacy.json" % _base
 	var legacy_root := "%s/legacy_projects" % _base
 	var duplicate_data := {
@@ -126,9 +144,9 @@ func _run() -> void:
 			{
 				"id": "dup-project", "title": "A", "context": "legacy context", "files": ["a", "a"],
 				"tasks": [
-					{"id": "dup-task", "prompt": "one", "status": "running", "last_action_retry_safety": "safe"},
+					{"id": "dup-task", "prompt": "one", "status": "running", "last_action_retry_safety": "safe", "attempt_retry_safety": "safe"},
 					{"id": "dup-task", "prompt": "two", "status": "unknown"},
-					{"id": "legacy-unknown", "prompt": "three", "status": "running"},
+					{"id": "legacy-unknown", "prompt": "three", "status": "running", "last_action_retry_safety": "safe"},
 					"corrupt-record"
 				]
 			},
@@ -160,20 +178,20 @@ func _run() -> void:
 		_fail("Legacy running task recovery failed", 27)
 		return
 	if bool(legacy_tasks[0].get("requires_user_action", true)):
-		_fail("Safe legacy running task incorrectly requires user action", 28)
+		_fail("Explicitly safe whole legacy attempt incorrectly requires user action", 28)
 		return
 	var unknown_legacy: Dictionary = legacy_tasks[2]
 	if str(unknown_legacy.get("status", "")) != AuroraWorkStore.STATE_INTERRUPTED:
-		_fail("Legacy running task without retry metadata was not interrupted", 38)
+		_fail("Legacy running task without attempt metadata was not interrupted", 38)
 		return
-	if str(unknown_legacy.get("last_action_retry_safety", "")) != "unsafe" or not bool(unknown_legacy.get("requires_user_action", false)):
-		_fail("Legacy running task without retry metadata did not fail closed", 39)
+	if str(unknown_legacy.get("attempt_retry_safety", "")) != "unsafe" or not bool(unknown_legacy.get("requires_user_action", false)):
+		_fail("Legacy running task without attempt metadata did not fail closed", 39)
 		return
 	if migrated.retry_task(str(first.get("id", "")), str(unknown_legacy.get("id", ""))):
 		_fail("Legacy unknown running task was blindly retryable", 40)
 		return
-	if "legacy_running_task_retry_safety_unknown" not in migrated.recovery_notes:
-		_fail("Legacy unknown retry safety was not observable in recovery notes", 41)
+	if "legacy_attempt_retry_safety_unknown" not in migrated.recovery_notes:
+		_fail("Legacy unknown attempt safety was not observable in recovery notes", 41)
 		return
 	if migrated.get_project(migrated.active_project_id).is_empty():
 		_fail("Stale active project reference not repaired", 29)
@@ -183,7 +201,7 @@ func _run() -> void:
 	var resilient := _store("corruption")
 	var resilient_project := resilient.create_project("Keep me")
 	var resilient_id := str(resilient_project.get("id", ""))
-	resilient.update_project(resilient_id, "Keep me updated", "backup checkpoint") # creates .bak
+	resilient.update_project(resilient_id, "Keep me updated", "backup checkpoint")
 	var corrupt_path := resilient.store_path
 	var backup_path := corrupt_path + ".bak"
 	if not FileAccess.file_exists(backup_path):
