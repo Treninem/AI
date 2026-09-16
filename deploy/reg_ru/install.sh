@@ -158,6 +158,7 @@ PYTHONPATH=/opt/aurorafox/repository /opt/aurorafox/venv/bin/python -m pytest -q
   /opt/aurorafox/repository/tests/test_api_server_hardening.py \
   /opt/aurorafox/repository/tests/test_api_request_limits.py \
   /opt/aurorafox/repository/tests/test_api_public_auth_limits.py \
+  /opt/aurorafox/repository/tests/test_api_persistence_maintenance.py \
   /opt/aurorafox/repository/tests/test_api_schema_migrations.py \
   /opt/aurorafox/repository/tests/test_api_privacy_contract.py \
   /opt/aurorafox/repository/tests/test_api_runtime_resilience.py \
@@ -176,6 +177,9 @@ AURORAFOX_API_MAX_BODY_BYTES=25165824
 AURORAFOX_API_LOG_LEVEL=warning
 AURORAFOX_DEPLOYMENT=reg-ru
 AURORAFOX_BACKUP_MAX_BYTES=268435456
+AURORAFOX_DATABASE_WARN_BYTES=536870912
+AURORAFOX_SYNC_CHANGES_WARN=1000000
+AURORAFOX_SYNC_CONFLICTS_WARN=10000
 AURORAFOX_GITHUB_REPO=${AURORAFOX_GITHUB_REPO}
 AURORAFOX_GITHUB_REF=${AURORAFOX_GITHUB_REF}
 AURORAFOX_PUBLIC_URL=https://${api_public_host}
@@ -317,6 +321,8 @@ systemctl enable --now aurorafox-update.timer aurorafox-backup.timer
 curl --fail --silent --show-error --retry 30 --retry-connrefused --retry-delay 2 http://127.0.0.1:8768/health >/dev/null
 runuser -u aurorafox -- env PYTHONPATH=/opt/aurorafox/repository \
   /opt/aurorafox/venv/bin/python -m api.database --path /var/lib/aurorafox/api/aurorafox.sqlite3
+runuser -u aurorafox -- env PYTHONPATH=/opt/aurorafox/repository \
+  /opt/aurorafox/venv/bin/python -m api.persistence_maintenance --user-root /var/lib/aurorafox/api
 systemctl start aurorafox-backup.service
 test -s /srv/aurorafox-backup/exports/latest.zip
 test -s /srv/aurorafox-backup/exports/latest.sha256
