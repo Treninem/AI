@@ -71,7 +71,7 @@ tasks.named("preBuild").configure { dependsOn(prepareOcrAssets) }
 dependencies {
     implementation("org.godotengine:godot:4.7.1.stable")
     implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")
-    implementation("com.github.adaptech-cz.Tesseract4Android:tesseract4android:$tesseractAndroidVersion")
+    implementation("cz.adaptech.tesseract4android:tesseract4android:$tesseractAndroidVersion")
     if (sherpaAar.exists()) compileOnly(files(sherpaAar))
 }
 
