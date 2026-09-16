@@ -13,21 +13,22 @@ function Warn([string]$Message) { $warnings.Add($Message); Write-Host "[WARN] $M
 function Fail([string]$Message) { $failures.Add($Message); Write-Host "[FAIL] $Message" -ForegroundColor Red }
 function Has-Command([string]$Name) { return [bool](Get-Command $Name -ErrorAction SilentlyContinue) }
 
-Write-Host 'AuroraFox V1 direct-update bridge readiness' -ForegroundColor Cyan
-Write-Host 'Compatibility floor: V1.0.0.0 -> latest stable'
+Write-Host 'AuroraFox V1.2 repair / V1.3 signed-update readiness' -ForegroundColor Cyan
+Write-Host 'Historical V1.0-V1.2 clients require a one-time repair bridge.'
+Write-Host 'Signed automatic-update floor: V1.3.0.0'
 Write-Host "Repository: $Repository"
 Write-Host ''
 
 $python = if (Has-Command 'python') { 'python' } elseif (Has-Command 'python3') { 'python3' } else { '' }
 if ([string]::IsNullOrWhiteSpace($python)) {
-    Fail 'Python is required to validate the legacy update contract'
+    Fail 'Python is required to validate the update compatibility contract'
 } else {
     try {
         & $python -m pytest -q (Join-Path $root 'tests\test_update_backward_compat.py')
-        if ($LASTEXITCODE -ne 0) { throw "legacy update contract tests returned $LASTEXITCODE" }
-        Pass 'V1.0 manifest, asset-name, ZIP-layout and export-key compatibility contract passed'
+        if ($LASTEXITCODE -ne 0) { throw "update compatibility tests returned $LASTEXITCODE" }
+        Pass 'V1.2 repair boundary and V1.3 signed-update contract passed'
     } catch {
-        Fail "Backward update compatibility: $($_.Exception.Message)"
+        Fail "Update compatibility: $($_.Exception.Message)"
     }
 }
 
@@ -39,48 +40,41 @@ try {
     Fail "Version synchronization: $($_.Exception.Message)"
 }
 
-$versionPath = Join-Path $root 'project\version.json'
 try {
-    $versionState = Get-Content -LiteralPath $versionPath -Raw | ConvertFrom-Json
+    $versionState = Get-Content -LiteralPath (Join-Path $root 'project\version.json') -Raw | ConvertFrom-Json
     $numeric = [string]$versionState.numeric
     if ($numeric -notmatch '^[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+$') { throw 'invalid four-part numeric version' }
     $parts = @($numeric.Split('.') | ForEach-Object { [int]$_ })
-    $floor = @(1,0,0,0)
+    $floor = @(1,3,0,0)
     $atLeastFloor = $false
     for ($i = 0; $i -lt 4; $i++) {
         if ($parts[$i] -gt $floor[$i]) { $atLeastFloor = $true; break }
         if ($parts[$i] -lt $floor[$i]) { break }
         if ($i -eq 3) { $atLeastFloor = $true }
     }
-    if (-not $atLeastFloor) { throw "bridge target $numeric is older than V1.0.0.0 compatibility floor" }
-    Pass "Bridge target version is V$numeric"
+    if (-not $atLeastFloor) { throw "signed update target $numeric is older than V1.3.0.0" }
+    Pass "Signed update target version is V$numeric"
 } catch {
-    Fail "Canonical bridge version: $($_.Exception.Message)"
+    Fail "Canonical signed-update version: $($_.Exception.Message)"
 }
+
+$iss = Get-Content -LiteralPath (Join-Path $root 'build\AuroraFox.iss') -Raw
+$fixture = Get-Content -LiteralPath (Join-Path $root 'build\AuroraFox_V12_BridgeFixture.iss') -Raw
+if ($iss -match 'AppId=\{\{8C21F024-53DE-4FA3-A150-78C80829B6BF\}' -and $fixture -match 'AppId=\{\{8C21F024-53DE-4FA3-A150-78C80829B6BF\}') {
+    Pass 'V1.2 fixture and current Windows installer share the same upgrade AppId'
+} else {
+    Fail 'Windows repair AppId continuity is broken'
+}
+if ($iss.Contains('bridge_repair.txt')) { Pass 'Windows installer records successful bridge repair' } else { Fail 'Windows installer does not record bridge repair' }
 
 $publicKey = Join-Path $root 'update\release_public.pub'
 if (-not (Test-Path -LiteralPath $publicKey)) {
-    Fail 'update/release_public.pub is missing. Run build/create_update_signing_key.ps1 once on the trusted owner machine, commit ONLY the public key, and keep the private key outside Git.'
+    Fail 'update/release_public.pub is missing. Initialize the owner-controlled trust root before publishing the first signed release.'
 } else {
     try {
         $text = Get-Content -LiteralPath $publicKey -Raw
         if ($text -notmatch '-----BEGIN PUBLIC KEY-----') { throw 'public key is not SubjectPublicKeyInfo PEM' }
-        if (Has-Command 'openssl') {
-            & openssl pkey -pubin -in $publicKey -noout 2>$null
-            if ($LASTEXITCODE -ne 0) { throw 'OpenSSL rejected the pinned public key' }
-            $der = Join-Path $env:TEMP ('aurora-public-' + [Guid]::NewGuid().ToString('N') + '.der')
-            try {
-                & openssl pkey -pubin -in $publicKey -outform DER -out $der
-                if ($LASTEXITCODE -ne 0) { throw 'Failed to derive public-key DER' }
-                $fingerprint = (Get-FileHash -LiteralPath $der -Algorithm SHA256).Hash.ToLowerInvariant()
-                Pass "Pinned update public key parses; SHA-256=$fingerprint"
-            } finally {
-                Remove-Item -LiteralPath $der -Force -ErrorAction SilentlyContinue
-            }
-        } else {
-            Pass 'Pinned update public key exists in PEM format'
-            Warn 'OpenSSL is unavailable locally; GitHub release workflow will perform the key-pair fingerprint check'
-        }
+        Pass 'Pinned update public key exists in PEM format'
     } catch {
         Fail "Pinned update public key: $($_.Exception.Message)"
     }
@@ -88,16 +82,8 @@ if (-not (Test-Path -LiteralPath $publicKey)) {
 
 $presets = Get-Content -LiteralPath (Join-Path $root 'export_presets.cfg') -Raw
 $includeCount = ([regex]::Matches($presets, 'include_filter="update/release_public\.pub"')).Count
-if ($includeCount -eq 2) {
-    Pass 'Pinned update public key is explicitly included in both Windows and Android exports'
-} else {
-    Fail "Expected update/release_public.pub in both export presets; found $includeCount include rules"
-}
-if ($presets -match 'package/unique_name="com\.aurorafox\.ai"') {
-    Pass 'Android package identity remains com.aurorafox.ai'
-} else {
-    Fail 'Android package identity changed; installed legacy APKs would not update in place'
-}
+if ($includeCount -eq 2) { Pass 'Pinned update key is included in Windows and Android exports' } else { Fail "Expected public key in both exports; found $includeCount include rules" }
+if ($presets -match 'package/unique_name="com\.aurorafox\.ai"') { Pass 'Android package identity remains com.aurorafox.ai' } else { Fail 'Android package identity changed' }
 
 $release = Get-Content -LiteralPath (Join-Path $root '.github\workflows\release.yml') -Raw
 foreach ($needle in @(
@@ -137,12 +123,12 @@ if (-not $SkipGitHubSecrets) {
 Write-Host ''
 if ($warnings.Count -gt 0) { Write-Host "Warnings: $($warnings.Count)" -ForegroundColor Yellow }
 if ($failures.Count -gt 0) {
-    Write-Host "BRIDGE RELEASE NOT READY: $($failures.Count) blocking issue(s)." -ForegroundColor Red
+    Write-Host "SIGNED RELEASE NOT READY: $($failures.Count) blocking issue(s)." -ForegroundColor Red
     foreach ($item in $failures) { Write-Host " - $item" -ForegroundColor Red }
-    Write-Host 'No tag/release should be published until all blocking items are resolved.' -ForegroundColor Yellow
+    Write-Host 'V1.2 users may use the tested Windows repair installer, but no signed auto-update release should be published until trust/signing requirements are satisfied.' -ForegroundColor Yellow
     exit 1
 }
 
-Write-Host 'BRIDGE RELEASE READY.' -ForegroundColor Green
-Write-Host 'V1.0.0.0+ clients retain a direct path to this stable release; current clients retain RSA manifest verification.' -ForegroundColor Cyan
+Write-Host 'V1.2 REPAIR + V1.3 SIGNED RELEASE READY.' -ForegroundColor Green
+Write-Host 'Legacy V1.2 installations use the one-time repair installer; V1.3+ uses the signed update channel.' -ForegroundColor Cyan
 exit 0
