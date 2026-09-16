@@ -52,9 +52,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Validate benchmark contract
-        run: python -m unittest tests.test_knowledge_performance_contract -v
-      - name: Compile Python runner
-        run: python -m py_compile benchmarks/knowledge/run_knowledge_benchmark.py
+        run: python -m unittest tests.test_knowledge_performance_contract tests.test_knowledge_performance_compare -v
+      - name: Compile Python tools
+        run: python -m py_compile benchmarks/knowledge/run_knowledge_benchmark.py benchmarks/knowledge/compare_reports.py
 
   smoke-linux:
     if: github.event_name != 'workflow_dispatch' || inputs.profile == 'smoke'
@@ -113,6 +113,36 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: knowledge-performance-windows-smoke-${{ github.sha }}
+          path: artifacts/knowledge-performance/
+          if-no-files-found: error
+
+  standard-linux:
+    if: github.event_name == 'push'
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Import and parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run standard knowledge scale gate
+        run: python benchmarks/knowledge/run_knowledge_benchmark.py --godot ./godot --profile standard --timeout-seconds 900 --report artifacts/knowledge-performance/linux-standard.json
+      - name: Upload standard benchmark report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-performance-linux-standard-${{ github.sha }}
           path: artifacts/knowledge-performance/
           if-no-files-found: error
 
