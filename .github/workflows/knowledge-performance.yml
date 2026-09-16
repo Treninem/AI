@@ -122,6 +122,14 @@ jobs:
       - name: Import and parse project
         shell: powershell
         run: .\godot.exe --headless --editor --path . --quit
+      - name: Reproduce dedupe alias removal safety on Windows
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
+          --report artifacts/knowledge-performance/dedupe-alias-removal-windows.json
       - name: Run bounded Windows knowledge smoke benchmark
         shell: powershell
         run: python benchmarks/knowledge/run_knowledge_benchmark_portable.py --godot .\godot.exe --profile smoke --timeout-seconds 600 --report artifacts/knowledge-performance/windows-smoke.json
