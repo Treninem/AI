@@ -16,7 +16,7 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	var _plugin_name := "AuroraFoxRuntime"
 	var _sherpa_name := "sherpa-onnx-1.13.4.aar"
 	var _pdfbox_dependency := "com.tom-roush:pdfbox-android:2.0.27.0"
-	var _tesseract_dependency := "cz.adaptech.tesseract4android:tesseract4android:4.9.0"
+	var _tesseract_dependency := "com.github.adaptech-cz.Tesseract4Android:tesseract4android:4.9.0"
 	var _jitpack_repo := "https://jitpack.io"
 
 	func _supports_platform(platform) -> bool:
