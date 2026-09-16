@@ -176,6 +176,11 @@ def test_windows_v12_repair_uses_same_inno_identity_and_is_ci_verified() -> None
     workflow = (ROOT / ".github" / "workflows" / "windows-package-ci.yml").read_text(encoding="utf-8")
     assert "Verify V1.2 to V1.3 in-place bridge" in workflow
     assert "AuroraFox-V1.2-to-V$version-Repair-Windows.exe" in workflow
+    assert "publish-v12-repair:" in workflow
+    assert "repair-v1.2-windows" in workflow
+    assert "AuroraFox-V1.2-Repair-Windows.exe" in workflow
+    assert "--latest=false" in workflow
+    assert "github.event_name == 'push' && github.ref == 'refs/heads/main'" in workflow
 
 
 def test_documentation_states_v12_repair_and_android_signing_boundary() -> None:
@@ -184,3 +189,4 @@ def test_documentation_states_v12_repair_and_android_signing_boundary() -> None:
     assert re.search(r"repair|bridge", docs, re.IGNORECASE)
     assert re.search(r"same.+sign|signing.+same", docs, re.IGNORECASE | re.DOTALL)
     assert "V1.3.0.0" in docs
+    assert "releases/tag/repair-v1.2-windows" in docs
