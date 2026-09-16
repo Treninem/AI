@@ -1,0 +1,69 @@
+name: Temporary Voice R2 Claim
+
+on:
+  push:
+    branches: [chat-2026-09-17-voice-audio-r2]
+    paths:
+      - '.github/workflows/temp-voice-r2-claim.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  claim:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: chat-2026-09-17-voice-audio-r2
+          fetch-depth: 0
+      - name: Append takeover claim if missing
+        shell: bash
+        run: |
+          set -euo pipefail
+          log='docs/PROJECT_MASTER_LOG.md'
+          if grep -Fq '### CLAIM `CHAT-2026-09-17-VOICE-AUDIO`' "$log"; then
+            echo 'Voice takeover claim already present.'
+            exit 0
+          fi
+          cat >> "$log" <<'EOF'
+
+## 40. Voice / Audio — TAKEOVER/RECONCILE, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-VOICE-AUDIO`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
+- Fresh baseline: `7be54b6a0ee6bb8a20ef410ef0b6af3e64ece956`; working branch: `chat-2026-09-17-voice-audio-r2`.
+- Режим: Chat. Intended bump after acceptance: **PATCH**; canonical version, Android `versionCode`, final merge and release remain coordinator-only.
+- Inherits `CHAT-2026-09-16-VOICE-QUALITY` / PR #34 and Android female-voice candidate section 33. Old replacement branch `chat-2026-09-17-voice-audio` is superseded for implementation because fresh `main` advanced; its verified asset-audit evidence remains valid and is not discarded.
+- Verified Supertonic 3 supply evidence: Voice Asset Audit run `35159816459` on `7d6d074ec597b21ff0a0a906e3a04871cae2158a` SUCCESS; official `sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2` = `128774318` bytes, SHA-256 `82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427`, with required `duration_predictor.int8.onnx`, `text_encoder.int8.onnx`, `vector_estimator.int8.onnx`, `vocoder.int8.onnx`, `tts.json`, `unicode_indexer.bin`, `voice.bin`. Audit artifact `10473160371`.
+- Owned implementation scope for this takeover stage: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`, `android_plugin/setup_native.ps1`, new Voice-specific Android tests/workflows/benchmarks and `docs/PROJECT_MASTER_LOG.md`. Do not edit OCR-owned `AndroidFileRuntime.kt`, `plugin/build.gradle.kts`, `settings.gradle.kts`; do not edit UI-owned overlays; do not edit old Windows Voice/Python files until old Voice-Quality ownership is explicitly reconciled/released.
+- Architecture invariant: Android speech remains fully local at runtime. Required TTS/STT model assets are staged into the APK/build before delivery; normal runtime must not download models. sherpa-onnx stays pinned at `1.13.4` unless independent evidence requires a coordinated dependency change.
+- Immediate acceptance target: replace male Piper Denis Android TTS with integrity-pinned Supertonic 3; pass Russian via `GenerationConfig.extra["lang"]="ru"`; keep cache/interruption/degradation behavior; compile/package without Gradle/settings changes; then measure F1-F5 female candidates with reproducible WAV/RTF/clipping/ASR evidence before selecting a release speaker.
+
+PROGRESS_COMPLETE: 42%
+PROGRESS_REMAINING: 58%
+
+DONE:
+- Fresh main/AGENTS/full master log and active ownership audited.
+- Current Android runtime confirmed to use male `vits-piper-ru_RU-denis-medium` / `sherpa-onnx-piper-denis`, so female acceptance is genuinely open.
+- sherpa-onnx `v1.13.4` Kotlin API verified to contain `OfflineTtsSupertonicModelConfig` and `GenerationConfig.extra: Map<String,String>?`.
+- Official Supertonic 3 asset identity/layout proven by exact CI download and SHA audit above.
+
+REMAINING:
+- Implement fail-closed build staging + Supertonic Android runtime/config and Voice-specific contracts.
+- Obtain exact-head compile/package CI; then generate/measure F1-F5 Russian outputs, select a female candidate from evidence, and rerun Android APK install/launch + real TTS invocation.
+- Preserve model license/notice in release packaging and record physical-device human listening separately if no real device is available.
+
+BLOCKERS:
+- none for owned-scope implementation now. Physical Android human-listen proof remains a later device boundary, not a blocker for compile/package/acoustic CI.
+
+NEXT:
+- Patch only the owned Android Voice runtime/setup plus isolated Voice contracts, then run exact-head CI and classify any failure by job/test before touching additional files.
+EOF
+          git config user.name 'aurorafox-voice-bot'
+          git config user.email 'actions@users.noreply.github.com'
+          git add "$log"
+          git commit -m 'coord: take over Voice Audio on fresh main'
+          git push origin HEAD:chat-2026-09-17-voice-audio-r2
