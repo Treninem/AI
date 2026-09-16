@@ -131,7 +131,8 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
         "Voice text contract",
         "Voice config and acoustic-evidence contract",
         "Voice optional XTTS contract",
-        "Candidate promotion and updater compatibility contract",
+        "Candidate promotion workflow trust-boundary contract",
+        "Updater repair and signed-floor compatibility contract",
         "API runtime resilience contract",
         "Master-log coordination contract",
     ):
