@@ -100,6 +100,9 @@ PYTHONPATH="${repository}" /opt/aurorafox/venv/bin/python -m pytest -q \
   tests/test_api_accounts_sync.py \
   tests/test_api_account_network.py \
   tests/test_api_account_restore.py \
+  tests/test_api_account_mailer.py \
+  tests/test_api_server_hardening.py \
+  tests/test_api_request_limits.py \
   tests/test_api_schema_migrations.py \
   tests/test_api_privacy_contract.py \
   tests/test_api_runtime_resilience.py \
