@@ -31,25 +31,25 @@ func _status_text(info: Dictionary) -> String:
 	var platform := str(info.get("platform", OS.get_name()))
 	var model_installed := bool(info.get("model_installed", false))
 	var fallback := bool(info.get("ollama_fallback", false))
-	var suffix := " • Ollama fallback разрешён" if fallback else ""
+	var suffix := " • режим совместимости Ollama разрешён" if fallback else ""
 	if platform == "Windows":
 		var desktop: Dictionary = info.get("desktop", {})
 		var engine_installed := bool(desktop.get("engine_installed", false))
 		var running := bool(desktop.get("running", false))
 		if model_installed and engine_installed:
-			return ("AuroraFox Core • локальная GGUF%s" % [" • Engine активен" if running else ""]) + suffix
+			return ("AuroraFox Core • встроенный AI%s" % [" • активен" if running else ""]) + suffix
 		if model_installed:
-			return "AuroraFox Core • GGUF готова • установите Core Engine" + suffix
+			return "AuroraFox Core • встроенный AI готов • Core Engine восстанавливается автоматически" + suffix
 		if engine_installed:
-			return "AuroraFox Core • Engine готов • выберите GGUF-модель" + suffix
-		return "AuroraFox Core • требуется первичная локальная настройка" + suffix
+			return "AuroraFox Core • Engine готов • встроенный Core-файл отсутствует в пакете" + suffix
+		return "AuroraFox Core • подготовка встроенного AI" + suffix
 	if platform == "Android":
 		var android: Dictionary = info.get("android", {})
 		if model_installed and bool(android.get("llama_cpp", false)):
-			return "AuroraFox Core • Android local GGUF"
+			return "AuroraFox Core • встроенный Android AI"
 		if model_installed:
-			return "AuroraFox Core • модель есть • runtime недоступен"
-		return "AuroraFox Core • локальная модель не установлена"
+			return "AuroraFox Core • встроенный AI готов • runtime восстанавливается"
+		return "AuroraFox Core • подготовка встроенного AI"
 	if model_installed:
-		return "AuroraFox Core • локальная модель готова" + suffix
-	return "AuroraFox Core • локальная модель не установлена" + suffix
+		return "AuroraFox Core • встроенный AI готов" + suffix
+	return "AuroraFox Core • встроенный AI недоступен в этой сборке" + suffix
