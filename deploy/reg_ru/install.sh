@@ -150,6 +150,7 @@ PYTHONPATH=/opt/aurorafox/repository /opt/aurorafox/venv/bin/python -m pytest -q
   /opt/aurorafox/repository/tests/test_api_database.py \
   /opt/aurorafox/repository/tests/test_api_accounts_sync.py \
   /opt/aurorafox/repository/tests/test_api_account_network.py \
+  /opt/aurorafox/repository/tests/test_api_account_restore.py \
   /opt/aurorafox/repository/tests/test_api_schema_migrations.py \
   /opt/aurorafox/repository/tests/test_api_privacy_contract.py \
   /opt/aurorafox/repository/tests/test_api_runtime_resilience.py \
