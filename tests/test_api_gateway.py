@@ -123,13 +123,17 @@ def test_feedback_replays_into_agent_experience_bridge(tmp_path: Path):
     assert bridge.feedback_items[0]["corrected_answer"] == "correct answer"
 
 
-def test_file_upload_rejects_oversize_payload_before_disk_write(tmp_path: Path):
+def test_file_upload_rejects_oversize_payload_before_disk_write_and_uses_unique_paths(tmp_path: Path):
     uploads = tmp_path / "uploads"
     client = FileIntelligenceClient(uploads, max_file_bytes=8)
     valid = base64.b64encode(b"12345678").decode("ascii")
-    path = client.save_base64("sample.bin", valid)
-    assert path.read_bytes() == b"12345678"
-    path.unlink()
+    first = client.save_base64("sample.bin", valid)
+    second = client.save_base64("sample.bin", valid)
+    assert first != second
+    assert first.read_bytes() == b"12345678"
+    assert second.read_bytes() == b"12345678"
+    first.unlink()
+    second.unlink()
 
     oversized = base64.b64encode(b"123456789").decode("ascii")
     with pytest.raises(ValueError, match="exceeds AuroraFox API limit"):
