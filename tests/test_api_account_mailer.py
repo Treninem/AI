@@ -42,13 +42,23 @@ def test_transport_requires_configuration_and_rejects_unknown_security():
         AccountMailer(config())._message("user@example.test", "other", "token")
 
 
-def test_account_action_url_must_be_https_and_have_no_embedded_credentials():
+def test_account_action_url_must_be_clean_https_origin():
     assert config().configured is True
-    assert config(public_url="http://auth.aurorafox.ru").configured is False
-    assert config(public_url="https://user:password@auth.aurorafox.ru").configured is False
-    assert config(public_url="not-a-url").configured is False
+    assert config(public_url="https://auth.aurorafox.ru/").configured is True
+    invalid_urls = (
+        "http://auth.aurorafox.ru",
+        "https://user:password@auth.aurorafox.ru",
+        "https://auth.aurorafox.ru:8443",
+        "https://auth.aurorafox.ru/account",
+        "https://auth.aurorafox.ru/?next=evil",
+        "https://auth.aurorafox.ru/#fragment",
+        "https://auth.aurorafox.ru:bad",
+        "not-a-url",
+    )
+    for public_url in invalid_urls:
+        assert config(public_url=public_url).configured is False, public_url
     with pytest.raises(AccountMailError, match="not configured|not secure"):
-        AccountMailer(config(public_url="http://auth.aurorafox.ru")).send_token(
+        AccountMailer(config(public_url="https://auth.aurorafox.ru/account")).send_token(
             "user@example.test", "reset_password", "one-time"
         )
 

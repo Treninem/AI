@@ -50,6 +50,13 @@ class AccountStore:
     """
 
     PASSWORD_PARAMS = {"name": "scrypt", "n": 16384, "r": 8, "p": 1, "dklen": 32}
+    # These public sentinel values carry no authentication authority. They exist
+    # only so a login attempt for a missing/disabled account performs the same
+    # expensive scrypt primitive as a normal wrong-password attempt instead of
+    # leaking account existence through a cheap early return.
+    DUMMY_PASSWORD_SALT_HEX = "f3c6c0b7c8d452369fb1c84a8c8655ab"
+    DUMMY_PASSWORD_HASH_HEX = "0" * 64
+    DUMMY_PASSWORD_PARAMS_JSON = json.dumps(PASSWORD_PARAMS, separators=(",", ":"), sort_keys=True)
 
     def __init__(
         self,
@@ -125,6 +132,14 @@ class AccountStore:
         except Exception:
             return False
         return hmac.compare_digest(candidate, digest_hex)
+
+    def _consume_dummy_password_check(self, password: str) -> None:
+        self._password_matches(
+            password,
+            self.DUMMY_PASSWORD_SALT_HEX,
+            self.DUMMY_PASSWORD_HASH_HEX,
+            self.DUMMY_PASSWORD_PARAMS_JSON,
+        )
 
     @staticmethod
     def _account_public(row: Any) -> dict[str, Any]:
@@ -411,6 +426,7 @@ class AccountStore:
         with self.database.connection(write=True) as connection:
             row = connection.execute("SELECT * FROM accounts WHERE email_norm=?", (email_norm,)).fetchone()
             if row is None or row["disabled_at"] is not None:
+                self._consume_dummy_password_check(password)
                 raise AuthenticationError("Invalid email or password")
             if not self._password_matches(
                 password,
