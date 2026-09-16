@@ -79,6 +79,13 @@ def test_sandbox_exec_is_container_first_and_explicit_container_fails_closed():
     assert 'network_isolation_enforced' in tools
 
 
+def test_strict_container_cannot_implicitly_pull_images_from_network():
+    service = _text("computer/computer_service.py")
+    assert '"--pull=never"' in service
+    assert '"--network", "none"' in service
+    assert '"image_pull_allowed": False' in service
+
+
 def test_windows_workspace_bridge_cannot_bypass_private_channel_or_master_stop():
     sandbox = _text("scripts/sandbox_manager.gd")
     assert 'ComputerClient.master_enabled_from(self)' in sandbox
