@@ -134,3 +134,22 @@ def test_unsupported_platform_capability_does_not_break_health(tmp_path: Path, m
     assert caps["computer_supported"] is False
     assert screen["ok"] is False
     assert screen["error"] == "unsupported_platform"
+
+
+def test_actual_runner_capability_matches_host_platform(tmp_path: Path):
+    service = _load_service(tmp_path)
+    expected_windows = os.name == "nt"
+    client = TestClient(service.app)
+    health = client.get("/health").json()
+    caps = client.get("/capabilities", headers=_headers(allowed=False)).json()
+
+    assert service.IS_WINDOWS is expected_windows
+    assert health["computer_supported"] is expected_windows
+    assert caps["computer_supported"] is expected_windows
+    assert caps["screen"] is expected_windows
+    assert caps["windows"] is expected_windows
+    assert caps["mouse"] is expected_windows
+    assert caps["keyboard"] is expected_windows
+    assert health["planning_owner"] == "aurorafox_core"
+    assert health["external_ai_required"] is False
+    assert health["network_required"] is False
