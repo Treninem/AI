@@ -142,6 +142,16 @@ Current code:
 	var parsed := _parse_json(str(response.get("content", "")))
 	if parsed.is_empty():
 		return {"ok":false,"error":"Refactoring Specialist returned invalid JSON","raw":response.get("content", "")}
+	var refactored_code := str(parsed.get("refactored_code", "")).strip_edges()
+	if refactored_code.is_empty():
+		return {"ok":false,"error":"Refactoring Specialist returned no refactored code","raw":response.get("content", "")}
+	var changes = parsed.get("changes", [])
+	if not changes is Array:
+		return {"ok":false,"error":"Refactoring Specialist returned invalid changes structure","raw":response.get("content", "")}
+	if changes.is_empty():
+		if refactored_code == code.strip_edges():
+			return {"ok":false,"error":"Refactoring Specialist returned a no-op refactor","raw":response.get("content", "")}
+		parsed["changes"] = [_describe_code_delta(code, refactored_code)]
 	parsed["ok"] = true
 	return parsed
 
@@ -222,7 +232,60 @@ func _files_context(files: Array, max_chars: int = 90000) -> String:
 
 func _parse_json(text: String) -> Dictionary:
 	var cleaned := text.strip_edges()
-	if cleaned.begins_with("```"):
-		cleaned = cleaned.replace("```json", "").replace("```", "").strip_edges()
 	var parsed = JSON.parse_string(cleaned)
+	if parsed is Dictionary:
+		return parsed
+
+	# Local models sometimes wrap an otherwise valid JSON object in a Markdown
+	# fence or add a short sentence before/after it. Recover only the first
+	# syntactically valid object; never execute or reinterpret free-form text.
+	if cleaned.begins_with("```"):
+		var first_newline := cleaned.find("\n")
+		var closing_fence := cleaned.rfind("```")
+		if first_newline >= 0 and closing_fence > first_newline:
+			var fenced := cleaned.substr(first_newline + 1, closing_fence - first_newline - 1).strip_edges()
+			parsed = JSON.parse_string(fenced)
+			if parsed is Dictionary:
+				return parsed
+
+	var extracted := _extract_first_json_object(cleaned)
+	if extracted.is_empty():
+		return {}
+	parsed = JSON.parse_string(extracted)
 	return parsed if parsed is Dictionary else {}
+
+func _extract_first_json_object(text: String) -> String:
+	var start := text.find("{")
+	while start >= 0:
+		var depth := 0
+		var in_string := false
+		var escaped := false
+		for index in range(start, text.length()):
+			var ch := text.substr(index, 1)
+			if in_string:
+				if escaped:
+					escaped = false
+				elif ch == "\\":
+					escaped = true
+				elif ch == "\"":
+					in_string = false
+				continue
+			if ch == "\"":
+				in_string = true
+			elif ch == "{":
+				depth += 1
+			elif ch == "}":
+				depth -= 1
+				if depth == 0:
+					var candidate := text.substr(start, index - start + 1)
+					var candidate_parsed = JSON.parse_string(candidate)
+					if candidate_parsed is Dictionary:
+						return candidate
+					break
+		start = text.find("{", start + 1)
+	return ""
+
+func _describe_code_delta(before: String, after: String) -> String:
+	var before_lines := before.split("\n").size()
+	var after_lines := after.split("\n").size()
+	return "Refactored implementation differs from the input (%d -> %d lines); inspect refactored_code for the exact delta." % [before_lines, after_lines]
