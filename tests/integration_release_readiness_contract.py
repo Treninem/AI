@@ -13,12 +13,10 @@ def read(path: str) -> str:
 def test_integration_gate_runs_representative_cross_subsystem_contracts() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
 
-    # These tests belong to different subsystem owners. Running them together on
-    # one SHA is the point of this lane: a green lane-specific CI is not enough
-    # when another subsystem changed a shared contract underneath it.
     for test_path in (
         "tests/test_standalone_core_contract.py",
         "tests/test_autonomous_evolution_contract.py",
+        "tests/test_research_evidence_lifecycle_contract.py",
         "tests/test_api_accounts_sync.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_release_core_gates.py",
@@ -28,6 +26,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/test_xtts_contract.py",
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
+        "tests/test_knowledge_stress_gates.py",
         "tests/test_core_candidate_promotion.py",
         "tests/test_api_runtime_resilience.py",
         "tests/test_project_master_contract.py",
@@ -38,6 +37,7 @@ def test_integration_gate_runs_representative_cross_subsystem_contracts() -> Non
         "tests/self_reliance_smoke.gd",
         "tests/offline_autonomy_smoke.gd",
         "tests/autonomy_learning_smoke.gd",
+        "tests/research_evidence_lifecycle_smoke.gd",
         "tests/knowledge_registry_smoke.gd",
         "tests/knowledge_transaction_rollback_smoke.gd",
         "tests/api_gateway_smoke.gd",
@@ -69,6 +69,8 @@ def test_research_to_knowledge_authority_is_part_of_same_sha_gate() -> None:
     contract = read("tests/test_autonomous_evolution_contract.py")
 
     assert "tests/test_autonomous_evolution_contract.py" in workflow
+    assert "tests/test_research_evidence_lifecycle_contract.py" in workflow
+    assert "tests/research_evidence_lifecycle_smoke.gd" in workflow
     assert "test_autonomous_research_is_promoted_only_through_curator" in contract
     assert 'assert "memory.learn(" not in collector' in contract
     assert 'assert \'if source == "local_documents":\' in curator' in contract
@@ -130,11 +132,13 @@ def test_safety_and_release_authority_contracts_are_aggregated() -> None:
 def test_python_regressions_are_split_into_owner_routable_steps() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
     for step_name in (
+        "Research evidence lifecycle contract",
         "Voice text contract",
         "Voice config and acoustic-evidence contract",
         "Voice optional XTTS contract",
         "Large Knowledge performance contract",
         "Large Knowledge comparable regression contract",
+        "Large Knowledge scaling blocker contract",
         "Candidate promotion workflow trust-boundary contract",
         "Updater repair and signed-floor compatibility contract",
         "API runtime resilience contract",
@@ -145,10 +149,6 @@ def test_python_regressions_are_split_into_owner_routable_steps() -> None:
 
 def test_integration_gate_is_not_mistaken_for_visual_or_physical_device_acceptance() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
-
-    # Headless UI and emulator/package gates are useful regression gates, but
-    # they must not be labelled as human visual acceptance or physical-device
-    # acceptance. Those remain explicit final acceptance items in the master log.
     assert "headless UI regression smoke (not visual acceptance)" in workflow
     assert "physical-device acceptance is separate" in workflow
 
@@ -156,17 +156,16 @@ def test_integration_gate_is_not_mistaken_for_visual_or_physical_device_acceptan
 def test_active_lane_workflows_become_visible_to_integration_when_they_land() -> None:
     workflow = INTEGRATION_WORKFLOW.read_text(encoding="utf-8")
 
-    # OCR, real-Core benchmark and Work/Computer reliability lanes are
-    # independently ACTIVE. Their absence is PENDING, not a failure. Large
-    # Knowledge contracts have landed and are required immediately.
     for marker in (
         "local-ocr-ci.yml",
         "core-benchmarks.yml",
         "work-computer-reliability.yml",
+        "research-quality-ci.yml",
         "tests/test_local_ocr.py",
         "benchmarks/core/**",
         "benchmarks/knowledge/**",
         "tests/test_knowledge_performance_contract.py",
         "tests/test_knowledge_performance_compare.py",
+        "tests/test_knowledge_stress_gates.py",
     ):
         assert marker in workflow
