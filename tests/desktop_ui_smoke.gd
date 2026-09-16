@@ -22,7 +22,7 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 		"RootLayout", "Sidebar", "SidebarMobileNavSlot", "NewChatButton", "ChatSearch", "ChatHistoryScroll", "ChatList",
 		"MainPanel", "HeaderPanel", "HeaderMargin", "MobileNavSlot", "MainHeaderActions", "AvatarSlot", "MessageScroll", "MessageList", "MessagesMargin", "ComposerMargin",
 		"MessageInput", "AttachmentBar", "AttachButton", "VoiceDock", "SendButton", "ComposerHint", "SettingsButton",
-		"VoiceMicButton", "VoiceSpeakButton", "VoiceSettingsButton", "ComputerAgentToggle", "ComputerAgentAuto", "ComputerAgentPopup",
+		"VoiceMicButton", "ComputerAgentToggle", "ComputerAgentAuto", "ComputerAgentPopup",
 		"SettingsPopup", "SettingsPages", "SettingsNav_general", "SettingsNav_voice", "SettingsNav_files", "SettingsNav_autonomy", "SettingsNav_tools", "SettingsNav_updates",
 		"KnowledgeBasePopup", "SelfImprovementPopup"
 	]
@@ -46,12 +46,10 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 		_fail("Avatar placeholder slot must stay hidden until owner artwork is supplied", 24)
 		return false
 
-	var speak := main.find_child("VoiceSpeakButton", true, false) as Button
-	var voice_settings := main.find_child("VoiceSettingsButton", true, false) as Button
-	var mic := main.find_child("VoiceMicButton", true, false) as Button
-	if speak == null or voice_settings == null or speak.visible or voice_settings.visible:
-		_fail("Redundant voice quick controls are still visible in composer", 25)
+	if main.find_child("VoiceSpeakButton", true, false) != null or main.find_child("VoiceSettingsButton", true, false) != null or main.find_child("VoiceSettingsPopup", true, false) != null:
+		_fail("Redundant voice quick controls or separate voice settings leaked back into composer", 25)
 		return false
+	var mic := main.find_child("VoiceMicButton", true, false) as Button
 	if mic == null or not mic.visible:
 		_fail("Primary microphone action is missing from composer", 26)
 		return false
