@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
@@ -193,3 +194,38 @@ def test_learning_queue_never_evicts_unsynced_events_when_offline(tmp_path: Path
     assert store.status()["total"] == 3
     assert store.status()["over_capacity"] == 0
     assert store.database.integrity_check()["ok"] is True
+
+
+def test_operational_snapshot_is_complete_and_integrity_verified(tmp_path: Path):
+    api_root = tmp_path / "api"
+    keys = KeyStore(api_root)
+    token, key = keys.create("Rollback identity", ["chat", "memory.read"])
+    conversations = ConversationStore(api_root / "conversations")
+    conversations.append(str(key["id"]), "rollback-chat", "user", "preserve me")
+    learning = LearningStore(api_root)
+    event = learning.append("feedback", {"note": "pending rollback work"})
+
+    live = AuroraDatabase(api_root / "aurorafox.sqlite3")
+    destination = tmp_path / "root-only-rollback" / "preupdate.sqlite3"
+    snapshot = live.create_snapshot(destination)
+
+    assert snapshot["ok"] is True
+    assert snapshot["schema_version"] == SCHEMA_VERSION
+    assert snapshot["integrity"] == "ok"
+    assert snapshot["foreign_key_errors"] == 0
+    assert snapshot["bytes"] > 0
+    assert destination.is_file()
+
+    # The operational rollback copy is intentionally complete. It stays outside
+    # the exportable owner-backup root, so retaining token hashes here is needed
+    # to restore authentication exactly after a failed schema/deployment update.
+    with sqlite3.connect(destination) as connection:
+        assert connection.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+        assert connection.execute("PRAGMA foreign_key_check").fetchall() == []
+        assert connection.execute("SELECT COUNT(*) FROM api_keys").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM conversations").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM conversation_messages").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM learning_events WHERE synced=0").fetchone()[0] == 1
+        stored_hash = connection.execute("SELECT token_hash FROM api_keys WHERE id=?", (str(key["id"]),)).fetchone()[0]
+    assert stored_hash == hashlib.sha256(token.encode("utf-8")).hexdigest()
+    assert learning.pending(10)[0]["id"] == event["id"]
