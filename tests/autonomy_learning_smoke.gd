@@ -15,6 +15,18 @@ func _fail(message: String, code: int) -> void:
 func _init() -> void:
 	call_deferred("_run")
 
+func _fresh_stats() -> Dictionary:
+	return {
+		"considered": 0,
+		"promoted": 0,
+		"rejected": 0,
+		"duplicates": 0,
+		"invalid_provenance": 0,
+		"deferred": 0,
+		"corroborated": 0,
+		"contradictions": 0
+	}
+
 func _run() -> void:
 	# Persistent user controls must be able to stop every autonomous mutation and
 	# learning loop without touching normal chat/local inference.
@@ -72,8 +84,8 @@ func _run() -> void:
 		"url": "https://www.reddit.com/r/programming/comments/example",
 		"metadata": {"score": 0, "comments": 0}
 	}
-	if curator._quality_score(arxiv) <= curator.MIN_PROMOTION_SCORE:
-		_fail("High-provenance research did not reach promotion threshold", 8)
+	if curator._quality_score(arxiv) <= curator.SINGLE_SOURCE_PROMOTION_SCORE:
+		_fail("High-provenance research did not reach single-source promotion threshold", 8)
 		return
 	if curator._quality_score(weak_reddit) >= curator.MIN_PROMOTION_SCORE:
 		_fail("Low-signal community item unexpectedly reached promotion threshold", 9)
@@ -121,7 +133,9 @@ func _run() -> void:
 	gate.enabled = true
 	gate._seen.clear()
 	gate._seen_content.clear()
-	gate._stats = {"considered": 0, "promoted": 0, "rejected": 0, "duplicates": 0, "invalid_provenance": 0}
+	gate._claim_evidence.clear()
+	gate._gap_questions.clear()
+	gate._stats = _fresh_stats()
 	var local_doc := {
 		"source": "local_documents",
 		"title": "private notes.txt",
@@ -152,15 +166,118 @@ func _run() -> void:
 	if str(promoted_meta.get("evidence_tier", "")) != "research_preprint":
 		_fail("Promoted research metadata lost evidence tier", 22)
 		return
+	if str(promoted_meta.get("evidence_status", "")) != "single_high_confidence":
+		_fail("High-confidence single-source research lost evidence status", 23)
+		return
 	var gate_stats: Dictionary = gate.status().get("stats", {})
 	if int(gate_stats.get("promoted", 0)) != 1 or int(gate_stats.get("duplicates", 0)) != 1 or int(gate_stats.get("rejected", 0)) != 2:
-		_fail("Curator promotion/rejection/deduplication accounting is inconsistent", 23)
+		_fail("Curator promotion/rejection/deduplication accounting is inconsistent", 24)
+		return
+
+	# Medium-confidence evidence must remain provisional until another independent
+	# source family provides distinct content for the same normalized claim.
+	var corroboration_ai := FakeResearchAI.new()
+	var corroboration_gate := AuroraLearningCurator.new()
+	corroboration_gate.ai = corroboration_ai
+	corroboration_gate.enabled = true
+	corroboration_gate._seen.clear()
+	corroboration_gate._seen_content.clear()
+	corroboration_gate._claim_evidence.clear()
+	corroboration_gate._gap_questions.clear()
+	corroboration_gate._stats = _fresh_stats()
+	var moderate_stackoverflow := {
+		"source": "stackoverflow",
+		"title": "Deterministic task recovery requires journal replay",
+		"summary": "A detailed community answer explains that durable task recovery should persist state transitions and replay an idempotent journal after restart so interrupted local agent work can be reconciled safely.",
+		"url": "https://stackoverflow.com/questions/100001/durable-agent-recovery"
+	}
+	var moderate_github := {
+		"source": "github",
+		"title": "Deterministic task recovery requires journal replay",
+		"summary": "An independent repository documents a local task runner that stores transition records, restores them after process restart and avoids replaying already acknowledged destructive operations.",
+		"url": "https://github.com/example/durable-local-agent",
+		"metadata": {"stars": 0}
+	}
+	if corroboration_gate._quality_score(moderate_stackoverflow) >= corroboration_gate.SINGLE_SOURCE_PROMOTION_SCORE:
+		_fail("Moderate StackOverflow evidence unexpectedly bypasses corroboration", 25)
+		return
+	corroboration_gate._on_research_completed({"query": "durable task recovery", "items": [moderate_stackoverflow]})
+	if corroboration_ai.imports.size() != 0 or corroboration_gate.open_questions().is_empty():
+		_fail("Single moderate source was promoted instead of queued for corroboration", 26)
+		return
+	corroboration_gate._on_research_completed({"query": "durable task recovery", "items": [moderate_github]})
+	if corroboration_ai.imports.size() != 1:
+		_fail("Independent corroborating source did not unlock medium-confidence promotion", 27)
+		return
+	var corroborated_meta: Dictionary = (corroboration_ai.imports[0] as Dictionary).get("metadata", {})
+	if str(corroborated_meta.get("evidence_status", "")) != "corroborated" or int(corroborated_meta.get("corroboration_count", 0)) < 2:
+		_fail("Corroborated promotion lost independent-source evidence metadata", 28)
+		return
+	var families = corroborated_meta.get("source_families", [])
+	if not families is Array or families.size() < 2:
+		_fail("Corroborated promotion did not retain source-family evidence", 29)
+		return
+	if not corroboration_gate.open_questions().is_empty():
+		_fail("Resolved corroboration gap remained open", 30)
+		return
+
+	# Contradictory evidence must never be resolved by arrival order. Explicit
+	# stance metadata is supported for deterministic tests/collectors while the
+	# curator also has a conservative local negation heuristic for ordinary items.
+	var contradiction_ai := FakeResearchAI.new()
+	var contradiction_gate := AuroraLearningCurator.new()
+	contradiction_gate.ai = contradiction_ai
+	contradiction_gate.enabled = true
+	contradiction_gate._seen.clear()
+	contradiction_gate._seen_content.clear()
+	contradiction_gate._claim_evidence.clear()
+	contradiction_gate._gap_questions.clear()
+	contradiction_gate._stats = _fresh_stats()
+	var claim_support := {
+		"source": "stackoverflow",
+		"title": "Local recovery replays acknowledged task journal entries",
+		"summary": "This independent technical answer supports deterministic recovery by replaying persisted task transitions while skipping operations that already have durable acknowledgements after a restart.",
+		"url": "https://stackoverflow.com/questions/200001/local-recovery-journal",
+		"metadata": {"stance": "support"}
+	}
+	var claim_oppose := {
+		"source": "github",
+		"title": "Local recovery replays acknowledged task journal entries",
+		"summary": "This repository report disputes that behavior for its implementation and states that acknowledged task journal entries are intentionally not replayed during process recovery because snapshots are authoritative.",
+		"url": "https://github.com/example/conflicting-recovery-report",
+		"metadata": {"stars": 0, "stance": "oppose"}
+	}
+	contradiction_gate._on_research_completed({"query": "local recovery journal", "items": [claim_support, claim_oppose]})
+	if contradiction_ai.imports.size() != 0:
+		_fail("Contradictory independent evidence was promoted automatically", 31)
+		return
+	var conflict_questions := contradiction_gate.open_questions()
+	if conflict_questions.is_empty() or str((conflict_questions[0] as Dictionary).get("reason", "")) != "contradiction":
+		_fail("Contradictory evidence did not create a durable resolution question", 32)
+		return
+	var conflict_stats: Dictionary = contradiction_gate.status().get("stats", {})
+	if int(conflict_stats.get("contradictions", 0)) < 1 or int(conflict_stats.get("deferred", 0)) < 2:
+		_fail("Contradiction/deferred accounting is inconsistent", 33)
+		return
+
+	# Gap questions are state, not ephemeral UI text: they must survive a restart
+	# so a later autonomous research cycle can continue from unresolved evidence.
+	var reloaded_gate := AuroraLearningCurator.new()
+	reloaded_gate._load_state()
+	var reloaded_questions := reloaded_gate.open_questions()
+	var found_persisted_conflict := false
+	for question in reloaded_questions:
+		if question is Dictionary and str(question.get("reason", "")) == "contradiction":
+			found_persisted_conflict = true
+			break
+	if not found_persisted_conflict:
+		_fail("Knowledge-gap question queue did not survive curator restart", 34)
 		return
 
 	# Autonomous core rewriting must remain narrowly allowlisted and keep updater,
 	# permissions and its own verifier outside the model-writable surface.
 	if not pipeline._target_allowed("scripts/agent_core.gd") or not pipeline._target_allowed("scripts/memory_store.gd"):
-		_fail("Expected intelligence targets are missing from the core allowlist", 24)
+		_fail("Expected intelligence targets are missing from the core allowlist", 35)
 		return
 	for protected in [
 		"update/update_manager.gd",
@@ -170,10 +287,10 @@ func _run() -> void:
 		"project.godot"
 	]:
 		if pipeline._target_allowed(protected):
-			_fail("Protected file entered autonomous core allowlist: " + protected, 25)
+			_fail("Protected file entered autonomous core allowlist: " + protected, 36)
 			return
 	if pipeline._sha256_text("AuroraFox") != "AuroraFox".sha256_text().to_lower():
-		_fail("Core candidate SHA-256 helper is inconsistent", 26)
+		_fail("Core candidate SHA-256 helper is inconsistent", 37)
 		return
 
 	# Background updater failures must stay silent to the UI but must always emit
@@ -189,11 +306,11 @@ func _run() -> void:
 	)
 	var background := updater._fail("offline background test", false)
 	if int(visible_errors[0]) != 0 or int(attempt_failures[0]) != 1 or not bool(last_background[0]) or not bool(background.get("background", false)):
-		_fail("Background updater failure did not preserve silent internal recovery contract", 27)
+		_fail("Background updater failure did not preserve silent internal recovery contract", 38)
 		return
 	var manual := updater._fail("manual update test", true)
 	if int(visible_errors[0]) != 1 or int(attempt_failures[0]) != 2 or bool(last_background[0]) or bool(manual.get("background", true)):
-		_fail("Manual updater error visibility/internal recovery contract failed", 28)
+		_fail("Manual updater error visibility/internal recovery contract failed", 39)
 		return
 
 	# Regression: an update may pause hot/core improvements before a background
@@ -205,18 +322,26 @@ func _run() -> void:
 	guard.core_pipeline = pipeline
 	guard._pause(true, true, "test update selected")
 	if coordinator.autonomous_hot_improvements or pipeline.autonomous_core_candidates:
-		_fail("Update guard did not pause autonomous changes", 29)
+		_fail("Update guard did not pause autonomous changes", 40)
 		return
 	guard._on_update_attempt_failed("offline", true)
 	if not coordinator.autonomous_hot_improvements or not pipeline.autonomous_core_candidates:
-		_fail("Silent updater failure left autonomy paused", 30)
+		_fail("Silent updater failure left autonomy paused", 41)
 		return
 	if bool(guard.status().get("paused_hot_improvements", true)) or bool(guard.status().get("paused_core_candidates", true)):
-		_fail("Update guard status remained paused after updater failure", 31)
+		_fail("Update guard status remained paused after updater failure", 42)
 		return
 
+	var state_path := ProjectSettings.globalize_path(AuroraLearningCurator.STATE_PATH)
+	if FileAccess.file_exists(AuroraLearningCurator.STATE_PATH):
+		DirAccess.remove_absolute(state_path)
 	fake_ai.free()
 	gate.free()
+	corroboration_ai.free()
+	corroboration_gate.free()
+	contradiction_ai.free()
+	contradiction_gate.free()
+	reloaded_gate.free()
 	coordinator.free()
 	pipeline.free()
 	curator.free()
