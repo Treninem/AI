@@ -39,13 +39,16 @@ class PersistenceMaintenance:
     that has been offline for a long time can never silently lose its history.
     """
 
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, *, backup_max_bytes: int | None = None):
         self.root = root.resolve()
         self.database = AuroraDatabase(self.root / "aurorafox.sqlite3")
         configured_database_warning = _env_int(
             "AURORAFOX_DATABASE_WARN_BYTES", DEFAULT_WARN_DATABASE_BYTES
         )
-        self.backup_max_bytes = _env_int("AURORAFOX_BACKUP_MAX_BYTES", DEFAULT_BACKUP_MAX_BYTES)
+        if backup_max_bytes is None:
+            self.backup_max_bytes = _env_int("AURORAFOX_BACKUP_MAX_BYTES", DEFAULT_BACKUP_MAX_BYTES)
+        else:
+            self.backup_max_bytes = max(1, int(backup_max_bytes))
         # Backups fail closed at their source-size cap. Warn while there is still
         # operating room even when an older deployment configured a looser DB
         # warning. Other durable files can consume the remaining headroom, so 75%
