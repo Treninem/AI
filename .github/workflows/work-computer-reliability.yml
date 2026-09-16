@@ -14,6 +14,7 @@ on:
       - 'tests/work_computer_e2e_*'
       - 'tests/work_computer_attempt_safety_smoke.gd'
       - 'tests/work_computer_master_stop_smoke.gd'
+      - 'tests/work_computer_concurrency_smoke.gd'
       - 'tests/autonomy_state_failure_injection_smoke.gd'
       - '.github/workflows/work-computer-reliability.yml'
   push:
@@ -30,6 +31,7 @@ on:
       - 'tests/work_computer_e2e_*'
       - 'tests/work_computer_attempt_safety_smoke.gd'
       - 'tests/work_computer_master_stop_smoke.gd'
+      - 'tests/work_computer_concurrency_smoke.gd'
       - 'tests/autonomy_state_failure_injection_smoke.gd'
       - '.github/workflows/work-computer-reliability.yml'
   workflow_dispatch:
@@ -49,9 +51,9 @@ jobs:
       - name: Install contract-test dependencies
         run: python -m pip install --disable-pip-version-check pytest fastapi 'uvicorn[standard]' 'pydantic>=2.11' 'httpx==0.28.1' python-multipart
       - name: Python syntax
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py
-      - name: Computer reliability routing and failure-injection contracts
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py
+      - name: Computer reliability routing failure-injection and concurrency contracts
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py
 
   computer-contract-windows:
     runs-on: windows-latest
@@ -69,10 +71,10 @@ jobs:
         run: python -c "import pyautogui, pywinauto; from PIL import ImageGrab; print('WINDOWS_COMPUTER_RUNTIME_IMPORT_OK')"
       - name: Python syntax
         shell: pwsh
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py
-      - name: Computer reliability routing and failure-injection contracts on Windows
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py
+      - name: Computer reliability routing failure-injection and concurrency contracts on Windows
         shell: pwsh
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py
 
   work-godot:
     runs-on: ubuntu-24.04
@@ -105,6 +107,8 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/work_computer_e2e_uncertain_result_smoke.gd
       - name: Work and Computer real master-stop binding smoke
         run: timeout 30s ./godot --headless --path . --script tests/work_computer_master_stop_smoke.gd
+      - name: Work concurrent task isolation smoke
+        run: timeout 30s ./godot --headless --path . --script tests/work_computer_concurrency_smoke.gd
       - name: Autonomy both-corrupt state fail-closed smoke
         run: timeout 30s ./godot --headless --path . --script tests/autonomy_state_failure_injection_smoke.gd
 
