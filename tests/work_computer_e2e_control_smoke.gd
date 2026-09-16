@@ -30,6 +30,7 @@ func _init() -> void:
 		"cancel_requested": false,
 		"pause_requested": false,
 		"unsafe_action_inflight": false,
+		"unsafe_action_uncertain": false,
 	}
 	manager._action_sequence[unsafe_id] = 0
 	var before_unsafe := manager._execution_guard("before_tool", {"tool":"write_file"}, project_id, unsafe_id, unsafe_execution)
@@ -72,6 +73,7 @@ func _init() -> void:
 		"cancel_requested": false,
 		"pause_requested": false,
 		"unsafe_action_inflight": false,
+		"unsafe_action_uncertain": false,
 	}
 	manager._action_sequence[safe_id] = 0
 	manager._execution_guard("before_tool", {"tool":"read_file"}, project_id, safe_id, safe_execution)
@@ -105,9 +107,10 @@ func _init() -> void:
 		"cancel_requested": false,
 		"pause_requested": false,
 		"unsafe_action_inflight": false,
+		"unsafe_action_uncertain": false,
 	}
 	manager._action_sequence[stop_id] = 0
-	manager._execution_guard("before_tool", {"tool":"run_process"}, project_id, stop_id, stop_execution)
+	manager._execution_guard("before_tool", {"tool":"sandbox_exec"}, project_id, stop_id, stop_execution)
 	var stop_finish := manager._finish_controlled(project_id, stop_id, stop_execution, "master_stop")
 	var stop_saved := store.get_task(project_id, stop_id)
 	if str(stop_saved.get("status", "")) != AuroraWorkStore.STATE_INTERRUPTED:
@@ -116,6 +119,70 @@ func _init() -> void:
 	if not bool(stop_saved.get("requires_user_action", false)) or bool(stop_finish.get("retryable", true)):
 		_fail("unsafe master-stop race did not block blind replay", 18)
 		return
+
+	# A computer action gets a Work-owned action_id and an uncertain timeout must
+	# stop the task before another model/tool step can blindly replay it.
+	var timeout_task := store.create_task(project_id, "computer timeout")
+	var timeout_id := str(timeout_task.get("id", ""))
+	var timeout_execution := "timeout-exec"
+	if not store.start_task(project_id, timeout_id, timeout_execution):
+		_fail("timeout task start failed", 19)
+		return
+	manager._running_tasks[timeout_id] = {
+		"project_id": project_id,
+		"execution_id": timeout_execution,
+		"cancel_requested": false,
+		"pause_requested": false,
+		"unsafe_action_inflight": false,
+		"unsafe_action_uncertain": false,
+	}
+	manager._action_sequence[timeout_id] = 0
+	var before_computer := manager._execution_guard("before_tool", {"tool":"computer_action"}, project_id, timeout_id, timeout_execution)
+	var args_patch: Dictionary = before_computer.get("args_patch", {})
+	var action_id := str(args_patch.get("action_id", ""))
+	if not bool(before_computer.get("allowed", false)) or action_id != timeout_execution + ":1":
+		_fail("Work did not provide stable computer action_id", 20)
+		return
+	var uncertain := manager._execution_guard("after_tool", {"tool":"computer_action", "result":{"ok":false,"error":"timeout","retryable":false}}, project_id, timeout_id, timeout_execution)
+	if bool(uncertain.get("allowed", true)) or str(uncertain.get("reason", "")) != "unsafe_action_uncertain":
+		_fail("uncertain unsafe result did not stop execution", 21)
+		return
+	var timeout_finish := manager._finish_controlled(project_id, timeout_id, timeout_execution, str(uncertain.get("reason", "")))
+	var timeout_saved := store.get_task(project_id, timeout_id)
+	if str(timeout_saved.get("status", "")) != AuroraWorkStore.STATE_INTERRUPTED:
+		_fail("uncertain computer action was not interrupted", 22)
+		return
+	if not bool(timeout_saved.get("requires_user_action", false)) or bool(timeout_saved.get("retryable", true)):
+		_fail("uncertain computer action did not require verification", 23)
+		return
+	if bool(timeout_finish.get("retryable", true)) or not bool(timeout_finish.get("requires_user_action", false)):
+		_fail("uncertain computer action response allowed blind retry", 24)
+		return
+
+	# Deterministic validation failure is not an uncertain external side effect;
+	# the guard may return control to the Core to choose a corrected action.
+	var rejected_task := store.create_task(project_id, "deterministic reject")
+	var rejected_id := str(rejected_task.get("id", ""))
+	var rejected_execution := "reject-exec"
+	if not store.start_task(project_id, rejected_id, rejected_execution):
+		_fail("rejected task start failed", 25)
+		return
+	manager._running_tasks[rejected_id] = {
+		"project_id": project_id,
+		"execution_id": rejected_execution,
+		"cancel_requested": false,
+		"pause_requested": false,
+		"unsafe_action_inflight": false,
+		"unsafe_action_uncertain": false,
+	}
+	manager._action_sequence[rejected_id] = 0
+	manager._execution_guard("before_tool", {"tool":"computer_action"}, project_id, rejected_id, rejected_execution)
+	var rejected := manager._execution_guard("after_tool", {"tool":"computer_action", "result":{"ok":false,"error":"http_error","http":400,"retryable":false}}, project_id, rejected_id, rejected_execution)
+	if not bool(rejected.get("allowed", false)):
+		_fail("deterministic validation rejection was treated as uncertain", 26)
+		return
+	manager.cancel_task(project_id, rejected_id)
+	manager._finish_controlled(project_id, rejected_id, rejected_execution, "cancelled")
 
 	manager.queue_free()
 	print("AURORA_WORK_COMPUTER_CONTROL_SMOKE_OK")
