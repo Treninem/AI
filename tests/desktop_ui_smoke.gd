@@ -37,43 +37,46 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if main.find_child("UpdateStatusButton", true, false) != null:
 		_fail("Floating/header update control leaked back into the chat surface", 22)
 		return false
+	if main.find_child("WorkButton", true, false) != null:
+		_fail("Work shortcut leaked back into the primary chat sidebar", 23)
+		return false
 	if _visible_placeholder_fox(main):
-		_fail("Temporary fox/cat placeholder artwork is visible in production UI", 23)
+		_fail("Temporary fox/cat placeholder artwork is visible in production UI", 24)
 		return false
 
 	var avatar_slot := main.find_child("AvatarSlot", true, false) as Control
 	if avatar_slot == null or avatar_slot.visible or avatar_slot.custom_minimum_size.x > 1.0:
-		_fail("Avatar placeholder slot must stay hidden until owner artwork is supplied", 24)
+		_fail("Avatar placeholder slot must stay hidden until owner artwork is supplied", 25)
 		return false
 
 	if main.find_child("VoiceSpeakButton", true, false) != null or main.find_child("VoiceSettingsButton", true, false) != null or main.find_child("VoiceSettingsPopup", true, false) != null:
-		_fail("Redundant voice quick controls or separate voice settings leaked back into composer", 25)
+		_fail("Redundant voice quick controls or separate voice settings leaked back into composer", 26)
 		return false
 	var mic := main.find_child("VoiceMicButton", true, false) as Button
 	if mic == null or not mic.visible:
-		_fail("Primary microphone action is missing from composer", 26)
+		_fail("Primary microphone action is missing from composer", 27)
 		return false
 
 	var attachment_bar := main.find_child("AttachmentBar", true, false)
 	if not attachment_bar is HFlowContainer:
-		_fail("Attachment chips must wrap instead of overflowing horizontally", 27)
+		_fail("Attachment chips must wrap instead of overflowing horizontally", 28)
 		return false
 	var title := main.find_child("ActiveChatTitle", true, false) as Label
 	if title == null or title.text_overrun_behavior != TextServer.OVERRUN_TRIM_ELLIPSIS:
-		_fail("Chat title does not have ellipsis overflow protection", 28)
+		_fail("Chat title does not have ellipsis overflow protection", 29)
 		return false
 
 	var settings_pages := main.find_child("SettingsPages", true, false) as TabContainer
 	if settings_pages == null or settings_pages.tabs_visible or settings_pages.get_child_count() < 6:
-		_fail("Settings must be category pages, not one long scrolling ribbon", 29)
+		_fail("Settings must be category pages, not one long scrolling ribbon", 30)
 		return false
 	var settings_overlay := main.get_node_or_null("SettingsOverlay") as AuroraSettingsOverlay
 	if settings_overlay == null:
-		_fail("Settings controller missing", 30)
+		_fail("Settings controller missing", 31)
 		return false
 	settings_overlay.call("_select_page", "voice")
 	if settings_pages.current_tab != int(settings_overlay.nav_indices.get("voice", -1)):
-		_fail("Settings navigation does not switch pages", 31)
+		_fail("Settings navigation does not switch pages", 32)
 		return false
 	settings_overlay.call("_select_page", "general")
 
@@ -81,36 +84,46 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	var computer_auto := main.find_child("ComputerAgentAuto", true, false) as CheckButton
 	var computer_popup := main.find_child("ComputerAgentPopup", true, false) as PopupPanel
 	if computer_toggle == null or computer_auto == null or computer_popup == null:
-		_fail("Computer Agent settings panel is incomplete", 32)
+		_fail("Computer Agent settings panel is incomplete", 33)
 		return false
 	if not computer_popup.is_ancestor_of(computer_toggle) or not computer_popup.is_ancestor_of(computer_auto):
-		_fail("Computer Agent toggles must live inside their settings panel", 33)
+		_fail("Computer Agent toggles must live inside their settings panel", 34)
 		return false
 	if computer_auto.text.strip_edges().length() < 20:
-		_fail("Computer Agent automatic mode label is ambiguous", 34)
+		_fail("Computer Agent automatic mode label is ambiguous", 35)
 		return false
 
 	for node in main.find_children("*", "Button", true, false):
 		var button := node as Button
 		var normalized := button.text.to_lower()
 		if normalized.contains("локальные модели") or normalized.contains("gguf"):
-			_fail("Dead model-management button leaked into normal UI", 35)
+			_fail("Dead model-management button leaked into normal UI", 36)
 			return false
 
 	if mobile:
-		var mobile_nav := main.find_child("SettingsMobileNavigation", true, false)
-		if mobile_nav == null:
-			_fail("Mobile settings do not expose compact category navigation", 36)
+		var mobile_nav := main.find_child("SettingsMobileNavigation", true, false) as Control
+		var mobile_nav_scroll := main.find_child("SettingsMobileNavigationScroll", true, false) as ScrollContainer
+		if mobile_nav == null or mobile_nav_scroll == null:
+			_fail("Mobile settings do not expose compact category navigation", 37)
 			return false
+		if mobile_nav.custom_minimum_size.x < 700.0 or mobile_nav.custom_minimum_size.y > 60.0 or mobile_nav_scroll.custom_minimum_size.y > 64.0:
+			_fail("Mobile settings categories collapsed into a vertical/empty strip", 38)
+			return false
+		for nav_name in ["SettingsNav_general", "SettingsNav_voice", "SettingsNav_files", "SettingsNav_autonomy", "SettingsNav_tools", "SettingsNav_updates"]:
+			var nav_button := main.find_child(nav_name, true, false) as Button
+			if nav_button == null or nav_button.custom_minimum_size.x < 100.0 or nav_button.text.strip_edges().is_empty():
+				_fail("Mobile settings category label is collapsed or unreadable: %s" % nav_name, 39)
+				return false
+
 		var sidebar := main.find_child("Sidebar", true, false) as Control
 		var panel := main.find_child("MainPanel", true, false) as Control
 		var menu := main.find_child("MobileMenuButton", true, false) as Button
 		var header_actions := main.find_child("MainHeaderActions", true, false) as Control
 		if sidebar == null or panel == null or sidebar.visible or not panel.visible or menu == null or not menu.visible:
-			_fail("Mobile chat/sidebar navigation state is incorrect", 37)
+			_fail("Mobile chat/sidebar navigation state is incorrect", 40)
 			return false
 		if header_actions != null and header_actions.visible:
-			_fail("Mobile header still contains unrelated action clutter", 38)
+			_fail("Mobile header still contains unrelated action clutter", 41)
 			return false
 	return true
 
