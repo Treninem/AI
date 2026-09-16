@@ -4,6 +4,8 @@ extends RefCounted
 const REGISTRY_PATH := "user://knowledge/sources.json"
 const REGISTRY_VERSION := 1
 const HASH_CHUNK_BYTES := 1024 * 1024
+const REGISTRY_TEMP := REGISTRY_PATH + ".tmp"
+const REGISTRY_ORIGINAL := REGISTRY_PATH + ".write.original"
 
 # Each registry instance keeps a deep-copied read cache. The static generation
 # invalidates sibling instances after any successful in-process write while
@@ -112,7 +114,6 @@ func mark_imported(path: String, inspection: Dictionary, result: Dictionary, met
 		var old_hash := str(old.get("fingerprint_sha256", ""))
 		var old_canonical := str(old.get("source", ""))
 		if old_hash == fingerprint:
-			# Reindexing unchanged canonical bytes keeps history and aliases.
 			row["source"] = old_canonical
 			row["source_id"] = str(old.get("source_id", row["source_id"]))
 			row["aliases"] = old.get("aliases", []) if old.get("aliases", []) is Array else []
@@ -275,14 +276,20 @@ func _file_size(path: String) -> int:
 	return size
 
 func _load_rows() -> Array:
-	if not FileAccess.file_exists(REGISTRY_PATH):
+	var repaired := _repair_interrupted_save()
+	var active_path := REGISTRY_PATH
+	if not repaired and not FileAccess.file_exists(active_path) and FileAccess.file_exists(REGISTRY_ORIGINAL):
+		# Read the last committed original without mutating it. Future writes will
+		# fail closed until the replacement can be repaired.
+		active_path = REGISTRY_ORIGINAL
+	if not FileAccess.file_exists(active_path):
 		_remember_cache([], 0, 0)
 		return []
-	var size := _file_size(REGISTRY_PATH)
-	var mtime := int(FileAccess.get_modified_time(REGISTRY_PATH))
-	if _cache_valid and _cache_generation == _registry_write_generation and size == _cache_size and mtime == _cache_mtime:
+	var size := _file_size(active_path)
+	var mtime := int(FileAccess.get_modified_time(active_path))
+	if active_path == REGISTRY_PATH and _cache_valid and _cache_generation == _registry_write_generation and size == _cache_size and mtime == _cache_mtime:
 		return _cached_rows.duplicate(true)
-	var file := FileAccess.open(REGISTRY_PATH, FileAccess.READ)
+	var file := FileAccess.open(active_path, FileAccess.READ)
 	if file == null:
 		_cache_valid = false
 		return []
@@ -294,8 +301,12 @@ func _load_rows() -> Array:
 	var rows = parsed.get("sources", [])
 	if not rows is Array:
 		rows = []
-	_remember_cache(rows, size, mtime)
-	return _cached_rows.duplicate(true)
+	if active_path == REGISTRY_PATH:
+		_remember_cache(rows, size, mtime)
+	else:
+		_cache_valid = false
+		_cached_rows = rows.duplicate(true)
+	return rows.duplicate(true)
 
 func _remember_cache(rows: Array, size: int, mtime: int) -> void:
 	_cached_rows = rows.duplicate(true)
@@ -306,8 +317,11 @@ func _remember_cache(rows: Array, size: int, mtime: int) -> void:
 
 func _save_rows(rows: Array) -> bool:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(REGISTRY_PATH.get_base_dir()))
-	var temp := REGISTRY_PATH + ".tmp"
-	var file := FileAccess.open(temp, FileAccess.WRITE)
+	if not _repair_interrupted_save():
+		_cache_valid = false
+		return false
+	_remove_if_exists(REGISTRY_TEMP)
+	var file := FileAccess.open(REGISTRY_TEMP, FileAccess.WRITE)
 	if file == null:
 		return false
 	file.store_string(JSON.stringify({
@@ -316,18 +330,83 @@ func _save_rows(rows: Array) -> bool:
 		"sources": rows
 	}, "  "))
 	file.close()
-	var target_abs := ProjectSettings.globalize_path(REGISTRY_PATH)
-	var temp_abs := ProjectSettings.globalize_path(temp)
-	if FileAccess.file_exists(REGISTRY_PATH):
-		var remove_error := DirAccess.remove_absolute(target_abs)
-		if remove_error != OK:
-			DirAccess.remove_absolute(temp_abs)
-			_cache_valid = false
-			return false
-	var renamed := DirAccess.rename_absolute(temp_abs, target_abs) == OK
-	if not renamed:
+	if not _replace_registry_file():
 		_cache_valid = false
 		return false
 	_registry_write_generation += 1
 	_remember_cache(rows, _file_size(REGISTRY_PATH), int(FileAccess.get_modified_time(REGISTRY_PATH)))
 	return true
+
+func _replace_registry_file() -> bool:
+	var target_abs := ProjectSettings.globalize_path(REGISTRY_PATH)
+	var temp_abs := ProjectSettings.globalize_path(REGISTRY_TEMP)
+	var original_abs := ProjectSettings.globalize_path(REGISTRY_ORIGINAL)
+	if not FileAccess.file_exists(REGISTRY_TEMP):
+		return false
+	if FileAccess.file_exists(REGISTRY_PATH):
+		if DirAccess.rename_absolute(target_abs, original_abs) != OK:
+			_remove_if_exists(REGISTRY_TEMP)
+			return false
+	if DirAccess.rename_absolute(temp_abs, target_abs) != OK:
+		if FileAccess.file_exists(REGISTRY_ORIGINAL) and not FileAccess.file_exists(REGISTRY_PATH):
+			DirAccess.rename_absolute(original_abs, target_abs)
+		return false
+	# The new target is committed. A crash before this cleanup is repaired on the
+	# next read/save by keeping target and deleting the stale original.
+	_remove_if_exists(REGISTRY_ORIGINAL)
+	return true
+
+func _repair_interrupted_save() -> bool:
+	var target_exists := FileAccess.file_exists(REGISTRY_PATH)
+	var original_exists := FileAccess.file_exists(REGISTRY_ORIGINAL)
+	var temp_exists := FileAccess.file_exists(REGISTRY_TEMP)
+	var target_abs := ProjectSettings.globalize_path(REGISTRY_PATH)
+	var original_abs := ProjectSettings.globalize_path(REGISTRY_ORIGINAL)
+	var temp_abs := ProjectSettings.globalize_path(REGISTRY_TEMP)
+
+	if original_exists:
+		if target_exists:
+			# New target already exists, so the previous replacement committed.
+			if DirAccess.remove_absolute(original_abs) != OK:
+				return false
+		else:
+			# Target disappeared before the new temp was committed. Restore the last
+			# committed registry and discard any uncommitted temp below.
+			if DirAccess.rename_absolute(original_abs, target_abs) != OK:
+				return false
+			target_exists = true
+
+	if temp_exists:
+		if target_exists:
+			if DirAccess.remove_absolute(temp_abs) != OK:
+				return false
+		elif _valid_registry_file(REGISTRY_TEMP):
+			# First-ever registry write may have completed the temp file but crashed
+			# just before rename. A fully parseable temp is safe to promote.
+			if DirAccess.rename_absolute(temp_abs, target_abs) != OK:
+				return false
+			target_exists = true
+		else:
+			# Never promote a truncated registry. There was no committed registry yet.
+			if DirAccess.remove_absolute(temp_abs) != OK:
+				return false
+
+	if target_exists and not _valid_registry_file(REGISTRY_PATH):
+		# A malformed canonical registry is not evidence of an empty registry.
+		return false
+	return true
+
+func _valid_registry_file(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return false
+	var parsed = JSON.parse_string(file.get_as_text())
+	file.close()
+	return parsed is Dictionary and parsed.get("sources", null) is Array
+
+func _remove_if_exists(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return true
+	return DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK

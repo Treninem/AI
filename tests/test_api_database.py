@@ -6,6 +6,8 @@ import sqlite3
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import pytest
+
 from api.auth import KeyStore
 from api.conversation_store import ConversationStore
 from api.database import AuroraDatabase, SCHEMA_VERSION
@@ -116,6 +118,43 @@ def test_bootstrap_key_creation_is_atomic_across_store_instances(tmp_path: Path)
     assert len(mirror["keys"]) == 1
     assert "token" not in mirror["keys"][0]
     assert mirror["keys"][0]["token_hash"] == hashlib.sha256(created[0].encode("utf-8")).hexdigest()
+
+
+def test_bootstrap_key_recovers_when_insert_fails_after_raw_token_is_durable(tmp_path: Path, monkeypatch):
+    root = tmp_path / "api"
+    store = KeyStore(root)
+    observed: dict[str, str] = {}
+
+    def fail_after_raw_token(connection, record):
+        # The recoverable raw material must already be durable before the DB hash
+        # can be inserted/committed. Inject a failure at exactly that boundary.
+        assert store.bootstrap_path.is_file()
+        raw = store.bootstrap_path.read_text(encoding="utf-8").strip()
+        assert raw.startswith("af_admin_")
+        assert hashlib.sha256(raw.encode("utf-8")).hexdigest() == str(record["token_hash"])
+        observed["raw"] = raw
+        raise RuntimeError("injected bootstrap insert failure")
+
+    monkeypatch.setattr(store, "_insert_bootstrap_record", fail_after_raw_token)
+    with pytest.raises(RuntimeError, match="injected bootstrap insert failure"):
+        store.ensure_bootstrap_key()
+
+    # Normal exception rollback removes the provisional raw token and leaves no
+    # committed active key. A hard process crash would leave only the provisional
+    # file; SQLite rolls back the open transaction and the next start overwrites it.
+    assert observed["raw"].startswith("af_admin_")
+    assert not store.bootstrap_path.exists()
+    with store.database.connection() as connection:
+        assert int(connection.execute("SELECT COUNT(*) FROM api_keys WHERE revoked=0").fetchone()[0]) == 0
+
+    recovered_store = KeyStore(root)
+    recovered = recovered_store.ensure_bootstrap_key()
+    assert recovered is not None
+    assert recovered != observed["raw"]
+    assert recovered_store.bootstrap_path.read_text(encoding="utf-8").strip() == recovered
+    assert recovered_store.verify(recovered) is not None
+    with recovered_store.database.connection() as connection:
+        assert int(connection.execute("SELECT COUNT(*) FROM api_keys WHERE revoked=0").fetchone()[0]) == 1
 
 
 def test_concurrent_conversation_writes_do_not_lose_messages(tmp_path: Path):

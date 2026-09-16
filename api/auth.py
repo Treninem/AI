@@ -122,26 +122,45 @@ class KeyStore:
         payload = {"keys": self._all_records()}
         atomic_write_text(self.path, json.dumps(payload, ensure_ascii=False, indent=2) + "\n", mode=0o600)
 
+    def _insert_bootstrap_record(self, connection: Any, record: dict[str, Any]) -> None:
+        connection.execute(
+            "INSERT INTO api_keys(id, name, token_hash, scopes_json, created_at, revoked) "
+            "VALUES(?, ?, ?, ?, ?, 0)",
+            (
+                str(record["id"]),
+                str(record["name"]),
+                str(record["token_hash"]),
+                json.dumps(record["scopes"], ensure_ascii=False, separators=(",", ":")),
+                int(record["created_at"]),
+            ),
+        )
+
     def ensure_bootstrap_key(self) -> str | None:
+        """Create the first admin key without an unrecoverable raw-token window.
+
+        The one-time raw token is atomically written *before* the SQLite commit.
+        If the process dies before commit, SQLite rolls the transaction back and
+        the next start overwrites the unusable file with a new token. If the DB
+        insertion raises normally, the provisional file is removed. Therefore a
+        committed bootstrap hash can never be created before its raw recovery
+        material is durable on disk.
+        """
+
         with self._write_lock:
-            token, record = self._new_record("AuroraFox local admin", ADMIN_SCOPES, prefix="af_admin")
             with self.database.connection(write=True) as connection:
                 active = int(connection.execute("SELECT COUNT(*) FROM api_keys WHERE revoked=0").fetchone()[0])
                 if active:
                     return None
-                connection.execute(
-                    "INSERT INTO api_keys(id, name, token_hash, scopes_json, created_at, revoked) "
-                    "VALUES(?, ?, ?, ?, ?, 0)",
-                    (
-                        str(record["id"]),
-                        str(record["name"]),
-                        str(record["token_hash"]),
-                        json.dumps(record["scopes"], ensure_ascii=False, separators=(",", ":")),
-                        int(record["created_at"]),
-                    ),
-                )
+                token, record = self._new_record("AuroraFox local admin", ADMIN_SCOPES, prefix="af_admin")
+                atomic_write_text(self.bootstrap_path, token + "\n", mode=0o600)
+                try:
+                    self._insert_bootstrap_record(connection, record)
+                except Exception:
+                    self.bootstrap_path.unlink(missing_ok=True)
+                    raise
+            # DB is now committed and bootstrap_path already contains the raw
+            # matching token. A later mirror failure is recoverable on restart.
             self._write_legacy_mirror()
-            atomic_write_text(self.bootstrap_path, token + "\n", mode=0o600)
             return token
 
     def _new_record(self, name: str, scopes: list[str], prefix: str = "af_live") -> tuple[str, dict[str, Any]]:

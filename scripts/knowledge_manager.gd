@@ -7,6 +7,16 @@ var registry := KnowledgeSourceRegistry.new()
 var _scan_cache: Dictionary = {}
 var _scan_size := -1
 var _scan_mtime := -1
+var _recovery_status: Dictionary = {}
+
+func _init() -> void:
+	# KnowledgeStore streaming imports mutate source rows before the final registry
+	# commit. Recover any manifest-backed interrupted transaction before manager
+	# reads expose those files after an application restart.
+	_recovery_status = KnowledgeImportTransaction.new().recover_interrupted_transaction()
+
+func recovery_status() -> Dictionary:
+	return _recovery_status.duplicate(true)
 
 func sources() -> Array:
 	var scan := _scan_db()
@@ -41,6 +51,7 @@ func stats() -> Dictionary:
 		"source_aliases": int(registry_stats.get("aliases", 0)),
 		"source_revisions_total": int(registry_stats.get("revisions_total", 0)),
 		"registry": registry_stats,
+		"startup_recovery": _recovery_status.duplicate(true),
 		"streaming_index": true
 	}
 

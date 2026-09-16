@@ -97,6 +97,22 @@ def test_server_has_pre_parser_body_limit_and_secure_account_mail_boundary():
     assert 'status": 429' in public_auth_limits
 
 
+def test_persistence_capacity_policy_never_auto_prunes_private_or_offline_sync_state():
+    maintenance = read("api/persistence_maintenance.py")
+    assert '"sync_changes_auto_pruned": False' in maintenance
+    assert '"pending_learning_protected": True' in maintenance
+    assert '"conversation_data_auto_pruned": False' in maintenance
+    prune = maintenance.split("def prune_ephemeral", 1)[1]
+    assert "DELETE FROM account_tokens" in prune
+    assert "DELETE FROM refresh_tokens" in prune
+    assert "DELETE FROM auth_sessions" in prune
+    assert "DELETE FROM sync_entities" not in prune
+    assert "DELETE FROM sync_changes" not in prune
+    assert "DELETE FROM sync_conflicts" not in prune
+    assert "DELETE FROM conversations" not in prune
+    assert "DELETE FROM learning_events" not in prune
+
+
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
     sync = read("deploy/windows/sync_server_backup.ps1")
     installer = read("deploy/windows/install_server_backup.ps1")
@@ -152,6 +168,7 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
         "tests/test_api_server_hardening.py",
         "tests/test_api_request_limits.py",
         "tests/test_api_public_auth_limits.py",
+        "tests/test_api_persistence_maintenance.py",
         "tests/test_api_schema_migrations.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
@@ -186,12 +203,19 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     # while production account creation fails closed until the owner configures it.
     assert "AURORAFOX_API_MAX_BODY_BYTES=25165824" in install
     assert "AURORAFOX_PUBLIC_AUTH_RPM=20" in install
+    assert "AURORAFOX_DATABASE_WARN_BYTES=536870912" in install
+    assert "AURORAFOX_SYNC_CHANGES_WARN=1000000" in install
+    assert "AURORAFOX_SYNC_CONFLICTS_WARN=10000" in install
     assert "if [[ ! -e /etc/aurorafox/account-mail.env ]]" in install
     assert "chmod 0600 /etc/aurorafox/account-mail.env" in install
     assert "AURORAFOX_SMTP_PASSWORD=" in install
     assert "AURORAFOX_SMTP_SECURITY=starttls" in install
     assert "EnvironmentFile=-/etc/aurorafox/account-mail.env" in install
     assert "account_public_host='auth.aurorafox.ru'" in install
+    assert "python -m api.persistence_maintenance" in install
+    assert "python -m api.persistence_maintenance" in updater
+    assert "--prune-ephemeral" not in install
+    assert "--prune-ephemeral" not in updater
 
     # Production switching is data-aware: the current SQLite state must be
     # healthy, a verifiable snapshot must exist before checkout, and the new
