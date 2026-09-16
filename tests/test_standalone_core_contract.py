@@ -78,26 +78,27 @@ def test_core_improvement_deterministic_gates_are_authoritative() -> None:
     pipeline = read("scripts/core_improvement_pipeline.gd")
     benchmark = read("scripts/core_candidate_benchmark.gd")
 
-    # A candidate must pass source contracts, a healthy baseline, the same
-    # target-specific candidate benchmarks and an explicit no-regression
-    # comparison before the local model is even allowed to perform its final
-    # qualitative review. The review may reject an otherwise safe candidate,
-    # but it cannot override failed deterministic evidence.
-    assert "benchmark.source_contract(original, content, target)" in pipeline
-    assert "benchmark.commands_for_target(target)" in pipeline
-    assert "benchmark.summarize_runs(baseline_runs)" in pipeline
-    assert "benchmark.summarize_runs(candidate_runs)" in pipeline
-    assert "benchmark.compare_runtime(baseline_summary, candidate_summary)" in pipeline
+    # Validate the actual execution order, not the textual order of helper
+    # function definitions in the source file. run_candidate() must validate
+    # source contracts before workspace verification and only then call review.
+    run_candidate = pipeline.split("func run_candidate", 1)[1].split("func _propose", 1)[0]
+    assert run_candidate.index("_validate_candidate") < run_candidate.index("_verify_in_workspace") < run_candidate.index("await _comparative_review")
 
-    source_contract_pos = pipeline.index("benchmark.source_contract(original, content, target)")
-    baseline_pos = pipeline.index("benchmark.summarize_runs(baseline_runs)")
-    candidate_pos = pipeline.index("benchmark.summarize_runs(candidate_runs)")
-    comparison_pos = pipeline.index("benchmark.compare_runtime(baseline_summary, candidate_summary)")
-    review_call_pos = pipeline.index("await _comparative_review")
-    assert source_contract_pos < baseline_pos < candidate_pos < comparison_pos < review_call_pos
+    validation = pipeline.split("func _validate_candidate", 1)[1].split("func _verify_in_workspace", 1)[0]
+    assert "benchmark.source_contract(original, content, target)" in validation
 
-    assert 'return {"ok": false, "stage": "baseline_benchmark"' in pipeline
-    assert 'return {"ok": false, "stage": "candidate_benchmark"' in pipeline
+    verification = pipeline.split("func _verify_in_workspace", 1)[1].split("func _run_benchmark_commands", 1)[0]
+    assert "benchmark.commands_for_target(target)" in verification
+    assert "benchmark.summarize_runs(baseline_runs)" in verification
+    assert "benchmark.summarize_runs(candidate_runs)" in verification
+    assert "benchmark.compare_runtime(baseline_summary, candidate_summary)" in verification
+    baseline_pos = verification.index("benchmark.summarize_runs(baseline_runs)")
+    candidate_pos = verification.index("benchmark.summarize_runs(candidate_runs)")
+    comparison_pos = verification.index("benchmark.compare_runtime(baseline_summary, candidate_summary)")
+    assert baseline_pos < candidate_pos < comparison_pos
+
+    assert 'return {"ok": false, "stage": "baseline_benchmark"' in verification
+    assert 'return {"ok": false, "stage": "candidate_benchmark"' in verification
     assert '"benchmark_verified": true' in pipeline
     assert '"promotion": "signed_update"' in pipeline
 
