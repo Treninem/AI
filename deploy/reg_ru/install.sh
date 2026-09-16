@@ -154,8 +154,10 @@ PYTHONPATH=/opt/aurorafox/repository /opt/aurorafox/venv/bin/python -m pytest -q
   /opt/aurorafox/repository/tests/test_api_account_network.py \
   /opt/aurorafox/repository/tests/test_api_account_restore.py \
   /opt/aurorafox/repository/tests/test_api_account_mailer.py \
+  /opt/aurorafox/repository/tests/test_api_account_web.py \
   /opt/aurorafox/repository/tests/test_api_server_hardening.py \
   /opt/aurorafox/repository/tests/test_api_request_limits.py \
+  /opt/aurorafox/repository/tests/test_api_public_auth_limits.py \
   /opt/aurorafox/repository/tests/test_api_schema_migrations.py \
   /opt/aurorafox/repository/tests/test_api_privacy_contract.py \
   /opt/aurorafox/repository/tests/test_api_runtime_resilience.py \
@@ -169,6 +171,7 @@ AURORAFOX_USER_DIR=/var/lib/aurorafox
 AURORAFOX_API_HOST=127.0.0.1
 AURORAFOX_API_PORT=8768
 AURORAFOX_API_RPM=60
+AURORAFOX_PUBLIC_AUTH_RPM=20
 AURORAFOX_API_MAX_BODY_BYTES=25165824
 AURORAFOX_API_LOG_LEVEL=warning
 AURORAFOX_DEPLOYMENT=reg-ru
