@@ -48,6 +48,17 @@ def test_tool_registry_uses_local_core_planning_and_protected_primitives():
     assert 'COMPUTER_TIMEOUT_MAX := 320.0' in tools
 
 
+def test_computer_timeout_budgets_cover_bounded_service_execution():
+    client = _text("scripts/computer_client.gd")
+    tools = _text("scripts/tool_registry.gd")
+    assert 'const SCREEN_TIMEOUT := 20.0' in client
+    assert 'const ACTION_TIMEOUT := 32.0' in client
+    assert 'const COMPUTER_ACTION_TIMEOUT := 32.0' in tools
+    assert 'const COMPUTER_SCREEN_TIMEOUT := 20.0' in tools
+    assert '_computer_json("/action", HTTPClient.METHOD_POST, payload, COMPUTER_ACTION_TIMEOUT)' in tools
+    assert '_computer_json("/screen", HTTPClient.METHOD_GET, {}, COMPUTER_SCREEN_TIMEOUT)' in tools
+
+
 def test_agent_cannot_bypass_sandbox_with_public_arbitrary_process_tool():
     tools = _text("scripts/tool_registry.gd")
     assert 'register_tool("run_process"' not in tools
@@ -97,8 +108,10 @@ def test_work_guard_owns_computer_action_id_and_stops_uncertain_unsafe_results()
     assert 'decision["args_patch"] = {"action_id": action_id}' in work
     assert 'unsafe_action_uncertain' in work
     assert 'func _tool_result_uncertain' in work
+    assert 'str(result.get("retry_safety", "")).strip_edges().to_lower() == "unsafe"' in work
     assert '"transport_failure"' in work
     assert '"service_unavailable"' in work
+    assert '"malformed_worker_response"' in work
     assert 'http >= 500 or http in [408, 429]' in work
 
 
