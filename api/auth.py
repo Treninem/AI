@@ -121,12 +121,22 @@ class KeyStore:
 
     def ensure_bootstrap_key(self) -> str | None:
         with self._write_lock:
-            with self.database.connection() as connection:
-                active = int(connection.execute("SELECT COUNT(*) FROM api_keys WHERE revoked=0").fetchone()[0])
-            if active:
-                return None
             token, record = self._new_record("AuroraFox local admin", ADMIN_SCOPES, prefix="af_admin")
-            self._insert_record(record)
+            with self.database.connection(write=True) as connection:
+                active = int(connection.execute("SELECT COUNT(*) FROM api_keys WHERE revoked=0").fetchone()[0])
+                if active:
+                    return None
+                connection.execute(
+                    "INSERT INTO api_keys(id, name, token_hash, scopes_json, created_at, revoked) "
+                    "VALUES(?, ?, ?, ?, ?, 0)",
+                    (
+                        str(record["id"]),
+                        str(record["name"]),
+                        str(record["token_hash"]),
+                        json.dumps(record["scopes"], ensure_ascii=False, separators=(",", ":")),
+                        int(record["created_at"]),
+                    ),
+                )
             self._write_legacy_mirror()
             atomic_write_text(self.bootstrap_path, token + "\n", mode=0o600)
             return token
@@ -187,15 +197,15 @@ class KeyStore:
             return None
         digest = self._hash(token)
         with self.database.connection() as connection:
-            rows = connection.execute(
+            row = connection.execute(
                 "SELECT id, name, token_hash, scopes_json, created_at, revoked "
-                "FROM api_keys WHERE revoked=0"
-            ).fetchall()
-        for row in rows:
-            stored = str(row["token_hash"])
-            if stored and hmac.compare_digest(digest, stored):
-                return self._row_record(row)
-        return None
+                "FROM api_keys WHERE token_hash=? AND revoked=0 LIMIT 1",
+                (digest,),
+            ).fetchone()
+        if row is None:
+            return None
+        stored = str(row["token_hash"])
+        return self._row_record(row) if hmac.compare_digest(digest, stored) else None
 
 
 def allows(record: dict[str, Any], required: str) -> bool:
