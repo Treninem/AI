@@ -15,6 +15,7 @@ def test_voice_config_has_required_local_paths():
     cfg = load("voice_config.json")
     assert cfg["backend"] in {"auto", "silero", "xtts"}
     assert cfg["language"] == "ru"
+    assert cfg["silero"]["speaker"] == "kseniya"
     assert set(cfg["wake"]["words"]) >= {"fox", "фокс", "лиса"}
     assert float(cfg["mechanical_amount"]) == 0.0
     assert 0.0 <= float(cfg["emotionality"]) <= 0.65
