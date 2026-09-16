@@ -8,10 +8,24 @@ const DB_BACKUP := "user://knowledge/.knowledge_source.txn.jsonl"
 const STRUCTURED_BACKUP := "user://knowledge/.structured_source.txn.jsonl"
 const REGISTRY_BACKUP := "user://knowledge/.sources.json.txn"
 
+# Transaction journals use fixed user:// paths. Multiple imports in one process
+# therefore cannot safely mutate them concurrently. Serialize the full
+# prepare/snapshot/import/register/cleanup lifecycle instead of allowing backup
+# files and registry writes to race. Callers may still launch imports from
+# different threads; they are explicitly queued here.
+static var _transaction_mutex: Mutex = Mutex.new()
+
 var registry := KnowledgeSourceRegistry.new()
 var large_json_importer := LargeJsonKnowledgeImporter.new()
 
 func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {}) -> Dictionary:
+	_transaction_mutex.lock()
+	var result := _import_file_locked(store, path, metadata)
+	_transaction_mutex.unlock()
+	result["transaction_serialized"] = true
+	return result
+
+func _import_file_locked(store: KnowledgeStore, path: String, metadata: Dictionary = {}) -> Dictionary:
 	var prepared := _prepare_file(path, metadata)
 	if not bool(prepared.get("ok", false)) or bool(prepared.get("skipped", false)):
 		return prepared
@@ -27,6 +41,13 @@ func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {})
 	return _finish_import(path, result, prepared.get("inspection", {}), meta, snapshot)
 
 func import_extracted_file(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
+	_transaction_mutex.lock()
+	var result := _import_extracted_file_locked(store, path, text, metadata)
+	_transaction_mutex.unlock()
+	result["transaction_serialized"] = true
+	return result
+
+func _import_extracted_file_locked(store: KnowledgeStore, path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
 	var prepared := _prepare_file(path, metadata)
 	if not bool(prepared.get("ok", false)) or bool(prepared.get("skipped", false)):
 		return prepared
@@ -207,10 +228,14 @@ func _restore_registry(existed: bool) -> bool:
 		if DirAccess.remove_absolute(target_abs) != OK:
 			return false
 	if not existed:
+		KnowledgeSourceRegistry.invalidate_runtime_cache()
 		return true
 	if not FileAccess.file_exists(REGISTRY_BACKUP):
 		return false
-	return DirAccess.rename_absolute(backup_abs, target_abs) == OK
+	var restored := DirAccess.rename_absolute(backup_abs, target_abs) == OK
+	if restored:
+		KnowledgeSourceRegistry.invalidate_runtime_cache()
+	return restored
 
 func _cleanup_backups() -> void:
 	for path in [DB_BACKUP, STRUCTURED_BACKUP, REGISTRY_BACKUP, DB_PATH + ".rollback.tmp", STRUCTURED_PATH + ".rollback.tmp"]:
