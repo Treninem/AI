@@ -20,46 +20,48 @@ DEFAULT_MIN_FREE_BYTES = 256 * 1024 * 1024
 MAINTENANCE_META_KEY = "persistence_maintenance.last_prune_epoch"
 
 
+def _env_int(name: str, default: int, *, minimum: int = 1) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError:
+        value = default
+    return max(minimum, value)
+
+
 class PersistenceMaintenance:
     """Capacity visibility plus conservative ephemeral-row cleanup.
 
-    This class never deletes conversations, account/guest principals, current
-    sync entities, unresolved conflicts, pending learning events, or other user
-    knowledge. Sync change history is intentionally not compacted until a full
-    snapshot/cursor-reset protocol exists for long-offline devices.
+    Automatic retention is deliberately limited to terminal authentication rows.
+    Conversation data, account/guest principals, device records, learning events,
+    sync entities, sync change history and all sync conflicts are preserved. Sync
+    compaction needs an explicit snapshot/cursor-reset protocol first so a device
+    that has been offline for a long time can never silently lose its history.
     """
 
     def __init__(self, root: Path):
         self.root = root.resolve()
         self.database = AuroraDatabase(self.root / "aurorafox.sqlite3")
-        self.warn_database_bytes = max(
-            1,
-            int(os.getenv("AURORAFOX_DATABASE_WARN_BYTES", str(DEFAULT_WARN_DATABASE_BYTES))),
+        self.warn_database_bytes = _env_int(
+            "AURORAFOX_DATABASE_WARN_BYTES", DEFAULT_WARN_DATABASE_BYTES
         )
-        self.warn_sync_changes = max(
-            1,
-            int(os.getenv("AURORAFOX_SYNC_CHANGES_WARN", str(DEFAULT_WARN_SYNC_CHANGES))),
+        self.warn_sync_changes = _env_int(
+            "AURORAFOX_SYNC_CHANGES_WARN", DEFAULT_WARN_SYNC_CHANGES
         )
-        self.warn_open_conflicts = max(
-            1,
-            int(os.getenv("AURORAFOX_SYNC_CONFLICTS_WARN", str(DEFAULT_WARN_OPEN_CONFLICTS))),
+        self.warn_open_conflicts = _env_int(
+            "AURORAFOX_SYNC_CONFLICTS_WARN", DEFAULT_WARN_OPEN_CONFLICTS
         )
-        self.min_free_bytes = max(
-            1,
-            int(os.getenv("AURORAFOX_STORAGE_MIN_FREE_BYTES", str(DEFAULT_MIN_FREE_BYTES))),
+        self.min_free_bytes = _env_int(
+            "AURORAFOX_STORAGE_MIN_FREE_BYTES", DEFAULT_MIN_FREE_BYTES
         )
-        self.maintenance_interval_seconds = max(
-            60,
-            int(
-                os.getenv(
-                    "AURORAFOX_STORAGE_MAINTENANCE_INTERVAL_SECONDS",
-                    str(DEFAULT_MAINTENANCE_INTERVAL_SECONDS),
-                )
-            ),
+        self.maintenance_interval_seconds = _env_int(
+            "AURORAFOX_STORAGE_MAINTENANCE_INTERVAL_SECONDS",
+            DEFAULT_MAINTENANCE_INTERVAL_SECONDS,
+            minimum=60,
         )
-        self.retention_seconds = max(
-            0,
-            int(os.getenv("AURORAFOX_STORAGE_RETENTION_SECONDS", str(DEFAULT_RETENTION_SECONDS))),
+        self.retention_seconds = _env_int(
+            "AURORAFOX_STORAGE_RETENTION_SECONDS",
+            DEFAULT_RETENTION_SECONDS,
+            minimum=0,
         )
 
     @staticmethod
@@ -109,6 +111,7 @@ class PersistenceMaintenance:
         try:
             disk_free_bytes = int(shutil.disk_usage(self.root).free)
         except OSError:
+            # Capacity inspection is fail-closed when the filesystem cannot be inspected.
             disk_free_bytes = 0
         warnings: list[str] = []
         if sizes["database_bytes"] >= self.warn_database_bytes:
@@ -138,8 +141,9 @@ class PersistenceMaintenance:
                 "pending_learning_protected": True,
                 "sync_entities_protected": True,
                 "sync_changes_auto_pruned": False,
+                "sync_conflicts_auto_pruned": False,
                 "unresolved_conflicts_protected": True,
-                "resolved_conflicts_prunable": True,
+                "resolved_conflicts_protected": True,
                 "conversation_data_auto_pruned": False,
                 "ephemeral_auth_rows_prunable": True,
                 "refresh_replay_sentinel_kept_until_expiry": True,
@@ -173,10 +177,6 @@ class PersistenceMaintenance:
                 ")",
                 (cutoff, cutoff, now),
             )
-            conflict_cursor = connection.execute(
-                "DELETE FROM sync_conflicts WHERE resolved_at IS NOT NULL AND resolved_at < ?",
-                (cutoff,),
-            )
         return {
             "ok": True,
             "retention_seconds": retention,
@@ -184,7 +184,6 @@ class PersistenceMaintenance:
                 "account_tokens": max(0, int(account_cursor.rowcount)),
                 "refresh_tokens": max(0, int(refresh_cursor.rowcount)),
                 "auth_sessions": max(0, int(session_cursor.rowcount)),
-                "resolved_sync_conflicts": max(0, int(conflict_cursor.rowcount)),
             },
             "protected": [
                 "accounts",
@@ -196,6 +195,7 @@ class PersistenceMaintenance:
                 "sync_entities",
                 "sync_changes",
                 "sync_conflicts_unresolved",
+                "sync_conflicts_resolved",
             ],
         }
 
