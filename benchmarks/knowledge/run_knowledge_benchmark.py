@@ -161,61 +161,6 @@ def parse_result(stdout: str) -> dict[str, Any] | None:
     return None
 
 
-def prepare_isolated_project(
-    godot: str,
-    repo: Path,
-    user_root: Path,
-    env: dict[str, str],
-    timeout_seconds: int,
-    log_dir: Path,
-) -> dict[str, Any] | None:
-    """Populate Godot class-name/import caches inside the isolated Windows profile.
-
-    Windows Godot 4.7.1 can fail to resolve project ``class_name`` symbols when
-    APPDATA/LOCALAPPDATA are moved after the editor import step.  Running one
-    bounded editor bootstrap in the same isolated environment keeps the safety
-    boundary while making the benchmark equivalent to a real prepared project.
-    The marker prevents repeated bootstrap work for restart/follow-up cases that
-    intentionally share one user root.
-    """
-    if sys.platform != "win32":
-        return None
-    marker = user_root / ".godot-isolated-project-prepared"
-    if marker.exists():
-        return None
-    stdout_path = log_dir / f"isolated-project-{user_root.name}.stdout.log"
-    stderr_path = log_dir / f"isolated-project-{user_root.name}.stderr.log"
-    command = [godot, "--headless", "--editor", "--path", str(repo), "--quit"]
-    bootstrap_timeout = min(max(30, timeout_seconds), 120)
-    try:
-        with stdout_path.open("wb") as stdout_file, stderr_path.open("wb") as stderr_file:
-            completed = subprocess.run(
-                command,
-                cwd=repo,
-                env=env,
-                stdout=stdout_file,
-                stderr=stderr_file,
-                timeout=bootstrap_timeout,
-                check=False,
-            )
-    except subprocess.TimeoutExpired:
-        return {
-            "ok": False,
-            "error": f"isolated Windows Godot project bootstrap timed out after {bootstrap_timeout}s",
-            "bootstrap_stdout_log": str(stdout_path),
-            "bootstrap_stderr_log": str(stderr_path),
-        }
-    if completed.returncode != 0:
-        return {
-            "ok": False,
-            "error": f"isolated Windows Godot project bootstrap failed with {completed.returncode}",
-            "bootstrap_stdout_log": str(stdout_path),
-            "bootstrap_stderr_log": str(stderr_path),
-        }
-    marker.write_text("prepared\n", encoding="utf-8")
-    return None
-
-
 def run_godot_case(
     godot: str,
     repo: Path,
@@ -233,19 +178,6 @@ def run_godot_case(
         env.update(extra_env)
     stdout_path = log_dir / f"{tag}.stdout.log"
     stderr_path = log_dir / f"{tag}.stderr.log"
-    bootstrap_error = prepare_isolated_project(godot, repo, user_root, env, timeout_seconds, log_dir)
-    if bootstrap_error is not None:
-        bootstrap_error.update(
-            {
-                "runner_return_code": 1,
-                "runner_wall_ms": 0.0,
-                "peak_rss_bytes": 0,
-                "timed_out": "timed out" in str(bootstrap_error.get("error", "")),
-                "stdout_log": str(stdout_path),
-                "stderr_log": str(stderr_path),
-            }
-        )
-        return bootstrap_error
     command = [godot, "--headless", "--path", str(repo), "--script", "benchmarks/knowledge/knowledge_stress_benchmark.gd"]
     peak_rss = 0
     timed_out = False
