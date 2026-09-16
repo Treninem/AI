@@ -937,3 +937,42 @@ BLOCKERS:
 
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
+
+## 38. Platform / updater / integration takeover — 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-PLATFORM-INTEGRATION`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**
+- Started from fresh `main`: `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`
+- Branch: `chat-2026-09-17-platform-integration-v2`
+- Topology mapping: этот exact CLAIM является активной реализацией объединённой canonical lane из section 37 `CHAT-2026-09-17-PLATFORM-UPDATER-INTEGRATION`; отдельное дублирующее ownership не создаётся.
+- Наследует: `CHAT-2026-09-16-UPDATER-VERSIONING` и `CHAT-2026-09-16-INTEGRATION-GATE`.
+- Исторические heads/candidates после reconcile-аудита:
+  - updater PR #70 merge `99b2c144dbeb675caafb527ad528f5db18a32b50` полностью landed в current `main` и не требует отдельного merge;
+  - `release/v1.4-integration` = `99b2c144dbeb675caafb527ad528f5db18a32b50`, stale и не является candidate;
+  - closed PR #32 / `chat-2026-09-16-integration-gate` = `c08aa335bce30978199ed3ea2727e64fa511095e`, diverged от current `main`, не переносится целиком;
+  - draft PR #69 / `coord/work-ui-integration-20260916` = `218a5a83d1e7d0a90ad612415e6aae02fad28045`, diverged stale integration probe, не является и не будет использоваться как final merge candidate.
+- Ownership: Windows export/package/installer/ZIP/runtime/Core assets/hashes; Android APK/export/plugin/native package/signing continuity/versionCode/package hash; updater/signature/trust/repair/latest/release assets/version discipline; release-engineering workflows/tests; независимый same-SHA integration/regression/release-readiness gate.
+- Cross-lane rule: UI/Core/Voice/Knowledge/Work/Computer/Server production defects маршрутизируются их новым takeover CLAIM с exact SHA/run/job/test evidence; production-файлы другой активной lane молча не исправляются.
+- Intended bump: **MINOR** из-за унаследованного нового signed update floor не ниже `1.4.0.0`; canonical version, Android `versionCode` и final release metadata не меняются до явного release-stage решения координатора.
+
+PROGRESS_COMPLETE: 12%
+PROGRESS_REMAINING: 88%
+
+DONE:
+- Получен свежий `main`, полностью перечитаны `AGENTS.md` и canonical master log.
+- Сверены наследуемые updater/integration branches и PR heads с current main; updater PR #70 уже landed, PR #32 и PR #69 divergent/stale.
+- Создана fresh takeover branch от exact current main; stale branch от прежнего HEAD не используется.
+- Начат аудит version identity, updater trust/release contract, workflow inventory и опубликованных release assets.
+
+REMAINING:
+- Закончить exact workflow run/job/artifact audit и stale-probe cleanup.
+- Проверить fast/version/package contracts на exact takeover SHA.
+- Исправить только release-engineering-owned дефекты и перепроверить их CI.
+- Получить Windows package/install evidence, Android APK/emulator evidence, updater/signing evidence и один same-SHA integration candidate package.
+
+BLOCKERS:
+- Owner-controlled private production signing key и physical Windows/Android device proof остаются внешними boundaries; полный список product blockers ещё уточняется по current exact CI.
+
+NEXT:
+- Закрыть PR #69 как stale superseded probe с evidence; затем проверить current Windows/Android/updater/integration workflows и последние run/job/artifact результаты, после чего запускать/чинить только необходимые fast gates без duplicate CI waves.
