@@ -32,7 +32,8 @@ func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRe
 # execution_guard is optional and keeps every existing caller source-compatible.
 # Work supplies it to stop before the next model/tool action when the user
 # cancels, pauses, or activates master stop. The guard never grants authority;
-# it can only deny continued execution.
+# it can only deny continued execution or attach execution metadata to a tool
+# call (for example a stable idempotency action_id chosen by Work).
 func run_task(task: String, conversation_context: Array = [], execution_guard: Callable = Callable()) -> String:
 	var guard_reason := _execution_guard_reason(execution_guard, "before_task", {})
 	if not guard_reason.is_empty():
@@ -103,11 +104,11 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 			break
 		var tool_name := str(action.get("tool", ""))
 		var args: Dictionary = action.get("args", {})
-		guard_reason = _execution_guard_reason(execution_guard, "before_tool", {"step": step + 1, "tool": tool_name, "args": _safe_args(args)})
+		guard_reason = _execution_guard_reason(execution_guard, "before_tool", {"step": step + 1, "tool": tool_name, "args": _safe_args(args)}, args)
 		if not guard_reason.is_empty():
 			return EXECUTION_CONTROL_PREFIX + guard_reason
 		var tool_result = await tools.call_tool(tool_name, args)
-		guard_reason = _execution_guard_reason(execution_guard, "after_tool", {"step": step + 1, "tool": tool_name})
+		guard_reason = _execution_guard_reason(execution_guard, "after_tool", {"step": step + 1, "tool": tool_name, "result": _guard_result(tool_result)})
 		if not guard_reason.is_empty():
 			return EXECUTION_CONTROL_PREFIX + guard_reason
 		var trace_item := {"step":step + 1,"tool":tool_name,"args":_safe_args(args),"result":_compact_result(tool_result)}
@@ -183,7 +184,7 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 			memory.remember("improvement_ideas", JSON.stringify(ideas), "dream_cycle", 0.62, 0.65)
 	return final_answer
 
-func _execution_guard_reason(execution_guard: Callable, stage: String, details: Dictionary) -> String:
+func _execution_guard_reason(execution_guard: Callable, stage: String, details: Dictionary, tool_args: Dictionary = {}) -> String:
 	if not execution_guard.is_valid():
 		return ""
 	var decision = execution_guard.call(stage, details)
@@ -191,10 +192,28 @@ func _execution_guard_reason(execution_guard: Callable, stage: String, details: 
 		return "" if bool(decision) else stage
 	if decision is Dictionary:
 		if bool(decision.get("allowed", true)):
+			var patch = decision.get("args_patch", {})
+			if patch is Dictionary:
+				for key in patch.keys():
+					tool_args[key] = patch[key]
 			return ""
 		var reason := str(decision.get("reason", stage)).strip_edges()
 		return reason if not reason.is_empty() else stage
 	return ""
+
+func _guard_result(value: Variant) -> Dictionary:
+	if not value is Dictionary:
+		return {"ok": false, "error": "non_dictionary_tool_result", "retryable": false}
+	var source: Dictionary = value
+	var result := {
+		"ok": bool(source.get("ok", false)),
+		"error": str(source.get("error", "")),
+		"retryable": bool(source.get("retryable", false)),
+	}
+	for key in ["http", "retry_safety", "deduplicated", "verified", "requires_user_action"]:
+		if source.has(key):
+			result[key] = source[key]
+	return result
 
 func _append_conversation_context(messages: Array, conversation_context: Array) -> void:
 	var source: Array = conversation_context
