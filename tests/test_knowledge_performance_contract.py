@@ -7,6 +7,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 RUNNER_PATH = ROOT / "benchmarks" / "knowledge" / "run_knowledge_benchmark.py"
 HARNESS_PATH = ROOT / "benchmarks" / "knowledge" / "knowledge_stress_benchmark.gd"
+WORKFLOW_PATH = ROOT / ".github" / "workflows" / "knowledge-performance.yml"
+ALIAS_PROBE_PATH = ROOT / "benchmarks" / "knowledge" / "dedupe_alias_removal_probe.gd"
 
 
 def load_runner():
@@ -41,6 +43,16 @@ class KnowledgePerformanceContractTests(unittest.TestCase):
         self.assertNotIn("HTTPRequest.new()", text)
         self.assertNotIn("http://", text.lower())
         self.assertNotIn("https://", text.lower())
+
+    def test_alias_removal_safety_probe_runs_on_linux_and_windows(self) -> None:
+        workflow = WORKFLOW_PATH.read_text(encoding="utf-8")
+        probe = ALIAS_PROBE_PATH.read_text(encoding="utf-8")
+        self.assertGreaterEqual(workflow.count("dedupe_alias_removal_probe.gd"), 2)
+        self.assertIn("dedupe-alias-removal.json", workflow)
+        self.assertIn("dedupe-alias-removal-windows.json", workflow)
+        self.assertIn("canonical_survived", probe)
+        self.assertIn("post_remove_searchable", probe)
+        self.assertIn("alias_detached", probe)
 
     def test_report_contract_contains_scale_memory_restart_and_correctness(self) -> None:
         text = RUNNER_PATH.read_text(encoding="utf-8") + "\n" + HARNESS_PATH.read_text(encoding="utf-8")
