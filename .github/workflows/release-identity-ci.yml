@@ -21,6 +21,7 @@ on:
       - 'tests/test_release_identity_version_policy.py'
       - 'tests/test_update_backward_compat.py'
       - 'tests/update_smoke.gd'
+      - 'tests/version_policy_test.ps1'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
@@ -45,6 +46,7 @@ on:
       - 'tests/test_release_identity_version_policy.py'
       - 'tests/test_update_backward_compat.py'
       - 'tests/update_smoke.gd'
+      - 'tests/version_policy_test.ps1'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
       - '.github/workflows/release.yml'
@@ -86,3 +88,20 @@ jobs:
           assert re.fullmatch(r'\d+\.\d+\.\d+\.\d+', numeric)
           print('AURORA_RELEASE_VERSION_POLICY_OK', numeric)
           PY
+
+  version-execution:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse version scripts
+        shell: powershell
+        run: |
+          foreach ($script in @('.\build\set_version.ps1','.\tests\version_policy_test.ps1','.\tests\version_sync_test.ps1')) {
+            $tokens=$null; $errors=$null
+            [System.Management.Automation.Language.Parser]::ParseFile((Resolve-Path $script),[ref]$tokens,[ref]$errors) | Out-Null
+            if ($errors.Count -gt 0) { $errors | ForEach-Object { Write-Error "$script :: $($_.Message)" }; throw "$script parse failed" }
+          }
+      - name: Execute hierarchical version policy test
+        shell: powershell
+        run: .\tests\version_policy_test.ps1
