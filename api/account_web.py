@@ -39,11 +39,48 @@ main{{border:1px solid currentColor;border-radius:18px;padding:24px}}label{{disp
     return HTMLResponse(document, status_code=status_code, headers=SECURITY_HEADERS)
 
 
+async def _form_fields(request: Request) -> dict[str, list[str]] | None:
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/x-www-form-urlencoded":
+        return None
+    raw = await request.body()
+    try:
+        return parse_qs(raw.decode("utf-8"), keep_blank_values=True, strict_parsing=False)
+    except UnicodeDecodeError:
+        return {}
+
+
 def create_account_web_router(accounts: AccountStore) -> APIRouter:
     router = APIRouter(include_in_schema=False)
 
     @router.get("/verify-email", response_class=HTMLResponse)
     def verify_email_page(token: str = Query(min_length=16, max_length=512)) -> HTMLResponse:
+        # GET is deliberately non-mutating. Mail security scanners and link preview
+        # bots commonly prefetch URLs; consuming a verification credential on GET
+        # could otherwise confirm an address without a deliberate user action.
+        escaped = html.escape(token, quote=True)
+        return _page(
+            "AuroraFox — подтверждение email",
+            f"""<h1>Подтвердите email</h1>
+<p>Нажмите кнопку, чтобы подтвердить адрес для аккаунта AuroraFox.</p>
+<form method="post" action="/verify-email" autocomplete="off">
+<input type="hidden" name="token" value="{escaped}">
+<button type="submit">Подтвердить email</button>
+</form>""",
+        )
+
+    @router.post("/verify-email", response_class=HTMLResponse)
+    async def verify_email_submit(request: Request) -> HTMLResponse:
+        fields = await _form_fields(request)
+        if fields is None:
+            return _page("AuroraFox — ошибка", "<h1>Неверный формат запроса</h1>", status_code=415)
+        token = str((fields.get("token") or [""])[0])
+        if not token or len(token) > 512:
+            return _page(
+                "AuroraFox — подтверждение email",
+                "<h1>Ссылка недействительна</h1><p>Ссылка истекла, уже использована или была отозвана.</p>",
+                status_code=400,
+            )
         try:
             accounts.verify_email(token)
         except AuthenticationError:
@@ -74,14 +111,9 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
 
     @router.post("/reset-password", response_class=HTMLResponse)
     async def reset_password_submit(request: Request) -> HTMLResponse:
-        content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
-        if content_type != "application/x-www-form-urlencoded":
+        fields = await _form_fields(request)
+        if fields is None:
             return _page("AuroraFox — ошибка", "<h1>Неверный формат запроса</h1>", status_code=415)
-        raw = await request.body()
-        try:
-            fields = parse_qs(raw.decode("utf-8"), keep_blank_values=True, strict_parsing=False)
-        except UnicodeDecodeError:
-            return _page("AuroraFox — ошибка", "<h1>Неверный формат запроса</h1>", status_code=400)
         token = str((fields.get("token") or [""])[0])
         password = str((fields.get("new_password") or [""])[0])
         confirmation = str((fields.get("confirm_password") or [""])[0])
