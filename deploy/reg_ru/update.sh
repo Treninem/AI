@@ -5,8 +5,8 @@ readonly repository='/opt/aurorafox/repository'
 readonly environment_file='/etc/aurorafox/aurorafox.env'
 readonly build_environment='/etc/aurorafox/build.env'
 readonly database_path='/var/lib/aurorafox/api/aurorafox.sqlite3'
-readonly backup_archive='/srv/aurorafox-sftp/exports/latest.zip'
-readonly backup_hash='/srv/aurorafox-sftp/exports/latest.sha256'
+readonly backup_archive='/srv/aurorafox-backup/exports/latest.zip'
+readonly backup_hash='/srv/aurorafox-backup/exports/latest.sha256'
 
 if [[ "${EUID}" -ne 0 ]]; then
   echo 'AuroraFox updater must run as root.' >&2
