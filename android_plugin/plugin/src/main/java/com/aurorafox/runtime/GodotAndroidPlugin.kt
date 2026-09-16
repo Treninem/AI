@@ -40,6 +40,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val freeStorage = if (filesDir != null) StatFs(filesDir.absolutePath).availableBytes else 0L
         val tts = try { voice.isTtsAvailable() } catch (_: Throwable) { false }
         val sherpaStt = try { voice.isSttAvailable() } catch (_: Throwable) { false }
+        val ocrHealth = try {
+            val ctx = activity?.applicationContext
+            if (ctx != null) AndroidOcrRuntime(ctx).health() else JSONObject().put("available", false)
+        } catch (t: Throwable) {
+            JSONObject().put("available", false).put("error", t.message ?: t.javaClass.simpleName)
+        }
         return JSONObject(
             mapOf(
                 "embedded_runtime" to true,
@@ -52,6 +58,8 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 "sherpa_stt" to sherpaStt,
                 "local_tts" to tts,
                 "file_intelligence" to true,
+                "local_ocr" to ocrHealth.optBoolean("available", false),
+                "local_ocr_health" to ocrHealth,
                 "wasm" to (loaded && native.hasWasm()),
                 "app_update_install" to true,
                 "architecture" to Build.SUPPORTED_ABIS.joinToString(","),
