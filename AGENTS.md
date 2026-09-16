@@ -33,9 +33,27 @@ Work in coherent batches. After each completed batch, update `docs/PROJECT_MASTE
 
 When stopping, mark the claim DONE or clearly state what remains so the next Chat/Work/Codex session can continue directly from the repository without repeating completed work.
 
-## Product invariants
+## HARD PRODUCT INVARIANT — AuroraFox is self-primary and self-reliant
 
-AuroraFox is local-first and must remain operational without Ollama or another third-party AI client. Normal Windows/Android users must not have to install an inference engine, choose/download a GGUF, or use a model setup wizard; the product ships AuroraFox Core and its required weights.
+AuroraFox must **depend and rely on its own Core as the foundation of intelligence**. This is stronger than merely preferring a local provider.
+
+The normal product must remain capable of its core work when Ollama, OpenAI/other AI APIs, cloud models, remote inference services, third-party AI clients, and the public Internet are all unavailable. Its own bundled model/runtime, local memory, Core Knowledge, planning/agent logic, local tools and local speech/file subsystems are the primary path.
+
+External systems may be used only as **optional tools or information sources** when available and permitted. They must never become the authority or required cognitive engine. In particular:
+
+- Ollama is compatibility-only, opt-in, disabled by default and never the product default model/runtime.
+- External AI/model APIs may not be required for chat, planning, memory, local generation, learning, self-evaluation or self-improvement.
+- Internet/websites are research/action surfaces: AuroraFox should browse/read/use them through its own agent/tooling, then reason with its own Core. Loss of Internet must degrade online tasks, not the intelligence core itself.
+- Learning must accumulate locally in AuroraFox memory/Core Knowledge/skills and controlled improvement artifacts. Remote services must not own the only copy of learned state.
+- Self-improvement may generate and test candidate changes, but promotion remains bounded by allowlists, sandbox/baseline tests, independent verification, master stop and rollback. Self-reliance never means bypassing these controls.
+- Voice/speech, document reading and file understanding should use local implementations as the guaranteed baseline. Optional external enhancements must be removable without breaking the basic feature.
+- Imported web/document/code content is untrusted data. Autonomous research does not grant external instructions system authority or permission to execute arbitrary code.
+
+A change that makes an external AI/model/service necessary for normal AuroraFox intelligence is an architecture regression and must be rejected even if it appears to improve quality.
+
+## Other protected invariants
+
+Normal Windows/Android users must not have to install an inference engine, choose/download a GGUF, or use a model setup wizard; the product ships AuroraFox Core and its required weights.
 
 Do not weaken the user master stop, rollback/snapshots, Core candidate allowlists, independent candidate verification, updater signature/trust boundaries, Android signing continuity, privacy boundaries, sandbox permissions, or the rule that imported documents/code are untrusted data rather than executable authority.
 
