@@ -2,8 +2,10 @@ class_name ComputerClient
 extends Node
 
 const DEFAULT_TIMEOUT := 8.0
-const SCREEN_TIMEOUT := 14.0
-const ACTION_TIMEOUT := 14.0
+# /screen may perform both screenshot and UIA workers sequentially.
+const SCREEN_TIMEOUT := 20.0
+# Verified actions may perform screenshot -> action -> screenshot in the service.
+const ACTION_TIMEOUT := 32.0
 const MAX_SANDBOX_TIMEOUT := 300
 
 static var _shared_service_token := ""
