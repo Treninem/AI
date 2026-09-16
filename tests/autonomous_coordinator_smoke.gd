@@ -1,5 +1,9 @@
 extends SceneTree
 
+const STATE_PATH := "user://agent/autonomy_state.json"
+const STATE_TEMP_PATH := STATE_PATH + ".tmp"
+const STATE_BACKUP_PATH := STATE_PATH + ".bak"
+
 func _dummy(_args: Dictionary) -> Dictionary:
 	return {"ok": true}
 
@@ -88,6 +92,14 @@ func _init() -> void:
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
 		quit(11)
 		return
+
+	var durability_error := _test_state_durability(coordinator)
+	if not durability_error.is_empty():
+		push_error(durability_error)
+		coordinator.free()
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(15)
+		return
 	coordinator.free()
 
 	var source := FileAccess.get_file_as_string("res://agent/autonomous_coordinator.gd")
@@ -101,6 +113,16 @@ func _init() -> void:
 		_cleanup([tools, agent_core, improver, extensions, memory, ai])
 		quit(13)
 		return
+	if not source.contains("STATE_TEMP_PATH") or not source.contains("STATE_BACKUP_PATH") or not source.contains("_repair_interrupted_state_save"):
+		push_error("Coordinator durable state replacement/recovery contract is missing")
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(16)
+		return
+	if not source.contains("_state_recovery_blocked") or not source.contains('"stage": "state_recovery"'):
+		push_error("Coordinator does not fail closed when autonomy state cannot be recovered")
+		_cleanup([tools, agent_core, improver, extensions, memory, ai])
+		quit(17)
+		return
 
 	var main_scene_text := FileAccess.get_file_as_string("res://main.tscn")
 	if not main_scene_text.contains("AutonomousCoordinator"):
@@ -110,8 +132,192 @@ func _init() -> void:
 		return
 
 	_cleanup([tools, agent_core, improver, extensions, memory, ai])
-	print("AURORA_AUTONOMOUS_COORDINATOR_SMOKE_OK tournament=3..10 startup=automatic")
+	print("AURORA_AUTONOMOUS_COORDINATOR_SMOKE_OK tournament=3..10 startup=automatic state_recovery=atomic_fail_closed")
 	quit(0)
+
+func _test_state_durability(coordinator: Node) -> String:
+	var original_state := _snapshot_state_files()
+	_cleanup_state_files()
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STATE_PATH.get_base_dir()))
+
+	coordinator._last_improvement_unix = 111
+	coordinator._last_research_unix = 112
+	coordinator.mutation_population_size = 7
+	coordinator._events = [{"time": 1, "kind": "committed", "details": {}}]
+	coordinator._last_report = {"marker": "committed"}
+	coordinator._save_state()
+	if not FileAccess.file_exists(STATE_PATH):
+		return _durability_fail(original_state, "Autonomous state save did not create the canonical file")
+	if FileAccess.file_exists(STATE_TEMP_PATH) or FileAccess.file_exists(STATE_BACKUP_PATH):
+		return _durability_fail(original_state, "Autonomous state save left temp/backup files after commit")
+	var committed := _read_json_state(STATE_PATH)
+	if int(committed.get("schema_version", 0)) != 1 or int(committed.get("last_improvement_unix", 0)) != 111:
+		return _durability_fail(original_state, "Autonomous state save produced an invalid schema/payload")
+	if bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Successful state save unexpectedly blocked autonomous recovery")
+
+	# Simulate a crash after the previous committed target was moved to backup but
+	# before the new temp became the target. Recovery must prefer the last committed backup.
+	if DirAccess.rename_absolute(ProjectSettings.globalize_path(STATE_PATH), ProjectSettings.globalize_path(STATE_BACKUP_PATH)) != OK:
+		return _durability_fail(original_state, "Failed to prepare interrupted-state backup scenario")
+	if not _write_json_state(STATE_TEMP_PATH, {
+		"schema_version": 1,
+		"last_improvement_unix": 222,
+		"last_research_unix": 223,
+		"mutation_population_size": 8,
+		"events": [{"time": 2, "kind": "uncommitted", "details": {}}],
+		"last_report": {"marker": "uncommitted"}
+	}):
+		return _durability_fail(original_state, "Failed to prepare interrupted-state temp scenario")
+	coordinator._last_improvement_unix = 0
+	coordinator._last_research_unix = 0
+	coordinator._events = []
+	coordinator._last_report = {}
+	coordinator._load_state()
+	if int(coordinator._last_improvement_unix) != 111 or str(coordinator._last_report.get("marker", "")) != "committed":
+		return _durability_fail(original_state, "Interrupted state recovery promoted uncommitted temp over committed backup")
+	if FileAccess.file_exists(STATE_TEMP_PATH) or FileAccess.file_exists(STATE_BACKUP_PATH):
+		return _durability_fail(original_state, "Interrupted state recovery left stale temp/backup files")
+
+	# A valid canonical target plus stale backup means the replacement committed;
+	# loader must keep canonical and clean the stale backup.
+	if not _write_json_state(STATE_PATH, {
+		"schema_version": 1,
+		"last_improvement_unix": 333,
+		"last_research_unix": 334,
+		"mutation_population_size": 6,
+		"events": [],
+		"last_report": {"marker": "new-target"}
+	}):
+		return _durability_fail(original_state, "Failed to prepare committed-target scenario")
+	if not _write_json_state(STATE_BACKUP_PATH, {
+		"schema_version": 1,
+		"last_improvement_unix": 111,
+		"last_research_unix": 112,
+		"mutation_population_size": 7,
+		"events": [],
+		"last_report": {"marker": "old-backup"}
+	}):
+		return _durability_fail(original_state, "Failed to prepare stale-backup scenario")
+	coordinator._load_state()
+	if int(coordinator._last_improvement_unix) != 333 or str(coordinator._last_report.get("marker", "")) != "new-target":
+		return _durability_fail(original_state, "State recovery replaced a committed target with stale backup")
+	if FileAccess.file_exists(STATE_BACKUP_PATH):
+		return _durability_fail(original_state, "State recovery did not clean stale backup after committed replacement")
+
+	# Corrupt canonical with a valid backup: recover the backup rather than silently
+	# resetting cooldown/events or accepting malformed JSON.
+	var corrupt := FileAccess.open(STATE_PATH, FileAccess.WRITE)
+	if corrupt == null:
+		return _durability_fail(original_state, "Failed to prepare corrupt canonical state")
+	corrupt.store_string("{broken-json")
+	corrupt.flush()
+	corrupt.close()
+	if not _write_json_state(STATE_BACKUP_PATH, {
+		"schema_version": 1,
+		"last_improvement_unix": 444,
+		"last_research_unix": 445,
+		"mutation_population_size": 5,
+		"events": [{"time": 4, "kind": "backup", "details": {}}],
+		"last_report": {"marker": "backup-recovery"}
+	}):
+		return _durability_fail(original_state, "Failed to prepare valid backup for corrupt-target recovery")
+	coordinator._load_state()
+	if int(coordinator._last_improvement_unix) != 444 or str(coordinator._last_report.get("marker", "")) != "backup-recovery":
+		return _durability_fail(original_state, "Corrupt canonical state did not recover from valid backup")
+	if bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Valid backup recovery unexpectedly left automatic cycles blocked")
+
+	# Corrupt canonical without backup must fail closed instead of resetting cooldowns
+	# and immediately running a duplicate autonomous cycle.
+	_cleanup_state_files()
+	var unrecoverable := FileAccess.open(STATE_PATH, FileAccess.WRITE)
+	if unrecoverable == null:
+		return _durability_fail(original_state, "Failed to prepare unrecoverable state scenario")
+	unrecoverable.store_string("{unrecoverable-json")
+	unrecoverable.flush()
+	unrecoverable.close()
+	coordinator._state_recovery_blocked = false
+	coordinator._load_state()
+	if not bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Unrecoverable autonomy state did not fail closed")
+
+	# Legacy state did not contain schema_version. It must remain loadable and clear
+	# the recovery block once a valid committed state exists again.
+	_cleanup_state_files()
+	if not _write_json_state(STATE_PATH, {
+		"last_improvement_unix": 555,
+		"last_research_unix": 556,
+		"mutation_population_size": 4,
+		"events": [],
+		"last_report": {"marker": "legacy"}
+	}):
+		return _durability_fail(original_state, "Failed to prepare legacy state compatibility scenario")
+	coordinator._load_state()
+	if int(coordinator._last_improvement_unix) != 555 or str(coordinator._last_report.get("marker", "")) != "legacy":
+		return _durability_fail(original_state, "Legacy autonomy state compatibility regressed")
+	if bool(coordinator._state_recovery_blocked):
+		return _durability_fail(original_state, "Valid legacy state did not clear the recovery block")
+
+	_restore_state_files(original_state)
+	return ""
+
+func _durability_fail(original_state: Dictionary, message: String) -> String:
+	_restore_state_files(original_state)
+	return message
+
+func _snapshot_state_files() -> Dictionary:
+	var snapshot: Dictionary = {}
+	for path in [STATE_PATH, STATE_TEMP_PATH, STATE_BACKUP_PATH]:
+		if not FileAccess.file_exists(path):
+			snapshot[path] = {"exists": false, "content": ""}
+			continue
+		var file := FileAccess.open(path, FileAccess.READ)
+		if file == null:
+			snapshot[path] = {"exists": true, "content": ""}
+			continue
+		snapshot[path] = {"exists": true, "content": file.get_as_text()}
+		file.close()
+	return snapshot
+
+func _restore_state_files(snapshot: Dictionary) -> void:
+	_cleanup_state_files()
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(STATE_PATH.get_base_dir()))
+	for path in [STATE_PATH, STATE_TEMP_PATH, STATE_BACKUP_PATH]:
+		var saved: Dictionary = snapshot.get(path, {}) if snapshot.get(path, {}) is Dictionary else {}
+		if not bool(saved.get("exists", false)):
+			continue
+		var file := FileAccess.open(path, FileAccess.WRITE)
+		if file == null:
+			continue
+		file.store_string(str(saved.get("content", "")))
+		file.flush()
+		file.close()
+
+func _write_json_state(path: String, payload: Dictionary) -> bool:
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(JSON.stringify(payload))
+	file.flush()
+	var ok := file.get_error() == OK
+	file.close()
+	return ok
+
+func _read_json_state(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		return {}
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return {}
+	var parsed: Variant = JSON.parse_string(file.get_as_text())
+	file.close()
+	return parsed if parsed is Dictionary else {}
+
+func _cleanup_state_files() -> void:
+	for path in [STATE_TEMP_PATH, STATE_BACKUP_PATH, STATE_PATH]:
+		if FileAccess.file_exists(path):
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func _cleanup(nodes: Array) -> void:
 	for node in nodes:

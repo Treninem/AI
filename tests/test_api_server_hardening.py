@@ -25,6 +25,17 @@ def _load_server(monkeypatch, root: Path, *, dev_tokens: bool = False, max_body:
     return importlib.import_module("api.server")
 
 
+def _healthy_readiness_dependencies(server) -> None:
+    server.database.integrity_check = lambda: {
+        "ok": True,
+        "schema_version": 3,
+        "journal_mode": "wal",
+        "integrity": "ok",
+        "foreign_key_errors": 0,
+    }
+    server.learning.status = lambda: {"ok": True}
+
+
 def test_production_account_routes_deliver_tokens_without_returning_them(tmp_path: Path, monkeypatch):
     server = _load_server(monkeypatch, tmp_path)
     deliveries: list[tuple[str, str, str]] = []
@@ -131,3 +142,69 @@ def test_server_rejects_oversized_json_before_route_validation(tmp_path: Path, m
     small = client.post("/v1/auth/guest", json={"device_name": "G", "platform": "t"})
     assert small.status_code == 200, small.text
     assert small.json()["guest_token"].startswith("af_guest_")
+
+
+def test_ready_ignores_noncritical_storage_warnings_and_redacts_details(tmp_path: Path, monkeypatch):
+    server = _load_server(monkeypatch, tmp_path, dev_tokens=True)
+    _healthy_readiness_dependencies(server)
+    server.persistence.status = lambda: {
+        "ok": True,
+        "hard_pressure": False,
+        "attention_required": True,
+        "warnings": ["database_size", "pending_learning_protected"],
+        "disk_free_bytes": 123,
+        "counts": {"accounts": 999},
+        "sizes": {"database_bytes": 456},
+    }
+    client = TestClient(server.app)
+
+    response = client.get("/ready")
+
+    assert response.status_code == 200, response.text
+    assert response.json()["storage"] == {"ok": True, "hard_pressure": False}
+    assert "disk_free_bytes" not in response.text
+    assert "database_size" not in response.text
+    assert '"counts"' not in response.text
+    assert '"sizes"' not in response.text
+
+
+def test_ready_fails_closed_on_critical_storage_pressure_without_leaking_capacity(tmp_path: Path, monkeypatch):
+    server = _load_server(monkeypatch, tmp_path, dev_tokens=True)
+    _healthy_readiness_dependencies(server)
+    server.persistence.status = lambda: {
+        "ok": False,
+        "hard_pressure": True,
+        "attention_required": True,
+        "warnings": ["disk_free_critical"],
+        "disk_free_bytes": 1,
+        "counts": {"accounts": 123},
+        "sizes": {"database_bytes": 987654321},
+    }
+    client = TestClient(server.app)
+
+    response = client.get("/ready")
+
+    assert response.status_code == 503, response.text
+    assert response.json()["detail"]["storage"] == {"ok": False, "hard_pressure": True}
+    assert "disk_free_bytes" not in response.text
+    assert "disk_free_critical" not in response.text
+    assert '"counts"' not in response.text
+    assert '"sizes"' not in response.text
+
+
+def test_ready_fails_closed_when_storage_status_raises_without_leaking_error(tmp_path: Path, monkeypatch):
+    server = _load_server(monkeypatch, tmp_path, dev_tokens=True)
+    _healthy_readiness_dependencies(server)
+
+    def fail_storage_status():
+        raise OSError("/secret/volume inspection failed")
+
+    server.persistence.status = fail_storage_status
+    client = TestClient(server.app)
+
+    response = client.get("/ready")
+
+    assert response.status_code == 503, response.text
+    assert response.json()["detail"]["storage"] == {"ok": False, "hard_pressure": False}
+    assert "/secret/volume" not in response.text
+    assert "inspection failed" not in response.text

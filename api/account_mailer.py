@@ -118,6 +118,12 @@ class AccountMailer:
         return message
 
     def send_token(self, recipient: str, purpose: str, token: str) -> None:
+        if self.config.security in {"starttls", "ssl"}:
+            security_allowed = True
+        else:
+            security_allowed = False
+        if not security_allowed:
+            raise AccountMailError("Unsupported SMTP security mode")
         if not self.config.configured:
             raise AccountMailError("Account email transport is not configured or action URL is not secure")
         context = ssl.create_default_context()
@@ -134,8 +140,6 @@ class AccountMailer:
                     self._authenticate(client)
                     client.send_message(message)
                 return
-            if self.config.security != "starttls":
-                raise AccountMailError("Unsupported SMTP security mode")
             with smtplib.SMTP(self.config.host, self.config.port, timeout=self.config.timeout) as client:
                 client.ehlo()
                 client.starttls(context=context)

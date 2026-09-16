@@ -317,7 +317,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Core benchmarks.
 
 ## 14. Активные работы и занятые файлы
-
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
@@ -465,7 +464,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 похвалил в журнале — ещё не прошёл gate 🙂. Экономить токены: один пакет чтения,
 один связанный набор правок, относящиеся тесты; повторять только при выявленном дефекте.
 
-
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
@@ -477,8 +475,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Не пересекается с UI claim: `update/update_overlay.gd` остаётся за UI lane; с research/voice/server claims их файлы не трогаются. Перед каждой записью сверять свежий `main` и интегрировать параллельные изменения.
 - Инженерная причина: normal `latest` release отсутствует, а historical V1.3 использует RSA updater, но не содержит pinned `release_public.pub`; поэтому публикация одного `update.json` не может исправить уже установленный бинарник. Нужен one-time repair на новый signed floor и permanent version/release discipline.
 - Acceptance: V1.2 repair остаётся рабочим; V1.3 repair проверен in-place на Windows с сохранением `user://`; новый floor содержит pinned public key; updater contract на floor видит версию выше себя и отклоняет неверную подпись/hash; release workflow обязан формировать `latest` assets; version bump выполняется только после зелёных Core/Windows/Android/update/release gates.
-
-
 Код: draft [PR #29](https://github.com/Treninem/AI/pull/29), commit `13b5a948363688eb0b38429330e127a9a52ea7a4`. Эта запись публикует только координацию; код и полный текст 56 пунктов ТЗ находятся в PR до CI/интеграции.
 
 ## 18. Core Quality / Performance Benchmark & Regression Gate — active lane
@@ -587,7 +583,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Acceptance: create/save/execute/progress/complete/restart/load; pause/resume/cancel/retry/failed/interrupted/partial; atomic resilient store + migration/dedup; invalid transitions rejected; safe/unsafe retry distinction; no blind destructive replay after uncertain result; Computer unavailable/timeout/malformed/permission/screenshot/platform failures не ломают chat; bounded calls; path traversal/symlink/command-injection/master-stop/untrusted-authority/privacy regressions; concurrency/stress; Windows contracts зелёные; Android Work + explicit unsupported Computer capability зелёный; physical Windows/Android gates отмечаются отдельно, если устройства недоступны; нет известного P0/P1 в собственном scope.
 
 ## 25. Integration Gate — routed findings and checkpoint, 2026-09-16
-
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UPDATER-VERSIONING
 TYPE: BLOCKER
@@ -638,7 +633,6 @@ ACTION: Сохранить responsive UI/progress на large import и сдел�
 - Освобождённые файлы: нет; benchmark/test/workflow paths и три performance-follow-up production paths остаются занятыми этим ACTIVE CLAIM до завершения acceptance.
 
 ## 27. Integration Gate — Knowledge alias removal correctness blocker, 2026-09-16
-
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF
 TYPE: BLOCKER
@@ -678,7 +672,6 @@ ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the det
 ## 31. Large Knowledge / Memory Performance — durability and scaling checkpoint, 2026-09-16
 
 ### `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` — checkpoint
-
 - Статус: **ACTIVE — Linux correctness/scaling baseline подтверждён; durability hardening интегрирован; Windows/record-dedupe/registry-only/100–250 MiB exact runtime evidence ожидается**.
 - Каноническая версия остаётся **V1.3.0.0**; предполагаемый итоговый bump lane — **PATCH** только после зелёных acceptance-gates. Этот checkpoint версию и Android `versionCode` не меняет.
 - Последний доказанный exact Linux baseline: Knowledge Performance run `35105876229` на `35275e4c3a6b5cc7b3fa67f0aaebef84e43a903e`; contract `104826816228` SUCCESS, smoke-linux `104835749250` SUCCESS, standard-linux `104835749257` SUCCESS. Standard artifact `10453990990`, digest `sha256:1cfe0f08f35ef4605e9b5c7c1679ac09409140d0aefae795146b4a4254c9d88b`.
@@ -718,7 +711,6 @@ DONE:
 - На текущей Wave-B ветке собран единый race/scaling/failure-injection пакет, отдельный Linux/Windows workflow и machine-readable aggregate verdict; production-файлы не затронуты.
 - Добавлены duplicate-import и search/remove concurrency proofs, Windows isolated-profile warm-up для registry scaling и fail-closed regression contracts.
 - Coordinator wave-control соблюдён: новый replacement PR после закрытия #64 не создавался, #64 не переоткрывался самовольно.
-
 REMAINING:
 - После coordinator Wave-B signal переоткрыть **тот же PR #64** и получить exact Linux + Windows artifacts для consolidated resilience batch.
 - Если runtime выявит дефект в `knowledge_import_transaction.gd`/registry — исправить в этом CLAIM и повторить exact batch; если root cause потребует `scripts/knowledge_store.gd`, оформить точный `PERFORMANCE-BLOCKER` в `CHAT-2026-09-16-LOCAL-OCR`, не менять занятый файл.
@@ -747,4 +739,310 @@ NEXT:
 - Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
 - Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
 - Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1–F5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
-- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially regresses intelligibility, clipping, latency/memory/package limits or local-only operation.
+- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially регресes intelligibility, clipping, latency/memory/package limits or local-only operation.
+
+## 34. Integration Gate — release-train delta and routed status, 2026-09-16
+
+- Fresh release-train code checkpoint: `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` (`test: tighten integration updater and branding gates`) on parent `5bca4a1353ff66731073515533414ab1d0369e15`. Integration-owned changes only: `.github/workflows/integration-gate.yml` and new `tests/test_release_branding_contract.py`; production UI/Core/updater files and canonical version were not modified.
+- Integration workflow stale updater selector was corrected to `test_signed_release_enforces_v12_v13_repair_and_v14_signed_update_floor`, matching updater fix commit `99b2c144dbeb675caafb527ad528f5db18a32b50` and current `tests/test_core_candidate_promotion.py`.
+- Owner-approved immutable branding source masters are now release-gated by Git blob identity: `assets/ui/aurorafox_avatar_master.png` = `89ff783b171733f88b5153acd24c6a28fb2953dd`; `assets/ui/aurorafox_background_master.png` = `ed17e933244b7ce0f520b28897c0ca1ad50a5347`. The contract also requires runtime use of those paths and forbids active legacy `fox_logo.svg` / `aurora_background.svg` substitution.
+- Exact-head Integration Gate run `35147689311` on `cc44cce8...` remains **PENDING** with no jobs at this checkpoint; it is explicitly not green evidence. Exact-head Updater Repair Validation run `35147697509` remains **QUEUED**. Per coordinator NO-QUEUE policy no duplicate rerun was started.
+- Current `scripts/code_specialist.gd` after `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` no longer reads `AIClient.base_url` or directly calls Ollama in the normal path; `_chat_code()` delegates to `general_ai.chat()`. This is static fix evidence only; section 29 is not closed until runtime/real-Core proof is green.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: BLOCKER
+EVIDENCE: Exact main checkpoint `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` contains byte-exact owner masters above, while active runtime `scripts/main.gd` still preloads `res://assets/ui/aurora_background.svg` and `res://assets/ui/fox_logo.svg`. Integration commit `cc44cce8...` adds `tests/test_release_branding_contract.py` and the `Owner-approved branding identity contract` step so this mismatch cannot silently ship. Run `35147689311` is still pending, therefore this blocker is based on deterministic source/runtime mismatch, not a claimed CI failure.
+ACTION: In UI-owned runtime/package surfaces, make Windows and Android use `assets/ui/aurorafox_avatar_master.png` and `assets/ui/aurorafox_background_master.png` as the active canonical branding without modifying their source bytes; remove legacy `fox_logo.svg` / `aurora_background.svg` from active runtime substitution. If any derived platform asset is unavoidable, prove exact-pixel identity from the canonical master and keep the master bytes unchanged. Extend UI/package smoke/capture evidence and rerun Integration Gate on the same resulting SHA.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UPDATER-VERSIONING
+TYPE: NEXT
+EVIDENCE: Updater bridge selector drift from section 25 is statically reconciled by updater commit `99b2c144dbeb675caafb527ad528f5db18a32b50` plus integration commit `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b`; current composite function name and Integration workflow selector both target the V1.2/V1.3 repair + V1.4 signed-floor contract. Exact-head Integration run `35147689311` is PENDING and Updater Repair Validation `35147697509` is QUEUED, so runtime acceptance is not yet proven.
+ACTION: Do not reopen the stale function-name fix. Keep section 25 runtime blocker open only until an exact-head updater compatibility step plus repair/signing validation is green; preserve V1.2/V1.3 repair, pinned trust root and V1.4 signed floor without weakening signing/version discipline.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-CORE-BENCHMARKS
+TYPE: NEXT
+EVIDENCE: CodeSpecialist production fix `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` removes the stale `AIClient.base_url` access and direct normal-path Ollama `/api/chat` call; current `scripts/code_specialist.gd::_chat_code()` delegates to `general_ai.chat()`. Exact runtime Work Mode / real bundled-Core CodeSpecialist proof after this fix has not yet been accepted by Integration Gate.
+ACTION: Preserve the bundled-Core-only CodeSpecialist path, add/retain a real bundled-Core CodeSpecialist smoke/benchmark, and close section 29 only with same-SHA runtime evidence that setup + analyze/review/explain work without Ollama/remote AI.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT_MAIN-2026-09-16-RESEARCH-QUALITY
+TYPE: READY
+EVIDENCE: AuroraFox Research Quality CI run `35112565080` on exact SHA `adb5ae35b19b2e5412b565133c820d3be7d1437c` completed SUCCESS. The landed Integration Gate retains Research evidence-lifecycle, collector-privacy and source-resilience contracts/smokes so future cross-subsystem regression remains covered.
+ACTION: Coordinator-authorized Research source-resilience acceptance is satisfied. Mark the Research lane DONE/free its production/test paths unless a newer coordinator assignment exists; preserve collector→curator single-authority, provenance/privacy and source-resilience coverage in the final release candidate gate.
+
+PROGRESS_COMPLETE: 66%
+PROGRESS_REMAINING: 34%
+
+DONE:
+- Integration workflow/test infrastructure is on main and its stale updater selector is corrected.
+- Byte-exact canonical branding release contract is on main and routes the current runtime mismatch to UI ownership.
+- Research Quality source-resilience gate has exact successful run evidence and is routed READY.
+- Updater and CodeSpecialist old findings are separated into static-fix vs runtime-acceptance status rather than being falsely marked green.
+
+REMAINING:
+- Obtain a non-pending exact-head Integration Gate run after queue wave execution and triage each step independently.
+- Obtain exact updater repair/signing validation before closing section 25.
+- Obtain real bundled-Core CodeSpecialist runtime evidence before closing section 29.
+- Recheck UI branding/login-guest/memory/Work-Computer fixes after UI lane lands, then Windows/Android package/device boundaries and final release matrix.
+
+BLOCKERS:
+- UI canonical branding mismatch is a current source/runtime release blocker.
+- Integration run `35147689311` and updater repair run `35147697509` are queued/pending and therefore cannot be counted as green.
+- Physical Windows/Android device + human visual/listening acceptance remains a separate evidence boundary.
+
+NEXT:
+- Follow coordinator CI wave control without duplicate reruns. On the next executable exact-main gate, inspect updater, branding, Research, Work/Computer, Core/CodeSpecialist, Account/Guest, OCR, Voice and package steps separately; route only reproducible failures to the exact owning CLAIM and do not change their production files.
+
+## 35. Integration Gate — UI candidate regressions and handoff, 2026-09-16
+
+- Integration-owned branding contract follow-up commit: `b19719bdb4b88cbafbd07310ed34330c6c80660e` (`test: validate branding through active UI runtime`). The gate still pins both owner-master Git blobs byte-for-byte, but now validates the actual product entrypoint `main.tscn -> scripts/main_compat.gd` and permits legacy base placeholders only when the active compatibility layer replaces/removes them before final UI rendering. This avoids a false failure for the UI candidate architecture without weakening owner-art identity.
+- Exact-main Integration Gate run `35148889897` on `b19719bd...` is **PENDING**; no manual duplicate rerun was started under coordinator NO-QUEUE policy.
+- UI PR #27 remains draft at head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b`, `mergeable=false`, and is still based on pre-integration main `5bca4a1353ff66731073515533414ab1d0369e15`; it must be reconciled non-force before merge.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: BLOCKER
+EVIDENCE: UI Visual CI run `35147641336`, job `104967664697`, on UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b`: `Parse UI project headlessly` succeeded, then `Run headless layout interaction smoke` failed with exit code `66` and the exact assertion `Portrait owner background is not right-biased`. All downstream owner-art/navigation/render-matrix steps were skipped. The candidate `scripts/main_compat.gd::_owner_background_texture()` derives its crop from `get_viewport_rect().size`; the portrait smoke observed a crop with no positive rightward X offset.
+ACTION: Fix the UI-owned owner-background crop so portrait/narrow rendering derives from the effective target viewport/content-scale after resize and produces the intended right-biased focal region while retaining the immutable `aurorafox_background_master.png` bytes and neutral rendering. Re-run `desktop_ui_smoke.gd`, owner-art smoke, pointer/navigation and render matrix on the same candidate SHA before calling UI Wave A ready.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: REGRESSION
+EVIDENCE: UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b` has unique non-UI patches against current main that delete SERVER-DB-owned resilience behavior: `api/account_store.py::revoke_account_token`, the `_deliver_account_token` SMTP-failure revocation path in `api/server.py`, and the regressions `test_smtp_failure_revokes_issued_token_and_immediate_resend_is_not_cooldown_blocked` plus `test_undelivered_account_token_revoke_allows_immediate_retry_inside_cooldown`. These paths are explicitly owned by `CHAT-2026-09-16-SERVER-DB`; removing them would reintroduce an undelivered-token cooldown/retry defect unrelated to UI work.
+ACTION: Re-sync/reconcile PR #27 non-force with fresh `main` and preserve the current SERVER-DB token revoke/retry implementation plus both regression tests. Any intentional server semantic change must be coordinated with `CHAT-2026-09-16-SERVER-DB`; otherwise eliminate эти API/test diffs from the UI branch. Require API CI + UI Visual CI + Integration Gate on one same SHA before merge.
+
+FROM: CHAT-2026-09-16-INTEGRATION-GATE
+TO: CHAT-2026-09-16-UI-POLISH
+TYPE: NEXT
+EVIDENCE: The current PR #27 `scripts/computer_overlay.gd` patch statically addresses section 28: the visible Computer toggle propagates through `set_computer_control_enabled(enabled)`, high-level goal execution delegates to `AgentCore.run_task()`, preview delegates to local `AIClient.chat()`, and the overlay no longer calls `ComputerClient.run()` / `plan()` as a service-side planner. This preserves bundled AuroraFox Core as planning authority, but same-SHA Work/UI runtime evidence is still queued/not accepted.
+ACTION: Preserve this local-Core/default-OFF permission architecture while fixing the remaining UI blockers. Close section 28 only after the reconciled PR SHA has green Work Mode + UI Visual + Integration evidence proving enable/disable, high-level goal routing and no service-side/external-AI planning regression.
+
+PROGRESS_COMPLETE: 68%
+PROGRESS_REMAINING: 32%
+
+DONE:
+- Integration-owned branding gate is corrected for the actual `main_compat.gd` runtime architecture without relaxing immutable owner-master identity.
+- UI Visual failure is localized to the portrait/right-biased owner-background crop with exact run/job/assertion evidence.
+- Cross-lane SERVER-DB regression inside UI PR #27 is identified at concrete production functions and test names before merge.
+- Work/Computer UI candidate is statically reconciled with bundled-Core planning authority and process-wide permission semantics; runtime acceptance remains separate.
+
+REMAINING:
+- UI lane must fix portrait crop and remove/reconcile accidental SERVER-DB diffs, then produce one same-SHA green UI/API/Work/Integration set.
+- Exact-main Integration Gate `35148889897` must execute and be triaged step-by-step.
+- Updater repair/signing and CodeSpecialist bundled-Core runtime acceptance remain open until green exact evidence.
+- Windows/Android package plus physical-device/human visual/listening boundaries remain before final release readiness.
+
+BLOCKERS:
+- `CHAT-2026-09-16-UI-POLISH`: UI Visual run `35147641336/104967664697` fails portrait owner-background focal crop.
+- `CHAT-2026-09-16-UI-POLISH` cross-lane regression: PR #27 currently deletes SERVER-DB token-delivery revoke/retry safety code/tests.
+- Exact-main Integration Gate `35148889897` is pending, not green evidence.
+- Physical Windows/Android device and human visual/listening acceptance remain external evidence boundaries.
+
+NEXT:
+- Do not merge or manually rerun the stale UI candidate. Let `CHAT-2026-09-16-UI-POLISH` reconcile the two routed blockers against fresh main; then inspect the next UI head's API/UI/Work exact-SHA results and feed only the reconciled candidate into the release-train Integration Gate. Preserve coordinator Wave-A/Wave-B queue control.
+
+## 36. Coordinator continuity and fresh executor-chat handoff, 2026-09-17
+
+- Coordinator decision: **the current coordinator chat remains the single main AuroraFox coordinator. No replacement coordinator chat will be created.** Merge authority, release-train sequencing, cross-lane arbitration, final version bump decision and final Windows/Android release acceptance remain with this coordinator.
+- Fresh verified `main` before this coordination update: `047fe827c5dfee6aad967767d4d1a46f6487228b` (`server: satisfy explicit SMTP security contract`). `AGENTS.md` and the full canonical master log were reread before this write.
+- Reason for rollover: old executor conversations are approaching maximum conversation length. The owner will stop using those old conversations and create fresh executor chats. This is a **chat-session rollover**, not permission to discard their branches, commits, PRs, artifacts or unresolved defects.
+- Target operating set: **10 concurrent chats total = this coordinator + 9 fresh executor chats.** Creating an additional coordinator is explicitly unnecessary.
+- Old executor chats are retired as active human/chat sessions after the rollover. Their old CLAIM names remain historical evidence and their occupied production paths remain protected until a fresh replacement executor explicitly performs TAKEOVER/RECONCILE in this master log. No fresh executor may assume an old claim is free merely because the old conversation is no longer used.
+- A replacement executor MUST start from fresh `main`, read `AGENTS.md`, read this full master log, inspect current open PRs/heads/workflow runs, identify the old lane it replaces, and create a new takeover CLAIM before changing implementation. The takeover entry must state the old CLAIM/PR/branch/head being inherited and whether it will continue, reconcile or supersede that candidate. No blind merge of stale branches.
+- Canonical version and Android `versionCode` are unchanged by this coordination-only update. Intended bump: **NONE**.
+
+### Fresh executor topology
+
+1. `CHAT-2026-09-17-UI-VISUAL` — UI/UX/Visual for Windows + Android: responsive layout, navigation, owner-approved art, account/guest/memory surfaces, Work/Computer UI integration, accessibility and visual regression. Inherits/reconciles `CHAT-2026-09-16-UI-POLISH` / PR #27 and any sync-only UI PRs; must preserve Server-owned fixes while reconciling.
+2. `CHAT-2026-09-17-VOICE-AUDIO` — local Voice/STT/TTS/audio quality on Windows + Android, female-voice acceptance, prosody, latency, cache/interruption and package assets. Inherits/reconciles `CHAT-2026-09-16-VOICE-QUALITY` / PR #34 and related voice candidate work.
+3. `CHAT-2026-09-17-CORE-CODER` — bundled AuroraFox Core intelligence, SpecialistTeam, CodeSpecialist, real offline benchmarks, Windows/Android local inference, quality/performance and candidate comparison. Inherits/reconciles `CHAT-2026-09-16-CORE-BENCHMARKS` / PR #30 and section 29 runtime acceptance.
+4. `CHAT-2026-09-17-WORK-COMPUTER-AGENT` — Work lifecycle/store, Computer Agent primitives, Agent reliability/autonomy-state durability, permission/master-stop/sandbox/rollback/idempotency/recovery. Inherits/reconciles `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / PR #40 and autonomy durability candidate PR #72 where relevant; must not take UI-owned overlays without handoff.
+5. `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR` — unified Knowledge/Memory/document/OCR ownership to remove the former KnowledgeStore handoff bottleneck: local OCR, import/streaming, dedupe/provenance/aliases/removal/recovery, large-scale performance/stress on Windows/Android. Inherits/reconciles both `CHAT-2026-09-16-LOCAL-OCR` / PR #66 (and prior OCR candidate history) and `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` / PR #64. This fresh lane must explicitly reconcile overlapping Store/transaction ownership before editing.
+6. `CHAT-2026-09-17-SERVER-API-DB` — Server/API/SQLite/account/auth/guest/device sync/mail/request limits/privacy/deployment/rollback. Inherits current `CHAT-2026-09-16-SERVER-DB` state and must start from the current server-updated main, not stale PR #25 history.
+7. `CHAT-2026-09-17-PLATFORM-RELEASE` — Windows + Android packaging/export/install/launch, Android signing continuity, updater/signatures/trust-root/repair bridge, deterministic build supply chain and release artifacts. Inherits/reconciles `CHAT-2026-09-16-UPDATER-VERSIONING` and current package workflows. Final canonical version bump remains coordinator-authorized only after global acceptance.
+8. `CHAT-2026-09-17-RESEARCH-SELF-IMPROVEMENT` — Research collector/curator, provenance/corroboration/retraction/privacy, controlled self-improvement/candidate queue/tournament/promotion safety. Inherits accepted Research Quality evidence including run `35112565080`; must not redo already green work and should continue from the first remaining research/self-improvement gap.
+9. `CHAT-2026-09-17-INTEGRATION-REGRESSION` — independent same-SHA integration/regression/release-readiness gate. It owns integration tests/workflow and failure classification, not other lanes' production code. Old probe PR #69 is stale and must never be treated as the final merge candidate; build fresh integration evidence from current main plus current accepted candidate heads.
+
+### Coordinator rules for the fresh topology
+
+- This coordinator continuously checks all nine executors, current `main`, open PR heads and exact-head CI. Idle/finished executors are reassigned to an independent bottleneck, integration evidence or final release regression instead of waiting.
+- Production ownership overlaps are intentionally minimized: UI+Visual together; Core+Coder together; Knowledge+Memory+OCR together; Work+Computer+Agent reliability together; Platform+Updater together. This replaces the less efficient old split where OCR/Knowledge and package/updater repeatedly blocked each other.
+- Fresh executors must preserve useful old work. A new branch from current `main` may cherry-pick/reimplement only verified relevant deltas from old PRs; stale unrelated diffs must not be carried forward.
+- A lane may be called READY only with exact commit SHA + relevant green tests/workflow run IDs/artifacts and no known P0/P1 blocker in its scope. Static source inspection is not runtime proof.
+- Final merge order is not predetermined. The coordinator chooses it from current overlap, CI and dependency evidence; no executor self-merges a red or stale integration candidate.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+
+DONE:
+- Fresh 10-chat operating topology is defined: one continuing coordinator plus nine replacement executor roles.
+- Old chat sessions are explicitly retired without discarding their Git/CI evidence, and takeover/reconciliation rules preserve file ownership until a replacement claim is recorded.
+- Coordinator/release authority and no-extra-coordinator rule are explicit.
+- No production code, product version or Android versionCode was changed by this coordination update.
+
+REMAINING:
+- Coordination rollover itself: none. Product acceptance work remains in the nine executor lanes and coordinator release train.
+
+BLOCKERS:
+- none for the chat-topology rollover. Individual product blockers remain documented in the preceding lane sections and current GitHub CI.
+
+NEXT:
+- Owner creates the nine fresh executor chats using their assigned prompts. Each replacement chat immediately fetches current `main`, reads `AGENTS.md` + this journal, creates its takeover/reconcile CLAIM, inspects its inherited PR/branch/run evidence and resumes from the first unaccepted item. Coordinator then tracks their new CLAIMs and prevents duplicate/stale work.
+
+## 37. Coordinator topology correction — seven fresh executors, 2026-09-17
+
+- This section **supersedes only the executor-count/topology instructions in section 36**. All historical Git/CI/PR evidence and the takeover/reconcile safety rules from section 36 remain valid.
+- Coordinator remains this current chat. No replacement coordinator is created.
+- Final operating set is **8 chats total = this coordinator + 7 fresh executor chats**. This consolidation is chosen to reduce ownership handoffs and duplicated CI while retaining independent parallel work.
+- Old executor conversations are retired as active sessions, but their branches, PRs, commits, artifacts, failures and useful work are not discarded. Old production ownership remains protected until the corresponding new executor writes an explicit TAKEOVER/RECONCILE claim from fresh `main`.
+- Canonical product version and Android `versionCode` remain unchanged. This is coordination-only; intended bump **NONE**.
+
+### Final seven executor lanes
+
+1. `CHAT-2026-09-17-UI-VISUAL-UX` — UI + UX + Visual for Windows/Android. Takes over/reconciles old UI-POLISH / PR #27 and UI sync candidates. Owns responsive layout, navigation, canonical owner artwork integration, account/guest/memory surfaces, Work/Computer presentation, accessibility and visual regression. Must preserve Server-owned semantics while reconciling stale UI diffs.
+2. `CHAT-2026-09-17-CORE-CODER-RESEARCH` — bundled AuroraFox Core + CodeSpecialist/SpecialistTeam + real offline benchmarks + Research/Self-Improvement. Takes over/reconciles CORE-BENCHMARKS / PR #30, CodeSpecialist runtime acceptance, accepted Research Quality evidence (including run `35112565080`), and remaining candidate-queue/tournament/promotion/corroboration work. Already-green research work must not be redone. External AI remains optional/non-authoritative.
+3. `CHAT-2026-09-17-VOICE-AUDIO` — local Voice/STT/TTS/audio for Windows/Android. Takes over/reconciles VOICE-QUALITY / PR #34 and Android female-voice candidate work. Owns voice quality, prosody, latency, interruption/cache/device degradation and acoustic/package evidence.
+4. `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY` — Work + Computer Agent + Agent/Autonomy reliability. Takes over/reconciles WORK-COMPUTER-RELIABILITY / PR #40 and autonomy-state durability / PR #72 where applicable. Owns lifecycle/recovery/idempotency/concurrency, Computer primitives, sandbox/master-stop/permission/rollback and autonomy-state durability. UI overlays remain with UI lane unless explicitly handed off.
+5. `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR` — unified Knowledge + Memory + OCR/document intelligence. Takes over/reconciles LOCAL-OCR / PR #66 and LARGE-KNOWLEDGE-PERF / PR #64, intentionally removing the former `knowledge_store.gd` ownership bottleneck. Owns local OCR, streaming import, dedupe/provenance/aliases/removal/recovery, large-data stress/performance, bounded memory and Windows/Android document paths.
+6. `CHAT-2026-09-17-SERVER-API-DB` — Server + API + accounts/auth/guest/device sync + SQLite + mail + privacy + deployment/rollback. Takes over current SERVER-DB state and starts from current server-updated `main`; stale PR #25 is historical input only, never a blind merge source.
+7. `CHAT-2026-09-17-PLATFORM-UPDATER-INTEGRATION` — Windows/Android packaging + installer/APK + signing continuity + updater/repair/trust-root + deterministic build supply chain + same-SHA integration/regression/release-readiness. This consolidates the former PLATFORM/UPDATER and separate INTEGRATION lanes because their current work is tightly coupled at package/release gates. It inherits UPDATER-VERSIONING, integration-gate history and current package workflows. Old probe PR #69 remains stale and must never be merged as a final candidate. This executor may classify product failures but must route production fixes to the owning lane rather than silently taking its files. Final merge/version bump/release authority stays with the coordinator.
+
+### Consolidated rollover rules
+
+- Section 36 roles `RESEARCH-SELF-IMPROVEMENT` and `INTEGRATION-REGRESSION` are **not separate fresh chats anymore**: Research/Self-Improvement is absorbed into `CORE-CODER-RESEARCH`; Integration/Regression is absorbed into `PLATFORM-UPDATER-INTEGRATION`.
+- All seven fresh executors must first fetch current `main`, read `AGENTS.md` and the complete master log, inspect inherited PR/branch/head/workflow evidence, and write an explicit takeover/reconcile CLAIM before touching implementation.
+- A fresh executor must continue from the first unaccepted item, not restart already-proven work. Stale unrelated diffs are excluded; verified useful deltas may be reconciled onto fresh `main` non-force.
+- Exact-head evidence remains mandatory: commit SHA + relevant tests/workflow run IDs/artifacts. Static inspection alone is not runtime proof.
+- Finished/blocked executors do not idle: after releasing owned files they help an independent bottleneck, regression or release evidence without editing another active lane's occupied production files.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+
+DONE:
+- Final rollover topology corrected to one continuing coordinator + seven fresh executor chats.
+- Research is consolidated with Core/Coder; Integration is consolidated with Platform/Updater; OCR and Large Knowledge remain consolidated.
+- Old work/PR/CI evidence is preserved through explicit takeover/reconcile instead of being discarded.
+- No production code or public version metadata changed.
+
+REMAINING:
+- Coordination topology: none. Product work continues under the seven fresh takeover claims.
+
+BLOCKERS:
+- none for this coordination correction; subsystem blockers remain those proven by current Git/CI evidence.
+
+NEXT:
+- Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
+
+## 38. Mandatory blocked/waiting escalation through coordinator, 2026-09-17
+
+This section is a **mandatory coordination rule** for all seven executor lanes and supersedes any older habit of silently waiting on another lane, a queued check, ownership conflict or unknown next step.
+
+### Executor rule
+
+If an executor chat reaches **any state that prevents useful forward progress**, it MUST report the condition in this `docs/PROJECT_MASTER_LOG.md` immediately instead of waiting indefinitely, starting duplicate work or crossing another lane's ownership boundary. This includes, but is not limited to:
+
+- a failing test/workflow that belongs to another lane;
+- waiting for another lane's code, API, artifact or merge;
+- ownership/file conflict;
+- stale/incompatible branch or PR state;
+- CI queue/scheduling blocker that prevents the next required gate;
+- missing external/device/credential/access boundary;
+- architectural decision requiring coordinator arbitration;
+- uncertainty about whether a candidate can be merged;
+- any other condition where the executor has no safe independent next action inside its own scope.
+
+The executor records a `COORDINATOR-BLOCKER` entry using this minimum format:
+
+```text
+COORDINATOR-BLOCKER:
+FROM: <current CLAIM>
+STATUS: BLOCKED | WAITING | OWNERSHIP-CONFLICT | CI-BLOCKED | DECISION-REQUIRED
+CURRENT_SHA: <exact branch/head SHA>
+BLOCKED_ON: <claim/pr/run/job/file/external boundary>
+EVIDENCE: <exact failing test/workflow/run/job/artifact/diff or factual reason>
+ALREADY_TRIED: <only factual attempts already made>
+SAFE_PARALLEL_WORK: <independent work that can still continue, or NONE>
+NEEDS_COORDINATOR: <specific decision/routing needed>
+```
+
+After writing the escalation, the executor MUST NOT silently take another active lane's production files or weaken/remove a failing acceptance test merely to continue. If `SAFE_PARALLEL_WORK` exists, it should continue that independent work while waiting for coordinator routing. If none exists, it waits for the coordinator decision recorded in this journal rather than inventing a new ownership scope.
+
+### Coordinator rule
+
+The coordinator continuously reads these `COORDINATOR-BLOCKER` entries and resolves them through the same journal. For each unresolved escalation the coordinator must verify the available Git/CI evidence and write a `COORDINATOR-DECISION` entry with:
+
+```text
+COORDINATOR-DECISION:
+FOR: <blocked CLAIM>
+DECISION: CONTINUE | REROUTE | HANDOFF | MERGE-FIRST | REBASE/RECONCILE | WAIT-EXTERNAL | DROP-STALE | SPLIT-WORK | OTHER
+OWNER: <claim responsible for next action>
+ACTION: <exact next safe action>
+DEPENDENCY: <what must become true before the original lane resumes, or NONE>
+EVIDENCE: <SHA/run/job/diff/contract supporting the decision>
+PARALLEL_ACTION: <what the blocked lane should do meanwhile, or NONE>
+```
+
+The coordinator is responsible for preventing queue deadlocks: if a dependency can be removed by changing merge order, reconciling a stale candidate, routing a defect to its true owner, splitting an independent test wave, or moving an idle/finished executor to an unowned bottleneck, the coordinator does so and records that decision here.
+
+### No-idle / no-deadlock rule
+
+- No executor should remain in an undefined `waiting` state without a journal escalation and coordinator decision.
+- A red aggregate Integration gate does not force unrelated green lanes to stop when the failing subsystem has been identified and isolated by exact evidence.
+- A finished executor releases its files and may be reassigned by the coordinator to independent regression, evidence collection, packaging or another unowned bottleneck.
+- A blocked executor may continue only explicitly safe parallel work; it must not duplicate the blocker owner's implementation.
+- Every blocker must have an owner, evidence, a coordinator decision and a next action. `Ждём`, `непонятно кто делает`, `проверим потом` are not valid terminal states.
+- Final merge, final version bump and release authority remain coordinator-only.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+
+DONE:
+- Mandatory executor→coordinator escalation protocol is defined for blockers, waits, ownership conflicts, CI scheduling and architecture/merge decisions.
+- Mandatory coordinator→executor decision protocol is defined in the same canonical journal.
+- No-idle/no-deadlock behavior is explicit: executors continue safe independent work where possible and do not cross ownership boundaries while blocked.
+- This coordination-only change does not modify production code, canonical product version or Android versionCode.
+
+REMAINING:
+- Product lanes continue normally under section 37; every new blocker/wait condition must now use this section 38 protocol.
+
+BLOCKERS:
+- none for this coordination rule.
+
+NEXT:
+- Coordinator continues monitoring all seven lanes. On the first `COORDINATOR-BLOCKER` entry, verify its exact evidence, publish a `COORDINATOR-DECISION` here, reroute ownership/merge order/CI as needed, and keep all independent lanes moving.
+
+## 39. Work / Computer / Autonomy — TAKEOVER/RECONCILE, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
+- Fresh baseline: `b574546cc133a7bd9aa6b24e65414ca3328949d7`; branch head before this claim: `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`.
+- Режим: Chat. Intended bump after acceptance: **PATCH**; version/versionCode/final merge/release remain coordinator-only.
+- Inherits `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / draft PR #40, verified head `f4ad58377752020823900fea107914af49021349`: Work lifecycle/recovery, atomic WorkStore, safe/unsafe retry + uncertain-result protection, bounded local Computer primitives, default-OFF/master-stop, sandbox/idempotency/privacy, tests. Old exact-head evidence: Work Computer Reliability `35147796178` SUCCESS; Work Mode `35147796111` SUCCESS; Windows Package `35147796213` SUCCESS; Android APK `35147795977` SUCCESS; Agent Sync `35147796112` SUCCESS; Core/Voice `35147796205` SUCCESS.
+- Inherits PR #72 head `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa`, already merged into main as `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`: temp/backup atomic autonomy-state save, interrupted/corrupt recovery, legacy schema, fail-closed autonomy boot. Exact-head evidence: Agent Sync `35150755820` SUCCESS; Core/Voice `35150755870` SUCCESS; Windows Package `35150755901` SUCCESS; Android APK `35150755919` SUCCESS. Windows artifact `10469683226` digest `sha256:965ecd3670ca26bfc2ea478c1135deeda01c13ae87c3166ca90350ca26d05eaf`; Android artifact `10469586976` digest `sha256:fa9c968aa8b54e2ad7e8770f8a6c25b60e5d8231b1d0863441fc15fb17431ca4`.
+- Current reconcile candidate `af652c3e76254eb3f7981907a9adf8c8b82c7d91` was produced concurrently from fresh main and merged into this branch as `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`; it is **not accepted by assertion alone**. Audit already found five unrelated stale workflow diffs (`agent-sync-ci.yml`, `android-apk-artifact.yml`, `release-identity-ci.yml`, `voice-ci.yml`, `windows-package-ci.yml`); those must be removed before candidate acceptance.
+- Owned scope: `work/work_manager.gd`, `work/work_store.gd`, `computer/computer_service.py`, `computer/install_computer.ps1`, `computer/requirements.txt`, `scripts/computer_client.gd`, Work/Computer reliability tests and `.github/workflows/work-computer-reliability.yml`; `scripts/agent_core.gd`, `scripts/tool_registry.gd`, `scripts/sandbox_manager.gd`, `agent/autonomous_coordinator.gd` only with runtime evidence/rechecked ownership.
+- UI boundary: do not edit `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd`, `work/work_overlay.gd`; UI contract defects route to `CHAT-2026-09-17-UI-VISUAL-UX`.
+- Architecture invariant: high-level goal = bundled AuroraFox Core / AgentCore → ToolRegistry → bounded Computer primitives. `ComputerClient.plan()` / `run()` and sidecar service are not planners; no mandatory external AI/model.
+
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+
+DONE:
+- Fresh main/AGENTS/full master log, old claims, PR #40/#72 exact heads/diffs/CI/artifacts audited.
+- PR #72 is already integrated and preserved; no reimplementation.
+- PR #40 useful work identified, and stale unrelated workflow contamination in current reconcile candidate is explicitly identified before acceptance.
+
+REMAINING:
+- Remove unrelated workflow diffs; verify resulting diff contains only owned/relevant Work/Computer safety changes plus this journal entry.
+- Create/open a draft takeover PR; obtain same-SHA Work Computer Reliability + Work Mode CI and inspect exact failure-injection results.
+- Extend any missing runtime gates for state corruption/both-corrupt/fail-closed, concurrency, service crash/timeout/malformed/permission/screenshot/idempotency/destructive uncertain replay, Windows supported capability and Android graceful unsupported Computer.
+
+BLOCKERS:
+- none preventing safe owned-scope cleanup/testing now. UI runtime acceptance remains cross-lane and will be routed, not edited here.
+
+NEXT:
+- Restore the five unrelated workflows from fresh main, verify net diff, then trigger draft-PR CI and classify failures by exact run/job/test before further implementation.
