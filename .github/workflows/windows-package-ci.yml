@@ -48,7 +48,7 @@ permissions:
 jobs:
   package-windows:
     runs-on: windows-latest
-    timeout-minutes: 50
+    timeout-minutes: 90
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -58,6 +58,8 @@ jobs:
         run: |
           foreach ($script in @(
             '.\build\build_windows.ps1',
+            '.\build\prepare_bundled_core_model.ps1',
+            '.\build\prepare_bundled_windows_core.ps1',
             '.\build\bridge_release_readiness.ps1',
             '.\build\create_update_signing_key.ps1',
             '.\build\setup_release_signing.ps1',
@@ -72,6 +74,18 @@ jobs:
               throw "$script parse failed"
             }
           }
+
+      - name: Restore bundled AuroraFox Core model cache
+        uses: actions/cache@v4
+        with:
+          path: .ci/core-model
+          key: aurorafox-core-model-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+
+      - name: Prepare complete bundled Windows Core
+        shell: pwsh
+        env:
+          AURORAFOX_GITHUB_TOKEN: ${{ github.token }}
+        run: .\build\prepare_bundled_windows_core.ps1 -CacheDir "$env:GITHUB_WORKSPACE\.ci\core-model"
 
       - name: Download Godot 4.7.1 and export templates
         id: godot
@@ -109,7 +123,7 @@ jobs:
         shell: pwsh
         run: .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup -SkipVoiceSetup
 
-      - name: Verify packaged runtime assets
+      - name: Verify packaged runtime assets and embedded Core
         shell: pwsh
         run: |
           $required = @(
@@ -119,6 +133,8 @@ jobs:
             'build\windows\computer\install_computer.ps1',
             'build\windows\file_intelligence\install_files.ps1',
             'build\windows\core_runtime\install_core.ps1',
+            'build\windows\core_runtime\engine\llama-server.exe',
+            'build\windows\core_runtime\engine\aurorafox-core.gguf',
             'build\windows\api\server.py',
             'build\windows\api\local_core_client.py',
             'build\windows\api\runtime_bridge.py',
@@ -131,6 +147,10 @@ jobs:
           foreach ($path in $required) {
             if (-not (Test-Path $path)) { throw "Packaged runtime asset missing: $path" }
           }
+          $model = 'build\windows\core_runtime\engine\aurorafox-core.gguf'
+          if ((Get-Item $model).Length -ne 1282439264) { throw 'Packaged AuroraFox Core weights have the wrong size' }
+          $sha = (Get-FileHash $model -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5') { throw "Packaged AuroraFox Core SHA mismatch: $sha" }
 
       - name: Smoke exported executable
         shell: pwsh
@@ -164,9 +184,19 @@ jobs:
           if ($p.ExitCode -notin @(0,3010)) { throw "Installer exited with $($p.ExitCode)" }
           $exe = Join-Path $installDir 'AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe missing' }
-          foreach ($relative in @('api\local_core_client.py','api\runtime_bridge.py','core_runtime\install_core.ps1','update\windows_updater.ps1')) {
+          foreach ($relative in @(
+            'api\local_core_client.py',
+            'api\runtime_bridge.py',
+            'core_runtime\install_core.ps1',
+            'core_runtime\engine\llama-server.exe',
+            'core_runtime\engine\aurorafox-core.gguf',
+            'update\windows_updater.ps1'
+          )) {
             if (-not (Test-Path (Join-Path $installDir $relative))) { throw "Installed runtime asset missing: $relative" }
           }
+          $installedModel = Join-Path $installDir 'core_runtime\engine\aurorafox-core.gguf'
+          $installedSha = (Get-FileHash $installedModel -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($installedSha -ne 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5') { throw 'Installed AuroraFox Core integrity check failed' }
           $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
           if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
