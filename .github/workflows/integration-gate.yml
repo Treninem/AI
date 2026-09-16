@@ -49,6 +49,11 @@ jobs:
           tests/test_release_core_gates.py
           tests/test_android_contract.py
 
+      - name: Research evidence lifecycle contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_research_evidence_lifecycle_contract.py
+
       - name: Voice text contract
         if: always()
         shell: bash
@@ -73,6 +78,11 @@ jobs:
         if: always()
         shell: bash
         run: PYTHONPATH="$PWD" python -m pytest -q tests/test_knowledge_performance_compare.py
+
+      - name: Large Knowledge scaling blocker contract
+        if: always()
+        shell: bash
+        run: PYTHONPATH="$PWD" python -m pytest -q tests/test_knowledge_stress_gates.py
 
       - name: Candidate verified bundle application contract
         if: always()
@@ -131,7 +141,7 @@ jobs:
           set -euo pipefail
           # OCR, real-Core benchmark and Work/Computer paths are owned by
           # independently ACTIVE lanes. Their absence is PENDING, not a failure.
-          # Large Knowledge has landed and is executed above.
+          # Research lifecycle and Large Knowledge have landed and are executed.
           for path in \
             .github/workflows/local-ocr-ci.yml \
             .github/workflows/core-benchmarks.yml \
@@ -149,13 +159,21 @@ jobs:
           else
             echo 'LANE_ARTIFACT_PENDING benchmarks/core/**'
           fi
+          test -f .github/workflows/research-quality-ci.yml
+          test -f tests/test_research_evidence_lifecycle_contract.py
+          test -f tests/research_evidence_lifecycle_smoke.gd
           test -d benchmarks/knowledge
           test -f tests/test_knowledge_performance_contract.py
           test -f tests/test_knowledge_performance_compare.py
+          test -f tests/test_knowledge_stress_gates.py
           test -f .github/workflows/knowledge-performance.yml
+          echo 'LANE_ARTIFACT_PRESENT .github/workflows/research-quality-ci.yml'
+          echo 'LANE_ARTIFACT_PRESENT tests/test_research_evidence_lifecycle_contract.py'
+          echo 'LANE_ARTIFACT_PRESENT tests/research_evidence_lifecycle_smoke.gd'
           echo 'LANE_ARTIFACT_PRESENT benchmarks/knowledge/**'
           echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_performance_contract.py'
           echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_performance_compare.py'
+          echo 'LANE_ARTIFACT_PRESENT tests/test_knowledge_stress_gates.py'
           echo 'LANE_ARTIFACT_PRESENT .github/workflows/knowledge-performance.yml'
 
   godot-cross-subsystem:
@@ -189,6 +207,7 @@ jobs:
             tests/self_reliance_smoke.gd \
             tests/offline_autonomy_smoke.gd \
             tests/autonomy_learning_smoke.gd \
+            tests/research_evidence_lifecycle_smoke.gd \
             tests/knowledge_registry_smoke.gd \
             tests/knowledge_transaction_rollback_smoke.gd \
             tests/api_gateway_smoke.gd \
