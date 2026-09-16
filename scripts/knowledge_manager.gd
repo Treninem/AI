@@ -45,17 +45,22 @@ func stats() -> Dictionary:
 	}
 
 func remove_source(source: String) -> Dictionary:
-	var canonical := registry.canonical_source(source)
-	var store := KnowledgeStore.new()
-	var removed := store.remove_source(canonical)
-	if canonical != source and int(removed.get("removed", 0)) == 0 and int(removed.get("structured_removed", 0)) == 0:
-		removed = store.remove_source(source)
+	var record := registry.record_for_source(source)
+	var canonical := str(record.get("source", source)) if not record.is_empty() else source
+	var alias_only := not record.is_empty() and canonical != source
+	var removed := {"ok": true, "removed": 0, "structured_removed": 0}
+	if not alias_only:
+		var store := KnowledgeStore.new()
+		removed = store.remove_source(canonical)
+		if canonical != source and int(removed.get("removed", 0)) == 0 and int(removed.get("structured_removed", 0)) == 0:
+			removed = store.remove_source(source)
 	var registry_result := registry.remove_source(source)
 	_invalidate_scan()
 	return {
 		"ok": bool(removed.get("ok", false)) and bool(registry_result.get("ok", false)),
 		"source": source,
 		"canonical_source": canonical,
+		"alias_detached": alias_only and bool(registry_result.get("alias_detached", false)),
 		"removed": removed.get("removed", 0),
 		"structured_removed": removed.get("structured_removed", 0),
 		"registry_removed": registry_result.get("removed", 0)
