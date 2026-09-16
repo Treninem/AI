@@ -27,7 +27,7 @@ func _background_master_path(rect: TextureRect) -> String:
 		return atlas.atlas.resource_path if atlas.atlas != null else ""
 	return rect.texture.resource_path if rect.texture != null else ""
 
-func _assert_owner_surface(main: Control, mobile := false) -> bool:
+func _assert_owner_surface(main: Control, requested_size: Vector2i, mobile := false) -> bool:
 	var avatar := main.find_child("OwnerAvatar", true, false) as TextureRect
 	var background := main.find_child("OwnerBackground", true, false) as TextureRect
 	var brand_row := main.find_child("BrandRow", true, false) as HBoxContainer
@@ -48,34 +48,41 @@ func _assert_owner_surface(main: Control, mobile := false) -> bool:
 		_fail("Owner background must render with neutral modulate; owner pixels may not be dimmed or tinted", 14)
 		return false
 	var atlas := background.texture as AtlasTexture
-	var viewport := main.get_viewport().get_visible_rect().size
-	if viewport.x >= viewport.y and atlas.region.position.y <= 0.0:
-		_fail("Wide owner background is not bottom-biased; fox/paws may be cropped", 15)
+	var source_size := atlas.atlas.get_size() if atlas.atlas != null else Vector2.ZERO
+	if source_size.x <= 0.0 or source_size.y <= 0.0:
+		_fail("Owner background master has invalid dimensions", 15)
 		return false
-	if viewport.y > viewport.x and atlas.region.position.x <= 0.0:
-		_fail("Portrait owner background is not right-biased; fox may be cropped", 16)
-		return false
+	var requested_ratio := float(requested_size.x) / float(requested_size.y)
+	var source_ratio := source_size.x / source_size.y
+	if requested_ratio > source_ratio:
+		if atlas.region.position.y <= 0.0 or atlas.region.position.x > 0.01:
+			_fail("Wide owner background crop is not bottom-biased for the logical canvas", 16)
+			return false
+	elif requested_ratio < source_ratio:
+		if atlas.region.position.x <= 0.0 or atlas.region.position.y > 0.01:
+			_fail("Portrait owner background crop is not right-biased for the logical canvas", 17)
+			return false
 	if not brand_row.is_ancestor_of(avatar):
-		_fail("Owner avatar must stay in the AuroraFox brand row", 17)
+		_fail("Owner avatar must stay in the AuroraFox brand row", 18)
 		return false
 	if avatar.custom_minimum_size.x < 44.0 or avatar.custom_minimum_size.y < 44.0:
-		_fail("Owner avatar is too small for a clear brand mark", 18)
+		_fail("Owner avatar is too small for a clear brand mark", 19)
 		return false
 	if avatar_slot == null or avatar_slot.visible or avatar_slot.custom_minimum_size.x > 1.0:
-		_fail("Header avatar slot must remain empty to avoid duplicate owner artwork", 19)
+		_fail("Header avatar slot must remain empty to avoid duplicate owner artwork", 20)
 		return false
 	if _tree_contains_texture(main, "fox_logo.svg", true):
-		_fail("Legacy placeholder fox is visible together with owner artwork", 20)
+		_fail("Legacy placeholder fox is visible together with owner artwork", 21)
 		return false
 	if not mobile and not avatar.is_visible_in_tree():
-		_fail("Owner avatar is not visible in the desktop brand surface", 21)
+		_fail("Owner avatar is not visible in the desktop brand surface", 22)
 		return false
 	return true
 
 func _assert_messages_stay_clean(main: Control) -> bool:
 	var store = main.get("chats")
 	if not store is ChatStore:
-		_fail("ChatStore is unavailable for owner-art regression", 22)
+		_fail("ChatStore is unavailable for owner-art regression", 23)
 		return false
 	main.call("_new_chat")
 	await process_frame
@@ -85,23 +92,38 @@ func _assert_messages_stay_clean(main: Control) -> bool:
 	await process_frame
 	var messages := main.find_child("MessageList", true, false)
 	if messages == null:
-		_fail("MessageList is missing", 23)
+		_fail("MessageList is missing", 24)
 		return false
 	if _tree_contains_texture(messages, "aurorafox_avatar_master.png", false):
-		_fail("Owner avatar was duplicated beside an assistant message", 24)
+		_fail("Owner avatar was duplicated beside an assistant message", 25)
 		return false
 	if _tree_contains_texture(messages, "fox_logo.svg", false):
-		_fail("Legacy placeholder fox remained in a message row", 25)
+		_fail("Legacy placeholder fox remained in a message row", 26)
 		return false
 	return true
 
-func _run_scene(packed: PackedScene, mobile: bool) -> bool:
+func _prepare_window(size: Vector2i) -> void:
+	root.wrap_controls = false
+	root.min_size = Vector2i(1, 1)
+	root.size = size
+	root.content_scale_size = size
+	root.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
+	root.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	root.gui_embed_subwindows = true
+
+func _run_scene(packed: PackedScene, size: Vector2i, mobile: bool) -> bool:
 	ProjectSettings.set_setting("aurorafox/testing/mobile_preview", mobile)
-	root.content_scale_size = Vector2i(720, 1280) if mobile else Vector2i(1440, 900)
+	_prepare_window(size)
 	var main := packed.instantiate() as Control
 	root.add_child(main)
 	await create_timer(1.1).timeout
-	if not _assert_owner_surface(main, mobile):
+	root.size = size
+	await process_frame
+	await process_frame
+	if root.content_scale_size != size:
+		_fail("Owner-art smoke logical canvas drifted: requested=%s actual=%s" % [str(size), str(root.content_scale_size)], 27)
+		return false
+	if not _assert_owner_surface(main, size, mobile):
 		return false
 	if not await _assert_messages_stay_clean(main):
 		return false
@@ -121,9 +143,9 @@ func _run() -> void:
 	if packed == null:
 		_fail("main.tscn could not be loaded", 4)
 		return
-	if not await _run_scene(packed, false):
+	if not await _run_scene(packed, Vector2i(1440, 900), false):
 		return
-	if not await _run_scene(packed, true):
+	if not await _run_scene(packed, Vector2i(720, 1280), true):
 		return
 	ProjectSettings.set_setting("aurorafox/testing/mobile_preview", false)
 	print("AURORA_OWNER_ART_UI_SMOKE_OK")
