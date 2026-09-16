@@ -12,6 +12,17 @@ function Pass([string]$Message) { Write-Host "[OK] $Message" -ForegroundColor Gr
 function Warn([string]$Message) { $warnings.Add($Message); Write-Host "[WARN] $Message" -ForegroundColor Yellow }
 function Fail([string]$Message) { $failures.Add($Message); Write-Host "[FAIL] $Message" -ForegroundColor Red }
 function Has-Command([string]$Name) { return [bool](Get-Command $Name -ErrorAction SilentlyContinue) }
+function Get-Sha256Hex([byte[]]$Bytes) {
+    $sha = [Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($sha.ComputeHash($Bytes))).Replace('-', '').ToLowerInvariant() }
+    finally { $sha.Dispose() }
+}
+function Get-PublicKeyFingerprint([string]$Path) {
+    $pem = Get-Content -LiteralPath $Path -Raw
+    $base64 = ($pem -replace '-----BEGIN PUBLIC KEY-----', '' -replace '-----END PUBLIC KEY-----', '' -replace '\s', '')
+    if ([string]::IsNullOrWhiteSpace($base64)) { throw 'public key PEM is empty' }
+    return Get-Sha256Hex ([Convert]::FromBase64String($base64))
+}
 
 Write-Host 'AuroraFox V1.2 repair / V1.3 signed-update readiness' -ForegroundColor Cyan
 Write-Host 'Historical V1.0-V1.2 clients require a one-time repair bridge.'
@@ -68,15 +79,39 @@ if ($iss -match 'AppId=\{\{8C21F024-53DE-4FA3-A150-78C80829B6BF\}' -and $fixture
 if ($iss.Contains('bridge_repair.txt')) { Pass 'Windows installer records successful bridge repair' } else { Fail 'Windows installer does not record bridge repair' }
 
 $publicKey = Join-Path $root 'update\release_public.pub'
+$identityPath = Join-Path $root 'update\release_identity.json'
+$publicFingerprint = ''
 if (-not (Test-Path -LiteralPath $publicKey)) {
     Fail 'update/release_public.pub is missing. Initialize the owner-controlled trust root before publishing the first signed release.'
 } else {
     try {
         $text = Get-Content -LiteralPath $publicKey -Raw
         if ($text -notmatch '-----BEGIN PUBLIC KEY-----') { throw 'public key is not SubjectPublicKeyInfo PEM' }
-        Pass 'Pinned update public key exists in PEM format'
+        $publicFingerprint = Get-PublicKeyFingerprint $publicKey
+        Pass "Pinned update public key exists: $publicFingerprint"
     } catch {
         Fail "Pinned update public key: $($_.Exception.Message)"
+    }
+}
+
+if (-not (Test-Path -LiteralPath $identityPath)) {
+    Fail 'update/release_identity.json is missing. Run build/setup_release_signing.ps1 and commit the public identity pin before production release.'
+} else {
+    try {
+        $identity = Get-Content -LiteralPath $identityPath -Raw | ConvertFrom-Json
+        if ([int]$identity.schema_version -ne 1) { throw 'unsupported release identity schema' }
+        if ([string]$identity.android_package -ne 'com.aurorafox.ai') { throw 'Android package pin is not com.aurorafox.ai' }
+        if ([string]$identity.signed_update_floor -ne '1.3.0.0') { throw 'signed update floor pin is not 1.3.0.0' }
+        $androidFingerprint = ([string]$identity.android_signing_cert_sha256).ToLowerInvariant().Replace(':', '')
+        if ($androidFingerprint -notmatch '^[0-9a-f]{64}$') { throw 'Android certificate SHA-256 pin is invalid' }
+        $updateFingerprint = ([string]$identity.update_manifest_public_key_sha256).ToLowerInvariant().Replace(':', '')
+        if ($updateFingerprint -notmatch '^[0-9a-f]{64}$') { throw 'update public-key SHA-256 pin is invalid' }
+        if (-not [string]::IsNullOrWhiteSpace($publicFingerprint) -and $updateFingerprint -ne $publicFingerprint) {
+            throw "release identity pins update key $updateFingerprint but committed release_public.pub is $publicFingerprint"
+        }
+        Pass "Permanent release identity is pinned; Android cert=$androidFingerprint"
+    } catch {
+        Fail "Permanent release identity: $($_.Exception.Message)"
     }
 }
 
@@ -85,6 +120,17 @@ $includeCount = ([regex]::Matches($presets, 'include_filter="update/release_publ
 if ($includeCount -eq 2) { Pass 'Pinned update key is included in Windows and Android exports' } else { Fail "Expected public key in both exports; found $includeCount include rules" }
 if ($presets -match 'package/unique_name="com\.aurorafox\.ai"') { Pass 'Android package identity remains com.aurorafox.ai' } else { Fail 'Android package identity changed' }
 
+$androidBuild = Get-Content -LiteralPath (Join-Path $root 'build\build_android.ps1') -Raw
+foreach ($needle in @(
+    'update/release_identity.json',
+    'GODOT_ANDROID_KEYSTORE_RELEASE_PATH',
+    'certificate SHA-256 digest',
+    'Built APK signing certificate mismatch',
+    'AURORAFOX_ANDROID_RELEASE_IDENTITY_OK'
+)) {
+    if ($androidBuild.Contains($needle)) { Pass "Android release identity gate contains: $needle" } else { Fail "Android release identity gate missing: $needle" }
+}
+
 $release = Get-Content -LiteralPath (Join-Path $root '.github\workflows\release.yml') -Raw
 foreach ($needle in @(
     'AuroraFox-Windows.zip',
@@ -92,6 +138,9 @@ foreach ($needle in @(
     'dist/update.json',
     'dist/update.sig',
     'AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64',
+    'AURORA_ANDROID_KEYSTORE_BASE64',
+    'GODOT_ANDROID_KEYSTORE_RELEASE_PATH',
+    'build_android.ps1',
     'needs: core-gates'
 )) {
     if ($release.Contains($needle)) { Pass "Release contract contains: $needle" } else { Fail "Release contract missing: $needle" }
@@ -130,5 +179,5 @@ if ($failures.Count -gt 0) {
 }
 
 Write-Host 'V1.2 REPAIR + V1.3 SIGNED RELEASE READY.' -ForegroundColor Green
-Write-Host 'Legacy V1.2 installations use the one-time repair installer; V1.3+ uses the signed update channel.' -ForegroundColor Cyan
+Write-Host 'Legacy V1.2 installations use the one-time repair installer; V1.3+ uses the pinned signed update channel.' -ForegroundColor Cyan
 exit 0
