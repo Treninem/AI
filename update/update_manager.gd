@@ -15,6 +15,7 @@ const UPDATES_DIR := "user://updates"
 const LOG_PATH := "user://logs/aurora_update.log"
 const MANIFEST_URL := "https://github.com/Treninem/AI/releases/latest/download/update.json"
 const MANIFEST_SIG_URL := "https://github.com/Treninem/AI/releases/latest/download/update.sig"
+const RELEASE_PAGE_URL := "https://github.com/Treninem/AI/releases/latest"
 const PUBLIC_KEY_PATH := "res://update/release_public.pub"
 
 const DEFAULT_SETTINGS := {
@@ -88,6 +89,28 @@ func check_for_updates(manual := true) -> Dictionary:
 		return _fail("Сервер обновлений ответил кодом %d" % code, manual)
 
 	var manifest_bytes: PackedByteArray = result[3]
+	var raw := manifest_bytes.get_string_from_utf8()
+	var untrusted_parsed = JSON.parse_string(raw)
+	if not FileAccess.file_exists(PUBLIC_KEY_PATH):
+		checking = false
+		var untrusted_remote := "0.0.0"
+		if untrusted_parsed is Dictionary:
+			untrusted_remote = str(untrusted_parsed.get("version", "0.0.0"))
+		if _compare_versions(untrusted_remote, current_version) > 0:
+			var repair_message := "Обнаружена более новая версия AuroraFox %s, но эта установка не содержит доверенный ключ обновлений. Автоматическая установка заблокирована безопасностью. Выполните одноразовый Repair/Bridge переход и затем обновления будут работать штатно." % untrusted_remote
+			_log("repair required current=%s remote=%s release=%s" % [current_version, untrusted_remote, RELEASE_PAGE_URL])
+			if manual: update_error.emit(repair_message)
+			return {
+				"ok": false,
+				"available": true,
+				"repair_required": true,
+				"version": untrusted_remote,
+				"release_page": RELEASE_PAGE_URL,
+				"error": repair_message,
+				"background": not manual
+			}
+		return _fail("В этой сборке отсутствует публичный ключ обновлений AuroraFox", manual)
+
 	var signature_result := await _fetch_manifest_signature()
 	if not signature_result.get("ok", false):
 		checking = false
@@ -97,8 +120,7 @@ func check_for_updates(manual := true) -> Dictionary:
 		return _fail("Криптографическая подпись update.json недействительна. Обновление отклонено.", manual)
 	_log("update manifest RSA-SHA256 signature verified")
 
-	var raw := manifest_bytes.get_string_from_utf8()
-	var parsed = JSON.parse_string(raw)
+	var parsed = untrusted_parsed
 	checking = false
 	if not parsed is Dictionary:
 		return _fail("Некорректный update.json", manual)
