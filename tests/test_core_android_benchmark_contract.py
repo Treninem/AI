@@ -23,6 +23,7 @@ def test_android_probe_uses_exact_native_core_and_has_no_network_permission() ->
     assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in activity
     assert "android.permission.INTERNET" not in manifest
     assert 'abiFilters += listOf("x86_64")' in app_gradle
+    assert 'pickFirsts += "**/libc++_shared.so"' in app_gradle
     assert 'project(":runtime").projectDir = file("../../../android_plugin/plugin")' in settings
     assert "android.useAndroidX=true" in gradle_properties
 
