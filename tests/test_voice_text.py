@@ -42,11 +42,37 @@ def test_prepare_for_speech_verbalizes_minus_and_hides_paths():
 
 def test_prepare_for_speech_verbalizes_integer_decimal_percent_and_version():
     spoken = prepare_for_speech("Температура 23 °C, давление 2,4 бара, прогресс 75%, версия 1.3.0.")
-    assert "двадцать три градусов Цельсия" in spoken
+    assert "двадцать три градуса Цельсия" in spoken
     assert "две целых четыре десятых бара" in spoken
     assert "семьдесят пять процентов" in spoken
     assert "один точка три точка ноль" in spoken
     assert not any(ch.isdigit() for ch in spoken)
+
+
+def test_prepare_for_speech_uses_natural_measurement_morphology():
+    spoken = prepare_for_speech(
+        "Проверка: 1 °C, 2 °C, 5 °C, -21 °C; 1%, 2%, 5%, 21%, 22%, 25%; 2,4 °C и 1,5%."
+    )
+    assert "один градус Цельсия" in spoken
+    assert "два градуса Цельсия" in spoken
+    assert "пять градусов Цельсия" in spoken
+    assert "минус двадцать один градус Цельсия" in spoken
+    assert "один процент" in spoken
+    assert "два процента" in spoken
+    assert "пять процентов" in spoken
+    assert "двадцать один процент" in spoken
+    assert "двадцать два процента" in spoken
+    assert "двадцать пять процентов" in spoken
+    assert "две целых четыре десятых градуса Цельсия" in spoken
+    assert "одна целая пять десятых процента" in spoken
+
+
+def test_prepare_for_speech_trims_zero_fraction_for_natural_delivery():
+    spoken = prepare_for_speech("Температура 2,0 °C и прогресс 5,00%.")
+    assert "два градуса Цельсия" in spoken
+    assert "пять процентов" in spoken
+    assert "ноль десятых" not in spoken
+    assert "ноль сотых" not in spoken
 
 
 def test_streaming_split_is_sentence_based():
