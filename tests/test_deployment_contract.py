@@ -112,6 +112,9 @@ def test_reg_ru_deployment_updates_only_from_github_main_and_rolls_back():
     gates = (
         "tests/test_api_gateway.py",
         "tests/test_api_database.py",
+        "tests/test_api_accounts_sync.py",
+        "tests/test_api_account_network.py",
+        "tests/test_api_schema_migrations.py",
         "tests/test_api_privacy_contract.py",
         "tests/test_api_runtime_resilience.py",
         "tests/test_core_candidate_queue.py",
