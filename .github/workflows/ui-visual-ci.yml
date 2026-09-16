@@ -90,6 +90,8 @@ jobs:
             artifacts/ui/desktop_tools_1440x900.png
             artifacts/ui/desktop_knowledge_base_1440x900.png
             artifacts/ui/desktop_updates_1440x900.png
+            artifacts/ui/desktop_mid_chat_1280x720.png
+            artifacts/ui/desktop_mid_settings_1280x720.png
             artifacts/ui/desktop_compact_chat_960x640.png
             artifacts/ui/desktop_compact_settings_960x640.png
             artifacts/ui/desktop_compact_account_960x640.png
@@ -121,13 +123,13 @@ jobs:
           data = json.loads(manifest.read_text(encoding='utf-8'))
           expected_sha = os.environ['AURORA_UI_HEAD_SHA']
           assert data['head_sha'] == expected_sha, (data['head_sha'], expected_sha)
-          assert len(data['captures']) == 23, len(data['captures'])
+          assert len(data['captures']) == 25, len(data['captures'])
           assert data['known_missing_client_surfaces'] == []
           surfaces = {item['surface'] for item in data['captures']}
           for required in {'login_guest', 'user_memory_management', 'files_projects', 'knowledge_base', 'updates_error_resilience'}:
               assert required in surfaces, (required, sorted(surfaces))
-          assert any(item['requested_viewport'] == {'width': 960, 'height': 640} for item in data['captures'])
-          assert any(item['requested_viewport'] == {'width': 480, 'height': 960} for item in data['captures'])
+          for required_size in ({'width': 1440, 'height': 900}, {'width': 1280, 'height': 720}, {'width': 960, 'height': 640}, {'width': 720, 'height': 1280}, {'width': 480, 'height': 960}):
+              assert any(item['requested_viewport'] == required_size for item in data['captures']), required_size
           print(json.dumps(data, ensure_ascii=False, indent=2))
           PY
 
