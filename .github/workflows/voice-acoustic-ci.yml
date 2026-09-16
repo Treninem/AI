@@ -7,6 +7,7 @@ on:
       - "voice/python/**"
       - "voice/config/**"
       - "voice/tools/acoustic_benchmark.py"
+      - "voice/tools/ssml_rate_ab.py"
       - ".github/workflows/voice-acoustic-ci.yml"
 
 permissions:
@@ -31,7 +32,7 @@ jobs:
           python -m pip install silero==0.5.5 soundfile==0.13.1 numpy==2.2.6 transformers==4.57.1 accelerate==1.10.1 utmos-pytorch
 
       - name: Synthesize, score naturalness and round-trip intelligibility
-        run: python voice/tools/acoustic_benchmark.py
+        run: python voice/tools/ssml_rate_ab.py
 
       - name: Upload voice samples and acoustic report
         if: always()
