@@ -19,7 +19,7 @@ class LearningStore:
         self.path = self.root / "learning_events.jsonl"
         self.max_events = max(1000, max_events)
         self.database = AuroraDatabase(self.root / "aurorafox.sqlite3")
-        self._mirror_lock = threading.Lock()
+        self._write_lock = threading.RLock()
         self._migrate_legacy_once()
 
     @staticmethod
@@ -104,22 +104,19 @@ class LearningStore:
             json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
             for event in events
         )
-        with self._mirror_lock:
-            atomic_write_text(self.path, payload, mode=0o600)
+        atomic_write_text(self.path, payload, mode=0o600)
 
     def _append_legacy_mirror(self, event: dict[str, Any]) -> None:
         line = json.dumps(event, ensure_ascii=False, separators=(",", ":")) + "\n"
-        with self._mirror_lock:
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-            with self.path.open("a", encoding="utf-8", newline="\n") as stream:
-                stream.write(line)
-                stream.flush()
-            # Occasional compaction is bounded and keeps rollback format aligned.
-            try:
-                if self.path.stat().st_size > 32 * 1024 * 1024:
-                    self._rewrite_legacy_mirror()
-            except OSError:
-                pass
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        with self.path.open("a", encoding="utf-8", newline="\n") as stream:
+            stream.write(line)
+            stream.flush()
+        try:
+            if self.path.stat().st_size > 32 * 1024 * 1024:
+                self._rewrite_legacy_mirror()
+        except OSError:
+            pass
 
     def append(self, kind: str, payload: dict[str, Any]) -> dict[str, Any]:
         event = {
@@ -129,31 +126,32 @@ class LearningStore:
             "synced": False,
             "payload": payload,
         }
-        compacted = False
-        with self.database.connection(write=True) as connection:
-            connection.execute(
-                "INSERT INTO learning_events(id, kind, created_at, synced, payload_json) VALUES(?, ?, ?, 0, ?)",
-                (
-                    event["id"],
-                    kind,
-                    event["time"],
-                    json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
-                ),
-            )
-            count = int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0])
-            overflow = count - self.max_events
-            if overflow > 0:
+        with self._write_lock:
+            compacted = False
+            with self.database.connection(write=True) as connection:
                 connection.execute(
-                    "DELETE FROM learning_events WHERE id IN ("
-                    "SELECT id FROM learning_events ORDER BY created_at, rowid LIMIT ?)",
-                    (overflow,),
+                    "INSERT INTO learning_events(id, kind, created_at, synced, payload_json) VALUES(?, ?, ?, 0, ?)",
+                    (
+                        event["id"],
+                        kind,
+                        event["time"],
+                        json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
+                    ),
                 )
-                compacted = True
-        if compacted:
-            self._rewrite_legacy_mirror()
-        else:
-            self._append_legacy_mirror(event)
-        return event
+                count = int(connection.execute("SELECT COUNT(*) FROM learning_events").fetchone()[0])
+                overflow = count - self.max_events
+                if overflow > 0:
+                    connection.execute(
+                        "DELETE FROM learning_events WHERE id IN ("
+                        "SELECT id FROM learning_events ORDER BY created_at, rowid LIMIT ?)",
+                        (overflow,),
+                    )
+                    compacted = True
+            if compacted:
+                self._rewrite_legacy_mirror()
+            else:
+                self._append_legacy_mirror(event)
+            return event
 
     def pending(self, limit: int = 100) -> list[dict[str, Any]]:
         with self.database.connection() as connection:
@@ -169,15 +167,16 @@ class LearningStore:
         if not normalized:
             return 0
         placeholders = ",".join("?" for _ in normalized)
-        with self.database.connection(write=True) as connection:
-            cursor = connection.execute(
-                f"UPDATE learning_events SET synced=1 WHERE synced=0 AND id IN ({placeholders})",
-                tuple(normalized),
-            )
-            changed = cursor.rowcount
-        if changed:
-            self._rewrite_legacy_mirror()
-        return int(changed)
+        with self._write_lock:
+            with self.database.connection(write=True) as connection:
+                cursor = connection.execute(
+                    f"UPDATE learning_events SET synced=1 WHERE synced=0 AND id IN ({placeholders})",
+                    tuple(normalized),
+                )
+                changed = cursor.rowcount
+            if changed:
+                self._rewrite_legacy_mirror()
+            return int(changed)
 
     def status(self) -> dict[str, Any]:
         with self.database.connection() as connection:
