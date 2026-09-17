@@ -15,7 +15,7 @@ capture_logcat() {
 }
 trap capture_logcat EXIT
 
-adb install -r "$apk"
+adb install --no-incremental -r "$apk"
 # This is a release APK: run-as is intentionally unavailable. Root belongs
 # only to the disposable google_apis emulator, never to the shipped product.
 adb root

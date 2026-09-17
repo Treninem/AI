@@ -94,6 +94,7 @@ class AndroidE2ERunnerTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(saved['status'], 'completed')
         self.assertEqual(sum(call[:2] == ['exec-out', 'cat'] for call in calls), 2)
+        self.assertTrue(any(call[:3] == ['install', '--no-incremental', '-r'] for call in calls))
         self.assertIn(['root'], calls)
         self.assertFalse(any('run-as' in call for call in calls))
 
