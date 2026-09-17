@@ -32,6 +32,16 @@ def test_code_specialist_exposes_complete_local_coding_surface() -> None:
     assert "ollama" not in code.lower()
 
 
+def test_code_specialist_repairs_incomplete_generated_test_suites() -> None:
+    code = CODE_SPECIALIST.read_text(encoding="utf-8")
+    assert "func _valid_test_output(" in code
+    assert "func _repair_generated_tests_response(" in code
+    assert "cases.size() >= 2" in code
+    assert "if not _valid_test_output(parsed):" in code
+    assert "Test Engineer repair returned incomplete tests" in code
+    assert 'repaired["repaired_structure"] = true' in code
+
+
 def test_specialist_team_runtime_smoke_uses_real_owned_code_specialist_path() -> None:
     smoke = SMOKE.read_text(encoding="utf-8")
     assert "SpecialistTeam.new()" in smoke
