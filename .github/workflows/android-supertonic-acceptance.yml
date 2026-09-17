@@ -1,0 +1,121 @@
+name: AuroraFox Supertonic Acceptance Evidence
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [chat-2026-09-17-voice-audio-r2]
+    paths:
+      - 'voice/tools/android_supertonic_acceptance_benchmark.py'
+      - 'voice/tools/android_supertonic_candidate_benchmark.py'
+      - '.github/workflows/android-supertonic-acceptance.yml'
+  pull_request:
+    paths:
+      - 'voice/tools/android_supertonic_acceptance_benchmark.py'
+      - 'voice/tools/android_supertonic_candidate_benchmark.py'
+      - '.github/workflows/android-supertonic-acceptance.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-supertonic-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Validate benchmark source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m py_compile \
+            voice/tools/android_supertonic_candidate_benchmark.py \
+            voice/tools/android_supertonic_acceptance_benchmark.py
+
+      - name: Install pinned speech benchmark runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install 'sherpa-onnx==1.13.4' 'numpy>=2.0,<3' 'soundfile>=0.12,<1'
+
+      - name: Download and verify exact benchmark models
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/voice-models
+
+          tts_name='sherpa-onnx-supertonic-3-tts-int8-2026-05-11'
+          tts_archive=".ci/voice-models/${tts_name}.tar.bz2"
+          curl --retry 4 --retry-all-errors -fL \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${tts_name}.tar.bz2" \
+            -o "$tts_archive"
+          test "$(stat -c '%s' "$tts_archive")" = '128774318'
+          test "$(sha256sum "$tts_archive" | awk '{print $1}')" = '82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427'
+          tar -xjf "$tts_archive" -C .ci/voice-models
+
+          whisper_name='sherpa-onnx-whisper-tiny'
+          whisper_archive=".ci/voice-models/${whisper_name}.tar.bz2"
+          curl --retry 4 --retry-all-errors -fL \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/${whisper_name}.tar.bz2" \
+            -o "$whisper_archive"
+          test "$(stat -c '%s' "$whisper_archive")" = '116204861'
+          test "$(sha256sum "$whisper_archive" | awk '{print $1}')" = 'c46116994e539aa165266d96b325252728429c12535eb9d8b6a2b10f129e66b1'
+          tar -xjf "$whisper_archive" -C .ci/voice-models
+
+      - name: Run F1-F5 multilingual quality and reliability acceptance
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build/voice/supertonic-acceptance
+          python voice/tools/android_supertonic_acceptance_benchmark.py \
+            --supertonic-dir .ci/voice-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11 \
+            --supertonic-archive .ci/voice-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2 \
+            --whisper-dir .ci/voice-models/sherpa-onnx-whisper-tiny \
+            --whisper-archive .ci/voice-models/sherpa-onnx-whisper-tiny.tar.bz2 \
+            --output-dir build/voice/supertonic-acceptance
+
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          report = json.loads(Path('build/voice/supertonic-acceptance/acceptance-report.json').read_text(encoding='utf-8'))
+          assert report['wav_count'] == 65, report['wav_count']
+          assert report['scenario_count_per_speaker'] == 13
+          assert len(report['speaker_summary']) == 5
+          assert len(report['reliability']) == 5
+          assert all(row['clipping_count'] == 0 for row in report['speaker_summary'])
+          assert all(row['cancellation_callback_observed'] for row in report['reliability'])
+          assert all(row['post_cancel_recovery_samples'] > 0 for row in report['reliability'])
+          print('PROVISIONAL_METRIC_CANDIDATE', report['provisional_metric_candidate'])
+          print('COLD_LOAD_SECONDS', report['cold_tts_load_seconds'])
+          print('RESTART_LOAD_SECONDS', report['restart_tts_load_seconds'])
+          print('PEAK_RSS_MIB', report['peak_rss_mib'])
+          for row in report['speaker_summary']:
+              print(
+                  f"{row['speaker']} mean_similarity={row['mean_asr_similarity']:.4f} "
+                  f"min_similarity={row['min_asr_similarity']:.4f} "
+                  f"mean_rtf={row['mean_rtf']:.4f} max_rtf={row['max_rtf']:.4f} "
+                  f"peak={row['max_peak']:.4f} clipping={row['clipping_count']}"
+              )
+          PY
+
+      - name: Upload multilingual WAV and reliability evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-supertonic-acceptance-evidence
+          path: build/voice/supertonic-acceptance/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 6
