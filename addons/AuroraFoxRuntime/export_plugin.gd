@@ -16,6 +16,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	var _plugin_name := "AuroraFoxRuntime"
 	var _sherpa_name := "sherpa-onnx-1.13.4.aar"
 	var _pdfbox_dependency := "com.tom-roush:pdfbox-android:2.0.27.0"
+	var _tesseract_dependency := "cz.adaptech.tesseract4android:tesseract4android:4.9.0"
+	var _jitpack_repo := "https://jitpack.io"
 
 	func _supports_platform(platform) -> bool:
 		return platform is EditorExportPlatformAndroid
@@ -29,10 +31,14 @@ class AndroidExportPlugin extends EditorExportPlugin:
 		])
 
 	func _get_android_dependencies(_platform, _debug) -> PackedStringArray:
-		# Maven Central is included by Godot's Gradle Android export. Declaring
-		# PDFBox here makes the transitive classes available in the final APK;
-		# an implementation dependency in the local AAR alone is not sufficient.
-		return PackedStringArray([_pdfbox_dependency])
+		# Local AAR dependencies are not embedded automatically in the final
+		# Godot APK. Export the PDF parser and local Tesseract runtime explicitly.
+		return PackedStringArray([_pdfbox_dependency, _tesseract_dependency])
+
+	func _get_android_dependencies_maven_repos(_platform, _debug) -> PackedStringArray:
+		# Google and Maven Central are included by Godot; Tesseract4Android 4.9.0
+		# is distributed through JitPack and must be resolvable by the APK export.
+		return PackedStringArray([_jitpack_repo])
 
 	func _get_name() -> String:
 		return _plugin_name

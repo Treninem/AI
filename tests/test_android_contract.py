@@ -75,6 +75,7 @@ def main() -> None:
     require("apksigner" in artifact and "aapt" in artifact, "APK signature/package validation is missing")
     require("android-emulator-runner" in artifact and "arch: x86_64" in artifact, "Android emulator validation is missing")
     require('adb install -r "$APK_PATH"' in artifact, "Android artifact smoke does not install the generated APK")
+    require("ndk;28.1.13356709" in artifact, "Android workflow NDK pin drifted")
     emulator_script = artifact.split("script: |", 1)[1].split("- name: Upload APK artifact", 1)[0]
     require("set -eu" in emulator_script, "Android emulator smoke must fail fast under POSIX /bin/sh")
     require("pipefail" not in emulator_script, "Android emulator smoke uses Bash-only pipefail under POSIX /bin/sh")
@@ -161,12 +162,18 @@ def main() -> None:
     gradle = read("android_plugin/plugin/build.gradle.kts")
     require("compileSdk = 35" in gradle, "Android plugin compileSdk drifted")
     require("minSdk = 26" in gradle, "Android plugin minSdk drifted")
+    require('ndkVersion = "28.1.13356709"' in gradle, "Android plugin NDK pin drifted")
     require('abiFilters += listOf("arm64-v8a", "x86_64")' in gradle, "Android plugin ABI drifted")
     require('implementation("org.godotengine:godot:4.7.1.stable")' in gradle, "Godot Android plugin dependency drifted")
     require(
         'implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")' in gradle,
         "Android local PDF text dependency is missing from plugin build",
     )
+    require(
+        'implementation("cz.adaptech.tesseract4android:tesseract4android:$tesseractAndroidVersion")' in gradle,
+        "Android local OCR dependency is missing from plugin build",
+    )
+    require("eng.traineddata" in gradle and "rus.traineddata" in gradle, "Android bilingual OCR assets are not declared")
 
     export_plugin = read("addons/AuroraFoxRuntime/export_plugin.gd")
     require(
@@ -174,21 +181,33 @@ def main() -> None:
         "PDFBox dependency is not exported into the final Godot APK",
     )
     require(
-        "return PackedStringArray([_pdfbox_dependency])" in export_plugin,
-        "Godot Android export no longer exposes PDFBox Maven dependency",
+        'cz.adaptech.tesseract4android:tesseract4android:4.9.0' in export_plugin,
+        "Tesseract dependency is not exported into the final Godot APK",
     )
+    require(
+        "return PackedStringArray([_pdfbox_dependency, _tesseract_dependency])" in export_plugin,
+        "Godot Android export must expose both PDFBox and Tesseract Maven dependencies",
+    )
+    require('"https://jitpack.io"' in export_plugin, "Tesseract JitPack repository is not exported")
 
     file_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt")
-    require("PDFBoxResourceLoader.init" in file_runtime, "Android PDFBox runtime is not initialized")
-    require("PDDocument.load(file).use" in file_runtime, "Android PDF text path does not open PDF locally")
-    require("PDFTextStripper()" in file_runtime, "Android PDF text layer is not extracted")
-    require('"engine" to "pdfbox-android"' in file_runtime, "Android PDF extraction engine metadata drifted")
-    require('"offline" to true' in file_runtime, "Android PDF extraction must remain offline")
-    require("PdfRenderer" not in file_runtime, "Android PDF path regressed to metadata-only PdfRenderer")
+    require('ext == "pdf" -> analyzeOcr(file, "pdf", visual)' in file_runtime, "Android PDF route no longer delegates to local OCR runtime")
+    require('meta.put("offline", true)' in file_runtime, "Android file/OCR result metadata must remain offline")
+    require('meta.put("external_ai_required", false)' in file_runtime, "Android file/OCR path must not require external AI")
+
+    ocr_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt")
+    require("PDFBoxResourceLoader.init" in ocr_runtime, "Android PDFBox runtime is not initialized")
+    require("PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()).use" in ocr_runtime, "Android PDF path does not use bounded local PDFBox loading")
+    require("PDFTextStripper()" in ocr_runtime, "Android PDF text layer is not extracted")
+    require("PDFRenderer" in ocr_runtime, "Android scanned-PDF OCR renderer is missing")
+    require('private const val LANGUAGES = "rus+eng"' in ocr_runtime, "Android OCR language contract drifted")
+    require('"engine" to "pdfbox+tesseract4android"' in ocr_runtime, "Android PDF/OCR engine metadata drifted")
+    require("MAX_PDF_BYTES" in ocr_runtime and "MAX_PAGES" in ocr_runtime and "MAX_OCR_PAGES" in ocr_runtime, "Android PDF/OCR safety bounds are missing")
+    require("CancellationException" in ocr_runtime and "checkCancelled()" in ocr_runtime, "Android local OCR cancellation contract is missing")
 
     print(
         f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} "
-        f"abis=arm64-v8a,x86_64 pdf=offline core=bundled"
+        f"abis=arm64-v8a,x86_64 pdf=offline ocr=rus+eng core=bundled"
     )
 
 
