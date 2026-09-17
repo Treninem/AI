@@ -1,0 +1,60 @@
+name: AuroraFox Core Evolution Tournament
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/core_improvement_pipeline.gd'
+      - 'scripts/core_candidate_benchmark.gd'
+      - 'tests/core_candidate_benchmark_smoke.gd'
+      - '.github/workflows/core-evolution-tournament.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'scripts/core_improvement_pipeline.gd'
+      - 'scripts/core_candidate_benchmark.gd'
+      - 'tests/core_candidate_benchmark_smoke.gd'
+      - '.github/workflows/core-evolution-tournament.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-core-evolution-tournament-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tournament-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.1
+        id: godot
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          mkdir -p "$RUNNER_TEMP/aurora-godot"
+          curl -fL --retry 3 "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o "$RUNNER_TEMP/godot.zip"
+          unzip -q "$RUNNER_TEMP/godot.zip" -d "$RUNNER_TEMP/aurora-godot"
+          godot="$(find "$RUNNER_TEMP/aurora-godot" -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          chmod +x "$godot"
+          "$godot" --version
+          echo "path=$godot" >> "$GITHUB_OUTPUT"
+
+      - name: Parse full project
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 120s '${{ steps.godot.outputs.path }}' --headless --editor --path . --quit
+
+      - name: Run Core candidate tournament smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout 60s '${{ steps.godot.outputs.path }}' --headless --path . --script tests/core_candidate_benchmark_smoke.gd
