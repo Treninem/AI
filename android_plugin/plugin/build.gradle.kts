@@ -15,7 +15,6 @@ val pdfBoxAndroidVersion = "2.0.27.0"
 android {
     namespace = pluginPackageName
     compileSdk = 35
-    ndkVersion = "28.1.13356709"
 
     buildFeatures {
         buildConfig = true
