@@ -75,9 +75,24 @@ func _build_panel() -> void:
 		margin.add_theme_constant_override(side, 22)
 	popup.add_child(margin)
 
+	# PopupPanel derives its native minimum size from direct content. Autowrapped
+	# labels can report a very tall minimum before the embedded subwindow has a
+	# stable width, which previously expanded this 470 px panel above 7,000 px.
+	# A ScrollContainer makes the viewport the size authority while keeping every
+	# permission/status control reachable on short windows.
+	var scroll := ScrollContainer.new()
+	scroll.name = "ComputerAgentScroll"
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
+	margin.add_child(scroll)
+
 	var box := VBoxContainer.new()
+	box.name = "ComputerAgentContent"
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.add_theme_constant_override("separation", 12)
-	margin.add_child(box)
+	scroll.add_child(box)
 
 	var title := Label.new()
 	title.text = "Компьютерный режим"
