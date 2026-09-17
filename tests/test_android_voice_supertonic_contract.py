@@ -30,6 +30,7 @@ def main() -> None:
     runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt")
     setup = read("android_plugin/setup_native.ps1")
     gradle = read("android_plugin/plugin/build.gradle.kts")
+    notice = read("android_plugin/plugin/src/main/assets/voice/SUPERTONIC-THIRD-PARTY-NOTICE.txt")
 
     require(MODEL in runtime, "Android runtime is not pointed at the pinned Supertonic 3 asset root")
     require("OfflineTtsSupertonicModelConfig" in runtime, "Android runtime does not configure Supertonic")
@@ -59,9 +60,14 @@ def main() -> None:
     require('val sherpaVersion = "1.13.4"' in gradle, "sherpa-onnx dependency drifted from the verified Supertonic API")
     require("compileOnly(files(sherpaAar))" in gradle, "Android plugin no longer compiles against the pinned sherpa AAR")
 
+    require("OpenRAIL-M" in notice, "Packaged Supertonic notice does not identify the model license")
+    require("License: MIT" in notice, "Packaged Supertonic notice does not identify the software license")
+    require(ARCHIVE_SHA256 in notice, "Packaged Supertonic notice is not tied to the audited model archive")
+    require("huggingface.co/Supertone/supertonic-3/blob/main/LICENSE" in notice, "Packaged model notice lacks the full-license location")
+
     print(
         "AURORA_ANDROID_VOICE_SUPERTONIC_CONTRACT_OK "
-        f"model={MODEL} bytes={ARCHIVE_BYTES} sha256={ARCHIVE_SHA256} candidate=F1 sid=0 lang=ru"
+        f"model={MODEL} bytes={ARCHIVE_BYTES} sha256={ARCHIVE_SHA256} candidate=F1 sid=0 lang=ru license=MIT+OpenRAIL-M"
     )
 
 
