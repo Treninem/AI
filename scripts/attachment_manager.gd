@@ -172,13 +172,20 @@ func _learning_type(item: Dictionary) -> String:
 
 func _learning_type_from_filename(name: String) -> String:
 	var lowered := name.to_lower()
-	for marker in ["aurorafox_knowledge", "aurora_knowledge", ".knowledge.", "_knowledge.", "knowledge_base", "knowledge-db", "knowledge_db"]:
+	var stem := lowered.get_basename().get_file()
+	if stem in ["knowledge", "knowledge_db", "knowledge-base", "database", "db", "база_знаний", "знания", "бд"]:
+		return "knowledge"
+	if stem in ["training", "training_data", "training_dataset", "learning", "dataset", "обучение", "тренировка"]:
+		return "training"
+	if stem in ["skill", "skills", "abilities", "ability", "навык", "навыки", "умение", "умения"]:
+		return "skill"
+	for marker in ["aurorafox_knowledge", "aurora_knowledge", ".knowledge.", "_knowledge.", "knowledge_base", "knowledge-db", "knowledge_db", "база_знаний", "знания"]:
 		if lowered.contains(marker):
 			return "knowledge"
-	for marker in ["aurorafox_training", "aurora_training", ".training.", "_training.", "training_data", "training-dataset", "training_dataset"]:
+	for marker in ["aurorafox_training", "aurora_training", ".training.", "_training.", "training_data", "training-dataset", "training_dataset", "обучение"]:
 		if lowered.contains(marker):
 			return "training"
-	for marker in ["aurorafox_skills", "aurorafox_skill", "aurora_skills", "aurora_skill", ".skills.", ".skill.", "_skills.", "_skill."]:
+	for marker in ["aurorafox_skills", "aurorafox_skill", "aurora_skills", "aurora_skill", ".skills.", ".skill.", "_skills.", "_skill.", "навыки", "умения"]:
 		if lowered.contains(marker):
 			return "skill"
 	return ""
@@ -246,7 +253,7 @@ func _knowledge_import_worker(path: String, metadata: Dictionary) -> Dictionary:
 	return transaction.import_file(store, path, metadata)
 
 func _import_skill_file(path: String, item: Dictionary) -> Dictionary:
-	var experience := _owner_experience_store()
+	var experience: ExperienceStore = _owner_experience_store()
 	if experience == null:
 		return {"ok": false, "type": "skill", "error": "ExperienceStore AuroraFox ещё не готов"}
 	var ext := path.get_extension().to_lower()
@@ -363,7 +370,7 @@ func _sanitize_imported_skill(value: Variant) -> Dictionary:
 		"confidence": clampf(float(source.get("confidence", 0.55)), 0.05, 0.70)
 	}
 
-func _owner_experience_store():
+func _owner_experience_store() -> ExperienceStore:
 	var owner := get_parent()
 	if owner == null:
 		return null
@@ -372,7 +379,7 @@ func _owner_experience_store():
 		return null
 	var experience = agent.get("experience")
 	if experience is ExperienceStore:
-		return experience
+		return experience as ExperienceStore
 	return null
 
 func _learning_import_summary(result: Dictionary) -> String:
