@@ -226,7 +226,12 @@ func generate_tests(task: String, code: String, language: String = "unknown") ->
 You are AuroraFox Test Engineer. Design executable tests that validate the requested behavior, important edge cases and regressions in the supplied code.
 Return strict JSON only:
 {"framework":"...","test_code":"...","cases":[{"name":"...","purpose":"..."}],"coverage_notes":["..."]}
-Do not claim tests were executed. Prefer the ecosystem's standard lightweight test style when no framework is supplied.
+Requirements:
+- `test_code` must contain executable test code, not prose;
+- `cases` must contain at least two concrete cases: the requested primary behavior and at least one edge/regression case;
+- preserve exact literals/inputs/expected outputs explicitly requested by the user;
+- do not claim tests were executed.
+Prefer the ecosystem's standard lightweight test style when no framework is supplied.
 Language: %s
 Testing goal: %s
 Code under test:
@@ -235,14 +240,52 @@ Code under test:
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.08)
 	if not response.get("ok", false):
 		return response
-	var parsed := _parse_json(str(response.get("content", "")))
-	if parsed.is_empty():
-		return {"ok":false,"error":"Test Engineer returned invalid JSON","raw":response.get("content", "")}
-	var cases = parsed.get("cases", [])
-	if not cases is Array or cases.is_empty():
-		return {"ok":false,"error":"Test Engineer returned no test cases","raw":response.get("content", "")}
+	var raw := str(response.get("content", ""))
+	var parsed := _parse_json(raw)
+	if not _valid_test_output(parsed):
+		var repaired := await _repair_generated_tests_response(task, code, language, raw)
+		if not repaired.get("ok", false):
+			return repaired
+		parsed = repaired
+	if not _valid_test_output(parsed):
+		return {"ok":false,"error":"Test Engineer returned incomplete tests after repair","raw":raw}
 	parsed["ok"] = true
 	return parsed
+
+func _valid_test_output(parsed: Dictionary) -> bool:
+	if parsed.is_empty():
+		return false
+	var test_code := str(parsed.get("test_code", "")).strip_edges()
+	var cases = parsed.get("cases", [])
+	return not test_code.is_empty() and cases is Array and cases.size() >= 2
+
+func _repair_generated_tests_response(task: String, code: String, language: String, raw: String) -> Dictionary:
+	var repair_prompt := """
+You are repairing an incomplete AuroraFox Test Engineer answer. Return one strict JSON object only:
+{"framework":"...","test_code":"executable tests","cases":[{"name":"...","purpose":"..."},{"name":"...","purpose":"..."}],"coverage_notes":["..."]}
+Requirements:
+- `test_code` must be non-empty executable test code for the supplied language;
+- include at least two concrete cases: the user's primary requested behavior plus an edge/regression case;
+- preserve exact function names, literal inputs and expected outputs from the testing goal;
+- use the supplied code under test; do not invent an unrelated API;
+- never claim the tests were executed.
+Language: %s
+Testing goal: %s
+Code under test:
+%s
+Previous answer to repair:
+%s
+""" % [language, task, code.substr(0, 60000), raw.substr(0, 30000)]
+	var response := await _chat_code([{"role":"user","content":repair_prompt}], 0.02)
+	if not response.get("ok", false):
+		return {"ok":false,"error":"Test Engineer repair request failed: %s" % str(response.get("error", "unknown")),"raw":raw}
+	var repaired_raw := str(response.get("content", ""))
+	var repaired := _parse_json(repaired_raw)
+	if not _valid_test_output(repaired):
+		return {"ok":false,"error":"Test Engineer repair returned incomplete tests","raw":repaired_raw}
+	repaired["ok"] = true
+	repaired["repaired_structure"] = true
+	return repaired
 
 func reason_across_files(task: String, files: Array) -> Dictionary:
 	if files.size() < 2:
