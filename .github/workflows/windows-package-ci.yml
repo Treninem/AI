@@ -170,7 +170,18 @@ jobs:
       - name: Smoke exported executable
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath '.\build\windows\AuroraFox.exe' -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
+          $stdout = Join-Path $env:RUNNER_TEMP 'aurorafox-export-stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'aurorafox-export-stderr.log'
+          $p = Start-Process -FilePath '.\build\windows\AuroraFox.exe' -ArgumentList @('--headless','--verbose','--quit-after','3') -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          $finished = $p.WaitForExit(120000)
+          if (-not $finished) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Get-Content $stdout -ErrorAction SilentlyContinue
+            Get-Content $stderr -ErrorAction SilentlyContinue
+            throw 'Exported AuroraFox.exe did not honor the bounded headless shutdown'
+          }
+          Get-Content $stdout -ErrorAction SilentlyContinue
+          Get-Content $stderr -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { throw "Exported AuroraFox.exe exited with $($p.ExitCode)" }
 
       - name: Build installer
