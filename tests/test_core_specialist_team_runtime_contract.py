@@ -4,6 +4,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SMOKE = ROOT / "benchmarks" / "core" / "code_specialist_smoke.gd"
 CODE_SPECIALIST = ROOT / "scripts" / "code_specialist.gd"
 DESKTOP_RUNTIME = ROOT / "scripts" / "desktop_local_runtime.gd"
+ANDROID_RUNTIME = ROOT / "scripts" / "android_local_runtime.gd"
 SMOKE_RUNNER = ROOT / "benchmarks" / "core" / "run_windows_code_specialist_smoke.ps1"
 WORKFLOW = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
 
@@ -60,11 +61,12 @@ def test_specialist_team_runtime_smoke_is_fail_fast_before_full_benchmark() -> N
     assert start < end
 
 
-def test_desktop_core_requests_have_product_bounds_and_smoke_allows_full_surface() -> None:
+def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> None:
     runtime = DESKTOP_RUNTIME.read_text(encoding="utf-8")
+    android = ANDROID_RUNTIME.read_text(encoding="utf-8")
     runner = SMOKE_RUNNER.read_text(encoding="utf-8")
     assert "DEFAULT_CHAT_MAX_TOKENS := 2048" in runtime
-    assert "TERSE_CHAT_MAX_TOKENS := 768" in runtime
+    assert "TERSE_CHAT_MAX_TOKENS := 128" in runtime
     assert "DEFAULT_CONTEXT_SIZE := 16384" in runtime
     assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 180.0" in runtime
     assert '"max_tokens": max_tokens' in runtime
@@ -72,6 +74,9 @@ def test_desktop_core_requests_have_product_bounds_and_smoke_allows_full_surface
     assert 'clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)' in runtime
     assert 'payload["reasoning_effort"] = "none"' in runtime
     assert '"--ctx-size", str(DEFAULT_CONTEXT_SIZE)' in runtime
+    assert "DEFAULT_CHAT_MAX_TOKENS := 384" in android
+    assert "TERSE_CHAT_MAX_TOKENS := 64" in android
+    assert 'request_options["max_tokens"] = TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS' in android
     assert "[int]$TimeoutSeconds = 900" in runner
     assert "AURORAFOX_CODE_SPECIALIST_TIMEOUT_DIAGNOSTICS" in runner
 
