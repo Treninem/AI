@@ -1,11 +1,13 @@
 class_name AuroraSettingsVisualFix
 extends Node
 
+const BUNDLED_CORE_NOTE := "AuroraFox Core встроен в приложение"
+
 func _ready() -> void:
 	call_deferred("_apply")
 
 func _apply() -> void:
-	for _i in range(4):
+	for _i in range(5):
 		await get_tree().process_frame
 	var main := get_parent()
 	if main == null:
@@ -17,33 +19,100 @@ func _apply() -> void:
 	if not popup is PopupPanel:
 		return
 	var panel := popup as PopupPanel
-	if OS.get_name() != "Android":
-		panel.add_theme_stylebox_override("panel", _panel_style())
-		panel.transparent_bg = false
-		var viewport_size := get_viewport().get_visible_rect().size
-		var target_w := clampi(int(viewport_size.x * 0.72), 720, 980)
-		var target_h := clampi(int(viewport_size.y * 0.86), 620, 860)
-		panel.size = Vector2i(target_w, target_h)
+	panel.add_theme_stylebox_override("panel", _panel_style())
+	panel.transparent_bg = false
+	if overlay.has_method("_fit_popup"):
+		overlay.call("_fit_popup")
+	_hide_legacy_model_management(panel)
+	_fix_mobile_navigation(panel)
 	_apply_controls(panel)
+	# Generic visual normalization must not flatten the selected state of
+	# the category navigation. Ask the settings controller to repaint it last.
+	if overlay.has_method("_select_page"):
+		var pages = overlay.get("page_stack")
+		var indices = overlay.get("nav_indices")
+		if pages is TabContainer and indices is Dictionary:
+			var current_key := "general"
+			for key in indices.keys():
+				if int(indices[key]) == pages.current_tab:
+					current_key = str(key)
+					break
+			overlay.call("_select_page", current_key)
+
+func _hide_legacy_model_management(panel: PopupPanel) -> void:
+	# Bundled AuroraFox Core is the normal self-contained product path. New UI
+	# does not create a model-management button at all; this guard only neutralizes
+	# a legacy/compatibility control if an older overlay injects one at runtime.
+	for node in panel.find_children("*", "Button", true, false):
+		var button := node as Button
+		var normalized := button.text.to_lower()
+		var legacy_model_control := (
+			button.name == "ModelSetupButton"
+			or normalized.contains("локальные модели")
+			or normalized.contains("gguf")
+			or (normalized.contains("модел") and normalized.contains("измен"))
+		)
+		if legacy_model_control:
+			button.visible = false
+			button.disabled = true
+			button.focus_mode = Control.FOCUS_NONE
+			button.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Keep a truthful built-in-Core fallback description available if a future
+	# compatibility layout exposes an otherwise-empty Core status label.
+	var core_status := panel.find_child("CoreStatus", true, false) as Label
+	if core_status != null and core_status.text.strip_edges().is_empty():
+		core_status.text = BUNDLED_CORE_NOTE
+
+func _is_mobile_layout() -> bool:
+	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
+
+func _fix_mobile_navigation(panel: PopupPanel) -> void:
+	if not _is_mobile_layout():
+		return
+	# Current mobile settings use one OptionButton selector. Keep this legacy
+	# ribbon guard only for older compatibility layouts; it must never create one.
+	var scroll := panel.find_child("SettingsMobileNavigationScroll", true, false) as ScrollContainer
+	var nav := panel.find_child("SettingsMobileNavigation", true, false) as HFlowContainer
+	if scroll == null or nav == null:
+		return
+
+	scroll.custom_minimum_size.y = 52
+	scroll.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	nav.custom_minimum_size = Vector2(930, 46)
+	nav.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	nav.add_theme_constant_override("h_separation", 7)
+	nav.add_theme_constant_override("v_separation", 0)
+
+	var widths := {
+		"SettingsNav_general": 132.0,
+		"SettingsNav_voice": 112.0,
+		"SettingsNav_files": 168.0,
+		"SettingsNav_autonomy": 154.0,
+		"SettingsNav_tools": 144.0,
+		"SettingsNav_updates": 146.0
+	}
+	for child in nav.get_children():
+		if child is Button:
+			var button := child as Button
+			button.custom_minimum_size = Vector2(float(widths.get(button.name, 140.0)), 44)
+			button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			button.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			button.clip_text = false
 
 func _apply_controls(node: Node) -> void:
 	for child in node.get_children():
 		if child is Label:
 			var label := child as Label
-			if label.text.contains("Основной GGUF") or label.text.contains("локальные GGUF"):
-				label.text = "AuroraFox Core встроен в приложение и запускается без выбора, скачивания или настройки отдельной модели. Ollama остаётся только необязательным режимом совместимости."
-			if OS.get_name() != "Android":
-				label.add_theme_color_override("font_color", Color("edf3ff"))
-				label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.65))
-				label.add_theme_constant_override("shadow_offset_x", 1)
-				label.add_theme_constant_override("shadow_offset_y", 1)
-		elif child is LineEdit and OS.get_name() != "Android":
+			label.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.42))
+			label.add_theme_constant_override("shadow_offset_x", 1)
+			label.add_theme_constant_override("shadow_offset_y", 1)
+		elif child is LineEdit:
 			var line := child as LineEdit
 			line.add_theme_stylebox_override("normal", _input_style(false))
 			line.add_theme_stylebox_override("focus", _input_style(true))
 			line.add_theme_color_override("font_color", Color("f4f7ff"))
 			line.add_theme_color_override("font_placeholder_color", Color("8592a8"))
-		elif child is TextEdit and OS.get_name() != "Android":
+		elif child is TextEdit:
 			var edit := child as TextEdit
 			edit.add_theme_stylebox_override("normal", _input_style(false))
 			edit.add_theme_stylebox_override("focus", _input_style(true))
@@ -51,39 +120,36 @@ func _apply_controls(node: Node) -> void:
 			edit.add_theme_color_override("font_placeholder_color", Color("8592a8"))
 		elif child is Button:
 			var button := child as Button
-			if button.text.contains("локальные модели") or button.text.contains("GGUF"):
-				button.visible = false
-			if OS.get_name() != "Android":
-				button.add_theme_stylebox_override("normal", _button_style(Color(0.07, 0.075, 0.12, 1.0), Color(0.30, 0.52, 0.78, 0.72)))
-				button.add_theme_stylebox_override("hover", _button_style(Color(0.11, 0.08, 0.19, 1.0), Color(0.64, 0.50, 1.0, 0.94)))
-				button.add_theme_stylebox_override("pressed", _button_style(Color(0.14, 0.07, 0.22, 1.0), Color(0.38, 0.82, 1.0, 1.0)))
+			if not button.name.begins_with("SettingsNav_"):
+				button.add_theme_stylebox_override("normal", _button_style(Color(0.058, 0.064, 0.105, 1.0), Color(0.28, 0.44, 0.68, 0.66)))
+				button.add_theme_stylebox_override("hover", _button_style(Color(0.105, 0.08, 0.19, 1.0), Color(0.48, 0.77, 1.0, 0.90)))
+				button.add_theme_stylebox_override("pressed", _button_style(Color(0.14, 0.07, 0.22, 1.0), Color(0.66, 0.53, 1.0, 0.94)))
+				button.add_theme_stylebox_override("focus", _button_style(Color(0.10, 0.08, 0.18, 1.0), Color(0.38, 0.82, 1.0, 0.90)))
 				button.add_theme_color_override("font_color", Color("f4f7ff"))
-		elif child is OptionButton and OS.get_name() != "Android":
-			var option := child as OptionButton
-			option.add_theme_stylebox_override("normal", _button_style(Color(0.055, 0.06, 0.095, 1.0), Color(0.30, 0.52, 0.78, 0.65)))
-			option.add_theme_color_override("font_color", Color("f4f7ff"))
-		elif child is CheckButton and OS.get_name() != "Android":
-			(child as CheckButton).add_theme_color_override("font_color", Color("f4f7ff"))
+			button.clip_text = false
+			if button.get_parent() is HFlowContainer:
+				button.custom_minimum_size.y = maxf(button.custom_minimum_size.y, 40.0)
+				button.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 		_apply_controls(child)
 
 func _panel_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.022, 0.026, 0.045, 1.0)
-	style.border_color = Color(0.38, 0.55, 0.86, 0.90)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(18)
-	style.shadow_color = Color(0, 0, 0, 0.82)
+	style.bg_color = Color(0.020, 0.024, 0.041, 1.0)
+	style.border_color = Color(0.34, 0.50, 0.78, 0.78)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(20)
+	style.shadow_color = Color(0, 0, 0, 0.76)
 	style.shadow_size = 20
 	return style
 
 func _input_style(focused: bool) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
 	style.bg_color = Color(0.035, 0.041, 0.068, 1.0)
-	style.border_color = Color(0.46, 0.76, 1.0, 0.92) if focused else Color(0.22, 0.31, 0.48, 0.88)
+	style.border_color = Color(0.46, 0.76, 1.0, 0.86) if focused else Color(0.22, 0.31, 0.48, 0.76)
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(10)
-	style.content_margin_left = 10
-	style.content_margin_right = 10
+	style.set_corner_radius_all(12)
+	style.content_margin_left = 11
+	style.content_margin_right = 11
 	style.content_margin_top = 8
 	style.content_margin_bottom = 8
 	return style
@@ -93,7 +159,7 @@ func _button_style(fill: Color, border: Color) -> StyleBoxFlat:
 	style.bg_color = fill
 	style.border_color = border
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(10)
+	style.set_corner_radius_all(12)
 	style.content_margin_left = 12
 	style.content_margin_right = 12
 	style.content_margin_top = 8
