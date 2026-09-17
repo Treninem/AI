@@ -40,7 +40,8 @@ try {
     }
     if (-not $health.ok -or $health.backend -ne 'AuroraVoice') { throw 'Installed voice backend did not become healthy' }
     $started = [Diagnostics.Stopwatch]::StartNew()
-    $body = @{text='Аврора работает локально.'; backend='silero'} | ConvertTo-Json
+    $russianText = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('0JDQstGA0L7RgNCwINGA0LDQsdC+0YLQsNC10YIg0LvQvtC60LDQu9GM0L3Qvi4='))
+    $body = @{text=$russianText; backend='silero'} | ConvertTo-Json
     $tts = Invoke-RestMethod "$base/say" -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($body)) -TimeoutSec 300
     if (-not $tts.ok -or $tts.engine -ne 'silero' -or $tts.duration -le 0) { throw 'Installed offline TTS failed' }
     if (-not (Test-Path $tts.path) -or (Get-Item $tts.path).Length -le 44) { throw 'Installed TTS did not produce a WAV' }
