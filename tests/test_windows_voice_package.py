@@ -23,7 +23,7 @@ class WindowsVoicePackageTests(unittest.TestCase):
             executable = base / 'voice/AuroraVoiceBackend/AuroraVoiceBackend.exe'
             source = base / 'voice/AuroraVoiceBackend/_internal/aurora_voice_server.py'
             actual = self.resolve_server_root(True, executable, source)
-            self.assertEqual(actual, executable.parent)
+            self.assertEqual(actual, executable.parent.resolve())
 
     def test_development_backend_keeps_voice_source_root(self):
         self.assertEqual(self.resolve_server_root(False, '/python/python', SERVER), ROOT / 'voice')
