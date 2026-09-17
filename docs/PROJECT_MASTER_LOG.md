@@ -464,7 +464,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 похвалил в журнале — ещё не прошёл gate 🙂. Экономить токены: один пакет чтения,
 один связанный набор правок, относящиеся тесты; повторять только при выявленном дефекте.
 
-
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
@@ -584,7 +583,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Acceptance: create/save/execute/progress/complete/restart/load; pause/resume/cancel/retry/failed/interrupted/partial; atomic resilient store + migration/dedup; invalid transitions rejected; safe/unsafe retry distinction; no blind destructive replay after uncertain result; Computer unavailable/timeout/malformed/permission/screenshot/platform failures не ломают chat; bounded calls; path traversal/symlink/command-injection/master-stop/untrusted-authority/privacy regressions; concurrency/stress; Windows contracts зелёные; Android Work + explicit unsupported Computer capability зелёный; physical Windows/Android gates отмечаются отдельно, если устройства недоступны; нет известного P0/P1 в собственном scope.
 
 ## 25. Integration Gate — routed findings and checkpoint, 2026-09-16
-
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UPDATER-VERSIONING
 TYPE: BLOCKER
@@ -938,19 +936,113 @@ BLOCKERS:
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
 
-## 38. Core / Coder / Research — takeover and reconcile, 2026-09-17
+## 38. Mandatory blocked/waiting escalation through coordinator, 2026-09-17
 
-### CLAIM `CHAT-2026-09-17-CORE-CODER-RESEARCH`
+This section is a **mandatory coordination rule** for all seven executor lanes and supersedes any older habit of silently waiting on another lane, a queued check, ownership conflict or unknown next step.
+
+### Executor rule
+
+If an executor chat reaches **any state that prevents useful forward progress**, it MUST report the condition in this `docs/PROJECT_MASTER_LOG.md` immediately instead of waiting indefinitely, starting duplicate work or crossing another lane's ownership boundary. This includes, but is not limited to:
+
+- a failing test/workflow that belongs to another lane;
+- waiting for another lane's code, API, artifact or merge;
+- ownership/file conflict;
+- stale/incompatible branch or PR state;
+- CI queue/scheduling blocker that prevents the next required gate;
+- missing external/device/credential/access boundary;
+- architectural decision requiring coordinator arbitration;
+- uncertainty about whether a candidate can be merged;
+- any other condition where the executor has no safe independent next action inside its own scope.
+
+The executor records a `COORDINATOR-BLOCKER` entry using this minimum format:
+
+```text
+COORDINATOR-BLOCKER:
+FROM: <current CLAIM>
+STATUS: BLOCKED | WAITING | OWNERSHIP-CONFLICT | CI-BLOCKED | DECISION-REQUIRED
+CURRENT_SHA: <exact branch/head SHA>
+BLOCKED_ON: <claim/pr/run/job/file/external boundary>
+EVIDENCE: <exact failing test/workflow/run/job/artifact/diff or factual reason>
+ALREADY_TRIED: <only factual attempts already made>
+SAFE_PARALLEL_WORK: <independent work that can still continue, or NONE>
+NEEDS_COORDINATOR: <specific decision/routing needed>
+```
+
+After writing the escalation, the executor MUST NOT silently take another active lane's production files or weaken/remove a failing acceptance test merely to continue. If `SAFE_PARALLEL_WORK` exists, it should continue that independent work while waiting for coordinator routing. If none exists, it waits for the coordinator decision recorded in this journal rather than inventing a new ownership scope.
+
+### Coordinator rule
+
+The coordinator continuously reads these `COORDINATOR-BLOCKER` entries and resolves them through the same journal. For each unresolved escalation the coordinator must verify the available Git/CI evidence and write a `COORDINATOR-DECISION` entry with:
+
+```text
+COORDINATOR-DECISION:
+FOR: <blocked CLAIM>
+DECISION: CONTINUE | REROUTE | HANDOFF | MERGE-FIRST | REBASE/RECONCILE | WAIT-EXTERNAL | DROP-STALE | SPLIT-WORK | OTHER
+OWNER: <claim responsible for next action>
+ACTION: <exact next safe action>
+DEPENDENCY: <what must become true before the original lane resumes, or NONE>
+EVIDENCE: <SHA/run/job/diff/contract supporting the decision>
+PARALLEL_ACTION: <what the blocked lane should do meanwhile, or NONE>
+```
+
+The coordinator is responsible for preventing queue deadlocks: if a dependency can be removed by changing merge order, reconciling a stale candidate, routing a defect to its true owner, splitting an independent test wave, or moving an idle/finished executor to an unowned bottleneck, the coordinator does so and records that decision here.
+
+### No-idle / no-deadlock rule
+
+- No executor should remain in an undefined `waiting` state without a journal escalation and coordinator decision.
+- A red aggregate Integration gate does not force unrelated green lanes to stop when the failing subsystem has been identified and isolated by exact evidence.
+- A finished executor releases its files and may be reassigned by the coordinator to independent regression, evidence collection, packaging or another unowned bottleneck.
+- A blocked executor may continue only explicitly safe parallel work; it must not duplicate the blocker owner's implementation.
+- Every blocker must have an owner, evidence, a coordinator decision and a next action. `Ждём`, `непонятно кто делает`, `проверим потом` are not valid terminal states.
+- Final merge, final version bump and release authority remain coordinator-only.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+
+DONE:
+- Mandatory executor→coordinator escalation protocol is defined for blockers, waits, ownership conflicts, CI scheduling and architecture/merge decisions.
+- Mandatory coordinator→executor decision protocol is defined in the same canonical journal.
+- No-idle/no-deadlock behavior is explicit: executors continue safe independent work where possible and do not cross ownership boundaries while blocked.
+- This coordination-only change does not modify production code, canonical product version or Android versionCode.
+
+REMAINING:
+- Product lanes continue normally under section 37; every new blocker/wait condition must now use this section 38 protocol.
+
+BLOCKERS:
+- none for this coordination rule.
+
+NEXT:
+- Coordinator continues monitoring all seven lanes. On the first `COORDINATOR-BLOCKER` entry, verify its exact evidence, publish a `COORDINATOR-DECISION` here, reroute ownership/merge order/CI as needed, and keep all independent lanes moving.
+
+## 39. Work / Computer / Autonomy — TAKEOVER/RECONCILE, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY`
 
 - Статус: **ACTIVE — TAKEOVER/RECONCILE**.
-- Started from exact `main` HEAD: `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9` (`docs: consolidate rollover to seven executor chats`).
-- Режим: Chat, отдельный исполнитель; final merge/version bump/release authority остаётся у главного координатора.
-- Предполагаемый bump после зелёных acceptance-gates: **PATCH** для Core intelligence/benchmark/self-improvement quality; каноническая версия этим lane не меняется.
-- Наследуется и сверяется: `CHAT-2026-09-16-CORE-BENCHMARKS`; PR #30 branch `chat/core-benchmarks-20260916`, head `1fcaa6c5f3210cd20411ee9449610d6b1eec4c93`; CodeSpecialist fix `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393`; accepted Research Quality run `35112565080` on `adb5ae35b19b2e5412b565133c820d3be7d1437c`; candidate queue audit section 17; remaining tournament/promotion/research corroboration work.
-- Reconcile decision: PR #30 не сливать вслепую. Его benchmark/test/workflow deltas сравниваются с текущим `main` и переносятся только если остаются релевантны. Already-green Research source-resilience/collector→curator work не переделывать; accepted run `35112565080` сохраняется как доказательство. CodeSpecialist source fix не считать runtime-accepted до real bundled-Core inference.
-- Уже установленный первый незакрытый gate: PR #30 Windows real-Core run `35150595282` дошёл до подготовки bundled Core, затем остановился на GitHub API `403 rate limit` при разрешении pinned llama.cpp engine; реальный SpecialistTeam/CodeSpecialist inference не запускался. Android real-Core run `35150595444` скачал verified GGUF `1282439264` bytes с SHA-256 `d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5`, после чего workflow ложно завершил шаг ошибкой из-за `$LASTEXITCODE`; Android inference также не запускался. Эти красные runs — CI/supply-chain blockers, не evidence низкого качества Core.
-- Ownership этого lane: `benchmarks/core/**`; core-benchmark-specific tests; `.github/workflows/core-benchmarks.yml`, `.github/workflows/core-android-benchmark.yml`, `.github/workflows/core-android-e2e.yml`; `scripts/code_specialist.gd`, `scripts/specialist_team.gd`, `scripts/ai_client.gd`, `scripts/aurora_core_runtime.gd` только при воспроизводимом runtime defect; Research collector/curator и self-improvement/tournament files только для первого оставшегося непринятого Research/Self-Improvement gap; candidate queue logic только по explicit consolidated-lane assignment и без захвата общего Server/API ownership.
-- Cross-lane exclusions: не менять UI, Voice, Knowledge/OCR storage, Server/API/DB, Updater/release packaging, Work backend. `api/core_candidate_queue.py` сейчас исторически указан и в SERVER-DB ownership; до явного освобождения/разрешения overlap production queue-файл не менять — дефект фиксировать как master-log blocker или закрывать тестами в свободном path.
-- Архитектурный инвариант: normal `AIClient`/Core/CodeSpecialist/SpecialistTeam работают без Ollama/OpenAI/Claude/Gemini/remote inference/Internet и не требуют отдельного model setup/download. Compatibility/provider-specific path только explicit optional tool/API и никогда не предшествует AuroraFox Core normal path.
-- Acceptance: реальные inference tests, отдельно QUALITY / PERFORMANCE / SELF-RELIANCE; Windows и Android evidence отдельно; network disabled/Ollama absent/external AI unavailable; compatibility switch не меняет normal path; CodeSpecialist setup + generation/analysis/debug/review/explanation/refactor/test-generation/multi-file reasoning идут через AuroraFox Core; fixture/static contracts не выдаются за LLM quality. Self-improvement сохраняет master stop/allowlist/sandbox/baseline/independent verification/rollback/updater trust/release authority/privacy.
-- Первый implementation package после этого CLAIM: исправить только deterministic benchmark CI supply-chain/test-infra blockers так, чтобы pinned dependencies/models проверялись по SHA и runtime evidence действительно запускался; installed product не получает Internet dependency.
+- Fresh baseline: `b574546cc133a7bd9aa6b24e65414ca3328949d7`; branch head before this claim: `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`.
+- Режим: Chat. Intended bump after acceptance: **PATCH**; version/versionCode/final merge/release remain coordinator-only.
+- Inherits `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / draft PR #40, verified head `f4ad58377752020823900fea107914af49021349`: Work lifecycle/recovery, atomic WorkStore, safe/unsafe retry + uncertain-result protection, bounded local Computer primitives, default-OFF/master-stop, sandbox/idempotency/privacy, tests. Old exact-head evidence: Work Computer Reliability `35147796178` SUCCESS; Work Mode `35147796111` SUCCESS; Windows Package `35147796213` SUCCESS; Android APK `35147795977` SUCCESS; Agent Sync `35147796112` SUCCESS; Core/Voice `35147796205` SUCCESS.
+- Inherits PR #72 head `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa`, already merged into main as `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`: temp/backup atomic autonomy-state save, interrupted/corrupt recovery, legacy schema, fail-closed autonomy boot. Exact-head evidence: Agent Sync `35150755820` SUCCESS; Core/Voice `35150755870` SUCCESS; Windows Package `35150755901` SUCCESS; Android APK `35150755919` SUCCESS. Windows artifact `10469683226` digest `sha256:965ecd3670ca26bfc2ea478c1135deeda01c13ae87c3166ca90350ca26d05eaf`; Android artifact `10469586976` digest `sha256:fa9c968aa8b54e2ad7e8770f8a6c25b60e5d8231b1d0863441fc15fb17431ca4`.
+- Current reconcile candidate `af652c3e76254eb3f7981907a9adf8c8b82c7d91` was produced concurrently from fresh main and merged into this branch as `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`; it is **not accepted by assertion alone**. Audit already found five unrelated stale workflow diffs (`agent-sync-ci.yml`, `android-apk-artifact.yml`, `release-identity-ci.yml`, `voice-ci.yml`, `windows-package-ci.yml`); those must be removed before candidate acceptance.
+- Owned scope: `work/work_manager.gd`, `work/work_store.gd`, `computer/computer_service.py`, `computer/install_computer.ps1`, `computer/requirements.txt`, `scripts/computer_client.gd`, Work/Computer reliability tests and `.github/workflows/work-computer-reliability.yml`; `scripts/agent_core.gd`, `scripts/tool_registry.gd`, `scripts/sandbox_manager.gd`, `agent/autonomous_coordinator.gd` only with runtime evidence/rechecked ownership.
+- UI boundary: do not edit `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd`, `work/work_overlay.gd`; UI contract defects route to `CHAT-2026-09-17-UI-VISUAL-UX`.
+- Architecture invariant: high-level goal = bundled AuroraFox Core / AgentCore → ToolRegistry → bounded Computer primitives. `ComputerClient.plan()` / `run()` and sidecar service are not planners; no mandatory external AI/model.
+
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+
+DONE:
+- Fresh main/AGENTS/full master log, old claims, PR #40/#72 exact heads/diffs/CI/artifacts audited.
+- PR #72 is already integrated and preserved; no reimplementation.
+- PR #40 useful work identified, and stale unrelated workflow contamination in current reconcile candidate is explicitly identified before acceptance.
+
+REMAINING:
+- Remove unrelated workflow diffs; verify resulting diff contains only owned/relevant Work/Computer safety changes plus this journal entry.
+- Create/open a draft takeover PR; obtain same-SHA Work Computer Reliability + Work Mode CI and inspect exact failure-injection results.
+- Extend any missing runtime gates for state corruption/both-corrupt/fail-closed, concurrency, service crash/timeout/malformed/permission/screenshot/idempotency/destructive uncertain replay, Windows supported capability and Android graceful unsupported Computer.
+
+BLOCKERS:
+- none preventing safe owned-scope cleanup/testing now. UI runtime acceptance remains cross-lane and will be routed, not edited here.
+
+NEXT:
+- Restore the five unrelated workflows from fresh main, verify net diff, then trigger draft-PR CI and classify failures by exact run/job/test before further implementation.
