@@ -6,6 +6,7 @@ plugins {
 android {
     namespace = "com.aurorafox.corebenchmark"
     compileSdk = 35
+    ndkVersion = "28.1.13356709"
 
     defaultConfig {
         applicationId = "com.aurorafox.corebenchmark"
