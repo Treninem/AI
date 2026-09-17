@@ -12,7 +12,7 @@ class KnowledgeOneGiBReleaseContractTests(unittest.TestCase):
         self.assertIn("KNOWLEDGE_1G_HEAD_SHA=", text)
         self.assertIn("--scenario import_jsonl", text)
         self.assertIn("--target-mb 1024", text)
-        self.assertIn("--timeout-seconds 3600", text)
+        self.assertIn("--timeout-seconds 5400", text)
         self.assertIn("restart_check", text)
         self.assertIn("1024 * 1024 * 1024", text)
         self.assertIn("1536 * 1024 * 1024", text)
