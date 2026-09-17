@@ -1192,3 +1192,68 @@ BLOCKERS:
 - Android release-runtime E2E remains unproven. No physical Windows/Android device or production signing availability verified.
 NEXT:
 - Fix release APK report collection using root on the disposable API35 emulator, wait for completed status, retain partial report/filtered app diagnostics and reject missing mandatory scenarios. Test runner lifecycle with adb simulation before real CI.
+
+
+## 44. Final engineer audit and first Android evidence batch — 2026-09-17
+
+CLAIM: `WORK-2026-09-17-FINAL-RELEASE` — ACTIVE.
+Starting main: `031aebaad16fc25a39dfc45c58f96fadb658cac2`.
+Audited candidate: `30d054bb9a9419e63430ced1d841c8931068d79d` (PR #92); many workflows actually check out PR merge `8b11b2f29daa4b24af187eedcd996c97dbe92d45`, while explicit-head Knowledge/chat gates check out `30d054bb...`. These identities must not be conflated. New implementation commit: `8c61086b7ef9dfba3631b53a3e3624ba321d737f`.
+
+### Coordination / repository facts
+
+- Full main AGENTS/master log read before implementation; section 40 takeover notification acknowledged in section 43.
+- Only open PR found: #92, draft, mergeable, 108 files / 128 commits at the audited head. It is NOT accepted for merge.
+- Branch search paginated: 123 branch names returned. Old/superseded candidates include PR #64 race/scaling history, #66 OCR, #78 Core, #82 Knowledge, #84 UI, #86 Work and numerous temporary/sync branches. Names alone do not prove obsolete/redundant commits; none deleted, none blindly merged.
+- No open GitHub issues returned; unresolved work is in canonical log and release gates, not necessarily GitHub issues.
+- Releases API returned only `repair-v1.2-windows`, prerelease (2026-09-16). No normal V1.4 release/update asset set was returned.
+- Source canonical version remains V1.3.0.0 / Android code 100005. Pinned update floor is 1.4.0.0. Permanent public identity exists, private signing availability not inspected/assumed.
+
+### Component audit
+
+Percentages below are conservative evidence coverage, not a guarantee of quality equivalence to commercial assistants: 20 points each for inspected source/contract, green automated gate, relevant observed runtime evidence, complete platform/package evidence, final V1.4 device/release acceptance. Missing proofs never count as a pass. No component has final acceptance. SHA for rows is audited candidate `30d054bb...` / workflow checkout `8b11b2f...` as above unless explicitly noted.
+
+| COMPONENT | % | CURRENT STATUS / PROOF / TEST RESULT | WHAT IS MISSING |
+|---|---:|---|---|
+| Core | 60 | Windows real Core benchmark 35253859144 / job 105312715775 SUCCESS: SpecialistTeam/CodeSpecialist offline gate OK, benchmark exit 0, quality=True performance=True; peak RSS 4100.37 MiB. Android native probe 35253859334 / 105312834106 SUCCESS without INTERNET, llama.cpp / verified weights; cold 218780.915 ms, warm median 182518.543 ms, PSS 1311.397 MiB. | Full Godot AIClient Android E2E red; real physical Android benchmark and usability/performance acceptance; packaged final V1.4 benchmark. No proof of ChatGPT/Claude-level capability from this small suite. |
+| Knowledge | 60 | Knowledge Performance 35253859283 SUCCESS; source streaming/transaction/registry paths inspected. Exact-head synthetic 1GiB stress 35253859168 / 105312675022 SUCCESS: 1073742199 dataset bytes, peak RSS 901017600 bytes, restart_ok=true, no external runtime. | Genuine >=1GiB bootstrap pack, sharded manifest/hashes/provenance/licenses and Windows/Android import/query proof. Stress generator uses repeated filler/x.repeat(700); cannot satisfy genuine pack requirement. Export and final packaged device acceptance not independently proven. |
+| Memory | 40 | memory_store/local semantic contracts, Semantic Memory CI 35253859240 SUCCESS, Knowledge Performance SUCCESS. | Full report contents/real Android restart/search/export/restore at production scale, final device acceptance. |
+| OCR | 40 | Local Tesseract rus+eng Windows packaging and PDFBox+Tesseract4Android source/dependency/bounds/cancel contracts inspected; Windows package and Android Plugin CI 35253859261 SUCCESS. | Android installed APK real scanned/mixed ru/en OCR and large-PDF runtime; final offline-device proof; independent OCR report inspection. |
+| Voice | 40 | Android Voice 35253859478 proves asset layout and Kotlin compile only. Supertonic Acceptance 35253859172 SUCCESS with evidence artifact 10511768376. | Windows package CI AND release.yml both use -SkipVoiceSetup. This package proof does not guarantee bundled Windows voice backend/models, local STT/TTS invocation on installed package or offline voice. Android installed voice invocation and human listening still missing. |
+| UI | 60 | UI Visual 35253859237 / 105312822181 SUCCESS: structural/portrait/owner-art/keyboard/loading/offline/error/cancel/pointer/render-matrix steps all green. Actual runtime main_compat surfaces inspected. | Independently view captured frames and test physical Android keyboard/taps/orientation; installed signed V1.4 UI acceptance. |
+| Work Agent | 40 | Work Mode 35253859280 and Work Computer Reliability 35253859599 SUCCESS; WorkStore failure/concurrency smokes present. | Inspect exact runtime failure-injection outputs, installed Windows/Android Work lifecycle/restart and final release acceptance. |
+| Computer Agent | 40 | Reliability 35253859599 SUCCESS; bounded local primitives/default-OFF permission integration in client/overlay, new source paths retained. | Real installed Windows screenshot/actions/master-stop test; Android explicit unsupported behavior/device proof, final acceptance. |
+| Android | 40 | Build/export/test-sign/install succeeded in failed APK/E2E jobs; API35 native no-INTERNET probe succeeds. APK workflow fails logcat collection (exit255), E2E suppresses run-as failure and never collects report. | New runner CI; full normal-path Core/Voice/Knowledge/OCR installed behavior, physical device, permanent signing continuity, signed V1.4 versionCode increase. |
+| Windows | 60 | Windows Package 35253859209 / 105312824372 SUCCESS: EXE smoke, installer, silent install/uninstall, installed model hash, V1.2/V1.3 bridge steps. | Offline installed voice/Computer/File functionality beyond 3-frame headless startup, final signed-floor/update/package V1.4 acceptance. |
+| API | 40 | API CI 35253859249 SUCCESS; account/guest/privacy/SQLite/request/mail contracts present and inherited. | Inspect full exact test reports; real production deployment/ingress/account delivery and final candidate regression evidence. |
+| Server | 20 | REG.RU deploy/install/update/rollback scripts and local readiness contracts exist; API CI green is not deployed-host evidence. | Authenticated host deployment, /ready, DB backup/restore/rollback and production mail transport proof. No host access verified in this session. |
+| Updater | 40 | Release Identity 35253859409 SUCCESS; pinned public cert/key/floor contracts and Windows V1.2/V1.3 repair smoke SUCCESS. | Actual signed V1.4 latest update.json + update.sig/assets, invalid-signature/hash rejection in installed floor and upgrade/repair/rollback end-to-end. |
+| Installer | 60 | Windows package job builds Inno installer, performs silent install/model-integrity/app smoke/uninstall and historical bridges SUCCESS. | Final V1.4 installer with all voice dependencies/assets and full installed offline functionality, signed release/update linkage. |
+| Release | 20 | Version/signing/release contracts present; source still V1.3, one repair prerelease only. | Final same-SHA all gates, genuine knowledge payload, devices/listening, version metadata/changelog bump, RC/full CI, then main merge and production release. |
+
+Artifact metadata personally fetched (contents not downloaded through UTF-8-only connector): Windows artifact 10513160789 digest sha256:337b99ce3b50fe1d0ea162f92dec2a1684b7cd09ff33eb74d9993d9715146513; Core 10511848740 digest sha256:d338f4a47410999f98cafb4946ed055fc591fd724e605f1aeb0c0adeaa41d0bb; Android native 10512234902 digest sha256:27f48c6d05776bc1a162ed7bb823448a9adcb20717a7f693de8266f63d46d8ea; synthetic stress 10515131891 digest sha256:a173d67e0df4481cda703840194d05731fdc2bab6497068685ddf30ac93addb6. Logs for these four jobs read directly. Artifact existence/digest alone is not content/visual acceptance.
+
+### ACTION / FILES / DIFF / TEST / RESULT / COMMIT
+
+ACTION: repair Android release-report transport/lifecycle and fail-closed launch diagnostics.
+FILES: benchmarks/core/run_android_godot_e2e.sh; benchmarks/core/run_android_apk_smoke.sh; tests/test_android_e2e_runner.py; tests/test_android_contract.py; .github/workflows/core-android-e2e.yml; .github/workflows/android-apk-artifact.yml.
+DIFF: root only on disposable google_apis emulator reads release APK private report without making product debuggable; waits for completed status, preserves running report, detects early process exit, filters app diagnostics, required.issubset(rows) rejects missing mandatory scenarios even with extra rows. APK smoke executes in one Bash process with pipefail; retries logcat transport at most3 times with timeout30s, records stderr, still rejects persistent collection failure, empty PID, wrong version and app crash. Relevant CI runs new runner unit tests.
+TEST: python -m unittest tests.test_android_e2e_runner -v; python tests/test_android_contract.py; direct invocation of both tests/test_core_android_e2e_contract.py functions; bash -n on both runners; git diff --check.
+RESULT: 8 runtime lifecycle/fault-injection simulation tests PASS (3.013s), Android contract OK V1.3.0.0/code100005, 2 E2E contracts PASS; Bash syntax/diff checks PASS. Simulated adb tests are NOT Android inference/device proof. Real CI remains pending on new commit.
+COMMIT: 8c61086b7ef9dfba3631b53a3e3624ba321d737f (non-force advance of existing PR #92; no replacement PR/main merge/version bump).
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+Readiness uses 20 equally weighted release checkpoints for this audit, 8 confirmed automated boundaries: Windows Core; Android native Core; chat learning attachment smoke; Knowledge/Memory durability/scaling; synthetic1GiB stress/restart; research/evolution safety; Work/Computer contracts; API/account contracts. Remaining12: Android full normal-path E2E; installed APK launch; Windows installed offline voice/files/computer; installed Android voice/OCR/Knowledge; genuine knowledge corpus; sharded pack/provenance/licenses; real Windows/Android device benchmark; human UI/voice acceptance; deployed server/rollback/mail; final version/versionCode/metadata; same-SHA complete RC CI; production signing/update/release. Thus 40% is release acceptance coverage, not average table percentages or inherited 90% prose.
+DONE:
+- Current repository/PR/branches/releases and 24 workflow statuses audited; direct benchmark/stress/package logs and artifact metadata checked.
+- First implementation batch committed with passing local fault-injection tests; new CI automatically follows PR update.
+REMAINING:
+- Twelve acceptance checkpoints above. Plain arbitrary-name TXT/PDF/documents are analyzed as chat attachments; auto-learning classification requires filename/manifest markers. The broad user-import requirement needs a concrete explicit chat import flow/test before acceptance; do not silently treat analysis as persistent Knowledge import.
+BLOCKERS:
+- Actual genuine corpus is not supplied/proven; current synthetic pack is filler.
+- Current Windows CI/release packaging deliberately skips voice provisioning, so full offline voice acceptance is absent.
+- Physical devices, human listening and authenticated production host/signing availability not verified.
+NEXT:
+- Inspect new exact candidate Android CI/job outputs before declaring runner repair accepted. If product fails, use preserved partial report/app log to fix reproduced cause. In parallel audit/fix Windows full offline voice packaging and explicit chat import coverage in a newly extended claim; genuine owner-supplied Library knowledge archive must be inspected for content/provenance rather than counted by ZIP size.
+- Keep PR #92 draft until final acceptance; never bump/publish changed normal binaries as V1.3.
