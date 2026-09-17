@@ -6,6 +6,7 @@ on:
     paths:
       - 'benchmarks/core/android_godot_benchmark.gd'
       - 'benchmarks/core/android_godot_benchmark.tscn'
+      - 'benchmarks/core/run_android_godot_e2e.sh'
       - 'tests/test_core_android_e2e_contract.py'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -20,6 +21,7 @@ on:
     paths:
       - 'benchmarks/core/android_godot_benchmark.gd'
       - 'benchmarks/core/android_godot_benchmark.tscn'
+      - 'benchmarks/core/run_android_godot_e2e.sh'
       - 'tests/test_core_android_e2e_contract.py'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -222,70 +224,7 @@ jobs:
           disable-animations: true
           disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -memory 4096
-          script: |
-            set -eu
-            pkg='com.aurorafox.ai'
-            mkdir -p artifacts
-            adb install -r "$BENCHMARK_APK"
-            adb shell cmd connectivity airplane-mode enable || true
-            adb shell settings put global airplane_mode_on 1
-            adb shell svc wifi disable || true
-            adb shell svc data disable || true
-            sleep 2
-            state="$(adb shell settings get global airplane_mode_on | tr -d '\r')"
-            printf 'airplane_mode=%s\n' "$state" | tee artifacts/core-benchmark-android-e2e-network.txt
-            test "$state" = '1'
-            adb logcat -c
-            adb shell am force-stop "$pkg"
-            adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1
-            report_path=''
-            i=0
-            while [ "$i" -lt 240 ]; do
-              report_path="$(adb shell run-as "$pkg" find files -name core-benchmark-android-e2e.json -print 2>/dev/null | tr -d '\r' | head -n1 || true)"
-              if [ -n "$report_path" ]; then
-                break
-              fi
-              sleep 5
-              i=$((i + 1))
-            done
-            adb logcat -d -v brief > artifacts/core-benchmark-android-e2e-logcat.txt
-            if [ -z "$report_path" ]; then
-              echo 'Android AIClient E2E benchmark timed out after 1200 seconds.' >&2
-              tail -n 500 artifacts/core-benchmark-android-e2e-logcat.txt >&2
-              exit 1
-            fi
-            adb exec-out run-as "$pkg" cat "$report_path" > artifacts/core-benchmark-android-e2e.json
-            python3 - <<'PY'
-            import json
-            from pathlib import Path
-            data = json.loads(Path('artifacts/core-benchmark-android-e2e.json').read_text(encoding='utf-8'))
-            required = {
-                'offline_network_guard', 'bundled_core_identity', 'cold_start_first_response',
-                'basic_reasoning', 'russian_dialog', 'multi_turn_context',
-                'core_knowledge_retrieval', 'compatibility_switch_isolation'
-            }
-            rows = {row.get('id'): row for row in data.get('scenarios', []) if isinstance(row, dict)}
-            failures = []
-            if data.get('status') != 'completed' or data.get('passed') is not True: failures.append('overall')
-            if data.get('platform') != 'Android': failures.append('platform')
-            if data.get('environment', {}).get('external_network_probe_blocked') is not True: failures.append('network_probe')
-            core = data.get('core', {})
-            if core.get('prepared_sha256') != 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5': failures.append('model_sha')
-            runtime_after = core.get('runtime_after', {})
-            if runtime_after.get('last_runtime') != 'aurora_core_android': failures.append('runtime_after')
-            if int(runtime_after.get('ollama_failures', -1)) != 0: failures.append('ollama_failures')
-            if set(rows) < required: failures.append('missing_scenarios')
-            if any(not bool(rows[name].get('passed', False)) for name in required if name in rows): failures.append('scenario_failure')
-            if any(str(rows[name].get('runtime', '')) not in ('', 'aurora_core_android') for name in required if name in rows): failures.append('unexpected_runtime')
-            perf = data.get('performance', {})
-            if float(perf.get('cold_first_response_ms', 0) or 0) <= 0: failures.append('cold_measurement')
-            if float(perf.get('warm_median_ms', 0) or 0) <= 0: failures.append('warm_measurement')
-            if float(perf.get('suite_wall_ms', 0) or 0) <= 0: failures.append('wall_measurement')
-            print(json.dumps(data, ensure_ascii=False, indent=2))
-            if failures:
-                raise SystemExit('AURORAFOX_ANDROID_NORMAL_PATH_GATE_FAILED: ' + ','.join(failures))
-            print('AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK')
-            PY
+          script: 'bash benchmarks/core/run_android_godot_e2e.sh "$BENCHMARK_APK"'
 
       - name: Upload Android normal-path Core evidence
         if: always()
