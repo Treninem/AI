@@ -1,0 +1,26 @@
+AuroraFox Android local TTS — Supertonic 3 third-party notice
+
+Packaged model asset:
+  sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2
+  bytes: 128774318
+  SHA-256: 82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427
+
+Supertonic software/sample code:
+  Copyright (c) Supertone Inc.
+  License: MIT
+  Source: https://github.com/supertone-oss-archive/supertonic
+
+Supertonic 3 model weights and voice styles:
+  Copyright (c) 2026 Supertone Inc.
+  License: OpenRAIL-M
+  Model card: https://huggingface.co/Supertone/supertonic-3
+  Full model license: https://huggingface.co/Supertone/supertonic-3/blob/main/LICENSE
+
+sherpa-onnx integration/runtime:
+  Project: https://github.com/k2-fsa/sherpa-onnx
+  AuroraFox pins sherpa-onnx 1.13.4 for this Android voice path.
+  See the sherpa-onnx distribution for its own license and third-party notices.
+
+AuroraFox does not use Supertonic Voice Builder or remote inference at runtime.
+The packaged TTS model is executed locally on-device. Use and redistribution of
+model weights remain subject to the OpenRAIL-M model license above.
