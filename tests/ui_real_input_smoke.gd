@@ -34,6 +34,37 @@ func _control_screen_center(control: Control) -> Vector2:
 	var local_center := control.size * 0.5
 	return control.get_viewport().get_screen_transform() * control.get_global_transform_with_canvas() * local_center
 
+func _nearest_scroll_container(control: Control) -> ScrollContainer:
+	var current := control.get_parent()
+	while current != null:
+		if current is ScrollContainer:
+			return current as ScrollContainer
+		current = current.get_parent()
+	return null
+
+func _ensure_target_in_scroll(control: Control, label: String) -> bool:
+	if control == null:
+		return _fail("Scrollable target missing: " + label, 17)
+	var scroll := _nearest_scroll_container(control)
+	if scroll == null:
+		return true
+	var target_rect := control.get_global_rect()
+	var viewport_rect := scroll.get_global_rect()
+	if viewport_rect.has_point(target_rect.get_center()):
+		return true
+	var current_scroll := float(scroll.scroll_vertical)
+	var relative_y := target_rect.position.y - viewport_rect.position.y + current_scroll
+	var centered_y := relative_y - maxf(8.0, (viewport_rect.size.y - target_rect.size.y) * 0.5)
+	scroll.scroll_vertical = maxi(0, int(centered_y))
+	await process_frame
+	await process_frame
+	target_rect = control.get_global_rect()
+	viewport_rect = scroll.get_global_rect()
+	if not viewport_rect.has_point(target_rect.get_center()):
+		return _fail("Scrollable target did not enter viewport: " + label, 18)
+	print("UI_REAL_SCROLL %s scroll=%d" % [label, scroll.scroll_vertical])
+	return true
+
 func _real_click(button: Button, label: String) -> bool:
 	if button == null:
 		return _fail("Real-input target missing: " + label, 4)
@@ -127,6 +158,8 @@ func _exercise_work(main: Control, size: Vector2i) -> bool:
 	if settings == null:
 		return false
 	var open_work := _button_by_text(settings.popup, "Открыть Работу")
+	if not await _ensure_target_in_scroll(open_work, "Инструменты → Открыть Работу"):
+		return false
 	if not await _real_click(open_work, "Инструменты → Открыть Работу"):
 		return false
 	var work_popup := main.find_child("AuroraWorkPopup", true, false) as PopupPanel
@@ -147,6 +180,8 @@ func _exercise_computer(main: Control, size: Vector2i) -> bool:
 	if settings == null:
 		return false
 	var open_computer := _button_by_text(settings.popup, "Настроить компьютерный режим")
+	if not await _ensure_target_in_scroll(open_computer, "Инструменты → Настроить компьютерный режим"):
+		return false
 	if not await _real_click(open_computer, "Инструменты → Настроить компьютерный режим"):
 		return false
 	var computer_popup := main.find_child("ComputerAgentPopup", true, false) as PopupPanel
@@ -158,10 +193,24 @@ func _exercise_computer(main: Control, size: Vector2i) -> bool:
 	var automatic := computer_popup.find_child("ComputerAgentAuto", true, false) as CheckButton
 	if enabled == null or automatic == null:
 		return _fail("Computer permission controls missing", 12)
-	if enabled.button_pressed:
+	if enabled.button_pressed or ComputerClient.computer_control_enabled():
 		return _fail("Computer permission must remain default OFF", 13)
 	if not automatic.disabled:
 		return _fail("Computer auto-chain must stay disabled while permission is OFF", 14)
+	if not await _ensure_target_in_scroll(enabled, "Компьютерный режим → доступ ON"):
+		return false
+	if not await _real_click(enabled, "Компьютерный режим → доступ ON"):
+		return false
+	if not enabled.button_pressed or not ComputerClient.computer_control_enabled():
+		return _fail("Computer permission toggle did not propagate process-wide ON", 19)
+	if automatic.disabled:
+		return _fail("Computer auto-chain must become available after explicit permission", 20)
+	if not await _real_click(enabled, "Компьютерный режим → доступ OFF"):
+		return false
+	if enabled.button_pressed or ComputerClient.computer_control_enabled():
+		return _fail("Computer permission toggle did not propagate process-wide OFF", 21)
+	if not automatic.disabled:
+		return _fail("Computer auto-chain must disable again with permission OFF", 22)
 	var done := _button_by_text(computer_popup, "Готово")
 	if not await _real_click(done, "Компьютерный режим → Готово"):
 		return false
@@ -189,5 +238,5 @@ func _run() -> void:
 	if not await _run_size(packed, Vector2i(960, 640)):
 		return
 	ProjectSettings.set_setting("aurorafox/testing/desktop_preview", false)
-	print("AURORA_UI_REAL_INPUT_OK wide_and_compact work computer")
+	print("AURORA_UI_REAL_INPUT_OK wide_and_compact work computer permission_on_off")
 	quit(0)
