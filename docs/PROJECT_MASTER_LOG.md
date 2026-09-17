@@ -1167,3 +1167,28 @@ BLOCKERS:
 
 NEXT:
 - Reread fresh `main` and this journal, then inspect the exact Core benchmark scenario, AIClient/context builder and the two Android workflow files. Make only evidence-backed minimal fixes, run the affected exact gates, and write the resulting commit SHA/run IDs/results back into this journal before moving to Knowledge/Work/UI/Voice.
+
+## 43. Work final engineer — owner-directed TAKEOVER/RECONCILE, 2026-09-17
+
+### CLAIM `WORK-2026-09-17-FINAL-RELEASE`
+
+- Status: **ACTIVE — OWNER-DIRECTED TAKEOVER/RECONCILE**.
+- Starting main: `031aebaad16fc25a39dfc45c58f96fadb658cac2`; inherited draft PR #92 / `chat-2026-09-17-unified-finalization` exact head `30d054bb9a9419e63430ced1d841c8931068d79d`.
+- AGENTS.md and full canonical log read. Acknowledge section 40 LEADER-NOTIFY: prior unified executor takeover received; useful code/evidence is preserved.
+- Owner appoints this session final engineer with integration/release responsibility. Reconciles unfinished section 40–42 claims and historical seven-lane claims; does not assume their percentages are verified.
+- Intended accumulated release bump: MINOR / V1.4.0.0, test first/version last. No canonical bump now.
+- First owned batch: `benchmarks/core/run_android_godot_e2e.sh`, Android APK/E2E workflows, relevant runner tests, this journal. Other production files only after reproduced defect and updated claim.
+- Current exact candidate: 24 workflows completed, 22 SUCCESS, Android APK `35253859322` FAILURE (job `105312532029`: logcat collection exit 255 after install/monkey success), Android Core E2E `35253859198` FAILURE (job `105312896359`: no collected report after 1200 s).
+- Source evidence: E2E builds --export-release, then attempts run-as against a non-debuggable package and suppresses errors; it also stops on the first report file although the app writes status=running before inference. Both are evidence collection defects, not proof of product inference success. Preserve actual release runtime and require completed report.
+- Knowledge 1GiB workflow `35253859168` is a synthetic JSONL stress test. It cannot establish genuine >=1GiB production knowledge pack/provenance/licenses or Android import acceptance.
+
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE:
+- Fresh main, complete instructions/log, open PR and exact candidate workflow conclusions checked; clone at exact candidate available.
+REMAINING:
+- Full component audit from files/logs/artifacts; repair Android evidence collection, run relevant tests and exact CI; genuine pack and device/signing acceptance; final version and release gates.
+BLOCKERS:
+- Android release-runtime E2E remains unproven. No physical Windows/Android device or production signing availability verified.
+NEXT:
+- Fix release APK report collection using root on the disposable API35 emulator, wait for completed status, retain partial report/filtered app diagnostics and reject missing mandatory scenarios. Test runner lifecycle with adb simulation before real CI.
