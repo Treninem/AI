@@ -191,12 +191,19 @@ def main() -> None:
     require('"https://jitpack.io"' in export_plugin, "Tesseract JitPack repository is not exported")
 
     file_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt")
-    require("PDFBoxResourceLoader.init" in file_runtime, "Android PDFBox runtime is not initialized")
-    require("PDDocument.load(file).use" in file_runtime, "Android PDF text path does not open PDF locally")
-    require("PDFTextStripper()" in file_runtime, "Android PDF text layer is not extracted")
-    require('"engine" to "pdfbox-android"' in file_runtime, "Android PDF extraction engine metadata drifted")
-    require('"offline" to true' in file_runtime, "Android PDF extraction must remain offline")
-    require("PdfRenderer" not in file_runtime, "Android PDF path regressed to metadata-only PdfRenderer")
+    require('ext == "pdf" -> analyzeOcr(file, "pdf", visual)' in file_runtime, "Android PDF route no longer delegates to local OCR runtime")
+    require('meta.put("offline", true)' in file_runtime, "Android file/OCR result metadata must remain offline")
+    require('meta.put("external_ai_required", false)' in file_runtime, "Android file/OCR path must not require external AI")
+
+    ocr_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt")
+    require("PDFBoxResourceLoader.init" in ocr_runtime, "Android PDFBox runtime is not initialized")
+    require("PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()).use" in ocr_runtime, "Android PDF path does not use bounded local PDFBox loading")
+    require("PDFTextStripper()" in ocr_runtime, "Android PDF text layer is not extracted")
+    require("PDFRenderer" in ocr_runtime, "Android scanned-PDF OCR renderer is missing")
+    require('private const val LANGUAGES = "rus+eng"' in ocr_runtime, "Android OCR language contract drifted")
+    require('"engine" to "pdfbox+tesseract4android"' in ocr_runtime, "Android PDF/OCR engine metadata drifted")
+    require("MAX_PDF_BYTES" in ocr_runtime and "MAX_PAGES" in ocr_runtime and "MAX_OCR_PAGES" in ocr_runtime, "Android PDF/OCR safety bounds are missing")
+    require("CancellationException" in ocr_runtime and "checkCancelled()" in ocr_runtime, "Android local OCR cancellation contract is missing")
 
     print(
         f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} "
