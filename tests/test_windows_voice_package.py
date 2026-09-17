@@ -11,7 +11,7 @@ SERVER = ROOT / 'voice/python/aurora_voice_server.py'
 
 class WindowsVoicePackageTests(unittest.TestCase):
     def resolve_server_root(self, frozen, executable, source):
-        tree = ast.parse(SERVER.read_text())
+        tree = ast.parse(SERVER.read_text(encoding="utf-8"))
         node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'ROOT' for t in node.targets))
         values = {'Path': Path, 'sys': SimpleNamespace(frozen=frozen, executable=str(executable)), '__file__': str(source)}
         exec(compile(ast.Module(body=[node], type_ignores=[]), str(SERVER), 'exec'), values)
@@ -29,7 +29,7 @@ class WindowsVoicePackageTests(unittest.TestCase):
         self.assertEqual(self.resolve_server_root(False, '/python/python', SERVER), ROOT / 'voice')
 
     def test_packaged_powershell_utf8_bom_config_can_be_loaded(self):
-        tree = ast.parse(SERVER.read_text())
+        tree = ast.parse(SERVER.read_text(encoding="utf-8"))
         node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'CONFIG' for t in node.targets))
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory)
@@ -40,11 +40,11 @@ class WindowsVoicePackageTests(unittest.TestCase):
 
     def test_full_package_and_production_release_require_installed_offline_voice(self):
         for name in ['windows-package-ci.yml', 'release.yml']:
-            text = (ROOT / '.github/workflows' / name).read_text()
+            text = (ROOT / '.github/workflows' / name).read_text(encoding="utf-8")
             self.assertNotIn('-SkipVoiceSetup', text)
             self.assertIn('windows_installed_voice_smoke.ps1 -InstallDir $installDir', text)
             self.assertIn('7z.exe', text)
-        builder = (ROOT / 'voice/build_backend.ps1').read_text()
+        builder = (ROOT / 'voice/build_backend.ps1').read_text(encoding="utf-8")
         self.assertNotIn('$python -m pip', builder)
         self.assertIn('$uv pip install --python $python', builder)
 
