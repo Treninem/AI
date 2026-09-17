@@ -47,6 +47,8 @@ var store_path := STORE_PATH
 var work_root := WORK_ROOT
 var recovered_from_backup := false
 var recovery_notes: Array[String] = []
+var recovery_blocked := false
+var recovery_error := ""
 var _batch_depth := 0
 var _dirty := false
 
@@ -55,6 +57,8 @@ func _ready() -> void:
 	_load()
 
 func create_project(title: String, instructions := "", idempotency_key: String = "") -> Dictionary:
+	if recovery_blocked:
+		return {}
 	var clean_key := idempotency_key.strip_edges()
 	if not clean_key.is_empty():
 		for existing in projects:
@@ -96,13 +100,15 @@ func active_project() -> Dictionary:
 	return get_active_project()
 
 func set_active(project_id: String) -> bool:
-	if _project_index(project_id) < 0:
+	if recovery_blocked or _project_index(project_id) < 0:
 		return false
 	active_project_id = project_id
 	_mark_dirty()
 	return true
 
 func update_project(project_id: String, title_or_patch, instructions: String = "") -> bool:
+	if recovery_blocked:
+		return false
 	var index := _project_index(project_id)
 	if index < 0:
 		return false
@@ -125,6 +131,8 @@ func update_project(project_id: String, title_or_patch, instructions: String = "
 	return true
 
 func add_file(project_id: String, path: String) -> bool:
+	if recovery_blocked:
+		return false
 	var index := _project_index(project_id)
 	if index < 0:
 		return false
@@ -142,6 +150,8 @@ func add_file(project_id: String, path: String) -> bool:
 	return true
 
 func remove_file(project_id: String, path: String) -> bool:
+	if recovery_blocked:
+		return false
 	var index := _project_index(project_id)
 	if index < 0:
 		return false
@@ -155,6 +165,8 @@ func remove_file(project_id: String, path: String) -> bool:
 	return true
 
 func create_task(project_id: String, prompt: String, output_name := "", idempotency_key: String = "") -> Dictionary:
+	if recovery_blocked:
+		return {}
 	var project_index := _project_index(project_id)
 	if project_index < 0:
 		return {}
@@ -210,6 +222,8 @@ func get_task(project_id: String, task_id: String) -> Dictionary:
 	return (tasks[int(location["task_index"])] as Dictionary).duplicate(true)
 
 func update_task(project_id: String, task_id: String, patch: Dictionary) -> bool:
+	if recovery_blocked:
+		return false
 	var location := _task_location(project_id, task_id)
 	if location.is_empty():
 		return false
@@ -225,7 +239,7 @@ func update_task(project_id: String, task_id: String, patch: Dictionary) -> bool
 	return _patch_task(location, patch)
 
 func transition_task(project_id: String, task_id: String, new_state: String, patch: Dictionary = {}, explicit_retry: bool = false) -> bool:
-	if new_state not in VALID_STATES:
+	if recovery_blocked or new_state not in VALID_STATES:
 		return false
 	var location := _task_location(project_id, task_id)
 	if location.is_empty():
@@ -325,6 +339,8 @@ func retry_task(project_id: String, task_id: String) -> bool:
 	return transition_task(project_id, task_id, STATE_QUEUED, {}, true)
 
 func acknowledge_user_action(project_id: String, task_id: String, allow_retry: bool, note: String = "") -> bool:
+	if recovery_blocked:
+		return false
 	var location := _task_location(project_id, task_id)
 	if location.is_empty():
 		return false
@@ -407,6 +423,8 @@ func begin_batch() -> void:
 	_batch_depth += 1
 
 func end_batch() -> bool:
+	if recovery_blocked:
+		return false
 	_batch_depth = maxi(0, _batch_depth - 1)
 	if _batch_depth == 0 and _dirty:
 		return _save()
@@ -418,8 +436,16 @@ func force_save() -> bool:
 func reload_from_disk() -> void:
 	_load()
 
+func recovery_status() -> Dictionary:
+	return {
+		"blocked": recovery_blocked,
+		"error": recovery_error,
+		"recovered_from_backup": recovered_from_backup,
+		"notes": recovery_notes.duplicate(),
+	}
+
 func _patch_task(location: Dictionary, patch: Dictionary) -> bool:
-	if location.is_empty():
+	if recovery_blocked or location.is_empty():
 		return false
 	var project_index := int(location["project_index"])
 	var task_index := int(location["task_index"])
@@ -489,13 +515,18 @@ func _load() -> void:
 	projects = []
 	active_project_id = ""
 	recovered_from_backup = false
+	recovery_blocked = false
+	recovery_error = ""
 	recovery_notes.clear()
 	_ensure_directories()
 	var primary_exists := FileAccess.file_exists(store_path)
+	var temp_exists := FileAccess.file_exists(_temp_path())
+	var backup_exists := FileAccess.file_exists(_backup_path())
+	var had_persisted_state := primary_exists or temp_exists or backup_exists
 	var loaded := _read_store(store_path)
 	var temp_needs_persist := false
 	if not loaded.is_empty():
-		if FileAccess.file_exists(_temp_path()):
+		if temp_exists:
 			recovery_notes.append("discarded_stale_temp")
 			DirAccess.remove_absolute(ProjectSettings.globalize_path(_temp_path()))
 	elif primary_exists:
@@ -505,6 +536,8 @@ func _load() -> void:
 		if not loaded.is_empty():
 			recovered_from_backup = true
 			recovery_notes.append("recovered_from_backup")
+		elif backup_exists:
+			recovery_notes.append("backup_store_invalid")
 	else:
 		var temp_loaded := _read_store(_temp_path())
 		if not temp_loaded.is_empty():
@@ -517,14 +550,20 @@ func _load() -> void:
 			if promote_error != OK:
 				recovery_notes.append("temp_promotion_failed")
 				temp_needs_persist = true
-		elif FileAccess.file_exists(_temp_path()):
+		elif temp_exists:
 			recovery_notes.append("temp_store_invalid")
-		if loaded.is_empty() and FileAccess.file_exists(_backup_path()):
+		if loaded.is_empty() and backup_exists:
 			loaded = _read_store(_backup_path())
 			if not loaded.is_empty():
 				recovered_from_backup = true
 				recovery_notes.append("primary_missing_recovered_from_backup")
+			else:
+				recovery_notes.append("backup_store_invalid")
 	if loaded.is_empty():
+		if had_persisted_state:
+			recovery_blocked = true
+			recovery_error = "unrecoverable_work_store"
+			recovery_notes.append("unrecoverable_state_fail_closed")
 		return
 	var migrated := _sanitize_loaded(loaded)
 	if migrated or recovered_from_backup or temp_needs_persist:
@@ -540,6 +579,11 @@ func _read_store(path: String) -> Dictionary:
 		return {}
 	var parsed = JSON.parse_string(text)
 	if not parsed is Dictionary:
+		return {}
+	var schema := int(parsed.get("schema_version", 1))
+	if schema < 1 or schema > SCHEMA_VERSION:
+		return {}
+	if not parsed.get("projects", []) is Array:
 		return {}
 	return parsed
 
@@ -700,11 +744,15 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 	}
 
 func _mark_dirty() -> void:
+	if recovery_blocked:
+		return
 	_dirty = true
 	if _batch_depth == 0:
 		_save()
 
 func _save() -> bool:
+	if recovery_blocked:
+		return false
 	_ensure_directories()
 	var data := {
 		"schema_version": SCHEMA_VERSION,
