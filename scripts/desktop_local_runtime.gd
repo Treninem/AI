@@ -6,6 +6,8 @@ const PORT := 8766
 const BASE_URL := "http://127.0.0.1:8766"
 const MODEL_ALIAS := "AuroraFox-Core"
 const STARTUP_ATTEMPTS := 480
+const DEFAULT_CHAT_MAX_TOKENS := 2048
+const DEFAULT_CHAT_TIMEOUT_SECONDS := 180.0
 
 var server_pid := 0
 var active_model := ""
@@ -39,14 +41,16 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	if not FileAccess.file_exists(absolute_model): return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core отсутствует или повреждён. Восстановите установку AuroraFox.", "model_path": model_path}
 	var ready := await ensure_server(absolute_model)
 	if not bool(ready.get("ok", false)): return ready
+	var max_tokens := clampi(int(options.get("max_tokens", DEFAULT_CHAT_MAX_TOKENS)), 64, 8192)
+	var request_timeout := clampf(float(options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)), 5.0, 600.0)
 	var payload := {
 		"model": MODEL_ALIAS,
 		"messages": messages,
 		"temperature": float(options.get("temperature", 0.2)),
+		"max_tokens": max_tokens,
 		"stream": false
 	}
-	if options.has("max_tokens"): payload["max_tokens"] = int(options.get("max_tokens", 0))
-	var response := await _request_json("/v1/chat/completions", HTTPClient.METHOD_POST, payload, 600.0)
+	var response := await _request_json("/v1/chat/completions", HTTPClient.METHOD_POST, payload, request_timeout)
 	if not bool(response.get("ok", false)): return response
 	var data: Dictionary = response.get("data", {})
 	var choices: Array = data.get("choices", [])
@@ -55,7 +59,7 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	var message = choices[0].get("message", {})
 	if not message is Dictionary:
 		return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core вернул некорректное сообщение", "raw": data}
-	return {"ok": true, "runtime": "aurora_core_desktop", "content": str(message.get("content", "")), "raw": data, "model": MODEL_ALIAS, "model_path": model_path}
+	return {"ok": true, "runtime": "aurora_core_desktop", "content": str(message.get("content", "")), "raw": data, "model": MODEL_ALIAS, "model_path": model_path, "max_tokens": max_tokens}
 
 func ensure_server(model_absolute_path: String) -> Dictionary:
 	if not is_available():
@@ -131,7 +135,9 @@ func runtime_info() -> Dictionary:
 		"starting": starting,
 		"pid": server_pid,
 		"active_model": active_model,
-		"endpoint": BASE_URL
+		"endpoint": BASE_URL,
+		"default_chat_max_tokens": DEFAULT_CHAT_MAX_TOKENS,
+		"default_chat_timeout_seconds": DEFAULT_CHAT_TIMEOUT_SECONDS
 	}
 
 func _request_json(path: String, method: HTTPClient.Method, payload: Dictionary, timeout: float) -> Dictionary:
