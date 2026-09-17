@@ -18,6 +18,7 @@ on:
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
+      - 'tests/windows_installed_voice_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -38,6 +39,7 @@ on:
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
+      - 'tests/windows_installed_voice_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -70,7 +72,7 @@ jobs:
             '.\build\create_update_signing_key.ps1',
             '.\build\setup_release_signing.ps1',
             '.\tests\windows_v12_bridge_smoke.ps1',
-            '.\tests\windows_v13_bridge_smoke.ps1'
+            '.\tests\windows_v13_bridge_smoke.ps1',
             '.\tests\windows_installed_voice_smoke.ps1'
           )) {
             if (-not (Test-Path $script)) { throw "Required Windows/release helper missing: $script" }
