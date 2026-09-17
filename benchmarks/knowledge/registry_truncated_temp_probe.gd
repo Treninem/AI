@@ -56,8 +56,8 @@ func _run() -> void:
 	var target_valid := _registry_is_valid(KnowledgeSourceRegistryScript.REGISTRY_PATH)
 	var temp_gone := not FileAccess.file_exists(KnowledgeSourceRegistryScript.REGISTRY_TEMP)
 	var original_gone := not FileAccess.file_exists(KnowledgeSourceRegistryScript.REGISTRY_ORIGINAL)
-	var fingerprint_preserved := not after.is_empty() and str(after.get("fingerprint_sha256", "")) == expected_fingerprint
-	var ok := not promoted and target_valid and fingerprint_preserved and temp_gone and original_gone
+	var fingerprint_preserved: bool = not after.is_empty() and str(after.get("fingerprint_sha256", "")) == expected_fingerprint
+	var ok: bool = not promoted and target_valid and fingerprint_preserved and temp_gone and original_gone
 	_emit({
 		"ok": ok,
 		"malformed_temp_promoted": promoted,
