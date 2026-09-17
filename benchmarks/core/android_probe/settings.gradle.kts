@@ -11,6 +11,9 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
+        // Keep the benchmark dependency graph identical to the production
+        // Android runtime: OCR is resolved from JitPack in android_plugin.
+        maven { url = uri("https://jitpack.io") }
     }
 }
 
