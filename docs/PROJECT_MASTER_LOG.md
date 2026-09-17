@@ -1321,3 +1321,36 @@ DONE: exact Windows size failure and Android post-root launcher race classified 
 REMAINING: minimal implementation/contracts, exact-head Windows and Android reruns, then remaining release gates.
 BLOCKERS: single-file installer limit and Android E2E launch race; genuine Knowledge corpus and external device/host/signing boundaries remain.
 NEXT: switch packaged default STT to a smaller local Whisper baseline consistently, add package-size/config contracts, and wait for the resolved Android launcher before explicit start.
+
+## 49. BEFORE/AFTER ACTION — handoff обычному чату для доведения до релиза, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 остаётся test-first/version-last.
+TIME: 2026-09-18 (только GitHub; локальный ПК пользователя не использовать).
+BEFORE ACTION TASK: оставить самодостаточное задание следующему обычному чату на случай исчерпания контекста/токенов финального инженера.
+REPOSITORY: `Treninem/AI`; draft PR #92; branch `chat-2026-09-17-unified-finalization`; audited product HEAD `4f0349612d36dab01cad1fb913154114d9adb49e`; base `main` at `031aebaad16fc25a39dfc45c58f96fadb658cac2`.
+CURRENT EXACT-HEAD CI BEFORE THIS JOURNAL COMMIT: 24 workflows total; 15 SUCCESS; 9 IN_PROGRESS; 0 observed failures. Running: Android APK Artifact `35288500991`; Knowledge Performance `35288500891`; Android Plugin CI `35288500982`; Core Android Benchmark `35288501021`; Core Android E2E `35288501145`; Supertonic Acceptance Evidence `35288500775`; Core Benchmarks `35288500844`; Knowledge 1GiB Release Gate `35288500829`; Windows Package CI `35288500840`.
+RECENT FIXES TO VERIFY, NOT ASSUME: commit `50edce32603396306fa998960706034b63269e79` changed packaged STT consistently to `openai/whisper-small` so the required single-file Windows installer can fit, and made Android E2E wait for the launcher after `adb root`; commit `4f0349612d36dab01cad1fb913154114d9adb49e` changed emulator installation to `adb install --no-incremental -r` after logs proved the incrementally streamed package disappeared across adbd restart.
+
+### CONTINUATION TASK FOR THE NEXT NORMAL CHAT
+
+1. Work only through GitHub/repository tools as the owner requested. Fetch fresh PR #92 head and `main`; read `AGENTS.md` and this entire canonical journal first. Continue this claim; do not create another journal and do not treat this recorded SHA or 40% as fresh truth.
+2. Inspect workflows for the latest product SHA. Fix only failures reproduced there. Journal-only commits may start new runs, so distinguish the audited product SHA from the handoff commit and do not restart expensive jobs without an actionable reason.
+3. Close Windows acceptance: prove one installable single-file installer below the Inno limit, portable offline voice contents, installed Silero TTS plus Whisper STT HTTP smoke with outbound network blocked, EXE/startup/bridges/update/silent install/uninstall, retained reports/WAVs. The `whisper-small` change earns no readiness until this passes.
+4. Close Android acceptance: prove API 35 build/install/explicit launch after `adb root` using non-incremental install, normal offline product path, Voice/Knowledge/OCR, retained report/logcat/screenshots. Do not weaken completion assertions to make CI green.
+5. Visually inspect actual Windows and Android render/screenshot artifacts: owner avatar/art, layout, button and tap targets, keyboard, scrolling and orientation. Structural green CI is not visual acceptance; do not replace the existing avatar without a reproduced reason.
+6. Replace the synthetic 1GiB stress artifact with a genuinely useful, redistributable Knowledge pack only when real source material, provenance and licenses exist. Require manifest, shards and hashes plus Windows/Android import and query proof. The audited v14 archive contains synthetic/duplicated cases and is not proof. Never pad or relabel filler. If genuine data is unavailable, record the external blocker and ask the owner one precise question.
+7. Verify production API/REG.RU readiness, database backup/restore and mail delivery when credentials/access exist. Treat physical devices, human voice listening, production signing keys/Android lineage and production host secrets as owner-controlled boundaries; never invent or expose credentials or private keys.
+8. Only after every internal gate is green on one same product SHA: bump accumulated release identity to `V1.4.0.0` with Android `versionCode > 100005`; synchronize `project/version.json`, `project.godot`, `export_presets.cfg`, installer/update manifest, changelog and release notes; rerun version/package/update/release gates.
+9. Keep PR #92 draft until genuine acceptance. Merge to `main`, tag and publish the GitHub release only after same-SHA gates are green and owner-controlled signing/deployment boundaries are satisfied or explicitly authorized. “Доводи до релиза” is the target, not permission to fabricate missing evidence.
+10. After every meaningful batch append BEFORE/AFTER evidence here: exact commit, workflow/run/job, artifact and result; update DONE/REMAINING/BLOCKERS/NEXT and the readiness footer. Continue autonomously until a real external owner-only blocker remains; then stop and ask exactly one focused question.
+
+AFTER ACTION: durable continuation instructions recorded in the canonical master log only; no product code changed by this action. The GitHub contents update that adds section 49 is the handoff commit; the next chat must record its resulting branch HEAD before further work.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: reproduced Windows installer-size and Android post-root package-loss causes repaired in product commits; exact-head CI launched; release continuation made self-contained.
+REMAINING: consume exact CI results; close Windows/Android/runtime/visual/Knowledge/API acceptance; synchronize V1.4 identity; final same-SHA gates; merge/tag/release.
+BLOCKERS: genuine production Knowledge corpus/provenance remains absent; physical-device, human-listening, production-host and signing evidence depend on owner-controlled access. In-progress workflows are not evidence of success.
+NEXT: first inspect completion of Windows Package `35288500840` and Core Android E2E `35288501145`, then the other seven running jobs; act only on their exact logs/artifacts.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
