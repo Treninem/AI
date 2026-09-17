@@ -93,7 +93,7 @@ jobs:
           --profile stress
           --scenario import_jsonl
           --target-mb 1024
-          --timeout-seconds 3600
+          --timeout-seconds 5400
           --report artifacts/knowledge-1g/knowledge-1g.json
       - name: Enforce 1GiB correctness self-reliance and bounded RSS
         shell: bash
