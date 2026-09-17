@@ -50,6 +50,7 @@ val prepareOcrAssets by tasks.registering {
 android {
     namespace = pluginPackageName
     compileSdk = 35
+    ndkVersion = "28.1.13356709"
     buildFeatures { buildConfig = true }
     defaultConfig {
         minSdk = 26
@@ -62,7 +63,8 @@ android {
     }
     sourceSets.getByName("main").assets.srcDir(generatedOcrAssets)
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
-    kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) } }
+    kotlin { compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
+    }
     externalNativeBuild { cmake { path = file("src/main/cpp/CMakeLists.txt"); version = "3.22.1" } }
 }
 
