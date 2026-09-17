@@ -6,6 +6,7 @@ import json
 import logging
 import os
 import queue
+import sys
 import threading
 import time
 from difflib import SequenceMatcher
@@ -27,7 +28,7 @@ from personality import AuroraPersonality
 from processor import AuroraVoiceProcessor, amplitude_envelope, prepare_for_speech
 from tts_engine import EngineRouter
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
 CONFIG_DIR = ROOT / "config"
 USER_DIR = Path(os.getenv("AURORAFOX_USER_DIR", str(ROOT))).resolve()
 CACHE_DIR = USER_DIR / "voice_cache"
@@ -35,7 +36,7 @@ LOG_DIR = USER_DIR / "logs"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
-CONFIG = json.loads((CONFIG_DIR / "voice_config.json").read_text(encoding="utf-8"))
+CONFIG = json.loads((CONFIG_DIR / "voice_config.json").read_text(encoding="utf-8-sig"))
 EMOTIONS = json.loads((CONFIG_DIR / "emotions.json").read_text(encoding="utf-8"))
 PERSONALITY = AuroraPersonality(CONFIG_DIR / "personality.json")
 

@@ -86,10 +86,10 @@ if (-not $SkipVoiceSetup) {
             $portableExe = Join-Path $portableDist "AuroraVoiceBackend\AuroraVoiceBackend.exe"
             $portableBuilt = (Test-Path $portableExe)
         } catch {
-            Write-Warning "Portable AuroraVoiceBackend build failed. Windows package will use the local managed-Python fallback: $($_.Exception.Message)"
-            $portableBuilt = $false
+            throw "Portable AuroraVoiceBackend build failed; refusing an incomplete offline package: $($_.Exception.Message)"
         }
     }
+    if (-not $portableBuilt) { throw "Portable AuroraVoiceBackend is required for a complete Windows voice package" }
 }
 
 Push-Location $root
@@ -223,8 +223,8 @@ if (-not $SkipVoiceSetup) {
     if (-not (Test-Path $server)) { throw "Packaged voice backend sources are missing" }
     if (-not (Test-Path $wake)) { throw "Packaged Fox/Лиса wake model is missing" }
     if (-not (Test-Path $hfCache)) { throw "Packaged Whisper cache is missing" }
-    if (-not (Test-Path $portableExe) -and -not (Test-Path $pythonw)) {
-        throw "Neither portable nor managed-Python Aurora Voice runtime is available"
+    if (-not (Test-Path $portableExe)) {
+        throw "Portable Aurora Voice runtime is missing from the complete Windows package"
     }
 }
 if (-not (Test-Path (Join-Path $voiceOut "requirements_xtts.txt"))) { throw "XTTS dependency profile was not packaged" }

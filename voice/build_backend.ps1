@@ -14,7 +14,10 @@ $spec = Join-Path $repoRoot "build\.voice_spec"
 if (-not (Test-Path $python)) { throw "Voice .venv is missing. Run voice/install_voice.ps1 first." }
 if (-not (Test-Path $server)) { throw "aurora_voice_server.py is missing" }
 
-& $python -m pip install --disable-pip-version-check "pyinstaller==6.16.0"
+$uv = Join-Path $repoRoot 'runtime/windows/uv/uv.exe'
+if (-not (Test-Path $uv)) { throw 'Managed uv is missing. Run voice/install_voice.ps1 first.' }
+# uv-created environments do not contain pip by default.
+& $uv pip install --python $python "pyinstaller==6.16.0"
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller installation failed" }
 
 if (Test-Path $OutputDir) { Remove-Item $OutputDir -Recurse -Force }
