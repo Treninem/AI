@@ -3,6 +3,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE = ROOT / "benchmarks" / "core" / "code_specialist_smoke.gd"
 CODE_SPECIALIST = ROOT / "scripts" / "code_specialist.gd"
+AGENT_CORE = ROOT / "scripts" / "agent_core.gd"
 DESKTOP_RUNTIME = ROOT / "scripts" / "desktop_local_runtime.gd"
 ANDROID_RUNTIME = ROOT / "scripts" / "android_local_runtime.gd"
 SMOKE_RUNNER = ROOT / "benchmarks" / "core" / "run_windows_code_specialist_smoke.ps1"
@@ -59,6 +60,20 @@ def test_specialist_team_runtime_smoke_is_fail_fast_before_full_benchmark() -> N
     assert "continue-on-error: true" not in specialist_step
     assert "run_windows_code_specialist_smoke.ps1" in specialist_step
     assert start < end
+
+
+def test_agent_core_handles_no_tool_retrieval_and_repairs_args_before_execution() -> None:
+    agent = AGENT_CORE.read_text(encoding="utf-8")
+    assert "if tool_catalog.is_empty():" in agent
+    assert '"direct_no_tools": true' in agent
+    assert "Не возвращай JSON tool-call" in agent
+    assert "args = await _complete_tool_args(task, tool_name, args)" in agent
+    assert "func _complete_tool_args(" in agent
+    assert "func _explicit_task_arg(" in agent
+    assert "Structural repair happens before any tool call" in agent
+    completion_pos = agent.index("args = await _complete_tool_args(task, tool_name, args)")
+    call_pos = agent.index("var tool_result = await tools.call_tool(tool_name, args)")
+    assert completion_pos < call_pos
 
 
 def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> None:
