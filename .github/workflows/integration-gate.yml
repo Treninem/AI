@@ -24,6 +24,18 @@ jobs:
     steps:
       - name: Checkout exact SHA
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "INTEGRATION_HEAD_SHA=$actual"
+          test "$actual" = "$EXPECTED_SHA"
 
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
@@ -35,7 +47,7 @@ jobs:
         run: >-
           python -m pip install --disable-pip-version-check
           -r api/requirements.txt
-          pytest==8.4.1 numpy==2.2.6 requests==2.32.5
+          pytest==8.4.1 numpy==2.2.6 requests==2.32.5 httpx==0.28.1
 
       - name: Run same-SHA cross-subsystem contracts
         shell: bash
@@ -244,6 +256,18 @@ jobs:
     steps:
       - name: Checkout exact SHA
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "INTEGRATION_HEAD_SHA=$actual"
+          test "$actual" = "$EXPECTED_SHA"
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -380,7 +404,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: integration-gate-godot-${{ github.sha }}
+          name: integration-gate-godot-${{ github.event.pull_request.head.sha || github.sha }}
           path: artifacts/integration-gate/
           if-no-files-found: warn
 
