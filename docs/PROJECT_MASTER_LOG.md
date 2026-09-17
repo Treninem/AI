@@ -1285,3 +1285,21 @@ TEST: python -m unittest tests.test_windows_voice_package tests.test_android_e2e
 RESULT: Source and regression tests verified. Full Windows package, firewall operation, installed voice model availability, performance, human quality and Android product execution remain pending. No version bump, main merge, RC or release authorized by test evidence yet.
 COMMIT: 415b47a2ebf56f9ad365bdfaf98c718ee6a13e9d (implementation). This journal commit follows it; both published together to avoid canceling an intermediate CI run.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%. Component assessment remains section 44; new implementation does not earn runtime/release credit until same-SHA checks pass.
+
+
+## 47. BEFORE ACTION — Windows package parse repair, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
+TIME: 2026-09-18 (GitHub-only continuation).
+TASK: repair exact Windows Package run `35280387297` before any further release work.
+WHY: job `105400709410` failed in step 3 before packaging. The log proves Windows PowerShell 5.1 cannot parse a Cyrillic UTF-8-without-BOM literal in `tests/windows_installed_voice_smoke.ps1`; inspection of the emitted workflow script also shows a missing comma before that helper entry.
+CURRENT STATE: PR #92 head `7f65d11c1b8fd4f2ff8aa6c1822b00c111d5be9e`; 19 workflows SUCCESS, Windows Package FAILURE, Android APK/Core/Knowledge heavy gates still running. No release/version bump.
+EXPECTED RESULT: PowerShell helper parse step passes on Windows and the same workflow proceeds to real installed offline voice packaging/smoke.
+RISKS: a parse-only fix may reveal a later genuine packaging/runtime failure; that result must be inspected rather than bypassed.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: exact failing run/job/step and two source causes classified from GitHub Actions logs.
+REMAINING: minimal source repair, exact-head Windows rerun, then remaining same-SHA release gates.
+BLOCKERS: Windows installed offline voice/package gate is red at parse stage; genuine Knowledge corpus and external device/host/signing boundaries remain.
+NEXT: update only the workflow delimiter and non-ASCII PowerShell test literal, then inspect the new exact-head Windows result.
