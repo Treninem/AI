@@ -5,6 +5,7 @@ on:
   pull_request:
     paths:
       - 'benchmarks/core/android_probe/**'
+      - 'benchmarks/core/run_android_probe.sh'
       - 'tests/test_core_android_benchmark_contract.py'
       - 'android_plugin/plugin/**'
       - 'android_plugin/setup_native.ps1'
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'benchmarks/core/android_probe/**'
+      - 'benchmarks/core/run_android_probe.sh'
       - 'tests/test_core_android_benchmark_contract.py'
       - 'android_plugin/plugin/**'
       - 'android_plugin/setup_native.ps1'
@@ -164,65 +166,7 @@ jobs:
           disable-animations: true
           disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -memory 4096
-          script: |
-            set -eu
-            pkg='com.aurorafox.corebenchmark'
-            apk='benchmarks/core/android_probe/app/build/outputs/apk/debug/app-debug.apk'
-            report='artifacts/core-benchmark-android.json'
-            mkdir -p artifacts
-            adb install -r "$apk"
-            if adb shell dumpsys package "$pkg" | grep -q 'android.permission.INTERNET'; then
-              echo 'Benchmark app unexpectedly requests INTERNET permission.' >&2
-              exit 1
-            fi
-            adb push "$CORE_MODEL" /data/local/tmp/aurorafox-core.gguf
-            adb shell run-as "$pkg" mkdir -p files
-            adb shell run-as "$pkg" cp /data/local/tmp/aurorafox-core.gguf files/aurorafox-core.gguf
-            adb shell rm -f /data/local/tmp/aurorafox-core.gguf
-            adb shell run-as "$pkg" ls -l files/aurorafox-core.gguf
-            adb logcat -c
-            adb shell am force-stop "$pkg"
-            adb shell am start -W -n "$pkg/.MainActivity"
-            i=0
-            while [ "$i" -lt 180 ]; do
-              if adb shell run-as "$pkg" test -s files/core-benchmark-android.json; then
-                break
-              fi
-              sleep 5
-              i=$((i + 1))
-            done
-            if ! adb shell run-as "$pkg" test -s files/core-benchmark-android.json; then
-              echo 'Android Core benchmark timed out after 900 seconds.' >&2
-              adb logcat -d -v brief | tail -n 400 >&2
-              exit 1
-            fi
-            adb shell run-as "$pkg" cat files/core-benchmark-android.json > "$report"
-            adb logcat -d -v brief > artifacts/core-benchmark-android-logcat.txt
-            python - <<'PY'
-            import json
-            from pathlib import Path
-            path = Path('artifacts/core-benchmark-android.json')
-            data = json.loads(path.read_text(encoding='utf-8'))
-            failures = []
-            if data.get('status') != 'completed': failures.append('status')
-            if data.get('passed') is not True: failures.append('overall')
-            env = data.get('environment', {})
-            if env.get('internet_permission_granted') is not False: failures.append('internet_permission')
-            if env.get('network_forbidden_by_manifest') is not True: failures.append('network_guard')
-            core = data.get('core', {})
-            if core.get('runtime') != 'llama.cpp': failures.append('runtime')
-            if core.get('native_library_loaded') is not True or core.get('llama_cpp') is not True: failures.append('native_llama')
-            if core.get('prepared_sha256') != 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5': failures.append('model_sha')
-            perf = data.get('performance', {})
-            for key in ('cold_first_response_ms', 'warm_median_ms', 'process_pss_mb'):
-                if float(perf.get(key, 0) or 0) <= 0: failures.append(key)
-            scenarios = data.get('scenarios', [])
-            if len(scenarios) != 3 or any(row.get('passed') is not True for row in scenarios): failures.append('scenarios')
-            print(json.dumps(data, ensure_ascii=False, indent=2))
-            if failures:
-                raise SystemExit('AURORAFOX_ANDROID_CORE_GATE_FAILED: ' + ','.join(failures))
-            print('AURORAFOX_ANDROID_REAL_CORE_GATE_OK')
-            PY
+          script: 'bash benchmarks/core/run_android_probe.sh "$CORE_MODEL"'
 
       - name: Upload Android Core benchmark evidence
         if: always()
