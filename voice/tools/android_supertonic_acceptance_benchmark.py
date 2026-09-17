@@ -25,9 +25,6 @@ from android_supertonic_candidate_benchmark import (
 EXPECTED_WHISPER_ARCHIVE_BYTES = 116_204_861
 EXPECTED_WHISPER_ARCHIVE_SHA256 = "c46116994e539aa165266d96b325252728429c12535eb9d8b6a2b10f129e66b1"
 
-# These are acceptance probes, not prompts used to alter the voice acoustics. The
-# raw abbreviations and mixed-language text are intentional: AuroraFox has to
-# pronounce what users actually type rather than a benchmark-only rewrite.
 SCENARIOS = [
     ("neutral_ru", "ru", "ru", "AuroraFox работает локально и готова спокойно помочь с задачей."),
     ("morning_ru", "ru", "ru", "Доброе утро. Сегодня всё получится. Я рядом и помогу спокойно начать день."),
@@ -178,7 +175,7 @@ def run_reliability(tts: sherpa_onnx.OfflineTts, sid: int) -> dict[str, object]:
         audio = tts.generate(REPEAT_TEXT, generation_config(sid, "ru"))
         repeat_times.append(time.perf_counter() - started)
         repeat_sizes.append(len(audio.samples))
-        if not audio.samples:
+        if len(audio.samples) == 0:
             raise RuntimeError(f"repeat synthesis returned empty audio for sid={sid}")
 
     rapid_times: list[float] = []
@@ -186,7 +183,7 @@ def run_reliability(tts: sherpa_onnx.OfflineTts, sid: int) -> dict[str, object]:
         started = time.perf_counter()
         audio = tts.generate(text, generation_config(sid, "ru"))
         rapid_times.append(time.perf_counter() - started)
-        if not audio.samples:
+        if len(audio.samples) == 0:
             raise RuntimeError(f"rapid synthesis returned empty audio for sid={sid}")
 
     callback_calls = 0
@@ -196,7 +193,6 @@ def run_reliability(tts: sherpa_onnx.OfflineTts, sid: int) -> dict[str, object]:
         nonlocal callback_calls, max_progress
         callback_calls += 1
         max_progress = max(max_progress, float(progress))
-        # Stop on the first chunk. The binding documents non-zero as cancel.
         return 1
 
     started = time.perf_counter()
@@ -204,9 +200,8 @@ def run_reliability(tts: sherpa_onnx.OfflineTts, sid: int) -> dict[str, object]:
     cancellation_seconds = time.perf_counter() - started
     cancelled_samples = len(cancelled_audio.samples)
 
-    # A request after cancellation must still work on the same engine instance.
     recovery = tts.generate("После отмены синтез снова работает.", generation_config(sid, "ru"))
-    if not recovery.samples:
+    if len(recovery.samples) == 0:
         raise RuntimeError(f"post-cancellation recovery failed for sid={sid}")
 
     return {
@@ -229,18 +224,8 @@ def run_reliability(tts: sherpa_onnx.OfflineTts, sid: int) -> dict[str, object]:
 def main() -> None:
     args = parse_args()
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    verify_archive(
-        args.supertonic_archive,
-        EXPECTED_SUPERTONIC_ARCHIVE_BYTES,
-        EXPECTED_SUPERTONIC_ARCHIVE_SHA256,
-        "Supertonic",
-    )
-    verify_archive(
-        args.whisper_archive,
-        EXPECTED_WHISPER_ARCHIVE_BYTES,
-        EXPECTED_WHISPER_ARCHIVE_SHA256,
-        "Whisper",
-    )
+    verify_archive(args.supertonic_archive, EXPECTED_SUPERTONIC_ARCHIVE_BYTES, EXPECTED_SUPERTONIC_ARCHIVE_SHA256, "Supertonic")
+    verify_archive(args.whisper_archive, EXPECTED_WHISPER_ARCHIVE_BYTES, EXPECTED_WHISPER_ARCHIVE_SHA256, "Whisper")
 
     load_started = time.perf_counter()
     tts = build_tts(args.supertonic_dir, args.threads)
@@ -260,55 +245,37 @@ def main() -> None:
     reliability: list[dict[str, object]] = []
     for sid in range(5):
         for scenario, tts_language, asr_language, text in SCENARIOS:
-            samples.append(
-                generate_one(
-                    tts,
-                    recognizers,
-                    sid,
-                    scenario,
-                    tts_language,
-                    asr_language,
-                    text,
-                    args.output_dir,
-                )
-            )
+            samples.append(generate_one(tts, recognizers, sid, scenario, tts_language, asr_language, text, args.output_dir))
         reliability.append(run_reliability(tts, sid))
 
-    # Restart proof: construct a second engine from the same verified local model,
-    # synthesize after the original instance has already been exercised heavily.
     restart_started = time.perf_counter()
     restarted_tts = build_tts(args.supertonic_dir, args.threads)
     restart_load_seconds = time.perf_counter() - restart_started
     restart_audio = restarted_tts.generate("Проверка после повторной загрузки модели.", generation_config(0, "ru"))
-    if not restart_audio.samples:
+    if len(restart_audio.samples) == 0:
         raise RuntimeError("restart synthesis returned empty audio")
 
     summaries: list[dict[str, object]] = []
     for sid in range(5):
         rows = [row for row in samples if int(row["sid"]) == sid]
-        summaries.append(
-            {
-                "speaker": f"F{sid + 1}",
-                "sid": sid,
-                "mean_asr_similarity": statistics.mean(float(row["asr_similarity"]) for row in rows),
-                "min_asr_similarity": min(float(row["asr_similarity"]) for row in rows),
-                "mean_rtf": statistics.mean(float(row["rtf"]) for row in rows),
-                "max_rtf": max(float(row["rtf"]) for row in rows),
-                "max_peak": max(float(row["peak"]) for row in rows),
-                "mean_rms": statistics.mean(float(row["rms"]) for row in rows),
-                "clipping_count": sum(int(row["clipping_count"]) for row in rows),
-            }
-        )
+        summaries.append({
+            "speaker": f"F{sid + 1}",
+            "sid": sid,
+            "mean_asr_similarity": statistics.mean(float(row["asr_similarity"]) for row in rows),
+            "min_asr_similarity": min(float(row["asr_similarity"]) for row in rows),
+            "mean_rtf": statistics.mean(float(row["rtf"]) for row in rows),
+            "max_rtf": max(float(row["rtf"]) for row in rows),
+            "max_peak": max(float(row["peak"]) for row in rows),
+            "mean_rms": statistics.mean(float(row["rms"]) for row in rows),
+            "clipping_count": sum(int(row["clipping_count"]) for row in rows),
+        })
 
-    metric_candidates = sorted(
-        summaries,
-        key=lambda row: (
-            int(row["clipping_count"]) != 0,
-            -float(row["mean_asr_similarity"]),
-            float(row["mean_rtf"]),
-            int(row["sid"]),
-        ),
-    )
+    metric_candidates = sorted(summaries, key=lambda row: (
+        int(row["clipping_count"]) != 0,
+        -float(row["mean_asr_similarity"]),
+        float(row["mean_rtf"]),
+        int(row["sid"]),
+    ))
     provisional_metric_candidate = metric_candidates[0]
 
     report = {
@@ -316,10 +283,7 @@ def main() -> None:
         "engine": "sherpa-onnx-supertonic-3",
         "sherpa_onnx_version": getattr(sherpa_onnx, "__version__", "unknown"),
         "candidate_range": "F1-F5",
-        "candidate_decision_boundary": (
-            "Machine metrics are provisional only. They do not prove female identity or naturalness; "
-            "release speaker selection still requires human listening evidence."
-        ),
+        "candidate_decision_boundary": "Machine metrics are provisional only. They do not prove female identity or naturalness; release speaker selection still requires human listening evidence.",
         "provisional_metric_candidate": provisional_metric_candidate,
         "speaker_summary": summaries,
         "samples": samples,
@@ -339,9 +303,7 @@ def main() -> None:
         "whisper_unpacked_bytes": tree_bytes(args.whisper_dir),
         "threads": args.threads,
     }
-    (args.output_dir / "acceptance-report.json").write_text(
-        json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8"
-    )
+    (args.output_dir / "acceptance-report.json").write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
 
     if len(samples) != 5 * len(SCENARIOS):
         raise RuntimeError(f"unexpected sample count: {len(samples)}")
