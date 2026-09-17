@@ -7,6 +7,8 @@ signal workspace_event(id: String, kind: String, details: Dictionary)
 const INDEX_PATH := "user://sandboxes/index.json"
 const ROOT_PATH := "user://sandboxes"
 const WINDOWS_SERVICE := "http://127.0.0.1:8766"
+const MAX_WINDOWS_EXEC_TIMEOUT := 300
+const MAX_WINDOWS_HTTP_TIMEOUT := 320.0
 
 var workspaces: Dictionary = {}
 var active_workspace_id := ""
@@ -27,11 +29,17 @@ func capabilities() -> Dictionary:
 		"native_processes": false,
 		"container_runtime": false,
 		"embedded_runtime": false,
-		"computer_control": os_name == "Windows"
+		"computer_control": os_name == "Windows",
+		"local_network_isolation": false,
+		"strict_network_isolation": false,
+		"degraded_local_process_opt_in": false,
 	}
 	if os_name == "Windows":
-		base.native_processes = true
+		var local_opt_in := OS.get_environment("AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX").strip_edges() == "1"
+		base.native_processes = local_opt_in
+		base.degraded_local_process_opt_in = local_opt_in
 		base.container_runtime = _command_exists("podman") or _command_exists("docker")
+		base.strict_network_isolation = bool(base.container_runtime)
 	elif os_name == "Android":
 		var android_caps := android_runtime.capabilities()
 		for key in android_caps.keys():
@@ -196,16 +204,30 @@ func status() -> Dictionary:
 
 func _execute_windows(command: Array, cwd: String, timeout: int, mode: String) -> Dictionary:
 	var ws := get_active()
+	var requested_mode := mode.strip_edges().to_lower()
+	if requested_mode not in ["auto", "container", "local"]:
+		return {"ok": false, "error": "invalid_sandbox_mode", "message": "Sandbox mode must be auto, container, or local", "retryable": false}
 	var rel_cwd := "%s/work" % ws.id
 	if cwd != "." and not cwd.is_empty():
 		var safe_cwd := _safe_relative(cwd)
 		if safe_cwd.is_empty(): return {"ok": false, "error": "Invalid cwd"}
 		rel_cwd += "/" + safe_cwd
-	var payload := {"command": command, "cwd": rel_cwd, "timeout": clampi(timeout, 1, 600)}
-	if mode == "container" or (mode == "auto" and bool(capabilities().get("container_runtime", false))):
-		var container_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(timeout + 30))
-		if container_result.get("ok", false) or int(container_result.get("http", 0)) != 404: return container_result
-	return await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, float(timeout + 30))
+	var bounded_timeout := clampi(timeout, 1, MAX_WINDOWS_EXEC_TIMEOUT)
+	var payload := {"command": command, "cwd": rel_cwd, "timeout": bounded_timeout, "allow_network": false}
+	if requested_mode in ["auto", "container"]:
+		if requested_mode == "auto" and not bool(capabilities().get("container_runtime", false)):
+			return {"ok": false, "error": "container_runtime_unavailable", "message": "Automatic execution requires the strict Docker/Podman sandbox; degraded local fallback is disabled", "retryable": false, "network_isolation_enforced": false}
+		var container_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
+		if int(container_result.get("http", 0)) == 404:
+			return {"ok": false, "error": "container_runtime_unavailable", "message": "Strict container sandbox requested but Docker/Podman or the required local image is unavailable", "retryable": false, "network_isolation_enforced": false}
+		return container_result
+	# "local" is an explicit degraded operator mode. The sidecar independently
+	# rejects this endpoint unless AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX=1.
+	var local_result := await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
+	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
+		local_result["degraded_isolation"] = true
+		local_result["isolation_note"] = "Explicit local mode lacks strict filesystem/network isolation. Prefer mode=container."
+	return local_result
 
 func _test_commands(language: String) -> Array:
 	var l := language.to_lower()
@@ -334,20 +356,41 @@ func _load_index() -> void:
 		workspaces = parsed.get("workspaces", {})
 
 func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout := 180.0) -> Dictionary:
+	if not url.begins_with(WINDOWS_SERVICE):
+		return {"ok": false, "error": "service_url_denied", "retryable": false}
+	if OS.get_name() != "Windows":
+		return {"ok": false, "error": "unsupported_platform", "retryable": false}
+	if not ComputerClient.master_enabled_from(self):
+		return {"ok": false, "error": "master_stop", "message": "Master stop активен", "retryable": false}
 	var req := HTTPRequest.new()
-	req.timeout = timeout
+	req.timeout = clampf(timeout, 1.0, MAX_WINDOWS_HTTP_TIMEOUT)
 	add_child(req)
-	var headers := PackedStringArray(["Content-Type: application/json"])
+	var headers := PackedStringArray([
+		"Content-Type: application/json",
+		"X-AuroraFox-Computer-Token: " + ComputerClient.shared_service_token(),
+		"X-AuroraFox-Autonomy-Allowed: 1",
+	])
 	var body := "" if payload.is_empty() else JSON.stringify(payload)
 	var err := req.request(url, headers, method, body)
 	if err != OK:
 		req.queue_free()
-		return {"ok": false, "error": "HTTPRequest error %s" % err}
-	var result: Array = await req.request_completed
+		return {"ok": false, "error": "service_unavailable", "message": "Computer sandbox request failed (%s)" % err, "retryable": true}
+	var completed: Array = await req.request_completed
 	req.queue_free()
-	var code := int(result[1])
-	var raw: PackedByteArray = result[3]
-	var text := raw.get_string_from_utf8()
+	if completed.size() < 4:
+		return {"ok": false, "error": "malformed_response", "retryable": true}
+	var result_code := int(completed[0])
+	var code := int(completed[1])
+	var raw: PackedByteArray = completed[3]
+	if result_code != HTTPRequest.RESULT_SUCCESS:
+		return {"ok": false, "error": "transport_failure", "message": "Computer sandbox transport failed (%s)" % result_code, "retryable": true}
+	var text := raw.get_string_from_utf8().strip_edges()
+	if text.is_empty():
+		return {"ok": false, "error": "empty_response", "http": code, "retryable": code >= 500}
 	var parsed = JSON.parse_string(text)
-	if code < 200 or code >= 300: return {"ok": false, "http": code, "error": text.substr(0, 4000)}
-	return parsed if parsed is Dictionary else {"ok": false, "error": "Invalid JSON response"}
+	if not parsed is Dictionary:
+		return {"ok": false, "error": "malformed_response", "http": code, "retryable": code >= 500}
+	var response: Dictionary = parsed
+	if code < 200 or code >= 300:
+		return {"ok": false, "http": code, "error": str(response.get("error", "http_error")), "message": str(response.get("detail", response.get("message", "Computer sandbox error"))).substr(0, 2048), "retryable": code in [408, 429, 502, 503, 504]}
+	return response

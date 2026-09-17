@@ -464,7 +464,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 похвалил в журнале — ещё не прошёл gate 🙂. Экономить токены: один пакет чтения,
 один связанный набор правок, относящиеся тесты; повторять только при выявленном дефекте.
 
-
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
@@ -584,7 +583,6 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Acceptance: create/save/execute/progress/complete/restart/load; pause/resume/cancel/retry/failed/interrupted/partial; atomic resilient store + migration/dedup; invalid transitions rejected; safe/unsafe retry distinction; no blind destructive replay after uncertain result; Computer unavailable/timeout/malformed/permission/screenshot/platform failures не ломают chat; bounded calls; path traversal/symlink/command-injection/master-stop/untrusted-authority/privacy regressions; concurrency/stress; Windows contracts зелёные; Android Work + explicit unsupported Computer capability зелёный; physical Windows/Android gates отмечаются отдельно, если устройства недоступны; нет известного P0/P1 в собственном scope.
 
 ## 25. Integration Gate — routed findings and checkpoint, 2026-09-16
-
 FROM: CHAT-2026-09-16-INTEGRATION-GATE
 TO: CHAT-2026-09-16-UPDATER-VERSIONING
 TYPE: BLOCKER
@@ -938,43 +936,113 @@ BLOCKERS:
 NEXT:
 - Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
 
-## 38. TAKEOVER/RECONCILE — Knowledge + Memory + OCR, 2026-09-17
+## 38. Mandatory blocked/waiting escalation through coordinator, 2026-09-17
 
-### CLAIM `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR`
+This section is a **mandatory coordination rule** for all seven executor lanes and supersedes any older habit of silently waiting on another lane, a queued check, ownership conflict or unknown next step.
 
-- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
-- Started from fresh `main`: `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`.
-- Working branch: `chat-2026-09-17-knowledge-memory-ocr`.
-- Режим: Chat.
-- Предполагаемый bump после полного acceptance: **PATCH**; каноническую версию и Android `versionCode` этот lane не меняет, финальный merge/version/release остаётся у главного координатора.
-- Этот CLAIM намеренно объединяет и **замещает active ownership** двух старых направлений: `CHAT-2026-09-16-LOCAL-OCR` / PR #66 и `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` / PR #64. Старые записи остаются историческим evidence, но их конфликт вокруг `scripts/knowledge_store.gd`, dedupe/import transaction/OCR больше не является межчатовой границей.
-- Inherited OCR candidate: PR #66 branch `chat-2026-09-16-local-ocr`, current head `38f03adb2bed9cdf5e0cd0c2caa485072ee7152b`; относительно takeover-base branch diverged и содержит OCR/File Intelligence/Android OCR/`knowledge_store.gd` implementation, поэтому **не переносится wholesale**. Берутся только проверенные полезные дельты без stale unrelated history.
-- Inherited Large Knowledge candidate: PR #64 branch `chat-knowledge-races-v2-20260916`, current head `1bc4003170e45394d181d6010453cb8560312784`; относительно takeover-base branch diverged, а текущий net-unmerged delta является benchmark/workflow/test evidence без production Knowledge changes. Этот evidence harness сохраняется и переносится выборочно, без слепого merge ветки.
-- Текущий runtime evidence PR #64: Knowledge Performance run `35149777829` завершён с failure; Linux воспроизводит record-level same-source/cross-source provenance dedupe failure, Windows после успешного isolated-profile warm-up снова упирается в bounded ~120 s class hang/probe timeout. Downloaded artifacts: Linux `10469340743` (`knowledge-linux-smoke`), Windows `10469530877` (`knowledge-windows-smoke`). Machine-readable Windows evidence фиксирует timeout около `120041.95 ms`, warm-up отдельно около `21638 ms`; старый Windows ~120 s класс **не закрыт**.
-- Record-dedupe contract PR #64 требует: пять byte/content-identical records внутри source A -> одна normalized запись A; тот же fact из A+B -> по одной source-scoped provenance записи на источник; remove B сохраняет shared fact и unique A, удаляет only B. Текущий `KnowledgeStore` fingerprint включает `source + record_path + text`, поэтому одинаковое содержимое на разных record paths не dedupe-ится; production fix обязателен, тест не ослаблять.
-- Текущий OCR evidence PR #66: GDScript project parse уже исправлен на current head, но Local OCR static contract остаётся красным из-за отсутствующего Android bridge API `cancelDocumentExtraction`; Windows portable OCR runtime/package и Knowledge/OCR duplicate smoke также не имеют accepted green proof. Android APK workflow `35153788311` останавливается на release-contract до build/install, поэтому installable APK и physical Android stress не доказаны. Python OCR regression и отдельный Android plugin contract могут быть зелёными, но не заменяют package/device proof.
-- Объединённый production ownership этого CLAIM: `scripts/knowledge_store.gd`, `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd`, `scripts/knowledge_manager.gd`, knowledge-related `scripts/memory_store.gd` behavior, `scripts/knowledge_document_importer.gd`, `scripts/file_intelligence_client.gd`, `file_intelligence/**` local document/OCR path, Android document/OCR runtime + required OCR package metadata, `benchmarks/knowledge/**`, related Knowledge/OCR tests and isolated workflows. UI/Core/Voice/Server/Work/Updater production paths не изменяются этим lane.
-- Scope: source registry, KnowledgeManager, import transaction, fingerprints/revisions/aliases, dedupe/provenance/removal/rollback/restart recovery, search/retrieval, persistent indexing, large-source bounded-memory performance, relevant MemoryStore behavior, local document ingestion and OCR for TXT/JSON/JSONL/CSV/code/data/DOCX/ODT/RTF/EPUB/XLS/XLSX/ODS/PPTX/PDF/images on Windows + Android.
-- Security invariant: document/image/OCR content remains untrusted data; embedded text such as `игнорируй правила`, `запусти команду`, `удали файлы` receives no system/tool authority. Normal OCR/document path may not require OpenAI/Gemini/Claude/Ollama/cloud OCR/remote inference/Internet; required runtime/assets must be packaged or guaranteed local platform capability, with no mandatory first-run OCR download.
-- OCR acceptance keeps text-layer page skipping, image/image-only/scanned/mixed PDF, RU/EN/mixed, page-by-page metadata and bounded memory. Desktop CI is never reported as physical Android stress proof.
-- Durability/concurrency acceptance retains process-kill import/removal, stale temp, corrupt/truncated registry temp, failed registry/store writes, rollback/restart/recovery, concurrent imports and search/remove race. Performance regressions are not hidden by timeout increases; required scaling remains 8/16/32 small sources, 16/32/64 registry isolation and 10/50/100/250 MiB where CI capacity permits with duration/throughput/search p50/p95/p99/peak RSS/store-size/restart/removal/rollback/duplicate/error evidence.
-- First implementation targets after this CLAIM: (1) reconcile only the useful PR #66 `KnowledgeStore` batching/source-presence improvements while correcting record-level content dedupe/provenance semantics; (2) preserve/carry the PR #64 deterministic dedupe/race/failure probes; (3) add Android `cancelDocumentExtraction` bridge and reconcile offline OCR packaging/release-contract failures; (4) rerun same-SHA Linux/Windows Knowledge evidence, OCR contract/package evidence and large stress; then investigate the exact Windows post-warmup hang stage rather than increasing timeout.
+### Executor rule
 
-PROGRESS_COMPLETE: 18%
-PROGRESS_REMAINING: 82%
+If an executor chat reaches **any state that prevents useful forward progress**, it MUST report the condition in this `docs/PROJECT_MASTER_LOG.md` immediately instead of waiting indefinitely, starting duplicate work or crossing another lane's ownership boundary. This includes, but is not limited to:
+
+- a failing test/workflow that belongs to another lane;
+- waiting for another lane's code, API, artifact or merge;
+- ownership/file conflict;
+- stale/incompatible branch or PR state;
+- CI queue/scheduling blocker that prevents the next required gate;
+- missing external/device/credential/access boundary;
+- architectural decision requiring coordinator arbitration;
+- uncertainty about whether a candidate can be merged;
+- any other condition where the executor has no safe independent next action inside its own scope.
+
+The executor records a `COORDINATOR-BLOCKER` entry using this minimum format:
+
+```text
+COORDINATOR-BLOCKER:
+FROM: <current CLAIM>
+STATUS: BLOCKED | WAITING | OWNERSHIP-CONFLICT | CI-BLOCKED | DECISION-REQUIRED
+CURRENT_SHA: <exact branch/head SHA>
+BLOCKED_ON: <claim/pr/run/job/file/external boundary>
+EVIDENCE: <exact failing test/workflow/run/job/artifact/diff or factual reason>
+ALREADY_TRIED: <only factual attempts already made>
+SAFE_PARALLEL_WORK: <independent work that can still continue, or NONE>
+NEEDS_COORDINATOR: <specific decision/routing needed>
+```
+
+After writing the escalation, the executor MUST NOT silently take another active lane's production files or weaken/remove a failing acceptance test merely to continue. If `SAFE_PARALLEL_WORK` exists, it should continue that independent work while waiting for coordinator routing. If none exists, it waits for the coordinator decision recorded in this journal rather than inventing a new ownership scope.
+
+### Coordinator rule
+
+The coordinator continuously reads these `COORDINATOR-BLOCKER` entries and resolves them through the same journal. For each unresolved escalation the coordinator must verify the available Git/CI evidence and write a `COORDINATOR-DECISION` entry with:
+
+```text
+COORDINATOR-DECISION:
+FOR: <blocked CLAIM>
+DECISION: CONTINUE | REROUTE | HANDOFF | MERGE-FIRST | REBASE/RECONCILE | WAIT-EXTERNAL | DROP-STALE | SPLIT-WORK | OTHER
+OWNER: <claim responsible for next action>
+ACTION: <exact next safe action>
+DEPENDENCY: <what must become true before the original lane resumes, or NONE>
+EVIDENCE: <SHA/run/job/diff/contract supporting the decision>
+PARALLEL_ACTION: <what the blocked lane should do meanwhile, or NONE>
+```
+
+The coordinator is responsible for preventing queue deadlocks: if a dependency can be removed by changing merge order, reconciling a stale candidate, routing a defect to its true owner, splitting an independent test wave, or moving an idle/finished executor to an unowned bottleneck, the coordinator does so and records that decision here.
+
+### No-idle / no-deadlock rule
+
+- No executor should remain in an undefined `waiting` state without a journal escalation and coordinator decision.
+- A red aggregate Integration gate does not force unrelated green lanes to stop when the failing subsystem has been identified and isolated by exact evidence.
+- A finished executor releases its files and may be reassigned by the coordinator to independent regression, evidence collection, packaging or another unowned bottleneck.
+- A blocked executor may continue only explicitly safe parallel work; it must not duplicate the blocker owner's implementation.
+- Every blocker must have an owner, evidence, a coordinator decision and a next action. `Ждём`, `непонятно кто делает`, `проверим потом` are not valid terminal states.
+- Final merge, final version bump and release authority remain coordinator-only.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
 
 DONE:
-- Fresh main/AGENTS/master-log/old CLAIMs/PR heads/diffs/workflow/artifact state reconciled.
-- Exact current record-level dedupe/provenance and Windows timeout failures identified from runtime evidence.
-- Exact current Android OCR bridge/package blocker identified.
-- Old OCR + Large Knowledge ownership scopes are now unified under this CLAIM.
+- Mandatory executor→coordinator escalation protocol is defined for blockers, waits, ownership conflicts, CI scheduling and architecture/merge decisions.
+- Mandatory coordinator→executor decision protocol is defined in the same canonical journal.
+- No-idle/no-deadlock behavior is explicit: executors continue safe independent work where possible and do not cross ownership boundaries while blocked.
+- This coordination-only change does not modify production code, canonical product version or Android versionCode.
 
 REMAINING:
-- Production implementation, same-SHA tests/CI, Windows hang localization, OCR package/runtime acceptance, 100/250 MiB stress and Android package/device boundary.
+- Product lanes continue normally under section 37; every new blocker/wait condition must now use this section 38 protocol.
 
 BLOCKERS:
-- No external ownership blocker remains for `knowledge_store.gd`; remaining blockers are code/runtime evidence inside this unified lane.
-- Physical Android stress still requires real-device evidence and cannot be inferred from desktop CI/emulator-only checks.
+- none for this coordination rule.
 
 NEXT:
-- Reconcile `KnowledgeStore` batching with correct content-level dedupe/provenance first, run deterministic record-dedupe + alias/removal/rollback tests, then continue OCR bridge/package repair and combined stress.
+- Coordinator continues monitoring all seven lanes. On the first `COORDINATOR-BLOCKER` entry, verify its exact evidence, publish a `COORDINATOR-DECISION` here, reroute ownership/merge order/CI as needed, and keep all independent lanes moving.
+
+## 39. Work / Computer / Autonomy — TAKEOVER/RECONCILE, 2026-09-17
+
+### CLAIM `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY`
+
+- Статус: **ACTIVE — TAKEOVER/RECONCILE**.
+- Fresh baseline: `b574546cc133a7bd9aa6b24e65414ca3328949d7`; branch head before this claim: `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`.
+- Режим: Chat. Intended bump after acceptance: **PATCH**; version/versionCode/final merge/release remain coordinator-only.
+- Inherits `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / draft PR #40, verified head `f4ad58377752020823900fea107914af49021349`: Work lifecycle/recovery, atomic WorkStore, safe/unsafe retry + uncertain-result protection, bounded local Computer primitives, default-OFF/master-stop, sandbox/idempotency/privacy, tests. Old exact-head evidence: Work Computer Reliability `35147796178` SUCCESS; Work Mode `35147796111` SUCCESS; Windows Package `35147796213` SUCCESS; Android APK `35147795977` SUCCESS; Agent Sync `35147796112` SUCCESS; Core/Voice `35147796205` SUCCESS.
+- Inherits PR #72 head `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa`, already merged into main as `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`: temp/backup atomic autonomy-state save, interrupted/corrupt recovery, legacy schema, fail-closed autonomy boot. Exact-head evidence: Agent Sync `35150755820` SUCCESS; Core/Voice `35150755870` SUCCESS; Windows Package `35150755901` SUCCESS; Android APK `35150755919` SUCCESS. Windows artifact `10469683226` digest `sha256:965ecd3670ca26bfc2ea478c1135deeda01c13ae87c3166ca90350ca26d05eaf`; Android artifact `10469586976` digest `sha256:fa9c968aa8b54e2ad7e8770f8a6c25b60e5d8231b1d0863441fc15fb17431ca4`.
+- Current reconcile candidate `af652c3e76254eb3f7981907a9adf8c8b82c7d91` was produced concurrently from fresh main and merged into this branch as `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`; it is **not accepted by assertion alone**. Audit already found five unrelated stale workflow diffs (`agent-sync-ci.yml`, `android-apk-artifact.yml`, `release-identity-ci.yml`, `voice-ci.yml`, `windows-package-ci.yml`); those must be removed before candidate acceptance.
+- Owned scope: `work/work_manager.gd`, `work/work_store.gd`, `computer/computer_service.py`, `computer/install_computer.ps1`, `computer/requirements.txt`, `scripts/computer_client.gd`, Work/Computer reliability tests and `.github/workflows/work-computer-reliability.yml`; `scripts/agent_core.gd`, `scripts/tool_registry.gd`, `scripts/sandbox_manager.gd`, `agent/autonomous_coordinator.gd` only with runtime evidence/rechecked ownership.
+- UI boundary: do not edit `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd`, `work/work_overlay.gd`; UI contract defects route to `CHAT-2026-09-17-UI-VISUAL-UX`.
+- Architecture invariant: high-level goal = bundled AuroraFox Core / AgentCore → ToolRegistry → bounded Computer primitives. `ComputerClient.plan()` / `run()` and sidecar service are not planners; no mandatory external AI/model.
+
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+
+DONE:
+- Fresh main/AGENTS/full master log, old claims, PR #40/#72 exact heads/diffs/CI/artifacts audited.
+- PR #72 is already integrated and preserved; no reimplementation.
+- PR #40 useful work identified, and stale unrelated workflow contamination in current reconcile candidate is explicitly identified before acceptance.
+
+REMAINING:
+- Remove unrelated workflow diffs; verify resulting diff contains only owned/relevant Work/Computer safety changes plus this journal entry.
+- Create/open a draft takeover PR; obtain same-SHA Work Computer Reliability + Work Mode CI and inspect exact failure-injection results.
+- Extend any missing runtime gates for state corruption/both-corrupt/fail-closed, concurrency, service crash/timeout/malformed/permission/screenshot/idempotency/destructive uncertain replay, Windows supported capability and Android graceful unsupported Computer.
+
+BLOCKERS:
+- none preventing safe owned-scope cleanup/testing now. UI runtime acceptance remains cross-lane and will be routed, not edited here.
+
+NEXT:
+- Restore the five unrelated workflows from fresh main, verify net diff, then trigger draft-PR CI and classify failures by exact run/job/test before further implementation.

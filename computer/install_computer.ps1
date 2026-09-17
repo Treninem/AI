@@ -30,17 +30,9 @@ if (-not (Test-Path -LiteralPath $Python)) {
 & $Uv pip install --python $Python -r (Join-Path $Root 'requirements.txt')
 if ($LASTEXITCODE -ne 0) { throw 'Failed to install Computer Agent dependencies' }
 
-Write-Host 'Checking Ollama...'
-$ollama = Get-Command ollama -ErrorAction SilentlyContinue
-if ($null -eq $ollama) {
-    Write-Warning 'Ollama is not installed or not in PATH. AuroraFox chat can continue, but Computer Vision requires the local vision model.'
-    Write-Warning 'After installing Ollama run: ollama pull qwen3-vl:8b'
-} else {
-    & ollama pull qwen3-vl:8b
-}
-
 Write-Host ''
 Write-Host 'AuroraFox Computer Agent installed.' -ForegroundColor Green
 Write-Host 'System Python is not required; AuroraFox uses its managed Python 3.11 runtime.'
+Write-Host 'Planning is performed by the bundled AuroraFox Core; Ollama or cloud AI is not required.'
 Write-Host "Start with: $Python $Root\computer_service.py"
-Write-Host 'Emergency stop while automation is running: move the mouse to the upper-left corner.'
+Write-Host 'Emergency stop while Windows automation is running: move the mouse to the upper-left corner.'
