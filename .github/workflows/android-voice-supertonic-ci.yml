@@ -77,6 +77,8 @@ jobs:
 
       - name: Setup Android SDK 35
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Install Android compile platform
         shell: bash
