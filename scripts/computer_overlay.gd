@@ -75,6 +75,13 @@ func _build_panel() -> void:
 		margin.add_theme_constant_override(side, 22)
 	popup.add_child(margin)
 
+	var root_box := VBoxContainer.new()
+	root_box.name = "ComputerAgentRoot"
+	root_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	root_box.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root_box.add_theme_constant_override("separation", 12)
+	margin.add_child(root_box)
+
 	# PopupPanel derives its native minimum size from direct content. Autowrapped
 	# labels can report a very tall minimum before the embedded subwindow has a
 	# stable width, which previously expanded this 470 px panel above 7,000 px.
@@ -86,7 +93,7 @@ func _build_panel() -> void:
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_AUTO
-	margin.add_child(scroll)
+	root_box.add_child(scroll)
 
 	var box := VBoxContainer.new()
 	box.name = "ComputerAgentContent"
@@ -150,15 +157,15 @@ func _build_panel() -> void:
 	_apply_button(setup_button, false)
 	box.add_child(setup_button)
 
-	var spacer := Control.new()
-	spacer.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	box.add_child(spacer)
-
+	# Keep the primary dismissal action outside the scrolling body. It must stay
+	# pointer-accessible even when compact windows require the content to scroll.
 	var close := Button.new()
+	close.name = "ComputerAgentDone"
 	close.text = "Готово"
+	close.custom_minimum_size.y = 44
 	close.pressed.connect(func(): popup.hide())
 	_apply_button(close, false)
-	box.add_child(close)
+	root_box.add_child(close)
 	_refresh_control_state()
 
 func _desktop_panel_available() -> bool:
