@@ -3,6 +3,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "benchmarks/core/android_godot_benchmark.gd"
 SCENE = ROOT / "benchmarks/core/android_godot_benchmark.tscn"
+RUNNER = ROOT / "benchmarks/core/run_android_godot_e2e.sh"
 WORKFLOW = ROOT / ".github/workflows/core-android-e2e.yml"
 
 
@@ -25,16 +26,25 @@ def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
     assert "android_godot_benchmark.gd" in scene
 
 
-def test_android_godot_e2e_workflow_is_offline_during_measured_phase() -> None:
+def test_android_godot_e2e_workflow_runs_offline_phase_in_one_shell() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    runner = RUNNER.read_text(encoding="utf-8")
     assert "build/build_android.ps1" in workflow
     assert "--check-only --script benchmarks/core/android_godot_benchmark.gd" in workflow
     assert 'run/main_scene="res://benchmarks/core/android_godot_benchmark.tscn"' in workflow
     assert "reactivecircus/android-emulator-runner@v2.38.0" in workflow
-    assert "airplane-mode enable" in workflow
-    assert "svc wifi disable" in workflow
-    assert "svc data disable" in workflow
-    assert "core-benchmark-android-e2e.json" in workflow
-    assert "offline_network_guard" in workflow
-    assert "aurora_core_android" in workflow
-    assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in workflow
+    assert 'bash benchmarks/core/run_android_godot_e2e.sh "$BENCHMARK_APK"' in workflow
+    assert "benchmarks/core/run_android_godot_e2e.sh" in workflow
+
+    assert "set -euo pipefail" in runner
+    assert "airplane-mode enable" in runner
+    assert "svc wifi disable" in runner
+    assert "svc data disable" in runner
+    assert "ping -c 1 -W 2 1.1.1.1" in runner
+    assert "external_ping_blocked" in runner
+    assert "core-benchmark-android-e2e.json" in runner
+    assert "offline_network_guard" in runner
+    assert "external_network_probe_blocked" in runner
+    assert "aurora_core_android" in runner
+    assert "AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK" in runner
+    assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in runner
