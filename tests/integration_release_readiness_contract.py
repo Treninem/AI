@@ -12,7 +12,11 @@ def read(path: str) -> str:
 
 def test_integration_gate_is_same_sha_and_cancels_stale_runs() -> None:
     workflow = WORKFLOW.read_text(encoding="utf-8")
+    exact_ref = "ref: ${{ github.event.pull_request.head.sha || github.sha }}"
     assert "Checkout exact SHA" in workflow
+    assert workflow.count(exact_ref) == 2
+    assert workflow.count("INTEGRATION_HEAD_SHA=") == 2
+    assert "integration-gate-godot-${{ github.event.pull_request.head.sha || github.sha }}" in workflow
     assert "cancel-in-progress: true" in workflow
     assert "branches: [main]" in workflow
 
@@ -121,8 +125,9 @@ def test_knowledge_registry_durability_and_removal_are_same_sha_covered() -> Non
 
     durability = read("tests/test_knowledge_stress_registry_durability.py")
     removal = read("tests/test_knowledge_stress_removal_transaction.py")
-    assert "temp" in durability.lower()
-    assert "rollback" in durability.lower() or "failure" in durability.lower()
+    assert "_valid_registry_file" in durability
+    assert "AURORA_KNOWLEDGE_TRUNCATED_REGISTRY_RESULT=" in durability
+    assert "source_preserved_after_restart" in durability
     assert "remov" in removal.lower()
     assert "transaction" in removal.lower() or "rollback" in removal.lower()
 
@@ -137,8 +142,10 @@ def test_server_persistence_and_reg_ru_release_contracts_are_same_sha_covered() 
     maintenance = read("tests/test_api_persistence_maintenance.py")
     deployment = read("tests/test_deployment_contract.py")
     assert "sync" in maintenance.lower()
-    assert "ready" in maintenance.lower()
-    assert "verify_production.py" in deployment
+    assert "test_server_readiness_is_database_integrity_backed_and_privacy_safe" in deployment
+    assert "http://127.0.0.1:8768/ready" in deployment
+    assert "test_reg_ru_production_verifier_is_fail_closed_and_ci_is_self_cleaning" in deployment
+    assert "deploy/reg_ru/verify.sh" in deployment
     assert "sqlite" in deployment.lower()
     assert "backup" in deployment.lower()
     assert "rollback" in deployment.lower()
