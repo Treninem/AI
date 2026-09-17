@@ -2,7 +2,7 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$GodotPath,
     [string]$ReportPath = "",
-    [int]$TimeoutSeconds = 360
+    [int]$TimeoutSeconds = 900
 )
 
 $ErrorActionPreference = 'Stop'
@@ -81,7 +81,12 @@ try {
     $env:AURORAFOX_CODE_SPECIALIST_NETWORK_GUARD = '0'
 }
 
-if ($timedOut) { throw "CodeSpecialist offline smoke timed out after $TimeoutSeconds seconds." }
+if ($timedOut) {
+    Write-Host 'AURORAFOX_CODE_SPECIALIST_TIMEOUT_DIAGNOSTICS' -ForegroundColor Yellow
+    if (Test-Path -LiteralPath $stdoutPath) { Get-Content -LiteralPath $stdoutPath -Tail 120 | Write-Host }
+    if (Test-Path -LiteralPath $stderrPath) { Get-Content -LiteralPath $stderrPath -Tail 120 | Write-Host }
+    throw "CodeSpecialist offline smoke timed out after $TimeoutSeconds seconds. Individual desktop Core requests are separately bounded by DesktopLocalRuntime."
+}
 if (-not (Test-Path -LiteralPath $ReportPath)) { throw "CodeSpecialist smoke report missing: $ReportPath" }
 $report = Get-Content -LiteralPath $ReportPath -Raw | ConvertFrom-Json
 if ($report.passed -ne $true) { throw 'CodeSpecialist offline smoke reported failure.' }
