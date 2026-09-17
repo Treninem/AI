@@ -138,12 +138,12 @@ try {
             'from transformers import pipeline',
             'import torch',
             'pipeline(',
-            '    "automatic-speech-recognition",',
-            '    model="openai/whisper-large-v3-turbo",',
+            "    'automatic-speech-recognition',",
+            "    model='openai/whisper-large-v3-turbo',",
             '    torch_dtype=torch.float32,',
             '    device=-1,',
             ')',
-            'print("WHISPER_READY")'
+            "print('WHISPER_READY')"
         ) -join "`n"
         & $python -c $sttCode
         if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Whisper.' }
@@ -151,8 +151,8 @@ try {
         Set-Stage 'tts_model' 75 'Downloading Russian Silero TTS fallback'
         $ttsCode = @(
             'from silero import silero_tts',
-            'model, _ = silero_tts(language="ru", speaker="v5_5_ru")',
-            'print("SILERO_READY")'
+            "model, _ = silero_tts(language='ru', speaker='v5_5_ru')",
+            "print('SILERO_READY')"
         ) -join "`n"
         & $python -c $ttsCode
         if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare Silero TTS.' }
@@ -163,13 +163,13 @@ try {
             $env:AURORAFOX_VOICE_CONFIG = $voiceConfigPath
             $xttsCode = @(
                 'import json, os, sys',
-                'sys.path.insert(0, os.environ["AURORAFOX_VOICE_PYTHON_DIR"])',
+                "sys.path.insert(0, os.environ['AURORAFOX_VOICE_PYTHON_DIR'])",
                 'import tts_engine',
-                'cfg = json.load(open(os.environ["AURORAFOX_VOICE_CONFIG"], encoding="utf-8"))',
-                'engine = tts_engine.XTTSVoiceEngine(cfg["xtts"], "cpu")',
+                "cfg = json.load(open(os.environ['AURORAFOX_VOICE_CONFIG'], encoding='utf-8'))",
+                "engine = tts_engine.XTTSVoiceEngine(cfg['xtts'], 'cpu')",
                 'assert engine.available(), engine.diagnostics()',
                 'engine._load()',
-                'print("XTTS_MODEL_READY", engine.diagnostics())'
+                "print('XTTS_MODEL_READY', engine.diagnostics())"
             ) -join "`n"
             & $python -c $xttsCode
             if ($LASTEXITCODE -ne 0) { throw 'Failed to prepare XTTS-v2 model.' }
@@ -179,7 +179,7 @@ try {
     Set-Stage 'microphone' 95 'Checking audio library'
     $audioCode = @(
         'import sounddevice as sd',
-        'print("AUDIO_DEVICES", len(sd.query_devices()))'
+        "print('AUDIO_DEVICES', len(sd.query_devices()))"
     ) -join "`n"
     & $python -c $audioCode
     if ($LASTEXITCODE -ne 0) { throw 'Audio library initialization failed.' }
