@@ -3,6 +3,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SMOKE = ROOT / "benchmarks" / "core" / "code_specialist_smoke.gd"
 CODE_SPECIALIST = ROOT / "scripts" / "code_specialist.gd"
+DESKTOP_RUNTIME = ROOT / "scripts" / "desktop_local_runtime.gd"
+SMOKE_RUNNER = ROOT / "benchmarks" / "core" / "run_windows_code_specialist_smoke.ps1"
 WORKFLOW = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
 
 EXPECTED_OPERATIONS = (
@@ -56,6 +58,18 @@ def test_specialist_team_runtime_smoke_is_fail_fast_before_full_benchmark() -> N
     assert "continue-on-error: true" not in specialist_step
     assert "run_windows_code_specialist_smoke.ps1" in specialist_step
     assert start < end
+
+
+def test_desktop_core_requests_have_product_bounds_and_smoke_allows_full_surface() -> None:
+    runtime = DESKTOP_RUNTIME.read_text(encoding="utf-8")
+    runner = SMOKE_RUNNER.read_text(encoding="utf-8")
+    assert "DEFAULT_CHAT_MAX_TOKENS := 2048" in runtime
+    assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 180.0" in runtime
+    assert '"max_tokens": max_tokens' in runtime
+    assert 'options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)' in runtime
+    assert "clampi(int(options.get(\"max_tokens\", DEFAULT_CHAT_MAX_TOKENS)), 64, 8192)" in runtime
+    assert "[int]$TimeoutSeconds = 900" in runner
+    assert "AURORAFOX_CODE_SPECIALIST_TIMEOUT_DIAGNOSTICS" in runner
 
 
 def test_core_engine_resolution_uses_actions_token_without_weakening_verification() -> None:
