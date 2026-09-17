@@ -1303,3 +1303,21 @@ DONE: exact failing run/job/step and two source causes classified from GitHub Ac
 REMAINING: minimal source repair, exact-head Windows rerun, then remaining same-SHA release gates.
 BLOCKERS: Windows installed offline voice/package gate is red at parse stage; genuine Knowledge corpus and external device/host/signing boundaries remain.
 NEXT: update only the workflow delimiter and non-ASCII PowerShell test literal, then inspect the new exact-head Windows result.
+
+
+## 48. BEFORE ACTION — release-size voice baseline and Android launcher readiness, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
+TIME: 2026-09-18 (GitHub-only continuation).
+TASK: close two exact-head release blockers reproduced on `5ef78fc17397c653a883cebdb62759af186d1f21`.
+WHY: Windows Package run `35283295294`, job `105409940361`, proves full offline voice is built but Inno Setup rejects the single installer above 4,200,000,000 bytes; Whisper large-v3-turbo is the dominant payload. Core Android E2E run `35283295232`, job `105410103687`, proves build/install/offline setup but launches immediately after `adb root`, before Package Manager again resolves the launcher.
+CURRENT STATE: 21/24 same-SHA workflows SUCCESS; Android Core E2E FAILURE; Windows Package FAILURE; synthetic Knowledge 1GiB still running. No version bump or release.
+EXPECTED RESULT: retain a useful Russian offline STT baseline with a single-file Windows installer below the platform limit, and make Android E2E wait for/launch the resolved activity after adbd restart.
+RISKS: a smaller Whisper model trades some recognition quality for installability; objective installed TTS/STT smoke remains mandatory and subjective listening remains separate. Android launch readiness must not weaken offline or completed-report checks.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: exact Windows size failure and Android post-root launcher race classified from GitHub logs.
+REMAINING: minimal implementation/contracts, exact-head Windows and Android reruns, then remaining release gates.
+BLOCKERS: single-file installer limit and Android E2E launch race; genuine Knowledge corpus and external device/host/signing boundaries remain.
+NEXT: switch packaged default STT to a smaller local Whisper baseline consistently, add package-size/config contracts, and wait for the resolved Android launcher before explicit start.
