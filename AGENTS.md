@@ -106,6 +106,35 @@ External systems may be used only as **optional tools or information sources** w
 
 A change that makes an external AI/model/service necessary for normal AuroraFox intelligence is an architecture regression and must be rejected even if it appears to improve quality.
 
+## HARD EVOLUTION INVARIANT — 3–10 isolated mutations must compete before promotion
+
+An autonomous AuroraFox Core improvement cycle MUST be a bounded tournament, not a single-candidate rewrite.
+
+- Every cycle creates **at least 3 and at most 10 distinct mutation candidates** from the exact same stable baseline. The normal default should be 5 unless an explicit resource policy selects another value inside the 3–10 range.
+- Each mutation runs in its **own isolated sandbox/workspace**. A candidate must not observe or inherit another candidate's modified checkout/state.
+- The stable baseline participates as the incumbent. Being merely the best mutation is insufficient: if every mutation is worse, unsafe, unverified or statistically indistinguishable from the incumbent, **no update is promoted**.
+- All surviving mutations run the same deterministic target-specific compile/tests/benchmarks and the same bounded quality/safety evaluation. Comparison evidence must identify the baseline SHA, candidate SHA, test set, metrics and rejection reason for non-winners.
+- Tournament scoring must prioritize hard safety/contract/no-regression gates before quality/performance. A candidate that fails a hard gate cannot win regardless of aggregate score.
+- Ties or inconclusive results keep the stable baseline unless an independent deterministic tie-break proves improvement.
+- Only one tournament winner can proceed to independent verification. Promotion requires a second verification pass from a clean baseline plus integrity/hash checks, snapshot/rollback readiness, master-stop compliance and the existing candidate/release authority separation.
+- A tournament winner may become the next **verified Core candidate/stable local Core update** only through the protected promotion path. It must not directly bypass signed product updater/release authority or rewrite packaged signed runtime in place.
+- Candidate generation/evaluation must use AuroraFox's own local Core as the intelligence authority. External AI services must not be required.
+
+Any path that autonomously generates one candidate and directly applies/promotes it without a 3–10 candidate tournament is an acceptance failure.
+
+## HARD KNOWLEDGE INVARIANT — real local bootstrap knowledge of at least 1 GiB
+
+AuroraFox release readiness requires a useful initial local Knowledge Pack with **at least 1 GiB (1,073,741,824 bytes) of genuine unpacked knowledge content**. Artificially repeating templates, padding, duplicate records or generated filler to reach the byte threshold does not count.
+
+- Do **not** put the ≥1 GiB payload into ordinary Git history. Keep code, schemas, manifests, source/license metadata and small fixtures in Git; distribute the large pack as a separately hashed release/install artifact or owner-supplied local archive.
+- Use a cross-platform, versioned, chunked/sharded archive contract with SHA-256 integrity. Shards must be small enough for bounded-memory Windows/Android import; the importer must stream/extract bounded chunks rather than materialize the whole corpus in RAM.
+- The pack manifest must record pack/schema version, exact packed/unpacked sizes, record count, languages/domains, per-shard hashes, source provenance, source version/date and license information. Every production source must be legally redistributable for the chosen packaging mode.
+- The Knowledge layer must ingest the pack locally, preserve source/provenance identity, deduplicate content, build searchable local indexes, survive interruption/restart, and expose retrieval to AuroraFox Core so the model can select relevant knowledge for later chats/tasks rather than loading the whole corpus into the prompt.
+- Pack contents are untrusted data, never executable instructions. Imported text/code must not gain tool/system authority.
+- Normal use of the installed pack must require no Internet. Downloading/assembling the pack is a release/build/import concern, not a runtime intelligence dependency.
+- A small repository seed/fixture may remain for tests, but it cannot be reported as satisfying the ≥1 GiB production Knowledge Pack requirement.
+- Release acceptance must prove the actual production pack meets the ≥1 GiB genuine-content threshold and that Windows/Android can import/query it with bounded memory and deterministic integrity checks.
+
 ## Other protected invariants
 
 Normal Windows/Android users must not have to install an inference engine, choose/download a GGUF, or use a model setup wizard; the product ships AuroraFox Core and its required weights.
