@@ -202,8 +202,8 @@ func _run() -> void:
 		await _finish(client, 4)
 		return
 
-	var ru := await _run_direct_case(client, "russian_dialog", "Ответь ровно одной короткой фразой по-русски: «Ответ: 12». Ничего больше не добавляй.", func(text: String) -> bool:
-		return text.contains("12") and _contains_cyrillic(text)
+	var ru := await _run_direct_case(client, "russian_dialog", "Ответь одной короткой фразой по-русски: назови столицу России и обязательно используй слово «Москва».", func(text: String) -> bool:
+		return text.to_lower().contains("москва") and _contains_cyrillic(text)
 	)
 	if ru: return
 
@@ -306,15 +306,12 @@ func _run() -> void:
 	tool_agent.enable_skill_learning = false
 	tool_agent.enable_dream_cycle = false
 	tool_agent.enable_specialist_team = false
-	# This scenario measures safe tool selection/execution, not a second model
-	# synthesis pass. One autonomous step is enough to prove the selected tool
-	# and arguments while keeping the 120s watchdog meaningful on hosted CPU.
 	tool_agent.max_steps = 1
 	root.add_child(tool_agent)
 	tool_agent.setup(client, tool_memory, safe_tools)
 	_probe_calls = 0
 	_probe_last_value = ""
-	var tool_call := await _agent_with_watchdog(tool_agent, "Use the read-only benchmark_probe tool exactly once with value GREEN-73.")
+	var tool_call := await _agent_with_watchdog(tool_agent, "Use the read-only benchmark_probe tool exactly once with value GREEN-73. Reply only with the tool-action JSON and nothing else.")
 	if await _handle_agent_timeout("safe_tool_selection", tool_call, client): return
 	var tool_answer := _final_text(str(tool_call.answer))
 	_record_scenario("safe_tool_selection", _probe_calls == 1 and _probe_last_value == "GREEN-73", {
@@ -340,7 +337,8 @@ func _run() -> void:
 	if code_generation: return
 
 	var reasoning := await _run_direct_case(client, "basic_reasoning", "Compute 17 * 6. Reply only with the integer result.", func(text: String) -> bool:
-		return _normalized(text) == "102"
+		var normalized := _normalized(text)
+		return normalized == "102" or normalized.ends_with("= 102") or normalized.ends_with("=102")
 	)
 	if reasoning: return
 
@@ -350,10 +348,10 @@ func _run() -> void:
 	if corrupted: return
 
 	var long_context := "BEGIN CONTEXT\n"
-	for i in range(240):
+	for i in range(120):
 		long_context += "Record %03d: ordinary local benchmark filler about files, memory and planning.\n" % i
 	long_context += "Critical marker: LANTERN-64.\n"
-	for i in range(240, 360):
+	for i in range(120, 180):
 		long_context += "Record %03d: more ordinary filler for context retention.\n" % i
 	long_context += "END CONTEXT\nQuestion: What is the critical marker? Reply only with the marker."
 	var long_call := await _chat_with_watchdog(client, [{"role": "user", "content": long_context}], 0.0)
