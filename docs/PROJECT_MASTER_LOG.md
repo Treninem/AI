@@ -1257,3 +1257,20 @@ BLOCKERS:
 NEXT:
 - Inspect new exact candidate Android CI/job outputs before declaring runner repair accepted. If product fails, use preserved partial report/app log to fix reproduced cause. In parallel audit/fix Windows full offline voice packaging and explicit chat import coverage in a newly extended claim; genuine owner-supplied Library knowledge archive must be inspected for content/provenance rather than counted by ZIP size.
 - Keep PR #92 draft until final acceptance; never bump/publish changed normal binaries as V1.3.
+
+
+## 45. Knowledge archive byte audit; offline Windows voice packaging claim extension
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, intended accumulated MINOR unchanged.
+- Original user archive `AuroraFox_Knowledge_CUMULATIVE_2026_09_v14(1).zip` fetched and inspected as data only. ZIP SHA256 `e2564095ae05bc086143517cc2bf8195eefaba947f44d4b59427a359740ab11c`; 29 top-level entries, immediate expanded bytes 201126321; recursive 10 ZIP containers hold 899 JSONL files / 10125430370 leaf JSONL bytes, including historical duplication. This is not a claim of 10GB unique genuine knowledge.
+- Manifests explicitly distinguish 4.22M physical rows and 72M logical Cartesian cases; sampled cases are synthetic_skill_case and resource_locator_url Google search templates, not source-document content. v14 truth metadata explicitly says schema PASS is not truth PASS. The archive does not prove >=1GiB genuine redistributable knowledge, production shard contract or Android import. Embedded Python scripts were not executed; no useful existing pack content discarded.
+- New owned batch: build/build_windows.ps1, voice/build_backend.ps1, voice/python/aurora_voice_server.py, Windows package/release workflows, new installed offline voice smoke, relevant packaging tests and this journal. Reconciles previous VOICE/PLATFORM ownership under owner-appointed final engineer; no change to default voice quality or signing identities.
+- Reproduced source blocker: both CI and release skip Windows voice provisioning. Secondary source blocker: frozen backend uses __file__ for config root despite builder staging config beside executable; resolve frozen root from executable. Stop accepting copied non-relocatable .venv as a complete portable release fallback.
+- Required acceptance: full staged backend/models, installed package local TTS+STT real HTTP invocation with offline model flags and an outbound firewall rule for the executable, report/WAV retained. Keep subjective listening separate. Use ZIP64-capable packaging rather than Compress-Archive's large-file boundary for expanded voice payload.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: genuine archive vs synthetic stress evidence separated; source packaging omissions reproduced.
+REMAINING: full Windows offline voice packaging/run acceptance and twelve release checkpoints.
+BLOCKERS: genuine production corpus remains missing/unproven; devices/host/signing availability unverified.
+NEXT: implement full portable voice packaging and installed offline smoke, then exact Windows CI; no version bump/merge/release.
