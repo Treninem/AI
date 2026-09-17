@@ -64,10 +64,14 @@ def test_desktop_core_requests_have_product_bounds_and_smoke_allows_full_surface
     runtime = DESKTOP_RUNTIME.read_text(encoding="utf-8")
     runner = SMOKE_RUNNER.read_text(encoding="utf-8")
     assert "DEFAULT_CHAT_MAX_TOKENS := 2048" in runtime
+    assert "TERSE_CHAT_MAX_TOKENS := 768" in runtime
+    assert "DEFAULT_CONTEXT_SIZE := 16384" in runtime
     assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 180.0" in runtime
     assert '"max_tokens": max_tokens' in runtime
     assert 'options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)' in runtime
-    assert "clampi(int(options.get(\"max_tokens\", DEFAULT_CHAT_MAX_TOKENS)), 64, 8192)" in runtime
+    assert 'clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)' in runtime
+    assert 'payload["reasoning_effort"] = "none"' in runtime
+    assert '"--ctx-size", str(DEFAULT_CONTEXT_SIZE)' in runtime
     assert "[int]$TimeoutSeconds = 900" in runner
     assert "AURORAFOX_CODE_SPECIALIST_TIMEOUT_DIAGNOSTICS" in runner
 
