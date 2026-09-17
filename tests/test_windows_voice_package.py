@@ -38,6 +38,17 @@ class WindowsVoicePackageTests(unittest.TestCase):
             exec(compile(ast.Module(body=[node], type_ignores=[]), str(SERVER), 'exec'), values)
             self.assertIs(values['CONFIG']['enabled'], True)
 
+
+    def test_packaged_stt_baseline_fits_single_installer_contract(self):
+        config = json.loads((ROOT / 'voice/config/voice_config.json').read_text(encoding="utf-8"))
+        sources = '\n'.join([
+            (ROOT / 'voice/install_voice.ps1').read_text(encoding="utf-8"),
+            (ROOT / 'voice/python/aurora_voice_server.py').read_text(encoding="utf-8"),
+        ])
+        self.assertEqual(config['stt']['model'], 'openai/whisper-small')
+        self.assertIn('openai/whisper-small', sources)
+        self.assertNotIn('whisper-large-v3-turbo', sources)
+
     def test_full_package_and_production_release_require_installed_offline_voice(self):
         for name in ['windows-package-ci.yml', 'release.yml']:
             text = (ROOT / '.github/workflows' / name).read_text(encoding="utf-8")

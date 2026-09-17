@@ -139,7 +139,7 @@ try {
             'import torch',
             'pipeline(',
             "    'automatic-speech-recognition',",
-            "    model='openai/whisper-large-v3-turbo',",
+            "    model='openai/whisper-small',",
             '    torch_dtype=torch.float32,',
             '    device=-1,',
             ')',

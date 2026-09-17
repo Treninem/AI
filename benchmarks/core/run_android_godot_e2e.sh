@@ -21,6 +21,21 @@ adb install -r "$apk"
 adb root
 adb wait-for-device
 test "$(adb shell id -u | tr -d '\r')" = '0'
+
+launcher=''
+for _attempt in $(seq 1 30); do
+  launcher="$(adb shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER "$pkg" 2>/dev/null | tr -d '\r' | grep -E '^[A-Za-z0-9_.]+/[A-Za-z0-9_.$]+' | tail -n1 || true)"
+  if [ -n "$launcher" ]; then
+    break
+  fi
+  sleep 2
+done
+if [ -z "$launcher" ]; then
+  echo 'Android package manager did not resolve the AuroraFox launcher after adb root.' >&2
+  adb shell dumpsys package "$pkg" >&2 || true
+  exit 1
+fi
+
 app_files="/data/user/0/$pkg/files"
 adb shell rm -f "$app_files/core-benchmark-android-e2e.json"
 adb shell cmd connectivity airplane-mode enable || true
@@ -42,7 +57,7 @@ fi
 
 adb logcat -c
 adb shell am force-stop "$pkg"
-adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1
+adb shell am start -W -n "$launcher"
 
 report_path=''
 completed=0

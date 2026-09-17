@@ -28,7 +28,7 @@
     "language": "ru"
   },
   "stt": {
-    "model": "openai/whisper-large-v3-turbo",
+    "model": "openai/whisper-small",
     "device": "auto",
     "language": "ru"
   },

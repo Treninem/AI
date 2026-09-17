@@ -23,6 +23,11 @@ if args == ['shell', 'id', '-u']:
     print(os.environ.get('FAKE_UID', '0'))
 elif args[:2] == ['shell', 'ping']:
     sys.exit(1)
+elif args[:4] == ['shell', 'cmd', 'package', 'resolve-activity']:
+    if os.environ.get('FAKE_NO_LAUNCHER') != '1':
+        print('com.aurorafox.ai/com.godot.game.GodotApp')
+elif args[:3] == ['shell', 'am', 'start']:
+    print('Status: ok')
 elif args[:3] == ['shell', 'settings', 'get']:
     print('1')
 elif args[:2] == ['shell', 'find']:
@@ -118,6 +123,12 @@ class AndroidE2ERunnerTests(unittest.TestCase):
         result, _, calls = self.run_runner([completed_report()], FAKE_UID='2000')
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(any('monkey' in call for call in calls))
+
+    def test_missing_launcher_after_adb_root_is_rejected(self):
+        result, _, calls = self.run_runner([completed_report()], FAKE_NO_LAUNCHER='1')
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('did not resolve', result.stderr)
+        self.assertFalse(any(call[:3] == ['shell', 'am', 'start'] for call in calls))
 
     def test_apk_smoke_retries_transient_logcat_failure(self):
         result, _, calls = self.run_runner([], runner=ROOT / 'benchmarks/core/run_android_apk_smoke.sh', FAKE_LOGCAT='fail_once')

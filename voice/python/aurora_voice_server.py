@@ -118,7 +118,7 @@ hub = EventHub()
 def get_stt():
     global _stt_pipe
     if _stt_pipe is None:
-        model = CONFIG.get("stt", {}).get("model", "openai/whisper-large-v3-turbo")
+        model = CONFIG.get("stt", {}).get("model", "openai/whisper-small")
         dtype = torch.float16 if DEVICE == "cuda" else torch.float32
         log.info("loading STT model=%s device=%s", model, DEVICE)
         _stt_pipe = pipeline(
