@@ -25,7 +25,31 @@ func _ready() -> void:
 func show_center() -> void:
 	_refresh_extensions()
 	_sync_autonomy_status()
+	_fit_popup()
 	popup.popup_centered()
+
+func _fit_popup() -> void:
+	var viewport := get_viewport().get_visible_rect().size
+	var gap := 28.0 if OS.get_name() == "Android" else 48.0
+	popup.size = Vector2i(
+		maxi(360, mini(860, int(viewport.x - gap))),
+		maxi(520, mini(800, int(viewport.y - gap)))
+	)
+
+func _apply_main_button(button: Button, danger := false) -> void:
+	var main := get_parent()
+	if main != null and main.has_method("_apply_button"):
+		main.call("_apply_button", button, false, danger, false)
+
+func _panel_style() -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.022, 0.027, 0.048, 0.995)
+	style.border_color = Color(0.42, 0.55, 0.94, 0.78)
+	style.set_border_width_all(1)
+	style.set_corner_radius_all(18)
+	style.shadow_color = Color(0, 0, 0, 0.72)
+	style.shadow_size = 18
+	return style
 
 func _connect_signals() -> void:
 	var improver := _improver()
@@ -50,17 +74,21 @@ func _build_ui() -> void:
 	layer.layer = 120
 	add_child(layer)
 	popup = PopupPanel.new()
+	popup.name = "SelfImprovementPopup"
 	popup.size = Vector2i(860, 800)
+	popup.add_theme_stylebox_override("panel", _panel_style())
 	layer.add_child(popup)
 
 	var margin := MarginContainer.new()
 	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 24)
+		margin.add_theme_constant_override(side, 22)
 	popup.add_child(margin)
 
 	var scroll := ScrollContainer.new()
+	scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	margin.add_child(scroll)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -68,33 +96,35 @@ func _build_ui() -> void:
 	scroll.add_child(box)
 
 	var title := Label.new()
-	title.text = "Эволюция AuroraFox"
+	title.text = "Самоулучшение AuroraFox"
 	title.add_theme_font_size_override("font_size", 26)
 	box.add_child(title)
 
 	var autonomous := Label.new()
-	autonomous.text = "Автономный режим включён: AuroraFox сама собирает знания, создаёт 3–10 разных мутаций, отдельно проверяет каждую, проводит соревнование, повторно тестирует победителя и автоматически активирует его без запроса подтверждения."
+	autonomous.text = "AuroraFox может создавать несколько изолированных вариантов улучшения, отдельно проверять каждый и выбирать только прошедший обязательные тесты результат."
 	autonomous.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(autonomous)
 
 	var safety := Label.new()
-	safety.text = "Непрошедшая тесты мутация не активируется. На Windows дополнительно тестируется полная копия проекта в отдельной песочнице Godot 4.7.1; на Android горячая мутация проходит встроенную компиляцию GDScript, проверку manifest-контракта и собственный детерминированный self-test."
+	safety.text = "Непрошедшая тесты мутация не активируется. Проверки выполняются в предусмотренном для платформы изолированном контуре; рабочая версия и возможность отката сохраняются."
 	safety.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	safety.modulate = Color(0.82, 0.88, 0.95)
 	box.add_child(safety)
 
 	goal_input = TextEdit.new()
-	goal_input.placeholder_text = "Необязательно: задай цель для внеочередного турнира. Если поле пустое — AuroraFox сама выберет цель по состоянию, ошибкам и знаниям."
+	goal_input.placeholder_text = "Необязательно: цель для внеочередной проверки улучшений. Пустое поле оставляет выбор цели автономному контуру."
 	goal_input.custom_minimum_size.y = 92
 	goal_input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	box.add_child(goal_input)
 
-	var actions := HBoxContainer.new()
-	actions.alignment = BoxContainer.ALIGNMENT_END
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 8)
+	actions.add_theme_constant_override("v_separation", 8)
 	box.add_child(actions)
 	tournament_button = Button.new()
-	tournament_button.text = "Запустить внеочередной турнир сейчас"
+	tournament_button.text = "Запустить внеочередную проверку"
 	tournament_button.pressed.connect(_run_tournament_now)
+	_apply_main_button(tournament_button)
 	actions.add_child(tournament_button)
 
 	status_label = Label.new()
@@ -104,28 +134,29 @@ func _build_ui() -> void:
 
 	proposal_view = RichTextLabel.new()
 	proposal_view.bbcode_enabled = false
-	proposal_view.custom_minimum_size.y = 260
+	proposal_view.custom_minimum_size.y = 250
 	proposal_view.fit_content = false
 	proposal_view.selection_enabled = true
 	box.add_child(proposal_view)
 
 	box.add_child(HSeparator.new())
 	var ext_title := Label.new()
-	ext_title.text = "Активные и сохранённые победители"
+	ext_title.text = "Проверенные runtime-расширения"
 	ext_title.add_theme_font_size_override("font_size", 20)
 	box.add_child(ext_title)
 	var ext_hint := Label.new()
-	ext_hint.text = "Победители сохраняются между запусками. Здесь можно вручную отключить или удалить конкретное расширение для отката, но подтверждение перед автоматической эволюцией не требуется."
+	ext_hint.text = "Здесь показаны сохранённые победители. Любое расширение можно вручную отключить или удалить для отката."
 	ext_hint.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	box.add_child(ext_hint)
 	extension_list = VBoxContainer.new()
-	extension_list.add_theme_constant_override("separation", 7)
+	extension_list.add_theme_constant_override("separation", 9)
 	box.add_child(extension_list)
 
 	box.add_child(HSeparator.new())
 	var close := Button.new()
 	close.text = "Закрыть"
 	close.pressed.connect(func(): popup.hide())
+	_apply_main_button(close)
 	box.add_child(close)
 
 func _run_tournament_now() -> void:
@@ -288,28 +319,39 @@ func _refresh_extensions() -> void:
 	var items := manager.list_extensions()
 	if items.is_empty():
 		var empty := Label.new()
-		empty.text = "Победителей пока нет — первый автономный турнир запускается после старта AuroraFox."
+		empty.text = "Проверенных расширений пока нет."
 		extension_list.add_child(empty)
 		return
 	for item in items:
-		var row := HBoxContainer.new()
-		row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var card := PanelContainer.new()
+		extension_list.add_child(card)
+		var content := VBoxContainer.new()
+		content.add_theme_constant_override("separation", 7)
+		card.add_child(content)
 		var label := Label.new()
 		var tool_names: PackedStringArray = PackedStringArray(item.get("tools", []))
-		label.text = "%s • %s • %s" % [str(item.get("name", item.get("id", "extension"))), "активно" if bool(item.get("active", false)) else "выключено", ", ".join(tool_names)]
-		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		label.text = "%s • %s%s" % [
+			str(item.get("name", item.get("id", "extension"))),
+			"активно" if bool(item.get("active", false)) else "выключено",
+			" • " + ", ".join(tool_names) if not tool_names.is_empty() else ""
+		]
 		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		row.add_child(label)
+		content.add_child(label)
+		var actions := HFlowContainer.new()
+		actions.add_theme_constant_override("h_separation", 8)
+		actions.add_theme_constant_override("v_separation", 8)
+		content.add_child(actions)
 		var id := str(item.get("id", ""))
 		var toggle := Button.new()
 		toggle.text = "Отключить" if bool(item.get("active", false)) else "Включить"
 		toggle.pressed.connect(func(): _toggle_extension(id))
-		row.add_child(toggle)
+		_apply_main_button(toggle)
+		actions.add_child(toggle)
 		var remove := Button.new()
 		remove.text = "Удалить"
 		remove.pressed.connect(func(): _remove_extension(id))
-		row.add_child(remove)
-		extension_list.add_child(row)
+		_apply_main_button(remove, true)
+		actions.add_child(remove)
 
 func _toggle_extension(id: String) -> void:
 	var manager := _extensions()
