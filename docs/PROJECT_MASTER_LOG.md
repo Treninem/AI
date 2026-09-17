@@ -1274,3 +1274,14 @@ DONE: genuine archive vs synthetic stress evidence separated; source packaging o
 REMAINING: full Windows offline voice packaging/run acceptance and twelve release checkpoints.
 BLOCKERS: genuine production corpus remains missing/unproven; devices/host/signing availability unverified.
 NEXT: implement full portable voice packaging and installed offline smoke, then exact Windows CI; no version bump/merge/release.
+
+
+## 46. WORK-2026-09-17-FINAL-RELEASE — Windows installed offline voice gate
+
+ACTION: Removed SkipVoiceSetup from Windows package CI and production release. Packaging now refuses incomplete portable voice output. Corrected frozen backend configuration root and PowerShell UTF-8 BOM reading; PyInstaller installation uses bundled uv rather than assuming venv pip. Added installed TTS/STT acceptance with outbound firewall block, offline cache flags, health wait, WAV evidence and JSON report. ZIP packaging uses 7-Zip for large offline payloads.
+FILES: .github/workflows/windows-package-ci.yml; .github/workflows/release.yml; build/build_windows.ps1; voice/build_backend.ps1; voice/python/aurora_voice_server.py; tests/windows_installed_voice_smoke.ps1; tests/test_windows_voice_package.py.
+DIFF: Production packaging must contain portable voice backend; installed backend must synthesize Silero WAV and transcribe it locally. Firewall cleanup and environment restoration run in finally. Human listening is explicitly unverified.
+TEST: python -m unittest tests.test_windows_voice_package tests.test_android_e2e_runner -v — 12 tests passed (2.897 seconds). Python compilation and git diff --check passed in local inspection. No PowerShell or Windows runtime exists in this Linux workspace; installed smoke requires real Windows CI.
+RESULT: Source and regression tests verified. Full Windows package, firewall operation, installed voice model availability, performance, human quality and Android product execution remain pending. No version bump, main merge, RC or release authorized by test evidence yet.
+COMMIT: 415b47a2ebf56f9ad365bdfaf98c718ee6a13e9d (implementation). This journal commit follows it; both published together to avoid canceling an intermediate CI run.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%. Component assessment remains section 44; new implementation does not earn runtime/release credit until same-SHA checks pass.
