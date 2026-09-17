@@ -6,7 +6,10 @@ const STRUCTURED_PATH := "user://knowledge/structured.jsonl"
 const MAX_CHUNK_CHARS := 1800
 const LARGE_TEXT_THRESHOLD_BYTES := 8 * 1024 * 1024
 const STREAM_BATCH_CHARS := 128 * 1024
-const STRUCTURED_WRITE_BATCH := 128
+# Large structured imports used to close/reopen both JSONL indexes every 128
+# records. At gigabyte scale that creates millions of avoidable filesystem
+# operations. A 2048-record batch remains bounded while amortizing persistence.
+const STRUCTURED_WRITE_BATCH := 2048
 const SEARCH_BUFFER_LIMIT := 256
 var document_importer := KnowledgeDocumentImporter.new()
 var _source_presence_cache: Dictionary = {}
@@ -451,7 +454,9 @@ func _is_leaf_object(value: Dictionary) -> bool:
 
 func _record_text(value: Variant) -> String:
 	if value is Dictionary or value is Array:
-		return JSON.stringify(value, "  ", false)
+		# Compact JSON preserves every field and character while avoiding the CPU,
+		# allocation and disk amplification of pretty-printing millions of rows.
+		return JSON.stringify(value)
 	return str(value)
 
 func _has_any(text: String, needles: Array) -> bool:
