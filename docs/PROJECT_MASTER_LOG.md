@@ -1094,3 +1094,43 @@ BLOCKERS:
 
 NEXT:
 - Inspect current open PRs and exact-head Actions; begin with the highest-severity reproducible current blocker on top of `54fa827...`, preserving all already-green subsystem evidence and avoiding duplicate heavy CI.
+
+## 41. Unified execution checkpoint — journal-first discipline and current exact evidence, 2026-09-17
+
+### `CHAT-2026-09-17-UNIFIED-EXECUTION-TAKEOVER` — checkpoint
+
+- Owner explicitly reaffirmed that the canonical `docs/PROJECT_MASTER_LOG.md` must be read and updated around every meaningful implementation stage. From this checkpoint onward the unified executor treats a PR comment as supplemental evidence only; it does not replace this journal.
+- Fresh `main` before this journal write: `9ca5fafd1f65038d855d00e1e1e0db876938d17f` (`docs: unify executor takeover under current chat`), parent `54fa827854320adf864d578ad3831e9e375a9e3f`.
+- Platform/Integration infrastructure was merged as `54fa827854320adf864d578ad3831e9e375a9e3f`: Integration now installs `httpx==0.28.1` and uses current durability/readiness contracts, so missing-httpx/stale-meta false reds are no longer accepted as product failures.
+- Knowledge/Memory/OCR active PR #82 exact head `693126d033057eb8382160c8e16f51faf5548176` is mergeable. Its reconciled candidate carries local Windows Tesseract `rus+eng` packaging, Android PDFBox+Tesseract export, Android NDK pin `28.1.13356709` and the corrected Android OCR contract. Integration run `35191781320`: `godot-cross-subsystem` SUCCESS; alias removal, record/shared-source dedupe, legacy rollback, registry write-failure rollback, truncated-temp rejection, interrupted reimport and interrupted canonical removal all SUCCESS. The cross-subsystem aggregate remained red only on UI branding. Heavy 100/250 MiB and genuine >=1 GiB Knowledge Pack acceptance remain open and therefore this lane is not 100% ready.
+- Work/Computer active PR #86 exact head `4d5007d7b7f933f3ee3a4b47c88edfad2f223500` is mergeable and non-draft. Exact-head Work Mode `35191682282`, Work Computer Reliability `35191682119`, Agent Sync `35191682275`, Core/Voice `35191682234` and API CI `35191682195` are SUCCESS. Windows Package `35191682187` and Android APK `35191682264` were still running at the last exact check; do not call final same-SHA package acceptance until their final status is recorded.
+- UI PR #84 was reconciled without importing its stale master-log delta; latest UI cleanup commit recorded by this unified executor is `4e72fd9075dd215bb1d8d114dc103e3a479c951f`. Prior UI Visual evidence remains accepted for its own old head, but final UI release acceptance still requires same-SHA rerun after backend/release-train reconciliation and does not substitute for physical-device tap/visual acceptance.
+- Core/Coder/Research PR #78 was reconciled non-force onto the release train as merge commit `431c3be296b095e4e3318faa1c098bb918e86028`, then bounded-runtime/test hardening advanced the branch through `8d0cfe0ecf645781b47bdf1eef9a4ee110e30bba`, `a4a73fa275f5272853e43a73cb5a6ac441ca4e77` and exact head `738128444d8723ae69842a2fcad1c4a76c565d8c`. Historical run `35186317354` had timed out SpecialistTeam/CodeSpecialist after 360 seconds. On the new exact head, Core Benchmarks run `35192337079` proves the timeout blocker itself is resolved: gate-contract SUCCESS, verified bundled Core preparation SUCCESS, **real SpecialistTeam / CodeSpecialist offline smoke SUCCESS**, and the real bundled Core benchmark actually executed. The workflow remains FAILURE for a new genuine quality finding: benchmark runner reported `exit=2`, peak RSS `3817.29 MiB`, evaluator reported `quality=False performance=True relative=False`; artifact `10484628030`, digest `sha256:b3c4bd35a66b70b3197357d9aa5eaba26bc966b110d7c8ed7a8a021a64e58640`. This is now a quality/debug blocker rather than an infrastructure-timeout blocker and must be fixed from the artifact evidence without weakening the quality gate. Core/Voice `35192336941`, Agent Sync `35192337036`, Core Bootstrap `35192336993`, Research Quality `35192336943` and Evolution Tournament `35192336994` are SUCCESS on the same branch head/PR merge context.
+- Core Android remains independently red on exact head: Core Android Benchmark `35192336947` FAILURE and Core Android E2E `35192336879` FAILURE. These must be inspected by exact job/log before changing Android production/package code; historical duplicate `libc++_shared.so` packaging evidence is not assumed to be the current root cause.
+- Voice candidate has prior exact local Supertonic F1–F5 acceptance evidence and remains open; it still needs a current same-SHA package/install/launch set before final merge acceptance. Server/API remains largely green by exact contract evidence but physical REG.RU deployment remains an access boundary.
+
+PROGRESS_COMPLETE: 89%
+PROGRESS_REMAINING: 11%
+
+DONE:
+- Unified ownership is active and journal-first execution discipline is explicitly reaffirmed.
+- Platform/Integration false-red infrastructure is landed in main.
+- Knowledge runtime correctness P0 is closed on PR #82 exact-head Integration runtime evidence; remaining Knowledge risk is heavy-scale/real-pack/platform acceptance, not the four former durability probes.
+- Work/Computer own-scope reliability and network-response safety are green on current exact head; heavy package completion remains to be recorded.
+- Core SpecialistTeam/CodeSpecialist real offline execution now passes; the previous 360-second timeout is no longer the blocker.
+- Core benchmark now reaches real inference and exposes a genuine quality failure with a machine-readable artifact instead of failing before quality measurement.
+
+REMAINING:
+- Download/inspect Core artifact `10484628030`, identify the exact failing quality scenarios and fix the smallest real Core/Coder defect; rerun the same real-Core gate without weakening thresholds.
+- Inspect current Core Android Benchmark/E2E failures separately and reconcile only their current root cause.
+- Complete Knowledge 100/250 MiB stress plus the required genuine >=1 GiB `.afknowledge` production-pack gate and Windows/Android import/query evidence.
+- Record final Windows/Android package results for Work/Computer and other candidates; reconcile UI/Voice onto the eventual integrated SHA and rerun exact acceptance.
+- Build the final same-SHA release candidate; only then perform coordinator-authorized version/versionCode bump and owner-signing/release flow.
+
+BLOCKERS:
+- P0 current internal blocker: Core benchmark quality (`quality=False`) on real bundled inference, artifact `10484628030`.
+- Core Android real-runtime acceptance remains red pending exact failure classification.
+- Genuine >=1 GiB Knowledge Pack and physical-device/production-signing boundaries remain incomplete.
+
+NEXT:
+- Before the next code mutation, reread fresh `main` and this complete journal. Then inspect artifact `10484628030` and the two Core Android job logs; change only the reproduced root cause. After that implementation/test stage, append its exact SHA/run/result to this journal before moving to another lane.
