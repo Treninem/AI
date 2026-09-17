@@ -74,22 +74,18 @@ def main() -> None:
     require("project/version.json" in artifact, "APK artifact workflow does not derive canonical version")
     require("apksigner" in artifact and "aapt" in artifact, "APK signature/package validation is missing")
     require("android-emulator-runner" in artifact and "arch: x86_64" in artifact, "Android emulator validation is missing")
-    require('adb install -r "$APK_PATH"' in artifact, "Android artifact smoke does not install the generated APK")
+    require('bash benchmarks/core/run_android_apk_smoke.sh "$APK_PATH"' in artifact, "Android artifact smoke must run the generated APK in one Bash process")
     require("ndk;28.1.13356709" in artifact, "Android workflow NDK pin drifted")
-    emulator_script = artifact.split("script: |", 1)[1].split("- name: Upload APK artifact", 1)[0]
-    require("set -eu" in emulator_script, "Android emulator smoke must fail fast under POSIX /bin/sh")
-    require("pipefail" not in emulator_script, "Android emulator smoke uses Bash-only pipefail under POSIX /bin/sh")
-    require("emulator-pid.txt" in emulator_script, "Android emulator smoke does not persist PID across runner shell commands")
+    emulator_script = read("benchmarks/core/run_android_apk_smoke.sh")
+    require("set -euo pipefail" in emulator_script, "Android emulator Bash runner must fail fast including pipelines")
+    require('adb install -r "$apk"' in emulator_script, "Android artifact smoke must install the supplied APK")
+    require('adb shell pidof "$pkg"' in emulator_script, "Android artifact smoke must check app liveness")
+    require("emulator-pid.txt" in emulator_script, "Android emulator smoke must persist PID evidence")
+    require("FATAL EXCEPTION" in emulator_script and 'exit 1' in emulator_script, "Android artifact smoke must reject a crashed app")
+    require('versionName=$version' in emulator_script, "Android artifact smoke must verify supplied version")
+    require('timeout 30s adb logcat -d' in emulator_script, "Android logcat retries must remain bounded")
     require(
-        "; exit 1; fi" in emulator_script,
-        "Android emulator crash check must stay on one line because the runner executes every line separately",
-    )
-    require(
-        not any(line.strip() in {"then", "fi"} for line in emulator_script.splitlines()),
-        "Android emulator smoke contains a multiline shell conditional that the runner cannot preserve",
-    )
-    require(
-        emulator_script.index("adb logcat -d") < emulator_script.index("test -s build/android/emulator-pid.txt"),
+        emulator_script.index("capture_logcat\nadb shell pidof") < emulator_script.index("test -s build/android/emulator-pid.txt"),
         "Android failure diagnostics must be captured before the process liveness assertion",
     )
 

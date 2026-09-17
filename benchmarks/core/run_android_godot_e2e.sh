@@ -16,6 +16,13 @@ capture_logcat() {
 trap capture_logcat EXIT
 
 adb install -r "$apk"
+# This is a release APK: run-as is intentionally unavailable. Root belongs
+# only to the disposable google_apis emulator, never to the shipped product.
+adb root
+adb wait-for-device
+test "$(adb shell id -u | tr -d '\r')" = '0'
+app_files="/data/user/0/$pkg/files"
+adb shell rm -f "$app_files/core-benchmark-android-e2e.json"
 adb shell cmd connectivity airplane-mode enable || true
 adb shell settings put global airplane_mode_on 1 || true
 adb shell svc wifi disable || true
@@ -38,22 +45,53 @@ adb shell am force-stop "$pkg"
 adb shell monkey -p "$pkg" -c android.intent.category.LAUNCHER 1
 
 report_path=''
+completed=0
 for _attempt in $(seq 1 240); do
-  report_path="$(adb shell run-as "$pkg" find files -name core-benchmark-android-e2e.json -print 2>/dev/null | tr -d '\r' | head -n1 || true)"
+  report_path="$(adb shell find "$app_files" -name core-benchmark-android-e2e.json -print 2>/dev/null | tr -d '\r' | head -n1 || true)"
   if [ -n "$report_path" ]; then
+    # A running report is useful failure evidence, but not acceptance. Reads
+    # may race with the writer; retry malformed/partial JSON until the bound.
+    if adb exec-out cat "$report_path" > "$report.tmp"; then
+      if python3 - "$report.tmp" <<'PY'
+import json
+import sys
+try:
+    with open(sys.argv[1], encoding='utf-8') as file:
+        data = json.load(file)
+except (OSError, ValueError):
+    raise SystemExit(1)
+raise SystemExit(0 if isinstance(data, dict) else 1)
+PY
+      then
+        mv "$report.tmp" "$report"
+        if python3 - "$report" <<'PY'
+import json
+import sys
+with open(sys.argv[1], encoding='utf-8') as file:
+    data = json.load(file)
+raise SystemExit(0 if data.get('status') == 'completed' else 1)
+PY
+        then
+          completed=1
+          break
+        fi
+      fi
+    fi
+  fi
+  if ! adb shell pidof "$pkg" >/dev/null 2>&1; then
+    echo 'Android benchmark process exited before a completed report.' >&2
     break
   fi
   sleep 5
 done
 
 capture_logcat
-if [ -z "$report_path" ]; then
-  echo 'Android AIClient E2E benchmark timed out after 1200 seconds.' >&2
-  tail -n 500 "$logcat_report" >&2 || true
+if [ "$completed" != '1' ]; then
+  echo 'Android AIClient E2E benchmark did not produce a completed report within 1200 seconds.' >&2
+  cat "$report" >&2 2>/dev/null || true
+  grep -E 'godot|Godot|aurorafox|AuroraFox|FATAL|AndroidRuntime|SCRIPT ERROR|Parse Error|Fatal signal' "$logcat_report" | tail -n 200 >&2 || true
   exit 1
 fi
-
-adb exec-out run-as "$pkg" cat "$report_path" > "$report"
 
 python3 - <<'PY'
 import json
@@ -75,7 +113,7 @@ if core.get('prepared_sha256') != 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2
 runtime_after = core.get('runtime_after', {})
 if runtime_after.get('last_runtime') != 'aurora_core_android': failures.append('runtime_after')
 if int(runtime_after.get('ollama_failures', -1)) != 0: failures.append('ollama_failures')
-if set(rows) < required: failures.append('missing_scenarios')
+if not required.issubset(rows): failures.append('missing_scenarios')
 if any(not bool(rows[name].get('passed', False)) for name in required if name in rows): failures.append('scenario_failure')
 if any(str(rows[name].get('runtime', '')) not in ('', 'aurora_core_android') for name in required if name in rows): failures.append('unexpected_runtime')
 perf = data.get('performance', {})
