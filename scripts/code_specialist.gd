@@ -43,30 +43,95 @@ Task: %s
 	return parsed
 
 func generate_code(task: String, files: Array = []) -> Dictionary:
+	var context_paths: Array[String] = []
+	for item in files:
+		if item is Dictionary:
+			var candidate := str(item.get("path", item.get("name", ""))).strip_edges()
+			if not candidate.is_empty():
+				context_paths.append(candidate)
 	var prompt := """
 You are AuroraFox Code Generator. Produce the smallest complete implementation that satisfies the task and fits the supplied project context.
 Return strict JSON only:
 {"files":[{"path":"relative/path.ext","language":"...","content":"complete file or patch-ready replacement"}],"explanation":"...","validation":["..."]}
 Rules:
+- `files` is mandatory and MUST contain at least one entry whenever implementation is requested;
+- when project context already provides a target file, use that exact relative path instead of inventing another one;
+- every files entry must contain non-empty `path` and non-empty `content`;
 - preserve the project language/framework and public contracts unless the task explicitly changes them;
 - never invent successful test/build results;
 - no TODO/FIXME/placeholders;
 - use only the files needed for the task.
+Expected context paths: %s
 Task: %s
 Project context:
 %s
-""" % [task, _files_context(files)]
+""" % [JSON.stringify(context_paths), task, _files_context(files)]
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.12)
 	if not response.get("ok", false):
 		return response
-	var parsed := _parse_json(str(response.get("content", "")))
+	var raw := str(response.get("content", ""))
+	var parsed := _parse_json(raw)
 	if parsed.is_empty():
-		return {"ok":false,"error":"Code Generator returned invalid JSON","raw":response.get("content", "")}
-	var generated = parsed.get("files", [])
-	if not generated is Array or generated.is_empty():
-		return {"ok":false,"error":"Code Generator returned no files","raw":response.get("content", "")}
+		return {"ok":false,"error":"Code Generator returned invalid JSON","raw":raw}
+	var generated := _valid_generated_files(parsed.get("files", []))
+	if generated.is_empty():
+		var repaired := await _repair_generated_code_response(task, files, raw, context_paths)
+		if not repaired.get("ok", false):
+			return repaired
+		parsed = repaired
+		generated = _valid_generated_files(parsed.get("files", []))
+	if generated.is_empty():
+		return {"ok":false,"error":"Code Generator returned no usable files after repair","raw":raw}
+	parsed["files"] = generated
 	parsed["ok"] = true
 	return parsed
+
+func _repair_generated_code_response(task: String, files: Array, raw: String, context_paths: Array[String]) -> Dictionary:
+	var repair_prompt := """
+You are repairing the STRUCTURE of a previous AuroraFox Code Generator answer. The implementation task still requires actual code.
+Return one strict JSON object using exactly this top-level shape:
+{"files":[{"path":"relative/path.ext","language":"...","content":"complete implementation"}],"explanation":"...","validation":["..."]}
+Requirements:
+- `files` must contain at least one usable file;
+- prefer one of these existing context paths: %s;
+- `path` and `content` must be non-empty;
+- preserve any correct implementation content from the previous answer;
+- if the previous answer omitted code, generate the smallest complete implementation now;
+- never claim validation was executed.
+Task: %s
+Project context:
+%s
+Previous answer to repair:
+%s
+""" % [JSON.stringify(context_paths), task, _files_context(files, 50000), raw.substr(0, 30000)]
+	var response := await _chat_code([{"role":"user","content":repair_prompt}], 0.02)
+	if not response.get("ok", false):
+		return {"ok":false,"error":"Code Generator repair request failed: %s" % str(response.get("error", "unknown")),"raw":raw}
+	var repaired_raw := str(response.get("content", ""))
+	var repaired := _parse_json(repaired_raw)
+	if repaired.is_empty():
+		return {"ok":false,"error":"Code Generator repair returned invalid JSON","raw":repaired_raw}
+	var repaired_files := _valid_generated_files(repaired.get("files", []))
+	if repaired_files.is_empty():
+		return {"ok":false,"error":"Code Generator repair returned no usable files","raw":repaired_raw}
+	repaired["files"] = repaired_files
+	repaired["ok"] = true
+	repaired["repaired_structure"] = true
+	return repaired
+
+func _valid_generated_files(value: Variant) -> Array:
+	if not value is Array:
+		return []
+	var result: Array = []
+	for item in value:
+		if not item is Dictionary:
+			continue
+		var path := str(item.get("path", "")).strip_edges()
+		var content := str(item.get("content", "")).strip_edges()
+		if path.is_empty() or content.is_empty():
+			continue
+		result.append(item)
+	return result
 
 func debug_code(task: String, code_or_error: String, language: String = "unknown") -> Dictionary:
 	var prompt := """
@@ -261,8 +326,8 @@ func _extract_first_json_object(text: String) -> String:
 		var depth := 0
 		var in_string := false
 		var escaped := false
-		for index in range(start, text.length()):
-			var ch := text.substr(index, 1)
+		for i in range(start, text.length()):
+			var ch := text.substr(i, 1)
 			if in_string:
 				if escaped:
 					escaped = false
@@ -278,15 +343,18 @@ func _extract_first_json_object(text: String) -> String:
 			elif ch == "}":
 				depth -= 1
 				if depth == 0:
-					var candidate := text.substr(start, index - start + 1)
-					var candidate_parsed = JSON.parse_string(candidate)
-					if candidate_parsed is Dictionary:
+					var candidate := text.substr(start, i - start + 1)
+					if JSON.parse_string(candidate) is Dictionary:
 						return candidate
 					break
 		start = text.find("{", start + 1)
 	return ""
 
-func _describe_code_delta(before: String, after: String) -> String:
-	var before_lines := before.split("\n").size()
-	var after_lines := after.split("\n").size()
-	return "Refactored implementation differs from the input (%d -> %d lines); inspect refactored_code for the exact delta." % [before_lines, after_lines]
+func _describe_code_delta(original: String, refactored: String) -> String:
+	var before_lines := original.split("\n").size()
+	var after_lines := refactored.split("\n").size()
+	if after_lines < before_lines:
+		return "Simplified implementation while preserving the requested contract (%d -> %d lines)." % [before_lines, after_lines]
+	if after_lines > before_lines:
+		return "Reworked implementation while preserving the requested contract (%d -> %d lines)." % [before_lines, after_lines]
+	return "Changed implementation details while preserving the requested contract."
