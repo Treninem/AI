@@ -1134,3 +1134,36 @@ BLOCKERS:
 
 NEXT:
 - Before the next code mutation, reread fresh `main` and this complete journal. Then inspect artifact `10484628030` and the two Core Android job logs; change only the reproduced root cause. After that implementation/test stage, append its exact SHA/run/result to this journal before moving to another lane.
+
+## 42. Core/Android blocker classification — exact artifact/log evidence, 2026-09-17
+
+### `CHAT-2026-09-17-UNIFIED-EXECUTION-TAKEOVER` — classification checkpoint
+
+- Fresh canonical `main` was rechecked immediately before this journal write and remains `d06ac6088445edd9197dca0584b64245b920b58b` (`docs: record unified execution checkpoint`). The complete current journal blob `d2e59c1a81b7b293b9bd817ca72de7cd8592e264` was reread before classification.
+- Core benchmark artifact `10484628030` from run `35192337079` was downloaded and inspected directly. `code-specialist-smoke.json` is green: all 8 operations passed on `aurora_core_desktop`, with no external AI requirement. In `core-benchmark-report.json` / raw report, **20 of 21 quality scenarios pass**. The sole failing scenario is `corrupted_input`: `passed=false`, runtime `aurora_core_desktop`, elapsed `5995.096 ms`, output excerpt exactly `IVORY-29`. The other scenarios — self-reliance/offline identity, RU/EN dialogue, instructions, multi-turn, local memory, Core Knowledge retrieval, planning, tool selection, text/code generation, explanation, reasoning, long context, compatibility isolation and repeatability — pass. Performance gate itself remains green; reported cold response `6331.216 ms`, warm median `8327.302 ms`, peak RSS about `3817.29 MiB`; no benchmark timeout.
+- This narrows the real desktop product-quality blocker to context/retrieval isolation around malformed input. `IVORY-29` is evidence that the corrupted-input request received unrelated retained Knowledge/context content from an earlier scenario rather than demonstrating a generic model crash. The acceptance threshold is **not** weakened; the next code step must first inspect the exact benchmark scenario and AIClient/context orchestration and decide whether the defect is benchmark state leakage or production retrieval behavior.
+- Core Android E2E run `35192336879` was inspected by exact job log. Verified bundled Core preparation, Android plugin build, APK export, temporary CI signing and install all succeeded. The job failed **before launching the AuroraFox benchmark**: after `cmd connectivity airplane-mode enable`, `settings put global airplane_mode_on 1`, Wi-Fi/data disable, the script read `settings get global airplane_mode_on` as an empty string (`airplane_mode=`) and `test "$state" = '1'` exited 1. Therefore this run does **not** prove an Android Core inference failure; it proves the offline-device-state CI assertion is not valid on this API-35 emulator configuration. The offline requirement itself remains mandatory and must be re-proven with a reliable connectivity/network-blocked assertion, not deleted.
+- Core Android Benchmark run `35192336947`, failing job `105107868118`, was also inspected. The production Android runtime/plugin build completed successfully before the emulator stage. Inside `reactivecircus/android-emulator-runner`, the script assigns `apk='benchmarks/core/android_probe/app/build/outputs/apk/debug/app-debug.apk'` and then later executes `adb install -r "$apk"`; the action wrapper executes script lines in separate shell invocations, so `$apk` is empty and adb exits with `filename doesn't end .apk or .apex:`. The app/Core benchmark is never reached. This is a workflow shell-scope defect, not current evidence of Android model/runtime failure.
+- Toolchain reproducibility issue found while inspecting the same Android logs: workflow provisioning explicitly installs/exports NDK `28.1.13356709`, while Gradle later requests and auto-installs NDK `27.0.12077973`. This mismatch is not the immediate failure above, but deterministic Android supply-chain acceptance is incomplete until workflow and Gradle use one pinned NDK version.
+
+PROGRESS_COMPLETE: 90%
+PROGRESS_REMAINING: 10%
+
+DONE:
+- Previous generic `Core quality=False` blocker is reduced to one exact failing scenario with output evidence; CodeSpecialist/SpecialistTeam are independently confirmed green.
+- Both exact-head Android Core failures are classified as pre-runtime CI/workflow defects; neither current red run reached Android Core inference.
+- Android build/export/sign/install success is separated from Android inference acceptance instead of falsely treating the whole red run as product failure.
+- Deterministic NDK mismatch is recorded as an independent platform reproducibility issue.
+
+REMAINING:
+- Inspect `corrupted_input` benchmark source and the AIClient/Knowledge/context path that produced `IVORY-29`; fix the smallest reproduced isolation defect without changing expected quality semantics.
+- Fix Android Benchmark emulator script variable scope so the built probe APK is actually installed/launched and the real benchmark report is collected.
+- Replace the fragile API-35 `airplane_mode_on` property assertion with a reliable offline proof while preserving the mandatory no-network normal-path gate.
+- Unify Android Gradle/workflow NDK pin, then rerun both Android Core gates and the desktop real-Core benchmark on the resulting exact branch SHA.
+
+BLOCKERS:
+- Product P0 remains only the reproduced desktop `corrupted_input` context/retrieval isolation failure until source inspection says otherwise.
+- Android Core runtime acceptance is **unproven**, not product-red: current jobs stop before inference.
+
+NEXT:
+- Reread fresh `main` and this journal, then inspect the exact Core benchmark scenario, AIClient/context builder and the two Android workflow files. Make only evidence-backed minimal fixes, run the affected exact gates, and write the resulting commit SHA/run IDs/results back into this journal before moving to Knowledge/Work/UI/Voice.
