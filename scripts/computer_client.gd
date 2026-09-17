@@ -142,25 +142,36 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 	var result_code := int(completed[0])
 	var response_code := int(completed[1])
 	var raw: PackedByteArray = completed[3]
+	return _decode_response(result_code, response_code, raw)
+
+func _decode_response(result_code: int, response_code: int, raw: PackedByteArray) -> Dictionary:
 	if result_code != HTTPRequest.RESULT_SUCCESS:
 		return {"ok": false, "error": "transport_failure", "message": "Computer service transport failed (%s)" % result_code, "retryable": true}
 	var text := raw.get_string_from_utf8().strip_edges()
-	if text.is_empty():
-		return {"ok": false, "error": "empty_response", "message": "Computer service returned an empty response", "http": response_code, "retryable": response_code >= 500}
-	var data = JSON.parse_string(text)
-	if not data is Dictionary:
-		return {"ok": false, "error": "malformed_response", "message": "Computer service returned invalid JSON", "http": response_code, "retryable": response_code >= 500}
-	var response: Dictionary = data
 	if response_code < 200 or response_code >= 300:
-		var detail = response.get("detail", response.get("message", "Computer service error"))
+		var error_code := "http_error"
+		var detail := "Computer service error"
+		if not text.is_empty():
+			var parsed = JSON.parse_string(text)
+			if parsed is Dictionary:
+				var error_body: Dictionary = parsed
+				error_code = str(error_body.get("error", "http_error"))
+				detail = str(error_body.get("detail", error_body.get("message", detail)))
+			else:
+				detail = text
 		return {
 			"ok": false,
-			"error": str(response.get("error", "http_error")),
-			"message": str(detail).substr(0, 2048),
+			"error": error_code,
+			"message": detail.substr(0, 2048),
 			"http": response_code,
 			"retryable": response_code in [408, 429, 502, 503, 504],
 		}
-	return response
+	if text.is_empty():
+		return {"ok": false, "error": "empty_response", "message": "Computer service returned an empty response", "http": response_code, "retryable": false}
+	var data = JSON.parse_string(text)
+	if not data is Dictionary:
+		return {"ok": false, "error": "malformed_response", "message": "Computer service returned invalid JSON", "http": response_code, "retryable": false}
+	return data
 
 func health() -> Dictionary:
 	if OS.get_name() != "Windows":

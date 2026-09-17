@@ -20,10 +20,18 @@ def test_api_health_poll_does_not_parse_empty_offline_response():
 
 def test_computer_client_handles_http_and_empty_body_before_json_parse():
     source = read("scripts/computer_client.gd")
-    request = source.split("func _json_request", 1)[1].split("func health", 1)[0]
-    http_guard = "if code < 200 or code >= 300:"
+    request = source.split("func _json_request", 1)[1].split("func _decode_response", 1)[0]
+    assert "return _decode_response(result_code, response_code, raw)" in request
+
+    decoder = source.split("func _decode_response", 1)[1].split("func health", 1)[0]
+    http_guard = "if response_code < 200 or response_code >= 300:"
     empty_guard = "if text.is_empty():"
     parser = "JSON.parse_string(text)"
-    assert request.index(http_guard) < request.index(parser)
-    assert request.index(empty_guard) < request.index(parser)
-
+    assert http_guard in decoder
+    assert empty_guard in decoder
+    assert parser in decoder
+    assert decoder.index(http_guard) < decoder.index(parser)
+    assert decoder.index(http_guard) < decoder.index(empty_guard)
+    assert 'var error_code := "http_error"' in decoder
+    assert "detail = text" in decoder
+    assert "response_code in [408, 429, 502, 503, 504]" in decoder
