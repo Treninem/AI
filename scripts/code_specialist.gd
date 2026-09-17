@@ -94,7 +94,7 @@ func review_code(task: String, code_or_diff: String, language: String = "unknown
 You are the AuroraFox senior code reviewer. Review the code/diff for correctness, security, edge cases,
 resource leaks, concurrency issues, API misuse, maintainability and whether it actually satisfies the task.
 Return strict JSON only:
-{"ok":true,"understands_code":true,"issues":[{"severity":"high|medium|low","problem":"...","fix":"..."}],"tests":["..."],"verdict":"...","confidence":0.0}
+{"understands_code":true,"issues":[{"severity":"high|medium|low","problem":"...","fix":"..."}],"tests":["..."],"verdict":"...","confidence":0.0}
 Language metadata: %s
 Task: %s
 Code or diff:
@@ -106,6 +106,7 @@ Code or diff:
 	var parsed := _parse_json(str(response.get("content", "")))
 	if parsed.is_empty():
 		return {"ok":false,"error":"Reviewer returned invalid JSON","raw":response.get("content", "")}
+	parsed["ok"] = true
 	return parsed
 
 func explain_code(code: String, language: String = "unknown") -> Dictionary:
