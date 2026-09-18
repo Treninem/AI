@@ -1520,3 +1520,19 @@ BLOCKERS: incomplete same-head real gates and section44 external acceptance boun
 NEXT: publish this atomic benchmark+journal fix to PR92 and inspect resulting exact-head guard/build reports. No version bump/main merge/release; sole engineer claim stays ACTIVE.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 57. Sole engineer checkpoint — verified publication and native offline answers
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Product-code publication73a71420e5fea775848bfcc8abd7b7111e4e039b verified by authenticated Git ref/shell fetch and empty local-to-remote tracked diff. Main remains031aebaad16fc25a39dfc45c58f96fadb658cac2. Owner instruction to work alone and keep Core autonomous remains binding.
+EXACT-HEAD PROOF: source73a7142 UI Visual run35310112166/job105490211520 succeeds. Core Evolution run35310112270/job105490211826 succeeds and actual log prints `AURORA_CI_CHECKOUT_SHA=73a71420e5fea775848bfcc8abd7b7111e4e039b`, confirming remote guard execution. This checkpoint is evidence-only; source73a7142 and the subsequent journal-head are distinct SHAs. Final package/runtime acceptance still needs the final selected head.
+NATIVE RESULT: preserved e6 native run35308554796/job105485744736 now succeeds. Artifact10533016809 downloaded/digest07d94f0db738bbfed3fab3c48228065fed47f52116a0cfd7f607e678ee5054b9 verified. Report status=completed, passed=true; all3 answers correct: ANDROID-LOCAL-READY,56,ЛОКАЛЬНО; llama.cpp, no INTERNET permission, remote_ai_allowed=false. Debug-native cold332915.049ms/warm median280467.932ms/PSS1151.193MiB; extremely slow compared with optimized normal-path cold32731.408ms/warm21375.532ms. It finishes near900s watchdog. Non-thinking prompt repair is proven semantically on both Android paths; do not claim the old timeout was caused only by Debug. New enforced Release-native variant performance/build remains pending.
+WINDOWS: preserved c5 Windows Package35304140155/job105472767790 still at historical V1.2/V1.3 bridge step; exported executable, runtime asset checks and installer build already passed. This does not replace current-head installed offline voice/package acceptance. No current real report/quality assertions bypassed.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: sole ownership/full journal continued; Android normal/direct native local answers and Windows21 quality/Coder8 operations verified; Work labels visually fixed; exact-head CI guards published/proven; production Release-native benchmark configuration published.
+REMAINING: final-head Release-native/normal-path benchmarks, Windows/Android packages and installed voice/OCR/Knowledge acceptance; section44 version/release checkpoints.
+BLOCKERS: genuine useful licensed1GiB bootstrap corpus/provenance and physical-device/host/listening/signing evidence remain unproven; expensive real gates incomplete; no main relative benchmark baseline.
+NEXT: inspect the newest PR92 CI by actual head and preserved report SHAs; repair only reproduced failures, finish all available gates. Keep draft/no version bump/no main merge/no release until acceptance. Evidence-only journal updates must not count as product acceptance.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
