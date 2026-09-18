@@ -1474,3 +1474,26 @@ BLOCKERS: genuine useful licensed1GiB corpus, physical-device/host/listening/sig
 NEXT: read back remote PR92 publication, inspect preserved e6 reports; inspect newest candidate CI as it finishes. No version bump/main merge/release.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 55. BEFORE ACTION — exact candidate checkout for release evidence, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Fresh main remains031aebaad16fc25a39dfc45c58f96fadb658cac2; PR92 publication5c7afcdda14f026d609404faa98cd3ed43603e90 verified by Git ref and shell fetch, all10 remote blobs match locally reviewed bytes.
+OWNERSHIP EXTENSION: checkout SHA only in the24 CI workflows currently triggered for PR92; preserve already exact checkout/verification and leave promotion, release, updater workflow-run and unrelated/manual candidate workflows alone. Ordinary runtime/safety/signing/source assertions and timeouts remain.
+REPRODUCTION: Windows e6 run35308554778 succeeds, artifact10532777456 digestda0a62dd581768c1bb95c310ed5c30698837ef5ccdb3b17f327ef067291db944 verified. Actual benchmark report git_sha8c0efb70d95bc0195d15418c01d7682446c58263 is a PR merge checkout, not associated candidate e6 head.21/21 local-quality scenarios and8/8 Coder operations pass with OS network guards active/Ollama absent; cold3293.713ms, warm median650.221ms, peak4468.85MiB. Hard performance limits pass; relative regression is not applied because no successful main baseline is available. This is genuine offline inference evidence but not exact-head final acceptance.
+VISUAL PROOF: current Work UI run35309428195 succeeds; artifact10532497960 digest60ef63ab935a570a36dba820b0cf04d579aba43a3c7a41bc79f59c9edcf8c433 verified. Personally viewed compact960x640 and wide1440x900 frames: New project/Close labels are visible and fit. Head label is5c7, but its default checkout also needs explicit SHA enforcement before final same-SHA acceptance.
+NEXT: explicitly checkout PR head (or event SHA for push/manual runs) and reject an actual HEAD mismatch in every missing PR92 gate checkout. No intelligence path change; preserve the running Android/Windows/Knowledge reports.
+
+### AFTER ACTION — candidate checkout guard and Android inference proof
+
+ACTION:21 workflows updated,40 missing checkouts now pin the exact candidate and immediately verify actual Git HEAD. Across24 candidate workflows all45 checkouts use the head/event SHA;5 existing exact guarded checkouts preserved. Other manual promotion/release/updater/candidate workflows untouched.
+TEST:24 YAMLs parse; all45 checkout refs verified; all40 added guards use the same executable command. Running that actual command accepts the correct local Git HEAD (exit0) and rejects an intentionally wrong expected SHA (exit1).46 relevant Core/Android/Knowledge/release workflow contract tests pass (0.15s); diff check passes. Windows runner default Python executes the same cross-platform guard; remote jobs remain required.
+ANDROID RESULT: preserved e6 normal-path E2E35308554897/job105485808921 succeeds with `AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK`. Artifact10532951299 downloaded/digestb379a9a1f728f2f81d1f5c4ae86c621f46b8fa6d48fe9562db7ce8f06798949c verified; all required answer scenarios now return final answers, not truncated thinking: ANDROID-E2E-READY,63,ЛОКАЛЬНО,MOBILE-42,MOBILE-IVORY-29,ANDROID-COMPAT-LOCAL. Offline environment, bundled model integrity and aurora_core_android retained. Its artifact also identifies the old PR merge SHA8c0efb7; repeat on newly enforced head before exact-head final acceptance. e6 APK35308554793 installation/launch succeeded; native probe remains in progress.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: actual Android normal Core path repaired and proven offline; Windows21 scenarios/Coder8 operations and updated Work frames personally verified; final CI evidence checkout ambiguity repaired.
+REMAINING: publish exact-checkout batch to existing PR92, inspect newest guards/frames/Android native and normal-path reports, finish Windows installed package/voice and remaining section44 gates.
+BLOCKERS: pending package/runtime acceptance; genuine licensed1GiB corpus and physical-device/host/listening/signing evidence remain unproven. No main baseline for relative performance comparison yet.
+NEXT: publish atomic CI+journal fast-forward; preserve in-flight expensive evidence and inspect reports by actual SHA. Keep draft, test first/version last.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
