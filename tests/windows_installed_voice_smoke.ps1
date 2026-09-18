@@ -22,23 +22,36 @@ $previous = @{}
 $rule = 'AuroraFoxVoiceOffline-' + [Guid]::NewGuid().ToString('N')
 $process = $null
 $ruleCreated = $false
+$stdoutLog = Join-Path $reportRoot 'backend.stdout.log'
+$stderrLog = Join-Path $reportRoot 'backend.stderr.log'
 try {
     foreach ($key in $settings.Keys) {
         $previous[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
         [Environment]::SetEnvironmentVariable($key, $settings[$key], 'Process')
     }
-    # Only the disposable CI machine is changed. The installed process retains
-    # its normal user identity; model downloads cannot satisfy this smoke.
     New-NetFirewallRule -DisplayName $rule -Direction Outbound -Program $backend -Action Block -Profile Any | Out-Null
     $ruleCreated = $true
-    $process = Start-Process $backend -PassThru
+    $backendRoot = Split-Path -Parent $backend
+    $process = Start-Process -FilePath $backend -WorkingDirectory $backendRoot -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
     $base = 'http://127.0.0.1:18865'
     $health = $null
     for ($attempt = 0; $attempt -lt 120; $attempt++) {
-        if ($process.HasExited) { throw "Installed voice backend exited: $($process.ExitCode)" }
-        try { $health = Invoke-RestMethod "$base/health" -TimeoutSec 2; break } catch { Start-Sleep -Seconds 1 }
+        if ($process.HasExited) {
+            $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
+            $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
+            throw "Installed voice backend exited: $($process.ExitCode)`nstdout:`n$stdout`nstderr:`n$stderr"
+        }
+        try {
+            $health = Invoke-RestMethod "$base/health" -TimeoutSec 2
+            if ($health.ok -and $health.backend -eq 'AuroraVoice') { break }
+        } catch { }
+        Start-Sleep -Seconds 1
     }
-    if (-not $health.ok -or $health.backend -ne 'AuroraVoice') { throw 'Installed voice backend did not become healthy' }
+    if (-not $health -or -not $health.ok -or $health.backend -ne 'AuroraVoice') {
+        $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
+        $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
+        throw "Installed voice backend did not become healthy.`nstdout:`n$stdout`nstderr:`n$stderr"
+    }
     $started = [Diagnostics.Stopwatch]::StartNew()
     $russianText = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('0JDQstGA0L7RgNCwINGA0LDQsdC+0YLQsNC10YIg0LvQvtC60LDQu9GM0L3Qvi4='))
     $body = @{text=$russianText; backend='silero'} | ConvertTo-Json
