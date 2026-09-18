@@ -19,6 +19,9 @@ def test_android_probe_uses_exact_native_core_and_has_no_network_permission() ->
     assert "com.aurorafox.runtime.NativeRuntime" in activity
     assert "native.chat(" in activity
     assert "native.hasLlama()" in activity
+    assert "CoreChatPrompt.format(" in activity
+    plugin = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt").read_text(encoding="utf-8")
+    assert "return CoreChatPrompt.format(items)" in plugin
     assert '"llama.cpp"' in activity
     assert "ANDROID-LOCAL-READY" in activity
     assert '.put("max_tokens", 16)' in activity

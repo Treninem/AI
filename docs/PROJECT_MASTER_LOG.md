@@ -1394,3 +1394,40 @@ BLOCKERS: runtime CI proof pending; genuine corpus/device/host/signing boundarie
 NEXT: inspect workflows started by this atomic commit; if Android is green, inspect retained reports/artifacts and visual evidence, then let Windows finish without journal-only interruption.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 52. BEFORE ACTION — sole final engineer continuation, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE — OWNER-DIRECTED SOLE EXECUTOR TAKEOVER/RECONCILE.
+- Owner explicitly instructs this session to work alone and take unfinished tasks from other lanes. No subagents or reliance on another executor. Existing code and evidence are preserved.
+- Fresh main `031aebaad16fc25a39dfc45c58f96fadb658cac2`; inherited PR #92 head `c5d9183433c985a1e834a46345db7a8fe7ccec5f`. Full main journal and candidate additions 43–51 read; section 40 notification acknowledged.
+- Intended accumulated bump MINOR / V1.4.0.0, test first/version last.
+- Exact current failures personally inspected: Core Benchmarks `35304140196` / `105472793773` fails an obsolete assertion expecting Android terse=64 while production=16; Windows runtime was skipped. Android normal-path E2E `35304140175` / `105472917764` reaches real offline inference but all answer scenarios return truncated `<think>` content. Android native probe `35304140103` / `105472867694` times out after 900s. APK `35304140172` / `105472800202` crashes during Godot import (dialog parenting errors followed by double free).
+- Owned batch: Android production prompt formatter/NativeRuntime, native probe, related runtime/contracts/tests, build/build_android.ps1 and canonical journal. Reconciles previous Core/Platform ownership; no safety/signing/offline/expected-answer gates removed.
+- Ownership extension for executable prompt regression coverage: plugin Gradle test dependency, CoreChatPromptTest and android-plugin-ci test task; `.gdignore` in native/probe source trees. Exported addon in `addons/AuroraFoxRuntime` stays visible to Godot.
+- Scheduling ownership extension: windows-package-ci concurrency sets cancel-in-progress=false to preserve the current expensive run while the next atomic candidate queues. Sections 49–51 document previous cancelled Windows runs; no product gate/timeout is bypassed.
+- Source cause: Android hand-written ChatML generation prefix omits Qwen3 non-thinking template suffix; reducing token budget alone truncates thinking before the answer. Need a shared production formatter used by plugin and probe, then real CI proof. Import crash requires source/log investigation before changing build behavior.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: fresh main/candidate/full journal and exact failing jobs inspected; sole ownership recorded.
+REMAINING: reproduce and repair prompt/bounds/import failures, relevant local tests, exact-head runtime/package CI and remaining release checkpoints in section 44.
+BLOCKERS: current Android runtime/package and Core gate failures; genuine corpus and physical-device/host/signing acceptance remain unproven.
+NEXT: implement shared Qwen3 non-thinking prompt suffix and validate production/probe integration; inspect first import errors and reproduce import separately; publish one atomic batch to existing draft PR #92.
+
+## 53. AFTER ACTION — mobile prompt and import batch, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor.
+ACTION: shared production CoreChatPrompt starts generation after an empty closed thinking block for the bundled Qwen3, aligned with desktop non-thinking default. Plugin and native benchmark both use it. Normal mobile chat remains 384 tokens; terse=16; expected-answer gates unchanged. Godot ignores native/probe build source trees while exported addon stays visible. Windows expensive workflow is no longer cancelled by each newer candidate.
+FILES/DIFF: 13-file implementation in commit `8f0a2788eab3207e250efe6757bb1cf7a5816ac1`; includes prompt formatter, executable Kotlin regressions and Gradle/CI wiring, probe integration, stale terse assertion correction, source `.gdignore`, Android contract and scheduling/journal.
+TEST: Python relevant gate/runner/package set 42 passed (3.75s); real Kotlin compiler 2.1.20 + JUnit 4.13.2: 3 passed (0.026s). Godot 4.7.1 headless import exit 0 with no parse errors. Planted native-tree CSV was not queued/imported (no sidecar), import exit 0. Android release contract PASS. Chat context `AURORA_CHAT_CONTEXT_SMOKE_OK`, self-reliance `SELF_RELIANCE_SMOKE_OK`; these smokes report resource-leak warnings on exit, not actual LLM quality/device proof. git diff --check PASS.
+RESULT: local code/contract/formatter/import checks green. Android native/Godot inference and release APK CI remain required; no readiness gain from source changes alone. Current Windows run `35304140155` is preserved and still in progress at publication preparation.
+COMMIT: locally verified implementation `8f0a2788eab3207e250efe6757bb1cf7a5816ac1`, local evidence commit `962ff71`. Shell Git push has no authenticated credential and failed before writing; publish the identical reviewed file contents through the authenticated GitHub connector as one fast-forward commit on PR #92. Remote publication SHA must be read back and recorded in the next checkpoint; local SHAs are not remote links. No replacement PR/version bump/main merge/release.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: three current failure causes repaired with local executable tests; independent local Core path preserved.
+REMAINING: exact-head Android/Core/package CI, installed Voice/OCR/Knowledge, genuine pack/provenance, actual visual/listening/device/server/signing and final version/release checkpoints.
+BLOCKERS: runtime/package acceptance pending; genuine production corpus and external device/host/signing evidence remain unproven.
+NEXT: inspect workflows on the published journal head (product parent above); classify only new exact failures. Preserve current Windows evidence and distinguish its older SHA from new same-SHA acceptance. Keep PR draft.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%

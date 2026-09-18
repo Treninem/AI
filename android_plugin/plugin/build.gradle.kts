@@ -71,6 +71,7 @@ android {
 tasks.named("preBuild").configure { dependsOn(prepareOcrAssets) }
 
 dependencies {
+    testImplementation("junit:junit:4.13.2")
     implementation("org.godotengine:godot:4.7.1.stable")
     implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")
     implementation("cz.adaptech.tesseract4android:tesseract4android:$tesseractAndroidVersion")

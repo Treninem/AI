@@ -51,7 +51,9 @@ permissions:
 
 concurrency:
   group: aurorafox-windows-package-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve the expensive installer/offline-voice evidence from the running
+  # candidate. A newer candidate waits instead of repeatedly cancelling it.
+  cancel-in-progress: false
 
 jobs:
   package-windows:

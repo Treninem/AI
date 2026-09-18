@@ -100,7 +100,7 @@ def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> 
     assert 'payload["reasoning_effort"] = "none"' in runtime
     assert '"--ctx-size", str(DEFAULT_CONTEXT_SIZE)' in runtime
     assert "DEFAULT_CHAT_MAX_TOKENS := 384" in android
-    assert "TERSE_CHAT_MAX_TOKENS := 64" in android
+    assert "TERSE_CHAT_MAX_TOKENS := 16" in android
     assert 'request_options["max_tokens"] = TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS' in android
     assert "[int]$TimeoutSeconds = 900" in runner
     assert "AURORAFOX_CODE_SPECIALIST_TIMEOUT_DIAGNOSTICS" in runner

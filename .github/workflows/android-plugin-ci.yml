@@ -60,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gradle :plugin:installGodotPlugin --stacktrace
+          gradle :plugin:testDebugUnitTest :plugin:installGodotPlugin --stacktrace
 
       - name: Verify exported Android libraries
         shell: bash

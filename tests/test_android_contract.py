@@ -46,6 +46,8 @@ def main() -> None:
     )
 
     build_script = read("build/build_android.ps1")
+    require((ROOT / "android_plugin/.gdignore").is_file(), "Godot must not import Android native/build source trees")
+    require(not (ROOT / "addons/AuroraFoxRuntime/.gdignore").exists(), "Exported Android runtime addon must remain discoverable")
     require("[switch]$AllowUnsignedRelease" in build_script, "CI unsigned export switch is missing")
     require("package/signed=false" in build_script, "unsigned CI export is not implemented")
     require("Restored signed Android export preset" in build_script, "signed preset restoration guard is missing")

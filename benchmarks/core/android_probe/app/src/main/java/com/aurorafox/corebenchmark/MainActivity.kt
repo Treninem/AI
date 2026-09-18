@@ -10,6 +10,7 @@ import android.os.Process
 import android.os.SystemClock
 import android.util.Log
 import com.aurorafox.runtime.NativeRuntime
+import com.aurorafox.runtime.CoreChatPrompt
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -107,13 +108,10 @@ class MainActivity : Activity() {
                 .put("elapsed_ms", 0.0)
                 .put("error", "model_or_native_runtime_unavailable")
         }
-        val prompt = buildString {
-            append("<|im_start|>system\n")
-            append("You are AuroraFox Core. Follow the user's output format exactly.\n")
-            append("<|im_end|>\n<|im_start|>user\n")
-            append(userPrompt)
-            append("<|im_end|>\n<|im_start|>assistant\n")
-        }
+        val prompt = CoreChatPrompt.format(listOf(
+            "system" to "You are AuroraFox Core. Follow the user's output format exactly.",
+            "user" to userPrompt,
+        ))
         val options = JSONObject()
             .put("max_tokens", 16)
             .put("temperature", 0.0)

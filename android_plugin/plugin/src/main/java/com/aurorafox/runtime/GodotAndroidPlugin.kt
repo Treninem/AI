@@ -298,15 +298,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     ).toString()
 
     private fun formatChatPrompt(messages: JSONArray): String {
-        val out = StringBuilder()
+        val items = mutableListOf<Pair<String, String>>()
         for (i in 0 until messages.length()) {
             val item = messages.optJSONObject(i) ?: continue
-            val role = item.optString("role", "user").lowercase().let { if (it in setOf("system", "user", "assistant")) it else "user" }
-            val content = item.optString("content", "")
-            out.append("<|im_start|>").append(role).append('\n').append(content).append("<|im_end|>\n")
+            items.add(item.optString("role", "user") to item.optString("content", ""))
         }
-        out.append("<|im_start|>assistant\n")
-        return out.toString()
+        return CoreChatPrompt.format(items)
     }
 
     private fun isInsideAppStorage(path: String): Boolean {
