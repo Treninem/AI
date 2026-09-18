@@ -1,14 +1,25 @@
 param(
     [Parameter(Mandatory = $true)][string]$Iscc,
-    [string]$CandidateVersion = '1.3.0.0'
+    [string]$CandidateVersion = '1.3.0.0',
+    [string]$CurrentInstaller = ''
 )
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+. (Join-Path $PSScriptRoot 'windows_bounded_process.ps1')
+$logDir = Join-Path $root 'artifacts\installer-smoke'
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $fixtureSource = Join-Path $root 'build\bridge_fixture'
 $fixtureIss = Join-Path $root 'build\AuroraFox_V13_BridgeFixture.iss'
 $targetIss = Join-Path $root 'build\AuroraFox.iss'
 $targetDir = Join-Path $root 'build\release\v13-repair-target'
+$reuseInstaller = -not [string]::IsNullOrWhiteSpace($CurrentInstaller)
+if ($reuseInstaller) {
+    $targetInstaller = (Resolve-Path -LiteralPath $CurrentInstaller).Path
+    $versionState = Get-Content -LiteralPath (Join-Path $root 'project\version.json') -Raw | ConvertFrom-Json
+    if ($CandidateVersion -ne [string]$versionState.numeric) { throw 'Reused installer requires the canonical candidate version' }
+    Write-Host "AURORA_WINDOWS_V13_REUSE_INSTALLER $targetInstaller"
+}
 
 if ($CandidateVersion -notmatch '^([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$') { throw 'CandidateVersion must use four numeric parts' }
 $parts = @([int]$Matches[1],[int]$Matches[2],[int]$Matches[3],[int]$Matches[4])
@@ -31,14 +42,16 @@ Push-Location (Join-Path $root 'build')
 try {
     & $Iscc 'AuroraFox_V13_BridgeFixture.iss'
     if ($LASTEXITCODE -ne 0) { throw 'Failed to compile V1.3 bridge fixture installer' }
-    & $Iscc "/DMyAppVersion=$CandidateVersion" "/O$targetDir" '/FAuroraFox_V13_Repair_Target' 'AuroraFox.iss'
-    if ($LASTEXITCODE -ne 0) { throw 'Failed to compile V1.3 repair target installer' }
+    if (-not $reuseInstaller) {
+        & $Iscc "/DMyAppVersion=$CandidateVersion" "/O$targetDir" '/FAuroraFox_V13_Repair_Target' 'AuroraFox.iss'
+        if ($LASTEXITCODE -ne 0) { throw 'Failed to compile V1.3 repair target installer' }
+    }
 } finally {
     Pop-Location
 }
 
 $fixtureInstaller = Join-Path $root 'build\release\AuroraFox_V13_BridgeFixture.exe'
-$targetInstaller = Join-Path $targetDir 'AuroraFox_V13_Repair_Target.exe'
+if (-not $reuseInstaller) { $targetInstaller = Join-Path $targetDir 'AuroraFox_V13_Repair_Target.exe' }
 if (-not (Test-Path -LiteralPath $fixtureInstaller)) { throw 'V1.3 bridge fixture installer was not produced' }
 if (-not (Test-Path -LiteralPath $targetInstaller)) { throw 'V1.3 repair target installer was not produced' }
 
@@ -51,12 +64,14 @@ $sentinelValue = 'AURORAFOX_V13_USER_DATA_MUST_SURVIVE_' + [guid]::NewGuid().ToS
 Set-Content -LiteralPath $sentinel -Value $sentinelValue -Encoding UTF8
 
 try {
-    $legacy = Start-Process -FilePath $fixtureInstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
-    if ($legacy.ExitCode -notin @(0,3010)) { throw "V1.3 fixture installer exited with $($legacy.ExitCode)" }
+    $installLog = Join-Path $logDir 'v13-fixture.log'
+    $legacyExit = Invoke-AuroraBoundedProcess -FilePath $fixtureInstaller -ArgumentList @('/SP-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"","/LOG=`"$installLog`"") -Phase 'v13-fixture-install' -TimeoutSeconds 180
+    if ($legacyExit -notin @(0,3010)) { throw "V1.3 fixture installer exited with $($legacyExit)" }
     if (-not (Test-Path (Join-Path $installDir 'v1.3-marker.txt'))) { throw 'V1.3 fixture marker is missing after fixture install' }
 
-    $repair = Start-Process -FilePath $targetInstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
-    if ($repair.ExitCode -notin @(0,3010)) { throw "V1.3 repair installer exited with $($repair.ExitCode)" }
+    $installLog = Join-Path $logDir 'v13-repair.log'
+    $repairExit = Invoke-AuroraBoundedProcess -FilePath $targetInstaller -ArgumentList @('/SP-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"","/LOG=`"$installLog`"") -Phase 'v13-repair-install' -TimeoutSeconds 1200
+    if ($repairExit -notin @(0,3010)) { throw "V1.3 repair installer exited with $($repairExit)" }
 
     $installedExe = Join-Path $installDir 'AuroraFox.exe'
     if (-not (Test-Path -LiteralPath $installedExe)) { throw 'AuroraFox.exe is missing after V1.3 repair install' }
@@ -75,14 +90,16 @@ try {
     $after = (Get-Content -LiteralPath $sentinel -Raw).Trim()
     if ($after -ne $sentinelValue) { throw 'Godot user data changed during V1.3 repair' }
 
-    $run = Start-Process -FilePath $installedExe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-    if ($run.ExitCode -ne 0) { throw "Repaired AuroraFox exited with $($run.ExitCode)" }
+    $runExit = Invoke-AuroraBoundedProcess -FilePath $installedExe -ArgumentList @('--headless','--quit-after','3') -Phase 'v13-installed-app' -TimeoutSeconds 90
+    if ($runExit -ne 0) { throw "Repaired AuroraFox exited with $($runExit)" }
 
     Write-Host "AURORA_WINDOWS_V13_TRUST_ROOT_REPAIR_OK target=$CandidateVersion" -ForegroundColor Green
 } finally {
     $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($uninstaller) {
-        Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait | Out-Null
+        $uninstallLog = Join-Path $logDir 'v13-uninstall.log'
+        $uninstallExit = Invoke-AuroraBoundedProcess -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=`"$uninstallLog`"") -Phase 'v13-uninstall' -TimeoutSeconds 180
+        if ($uninstallExit -notin @(0,3010)) { throw "Uninstaller exited with $uninstallExit" }
     }
     Remove-Item $sentinel -Force -ErrorAction SilentlyContinue
     Remove-Item $fixtureSource -Recurse -Force -ErrorAction SilentlyContinue

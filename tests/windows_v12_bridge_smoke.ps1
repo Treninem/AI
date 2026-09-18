@@ -5,6 +5,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+. (Join-Path $PSScriptRoot 'windows_bounded_process.ps1')
+$logDir = Join-Path $root 'artifacts\installer-smoke'
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 $fixtureSource = Join-Path $root 'build\bridge_fixture'
 $fixtureIss = Join-Path $root 'build\AuroraFox_V12_BridgeFixture.iss'
 $currentInstallerPath = (Resolve-Path $CurrentInstaller).Path
@@ -43,12 +46,14 @@ $sentinelValue = 'AURORAFOX_V12_USER_DATA_MUST_SURVIVE_' + [guid]::NewGuid().ToS
 Set-Content -LiteralPath $sentinel -Value $sentinelValue -Encoding UTF8
 
 try {
-    $v12 = Start-Process -FilePath $fixtureInstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
-    if ($v12.ExitCode -notin @(0,3010)) { throw "V1.2 fixture installer exited with $($v12.ExitCode)" }
+    $installLog = Join-Path $logDir 'v12-fixture.log'
+    $v12Exit = Invoke-AuroraBoundedProcess -FilePath $fixtureInstaller -ArgumentList @('/SP-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"","/LOG=`"$installLog`"") -Phase 'v12-fixture-install' -TimeoutSeconds 180
+    if ($v12Exit -notin @(0,3010)) { throw "V1.2 fixture installer exited with $($v12Exit)" }
     if (-not (Test-Path (Join-Path $installDir 'v1.2-marker.txt'))) { throw 'V1.2 fixture marker is missing after fixture install' }
 
-    $current = Start-Process -FilePath $currentInstallerPath -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
-    if ($current.ExitCode -notin @(0,3010)) { throw "Current bridge installer exited with $($current.ExitCode)" }
+    $installLog = Join-Path $logDir 'v12-repair.log'
+    $currentExit = Invoke-AuroraBoundedProcess -FilePath $currentInstallerPath -ArgumentList @('/SP-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"","/LOG=`"$installLog`"") -Phase 'v12-repair-install' -TimeoutSeconds 1200
+    if ($currentExit -notin @(0,3010)) { throw "Current bridge installer exited with $($currentExit)" }
 
     $installedExe = Join-Path $installDir 'AuroraFox.exe'
     if (-not (Test-Path -LiteralPath $installedExe)) { throw 'AuroraFox.exe is missing after V1.2 -> current bridge install' }
@@ -64,14 +69,16 @@ try {
     $after = (Get-Content -LiteralPath $sentinel -Raw).Trim()
     if ($after -ne $sentinelValue) { throw 'Godot user data changed during bridge install' }
 
-    $run = Start-Process -FilePath $installedExe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-    if ($run.ExitCode -ne 0) { throw "Bridged AuroraFox exited with $($run.ExitCode)" }
+    $runExit = Invoke-AuroraBoundedProcess -FilePath $installedExe -ArgumentList @('--headless','--quit-after','3') -Phase 'v12-installed-app' -TimeoutSeconds 90
+    if ($runExit -ne 0) { throw "Bridged AuroraFox exited with $($runExit)" }
 
     Write-Host "AURORA_WINDOWS_V12_TO_CURRENT_BRIDGE_OK target=$currentVersion" -ForegroundColor Green
 } finally {
     $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' -ErrorAction SilentlyContinue | Select-Object -First 1
     if ($uninstaller) {
-        Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait | Out-Null
+        $uninstallLog = Join-Path $logDir 'v12-uninstall.log'
+        $uninstallExit = Invoke-AuroraBoundedProcess -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=`"$uninstallLog`"") -Phase 'v12-uninstall' -TimeoutSeconds 180
+        if ($uninstallExit -notin @(0,3010)) { throw "Uninstaller exited with $uninstallExit" }
     }
     Remove-Item $sentinel -Force -ErrorAction SilentlyContinue
     Remove-Item $fixtureSource -Recurse -Force -ErrorAction SilentlyContinue

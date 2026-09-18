@@ -18,6 +18,7 @@ on:
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
+      - 'tests/windows_bounded_process*.ps1'
       - 'tests/windows_installed_voice_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
@@ -39,6 +40,7 @@ on:
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
+      - 'tests/windows_bounded_process*.ps1'
       - 'tests/windows_installed_voice_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
@@ -56,7 +58,24 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  process-contract:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == os.environ['AURORA_EXPECTED_HEAD_SHA'] else 'Candidate checkout SHA mismatch')"
+      - name: Run bounded process lifecycle regression
+        shell: pwsh
+        run: .\tests\windows_bounded_process_smoke.ps1
+
   package-windows:
+    needs: process-contract
     runs-on: windows-latest
     timeout-minutes: 180
     steps:
@@ -83,6 +102,8 @@ jobs:
             '.\build\setup_release_signing.ps1',
             '.\tests\windows_v12_bridge_smoke.ps1',
             '.\tests\windows_v13_bridge_smoke.ps1',
+            '.\tests\windows_bounded_process.ps1',
+            '.\tests\windows_bounded_process_smoke.ps1',
             '.\tests\windows_installed_voice_smoke.ps1'
           )) {
             if (-not (Test-Path $script)) { throw "Required Windows/release helper missing: $script" }
@@ -213,15 +234,19 @@ jobs:
           $state = Get-Content project\version.json -Raw | ConvertFrom-Json
           $current = [string]$state.numeric
           .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
-          .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $current
+          .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $current -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
 
       - name: Silent install and installed-app smoke
         shell: pwsh
         run: |
+          . .\tests\windows_bounded_process.ps1
+          $logDir = Join-Path $PWD 'artifacts\installer-smoke'
+          New-Item -ItemType Directory -Force -Path $logDir | Out-Null
           $installDir = Join-Path $env:RUNNER_TEMP 'AuroraFoxInstalled'
           $installer = (Resolve-Path 'build\release\AuroraFox_Setup_Windows.exe').Path
-          $p = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
-          if ($p.ExitCode -notin @(0,3010)) { throw "Installer exited with $($p.ExitCode)" }
+          $installLog = Join-Path $logDir 'current-install.log'
+          $installExit = Invoke-AuroraBoundedProcess -FilePath $installer -ArgumentList @('/SP-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"","/LOG=`"$installLog`"") -Phase 'current-install' -TimeoutSeconds 1200
+          if ($installExit -notin @(0,3010)) { throw "Installer exited with $installExit" }
           $exe = Join-Path $installDir 'AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe missing' }
           foreach ($relative in @(
@@ -238,13 +263,14 @@ jobs:
           $installedModel = Join-Path $installDir 'core_runtime\engine\aurorafox-core.gguf'
           $installedSha = (Get-FileHash $installedModel -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($installedSha -ne 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5') { throw 'Installed AuroraFox Core integrity check failed' }
-          $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-          if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
+          $runExit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'current-installed-app' -TimeoutSeconds 90
+          if ($runExit -ne 0) { throw "Installed AuroraFox.exe exited with $runExit" }
           .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
           if (-not $uninstaller) { throw 'Uninstaller missing' }
-          $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
-          if ($un.ExitCode -ne 0) { throw "Uninstaller exited with $($un.ExitCode)" }
+          $uninstallLog = Join-Path $logDir 'current-uninstall.log'
+          $uninstallExit = Invoke-AuroraBoundedProcess -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=`"$uninstallLog`"") -Phase 'current-uninstall' -TimeoutSeconds 180
+          if ($uninstallExit -ne 0) { throw "Uninstaller exited with $uninstallExit" }
 
       - name: Create portable ZIP, setup and hashes
         shell: pwsh
@@ -262,6 +288,15 @@ jobs:
           Get-FileHash $portable -Algorithm SHA256 | ForEach-Object { "PORTABLE  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
           Get-ChildItem dist | Select-Object Name,Length
+
+      - name: Preserve installer diagnostics on every outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-installer-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/installer-smoke/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4

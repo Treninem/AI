@@ -19,6 +19,8 @@ import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+from extended_formats import analyze_epub, analyze_rar
+
 from local_ocr import health as local_ocr_health
 from local_ocr import recognize_image as local_ocr_image
 
@@ -428,6 +430,8 @@ def _archive_listing(path: Path) -> tuple[str, dict[str, Any], list[str]]:
 def _analyze(path: Path, question: str, visual: bool, max_chars: int = MAX_TEXT_CHARS) -> dict[str, Any]:
     ext = path.suffix.lower(); warnings: list[str] = []; metadata: dict[str, Any] = {"name": path.name, "extension": ext, "size": path.stat().st_size}; text = ""; kind = "binary"
     if ext in TEXT_EXT: kind = "text/code"; text, encoding = _read_text(path); metadata["encoding"] = encoding
+    elif ext == ".epub": kind = "ebook"; text, extra, warnings = analyze_epub(path, max_chars=max_chars); metadata.update(extra)
+    elif ext == ".rar": kind = "archive"; text, extra, warnings = analyze_rar(path, max_chars=max_chars); metadata.update(extra)
     elif ext == ".pdf": kind = "pdf"; text, extra, warnings = _pdf_extract(path, visual, question, max_chars=max_chars); metadata.update(extra)
     elif ext == ".docx": kind = "document"; text, extra = _text_from_docx(path); metadata.update(extra)
     elif ext == ".xlsx": kind = "spreadsheet"; text, extra = _text_from_xlsx(path); metadata.update(extra)
@@ -438,7 +442,6 @@ def _analyze(path: Path, question: str, visual: bool, max_chars: int = MAX_TEXT_
     elif ext in AUDIO_EXT: kind = "audio"; text, extra, warnings = _voice_transcribe(path); metadata.update(extra)
     elif ext in VIDEO_EXT: kind = "video"; text, extra, warnings = _video_analyze(path, question, visual); metadata.update(extra)
     elif ext in ARCHIVE_EXT or zipfile.is_zipfile(path) or tarfile.is_tarfile(path): kind = "archive"; text, extra, warnings = _archive_listing(path); metadata.update(extra)
-    elif ext == ".rar": kind = "archive"; warnings.append("RAR принят, но автоматическая распаковка отключена: в локальный runtime не добавлен отдельный RAR backend."); text = "RAR-архив. Можно сохранить и обработать после подключения совместимого локального распаковщика."
     else:
         try:
             text, encoding = _read_text(path)

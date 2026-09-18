@@ -1631,3 +1631,176 @@ BLOCKERS: red Coder/Knowledge real gates до нового успешного з
 NEXT: получить настоящий новый PR92/head и результаты его Windows Core/Knowledge; читать новые refactor excerpts/stage logs, сохранить дорогую Windows-сборку.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 61. BEFORE ACTION — resumed sole ownership, green Core/Knowledge and bounded Windows bridge
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE — sole executor resumes section60 handoff. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2/candidate96beca1eef36e022da33b51c40b3ffe1f5100352, PR92/draft; instructions/current canonical continuation reconciled. Accumulated intended MINOR/V1.4 remains version-last.
+CURRENT FACTS:23/24 candidate workflowsSUCCESS; Windows Package35325857421/job105554749059 CANCELLED. Coder/realWindows35325857344/job105538675377 succeeds: actual checkout guard96beca1 and AURORA_REPORT_SOURCE_SHA96beca1, all owned regression/real-code/benchmark gates pass. Knowledge1GiB35325857519/job105543423201 succeeds with two cases/error_count0, no timeout increase; this is synthetic capacity, not genuine pack. Previous5400s failure is a runtime variability/performance risk, not asserted algorithmically solved by stage prints.
+WINDOWS EVIDENCE: build/export/runtime/exe/installer steps pass, full installer compile2055.078s. Last visible bridge event is V1.2 fixture compile27.079s at10:25:37Z, then no per-operation output until cancelled12:42:18Z. Old03ae run35310302289 is alsoCANCELLED at bridge. Neither proves a failed assertion or exact blocked installer/app phase. Source uses unbounded Start-Process -Wait for fixture install/repair/app smoke/uninstall, losing phase diagnostics and potentially waiting for descendants after main exit. Do not call descendants the proven cause without a rerun.
+OWNED NEXT BATCH: tests/windows_v12_bridge_smoke.ps1, tests/windows_v13_bridge_smoke.ps1, shared bounded process helper + real PowerShell helper smoke, Windows workflow helper parse/fast regression wiring and failure diagnostics artifact, relevant backwards-compatibility tests and canonical journal. Log explicit phase/installer logs; bound each child process, cleanup only its process tree, preserve every marker/trust/user-data/exitcode assertion. Let V1.3 reuse the already-built current installer when requested, retaining standalone compile fallback; this avoids confirmed redundant compression, not claimed the current hang cause.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: new Core/Knowledge real gates green; actual source guard/report identity executed remotely.
+REMAINING: Windows installed/package acceptance,10 release checkpoints and remaining Knowledge report identity/performance boundaries.
+BLOCKERS: Windows bridge phase unknown/unbounded, installed voice not reached; genuine corpus/device/human/host/signing absent.
+NEXT: add bounded phase-level diagnostics and regression, reuse current installer for V1.3, publish coherent batch and inspect its real Windows result. No version/main merge/release.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+OWNER STEERING/TAKEOVER: owner reiterates to audit/take all chats and authorizes deletion of unnecessary branches only after takeover. Full123-branch ancestry and branch-relative text-path/blob audit completed:51 ancestors/72 non-ancestors;54 unique older text paths absent at candidate. Absence is not acceptance evidence: deprecated parallel journals/fake release overlay/old workflows are excluded, and remaining useful source must be reconciled. Genuine missing feature found in file-intelligence-epub-rar-v1/a187628: current file_service lists EPUB as generic ZIP and RAR only warns, unlike old chapter/RAR analyzers. Extend ownership to file_intelligence/extended_formats.py, current file_service/requirements, meaningful EPUB/RAR regressions and relevant CI, preserving current OCR/limits/local autonomy. Audit catches unsafe old lstrip path normalization and unbounded EPUB member reads; do not import those defects or the stale launcher wrapper. Production-path takeover continues under sole claim; old spec/probes remain retained until reconciled.
+BRANCH CLEANUP: no authenticated delete-ref operation exposed in current GitHub connector; shell push previously unauthenticated. Prepare only exact-SHA ancestor alias cleanup with preserved refs/evidence and available authenticated means; never say a branch was deleted until remote readback proves it. Owner authorization persists, no repeat permission required.
+
+### BEFORE: разрешённое удаление доказанных временных веток
+
+Владелец явно разрешил удалять ненужные ветки ПОСЛЕ переноса работ. CLAIM расширен на `.github/workflows/retire-verified-branches.yml` и `build/retire_verified_branches.py`: удалить только фиксированный список временных aliases ниже, чьи SHA лично проверены как ancestors кандидата96beca. Main, PR92, canonical lanes и72 ветки с непроверенным delta не удалять. Прямой GitHub DELETE-ref инструмент отсутствует, shell push не имеет авторизации; выполняется обычная авторизованная Actions-операция с job-scoped contents:write, без выдачи/печати токенов. Перед каждой операцией заново проверить protected/open-PR/head-SHA/ancestry; удаление только через compare-and-swap lease. До readback не писать «удалено».
+
+- `chat-2026-09-17-work-computer-autonomy-please-stop` → `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58`; ancestor, ожидает безопасного удаления.
+- `tmp-ignore` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-main-for-voice-sync` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-main-for-voice-sync-2` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-main-for-voice-sync-final` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-never-use` → `c41a9996692d4588592ecf5735e2c72a10ceb9f2`; ancestor, ожидает безопасного удаления.
+
+### AFTER: проверенная партия и полный реестр takeover
+
+Локально36 passed (0.67s): `tests/test_extended_formats.py`, `test_file_intelligence.py`, `test_project_index.py`, `test_update_backward_compat.py`, `test_windows_voice_package.py`. Реальные EPUB ZIP/OPF/spine/nav и RAR3 CRC fixtures проверены, включая dispatch file_service, traversal rejection, bounds и запрет внешних процессов для RAR. Сжатый RAR перечисляется с явным предупреждением: полноценная распаковка сжатых entries НЕ заявлена. Старый launcher-wrapper не возвращён; новый модуль входит в Windows package file list. RAR parser — pure-Python rarfile4.2; собственный Core не получает внешнего inference dependency. YAML всех32 workflows и Python syntax проверены; diff whitespace clean. Реальный локальный bare Git доказал, что stale deletion lease сохраняет advanced ref, а точный lease удаляет только выбранный ref.
+
+Windows bounded process helper имеет отдельную быструю реальную PowerShell regression в CI, phase markers и installer logs; timeout каждой фазы прекращает только её parent/owned descendants. Cleanup parent/dispose защищён вложенными finally. V1.3 reuse уже проверенного installer исключает вторую долгую компрессию, НЕ объявляется причиной старого зависания. Локального PowerShell нет: regression/package/voice подтверждение ждёт нового CI. Старые мостовые marker/user-data/hash/voice assertions сохранены.
+
+На96beca лично прочитаны CI:23/24 success, Windows run35325857421/job105554749059 cancelled после180min; last output — V1.2 fixture compiler10:25:37Z, точная зависшая установка/app/uninstall неизвестна. Core Windows35325857344/job105538675377:8/8 Coder и21 quality scenarios green. Knowledge35325857519/job105543423201:2 cases,0 errors, ~88min synthetic1GiB; это НЕ настоящий licensed production pack. Предыдущая ошибка CodeSpecialist закрыта на96beca; final same-head verification для новой партии остаётся.
+
+Ниже123 remote branches относительно96beca:51 ANCESTOR уже в истории,72 DELTA требуют reconcile. Для DELTA числа I/D/M — identical/different/missing text paths относительно текущего кандидата, а не обещание функциональной эквивалентности. Старые journals, fake progress overlay, обязательные Ollama/external-model dependencies не возвращать. Все незавершённые задачи беру на себя; следующие отсутствующие полезные части проверять по точному SHA, не ждать старые чаты. Canonical source: GitHub/PR92; локальный qa JSON не нужен следующему чату.
+
+| Ветка | SHA | Проверка | I/D/M |
+|---|---|---|---|
+| `aurora-agent-sync-v1` | `f6f525a43bf015240db09d57ba6ab4805feb68ba` | DELTA | 2/2/0 |
+| `aurora-api-gateway-v1` | `4cc9522b7685f8204188c17ce2a7fb6b3f773475` | DELTA | 4/14/1 |
+| `aurora-api-gateway-v2` | `6ae0e75a43db4396db3e9fcc45c08ab13d633ed3` | DELTA | 4/14/0 |
+| `aurora-pc-release-v1` | `78f7ffc6c9766933955f71296df381886f091c96` | DELTA | 0/3/0 |
+| `aurora-ui-assets-v2` | `ed3b32962445c7957deca2f0732dbbdf794f4696` | DELTA | 0/3/1 |
+| `autonomy-foundation-2026-08` | `b16d8cc0fb892c371fd798bd408acf883d2710a1` | DELTA | 0/6/12 |
+| `bugfix-v1.1.1.1` | `0dd0fe12c198040db0d822330daff4f08504319e` | DELTA | 4/15/0 |
+| `build-v1.0.0.0-android` | `5710fd5eb895a5737bcc4d68b9a9824641f94ce2` | DELTA | 0/0/0 |
+| `build-v1.0.0.0-windows-installer` | `23d76b1504dc577353688da2ab5112997f87ff42` | DELTA | 0/0/1 |
+| `chat-2026-09-16-integration-gate` | `c08aa335bce30978199ed3ea2727e64fa511095e` | DELTA | 0/2/0 |
+| `chat-2026-09-16-large-knowledge-perf` | `4f3162bc5d08ccb2e29265e9d1400d78f8b5ee81` | DELTA | 0/2/3 |
+| `chat-2026-09-16-local-ocr` | `38f03adb2bed9cdf5e0cd0c2caa485072ee7152b` | DELTA | 10/7/2 |
+| `chat-2026-09-16-local-ocr-replay` | `9eaf9d08e49c7ff5928cdcac6d90eacc905cc5ca` | DELTA | 0/5/0 |
+| `chat-2026-09-17-knowledge-memory-ocr` | `07cf2f54cf0fdf4ab6ff33d019986f14942db1b1` | ANCESTOR | — |
+| `chat-2026-09-17-platform-integration` | `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9` | ANCESTOR | — |
+| `chat-2026-09-17-platform-integration-v2` | `42fc32b664005e007175c8542f49030bc7bb4a0b` | ANCESTOR | — |
+| `chat-2026-09-17-server-api-db` | `5ef7c9002950a4b59c962888bd869cbc677dd9ef` | DELTA | 0/0/0 |
+| `chat-2026-09-17-ui-visual` | `2006566710a5662bba9074c5cbb47c48988ae603` | ANCESTOR | — |
+| `chat-2026-09-17-unified-execution` | `9ca5fafd1f65038d855d00e1e1e0db876938d17f` | ANCESTOR | — |
+| `chat-2026-09-17-unified-finalization` | `96beca1eef36e022da33b51c40b3ffe1f5100352` | ANCESTOR | — |
+| `chat-2026-09-17-voice-audio` | `7d6d074ec597b21ff0a0a906e3a04871cae2158a` | DELTA | 0/0/1 |
+| `chat-2026-09-17-voice-audio-r2` | `c18ac6d29950fc277345734850aed1422bb86ae0` | ANCESTOR | — |
+| `chat-2026-09-17-voice-main-sync` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | — |
+| `chat-2026-09-17-voice-main-sync-2` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | — |
+| `chat-2026-09-17-voice-main-sync-3` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-123` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-actual` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-ci` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-draft` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-final` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-last` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-please-stop` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-pr` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-pr0` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-review` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-stop` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-x` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-z` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-hardening` | `f0918a64c78e38262634991116a0051369590aad` | ANCESTOR | — |
+| `chat-autonomy-state-durability-20260916` | `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa` | ANCESTOR | — |
+| `chat-knowledge-races-20260916` | `bfd9c23dbca44c31508f44e531407aa47560423d` | DELTA | 0/2/2 |
+| `chat-knowledge-races-v2-20260916` | `1bc4003170e45394d181d6010453cb8560312784` | DELTA | 0/4/12 |
+| `chat-large-knowledge-complete-scaling-gates` | `338e2f54070ccdb2cd463a2843556eeb93908cea` | DELTA | 0/2/0 |
+| `chat-large-knowledge-complete-scaling-gates-v2` | `bdf79c211fab40a0431f50a92ee9f4df549a30fb` | DELTA | 0/2/0 |
+| `chat-large-knowledge-concurrency-isolation` | `f62c18f4138f0710456376dffce78cf62b2fbc92` | DELTA | 1/1/0 |
+| `chat-large-knowledge-concurrency-isolation-v2` | `afecd94e02482261fe13d513e7002541ea0245c7` | DELTA | 1/1/0 |
+| `chat-large-knowledge-concurrency-isolation-v3` | `bc403203ec575a0f1188329ddb09bfd0f0587551` | DELTA | 1/1/0 |
+| `chat-large-knowledge-data-safety` | `02b931a85044a7df88662614d45f22db7c4330a4` | DELTA | 0/4/1 |
+| `chat-large-knowledge-data-safety-v2` | `d2294bacaaeff27f661ea75f73dd218687f6f4ba` | DELTA | 0/3/1 |
+| `chat-large-knowledge-hard-gates` | `098fa166d6ff0e1bd34ab5b6c6fe8778c8e94cf6` | DELTA | 0/2/0 |
+| `chat-large-knowledge-lost-registry-validation` | `899d6bb091db906354d86f3793a5e7194838ba74` | DELTA | 0/0/2 |
+| `chat-large-knowledge-registry-recovery` | `2f8d4b4b7c22d1f01dadc0829ea8d1c9441ac1c7` | DELTA | 0/2/2 |
+| `chat-large-knowledge-source-removal-gate` | `5c22e0ae195444e291792624a5533375f9ece070` | DELTA | 0/2/0 |
+| `chat-large-knowledge-stress-evidence` | `8a2c95d01d0c5eaf1730d34dfa2c69be25225c57` | DELTA | 0/1/0 |
+| `chat-voice-android-female-20260916` | `7e81c373e4190567b7b5370de257aad5b8b2972f` | ANCESTOR | — |
+| `chat-work-computer-autonomy-20260917` | `0edb9262e0f6efeea3801f61d2cf667a97abd5cc` | DELTA | 7/1/0 |
+| `chat-work-computer-autonomy-ci-trigger` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-work-computer-reliability-20260916` | `a716b14e63a9c15453e1f2d214e26f33fb030dbc` | DELTA | 6/1/0 |
+| `chat/core-benchmarks-20260916` | `1fcaa6c5f3210cd20411ee9449610d6b1eec4c93` | DELTA | 6/13/0 |
+| `chat/core-benchmarks-20260916-sync-test` | `c41a9996692d4588592ecf5735e2c72a10ceb9f2` | ANCESTOR | — |
+| `chat/core-benchmarks-clean-stage` | `9b051ac01f9bdbfc1055a6f2c16a321329264e0f` | DELTA | 6/13/0 |
+| `chat/core-benchmarks-clean-stage2` | `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` | ANCESTOR | — |
+| `chat/core-benchmarks-clean-stage3` | `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` | ANCESTOR | — |
+| `chat/core-coder-research-20260917` | `51bb1860c17bc86c104d4b164367ca2d0f541649` | ANCESTOR | — |
+| `chat/knowledge-record-dedup-probe-20260916` | `e0d2987947ed4d2261996527340fb7f42da18b82` | DELTA | 0/0/1 |
+| `chat/large-knowledge-alias-safety-20260916` | `34ce75a02ea9f37cb3ccabc03fb0d014a502c29c` | DELTA | 0/4/0 |
+| `chat/large-knowledge-consolidated-20260916` | `575575b46cf12a9234e5de04441ccb0481f75ded` | DELTA | 0/3/3 |
+| `chat/large-knowledge-final-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-hard-gates-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-perf-continue-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-perf-harness-20260916` | `a4c64e0f9f7bbc9394dc947f6d3aeb96596dcdf4` | DELTA | 0/2/2 |
+| `chat/large-knowledge-record-dedup-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-windows-bootstrap-20260916` | `a395070ac64fe154474159c2547b4ecb2a5b8e26` | DELTA | 0/2/0 |
+| `chat/large-knowledge-windows-bootstrap-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chatgpt/aurorafox-kb-v7-server` | `aedb76d1ad2cbdaa5ac66700391e3f851bb48351` | DELTA | 2/0/0 |
+| `coord/ci-scheduling-20260916` | `8507b8b8db10bb59276f6e8b6a50c65a6043c261` | DELTA | 0/5/0 |
+| `coord/updater-contract-drift-20260916` | `22d95766482a095cee429f6f12cfdb0147cc0f42` | DELTA | 1/0/0 |
+| `coord/work-ui-integration-20260916` | `218a5a83d1e7d0a90ad612415e6aae02fad28045` | DELTA | 13/4/0 |
+| `desktop-ui-smoke-v1` | `364f40c678ca4f733c940597e1685680ab47ddb8` | DELTA | 0/2/0 |
+| `diag/android-apk-stage-split` | `b8fb2f936d9e86235751efca235b2d9fe01691e0` | DELTA | 0/3/0 |
+| `feat/premium-fox-adaptive-voice` | `961186474521a04c61b54ce3cce5ce1b3948412d` | ANCESTOR | — |
+| `file-intelligence-epub-rar-v1` | `a187628b65ac8b4d60dd7a8d3c750d52a72de26d` | DELTA | 0/2/2 |
+| `fix/android-apk-gate-timeout` | `cd3841372cfff7d97b42f701f77685233fcdbf6a` | DELTA | 5/16/0 |
+| `fix/reg-ru-ssh-availability` | `08026f02cadf67cc07e63a1933ce214dfc4d9659` | DELTA | 0/2/0 |
+| `fix/ui-polish-2026-09-16` | `5336e8388e745dbffa3e460e74296bde09c132ce` | DELTA | 15/8/0 |
+| `fix/ui-visual-2026-09-17` | `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9` | ANCESTOR | — |
+| `main` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `model-bootstrap-e2e/v1` | `f5a2ce0762ef008e18811880a8e6cf4e5edf4f01` | DELTA | 0/0/0 |
+| `model-bootstrap-e2e/v2` | `924e8a2f7bca3b090934ab104a7b5a3984f8acce` | DELTA | 0/0/0 |
+| `ocr-backup-437d` | `437d513523cb712f0cd2c08bab3a5908d8794625` | DELTA | 2/12/1 |
+| `ocr-backup-old` | `5bf5676499dba42a4369de9a1704c1530ad36d43` | DELTA | 0/5/0 |
+| `ocr-backup-pre-d2065b2` | `53e9f06712fe6318b1798954cdf69a5d4dc691e9` | DELTA | 4/11/1 |
+| `ocr-noop-temp` | `9eaf9d08e49c7ff5928cdcac6d90eacc905cc5ca` | DELTA | 0/5/0 |
+| `ocr-replay-temp` | `da44196223de58abb3126c045bf68bc0c9e68fd0` | ANCESTOR | — |
+| `ocr-work-fresh` | `5436eec13e34236cf7b6482bc934dfebd8223d73` | ANCESTOR | — |
+| `release-ci-validation` | `d9e717077dc9a667c0e616ce204b98c295b6c2c9` | DELTA | 8/23/1 |
+| `release-v1.1.0.0` | `f138ded4d7901973a0d0b717df4e41fc70563b7d` | DELTA | 0/3/0 |
+| `release/v1.4-integration` | `99b2c144dbeb675caafb527ad528f5db18a32b50` | ANCESTOR | — |
+| `semantic-memory-v1` | `158f021bfcdf3afb5622687e8ac84f9be6543ea9` | DELTA | 0/5/0 |
+| `sync-main-ui-owner-assets-2026-09-16` | `34872816166cd85b70ed6d005c59a6f495d2c475` | DELTA | 0/0/0 |
+| `tmp-ignore` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-main-for-voice-sync` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-main-for-voice-sync-2` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-main-for-voice-sync-final` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-never-use` | `c41a9996692d4588592ecf5735e2c72a10ceb9f2` | ANCESTOR | — |
+| `validation/v1.2.0.0-full` | `6bfbecd3cf2023d0932e1ca4733917c9ea8ef1c5` | DELTA | 0/0/0 |
+| `verify-v1.1.0.0-artifact` | `fd235d6deab6d98e8697f0fc25f730aea2ccb392` | DELTA | 0/0/0 |
+| `visual-assets-fix-v1` | `ef49029307bf7b201259fde5e65905495b5aec4e` | DELTA | 0/4/0 |
+| `visual-ui-assets-v1.1.2.2` | `13d83aed7b2d15ab5a6bfe2a6613928f30e0f56a` | DELTA | 0/0/0 |
+| `visual-ui-v1.1.2.2` | `8d11c0a477595fea658a37aed2552798bca46776` | DELTA | 0/1/5 |
+| `voice-android-female-supertonic-20260916` | `758961b2bd93be994e5299e8f2051d09688b2832` | ANCESTOR | — |
+| `voice-quality-android-female-supertonic-20260916` | `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` | ANCESTOR | — |
+| `voice-quality-native-prosody-20260916` | `cea8142818b9d612adc468dc522332ad8ceb3304` | DELTA | 3/1/0 |
+| `voice-quality-native-prosody-integration-20260916` | `345934b37e12f648a1c919515818bb5b1b949092` | DELTA | 0/4/0 |
+| `voice-quality-ssml-ab-20260916` | `7d9655421da6a74cd7089196ce6b8480b200713f` | DELTA | 0/2/3 |
+| `voice-quality-targeted-prosody-20260916` | `fae479d469706b2e3eff6356222eb4071fee72e2` | DELTA | 0/1/0 |
+| `windows-package-fix-v1` | `39e785fe020e4ba1597a2251d42131d511d0920b` | DELTA | 0/1/0 |
+| `windows-package-validation-v1` | `77e29540f955bfdae84115831a08f1fa7ce6e443` | DELTA | 0/0/0 |
+| `windows-stability-ui-v1` | `ae0d4ee0f2b6996c788a47131d88a9bebf036dc4` | DELTA | 1/5/0 |
+| `windows-ui-stabilization-v1` | `23c5a48bc110c96b0a582629f81fed8fe585cea7` | DELTA | 0/2/1 |
+| `work/coordination-2026-09-16` | `72b0368056fd43028c6f99d7034797a12767bb1d` | DELTA | 0/2/1 |
+| `x-temp-ocr` | `5436eec13e34236cf7b6482bc934dfebd8223d73` | ANCESTOR | — |
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: доказательства выше; branch deletion ещё ожидает actual CI/readback.
+REMAINING: Windows installed voice/bridges/package, production Knowledge>=1GiB, physical devices/human UI+voice, deployment/mail/rollback/signing и final same-head acceptance —10/20 checkpoints раздел58.
+BLOCKERS: старый Windows timeout не признан исправленным без нового phase/acceptance evidence; никаких ложных release approvals.
+NEXT: опубликовать эту атомарную партию поверх96beca в PR92, лично прочитать fast process-contract/file-intelligence/retire job, сверить branch deletion readback; затем довести конкретную Windows фазу по logs. Не bump/merge/tag/release до всех обязательных gates. Если чат остановится, секция60 продолжает действовать; этот AFTER уточняет актуальный код/реестр и заменяет устаревшие сведения об ожидающих96beca CI.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
