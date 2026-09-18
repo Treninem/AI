@@ -1868,3 +1868,29 @@ REMAINING: ownCore generate_tests и Windows installed package/voice gates; ос
 BLOCKERS: real-Core35350878591/job105618637412 ещё выполняется; Windows35349142330/job105612934621 ещё installer; genuine corpus/devices/deployed/signing acceptance не получены.
 NEXT: опубликовать эту единую партию поверхae4f55b в PR92; читать завершённый Core artifact с bounded Test Engineer response и Windows phase logs, исправлять точный сбой. Не считать чужой SHA/синтетику/offline smoke установленным product release. Секция60 остаётся инструкцией следующему обычному чату; версия пока1.3.0.0/code100005, PR92 draft.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 64. BEFORE: takeover/reconcile Windows firewall fix из свежего main
+
+Единый WORK-2026-09-17-FINAL-RELEASE ACTIVE. Fresh main4c6fe649af69c9be0eb080863f0e94b80cc3e082, PR92/head27c5a8a25c335e66e35eec69c76e8117a8368ae0; journal/AGENTS предыдущие правила сохраняются. Claims tests/windows_installed_voice_smoke.ps1, tests/test_windows_voice_package.py и журнал. Intended BUILD test-isolation correction, accumulated MINOR1.4.0.0 deferred. В main fc582b0 владелец/другой чат внёс loopback firewall fix; он не входит в candidate. Его IPv6 ::/1+8000::/1 всё ещё блокирует ::1, а полный старый файл теряет offline env/state/WAV assertions и startup logs кандидата. Перенести полезное external-address правило с корректным исключением IPv6 loopback, сохранить все сильные candidate checks.
+
+Проверочный merge выявил add/add conflict, abort выполнен без сохранения edits; main интегрируется после этой заявки с явным reconcile файла. Лично прочитан latest Windows35362712313/job105711893012 на27c5a8a:install/app и V1.2/V1.3 bridges success, TTS WinError10013;24/25 latest workflows success, Windows failure. Own Core35350878591/job105618637412 наae4f55b success, но это не same-head current release. Версия не меняется.
+
+CLAIM64 расширен BEFORE на voice/build_backend.ps1 и voice/python/tts_engine.py: лично прочитан exact pinned silero0.5.5 wheel. silero_tts ищет models.yml в package parents либо latest_silero_models.yml в CWD, при отсутствии делает torch.hub.download_url_to_file внешнего YAML. Install заранее грузит модель, но backend builder не гарантирует YAML в своём CWD. Firewall-only fix НЕ достаточное доказательство: packaged backend должен явно загружать уже скачанный local package через torch.package.PackageImporter, без online manifest lookup. Builder определяет exact downloaded source package по существующему model manifest/config, копирует его в backend/models/silero и задаёт package_path; missing package/manifest — build error, runtime download fallback для packaged path запрещён.
+
+### AFTER: main интегрирован, конфликт разрешён без потери кандидатных проверок
+
+Разрешён единственный add/add conflict tests/windows_installed_voice_smoke.ps1: сохранены user state/offline environment/restoration, stdout/stderr/working directory, TTS WAV/duration и STT assertions кандидата; из main перенесён external-only firewall. IPv4127/8 и IPv6::1 исключены, IPv6 remote range ::2-ffff:... вместо ошибочных ::/1+8000::/1. Main4c6fe64 включается отдельным parent при GitHub commit, main не переписывается.
+
+Builder теперь определяет уже скачанный Silero package по существующему модели manifest и voice config, требует local file, копирует его в backend/models/silero/aurorafox-silero.pt и фиксирует package_path. Runtime при package_path использует torch.package.PackageImporter.load_pickle и model.to(device); отсутствующий package — явный FileNotFoundError без fallback/download. Нормальный packaged path не вызывает silero_tts и network manifest. Legacy development path без package_path сохранён; installed silence/offline baseline обязан packaged config.
+
+Локально19 passed+7 address subtests0.05s: test_windows_voice_package и test_update_backward_compat. Новая fault-injection проверка выполняет реальный _load method из AST: local package path/caching/device transfer, online manifest forbidden, missing package refuses. Address coverage использует stdlib ipaddress и проверяет127/8,::1, external/private/linklocal destinations. Python compile и git diff whitespace OK. Локального Windows/PowerShell нет: настоящая firewall syntax и real TTS/STT ещё требуют CI. Нельзя считать17/19 local tests установленным голосом.
+
+Latest27c5a8a:24/25 workflows success; Windows35362712313/job105711893012 установка и оба bridges success, TTS WinError10013 failure. Readiness не повышена: Windows installed voice/files/computer checkpoint ещё не принят, production corpus/devices/human/deployment/signing и final same-head release gates остаются.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: свежий main reconciled, firewall IPv6 исключение исправлено, explicit local TTS package/runtime и regression tests выполнены.
+REMAINING: новая installed offline TTS+STT/package acceptance и10 release checkpoints раздел58.
+BLOCKERS: прежний Windows TTS WinError10013; actual patched Windows run пока не получен.
+NEXT: опубликовать эту атомарную партию в PR92 с parents27c5a8a+main4c6fe64, проверить Windows build/installed voice. ЖДАТЬ завершения нового Windows run перед повторной проверкой (сборка ранее требовала десятки минут); если он failed — сразу разобрать precise log. Следующий чат продолжает по разделу60; нельзя просто переносить main файл поверх сильного кандидата или считать scheduled run pass. Версия пока1.3.0.0/code100005, PR92 draft, release/bump не выполнены.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%

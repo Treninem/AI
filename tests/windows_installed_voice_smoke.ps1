@@ -29,7 +29,10 @@ try {
         $previous[$key] = [Environment]::GetEnvironmentVariable($key, 'Process')
         [Environment]::SetEnvironmentVariable($key, $settings[$key], 'Process')
     }
-    New-NetFirewallRule -DisplayName $rule -Direction Outbound -Program $backend -Action Block -Profile Any | Out-Null
+    # Block external destinations while preserving local service communication.
+    $externalIpv4 = @('0.0.0.0-126.255.255.255','128.0.0.0-255.255.255.255')
+    $externalIpv6 = @('::2-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff')
+    New-NetFirewallRule -DisplayName $rule -Direction Outbound -Program $backend -Action Block -Profile Any -RemoteAddress ($externalIpv4 + $externalIpv6) | Out-Null
     $ruleCreated = $true
     $backendRoot = Split-Path -Parent $backend
     $process = Start-Process -FilePath $backend -WorkingDirectory $backendRoot -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
@@ -65,7 +68,7 @@ try {
     $started.Stop()
     @{
         passed=$true; installed=$true; outbound_firewall_block=$true
-        offline_model_flags=$true; tts=$tts; stt=$stt; wall_ms=$started.ElapsedMilliseconds
+        loopback_allowed=$true; offline_model_flags=$true; tts=$tts; stt=$stt; wall_ms=$started.ElapsedMilliseconds
         human_listening_verified=$false
     } | ConvertTo-Json -Depth 12 | Set-Content (Join-Path $reportRoot 'report.json') -Encoding UTF8
     Write-Host 'AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK'
