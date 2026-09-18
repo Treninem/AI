@@ -288,6 +288,31 @@ func _exercise_computer_contract(main: Control) -> bool:
 			return false
 	return true
 
+func _exercise_work_header(main: Control) -> bool:
+	var overlay := main.get_node_or_null("WorkOverlay")
+	if overlay == null:
+		_fail("Work overlay is missing", 90)
+		return false
+	overlay.show_work()
+	await process_frame
+	await process_frame
+	var popup := main.find_child("AuroraWorkPopup", true, false) as PopupPanel
+	if popup == null or not popup.visible:
+		_fail("Work popup did not open", 91)
+		return false
+	for action_name in ["WorkNewProjectButton", "WorkCloseButton"]:
+		var action := popup.find_child(action_name, true, false) as Button
+		if action == null or not action.is_visible_in_tree() or action.text.is_empty():
+			_fail("Work header action is missing: " + action_name, 92)
+			return false
+		var font := action.get_theme_font("font")
+		var text_width := font.get_string_size(action.text, HORIZONTAL_ALIGNMENT_LEFT, -1, action.get_theme_font_size("font_size")).x
+		if action.clip_text or action.size.x < text_width + 24.0:
+			_fail("Work header action label collapsed: " + action_name, 93)
+			return false
+	popup.hide()
+	return true
+
 func _exercise_chat(main: Control) -> bool:
 	var store = main.get("chats")
 	if not store is ChatStore:
@@ -327,6 +352,8 @@ func _run_desktop(packed: PackedScene) -> bool:
 	if not _assert_core_layout(main, false):
 		return false
 	if not await _exercise_computer_contract(main):
+		return false
+	if not await _exercise_work_header(main):
 		return false
 
 	var new_chat := main.find_child("NewChatButton", true, false) as Button

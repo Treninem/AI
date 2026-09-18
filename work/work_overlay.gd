@@ -98,10 +98,12 @@ func _build_ui() -> void:
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(heading)
 	var new_project := Button.new()
+	new_project.name = "WorkNewProjectButton"
 	new_project.text = "Новый проект"
 	new_project.pressed.connect(_create_project)
 	header.add_child(new_project)
 	var close := Button.new()
+	close.name = "WorkCloseButton"
 	close.text = "Закрыть"
 	close.pressed.connect(func(): popup.hide())
 	header.add_child(close)

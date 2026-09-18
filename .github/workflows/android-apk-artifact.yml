@@ -45,7 +45,8 @@ permissions:
 
 concurrency:
   group: aurorafox-android-apk-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve real runtime evidence; queue the newest candidate until it finishes.
+  cancel-in-progress: false
 
 jobs:
   android-apk:

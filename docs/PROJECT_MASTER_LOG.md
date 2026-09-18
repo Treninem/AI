@@ -1431,3 +1431,46 @@ BLOCKERS: runtime/package acceptance pending; genuine production corpus and exte
 NEXT: inspect workflows on the published journal head (product parent above); classify only new exact failures. Preserve current Windows evidence and distinguish its older SHA from new same-SHA acceptance. Keep PR draft.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 54. Sole engineer visual evidence ownership extension
+
+### BEFORE ACTION — visual evidence ownership extension, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; publication head `e6d2fd2f12d985a31868473bb1e5abc18123d7f2` verified through PR #92.
+- Actual UI artifact `10530997398` / run `35304140134` downloaded and ZIP SHA-256 verified: `d0bb276217e10fbb5ed7a08b92030f8d81f08a94a47c1b4cbc72fbbb767f7b95`.
+- Viewed desktop chat, 480px portrait chat/keyboard/account, 720px Knowledge and compact Work/Computer frames. Work compact header renders New project and Close as empty pills; their text exists but generic theme sets clip_text=true, so their minimum width collapses. This is a reproduced visual defect despite green structural CI.
+- Owned next independent batch: work/work_overlay.gd, scripts/desktop_visual_theme.gd, tests/ui_work_computer_visual_capture.gd and this journal. Preserve runtime/lifecycle/master-stop and owner artwork. Add identifiable header actions, preserve their measured label widths and reject collapsed actions in render gate. Portrait capture is a desktop preview/simulated keyboard, not physical Android proof.
+- Local work only while exact-head Android/Core CI runs; publish the next atomic batch after consuming current heavy results to avoid unnecessary cancellation.
+
+### AFTER ACTION — Work action geometry and autonomy evidence, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor.
+OWNER REQUIREMENT: owner reaffirms that Core must operate independently without third-party means. Normal Core uses the bundled runtime/weights/local memory and knowledge; no required cloud inference, Ollama, external AI API or Internet. Existing optional compatibility must not become normal fallback.
+ACTION: name the two Work header actions and preserve measured text width using the existing safe flow-button styling. Add geometry assertions to the render gate and extend owned `tests/desktop_ui_smoke.gd` with executable header checks.
+PROOF: compact 960x640 production-scene probe before: New project 24px / label116px and Close24px / label69px, clip=true. After:146px and99px, clip=false. Permanent headless UI smoke rejects original theme with exit93 and `Work header action label collapsed: WorkNewProjectButton`; restored fixed theme passes `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`. Owner-art smoke passes. Shutdown leak warnings remain (UI7 objects/2resources); not claimed resolved.
+AUTONOMY: `tests/test_standalone_core_contract.py` 12 passed (0.05s); real Godot `OFFLINE_AUTONOMY_SMOKE_OK` (exit0, existing7objects/3resources shutdown warnings). Relevant safety/evolution/privacy22 and branding4 Python tests passed. These validate routing/contracts, not full inference or actual device acceptance.
+VISUAL LIMIT: local Xvfb cannot establish a usable display in this execution environment; no updated local screenshot is claimed. Source geometry and prior downloaded artifact are actual evidence; new CI render remains required. Portable QA tools and the temporary xkbcomp symlink were cleaned up from system paths; no build dependency added.
+CI CHECKPOINT: remote e6d2fd2 has18/24 successful workflows; Android Plugin compiled both AARs and executed `:plugin:testDebugUnitTest` successfully. Windows real SpecialistTeam/CodeSpecialist step is successful, full benchmark pending. Android native probe, normal-path E2E/APK, synthetic Knowledge1GiB and queued Windows package are still pending. Old Windows c5 run35304140155 is preserved, but cannot establish same-head acceptance.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: remote Android prompt/import repairs published and plugin compiled; actual collapsed Work actions repaired and proven by failing-before/passing-after regression; self-primary routing rechecked.
+REMAINING: consume exact-head runtime/package results, publish reviewed Work UI batch, then new exact-head render/package/runtime evidence and section44 release checkpoints.
+BLOCKERS: heavy runtime/package CI pending; genuine licensed1GiB corpus and physical-device/host/listening/signing acceptance unproven.
+NEXT: preserve current heavy CI until reports are available; classify actual failures before next atomic PR92 update. Keep draft/no version bump/no main merge/no release.
+
+### BEFORE ACTION — preserve all expensive in-flight evidence, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; ownership extends to concurrency scheduling in Core Benchmarks, Core Android Benchmark/E2E, Android APK and Knowledge1GiB workflows. The reviewed UI commit is local `df0344a`; not yet a remote publication.
+REASON: these five workflows still cancel current real evidence on each newer PR commit. Preserve their running tests using cancel-in-progress=false, as already done for Windows Package; let the newest candidate queue. GitHub may replace an older pending candidate, which is scheduling and not a failed product assertion. No gate, expected output, offline guard, checkout SHA or timeout changes. This allows publishing the reviewed UI batch without discarding e6 runtime reports; it supersedes the previous plan to hold every change until all long jobs finish.
+
+AFTER ACTION: five workflow YAMLs parse, concurrency=false verified;29 relevant Core/Android/Knowledge contract tests pass (0.08s), diff check passes. Android e6 APK export/import now succeeded and reached signing/install; native probe and normal-path inference are running. Publish UI+headless/render regressions+preserved CI scheduling+this journal atomically to existing draft PR92. Remote commit SHA must be read back; local df0344a is not a remote link. Same-head final evidence remains required and readiness40% unchanged.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: Work UI fix executable regression proven; heavy evidence scheduling preserved without changing product acceptance.
+REMAINING: real Android inference reports and exported APK launch, uninterrupted Windows packaging/benchmarks, updated UI frames and final release checkpoints.
+BLOCKERS: genuine useful licensed1GiB corpus, physical-device/host/listening/signing evidence and incomplete package/runtime gates.
+NEXT: read back remote PR92 publication, inspect preserved e6 reports; inspect newest candidate CI as it finishes. No version bump/main merge/release.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%

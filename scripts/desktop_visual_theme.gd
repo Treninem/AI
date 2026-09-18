@@ -177,6 +177,10 @@ func _apply_safe_button_styles(node: Node) -> void:
 			button.add_theme_color_override("font_hover_color", Color.WHITE)
 			if button.get_parent() is HFlowContainer:
 				_preserve_flow_button_label(button)
+			elif button.name in ["WorkNewProjectButton", "WorkCloseButton"]:
+				# Header actions shrink to their text width; clipping erases that
+				# minimum and turns these actions into empty pills.
+				_preserve_flow_button_label(button)
 			elif button.name == "KnowledgeCloseButton":
 				button.clip_text = false
 			else:

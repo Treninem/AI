@@ -140,6 +140,14 @@ func _capture_work(main: Control, size: Vector2i, suffix: String) -> bool:
 	var work_popup := main.find_child("AuroraWorkPopup", true, false) as PopupPanel
 	if not await _wait_visible(work_popup, "AuroraWorkPopup"):
 		return false
+	for action_name in ["WorkNewProjectButton", "WorkCloseButton"]:
+		var action := work_popup.find_child(action_name, true, false) as Button
+		if action == null or not action.is_visible_in_tree() or action.text.is_empty():
+			return _fail("Work header action missing: " + action_name, 18)
+		var font := action.get_theme_font("font")
+		var text_width := font.get_string_size(action.text, HORIZONTAL_ALIGNMENT_LEFT, -1, action.get_theme_font_size("font_size")).x
+		if action.clip_text or action.size.x < text_width + 24.0:
+			return _fail("Work header action label collapsed: " + action_name, 19)
 	if not await _capture("desktop_%s_work_%dx%d" % [suffix, size.x, size.y], "work", size, work_popup):
 		return false
 	var close := _button_by_text(work_popup, "Закрыть")

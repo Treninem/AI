@@ -49,7 +49,8 @@ on:
 
 concurrency:
   group: aurorafox-core-benchmarks-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve real runtime evidence; queue the newest candidate until it finishes.
+  cancel-in-progress: false
 
 permissions:
   contents: read
