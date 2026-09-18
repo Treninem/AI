@@ -91,4 +91,6 @@ if (-not (Test-Path -LiteralPath $ReportPath)) { throw "CodeSpecialist smoke rep
 $report = Get-Content -LiteralPath $ReportPath -Raw | ConvertFrom-Json
 if ($report.passed -ne $true) { throw 'CodeSpecialist offline smoke reported failure.' }
 if ($exitCode -ne 0) { throw "CodeSpecialist offline smoke process failed with exit code $exitCode" }
+& python (Join-Path $PSScriptRoot 'report_identity.py') --repo $root --report $ReportPath
+if ($LASTEXITCODE -ne 0) { throw 'CodeSpecialist source checkout identity failed.' }
 Write-Host "AURORAFOX_CODE_SPECIALIST_OFFLINE_GATE_OK report=$ReportPath"

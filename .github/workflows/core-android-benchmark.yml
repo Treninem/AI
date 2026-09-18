@@ -6,6 +6,8 @@ on:
     paths:
       - 'benchmarks/core/android_probe/**'
       - 'benchmarks/core/run_android_probe.sh'
+      - 'benchmarks/core/report_identity.py'
+      - 'tests/test_core_report_identity.py'
       - 'tests/test_core_android_benchmark_contract.py'
       - 'android_plugin/plugin/**'
       - 'android_plugin/setup_native.ps1'
@@ -16,6 +18,8 @@ on:
     paths:
       - 'benchmarks/core/android_probe/**'
       - 'benchmarks/core/run_android_probe.sh'
+      - 'benchmarks/core/report_identity.py'
+      - 'tests/test_core_report_identity.py'
       - 'tests/test_core_android_benchmark_contract.py'
       - 'android_plugin/plugin/**'
       - 'android_plugin/setup_native.ps1'
@@ -24,6 +28,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  AURORAFOX_BENCHMARK_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
   group: aurorafox-core-android-${{ github.workflow }}-${{ github.ref }}
@@ -48,7 +55,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m pip install --disable-pip-version-check pytest
-      - run: python -m pytest -q tests/test_core_android_benchmark_contract.py
+      - run: python -m pytest -q tests/test_core_android_benchmark_contract.py tests/test_core_report_identity.py
 
   real-core-android-emulator:
     needs: contract
@@ -189,7 +196,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: aurorafox-core-android-benchmark-${{ github.sha }}
+          name: aurorafox-core-android-benchmark-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             artifacts/core-benchmark-android.json
             artifacts/core-benchmark-android-logcat.txt

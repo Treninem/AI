@@ -93,10 +93,20 @@ class AndroidE2ERunnerTests(unittest.TestCase):
         result, saved, calls = self.run_runner([{'status': 'running'}, completed_report()])
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(saved['status'], 'completed')
+        actual_sha = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
+        self.assertEqual(saved['git_sha'], actual_sha)
         self.assertEqual(sum(call[:2] == ['exec-out', 'cat'] for call in calls), 2)
         self.assertTrue(any(call[:3] == ['install', '--no-incremental', '-r'] for call in calls))
         self.assertIn(['root'], calls)
         self.assertFalse(any('run-as' in call for call in calls))
+
+    def test_rejects_wrong_expected_source_after_collecting_valid_runtime_report(self):
+        result, saved, _ = self.run_runner(
+            [completed_report()], AURORAFOX_BENCHMARK_EXPECTED_SHA='f' * 40,
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('Benchmark source mismatch', result.stderr)
+        self.assertNotIn('git_sha', saved)
 
     def test_missing_required_scenario_with_extra_row_is_rejected(self):
         report = completed_report()

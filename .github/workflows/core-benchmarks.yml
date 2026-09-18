@@ -8,6 +8,7 @@ on:
     paths:
       - 'benchmarks/core/**'
       - 'tests/test_core_benchmark_regression_gate.py'
+      - 'tests/test_core_report_identity.py'
       - 'tests/test_core_specialist_team_runtime_contract.py'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -29,6 +30,7 @@ on:
     paths:
       - 'benchmarks/core/**'
       - 'tests/test_core_benchmark_regression_gate.py'
+      - 'tests/test_core_report_identity.py'
       - 'tests/test_core_specialist_team_runtime_contract.py'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -46,6 +48,9 @@ on:
       - 'build/prepare_bundled_core_model.ps1'
       - 'core_runtime/install_core.ps1'
       - '.github/workflows/core-benchmarks.yml'
+
+env:
+  AURORAFOX_BENCHMARK_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
   group: aurorafox-core-benchmarks-${{ github.workflow }}-${{ github.ref }}
@@ -85,6 +90,7 @@ jobs:
           python -m pytest -q
           tests/test_core_benchmark_regression_gate.py
           tests/test_core_specialist_team_runtime_contract.py
+          tests/test_core_report_identity.py
 
   real-core-windows:
     needs: gate-contract
@@ -259,7 +265,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: aurorafox-core-benchmark-${{ github.sha }}
+          name: aurorafox-core-benchmark-${{ github.event.pull_request.head.sha || github.sha }}
           path: |
             artifacts/code-specialist-smoke.json
             artifacts/code-specialist-smoke.stdout.log

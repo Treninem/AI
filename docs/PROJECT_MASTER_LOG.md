@@ -1536,3 +1536,36 @@ BLOCKERS: genuine useful licensed1GiB bootstrap corpus/provenance and physical-d
 NEXT: inspect the newest PR92 CI by actual head and preserved report SHAs; repair only reproduced failures, finish all available gates. Keep draft/no version bump/no main merge/no release until acceptance. Evidence-only journal updates must not count as product acceptance.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 58. BEFORE ACTION — verified readiness50% and actual report source identity
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2 unchanged; current draft PR92 head03ae14bbf3c46414477b3e02630f32a08dd4af69. Previous full main/candidate journal reads remain valid; sections52–57 and section44 checkpoint rubric reconciled.
+READINESS: section44 defines20 equally weighted acceptance checkpoints; existing8=40%. Add2 personally verified boundaries: Android full normal-path E2E and installed APK launch. Thus10/20=50%, not22/24 workflow success or commercial capability equivalence. Remaining10 checkpoints: installed Windows offline voice/files/computer; installed Android voice/OCR/Knowledge; genuine corpus; sharded provenance/licensed pack; real device benchmark; human UI/voice; server/mail/rollback; version metadata; complete same-head RC CI; production signing/update/release.
+EVIDENCE:22/24 current workflows succeed. Android normal run35310302212/job105492349292 actual checkout guard03ae14b; artifact10534015382 ZIP digest e2a5f767d6079ce4017628141529e208c3472a416515be40194b04b4980658eb verified. All8 scenarios pass (offline guard, model identity, six answer/context/knowledge/compatibility scenarios); cold28532.807ms/warm19973.946ms, external network blocked, remote_ai_allowed=false.
+APK ACCEPTANCE: run35310302214/job105491048635 guard03ae14b, installation/version check and `AURORA_ANDROID_EMULATOR_OK pid=2578`; com.aurorafox.ai/V1.3.0.0/code100005, no accepted release signing/device upgrade claim. It is test acceptance, not a published changed V1.3 binary.
+NATIVE: Release probe35310302265/job105494782900 guard03ae14b; artifact10534265632 digest5a9d28acdc3157a9dc4c2af183cdfb00b10af39559d90e283da0a7fc632f868e verified; runtime_build_type=release/runtime_debug=false, no INTERNET, all3 answers pass. Cold70571.912ms/warm20634.164ms/PSS1138.409MiB; Debug previous warm280467.932ms. Actual optimized variant validated; not physical-device usability proof.
+WINDOWS: Core35310302221/job105491720760 guard03ae14b; artifact10532889210 digestfab3eb5038182edfea8e8cc62638a813c8c88c909ad5eb7de9ee138c269995bd verified;21/21 quality and8/8 Coder operations, hard performance limits pass/no relative baseline. Windows Package35310302289/job105507674904 still Build installer; synthetic Knowledge1GiB35310302273/job105503429773 still real streaming import/restart. Neither pending checkpoint counted.
+OWNED FIX: benchmarks/core report runners and three Core benchmark workflows/artifact names, related contract/runner tests and canonical journal. Windows runner wrongly prefers GITHUB_SHA (PR merge7381817) over actual checked-out03ae14b; Android artifact names also use event merge SHA, and Android JSON lacks source SHA. Bind evidence to actual Git HEAD without changing model/answers/offline/performance assertions. Current acceptance is supported by actual checkout guards and verified runtime contents, not misleading artifact labels.
+OWNERSHIP EXTENSION: shared stdlib report_identity.py helper, real-Git regression test, Windows CodeSpecialist runner identity, and workflow expected-head/contract wiring. Reject conflicting existing report identity or a mismatched expected checkout instead of silently relabeling a foreign report. Local temporary-Git tests are metadata regression proof, not model inference.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: two more section44 checkpoints accepted from actual current-candidate execution and artifact contents.
+REMAINING: remaining10 checkpoints and report source-identity repair; finish preserved Windows/Knowledge runs.
+BLOCKERS: genuine useful licensed corpus/device/human/host/signing evidence and incomplete final package/runtime gates.
+NEXT: repair report/artifact identity, add real Git mismatch regression, then inspect installed-package gates. Keep PR92 draft/version unchanged.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER ACTION — report identity repaired and tested
+
+ACTION: shared stdlib-only helper reads actual Git HEAD, enforces the expected candidate, rejects conflicting existing report identity, and writes JSON atomically while preserving all runtime results. Windows normal/Coder and Android native/normal runners use it; three workflows label artifacts by candidate head and run identity regressions. No cloud/runtime dependency, model, answer, performance or offline guard change.
+TEST:44 relevant Python tests passed in22.34s, including real temporary-Git repositories, poisoned event SHA, expected-head mismatch and foreign-report refusal. Both Android runners pass bash syntax; helper compiles; workflow YAML and diff checks pass. Windows PowerShell execution and new-source runtime CI remain pending, not locally claimed. Preserved current Windows installer and synthetic1GiB import are still running; do not cancel them or count them as accepted.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: report provenance repaired; actual Android normal-path/installed APK checkpoints accepted above.
+REMAINING:10 release checkpoints, final selected-head CI and installed Windows acceptance.
+BLOCKERS: useful licensed corpus/provenance, physical-device/human/server/signing acceptance remain unproven.
+NEXT: publish this atomic correction in existing draft PR92 and inspect its actual-head checks; preserve long-running gates. No version bump/main merge/tag/release.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%

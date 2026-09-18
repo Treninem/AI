@@ -49,6 +49,9 @@ fi
 adb shell run-as "$pkg" cat files/core-benchmark-android.json > "$report"
 capture_logcat
 
+source_script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+python3 "$source_script_dir/report_identity.py" --report "$report"
+
 python3 - <<'PY'
 import json
 from pathlib import Path

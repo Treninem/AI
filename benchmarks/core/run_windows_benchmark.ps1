@@ -42,7 +42,9 @@ if ($ollamaLeft.Count -ne 0) { throw 'Ollama process is still running; offline C
 
 $cpu = (Get-CimInstance Win32_Processor | Select-Object -First 1 -ExpandProperty Name).Trim()
 $env:AURORAFOX_BENCHMARK_REPORT = $ReportPath
-$env:AURORAFOX_BENCHMARK_GIT_SHA = if ($env:GITHUB_SHA) { $env:GITHUB_SHA } else { (git -C $root rev-parse HEAD).Trim() }
+$checkoutSha = & python (Join-Path $PSScriptRoot 'report_identity.py') --repo $root
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace([string]$checkoutSha)) { throw 'Benchmark source checkout identity failed.' }
+$env:AURORAFOX_BENCHMARK_GIT_SHA = ([string]$checkoutSha).Trim()
 $env:AURORAFOX_BENCHMARK_MODEL_SHA = $modelSha
 $env:AURORAFOX_BENCHMARK_CPU = $cpu
 $env:AURORAFOX_BENCHMARK_OLLAMA_ABSENT = '1'
