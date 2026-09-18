@@ -202,6 +202,9 @@ func _run() -> void:
 		"elapsed_ms": timings["generate_tests"],
 		"cases": cases.size(),
 		"contains_expected_assertion_inputs": test_code.to_lower().contains("add_numbers") and test_code.contains("5"),
+		"returned_ok": bool(tests.get("ok", false)),
+		"test_code_excerpt": test_code.substr(0, 4000),
+		"rejected_response_excerpt": str(tests.get("raw", "")).substr(0, 4000),
 		"error": str(tests.get("error", "")).substr(0, 500)
 	}
 

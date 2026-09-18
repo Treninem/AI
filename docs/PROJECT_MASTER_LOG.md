@@ -1824,3 +1824,25 @@ REMAINING:10 checkpoints раздел58;72 старых DELTA ветки тре�
 BLOCKERS: прежний Windows timeout source96beca, новый package queued; настоящий production Knowledge corpus/devices/deployment/signing ещё не подтверждены.
 NEXT: читать Windows package35349142330/job105612934621 после запуска и новые фазовые installer logs; исправлять конкретный сбой без ослабления checks. Обычный чат продолжает по разделу60 и этому реестру; после остановки текущий исполнитель в фоне не работает. PR92 остаётся draft, версия1.3.0.0/code100005, bump/main/tag/release не выполнены.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 62. BEFORE: экономная партия по настоящим новым сбоям
+
+TAKEOVER WORK-2026-09-17-FINAL-RELEASE ACTIVE. Fresh main031aeba, PR92/headbd219fc, реализация8ac6bd1. Беру `android_plugin/setup_native.ps1`, `tests/android_native_download_smoke.ps1`, `.github/workflows/android-plugin-ci.yml`, `benchmarks/core/code_specialist_smoke.gd` и существующий общий журнал; intended BUILD diagnostics/network robustness, accumulated MINOR1.4.0.0 remains version-last. Старые claims reconcile единым исполнителем; другие чаты не запускаю.
+
+Core run35349142031/job105612828523/artifact10549936248 SHA256a0178c7fc04e5075d34ff00eb2b7cf3e31e59fa9fea511414c6b3892326bfd7e:7/8. Refactor теперь PASS, generate_tests после bounded repair incomplete. Report потерял raw ответа: исправить bounded diagnostic evidence, НЕ заявлять генератор исправленным и НЕ добавлять canned tests/ослаблять >=2 cases. Android run35349142055/job105612778791: GitHub Server Error на setup_native.ps1:85 при загрузке sherpa1.13.4. Добавить максимум3 попытки с временным файлом/cleanup, не менять pinned hashes/revisions и не делать unbounded retry. Windows35349142330/job105612934621 идёт Build installer, сохранить run. Работа из старых веток уже сравнивалась; свежие функциональные ошибки имеют приоритет над blind merge старых workflows.
+
+### AFTER: небольшая согласованная партия без повторения старых работ
+
+Реализован максимум3 download attempts, TimeoutSec600, ограниченная пауза3/6sec; HTTP4xx кроме429 не retry, временный .download удаляется при каждом сбое и в finally, cache destination публикуется только после завершённой загрузки. Все native revisions/hash/size assertions сохранены. Новая PowerShell fault-injection regression проверяет interrupted partial→complete retry, cache reuse, окончательный отказ после3 attempts и отсутствие повреждённого cache/partial; wired перед дорогими Android toolchain/build steps. Локального pwsh нет, её pass ещё НЕ заявлен.
+
+Core diagnostic report теперь сохраняет returned_ok, test_code_excerpt и rejected_response_excerpt максимум4000chars. Генерация тестов НЕ объявляется исправленной; нет canned fallback/увеличения inference retries/ослабления two-case gate. Причину неполного JSON следующая real-Core проверка покажет непосредственно.
+
+Локально8 passed0.03s: test_core_specialist_team_runtime_contract.py и test_android_voice_supertonic_contract.py. Godot4.7.1 --check-only code_specialist_smoke.gd exit0. Все workflow YAML parsed, git diff --check clean. Лично сопоставлены старые ветки: chatgpt/aurorafox-kb-v7-server aedb76d содержит api/__init__.py и api/knowledge_bundle.py уже идентичные кандидату; coord/updater-contract-drift-20260916 22d9576 содержит test_core_candidate_promotion.py уже идентичный. Переносить повторно нечего. diag/android-apk-stage-split b8fb2f9 сопоставлена с текущим APK workflow: кандидат уже имеет stage layout/exact-head guard/сохранение expensive runs и более узкие test selectors, blind merge вернул бы старые checkout/cancellation contracts. fix/android-apk-gate-timeout cd38413 имеет16 отличающихся paths и не получает ложной patch-equivalence приёмки.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: bounded native downloader и failure evidence улучшены;8 local tests/Godot parse/YAML green; две старые ветки содержательно уже взяты.
+REMAINING: реальная Android download regression/build, реальный Test Engineer corrected output, текущий Windows installer/bridges/installed voice и остальные10 release checkpoints.
+BLOCKERS: Core35349142031/job105612828523 generate_tests incomplete; Android35349142055/job105612778791 download GitHub server error; Windows35349142330/job105612934621 продолжает installer.
+NEXT: атомарно опубликовать эту партию в PR92 поверхbd219fc, проверить быстрый native download smoke и сохранить текущую expensive Windows evidence; по новому bounded rejected-response чинить фактическую Test Engineer причину, не перезапускать слепо. Следующему обычному чату продолжать по разделу60; источник текущего SHA — PR/ref, canonical version пока1.3.0.0/code100005.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%

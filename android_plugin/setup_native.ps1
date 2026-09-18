@@ -82,7 +82,26 @@ function Patch-Wasm3AndroidCompatibility {
 function Download-IfMissing($url, $dest) {
     if (-not (Test-Path $dest)) {
         Write-Host "Downloading $(Split-Path $dest -Leaf)..."
-        Invoke-WebRequest -Uri $url -OutFile $dest
+        $partial = "$dest.download"
+        try {
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+                try {
+                    Invoke-WebRequest -Uri $url -OutFile $partial -TimeoutSec 600
+                    Move-Item -LiteralPath $partial -Destination $dest -Force
+                    return
+                } catch {
+                    Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+                    $status = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+                    if ($attempt -eq 3 -or ($status -ne 0 -and $status -ne 429 -and $status -lt 500)) {
+                        throw "Pinned download failed: $(Split-Path $dest -Leaf) attempt=$attempt HTTP=$status"
+                    }
+                    Write-Host "Retrying pinned download attempt=$attempt HTTP=$status"
+                    Start-Sleep -Seconds (3 * $attempt)
+                }
+            }
+        } finally {
+            Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+        }
     } else {
         Write-Host "Using cached $(Split-Path $dest -Leaf)."
     }
