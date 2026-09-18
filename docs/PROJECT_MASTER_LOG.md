@@ -1354,3 +1354,24 @@ BLOCKERS: genuine production Knowledge corpus/provenance remains absent; physica
 NEXT: first inspect completion of Windows Package `35288500840` and Core Android E2E `35288501145`, then the other seven running jobs; act only on their exact logs/artifacts.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 50. BEFORE ACTION — reconcile 95% claim and continue exact CI repair, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
+TIME: 2026-09-18 (GitHub-only continuation).
+OWNER QUESTION: why an earlier chat reported 95% while this finalization reports 40%.
+ANSWER: 95% was a feature/lane-level estimate based on historical or branch-local completion. It was not backed by one unified releasable SHA passing Windows installer, Android runtime, visual, genuine Knowledge, production API, signing and deployment acceptance. The current 40% is the conservative release-readiness baseline defined by sections 43–49; incomplete, cancelled or external gates earn no credit. Do not average or inherit stale percentages.
+AUDITED HEAD: `2b988eefdaa290b1f0dd5f23aa557474429ba8f5` (journal-only child of product fix `4f0349612d36dab01cad1fb913154114d9adb49e`).
+CI SNAPSHOT: 21 SUCCESS; Core Android Benchmark run `35288786731` FAILURE; Core Android E2E run `35288786692` FAILURE; Windows Package CI run `35288786712` CANCELLED.
+TASK: inspect exact job logs for both Android failures and distinguish infrastructure/cancellation from product failure; inspect the last uncancelled Windows product run before deciding whether to rerun or patch. Fix only reproduced causes, then append AFTER evidence.
+EXPECTED RESULT: Android product gates pass without weakened assertions; Windows installed offline voice package completes; readiness changes only from verified same-SHA evidence.
+RISKS: every journal commit retriggers PR workflows and may cancel expensive Windows work; prefer inspecting preserved runs and make the next code update atomic.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: conflicting percentage semantics reconciled against release acceptance.
+REMAINING: classify exact Android/Windows results and repair verified blockers.
+BLOCKERS: two Android gates red; current Windows run cancelled; external corpus/device/host/signing boundaries remain.
+NEXT: fetch jobs, failing steps and logs for runs `35288786731`, `35288786692`, and the latest preserved Windows run.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
