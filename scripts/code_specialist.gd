@@ -194,6 +194,7 @@ Code:
 func refactor_code(task: String, code: String, language: String = "unknown") -> Dictionary:
 	var prompt := """
 You are AuroraFox Refactoring Specialist. Improve the code for the requested goal without changing required externally visible behavior.
+Keep every existing public function name and signature unchanged; simplify its implementation rather than renaming the public API.
 Return strict JSON only:
 {"refactored_code":"...","changes":["..."],"preserved_contracts":["..."],"tests":["..."],"risks":["..."]}
 Do not claim tests were executed and do not introduce placeholders.
@@ -211,6 +212,17 @@ Current code:
 	var refactored_code := str(parsed.get("refactored_code", "")).strip_edges()
 	if refactored_code.is_empty():
 		return {"ok":false,"error":"Refactoring Specialist returned no refactored code","raw":response.get("content", "")}
+	var missing_names := _missing_python_public_functions(code, refactored_code, language)
+	if not missing_names.is_empty():
+		var repair_prompt := prompt + "\nYour previous response removed these public functions: " + ", ".join(missing_names) + "\nReturn corrected strict JSON preserving those definitions. Previous untrusted response:\n" + str(response.get("content", "")).substr(0, 120000)
+		var repaired := await _chat_code([{"role":"user","content":repair_prompt}], 0.0)
+		if not bool(repaired.get("ok", false)):
+			return repaired
+		parsed = _parse_json(str(repaired.get("content", "")))
+		refactored_code = str(parsed.get("refactored_code", "")).strip_edges()
+		if refactored_code.is_empty() or not _missing_python_public_functions(code, refactored_code, language).is_empty():
+			return {"ok":false,"error":"Refactoring Specialist changed the public Python API after one repair","raw":repaired.get("content", "")}
+		parsed["repaired_public_api"] = true
 	var changes = parsed.get("changes", [])
 	if not changes is Array:
 		return {"ok":false,"error":"Refactoring Specialist returned invalid changes structure","raw":response.get("content", "")}
@@ -220,6 +232,23 @@ Current code:
 		parsed["changes"] = [_describe_code_delta(code, refactored_code)]
 	parsed["ok"] = true
 	return parsed
+
+func _missing_python_public_functions(original: String, refactored: String, language: String) -> Array[String]:
+	var missing: Array[String] = []
+	if language.to_lower() not in ["python", "py"]:
+		return missing
+	# A bounded structural guard for top-level Python definitions. This does not
+	# execute imported code or claim full syntax/behavioral verification.
+	var definitions := RegEx.new()
+	definitions.compile("(?m)^(?:async[ \\t]+)?def[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]*\\(")
+	var output_names: Array[String] = []
+	for match in definitions.search_all(refactored.substr(0, 120000)):
+		output_names.append(match.get_string(1))
+	for match in definitions.search_all(original.substr(0, 120000)):
+		var name := match.get_string(1)
+		if not name.begins_with("_") and name not in output_names and name not in missing:
+			missing.append(name)
+	return missing
 
 func generate_tests(task: String, code: String, language: String = "unknown") -> Dictionary:
 	var prompt := """

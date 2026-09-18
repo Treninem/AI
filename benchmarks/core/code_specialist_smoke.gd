@@ -172,6 +172,9 @@ func _run() -> void:
 		"elapsed_ms": timings["refactor_code"],
 		"changes": refactor_changes.size(),
 		"preserves_sum": refactored_code.contains("a + b"),
+		"returned_ok": bool(refactor.get("ok", false)),
+		"contains_expected_function": refactored_code.contains("add_numbers"),
+		"refactored_code_excerpt": refactored_code.substr(0, 4000),
 		"error": str(refactor.get("error", "")).substr(0, 500)
 	}
 
