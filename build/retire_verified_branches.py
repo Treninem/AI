@@ -1,7 +1,9 @@
 """Owner-authorized removal of seven integrated temporary aliases only."""
 import json
 import os
+import random
 import subprocess
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -15,6 +17,24 @@ def git(*args):
     return subprocess.check_output(["git", *args], text=True).strip()
 
 
+def open_with_retry(request, attempts=5, timeout=30):
+    last_error = None
+    for attempt in range(attempts):
+        try:
+            return urllib.request.urlopen(request, timeout=timeout)
+        except urllib.error.HTTPError as error:
+            if error.code not in (429, 500, 502, 503, 504):
+                raise
+            retry_after = error.headers.get("Retry-After")
+            delay = float(retry_after) if retry_after else 2 ** attempt
+        except (urllib.error.URLError, TimeoutError) as error:
+            last_error = error
+            delay = 2 ** attempt
+        if attempt < attempts - 1:
+            time.sleep(delay + random.uniform(0, 0.5))
+    raise RuntimeError(f"GitHub API request failed after {attempts} attempts") from last_error
+
+
 def api(path):
     request = urllib.request.Request(
         "https://api.github.com/repos/" + REPOSITORY + path,
@@ -22,7 +42,7 @@ def api(path):
                  "Accept": "application/vnd.github+json"},
     )
     try:
-        with urllib.request.urlopen(request, timeout=30) as response:
+        with open_with_retry(request) as response:
             return json.load(response)
     except urllib.error.HTTPError as error:
         if error.code == 404:
@@ -64,7 +84,6 @@ def main():
         if current.get("protected") is not False or current["commit"]["sha"] != expected:
             print("AURORA_BRANCH_PRESERVED protected/advanced " + branch)
             continue
-        # Lease refuses deletion if the remote branch advanced after the API read.
         subprocess.run(["git", "push", "--force-with-lease=refs/heads/" + branch + ":" + expected,
                         "origin", ":refs/heads/" + branch], check=True)
         if api("/branches/" + urllib.parse.quote(branch, safe="")) is not None:
