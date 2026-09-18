@@ -160,8 +160,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gradle -p benchmarks/core/android_probe :app:assembleDebug --build-cache --no-daemon --stacktrace
-          test -s benchmarks/core/android_probe/app/build/outputs/apk/debug/app-debug.apk
+          gradle -p benchmarks/core/android_probe :app:assembleBenchmark --build-cache --no-daemon --stacktrace
+          test -s benchmarks/core/android_probe/app/build/outputs/apk/benchmark/app-benchmark.apk
 
       - name: Enable KVM when available
         shell: bash

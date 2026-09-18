@@ -19,6 +19,15 @@ android {
         }
     }
 
+    buildTypes {
+        create("benchmark") {
+            // Keep adb run-as and the test signer while measuring the exact
+            // optimized library used by the production release APK.
+            initWith(getByName("debug"))
+            matchingFallbacks += listOf("release")
+        }
+    }
+
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17

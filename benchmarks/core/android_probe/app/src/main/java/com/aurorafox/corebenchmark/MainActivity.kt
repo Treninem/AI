@@ -11,6 +11,7 @@ import android.os.SystemClock
 import android.util.Log
 import com.aurorafox.runtime.NativeRuntime
 import com.aurorafox.runtime.CoreChatPrompt
+import com.aurorafox.runtime.BuildConfig as RuntimeBuildConfig
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -46,6 +47,9 @@ class MainActivity : Activity() {
     }
 
     private fun runBenchmark(): JSONObject {
+        check(RuntimeBuildConfig.BUILD_TYPE == "release" && !RuntimeBuildConfig.DEBUG) {
+            "Native benchmark requires the production Release runtime library"
+        }
         val model = File(filesDir, "aurorafox-core.gguf")
         val modelSha = if (model.isFile) sha256(model) else ""
         val modelOk = model.isFile && model.length() == EXPECTED_BYTES && modelSha == EXPECTED_SHA
@@ -87,6 +91,8 @@ class MainActivity : Activity() {
                 .put("remote_ai_allowed", false))
             .put("core", JSONObject()
                 .put("runtime", "llama.cpp")
+                .put("runtime_build_type", RuntimeBuildConfig.BUILD_TYPE)
+                .put("runtime_debug", RuntimeBuildConfig.DEBUG)
                 .put("native_library_loaded", native.isLoaded())
                 .put("llama_cpp", native.hasLlama())
                 .put("model_path", model.absolutePath)

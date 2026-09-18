@@ -3,7 +3,7 @@ set -euo pipefail
 
 core_model="${1:?usage: run_android_probe.sh <core-model-path>}"
 pkg='com.aurorafox.corebenchmark'
-apk='benchmarks/core/android_probe/app/build/outputs/apk/debug/app-debug.apk'
+apk='benchmarks/core/android_probe/app/build/outputs/apk/benchmark/app-benchmark.apk'
 report='artifacts/core-benchmark-android.json'
 logcat_report='artifacts/core-benchmark-android-logcat.txt'
 
@@ -63,6 +63,7 @@ if env.get('internet_permission_granted') is not False: failures.append('interne
 if env.get('network_forbidden_by_manifest') is not True: failures.append('network_guard')
 core = data.get('core', {})
 if core.get('runtime') != 'llama.cpp': failures.append('runtime')
+if core.get('runtime_build_type') != 'release' or core.get('runtime_debug') is not False: failures.append('production_release_runtime')
 if core.get('native_library_loaded') is not True or core.get('llama_cpp') is not True: failures.append('native_llama')
 if core.get('prepared_sha256') != 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5': failures.append('model_sha')
 perf = data.get('performance', {})

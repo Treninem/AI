@@ -1497,3 +1497,26 @@ BLOCKERS: pending package/runtime acceptance; genuine licensed1GiB corpus and ph
 NEXT: publish atomic CI+journal fast-forward; preserve in-flight expensive evidence and inspect reports by actual SHA. Keep draft, test first/version last.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 56. BEFORE ACTION — native probe must measure production Release runtime
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Exact-checkout publication23f5757e42b3dedff84a8cc4f249538d24aaf890 verified remotely and fetched locally; reviewed files match remote tree. Main unchanged.
+OWNERSHIP: native probe app build variant, Core Android Benchmark workflow/runner, its contract test and canonical journal.
+EVIDENCE: c5 native run35304140103/job105472867694 explicitly builds `:runtime:configureCMakeDebug`/`buildCMakeDebug` with `CMAKE_BUILD_TYPE=Debug`, then900s timeout without report. Artifact10531608631 logcat ZIP downloaded/digest4e5e44f6841c818a5c463efb8897bc5e2c31b8b399f3b001f33252bf6763732e verified. No app-specific kill/crash established; unrelated killed system processes must not be treated as AuroraFox OOM. e6 native probe still running while optimized production normal-path E2E is green.
+CAUSE/BOUNDARY: benchmark currently links the unoptimized Debug native library, so it does not measure the production Release runtime. This is a confirmed build mismatch; its contribution to900s timeout is an inference until a new optimized run completes. Use a debuggable/test-signed benchmark app variant with only Release library fallback, preserving run-as/no-INTERNET/model/answer gates and900s timeout. Official Android build-variants documentation confirms initWith/debug and matchingFallbacks selection: https://developer.android.com/build/build-variants#resolve_matching_errors . No normal product runtime behavior change.
+
+OWNERSHIP EXTENSION: probe MainActivity and report reader validate the selected runtime's generated BuildConfig (release/non-debug) at execution and in the report; fail rather than accidentally benchmark Debug again.
+
+### AFTER ACTION — production native benchmark variant
+
+ACTION: dedicated benchmark app variant inherits debug/test-signing/run-as configuration and falls back only to the production runtime Release library. Workflow and runner use assembleBenchmark/app-benchmark.apk. Runtime BuildConfig must identify release/non-debug before inference; report carries both fields and Python reader enforces them. Normal product library/build behavior,900s watchdog,16-token exact-output ceiling, all three semantic/model/no-INTERNET/performance assertions remain.
+TEST:5 relevant Android probe/E2E/package contract tests passed (0.05s), runner bash syntax and diff checks pass; YAML parses. Full Gradle variant resolution/build and on-device inference pending new CI, not claimed locally executed. Current e6 Debug-native run still pending; normal-path optimized Android inference already green.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: production-vs-Debug benchmark mismatch corrected and hard release-variant checks added; all accepted offline Core/UI proofs preserved in sections54–55.
+REMAINING: new Release-native probe and exact-head runtime/package/render reports; uninterrupted Windows package/installed offline voice; genuine corpus/device/host/listening/signing acceptance and final version/release checkpoints.
+BLOCKERS: incomplete same-head real gates and section44 external acceptance boundaries. Genuine useful licensed1GiB corpus still unproven; synthetic capacity run is separate evidence.
+NEXT: publish this atomic benchmark+journal fix to PR92 and inspect resulting exact-head guard/build reports. No version bump/main merge/release; sole engineer claim stays ACTIVE.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
