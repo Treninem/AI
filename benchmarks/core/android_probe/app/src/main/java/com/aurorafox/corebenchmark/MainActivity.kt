@@ -115,7 +115,7 @@ class MainActivity : Activity() {
             append("<|im_end|>\n<|im_start|>assistant\n")
         }
         val options = JSONObject()
-            .put("max_tokens", 48)
+            .put("max_tokens", 16)
             .put("temperature", 0.0)
             .put("seed", 42)
             .toString()

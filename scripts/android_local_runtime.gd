@@ -3,7 +3,7 @@ extends Node
 
 const SINGLETON_NAME := "AuroraFoxRuntime"
 const DEFAULT_CHAT_MAX_TOKENS := 384
-const TERSE_CHAT_MAX_TOKENS := 64
+const TERSE_CHAT_MAX_TOKENS := 16
 
 var _plugin: Object
 
@@ -27,7 +27,9 @@ func capabilities() -> Dictionary:
 		"local_tts": false,
 		"wasm": false
 	}
-	if _plugin != null and _plugin.has_method("getCapabilitiesJson"):
+	# Android Java singletons dispatch @UsedByGodot methods dynamically. In a
+	# release APK Object.has_method() can report false even though call() works.
+	if _plugin != null:
 		var raw := str(_plugin.call("getCapabilitiesJson"))
 		var parsed = JSON.parse_string(raw)
 		if parsed is Dictionary:
@@ -35,15 +37,13 @@ func capabilities() -> Dictionary:
 	return caps
 
 func private_root() -> String:
-	if _plugin != null and _plugin.has_method("getPrivateRoot"):
+	if _plugin != null:
 		return str(_plugin.call("getPrivateRoot"))
 	return ProjectSettings.globalize_path("user://")
 
 func execute(workspace_root: String, command: Array, cwd: String, timeout: int, mode: String) -> Dictionary:
 	if _plugin == null:
 		return {"ok": false, "error": "Android native runtime plugin is not installed in this build", "hint": "File operations still work in the Android app sandbox."}
-	if not _plugin.has_method("executeSandbox"):
-		return {"ok": false, "error": "Android runtime does not expose executeSandbox"}
 	var request := {
 		"workspace": ProjectSettings.globalize_path(workspace_root),
 		"command": command,
@@ -54,7 +54,7 @@ func execute(workspace_root: String, command: Array, cwd: String, timeout: int, 
 	return _parse_result(_plugin.call("executeSandbox", JSON.stringify(request)), "Invalid Android runtime response")
 
 func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dictionary:
-	if _plugin == null or not _plugin.has_method("chatLocal"):
+	if _plugin == null:
 		return {"ok": false, "error": "Local Android LLM runtime unavailable"}
 	var request_options := options.duplicate(true)
 	var terse_request := _is_explicit_terse_request(messages)
@@ -64,7 +64,7 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	return _parse_result(_plugin.call("chatLocal", model_path, JSON.stringify(messages), JSON.stringify(request_options)), "Invalid local chat response")
 
 func synthesize_speech(text: String, speed := 1.0, emotion := "neutral", intensity := 0.5) -> Dictionary:
-	if _plugin == null or not _plugin.has_method("synthesizeSpeechLocal"):
+	if _plugin == null:
 		return {"ok": false, "error": "Local Android TTS runtime unavailable"}
 	return _parse_result(
 		_plugin.call("synthesizeSpeechLocal", text, float(speed), emotion, float(intensity)),
@@ -72,12 +72,12 @@ func synthesize_speech(text: String, speed := 1.0, emotion := "neutral", intensi
 	)
 
 func clear_voice_cache() -> Dictionary:
-	if _plugin == null or not _plugin.has_method("clearVoiceCache"):
+	if _plugin == null:
 		return {"ok": false, "error": "Local Android voice cache API unavailable"}
 	return _parse_result(_plugin.call("clearVoiceCache"), "Invalid Android cache response")
 
 func transcribe(model_path: String, audio_path: String, language := "ru") -> Dictionary:
-	if _plugin == null or not _plugin.has_method("transcribeLocal"):
+	if _plugin == null:
 		return {"ok": false, "error": "Local Android STT runtime unavailable"}
 	return _parse_result(_plugin.call("transcribeLocal", model_path, audio_path, language), "Invalid transcription response")
 

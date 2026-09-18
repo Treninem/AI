@@ -128,6 +128,22 @@ def main() -> None:
     require(str(CORE_BYTES) in bundled, "Runtime built-in Core byte count drifted")
     require("ensure_android_private_copy" in bundled, "Android no longer silently provisions the bundled Core")
 
+    android_runtime = read("scripts/android_local_runtime.gd")
+    require("const TERSE_CHAT_MAX_TOKENS := 16" in android_runtime, "Android exact-output inference budget drifted")
+    require(
+        '_plugin.call("getCapabilitiesJson")' in android_runtime,
+        "Android capabilities no longer call the @UsedByGodot API directly",
+    )
+    require(
+        '_plugin.call("chatLocal"' in android_runtime,
+        "Android chat no longer calls the @UsedByGodot API directly",
+    )
+    require(
+        '.has_method("getCapabilitiesJson")' not in android_runtime
+        and '.has_method("chatLocal")' not in android_runtime,
+        "Android release bridge must not gate valid Java singleton calls on Object.has_method",
+    )
+
     core_runtime = read("scripts/aurora_core_runtime.gd")
     core_chat = core_runtime.split("func _chat_local(messages: Array, temperature: float) -> Dictionary:", 1)[1].split(
         "func _chat_ollama", 1

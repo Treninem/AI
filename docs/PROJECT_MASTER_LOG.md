@@ -1375,3 +1375,22 @@ BLOCKERS: two Android gates red; current Windows run cancelled; external corpus/
 NEXT: fetch jobs, failing steps and logs for runs `35288786731`, `35288786692`, and the latest preserved Windows run.
 
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 51. AFTER ACTION — Android Java bridge dispatch and bounded exact-output inference, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE.
+EVIDENCE: Core Android E2E run `35288786692`, job `105427103660`, installed and explicitly launched the offline APK, verified the 1,282,439,264-byte model and SHA `d2387ca2...`, but the report exposed only fallback capability values (`llama_cpp=false`, `isolated_service=false`) and stopped at `bundled_core_identity`. The release bridge found the Java singleton but rejected valid `@UsedByGodot` methods behind `Object.has_method()`. Godot's Android plugin contract requires exact Java method names and direct singleton invocation.
+EVIDENCE: Core Android Benchmark run `35288786731`, job `105426996979`, loaded the APK/model and launched `MainActivity`, but three exact-output samples with a 48-token cap did not finish within 900 seconds on the API 35 x86_64 emulator.
+ACTION: call the known, same-build Android Java plugin API directly after singleton discovery; retain null guards and exact method names. Reduce only the explicit terse/exact-output inference ceiling from 64/48 to 16 tokens; normal chat remains 384. Semantic expected-output assertions, offline guard, model identity and real llama.cpp execution remain mandatory.
+FILES: `scripts/android_local_runtime.gd`; `benchmarks/core/android_probe/app/src/main/java/com/aurorafox/corebenchmark/MainActivity.kt`; `tests/test_android_contract.py`; `tests/test_core_android_benchmark_contract.py`; this journal.
+TEST STATUS: source contracts added in the same atomic commit. Runtime acceptance is pending fresh exact-head Core Android E2E and Benchmark workflows; no readiness credit claimed yet.
+WINDOWS: run `35288786712` was cancelled at the historical bridge step by a newer PR commit, not a product assertion. The next exact-head Windows Package run must finish before classification.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: exact Android runtime causes classified and minimally repaired without weakening offline/model/quality assertions.
+REMAINING: verify both Android gates and complete the uninterrupted Windows installed offline voice/package run.
+BLOCKERS: runtime CI proof pending; genuine corpus/device/host/signing boundaries unchanged.
+NEXT: inspect workflows started by this atomic commit; if Android is green, inspect retained reports/artifacts and visual evidence, then let Windows finish without journal-only interruption.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%

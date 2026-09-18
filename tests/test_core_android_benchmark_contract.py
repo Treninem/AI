@@ -21,6 +21,7 @@ def test_android_probe_uses_exact_native_core_and_has_no_network_permission() ->
     assert "native.hasLlama()" in activity
     assert '"llama.cpp"' in activity
     assert "ANDROID-LOCAL-READY" in activity
+    assert '.put("max_tokens", 16)' in activity
     assert "cold_first_response_ms" in activity
     assert "warm_median_ms" in activity
     assert "process_pss_mb" in activity
