@@ -7,6 +7,8 @@ on:
       - 'benchmarks/knowledge/**'
       - 'tests/*knowledge_performance*'
       - 'tests/*knowledge_stress*'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
       - 'scripts/knowledge_store.gd'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_manager.gd'
@@ -21,6 +23,8 @@ on:
       - 'benchmarks/knowledge/**'
       - 'tests/*knowledge_performance*'
       - 'tests/*knowledge_stress*'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
       - 'scripts/knowledge_store.gd'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_manager.gd'
@@ -44,6 +48,9 @@ on:
 
 permissions:
   contents: read
+
+env:
+  AURORAFOX_BENCHMARK_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
   group: >-
@@ -74,6 +81,7 @@ jobs:
         run: >-
           python -m unittest
           tests.test_knowledge_performance_contract
+          tests.test_knowledge_report_identity
           tests.test_knowledge_performance_compare
           tests.test_knowledge_stress_gates
           tests.test_knowledge_stress_removal_transaction

@@ -1846,3 +1846,25 @@ REMAINING: реальная Android download regression/build, реальный 
 BLOCKERS: Core35349142031/job105612828523 generate_tests incomplete; Android35349142055/job105612778791 download GitHub server error; Windows35349142330/job105612934621 продолжает installer.
 NEXT: атомарно опубликовать эту партию в PR92 поверхbd219fc, проверить быстрый native download smoke и сохранить текущую expensive Windows evidence; по новому bounded rejected-response чинить фактическую Test Engineer причину, не перезапускать слепо. Следующему обычному чату продолжать по разделу60; источник текущего SHA — PR/ref, canonical version пока1.3.0.0/code100005.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 63. BEFORE: Knowledge identity и доказательства старых веток
+
+WORK-2026-09-17-FINAL-RELEASE ACTIVE, takeover/reconcile прежних lanes одним исполнителем. Fresh main031aeba, PR92/head ae4f55bcd5291b32580fbe8352782c60658abfa1. Claims: benchmarks/knowledge/run_knowledge_benchmark.py, tests/test_knowledge_report_identity.py, .github/workflows/knowledge-performance.yml, .github/workflows/knowledge-1g-release-gate.yml и этот журнал. Intended BUILD evidence bugfix, accumulated MINOR1.4.0.0 version-last. Own existing report_identity.py переиспользовать, не дублировать SHA validation.
+
+Найден оставшийся реальный defect: Knowledge platform_runtime_identity.git_sha берётся из GITHUB_SHA, который при PR обозначает merge event вместо проверенного source head. Проверять actual git HEAD и expected до запуска expensive benchmark, считать отсутствие Git/несовпадение hard error, report сохранять с actual SHA. Не переписывать старый foreign report и не выдавать эту metadata работу за ускорение Knowledge или production1GiB corpus. Текущий ownCore35350878591/job105618637412 ещё выполняет SpecialistTeam; Windows35349142330/job105612934621 ещё installer. Native download smoke на ae4f55b run35350878384/job105618447139 уже success, native build ещё идёт.
+
+### AFTER: identity correction и ещё одна старая ветка сверена
+
+Knowledge использует единый stdlib checkout_sha helper из benchmarks/core/report_identity.py. Проверка actual/expected SHA выполняется ДО logs/Godot/import; повторная проверка source_sha перед report запрещает relabel при изменении HEAD во время работы. platform_runtime_identity.git_sha — настоящий HEAD; GITHUB_SHA не используется. Обе Knowledge workflows передают exact PR-head/normal SHA через AURORAFOX_BENCHMARK_EXPECTED_SHA; новые tests включены в их быстрые contracts и path selectors.
+
+33 passed0.16s: report identity, performance contract/compare, stress gates,1GiB contract, workflow contract; stdlib unittest3 cases0.035s также OK (никаких новых pytest dependencies в CI). Реальные temporary Git repos подтверждают foreign PR merge ignored, mismatch rejects ДО Godot/сохранения report и сохраняет существующий evidence файл, missing Git rejects. YAML всех workflows и changed Python compile OK, diff whitespace clean. Это не новая1GiB production acceptance и не устранение Test Engineer ошибки.
+
+Дополнительно прочитаны api/learning_pull.py и api/learning_daemon.py из autonomy-foundation-2026-08 b16d8cc. Старый daemon использует flush(...,max_seconds=60), несовместимый с нынешним LearningSynchronizer.flush(limit); нынешний server выполняет learning.flush(25) после успешного chat и имеет явный sync endpoint, storage теперь SQLite/RLock. Отдельный автономный periodic daemon этим НЕ доказан: его отсутствующий механизм остаётся задачей reconcile. Возвращать старые daemon/file_lock/store вместо действующих механизмов нельзя. Старый remote pull ожидает /v1/learning/pending и /ack плюс learning.sync credential — таких current server endpoints нет; необследованный remote trust/privacy feature не объявляется перенесённым/готовым. Не возвращать параллельные autonomy journals. Полезные требования/делты остаются под единым takeover, ветка сохранена.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE:33 local tests+3 stdlib identity cases green, source SHA correction+CI contracts выполнены, старый learning delta лично разобран.
+REMAINING: ownCore generate_tests и Windows installed package/voice gates; остальные10 release checkpoints раздел58.
+BLOCKERS: real-Core35350878591/job105618637412 ещё выполняется; Windows35349142330/job105612934621 ещё installer; genuine corpus/devices/deployed/signing acceptance не получены.
+NEXT: опубликовать эту единую партию поверхae4f55b в PR92; читать завершённый Core artifact с bounded Test Engineer response и Windows phase logs, исправлять точный сбой. Не считать чужой SHA/синтетику/offline smoke установленным product release. Секция60 остаётся инструкцией следующему обычному чату; версия пока1.3.0.0/code100005, PR92 draft.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%

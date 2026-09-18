@@ -11,6 +11,8 @@ on:
       - 'scripts/large_json_knowledge_importer.gd'
       - 'scripts/json_stream_reader.gd'
       - 'tests/test_knowledge_1g_release_contract.py'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
       - '.github/workflows/knowledge-1g-release-gate.yml'
   push:
     branches: [main]
@@ -23,11 +25,16 @@ on:
       - 'scripts/large_json_knowledge_importer.gd'
       - 'scripts/json_stream_reader.gd'
       - 'tests/test_knowledge_1g_release_contract.py'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
       - '.github/workflows/knowledge-1g-release-gate.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
+
+env:
+  AURORAFOX_BENCHMARK_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 concurrency:
   group: aurorafox-knowledge-1g-${{ github.workflow }}-${{ github.ref }}
@@ -53,7 +60,7 @@ jobs:
           echo "KNOWLEDGE_1G_HEAD_SHA=$actual"
           test "$actual" = "$EXPECTED_SHA"
       - name: Validate 1GiB release contract
-        run: python -m unittest tests.test_knowledge_1g_release_contract -v
+        run: python -m unittest tests.test_knowledge_1g_release_contract tests.test_knowledge_report_identity -v
 
   real-one-gib-import:
     needs: contract
