@@ -1804,3 +1804,23 @@ REMAINING: Windows installed voice/bridges/package, production Knowledge>=1GiB, 
 BLOCKERS: старый Windows timeout не признан исправленным без нового phase/acceptance evidence; никаких ложных release approvals.
 NEXT: опубликовать эту атомарную партию поверх96beca в PR92, лично прочитать fast process-contract/file-intelligence/retire job, сверить branch deletion readback; затем довести конкретную Windows фазу по logs. Не bump/merge/tag/release до всех обязательных gates. Если чат остановится, секция60 продолжает действовать; этот AFTER уточняет актуальный код/реестр и заменяет устаревшие сведения об ожидающих96beca CI.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: фактическое удаление и новые быстрые CI-доказательства
+
+Опубликован remote commit `8ac6bd1a4f2925881c8378812bd8d1949456a341`, tree `69170b8eff7db3e1d52999b56b52225a256e6d43`, parent96beca. Все14 GitHub blob SHA сверены с локальным git hash-object, fetch и diff HEAD/FETCH_HEAD пустой. Локальный commit2bb660a — тот же код, НЕ remote identity.
+
+Retire run35349142205/job105612779076 SUCCESS; actual checkout8ac6bd1,6 AURORA_BRANCH_DELETED, каждая с exact lease и API readback. Удалены именно6 веток из фиксированного BEFORE списка: `chat-2026-09-17-work-computer-autonomy-please-stop`, `tmp-ignore`, `tmp-main-for-voice-sync`, `tmp-main-for-voice-sync-2`, `tmp-main-for-voice-sync-final`, `tmp-never-use`. Ошибка предыдущего комментария «семь» исправлена: фактический manifest содержит6 entries (вводный docstring helper со словом seven косметически устарел, логика удаления определяется только шестью exact-SHA entries). Повторное чтение обеих страниц GitHub branches подтвердило117 вместо123; все6 refs отсутствуют, main031aebaad16fc25a39dfc45c58f96fadb658cac2 неизменен. Указанные SHA/работы сохранены в истории и реестре выше. Все72 DELTA branches и canonical lanes сохранены.
+
+Windows run35349142330/process-contract job105612779804 SUCCESS на8ac6bd1: exit17 preserved, parent-exit0 вернулся без ожидания descendant, owned pwsh/conhost stopped; timeout1sec refused и parent cleanup; AURORA_WINDOWS_BOUNDED_PROCESS_SMOKE_OK. Это реально выполнено Windows CI, не локальный PowerShell. Package job105612934621 queued на момент записи; успешная regression НЕ принимает installer/voice.
+
+Core/Voice run35349141942/file-intelligence job105612778995 SUCCESS на8ac6bd1; лично прочитан job log:19 passed in0.70s (parser/index/EPUB/RAR). Windows-integration105612778743 и python-voice105612778997 также SUCCESS. Общий godot-core ещё in_progress; остальные тяжёлые same-head gates не объявлять зелёными заранее.
+
+Эта последующая journal-only запись сохраняет фактические результаты, НЕ меняет проверенный код8ac6bd1 и НЕ является новой final same-head release acceptance. При следующем настоящем изменении исправь косметический docstring helper, не перезапуская дорогую упаковку только ради числа в комментарии.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE:6 доказанных aliases удалены с readback;36 локальных tests, новая Windows lifecycle regression и file-intelligence CI зелёные.
+REMAINING:10 checkpoints раздел58;72 старых DELTA ветки требуют выборочного функционального reconcile; полное доказательство установленного Windows voice/bridges ещё не получено.
+BLOCKERS: прежний Windows timeout source96beca, новый package queued; настоящий production Knowledge corpus/devices/deployment/signing ещё не подтверждены.
+NEXT: читать Windows package35349142330/job105612934621 после запуска и новые фазовые installer logs; исправлять конкретный сбой без ослабления checks. Обычный чат продолжает по разделу60 и этому реестру; после остановки текущий исполнитель в фоне не работает. PR92 остаётся draft, версия1.3.0.0/code100005, bump/main/tag/release не выполнены.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
