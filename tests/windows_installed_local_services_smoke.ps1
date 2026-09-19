@@ -150,11 +150,27 @@ try {
     }
     $samplePath = Join-Path $reportRoot 'installed-file-sample.txt'
     $fileText = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('QXVyb3JhRm94INC70L7QutCw0LvRjNC90YvQuSDRgNCw0LfQsdC+0YAg0YTQsNC50LvQvtCy'))
+    $expectedFileKind = 'text/code'
     [IO.File]::WriteAllText($samplePath, $fileText, (New-Object Text.UTF8Encoding($false)))
     $analyzeBody = @{path=$samplePath;question='';visual=$false;max_chars=10000} | ConvertTo-Json
-    $fileAnalysis = Invoke-RestMethod 'http://127.0.0.1:18867/analyze' -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($analyzeBody)) -TimeoutSec 60
-    if (-not $fileAnalysis.ok -or $fileAnalysis.kind -ne 'text' -or $fileAnalysis.content -ne $fileText) {
-        throw 'Installed File Intelligence TXT analysis failed'
+    $filesAnalyzeUrl = "http://127.0.0.1:$localServicesPort/analyze"
+    $fileAnalysis = Invoke-RestMethod $filesAnalyzeUrl -Method Post -ContentType 'application/json; charset=utf-8' -Body ([Text.Encoding]::UTF8.GetBytes($analyzeBody)) -TimeoutSec 60
+    $actualFileContent = [string]$fileAnalysis.content
+    if (-not $fileAnalysis.ok -or $fileAnalysis.kind -ne $expectedFileKind -or $actualFileContent -cne $fileText) {
+        $responseJson = $fileAnalysis | ConvertTo-Json -Depth 10
+        throw @"
+Installed File Intelligence TXT analysis failed.
+Expected kind: $expectedFileKind
+Actual kind: $($fileAnalysis.kind)
+Expected content length: $($fileText.Length)
+Actual content length: $($actualFileContent.Length)
+Expected content:
+[$fileText]
+Actual content:
+[$actualFileContent]
+Response:
+$responseJson
+"@
     }
 
     @{

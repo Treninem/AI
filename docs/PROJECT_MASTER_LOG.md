@@ -1958,3 +1958,33 @@ REMAINING: новый Windows package installed File/Computer marker на exact 
 BLOCKERS: прежний run `35426429648` остаётся red evidence; readiness 10/20.
 NEXT: fast-forward publish одной партией поверх `1302f11`; читать новый Windows job. Если failure повторится, исправлять по новым PID/socket/command/log данным; если оба installed markers SUCCESS — записать Windows checkpoint и 55%.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 67. BEFORE: исправление ложного TXT kind assertion без ослабления content contract
+
+`WORK-2026-09-17-FINAL-RELEASE` ACTIVE у единственного исполнителя. Fresh GitHub `main` — `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head — `8af10a7c4a47d76e1e3e2b3d75418cc72bb97dd6`; draft, version `1.3.0.0`/code `100005`. Claim: `tests/windows_installed_local_services_smoke.ps1`, relevant File Intelligence contract tests and этот журнал. Intended accumulated MINOR `1.4.0.0`, version-last.
+
+Фактический Windows run `35438103314`, package job `105884214195`: deterministic port fix сработал — Computer Agent запущен, File Intelligence слушает `127.0.0.1:18867`, `/health` и bundled rus+eng OCR assertions пройдены. Terminating failure только строка 157 `Installed File Intelligence TXT analysis failed`; voice marker также SUCCESS. Локальное выполнение настоящего `_analyze` на точном UTF-8 fixture доказало: expected и actual content идентичны (`33` символа), actual kind — `text/code`. Это действующий намеренный контракт: `tests/test_file_intelligence.py` уже требует `text/code`, `scripts/attachment_manager.gd` маршрутизирует его. Менять service kind на `text` означало бы регрессию ради ошибочного smoke.
+
+Исправление: installed smoke должен ожидать canonical project kind `text/code`, продолжать строго сравнивать точное содержимое без strip/newline normalization и при любом расхождении печатать ok/kind/length/bracketed content/full JSON response. Добавить regression, выполняющую настоящий `_analyze` и доказывающую exact content + kind.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: точная причина воспроизведена исходным analyzer, startup/port/package не являются текущим blocker.
+REMAINING: исправить smoke и получить installed marker на новом Windows run.
+BLOCKERS: head `8af10a7` red только из-за неверного expected kind; readiness пока 10/20.
+NEXT: минимальная contract/test/journal партия, local tests, fast-forward publish; не менять production analyzer contract и не повторять port fix.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: smoke согласован с действующим TXT contract
+
+Installed smoke теперь ожидает канонический для проекта `kind=text/code`, строит `/analyze` URL из того же `$localServicesPort` и по-прежнему требует точное регистрозависимое совпадение содержимого через `-cne`. Никакой `strip` или нормализации переводов строк не добавлено. При расхождении Windows job напечатает expected/actual kind, длины, содержимое в скобках и полный JSON response.
+
+Добавлен быстрый regression, который через AST выполняет настоящие `_read_text` и `_analyze` из `file_service.py` на UTF-8 TXT без BOM и требует одновременно `text/code` и точное исходное содержимое. Локально: `28 passed, 13 subtests passed` за `0.09s`; Python compile и `git diff --check` успешны. PowerShell/installed boundary остаётся за новым Windows CI run.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: ложное ожидание `text` исправлено без изменения production contract; строгая content assertion и подробная диагностика сохранены; local contracts green.
+REMAINING: опубликовать партию и получить `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK` на exact новом head.
+BLOCKERS: Windows installed marker ещё не подтверждён новым run; readiness остаётся 10/20.
+NEXT: обычному чату после остановки сделать fresh fetch PR #92/main, найти Windows Package run по exact опубликованному SHA и читать его. При SUCCESS обоих installed markers принять Windows checkpoint 11/20=55%; при FAILURE исправлять только точную terminating assertion по artifact/log evidence.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%

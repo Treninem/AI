@@ -32,6 +32,33 @@ class WindowsVoicePackageTests(unittest.TestCase):
         self.assertEqual(self.resolve_file_service_port({'AURORAFOX_API_PORT': '18869'}), 18869)
         self.assertEqual(self.resolve_file_service_port({}), 8767)
 
+    def test_file_service_txt_contract_preserves_content_and_uses_canonical_kind(self):
+        path = ROOT / 'file_intelligence/file_service.py'
+        tree = ast.parse(path.read_text(encoding='utf-8'))
+        nodes = [node for node in tree.body
+                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and
+                 node.name in {'_read_text', '_analyze'}]
+        values = {
+            'Path': Path,
+            'Any': object,
+            'MAX_TEXT_CHARS': 10000,
+            'TEXT_EXT': {'.txt'},
+            'IMAGE_EXT': set(),
+            'AUDIO_EXT': set(),
+            'VIDEO_EXT': set(),
+            'ARCHIVE_EXT': set(),
+            'zipfile': SimpleNamespace(is_zipfile=lambda _path: False),
+            'tarfile': SimpleNamespace(is_tarfile=lambda _path: False),
+        }
+        exec(compile(ast.Module(body=nodes, type_ignores=[]), str(path), 'exec'), values)
+        expected = 'AuroraFox локальный разбор файлов'
+        with tempfile.TemporaryDirectory() as directory:
+            sample = Path(directory) / 'installed-file-sample.txt'
+            sample.write_bytes(expected.encode('utf-8'))
+            actual = values['_analyze'](sample, '', False, 10000)
+        self.assertEqual(actual['kind'], 'text/code')
+        self.assertEqual(actual['text'], expected)
+
     def resolve_server_root(self, frozen, executable, source):
         tree = ast.parse(SERVER.read_text(encoding="utf-8"))
         node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'ROOT' for t in node.targets))
@@ -156,15 +183,22 @@ class WindowsVoicePackageTests(unittest.TestCase):
         self.assertIn("'file_service:app'", text)
         self.assertIn("'--port',$localServicesPort", text)
         self.assertIn('$filesHealthUrl = "http://127.0.0.1:$localServicesPort/health"', text)
+        self.assertIn('$filesAnalyzeUrl = "http://127.0.0.1:$localServicesPort/analyze"', text)
         self.assertIn('Get-NetTCPConnection -LocalPort $ExpectedPort -State Listen', text)
         self.assertIn('ProcessExited:', text)
+        self.assertIn("$expectedFileKind = 'text/code'", text)
+        self.assertIn('$actualFileContent = [string]$fileAnalysis.content', text)
+        self.assertIn('$actualFileContent -cne $fileText', text)
+        self.assertIn('Expected kind:', text)
+        self.assertIn('Actual content length:', text)
+        self.assertIn('Response:', text)
         service = (ROOT / 'file_intelligence/file_service.py').read_text(encoding='utf-8')
         self.assertIn('os.getenv("AURORAFOX_LOCAL_SERVICES_PORT")', service)
         self.assertIn('or os.getenv("AURORAFOX_FILES_PORT")', service)
         self.assertIn('or os.getenv("AURORAFOX_API_PORT")', service)
         self.assertIn("/sandbox/write'", text)
         self.assertIn("/sandbox/read?path=installed-proof.txt'", text)
-        self.assertIn("/analyze'", text)
+        self.assertIn('Invoke-RestMethod $filesAnalyzeUrl', text)
         self.assertIn("local_core_planning_required", text)
         ranges = []
         for family in ('externalIpv4', 'externalIpv6'):
