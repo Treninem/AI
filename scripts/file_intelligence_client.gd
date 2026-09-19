@@ -85,7 +85,7 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		# OCR into an "unsupported" external-AI error.
 		if extension in ANDROID_OCR_EXTENSIONS:
 			var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual)
-			return _decorate_android_result(async_result, path, private_path, max_chars)
+			return _decorate_android_result(_validate_android_ocr_result(async_result), path, private_path, max_chars)
 		var raw = plugin.call("analyzeLocalFile", private_path, question, visual)
 		var parsed = JSON.parse_string(str(raw))
 		if parsed is Dictionary:
@@ -267,6 +267,12 @@ func _decorate_android_result(parsed: Dictionary, original_path: String, private
 		parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars) + "\n[Обрезано AuroraFox]"
 		parsed["truncated"] = true
 	return parsed
+
+func _validate_android_ocr_result(result: Dictionary) -> Dictionary:
+	if bool(result.get("ok", false)) and str(result.get("content", "")).strip_edges().is_empty():
+		result["ok"] = false
+		result["error"] = "Android OCR returned empty content"
+	return result
 
 func _analyze_android_job(plugin: Object, private_path: String, question: String, visual: bool) -> Dictionary:
 	var start_raw = plugin.call("startAnalyzeLocalFile", private_path, question, visual)

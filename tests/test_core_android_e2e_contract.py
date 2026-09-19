@@ -26,7 +26,9 @@ def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
     assert "transcribe(" in script
     assert "installed_ocr_bilingual" in script
     assert "FileIntelligenceClient.new()" in script
-    assert "АВРОРА 5183" in script
+    assert "BILINGUAL_OCR_FIXTURE_PNG_BASE64" in script
+    assert "image.load_png_from_buffer" in script
+    assert "SubViewport.new()" not in script
     assert 'ocr_meta.get("offline", false)' in script
     assert 'ocr_meta.get("external_ai_required", true)' in script
     assert '"rus" in ocr_languages' in script
@@ -49,6 +51,7 @@ def test_android_file_intelligence_uses_callable_exported_plugin_methods() -> No
     assert 'plugin.has_method("startAnalyzeLocalFile")' not in client
     assert 'plugin.has_method("analyzeLocalFile")' not in client
     assert 'Android runtime does not expose File Intelligence' not in client
+    assert "Android OCR returned empty content" in client
 
 
 def test_android_godot_e2e_workflow_runs_offline_phase_in_one_shell() -> None:

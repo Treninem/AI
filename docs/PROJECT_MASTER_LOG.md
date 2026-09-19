@@ -2099,3 +2099,33 @@ REMAINING: publish and require `AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_
 BLOCKERS: only the real emulator validates packaged JNI/assets and recognition.
 NEXT: publish this minimal correction and wait for its exact Android E2E job before further release mutation.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+## 72. BEFORE: deterministic bilingual bitmap and fail-closed empty OCR response
+
+Exact PR #92/head `d2d11fa369bc01b1f915aa30cae0eeef642e642f`; Android Core E2E job `105962815237` reaches Kotlin OCR bridge. TTS, STT, Core, Knowledge and all other scenarios pass. The OCR response has `engine=tesseract4android`, `offline=false` is not reported, no error, but empty `content`, proving the bridge call now occurs but its input contains no recognisable pixels.
+
+Native inspection matters here: `AndroidFileRuntime.analyzeOcr()` delegates image files to `AndroidOcrRuntime.extractImage()`, which loads the bitmap, initializes Tesseract with pinned `rus+eng`, calls `getUTF8Text()` and returns it as `content`. Therefore no invented replacement Kotlin API is required. The benchmark's prior `SubViewport`-rendered fixture is the unstable component: it can capture an unrendered frame in the no-window emulator. Claim: `benchmarks/core/android_godot_benchmark.gd`, `scripts/file_intelligence_client.gd`, Android E2E contracts and this journal. No OCR skip, no external fallback, and no relaxation of required bilingual markers.
+
+INTENDED FIX: replace the runtime off-screen render with a deterministic, high-contrast 1280×420 PNG payload containing actual DejaVu Sans glyphs `AURORA 7429` and `АВРОРА 5183`; persist those bytes inside the app sandbox and retain SHA evidence. On the Godot wrapper, a successful image OCR JSON with blank `content` becomes `ok=false, error=Android OCR returned empty content` before decoration, so an input/bridge regression cannot look healthy.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: exact empty-content failure traced to test fixture capture, not a missing Tesseract invocation.
+REMAINING: fixture/wrapper correction, local parse/contracts, exact Android rerun.
+BLOCKERS: Russian recognition is only authoritative on packaged Android Tesseract data.
+NEXT: make the fixture pixel-deterministic and preserve strict gate semantics.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+### AFTER: OCR fixture contains deterministic text pixels
+
+The Android benchmark no longer depends on `SubViewport`/frame-post-draw timing. It decodes an embedded 1280×420 DejaVu Sans Bold PNG, verified before inclusion by local Tesseract (`AURORA 7429`, second Cyrillic line rendered as visible glyphs), validates dimensions, writes exactly those bytes to `user://android-installed-ocr-e2e.png`, and records its SHA. This makes the packaged Tesseract input deterministic under the no-window emulator.
+
+`FileIntelligenceClient` additionally changes `ok=true` plus blank OCR `content` into `ok=false` with `Android OCR returned empty content`; the benchmark still requires every English/Russian marker and has no skip route. Local verification: `29 passed` selected contracts, `AURORA_ANDROID_CONTRACT_OK`, Godot 4.7.1 parse, shell syntax and diff check succeed.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: deterministic bitmap source and explicit empty-OCR rejection implemented without altering native engine or gate semantics.
+REMAINING: publish and inspect actual Android 35 `rus+eng` report content/marker.
+BLOCKERS: only the packaged emulator can prove the pinned Russian traineddata recognizes the second line.
+NEXT: publish minimal candidate and wait for exact Core Android E2E.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
