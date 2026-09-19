@@ -21,7 +21,11 @@ func _exit_tree() -> void:
 		_active_request = null
 	if OS.get_name() == "Android" and not _active_android_job_id.is_empty() and Engine.has_singleton("AuroraFoxRuntime"):
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		if plugin != null and plugin.has_method("cancelAnalyzeLocalFile"):
+		# Godot Android release singletons expose @UsedByGodot methods through
+		# call(), but has_method() can incorrectly report false (see
+		# AndroidLocalRuntime). The job id exists only after this known API was
+		# called successfully, so cancel directly and fail closed nowhere else.
+		if plugin != null:
 			plugin.call("cancelAnalyzeLocalFile", _active_android_job_id)
 		_active_android_job_id = ""
 	if OS.get_name() == "Windows" and backend_pid > 0:
@@ -33,7 +37,7 @@ func health() -> Dictionary:
 		if not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": false, "error": "AuroraFoxRuntime Android plugin is unavailable"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		var raw = plugin.call("getCapabilitiesJson") if plugin.has_method("getCapabilitiesJson") else "{}"
+		var raw = plugin.call("getCapabilitiesJson")
 		var caps = JSON.parse_string(str(raw))
 		if not caps is Dictionary:
 			return {"ok": false, "error": "Invalid Android runtime capabilities"}
@@ -76,11 +80,12 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 			return {"ok": false, "error": "Не удалось скопировать выбранный файл в приватную песочницу AuroraFox"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
 		var extension := path.get_extension().to_lower()
-		if extension in ANDROID_OCR_EXTENSIONS and plugin.has_method("startAnalyzeLocalFile") and plugin.has_method("pollAnalyzeLocalFile") and plugin.has_method("cancelAnalyzeLocalFile"):
+		# Do not use Object.has_method() here. In a release Android APK it may
+		# hide a callable @UsedByGodot plugin method and incorrectly turn local
+		# OCR into an "unsupported" external-AI error.
+		if extension in ANDROID_OCR_EXTENSIONS:
 			var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual)
 			return _decorate_android_result(async_result, path, private_path, max_chars)
-		if not plugin.has_method("analyzeLocalFile"):
-			return {"ok": false, "error": "Android runtime does not expose File Intelligence"}
 		var raw = plugin.call("analyzeLocalFile", private_path, question, visual)
 		var parsed = JSON.parse_string(str(raw))
 		if parsed is Dictionary:
@@ -102,7 +107,7 @@ func cancel_active_analysis() -> Dictionary:
 		if _active_android_job_id.is_empty() or not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": true, "cancel_requested": false, "reason": "no_active_analysis"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		if plugin == null or not plugin.has_method("cancelAnalyzeLocalFile"):
+		if plugin == null:
 			return {"ok": false, "cancel_requested": false, "error": "Android cancellation API is unavailable"}
 		var raw = plugin.call("cancelAnalyzeLocalFile", _active_android_job_id)
 		var parsed = JSON.parse_string(str(raw))
@@ -118,8 +123,6 @@ func tree(path: String, max_items := 2000) -> Dictionary:
 		if not path.begins_with("user://") or not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": false, "error": "Android directory tree is restricted to user://"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		if not plugin.has_method("treeLocal"):
-			return {"ok": false, "error": "Android treeLocal is unavailable"}
 		var raw = plugin.call("treeLocal", ProjectSettings.globalize_path(path), clampi(max_items, 1, 5000))
 		return _parse_native(raw)
 	if OS.get_name() != "Windows":

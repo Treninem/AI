@@ -2069,3 +2069,33 @@ REMAINING: publish exact candidate and inspect the real Android 35 offline emula
 BLOCKERS: local Linux cannot execute the packaged Android Kotlin/ONNX/Tesseract runtime; CI marker is mandatory.
 NEXT: commit only claimed files (never the unrelated owner background), publish to PR #92, then wait for exact-head Core Android E2E instead of spending tokens polling prematurely.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+## 71. BEFORE: release Android OCR bridge must call exported plugin methods
+
+Exact PR #92/head `56697577383b333eb5329be218b3dd095bad91b1`; Android Core E2E run `35466043477`, real-normal-path job `105958581074` failed only at installed OCR. Build, test-sign, Android 35 install/launch, offline Core, reasoning, Russian dialog, Knowledge retrieval, Supertonic TTS, Whisper STT and compatibility all passed. Exact report failure: `installed_ocr_bilingual` received `engine=tesseract4android`, empty content and `Android runtime does not expose File Intelligence`.
+
+The proposed "skip if external AI required" is rejected: product contract is offline local `tesseract4android`, and the diagnostic `external_ai_required=true` is only the benchmark's default for a malformed error response. Root cause is local: `scripts/android_local_runtime.gd` already documents that Godot Android release singleton methods may dispatch correctly through `call()` while `has_method()` falsely returns false; `scripts/file_intelligence_client.gd` nevertheless gates every exported File Intelligence method on `has_method()`. Claim: `scripts/file_intelligence_client.gd`, Android E2E contract/runner regression only as necessary, and this journal. Do not change Kotlin OCR assets, change scenario to skipped, or relax OCR assertions.
+
+INTENDED FIX: for an existing `AuroraFoxRuntime` singleton invoke its known `@UsedByGodot` File Intelligence methods directly, parse/fail closed on malformed native response, and retain async OCR cancellation/polling path. This restores the actual local bridge rather than masking an unavailable capability.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: exact failing scenario isolated from Android CI evidence.
+REMAINING: bridge correction, local parse/contracts, publish and rerun exact Android E2E.
+BLOCKERS: no local Android emulator/runtime proof; only a new CI report may accept installed OCR.
+NEXT: remove unreliable reflection gates for declared Android plugin methods.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+### AFTER: local OCR is invoked, never reclassified as an external fallback
+
+`FileIntelligenceClient` now invokes known exported `AuroraFoxRuntime` APIs through `plugin.call()` after verifying the singleton exists. It no longer uses false-negative `has_method()` reflection for `getCapabilitiesJson`, synchronous File Intelligence, OCR async start/poll/cancel, tree, or shutdown cancellation. Unknown/malformed native output still fails closed through existing JSON parsing; no external OCR, skip path, or capability downgrade was introduced. The async image/PDF OCR route is therefore selected in the installed release APK and receives the actual `startAnalyzeLocalFile` response from Kotlin.
+
+Regression coverage explicitly rejects restoration of the false reflection gate and of the misleading `Android runtime does not expose File Intelligence` path. Local verification: `29 passed` selected Android E2E/runner/APK/OCR/Supertonic contracts; `AURORA_ANDROID_CONTRACT_OK`; Godot 4.7.1 parse, shell syntax and diff check succeed. Actual Android 35 Tesseract execution remains pending a new exact CI run.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: exact release OCR failure repaired at the Godot-to-Kotlin bridge without weakening the local-only acceptance contract.
+REMAINING: publish and require `AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK` plus a completed report with nonempty bilingual OCR content.
+BLOCKERS: only the real emulator validates packaged JNI/assets and recognition.
+NEXT: publish this minimal correction and wait for its exact Android E2E job before further release mutation.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%

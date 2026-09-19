@@ -5,6 +5,7 @@ SCRIPT = ROOT / "benchmarks/core/android_godot_benchmark.gd"
 SCENE = ROOT / "benchmarks/core/android_godot_benchmark.tscn"
 RUNNER = ROOT / "benchmarks/core/run_android_godot_e2e.sh"
 WORKFLOW = ROOT / ".github/workflows/core-android-e2e.yml"
+FILE_CLIENT = ROOT / "scripts/file_intelligence_client.gd"
 
 
 def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
@@ -35,6 +36,19 @@ def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
     assert "http://1.1.1.1/" in script
     assert "external_network_probe_blocked" in script
     assert "android_godot_benchmark.gd" in scene
+
+
+def test_android_file_intelligence_uses_callable_exported_plugin_methods() -> None:
+    client = FILE_CLIENT.read_text(encoding="utf-8")
+    # Godot Android release singleton reflection can hide @UsedByGodot methods
+    # even though Object.call() correctly dispatches them.
+    assert 'plugin.call("startAnalyzeLocalFile"' in client
+    assert 'plugin.call("pollAnalyzeLocalFile"' in client
+    assert 'plugin.call("analyzeLocalFile"' in client
+    assert 'plugin.call("getCapabilitiesJson")' in client
+    assert 'plugin.has_method("startAnalyzeLocalFile")' not in client
+    assert 'plugin.has_method("analyzeLocalFile")' not in client
+    assert 'Android runtime does not expose File Intelligence' not in client
 
 
 def test_android_godot_e2e_workflow_runs_offline_phase_in_one_shell() -> None:
