@@ -11,7 +11,8 @@ RUNNER = ROOT / 'benchmarks/core/run_android_godot_e2e.sh'
 REQUIRED = [
     'offline_network_guard', 'bundled_core_identity', 'cold_start_first_response',
     'basic_reasoning', 'russian_dialog', 'multi_turn_context',
-    'core_knowledge_retrieval', 'compatibility_switch_isolation',
+    'core_knowledge_retrieval', 'installed_voice_tts', 'installed_voice_stt',
+    'installed_ocr_bilingual', 'compatibility_switch_isolation',
 ]
 ADB = '''#!/usr/bin/env python3
 import json, os, pathlib, sys
@@ -95,6 +96,7 @@ class AndroidE2ERunnerTests(unittest.TestCase):
         self.assertEqual(saved['status'], 'completed')
         actual_sha = subprocess.check_output(['git', '-C', str(ROOT), 'rev-parse', 'HEAD'], text=True).strip()
         self.assertEqual(saved['git_sha'], actual_sha)
+        self.assertIn('AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK', result.stdout)
         self.assertEqual(sum(call[:2] == ['exec-out', 'cat'] for call in calls), 2)
         self.assertTrue(any(call[:3] == ['install', '--no-incremental', '-r'] for call in calls))
         self.assertIn(['root'], calls)
@@ -122,6 +124,7 @@ class AndroidE2ERunnerTests(unittest.TestCase):
         result, _, _ = self.run_runner([report])
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('scenario_failure', result.stderr)
+        self.assertNotIn('AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK', result.stdout)
 
     def test_process_exit_preserves_partial_report_and_app_diagnostics(self):
         result, saved, _ = self.run_runner([{'status': 'running'}], FAKE_CRASH='1')

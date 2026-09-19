@@ -2035,3 +2035,37 @@ REMAINING: fast-forward publish and real Windows installer/bridges/installed ser
 BLOCKERS: current head `bec6332` Windows package red only at Inno compile; no local Windows/Inno runtime.
 NEXT: publish this coherent BUILD correction, then wait for and inspect the exact Windows Package job before any further release mutation; do not change hidden imports or production API behavior.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+## 70. BEFORE: installed Android Voice/OCR/Knowledge runtime acceptance
+
+`WORK-2026-09-17-FINAL-RELEASE` остаётся единственным активным исполнителем. Remote exact PR #92/head `40d45dca1225050315944593388dbad8813ffe36`, tree `23919971979a782f2a69a5b2b0702fd71fb91056`, main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; version `1.3.0.0`/Android code `100005`, финальный MINOR остаётся version-last. Claim: `benchmarks/core/android_godot_benchmark.gd`, `benchmarks/core/run_android_godot_e2e.sh`, `tests/test_core_android_e2e_contract.py`, `tests/test_android_e2e_runner.py`, stale `tests/test_android_voice_quality_contract.py`, `.github/workflows/core-android-e2e.yml` только если необходим path trigger, и этот журнал. Unrelated owner asset `assets/ui/aurorafox_background_master.png` не принадлежит claim и не меняется.
+
+Windows packaging correction section 69 подтверждён exact Windows Package run `35451459634`: process-contract job `105919229958` SUCCESS и package job `105919312960` SUCCESS; Build installer, historical V1.2/V1.3 bridges, silent install, installed-app smoke и artifact upload завершились успешно. Все 25 workflows exact head `40d45dc` завершились SUCCESS. Это закрывает regression самой Inno-поправки, но не добавляет новый readiness checkpoint сверх уже принятого Windows installed checkpoint section 68.
+
+BEFORE GAP: текущий Android APK smoke доказывает install/version/launch/no-crash, а Android normal-path E2E доказывает offline Core, multi-turn и Core Knowledge import/retrieval. Ни один installed-emulator gate не вызывает packaged Supertonic/Whisper voice assets и packaged `rus+eng` Tesseract OCR через production Godot/Kotlin bridge. Static Kotlin/asset/contract checks не считаются runtime acceptance.
+
+INTENDED CHANGE: расширить существующий disposable exact-production-runtime Android E2E, не добавляя test hook в рабочую main scene и не создавая второй тяжёлый APK job. В установленном release APK при отключённой внешней сети: вызвать packaged Russian TTS и локальный STT на созданном WAV; создать high-contrast bilingual ru/en image внутри app sandbox, пропустить её через normal `FileIntelligenceClient` Android OCR path; сохранить bounded hashes/metadata/errors в существующий report; сохранить уже существующий Core Knowledge import/retrieval scenario. Runner обязан требовать новые scenario IDs и отдельный marker только после completed/passed report. Никакого снижения существующих Core assertions или сетевого guard.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: Inno regression accepted on exact head; missing Android installed runtime boundary identified without crediting static tests.
+REMAINING: implement locally, parse/contract-test, publish coherent BUILD candidate, then require real Android 35 emulator evidence before readiness changes.
+BLOCKERS: installed TTS/STT/OCR evidence does not yet exist; emulator CI is the first authoritative runtime boundary.
+NEXT: add the three bounded scenarios to the already installed/offline Android normal-path benchmark and keep version unchanged until final release identity gate.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+### AFTER: exact installed-runtime scenarios are mandatory
+
+Existing disposable Android normal-path APK now performs three additional calls after the already accepted Core Knowledge import/retrieval: packaged Supertonic Russian TTS must create a non-empty WAV with exact engine/language metadata; packaged Whisper STT must transcribe that WAV locally; `FileIntelligenceClient` must send a runtime-rendered high-contrast `AURORA 7429` + `АВРОРА 5183` PNG through the asynchronous Android plugin and receive both markers with `tesseract4android`, `rus+eng`, `offline=true`, `external_ai_required=false`. The emulator remains in airplane mode with Wi-Fi/data disabled and the pre-existing external ping/HTTP probes blocked. The runner requires all 11 scenario IDs and prints `AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK` only after the completed report passes; a regression verifies the marker is absent on scenario failure.
+
+The benchmark remains a disposable scene selected only in the CI checkout, so the production `main.tscn`, stable Core and shipped UI receive no test backdoor. The previously orphaned quality test still required removed Piper Denis strings and contradicted the active pinned Supertonic contract; it now checks the current offline Supertonic engine/cache identity and rejects Piper. No production voice implementation changed.
+
+LOCAL EVIDENCE: Godot `4.7.1-stable` imported the project and parsed `android_godot_benchmark.gd` with exit 0; `28 passed` across Android E2E runner/report, APK/OCR, Supertonic and voice-quality contracts; standalone Android contract printed `AURORA_ANDROID_CONTRACT_OK`; shell syntax and `git diff --check` pass. A broad unprovisioned local pytest collection cannot represent CI because this container lacks optional FastAPI/requests dependencies; the affected isolated release contracts above are green. Real packaged TTS/STT/Tesseract execution remains deliberately uncredited until the exact Android emulator job returns its new marker.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: production-path installed Android Voice/OCR/Knowledge acceptance implemented locally with fail-closed report/runner contract; stale Piper-only test corrected to active Supertonic.
+REMAINING: publish exact candidate and inspect the real Android 35 offline emulator report/logcat; only then may installed Android checkpoint increase readiness to 12/20.
+BLOCKERS: local Linux cannot execute the packaged Android Kotlin/ONNX/Tesseract runtime; CI marker is mandatory.
+NEXT: commit only claimed files (never the unrelated owner background), publish to PR #92, then wait for exact-head Core Android E2E instead of spending tokens polling prematurely.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%

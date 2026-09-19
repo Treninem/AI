@@ -108,6 +108,94 @@ func _run() -> void:
 	knowledge_details["import_ok"] = knowledge_import.get("ok", false)
 	_append(report, "core_knowledge_retrieval", knowledge_pass, knowledge_details)
 
+	# Exercise the packaged Android plugin and its real bundled assets from the
+	# installed, offline release APK. Static Kotlin/asset checks do not prove that
+	# Godot can invoke these runtimes after installation.
+	var android_runtime := AndroidLocalRuntime.new()
+	add_child(android_runtime)
+	await get_tree().process_frame
+	var voice_caps := android_runtime.capabilities()
+	var tts_started := Time.get_ticks_usec()
+	var tts := android_runtime.synthesize_speech("Аврора проверяет локальный голос: один, два, три.", 1.0, "neutral", 0.5)
+	var tts_path := str(tts.get("path", ""))
+	var tts_bytes := _file_size(tts_path)
+	var tts_pass: bool = (
+		bool(voice_caps.get("local_tts", false))
+		and bool(tts.get("ok", false))
+		and str(tts.get("engine", "")) == "sherpa-onnx-supertonic-3"
+		and str(tts.get("language", "")) == "ru"
+		and float(tts.get("duration", 0.0)) > 0.0
+		and tts_bytes > 1024
+	)
+	_append(report, "installed_voice_tts", tts_pass, {
+		"elapsed_ms": float(Time.get_ticks_usec() - tts_started) / 1000.0,
+		"engine": tts.get("engine", ""),
+		"language": tts.get("language", ""),
+		"duration": tts.get("duration", 0.0),
+		"wav_bytes": tts_bytes,
+		"wav_sha256": FileAccess.get_sha256(tts_path) if tts_bytes > 0 else "",
+		"error": str(tts.get("error", "")).substr(0, 500)
+	})
+
+	var stt_started := Time.get_ticks_usec()
+	var stt := android_runtime.transcribe("", tts_path, "ru") if tts_bytes > 0 else {"ok": false, "error": "TTS fixture WAV is unavailable"}
+	var stt_text := str(stt.get("text", "")).strip_edges()
+	var stt_pass: bool = (
+		bool(voice_caps.get("sherpa_stt", false))
+		and bool(stt.get("ok", false))
+		and str(stt.get("engine", "")) == "sherpa-onnx-whisper-tiny"
+		and not stt_text.is_empty()
+	)
+	_append(report, "installed_voice_stt", stt_pass, {
+		"elapsed_ms": float(Time.get_ticks_usec() - stt_started) / 1000.0,
+		"engine": stt.get("engine", ""),
+		"language": stt.get("language", ""),
+		"text_sha256": _normalized(stt_text).sha256_text(),
+		"text_excerpt": stt_text.substr(0, 160),
+		"error": str(stt.get("error", "")).substr(0, 500)
+	})
+
+	var fixture := await _create_bilingual_ocr_fixture()
+	var file_client := FileIntelligenceClient.new()
+	add_child(file_client)
+	await get_tree().process_frame
+	var ocr_started := Time.get_ticks_usec()
+	var ocr: Dictionary = await file_client.analyze_file(str(fixture.get("path", "")), "", true) if bool(fixture.get("ok", false)) else {"ok": false, "error": fixture.get("error", "OCR fixture creation failed")}
+	var ocr_text := str(ocr.get("content", ""))
+	var ocr_normalized := _normalized(ocr_text)
+	var ocr_meta: Dictionary = ocr.get("metadata", {}) if ocr.get("metadata", {}) is Dictionary else {}
+	var ocr_health: Dictionary = voice_caps.get("local_ocr_health", {}) if voice_caps.get("local_ocr_health", {}) is Dictionary else {}
+	var ocr_languages: Array = ocr_health.get("languages", []) if ocr_health.get("languages", []) is Array else []
+	var ocr_pass: bool = (
+		bool(voice_caps.get("local_ocr", false))
+		and str(ocr_health.get("engine", "")) == "tesseract4android"
+		and "rus" in ocr_languages
+		and "eng" in ocr_languages
+		and bool(ocr.get("ok", false))
+		and str(ocr.get("kind", "")) == "image"
+		and bool(ocr_meta.get("local_ocr", false))
+		and bool(ocr_meta.get("offline", false))
+		and not bool(ocr_meta.get("external_ai_required", true))
+		and ocr_normalized.contains("aurora")
+		and ocr_normalized.contains("7429")
+		and ocr_normalized.contains("аврора")
+		and ocr_normalized.contains("5183")
+	)
+	_append(report, "installed_ocr_bilingual", ocr_pass, {
+		"elapsed_ms": float(Time.get_ticks_usec() - ocr_started) / 1000.0,
+		"kind": ocr.get("kind", ""),
+		"fixture_sha256": fixture.get("sha256", ""),
+		"content_sha256": ocr_normalized.sha256_text(),
+		"content_excerpt": ocr_text.substr(0, 240),
+		"engine": ocr_health.get("engine", ocr_meta.get("engine", "")),
+		"languages": ocr_languages,
+		"offline": ocr_meta.get("offline", false),
+		"external_ai_required": ocr_meta.get("external_ai_required", true),
+		"error": str(ocr.get("error", "")).substr(0, 500)
+	})
+	file_client.queue_free()
+	android_runtime.queue_free()
+
 	var compatibility := await _measure_chat(client, [{"role":"user", "content":"Reply exactly ANDROID-COMPAT-LOCAL and nothing else."}], 0.0)
 	var compatibility_text := _final_text(str(compatibility.result.get("content", "")))
 	var runtime_after := client.runtime_info()
@@ -156,7 +244,7 @@ func _finish(report: Dictionary, started: int, client: AIClient) -> void:
 		if row is Dictionary and not bool(row.get("passed", false)):
 			failed.append(str(row.get("id", "unknown")))
 	report["failed_scenarios"] = failed
-	report["passed"] = failed.is_empty() and report.scenarios.size() >= 8
+	report["passed"] = failed.is_empty() and report.scenarios.size() >= 11
 	report["status"] = "completed"
 	_write_report(report)
 	print("AURORAFOX_ANDROID_E2E_REPORT " + JSON.stringify(report))
@@ -211,6 +299,46 @@ func _file_size(path: String) -> int:
 	var size := file.get_length()
 	file.close()
 	return size
+
+func _create_bilingual_ocr_fixture() -> Dictionary:
+	var viewport := SubViewport.new()
+	viewport.size = Vector2i(1280, 420)
+	viewport.transparent_bg = false
+	viewport.render_target_update_mode = SubViewport.UPDATE_ONCE
+	add_child(viewport)
+
+	var background := ColorRect.new()
+	background.position = Vector2.ZERO
+	background.size = Vector2(viewport.size)
+	background.color = Color.WHITE
+	viewport.add_child(background)
+
+	var label := Label.new()
+	label.position = Vector2(40, 24)
+	label.size = Vector2(1200, 372)
+	label.text = "AURORA 7429\nАВРОРА 5183"
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", Color.BLACK)
+	label.add_theme_font_size_override("font_size", 112)
+	viewport.add_child(label)
+
+	await get_tree().process_frame
+	await RenderingServer.frame_post_draw
+	var image := viewport.get_texture().get_image()
+	viewport.queue_free()
+	if image == null or image.is_empty():
+		return {"ok": false, "error": "Godot did not render the bilingual OCR fixture"}
+	var path := "user://android-installed-ocr-e2e.png"
+	var save_error := image.save_png(path)
+	if save_error != OK:
+		return {"ok": false, "error": "Cannot save OCR fixture: " + error_string(save_error)}
+	return {
+		"ok": true,
+		"path": path,
+		"sha256": FileAccess.get_sha256(path),
+		"bytes": _file_size(path)
+	}
 
 func _median(values: Array[float]) -> float:
 	if values.is_empty():

@@ -119,7 +119,8 @@ data = json.loads(Path('artifacts/core-benchmark-android-e2e.json').read_text(en
 required = {
     'offline_network_guard', 'bundled_core_identity', 'cold_start_first_response',
     'basic_reasoning', 'russian_dialog', 'multi_turn_context',
-    'core_knowledge_retrieval', 'compatibility_switch_isolation'
+    'core_knowledge_retrieval', 'installed_voice_tts', 'installed_voice_stt',
+    'installed_ocr_bilingual', 'compatibility_switch_isolation'
 }
 rows = {row.get('id'): row for row in data.get('scenarios', []) if isinstance(row, dict)}
 failures = []
@@ -141,5 +142,6 @@ if float(perf.get('suite_wall_ms', 0) or 0) <= 0: failures.append('wall_measurem
 print(json.dumps(data, ensure_ascii=False, indent=2))
 if failures:
     raise SystemExit('AURORAFOX_ANDROID_NORMAL_PATH_GATE_FAILED: ' + ','.join(failures))
+print('AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK')
 print('AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK')
 PY

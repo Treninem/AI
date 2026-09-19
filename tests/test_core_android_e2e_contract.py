@@ -19,6 +19,17 @@ def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
     assert "ollama_failures" in script
     assert "fallback_from" in script
     assert "core_knowledge_retrieval" in script
+    assert "installed_voice_tts" in script
+    assert "installed_voice_stt" in script
+    assert "synthesize_speech(" in script
+    assert "transcribe(" in script
+    assert "installed_ocr_bilingual" in script
+    assert "FileIntelligenceClient.new()" in script
+    assert "АВРОРА 5183" in script
+    assert 'ocr_meta.get("offline", false)' in script
+    assert 'ocr_meta.get("external_ai_required", true)' in script
+    assert '"rus" in ocr_languages' in script
+    assert '"eng" in ocr_languages' in script
     assert "multi_turn_context" in script
     assert "offline_network_guard" in script
     assert "http://1.1.1.1/" in script
@@ -47,4 +58,5 @@ def test_android_godot_e2e_workflow_runs_offline_phase_in_one_shell() -> None:
     assert "external_network_probe_blocked" in runner
     assert "aurora_core_android" in runner
     assert "AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK" in runner
+    assert "AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK" in runner
     assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in runner
