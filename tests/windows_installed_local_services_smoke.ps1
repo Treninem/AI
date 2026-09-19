@@ -27,11 +27,13 @@ New-Item -ItemType Directory -Force $ReportDir | Out-Null
 $reportRoot = (Resolve-Path $ReportDir).Path
 $stateRoot = Join-Path $reportRoot 'user'
 $sandboxRoot = Join-Path $reportRoot 'sandbox'
+$localServicesPort = '18867'
 New-Item -ItemType Directory -Force $stateRoot,$sandboxRoot | Out-Null
 $token = [Guid]::NewGuid().ToString('N') + [Guid]::NewGuid().ToString('N')
 $previous = @{}
 $keys = @(
-    'PYTHONPATH','AURORAFOX_USER_DIR','AURORAFOX_FILES_PORT',
+    'PYTHONPATH','AURORAFOX_USER_DIR','AURORAFOX_LOCAL_SERVICES_PORT',
+    'AURORAFOX_FILES_PORT','AURORAFOX_API_PORT',
     'AURORAFOX_COMPUTER_PORT','AURORAFOX_COMPUTER_TOKEN',
     'AURORAFOX_SANDBOX_ROOT','AURORAFOX_PARENT_PID',
     'AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX'
@@ -49,22 +51,54 @@ $computerStderr = Join-Path $reportRoot 'computer.stderr.log'
 $filesStdout = Join-Path $reportRoot 'files.stdout.log'
 $filesStderr = Join-Path $reportRoot 'files.stderr.log'
 
-function Wait-ServiceHealth([string]$Url, [Diagnostics.Process]$Process, [string]$Stdout, [string]$Stderr) {
-    for ($attempt = 0; $attempt -lt 90; $attempt++) {
+function Wait-ServiceHealth([string]$Url, [int]$ExpectedPort, [Diagnostics.Process]$Process, [string]$Stdout, [string]$Stderr) {
+    $lastRequestError = ''
+    for ($attempt = 0; $attempt -lt 120; $attempt++) {
+        $Process.Refresh()
         if ($Process.HasExited) {
             $out = if (Test-Path $Stdout) { Get-Content $Stdout -Raw } else { '' }
             $err = if (Test-Path $Stderr) { Get-Content $Stderr -Raw } else { '' }
             throw "Installed service exited with $($Process.ExitCode).`nstdout:`n$out`nstderr:`n$err"
         }
-        try {
-            $health = Invoke-RestMethod $Url -TimeoutSec 2
-            if ($health.ok) { return $health }
-        } catch { }
+        $expectedListener = Get-NetTCPConnection -LocalPort $ExpectedPort -State Listen -ErrorAction SilentlyContinue |
+            Where-Object { $_.LocalAddress -in @('127.0.0.1','0.0.0.0','::1','::') }
+        if ($expectedListener) {
+            try {
+                $health = Invoke-RestMethod $Url -TimeoutSec 10
+                if ($health.ok) { return $health }
+            } catch { $lastRequestError = $_.Exception.Message }
+        }
         Start-Sleep -Seconds 1
     }
+    $Process.Refresh()
+    $expectedListener = Get-NetTCPConnection -LocalPort $ExpectedPort -State Listen -ErrorAction SilentlyContinue |
+        Select-Object LocalAddress,LocalPort,OwningProcess
+    $listening = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue |
+        Where-Object { $_.LocalAddress -in @('127.0.0.1','0.0.0.0','::1','::') } |
+        Select-Object LocalAddress,LocalPort,OwningProcess
+    $processInfo = Get-CimInstance Win32_Process -Filter "ProcessId = $($Process.Id)" -ErrorAction SilentlyContinue |
+        Select-Object ProcessId,ParentProcessId,ExecutablePath,CommandLine
     $out = if (Test-Path $Stdout) { Get-Content $Stdout -Raw } else { '' }
     $err = if (Test-Path $Stderr) { Get-Content $Stderr -Raw } else { '' }
-    throw "Installed service did not become healthy: $Url`nstdout:`n$out`nstderr:`n$err"
+    $exitCode = if ($Process.HasExited) { $Process.ExitCode } else { '<running>' }
+    throw @"
+Installed service did not become healthy: $Url
+ExpectedPort: $ExpectedPort
+ProcessId: $($Process.Id)
+ProcessExited: $($Process.HasExited)
+ExitCode: $exitCode
+LastRequestError: $lastRequestError
+Process:
+$($processInfo | Out-String)
+Expected-port listeners:
+$($expectedListener | Out-String)
+Loopback/all-interface listening sockets:
+$($listening | Out-String)
+stdout:
+$out
+stderr:
+$err
+"@
 }
 
 try {
@@ -81,7 +115,7 @@ try {
     [Environment]::SetEnvironmentVariable('AURORAFOX_PARENT_PID', "$PID", 'Process')
     [Environment]::SetEnvironmentVariable('AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX', $null, 'Process')
     $computerProcess = Start-Process -FilePath $computerPython -ArgumentList @($computerService) -WorkingDirectory $computerRoot -RedirectStandardOutput $computerStdout -RedirectStandardError $computerStderr -PassThru
-    $computerHealth = Wait-ServiceHealth 'http://127.0.0.1:18866/health' $computerProcess $computerStdout $computerStderr
+    $computerHealth = Wait-ServiceHealth 'http://127.0.0.1:18866/health' 18866 $computerProcess $computerStdout $computerStderr
     if (-not $computerHealth.computer_supported -or $computerHealth.planning_owner -ne 'aurorafox_core' -or $computerHealth.network_required) {
         throw 'Installed Computer Agent health contract failed'
     }
@@ -103,9 +137,14 @@ try {
 
     [Environment]::SetEnvironmentVariable('PYTHONPATH', (Join-Path $filesRoot 'vendor'), 'Process')
     [Environment]::SetEnvironmentVariable('AURORAFOX_USER_DIR', $stateRoot, 'Process')
-    [Environment]::SetEnvironmentVariable('AURORAFOX_FILES_PORT', '18867', 'Process')
-    $filesProcess = Start-Process -FilePath $filesPython -ArgumentList @($filesService) -WorkingDirectory $filesRoot -RedirectStandardOutput $filesStdout -RedirectStandardError $filesStderr -PassThru
-    $filesHealth = Wait-ServiceHealth 'http://127.0.0.1:18867/health' $filesProcess $filesStdout $filesStderr
+    [Environment]::SetEnvironmentVariable('AURORAFOX_LOCAL_SERVICES_PORT', $localServicesPort, 'Process')
+    [Environment]::SetEnvironmentVariable('AURORAFOX_FILES_PORT', $localServicesPort, 'Process')
+    [Environment]::SetEnvironmentVariable('AURORAFOX_API_PORT', $localServicesPort, 'Process')
+    $filesProcess = Start-Process -FilePath $filesPython -ArgumentList @(
+        '-m','uvicorn','file_service:app','--host','127.0.0.1','--port',$localServicesPort,'--log-level','info'
+    ) -WorkingDirectory $filesRoot -RedirectStandardOutput $filesStdout -RedirectStandardError $filesStderr -PassThru
+    $filesHealthUrl = "http://127.0.0.1:$localServicesPort/health"
+    $filesHealth = Wait-ServiceHealth $filesHealthUrl ([int]$localServicesPort) $filesProcess $filesStdout $filesStderr
     if (-not $filesHealth.ocr_available -or -not ($filesHealth.ocr_languages -contains 'eng') -or -not ($filesHealth.ocr_languages -contains 'rus')) {
         throw 'Installed File Intelligence offline OCR health contract failed'
     }

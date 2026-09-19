@@ -1,17 +1,37 @@
 import ast
 import json
 import ipaddress
+import os
 import re
 from pathlib import Path
 import tempfile
 from types import SimpleNamespace
 import unittest
+from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = ROOT / 'voice/python/aurora_voice_server.py'
 
 
 class WindowsVoicePackageTests(unittest.TestCase):
+    def resolve_file_service_port(self, environment):
+        path = ROOT / 'file_intelligence/file_service.py'
+        tree = ast.parse(path.read_text(encoding='utf-8'))
+        node = next(node for node in tree.body if isinstance(node, ast.Assign) and
+                    any(isinstance(target, ast.Name) and target.id == 'PORT' for target in node.targets))
+        values = {'os': os}
+        with patch.dict(os.environ, environment, clear=True):
+            exec(compile(ast.Module(body=[node], type_ignores=[]), str(path), 'exec'), values)
+        return values['PORT']
+
+    def test_file_service_port_has_one_canonical_value_with_compatible_aliases(self):
+        self.assertEqual(self.resolve_file_service_port({'AURORAFOX_LOCAL_SERVICES_PORT': '18867',
+                                                         'AURORAFOX_FILES_PORT': '8767',
+                                                         'AURORAFOX_API_PORT': '9999'}), 18867)
+        self.assertEqual(self.resolve_file_service_port({'AURORAFOX_FILES_PORT': '18868'}), 18868)
+        self.assertEqual(self.resolve_file_service_port({'AURORAFOX_API_PORT': '18869'}), 18869)
+        self.assertEqual(self.resolve_file_service_port({}), 8767)
+
     def resolve_server_root(self, frozen, executable, source):
         tree = ast.parse(SERVER.read_text(encoding="utf-8"))
         node = next(node for node in tree.body if isinstance(node, ast.Assign) and any(isinstance(t, ast.Name) and t.id == 'ROOT' for t in node.targets))
@@ -129,6 +149,19 @@ class WindowsVoicePackageTests(unittest.TestCase):
         text = path.read_text(encoding='utf-8')
         self.assertIn('-RemoteAddress ($externalIpv4 + $externalIpv6)', text)
         self.assertIn("AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK", text)
+        self.assertIn("$localServicesPort = '18867'", text)
+        self.assertIn("'AURORAFOX_LOCAL_SERVICES_PORT'", text)
+        self.assertIn("SetEnvironmentVariable('AURORAFOX_FILES_PORT', $localServicesPort", text)
+        self.assertIn("SetEnvironmentVariable('AURORAFOX_API_PORT', $localServicesPort", text)
+        self.assertIn("'file_service:app'", text)
+        self.assertIn("'--port',$localServicesPort", text)
+        self.assertIn('$filesHealthUrl = "http://127.0.0.1:$localServicesPort/health"', text)
+        self.assertIn('Get-NetTCPConnection -LocalPort $ExpectedPort -State Listen', text)
+        self.assertIn('ProcessExited:', text)
+        service = (ROOT / 'file_intelligence/file_service.py').read_text(encoding='utf-8')
+        self.assertIn('os.getenv("AURORAFOX_LOCAL_SERVICES_PORT")', service)
+        self.assertIn('or os.getenv("AURORAFOX_FILES_PORT")', service)
+        self.assertIn('or os.getenv("AURORAFOX_API_PORT")', service)
         self.assertIn("/sandbox/write'", text)
         self.assertIn("/sandbox/read?path=installed-proof.txt'", text)
         self.assertIn("/analyze'", text)

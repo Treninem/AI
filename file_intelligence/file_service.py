@@ -25,7 +25,12 @@ from local_ocr import health as local_ocr_health
 from local_ocr import recognize_image as local_ocr_image
 
 HOST = os.getenv("AURORAFOX_FILES_HOST", "127.0.0.1")
-PORT = int(os.getenv("AURORAFOX_FILES_PORT", "8767"))
+PORT = int(
+    os.getenv("AURORAFOX_LOCAL_SERVICES_PORT")
+    or os.getenv("AURORAFOX_FILES_PORT")
+    or os.getenv("AURORAFOX_API_PORT")
+    or "8767"
+)
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 VISION_MODEL = os.getenv("AURORAFOX_VISION_MODEL", "qwen3-vl:8b")
 VOICE_URL = os.getenv("AURORAFOX_VOICE_URL", "http://127.0.0.1:8765").rstrip("/")

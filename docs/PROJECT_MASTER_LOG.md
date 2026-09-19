@@ -1926,3 +1926,35 @@ REMAINING: опубликовать и получить `AURORA_WINDOWS_INSTALLE
 BLOCKERS: локального PowerShell/Windows runtime нет; production Knowledge pack, physical devices/human acceptance, deployment/mail/rollback/signing остаются внешними release boundaries.
 NEXT: fast-forward publish поверх свежего PR #92/head, проверить новый Windows package job и его marker/report. При остановке обычному чату: fresh fetch PR/head и main, читать этот раздел; если Windows failed — исправить точную фазу, если SUCCESS с обоими voice и files/computer markers — записать 55%, затем выбрать следующий из оставшихся 9 checkpoints. Не bump/merge/tag/release заранее.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 66. BEFORE: точный File Intelligence port/startup failure на установленном Windows пакете
+
+`WORK-2026-09-17-FINAL-RELEASE` ACTIVE у единственного исполнителя. Fresh GitHub `main` — `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head — `1302f112fdd3552da63b5b5113a3c034d37ba9cc`; draft, version `1.3.0.0`/code `100005`. Беру `tests/windows_installed_local_services_smoke.ps1`, `file_intelligence/file_service.py`, `tests/test_windows_voice_package.py` и этот журнал. Intended accumulated bump MINOR `1.4.0.0`, version-last.
+
+Фактический Windows Package run `35426429648`, package job `105853137492`: build, packaged runtime validation, Inno installer, V1.2/V1.3 bridges, installed EXE и `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK` SUCCESS. Terminating failure только в installed local-services smoke: после успешного Computer этапа File health `http://127.0.0.1:18867/health` не появился; stdout/stderr пусты, старый helper не записал PID/HasExited/listening sockets. Build log отдельно доказывает `AURORA_FILE_PORTABLE_READY` и `AURORA_COMPUTER_PORTABLE_READY`. PyInstaller `torch.distributed` warnings не причина.
+
+Исходник уже выставлял `AURORAFOX_FILES_PORT=18867`, а `file_service.py` уже читал именно его, поэтому слепое повторение той же пары не является достаточным fix. Исправление должно иметь один canonical `AURORAFOX_LOCAL_SERVICES_PORT` с backward-compatible `AURORAFOX_FILES_PORT`/`AURORAFOX_API_PORT`, явный `python -m uvicorn file_service:app --host 127.0.0.1 --port <тот же порт>`, health URL из той же переменной и ожидание фактического listen socket. Failure evidence обязано содержать PID, exit state/code, command line, expected-port owner, общие listening sockets и logs.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: точный failing job/phase прочитан; ложная причина Inno/PyInstaller исключена evidence.
+REMAINING: реализовать deterministic port/startup и подтвердить новым installed Windows marker.
+BLOCKERS: current head `1302f11` red на File health; readiness не повышать.
+NEXT: изменить только заявленные файлы, выполнить local contracts/compile/diff checks, fast-forward publish в PR #92 и читать новый Windows job. Обычному чату после остановки продолжать с этого раздела и fresh PR head, не повторять уже успешные installer/voice fixes.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: единый порт, явный launcher и диагностируемое ожидание listen
+
+`file_service.py` выбирает порт в одном порядке: `AURORAFOX_LOCAL_SERVICES_PORT`, совместимый `AURORAFOX_FILES_PORT`, совместимый `AURORAFOX_API_PORT`, затем product default `8767`. Installed smoke задаёт все три aliases одним `$localServicesPort=18867`, запускает точный модуль через `python -m uvicorn file_service:app --host 127.0.0.1 --port 18867 --log-level info` и строит health URL из того же значения. Таким образом env, launcher и probe больше не могут разойтись.
+
+Wait helper сначала требует настоящий TCP LISTEN на ожидаемом порту и лишь затем делает HTTP с 10-second timeout; process refresh выполняется на каждой итерации. При failure сохраняются expected port, PID, HasExited/exit code, last request error, Win32 command line, owner ожидаемого порта, все loopback/all-interface listeners и stdout/stderr. Ожидание теперь bounded примерно 120 seconds вместо прежних последовательных HTTP timeouts до ~270 seconds.
+
+Локально `27 passed, 13 subtests passed` за `0.10s`; добавлено AST-выполнение настоящего PORT assignment с canonical/FILES/API/default cases. Python compile и `git diff --check` успешны. PowerShell parse/runtime остаётся только Windows CI boundary; pass до него не заявляется.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: deterministic installed File launcher/port contract и actionable diagnostics реализованы; local contracts green.
+REMAINING: новый Windows package installed File/Computer marker на exact published head.
+BLOCKERS: прежний run `35426429648` остаётся red evidence; readiness 10/20.
+NEXT: fast-forward publish одной партией поверх `1302f11`; читать новый Windows job. Если failure повторится, исправлять по новым PID/socket/command/log данным; если оба installed markers SUCCESS — записать Windows checkpoint и 55%.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
