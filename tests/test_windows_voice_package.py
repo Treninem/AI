@@ -214,6 +214,18 @@ class WindowsVoicePackageTests(unittest.TestCase):
             with self.subTest(installed_service_address=address):
                 self.assertEqual(actual, blocked)
 
+    def test_windows_installer_excludes_generated_api_venv_and_preflights_payload(self):
+        iss = (ROOT / 'build/AuroraFox.iss').read_text(encoding='utf-8')
+        workflow = (ROOT / '.github/workflows/windows-package-ci.yml').read_text(encoding='utf-8')
+        self.assertIn('Source: "windows\\*"', iss)
+        self.assertIn('Excludes: "api\\.venv\\*"', iss)
+        self.assertIn("$iss = (Resolve-Path 'build\\AuroraFox.iss').Path", workflow)
+        self.assertIn("$packageRoot = (Resolve-Path 'build\\windows').Path", workflow)
+        self.assertIn('Installer source missing:', workflow)
+        self.assertIn("'api\\server.py'", workflow)
+        self.assertIn("'core_runtime\\engine\\aurorafox-core.gguf'", workflow)
+        self.assertIn('& $iscc "/DMyAppVersion=$version" $iss', workflow)
+
 
 if __name__ == '__main__':
     unittest.main()

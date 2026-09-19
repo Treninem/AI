@@ -229,8 +229,27 @@ jobs:
           $version = $Matches[1]
           $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found' }
-          & $iscc "/DMyAppVersion=$version" build\AuroraFox.iss
-          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          $iss = (Resolve-Path 'build\AuroraFox.iss').Path
+          $packageRoot = (Resolve-Path 'build\windows').Path
+          foreach ($relative in @(
+            'AuroraFox.exe',
+            'api\server.py',
+            'api\local_core_client.py',
+            'api\runtime_bridge.py',
+            'api\ollama_client.py',
+            'api\install_api.ps1',
+            'api\start_api.ps1',
+            'api\requirements.txt',
+            'core_runtime\engine\llama-server.exe',
+            'core_runtime\engine\aurorafox-core.gguf'
+          )) {
+            $path = Join-Path $packageRoot $relative
+            if (-not (Test-Path -LiteralPath $path)) { throw "Installer source missing: $path" }
+          }
+          Write-Host "Using Inno script: $iss"
+          Write-Host "Using package root: $packageRoot"
+          & $iscc "/DMyAppVersion=$version" $iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
           if (-not (Test-Path build\release\AuroraFox_Setup_Windows.exe)) { throw 'Installer was not produced' }
 
       - name: Verify historical V1.2 and V1.3 in-place bridge mechanics

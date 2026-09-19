@@ -2013,3 +2013,25 @@ DONE: installed Windows voice/files/computer доказан exact run/job marker
 REMAINING: 9 из 20 acceptance checkpoints и их внешние доказательства.
 BLOCKERS: новый Universal Intake/Multi-Model/RAG/Evolution не реализуется в текущем RC по решению владельца; external corpus/device/human/server/signing evidence отсутствует.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+## 69. BEFORE: устранение Inno race от generated API virtualenv
+
+`WORK-2026-09-17-FINAL-RELEASE` ACTIVE у единственного исполнителя. Fresh main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head `bec633240582c2f4bdc3d45afc8dc98589b23b1e`; intended bump BUILD для packaging-only correction, public version остаётся version-last. Claim: `build/AuroraFox.iss`, `.github/workflows/windows-package-ci.yml`, `tests/test_windows_voice_package.py` и этот журнал.
+
+Exact Windows Package run `35449964366`, package job `105915327224` failed только на Build installer; export/runtime/asset checks прошли. Лично прочитан terminating log: broad `Source: "windows\\*"` enters generated `build\\windows\\api\\.venv`, Inno compresses `uvicorn\\lifespan\\__pycache__\\on.cpython-311.pyc.<temporary-id>` and immediately fails `The system cannot find the file specified`. API build copy explicitly selects только top-level `.py`/`.ps1`/`requirements.txt`; API `start_api.ps1` recreates `.venv` through `install_api.ps1` после установки. Следовательно `.venv` не является installer payload, а изменчивое generated output must be excluded. PyInstaller warnings не terminating cause.
+
+Исправление: exclude только `api\\.venv\\*` из broad Inno source, не удаляя portable voice/Computer/File runtimes; перед ISCC проверить script/package root/required staged API+Core files и дать конкретный missing-path error. Добавить static regression, чтобы broad include не вернул API virtualenv и preflight не исчез.
+
+### AFTER: Inno packages stable API payload only
+
+`build/AuroraFox.iss` сохраняет единую recursive package entry, но исключает лишь `api\\.venv\\*`. Поэтому normal installed API продолжает иметь `server.py`, clients, scripts and requirements, а `start_api.ps1` создаёт fresh per-user `.venv` через existing managed-runtime installer; portable Voice, Computer и File Intelligence не затронуты. Workflow перед ISCC resolve-ит exact `.iss` и package root, требует staged API/Core payload и оставляет path/exit-code diagnostics вместо общего `Inno Setup failed`.
+
+Локально `24 passed, 13 subtests passed` за `0.21s` (`test_windows_voice_package.py`, `test_update_backward_compat.py`), Python compile и `git diff --check` successful. Local Linux does not have Inno Setup/PowerShell, поэтому настоящий recursive enumeration/install proof остаётся новым Windows Package CI boundary.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: exact generated-file race identified from Windows log; targeted installer exclusion, preflight and regression contract implemented locally.
+REMAINING: fast-forward publish and real Windows installer/bridges/installed services proof on new exact head; other 9 release checkpoints remain.
+BLOCKERS: current head `bec6332` Windows package red only at Inno compile; no local Windows/Inno runtime.
+NEXT: publish this coherent BUILD correction, then wait for and inspect the exact Windows Package job before any further release mutation; do not change hidden imports or production API behavior.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
