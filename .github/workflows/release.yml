@@ -81,7 +81,7 @@ jobs:
   windows:
     needs: core-gates
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -133,7 +133,7 @@ jobs:
       - name: Build Windows core package
         shell: pwsh
         run: |
-          .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup -SkipVoiceSetup
+          .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup
 
       - name: Smoke exported Windows executable
         shell: pwsh
@@ -147,7 +147,8 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path build\windows\* -DestinationPath dist\AuroraFox-Windows.zip -CompressionLevel Optimal -Force
+          & 'C:\Program Files\7-Zip\7z.exe' a -tzip dist\AuroraFox-Windows.zip '.\build\windows\*'
+          if ($LASTEXITCODE -ne 0) { throw 'ZIP64 Windows update package creation failed' }
 
       - name: Build Windows installer
         shell: pwsh
@@ -174,6 +175,8 @@ jobs:
           if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe is missing' }
           $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
           if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
+          .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
+          .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
           if (-not $uninstaller) { throw 'Uninstaller is missing' }
           $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
@@ -187,6 +190,8 @@ jobs:
           path: |
             dist/AuroraFox-Windows.zip
             dist/AuroraFox_Setup_Windows.exe
+            artifacts/windows-offline-voice/**
+            artifacts/windows-offline-services/**
           if-no-files-found: error
 
   android:

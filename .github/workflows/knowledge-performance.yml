@@ -7,6 +7,8 @@ on:
       - 'benchmarks/knowledge/**'
       - 'tests/*knowledge_performance*'
       - 'tests/*knowledge_stress*'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
       - 'scripts/knowledge_store.gd'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_manager.gd'
@@ -21,6 +23,8 @@ on:
       - 'benchmarks/knowledge/**'
       - 'tests/*knowledge_performance*'
       - 'tests/*knowledge_stress*'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
       - 'scripts/knowledge_store.gd'
       - 'scripts/knowledge_import_transaction.gd'
       - 'scripts/knowledge_manager.gd'
@@ -45,6 +49,9 @@ on:
 permissions:
   contents: read
 
+env:
+  AURORAFOX_BENCHMARK_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 concurrency:
   group: >-
     ${{ github.event_name == 'push' && contains(github.event.head_commit.message, '[knowledge-large]')
@@ -62,10 +69,19 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Validate benchmark contract
         run: >-
           python -m unittest
           tests.test_knowledge_performance_contract
+          tests.test_knowledge_report_identity
           tests.test_knowledge_performance_compare
           tests.test_knowledge_stress_gates
           tests.test_knowledge_stress_removal_transaction
@@ -93,6 +109,14 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -174,6 +198,14 @@ jobs:
     timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Download Godot 4.7.1
         shell: powershell
         run: |
@@ -263,6 +295,14 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -308,6 +348,14 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -353,6 +401,14 @@ jobs:
     timeout-minutes: 180
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Download Godot 4.7.1
         shell: bash
         run: |

@@ -1,0 +1,252 @@
+name: AuroraFox Knowledge Memory OCR Candidate
+
+on:
+  push:
+    branches: [chat-2026-09-17-knowledge-memory-ocr]
+    paths:
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_document_importer.gd'
+      - 'scripts/file_intelligence_client.gd'
+      - 'file_intelligence/**'
+      - 'android_plugin/**'
+      - 'addons/AuroraFoxRuntime/**'
+      - 'benchmarks/knowledge/**'
+      - 'tests/test_knowledge_record_dedupe_contract.py'
+      - 'tests/test_knowledge_store_batch_contract.py'
+      - 'tests/test_local_ocr.py'
+      - 'tests/local_ocr_contract_static_test.py'
+      - 'tests/local_ocr_knowledge_smoke.gd'
+      - '.github/workflows/knowledge-memory-ocr-candidate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-knowledge-memory-ocr-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pytest
+      - name: Python syntax
+        run: python -m py_compile file_intelligence/local_ocr.py file_intelligence/file_service.py benchmarks/knowledge/run_godot_probe.py
+      - name: Knowledge and owned OCR static contracts
+        run: >-
+          python -m pytest -q
+          tests/test_knowledge_record_dedupe_contract.py
+          tests/test_knowledge_store_batch_contract.py
+          tests/local_ocr_contract_static_test.py
+          -k 'not windows_ocr_is_local_bundled_and_bilingual'
+
+  windows-release-packaging-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -m pip install pytest
+      - name: Cross-lane Windows release packaging contract
+        run: >-
+          python -m pytest -q
+          tests/local_ocr_contract_static_test.py::test_windows_ocr_is_local_bundled_and_bilingual
+
+  ocr-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install local bilingual OCR
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y tesseract-ocr tesseract-ocr-eng tesseract-ocr-rus fonts-dejavu-core
+          python -m pip install -r file_intelligence/requirements.txt pytest reportlab
+      - name: Run local OCR regression
+        env:
+          AURORAFOX_OCR_LANGUAGES: rus+eng
+        run: |
+          PYTHONPATH=file_intelligence python -c "import local_ocr; h=local_ocr.health(); assert h['available'], h; assert h['network_required'] is False; assert h['external_ai_required'] is False; assert set(h['languages']) >= {'rus','eng'}, h; print('AURORA_LINUX_BILINGUAL_OCR_READY')"
+          pytest -q tests/test_local_ocr.py
+
+  knowledge-linux:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        run: |
+          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Parse project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Record dedupe and shared provenance
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/record_dedupe_shared_source_probe.gd
+          --prefix AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=
+          --timeout-seconds 120
+          --report artifacts/knowledge-memory-ocr/record-dedupe-linux.json
+      - name: Alias canonical preservation
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
+          --timeout-seconds 120
+          --report artifacts/knowledge-memory-ocr/alias-linux.json
+      - name: Failed registry write rollback
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot ./godot
+          --script benchmarks/knowledge/write_failure_rollback_probe.gd
+          --prefix AURORA_KNOWLEDGE_WRITE_FAILURE_RESULT=
+          --timeout-seconds 120
+          --report artifacts/knowledge-memory-ocr/write-failure-linux.json
+      - name: Local OCR to Knowledge smoke
+        run: timeout 45s ./godot --headless --path . --script tests/local_ocr_knowledge_smoke.gd
+      - name: Upload Linux evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-memory-ocr-linux-${{ github.sha }}
+          path: artifacts/knowledge-memory-ocr/
+          if-no-files-found: warn
+
+  knowledge-windows:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download Godot 4.7.1
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri 'https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip' -OutFile godot.zip
+          Expand-Archive -Path godot.zip -DestinationPath godot-bin -Force
+          $godot = Get-ChildItem -Path godot-bin -Filter 'Godot_v4.7.1-stable_win64.exe' -Recurse | Select-Object -First 1
+          if (-not $godot) { throw 'Godot executable missing' }
+          Copy-Item $godot.FullName '.\godot.exe'
+          .\godot.exe --version
+      - name: Parse project
+        shell: powershell
+        run: .\godot.exe --headless --editor --path . --quit
+      - name: Record dedupe and exact 120 second hang evidence
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/record_dedupe_shared_source_probe.gd
+          --prefix AURORA_KNOWLEDGE_RECORD_DEDUPE_RESULT=
+          --timeout-seconds 120
+          --report artifacts/knowledge-memory-ocr/record-dedupe-windows.json
+      - name: Alias probe exact 120 second hang evidence
+        if: always()
+        shell: powershell
+        run: >-
+          python benchmarks/knowledge/run_godot_probe.py
+          --godot .\godot.exe
+          --script benchmarks/knowledge/dedupe_alias_removal_probe.gd
+          --prefix AURORA_KNOWLEDGE_ALIAS_REMOVAL_RESULT=
+          --timeout-seconds 120
+          --report artifacts/knowledge-memory-ocr/alias-windows.json
+      - name: Upload Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-memory-ocr-windows-${{ github.sha }}
+          path: artifacts/knowledge-memory-ocr/
+          if-no-files-found: warn
+
+  windows-portable-ocr:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build verified portable File Intelligence OCR runtime
+        shell: powershell
+        run: .\file_intelligence\install_files.ps1 -PreparePortable
+      - name: Verify packaged local-only OCR runtime
+        shell: powershell
+        run: |
+          $root = Join-Path $PWD 'file_intelligence'
+          $python = Join-Path $root 'python\python.exe'
+          $vendor = Join-Path $root 'vendor'
+          $tesseract = Join-Path $root 'ocr_runtime\tesseract.exe'
+          if (-not (Test-Path $python)) { throw 'Portable Python missing' }
+          if (-not (Test-Path $tesseract)) { throw 'Bundled tesseract.exe missing' }
+          if (-not (Test-Path (Join-Path $root 'ocr_runtime\tessdata\eng.traineddata'))) { throw 'eng.traineddata missing' }
+          if (-not (Test-Path (Join-Path $root 'ocr_runtime\tessdata\rus.traineddata'))) { throw 'rus.traineddata missing' }
+          $old = $env:PYTHONPATH
+          try {
+            $env:PYTHONPATH = $vendor
+            Push-Location $root
+            & $python -c "import local_ocr; h=local_ocr.health(); assert h['available']; assert h['network_required'] is False; assert h['external_ai_required'] is False; assert set(h['requested_languages']) == {'rus','eng'}; print('AURORA_WINDOWS_PORTABLE_OCR_OK')"
+            if ($LASTEXITCODE -ne 0) { throw 'Portable OCR verification failed' }
+          } finally {
+            Pop-Location
+            $env:PYTHONPATH = $old
+          }
+
+  android-ocr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+      - name: Install Android native toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "${ANDROID_HOME:-}"
+          export PATH="$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          command -v sdkmanager
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            'platform-tools' \
+            'platforms;android-35' \
+            'build-tools;35.0.1' \
+            'cmake;3.22.1' \
+            'ndk;28.1.13356709'
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
+      - name: Prepare pinned native dependencies
+        shell: pwsh
+        run: ./android_plugin/setup_native.ps1
+      - name: Build OCR plugin AAR
+        working-directory: android_plugin
+        run: gradle :plugin:assembleRelease --stacktrace
+      - name: Verify bundled OCR assets and bridge
+        run: |
+          test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/eng.traineddata
+          test -f android_plugin/plugin/build/generated/aurorafoxOcrAssets/tessdata/rus.traineddata
+          aar='android_plugin/plugin/build/outputs/aar/AuroraFoxRuntime-release.aar'
+          test -f "$aar"
+          unzip -l "$aar" | grep -q 'assets/tessdata/eng.traineddata'
+          unzip -l "$aar" | grep -q 'assets/tessdata/rus.traineddata'
+          grep -q 'fun cancelDocumentExtraction' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'fun getDocumentExtractionProgress' android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt
+          grep -q 'TessBaseAPI' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt
+          ! grep -E 'OpenAI|Gemini|Claude|Ollama' android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt

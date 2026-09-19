@@ -46,6 +46,8 @@ def main() -> None:
     )
 
     build_script = read("build/build_android.ps1")
+    require((ROOT / "android_plugin/.gdignore").is_file(), "Godot must not import Android native/build source trees")
+    require(not (ROOT / "addons/AuroraFoxRuntime/.gdignore").exists(), "Exported Android runtime addon must remain discoverable")
     require("[switch]$AllowUnsignedRelease" in build_script, "CI unsigned export switch is missing")
     require("package/signed=false" in build_script, "unsigned CI export is not implemented")
     require("Restored signed Android export preset" in build_script, "signed preset restoration guard is missing")
@@ -74,21 +76,18 @@ def main() -> None:
     require("project/version.json" in artifact, "APK artifact workflow does not derive canonical version")
     require("apksigner" in artifact and "aapt" in artifact, "APK signature/package validation is missing")
     require("android-emulator-runner" in artifact and "arch: x86_64" in artifact, "Android emulator validation is missing")
-    require('adb install -r "$APK_PATH"' in artifact, "Android artifact smoke does not install the generated APK")
-    emulator_script = artifact.split("script: |", 1)[1].split("- name: Upload APK artifact", 1)[0]
-    require("set -eu" in emulator_script, "Android emulator smoke must fail fast under POSIX /bin/sh")
-    require("pipefail" not in emulator_script, "Android emulator smoke uses Bash-only pipefail under POSIX /bin/sh")
-    require("emulator-pid.txt" in emulator_script, "Android emulator smoke does not persist PID across runner shell commands")
+    require('bash benchmarks/core/run_android_apk_smoke.sh "$APK_PATH"' in artifact, "Android artifact smoke must run the generated APK in one Bash process")
+    require("ndk;28.1.13356709" in artifact, "Android workflow NDK pin drifted")
+    emulator_script = read("benchmarks/core/run_android_apk_smoke.sh")
+    require("set -euo pipefail" in emulator_script, "Android emulator Bash runner must fail fast including pipelines")
+    require('adb install -r "$apk"' in emulator_script, "Android artifact smoke must install the supplied APK")
+    require('adb shell pidof "$pkg"' in emulator_script, "Android artifact smoke must check app liveness")
+    require("emulator-pid.txt" in emulator_script, "Android emulator smoke must persist PID evidence")
+    require("FATAL EXCEPTION" in emulator_script and 'exit 1' in emulator_script, "Android artifact smoke must reject a crashed app")
+    require('versionName=$version' in emulator_script, "Android artifact smoke must verify supplied version")
+    require('timeout 30s adb logcat -d' in emulator_script, "Android logcat retries must remain bounded")
     require(
-        "; exit 1; fi" in emulator_script,
-        "Android emulator crash check must stay on one line because the runner executes every line separately",
-    )
-    require(
-        not any(line.strip() in {"then", "fi"} for line in emulator_script.splitlines()),
-        "Android emulator smoke contains a multiline shell conditional that the runner cannot preserve",
-    )
-    require(
-        emulator_script.index("adb logcat -d") < emulator_script.index("test -s build/android/emulator-pid.txt"),
+        emulator_script.index("capture_logcat\nadb shell pidof") < emulator_script.index("test -s build/android/emulator-pid.txt"),
         "Android failure diagnostics must be captured before the process liveness assertion",
     )
 
@@ -131,6 +130,22 @@ def main() -> None:
     require(str(CORE_BYTES) in bundled, "Runtime built-in Core byte count drifted")
     require("ensure_android_private_copy" in bundled, "Android no longer silently provisions the bundled Core")
 
+    android_runtime = read("scripts/android_local_runtime.gd")
+    require("const TERSE_CHAT_MAX_TOKENS := 16" in android_runtime, "Android exact-output inference budget drifted")
+    require(
+        '_plugin.call("getCapabilitiesJson")' in android_runtime,
+        "Android capabilities no longer call the @UsedByGodot API directly",
+    )
+    require(
+        '_plugin.call("chatLocal"' in android_runtime,
+        "Android chat no longer calls the @UsedByGodot API directly",
+    )
+    require(
+        '.has_method("getCapabilitiesJson")' not in android_runtime
+        and '.has_method("chatLocal")' not in android_runtime,
+        "Android release bridge must not gate valid Java singleton calls on Object.has_method",
+    )
+
     core_runtime = read("scripts/aurora_core_runtime.gd")
     core_chat = core_runtime.split("func _chat_local(messages: Array, temperature: float) -> Dictionary:", 1)[1].split(
         "func _chat_ollama", 1
@@ -161,12 +176,18 @@ def main() -> None:
     gradle = read("android_plugin/plugin/build.gradle.kts")
     require("compileSdk = 35" in gradle, "Android plugin compileSdk drifted")
     require("minSdk = 26" in gradle, "Android plugin minSdk drifted")
+    require('ndkVersion = "28.1.13356709"' in gradle, "Android plugin NDK pin drifted")
     require('abiFilters += listOf("arm64-v8a", "x86_64")' in gradle, "Android plugin ABI drifted")
     require('implementation("org.godotengine:godot:4.7.1.stable")' in gradle, "Godot Android plugin dependency drifted")
     require(
         'implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")' in gradle,
         "Android local PDF text dependency is missing from plugin build",
     )
+    require(
+        'implementation("cz.adaptech.tesseract4android:tesseract4android:$tesseractAndroidVersion")' in gradle,
+        "Android local OCR dependency is missing from plugin build",
+    )
+    require("eng.traineddata" in gradle and "rus.traineddata" in gradle, "Android bilingual OCR assets are not declared")
 
     export_plugin = read("addons/AuroraFoxRuntime/export_plugin.gd")
     require(
@@ -174,21 +195,33 @@ def main() -> None:
         "PDFBox dependency is not exported into the final Godot APK",
     )
     require(
-        "return PackedStringArray([_pdfbox_dependency])" in export_plugin,
-        "Godot Android export no longer exposes PDFBox Maven dependency",
+        'cz.adaptech.tesseract4android:tesseract4android:4.9.0' in export_plugin,
+        "Tesseract dependency is not exported into the final Godot APK",
     )
+    require(
+        "return PackedStringArray([_pdfbox_dependency, _tesseract_dependency])" in export_plugin,
+        "Godot Android export must expose both PDFBox and Tesseract Maven dependencies",
+    )
+    require('"https://jitpack.io"' in export_plugin, "Tesseract JitPack repository is not exported")
 
     file_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt")
-    require("PDFBoxResourceLoader.init" in file_runtime, "Android PDFBox runtime is not initialized")
-    require("PDDocument.load(file).use" in file_runtime, "Android PDF text path does not open PDF locally")
-    require("PDFTextStripper()" in file_runtime, "Android PDF text layer is not extracted")
-    require('"engine" to "pdfbox-android"' in file_runtime, "Android PDF extraction engine metadata drifted")
-    require('"offline" to true' in file_runtime, "Android PDF extraction must remain offline")
-    require("PdfRenderer" not in file_runtime, "Android PDF path regressed to metadata-only PdfRenderer")
+    require('ext == "pdf" -> analyzeOcr(file, "pdf", visual)' in file_runtime, "Android PDF route no longer delegates to local OCR runtime")
+    require('meta.put("offline", true)' in file_runtime, "Android file/OCR result metadata must remain offline")
+    require('meta.put("external_ai_required", false)' in file_runtime, "Android file/OCR path must not require external AI")
+
+    ocr_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt")
+    require("PDFBoxResourceLoader.init" in ocr_runtime, "Android PDFBox runtime is not initialized")
+    require("PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()).use" in ocr_runtime, "Android PDF path does not use bounded local PDFBox loading")
+    require("PDFTextStripper()" in ocr_runtime, "Android PDF text layer is not extracted")
+    require("PDFRenderer" in ocr_runtime, "Android scanned-PDF OCR renderer is missing")
+    require('private const val LANGUAGES = "rus+eng"' in ocr_runtime, "Android OCR language contract drifted")
+    require('"engine" to "pdfbox+tesseract4android"' in ocr_runtime, "Android PDF/OCR engine metadata drifted")
+    require("MAX_PDF_BYTES" in ocr_runtime and "MAX_PAGES" in ocr_runtime and "MAX_OCR_PAGES" in ocr_runtime, "Android PDF/OCR safety bounds are missing")
+    require("CancellationException" in ocr_runtime and "checkCancelled()" in ocr_runtime, "Android local OCR cancellation contract is missing")
 
     print(
         f"AURORA_ANDROID_CONTRACT_OK version=V{numeric} code={state['android_version_code']} "
-        f"abis=arm64-v8a,x86_64 pdf=offline core=bundled"
+        f"abis=arm64-v8a,x86_64 pdf=offline ocr=rus+eng core=bundled"
     )
 
 

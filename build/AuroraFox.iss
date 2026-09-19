@@ -34,7 +34,10 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "Создать ярлык на рабочем столе"; GroupDescription: "Ярлыки:"; Flags: checkedonce
 
 [Files]
-Source: "windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+; The API environment is generated after installation by api\install_api.ps1.
+; It can be created by the exported-app smoke immediately before ISCC runs, so
+; never race it while recursively enumerating the stable package payload.
+Source: "windows\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs; Excludes: "api\.venv\*"
 
 [Icons]
 Name: "{autoprograms}\AuroraFox"; Filename: "{app}\{#MyAppExeName}"; WorkingDir: "{app}"

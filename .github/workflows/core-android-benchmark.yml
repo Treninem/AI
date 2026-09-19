@@ -1,0 +1,204 @@
+name: AuroraFox Core Android Benchmark
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'benchmarks/core/android_probe/**'
+      - 'benchmarks/core/run_android_probe.sh'
+      - 'benchmarks/core/report_identity.py'
+      - 'tests/test_core_report_identity.py'
+      - 'tests/test_core_android_benchmark_contract.py'
+      - 'android_plugin/plugin/**'
+      - 'android_plugin/setup_native.ps1'
+      - 'build/prepare_bundled_core_model.ps1'
+      - '.github/workflows/core-android-benchmark.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/core/android_probe/**'
+      - 'benchmarks/core/run_android_probe.sh'
+      - 'benchmarks/core/report_identity.py'
+      - 'tests/test_core_report_identity.py'
+      - 'tests/test_core_android_benchmark_contract.py'
+      - 'android_plugin/plugin/**'
+      - 'android_plugin/setup_native.ps1'
+      - 'build/prepare_bundled_core_model.ps1'
+      - '.github/workflows/core-android-benchmark.yml'
+
+permissions:
+  contents: read
+
+env:
+  AURORAFOX_BENCHMARK_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: aurorafox-core-android-${{ github.workflow }}-${{ github.ref }}
+  # Preserve real runtime evidence; queue the newest candidate until it finishes.
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install --disable-pip-version-check pytest
+      - run: python -m pytest -q tests/test_core_android_benchmark_contract.py tests/test_core_report_identity.py
+
+  real-core-android-emulator:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      AURORAFOX_NATIVE_CACHE_DIR: ${{ github.workspace }}/.ci/native-cache
+      CORE_MODEL: ${{ github.workspace }}/.ci/android-core/aurorafox-core.gguf
+      CORE_SHA: d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Gradle 8.13
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+          cache-cleanup: on-success
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install pinned Android toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager \
+            'platform-tools' \
+            'platforms;android-35' \
+            'build-tools;35.0.1' \
+            'cmake;3.22.1' \
+            'ndk;28.1.13356709'
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
+
+      - name: Restore verified Core model cache
+        id: model_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci/core-model-cache
+          key: aurorafox-core-android-v1-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+
+      - name: Restore pinned Android native cache
+        id: native_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .ci/native-cache
+            android_plugin/plugin/src/main/cpp/third_party
+            android_plugin/plugin/libs
+            android_plugin/plugin/src/main/assets/voice
+          key: aurorafox-android-native-v1-llama-6d054983-wasm3-2f3123df-sherpa-1.13.4
+
+      - name: Prepare verified bundled Core weights
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          New-Item -ItemType Directory -Force (Split-Path -Parent $env:CORE_MODEL) | Out-Null
+          ./build/prepare_bundled_core_model.ps1 -Destination $env:CORE_MODEL -CacheDir "$PWD/.ci/core-model-cache"
+          $sha = (Get-FileHash -LiteralPath $env:CORE_MODEL -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($sha -ne $env:CORE_SHA) { throw "Android benchmark model SHA mismatch: $sha" }
+
+      - name: Save verified Core model cache
+        if: steps.model_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .ci/core-model-cache
+          key: ${{ steps.model_cache.outputs.cache-primary-key }}
+
+      - name: Prepare exact pinned production native runtime sources
+        shell: pwsh
+        run: |
+          ./android_plugin/setup_native.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Pinned Android native runtime setup failed' }
+
+      - name: Save pinned Android native cache
+        if: steps.native_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            .ci/native-cache
+            android_plugin/plugin/src/main/cpp/third_party
+            android_plugin/plugin/libs
+            android_plugin/plugin/src/main/assets/voice
+          key: ${{ steps.native_cache.outputs.cache-primary-key }}
+
+      - name: Build benchmark app against production AuroraFox runtime module
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle -p benchmarks/core/android_probe :app:assembleBenchmark --build-cache --no-daemon --stacktrace
+          test -s benchmarks/core/android_probe/app/build/outputs/apk/benchmark/app-benchmark.apk
+
+      - name: Enable KVM when available
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -e /dev/kvm ]; then
+            echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+            sudo udevadm control --reload-rules
+            sudo udevadm trigger --name-match=kvm
+          fi
+
+      - name: Run real bundled Core on Android 35 emulator without INTERNET permission
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7
+          disable-animations: true
+          disable-linux-hw-accel: auto
+          emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none -memory 4096
+          script: 'bash benchmarks/core/run_android_probe.sh "$CORE_MODEL"'
+
+      - name: Upload Android Core benchmark evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: aurorafox-core-android-benchmark-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            artifacts/core-benchmark-android.json
+            artifacts/core-benchmark-android-logcat.txt
+          if-no-files-found: warn
+          retention-days: 30

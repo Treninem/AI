@@ -1,0 +1,33 @@
+name: Retire integrated temporary branches
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/retire-verified-branches.yml'
+      - 'build/retire_verified_branches.py'
+permissions:
+  contents: read
+jobs:
+  retire:
+    if: >-
+      github.repository == 'Treninem/AI' &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'chat-2026-09-17-unified-finalization'
+    permissions:
+      contents: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          fetch-depth: 0
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == os.environ['AURORA_EXPECTED_HEAD_SHA'] else 'Candidate checkout SHA mismatch')"
+      - name: Delete only owner-authorized integrated aliases with SHA leases
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: python build/retire_verified_branches.py

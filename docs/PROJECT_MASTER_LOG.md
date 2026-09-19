@@ -1167,3 +1167,905 @@ BLOCKERS:
 
 NEXT:
 - Reread fresh `main` and this journal, then inspect the exact Core benchmark scenario, AIClient/context builder and the two Android workflow files. Make only evidence-backed minimal fixes, run the affected exact gates, and write the resulting commit SHA/run IDs/results back into this journal before moving to Knowledge/Work/UI/Voice.
+
+## 43. Work final engineer — owner-directed TAKEOVER/RECONCILE, 2026-09-17
+
+### CLAIM `WORK-2026-09-17-FINAL-RELEASE`
+
+- Status: **ACTIVE — OWNER-DIRECTED TAKEOVER/RECONCILE**.
+- Starting main: `031aebaad16fc25a39dfc45c58f96fadb658cac2`; inherited draft PR #92 / `chat-2026-09-17-unified-finalization` exact head `30d054bb9a9419e63430ced1d841c8931068d79d`.
+- AGENTS.md and full canonical log read. Acknowledge section 40 LEADER-NOTIFY: prior unified executor takeover received; useful code/evidence is preserved.
+- Owner appoints this session final engineer with integration/release responsibility. Reconciles unfinished section 40–42 claims and historical seven-lane claims; does not assume their percentages are verified.
+- Intended accumulated release bump: MINOR / V1.4.0.0, test first/version last. No canonical bump now.
+- First owned batch: `benchmarks/core/run_android_godot_e2e.sh`, Android APK/E2E workflows, relevant runner tests, this journal. Other production files only after reproduced defect and updated claim.
+- Current exact candidate: 24 workflows completed, 22 SUCCESS, Android APK `35253859322` FAILURE (job `105312532029`: logcat collection exit 255 after install/monkey success), Android Core E2E `35253859198` FAILURE (job `105312896359`: no collected report after 1200 s).
+- Source evidence: E2E builds --export-release, then attempts run-as against a non-debuggable package and suppresses errors; it also stops on the first report file although the app writes status=running before inference. Both are evidence collection defects, not proof of product inference success. Preserve actual release runtime and require completed report.
+- Knowledge 1GiB workflow `35253859168` is a synthetic JSONL stress test. It cannot establish genuine >=1GiB production knowledge pack/provenance/licenses or Android import acceptance.
+
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE:
+- Fresh main, complete instructions/log, open PR and exact candidate workflow conclusions checked; clone at exact candidate available.
+REMAINING:
+- Full component audit from files/logs/artifacts; repair Android evidence collection, run relevant tests and exact CI; genuine pack and device/signing acceptance; final version and release gates.
+BLOCKERS:
+- Android release-runtime E2E remains unproven. No physical Windows/Android device or production signing availability verified.
+NEXT:
+- Fix release APK report collection using root on the disposable API35 emulator, wait for completed status, retain partial report/filtered app diagnostics and reject missing mandatory scenarios. Test runner lifecycle with adb simulation before real CI.
+
+
+## 44. Final engineer audit and first Android evidence batch — 2026-09-17
+
+CLAIM: `WORK-2026-09-17-FINAL-RELEASE` — ACTIVE.
+Starting main: `031aebaad16fc25a39dfc45c58f96fadb658cac2`.
+Audited candidate: `30d054bb9a9419e63430ced1d841c8931068d79d` (PR #92); many workflows actually check out PR merge `8b11b2f29daa4b24af187eedcd996c97dbe92d45`, while explicit-head Knowledge/chat gates check out `30d054bb...`. These identities must not be conflated. New implementation commit: `8c61086b7ef9dfba3631b53a3e3624ba321d737f`.
+
+### Coordination / repository facts
+
+- Full main AGENTS/master log read before implementation; section 40 takeover notification acknowledged in section 43.
+- Only open PR found: #92, draft, mergeable, 108 files / 128 commits at the audited head. It is NOT accepted for merge.
+- Branch search paginated: 123 branch names returned. Old/superseded candidates include PR #64 race/scaling history, #66 OCR, #78 Core, #82 Knowledge, #84 UI, #86 Work and numerous temporary/sync branches. Names alone do not prove obsolete/redundant commits; none deleted, none blindly merged.
+- No open GitHub issues returned; unresolved work is in canonical log and release gates, not necessarily GitHub issues.
+- Releases API returned only `repair-v1.2-windows`, prerelease (2026-09-16). No normal V1.4 release/update asset set was returned.
+- Source canonical version remains V1.3.0.0 / Android code 100005. Pinned update floor is 1.4.0.0. Permanent public identity exists, private signing availability not inspected/assumed.
+
+### Component audit
+
+Percentages below are conservative evidence coverage, not a guarantee of quality equivalence to commercial assistants: 20 points each for inspected source/contract, green automated gate, relevant observed runtime evidence, complete platform/package evidence, final V1.4 device/release acceptance. Missing proofs never count as a pass. No component has final acceptance. SHA for rows is audited candidate `30d054bb...` / workflow checkout `8b11b2f...` as above unless explicitly noted.
+
+| COMPONENT | % | CURRENT STATUS / PROOF / TEST RESULT | WHAT IS MISSING |
+|---|---:|---|---|
+| Core | 60 | Windows real Core benchmark 35253859144 / job 105312715775 SUCCESS: SpecialistTeam/CodeSpecialist offline gate OK, benchmark exit 0, quality=True performance=True; peak RSS 4100.37 MiB. Android native probe 35253859334 / 105312834106 SUCCESS without INTERNET, llama.cpp / verified weights; cold 218780.915 ms, warm median 182518.543 ms, PSS 1311.397 MiB. | Full Godot AIClient Android E2E red; real physical Android benchmark and usability/performance acceptance; packaged final V1.4 benchmark. No proof of ChatGPT/Claude-level capability from this small suite. |
+| Knowledge | 60 | Knowledge Performance 35253859283 SUCCESS; source streaming/transaction/registry paths inspected. Exact-head synthetic 1GiB stress 35253859168 / 105312675022 SUCCESS: 1073742199 dataset bytes, peak RSS 901017600 bytes, restart_ok=true, no external runtime. | Genuine >=1GiB bootstrap pack, sharded manifest/hashes/provenance/licenses and Windows/Android import/query proof. Stress generator uses repeated filler/x.repeat(700); cannot satisfy genuine pack requirement. Export and final packaged device acceptance not independently proven. |
+| Memory | 40 | memory_store/local semantic contracts, Semantic Memory CI 35253859240 SUCCESS, Knowledge Performance SUCCESS. | Full report contents/real Android restart/search/export/restore at production scale, final device acceptance. |
+| OCR | 40 | Local Tesseract rus+eng Windows packaging and PDFBox+Tesseract4Android source/dependency/bounds/cancel contracts inspected; Windows package and Android Plugin CI 35253859261 SUCCESS. | Android installed APK real scanned/mixed ru/en OCR and large-PDF runtime; final offline-device proof; independent OCR report inspection. |
+| Voice | 40 | Android Voice 35253859478 proves asset layout and Kotlin compile only. Supertonic Acceptance 35253859172 SUCCESS with evidence artifact 10511768376. | Windows package CI AND release.yml both use -SkipVoiceSetup. This package proof does not guarantee bundled Windows voice backend/models, local STT/TTS invocation on installed package or offline voice. Android installed voice invocation and human listening still missing. |
+| UI | 60 | UI Visual 35253859237 / 105312822181 SUCCESS: structural/portrait/owner-art/keyboard/loading/offline/error/cancel/pointer/render-matrix steps all green. Actual runtime main_compat surfaces inspected. | Independently view captured frames and test physical Android keyboard/taps/orientation; installed signed V1.4 UI acceptance. |
+| Work Agent | 40 | Work Mode 35253859280 and Work Computer Reliability 35253859599 SUCCESS; WorkStore failure/concurrency smokes present. | Inspect exact runtime failure-injection outputs, installed Windows/Android Work lifecycle/restart and final release acceptance. |
+| Computer Agent | 40 | Reliability 35253859599 SUCCESS; bounded local primitives/default-OFF permission integration in client/overlay, new source paths retained. | Real installed Windows screenshot/actions/master-stop test; Android explicit unsupported behavior/device proof, final acceptance. |
+| Android | 40 | Build/export/test-sign/install succeeded in failed APK/E2E jobs; API35 native no-INTERNET probe succeeds. APK workflow fails logcat collection (exit255), E2E suppresses run-as failure and never collects report. | New runner CI; full normal-path Core/Voice/Knowledge/OCR installed behavior, physical device, permanent signing continuity, signed V1.4 versionCode increase. |
+| Windows | 60 | Windows Package 35253859209 / 105312824372 SUCCESS: EXE smoke, installer, silent install/uninstall, installed model hash, V1.2/V1.3 bridge steps. | Offline installed voice/Computer/File functionality beyond 3-frame headless startup, final signed-floor/update/package V1.4 acceptance. |
+| API | 40 | API CI 35253859249 SUCCESS; account/guest/privacy/SQLite/request/mail contracts present and inherited. | Inspect full exact test reports; real production deployment/ingress/account delivery and final candidate regression evidence. |
+| Server | 20 | REG.RU deploy/install/update/rollback scripts and local readiness contracts exist; API CI green is not deployed-host evidence. | Authenticated host deployment, /ready, DB backup/restore/rollback and production mail transport proof. No host access verified in this session. |
+| Updater | 40 | Release Identity 35253859409 SUCCESS; pinned public cert/key/floor contracts and Windows V1.2/V1.3 repair smoke SUCCESS. | Actual signed V1.4 latest update.json + update.sig/assets, invalid-signature/hash rejection in installed floor and upgrade/repair/rollback end-to-end. |
+| Installer | 60 | Windows package job builds Inno installer, performs silent install/model-integrity/app smoke/uninstall and historical bridges SUCCESS. | Final V1.4 installer with all voice dependencies/assets and full installed offline functionality, signed release/update linkage. |
+| Release | 20 | Version/signing/release contracts present; source still V1.3, one repair prerelease only. | Final same-SHA all gates, genuine knowledge payload, devices/listening, version metadata/changelog bump, RC/full CI, then main merge and production release. |
+
+Artifact metadata personally fetched (contents not downloaded through UTF-8-only connector): Windows artifact 10513160789 digest sha256:337b99ce3b50fe1d0ea162f92dec2a1684b7cd09ff33eb74d9993d9715146513; Core 10511848740 digest sha256:d338f4a47410999f98cafb4946ed055fc591fd724e605f1aeb0c0adeaa41d0bb; Android native 10512234902 digest sha256:27f48c6d05776bc1a162ed7bb823448a9adcb20717a7f693de8266f63d46d8ea; synthetic stress 10515131891 digest sha256:a173d67e0df4481cda703840194d05731fdc2bab6497068685ddf30ac93addb6. Logs for these four jobs read directly. Artifact existence/digest alone is not content/visual acceptance.
+
+### ACTION / FILES / DIFF / TEST / RESULT / COMMIT
+
+ACTION: repair Android release-report transport/lifecycle and fail-closed launch diagnostics.
+FILES: benchmarks/core/run_android_godot_e2e.sh; benchmarks/core/run_android_apk_smoke.sh; tests/test_android_e2e_runner.py; tests/test_android_contract.py; .github/workflows/core-android-e2e.yml; .github/workflows/android-apk-artifact.yml.
+DIFF: root only on disposable google_apis emulator reads release APK private report without making product debuggable; waits for completed status, preserves running report, detects early process exit, filters app diagnostics, required.issubset(rows) rejects missing mandatory scenarios even with extra rows. APK smoke executes in one Bash process with pipefail; retries logcat transport at most3 times with timeout30s, records stderr, still rejects persistent collection failure, empty PID, wrong version and app crash. Relevant CI runs new runner unit tests.
+TEST: python -m unittest tests.test_android_e2e_runner -v; python tests/test_android_contract.py; direct invocation of both tests/test_core_android_e2e_contract.py functions; bash -n on both runners; git diff --check.
+RESULT: 8 runtime lifecycle/fault-injection simulation tests PASS (3.013s), Android contract OK V1.3.0.0/code100005, 2 E2E contracts PASS; Bash syntax/diff checks PASS. Simulated adb tests are NOT Android inference/device proof. Real CI remains pending on new commit.
+COMMIT: 8c61086b7ef9dfba3631b53a3e3624ba321d737f (non-force advance of existing PR #92; no replacement PR/main merge/version bump).
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+Readiness uses 20 equally weighted release checkpoints for this audit, 8 confirmed automated boundaries: Windows Core; Android native Core; chat learning attachment smoke; Knowledge/Memory durability/scaling; synthetic1GiB stress/restart; research/evolution safety; Work/Computer contracts; API/account contracts. Remaining12: Android full normal-path E2E; installed APK launch; Windows installed offline voice/files/computer; installed Android voice/OCR/Knowledge; genuine knowledge corpus; sharded pack/provenance/licenses; real Windows/Android device benchmark; human UI/voice acceptance; deployed server/rollback/mail; final version/versionCode/metadata; same-SHA complete RC CI; production signing/update/release. Thus 40% is release acceptance coverage, not average table percentages or inherited 90% prose.
+DONE:
+- Current repository/PR/branches/releases and 24 workflow statuses audited; direct benchmark/stress/package logs and artifact metadata checked.
+- First implementation batch committed with passing local fault-injection tests; new CI automatically follows PR update.
+REMAINING:
+- Twelve acceptance checkpoints above. Plain arbitrary-name TXT/PDF/documents are analyzed as chat attachments; auto-learning classification requires filename/manifest markers. The broad user-import requirement needs a concrete explicit chat import flow/test before acceptance; do not silently treat analysis as persistent Knowledge import.
+BLOCKERS:
+- Actual genuine corpus is not supplied/proven; current synthetic pack is filler.
+- Current Windows CI/release packaging deliberately skips voice provisioning, so full offline voice acceptance is absent.
+- Physical devices, human listening and authenticated production host/signing availability not verified.
+NEXT:
+- Inspect new exact candidate Android CI/job outputs before declaring runner repair accepted. If product fails, use preserved partial report/app log to fix reproduced cause. In parallel audit/fix Windows full offline voice packaging and explicit chat import coverage in a newly extended claim; genuine owner-supplied Library knowledge archive must be inspected for content/provenance rather than counted by ZIP size.
+- Keep PR #92 draft until final acceptance; never bump/publish changed normal binaries as V1.3.
+
+
+## 45. Knowledge archive byte audit; offline Windows voice packaging claim extension
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, intended accumulated MINOR unchanged.
+- Original user archive `AuroraFox_Knowledge_CUMULATIVE_2026_09_v14(1).zip` fetched and inspected as data only. ZIP SHA256 `e2564095ae05bc086143517cc2bf8195eefaba947f44d4b59427a359740ab11c`; 29 top-level entries, immediate expanded bytes 201126321; recursive 10 ZIP containers hold 899 JSONL files / 10125430370 leaf JSONL bytes, including historical duplication. This is not a claim of 10GB unique genuine knowledge.
+- Manifests explicitly distinguish 4.22M physical rows and 72M logical Cartesian cases; sampled cases are synthetic_skill_case and resource_locator_url Google search templates, not source-document content. v14 truth metadata explicitly says schema PASS is not truth PASS. The archive does not prove >=1GiB genuine redistributable knowledge, production shard contract or Android import. Embedded Python scripts were not executed; no useful existing pack content discarded.
+- New owned batch: build/build_windows.ps1, voice/build_backend.ps1, voice/python/aurora_voice_server.py, Windows package/release workflows, new installed offline voice smoke, relevant packaging tests and this journal. Reconciles previous VOICE/PLATFORM ownership under owner-appointed final engineer; no change to default voice quality or signing identities.
+- Reproduced source blocker: both CI and release skip Windows voice provisioning. Secondary source blocker: frozen backend uses __file__ for config root despite builder staging config beside executable; resolve frozen root from executable. Stop accepting copied non-relocatable .venv as a complete portable release fallback.
+- Required acceptance: full staged backend/models, installed package local TTS+STT real HTTP invocation with offline model flags and an outbound firewall rule for the executable, report/WAV retained. Keep subjective listening separate. Use ZIP64-capable packaging rather than Compress-Archive's large-file boundary for expanded voice payload.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: genuine archive vs synthetic stress evidence separated; source packaging omissions reproduced.
+REMAINING: full Windows offline voice packaging/run acceptance and twelve release checkpoints.
+BLOCKERS: genuine production corpus remains missing/unproven; devices/host/signing availability unverified.
+NEXT: implement full portable voice packaging and installed offline smoke, then exact Windows CI; no version bump/merge/release.
+
+
+## 46. WORK-2026-09-17-FINAL-RELEASE — Windows installed offline voice gate
+
+ACTION: Removed SkipVoiceSetup from Windows package CI and production release. Packaging now refuses incomplete portable voice output. Corrected frozen backend configuration root and PowerShell UTF-8 BOM reading; PyInstaller installation uses bundled uv rather than assuming venv pip. Added installed TTS/STT acceptance with outbound firewall block, offline cache flags, health wait, WAV evidence and JSON report. ZIP packaging uses 7-Zip for large offline payloads.
+FILES: .github/workflows/windows-package-ci.yml; .github/workflows/release.yml; build/build_windows.ps1; voice/build_backend.ps1; voice/python/aurora_voice_server.py; tests/windows_installed_voice_smoke.ps1; tests/test_windows_voice_package.py.
+DIFF: Production packaging must contain portable voice backend; installed backend must synthesize Silero WAV and transcribe it locally. Firewall cleanup and environment restoration run in finally. Human listening is explicitly unverified.
+TEST: python -m unittest tests.test_windows_voice_package tests.test_android_e2e_runner -v — 12 tests passed (2.897 seconds). Python compilation and git diff --check passed in local inspection. No PowerShell or Windows runtime exists in this Linux workspace; installed smoke requires real Windows CI.
+RESULT: Source and regression tests verified. Full Windows package, firewall operation, installed voice model availability, performance, human quality and Android product execution remain pending. No version bump, main merge, RC or release authorized by test evidence yet.
+COMMIT: 415b47a2ebf56f9ad365bdfaf98c718ee6a13e9d (implementation). This journal commit follows it; both published together to avoid canceling an intermediate CI run.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%. Component assessment remains section 44; new implementation does not earn runtime/release credit until same-SHA checks pass.
+
+
+## 47. BEFORE ACTION — Windows package parse repair, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
+TIME: 2026-09-18 (GitHub-only continuation).
+TASK: repair exact Windows Package run `35280387297` before any further release work.
+WHY: job `105400709410` failed in step 3 before packaging. The log proves Windows PowerShell 5.1 cannot parse a Cyrillic UTF-8-without-BOM literal in `tests/windows_installed_voice_smoke.ps1`; inspection of the emitted workflow script also shows a missing comma before that helper entry.
+CURRENT STATE: PR #92 head `7f65d11c1b8fd4f2ff8aa6c1822b00c111d5be9e`; 19 workflows SUCCESS, Windows Package FAILURE, Android APK/Core/Knowledge heavy gates still running. No release/version bump.
+EXPECTED RESULT: PowerShell helper parse step passes on Windows and the same workflow proceeds to real installed offline voice packaging/smoke.
+RISKS: a parse-only fix may reveal a later genuine packaging/runtime failure; that result must be inspected rather than bypassed.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: exact failing run/job/step and two source causes classified from GitHub Actions logs.
+REMAINING: minimal source repair, exact-head Windows rerun, then remaining same-SHA release gates.
+BLOCKERS: Windows installed offline voice/package gate is red at parse stage; genuine Knowledge corpus and external device/host/signing boundaries remain.
+NEXT: update only the workflow delimiter and non-ASCII PowerShell test literal, then inspect the new exact-head Windows result.
+
+
+## 48. BEFORE ACTION — release-size voice baseline and Android launcher readiness, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
+TIME: 2026-09-18 (GitHub-only continuation).
+TASK: close two exact-head release blockers reproduced on `5ef78fc17397c653a883cebdb62759af186d1f21`.
+WHY: Windows Package run `35283295294`, job `105409940361`, proves full offline voice is built but Inno Setup rejects the single installer above 4,200,000,000 bytes; Whisper large-v3-turbo is the dominant payload. Core Android E2E run `35283295232`, job `105410103687`, proves build/install/offline setup but launches immediately after `adb root`, before Package Manager again resolves the launcher.
+CURRENT STATE: 21/24 same-SHA workflows SUCCESS; Android Core E2E FAILURE; Windows Package FAILURE; synthetic Knowledge 1GiB still running. No version bump or release.
+EXPECTED RESULT: retain a useful Russian offline STT baseline with a single-file Windows installer below the platform limit, and make Android E2E wait for/launch the resolved activity after adbd restart.
+RISKS: a smaller Whisper model trades some recognition quality for installability; objective installed TTS/STT smoke remains mandatory and subjective listening remains separate. Android launch readiness must not weaken offline or completed-report checks.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: exact Windows size failure and Android post-root launcher race classified from GitHub logs.
+REMAINING: minimal implementation/contracts, exact-head Windows and Android reruns, then remaining release gates.
+BLOCKERS: single-file installer limit and Android E2E launch race; genuine Knowledge corpus and external device/host/signing boundaries remain.
+NEXT: switch packaged default STT to a smaller local Whisper baseline consistently, add package-size/config contracts, and wait for the resolved Android launcher before explicit start.
+
+## 49. BEFORE/AFTER ACTION — handoff обычному чату для доведения до релиза, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 остаётся test-first/version-last.
+TIME: 2026-09-18 (только GitHub; локальный ПК пользователя не использовать).
+BEFORE ACTION TASK: оставить самодостаточное задание следующему обычному чату на случай исчерпания контекста/токенов финального инженера.
+REPOSITORY: `Treninem/AI`; draft PR #92; branch `chat-2026-09-17-unified-finalization`; audited product HEAD `4f0349612d36dab01cad1fb913154114d9adb49e`; base `main` at `031aebaad16fc25a39dfc45c58f96fadb658cac2`.
+CURRENT EXACT-HEAD CI BEFORE THIS JOURNAL COMMIT: 24 workflows total; 15 SUCCESS; 9 IN_PROGRESS; 0 observed failures. Running: Android APK Artifact `35288500991`; Knowledge Performance `35288500891`; Android Plugin CI `35288500982`; Core Android Benchmark `35288501021`; Core Android E2E `35288501145`; Supertonic Acceptance Evidence `35288500775`; Core Benchmarks `35288500844`; Knowledge 1GiB Release Gate `35288500829`; Windows Package CI `35288500840`.
+RECENT FIXES TO VERIFY, NOT ASSUME: commit `50edce32603396306fa998960706034b63269e79` changed packaged STT consistently to `openai/whisper-small` so the required single-file Windows installer can fit, and made Android E2E wait for the launcher after `adb root`; commit `4f0349612d36dab01cad1fb913154114d9adb49e` changed emulator installation to `adb install --no-incremental -r` after logs proved the incrementally streamed package disappeared across adbd restart.
+
+### CONTINUATION TASK FOR THE NEXT NORMAL CHAT
+
+1. Work only through GitHub/repository tools as the owner requested. Fetch fresh PR #92 head and `main`; read `AGENTS.md` and this entire canonical journal first. Continue this claim; do not create another journal and do not treat this recorded SHA or 40% as fresh truth.
+2. Inspect workflows for the latest product SHA. Fix only failures reproduced there. Journal-only commits may start new runs, so distinguish the audited product SHA from the handoff commit and do not restart expensive jobs without an actionable reason.
+3. Close Windows acceptance: prove one installable single-file installer below the Inno limit, portable offline voice contents, installed Silero TTS plus Whisper STT HTTP smoke with outbound network blocked, EXE/startup/bridges/update/silent install/uninstall, retained reports/WAVs. The `whisper-small` change earns no readiness until this passes.
+4. Close Android acceptance: prove API 35 build/install/explicit launch after `adb root` using non-incremental install, normal offline product path, Voice/Knowledge/OCR, retained report/logcat/screenshots. Do not weaken completion assertions to make CI green.
+5. Visually inspect actual Windows and Android render/screenshot artifacts: owner avatar/art, layout, button and tap targets, keyboard, scrolling and orientation. Structural green CI is not visual acceptance; do not replace the existing avatar without a reproduced reason.
+6. Replace the synthetic 1GiB stress artifact with a genuinely useful, redistributable Knowledge pack only when real source material, provenance and licenses exist. Require manifest, shards and hashes plus Windows/Android import and query proof. The audited v14 archive contains synthetic/duplicated cases and is not proof. Never pad or relabel filler. If genuine data is unavailable, record the external blocker and ask the owner one precise question.
+7. Verify production API/REG.RU readiness, database backup/restore and mail delivery when credentials/access exist. Treat physical devices, human voice listening, production signing keys/Android lineage and production host secrets as owner-controlled boundaries; never invent or expose credentials or private keys.
+8. Only after every internal gate is green on one same product SHA: bump accumulated release identity to `V1.4.0.0` with Android `versionCode > 100005`; synchronize `project/version.json`, `project.godot`, `export_presets.cfg`, installer/update manifest, changelog and release notes; rerun version/package/update/release gates.
+9. Keep PR #92 draft until genuine acceptance. Merge to `main`, tag and publish the GitHub release only after same-SHA gates are green and owner-controlled signing/deployment boundaries are satisfied or explicitly authorized. “Доводи до релиза” is the target, not permission to fabricate missing evidence.
+10. After every meaningful batch append BEFORE/AFTER evidence here: exact commit, workflow/run/job, artifact and result; update DONE/REMAINING/BLOCKERS/NEXT and the readiness footer. Continue autonomously until a real external owner-only blocker remains; then stop and ask exactly one focused question.
+
+AFTER ACTION: durable continuation instructions recorded in the canonical master log only; no product code changed by this action. The GitHub contents update that adds section 49 is the handoff commit; the next chat must record its resulting branch HEAD before further work.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: reproduced Windows installer-size and Android post-root package-loss causes repaired in product commits; exact-head CI launched; release continuation made self-contained.
+REMAINING: consume exact CI results; close Windows/Android/runtime/visual/Knowledge/API acceptance; synchronize V1.4 identity; final same-SHA gates; merge/tag/release.
+BLOCKERS: genuine production Knowledge corpus/provenance remains absent; physical-device, human-listening, production-host and signing evidence depend on owner-controlled access. In-progress workflows are not evidence of success.
+NEXT: first inspect completion of Windows Package `35288500840` and Core Android E2E `35288501145`, then the other seven running jobs; act only on their exact logs/artifacts.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 50. BEFORE ACTION — reconcile 95% claim and continue exact CI repair, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
+TIME: 2026-09-18 (GitHub-only continuation).
+OWNER QUESTION: why an earlier chat reported 95% while this finalization reports 40%.
+ANSWER: 95% was a feature/lane-level estimate based on historical or branch-local completion. It was not backed by one unified releasable SHA passing Windows installer, Android runtime, visual, genuine Knowledge, production API, signing and deployment acceptance. The current 40% is the conservative release-readiness baseline defined by sections 43–49; incomplete, cancelled or external gates earn no credit. Do not average or inherit stale percentages.
+AUDITED HEAD: `2b988eefdaa290b1f0dd5f23aa557474429ba8f5` (journal-only child of product fix `4f0349612d36dab01cad1fb913154114d9adb49e`).
+CI SNAPSHOT: 21 SUCCESS; Core Android Benchmark run `35288786731` FAILURE; Core Android E2E run `35288786692` FAILURE; Windows Package CI run `35288786712` CANCELLED.
+TASK: inspect exact job logs for both Android failures and distinguish infrastructure/cancellation from product failure; inspect the last uncancelled Windows product run before deciding whether to rerun or patch. Fix only reproduced causes, then append AFTER evidence.
+EXPECTED RESULT: Android product gates pass without weakened assertions; Windows installed offline voice package completes; readiness changes only from verified same-SHA evidence.
+RISKS: every journal commit retriggers PR workflows and may cancel expensive Windows work; prefer inspecting preserved runs and make the next code update atomic.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: conflicting percentage semantics reconciled against release acceptance.
+REMAINING: classify exact Android/Windows results and repair verified blockers.
+BLOCKERS: two Android gates red; current Windows run cancelled; external corpus/device/host/signing boundaries remain.
+NEXT: fetch jobs, failing steps and logs for runs `35288786731`, `35288786692`, and the latest preserved Windows run.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 51. AFTER ACTION — Android Java bridge dispatch and bounded exact-output inference, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE.
+EVIDENCE: Core Android E2E run `35288786692`, job `105427103660`, installed and explicitly launched the offline APK, verified the 1,282,439,264-byte model and SHA `d2387ca2...`, but the report exposed only fallback capability values (`llama_cpp=false`, `isolated_service=false`) and stopped at `bundled_core_identity`. The release bridge found the Java singleton but rejected valid `@UsedByGodot` methods behind `Object.has_method()`. Godot's Android plugin contract requires exact Java method names and direct singleton invocation.
+EVIDENCE: Core Android Benchmark run `35288786731`, job `105426996979`, loaded the APK/model and launched `MainActivity`, but three exact-output samples with a 48-token cap did not finish within 900 seconds on the API 35 x86_64 emulator.
+ACTION: call the known, same-build Android Java plugin API directly after singleton discovery; retain null guards and exact method names. Reduce only the explicit terse/exact-output inference ceiling from 64/48 to 16 tokens; normal chat remains 384. Semantic expected-output assertions, offline guard, model identity and real llama.cpp execution remain mandatory.
+FILES: `scripts/android_local_runtime.gd`; `benchmarks/core/android_probe/app/src/main/java/com/aurorafox/corebenchmark/MainActivity.kt`; `tests/test_android_contract.py`; `tests/test_core_android_benchmark_contract.py`; this journal.
+TEST STATUS: source contracts added in the same atomic commit. Runtime acceptance is pending fresh exact-head Core Android E2E and Benchmark workflows; no readiness credit claimed yet.
+WINDOWS: run `35288786712` was cancelled at the historical bridge step by a newer PR commit, not a product assertion. The next exact-head Windows Package run must finish before classification.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: exact Android runtime causes classified and minimally repaired without weakening offline/model/quality assertions.
+REMAINING: verify both Android gates and complete the uninterrupted Windows installed offline voice/package run.
+BLOCKERS: runtime CI proof pending; genuine corpus/device/host/signing boundaries unchanged.
+NEXT: inspect workflows started by this atomic commit; if Android is green, inspect retained reports/artifacts and visual evidence, then let Windows finish without journal-only interruption.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 52. BEFORE ACTION — sole final engineer continuation, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE — OWNER-DIRECTED SOLE EXECUTOR TAKEOVER/RECONCILE.
+- Owner explicitly instructs this session to work alone and take unfinished tasks from other lanes. No subagents or reliance on another executor. Existing code and evidence are preserved.
+- Fresh main `031aebaad16fc25a39dfc45c58f96fadb658cac2`; inherited PR #92 head `c5d9183433c985a1e834a46345db7a8fe7ccec5f`. Full main journal and candidate additions 43–51 read; section 40 notification acknowledged.
+- Intended accumulated bump MINOR / V1.4.0.0, test first/version last.
+- Exact current failures personally inspected: Core Benchmarks `35304140196` / `105472793773` fails an obsolete assertion expecting Android terse=64 while production=16; Windows runtime was skipped. Android normal-path E2E `35304140175` / `105472917764` reaches real offline inference but all answer scenarios return truncated `<think>` content. Android native probe `35304140103` / `105472867694` times out after 900s. APK `35304140172` / `105472800202` crashes during Godot import (dialog parenting errors followed by double free).
+- Owned batch: Android production prompt formatter/NativeRuntime, native probe, related runtime/contracts/tests, build/build_android.ps1 and canonical journal. Reconciles previous Core/Platform ownership; no safety/signing/offline/expected-answer gates removed.
+- Ownership extension for executable prompt regression coverage: plugin Gradle test dependency, CoreChatPromptTest and android-plugin-ci test task; `.gdignore` in native/probe source trees. Exported addon in `addons/AuroraFoxRuntime` stays visible to Godot.
+- Scheduling ownership extension: windows-package-ci concurrency sets cancel-in-progress=false to preserve the current expensive run while the next atomic candidate queues. Sections 49–51 document previous cancelled Windows runs; no product gate/timeout is bypassed.
+- Source cause: Android hand-written ChatML generation prefix omits Qwen3 non-thinking template suffix; reducing token budget alone truncates thinking before the answer. Need a shared production formatter used by plugin and probe, then real CI proof. Import crash requires source/log investigation before changing build behavior.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: fresh main/candidate/full journal and exact failing jobs inspected; sole ownership recorded.
+REMAINING: reproduce and repair prompt/bounds/import failures, relevant local tests, exact-head runtime/package CI and remaining release checkpoints in section 44.
+BLOCKERS: current Android runtime/package and Core gate failures; genuine corpus and physical-device/host/signing acceptance remain unproven.
+NEXT: implement shared Qwen3 non-thinking prompt suffix and validate production/probe integration; inspect first import errors and reproduce import separately; publish one atomic batch to existing draft PR #92.
+
+## 53. AFTER ACTION — mobile prompt and import batch, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor.
+ACTION: shared production CoreChatPrompt starts generation after an empty closed thinking block for the bundled Qwen3, aligned with desktop non-thinking default. Plugin and native benchmark both use it. Normal mobile chat remains 384 tokens; terse=16; expected-answer gates unchanged. Godot ignores native/probe build source trees while exported addon stays visible. Windows expensive workflow is no longer cancelled by each newer candidate.
+FILES/DIFF: 13-file implementation in commit `8f0a2788eab3207e250efe6757bb1cf7a5816ac1`; includes prompt formatter, executable Kotlin regressions and Gradle/CI wiring, probe integration, stale terse assertion correction, source `.gdignore`, Android contract and scheduling/journal.
+TEST: Python relevant gate/runner/package set 42 passed (3.75s); real Kotlin compiler 2.1.20 + JUnit 4.13.2: 3 passed (0.026s). Godot 4.7.1 headless import exit 0 with no parse errors. Planted native-tree CSV was not queued/imported (no sidecar), import exit 0. Android release contract PASS. Chat context `AURORA_CHAT_CONTEXT_SMOKE_OK`, self-reliance `SELF_RELIANCE_SMOKE_OK`; these smokes report resource-leak warnings on exit, not actual LLM quality/device proof. git diff --check PASS.
+RESULT: local code/contract/formatter/import checks green. Android native/Godot inference and release APK CI remain required; no readiness gain from source changes alone. Current Windows run `35304140155` is preserved and still in progress at publication preparation.
+COMMIT: locally verified implementation `8f0a2788eab3207e250efe6757bb1cf7a5816ac1`, local evidence commit `962ff71`. Shell Git push has no authenticated credential and failed before writing; publish the identical reviewed file contents through the authenticated GitHub connector as one fast-forward commit on PR #92. Remote publication SHA must be read back and recorded in the next checkpoint; local SHAs are not remote links. No replacement PR/version bump/main merge/release.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: three current failure causes repaired with local executable tests; independent local Core path preserved.
+REMAINING: exact-head Android/Core/package CI, installed Voice/OCR/Knowledge, genuine pack/provenance, actual visual/listening/device/server/signing and final version/release checkpoints.
+BLOCKERS: runtime/package acceptance pending; genuine production corpus and external device/host/signing evidence remain unproven.
+NEXT: inspect workflows on the published journal head (product parent above); classify only new exact failures. Preserve current Windows evidence and distinguish its older SHA from new same-SHA acceptance. Keep PR draft.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 54. Sole engineer visual evidence ownership extension
+
+### BEFORE ACTION — visual evidence ownership extension, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; publication head `e6d2fd2f12d985a31868473bb1e5abc18123d7f2` verified through PR #92.
+- Actual UI artifact `10530997398` / run `35304140134` downloaded and ZIP SHA-256 verified: `d0bb276217e10fbb5ed7a08b92030f8d81f08a94a47c1b4cbc72fbbb767f7b95`.
+- Viewed desktop chat, 480px portrait chat/keyboard/account, 720px Knowledge and compact Work/Computer frames. Work compact header renders New project and Close as empty pills; their text exists but generic theme sets clip_text=true, so their minimum width collapses. This is a reproduced visual defect despite green structural CI.
+- Owned next independent batch: work/work_overlay.gd, scripts/desktop_visual_theme.gd, tests/ui_work_computer_visual_capture.gd and this journal. Preserve runtime/lifecycle/master-stop and owner artwork. Add identifiable header actions, preserve their measured label widths and reject collapsed actions in render gate. Portrait capture is a desktop preview/simulated keyboard, not physical Android proof.
+- Local work only while exact-head Android/Core CI runs; publish the next atomic batch after consuming current heavy results to avoid unnecessary cancellation.
+
+### AFTER ACTION — Work action geometry and autonomy evidence, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor.
+OWNER REQUIREMENT: owner reaffirms that Core must operate independently without third-party means. Normal Core uses the bundled runtime/weights/local memory and knowledge; no required cloud inference, Ollama, external AI API or Internet. Existing optional compatibility must not become normal fallback.
+ACTION: name the two Work header actions and preserve measured text width using the existing safe flow-button styling. Add geometry assertions to the render gate and extend owned `tests/desktop_ui_smoke.gd` with executable header checks.
+PROOF: compact 960x640 production-scene probe before: New project 24px / label116px and Close24px / label69px, clip=true. After:146px and99px, clip=false. Permanent headless UI smoke rejects original theme with exit93 and `Work header action label collapsed: WorkNewProjectButton`; restored fixed theme passes `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`. Owner-art smoke passes. Shutdown leak warnings remain (UI7 objects/2resources); not claimed resolved.
+AUTONOMY: `tests/test_standalone_core_contract.py` 12 passed (0.05s); real Godot `OFFLINE_AUTONOMY_SMOKE_OK` (exit0, existing7objects/3resources shutdown warnings). Relevant safety/evolution/privacy22 and branding4 Python tests passed. These validate routing/contracts, not full inference or actual device acceptance.
+VISUAL LIMIT: local Xvfb cannot establish a usable display in this execution environment; no updated local screenshot is claimed. Source geometry and prior downloaded artifact are actual evidence; new CI render remains required. Portable QA tools and the temporary xkbcomp symlink were cleaned up from system paths; no build dependency added.
+CI CHECKPOINT: remote e6d2fd2 has18/24 successful workflows; Android Plugin compiled both AARs and executed `:plugin:testDebugUnitTest` successfully. Windows real SpecialistTeam/CodeSpecialist step is successful, full benchmark pending. Android native probe, normal-path E2E/APK, synthetic Knowledge1GiB and queued Windows package are still pending. Old Windows c5 run35304140155 is preserved, but cannot establish same-head acceptance.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: remote Android prompt/import repairs published and plugin compiled; actual collapsed Work actions repaired and proven by failing-before/passing-after regression; self-primary routing rechecked.
+REMAINING: consume exact-head runtime/package results, publish reviewed Work UI batch, then new exact-head render/package/runtime evidence and section44 release checkpoints.
+BLOCKERS: heavy runtime/package CI pending; genuine licensed1GiB corpus and physical-device/host/listening/signing acceptance unproven.
+NEXT: preserve current heavy CI until reports are available; classify actual failures before next atomic PR92 update. Keep draft/no version bump/no main merge/no release.
+
+### BEFORE ACTION — preserve all expensive in-flight evidence, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; ownership extends to concurrency scheduling in Core Benchmarks, Core Android Benchmark/E2E, Android APK and Knowledge1GiB workflows. The reviewed UI commit is local `df0344a`; not yet a remote publication.
+REASON: these five workflows still cancel current real evidence on each newer PR commit. Preserve their running tests using cancel-in-progress=false, as already done for Windows Package; let the newest candidate queue. GitHub may replace an older pending candidate, which is scheduling and not a failed product assertion. No gate, expected output, offline guard, checkout SHA or timeout changes. This allows publishing the reviewed UI batch without discarding e6 runtime reports; it supersedes the previous plan to hold every change until all long jobs finish.
+
+AFTER ACTION: five workflow YAMLs parse, concurrency=false verified;29 relevant Core/Android/Knowledge contract tests pass (0.08s), diff check passes. Android e6 APK export/import now succeeded and reached signing/install; native probe and normal-path inference are running. Publish UI+headless/render regressions+preserved CI scheduling+this journal atomically to existing draft PR92. Remote commit SHA must be read back; local df0344a is not a remote link. Same-head final evidence remains required and readiness40% unchanged.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: Work UI fix executable regression proven; heavy evidence scheduling preserved without changing product acceptance.
+REMAINING: real Android inference reports and exported APK launch, uninterrupted Windows packaging/benchmarks, updated UI frames and final release checkpoints.
+BLOCKERS: genuine useful licensed1GiB corpus, physical-device/host/listening/signing evidence and incomplete package/runtime gates.
+NEXT: read back remote PR92 publication, inspect preserved e6 reports; inspect newest candidate CI as it finishes. No version bump/main merge/release.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 55. BEFORE ACTION — exact candidate checkout for release evidence, 2026-09-18
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Fresh main remains031aebaad16fc25a39dfc45c58f96fadb658cac2; PR92 publication5c7afcdda14f026d609404faa98cd3ed43603e90 verified by Git ref and shell fetch, all10 remote blobs match locally reviewed bytes.
+OWNERSHIP EXTENSION: checkout SHA only in the24 CI workflows currently triggered for PR92; preserve already exact checkout/verification and leave promotion, release, updater workflow-run and unrelated/manual candidate workflows alone. Ordinary runtime/safety/signing/source assertions and timeouts remain.
+REPRODUCTION: Windows e6 run35308554778 succeeds, artifact10532777456 digestda0a62dd581768c1bb95c310ed5c30698837ef5ccdb3b17f327ef067291db944 verified. Actual benchmark report git_sha8c0efb70d95bc0195d15418c01d7682446c58263 is a PR merge checkout, not associated candidate e6 head.21/21 local-quality scenarios and8/8 Coder operations pass with OS network guards active/Ollama absent; cold3293.713ms, warm median650.221ms, peak4468.85MiB. Hard performance limits pass; relative regression is not applied because no successful main baseline is available. This is genuine offline inference evidence but not exact-head final acceptance.
+VISUAL PROOF: current Work UI run35309428195 succeeds; artifact10532497960 digest60ef63ab935a570a36dba820b0cf04d579aba43a3c7a41bc79f59c9edcf8c433 verified. Personally viewed compact960x640 and wide1440x900 frames: New project/Close labels are visible and fit. Head label is5c7, but its default checkout also needs explicit SHA enforcement before final same-SHA acceptance.
+NEXT: explicitly checkout PR head (or event SHA for push/manual runs) and reject an actual HEAD mismatch in every missing PR92 gate checkout. No intelligence path change; preserve the running Android/Windows/Knowledge reports.
+
+### AFTER ACTION — candidate checkout guard and Android inference proof
+
+ACTION:21 workflows updated,40 missing checkouts now pin the exact candidate and immediately verify actual Git HEAD. Across24 candidate workflows all45 checkouts use the head/event SHA;5 existing exact guarded checkouts preserved. Other manual promotion/release/updater/candidate workflows untouched.
+TEST:24 YAMLs parse; all45 checkout refs verified; all40 added guards use the same executable command. Running that actual command accepts the correct local Git HEAD (exit0) and rejects an intentionally wrong expected SHA (exit1).46 relevant Core/Android/Knowledge/release workflow contract tests pass (0.15s); diff check passes. Windows runner default Python executes the same cross-platform guard; remote jobs remain required.
+ANDROID RESULT: preserved e6 normal-path E2E35308554897/job105485808921 succeeds with `AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK`. Artifact10532951299 downloaded/digestb379a9a1f728f2f81d1f5c4ae86c621f46b8fa6d48fe9562db7ce8f06798949c verified; all required answer scenarios now return final answers, not truncated thinking: ANDROID-E2E-READY,63,ЛОКАЛЬНО,MOBILE-42,MOBILE-IVORY-29,ANDROID-COMPAT-LOCAL. Offline environment, bundled model integrity and aurora_core_android retained. Its artifact also identifies the old PR merge SHA8c0efb7; repeat on newly enforced head before exact-head final acceptance. e6 APK35308554793 installation/launch succeeded; native probe remains in progress.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: actual Android normal Core path repaired and proven offline; Windows21 scenarios/Coder8 operations and updated Work frames personally verified; final CI evidence checkout ambiguity repaired.
+REMAINING: publish exact-checkout batch to existing PR92, inspect newest guards/frames/Android native and normal-path reports, finish Windows installed package/voice and remaining section44 gates.
+BLOCKERS: pending package/runtime acceptance; genuine licensed1GiB corpus and physical-device/host/listening/signing evidence remain unproven. No main baseline for relative performance comparison yet.
+NEXT: publish atomic CI+journal fast-forward; preserve in-flight expensive evidence and inspect reports by actual SHA. Keep draft, test first/version last.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 56. BEFORE ACTION — native probe must measure production Release runtime
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Exact-checkout publication23f5757e42b3dedff84a8cc4f249538d24aaf890 verified remotely and fetched locally; reviewed files match remote tree. Main unchanged.
+OWNERSHIP: native probe app build variant, Core Android Benchmark workflow/runner, its contract test and canonical journal.
+EVIDENCE: c5 native run35304140103/job105472867694 explicitly builds `:runtime:configureCMakeDebug`/`buildCMakeDebug` with `CMAKE_BUILD_TYPE=Debug`, then900s timeout without report. Artifact10531608631 logcat ZIP downloaded/digest4e5e44f6841c818a5c463efb8897bc5e2c31b8b399f3b001f33252bf6763732e verified. No app-specific kill/crash established; unrelated killed system processes must not be treated as AuroraFox OOM. e6 native probe still running while optimized production normal-path E2E is green.
+CAUSE/BOUNDARY: benchmark currently links the unoptimized Debug native library, so it does not measure the production Release runtime. This is a confirmed build mismatch; its contribution to900s timeout is an inference until a new optimized run completes. Use a debuggable/test-signed benchmark app variant with only Release library fallback, preserving run-as/no-INTERNET/model/answer gates and900s timeout. Official Android build-variants documentation confirms initWith/debug and matchingFallbacks selection: https://developer.android.com/build/build-variants#resolve_matching_errors . No normal product runtime behavior change.
+
+OWNERSHIP EXTENSION: probe MainActivity and report reader validate the selected runtime's generated BuildConfig (release/non-debug) at execution and in the report; fail rather than accidentally benchmark Debug again.
+
+### AFTER ACTION — production native benchmark variant
+
+ACTION: dedicated benchmark app variant inherits debug/test-signing/run-as configuration and falls back only to the production runtime Release library. Workflow and runner use assembleBenchmark/app-benchmark.apk. Runtime BuildConfig must identify release/non-debug before inference; report carries both fields and Python reader enforces them. Normal product library/build behavior,900s watchdog,16-token exact-output ceiling, all three semantic/model/no-INTERNET/performance assertions remain.
+TEST:5 relevant Android probe/E2E/package contract tests passed (0.05s), runner bash syntax and diff checks pass; YAML parses. Full Gradle variant resolution/build and on-device inference pending new CI, not claimed locally executed. Current e6 Debug-native run still pending; normal-path optimized Android inference already green.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: production-vs-Debug benchmark mismatch corrected and hard release-variant checks added; all accepted offline Core/UI proofs preserved in sections54–55.
+REMAINING: new Release-native probe and exact-head runtime/package/render reports; uninterrupted Windows package/installed offline voice; genuine corpus/device/host/listening/signing acceptance and final version/release checkpoints.
+BLOCKERS: incomplete same-head real gates and section44 external acceptance boundaries. Genuine useful licensed1GiB corpus still unproven; synthetic capacity run is separate evidence.
+NEXT: publish this atomic benchmark+journal fix to PR92 and inspect resulting exact-head guard/build reports. No version bump/main merge/release; sole engineer claim stays ACTIVE.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 57. Sole engineer checkpoint — verified publication and native offline answers
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Product-code publication73a71420e5fea775848bfcc8abd7b7111e4e039b verified by authenticated Git ref/shell fetch and empty local-to-remote tracked diff. Main remains031aebaad16fc25a39dfc45c58f96fadb658cac2. Owner instruction to work alone and keep Core autonomous remains binding.
+EXACT-HEAD PROOF: source73a7142 UI Visual run35310112166/job105490211520 succeeds. Core Evolution run35310112270/job105490211826 succeeds and actual log prints `AURORA_CI_CHECKOUT_SHA=73a71420e5fea775848bfcc8abd7b7111e4e039b`, confirming remote guard execution. This checkpoint is evidence-only; source73a7142 and the subsequent journal-head are distinct SHAs. Final package/runtime acceptance still needs the final selected head.
+NATIVE RESULT: preserved e6 native run35308554796/job105485744736 now succeeds. Artifact10533016809 downloaded/digest07d94f0db738bbfed3fab3c48228065fed47f52116a0cfd7f607e678ee5054b9 verified. Report status=completed, passed=true; all3 answers correct: ANDROID-LOCAL-READY,56,ЛОКАЛЬНО; llama.cpp, no INTERNET permission, remote_ai_allowed=false. Debug-native cold332915.049ms/warm median280467.932ms/PSS1151.193MiB; extremely slow compared with optimized normal-path cold32731.408ms/warm21375.532ms. It finishes near900s watchdog. Non-thinking prompt repair is proven semantically on both Android paths; do not claim the old timeout was caused only by Debug. New enforced Release-native variant performance/build remains pending.
+WINDOWS: preserved c5 Windows Package35304140155/job105472767790 still at historical V1.2/V1.3 bridge step; exported executable, runtime asset checks and installer build already passed. This does not replace current-head installed offline voice/package acceptance. No current real report/quality assertions bypassed.
+
+PROGRESS_COMPLETE: 40%
+PROGRESS_REMAINING: 60%
+DONE: sole ownership/full journal continued; Android normal/direct native local answers and Windows21 quality/Coder8 operations verified; Work labels visually fixed; exact-head CI guards published/proven; production Release-native benchmark configuration published.
+REMAINING: final-head Release-native/normal-path benchmarks, Windows/Android packages and installed voice/OCR/Knowledge acceptance; section44 version/release checkpoints.
+BLOCKERS: genuine useful licensed1GiB bootstrap corpus/provenance and physical-device/host/listening/signing evidence remain unproven; expensive real gates incomplete; no main relative benchmark baseline.
+NEXT: inspect the newest PR92 CI by actual head and preserved report SHAs; repair only reproduced failures, finish all available gates. Keep draft/no version bump/no main merge/no release until acceptance. Evidence-only journal updates must not count as product acceptance.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 40%
+
+## 58. BEFORE ACTION — verified readiness50% and actual report source identity
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2 unchanged; current draft PR92 head03ae14bbf3c46414477b3e02630f32a08dd4af69. Previous full main/candidate journal reads remain valid; sections52–57 and section44 checkpoint rubric reconciled.
+READINESS: section44 defines20 equally weighted acceptance checkpoints; existing8=40%. Add2 personally verified boundaries: Android full normal-path E2E and installed APK launch. Thus10/20=50%, not22/24 workflow success or commercial capability equivalence. Remaining10 checkpoints: installed Windows offline voice/files/computer; installed Android voice/OCR/Knowledge; genuine corpus; sharded provenance/licensed pack; real device benchmark; human UI/voice; server/mail/rollback; version metadata; complete same-head RC CI; production signing/update/release.
+EVIDENCE:22/24 current workflows succeed. Android normal run35310302212/job105492349292 actual checkout guard03ae14b; artifact10534015382 ZIP digest e2a5f767d6079ce4017628141529e208c3472a416515be40194b04b4980658eb verified. All8 scenarios pass (offline guard, model identity, six answer/context/knowledge/compatibility scenarios); cold28532.807ms/warm19973.946ms, external network blocked, remote_ai_allowed=false.
+APK ACCEPTANCE: run35310302214/job105491048635 guard03ae14b, installation/version check and `AURORA_ANDROID_EMULATOR_OK pid=2578`; com.aurorafox.ai/V1.3.0.0/code100005, no accepted release signing/device upgrade claim. It is test acceptance, not a published changed V1.3 binary.
+NATIVE: Release probe35310302265/job105494782900 guard03ae14b; artifact10534265632 digest5a9d28acdc3157a9dc4c2af183cdfb00b10af39559d90e283da0a7fc632f868e verified; runtime_build_type=release/runtime_debug=false, no INTERNET, all3 answers pass. Cold70571.912ms/warm20634.164ms/PSS1138.409MiB; Debug previous warm280467.932ms. Actual optimized variant validated; not physical-device usability proof.
+WINDOWS: Core35310302221/job105491720760 guard03ae14b; artifact10532889210 digestfab3eb5038182edfea8e8cc62638a813c8c88c909ad5eb7de9ee138c269995bd verified;21/21 quality and8/8 Coder operations, hard performance limits pass/no relative baseline. Windows Package35310302289/job105507674904 still Build installer; synthetic Knowledge1GiB35310302273/job105503429773 still real streaming import/restart. Neither pending checkpoint counted.
+OWNED FIX: benchmarks/core report runners and three Core benchmark workflows/artifact names, related contract/runner tests and canonical journal. Windows runner wrongly prefers GITHUB_SHA (PR merge7381817) over actual checked-out03ae14b; Android artifact names also use event merge SHA, and Android JSON lacks source SHA. Bind evidence to actual Git HEAD without changing model/answers/offline/performance assertions. Current acceptance is supported by actual checkout guards and verified runtime contents, not misleading artifact labels.
+OWNERSHIP EXTENSION: shared stdlib report_identity.py helper, real-Git regression test, Windows CodeSpecialist runner identity, and workflow expected-head/contract wiring. Reject conflicting existing report identity or a mismatched expected checkout instead of silently relabeling a foreign report. Local temporary-Git tests are metadata regression proof, not model inference.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: two more section44 checkpoints accepted from actual current-candidate execution and artifact contents.
+REMAINING: remaining10 checkpoints and report source-identity repair; finish preserved Windows/Knowledge runs.
+BLOCKERS: genuine useful licensed corpus/device/human/host/signing evidence and incomplete final package/runtime gates.
+NEXT: repair report/artifact identity, add real Git mismatch regression, then inspect installed-package gates. Keep PR92 draft/version unchanged.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER ACTION — report identity repaired and tested
+
+ACTION: shared stdlib-only helper reads actual Git HEAD, enforces the expected candidate, rejects conflicting existing report identity, and writes JSON atomically while preserving all runtime results. Windows normal/Coder and Android native/normal runners use it; three workflows label artifacts by candidate head and run identity regressions. No cloud/runtime dependency, model, answer, performance or offline guard change.
+TEST:44 relevant Python tests passed in22.34s, including real temporary-Git repositories, poisoned event SHA, expected-head mismatch and foreign-report refusal. Both Android runners pass bash syntax; helper compiles; workflow YAML and diff checks pass. Windows PowerShell execution and new-source runtime CI remain pending, not locally claimed. Preserved current Windows installer and synthetic1GiB import are still running; do not cancel them or count them as accepted.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: report provenance repaired; actual Android normal-path/installed APK checkpoints accepted above.
+REMAINING:10 release checkpoints, final selected-head CI and installed Windows acceptance.
+BLOCKERS: useful licensed corpus/provenance, physical-device/human/server/signing acceptance remain unproven.
+NEXT: publish this atomic correction in existing draft PR92 and inspect its actual-head checks; preserve long-running gates. No version bump/main merge/tag/release.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 59. BEFORE ACTION — owner-directed branch reconciliation, Core refactor and continuation
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; owner explicitly asks to check/combine other chats and leave normal-chat continuation. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2; candidate2e905df6ee656d7ff7071ff8918f3767b85a411d, only open PR92/draft. Intended accumulated MINOR/V1.4 unchanged.
+BRANCH AUDIT: authenticated API pagination returns123 branches. Shell has124 remote refs including origin HEAD alias;52 refs are ancestors of candidate,72 are not. Non-ancestry alone is not missing implementation: squash/replay/historical alternatives must be reconciled by contents before import. Latest Core51bb186, Knowledge07cf2f5, Platform42fc32b, UI2006566, Voice-r2c18ac6d, Work hardeningf0918a6 and Work20be9b1 are actual ancestors, already combined in PR92. Server5ef7c90 has exactly one candidate-unreachable commit, journal-only takeover claim; api/deploy production files are identical except subsequently expanded API UI settings. No extra server implementation needs merging. Preserve old branches/evidence; never import stale versions/workflows/UI wholesale or claim all historical branches accepted.
+REPRODUCED BLOCKER: current Windows Core35318393724/job105515111358 guard2e905df, real Coder reportfalse,7/8 operations pass. Verified artifact10535544194 ZIP SHA256b1180ae04a348ae5524586f9be761a7f7d33507f4e9d9c874231c3b6cdc1af5c: refactor preserves_sum=true/changes1/errorempty/local runtime/self_primary=true/no externalAI. Source accepts parsed refactor asok=true, and smoke additionally requires add_numbers; combined evidence narrows failure to missing original public function name. Actual returned code is not retained, so its replacement name/content cannot be asserted. This is independent of source-identity helper, reached before helper invocation.
+OWNED NEXT FIX: scripts/code_specialist.gd, benchmarks/core/code_specialist_smoke.gd, new bounded refactor regression smoke, Core benchmark workflow wiring, canonical journal. Preserve original Python top-level public function names, allow one repair through same bundled Core, fail closed if still missing, retain exact benchmark output diagnostics. Do not weaken existing answer/addition/local/offline gates. Name checks are a limited structural contract, not proof of Python execution or all-language behavioral equivalence.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: current executor implementation ancestry confirmed; stale Server journal-only branch reconciled; current Coder failure personally inspected.
+REMAINING: repair and rerun current Coder gate;10 remaining release checkpoints; self-contained updated handoff.
+BLOCKERS: current Coder acceptance red; Windows package/synthetic import pending; corpus/device/human/host/signing unproven. Previously accepted Windows benchmark remains historical evidence and does not accept the current head.
+NEXT: enforce bounded public-name preservation, run fault-injection smoke, publish with updated normal-chat instructions atomically. No main merge/version/tag/release while current mandatory gate red.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+OWNERSHIP EXTENSION: benchmark-only Knowledge stage diagnostics in benchmarks/knowledge/knowledge_stress_benchmark.gd. Current synthetic1GiB run35310302273/job105503429773 failed after5400s; artifact10537705836 digestf20ecfb39514bc321ff79c9dd95860fafcf2f3278370b2110717b49e2c0848f9 personally downloaded/verified: timed_out=true/return-9/RSS900882432, logs contain only Godot banner. No phase/cause or valid imported bytes/restart proof established; dataset_bytes0 is missing final report, not proof of a zero-byte generated dataset. Add stage prints without changing import algorithms/data/time limits/assertions, so next long-run failure can be diagnosed. Nested platform_runtime_identity.git_sha still wrongly uses event merge7381817; actual checkout03ae is proved by guard, and this remaining metadata issue belongs to next Knowledge evidence repair.
+
+### AFTER ACTION — bounded Core refactor repair
+
+ACTION: public-name preservation is explicit in refactor prompt; a limited non-executing Python top-level definition check rejects lost public names, invokes the same own-Core client once for repair, then refuses a repeated loss. Existing JSON/change/no-op/offline/addition quality gates remain. Benchmark now retains returned_ok, expected function presence and a bounded code excerpt. New fault-injection smoke is wired before real Windows Core evaluation. Knowledge benchmark logs reset/generation/import/search/restart phases; timeout cause is still unresolved, not reported fixed.
+TEST: new Godot4.7.1 regression passes; previous source2e905df fails the same new test with exit3 (rename was accepted without repair). Valid result uses1 call, repair2 calls, repeated-invalid result is refused after2 calls; async/private/non-Python boundaries checked.29 relevant Python tests pass in0.12s, workflow YAML parses, diff check passes. Godot exit0 has pre-existing7 ObjectDB/3 resource exit warnings; not claimed warning-free. Actual model inference/new-source Windows acceptance pending CI.
+
+ADDITIONAL LOCAL PROOF:9MiB JSONL import and fresh-process restart both pass in portable harness, error_count0; new reset/generate/import/search/restart stage logs retained in temporary QA. This is small-scale correctness/diagnostic proof only, not1GiB timeout repair or production corpus acceptance.
+
+## 60. Актуальная передача обычному чату — продолжать из GitHub, а не из обещаний
+
+Эта запись заменяет устаревшие SHA/очередь из раздела49, но сохраняет требования AGENTS и все инженерные доказательства. Исходный проверенный кандидат этой партии:2e905df6ee656d7ff7071ff8918f3767b85a411d. Коммит с этой записью и исправлением CodeSpecialist публикуется атомарно поверх него в существующей ветке `chat-2026-09-17-unified-finalization`; его настоящий SHA следующий чат получает из PR92/ref, а не угадывает по тексту. Main031aebaad16fc25a39dfc45c58f96fadb658cac2, версия1.3.0.0/code100005; предполагаемый финальный MINOR1.4.0.0.
+
+### Кто продолжает и чем
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: HANDOFF-READY / INCOMPLETE. На момент окончания ответа этот исполнитель не продолжает работу в фоне. Следующий обычный Chat/Codex/Work может сразу взять незавершённую работу на себя, записав TAKEOVER/RECONCILE здесь; связываться со старыми чатами и ждать их не нужно. Владелец требует одного исполнителя. Исторические ACTIVE-записи прежних lanes не означают, что их остановленные чаты сейчас работают; эта передача разрешает единый takeover, не отменяя safety/signing/privacy gates.
+
+Обычный чат способен изменять проект только при реально доступном GitHub-инструменте с правом записи. Наличие ссылки/упоминания GitHub само по себе не даёт такого права. Сначала проверь доступ чтением PR92, свежего main и AGENTS; затем используй только реально доступные операции записи. Если shell отсутствует, выполняй acceptance через GitHub Actions после атомарного обновления ветки, не называя их локально пройденными. Если доступно только чтение или инструмента нет — честно назови отсутствующую возможность и попроси подключить GitHub/дать write-доступ; не изображай edits/CI/merge. Не публикуй токены/секреты/ключи.
+
+При наличии shell и клона: `git fetch origin`, затем читай `AGENTS.md` и ВЕСЬ `docs/PROJECT_MASTER_LOG.md` из актуальных main и кандидата. Делай работу от настоящего PR head; локальная ветка Work могла иметь другие commit IDs при полностью совпадающих файлах, поэтому проверяй diff и SHA удалённой ветки. Scratch-путь этого сеанса не гарантирован следующему чату; восстановление веди из GitHub, а не ищи исчезнувшие временные файлы.
+
+### Первые исполнимые действия следующего чата
+
+1. Получи свежие `main`, PR92/head, список открытых PR и ВСЕ страницы branches. Запиши свою заявку с исходными SHA, файлами и предполагаемым bump ДО кода. Единственный журнал — этот файл. Если другой живой исполнитель уже добавил новые изменения, сохрани их и согласуй takeover по свежим фактам.
+2. Проверь CI коммита с текущей записью. Из-за pull_request событие GITHUB_SHA может быть служебным merge SHA: реальное доказательство — `AURORA_CI_CHECKOUT_SHA=<head>` в job и содержимое отчёта. Core artifact/helper теперь используют actual head. Nested Knowledge identity ещё использует eventSHA; исправь metadata отдельно, не выдавая mergeSHA за source и не переписывая чужой отчёт без проверки.
+3. Сначала закрой реальный CodeSpecialist сбой. Историческая ошибка35318393724/job105515111358/artifact10535544194:7/8, refactor missing public name; исправление этой партии имеет локальную regression proof, но требует успешного НОВОГО real-core-windows. Проверь все8 операций и21 quality scenarios, собственный Core, отсутствие Ollama/внешней сети, hashes/quality/performance. Не убирай add_numbers/a+b или hard gates. Если снова красный, теперь читай bounded returned code excerpt и precise error.
+4. Разбери настоящий Knowledge timeout:35310302273/job105503429773/source03ae14b/artifact10537705836,5400s/-9/RSS900882432, phase ранее неизвестна. В новой партии появляются stage logs. Сначала установи reset/generate/import/search/restart, воспроизведи на небольшом и увеличенном объёме с замером; только после этого исправляй алгоритм. Не повышай timeout вместо доказательства, не ослабляй restart/integrity/RSS и не считай синтетический JSONL настоящим корпусом.
+5. Сохрани длительную Windows-сборку35310302289/job105507674904/source03ae14b: installer уже прошёл, на последней проверке идёт исторический V1.2/V1.3 bridge. Новые Windows/Knowledge запускаются в очереди с cancel-in-progress=false. Не отменяй текущие дорогие проверки ради journal-only commit. Потребуются также окончательные same-head runs: установленный offline Silero TTS+Whisper-small STT, firewall block, WAV/JSON, файлы/Computer/master-stop, silent install/uninstall/bridges. Предыдущий результат не принимает новый head.
+6. Android normal-path E2E и APK launch приняты как отдельные checkpoints раздел58 на03ae14b; Release-native report также лично проверен. Для нового финального head опять нужны native/normal/APK результаты, а установленный Voice/OCR/Knowledge и физическое устройство остаются непроверенными. Native E2E/не-thinking prompt не заменяют installed voice/OCR.
+7. Работы актуальных прежних lanes уже находятся в PR92: Core51bb186, Knowledge07cf2f5, Platform42fc32b, UI2006566, Voice-r2c18ac6d, Workf0918a6/20be9b1 — ancestors. Server5ef7c90 отличается единственным journal-only claim, не новым implementation. Не делай дубликаты.72 других remote refs не являются ancestors; многие старые/squash/replay альтернативы, но универсальная patch-equivalence не доказана. Для нужной старой ветки сравни настоящий полезный delta/тесты с текущим кодом; не сливай старые versions/workflows/assets ради количества merges, не удаляй историю.
+8. Закрой10 недостающих release checkpoints раздел58. Реальный полезный >=1GiB licensed/sharded pack/provenance отсутствует: v14 synthetic/duplicate archive не выполняет требование. Физические устройства, human voice/UI, REG.RU deployment/mail/rollback, signing lineage/ключи — отдельные фактические границы. Не предполагай, что они прошли.
+9. Лишь после relevant gates и отсутствия P0/P1: финальный единый bump1.4.0.0/code>100005, sync JSON/Godot/export/installer/updater/changelog и новые package/update/release проверки. PR92 до этого draft; main merge/tag/production release не делать с красным обязательным gate. Владелец разрешил полезные слияния, а не ложную приёмку.
+10. Каждую выполненную партию записывай BEFORE/AFTER здесь с actualSHA/run/job/artifact/hash/test output, DONE/REMAINING/BLOCKERS/NEXT. Доводи доступную работу самостоятельно. Реальный внешний blocker называй точно; pending/cancelled не равно pass, повторённый запуск не равно repair.
+
+### Короткий запрос, который владелец может перенести в новый чат
+
+«Продолжи AuroraFox из https://github.com/Treninem/AI. Работай один. Сначала получи актуальные main и PR92/head, полностью прочитай AGENTS.md и docs/PROJECT_MASTER_LOG.md, особенно последнюю передачу раздел60. Проверь настоящие инструменты чтения/записи GitHub. Запиши TAKEOVER до кода; продолжай с Core refactor CI и Knowledge timeout/Windows installed gate, без повторения уже интегрированных lanes. Сохраняй автономность собственного Core. Исправляй реальные failures, публикуй атомарные партии в текущем draft PR92 и записывай evidence в единственный журнал. Не обещай фоновой работы после остановки и не объявляй релиз без всех gates. Процент — только по фактическим acceptance checkpoints».
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: актуальные executor branches сведены ранее и лично проверены по ancestry; Server journal-only остаток reconciled; bounded refactor repair и regression; диагностика Knowledge этапов; исполнимая передача обычному чату.
+REMAINING:10 release checkpoints, новый текущий Core CI, разбор5400s Knowledge failure и installed Windows proof.
+BLOCKERS: red Coder/Knowledge real gates до нового успешного запуска; genuine corpus/device/human/host/signing unproven. Полная эквивалентность72 исторических refs не установлена; они не заявлены слитыми/принятыми.
+NEXT: получить настоящий новый PR92/head и результаты его Windows Core/Knowledge; читать новые refactor excerpts/stage logs, сохранить дорогую Windows-сборку.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 61. BEFORE ACTION — resumed sole ownership, green Core/Knowledge and bounded Windows bridge
+
+CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE — sole executor resumes section60 handoff. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2/candidate96beca1eef36e022da33b51c40b3ffe1f5100352, PR92/draft; instructions/current canonical continuation reconciled. Accumulated intended MINOR/V1.4 remains version-last.
+CURRENT FACTS:23/24 candidate workflowsSUCCESS; Windows Package35325857421/job105554749059 CANCELLED. Coder/realWindows35325857344/job105538675377 succeeds: actual checkout guard96beca1 and AURORA_REPORT_SOURCE_SHA96beca1, all owned regression/real-code/benchmark gates pass. Knowledge1GiB35325857519/job105543423201 succeeds with two cases/error_count0, no timeout increase; this is synthetic capacity, not genuine pack. Previous5400s failure is a runtime variability/performance risk, not asserted algorithmically solved by stage prints.
+WINDOWS EVIDENCE: build/export/runtime/exe/installer steps pass, full installer compile2055.078s. Last visible bridge event is V1.2 fixture compile27.079s at10:25:37Z, then no per-operation output until cancelled12:42:18Z. Old03ae run35310302289 is alsoCANCELLED at bridge. Neither proves a failed assertion or exact blocked installer/app phase. Source uses unbounded Start-Process -Wait for fixture install/repair/app smoke/uninstall, losing phase diagnostics and potentially waiting for descendants after main exit. Do not call descendants the proven cause without a rerun.
+OWNED NEXT BATCH: tests/windows_v12_bridge_smoke.ps1, tests/windows_v13_bridge_smoke.ps1, shared bounded process helper + real PowerShell helper smoke, Windows workflow helper parse/fast regression wiring and failure diagnostics artifact, relevant backwards-compatibility tests and canonical journal. Log explicit phase/installer logs; bound each child process, cleanup only its process tree, preserve every marker/trust/user-data/exitcode assertion. Let V1.3 reuse the already-built current installer when requested, retaining standalone compile fallback; this avoids confirmed redundant compression, not claimed the current hang cause.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: new Core/Knowledge real gates green; actual source guard/report identity executed remotely.
+REMAINING: Windows installed/package acceptance,10 release checkpoints and remaining Knowledge report identity/performance boundaries.
+BLOCKERS: Windows bridge phase unknown/unbounded, installed voice not reached; genuine corpus/device/human/host/signing absent.
+NEXT: add bounded phase-level diagnostics and regression, reuse current installer for V1.3, publish coherent batch and inspect its real Windows result. No version/main merge/release.
+
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+OWNER STEERING/TAKEOVER: owner reiterates to audit/take all chats and authorizes deletion of unnecessary branches only after takeover. Full123-branch ancestry and branch-relative text-path/blob audit completed:51 ancestors/72 non-ancestors;54 unique older text paths absent at candidate. Absence is not acceptance evidence: deprecated parallel journals/fake release overlay/old workflows are excluded, and remaining useful source must be reconciled. Genuine missing feature found in file-intelligence-epub-rar-v1/a187628: current file_service lists EPUB as generic ZIP and RAR only warns, unlike old chapter/RAR analyzers. Extend ownership to file_intelligence/extended_formats.py, current file_service/requirements, meaningful EPUB/RAR regressions and relevant CI, preserving current OCR/limits/local autonomy. Audit catches unsafe old lstrip path normalization and unbounded EPUB member reads; do not import those defects or the stale launcher wrapper. Production-path takeover continues under sole claim; old spec/probes remain retained until reconciled.
+BRANCH CLEANUP: no authenticated delete-ref operation exposed in current GitHub connector; shell push previously unauthenticated. Prepare only exact-SHA ancestor alias cleanup with preserved refs/evidence and available authenticated means; never say a branch was deleted until remote readback proves it. Owner authorization persists, no repeat permission required.
+
+### BEFORE: разрешённое удаление доказанных временных веток
+
+Владелец явно разрешил удалять ненужные ветки ПОСЛЕ переноса работ. CLAIM расширен на `.github/workflows/retire-verified-branches.yml` и `build/retire_verified_branches.py`: удалить только фиксированный список временных aliases ниже, чьи SHA лично проверены как ancestors кандидата96beca. Main, PR92, canonical lanes и72 ветки с непроверенным delta не удалять. Прямой GitHub DELETE-ref инструмент отсутствует, shell push не имеет авторизации; выполняется обычная авторизованная Actions-операция с job-scoped contents:write, без выдачи/печати токенов. Перед каждой операцией заново проверить protected/open-PR/head-SHA/ancestry; удаление только через compare-and-swap lease. До readback не писать «удалено».
+
+- `chat-2026-09-17-work-computer-autonomy-please-stop` → `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58`; ancestor, ожидает безопасного удаления.
+- `tmp-ignore` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-main-for-voice-sync` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-main-for-voice-sync-2` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-main-for-voice-sync-final` → `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, ожидает безопасного удаления.
+- `tmp-never-use` → `c41a9996692d4588592ecf5735e2c72a10ceb9f2`; ancestor, ожидает безопасного удаления.
+
+### AFTER: проверенная партия и полный реестр takeover
+
+Локально36 passed (0.67s): `tests/test_extended_formats.py`, `test_file_intelligence.py`, `test_project_index.py`, `test_update_backward_compat.py`, `test_windows_voice_package.py`. Реальные EPUB ZIP/OPF/spine/nav и RAR3 CRC fixtures проверены, включая dispatch file_service, traversal rejection, bounds и запрет внешних процессов для RAR. Сжатый RAR перечисляется с явным предупреждением: полноценная распаковка сжатых entries НЕ заявлена. Старый launcher-wrapper не возвращён; новый модуль входит в Windows package file list. RAR parser — pure-Python rarfile4.2; собственный Core не получает внешнего inference dependency. YAML всех32 workflows и Python syntax проверены; diff whitespace clean. Реальный локальный bare Git доказал, что stale deletion lease сохраняет advanced ref, а точный lease удаляет только выбранный ref.
+
+Windows bounded process helper имеет отдельную быструю реальную PowerShell regression в CI, phase markers и installer logs; timeout каждой фазы прекращает только её parent/owned descendants. Cleanup parent/dispose защищён вложенными finally. V1.3 reuse уже проверенного installer исключает вторую долгую компрессию, НЕ объявляется причиной старого зависания. Локального PowerShell нет: regression/package/voice подтверждение ждёт нового CI. Старые мостовые marker/user-data/hash/voice assertions сохранены.
+
+На96beca лично прочитаны CI:23/24 success, Windows run35325857421/job105554749059 cancelled после180min; last output — V1.2 fixture compiler10:25:37Z, точная зависшая установка/app/uninstall неизвестна. Core Windows35325857344/job105538675377:8/8 Coder и21 quality scenarios green. Knowledge35325857519/job105543423201:2 cases,0 errors, ~88min synthetic1GiB; это НЕ настоящий licensed production pack. Предыдущая ошибка CodeSpecialist закрыта на96beca; final same-head verification для новой партии остаётся.
+
+Ниже123 remote branches относительно96beca:51 ANCESTOR уже в истории,72 DELTA требуют reconcile. Для DELTA числа I/D/M — identical/different/missing text paths относительно текущего кандидата, а не обещание функциональной эквивалентности. Старые journals, fake progress overlay, обязательные Ollama/external-model dependencies не возвращать. Все незавершённые задачи беру на себя; следующие отсутствующие полезные части проверять по точному SHA, не ждать старые чаты. Canonical source: GitHub/PR92; локальный qa JSON не нужен следующему чату.
+
+| Ветка | SHA | Проверка | I/D/M |
+|---|---|---|---|
+| `aurora-agent-sync-v1` | `f6f525a43bf015240db09d57ba6ab4805feb68ba` | DELTA | 2/2/0 |
+| `aurora-api-gateway-v1` | `4cc9522b7685f8204188c17ce2a7fb6b3f773475` | DELTA | 4/14/1 |
+| `aurora-api-gateway-v2` | `6ae0e75a43db4396db3e9fcc45c08ab13d633ed3` | DELTA | 4/14/0 |
+| `aurora-pc-release-v1` | `78f7ffc6c9766933955f71296df381886f091c96` | DELTA | 0/3/0 |
+| `aurora-ui-assets-v2` | `ed3b32962445c7957deca2f0732dbbdf794f4696` | DELTA | 0/3/1 |
+| `autonomy-foundation-2026-08` | `b16d8cc0fb892c371fd798bd408acf883d2710a1` | DELTA | 0/6/12 |
+| `bugfix-v1.1.1.1` | `0dd0fe12c198040db0d822330daff4f08504319e` | DELTA | 4/15/0 |
+| `build-v1.0.0.0-android` | `5710fd5eb895a5737bcc4d68b9a9824641f94ce2` | DELTA | 0/0/0 |
+| `build-v1.0.0.0-windows-installer` | `23d76b1504dc577353688da2ab5112997f87ff42` | DELTA | 0/0/1 |
+| `chat-2026-09-16-integration-gate` | `c08aa335bce30978199ed3ea2727e64fa511095e` | DELTA | 0/2/0 |
+| `chat-2026-09-16-large-knowledge-perf` | `4f3162bc5d08ccb2e29265e9d1400d78f8b5ee81` | DELTA | 0/2/3 |
+| `chat-2026-09-16-local-ocr` | `38f03adb2bed9cdf5e0cd0c2caa485072ee7152b` | DELTA | 10/7/2 |
+| `chat-2026-09-16-local-ocr-replay` | `9eaf9d08e49c7ff5928cdcac6d90eacc905cc5ca` | DELTA | 0/5/0 |
+| `chat-2026-09-17-knowledge-memory-ocr` | `07cf2f54cf0fdf4ab6ff33d019986f14942db1b1` | ANCESTOR | — |
+| `chat-2026-09-17-platform-integration` | `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9` | ANCESTOR | — |
+| `chat-2026-09-17-platform-integration-v2` | `42fc32b664005e007175c8542f49030bc7bb4a0b` | ANCESTOR | — |
+| `chat-2026-09-17-server-api-db` | `5ef7c9002950a4b59c962888bd869cbc677dd9ef` | DELTA | 0/0/0 |
+| `chat-2026-09-17-ui-visual` | `2006566710a5662bba9074c5cbb47c48988ae603` | ANCESTOR | — |
+| `chat-2026-09-17-unified-execution` | `9ca5fafd1f65038d855d00e1e1e0db876938d17f` | ANCESTOR | — |
+| `chat-2026-09-17-unified-finalization` | `96beca1eef36e022da33b51c40b3ffe1f5100352` | ANCESTOR | — |
+| `chat-2026-09-17-voice-audio` | `7d6d074ec597b21ff0a0a906e3a04871cae2158a` | DELTA | 0/0/1 |
+| `chat-2026-09-17-voice-audio-r2` | `c18ac6d29950fc277345734850aed1422bb86ae0` | ANCESTOR | — |
+| `chat-2026-09-17-voice-main-sync` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | — |
+| `chat-2026-09-17-voice-main-sync-2` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | — |
+| `chat-2026-09-17-voice-main-sync-3` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-123` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-actual` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-ci` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-draft` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-final` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-last` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-please-stop` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-pr` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-pr0` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-review` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-stop` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-x` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-autonomy-z` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-2026-09-17-work-computer-hardening` | `f0918a64c78e38262634991116a0051369590aad` | ANCESTOR | — |
+| `chat-autonomy-state-durability-20260916` | `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa` | ANCESTOR | — |
+| `chat-knowledge-races-20260916` | `bfd9c23dbca44c31508f44e531407aa47560423d` | DELTA | 0/2/2 |
+| `chat-knowledge-races-v2-20260916` | `1bc4003170e45394d181d6010453cb8560312784` | DELTA | 0/4/12 |
+| `chat-large-knowledge-complete-scaling-gates` | `338e2f54070ccdb2cd463a2843556eeb93908cea` | DELTA | 0/2/0 |
+| `chat-large-knowledge-complete-scaling-gates-v2` | `bdf79c211fab40a0431f50a92ee9f4df549a30fb` | DELTA | 0/2/0 |
+| `chat-large-knowledge-concurrency-isolation` | `f62c18f4138f0710456376dffce78cf62b2fbc92` | DELTA | 1/1/0 |
+| `chat-large-knowledge-concurrency-isolation-v2` | `afecd94e02482261fe13d513e7002541ea0245c7` | DELTA | 1/1/0 |
+| `chat-large-knowledge-concurrency-isolation-v3` | `bc403203ec575a0f1188329ddb09bfd0f0587551` | DELTA | 1/1/0 |
+| `chat-large-knowledge-data-safety` | `02b931a85044a7df88662614d45f22db7c4330a4` | DELTA | 0/4/1 |
+| `chat-large-knowledge-data-safety-v2` | `d2294bacaaeff27f661ea75f73dd218687f6f4ba` | DELTA | 0/3/1 |
+| `chat-large-knowledge-hard-gates` | `098fa166d6ff0e1bd34ab5b6c6fe8778c8e94cf6` | DELTA | 0/2/0 |
+| `chat-large-knowledge-lost-registry-validation` | `899d6bb091db906354d86f3793a5e7194838ba74` | DELTA | 0/0/2 |
+| `chat-large-knowledge-registry-recovery` | `2f8d4b4b7c22d1f01dadc0829ea8d1c9441ac1c7` | DELTA | 0/2/2 |
+| `chat-large-knowledge-source-removal-gate` | `5c22e0ae195444e291792624a5533375f9ece070` | DELTA | 0/2/0 |
+| `chat-large-knowledge-stress-evidence` | `8a2c95d01d0c5eaf1730d34dfa2c69be25225c57` | DELTA | 0/1/0 |
+| `chat-voice-android-female-20260916` | `7e81c373e4190567b7b5370de257aad5b8b2972f` | ANCESTOR | — |
+| `chat-work-computer-autonomy-20260917` | `0edb9262e0f6efeea3801f61d2cf667a97abd5cc` | DELTA | 7/1/0 |
+| `chat-work-computer-autonomy-ci-trigger` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | — |
+| `chat-work-computer-reliability-20260916` | `a716b14e63a9c15453e1f2d214e26f33fb030dbc` | DELTA | 6/1/0 |
+| `chat/core-benchmarks-20260916` | `1fcaa6c5f3210cd20411ee9449610d6b1eec4c93` | DELTA | 6/13/0 |
+| `chat/core-benchmarks-20260916-sync-test` | `c41a9996692d4588592ecf5735e2c72a10ceb9f2` | ANCESTOR | — |
+| `chat/core-benchmarks-clean-stage` | `9b051ac01f9bdbfc1055a6f2c16a321329264e0f` | DELTA | 6/13/0 |
+| `chat/core-benchmarks-clean-stage2` | `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` | ANCESTOR | — |
+| `chat/core-benchmarks-clean-stage3` | `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` | ANCESTOR | — |
+| `chat/core-coder-research-20260917` | `51bb1860c17bc86c104d4b164367ca2d0f541649` | ANCESTOR | — |
+| `chat/knowledge-record-dedup-probe-20260916` | `e0d2987947ed4d2261996527340fb7f42da18b82` | DELTA | 0/0/1 |
+| `chat/large-knowledge-alias-safety-20260916` | `34ce75a02ea9f37cb3ccabc03fb0d014a502c29c` | DELTA | 0/4/0 |
+| `chat/large-knowledge-consolidated-20260916` | `575575b46cf12a9234e5de04441ccb0481f75ded` | DELTA | 0/3/3 |
+| `chat/large-knowledge-final-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-hard-gates-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-perf-continue-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-perf-harness-20260916` | `a4c64e0f9f7bbc9394dc947f6d3aeb96596dcdf4` | DELTA | 0/2/2 |
+| `chat/large-knowledge-record-dedup-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chat/large-knowledge-windows-bootstrap-20260916` | `a395070ac64fe154474159c2547b4ecb2a5b8e26` | DELTA | 0/2/0 |
+| `chat/large-knowledge-windows-bootstrap-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | — |
+| `chatgpt/aurorafox-kb-v7-server` | `aedb76d1ad2cbdaa5ac66700391e3f851bb48351` | DELTA | 2/0/0 |
+| `coord/ci-scheduling-20260916` | `8507b8b8db10bb59276f6e8b6a50c65a6043c261` | DELTA | 0/5/0 |
+| `coord/updater-contract-drift-20260916` | `22d95766482a095cee429f6f12cfdb0147cc0f42` | DELTA | 1/0/0 |
+| `coord/work-ui-integration-20260916` | `218a5a83d1e7d0a90ad612415e6aae02fad28045` | DELTA | 13/4/0 |
+| `desktop-ui-smoke-v1` | `364f40c678ca4f733c940597e1685680ab47ddb8` | DELTA | 0/2/0 |
+| `diag/android-apk-stage-split` | `b8fb2f936d9e86235751efca235b2d9fe01691e0` | DELTA | 0/3/0 |
+| `feat/premium-fox-adaptive-voice` | `961186474521a04c61b54ce3cce5ce1b3948412d` | ANCESTOR | — |
+| `file-intelligence-epub-rar-v1` | `a187628b65ac8b4d60dd7a8d3c750d52a72de26d` | DELTA | 0/2/2 |
+| `fix/android-apk-gate-timeout` | `cd3841372cfff7d97b42f701f77685233fcdbf6a` | DELTA | 5/16/0 |
+| `fix/reg-ru-ssh-availability` | `08026f02cadf67cc07e63a1933ce214dfc4d9659` | DELTA | 0/2/0 |
+| `fix/ui-polish-2026-09-16` | `5336e8388e745dbffa3e460e74296bde09c132ce` | DELTA | 15/8/0 |
+| `fix/ui-visual-2026-09-17` | `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9` | ANCESTOR | — |
+| `main` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `model-bootstrap-e2e/v1` | `f5a2ce0762ef008e18811880a8e6cf4e5edf4f01` | DELTA | 0/0/0 |
+| `model-bootstrap-e2e/v2` | `924e8a2f7bca3b090934ab104a7b5a3984f8acce` | DELTA | 0/0/0 |
+| `ocr-backup-437d` | `437d513523cb712f0cd2c08bab3a5908d8794625` | DELTA | 2/12/1 |
+| `ocr-backup-old` | `5bf5676499dba42a4369de9a1704c1530ad36d43` | DELTA | 0/5/0 |
+| `ocr-backup-pre-d2065b2` | `53e9f06712fe6318b1798954cdf69a5d4dc691e9` | DELTA | 4/11/1 |
+| `ocr-noop-temp` | `9eaf9d08e49c7ff5928cdcac6d90eacc905cc5ca` | DELTA | 0/5/0 |
+| `ocr-replay-temp` | `da44196223de58abb3126c045bf68bc0c9e68fd0` | ANCESTOR | — |
+| `ocr-work-fresh` | `5436eec13e34236cf7b6482bc934dfebd8223d73` | ANCESTOR | — |
+| `release-ci-validation` | `d9e717077dc9a667c0e616ce204b98c295b6c2c9` | DELTA | 8/23/1 |
+| `release-v1.1.0.0` | `f138ded4d7901973a0d0b717df4e41fc70563b7d` | DELTA | 0/3/0 |
+| `release/v1.4-integration` | `99b2c144dbeb675caafb527ad528f5db18a32b50` | ANCESTOR | — |
+| `semantic-memory-v1` | `158f021bfcdf3afb5622687e8ac84f9be6543ea9` | DELTA | 0/5/0 |
+| `sync-main-ui-owner-assets-2026-09-16` | `34872816166cd85b70ed6d005c59a6f495d2c475` | DELTA | 0/0/0 |
+| `tmp-ignore` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-main-for-voice-sync` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-main-for-voice-sync-2` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-main-for-voice-sync-final` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | — |
+| `tmp-never-use` | `c41a9996692d4588592ecf5735e2c72a10ceb9f2` | ANCESTOR | — |
+| `validation/v1.2.0.0-full` | `6bfbecd3cf2023d0932e1ca4733917c9ea8ef1c5` | DELTA | 0/0/0 |
+| `verify-v1.1.0.0-artifact` | `fd235d6deab6d98e8697f0fc25f730aea2ccb392` | DELTA | 0/0/0 |
+| `visual-assets-fix-v1` | `ef49029307bf7b201259fde5e65905495b5aec4e` | DELTA | 0/4/0 |
+| `visual-ui-assets-v1.1.2.2` | `13d83aed7b2d15ab5a6bfe2a6613928f30e0f56a` | DELTA | 0/0/0 |
+| `visual-ui-v1.1.2.2` | `8d11c0a477595fea658a37aed2552798bca46776` | DELTA | 0/1/5 |
+| `voice-android-female-supertonic-20260916` | `758961b2bd93be994e5299e8f2051d09688b2832` | ANCESTOR | — |
+| `voice-quality-android-female-supertonic-20260916` | `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` | ANCESTOR | — |
+| `voice-quality-native-prosody-20260916` | `cea8142818b9d612adc468dc522332ad8ceb3304` | DELTA | 3/1/0 |
+| `voice-quality-native-prosody-integration-20260916` | `345934b37e12f648a1c919515818bb5b1b949092` | DELTA | 0/4/0 |
+| `voice-quality-ssml-ab-20260916` | `7d9655421da6a74cd7089196ce6b8480b200713f` | DELTA | 0/2/3 |
+| `voice-quality-targeted-prosody-20260916` | `fae479d469706b2e3eff6356222eb4071fee72e2` | DELTA | 0/1/0 |
+| `windows-package-fix-v1` | `39e785fe020e4ba1597a2251d42131d511d0920b` | DELTA | 0/1/0 |
+| `windows-package-validation-v1` | `77e29540f955bfdae84115831a08f1fa7ce6e443` | DELTA | 0/0/0 |
+| `windows-stability-ui-v1` | `ae0d4ee0f2b6996c788a47131d88a9bebf036dc4` | DELTA | 1/5/0 |
+| `windows-ui-stabilization-v1` | `23c5a48bc110c96b0a582629f81fed8fe585cea7` | DELTA | 0/2/1 |
+| `work/coordination-2026-09-16` | `72b0368056fd43028c6f99d7034797a12767bb1d` | DELTA | 0/2/1 |
+| `x-temp-ocr` | `5436eec13e34236cf7b6482bc934dfebd8223d73` | ANCESTOR | — |
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: доказательства выше; branch deletion ещё ожидает actual CI/readback.
+REMAINING: Windows installed voice/bridges/package, production Knowledge>=1GiB, physical devices/human UI+voice, deployment/mail/rollback/signing и final same-head acceptance —10/20 checkpoints раздел58.
+BLOCKERS: старый Windows timeout не признан исправленным без нового phase/acceptance evidence; никаких ложных release approvals.
+NEXT: опубликовать эту атомарную партию поверх96beca в PR92, лично прочитать fast process-contract/file-intelligence/retire job, сверить branch deletion readback; затем довести конкретную Windows фазу по logs. Не bump/merge/tag/release до всех обязательных gates. Если чат остановится, секция60 продолжает действовать; этот AFTER уточняет актуальный код/реестр и заменяет устаревшие сведения об ожидающих96beca CI.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: фактическое удаление и новые быстрые CI-доказательства
+
+Опубликован remote commit `8ac6bd1a4f2925881c8378812bd8d1949456a341`, tree `69170b8eff7db3e1d52999b56b52225a256e6d43`, parent96beca. Все14 GitHub blob SHA сверены с локальным git hash-object, fetch и diff HEAD/FETCH_HEAD пустой. Локальный commit2bb660a — тот же код, НЕ remote identity.
+
+Retire run35349142205/job105612779076 SUCCESS; actual checkout8ac6bd1,6 AURORA_BRANCH_DELETED, каждая с exact lease и API readback. Удалены именно6 веток из фиксированного BEFORE списка: `chat-2026-09-17-work-computer-autonomy-please-stop`, `tmp-ignore`, `tmp-main-for-voice-sync`, `tmp-main-for-voice-sync-2`, `tmp-main-for-voice-sync-final`, `tmp-never-use`. Ошибка предыдущего комментария «семь» исправлена: фактический manifest содержит6 entries (вводный docstring helper со словом seven косметически устарел, логика удаления определяется только шестью exact-SHA entries). Повторное чтение обеих страниц GitHub branches подтвердило117 вместо123; все6 refs отсутствуют, main031aebaad16fc25a39dfc45c58f96fadb658cac2 неизменен. Указанные SHA/работы сохранены в истории и реестре выше. Все72 DELTA branches и canonical lanes сохранены.
+
+Windows run35349142330/process-contract job105612779804 SUCCESS на8ac6bd1: exit17 preserved, parent-exit0 вернулся без ожидания descendant, owned pwsh/conhost stopped; timeout1sec refused и parent cleanup; AURORA_WINDOWS_BOUNDED_PROCESS_SMOKE_OK. Это реально выполнено Windows CI, не локальный PowerShell. Package job105612934621 queued на момент записи; успешная regression НЕ принимает installer/voice.
+
+Core/Voice run35349141942/file-intelligence job105612778995 SUCCESS на8ac6bd1; лично прочитан job log:19 passed in0.70s (parser/index/EPUB/RAR). Windows-integration105612778743 и python-voice105612778997 также SUCCESS. Общий godot-core ещё in_progress; остальные тяжёлые same-head gates не объявлять зелёными заранее.
+
+Эта последующая journal-only запись сохраняет фактические результаты, НЕ меняет проверенный код8ac6bd1 и НЕ является новой final same-head release acceptance. При следующем настоящем изменении исправь косметический docstring helper, не перезапуская дорогую упаковку только ради числа в комментарии.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE:6 доказанных aliases удалены с readback;36 локальных tests, новая Windows lifecycle regression и file-intelligence CI зелёные.
+REMAINING:10 checkpoints раздел58;72 старых DELTA ветки требуют выборочного функционального reconcile; полное доказательство установленного Windows voice/bridges ещё не получено.
+BLOCKERS: прежний Windows timeout source96beca, новый package queued; настоящий production Knowledge corpus/devices/deployment/signing ещё не подтверждены.
+NEXT: читать Windows package35349142330/job105612934621 после запуска и новые фазовые installer logs; исправлять конкретный сбой без ослабления checks. Обычный чат продолжает по разделу60 и этому реестру; после остановки текущий исполнитель в фоне не работает. PR92 остаётся draft, версия1.3.0.0/code100005, bump/main/tag/release не выполнены.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 62. BEFORE: экономная партия по настоящим новым сбоям
+
+TAKEOVER WORK-2026-09-17-FINAL-RELEASE ACTIVE. Fresh main031aeba, PR92/headbd219fc, реализация8ac6bd1. Беру `android_plugin/setup_native.ps1`, `tests/android_native_download_smoke.ps1`, `.github/workflows/android-plugin-ci.yml`, `benchmarks/core/code_specialist_smoke.gd` и существующий общий журнал; intended BUILD diagnostics/network robustness, accumulated MINOR1.4.0.0 remains version-last. Старые claims reconcile единым исполнителем; другие чаты не запускаю.
+
+Core run35349142031/job105612828523/artifact10549936248 SHA256a0178c7fc04e5075d34ff00eb2b7cf3e31e59fa9fea511414c6b3892326bfd7e:7/8. Refactor теперь PASS, generate_tests после bounded repair incomplete. Report потерял raw ответа: исправить bounded diagnostic evidence, НЕ заявлять генератор исправленным и НЕ добавлять canned tests/ослаблять >=2 cases. Android run35349142055/job105612778791: GitHub Server Error на setup_native.ps1:85 при загрузке sherpa1.13.4. Добавить максимум3 попытки с временным файлом/cleanup, не менять pinned hashes/revisions и не делать unbounded retry. Windows35349142330/job105612934621 идёт Build installer, сохранить run. Работа из старых веток уже сравнивалась; свежие функциональные ошибки имеют приоритет над blind merge старых workflows.
+
+### AFTER: небольшая согласованная партия без повторения старых работ
+
+Реализован максимум3 download attempts, TimeoutSec600, ограниченная пауза3/6sec; HTTP4xx кроме429 не retry, временный .download удаляется при каждом сбое и в finally, cache destination публикуется только после завершённой загрузки. Все native revisions/hash/size assertions сохранены. Новая PowerShell fault-injection regression проверяет interrupted partial→complete retry, cache reuse, окончательный отказ после3 attempts и отсутствие повреждённого cache/partial; wired перед дорогими Android toolchain/build steps. Локального pwsh нет, её pass ещё НЕ заявлен.
+
+Core diagnostic report теперь сохраняет returned_ok, test_code_excerpt и rejected_response_excerpt максимум4000chars. Генерация тестов НЕ объявляется исправленной; нет canned fallback/увеличения inference retries/ослабления two-case gate. Причину неполного JSON следующая real-Core проверка покажет непосредственно.
+
+Локально8 passed0.03s: test_core_specialist_team_runtime_contract.py и test_android_voice_supertonic_contract.py. Godot4.7.1 --check-only code_specialist_smoke.gd exit0. Все workflow YAML parsed, git diff --check clean. Лично сопоставлены старые ветки: chatgpt/aurorafox-kb-v7-server aedb76d содержит api/__init__.py и api/knowledge_bundle.py уже идентичные кандидату; coord/updater-contract-drift-20260916 22d9576 содержит test_core_candidate_promotion.py уже идентичный. Переносить повторно нечего. diag/android-apk-stage-split b8fb2f9 сопоставлена с текущим APK workflow: кандидат уже имеет stage layout/exact-head guard/сохранение expensive runs и более узкие test selectors, blind merge вернул бы старые checkout/cancellation contracts. fix/android-apk-gate-timeout cd38413 имеет16 отличающихся paths и не получает ложной patch-equivalence приёмки.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: bounded native downloader и failure evidence улучшены;8 local tests/Godot parse/YAML green; две старые ветки содержательно уже взяты.
+REMAINING: реальная Android download regression/build, реальный Test Engineer corrected output, текущий Windows installer/bridges/installed voice и остальные10 release checkpoints.
+BLOCKERS: Core35349142031/job105612828523 generate_tests incomplete; Android35349142055/job105612778791 download GitHub server error; Windows35349142330/job105612934621 продолжает installer.
+NEXT: атомарно опубликовать эту партию в PR92 поверхbd219fc, проверить быстрый native download smoke и сохранить текущую expensive Windows evidence; по новому bounded rejected-response чинить фактическую Test Engineer причину, не перезапускать слепо. Следующему обычному чату продолжать по разделу60; источник текущего SHA — PR/ref, canonical version пока1.3.0.0/code100005.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 63. BEFORE: Knowledge identity и доказательства старых веток
+
+WORK-2026-09-17-FINAL-RELEASE ACTIVE, takeover/reconcile прежних lanes одним исполнителем. Fresh main031aeba, PR92/head ae4f55bcd5291b32580fbe8352782c60658abfa1. Claims: benchmarks/knowledge/run_knowledge_benchmark.py, tests/test_knowledge_report_identity.py, .github/workflows/knowledge-performance.yml, .github/workflows/knowledge-1g-release-gate.yml и этот журнал. Intended BUILD evidence bugfix, accumulated MINOR1.4.0.0 version-last. Own existing report_identity.py переиспользовать, не дублировать SHA validation.
+
+Найден оставшийся реальный defect: Knowledge platform_runtime_identity.git_sha берётся из GITHUB_SHA, который при PR обозначает merge event вместо проверенного source head. Проверять actual git HEAD и expected до запуска expensive benchmark, считать отсутствие Git/несовпадение hard error, report сохранять с actual SHA. Не переписывать старый foreign report и не выдавать эту metadata работу за ускорение Knowledge или production1GiB corpus. Текущий ownCore35350878591/job105618637412 ещё выполняет SpecialistTeam; Windows35349142330/job105612934621 ещё installer. Native download smoke на ae4f55b run35350878384/job105618447139 уже success, native build ещё идёт.
+
+### AFTER: identity correction и ещё одна старая ветка сверена
+
+Knowledge использует единый stdlib checkout_sha helper из benchmarks/core/report_identity.py. Проверка actual/expected SHA выполняется ДО logs/Godot/import; повторная проверка source_sha перед report запрещает relabel при изменении HEAD во время работы. platform_runtime_identity.git_sha — настоящий HEAD; GITHUB_SHA не используется. Обе Knowledge workflows передают exact PR-head/normal SHA через AURORAFOX_BENCHMARK_EXPECTED_SHA; новые tests включены в их быстрые contracts и path selectors.
+
+33 passed0.16s: report identity, performance contract/compare, stress gates,1GiB contract, workflow contract; stdlib unittest3 cases0.035s также OK (никаких новых pytest dependencies в CI). Реальные temporary Git repos подтверждают foreign PR merge ignored, mismatch rejects ДО Godot/сохранения report и сохраняет существующий evidence файл, missing Git rejects. YAML всех workflows и changed Python compile OK, diff whitespace clean. Это не новая1GiB production acceptance и не устранение Test Engineer ошибки.
+
+Дополнительно прочитаны api/learning_pull.py и api/learning_daemon.py из autonomy-foundation-2026-08 b16d8cc. Старый daemon использует flush(...,max_seconds=60), несовместимый с нынешним LearningSynchronizer.flush(limit); нынешний server выполняет learning.flush(25) после успешного chat и имеет явный sync endpoint, storage теперь SQLite/RLock. Отдельный автономный periodic daemon этим НЕ доказан: его отсутствующий механизм остаётся задачей reconcile. Возвращать старые daemon/file_lock/store вместо действующих механизмов нельзя. Старый remote pull ожидает /v1/learning/pending и /ack плюс learning.sync credential — таких current server endpoints нет; необследованный remote trust/privacy feature не объявляется перенесённым/готовым. Не возвращать параллельные autonomy journals. Полезные требования/делты остаются под единым takeover, ветка сохранена.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE:33 local tests+3 stdlib identity cases green, source SHA correction+CI contracts выполнены, старый learning delta лично разобран.
+REMAINING: ownCore generate_tests и Windows installed package/voice gates; остальные10 release checkpoints раздел58.
+BLOCKERS: real-Core35350878591/job105618637412 ещё выполняется; Windows35349142330/job105612934621 ещё installer; genuine corpus/devices/deployed/signing acceptance не получены.
+NEXT: опубликовать эту единую партию поверхae4f55b в PR92; читать завершённый Core artifact с bounded Test Engineer response и Windows phase logs, исправлять точный сбой. Не считать чужой SHA/синтетику/offline smoke установленным product release. Секция60 остаётся инструкцией следующему обычному чату; версия пока1.3.0.0/code100005, PR92 draft.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 64. BEFORE: takeover/reconcile Windows firewall fix из свежего main
+
+Единый WORK-2026-09-17-FINAL-RELEASE ACTIVE. Fresh main4c6fe649af69c9be0eb080863f0e94b80cc3e082, PR92/head27c5a8a25c335e66e35eec69c76e8117a8368ae0; journal/AGENTS предыдущие правила сохраняются. Claims tests/windows_installed_voice_smoke.ps1, tests/test_windows_voice_package.py и журнал. Intended BUILD test-isolation correction, accumulated MINOR1.4.0.0 deferred. В main fc582b0 владелец/другой чат внёс loopback firewall fix; он не входит в candidate. Его IPv6 ::/1+8000::/1 всё ещё блокирует ::1, а полный старый файл теряет offline env/state/WAV assertions и startup logs кандидата. Перенести полезное external-address правило с корректным исключением IPv6 loopback, сохранить все сильные candidate checks.
+
+Проверочный merge выявил add/add conflict, abort выполнен без сохранения edits; main интегрируется после этой заявки с явным reconcile файла. Лично прочитан latest Windows35362712313/job105711893012 на27c5a8a:install/app и V1.2/V1.3 bridges success, TTS WinError10013;24/25 latest workflows success, Windows failure. Own Core35350878591/job105618637412 наae4f55b success, но это не same-head current release. Версия не меняется.
+
+CLAIM64 расширен BEFORE на voice/build_backend.ps1 и voice/python/tts_engine.py: лично прочитан exact pinned silero0.5.5 wheel. silero_tts ищет models.yml в package parents либо latest_silero_models.yml в CWD, при отсутствии делает torch.hub.download_url_to_file внешнего YAML. Install заранее грузит модель, но backend builder не гарантирует YAML в своём CWD. Firewall-only fix НЕ достаточное доказательство: packaged backend должен явно загружать уже скачанный local package через torch.package.PackageImporter, без online manifest lookup. Builder определяет exact downloaded source package по существующему model manifest/config, копирует его в backend/models/silero и задаёт package_path; missing package/manifest — build error, runtime download fallback для packaged path запрещён.
+
+### AFTER: main интегрирован, конфликт разрешён без потери кандидатных проверок
+
+Разрешён единственный add/add conflict tests/windows_installed_voice_smoke.ps1: сохранены user state/offline environment/restoration, stdout/stderr/working directory, TTS WAV/duration и STT assertions кандидата; из main перенесён external-only firewall. IPv4127/8 и IPv6::1 исключены, IPv6 remote range ::2-ffff:... вместо ошибочных ::/1+8000::/1. Main4c6fe64 включается отдельным parent при GitHub commit, main не переписывается.
+
+Builder теперь определяет уже скачанный Silero package по существующему модели manifest и voice config, требует local file, копирует его в backend/models/silero/aurorafox-silero.pt и фиксирует package_path. Runtime при package_path использует torch.package.PackageImporter.load_pickle и model.to(device); отсутствующий package — явный FileNotFoundError без fallback/download. Нормальный packaged path не вызывает silero_tts и network manifest. Legacy development path без package_path сохранён; installed silence/offline baseline обязан packaged config.
+
+Локально19 passed+7 address subtests0.05s: test_windows_voice_package и test_update_backward_compat. Новая fault-injection проверка выполняет реальный _load method из AST: local package path/caching/device transfer, online manifest forbidden, missing package refuses. Address coverage использует stdlib ipaddress и проверяет127/8,::1, external/private/linklocal destinations. Python compile и git diff whitespace OK. Локального Windows/PowerShell нет: настоящая firewall syntax и real TTS/STT ещё требуют CI. Нельзя считать17/19 local tests установленным голосом.
+
+Latest27c5a8a:24/25 workflows success; Windows35362712313/job105711893012 установка и оба bridges success, TTS WinError10013 failure. Readiness не повышена: Windows installed voice/files/computer checkpoint ещё не принят, production corpus/devices/human/deployment/signing и final same-head release gates остаются.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: свежий main reconciled, firewall IPv6 исключение исправлено, explicit local TTS package/runtime и regression tests выполнены.
+REMAINING: новая installed offline TTS+STT/package acceptance и10 release checkpoints раздел58.
+BLOCKERS: прежний Windows TTS WinError10013; actual patched Windows run пока не получен.
+NEXT: опубликовать эту атомарную партию в PR92 с parents27c5a8a+main4c6fe64, проверить Windows build/installed voice. ЖДАТЬ завершения нового Windows run перед повторной проверкой (сборка ранее требовала десятки минут); если он failed — сразу разобрать precise log. Следующий чат продолжает по разделу60; нельзя просто переносить main файл поверх сильного кандидата или считать scheduled run pass. Версия пока1.3.0.0/code100005, PR92 draft, release/bump не выполнены.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 65. BEFORE: установленный Windows File/Computer без сетевого bootstrap
+
+`WORK-2026-09-17-FINAL-RELEASE` остаётся ACTIVE у единственного исполнителя. Fresh GitHub `main` — `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head — `6705f0ab13ebd46cc0071103df00748cbcf5f062`; PR draft, версия `1.3.0.0`, Android code `100005`. Текущая партия берёт `computer/install_computer.ps1`, `scripts/computer_client.gd`, `build/build_windows.ps1`, новый Windows installed-services smoke, `.github/workflows/windows-package-ci.yml`, `.github/workflows/release.yml`, соответствующие contract tests и этот журнал. Intended bump этой накопленной релизной работы остаётся MINOR `1.4.0.0`, version-last.
+
+Проверены фактические результаты точного head `6705f0a`: Windows Package run `35385401079` SUCCESS, package job `105731284214` SUCCESS. Лог содержит `AURORA_WINDOWS_V12_TO_CURRENT_BRIDGE_OK`, `AURORA_WINDOWS_V13_TRUST_ROOT_REPAIR_OK` и `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK`; текущая установка/запуск/удаление завершились с exit 0. Артефакт Windows diagnostics `10565482935`, digest `sha256:ac26f29a5b50b12bbf6bb19294e3fe2acf41e6d96eb0aa2049fe3da574740a92`; основной Windows artifact `10565383330`, digest `sha256:f549d52a98e9b4e396076b27795dc3798185e7e9ffe91e43c9927dff38d33dd8`. Core/Voice run `35385401002` SUCCESS. Все 26 workflow runs, привязанные GitHub к exact head `6705f0a`, завершены SUCCESS.
+
+Readiness пока не повышается: checkpoint раздела 58 объединяет установленный Windows offline voice/files/computer. Voice доказан, File Intelligence portable runtime упакован, но Computer Agent всё ещё получает зависимости только через `uv pip install` после установки и `ComputerClient` распознаёт лишь `.venv`. Это нарушает требование готового самостоятельного установленного продукта без сети. Решение: собирать relocatable Computer Python/vendor при packaging, запускать его как основной путь и добавить установленный offline HTTP smoke для File Intelligence и Computer с запретом внешнего трафика, sandbox write/read и реальным анализом TXT. Не ослаблять permission/master-stop/sandbox/network contracts; никаких внешних AI/runtime зависимостей.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: exact-head Windows offline voice/bridges и 26/26 workflow SUCCESS подтверждены по job logs/API; артефактные digest записаны.
+REMAINING: installed File/Computer runtime evidence и остальные 10 checkpoints раздела 58.
+BLOCKERS: Computer Agent в установленном пакете требует post-install network dependency install; production Knowledge pack/devices/human/deployment/signing отсутствуют.
+NEXT: собрать portable Computer runtime, выполнить локальные contracts, опубликовать одной атомарной партией и принять Windows checkpoint только после нового installed offline services CI marker. Если чат остановится, обычному чату начать с fresh `main` и PR #92/head, прочитать AGENTS.md и этот раздел, не bump/merge/tag/release и не считать claim закрытым без нового Windows job log.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: самостоятельный installed Computer runtime и общий offline services gate
+
+`computer/install_computer.ps1 -PreparePortable` теперь использует только управляемый AuroraFox Python 3.11/uv на build-этапе, копирует relocatable Python и ставит зависимости в отдельный `vendor`; готовность модулей проверяется без запуска GUI. `build_windows.ps1` требует и упаковывает оба каталога, поэтому обычному пользователю не нужен system Python или post-install download. `ComputerClient` предпочитает portable runtime, передаёт ему `PYTHONPATH` только на момент запуска и восстанавливает прежнее окружение; legacy `.venv` остаётся recovery/developer fallback.
+
+Новый `windows_installed_local_services_smoke.ps1` запускается из реально установленного каталога после voice smoke. Для обоих Python executables внешние IPv4/IPv6 destinations блокируются Windows Firewall с сохранением loopback. Computer проверяет authenticated capabilities, AuroraFox Core как planning owner и реальный sandbox write/read при выключенном degraded exec. File Intelligence проверяет bundled rus+eng OCR health и точный UTF-8 TXT analyze. JSON/log evidence добавлены в Windows artifact; production release workflow выполняет тот же gate. Проверки permission/master-stop/sandbox не ослаблены, внешнее AI не добавлено.
+
+Локально: `26 passed, 13 subtests passed` за `0.06s` (`test_windows_voice_package`, Computer routing contracts, local OCR static contracts); Python compile OK; Godot 4.7.1 parse `computer_client.gd` OK; оба изменённых workflow YAML parsed; `git diff --check` clean. Расширенный старый `computer_agent_reliability_test.py` локально не запущен: доступное test-python окружение не содержит `httpx` и остановилось при collection до теста; это честно не считается product failure или pass. Реальный PowerShell/portable build/installed services требуют Windows CI.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: portable Computer implementation и installed offline Files/Computer gate готовы; локальные доступные contracts зелёные; прежний exact-head Voice/bridges доказан.
+REMAINING: опубликовать и получить `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK` на новом exact head; только тогда Windows checkpoint может стать 11/20.
+BLOCKERS: локального PowerShell/Windows runtime нет; production Knowledge pack, physical devices/human acceptance, deployment/mail/rollback/signing остаются внешними release boundaries.
+NEXT: fast-forward publish поверх свежего PR #92/head, проверить новый Windows package job и его marker/report. При остановке обычному чату: fresh fetch PR/head и main, читать этот раздел; если Windows failed — исправить точную фазу, если SUCCESS с обоими voice и files/computer markers — записать 55%, затем выбрать следующий из оставшихся 9 checkpoints. Не bump/merge/tag/release заранее.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 66. BEFORE: точный File Intelligence port/startup failure на установленном Windows пакете
+
+`WORK-2026-09-17-FINAL-RELEASE` ACTIVE у единственного исполнителя. Fresh GitHub `main` — `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head — `1302f112fdd3552da63b5b5113a3c034d37ba9cc`; draft, version `1.3.0.0`/code `100005`. Беру `tests/windows_installed_local_services_smoke.ps1`, `file_intelligence/file_service.py`, `tests/test_windows_voice_package.py` и этот журнал. Intended accumulated bump MINOR `1.4.0.0`, version-last.
+
+Фактический Windows Package run `35426429648`, package job `105853137492`: build, packaged runtime validation, Inno installer, V1.2/V1.3 bridges, installed EXE и `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK` SUCCESS. Terminating failure только в installed local-services smoke: после успешного Computer этапа File health `http://127.0.0.1:18867/health` не появился; stdout/stderr пусты, старый helper не записал PID/HasExited/listening sockets. Build log отдельно доказывает `AURORA_FILE_PORTABLE_READY` и `AURORA_COMPUTER_PORTABLE_READY`. PyInstaller `torch.distributed` warnings не причина.
+
+Исходник уже выставлял `AURORAFOX_FILES_PORT=18867`, а `file_service.py` уже читал именно его, поэтому слепое повторение той же пары не является достаточным fix. Исправление должно иметь один canonical `AURORAFOX_LOCAL_SERVICES_PORT` с backward-compatible `AURORAFOX_FILES_PORT`/`AURORAFOX_API_PORT`, явный `python -m uvicorn file_service:app --host 127.0.0.1 --port <тот же порт>`, health URL из той же переменной и ожидание фактического listen socket. Failure evidence обязано содержать PID, exit state/code, command line, expected-port owner, общие listening sockets и logs.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: точный failing job/phase прочитан; ложная причина Inno/PyInstaller исключена evidence.
+REMAINING: реализовать deterministic port/startup и подтвердить новым installed Windows marker.
+BLOCKERS: current head `1302f11` red на File health; readiness не повышать.
+NEXT: изменить только заявленные файлы, выполнить local contracts/compile/diff checks, fast-forward publish в PR #92 и читать новый Windows job. Обычному чату после остановки продолжать с этого раздела и fresh PR head, не повторять уже успешные installer/voice fixes.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: единый порт, явный launcher и диагностируемое ожидание listen
+
+`file_service.py` выбирает порт в одном порядке: `AURORAFOX_LOCAL_SERVICES_PORT`, совместимый `AURORAFOX_FILES_PORT`, совместимый `AURORAFOX_API_PORT`, затем product default `8767`. Installed smoke задаёт все три aliases одним `$localServicesPort=18867`, запускает точный модуль через `python -m uvicorn file_service:app --host 127.0.0.1 --port 18867 --log-level info` и строит health URL из того же значения. Таким образом env, launcher и probe больше не могут разойтись.
+
+Wait helper сначала требует настоящий TCP LISTEN на ожидаемом порту и лишь затем делает HTTP с 10-second timeout; process refresh выполняется на каждой итерации. При failure сохраняются expected port, PID, HasExited/exit code, last request error, Win32 command line, owner ожидаемого порта, все loopback/all-interface listeners и stdout/stderr. Ожидание теперь bounded примерно 120 seconds вместо прежних последовательных HTTP timeouts до ~270 seconds.
+
+Локально `27 passed, 13 subtests passed` за `0.10s`; добавлено AST-выполнение настоящего PORT assignment с canonical/FILES/API/default cases. Python compile и `git diff --check` успешны. PowerShell parse/runtime остаётся только Windows CI boundary; pass до него не заявляется.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: deterministic installed File launcher/port contract и actionable diagnostics реализованы; local contracts green.
+REMAINING: новый Windows package installed File/Computer marker на exact published head.
+BLOCKERS: прежний run `35426429648` остаётся red evidence; readiness 10/20.
+NEXT: fast-forward publish одной партией поверх `1302f11`; читать новый Windows job. Если failure повторится, исправлять по новым PID/socket/command/log данным; если оба installed markers SUCCESS — записать Windows checkpoint и 55%.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 67. BEFORE: исправление ложного TXT kind assertion без ослабления content contract
+
+`WORK-2026-09-17-FINAL-RELEASE` ACTIVE у единственного исполнителя. Fresh GitHub `main` — `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head — `8af10a7c4a47d76e1e3e2b3d75418cc72bb97dd6`; draft, version `1.3.0.0`/code `100005`. Claim: `tests/windows_installed_local_services_smoke.ps1`, relevant File Intelligence contract tests and этот журнал. Intended accumulated MINOR `1.4.0.0`, version-last.
+
+Фактический Windows run `35438103314`, package job `105884214195`: deterministic port fix сработал — Computer Agent запущен, File Intelligence слушает `127.0.0.1:18867`, `/health` и bundled rus+eng OCR assertions пройдены. Terminating failure только строка 157 `Installed File Intelligence TXT analysis failed`; voice marker также SUCCESS. Локальное выполнение настоящего `_analyze` на точном UTF-8 fixture доказало: expected и actual content идентичны (`33` символа), actual kind — `text/code`. Это действующий намеренный контракт: `tests/test_file_intelligence.py` уже требует `text/code`, `scripts/attachment_manager.gd` маршрутизирует его. Менять service kind на `text` означало бы регрессию ради ошибочного smoke.
+
+Исправление: installed smoke должен ожидать canonical project kind `text/code`, продолжать строго сравнивать точное содержимое без strip/newline normalization и при любом расхождении печатать ok/kind/length/bracketed content/full JSON response. Добавить regression, выполняющую настоящий `_analyze` и доказывающую exact content + kind.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: точная причина воспроизведена исходным analyzer, startup/port/package не являются текущим blocker.
+REMAINING: исправить smoke и получить installed marker на новом Windows run.
+BLOCKERS: head `8af10a7` red только из-за неверного expected kind; readiness пока 10/20.
+NEXT: минимальная contract/test/journal партия, local tests, fast-forward publish; не менять production analyzer contract и не повторять port fix.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: smoke согласован с действующим TXT contract
+
+Installed smoke теперь ожидает канонический для проекта `kind=text/code`, строит `/analyze` URL из того же `$localServicesPort` и по-прежнему требует точное регистрозависимое совпадение содержимого через `-cne`. Никакой `strip` или нормализации переводов строк не добавлено. При расхождении Windows job напечатает expected/actual kind, длины, содержимое в скобках и полный JSON response.
+
+Добавлен быстрый regression, который через AST выполняет настоящие `_read_text` и `_analyze` из `file_service.py` на UTF-8 TXT без BOM и требует одновременно `text/code` и точное исходное содержимое. Локально: `28 passed, 13 subtests passed` за `0.09s`; Python compile и `git diff --check` успешны. PowerShell/installed boundary остаётся за новым Windows CI run.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: ложное ожидание `text` исправлено без изменения production contract; строгая content assertion и подробная диагностика сохранены; local contracts green.
+REMAINING: опубликовать партию и получить `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK` на exact новом head.
+BLOCKERS: Windows installed marker ещё не подтверждён новым run; readiness остаётся 10/20.
+NEXT: обычному чату после остановки сделать fresh fetch PR #92/main, найти Windows Package run по exact опубликованному SHA и читать его. При SUCCESS обоих installed markers принять Windows checkpoint 11/20=55%; при FAILURE исправлять только точную terminating assertion по artifact/log evidence.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 68. AFTER: принят Windows checkpoint и ТЗ следующего обновления
+
+`WORK-2026-09-17-FINAL-RELEASE` остаётся единственным активным исполнителем. Exact PR #92/head `601dce11c8eb810c4c6b05c13bca2b3fe3b09ee7`, main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, version `1.3.0.0`/Android code `100005`; финальный MINOR `1.4.0.0` всё ещё version-last. Лично прочитан Windows Package run `35441302848`, package job `105892466312`, SUCCESS. Он исполнил exact checkout `601dce1`; лог содержит `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK` и `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK`. Все 25 workflow runs, привязанные GitHub к этому exact head, завершились SUCCESS, включая Windows, Android APK/E2E, Knowledge 1GiB, Integration, Work/Computer и Evolution Tournament.
+
+Windows installed offline voice/files/computer checkpoint принят: `11/20 = 55%`. Это не означает готовый коммерческий релиз: остаются installed Android Voice/OCR/Knowledge, настоящий полезный лицензированный corpus+provenance, физическое device/human acceptance, server/mail/rollback, version metadata, final same-head RC и production signing/update/release.
+
+### Owner TЗ следующего обновления — Universal Intake, Multi-Model RAG и Evolution
+
+НЕ добавлять эту архитектуру в текущий release candidate: она меняет runtime, storage, безопасность и acceptance surface, поэтому требует отдельного обновления/ветки после стабильного релиза. Цель — принять вложение через чат, определить его тип по содержимому, безопасно зарегистрировать и применить по назначению; «принять любой файл» означает сохранить и показать результат классификации, а не автоматически выполнить или доверять содержимому.
+
+1. **Universal Intake через чат.** Один inbox/transaction registry с hash, размером, MIME/signature, provenance, владельцем, статусом (`staged`, `quarantine`, `accepted`, `rejected`), rollback/recovery/dedupe. Маршруты: Knowledge dataset/document; training dataset; skill description; local model weights; embedding model; archive; unknown. Неизвестное хранить как staged attachment с понятным сообщением, не терять и не исполнять.
+2. **Несколько моделей, включая GGUF.** Не заменять активную модель при каждом upload: отдельный model registry поддерживает много записей, SHA-256, source/license, architecture/quantization/context metadata, required RAM/storage, health/quarantine, compatibility test, explicit activate/deactivate/rollback. Router выбирает одну совместимую модель для запроса; одновременная загрузка всех моделей не требуется и не допускается при нехватке памяти. Chat GGUF import — confirmation → transactional copy → hash/compatibility smoke → registry → optional activation; повреждённый/несовместимый файл quarantine. Existing `LocalModelManager.install_local_gguf` — фундамент, но ещё не chat/multi-model registry.
+3. **Embeddings + RAG.** Local embedding provider/model registry, chunking, embedding version, vector index, source-level provenance/citations, hybrid retrieval, reindex/remove/rollback and offline bounded-RAM tests. RAG дополняет KnowledgeStore; не подменяет память диалога и не превращает document text в authority.
+4. **Память/инструменты/оценка.** Разделять краткую память диалога, user memory и curated knowledge; сохранять user scope/privacy. Tools остаются allowlisted, consent-gated и sandboxed. Добавить offline answer-evaluation set: factuality against cited sources, relevance, safety, latency/resource budget, regression holdouts и explicit failure reports.
+5. **AuroraFox Evolution Engine.** Отдельный Candidate sandbox: analyzer → experiment manager → 3–10 bounded mutations → test runner/evaluator → improvement registry → human/automatic policy gate → blue/green accept or rollback. Никаких прямых self-edits Stable Core, no tool/secret escalation, no auto-training arbitrary uploaded weights. Каждое accepted improvement имеет diff, provenance, tests, metrics and rollback.
+
+NEXT: продолжать текущий release без реализации этого следующего обновления. Ближайший доступный релизный blocker — доказать/получить отсутствующие external acceptance boundaries, прежде всего настоящий лицензированный полезный Knowledge corpus с provenance и Android installed Voice/OCR/Knowledge; затем final version/RC/signing only after all gates. Обычный чат после остановки сначала делает fresh fetch PR92/main, читает этот раздел, не смешивает next-update architecture с текущим candidate и не повышает readiness без exact evidence.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: installed Windows voice/files/computer доказан exact run/job markers; all exact-head workflows SUCCESS; ТЗ следующего обновления записано как отдельная безопасная граница.
+REMAINING: 9 из 20 acceptance checkpoints и их внешние доказательства.
+BLOCKERS: новый Universal Intake/Multi-Model/RAG/Evolution не реализуется в текущем RC по решению владельца; external corpus/device/human/server/signing evidence отсутствует.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+## 69. BEFORE: устранение Inno race от generated API virtualenv
+
+`WORK-2026-09-17-FINAL-RELEASE` ACTIVE у единственного исполнителя. Fresh main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head `bec633240582c2f4bdc3d45afc8dc98589b23b1e`; intended bump BUILD для packaging-only correction, public version остаётся version-last. Claim: `build/AuroraFox.iss`, `.github/workflows/windows-package-ci.yml`, `tests/test_windows_voice_package.py` и этот журнал.
+
+Exact Windows Package run `35449964366`, package job `105915327224` failed только на Build installer; export/runtime/asset checks прошли. Лично прочитан terminating log: broad `Source: "windows\\*"` enters generated `build\\windows\\api\\.venv`, Inno compresses `uvicorn\\lifespan\\__pycache__\\on.cpython-311.pyc.<temporary-id>` and immediately fails `The system cannot find the file specified`. API build copy explicitly selects только top-level `.py`/`.ps1`/`requirements.txt`; API `start_api.ps1` recreates `.venv` through `install_api.ps1` после установки. Следовательно `.venv` не является installer payload, а изменчивое generated output must be excluded. PyInstaller warnings не terminating cause.
+
+Исправление: exclude только `api\\.venv\\*` из broad Inno source, не удаляя portable voice/Computer/File runtimes; перед ISCC проверить script/package root/required staged API+Core files и дать конкретный missing-path error. Добавить static regression, чтобы broad include не вернул API virtualenv и preflight не исчез.
+
+### AFTER: Inno packages stable API payload only
+
+`build/AuroraFox.iss` сохраняет единую recursive package entry, но исключает лишь `api\\.venv\\*`. Поэтому normal installed API продолжает иметь `server.py`, clients, scripts and requirements, а `start_api.ps1` создаёт fresh per-user `.venv` через existing managed-runtime installer; portable Voice, Computer и File Intelligence не затронуты. Workflow перед ISCC resolve-ит exact `.iss` и package root, требует staged API/Core payload и оставляет path/exit-code diagnostics вместо общего `Inno Setup failed`.
+
+Локально `24 passed, 13 subtests passed` за `0.21s` (`test_windows_voice_package.py`, `test_update_backward_compat.py`), Python compile и `git diff --check` successful. Local Linux does not have Inno Setup/PowerShell, поэтому настоящий recursive enumeration/install proof остаётся новым Windows Package CI boundary.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: exact generated-file race identified from Windows log; targeted installer exclusion, preflight and regression contract implemented locally.
+REMAINING: fast-forward publish and real Windows installer/bridges/installed services proof on new exact head; other 9 release checkpoints remain.
+BLOCKERS: current head `bec6332` Windows package red only at Inno compile; no local Windows/Inno runtime.
+NEXT: publish this coherent BUILD correction, then wait for and inspect the exact Windows Package job before any further release mutation; do not change hidden imports or production API behavior.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+## 70. BEFORE: installed Android Voice/OCR/Knowledge runtime acceptance
+
+`WORK-2026-09-17-FINAL-RELEASE` остаётся единственным активным исполнителем. Remote exact PR #92/head `40d45dca1225050315944593388dbad8813ffe36`, tree `23919971979a782f2a69a5b2b0702fd71fb91056`, main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; version `1.3.0.0`/Android code `100005`, финальный MINOR остаётся version-last. Claim: `benchmarks/core/android_godot_benchmark.gd`, `benchmarks/core/run_android_godot_e2e.sh`, `tests/test_core_android_e2e_contract.py`, `tests/test_android_e2e_runner.py`, stale `tests/test_android_voice_quality_contract.py`, `.github/workflows/core-android-e2e.yml` только если необходим path trigger, и этот журнал. Unrelated owner asset `assets/ui/aurorafox_background_master.png` не принадлежит claim и не меняется.
+
+Windows packaging correction section 69 подтверждён exact Windows Package run `35451459634`: process-contract job `105919229958` SUCCESS и package job `105919312960` SUCCESS; Build installer, historical V1.2/V1.3 bridges, silent install, installed-app smoke и artifact upload завершились успешно. Все 25 workflows exact head `40d45dc` завершились SUCCESS. Это закрывает regression самой Inno-поправки, но не добавляет новый readiness checkpoint сверх уже принятого Windows installed checkpoint section 68.
+
+BEFORE GAP: текущий Android APK smoke доказывает install/version/launch/no-crash, а Android normal-path E2E доказывает offline Core, multi-turn и Core Knowledge import/retrieval. Ни один installed-emulator gate не вызывает packaged Supertonic/Whisper voice assets и packaged `rus+eng` Tesseract OCR через production Godot/Kotlin bridge. Static Kotlin/asset/contract checks не считаются runtime acceptance.
+
+INTENDED CHANGE: расширить существующий disposable exact-production-runtime Android E2E, не добавляя test hook в рабочую main scene и не создавая второй тяжёлый APK job. В установленном release APK при отключённой внешней сети: вызвать packaged Russian TTS и локальный STT на созданном WAV; создать high-contrast bilingual ru/en image внутри app sandbox, пропустить её через normal `FileIntelligenceClient` Android OCR path; сохранить bounded hashes/metadata/errors в существующий report; сохранить уже существующий Core Knowledge import/retrieval scenario. Runner обязан требовать новые scenario IDs и отдельный marker только после completed/passed report. Никакого снижения существующих Core assertions или сетевого guard.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: Inno regression accepted on exact head; missing Android installed runtime boundary identified without crediting static tests.
+REMAINING: implement locally, parse/contract-test, publish coherent BUILD candidate, then require real Android 35 emulator evidence before readiness changes.
+BLOCKERS: installed TTS/STT/OCR evidence does not yet exist; emulator CI is the first authoritative runtime boundary.
+NEXT: add the three bounded scenarios to the already installed/offline Android normal-path benchmark and keep version unchanged until final release identity gate.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+### AFTER: exact installed-runtime scenarios are mandatory
+
+Existing disposable Android normal-path APK now performs three additional calls after the already accepted Core Knowledge import/retrieval: packaged Supertonic Russian TTS must create a non-empty WAV with exact engine/language metadata; packaged Whisper STT must transcribe that WAV locally; `FileIntelligenceClient` must send a runtime-rendered high-contrast `AURORA 7429` + `АВРОРА 5183` PNG through the asynchronous Android plugin and receive both markers with `tesseract4android`, `rus+eng`, `offline=true`, `external_ai_required=false`. The emulator remains in airplane mode with Wi-Fi/data disabled and the pre-existing external ping/HTTP probes blocked. The runner requires all 11 scenario IDs and prints `AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK` only after the completed report passes; a regression verifies the marker is absent on scenario failure.
+
+The benchmark remains a disposable scene selected only in the CI checkout, so the production `main.tscn`, stable Core and shipped UI receive no test backdoor. The previously orphaned quality test still required removed Piper Denis strings and contradicted the active pinned Supertonic contract; it now checks the current offline Supertonic engine/cache identity and rejects Piper. No production voice implementation changed.
+
+LOCAL EVIDENCE: Godot `4.7.1-stable` imported the project and parsed `android_godot_benchmark.gd` with exit 0; `28 passed` across Android E2E runner/report, APK/OCR, Supertonic and voice-quality contracts; standalone Android contract printed `AURORA_ANDROID_CONTRACT_OK`; shell syntax and `git diff --check` pass. A broad unprovisioned local pytest collection cannot represent CI because this container lacks optional FastAPI/requests dependencies; the affected isolated release contracts above are green. Real packaged TTS/STT/Tesseract execution remains deliberately uncredited until the exact Android emulator job returns its new marker.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: production-path installed Android Voice/OCR/Knowledge acceptance implemented locally with fail-closed report/runner contract; stale Piper-only test corrected to active Supertonic.
+REMAINING: publish exact candidate and inspect the real Android 35 offline emulator report/logcat; only then may installed Android checkpoint increase readiness to 12/20.
+BLOCKERS: local Linux cannot execute the packaged Android Kotlin/ONNX/Tesseract runtime; CI marker is mandatory.
+NEXT: commit only claimed files (never the unrelated owner background), publish to PR #92, then wait for exact-head Core Android E2E instead of spending tokens polling prematurely.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%

@@ -222,7 +222,7 @@ def test_core_benchmark_landing_keeps_real_offline_code_specialist_proof() -> No
     smoke = read("benchmarks/core/code_specialist_smoke.gd")
 
     assert "Run Work Mode startup regression smoke" in lane_workflow
-    assert "Run real CodeSpecialist through bundled Core offline" in lane_workflow
+    assert "Run real SpecialistTeam / CodeSpecialist through bundled Core offline" in lane_workflow
     assert "Enforce real Core gate" in lane_workflow
     assert "New-NetFirewallRule" in runner
     assert "ollama" in runner.lower()

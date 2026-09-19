@@ -54,21 +54,25 @@ func _run() -> void:
 	_emit(result, 0 if bool(result.get("ok", false)) else 2)
 
 func _scenario_import(format: String, target_mb: int) -> Dictionary:
+	print("AURORA_KNOWLEDGE_STAGE reset format=%s target_mb=%d" % [format, target_mb])
 	_reset_state()
 	var ext := format
 	var path := BENCH_ROOT.path_join("dataset_%s.%s" % [format, ext])
+	print("AURORA_KNOWLEDGE_STAGE generate_dataset")
 	var generated := _generate_dataset(path, format, target_mb * MB)
 	if not bool(generated.get("ok", false)):
 		return generated
 	var store := KnowledgeStoreScript.new()
 	var txn := KnowledgeImportTransactionScript.new()
 	var started := Time.get_ticks_usec()
+	print("AURORA_KNOWLEDGE_STAGE import bytes=%d records=%d" % [int(generated.get("bytes", 0)), int(generated.get("records", 0))])
 	var imported := txn.import_file(store, path, {"scope": "core_knowledge", "imported_by": "knowledge_stress_benchmark"})
 	var import_ms := _elapsed_ms(started)
 	if not bool(imported.get("ok", false)):
 		return {"ok": false, "error": "import failed", "import": imported, "dataset": generated, "import_duration_ms": import_ms}
 	if format in ["jsonl", "csv", "txt", "json"] and not bool(imported.get("streaming", false)):
 		return {"ok": false, "error": "expected streaming path was not used", "import": imported, "dataset": generated}
+	print("AURORA_KNOWLEDGE_STAGE search imported_chunks=%d elapsed_ms=%.3f" % [int(imported.get("chunks", 0)), import_ms])
 	var searches := _search_matrix(store, str(generated.get("late_marker", "")), path)
 	if not bool(searches.get("correct", false)):
 		return {"ok": false, "error": "search correctness failed", "search": searches, "import": imported, "dataset": generated}
@@ -92,6 +96,7 @@ func _scenario_import(format: String, target_mb: int) -> Dictionary:
 	}
 
 func _scenario_restart_check() -> Dictionary:
+	print("AURORA_KNOWLEDGE_STAGE restart_check")
 	var marker := OS.get_environment("AURORA_KNOWLEDGE_EXPECT_MARKER")
 	var source := OS.get_environment("AURORA_KNOWLEDGE_EXPECT_SOURCE")
 	if marker.is_empty():

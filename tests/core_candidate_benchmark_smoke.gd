@@ -62,14 +62,40 @@ func _run() -> void:
 	if pipeline.MIN_REVIEW_IMPROVEMENT <= 0.0:
 		_fail("Comparative review does not require positive improvement", 9)
 		return
+	if pipeline.MIN_TOURNAMENT_CANDIDATES != 3 or pipeline.MAX_TOURNAMENT_CANDIDATES != 10 or pipeline.DEFAULT_TOURNAMENT_CANDIDATES != 5:
+		_fail("Mutation tournament bounds/default changed", 10)
+		return
+	if pipeline.auto_apply_dev_checkout:
+		_fail("Autonomous Core tournament must not rewrite a dev checkout by default", 11)
+		return
 	if not pipeline._target_allowed("scripts/agent_core.gd"):
-		_fail("Expected core target disappeared from allowlist", 10)
+		_fail("Expected core target disappeared from allowlist", 12)
 		return
 	for protected in ["update/update_manager.gd", "scripts/core_improvement_pipeline.gd", "project.godot"]:
 		if pipeline._target_allowed(protected):
-			_fail("Protected path entered autonomous rewrite allowlist: " + protected, 11)
+			_fail("Protected path entered autonomous rewrite allowlist: " + protected, 13)
 			return
-	pipeline.free()
 
-	print("AURORA_CORE_CANDIDATE_BENCHMARK_SMOKE_OK contracts=true baseline=true candidate=true comparative_delta=true")
+	var tournament := pipeline._select_tournament_winner([
+		{"candidate_sha256":"bbb", "hard_gates_passed":true, "eligible":true, "review":{"baseline_score":70.0, "candidate_score":75.0}},
+		{"candidate_sha256":"aaa", "hard_gates_passed":true, "eligible":true, "review":{"baseline_score":70.0, "candidate_score":72.0}},
+		{"candidate_sha256":"unsafe", "hard_gates_passed":false, "eligible":true, "review":{"baseline_score":70.0, "candidate_score":99.0}}
+	])
+	if not bool(tournament.get("ok", false)) or str(tournament.get("winner", {}).get("candidate_sha256", "")) != "bbb":
+		_fail("Tournament did not choose the best hard-gate-passing mutation", 14)
+		return
+	if float(tournament.get("incumbent", {}).get("score", -1.0)) != 70.0:
+		_fail("Incumbent did not participate in tournament scoring", 15)
+		return
+
+	var no_winner := pipeline._select_tournament_winner([
+		{"candidate_sha256":"tie", "hard_gates_passed":true, "eligible":true, "review":{"baseline_score":80.0, "candidate_score":80.5}},
+		{"candidate_sha256":"failed", "hard_gates_passed":false, "eligible":true, "review":{"baseline_score":80.0, "candidate_score":99.0}}
+	])
+	if bool(no_winner.get("ok", true)):
+		_fail("Tournament promoted a tied/inconclusive or hard-gate-failed mutation", 16)
+		return
+
+	pipeline.free()
+	print("AURORA_CORE_CANDIDATE_BENCHMARK_SMOKE_OK contracts=true baseline=true candidate=true tournament=3-10 incumbent=true winner=true no_promotion=true")
 	quit(0)

@@ -6,8 +6,16 @@ const STRUCTURED_PATH := "user://knowledge/structured.jsonl"
 const MAX_CHUNK_CHARS := 1800
 const LARGE_TEXT_THRESHOLD_BYTES := 8 * 1024 * 1024
 const STREAM_BATCH_CHARS := 128 * 1024
+# Large structured imports used to close/reopen both JSONL indexes every 128
+# records. At gigabyte scale that creates millions of avoidable filesystem
+# operations. A 2048-record batch remains bounded while amortizing persistence.
+const STRUCTURED_WRITE_BATCH := 2048
 const SEARCH_BUFFER_LIMIT := 256
 var document_importer := KnowledgeDocumentImporter.new()
+var _source_presence_cache: Dictionary = {}
+var _source_presence_cache_valid := false
+var _source_presence_signature := ""
+var _session_source_item_ids: Dictionary = {}
 
 func import_text(text: String, source := "manual", metadata: Dictionary = {}) -> Dictionary:
 	var clean := text.strip_edges()
@@ -16,19 +24,26 @@ func import_text(text: String, source := "manual", metadata: Dictionary = {}) ->
 	_ensure_dir()
 	var chunks := _chunk(clean)
 	var routed := _empty_routes()
-	var written := 0
+	var rows: Array = []
+	var source_ids: Dictionary = _session_source_item_ids.get(source, {})
 	var explicit_kind := str(metadata.get("kind", "")).strip_edges()
 	for chunk in chunks:
 		var kind := explicit_kind if not explicit_kind.is_empty() else _classify_record(source, chunk)
-		routed[kind] = int(routed.get(kind, 0)) + 1
 		var meta := metadata.duplicate(true)
 		meta["kind"] = kind
 		meta["scope"] = str(meta.get("scope", "core_knowledge"))
-		if _append(DB_PATH, _knowledge_item(source, chunk, kind, meta)):
-			written += 1
-	if written != chunks.size():
-		return {"ok": false, "error": "Не удалось полностью записать базу знаний", "source": source, "written": written, "expected": chunks.size()}
-	return {"ok": true, "source": source, "chunks": written, "kind": _dominant_kind(routed), "routed": routed, "path": DB_PATH}
+		var row := _knowledge_item(source, chunk, kind, meta)
+		var row_id := str(row.get("id", ""))
+		if not row_id.is_empty() and source_ids.has(row_id):
+			continue
+		if not row_id.is_empty():
+			source_ids[row_id] = true
+		routed[kind] = int(routed.get(kind, 0)) + 1
+		rows.append(row)
+	if not _append_many(DB_PATH, rows):
+		return {"ok": false, "error": "Не удалось полностью записать базу знаний", "source": source, "written": 0, "expected": rows.size()}
+	_session_source_item_ids[source] = source_ids
+	return {"ok": true, "source": source, "chunks": rows.size(), "kind": _dominant_kind(routed), "routed": routed, "path": DB_PATH}
 
 func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 	if not FileAccess.file_exists(path):
@@ -45,7 +60,9 @@ func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 	var extracted := document_importer.extract(path)
 	if not bool(extracted.get("ok", false)):
 		return extracted
-	remove_source(path)
+	var removed := remove_source(path)
+	if not bool(removed.get("ok", false)):
+		return removed
 	var meta := metadata.duplicate(true)
 	meta["format"] = ext
 	meta["original_file"] = path
@@ -58,7 +75,9 @@ func import_file(path: String, metadata: Dictionary = {}) -> Dictionary:
 func import_extracted_file(path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
 	if text.strip_edges().is_empty():
 		return {"ok": false, "error": "Из документа не извлечён текст", "path": path}
-	remove_source(path)
+	var removed := remove_source(path)
+	if not bool(removed.get("ok", false)):
+		return removed
 	var meta := metadata.duplicate(true)
 	meta["format"] = path.get_extension().to_lower()
 	meta["original_file"] = path
@@ -200,13 +219,24 @@ func _import_structured_records(source: String, records: Array, format: String, 
 	return _structured_result(source, format, state, false)
 
 func _structured_state() -> Dictionary:
-	return {"routed": _empty_routes(), "seen": {}, "structured_written": 0, "normalized_chunks": 0}
+	return {
+		"routed": _empty_routes(),
+		"seen": {},
+		"normalized_seen": {},
+		"structured_written": 0,
+		"normalized_chunks": 0,
+		"structured_pending": [],
+		"normalized_pending": []
+	}
 
 func _import_structured_value(source: String, record_path: String, value: Variant, format: String, metadata: Dictionary, state: Dictionary) -> Dictionary:
-	var text := _record_text(value)
-	if text.strip_edges().is_empty():
+	var text := _record_text(value).strip_edges()
+	if text.is_empty():
 		return {"ok": true, "skipped": true}
-	var fingerprint := _id(source + record_path, text)
+	# Record identity is source-scoped content identity, not source+position.
+	# This collapses repeated records inside one source while keeping A/B provenance independent.
+	var fingerprint := _id(source, text)
+	var shared_fingerprint := _id("shared-record", text)
 	var seen: Dictionary = state.get("seen", {})
 	if seen.has(fingerprint):
 		return {"ok": true, "duplicate": true}
@@ -222,9 +252,12 @@ func _import_structured_value(source: String, record_path: String, value: Varian
 		"format": format,
 		"json_path": record_path,
 		"original_file": source,
-		"scope": "core_knowledge"
+		"scope": "core_knowledge",
+		"record_fingerprint": shared_fingerprint,
+		"source_record_id": fingerprint
 	}, true)
-	if not _append(STRUCTURED_PATH, {
+	var structured_pending: Array = state.get("structured_pending", [])
+	structured_pending.append({
 		"id": fingerprint,
 		"kind": kind,
 		"source": source,
@@ -232,19 +265,46 @@ func _import_structured_value(source: String, record_path: String, value: Varian
 		"value": value,
 		"metadata": meta,
 		"created_at": Time.get_datetime_string_from_system(true)
-	}):
-		return {"ok": false, "error": "Не удалось записать структурированную запись", "source": source, "json_path": record_path}
-	state["structured_written"] = int(state.get("structured_written", 0)) + 1
-	var normalized := import_text(text, source, meta)
-	if not bool(normalized.get("ok", false)):
-		return normalized
-	state["normalized_chunks"] = int(state.get("normalized_chunks", 0)) + int(normalized.get("chunks", 0))
+	})
+	state["structured_pending"] = structured_pending
+	var normalized_pending: Array = state.get("normalized_pending", [])
+	var normalized_seen: Dictionary = state.get("normalized_seen", {})
+	for chunk in _chunk(text):
+		var normalized_row := _knowledge_item(source, chunk, kind, meta.duplicate(true))
+		var normalized_id := str(normalized_row.get("id", ""))
+		if not normalized_id.is_empty() and normalized_seen.has(normalized_id):
+			continue
+		if not normalized_id.is_empty():
+			normalized_seen[normalized_id] = true
+		normalized_pending.append(normalized_row)
+	state["normalized_seen"] = normalized_seen
+	state["normalized_pending"] = normalized_pending
+	if structured_pending.size() >= STRUCTURED_WRITE_BATCH or normalized_pending.size() >= STRUCTURED_WRITE_BATCH:
+		return _flush_structured_state(state, source, record_path)
+	return {"ok": true}
+
+func _flush_structured_state(state: Dictionary, source: String, record_path := "") -> Dictionary:
+	var structured_pending: Array = state.get("structured_pending", [])
+	var normalized_pending: Array = state.get("normalized_pending", [])
+	if not structured_pending.is_empty():
+		if not _append_many(STRUCTURED_PATH, structured_pending):
+			return {"ok": false, "error": "Не удалось записать пакет структурированных записей", "source": source, "json_path": record_path}
+		state["structured_written"] = int(state.get("structured_written", 0)) + structured_pending.size()
+		state["structured_pending"] = []
+	if not normalized_pending.is_empty():
+		if not _append_many(DB_PATH, normalized_pending):
+			return {"ok": false, "error": "Не удалось записать пакет нормализованной базы знаний", "source": source, "json_path": record_path}
+		state["normalized_chunks"] = int(state.get("normalized_chunks", 0)) + normalized_pending.size()
+		state["normalized_pending"] = []
 	return {"ok": true}
 
 func _structured_result(source: String, format: String, state: Dictionary, streaming: bool) -> Dictionary:
 	var seen: Dictionary = state.get("seen", {})
 	if seen.is_empty():
 		return {"ok": false, "error": "Источник не содержит структурированных записей", "source": source}
+	var flushed := _flush_structured_state(state, source)
+	if not bool(flushed.get("ok", false)):
+		return flushed
 	var structured_written := int(state.get("structured_written", 0))
 	if structured_written != seen.size():
 		return {"ok": false, "error": "Не удалось полностью записать структурированную базу", "source": source, "written": structured_written, "expected": seen.size()}
@@ -260,13 +320,19 @@ func _structured_result(source: String, format: String, state: Dictionary, strea
 	}
 
 func remove_source(source: String) -> Dictionary:
+	if source.is_empty():
+		return {"ok": true, "source": source, "removed": 0, "structured_removed": 0, "streaming": true, "filter_skipped": true}
+	if not _source_may_exist(source):
+		_forget_source(source)
+		return {"ok": true, "source": source, "removed": 0, "structured_removed": 0, "streaming": true, "filter_skipped": true}
 	var db := _filter_source_jsonl(DB_PATH, source)
 	if not bool(db.get("ok", false)):
 		return db
 	var structured := _filter_source_jsonl(STRUCTURED_PATH, source)
 	if not bool(structured.get("ok", false)):
 		return structured
-	return {"ok": true, "source": source, "removed": db.get("removed", 0), "structured_removed": structured.get("removed", 0), "streaming": true}
+	_forget_source(source)
+	return {"ok": true, "source": source, "removed": db.get("removed", 0), "structured_removed": structured.get("removed", 0), "streaming": true, "filter_skipped": false}
 
 func search(query: String, limit := 6) -> Array:
 	var normalized_query := query.to_lower().strip_edges()
@@ -388,7 +454,9 @@ func _is_leaf_object(value: Dictionary) -> bool:
 
 func _record_text(value: Variant) -> String:
 	if value is Dictionary or value is Array:
-		return JSON.stringify(value, "  ", false)
+		# Compact JSON preserves every field and character while avoiding the CPU,
+		# allocation and disk amplification of pretty-printing millions of rows.
+		return JSON.stringify(value)
 	return str(value)
 
 func _has_any(text: String, needles: Array) -> bool:
@@ -417,6 +485,11 @@ func _chunk(text: String) -> Array[String]:
 	return chunks
 
 func _append(path: String, value: Dictionary) -> bool:
+	return _append_many(path, [value])
+
+func _append_many(path: String, values: Array) -> bool:
+	if values.is_empty():
+		return true
 	_ensure_dir()
 	var file := FileAccess.open(path, FileAccess.READ_WRITE)
 	if file == null:
@@ -424,9 +497,75 @@ func _append(path: String, value: Dictionary) -> bool:
 	if file == null:
 		return false
 	file.seek_end()
-	file.store_line(JSON.stringify(value))
+	var sources: Dictionary = {}
+	for value in values:
+		if not value is Dictionary:
+			continue
+		file.store_line(JSON.stringify(value))
+		if file.get_error() != OK:
+			file.close()
+			_source_presence_cache_valid = false
+			return false
+		var source := str(value.get("source", ""))
+		if not source.is_empty():
+			sources[source] = true
+	file.close()
+	_remember_sources(sources)
+	return true
+
+func _source_may_exist(source: String) -> bool:
+	var signature := _data_signature()
+	if not _source_presence_cache_valid or signature != _source_presence_signature:
+		_rebuild_source_presence_cache()
+	if not _source_presence_cache_valid:
+		return true
+	return bool(_source_presence_cache.get(source, false))
+
+func _rebuild_source_presence_cache() -> void:
+	_source_presence_cache.clear()
+	var db_ok := _scan_source_presence(DB_PATH)
+	var structured_ok := _scan_source_presence(STRUCTURED_PATH)
+	_source_presence_signature = _data_signature()
+	_source_presence_cache_valid = db_ok and structured_ok
+
+func _scan_source_presence(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return true
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return false
+	while not file.eof_reached():
+		var line := file.get_line().strip_edges()
+		if line.is_empty():
+			continue
+		var parsed = JSON.parse_string(line)
+		if parsed is Dictionary:
+			var source := str(parsed.get("source", ""))
+			if not source.is_empty():
+				_source_presence_cache[source] = true
 	file.close()
 	return true
+
+func _remember_sources(sources: Dictionary) -> void:
+	if not _source_presence_cache_valid:
+		return
+	for source in sources.keys():
+		_source_presence_cache[str(source)] = true
+	_source_presence_signature = _data_signature()
+
+func _forget_source(source: String) -> void:
+	_session_source_item_ids.erase(source)
+	if _source_presence_cache_valid:
+		_source_presence_cache.erase(source)
+		_source_presence_signature = _data_signature()
+
+func _data_signature() -> String:
+	return "%s|%s" % [_file_signature(DB_PATH), _file_signature(STRUCTURED_PATH)]
+
+func _file_signature(path: String) -> String:
+	if not FileAccess.file_exists(path):
+		return "0:0"
+	return "%d:%d" % [_file_size(path), int(FileAccess.get_modified_time(path))]
 
 func _filter_source_jsonl(path: String, source: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
@@ -453,6 +592,7 @@ func _filter_source_jsonl(path: String, source: String) -> Dictionary:
 	input.close()
 	output.close()
 	if not _replace_file(temp, path):
+		_source_presence_cache_valid = false
 		return {"ok": false, "error": "Не удалось завершить потоковую замену индекса", "path": path}
 	return {"ok": true, "removed": removed}
 
@@ -482,7 +622,9 @@ func _write_jsonl(path: String, rows: Array) -> bool:
 	for row in rows:
 		file.store_line(JSON.stringify(row))
 	file.close()
-	return _replace_file(temp, path)
+	var replaced := _replace_file(temp, path)
+	_source_presence_cache_valid = false
+	return replaced
 
 func _replace_file(temp: String, target: String) -> bool:
 	var absolute := ProjectSettings.globalize_path(target)

@@ -50,13 +50,16 @@ def test_android_voice_avoids_robotic_playback_ranges():
     text = source()
     assert "speed.coerceIn(0.92f, 1.08f)" in text
     assert "val silenceScale = 0.20f + (targetSilence - 0.20f) * power" in text
-    assert "piper-denis-v4" in text
+    assert "supertonic3-$supertonicSpeakerName-$supertonicLanguage-v1" in text
     assert "pitch" not in text.lower()
 
 
-def test_android_voice_remains_offline_native_piper():
+def test_android_voice_remains_offline_native_supertonic():
     text = source()
     assert "OfflineTts" in text
-    assert "sherpa-onnx-piper-denis" in text
+    assert "OfflineTtsSupertonicModelConfig" in text
+    assert 'put("engine", "sherpa-onnx-supertonic-3")' in text
+    assert 'private val supertonicLanguage = "ru"' in text
+    assert "piper-denis" not in text.lower()
     assert "http://" not in text
     assert "https://" not in text
