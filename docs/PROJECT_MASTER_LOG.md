@@ -1988,3 +1988,28 @@ REMAINING: опубликовать партию и получить `AURORA_WIN
 BLOCKERS: Windows installed marker ещё не подтверждён новым run; readiness остаётся 10/20.
 NEXT: обычному чату после остановки сделать fresh fetch PR #92/main, найти Windows Package run по exact опубликованному SHA и читать его. При SUCCESS обоих installed markers принять Windows checkpoint 11/20=55%; при FAILURE исправлять только точную terminating assertion по artifact/log evidence.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 68. AFTER: принят Windows checkpoint и ТЗ следующего обновления
+
+`WORK-2026-09-17-FINAL-RELEASE` остаётся единственным активным исполнителем. Exact PR #92/head `601dce11c8eb810c4c6b05c13bca2b3fe3b09ee7`, main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, version `1.3.0.0`/Android code `100005`; финальный MINOR `1.4.0.0` всё ещё version-last. Лично прочитан Windows Package run `35441302848`, package job `105892466312`, SUCCESS. Он исполнил exact checkout `601dce1`; лог содержит `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK` и `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK`. Все 25 workflow runs, привязанные GitHub к этому exact head, завершились SUCCESS, включая Windows, Android APK/E2E, Knowledge 1GiB, Integration, Work/Computer и Evolution Tournament.
+
+Windows installed offline voice/files/computer checkpoint принят: `11/20 = 55%`. Это не означает готовый коммерческий релиз: остаются installed Android Voice/OCR/Knowledge, настоящий полезный лицензированный corpus+provenance, физическое device/human acceptance, server/mail/rollback, version metadata, final same-head RC и production signing/update/release.
+
+### Owner TЗ следующего обновления — Universal Intake, Multi-Model RAG и Evolution
+
+НЕ добавлять эту архитектуру в текущий release candidate: она меняет runtime, storage, безопасность и acceptance surface, поэтому требует отдельного обновления/ветки после стабильного релиза. Цель — принять вложение через чат, определить его тип по содержимому, безопасно зарегистрировать и применить по назначению; «принять любой файл» означает сохранить и показать результат классификации, а не автоматически выполнить или доверять содержимому.
+
+1. **Universal Intake через чат.** Один inbox/transaction registry с hash, размером, MIME/signature, provenance, владельцем, статусом (`staged`, `quarantine`, `accepted`, `rejected`), rollback/recovery/dedupe. Маршруты: Knowledge dataset/document; training dataset; skill description; local model weights; embedding model; archive; unknown. Неизвестное хранить как staged attachment с понятным сообщением, не терять и не исполнять.
+2. **Несколько моделей, включая GGUF.** Не заменять активную модель при каждом upload: отдельный model registry поддерживает много записей, SHA-256, source/license, architecture/quantization/context metadata, required RAM/storage, health/quarantine, compatibility test, explicit activate/deactivate/rollback. Router выбирает одну совместимую модель для запроса; одновременная загрузка всех моделей не требуется и не допускается при нехватке памяти. Chat GGUF import — confirmation → transactional copy → hash/compatibility smoke → registry → optional activation; повреждённый/несовместимый файл quarantine. Existing `LocalModelManager.install_local_gguf` — фундамент, но ещё не chat/multi-model registry.
+3. **Embeddings + RAG.** Local embedding provider/model registry, chunking, embedding version, vector index, source-level provenance/citations, hybrid retrieval, reindex/remove/rollback and offline bounded-RAM tests. RAG дополняет KnowledgeStore; не подменяет память диалога и не превращает document text в authority.
+4. **Память/инструменты/оценка.** Разделять краткую память диалога, user memory и curated knowledge; сохранять user scope/privacy. Tools остаются allowlisted, consent-gated и sandboxed. Добавить offline answer-evaluation set: factuality against cited sources, relevance, safety, latency/resource budget, regression holdouts и explicit failure reports.
+5. **AuroraFox Evolution Engine.** Отдельный Candidate sandbox: analyzer → experiment manager → 3–10 bounded mutations → test runner/evaluator → improvement registry → human/automatic policy gate → blue/green accept or rollback. Никаких прямых self-edits Stable Core, no tool/secret escalation, no auto-training arbitrary uploaded weights. Каждое accepted improvement имеет diff, provenance, tests, metrics and rollback.
+
+NEXT: продолжать текущий release без реализации этого следующего обновления. Ближайший доступный релизный blocker — доказать/получить отсутствующие external acceptance boundaries, прежде всего настоящий лицензированный полезный Knowledge corpus с provenance и Android installed Voice/OCR/Knowledge; затем final version/RC/signing only after all gates. Обычный чат после остановки сначала делает fresh fetch PR92/main, читает этот раздел, не смешивает next-update architecture с текущим candidate и не повышает readiness без exact evidence.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: installed Windows voice/files/computer доказан exact run/job markers; all exact-head workflows SUCCESS; ТЗ следующего обновления записано как отдельная безопасная граница.
+REMAINING: 9 из 20 acceptance checkpoints и их внешние доказательства.
+BLOCKERS: новый Universal Intake/Multi-Model/RAG/Evolution не реализуется в текущем RC по решению владельца; external corpus/device/human/server/signing evidence отсутствует.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
