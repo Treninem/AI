@@ -102,10 +102,50 @@ class WindowsVoicePackageTests(unittest.TestCase):
             text = (ROOT / '.github/workflows' / name).read_text(encoding="utf-8")
             self.assertNotIn('-SkipVoiceSetup', text)
             self.assertIn('windows_installed_voice_smoke.ps1 -InstallDir $installDir', text)
+            self.assertIn('windows_installed_local_services_smoke.ps1 -InstallDir $installDir', text)
+            self.assertIn('artifacts/windows-offline-services/**', text)
             self.assertIn('7z.exe', text)
         builder = (ROOT / 'voice/build_backend.ps1').read_text(encoding="utf-8")
         self.assertNotIn('$python -m pip', builder)
         self.assertIn('$uv pip install --python $python', builder)
+
+    def test_computer_agent_is_built_as_a_portable_offline_runtime(self):
+        installer = (ROOT / 'computer/install_computer.ps1').read_text(encoding='utf-8')
+        builder = (ROOT / 'build/build_windows.ps1').read_text(encoding='utf-8')
+        client = (ROOT / 'scripts/computer_client.gd').read_text(encoding='utf-8')
+        self.assertIn('[switch]$PreparePortable', installer)
+        self.assertIn('--target $PortableVendor', installer)
+        self.assertIn("AURORA_COMPUTER_PORTABLE_READY", installer)
+        self.assertIn('$computerInstaller -PreparePortable', builder)
+        self.assertIn('computerOut "python\\python.exe"', builder)
+        self.assertIn('computerOut "vendor\\fastapi"', builder)
+        self.assertLess(client.index('root.path_join("python/python.exe")'),
+                        client.index('root.path_join(".venv/Scripts/python.exe")'))
+        self.assertIn('OS.set_environment("PYTHONPATH", vendor)', client)
+        self.assertIn('OS.unset_environment("PYTHONPATH")', client)
+
+    def test_installed_files_and_computer_smoke_is_external_network_isolated(self):
+        path = ROOT / 'tests/windows_installed_local_services_smoke.ps1'
+        text = path.read_text(encoding='utf-8')
+        self.assertIn('-RemoteAddress ($externalIpv4 + $externalIpv6)', text)
+        self.assertIn("AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK", text)
+        self.assertIn("/sandbox/write'", text)
+        self.assertIn("/sandbox/read?path=installed-proof.txt'", text)
+        self.assertIn("/analyze'", text)
+        self.assertIn("local_core_planning_required", text)
+        ranges = []
+        for family in ('externalIpv4', 'externalIpv6'):
+            literal = re.search(r'\$' + family + r" = @\(([^\n]+)\)", text).group(1)
+            for value in re.findall(r"'([^']+)'", literal):
+                first, last = value.split('-')
+                ranges.append((ipaddress.ip_address(first), ipaddress.ip_address(last)))
+        for address, blocked in [('127.0.0.1', False), ('::1', False),
+                                 ('8.8.8.8', True), ('10.0.0.1', True),
+                                 ('2001:db8::5', True), ('fe80::5', True)]:
+            ip = ipaddress.ip_address(address)
+            actual = any(ip.version == first.version and first <= ip <= last for first, last in ranges)
+            with self.subTest(installed_service_address=address):
+                self.assertEqual(actual, blocked)
 
 
 if __name__ == '__main__':

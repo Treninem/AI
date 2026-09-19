@@ -20,6 +20,7 @@ on:
       - 'tests/windows_v13_bridge_smoke.ps1'
       - 'tests/windows_bounded_process*.ps1'
       - 'tests/windows_installed_voice_smoke.ps1'
+      - 'tests/windows_installed_local_services_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -42,6 +43,7 @@ on:
       - 'tests/windows_v13_bridge_smoke.ps1'
       - 'tests/windows_bounded_process*.ps1'
       - 'tests/windows_installed_voice_smoke.ps1'
+      - 'tests/windows_installed_local_services_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -104,7 +106,8 @@ jobs:
             '.\tests\windows_v13_bridge_smoke.ps1',
             '.\tests\windows_bounded_process.ps1',
             '.\tests\windows_bounded_process_smoke.ps1',
-            '.\tests\windows_installed_voice_smoke.ps1'
+            '.\tests\windows_installed_voice_smoke.ps1',
+            '.\tests\windows_installed_local_services_smoke.ps1'
           )) {
             if (-not (Test-Path $script)) { throw "Required Windows/release helper missing: $script" }
             $tokens = $null
@@ -176,6 +179,8 @@ jobs:
             'build\windows\models\install_models.ps1',
             'build\windows\voice\install_voice.ps1',
             'build\windows\computer\install_computer.ps1',
+            'build\windows\computer\python\python.exe',
+            'build\windows\computer\vendor\fastapi',
             'build\windows\file_intelligence\install_files.ps1',
             'build\windows\core_runtime\install_core.ps1',
             'build\windows\core_runtime\engine\llama-server.exe',
@@ -266,6 +271,7 @@ jobs:
           $runExit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'current-installed-app' -TimeoutSeconds 90
           if ($runExit -ne 0) { throw "Installed AuroraFox.exe exited with $runExit" }
           .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
+          .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
           if (-not $uninstaller) { throw 'Uninstaller missing' }
           $uninstallLog = Join-Path $logDir 'current-uninstall.log'
@@ -307,5 +313,6 @@ jobs:
             dist/AuroraFox-V*-Windows-Portable.zip
             dist/SHA256SUMS.txt
             artifacts/windows-offline-voice/**
+            artifacts/windows-offline-services/**
           if-no-files-found: error
           retention-days: 14

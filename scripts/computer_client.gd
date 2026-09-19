@@ -93,8 +93,19 @@ func _start_backend_if_installed() -> void:
 	if executable.is_empty() or not FileAccess.file_exists(executable):
 		_clear_bootstrap_environment()
 		return
+	var vendor := str(found.get("vendor", ""))
+	var inject_vendor := not vendor.is_empty() and DirAccess.dir_exists_absolute(vendor)
+	var had_pythonpath := OS.has_environment("PYTHONPATH")
+	var previous_pythonpath := OS.get_environment("PYTHONPATH") if had_pythonpath else ""
+	if inject_vendor:
+		OS.set_environment("PYTHONPATH", vendor)
 	backend_pid = OS.create_process(executable, PackedStringArray([str(found.get("service", ""))]), false)
 	_clear_bootstrap_environment()
+	if inject_vendor:
+		if had_pythonpath:
+			OS.set_environment("PYTHONPATH", previous_pythonpath)
+		else:
+			OS.unset_environment("PYTHONPATH")
 
 func _clear_bootstrap_environment() -> void:
 	OS.unset_environment("AURORAFOX_COMPUTER_TOKEN")
@@ -103,10 +114,23 @@ func _clear_bootstrap_environment() -> void:
 func _find_runtime() -> Dictionary:
 	for root in _candidate_roots():
 		var service := root.path_join("computer_service.py")
+		if not FileAccess.file_exists(service):
+			continue
+		var portable_pythonw := root.path_join("python/pythonw.exe")
+		var portable_python := root.path_join("python/python.exe")
+		if FileAccess.file_exists(portable_pythonw) or FileAccess.file_exists(portable_python):
+			return {
+				"root": root,
+				"service": service,
+				"pythonw": portable_pythonw,
+				"python": portable_python,
+				"vendor": root.path_join("vendor"),
+				"portable": true
+			}
 		var pythonw := root.path_join(".venv/Scripts/pythonw.exe")
 		var python := root.path_join(".venv/Scripts/python.exe")
 		if FileAccess.file_exists(service) and (FileAccess.file_exists(pythonw) or FileAccess.file_exists(python)):
-			return {"root": root, "service": service, "pythonw": pythonw, "python": python}
+			return {"root": root, "service": service, "pythonw": pythonw, "python": python, "vendor": "", "portable": false}
 	return {}
 
 func _candidate_roots() -> Array[String]:

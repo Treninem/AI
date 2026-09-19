@@ -176,6 +176,7 @@ jobs:
           $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
           if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
           .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
+          .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
           if (-not $uninstaller) { throw 'Uninstaller is missing' }
           $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
@@ -190,6 +191,7 @@ jobs:
             dist/AuroraFox-Windows.zip
             dist/AuroraFox_Setup_Windows.exe
             artifacts/windows-offline-voice/**
+            artifacts/windows-offline-services/**
           if-no-files-found: error
 
   android:

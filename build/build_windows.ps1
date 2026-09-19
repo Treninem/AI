@@ -27,6 +27,7 @@ $apiOut = Join-Path $outDir "api"
 $ensureUv = Join-Path $runtimeSource "ensure_uv.ps1"
 $fileInstaller = Join-Path $fileSource "install_files.ps1"
 $fileOcrPrepare = Join-Path $fileSource "prepare_windows_ocr.ps1"
+$computerInstaller = Join-Path $computerSource "install_computer.ps1"
 $portableDist = Join-Path $root "build\voice_backend"
 $portableBuilt = $false
 $coreBundleHelper = Join-Path $PSScriptRoot "prepare_bundled_windows_core.ps1"
@@ -64,6 +65,14 @@ if (-not (Test-Path -LiteralPath $fileOcrPrepare)) { throw "file_intelligence/pr
 Write-Host "Preparing portable File Intelligence + local rus+eng OCR runtime..." -ForegroundColor Cyan
 & powershell -NoProfile -ExecutionPolicy Bypass -File $fileInstaller -PreparePortable
 if ($LASTEXITCODE -ne 0) { throw "Failed to prepare portable File Intelligence/OCR runtime" }
+
+# Computer primitives must also be ready in the installed package without a
+# post-install dependency download. The portable Python/vendor bundle is the
+# primary runtime; install_computer.ps1 remains a recovery/developer helper.
+if (-not (Test-Path -LiteralPath $computerInstaller)) { throw "Computer Agent installer is missing" }
+Write-Host "Preparing portable Computer Agent runtime..." -ForegroundColor Cyan
+& powershell -NoProfile -ExecutionPolicy Bypass -File $computerInstaller -PreparePortable
+if ($LASTEXITCODE -ne 0) { throw "Failed to prepare portable Computer Agent runtime" }
 
 # SkipModelSetup remains only for compatibility with older CI invocations. It
 # no longer disables Core packaging because the user-facing model setup flow
@@ -174,6 +183,11 @@ foreach ($file in @("computer_service.py", "requirements.txt", "install_computer
 }
 $computerVenv = Join-Path $computerSource ".venv"
 if (Test-Path $computerVenv) { Copy-Item $computerVenv (Join-Path $computerOut ".venv") -Recurse -Force }
+foreach ($dir in @("python", "vendor")) {
+    $source = Join-Path $computerSource $dir
+    if (-not (Test-Path -LiteralPath $source)) { throw "Portable Computer Agent component is missing: $dir" }
+    Copy-Item $source (Join-Path $computerOut $dir) -Recurse -Force
+}
 
 # Rich File Intelligence + source-project index bootstrap. The release receives
 # the same verified portable Python and OCR runtime proven by the candidate CI.
@@ -231,6 +245,8 @@ if (-not (Test-Path (Join-Path $voiceOut "requirements_xtts.txt"))) { throw "XTT
 if (-not (Test-Path (Join-Path $voiceOut "prepare_ffmpeg.ps1"))) { throw "XTTS shared FFmpeg bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
+if (-not (Test-Path (Join-Path $computerOut "python\python.exe"))) { throw "Portable Computer Agent Python was not packaged" }
+if (-not (Test-Path (Join-Path $computerOut "vendor\fastapi"))) { throw "Portable Computer Agent dependencies were not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "file_service.py"))) { throw "File Intelligence service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "project_index_service.py"))) { throw "Project index service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "extended_formats.py"))) { throw "EPUB/RAR service was not packaged" }

@@ -1894,3 +1894,35 @@ REMAINING: новая installed offline TTS+STT/package acceptance и10 release 
 BLOCKERS: прежний Windows TTS WinError10013; actual patched Windows run пока не получен.
 NEXT: опубликовать эту атомарную партию в PR92 с parents27c5a8a+main4c6fe64, проверить Windows build/installed voice. ЖДАТЬ завершения нового Windows run перед повторной проверкой (сборка ранее требовала десятки минут); если он failed — сразу разобрать precise log. Следующий чат продолжает по разделу60; нельзя просто переносить main файл поверх сильного кандидата или считать scheduled run pass. Версия пока1.3.0.0/code100005, PR92 draft, release/bump не выполнены.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+## 65. BEFORE: установленный Windows File/Computer без сетевого bootstrap
+
+`WORK-2026-09-17-FINAL-RELEASE` остаётся ACTIVE у единственного исполнителя. Fresh GitHub `main` — `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head — `6705f0ab13ebd46cc0071103df00748cbcf5f062`; PR draft, версия `1.3.0.0`, Android code `100005`. Текущая партия берёт `computer/install_computer.ps1`, `scripts/computer_client.gd`, `build/build_windows.ps1`, новый Windows installed-services smoke, `.github/workflows/windows-package-ci.yml`, `.github/workflows/release.yml`, соответствующие contract tests и этот журнал. Intended bump этой накопленной релизной работы остаётся MINOR `1.4.0.0`, version-last.
+
+Проверены фактические результаты точного head `6705f0a`: Windows Package run `35385401079` SUCCESS, package job `105731284214` SUCCESS. Лог содержит `AURORA_WINDOWS_V12_TO_CURRENT_BRIDGE_OK`, `AURORA_WINDOWS_V13_TRUST_ROOT_REPAIR_OK` и `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK`; текущая установка/запуск/удаление завершились с exit 0. Артефакт Windows diagnostics `10565482935`, digest `sha256:ac26f29a5b50b12bbf6bb19294e3fe2acf41e6d96eb0aa2049fe3da574740a92`; основной Windows artifact `10565383330`, digest `sha256:f549d52a98e9b4e396076b27795dc3798185e7e9ffe91e43c9927dff38d33dd8`. Core/Voice run `35385401002` SUCCESS. Все 26 workflow runs, привязанные GitHub к exact head `6705f0a`, завершены SUCCESS.
+
+Readiness пока не повышается: checkpoint раздела 58 объединяет установленный Windows offline voice/files/computer. Voice доказан, File Intelligence portable runtime упакован, но Computer Agent всё ещё получает зависимости только через `uv pip install` после установки и `ComputerClient` распознаёт лишь `.venv`. Это нарушает требование готового самостоятельного установленного продукта без сети. Решение: собирать relocatable Computer Python/vendor при packaging, запускать его как основной путь и добавить установленный offline HTTP smoke для File Intelligence и Computer с запретом внешнего трафика, sandbox write/read и реальным анализом TXT. Не ослаблять permission/master-stop/sandbox/network contracts; никаких внешних AI/runtime зависимостей.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: exact-head Windows offline voice/bridges и 26/26 workflow SUCCESS подтверждены по job logs/API; артефактные digest записаны.
+REMAINING: installed File/Computer runtime evidence и остальные 10 checkpoints раздела 58.
+BLOCKERS: Computer Agent в установленном пакете требует post-install network dependency install; production Knowledge pack/devices/human/deployment/signing отсутствуют.
+NEXT: собрать portable Computer runtime, выполнить локальные contracts, опубликовать одной атомарной партией и принять Windows checkpoint только после нового installed offline services CI marker. Если чат остановится, обычному чату начать с fresh `main` и PR #92/head, прочитать AGENTS.md и этот раздел, не bump/merge/tag/release и не считать claim закрытым без нового Windows job log.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
+
+### AFTER: самостоятельный installed Computer runtime и общий offline services gate
+
+`computer/install_computer.ps1 -PreparePortable` теперь использует только управляемый AuroraFox Python 3.11/uv на build-этапе, копирует relocatable Python и ставит зависимости в отдельный `vendor`; готовность модулей проверяется без запуска GUI. `build_windows.ps1` требует и упаковывает оба каталога, поэтому обычному пользователю не нужен system Python или post-install download. `ComputerClient` предпочитает portable runtime, передаёт ему `PYTHONPATH` только на момент запуска и восстанавливает прежнее окружение; legacy `.venv` остаётся recovery/developer fallback.
+
+Новый `windows_installed_local_services_smoke.ps1` запускается из реально установленного каталога после voice smoke. Для обоих Python executables внешние IPv4/IPv6 destinations блокируются Windows Firewall с сохранением loopback. Computer проверяет authenticated capabilities, AuroraFox Core как planning owner и реальный sandbox write/read при выключенном degraded exec. File Intelligence проверяет bundled rus+eng OCR health и точный UTF-8 TXT analyze. JSON/log evidence добавлены в Windows artifact; production release workflow выполняет тот же gate. Проверки permission/master-stop/sandbox не ослаблены, внешнее AI не добавлено.
+
+Локально: `26 passed, 13 subtests passed` за `0.06s` (`test_windows_voice_package`, Computer routing contracts, local OCR static contracts); Python compile OK; Godot 4.7.1 parse `computer_client.gd` OK; оба изменённых workflow YAML parsed; `git diff --check` clean. Расширенный старый `computer_agent_reliability_test.py` локально не запущен: доступное test-python окружение не содержит `httpx` и остановилось при collection до теста; это честно не считается product failure или pass. Реальный PowerShell/portable build/installed services требуют Windows CI.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: portable Computer implementation и installed offline Files/Computer gate готовы; локальные доступные contracts зелёные; прежний exact-head Voice/bridges доказан.
+REMAINING: опубликовать и получить `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK` на новом exact head; только тогда Windows checkpoint может стать 11/20.
+BLOCKERS: локального PowerShell/Windows runtime нет; production Knowledge pack, physical devices/human acceptance, deployment/mail/rollback/signing остаются внешними release boundaries.
+NEXT: fast-forward publish поверх свежего PR #92/head, проверить новый Windows package job и его marker/report. При остановке обычному чату: fresh fetch PR/head и main, читать этот раздел; если Windows failed — исправить точную фазу, если SUCCESS с обоими voice и files/computer markers — записать 55%, затем выбрать следующий из оставшихся 9 checkpoints. Не bump/merge/tag/release заранее.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 50%
