@@ -97,3 +97,15 @@ def test_core_public_candidate_preserves_reason_path_and_evidence():
     assert '"reason": reason' in adapter
     assert '"verification": candidate.get("verification", {})' in adapter
     assert '"failure": candidate.get("failure", {})' in adapter
+
+
+def test_core_async_stages_recheck_owned_lock_token_before_stateful_handoff():
+    adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
+    assert "func _lock_token_current(" in adapter
+    assert "func _lock_superseded(" in adapter
+    assert 'return _lock_superseded("proposal", lock_token)' in adapter
+    assert 'return _lock_superseded("winner_pending_store", lock_token)' in adapter
+    assert 'return _lock_superseded("handoff_store", lock_token)' in adapter
+    store_pos = adapter.index("var stored = pipeline._store_candidate")
+    guard_pos = adapter.rfind('if not _lock_token_current(lock_token):', 0, store_pos)
+    assert guard_pos >= 0

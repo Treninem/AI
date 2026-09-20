@@ -58,7 +58,7 @@ func run(goal: String, requested_target := "", requested_count := 5) -> Dictiona
 	if not bool(lock.get("ok", false)):
 		return lock
 	var lock_token := int(lock.get("lock_token", 0))
-	var result: Dictionary = await _run_locked(goal, requested_target, requested_count)
+	var result: Dictionary = await _run_locked(goal, requested_target, requested_count, lock_token)
 	result["pipeline_lock_release"] = _release_pipeline_lock(lock_token)
 	return result
 
@@ -73,7 +73,7 @@ func prepare_winner(tournament_id: String) -> Dictionary:
 	if not bool(lock.get("ok", false)):
 		return lock
 	var lock_token := int(lock.get("lock_token", 0))
-	var result: Dictionary = await _prepare_winner_locked(tournament_id)
+	var result: Dictionary = await _prepare_winner_locked(tournament_id, lock_token)
 	result["pipeline_lock_release"] = _release_pipeline_lock(lock_token)
 	return result
 
@@ -136,6 +136,23 @@ func _release_pipeline_lock(lock_token: int) -> Dictionary:
 	_pipeline_lock_acquired_at = 0
 	return {"ok": true, "released": true, "held_seconds": held_seconds, "lock_token": lock_token}
 
+func _lock_token_current(lock_token: int) -> bool:
+	return (
+		_owns_pipeline_lock
+		and lock_token > 0
+		and lock_token == _active_pipeline_lock_token
+	)
+
+func _lock_superseded(stage: String, lock_token: int) -> Dictionary:
+	return {
+		"ok": false,
+		"stage": "core_lock_superseded",
+		"error": "Core tournament operation was recovered or superseded during " + stage,
+		"requested_lock_token": lock_token,
+		"active_lock_token": _active_pipeline_lock_token,
+		"superseded_stage": stage
+	}
+
 func _preflight(requested_count: int) -> Dictionary:
 	var contract := contract_status()
 	if not bool(contract.get("ok", false)):
@@ -151,7 +168,7 @@ func _preflight(requested_count: int) -> Dictionary:
 		return {"ok": false, "stage": "update_guard", "error": "signed product update has priority", "deferred": true}
 	return {"ok": true}
 
-func _run_locked(goal: String, requested_target: String, requested_count: int) -> Dictionary:
+func _run_locked(goal: String, requested_target: String, requested_count: int, lock_token: int) -> Dictionary:
 	var clean_goal := goal.strip_edges()
 	if clean_goal.is_empty():
 		clean_goal = "Improve AuroraFox Core quality and robustness without regressions"
@@ -178,6 +195,8 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 			strategy
 		]
 		var proposal_result = await pipeline._propose(mutation_goal, target, original)
+		if not _lock_token_current(lock_token):
+			return _lock_superseded("proposal", lock_token)
 		attempt += 1
 		if not proposal_result is Dictionary or not bool(proposal_result.get("ok", false)):
 			generation_errors.append(_compact_error("proposal", proposal_result))
@@ -208,6 +227,8 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 			continue
 
 		var verification = await pipeline._verify_in_workspace(clean_goal, target, content)
+		if not _lock_token_current(lock_token):
+			return _lock_superseded("candidate_verification", lock_token)
 		if not verification is Dictionary or not bool(verification.get("ok", false)):
 			candidate["failure"] = _compact_error("verification", verification)
 			population[population.size() - 1] = candidate
@@ -215,6 +236,8 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 		verification["source_contract"] = validation.get("source_contract", {})
 
 		var review = await pipeline._comparative_review(clean_goal, target, original, content, verification, proposal)
+		if not _lock_token_current(lock_token):
+			return _lock_superseded("candidate_review", lock_token)
 		if not review is Dictionary or not bool(review.get("ok", false)):
 			candidate["failure"] = _compact_error("comparative_review", review)
 			candidate["verification"] = _compact_verification(verification)
@@ -267,6 +290,8 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 	var winner_proposal: Dictionary = winner.get("proposal", {})
 	var winner_content := str(winner_proposal.get("content", ""))
 	var final_verification = await pipeline._verify_in_workspace(clean_goal, target, winner_content)
+	if not _lock_token_current(lock_token):
+		return _lock_superseded("winner_final_verification", lock_token)
 	if not final_verification is Dictionary or not bool(final_verification.get("ok", false)):
 		return {
 			"ok": false,
@@ -279,6 +304,8 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 	if winner_validation is Dictionary:
 		final_verification["source_contract"] = winner_validation.get("source_contract", {})
 	var final_review = await pipeline._comparative_review(clean_goal, target, original, winner_content, final_verification, winner_proposal)
+	if not _lock_token_current(lock_token):
+		return _lock_superseded("winner_final_review", lock_token)
 	if not final_review is Dictionary or not bool(final_review.get("ok", false)):
 		return {
 			"ok": false,
@@ -296,6 +323,8 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 		str(winner.get("sha256", "")).substr(0, 10),
 		_tournament_sequence
 	]
+	if not _lock_token_current(lock_token):
+		return _lock_superseded("winner_pending_store", lock_token)
 	_pending_winners[tournament_id] = {
 		"created_unix": int(Time.get_unix_time_from_system()),
 		"goal": clean_goal,
@@ -324,7 +353,7 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 		"applied_to_dev_checkout": false
 	}
 
-func _prepare_winner_locked(tournament_id: String) -> Dictionary:
+func _prepare_winner_locked(tournament_id: String, lock_token: int) -> Dictionary:
 	var pending: Dictionary = _pending_winners[tournament_id]
 	var target := str(pending.get("target", ""))
 	var source_result = pipeline._read_res_source(target)
@@ -348,15 +377,21 @@ func _prepare_winner_locked(tournament_id: String) -> Dictionary:
 		return {"ok": false, "stage": "handoff_validation", "error": "Core winner no longer passes source contract", "details": _compact_error("handoff_validation", validation)}
 
 	var verification = await pipeline._verify_in_workspace(str(pending.get("goal", "")), target, content)
+	if not _lock_token_current(lock_token):
+		return _lock_superseded("handoff_verification", lock_token)
 	if not verification is Dictionary or not bool(verification.get("ok", false)):
 		return {"ok": false, "stage": "handoff_verification", "error": "Core winner failed clean handoff verification", "details": _compact_error("handoff_verification", verification)}
 	verification["source_contract"] = validation.get("source_contract", {})
 
 	var review = await pipeline._comparative_review(str(pending.get("goal", "")), target, original, content, verification, proposal)
+	if not _lock_token_current(lock_token):
+		return _lock_superseded("handoff_review", lock_token)
 	if not review is Dictionary or not bool(review.get("ok", false)):
 		return {"ok": false, "stage": "handoff_review", "error": "Core winner failed clean handoff comparative review", "details": _compact_error("handoff_review", review)}
 	verification["comparative_review"] = review
 
+	if not _lock_token_current(lock_token):
+		return _lock_superseded("handoff_store", lock_token)
 	var stored = pipeline._store_candidate(str(pending.get("goal", "")), target, original, proposal, verification)
 	if not stored is Dictionary or not bool(stored.get("ok", false)):
 		return {"ok": false, "stage": "handoff_store", "error": "Existing Core candidate storage rejected winner", "details": _compact_error("handoff_store", stored)}

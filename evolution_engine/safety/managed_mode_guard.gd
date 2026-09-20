@@ -11,8 +11,18 @@ func bind(value) -> void:
 	coordinator = value
 
 func enter() -> Dictionary:
-	if _active and permits_evolution():
-		return {"ok": true, "active": true, "already_active": true, "legacy_hot_improvements": false}
+	if _active:
+		if coordinator == null:
+			return {"ok": false, "stage": "managed_mode", "error": "AutonomousCoordinator is unavailable"}
+		coordinator.set("autonomous_hot_improvements", false)
+		_fail_closed = not permits_evolution()
+		return {
+			"ok": true,
+			"active": true,
+			"already_active": true,
+			"legacy_hot_improvements": false,
+			"saved_hot_improvements": _saved_hot_improvements
+		}
 	if coordinator == null:
 		return {"ok": false, "stage": "managed_mode", "error": "AutonomousCoordinator is unavailable"}
 	var cycle_running = coordinator.get("_cycle_running")
