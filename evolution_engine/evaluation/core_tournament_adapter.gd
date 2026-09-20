@@ -317,6 +317,7 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 		"generation_attempts": attempt,
 		"winner": _public_candidate(winner),
 		"scoreboard": _public_scoreboard(finalists),
+		"candidates": _public_scoreboard(population),
 		"final_verification": _compact_verification(final_verification),
 		"final_review": _compact_review(final_review),
 		"promotion_prepared": false,

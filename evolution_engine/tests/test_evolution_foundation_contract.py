@@ -209,3 +209,20 @@ def test_complete_cycle_entrypoint_records_analysis_and_decision():
     assert 'phase_changed.emit("cycle_experiment"' in controller
     assert 'result["decision"] = decisions.build' in controller
     assert 'result["cycle_complete"] = true' in controller
+
+
+def test_hot_tournament_collects_existing_candidate_signals_for_learning():
+    adapter = read("evolution_engine/evaluation/tournament_adapter.gd")
+    existing = read("scripts/self_improver.gd")
+    ledger = read("evolution_engine/learning/candidate_ledger.gd")
+    assert "signal mutation_candidate_completed" in existing
+    assert 'has_signal("mutation_candidate_completed")' in adapter
+    assert "_on_mutation_candidate_completed" in adapter
+    assert 'result["candidates"] = _captured_candidates.duplicate(true)' in adapter
+    assert 'var rows = result.get("candidates", [])' in ledger
+
+
+def test_core_success_exposes_full_population_for_learning_not_only_finalists():
+    core = read("evolution_engine/evaluation/core_tournament_adapter.gd")
+    assert '"scoreboard": _public_scoreboard(finalists)' in core
+    assert '"candidates": _public_scoreboard(population)' in core

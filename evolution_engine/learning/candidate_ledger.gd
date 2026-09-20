@@ -4,9 +4,9 @@ extends RefCounted
 const MAX_CANDIDATES := 10
 
 func build(experiment_id: String, result: Dictionary) -> Array:
-	var rows = result.get("scoreboard", [])
+	var rows = result.get("candidates", [])
 	if not rows is Array or rows.is_empty():
-		rows = result.get("candidates", [])
+		rows = result.get("scoreboard", [])
 	if not rows is Array:
 		return []
 	var out: Array = []
