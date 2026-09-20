@@ -15,6 +15,7 @@ on:
       - 'tests/ui_visual_capture.gd'
       - 'tests/ui_state_visual_capture.gd'
       - 'tests/ui_work_computer_visual_capture.gd'
+      - 'tests/test_ui_visual_workflow.py'
       - 'main.tscn'
       - 'project.godot'
       - '.github/workflows/ui-visual-ci.yml'
@@ -43,17 +44,51 @@ jobs:
         run: >-
           python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
 
+      - name: Restore verified Godot 4.7.1 cache
+        id: godot_cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci/godot-ui-4.7.1
+          key: aurorafox-godot-linux-4.7.1-stable-a13da4feb
+
       - name: Install Godot 4.7.1
         shell: bash
         run: |
           set -euo pipefail
-          curl -L --fail --retry 3 -o godot.zip https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
-          unzip -q godot.zip
-          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          cache_dir='.ci/godot-ui-4.7.1'
+          godot_url='https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip'
+          mkdir -p "$cache_dir"
+          godot="$(find "$cache_dir" -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' -print -quit || true)"
+          if [ -z "$godot" ]; then
+            archive="$cache_dir/godot.zip"
+            curl \
+              --location \
+              --fail \
+              --show-error \
+              --http1.1 \
+              --connect-timeout 30 \
+              --max-time 300 \
+              --retry 8 \
+              --retry-all-errors \
+              --retry-delay 5 \
+              --retry-max-time 300 \
+              --output "$archive" \
+              "$godot_url"
+            unzip -tq "$archive"
+            unzip -qo "$archive" -d "$cache_dir"
+            godot="$(find "$cache_dir" -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' -print -quit)"
+          fi
           test -n "$godot"
-          mv "$godot" godot
-          chmod +x godot
+          chmod +x "$godot"
+          cp "$godot" godot
           ./godot --version
+
+      - name: Save verified Godot 4.7.1 cache
+        if: steps.godot_cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: .ci/godot-ui-4.7.1
+          key: ${{ steps.godot_cache.outputs.cache-primary-key }}
 
       - name: Import project and parse scripts
         shell: bash

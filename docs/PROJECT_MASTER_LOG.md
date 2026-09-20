@@ -2143,3 +2143,33 @@ REMAINING: 8 release checkpoints, chiefly external/product evidence and final re
 BLOCKERS: no genuine corpus/provenance or physical/human/server-production acceptance yet.
 NEXT: preserve this accepted evidence, then address the next independently demonstrable release boundary without changing version before final identity gate.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 73. BEFORE: make UI Godot bootstrap retryable and cached
+
+Exact PR #92/head `03d0b1116853d8b7e1f9b8647571470402a2434b`; UI Visual job `106032550831` verified `AURORA_CI_CHECKOUT_SHA=03d0b111...` then failed before project import/tests because GitHub release download returned curl `(35) Recv failure: Connection reset by peer`. This is runner/network infrastructure, not a UI or product failure. Claim: `.github/workflows/ui-visual-ci.yml`, a narrow workflow regression test if added, and this journal. Unrelated owner background remains untouched.
+
+The UI workflow has a distinct release boundary: desktop/Android portrait layout, actual pointer navigation, and 34 rendered acceptance surfaces. It cannot be silently merged into Core/Android/package jobs because it needs Xvfb/GL rendering and its own artifacts. Repeated Godot downloads occur because GitHub jobs are isolated; however bootstrap can be cached and transient release-asset resets retried without duplicating UI assertions.
+
+INTENDED FIX: cache only the verified Godot 4.7.1 Linux executable under a fixed key; on cache miss use HTTP/1.1, connection/total timeouts, `--retry-all-errors`, bounded exponential-style retry delay and archive integrity test before extraction. Keep the actual UI gates unchanged and no retry of a failing product test.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact infrastructure-only failure classified before any product claim changed.
+REMAINING: resilient bootstrap implementation/local YAML check/new UI job.
+BLOCKERS: external GitHub release connection reset; no application failure observed.
+NEXT: make only the downloader retry/cache boundary resilient.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: UI bootstrap retries transient Godot delivery failures
+
+UI Visual CI restores/saves only the pinned Godot 4.7.1 Linux executable cache (`aurorafox-godot-linux-4.7.1-stable-a13da4feb`). On a miss it uses `curl --http1.1 --connect-timeout 30 --max-time 300 --retry 8 --retry-all-errors --retry-delay 5 --retry-max-time 300`, validates ZIP structure before extraction, and still verifies `./godot --version`. This retries transport resets such as curl 35 but does not retry or hide a product/UI test failure. The workflow's distinct Xvfb/pointer/render artifact gates remain intact.
+
+LOCAL EVIDENCE: dedicated workflow regression `1 passed`; YAML parses with PyYAML; `git diff --check` succeeds. A broad branding test was intentionally not used as this change's acceptance because the shared worktree has a pre-existing, unrelated modified owner background PNG; it is not staged or claimed and remains unchanged. The remote exact branch retains the approved asset.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: transient UI bootstrap failure made retryable/cacheable without deleting UI coverage.
+REMAINING: publish and accept a new exact UI Visual run; remaining external release checkpoints unchanged.
+BLOCKERS: GitHub asset delivery remains external, but resets now have bounded retry and future cache hits avoid download.
+NEXT: publish minimal workflow/test/journal change, then wait for exact UI evidence rather than rerunning unrelated checks locally.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
