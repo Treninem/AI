@@ -1,0 +1,28 @@
+# Evolution Engine acceptance
+
+This directory contains isolated tests for the feature branch. It does not alter release workflows.
+
+## Static contracts
+
+Run:
+
+`python evolution_engine/tests/run_evolution_checks.py --static-only`
+
+This checks that Evolution:
+- reuses the existing SelfImprover 3–10 tournament;
+- reuses sandbox/master-stop/update-guard/runtime-extension authorities;
+- does not call the single-candidate Core `run_candidate()`;
+- keeps Memory/Knowledge reuse bounded;
+- keeps release authority outside Evolution.
+
+## Full Godot acceptance
+
+With Godot 4.7.1 available:
+
+`python evolution_engine/tests/run_evolution_checks.py --godot <path-to-godot>`
+
+The runner executes the existing AuroraFox self-improvement and Core benchmark smokes before the new Evolution policy/evidence/controller smokes.
+
+On Windows it additionally runs `core_tournament_windows_smoke.gd`, because the existing Core source verification pipeline is Windows-only.
+
+A full acceptance claim requires the Godot smokes to be executed successfully; static contracts alone are not sufficient evidence for runtime readiness.
