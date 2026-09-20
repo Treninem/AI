@@ -32,9 +32,10 @@ def test_core_tournament_never_uses_single_candidate_entrypoint():
     assert "pipeline._store_candidate" in adapter
     assert "applied_to_dev_checkout" in adapter
     assert '"promotion": "signed_update"' in adapter
+    assert "project_apply_file" not in adapter
 
 
-def test_core_tournament_enforces_population_diversity_and_same_baseline():
+def test_core_tournament_enforces_population_diversity_same_baseline_and_topup():
     adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
     assert "const MIN_MUTATIONS := 3" in adapter
     assert "const MAX_MUTATIONS := 10" in adapter
@@ -44,6 +45,8 @@ def test_core_tournament_enforces_population_diversity_and_same_baseline():
     assert "var baseline_sha := _sha256_text(original)" in adapter
     assert "pipeline._validate_candidate(target, original, proposal)" in adapter
     assert "pipeline._verify_in_workspace(clean_goal, target, content)" in adapter
+    assert "population.size() < requested_count or finalists.size() < MIN_MUTATIONS" in adapter
+    assert "population.size() < MAX_MUTATIONS" in adapter
 
 
 def test_core_tournament_requires_three_verified_finalists_and_second_pass():
@@ -65,10 +68,32 @@ def test_core_promotion_handoff_rechecks_baseline_and_never_grants_release_autho
     assert '"release_authority_granted": false' in controller
 
 
-def test_core_tournament_shares_existing_pipeline_running_lock():
+def test_core_tournament_owns_existing_pipeline_running_lock():
     adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
     pipeline = read("scripts/core_improvement_pipeline.gd")
     assert "var _running := false" in pipeline
+    assert "var _owns_pipeline_lock := false" in adapter
     assert 'pipeline.get("_running")' in adapter
     assert 'pipeline.set("_running", true)' in adapter
     assert 'pipeline.set("_running", false)' in adapter
+    assert "func _acquire_pipeline_lock(" in adapter
+    assert "func _release_pipeline_lock(" in adapter
+    assert "func emergency_release_owned_lock(" in adapter
+
+
+def test_pending_core_winner_is_bounded_expiring_and_single_use():
+    adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
+    assert "const MAX_PENDING_WINNERS := 5" in adapter
+    assert "const PENDING_TTL_SECONDS := 86400" in adapter
+    assert "_trim_pending()" in adapter
+    assert "_pending_winners.erase(tournament_id)" in adapter
+    assert "Unknown or expired Core tournament winner" in adapter
+    assert "var _tournament_sequence := 0" in adapter
+
+
+def test_core_public_candidate_preserves_reason_path_and_evidence():
+    adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
+    assert '"path": path' in adapter
+    assert '"reason": reason' in adapter
+    assert '"verification": candidate.get("verification", {})' in adapter
+    assert '"failure": candidate.get("failure", {})' in adapter

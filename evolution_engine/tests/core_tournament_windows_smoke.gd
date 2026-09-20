@@ -5,6 +5,7 @@ class FakeCorePipeline:
 
 	var ai := RefCounted.new()
 	var tools := RefCounted.new()
+	var _running := false
 	var propose_calls := 0
 	var verify_calls := 0
 	var review_calls := 0
@@ -76,7 +77,7 @@ class FakeCorePipeline:
 		}
 
 	func status() -> Dictionary:
-		return {"running": false}
+		return {"running": _running}
 
 func _init() -> void:
 	call_deferred("_run")
@@ -109,44 +110,50 @@ func _run() -> void:
 	if pipeline.store_calls != 0:
 		_fail("Level 2 tournament stored/promoted a winner before handoff", 6)
 		return
+	if pipeline._running:
+		_fail("Core pipeline lock was not released after tournament", 7)
+		return
 	if pipeline.verify_calls < 6 or pipeline.review_calls < 6:
-		_fail("Winner did not receive an independent second verification/review", 7)
+		_fail("Winner did not receive an independent second verification/review", 8)
 		return
 
 	var tournament_id := str(tournament.get("tournament_id", ""))
 	if tournament_id.is_empty():
-		_fail("Core tournament did not return a handoff token", 8)
+		_fail("Core tournament did not return a handoff token", 9)
 		return
 
 	var handoff: Dictionary = await adapter.prepare_winner(tournament_id)
 	if not bool(handoff.get("ok", false)):
-		_fail("Core promotion handoff failed: " + JSON.stringify(handoff), 9)
+		_fail("Core promotion handoff failed: " + JSON.stringify(handoff), 10)
 		return
 	if pipeline.store_calls != 1:
-		_fail("Promotion handoff did not store exactly one winner", 10)
+		_fail("Promotion handoff did not store exactly one winner", 11)
+		return
+	if pipeline._running:
+		_fail("Core pipeline lock was not released after handoff", 12)
 		return
 	if bool(handoff.get("applied_to_dev_checkout", true)):
-		_fail("Core promotion handoff applied code directly to dev checkout", 11)
+		_fail("Core promotion handoff applied code directly to dev checkout", 13)
 		return
 	if str(handoff.get("promotion", "")) != "signed_update":
-		_fail("Core promotion handoff bypassed signed-update authority", 12)
+		_fail("Core promotion handoff bypassed signed-update authority", 14)
 		return
 	if pipeline.verify_calls < 7 or pipeline.review_calls < 7:
-		_fail("Level 3 handoff did not cleanly reverify the winner", 13)
+		_fail("Level 3 handoff did not cleanly reverify the winner", 15)
 		return
 
 	var replay: Dictionary = await adapter.prepare_winner(tournament_id)
 	if bool(replay.get("ok", false)):
-		_fail("Consumed Core tournament winner could be replayed", 14)
+		_fail("Consumed Core tournament winner could be replayed", 16)
 		return
 
 	pipeline.busy = true
 	var update_blocked: Dictionary = await adapter.run("blocked during update", "scripts/agent_core.gd", 5)
 	if bool(update_blocked.get("ok", false)) or str(update_blocked.get("stage", "")) != "update_guard":
-		_fail("Signed update activity did not block Core tournament", 15)
+		_fail("Signed update activity did not block Core tournament", 17)
 		return
 
-	print("AURORA_CORE_TOURNAMENT_WINDOWS_SMOKE_OK population=5 handoff=1 second_verify=true signed_update=true")
+	print("AURORA_CORE_TOURNAMENT_WINDOWS_SMOKE_OK population=5 handoff=1 second_verify=true signed_update=true lock=true")
 	quit(0)
 
 func _fail(message: String, code: int) -> void:

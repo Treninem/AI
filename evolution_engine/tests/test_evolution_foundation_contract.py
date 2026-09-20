@@ -29,8 +29,8 @@ def test_existing_safety_foundation_remains_authoritative():
     update_guard = read("scripts/update_autonomy_guard.gd")
     assert "func snapshot(" in sandbox
     assert "func rollback(" in sandbox
-    assert "master_stop" in sandbox
     assert "func activate_staged(" in extensions
+    assert "func deactivate(" in extensions
     assert '"master_enabled": true' in autonomy
     assert "func set_master_enabled" in autonomy
     assert "func status()" in update_guard
@@ -52,40 +52,112 @@ def test_controller_requires_independent_evolution_evidence_gate():
     assert "evidence_gate.validate_tournament" in controller
     assert "population < MIN_MUTATIONS" in evidence
     assert "verified < MIN_MUTATIONS" in evidence
-    assert "scoreboard_incomplete" in evidence
-    assert "winner_not_verified" in evidence
-    assert "final_verification_missing" in evidence
+    assert "scoreboard_count_mismatch" in evidence
+    assert "scoreboard_duplicate_candidate" in evidence
+    assert "winner_missing_from_scoreboard" in evidence
+    assert "winner_is_not_scoreboard_leader" in evidence
+    assert "winner_stage_sha_mismatch" in evidence
+    assert "final_verification_not_ok" in evidence
     assert "unsafe_stage_path" in evidence
     assert "invalid_stage_sha256" in evidence
 
 
-def test_controller_fails_closed_on_master_stop_and_update_guard():
+def test_controller_fails_closed_on_master_stop_update_guard_and_managed_mode():
     controller = read("evolution_engine/core/evolution_controller.gd")
     foundation = read("evolution_engine/integration/foundation_adapter.gd")
+    policy = read("evolution_engine/safety/evolution_policy.gd")
+    managed = read("evolution_engine/safety/managed_mode_guard.gd")
     assert "master stop is active or unavailable" in controller
     assert "update_gate_status" in controller
+    assert "managed_mode.permits_evolution()" in controller
+    assert "Evolution managed mode is required" in controller
     assert "UpdateAutonomyGuard is unavailable" in foundation
     assert '"master_enabled": false' in foundation
-    assert '"updater_bound"' in foundation
+    assert 'settings.get("master_enabled", false)' in policy
+    assert 'coordinator.set("autonomous_hot_improvements", false)' in managed
 
 
-def test_controller_does_not_bypass_core_tournament_requirement():
+def test_managed_mode_blocks_legacy_direct_hot_activation_path():
     controller = read("evolution_engine/core/evolution_controller.gd")
-    assert "core_autonomous_promotion_enabled" in controller
-    assert "autonomous_core_promotion_enabled" in controller
-    assert "3..10 candidate Core tournament adapter" in controller
+    managed = read("evolution_engine/safety/managed_mode_guard.gd")
+    legacy = read("agent/autonomous_coordinator.gd")
+    assert "enter_managed_mode" in controller
+    assert "leave_managed_mode" in controller
+    assert "managed_mode.fail_closed" in controller
+    assert "permits_evolution" in managed
+    assert "extensions.activate_staged" in legacy
+    assert 'coordinator.set("autonomous_hot_improvements", false)' in managed
+
+
+def test_controller_does_not_bypass_core_tournament_or_release_authority():
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    assert "run_core_experiment" in controller
+    assert "core_tournament.run" in controller
+    assert "prepare_core_promotion" in controller
     assert "core_pipeline.run_candidate(" not in controller
+    assert 'result["release_authority_granted"] = false' in controller
+    assert '"release_authority_granted": false' in controller
 
 
-def test_learning_reuses_existing_memory_and_knowledge():
+def test_learning_reuses_existing_memory_and_knowledge_without_double_counting():
     bridge = read("evolution_engine/learning/experience_bridge.gd")
     context = read("evolution_engine/learning/context_bridge.gd")
     assert 'memory.remember(KIND' in bridge
-    assert "memory.retrieve(" in context
-    assert "knowledge.search(" in context
+    assert "candidate_ledger" in bridge
+    assert "decision" in bridge
+    assert "memory.retrieve(goal, safe_memory_limit, true, false)" in context
+    assert "knowledge.search(goal, safe_knowledge_limit)" in context
     assert "memory.learn(" not in bridge
     assert "knowledge.import_text(" not in bridge
     assert "import_knowledge_text(" not in bridge
+
+
+def test_candidate_ledger_records_rejected_and_verified_candidates():
+    ledger = read("evolution_engine/learning/candidate_ledger.gd")
+    assert "MAX_CANDIDATES := 10" in ledger
+    assert '"outcome": "verified" if bool(row.get("verified", false)) else "rejected"' in ledger
+    assert 'verification.get("stage"' in ledger
+    assert 'verification.get("error"' in ledger
+    assert 'candidate_id = "%s-%s"' in ledger
+
+
+def test_controller_has_bounded_experiment_registry_metrics_and_decisions():
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    registry = read("evolution_engine/core/experiment_registry.gd")
+    metrics = read("evolution_engine/evaluation/metrics_adapter.gd")
+    decision = read("evolution_engine/evaluation/decision_record.gd")
+    assert "AuroraEvolutionExperimentRegistry.new()" in controller
+    assert "AuroraEvolutionCandidateLedger.new()" in controller
+    assert "AuroraEvolutionMetricsAdapter.new()" in controller
+    assert "AuroraEvolutionDecisionRecord.new()" in controller
+    assert "MAX_RECENT := 64" in registry
+    assert "verification_ratio" in metrics
+    assert '"memory": {"available": false}' in metrics
+    assert "outcome" in decision
+    assert "release_authority_granted" in decision
+
+
+def test_async_recovery_invalidates_old_cycle_generation():
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    assert "var _cycle_epoch := 0" in controller
+    assert "var _active_cycle_token := 0" in controller
+    assert "_cycle_is_current" in controller
+    assert "_superseded_result" in controller
+    assert "cycle_superseded" in controller
+    assert "recover_stuck_cycle" in controller
+    assert "_cycle_epoch += 1" in controller
+
+
+def test_execution_and_core_locks_are_owned_and_explicitly_recoverable():
+    guard = read("evolution_engine/safety/execution_guard.gd")
+    core = read("evolution_engine/evaluation/core_tournament_adapter.gd")
+    assert "func stale_status(" in guard
+    assert "recover_if_stale" not in guard
+    assert "func emergency_release(" in guard
+    assert "var _owns_pipeline_lock := false" in core
+    assert "func _acquire_pipeline_lock(" in core
+    assert "func _release_pipeline_lock(" in core
+    assert "func emergency_release_owned_lock(" in core
 
 
 def test_evolution_isolated_from_release_paths():
@@ -122,21 +194,18 @@ def test_evolution_is_not_wired_into_release_runtime_or_workflows_yet():
         assert "AuroraEvolutionEngine" not in text
 
 
-def test_foundation_requires_existing_memory_retrieval_contract():
+def test_foundation_requires_existing_memory_and_extension_contracts():
     foundation = read("evolution_engine/integration/foundation_adapter.gd")
     assert '_require_method(missing, "memory", memory, "remember")' in foundation
     assert '_require_method(missing, "memory", memory, "retrieve")' in foundation
-
-
-def test_evolution_serializes_against_existing_autonomous_cycle_and_reuses_rollback():
-    controller = read("evolution_engine/core/evolution_controller.gd")
-    guard = read("evolution_engine/safety/execution_guard.gd")
-    foundation = read("evolution_engine/integration/foundation_adapter.gd")
-    assert 'coordinator.get("_cycle_running")' in guard
-    assert 'coordinator.set("autonomous_hot_improvements", false)' in guard
-    assert 'coordinator.set("autonomous_hot_improvements", _saved_hot_improvements)' in guard
-    assert "execution_guard.acquire()" in controller
-    assert "execution_guard.release()" in controller
-    assert "rollback_hot_extension" in controller
-    assert "extensions.deactivate(clean_id)" in controller
+    assert '_require_method(missing, "extensions", extensions, "activate_staged")' in foundation
     assert '_require_method(missing, "extensions", extensions, "deactivate")' in foundation
+
+
+def test_complete_cycle_entrypoint_records_analysis_and_decision():
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    assert "func run_evolution_cycle(" in controller
+    assert 'phase_changed.emit("cycle_analysis"' in controller
+    assert 'phase_changed.emit("cycle_experiment"' in controller
+    assert 'result["decision"] = decisions.build' in controller
+    assert 'result["cycle_complete"] = true' in controller
