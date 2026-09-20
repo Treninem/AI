@@ -55,6 +55,10 @@ func validate_tournament(result: Dictionary) -> Dictionary:
 		return {"ok": false, "reason": "invalid_stage_sha256"}
 	if sha256 != winner_sha:
 		return {"ok": false, "reason": "winner_stage_sha_mismatch"}
+	var winner_path := str(winner.get("path", "")).replace("\\", "/").strip_edges()
+	var result_path := str(result.get("path", "")).replace("\\", "/").strip_edges()
+	if not winner_path.is_empty() and not result_path.is_empty() and winner_path != result_path:
+		return {"ok": false, "reason": "winner_stage_path_mismatch", "winner_path": winner_path, "result_path": result_path}
 
 	var final_verification = result.get("final_verification", {})
 	if not final_verification is Dictionary or final_verification.is_empty():

@@ -5,6 +5,7 @@ const MIN_MUTATIONS := 3
 const MAX_MUTATIONS := 10
 const MAX_GENERATION_ATTEMPTS := 24
 const MAX_PENDING_WINNERS := 5
+const PENDING_TTL_SECONDS := 86400
 const STRATEGIES := [
 	"minimal regression-first hardening",
 	"edge-case and recovery robustness",
@@ -18,6 +19,7 @@ const STRATEGIES := [
 
 var pipeline
 var _pending_winners: Dictionary = {}
+var _tournament_sequence := 0
 var _owns_pipeline_lock := false
 var _pipeline_lock_acquired_at := 0
 
@@ -58,6 +60,7 @@ func run(goal: String, requested_target := "", requested_count := 5) -> Dictiona
 	return result
 
 func prepare_winner(tournament_id: String) -> Dictionary:
+	_trim_pending()
 	if not _pending_winners.has(tournament_id):
 		return {"ok": false, "stage": "handoff", "error": "Unknown or expired Core tournament winner"}
 	var preflight := _preflight(MIN_MUTATIONS)
@@ -263,10 +266,12 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 		}
 	final_verification["comparative_review"] = final_review
 
-	var tournament_id := "%d_%s_%s" % [
+	_tournament_sequence += 1
+	var tournament_id := "%d_%s_%s_%04d" % [
 		int(Time.get_unix_time_from_system()),
 		baseline_sha.substr(0, 10),
-		str(winner.get("sha256", "")).substr(0, 10)
+		str(winner.get("sha256", "")).substr(0, 10),
+		_tournament_sequence
 	]
 	_pending_winners[tournament_id] = {
 		"created_unix": int(Time.get_unix_time_from_system()),
@@ -413,6 +418,12 @@ func _compact_error(stage: String, value: Variant) -> Dictionary:
 	return {"stage": stage, "error": "invalid result"}
 
 func _trim_pending() -> void:
+	var now := int(Time.get_unix_time_from_system())
+	for key in _pending_winners.keys():
+		var row: Dictionary = _pending_winners[key]
+		var created := int(row.get("created_unix", 0))
+		if created <= 0 or now - created > PENDING_TTL_SECONDS:
+			_pending_winners.erase(key)
 	while _pending_winners.size() > MAX_PENDING_WINNERS:
 		var oldest_key := ""
 		var oldest_time := 9223372036854775807
