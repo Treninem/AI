@@ -4,6 +4,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+# CI rerun marker: durable completion polling v1.
 $installRoot = (Resolve-Path $InstallDir).Path
 $primaryExe = Join-Path $installRoot 'AuroraFox.exe'
 $consoleExe = Join-Path $installRoot 'AuroraFox.console.exe'
