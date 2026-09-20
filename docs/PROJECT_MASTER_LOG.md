@@ -2241,3 +2241,35 @@ REMAINING: add bounded install/import/query consumption of this exact pack on Wi
 BLOCKERS: current AuroraFox runtime imports JSONL files, not the outer tar.zst release artifact; installed cross-platform production-pack evidence does not yet exist.
 NEXT: design the smallest fail-closed streaming pack installer that verifies the pinned artifact and feeds shards through the existing transactional Knowledge importer without loading the corpus into RAM.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 76. Android benchmark ApkFlinger heap exhaustion
+
+### BEFORE
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; exact PR #92/head is `cf1422aac72643c78ac5070a803a4f83c9c3821a`; version remains `1.3.0.0`/Android code `100005`, accumulated MINOR `1.4.0.0` version-last. The unrelated owner-modified `assets/ui/aurorafox_background_master.png` remains outside this claim.
+
+Android Core Benchmark job `106067774199` checked out exact `cf1422a`, prepared the pinned 1,282,439,264-byte Core model and production native runtime, compiled Kotlin/Java/CMake for the benchmark, then failed only at `:app:packageBenchmark`. The complete job log establishes the nested cause: `java.lang.OutOfMemoryError: Java heap space` from `NioFileInterceptors.readAllBytes -> ZipFlinger BytesSource -> ApkFlinger.writeFile`. There is no `No space left on device` and no duplicate-entry error. The Core model is not packaged into this APK: `run_android_probe.sh` intentionally pushes it separately with `adb`, so adding a generated model asset would duplicate work and make the APK much larger.
+
+CLAIM: `benchmarks/core/android_probe/gradle.properties`, `.github/workflows/core-android-benchmark.yml`, `tests/test_core_android_benchmark_contract.py`, and this journal. Set a bounded packaging-capable Gradle heap with one worker, capture full `--info --stacktrace` output while preserving the real exit status, always upload it, and add a disk/memory diagnostic without destructive runner-image cleanup. Product runtime, model identity, APK contents and benchmark assertions stay unchanged.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact nested Android packaging failure identified from authoritative job log; disk/duplicate/model-copy guesses rejected.
+REMAINING: implement diagnostics/heap correction, run local contracts/YAML parse, publish, and require exact Android emulator evidence.
+BLOCKERS: hosted runner is the authoritative ApkFlinger/emulator boundary.
+NEXT: raise only the Gradle packaging heap, serialize workers, and retain the complete failure log.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: packaging receives a bounded 4 GiB heap and complete diagnostics
+
+The benchmark Gradle policy now sets `-Xmx4g`, a bounded 768 MiB metaspace and one worker. This directly addresses ZipFlinger reading a large packaged native file into heap while avoiding multiple memory-heavy workers. The workflow records disk, memory and the effective Gradle policy before packaging; Gradle runs with `--stacktrace --info`, tees the complete output to `artifacts/core-benchmark-gradle.log`, preserves the original failure exit code, and uploads both build log and capacity report under `if: always()`. No runner directories are deleted because the authoritative failure is heap exhaustion, not disk exhaustion.
+
+LOCAL EVIDENCE: all three Android benchmark contract functions pass by direct stdlib invocation; workflow YAML parses; Python compilation and `git diff --check` pass. The model remains outside the APK and is still SHA-verified then pushed into the installed app sandbox by the existing runner. No production source, native runtime, benchmark threshold or version changed.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact ApkFlinger OOM corrected at its JVM resource boundary with fail-visible diagnostics and regression assertions.
+REMAINING: publish the minimal BUILD candidate and require the exact Android benchmark APK/package/emulator report to pass.
+BLOCKERS: local environment does not reproduce the hosted Android SDK/NDK/emulator packaging boundary.
+NEXT: publish only the four claimed files, then wait for the exact Core Android Benchmark run rather than starting duplicate work.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%

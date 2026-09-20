@@ -163,11 +163,35 @@ jobs:
             android_plugin/plugin/src/main/assets/voice
           key: ${{ steps.native_cache.outputs.cache-primary-key }}
 
-      - name: Build benchmark app against production AuroraFox runtime module
+      - name: Record Android packaging capacity
         shell: bash
         run: |
           set -euo pipefail
-          gradle -p benchmarks/core/android_probe :app:assembleBenchmark --build-cache --no-daemon --stacktrace
+          mkdir -p artifacts
+          {
+            echo '=== disk ==='
+            df -h
+            echo '=== memory ==='
+            free -h
+            echo '=== Gradle JVM policy ==='
+            cat benchmarks/core/android_probe/gradle.properties
+          } | tee artifacts/core-benchmark-gradle-capacity.txt
+
+      - name: Build benchmark app against production AuroraFox runtime module
+        shell: bash
+        run: |
+          set -o pipefail
+          status=0
+          gradle \
+            -p benchmarks/core/android_probe \
+            :app:assembleBenchmark \
+            --build-cache \
+            --no-daemon \
+            --stacktrace \
+            --info 2>&1 | tee artifacts/core-benchmark-gradle.log || status=$?
+          if [ "$status" -ne 0 ]; then
+            exit "$status"
+          fi
           test -s benchmarks/core/android_probe/app/build/outputs/apk/benchmark/app-benchmark.apk
 
       - name: Enable KVM when available
@@ -200,5 +224,7 @@ jobs:
           path: |
             artifacts/core-benchmark-android.json
             artifacts/core-benchmark-android-logcat.txt
+            artifacts/core-benchmark-gradle.log
+            artifacts/core-benchmark-gradle-capacity.txt
           if-no-files-found: warn
           retention-days: 30

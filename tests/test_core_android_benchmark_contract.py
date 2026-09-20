@@ -42,6 +42,8 @@ def test_android_probe_uses_exact_native_core_and_has_no_network_permission() ->
     assert PINNED_NDK in runtime_gradle
     assert 'project(":runtime").projectDir = file("../../../android_plugin/plugin")' in settings
     assert "android.useAndroidX=true" in gradle_properties
+    assert "org.gradle.jvmargs=-Xmx4g" in gradle_properties
+    assert "org.gradle.workers.max=1" in gradle_properties
 
 
 def test_android_benchmark_workflow_runs_emulator_probe_in_one_shell() -> None:
@@ -58,6 +60,11 @@ def test_android_benchmark_workflow_runs_emulator_probe_in_one_shell() -> None:
     assert ":app:assembleDebug" not in workflow
     assert "outputs/apk/benchmark/app-benchmark.apk" in workflow
     assert "outputs/apk/benchmark/app-benchmark.apk" in runner
+    assert "--stacktrace" in workflow
+    assert "--info" in workflow
+    assert "tee artifacts/core-benchmark-gradle.log" in workflow
+    assert 'exit "$status"' in workflow
+    assert "artifacts/core-benchmark-gradle-capacity.txt" in workflow
 
     assert "set -euo pipefail" in runner
     assert "pkg='com.aurorafox.corebenchmark'" in runner
