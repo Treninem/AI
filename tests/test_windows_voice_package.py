@@ -220,6 +220,12 @@ class WindowsVoicePackageTests(unittest.TestCase):
         path = ROOT / 'tests/windows_installed_knowledge_pack_smoke.ps1'
         text = path.read_text(encoding='utf-8')
         self.assertIn("'--headless','--script','res://tests/knowledge_pack_installer_smoke.gd'", text)
+        self.assertIn('$fixtureComplete = $false', text)
+        self.assertIn('$probeState.status -eq \'ready\'', text)
+        self.assertIn('[bool]$probeManifest.production', text)
+        self.assertIn('durable_completion_observed = $fixtureComplete', text)
+        self.assertIn('stdout:', text)
+        self.assertNotIn('$process.WaitForExit(120000)', text)
         self.assertIn('-RemoteAddress ($externalIpv4 + $externalIpv6)', text)
         self.assertIn("-Filter 'aurorafox-smoke.json'", text)
         self.assertIn("$state.status -ne 'ready'", text)
