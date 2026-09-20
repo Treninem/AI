@@ -110,3 +110,13 @@ def test_permission_policy_matches_declared_levels_and_population():
     assert "const LEVEL_VERIFIED_ACTIVATION := 4" in policy
     assert "const MIN_MUTATIONS := 3" in policy
     assert "const MAX_MUTATIONS := 10" in policy
+
+
+def test_evolution_is_not_wired_into_release_runtime_or_workflows_yet():
+    project = read("project.godot")
+    assert "evolution_engine/" not in project
+    assert "AuroraEvolutionEngine" not in project
+    for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
+        text = workflow.read_text(encoding="utf-8")
+        assert "evolution_engine/" not in text
+        assert "AuroraEvolutionEngine" not in text
