@@ -6,6 +6,37 @@ const EVOLUTION_KIND := "evolution_experience"
 const MAX_MEMORY_ROWS := 12
 const MAX_KNOWLEDGE_REFS := 5
 const MAX_SIGNAL_ITEMS := 6
+const ALLOWED_STRATEGIES := [
+	"robustness_and_edge_cases",
+	"performance_and_low_allocations",
+	"precision_and_determinism",
+	"simplicity_and_maintainability",
+	"context_quality_and_reasoning",
+	"observability_and_diagnostics",
+	"composability_and_reuse",
+	"failure_resistance",
+	"input_validation",
+	"low_memory_behavior",
+	"minimal regression-first hardening",
+	"edge-case and recovery robustness",
+	"deterministic state consistency",
+	"performance and allocation efficiency",
+	"reasoning/retrieval quality without contract changes",
+	"failure isolation and graceful degradation",
+	"compatibility-preserving simplification",
+	"bounded validation and input robustness"
+]
+const ALLOWED_FAILURE_STAGES := [
+	"proposal", "validation", "source_contract", "platform",
+	"workspace", "workspace_create", "workspace_import_project",
+	"candidate_integrity", "runtime_contract_test", "godot_test",
+	"baseline", "baseline_benchmark", "candidate_benchmark",
+	"comparative_review", "winner_final_verification",
+	"winner_final_review", "evidence_gate", "update_guard",
+	"exclusive_guard", "managed_mode", "core_contract",
+	"handoff_validation", "handoff_verification", "handoff_review",
+	"handoff_store", "core_lock_superseded"
+]
 
 func derive(context: Dictionary) -> Dictionary:
 	var accepted_strategies: Dictionary = {}
@@ -32,13 +63,13 @@ func derive(context: Dictionary) -> Dictionary:
 				rollback_count += 1
 			elif category == "blocked":
 				blocked_count += 1
-			elif category == "rejected" and not stage.is_empty():
+			elif category == "rejected" and stage in ALLOWED_FAILURE_STAGES:
 				rejected_stages[stage] = int(rejected_stages.get(stage, 0)) + 1
 			elif category == "accepted":
 				var winner = payload.get("winner", {})
 				if winner is Dictionary:
 					var strategy := _safe_label(str(winner.get("strategy", "")))
-					if not strategy.is_empty():
+					if strategy in ALLOWED_STRATEGIES:
 						accepted_strategies[strategy] = int(accepted_strategies.get(strategy, 0)) + 1
 
 	var knowledge_refs: Array = []
@@ -107,6 +138,6 @@ func _safe_label(value: String) -> String:
 	var out := ""
 	for i in range(mini(clean.length(), 100)):
 		var ch := clean.substr(i, 1)
-		if ch.to_lower() in "abcdefghijklmnopqrstuvwxyz0123456789_- ":
+		if "abcdefghijklmnopqrstuvwxyz0123456789_- ".find(ch.to_lower()) >= 0:
 			out += ch
 	return out.strip_edges()

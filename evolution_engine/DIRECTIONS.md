@@ -67,6 +67,7 @@ Authoritative storage/retrieval:
 Tasks:
 - record successful, rejected, blocked and rollback experience through MemoryStore;
 - preserve candidate-level failed/rejected evidence;
+- derive future-cycle hints only from allowlisted fields of AuroraFox's own Evolution experience;
 - read existing Memory and Knowledge without duplicating the same source;
 - never auto-import Evolution output into canonical Core Knowledge.
 
