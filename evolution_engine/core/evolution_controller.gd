@@ -8,7 +8,9 @@ signal cycle_rejected(report: Dictionary)
 var foundation := AuroraEvolutionFoundationAdapter.new()
 var policy := AuroraEvolutionPolicy.new()
 var tournament := AuroraEvolutionTournamentAdapter.new()
+var evidence_gate := AuroraEvolutionEvidenceGate.new()
 var experience := AuroraEvolutionExperienceBridge.new()
+var context := AuroraEvolutionContextBridge.new()
 
 var _cycle_running := false
 var _last_report: Dictionary = {}
@@ -37,6 +39,7 @@ func bind_foundation(
 	)
 	tournament.bind(improver)
 	experience.bind(memory)
+	context.bind(memory, knowledge)
 	return foundation.inspect()
 
 func set_permission_level(value: int) -> int:
@@ -68,7 +71,8 @@ func analyze(goal: String) -> Dictionary:
 			"ok": bool(result.get("compatible", result.get("ok", false))),
 			"stage": "analysis",
 			"goal": goal,
-			"sync": result
+			"sync": result,
+			"experience_context": context.build(goal)
 		}
 	return {"ok": false, "stage": "analysis", "error": "coordinator returned invalid synchronization report"}
 
@@ -89,8 +93,17 @@ func run_experiment(goal: String, requested_count := 5) -> Dictionary:
 		return {"ok": false, "stage": "population", "error": "mutation population must be within 3..10"}
 	_cycle_running = true
 	phase_changed.emit("mutation_tournament", {"goal": goal, "requested": requested_count})
-	var result: Dictionary = await tournament.run(goal, requested_count)
+	var raw_result: Dictionary = await tournament.run(goal, requested_count)
 	_cycle_running = false
+
+	var result: Dictionary = raw_result.duplicate(true)
+	var evidence := evidence_gate.validate_tournament(raw_result)
+	result["evolution_evidence"] = evidence
+	if bool(raw_result.get("ok", false)) and not bool(evidence.get("ok", false)):
+		result["ok"] = false
+		result["stage"] = "evidence_gate"
+		result["error"] = "Existing tournament returned incomplete or unsafe promotion evidence: %s" % str(evidence.get("reason", "unknown"))
+
 	var event := "tournament_verified" if bool(result.get("ok", false)) else "tournament_rejected"
 	result["activation_performed"] = false
 	result["activation_requires_level"] = AuroraEvolutionPolicy.LEVEL_VERIFIED_ACTIVATION
@@ -111,14 +124,16 @@ func activate_verified_winner(goal: String, tournament_result: Dictionary) -> Di
 	var gate := _gate(true, true, true)
 	if not gate.get("ok", false):
 		return gate
-	if not bool(tournament_result.get("ok", false)):
-		return {"ok": false, "stage": "activation", "error": "cannot activate a rejected tournament"}
-	if not bool(tournament_result.get("verified", false)) or not bool(tournament_result.get("staged", false)):
-		return {"ok": false, "stage": "activation", "error": "winner is not verified and staged"}
-	var stage_path := str(tournament_result.get("stage_path", ""))
-	var sha256 := str(tournament_result.get("sha256", ""))
-	if stage_path.is_empty() or sha256.length() != 64:
-		return {"ok": false, "stage": "activation", "error": "winner staging evidence is incomplete"}
+	var evidence := evidence_gate.validate_tournament(tournament_result)
+	if not bool(evidence.get("ok", false)):
+		return {
+			"ok": false,
+			"stage": "activation_evidence",
+			"error": "Tournament evidence is insufficient for activation",
+			"details": evidence
+		}
+	var stage_path := str(evidence.get("stage_path", ""))
+	var sha256 := str(evidence.get("sha256", ""))
 	if foundation.extensions == null or not foundation.extensions.has_method("activate_staged"):
 		return {"ok": false, "stage": "activation", "error": "existing RuntimeExtensionManager is unavailable"}
 	phase_changed.emit("activation", {"goal": goal, "stage_path": stage_path})
@@ -127,6 +142,7 @@ func activate_verified_winner(goal: String, tournament_result: Dictionary) -> Di
 		return {"ok": false, "stage": "activation", "error": "RuntimeExtensionManager returned invalid result"}
 	var result: Dictionary = activated
 	result["stage"] = "activation"
+	result["evolution_evidence"] = evidence
 	result["experience"] = experience.record("winner_activation", goal, result)
 	_last_report = result.duplicate(true)
 	return result

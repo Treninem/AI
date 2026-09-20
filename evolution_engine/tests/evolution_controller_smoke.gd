@@ -26,6 +26,9 @@ class FakeImprover:
 		}
 	func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 		tournament_calls += 1
+		var scoreboard: Array = []
+		for i in range(requested_count):
+			scoreboard.append({"index": i, "verified": true, "score": 90.0 - float(i), "sha256": SHA64})
 		return {
 			"ok": true,
 			"verified": true,
@@ -35,6 +38,8 @@ class FakeImprover:
 			"verified_count": requested_count,
 			"stage_path": "user://generated/fake.gd",
 			"sha256": SHA64,
+			"scoreboard": scoreboard,
+			"final_verification": {"ok": true, "mode": "fake"},
 			"winner": {
 				"mutation_tag": "m01",
 				"strategy": "balanced",
@@ -57,11 +62,13 @@ class FakeMemory:
 	var records := 0
 	func remember(_kind: String, _content: String, _source := "", _importance := 0.55, _confidence := 0.85) -> void:
 		records += 1
+	func retrieve(_query: String, _limit := 8, _include_memory := true, _include_knowledge := true) -> Array:
+		return [{"id": "memory-1", "kind": "evolution_experience", "content": "prior safe result", "source": "test"}]
 
 class FakeKnowledge:
 	extends RefCounted
 	func search(_query: String, _limit := 6) -> Array:
-		return []
+		return [{"id": "knowledge-1", "kind": "knowledge", "text": "existing AuroraFox knowledge", "source": "test"}]
 
 class FakeCorePipeline:
 	extends RefCounted
@@ -129,53 +136,72 @@ func _run() -> void:
 		return
 
 	engine.set_permission_level(AuroraEvolutionPolicy.LEVEL_SANDBOX_EXPERIMENT)
+	var analysis: Dictionary = await engine.analyze("improve safely")
+	if not bool(analysis.get("ok", false)):
+		_fail("Analysis failed: " + JSON.stringify(analysis), 4)
+		return
+	var experience_context = analysis.get("experience_context", {})
+	if not experience_context is Dictionary or not bool(experience_context.get("ok", false)):
+		_fail("Existing Memory/Knowledge context was not reused", 5)
+		return
+
 	var tournament_result: Dictionary = await engine.run_experiment("improve safely", 5)
 	if not bool(tournament_result.get("ok", false)):
-		_fail("Level 2 tournament failed: " + JSON.stringify(tournament_result), 4)
+		_fail("Level 2 tournament failed: " + JSON.stringify(tournament_result), 6)
+		return
+	if not bool(tournament_result.get("evolution_evidence", {}).get("ok", false)):
+		_fail("Tournament evidence gate did not accept complete existing evidence", 7)
 		return
 	if bool(tournament_result.get("activation_performed", true)):
-		_fail("Experiment auto-activated a staged winner", 5)
+		_fail("Experiment auto-activated a staged winner", 8)
 		return
 	if extensions.activations != 0:
-		_fail("RuntimeExtensionManager was called before Level 4", 6)
+		_fail("RuntimeExtensionManager was called before Level 4", 9)
 		return
 	if improver.tournament_calls != 1 or memory.records != 1:
-		_fail("Existing SelfImprover/MemoryStore adapters were not used exactly once", 7)
+		_fail("Existing SelfImprover/MemoryStore adapters were not used exactly once", 10)
 		return
 
 	var denied_activation: Dictionary = engine.activate_verified_winner("improve safely", tournament_result)
 	if bool(denied_activation.get("ok", false)):
-		_fail("Level 2 unexpectedly allowed activation", 8)
+		_fail("Level 2 unexpectedly allowed activation", 11)
 		return
 
 	update_guard.paused = true
 	var update_blocked: Dictionary = await engine.run_experiment("blocked by update", 5)
 	if bool(update_blocked.get("ok", false)) or str(update_blocked.get("stage", "")) != "update_guard":
-		_fail("UpdateAutonomyGuard did not block Evolution experiment", 9)
+		_fail("UpdateAutonomyGuard did not block Evolution experiment", 12)
 		return
 	update_guard.paused = false
 
 	engine.set_permission_level(AuroraEvolutionPolicy.LEVEL_VERIFIED_ACTIVATION)
 	var activated: Dictionary = engine.activate_verified_winner("improve safely", tournament_result)
 	if not bool(activated.get("ok", false)) or extensions.activations != 1:
-		_fail("Verified Level 4 activation did not delegate to RuntimeExtensionManager", 10)
+		_fail("Verified Level 4 activation did not delegate to RuntimeExtensionManager", 13)
+		return
+
+	var forged := tournament_result.duplicate(true)
+	forged["sha256"] = "bad"
+	var forged_activation: Dictionary = engine.activate_verified_winner("forged", forged)
+	if bool(forged_activation.get("ok", false)) or str(forged_activation.get("stage", "")) != "activation_evidence":
+		_fail("Forged tournament evidence reached activation", 14)
 		return
 
 	settings.master = false
 	var master_blocked: Dictionary = await engine.analyze("must stop")
 	if bool(master_blocked.get("ok", false)) or str(master_blocked.get("stage", "")) != "master_stop":
-		_fail("Master stop did not fail closed", 11)
+		_fail("Master stop did not fail closed", 15)
 		return
 
 	settings.master = true
 	update_guard.updater_bound = false
 	var unbound_update_guard: Dictionary = await engine.run_experiment("must stop", 5)
 	if bool(unbound_update_guard.get("ok", false)) or str(unbound_update_guard.get("stage", "")) != "update_guard":
-		_fail("Unbound updater did not fail closed", 12)
+		_fail("Unbound updater did not fail closed", 16)
 		return
 
 	engine.queue_free()
-	print("AURORA_EVOLUTION_CONTROLLER_SMOKE_OK reuse=true master_stop=true update_guard=true staged_activation=true")
+	print("AURORA_EVOLUTION_CONTROLLER_SMOKE_OK reuse=true context=true evidence=true master_stop=true update_guard=true staged_activation=true")
 	quit(0)
 
 func _fail(message: String, code: int) -> void:

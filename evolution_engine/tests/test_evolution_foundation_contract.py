@@ -46,6 +46,19 @@ def test_controller_preserves_stage_then_activate_separation():
     assert "activate_staged(stage_path, sha256)" in controller
 
 
+def test_controller_requires_independent_evolution_evidence_gate():
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    evidence = read("evolution_engine/evaluation/evidence_gate.gd")
+    assert "evidence_gate.validate_tournament" in controller
+    assert "population < MIN_MUTATIONS" in evidence
+    assert "verified < MIN_MUTATIONS" in evidence
+    assert "scoreboard_incomplete" in evidence
+    assert "winner_not_verified" in evidence
+    assert "final_verification_missing" in evidence
+    assert "unsafe_stage_path" in evidence
+    assert "invalid_stage_sha256" in evidence
+
+
 def test_controller_fails_closed_on_master_stop_and_update_guard():
     controller = read("evolution_engine/core/evolution_controller.gd")
     foundation = read("evolution_engine/integration/foundation_adapter.gd")
@@ -64,9 +77,12 @@ def test_controller_does_not_bypass_core_tournament_requirement():
     assert "core_pipeline.run_candidate(" not in controller
 
 
-def test_learning_reuses_memory_without_bypassing_core_knowledge_curation():
+def test_learning_reuses_existing_memory_and_knowledge():
     bridge = read("evolution_engine/learning/experience_bridge.gd")
+    context = read("evolution_engine/learning/context_bridge.gd")
     assert 'memory.remember(KIND' in bridge
+    assert "memory.retrieve(" in context
+    assert "knowledge.search(" in context
     assert "memory.learn(" not in bridge
     assert "knowledge.import_text(" not in bridge
     assert "import_knowledge_text(" not in bridge
