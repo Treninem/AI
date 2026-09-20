@@ -2393,3 +2393,28 @@ REMAINING: publish once and require exact-head Windows installer execution/artif
 BLOCKERS: hosted Windows package boundary is pending; no local Linux substitute is claimed.
 NEXT: publish only the claimed workflows/helper/test/journal, then inspect the automatically triggered exact-head Windows run without manual duplicates.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+
+## 80. BEFORE: CodeSpecialist structured-response timeout resilience
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact PR #92/head is `8b9a253f897906049f232383581b2e42abd68850`; public version remains `1.3.0.0`/Android code `100005`, accumulated MINOR `1.4.0.0` version-last. The unrelated owner-modified `assets/ui/aurorafox_background_master.png` remains outside this claim.
+
+Authoritative Core Benchmarks run `35529016730`, job `106126221219`, artifact `10610379062` disproves the suggested network diagnosis: `guard_expected=true`, `external_probe_blocked=true`, probe HTTP `0`, bundled Core was self-primary, external AI was false and Ollama failures were zero. Six real SpecialistTeam operations passed. `generate_tests` instead consumed the exact 180-second request timeout and returned empty content; stderr records JSON parsing of that empty response. The generic local-model failure path then quarantined the still-running healthy model, so `reason_across_files` failed immediately with the circuit-open message. The offline firewall/probe gate remains unchanged.
+
+CLAIM: `scripts/desktop_local_runtime.gd`, `scripts/aurora_core_runtime.gd`, `benchmarks/core/code_specialist_smoke.gd`, focused Core specialist contracts and this journal. Strict-JSON specialist prompts disable hidden thinking while retaining the full product token ceiling; empty/transport responses are explicit request-scoped failures without noisy empty JSON parsing; a single request-scoped timeout does not quarantine a valid GGUF. Concise failed-condition diagnostics are added without weakening any operation, runtime or offline assertion.
+
+### AFTER: strict JSON uses visible output and request failures preserve model health
+
+Desktop Core now detects the explicit strict-JSON contract already used by every CodeSpecialist operation and sends `reasoning_effort=none`, while retaining the normal 2048-token ceiling. Ordinary complex conversations keep the reasoning path. HTTP transport timeout/empty/invalid-JSON responses are returned as explicit retryable request-scoped failures; empty bodies are no longer passed into `JSON.parse_string`. Missing `choices`/message payloads receive the same request classification.
+
+Aurora Core records that classification in attempt evidence and advances the model circuit breaker only for actual model-scoped failures. A single generation deadline can therefore fail visibly without falsely quarantining a valid, loaded GGUF and blocking the next independent operation. The smoke retains the actual firewall plus `1.1.1.1` probe and all eight operation/runtime assertions, and now prints concise condition values on failure.
+
+LOCAL EVIDENCE: 38 focused and integration Core contract functions pass by direct Python invocation; both changed Python modules compile; `git diff --check` passes. A Godot executable is not present in the fresh local workspace, so no local Godot parse result is claimed. Exact Windows bundled-Core behavior remains pending the automatically triggered hosted benchmark.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: evidence-backed timeout/circuit-breaker correction implemented without weakening the offline network or operation gates.
+REMAINING: require exact-head Windows CodeSpecialist and Windows installed Knowledge Pack evidence.
+BLOCKERS: hosted Windows runner owns the bundled engine/model timing boundary.
+NEXT: wait for attached CI rather than dispatching duplicate checks.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
