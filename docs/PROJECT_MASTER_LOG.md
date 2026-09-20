@@ -2418,3 +2418,31 @@ REMAINING: require exact-head Windows CodeSpecialist and Windows installed Knowl
 BLOCKERS: hosted Windows runner owns the bundled engine/model timing boundary.
 NEXT: wait for attached CI rather than dispatching duplicate checks.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 81. BEFORE: installed Windows Knowledge Pack completion polling
+
+Exact remote head `f61f24ee68e396f63b739da7f82c3d9f324ebf93` completed Core Benchmarks run `35534183981` successfully, proving the CodeSpecialist correction. Of 25 workflows, only Windows Package run `35534183886`, job `106146948740`, failed. Packaging, installer creation, historical bridges, silent install and installed app launch all passed. The sole failure is `windows_installed_knowledge_pack_smoke.ps1`: it blocked for 120 seconds on the launcher process and threw before reading its redirected logs or checking whether the isolated fixture/state had already completed.
+
+CLAIM: `tests/windows_installed_knowledge_pack_smoke.ps1`, its focused package contract, and this journal. Replace the blocking process wait with bounded polling of both process state and the fail-closed durable proof. Completion requires the unique isolated profile to contain the ready state, final `production=true` manifest and verified shard; only then may the harness terminate a lingering launcher wrapper and continue the existing strict validations. A timeout must include process state plus stdout/stderr. Do not weaken pack integrity, resume, production-floor, firewall or installed-executable requirements.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact failing workflow/job/step identified; Core benchmark fix accepted on the same SHA.
+REMAINING: implement bounded completion polling, run focused contracts, publish and require Windows Package rerun.
+BLOCKERS: installed Windows executable remains a hosted-runner boundary.
+NEXT: make the harness observe the durable result instead of assuming the wrapper process must exit first.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: durable installed result is authoritative, with bounded diagnostics
+
+The Windows harness now polls at 250 ms for at most 120 seconds. It accepts completion only after the unique isolated profile contains all three expected files, the state is `ready` with exactly one completed shard, and the final manifest is `production=true`; the unchanged post-checks still verify schema, pack ID, record count, shard SHA and production-floor exercise. If this proof appears while the exported console wrapper remains alive, the harness terminates only that already-completed wrapper and records `durable_completion_observed=true`. A process exit without proof still fails, and a timeout now includes PID plus captured stdout/stderr instead of the prior opaque message.
+
+LOCAL EVIDENCE: all 13 Windows package/voice/service contract tests pass, the Python test module compiles and `git diff --check` passes. PowerShell is not installed in this Linux workspace, so no local PowerShell parser result is claimed; the existing workflow parser step remains the first exact Windows check. No workflow, installer payload, product Knowledge implementation, firewall boundary or acceptance field was removed.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: installed Knowledge Pack harness no longer conflates a lingering exported wrapper with failure, while durable proof remains fail-closed.
+REMAINING: publish and require the exact Windows Package run to pass; full production-payload platform import remains separate.
+BLOCKERS: exact installed execution is Windows-hosted only.
+NEXT: publish the three-file correction once and wait for automatically attached CI.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
