@@ -2347,3 +2347,49 @@ REMAINING: publish this atomic candidate and require exact-head Android APK/emul
 BLOCKERS: no implementation blocker; hosted Android package/emulator acceptance is pending.
 NEXT: commit/publish only the four implementation/test files plus this journal, then wait for the single automatically triggered Android E2E instead of dispatching duplicate runs.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### ACCEPTED: exact installed Android pack evidence
+
+Exact head `94d83f6849e170f34705597d41bec918e61f6dfa` completed all 25 workflows successfully. Core Android E2E run `35524065614`, real installed job `106113115481`, checked out the exact SHA, built and installed the production-runtime APK, disabled external networking and passed all 12 required scenarios. Evidence artifact `10609264894` has ZIP SHA-256 `b4667943267f7bcc96555abe1ede02c7456e79ba691f71d8fb750aafc7a12276`. Its report records `installed_knowledge_pack` passed in `21.369ms`: status `ready`, one imported shard, one skipped shard on resume, `query_match=true`, `offline=true`, `external_ai_required=false`; the overall report is passed with no failed scenarios and exact `git_sha=94d83f6...`.
+
+This accepts the installed Android fixture boundary but does not claim a full 1.98 GiB mobile import. Release-train readiness remains 12/20 (60%) because the fixture closes adapter packaging/control flow, while the mandatory production-payload cross-platform evidence is still pending.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: all exact-head workflows green; installed Android APK verifies pack integrity, import, resume and local query fully offline.
+REMAINING: symmetric installed Windows pack evidence and full production-payload platform import/query; physical/human/server/version/signing boundaries remain.
+BLOCKERS: none for the Windows installed fixture.
+NEXT: add the installed Windows fixture to the existing Windows Package and signed Release paths without a new workflow.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 79. Installed Windows Knowledge Pack fixture in existing package/release gates
+
+### BEFORE
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; exact accepted PR #92/head is `94d83f6849e170f34705597d41bec918e61f6dfa`; public version remains `1.3.0.0`/Android code `100005`, accumulated MINOR `1.4.0.0` version-last. The unrelated owner-modified `assets/ui/aurorafox_background_master.png` remains outside the claim.
+
+CLAIM: add `tests/windows_installed_knowledge_pack_smoke.ps1`, wire it into the already existing installed phase and artifact set of `.github/workflows/windows-package-ci.yml` and `.github/workflows/release.yml`, extend `tests/test_windows_voice_package.py`, and update this journal. The installed executable must run the embedded real Godot pack smoke with isolated user data and external destinations firewall-blocked, then prove durable ready state and one completed shard. Do not add a workflow, alter product Core/Knowledge implementation, include the production payload, weaken other package checks or bump the version early.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: installed Android pack boundary is accepted on exact SHA; Windows package/release already perform one installed-app phase suitable for the symmetric fixture.
+REMAINING: implement and locally parse/contract-test the Windows helper, publish once, then require exact installed Windows CI evidence.
+BLOCKERS: Windows executable execution and firewall proof require hosted Windows CI; local Linux can only validate contracts and embedded GDScript behavior.
+NEXT: implement the minimal helper and reuse the current Windows install instead of rebuilding in a separate job.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: Windows package and signed-release paths require the embedded pack smoke
+
+Added one installed-only PowerShell harness. It selects the installed console wrapper when present, firewall-blocks external IPv4/IPv6 destinations for both wrapper and primary executable while preserving loopback, assigns a unique APPDATA/LOCALAPPDATA profile, and runs `res://tests/knowledge_pack_installer_smoke.gd` from the installed PCK. Acceptance requires exit code zero plus newly persisted manifest, shard and durable state under that isolated profile; state must be `ready`, contain exactly one completed shard whose SHA matches the actual file, and the fixture must have reached its final `production=true` below-1-GiB rejection check. The report records hashes, duration, offline/external-AI flags and diagnostics.
+
+The helper is parsed and invoked inside the existing Windows Package installed phase and is also mandatory in the signed Release Windows install phase. Its evidence joins the existing Windows artifact; there is no additional package build or workflow. The normal product implementation, Core authority, production pack bytes and version remain unchanged.
+
+LOCAL EVIDENCE: all 13 `tests.test_windows_voice_package` unittest cases pass, including new installed-pack/firewall/state/workflow contracts; both changed workflow YAML files parse; Python compilation, Godot 4.7.1 parse of the embedded smoke, and `git diff --check` pass. Local pytest is unavailable, so no pytest result is claimed. Windows installed execution remains pending the exact hosted package run.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: minimal installed Windows pack proof is implemented in both existing package/release paths with focused green local contracts.
+REMAINING: publish once and require exact-head Windows installer execution/artifact; the small fixture still does not substitute for the full production-payload import.
+BLOCKERS: hosted Windows package boundary is pending; no local Linux substitute is claimed.
+NEXT: publish only the claimed workflows/helper/test/journal, then inspect the automatically triggered exact-head Windows run without manual duplicates.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%

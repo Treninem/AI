@@ -21,6 +21,7 @@ on:
       - 'tests/windows_bounded_process*.ps1'
       - 'tests/windows_installed_voice_smoke.ps1'
       - 'tests/windows_installed_local_services_smoke.ps1'
+      - 'tests/windows_installed_knowledge_pack_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -44,6 +45,7 @@ on:
       - 'tests/windows_bounded_process*.ps1'
       - 'tests/windows_installed_voice_smoke.ps1'
       - 'tests/windows_installed_local_services_smoke.ps1'
+      - 'tests/windows_installed_knowledge_pack_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -107,7 +109,8 @@ jobs:
             '.\tests\windows_bounded_process.ps1',
             '.\tests\windows_bounded_process_smoke.ps1',
             '.\tests\windows_installed_voice_smoke.ps1',
-            '.\tests\windows_installed_local_services_smoke.ps1'
+            '.\tests\windows_installed_local_services_smoke.ps1',
+            '.\tests\windows_installed_knowledge_pack_smoke.ps1'
           )) {
             if (-not (Test-Path $script)) { throw "Required Windows/release helper missing: $script" }
             $tokens = $null
@@ -289,6 +292,7 @@ jobs:
           if ($installedSha -ne 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5') { throw 'Installed AuroraFox Core integrity check failed' }
           $runExit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'current-installed-app' -TimeoutSeconds 90
           if ($runExit -ne 0) { throw "Installed AuroraFox.exe exited with $runExit" }
+          .\tests\windows_installed_knowledge_pack_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-knowledge-pack'
           .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
           .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
@@ -333,5 +337,6 @@ jobs:
             dist/SHA256SUMS.txt
             artifacts/windows-offline-voice/**
             artifacts/windows-offline-services/**
+            artifacts/windows-offline-knowledge-pack/**
           if-no-files-found: error
           retention-days: 14

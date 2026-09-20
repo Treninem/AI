@@ -150,7 +150,9 @@ class WindowsVoicePackageTests(unittest.TestCase):
             self.assertNotIn('-SkipVoiceSetup', text)
             self.assertIn('windows_installed_voice_smoke.ps1 -InstallDir $installDir', text)
             self.assertIn('windows_installed_local_services_smoke.ps1 -InstallDir $installDir', text)
+            self.assertIn('windows_installed_knowledge_pack_smoke.ps1 -InstallDir $installDir', text)
             self.assertIn('artifacts/windows-offline-services/**', text)
+            self.assertIn('artifacts/windows-offline-knowledge-pack/**', text)
             self.assertIn('7z.exe', text)
         builder = (ROOT / 'voice/build_backend.ps1').read_text(encoding="utf-8")
         self.assertNotIn('$python -m pip', builder)
@@ -213,6 +215,22 @@ class WindowsVoicePackageTests(unittest.TestCase):
             actual = any(ip.version == first.version and first <= ip <= last for first, last in ranges)
             with self.subTest(installed_service_address=address):
                 self.assertEqual(actual, blocked)
+
+    def test_installed_windows_knowledge_pack_runs_embedded_offline_smoke(self):
+        path = ROOT / 'tests/windows_installed_knowledge_pack_smoke.ps1'
+        text = path.read_text(encoding='utf-8')
+        self.assertIn("'--headless','--script','res://tests/knowledge_pack_installer_smoke.gd'", text)
+        self.assertIn('-RemoteAddress ($externalIpv4 + $externalIpv6)', text)
+        self.assertIn("-Filter 'aurorafox-smoke.json'", text)
+        self.assertIn("$state.status -ne 'ready'", text)
+        self.assertIn('@($state.completed_shards).Count -ne 1', text)
+        self.assertIn("$manifest.schema -ne 'aurorafox.knowledge-pack.v1'", text)
+        self.assertIn("$manifest.pack_id -ne 'aurorafox-smoke'", text)
+        self.assertIn('-not [bool]$manifest.production', text)
+        self.assertIn('@($state.completed_shards)[0]) -ne $shardHash', text)
+        self.assertIn('AURORA_WINDOWS_INSTALLED_OFFLINE_KNOWLEDGE_PACK_OK', text)
+        self.assertIn('outbound_firewall_block = $true', text)
+        self.assertIn('external_ai_required = $false', text)
 
     def test_windows_installer_excludes_generated_api_venv_and_preflights_payload(self):
         iss = (ROOT / 'build/AuroraFox.iss').read_text(encoding='utf-8')
