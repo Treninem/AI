@@ -21,6 +21,25 @@ class KnowledgeOneGiBReleaseContractTests(unittest.TestCase):
         self.assertIn("ollama_required", text)
         self.assertIn("uses: actions/upload-artifact@v4", text)
 
+    def test_release_gate_prints_failure_report_and_retries_only_transport(self) -> None:
+        text = WORKFLOW.read_text(encoding="utf-8")
+        self.assertIn("status=0", text)
+        self.assertIn("|| status=$?", text)
+        self.assertIn("python -m json.tool artifacts/knowledge-1g/knowledge-1g.json", text)
+        self.assertIn('exit "$status"', text)
+        self.assertIn("--retry-all-errors", text)
+        self.assertIn("--retry 8", text)
+        self.assertIn("unzip -tq godot.zip", text)
+
+    def test_one_gib_gate_keeps_every_query_with_one_bounded_sample(self) -> None:
+        benchmark = (ROOT / "benchmarks" / "knowledge" / "knowledge_stress_benchmark.gd").read_text(encoding="utf-8")
+        self.assertIn("var search_samples := 1 if target_mb >= 1024 else 5", benchmark)
+        self.assertIn("range(bounded_samples)", benchmark)
+        self.assertIn("clampi(sample_count, 1, 5)", benchmark)
+        for name in ("empty", "exact_rare", "common", "multiple_tokens", "russian", "mixed_ru_en", "very_long", "malformed"):
+            self.assertIn(f'"name": "{name}"', benchmark)
+        self.assertIn("AURORA_KNOWLEDGE_SEARCH", benchmark)
+
 
 if __name__ == "__main__":
     unittest.main()

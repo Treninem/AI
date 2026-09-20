@@ -2173,3 +2173,37 @@ REMAINING: publish and accept a new exact UI Visual run; remaining external rele
 BLOCKERS: GitHub asset delivery remains external, but resets now have bounded retry and future cache hits avoid download.
 NEXT: publish minimal workflow/test/journal change, then wait for exact UI evidence rather than rerunning unrelated checks locally.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 74. BEFORE: remove 1 GiB search-sampling timeout instability
+
+Exact PR #92/head `f943958f246b5dcb47ae001fe915ad938ad89de0`; Knowledge run `35493971205`, job `106043170612`, artifact `10602033376` was downloaded and inspected. Godot installation succeeded. The actual report records a bounded timeout after `5400s`, return `-9`, peak RSS `901107712`, and the stage log proves generation/import completed (`1073742199` bytes, `1221299` generated records, `1221202` imported chunks, import `348486.762ms`) before the process remained in the search matrix. No final result/restart evidence was emitted.
+
+Comparison with the immediately preceding successful exact-parent run `35493583972`, job `106032591110`, artifact `10600946637` proves the gate is timing-fragile rather than a new product regression: its import process consumed `5050429ms`, including eight search cases repeated five times over a `3751630715`-byte store, and restart consumed another `271702ms`. Total work completed only about 78 seconds inside the 5400-second bound. Individual full-scan searches were approximately 115-188 seconds, so 40 repetitions dominate runtime.
+
+CLAIM: benchmark/workflow diagnostics only. Preserve all eight correctness queries, the 1 GiB threshold, restart proof, RSS ceiling and failure exit. For the >=1 GiB correctness/RSS gate run each query once; smaller performance/scaling profiles retain five samples. Emit per-query stage timing, print the JSON report before returning the captured benchmark status, and make the independent Godot download resilient without treating retry as a product pass.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact artifact cause established; curl/Godot misdiagnosis rejected.
+REMAINING: implement bounded sample policy, workflow report printing and regression coverage; run local contracts and publish one candidate.
+BLOCKERS: new exact remote runtime evidence is required after the repair.
+NEXT: reduce redundant 1 GiB scans without removing a correctness case or raising the timeout.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: 1 GiB keeps correctness coverage without 40 full scans
+
+`knowledge_stress_benchmark.gd` now selects one sample per search case only when `target_mb >= 1024`; all eight cases remain (`empty`, exact rare marker, common, multiple tokens, Russian, mixed RU/EN, very long and malformed), and every required query still verifies the expected source. Profiles below 1 GiB retain five samples and percentile evidence. Each case now prints its name, sample count, elapsed time and correctness, so a later interruption identifies the exact phase. The 5400-second bound, 1 GiB dataset, restart process, RSS limit and hard failure behavior are unchanged.
+
+The workflow captures the runner status, prints `knowledge-1g.json` when present, then exits with the original status. Missing report is a failure. Godot transport now uses HTTP/1.1, bounded connection/total timeouts, eight all-error retries with delay/max time, and ZIP integrity validation. Product tests are not retried.
+
+LOCAL EVIDENCE: six stdlib workflow/report identity tests pass; workflow YAML parses; Godot 4.7.1 downloaded with the new command and passed archive validation/version check. A real portable 1 MiB import + separate-process restart smoke passed: 1,048,655 dataset bytes, 1,201 imported records/chunks, `hard_correctness.passed=true`, `error_count=0`; its search report proves smaller profiles still execute five samples for every case and emits the new per-case diagnostics. Full editor import encountered only the pre-existing unrelated modified/corrupt owner background PNG and is not used as acceptance; that owner file remains untouched and unstaged.
+
+REMOTE STATE BEFORE PUBLICATION: exact `f943958` has 24 successful workflows including Windows Package `35493971222`; only Knowledge run `35493971205` is FAILURE, localized above. This change therefore targets the sole exact-head red gate.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: timeout cause fixed without weakening size/correctness/restart/RSS gates; failure diagnostics made visible.
+REMAINING: publish one candidate and inspect its exact 1 GiB report/artifact.
+BLOCKERS: remote 1 GiB runtime proof is pending; external release acceptance boundaries remain unchanged.
+NEXT: commit/push only these Knowledge files, then wait for the single serialized heavy gate rather than launching duplicates manually.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%

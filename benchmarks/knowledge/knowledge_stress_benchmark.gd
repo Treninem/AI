@@ -73,7 +73,11 @@ func _scenario_import(format: String, target_mb: int) -> Dictionary:
 	if format in ["jsonl", "csv", "txt", "json"] and not bool(imported.get("streaming", false)):
 		return {"ok": false, "error": "expected streaming path was not used", "import": imported, "dataset": generated}
 	print("AURORA_KNOWLEDGE_STAGE search imported_chunks=%d elapsed_ms=%.3f" % [int(imported.get("chunks", 0)), import_ms])
-	var searches := _search_matrix(store, str(generated.get("late_marker", "")), path)
+	# The 1 GiB release gate proves correctness, restart and bounded RSS. Five
+	# full scans per query made that gate consume almost its entire 90-minute
+	# process bound. Smaller performance profiles retain percentile sampling.
+	var search_samples := 1 if target_mb >= 1024 else 5
+	var searches := _search_matrix(store, str(generated.get("late_marker", "")), path, search_samples)
 	if not bool(searches.get("correct", false)):
 		return {"ok": false, "error": "search correctness failed", "search": searches, "import": imported, "dataset": generated}
 	var manager := KnowledgeManagerScript.new()
@@ -423,7 +427,7 @@ func _generate_dataset(path: String, format: String, target_bytes: int, marker_p
 	file.close()
 	return {"ok": true, "path": path, "format": format, "bytes": size, "size_mb": float(size) / float(MB), "records": count, "late_marker": last_marker, "deterministic": true}
 
-func _search_matrix(store, marker: String, expected_source: String) -> Dictionary:
+func _search_matrix(store, marker: String, expected_source: String, sample_count := 5) -> Dictionary:
 	var cases := [
 		{"name": "empty", "query": "", "require": false},
 		{"name": "exact_rare", "query": marker, "require": true},
@@ -436,10 +440,11 @@ func _search_matrix(store, marker: String, expected_source: String) -> Dictionar
 	]
 	var reports: Array = []
 	var correct := true
+	var bounded_samples := clampi(sample_count, 1, 5)
 	for case in cases:
 		var samples: Array[float] = []
 		var last: Array = []
-		for _i in range(5):
+		for _i in range(bounded_samples):
 			var started := Time.get_ticks_usec()
 			last = store.search(str(case.get("query", "")), 8)
 			samples.append(_elapsed_ms(started))
@@ -447,6 +452,7 @@ func _search_matrix(store, marker: String, expected_source: String) -> Dictionar
 		var found_expected := not required or _contains_source(last, expected_source)
 		if required and not found_expected:
 			correct = false
+		print("AURORA_KNOWLEDGE_SEARCH case=%s samples=%d elapsed_ms=%.3f correct=%s" % [str(case.get("name", "")), samples.size(), _sum(samples), str(found_expected)])
 		reports.append({
 			"name": case.get("name", ""),
 			"p50_ms": _percentile(samples, 0.50),
@@ -456,7 +462,13 @@ func _search_matrix(store, marker: String, expected_source: String) -> Dictionar
 			"result_count": last.size(),
 			"correct": found_expected
 		})
-	return {"correct": correct, "cases": reports}
+	return {"correct": correct, "cases": reports, "samples_per_case": bounded_samples}
+
+func _sum(values: Array[float]) -> float:
+	var total := 0.0
+	for value in values:
+		total += value
+	return total
 
 func _contains_source(items: Array, source: String) -> bool:
 	if source.is_empty():
