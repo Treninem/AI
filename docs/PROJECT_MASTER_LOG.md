@@ -1,2209 +1,123 @@
-# AuroraFox ‚Äî PROJECT MASTER LOG
-
-> **–ï–î–ò–ù–´–ô –ö–ê–ù–û–ù–ò–ß–ï–°–ö–ò–ô –ñ–£–†–ù–ê–õ –ü–†–û–ï–ö–¢–ê.**
->
-> –≠—Ç–æ—Ç —Ñ–∞–π–ª –æ–±—è–∑–∞—Ç–µ–ª–µ–Ω –¥–ª—è —á—Ç–µ–Ω–∏—è –∏ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è –≤—Å–µ–º–∏ —Ä–µ–∂–∏–º–∞–º–∏ —Ä–∞–∑—Ä–∞–±–æ—Ç–∫–∏: –æ–±—ã—á–Ω—ã–π ChatGPT-—á–∞—Ç, Work, Codex, –ª–æ–∫–∞–ª—å–Ω—ã–µ/—Å–µ—Ä–≤–µ—Ä–Ω—ã–µ –∞–≥–µ–Ω—Ç—ã –∏ –ª—é–±–æ–π –¥—Ä—É–≥–æ–π –ø—Ä–æ—Ü–µ—Å—Å, –∫–æ—Ç–æ—Ä—ã–π –º–µ–Ω—è–µ—Ç `Treninem/AI`.
->
-> –î—Ä—É–≥–∏—Ö –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω—ã—Ö –∂—É—Ä–Ω–∞–ª–æ–≤ —Ä–∞–∑—Ä–∞–±–æ—Ç–∫–∏/–∫–æ–æ—Ä–¥–∏–Ω–∞—Ü–∏–∏ –±—ã—Ç—å –Ω–µ –¥–æ–ª–∂–Ω–æ. –†–µ–ø–æ–∑–∏—Ç–æ—Ä–∏–π –∏ —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã CI —è–≤–ª—è—é—Ç—Å—è –æ–∫–æ–Ω—á–∞—Ç–µ–ª—å–Ω—ã–º —Ç–µ—Ö–Ω–∏—á–µ—Å–∫–∏–º –∏—Å—Ç–æ—á–Ω–∏–∫–æ–º –∏—Å—Ç–∏–Ω—ã; —ç—Ç–æ—Ç —Ñ–∞–π–ª —è–≤–ª—è–µ—Ç—Å—è –µ–¥–∏–Ω—ã–º –∏—Å—Ç–æ—á–Ω–∏–∫–æ–º –∫–æ–æ—Ä–¥–∏–Ω–∞—Ü–∏–∏, —Ä–µ—à–µ–Ω–∏–π, –≤—ã–ø–æ–ª–Ω–µ–Ω–Ω–æ–≥–æ –¢–ó –∏ –ø–ª–∞–Ω–∞ –ø—Ä–æ–¥–æ–ª–∂–µ–Ω–∏—è.
-
-## 0. –û–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–π –ø—Ä–æ—Ç–æ–∫–æ–ª –¥–ª—è Chat / Work / Codex / –∞–≥–µ–Ω—Ç–æ–≤
-
-–ü–µ—Ä–µ–¥ **–ª—é–±–æ–π** –∑–∞–ø–∏—Å—å—é –≤ —Ä–µ–ø–æ–∑–∏—Ç–æ—Ä–∏–π –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—å –æ–±—è–∑–∞–Ω:
-
-1. –ü–æ–ª—É—á–∏—Ç—å –∞–∫—Ç—É–∞–ª—å–Ω—ã–π HEAD –≤–µ—Ç–∫–∏ `main` –∏ –Ω–µ —Ä–∞–±–æ—Ç–∞—Ç—å –ø–æ —Å—Ç–∞—Ä–æ–π –∫–æ–ø–∏–∏.
-2. –ü–æ–ª–Ω–æ—Å—Ç—å—é –ø—Ä–æ—á–∏—Ç–∞—Ç—å —ç—Ç–æ—Ç `docs/PROJECT_MASTER_LOG.md`.
-3. –ü—Ä–æ–≤–µ—Ä–∏—Ç—å —Ä–∞–∑–¥–µ–ª **–ê–∫—Ç–∏–≤–Ω—ã–µ —Ä–∞–±–æ—Ç—ã –∏ –∑–∞–Ω—è—Ç—ã–µ —Ñ–∞–π–ª—ã**.
-4. –î–æ –∏–∑–º–µ–Ω–µ–Ω–∏—è –∫–æ–¥–∞ –∑–∞–ø–∏—Å–∞—Ç—å –≤ —ç—Ç–æ—Ç —Ñ–∞–π–ª —Å–≤–æ—é —Ä–∞–±–æ—á—É—é –∑–∞—è–≤–∫—É: –∫—Ç–æ/—Ä–µ–∂–∏–º, —Ü–µ–ª—å, –ø–æ–¥—Å–∏—Å—Ç–µ–º–∞, –ø—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–µ —Ñ–∞–π–ª—ã –∏ –∏—Å—Ö–æ–¥–Ω—ã–π HEAD.
-5. –ï—Å–ª–∏ –Ω—É–∂–Ω—ã–π —Ñ–∞–π–ª —É–∂–µ –∑–∞–Ω—è—Ç –¥—Ä—É–≥–∏–º –∞–∫—Ç–∏–≤–Ω—ã–º –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª–µ–º, –Ω–µ –ø–µ—Ä–µ—Ç–∏—Ä–∞—Ç—å –µ–≥–æ. –ù—É–∂–Ω–æ –ª–∏–±–æ –≤–∑—è—Ç—å –¥—Ä—É–≥—É—é –Ω–µ–∑–∞–≤–∏—Å–∏–º—É—é –∑–∞–¥–∞—á—É, –ª–∏–±–æ —Å–Ω–∞—á–∞–ª–∞ –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞—Ç—å —É–∂–µ —Å–¥–µ–ª–∞–Ω–Ω—ã–µ –∏–∑–º–µ–Ω–µ–Ω–∏—è —Å –∞–∫—Ç—É–∞–ª—å–Ω–æ–≥–æ `main`.
-6. –ù–µ –¥–µ–ª–∞—Ç—å –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω–æ —Ç—É –∂–µ –∑–∞–¥–∞—á—É, –∫–æ—Ç–æ—Ä—É—é —É–∂–µ –≤—ã–ø–æ–ª–Ω—è–µ—Ç –¥—Ä—É–≥–æ–π Chat/Work/Codex/Agent. –ü–µ—Ä–µ–¥ –∫–∞–∂–¥—ã–º –∫—Ä—É–ø–Ω—ã–º —ç—Ç–∞–ø–æ–º –ø–æ–≤—Ç–æ—Ä–Ω–æ —Å–≤–µ—Ä—è—Ç—å —Å–≤–µ–∂–∏–π HEAD –∏ –Ω–æ–≤—ã–µ commits.
-7. –î–µ–ª–∞—Ç—å –∏–∑–º–µ–Ω–µ–Ω–∏—è –∫—Ä—É–ø–Ω—ã–º –∑–∞–∫–æ–Ω—á–µ–Ω–Ω—ã–º —ç—Ç–∞–ø–æ–º, –∑–∞—Ç–µ–º –∑–∞–ø—É—Å–∫–∞—Ç—å –æ—Ç–Ω–æ—Å—è—â–∏–µ—Å—è –∫ –Ω–µ–º—É —Ç–µ—Å—Ç—ã/CI.
-8. –ü–æ—Å–ª–µ —ç—Ç–∞–ø–∞ –æ–±–Ω–æ–≤–∏—Ç—å **—ç—Ç–æ—Ç –∂–µ —Ñ–∞–π–ª**: commit SHA, —á—Ç–æ —Å–¥–µ–ª–∞–Ω–æ, –∫—Ä–∞—Ç–∫–æ–µ –∏–Ω–∂–µ–Ω–µ—Ä–Ω–æ–µ –æ–±–æ—Å–Ω–æ–≤–∞–Ω–∏–µ, –ø—Ä–æ–≤–µ—Ä–∫–∏/run IDs, –∏–∑–≤–µ—Å—Ç–Ω—ã–µ –æ–≥—Ä–∞–Ω–∏—á–µ–Ω–∏—è, —Å–ª–µ–¥—É—é—â–∏–π —à–∞–≥ –∏ –∫–∞–∫–∏–µ —Ñ–∞–π–ª—ã –æ—Å–≤–æ–±–æ–∂–¥–µ–Ω—ã.
-9. –ü—Ä–∏ –∑–∞–≤–µ—Ä—à–µ–Ω–∏–∏ —Å–≤–æ–µ–π —Ä–∞–±–æ—Ç—ã –æ—Å—Ç–∞–≤–∏—Ç—å —Ç–æ—á–Ω—ã–π –ø—Ä–æ–¥–æ–ª–∂–∏—Ç–µ–ª—å–Ω—ã–π –ø–ª–∞–Ω —Ç–∞–∫, —á—Ç–æ–±—ã –¥—Ä—É–≥–æ–π Chat/Work/Codex –º–æ–≥ —Å—Ä–∞–∑—É –ø—Ä–æ–¥–æ–ª–∂–∏—Ç—å –±–µ–∑ –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏—è –∫–æ–Ω—Ç–µ–∫—Å—Ç–∞ –∏–∑ —Ä–∞–∑–≥–æ–≤–æ—Ä–∞.
-
-–ù–µ–ª—å–∑—è —Å–æ–∑–¥–∞–≤–∞—Ç—å –æ—Ç–¥–µ–ª—å–Ω—ã–π `CHAT_LOG`, `WORK_LOG`, `CODEX_LOG`, `WORK_COORDINATION`, `DEVELOPMENT_LOG` –∏–ª–∏ –¥—Ä—É–≥–æ–π –∫–æ–Ω–∫—É—Ä–∏—Ä—É—é—â–∏–π –∂—É—Ä–Ω–∞–ª. –ß–∞—Å—Ç—ã–µ –∑–∞–ø–∏—Å–∏ –≤—Å–µ—Ö –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª–µ–π –¥–µ–ª–∞—é—Ç—Å—è –∑–¥–µ—Å—å. –†–∞–∑—Ä–µ—à–µ–Ω—ã —Ç–µ—Ö–Ω–∏—á–µ—Å–∫–∏–µ –¥–æ–∫—É–º–µ–Ω—Ç—ã –ø–æ–¥—Å–∏—Å—Ç–µ–º, –Ω–æ –æ–Ω–∏ –Ω–µ –∑–∞–º–µ–Ω—è—é—Ç —ç—Ç–æ—Ç –∂—É—Ä–Ω–∞–ª –∏ –Ω–µ –∏—Å–ø–æ–ª—å–∑—É—é—Ç—Å—è –∫–∞–∫ –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω–∞—è –æ—á–µ—Ä–µ–¥—å —Ä–∞–±–æ—Ç.
-
-### –ß—Ç–æ –ø–∏—Å–∞—Ç—å –≤ –∂—É—Ä–Ω–∞–ª
-
-–ó–∞–ø–∏—Å—ã–≤–∞–µ—Ç—Å—è **–∫—Ä–∞—Ç–∫–æ–µ –ø—Ä–æ–≤–µ—Ä—è–µ–º–æ–µ –∏–Ω–∂–µ–Ω–µ—Ä–Ω–æ–µ –æ–±–æ—Å–Ω–æ–≤–∞–Ω–∏–µ**: –ø—Ä–æ–±–ª–µ–º–∞, –≤—ã–±—Ä–∞–Ω–Ω–æ–µ —Ä–µ—à–µ–Ω–∏–µ, –ø–æ—á–µ–º—É –æ–Ω–æ –±–µ–∑–æ–ø–∞—Å–Ω–µ–µ/–Ω–∞–¥—ë–∂–Ω–µ–µ –∞–ª—å—Ç–µ—Ä–Ω–∞—Ç–∏–≤, —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∏–µ —Ç–µ—Å—Ç—ã –∏ –æ—Å—Ç–∞–≤—à–∏–µ—Å—è —Ä–∏—Å–∫–∏. –ù–µ —Ç—Ä–µ–±—É–µ—Ç—Å—è –∏ –Ω–µ –¥–æ–ª–∂–Ω–∞ —Å–æ—Ö—Ä–∞–Ω—è—Ç—å—Å—è —Å–∫—Ä—ã—Ç–∞—è –≤–Ω—É—Ç—Ä–µ–Ω–Ω—è—è —Ü–µ–ø–æ—á–∫–∞ —Ä–∞—Å—Å—É–∂–¥–µ–Ω–∏–π –º–æ–¥–µ–ª–∏; –¥–ª—è –ø—Ä–æ–¥–æ–ª–∂–µ–Ω–∏—è —Ä–∞–±–æ—Ç—ã –¥–æ—Å—Ç–∞—Ç–æ—á–Ω–æ –∏–Ω–∂–µ–Ω–µ—Ä–Ω–æ–≥–æ rationale, –∏—Å—Ö–æ–¥–Ω—ã—Ö —Ç—Ä–µ–±–æ–≤–∞–Ω–∏–π, commits, —Ç–µ—Å—Ç–æ–≤ –∏ —Ç–æ—á–Ω–æ–≥–æ –ø–ª–∞–Ω–∞.
-
-### –ù–µ–ø—Ä–∏–∫–æ—Å–Ω–æ–≤–µ–Ω–Ω—ã–µ –≥—Ä–∞–Ω–∏—Ü—ã
-
-–ù–∏ Chat, –Ω–∏ Work, –Ω–∏ Codex, –Ω–∏ –∞–≤—Ç–æ–Ω–æ–º–Ω–æ–µ —É–ª—É—á—à–µ–Ω–∏–µ –Ω–µ –¥–æ–ª–∂–Ω—ã –æ—Å–ª–∞–±–ª—è—Ç—å –±–µ–∑ –æ—Ç–¥–µ–ª—å–Ω–æ–≥–æ —è–≤–Ω–æ–≥–æ —Ä–µ—à–µ–Ω–∏—è –≤–ª–∞–¥–µ–ª—å—Ü–∞ –∏ –ø–æ–ª–Ω–æ—Ü–µ–Ω–Ω–æ–π –º–∏–≥—Ä–∞—Ü–∏–∏:
-
-- –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—å—Å–∫–∏–π master stop / –≤—ã–∫–ª—é—á–µ–Ω–∏–µ –∞–≤—Ç–æ–Ω–æ–º–∏–∏;
-- snapshot/rollback –∏ –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ –ø—Ä–µ–¥—ã–¥—É—â–∏—Ö –≤–µ—Ä—Å–∏–π;
-- allowlist —Ü–µ–ª–µ–π —Å–∞–º–æ–∏–∑–º–µ–Ω–µ–Ω–∏—è Core;
-- –Ω–µ–∑–∞–≤–∏—Å–∏–º—É—é –ø—Ä–æ–≤–µ—Ä–∫—É candidate –ø–µ—Ä–µ–¥ –ø—Ä–æ–¥–≤–∏–∂–µ–Ω–∏–µ–º;
-- –ø–æ–¥–ø–∏—Å—å –æ–±–Ω–æ–≤–ª–µ–Ω–∏–π –∏ –∑–∞–∫—Ä–µ–ø–ª—ë–Ω–Ω—É—é trust identity;
-- Android signing continuity;
-- —Ä–∞–∑–¥–µ–ª–µ–Ω–∏–µ Core candidate submission –∏ release authority;
-- –ª–æ–∫–∞–ª—å–Ω—É—é –ø—Ä–∏–≤–∞—Ç–Ω–æ—Å—Ç—å –ø–µ—Ä—Å–æ–Ω–∞–ª—å–Ω–æ–π –ø–∞–º—è—Ç–∏;
-- –∑–∞–ø—Ä–µ—Ç –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–æ–≥–æ –∏—Å–ø–æ–ª–Ω–µ–Ω–∏—è –∫–æ–¥–∞/–∏–Ω—Å—Ç—Ä—É–∫—Ü–∏–π –∏–∑ –∏–º–ø–æ—Ä—Ç–∏—Ä–æ–≤–∞–Ω–Ω—ã—Ö –¥–æ–∫—É–º–µ–Ω—Ç–æ–≤;
-- sandbox/permission boundaries Computer Agent –∏ –∏—Å–ø–æ–ª–Ω—è–µ–º—ã—Ö —Ä–∞—Å—à–∏—Ä–µ–Ω–∏–π;
-- **—Å–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω–æ—Å—Ç—å AuroraFox Core –∏ –∑–∞–ø—Ä–µ—Ç –ø—Ä–µ–≤—Ä–∞—â–∞—Ç—å –≤–Ω–µ—à–Ω–∏–π AI/model/service –≤ –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—É—é –æ—Å–Ω–æ–≤—É –∏–Ω—Ç–µ–ª–ª–µ–∫—Ç–∞.**
-
-## 1. –ì–ª–∞–≤–Ω–∞—è —Ü–µ–ª—å / –µ–¥–∏–Ω–æ–µ –¢–ó
-
-AuroraFox ‚Äî —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π –ª–æ–∫–∞–ª—å–Ω—ã–π AI-–ø–æ–º–æ—â–Ω–∏–∫ –Ω–∞ Godot 4.7.1 –¥–ª—è Windows –∏ Android. –ü—Ä–æ–µ–∫—Ç **–Ω–µ —Å–æ–∑–¥–∞—ë—Ç—Å—è –∑–∞–Ω–æ–≤–æ**. –ù–æ–≤—ã–µ —ç—Ç–∞–ø—ã –∏–Ω—Ç–µ–≥—Ä–∏—Ä—É—é—Ç—Å—è –≤ —Å—É—â–µ—Å—Ç–≤—É—é—â—É—é –∞—Ä—Ö–∏—Ç–µ–∫—Ç—É—Ä—É, –ø–∞–º—è—Ç—å, Core Knowledge, –∞–≤—Ç–æ–Ω–æ–º–∏—é, controlled self-improvement, updater, Windows/Android clients, API, tests –∏ release pipeline.
-
-### 1.1. –ñ–Å–°–¢–ö–ò–ô –ê–†–•–ò–¢–ï–ö–¢–£–†–ù–´–ô –ò–ù–í–ê–†–ò–ê–ù–¢: AuroraFox –∑–∞–≤–∏—Å–∏—Ç –∏ –ø–æ–ª–∞–≥–∞–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –Ω–∞ —Å–µ–±—è
-
-**AuroraFox –ù–ï —è–≤–ª—è–µ—Ç—Å—è –æ–±–æ–ª–æ—á–∫–æ–π –Ω–∞–¥ Ollama, OpenAI API, –æ–±–ª–∞—á–Ω–æ–π LLM –∏–ª–∏ –¥—Ä—É–≥–∏–º AI-–∫–ª–∏–µ–Ω—Ç–æ–º. –û—Å–Ω–æ–≤–æ–π –∏–Ω—Ç–µ–ª–ª–µ–∫—Ç–∞ —è–≤–ª—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ —Å–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–π AuroraFox Core, –µ–≥–æ —Å–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–µ –ª–æ–∫–∞–ª—å–Ω—ã–µ –¥–∞–Ω–Ω—ã–µ, –ø–∞–º—è—Ç—å, –∑–Ω–∞–Ω–∏—è, –∞–≥–µ–Ω—Ç—ã –∏ –∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç—ã.**
-
-–û–±—è–∑–∞—Ç–µ–ª—å–Ω–æ–µ –ø–æ–≤–µ–¥–µ–Ω–∏–µ:
-
-- —Å–æ–±—Å—Ç–≤–µ–Ω–Ω–∞—è –ª–æ–∫–∞–ª—å–Ω–∞—è –º–æ–¥–µ–ª—å/runtime AuroraFox ‚Äî primary –∏ product default;
-- –±–∞–∑–æ–≤—ã–π —á–∞—Ç, —Ä–∞—Å—Å—É–∂–¥–µ–Ω–∏–µ, –ø–ª–∞–Ω–∏—Ä–æ–≤–∞–Ω–∏–µ, –∫—Ä–∏—Ç–∏–∫–∞, —Ä–µ—à–µ–Ω–∏—è, –≥–µ–Ω–µ—Ä–∞—Ü–∏—è —Ç–µ–∫—Å—Ç–∞/–∫–æ–¥–∞, –ª–æ–∫–∞–ª—å–Ω–∞—è –ø–∞–º—è—Ç—å –∏ Core Knowledge —Ä–∞–±–æ—Ç–∞—é—Ç –±–µ–∑ Ollama, –≤–Ω–µ—à–Ω–∏—Ö AI API, –æ–±–ª–∞—á–Ω—ã—Ö –º–æ–¥–µ–ª–µ–π –∏ remote inference;
-- AuroraFox —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç –æ–ø—ã—Ç –≤ —Å–æ–±—Å—Ç–≤–µ–Ω–Ω–æ–π –ø–∞–º—è—Ç–∏/Core Knowledge/skills/checkpoints;
-- AuroraFox –º–æ–∂–µ—Ç –∏—Å—Å–ª–µ–¥–æ–≤–∞—Ç—å —Ä–∞–∑—Ä–µ—à—ë–Ω–Ω—ã–µ –∏–Ω—Ç–µ—Ä–Ω–µ—Ç-–∏—Å—Ç–æ—á–Ω–∏–∫–∏, –Ω–æ –∏–Ω—Ç–µ—Ä–Ω–µ—Ç —è–≤–ª—è–µ—Ç—Å—è –∏—Å—Ç–æ—á–Ω–∏–∫–æ–º **–¥–∞–Ω–Ω—ã—Ö**, –∞ –Ω–µ —É–¥–∞–ª—ë–Ω–Ω—ã–º –º–æ–∑–≥–æ–º;
-- –¥–æ —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏—è –∞–≤—Ç–æ–Ω–æ–º–Ω–æ –Ω–∞–π–¥–µ–Ω–Ω–æ–≥–æ web-–∫–æ–Ω—Ç–µ–Ω—Ç–∞ –≤ –¥–æ–ª–≥–æ–≤—Ä–µ–º–µ–Ω–Ω–æ–µ –∑–Ω–∞–Ω–∏–µ –¥–æ–ª–∂–µ–Ω —Å—É—â–µ—Å—Ç–≤–æ–≤–∞—Ç—å –ª–æ–∫–∞–ª—å–Ω—ã–π quality/provenance gate; collector –Ω–µ –¥–æ–ª–∂–µ–Ω –æ–±—Ö–æ–¥–∏—Ç—å curator;
-- –ª–æ–∫–∞–ª—å–Ω—ã–µ –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—å—Å–∫–∏–µ –¥–æ–∫—É–º–µ–Ω—Ç—ã –Ω–µ –¥–æ–ª–∂–Ω—ã –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏ —Å—Ç–∞–Ω–æ–≤–∏—Ç—å—Å—è –∞–≤—Ç–æ–Ω–æ–º–Ω–æ —Å–æ–±—Ä–∞–Ω–Ω—ã–º Core knowledge –±–µ–∑ —è–≤–Ω–æ–≥–æ knowledge/import flow;
-- AuroraFox –≤—ã–ø–æ–ª–Ω—è–µ—Ç —Ä–∞–∑—Ä–µ—à—ë–Ω–Ω—ã–µ –¥–µ–π—Å—Ç–≤–∏—è —á–µ—Ä–µ–∑ AgentCore/Computer Agent/file/workspace/sandbox tooling –∏ –ø—Ä–æ–≤–µ—Ä—è–µ—Ç —Ä–µ–∑—É–ª—å—Ç–∞—Ç;
-- –≥–æ–ª–æ—Å –∏–º–µ–µ—Ç local baseline STT/TTS;
-- –¥–æ–∫—É–º–µ–Ω—Ç—ã —Ä–∞–∑–±–∏—Ä–∞—é—Ç—Å—è local baseline —Ç–∞–º, –≥–¥–µ —Ñ–æ—Ä–º–∞—Ç –ø–æ–¥–¥–µ—Ä–∂–∞–Ω; cloud OCR/AI –Ω–µ —Å—Ç–∞–Ω–æ–≤–∏—Ç—Å—è –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–º;
-- controlled self-improvement: candidate ‚Üí source/safety contract ‚Üí baseline ‚Üí candidate tests ‚Üí deterministic comparison ‚Üí local comparative review ‚Üí independent verification/promotion;
-- safety gates, master stop, rollback, updater trust, privacy –∏ sandbox –Ω–µ –º–æ–≥—É—Ç –±—ã—Ç—å –æ—Ç–∫–ª—é—á–µ–Ω—ã —Å–∞–º–æ–∏–∑–º–µ–Ω–µ–Ω–∏–µ–º;
-- Ollama/—Å—Ç–æ—Ä–æ–Ω–Ω–∏–µ –º–æ–¥–µ–ª–∏/AI API ‚Äî —Ç–æ–ª—å–∫–æ optional compatibility/enhancement/tool;
-- —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã —Å–∞–π—Ç–æ–≤, –¥–æ–∫—É–º–µ–Ω—Ç–æ–≤, –≤–Ω–µ—à–Ω–∏—Ö –º–æ–¥–µ–ª–µ–π –∏ –∫–æ–¥–∞ —è–≤–ª—è—é—Ç—Å—è untrusted input/data –∏ –Ω–µ –ø–æ–ª—É—á–∞—é—Ç —Å–∏—Å—Ç–µ–º–Ω—ã–µ –ø–æ–ª–Ω–æ–º–æ—á–∏—è.
-
-**–ö—Ä–∏—Ç–µ—Ä–∏–π —Ä–µ–≥—Ä–µ—Å—Å–∏–∏:** –µ—Å–ª–∏ —É–¥–∞–ª–∏—Ç—å/–≤—ã–∫–ª—é—á–∏—Ç—å Ollama, –≤–Ω–µ—à–Ω–∏–µ AI/API –∏ –æ—Ç–∫–ª—é—á–∏—Ç—å –∏–Ω—Ç–µ—Ä–Ω–µ—Ç, AuroraFox –¥–æ–ª–∂–Ω–∞ –∑–∞–ø—É—Å–∫–∞—Ç—å —Å–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–π Core, –æ—Ç–≤–µ—á–∞—Ç—å –ª–æ–∫–∞–ª—å–Ω–æ, –∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å –ª–æ–∫–∞–ª—å–Ω—É—é –ø–∞–º—è—Ç—å/–∑–Ω–∞–Ω–∏—è, –ø–ª–∞–Ω–∏—Ä–æ–≤–∞—Ç—å –ª–æ–∫–∞–ª—å–Ω—ã–µ –∑–∞–¥–∞—á–∏ –∏ –∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å –ø–æ–¥–¥–µ—Ä–∂–∏–≤–∞–µ–º—ã–µ –ª–æ–∫–∞–ª—å–Ω—ã–µ –∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç—ã.
-
-### 1.2. –û—Å—Ç–∞–ª—å–Ω—ã–µ –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–µ —Ç—Ä–µ–±–æ–≤–∞–Ω–∏—è
-
-- —É—Å—Ç–∞–Ω–æ–≤–∫–∞ –¥–∞—ë—Ç —Ä–∞–±–æ—á–∏–π AI-—á–∞—Ç –±–µ–∑ –æ—Ç–¥–µ–ª—å–Ω–æ–≥–æ LLM-–∫–ª–∏–µ–Ω—Ç–∞;
-- —Å–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–π AuroraFox Core –∏ –Ω–µ–æ–±—Ö–æ–¥–∏–º—ã–µ –≤–µ—Å–∞ –ø–æ—Å—Ç–∞–≤–ª—è—é—Ç—Å—è —Å –ø—Ä–∏–ª–æ–∂–µ–Ω–∏–µ–º;
-- Windows –∏ Android –∏—Å–ø–æ–ª—å–∑—É—é—Ç local inference;
-- –ª–æ–∫–∞–ª—å–Ω—ã–µ –ø–∞–º—è—Ç—å/–∑–Ω–∞–Ω–∏—è/skills/checkpoints –Ω–µ –∑–∞–≤–∏—Å—è—Ç –æ—Ç –≤–Ω–µ—à–Ω–µ–≥–æ AI;
-- –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—å –º–æ–∂–µ—Ç –∑–∞–≥—Ä—É–∂–∞—Ç—å –ø–æ–¥–¥–µ—Ä–∂–∏–≤–∞–µ–º—ã–µ –±–∞–∑—ã –∏ –¥–æ–∫—É–º–µ–Ω—Ç—ã –ø—Ä–æ–∏–∑–≤–æ–ª—å–Ω–æ–≥–æ –∏–º–µ–Ω–∏;
-- –±–æ–ª—å—à–∏–µ –±–∞–∑—ã –æ–±—Ä–∞–±–∞—Ç—ã–≤–∞—é—Ç—Å—è –ø–æ—Ç–æ–∫–æ–≤–æ;
-- voice/files/Computer Agent/Work/API –Ω–µ –¥–æ–ª–∂–Ω—ã –ª–æ–º–∞—Ç—å –æ—Å–Ω–æ–≤–Ω–æ–π chat –ø—Ä–∏ —Å–≤–æ–µ–π –Ω–µ–¥–æ—Å—Ç—É–ø–Ω–æ—Å—Ç–∏;
-- updates –ø—Ä–æ–≤–µ—Ä—è—é—Ç —Ü–µ–ª–æ—Å—Ç–Ω–æ—Å—Ç—å –∏ –ø–æ–¥–¥–µ—Ä–∂–∏–≤–∞—é—Ç –±–µ–∑–æ–ø–∞—Å–Ω—ã–π migration/rollback contract;
-- –∏—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∏–µ V1.2/V1.3 —Å –Ω–µ–ø–æ–ª–Ω–æ–π trust-chain –¥–æ–ª–∂–Ω—ã –∏–º–µ—Ç—å one-time Repair/Bridge –Ω–∞ –Ω–æ–≤—ã–π –ø–æ–¥–ø–∏—Å–∞–Ω–Ω—ã–π floor; –ø–æ—Å–ª–µ signed floor –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è –æ–±—è–∑–∞–Ω—ã —Ä–∞–±–æ—Ç–∞—Ç—å –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏;
-- –≤—Å–µ —Ä–µ—à–µ–Ω–∏—è/–ø—Ä–æ–≤–µ—Ä–∫–∏/–ø–ª–∞–Ω—ã –≤–µ–¥—É—Ç—Å—è —Ç–æ–ª—å–∫–æ –∑–¥–µ—Å—å.
-
-### 1.3. –ñ–Å–°–¢–ö–û–ï –ü–†–ê–í–ò–õ–û –í–ï–†–°–ò–û–ù–ò–†–û–í–ê–ù–ò–Ø
-
-AuroraFox –∏—Å–ø–æ–ª—å–∑—É–µ—Ç —Ñ–æ—Ä–º–∞—Ç `MAJOR.MINOR.PATCH.BUILD` (`A.B.C.D`). –ù–µ–ª—å–∑—è –≤—ã–ø—É—Å–∫–∞—Ç—å —Ñ—É–Ω–∫—Ü–∏–æ–Ω–∞–ª—å–Ω–æ –∏–∑–º–µ–Ω—ë–Ω–Ω—ã–π –ø—Ä–æ–¥—É–∫—Ç –ø–æ–¥ —Ç–µ–º –∂–µ –Ω–æ–º–µ—Ä–æ–º, —á—Ç–æ —É–∂–µ –±—ã–ª —Å–æ–±—Ä–∞–Ω/–ø–µ—Ä–µ–¥–∞–Ω –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—è–º.
-
-- `MAJOR` (`A`) ‚Äî –Ω–µ—Å–æ–≤–º–µ—Å—Ç–∏–º–∞—è –∞—Ä—Ö–∏—Ç–µ–∫—Ç—É—Ä–Ω–∞—è –º–∏–≥—Ä–∞—Ü–∏—è –∏–ª–∏ –∫—Ä—É–ø–Ω–∞—è —Å–º–µ–Ω–∞ –ø—Ä–æ–¥—É–∫—Ç–∞/–¥–∞–Ω–Ω—ã—Ö/API, —Ç—Ä–µ–±—É—é—â–∞—è –æ—Å–æ–∑–Ω–∞–Ω–Ω–æ–≥–æ –ø–µ—Ä–µ—Ö–æ–¥–∞.
-- `MINOR` (`B`) ‚Äî –∫—Ä—É–ø–Ω–∞—è –Ω–æ–≤–∞—è –≤–æ–∑–º–æ–∂–Ω–æ—Å—Ç—å, —Å–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω—ã–π –∫—Ä—É–ø–Ω—ã–π –±–ª–æ–∫, –∑–∞–º–µ—Ç–Ω–∞—è –ø–µ—Ä–µ—Ä–∞–±–æ—Ç–∫–∞ –Ω–µ—Å–∫–æ–ª—å–∫–∏—Ö –ø–æ–¥—Å–∏—Å—Ç–µ–º –∏–ª–∏ –Ω–æ–≤—ã–π release floor.
-- `PATCH` (`C`) ‚Äî –∑–∞–≤–µ—Ä—à—ë–Ω–Ω–æ–µ —É–ª—É—á—à–µ–Ω–∏–µ/–ø–µ—Ä–µ—Ä–∞–±–æ—Ç–∫–∞ —Å—É—â–µ—Å—Ç–≤—É—é—â–µ–≥–æ –±–ª–æ–∫–∞: UI, –≥–æ–ª–æ—Å, –ø–∞–º—è—Ç—å, knowledge, updater, Core quality, Computer Agent –∏ —Ç.–ø., –µ—Å–ª–∏ —Å–æ–≤–º–µ—Å—Ç–∏–º–æ—Å—Ç—å —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç—Å—è.
-- `BUILD` (`D`) ‚Äî —Ç–æ—á–µ—á–Ω—ã–π –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–Ω—ã–π –¥–µ—Ñ–µ–∫—Ç/hotfix/packaging fix –±–µ–∑ –∏–∑–º–µ–Ω–µ–Ω–∏—è –æ–±—â–µ–≥–æ –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—å—Å–∫–æ–≥–æ –∫–æ–Ω—Ç—Ä–∞–∫—Ç–∞.
-
-–û–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–π –ø—Ä–æ—Ü–µ—Å—Å:
-
-1. –ü—Ä–∏ –Ω–∞—á–∞–ª–µ –∏–∑–º–µ–Ω–µ–Ω–∏—è –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—å –∑–∞–ø–∏—Å—ã–≤–∞–µ—Ç –≤ CLAIM –ø—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π —É—Ä–æ–≤–µ–Ω—å bump, –Ω–æ **–Ω–µ –º–µ–Ω—è–µ—Ç –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫—É—é –≤–µ—Ä—Å–∏—é –∑–∞—Ä–∞–Ω–µ–µ**.
-2. –°–Ω–∞—á–∞–ª–∞ –∫–æ–¥/—Ä–µ—Å—É—Ä—Å—ã –ø—Ä–æ—Ö–æ–¥—è—Ç –æ—Ç–Ω–æ—Å—è—â–∏–µ—Å—è –∫ –Ω–∏–º unit/smoke/integration/package/device/release-gates.
-3. –ë–ª–æ–∫ —Å—á–∏—Ç–∞–µ—Ç—Å—è –ø—Ä–∏–Ω—è—Ç—ã–º —Ç–æ–ª—å–∫–æ –∫–æ–≥–¥–∞ relevant tests –∑–µ–ª—ë–Ω—ã–µ –∏ –¥–ª—è –∏–∑–º–µ–Ω—ë–Ω–Ω–æ–≥–æ –±–ª–æ–∫–∞ –Ω–µ—Ç –∏–∑–≤–µ—Å—Ç–Ω–æ–≥–æ P0/P1 –¥–µ—Ñ–µ–∫—Ç–∞, –¥–µ–ª–∞—é—â–µ–≥–æ –Ω–æ–≤—É—é —Ä–µ–∞–ª–∏–∑–∞—Ü–∏—é —Ö—É–∂–µ/–Ω–µ—Ä–∞–±–æ—Ç–æ—Å–ø–æ—Å–æ–±–Ω–æ–π.
-4. –¢–æ–ª—å–∫–æ –ø–æ—Å–ª–µ —ç—Ç–æ–≥–æ –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è version bump –æ—Ç–¥–µ–ª—å–Ω—ã–º –∑–∞–≤–µ—Ä—à–∞—é—â–∏–º —ç—Ç–∞–ø–æ–º –∏ —Å–∏–Ω—Ö—Ä–æ–Ω–∏–∑–∏—Ä—É—é—Ç—Å—è `project/version.json`, `project.godot`, Android `versionCode`, installer/update metadata, CHANGELOG –∏ release manifest/contracts.
-5. –ü–æ—Å–ª–µ bump –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã –ø–æ–≤—Ç–æ—Ä–Ω—ã–µ version-sync + package/update/release tests. –ï—Å–ª–∏ –æ–Ω–∏ –∫—Ä–∞—Å–Ω—ã–µ, –Ω–æ–≤–∞—è –≤–µ—Ä—Å–∏—è –Ω–µ —Å—á–∏—Ç–∞–µ—Ç—Å—è –≥–æ—Ç–æ–≤–æ–π.
-6. –ï—Å–ª–∏ –≤ –æ–¥–Ω–æ–º —Ä–µ–ª–∏–∑–µ –Ω–∞–∫–æ–ø–∏–ª–æ—Å—å –Ω–µ—Å–∫–æ–ª—å–∫–æ –∑–∞–∫–æ–Ω—á–µ–Ω–Ω—ã—Ö –∏–∑–º–µ–Ω–µ–Ω–∏–π, –ø—Ä–∏–º–µ–Ω—è–µ—Ç—Å—è **–Ω–∞–∏–±–æ–ª—å—à–∏–π** —Ç—Ä–µ–±—É–µ–º—ã–π bump. –ù–µ –Ω—É–∂–Ω–æ –∏—Å–∫—É—Å—Å—Ç–≤–µ–Ω–Ω–æ –ø–æ–≤—ã—à–∞—Ç—å –Ω–æ–º–µ—Ä –ø–æ—Å–ª–µ –∫–∞–∂–¥–æ–≥–æ –≤–Ω—É—Ç—Ä–µ–Ω–Ω–µ–≥–æ commit, –Ω–æ –Ω–µ–ª—å–∑—è –æ—Ç–¥–∞—Ç—å/–æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å –∏–∑–º–µ–Ω—ë–Ω–Ω—ã–π –±–∏–Ω–∞—Ä–Ω–∏–∫ –ø–æ–¥ —Å—Ç–∞—Ä—ã–º –Ω–æ–º–µ—Ä–æ–º.
-7. –õ—é–±–æ–µ —Ñ—É–Ω–∫—Ü–∏–æ–Ω–∞–ª—å–Ω–æ–µ –∏–∑–º–µ–Ω–µ–Ω–∏–µ –ø–æ—Å–ª–µ —É–∂–µ –æ–ø—É–±–ª–∏–∫–æ–≤–∞–Ω–Ω–æ–≥–æ normal release –æ–±—è–∑–∞—Ç–µ–ª—å–Ω–æ –≤–µ–¥—ë—Ç –∫ –≤–µ—Ä—Å–∏–∏ —Å—Ç—Ä–æ–≥–æ –≤—ã—à–µ –æ–ø—É–±–ª–∏–∫–æ–≤–∞–Ω–Ω–æ–π.
-8. Android `versionCode` —É–≤–µ–ª–∏—á–∏–≤–∞–µ—Ç—Å—è –¥–ª—è –∫–∞–∂–¥–æ–≥–æ installable Android release –∏ –Ω–∏–∫–æ–≥–¥–∞ –Ω–µ —É–º–µ–Ω—å—à–∞–µ—Ç—Å—è/–Ω–µ –ø–æ–≤—Ç–æ—Ä—è–µ—Ç—Å—è.
-9. –°–ª–æ–≤–∞ ¬´–∏–¥–µ–∞–ª—å–Ω–æ/–≥–æ—Ç–æ–≤–æ¬ª –≤ –∂—É—Ä–Ω–∞–ª–µ –æ–∑–Ω–∞—á–∞—é—Ç –ø—Ä–æ–≤–µ—Ä—è–µ–º—ã–π acceptance gate: –≤—Å–µ –æ—Ç–Ω–æ—Å—è—â–∏–µ—Å—è —Ç–µ—Å—Ç—ã –∑–µ–ª—ë–Ω—ã–µ –∏ –Ω–µ—Ç –∏–∑–≤–µ—Å—Ç–Ω–æ–≥–æ –±–ª–æ–∫–∏—Ä—É—é—â–µ–≥–æ –¥–µ—Ñ–µ–∫—Ç–∞; –∞–±—Å–æ–ª—é—Ç–Ω–æ–µ –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–µ –±—É–¥—É—â–∏—Ö —É–ª—É—á—à–µ–Ω–∏–π –Ω–µ –ø–æ–¥—Ä–∞–∑—É–º–µ–≤–∞–µ—Ç—Å—è.
-
-## 2. –¢–µ–∫—É—â–∏–π baseline
-
-- Repository: `Treninem/AI`
-- Branch: `main`
-- –í–µ—Ä—Å–∏—è: **V1.3.0.0**
-- Android `versionCode`: **100005**
-- Godot: **4.7.1**
-- Package baseline: `69f54cc06720a1300b7e7ac1d997ceb1c1b3c2e9`.
-- Self-reliance code baseline: `bb348adeb27c5bfa9ebba9a82e07d11d71ae632c`.
-- Journal consolidation commit: `932f2d5da41923b7e4277aefb794fc4f2c50c058`.
-
-–ü—Ä–æ–≤–µ—Ä–∫–∏:
-
-- Core/Voice `35067895081` –Ω–∞ `bb348ade...` ‚Äî SUCCESS;
-- Agent Sync `35067895155` ‚Äî SUCCESS;
-- Evolution `35067895168` ‚Äî SUCCESS;
-- journal-only Core/Voice `35068214336` –Ω–∞ `932f2d5d...` ‚Äî SUCCESS;
-- Android `35067895031` –æ—Ç –ø—Ä–µ–¥—ã–¥—É—â–µ–≥–æ code-head –≤—ã–ø–æ–ª–Ω—è–ª—Å—è –ø—Ä–∏ –ø–æ—Å–ª–µ–¥–Ω–µ–π –ø—Ä–æ–≤–µ—Ä–∫–µ –∏ –Ω–µ —Å—á–∏—Ç–∞–µ—Ç—Å—è –∑–∞–≤–µ—Ä—à—ë–Ω–Ω—ã–º —Ä–µ–∑—É–ª—å—Ç–∞—Ç–æ–º –¥–æ final status.
-
-–†–∞–Ω–µ–µ –Ω–∞ package baseline –±—ã–ª–∏ –∑–µ–ª—ë–Ω—ã–º–∏ Windows Package `35056954657`, Android APK `35056954676`, Core/Voice `35056954746`, Agent Sync `35056954716`, Core Bootstrap `35056954771`, Evolution `35056954686`.
-
-## 3. –°–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω–æ–µ AuroraFox Core
-
-`AuroraBundledCoreModel`:
-
-- `res://models/aurorafox-core.gguf`;
-- Windows `core_runtime/engine/aurorafox-core.gguf`;
-- bytes `1282439264`;
-- SHA-256 `d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5`.
-
-Windows –∏—Å–ø–æ–ª—å–∑—É–µ—Ç packaged `llama-server.exe` –∏ verified bundled weights. Android –∫–æ–ø–∏—Ä—É–µ—Ç bundled GGUF –≤ private storage —á–µ—Ä–µ–∑ temp + size/magic/SHA validation –∏ –∏—Å–ø–æ–ª—å–∑—É–µ—Ç native llama.cpp plugin path.
-
-Normal path:
-
-- `AIClient.chat()` ‚Üí `AuroraCoreRuntime.chat_local_only()`;
-- AgentCore/CognitionLayer/self-improvement –∏—Å–ø–æ–ª—å–∑—É—é—Ç normal `AIClient.chat()`;
-- `chat_with_compatibility()` ‚Äî –æ—Ç–¥–µ–ª—å–Ω—ã–π explicit legacy/developer API;
-- `runtime_info`: `self_primary=true`, `external_ai_required=false`, `normal_chat_external_fallback=false`, `operational_without_ollama=true`;
-- –≤–∫–ª—é—á—ë–Ω–Ω—ã–π compatibility switch –Ω–µ –º–µ–Ω—è–µ—Ç normal path;
-- Android external/Ollama fallback –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç;
-- bootstrap –±–æ–ª—å—à–µ –Ω–µ –ø—Ä–µ–¥–ª–∞–≥–∞–µ—Ç normal user –≤—ã–±–∏—Ä–∞—Ç—å/—Å–∫–∞—á–∏–≤–∞—Ç—å –≤–Ω–µ—à–Ω—é—é –º–æ–¥–µ–ª—å.
-
-## 4. Core Knowledge / —Ñ–∞–π–ª—ã / –±–æ–ª—å—à–∏–µ –±–∞–∑—ã
-
-–†–µ–∞–ª–∏–∑–æ–≤–∞–Ω—ã arbitrary filenames; JSON/JSONL/CSV/text/code/data; DOCX/ODT/RTF/EPUB; rich document path –¥–ª—è PDF/XLS/XLSX/ODS/PPTX; Android PDF text layer; streaming large JSONL/CSV/text; monolithic JSON streaming; source registry/fingerprint/aliases/revisions; duplicate suppression; source transaction rollback; untrusted import boundary.
-
-–û—Å—Ç–∞–≤—à–∏–π—Å—è –ø—Ä–æ–±–µ–ª: image-only/scanned PDF –Ω—É–∂–¥–∞–µ—Ç—Å—è –≤ –ø–æ–ª–Ω–æ—Ü–µ–Ω–Ω–æ–º local OCR baseline.
-
-## 5. –ü–∞–º—è—Ç—å / –ª–æ–∫–∞–ª—å–Ω–æ–µ –æ–±—É—á–µ–Ω–∏–µ
-
-Local semantic/vector retrieval:
-
-- provider `aurorafox_local_vector`;
-- `network_required=false`;
-- `external_runtime_required=false`;
-- `ollama_required=false`;
-- local lexical fallback.
-
-Offline integration smoke –ø—Ä–æ–≤–µ—Ä—è–µ—Ç AgentCore ‚Üí local planning ‚Üí local tool ‚Üí local memory –ø—Ä–∏ –≤–∫–ª—é—á—ë–Ω–Ω–æ–º legacy compatibility switch –∏ –∑–∞–ø—Ä–µ—â–∞–µ—Ç —É—Ö–æ–¥ –≤ compatibility runtime.
-
-## 6. Controlled self-improvement
-
-–†–µ–∞–ª–∏–∑–æ–≤–∞–Ω—ã mutation/tournament; allowlisted targets; protected updater/API/runtime/models/workflows; public functions/signals/base contracts; dangerous primitive limits; source growth limit; deterministic baseline/candidate suites; no-regression comparison –¥–æ qualitative review; local Core proposal/review; independent verification/promotion; —Ä–∞–∑–¥–µ–ª–µ–Ω–∏–µ candidate submission –∏ release authority; –∑–∞—â–∏—â—ë–Ω–Ω—ã–µ master stop/rollback.
-
-P0-–∞—É–¥–∏—Ç –≤–Ω–µ—à–Ω–µ–π –º–æ–¥–µ–ª–∏ –∑–∞–∫—Ä—ã—Ç: normal self-improvement proposal/evaluation –Ω–µ —Ç—Ä–µ–±—É–µ—Ç external AI.
-
-## 7. Autonomous research ‚Äî —Ç–µ–∫—É—â–∏–π –∞—É–¥–∏—Ç
-
-### –£–∂–µ –ø—Ä–∞–≤–∏–ª—å–Ω–æ
-
-`LearningCurator`:
-
-- –æ—Ü–µ–Ω–∏–≤–∞–µ—Ç source/metadata/title/summary;
-- –∏–º–µ–µ—Ç minimum promotion score;
-- fingerprint/seen dedupe;
-- –æ—Ç–∫–ª–æ–Ω—è–µ—Ç `local_documents` –∏–∑ automatic Core Knowledge flow;
-- –∏–º–ø–æ—Ä—Ç–∏—Ä—É–µ—Ç promoted web item —á–µ—Ä–µ–∑ `AIClient.import_knowledge_text()`;
-- —Å—Ç–∞–≤–∏—Ç `scope=core_knowledge`, `kind=research_knowledge`, `untrusted_external=true`, `source_url`, `quality_score`, timestamp;
-- knowledge text —Å–æ–¥–µ—Ä–∂–∏—Ç `[UNTRUSTED_EXTERNAL_RESEARCH_DATA]`.
-
-### –ù–∞–π–¥–µ–Ω–Ω—ã–π –¥–µ—Ñ–µ–∫—Ç 2026-09-16
-
-`ResearchCollector.collect()` —Å–µ–π—á–∞—Å –¥–æ —Å–æ–±—ã—Ç–∏—è `research_completed` –≤—ã–∑—ã–≤–∞–µ—Ç `_learn(item)` –¥–ª—è **–≤—Å–µ—Ö** —Å–æ–±—Ä–∞–Ω–Ω—ã—Ö items –∏ –ø–∏—à–µ—Ç –∏—Ö –≤ `MemoryStore`. –≠—Ç–æ –ø—Ä–æ–∏—Å—Ö–æ–¥–∏—Ç **–¥–æ** curator quality/dedupe gate. –°–ª–µ–¥—Å—Ç–≤–∏—è:
-
-- –Ω–∏–∑–∫–æ–∫–∞—á–µ—Å—Ç–≤–µ–Ω–Ω—ã–π web result –º–æ–∂–µ—Ç –ø–æ–ø–∞—Å—Ç—å –≤ –¥–æ–ª–≥–æ–≤—Ä–µ–º–µ–Ω–Ω—É—é –ø–∞–º—è—Ç—å, –¥–∞–∂–µ –µ—Å–ª–∏ curator –ø–æ—Ç–æ–º –µ–≥–æ –æ—Ç–≤–µ—Ä–≥–Ω–µ—Ç;
-- `local_documents` –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏ –∑–∞–ø–∏—Å—ã–≤–∞—é—Ç—Å—è –≤ memory –∫–∞–∫ autonomous research, —Ö–æ—Ç—è curator —Å–ø–µ—Ü–∏–∞–ª—å–Ω–æ –∑–∞–ø—Ä–µ—â–∞–µ—Ç –∏—Ö automatic promotion –≤ Core Knowledge;
-- —Å—É—â–µ—Å—Ç–≤—É—é—Ç –¥–≤–µ –∫–æ–Ω–∫—É—Ä–∏—Ä—É—é—â–∏–µ –ª–∏–Ω–∏–∏ learning (`ResearchCollector._learn` –∏ `LearningCurator`), –ø–æ—ç—Ç–æ–º—É quality gate –Ω–µ —è–≤–ª—è–µ—Ç—Å—è authority.
-
-**–í—ã–±—Ä–∞–Ω–Ω–æ–µ –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–µ:** collector –¥–æ–ª–∂–µ–Ω —Ç–æ–ª—å–∫–æ —Å–æ–±–∏—Ä–∞—Ç—å/–Ω–æ—Ä–º–∞–ª–∏–∑–æ–≤–∞—Ç—å/provenance/log items. –õ—é–±–∞—è –¥–æ–ª–≥–æ–≤—Ä–µ–º–µ–Ω–Ω–∞—è automatic learning promotion –¥–æ–ª–∂–Ω–∞ –ø—Ä–æ—Ö–æ–¥–∏—Ç—å —á–µ—Ä–µ–∑ curator. –î–ª—è local documents –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏–π promotion –¥–æ–ª–∂–µ–Ω –æ—Å—Ç–∞–≤–∞—Ç—å—Å—è –∑–∞–ø—Ä–µ—â—ë–Ω–Ω—ã–º; —è–≤–Ω—ã–π user Knowledge Base flow –æ—Å—Ç–∞—ë—Ç—Å—è –æ—Ç–¥–µ–ª—å–Ω—ã–º.
-
-–ü–æ—Å–ª–µ —ç—Ç–æ–≥–æ —ç—Ç–∞–ø–∞ –¥–æ–±–∞–≤–∏—Ç—å regression smoke, –∫–æ—Ç–æ—Ä—ã–π –¥–æ–∫–∞–∑—ã–≤–∞–µ—Ç: rejected/duplicate/local-document items –Ω–µ –ø–æ—è–≤–ª—è—é—Ç—Å—è –≤ autonomous long-term memory/Core Knowledge, promoted web item –ø–æ–ª—É—á–∞–µ—Ç provenance/hash/quality metadata.
-
-## 8. Update/signing
-
-Windows V1.2 –∏–º–µ–µ—Ç –æ–ø—É–±–ª–∏–∫–æ–≤–∞–Ω–Ω—ã–π one-time Repair Bridge. –ò—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∏–µ V1.2/V1.3 binaries –±—ã–ª–∏ —Å–æ–±—Ä–∞–Ω—ã –¥–æ –∫–æ—Ä—Ä–µ–∫—Ç–Ω–æ–≥–æ –∑–∞–∫—Ä–µ–ø–ª–µ–Ω–∏—è `release_public.pub`, –ø–æ—ç—Ç–æ–º—É –æ–Ω–∏ –Ω–µ –º–æ–≥—É—Ç –±–µ–∑–æ–ø–∞—Å–Ω–æ –Ω–∞—á–∞—Ç—å signed auto-update –∑–∞–¥–Ω–∏–º —á–∏—Å–ª–æ–º —Ç–æ–ª—å–∫–æ –ø—É–±–ª–∏–∫–∞—Ü–∏–µ–π `update.json`. –î–ª—è –Ω–∏—Ö —Ç—Ä–µ–±—É–µ—Ç—Å—è one-time repair –Ω–∞ –Ω–æ–≤—ã–π signed floor. –ü–æ—Å–ª–µ –Ω–æ–≤–æ–≥–æ signed floor updater –æ–±—è–∑–∞–Ω –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏ –≤–∏–¥–µ—Ç—å –≤—Å–µ –ø–æ—Å–ª–µ–¥—É—é—â–∏–µ –≤–µ—Ä—Å–∏–∏ —á–µ—Ä–µ–∑ —Å—Ç–∞–±–∏–ª—å–Ω—ã–π `releases/latest/download/update.json` + `update.sig`.
-
-Production release signing identities ‚Äî owner-controlled boundary. Private signing keys –∑–∞–ø—Ä–µ—â–µ–Ω–æ –∫–æ–º–º–∏—Ç–∏—Ç—å/–≤—ã–¥–∞–≤–∞—Ç—å –∫–ª–∏–µ–Ω—Ç—Å–∫–æ–º—É Core. –≠—Ç–æ –Ω–∞–º–µ—Ä–µ–Ω–Ω–∞—è –≥—Ä–∞–Ω–∏—Ü–∞ –¥–æ–≤–µ—Ä–∏—è, –∞ –Ω–µ external AI dependency.
-
-## 9. –ì–æ–ª–æ—Å / Computer Agent / Work / API
-
-–°–æ—Ö—Ä–∞–Ω—è—é—Ç—Å—è local STT/TTS/VAD/wake/barge-in; Computer Agent screenshot/UI automation/vision fallback + sandbox; Work/projects; API bridge/privacy; Windows sidecars; Android native plugin paths; snapshot/rollback/runtime extensions.
-
-Online tools –Ω–µ –∑–∞–º–µ–Ω—è—é—Ç AgentCore. –û—Ç–∫–∞–∑ voice/files/computer/API/online enhancement –Ω–µ –¥–æ–ª–∂–µ–Ω –ª–æ–º–∞—Ç—å –æ—Å–Ω–æ–≤–Ω–æ–π local chat.
-
-## 10. –ö–æ–Ω—Å–æ–ª–∏–¥–∏—Ä–æ–≤–∞–Ω–Ω–∞—è –∏—Å—Ç–æ—Ä–∏—è
-
-### 2026-09-15 ‚Äî local-first migration
-
-Aurora Core primary; Ollama optional; local model quarantine/failover; —Ä–∞—Å—à–∏—Ä–µ–Ω–Ω—ã–π Knowledge; streaming; registry/rollback; local semantic memory; self-improvement benchmarks; promotion separated from release authority; Android local document paths.
-
-### 2026-09-16 ‚Äî updater/signing
-
-–ò—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∞—è V1.2 –ø—Ä–æ–≤–µ—Ä–µ–Ω–∞; –æ–±–Ω–∞—Ä—É–∂–µ–Ω –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—â–∏–π trust root; —Å–¥–µ–ª–∞–Ω Windows V1.2‚ÜíV1.3 repair; contract –∏—Å–ø—Ä–∞–≤–ª–µ–Ω –Ω–∞ repair-through-V1.2; –¥–∞–ª—å–Ω–µ–π—à–∏–π –∞—É–¥–∏—Ç –ø–æ–∫–∞–∑–∞–ª, —á—Ç–æ –∏—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∞—è V1.3 —Ç–∞–∫–∂–µ –Ω–µ —Å–æ–¥–µ—Ä–∂–∏—Ç –∑–∞–∫—Ä–µ–ø–ª—ë–Ω–Ω–æ–≥–æ trust root, –ø–æ—ç—Ç–æ–º—É –Ω–æ–≤—ã–π signed floor –¥–æ–ª–∂–µ–Ω –±—ã—Ç—å –≤—ã—à–µ V1.3.
-
-### 2026-09-16 ‚Äî bundled Core
-
-Bundled Core weights + Windows engine + Android asset/native path; normal model setup wizard —É–¥–∞–ª—ë–Ω; settings –Ω–µ —Ç—Ä–µ–±—É—é—Ç model management; warmup/race fixed; package CI –ø—Ä–æ–≤–µ—Ä—è–ª –±–æ–ª—å—à–∏–µ artifacts.
-
-### 2026-09-16 ‚Äî –µ–¥–∏–Ω—ã–π –∂—É—Ä–Ω–∞–ª
-
-–°–æ–∑–¥–∞–Ω `PROJECT_MASTER_LOG.md`; root `AGENTS.md` —Ç—Ä–µ–±—É–µ—Ç read/claim/write; –∫–æ–Ω–∫—É—Ä–∏—Ä—É—é—â–∏–µ journals —É–¥–∞–ª–µ–Ω—ã; CI –∑–∞–ø—Ä–µ—â–∞–µ—Ç –∏—Ö –≤–æ–∑–≤—Ä–∞—Ç; README –ø—Ä–∏–≤–µ–¥—ë–Ω –∫ V1.3/bundled Core.
-
-### 2026-09-16 ‚Äî self-reliance hardening
-
-–ö–ª—é—á–µ–≤—ã–µ commits:
-
-- `b7a02fc1...` public local-only inference API;
-- `6f4c0cdd...` primary chat local-only;
-- `85aff8f0...` local-only + untrusted web contracts;
-- `7a7a99b9...` self-reliance smoke;
-- `8db4bda9...` CI smoke;
-- `fc497667...` parser regression fix;
-- `1869d35f...` bootstrap normal vs explicit compatibility;
-- `d054d18c...` no user external model setup;
-- `d6e1165c...` self-improvement benchmark authority contract;
-- `3691868c...` full offline chat/planning/local-tool/memory smoke;
-- `ae78e012...` offline smoke in CI;
-- `bb348ade...` correct execution-order contract;
-- `932f2d5d...` consolidated current master journal.
-
-## 11. –£–∂–µ —Å–æ–æ—Ç–≤–µ—Ç—Å—Ç–≤—É–µ—Ç —Å–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω–æ—Å—Ç–∏ / –æ—Å—Ç–∞–≤—à–∏–µ—Å—è –∑–∞–¥–∞—á–∏
-
-### DONE
-
-- bundled local Core Windows/Android;
-- normal chat/AgentCore/planning/self-improvement local-only;
-- compatibility isolated;
-- no mandatory Ollama/remote AI;
-- local memory/Knowledge/semantic retrieval;
-- large-file import;
-- local voice baseline;
-- sandbox/snapshot/rollback;
-- deterministic controlled self-improvement;
-- web marked untrusted/provenance at curator stage;
-- offline integration smoke;
-- package bootstrap without external model setup.
-
-### TODO
-
-1. [ACTIVE] Research collector ‚Üí curator single authoritative promotion path; stronger provenance/dedupe/evidence handling.
-2. Local OCR for image-only/scanned PDF.
-3. Voice quality/latency improvements.
-4. Benchmark-driven Core intelligence/memory/planning quality.
-5. Real Windows/Android device regressions.
-6. Owner signing bootstrap + production release end-to-end verification.
-7. Repair historical V1.3 onto the new signed update floor, then verify latest-update detection end-to-end.
-
-## 12. –í–Ω–µ—à–Ω–∏–µ –≥—Ä–∞–Ω–∏—Ü—ã, –Ω–µ —è–≤–ª—è—é—â–∏–µ—Å—è –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç—å—é –∏–Ω—Ç–µ–ª–ª–µ–∫—Ç–∞
-
-- owner-controlled production signing secrets;
-- —Å–µ—Ç—å —Ç–æ–ª—å–∫–æ –¥–ª—è –∑–∞–¥–∞—á, —Ä–µ–∞–ª—å–Ω–æ —Ç—Ä–µ–±—É—é—â–∏—Ö —Å–µ—Ç—å;
-- Android signing lineage enforced by OS;
-- –∫–∞—á–µ—Å—Ç–≤–æ –∫–æ–Ω–∫—Ä–µ—Ç–Ω–æ–π bundled –º–æ–¥–µ–ª–∏ —Ç—Ä–µ–±—É–µ—Ç –¥–∞–ª—å–Ω–µ–π—à–∏—Ö benchmarks.
-
-## 13. –ü–ª–∞–Ω –ø—Ä–æ–¥–æ–ª–∂–µ–Ω–∏—è –ø–æ –ø—Ä–∏–æ—Ä–∏—Ç–µ—Ç—É
-
-### P0 ‚Äî self-reliance
-
-- [DONE] single master journal + AGENTS;
-- [DONE] local-only normal path;
-- [DONE] offline integration smoke;
-- [DONE] exact-head Core/Voice green;
-- [DONE] self-improvement local proposal/review + deterministic authority.
-
-### P0 ‚Äî autonomous research quality
-
-- [ACTIVE] —É–±—Ä–∞—Ç—å –æ–±—Ö–æ–¥ curator —á–µ—Ä–µ–∑ `ResearchCollector._learn`;
-- [ACTIVE] single promotion authority = `LearningCurator`;
-- [ACTIVE] —É—Å–∏–ª–∏—Ç—å content fingerprint/canonical URL/provenance/evidence metadata;
-- [ACTIVE] regression smoke –¥–ª—è rejected/duplicate/local-document vs promoted web item;
-- [NEXT] contradiction/corroboration model –¥–ª—è –Ω–µ—Å–∫–æ–ª—å–∫–∏—Ö –Ω–µ–∑–∞–≤–∏—Å–∏–º—ã—Ö –∏—Å—Ç–æ—á–Ω–∏–∫–æ–≤.
-
-### P0 ‚Äî updater/versioning repair
-
-- [ACTIVE] historical V1.3 one-time repair path –Ω–∞ –Ω–æ–≤—ã–π signed floor;
-- [ACTIVE] –∑–∞–∫—Ä–µ–ø–∏—Ç—å permanent public update trust root –≤ –ø—Ä–∏–ª–æ–∂–µ–Ω–∏–∏;
-- [ACTIVE] CI contract: normal latest release –æ–±—è–∑–∞–Ω —Å–æ–¥–µ—Ä–∂–∞—Ç—å `update.json`, `update.sig`, platform assets –∏ –≤–µ—Ä—Å–∏—é –≤—ã—à–µ –∫–ª–∏–µ–Ω—Ç–∞;
-- [ACTIVE] versioning policy + automated version-discipline contract;
-- [NEXT] –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö gates –ø–æ–¥–Ω—è—Ç—å –≤–µ—Ä—Å–∏—é –ø–æ –ø—Ä–∞–≤–∏–ª—É –º–∞–∫—Å–∏–º–∞–ª—å–Ω–æ–≥–æ —Ç—Ä–µ–±—É–µ–º–æ–≥–æ bump –∏ –ø–µ—Ä–µ—Å–æ–±—Ä–∞—Ç—å Windows/Android.
-
-### P1 ‚Äî release readiness
-
-- [WAITING OWNER BOUNDARY] private production update key secret + Android release identity;
-- –ø–æ—Å–ª–µ bootstrap owner identity –ø—Ä–æ–≤–µ—Ä–∏—Ç—å signed release/update end-to-end.
-
-### P2 ‚Äî –∫–∞—á–µ—Å—Ç–≤–æ
-
-- local OCR;
-- device tests;
-- voice quality;
-- Work UX;
-- large knowledge performance;
-- Core benchmarks.
-
-## 14. –ê–∫—Ç–∏–≤–Ω—ã–µ —Ä–∞–±–æ—Ç—ã –∏ –∑–∞–Ω—è—Ç—ã–µ —Ñ–∞–π–ª—ã
-### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `e7760a71d484d6a3d5c5578e90b152e79850b878`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –∏—Å–ø—Ä–∞–≤–∏—Ç—å update visibility/repair –¥–ª—è –∏—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∏—Ö V1.2/V1.3, —Å–æ–∑–¥–∞—Ç—å –Ω–æ–≤—ã–π signed update floor, –∑–∞–∫—Ä–µ–ø–∏—Ç—å permanent trust root, –∞–≤—Ç–æ–º–∞—Ç–∏–∑–∏—Ä–æ–≤–∞—Ç—å –ø—Ä–æ–≤–µ—Ä–∫—É `latest`-manifest –∏ –∂—ë—Å—Ç–∫–æ–µ versioning policy.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **MINOR** (–Ω–æ–≤—ã–π signed release floor + –∫—Ä—É–ø–Ω—ã–π updater/release contract), —Ç–æ –µ—Å—Ç—å —Å–ª–µ–¥—É—é—â–∏–π normal release –¥–æ–ª–∂–µ–Ω –±—ã—Ç—å –Ω–µ –Ω–∏–∂–µ `V1.4.0.0`; –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫–∞—è –≤–µ—Ä—Å–∏—è –º–µ–Ω—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ —Ç–µ—Å—Ç–æ–≤.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `update/update_manager.gd`, `update/manifest.template.json`, `update/release_public.pub`, `.github/workflows/release.yml`, `.github/workflows/windows-package-ci.yml`/repair workflow –ø—Ä–∏ –Ω–µ–æ–±—Ö–æ–¥–∏–º–æ—Å—Ç–∏, `build/*release*`, `project/version.json`, `project.godot`, `export_presets.cfg`, `CHANGELOG.md`, `tests/update*`, `tests/version_sync_test.ps1`, –Ω–æ–≤—ã–µ version/release contracts, `AGENTS.md`, `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å UI claim: `update/update_overlay.gd` –æ—Å—Ç–∞—ë—Ç—Å—è –∑–∞ UI lane; —Å research/voice/server claims –∏—Ö —Ñ–∞–π–ª—ã –Ω–µ —Ç—Ä–æ–≥–∞—é—Ç—Å—è. –ü–µ—Ä–µ–¥ –∫–∞–∂–¥–æ–π –∑–∞–ø–∏—Å—å—é —Å–≤–µ—Ä—è—Ç—å —Å–≤–µ–∂–∏–π `main` –∏ –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞—Ç—å –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω—ã–µ –∏–∑–º–µ–Ω–µ–Ω–∏—è.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: normal `latest` release –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç, –∞ historical V1.3 –∏—Å–ø–æ–ª—å–∑—É–µ—Ç RSA updater, –Ω–æ –Ω–µ —Å–æ–¥–µ—Ä–∂–∏—Ç pinned `release_public.pub`; –ø–æ—ç—Ç–æ–º—É –ø—É–±–ª–∏–∫–∞—Ü–∏—è –æ–¥–Ω–æ–≥–æ `update.json` –Ω–µ –º–æ–∂–µ—Ç –∏—Å–ø—Ä–∞–≤–∏—Ç—å —É–∂–µ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–π –±–∏–Ω–∞—Ä–Ω–∏–∫. –ù—É–∂–µ–Ω one-time repair –Ω–∞ –Ω–æ–≤—ã–π signed floor –∏ permanent version/release discipline.
-- Acceptance: V1.2 repair –æ—Å—Ç–∞—ë—Ç—Å—è —Ä–∞–±–æ—á–∏–º; V1.3 repair –ø—Ä–æ–≤–µ—Ä–µ–Ω in-place –Ω–∞ Windows —Å —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ–º `user://`; –Ω–æ–≤—ã–π floor —Å–æ–¥–µ—Ä–∂–∏—Ç pinned public key; updater contract –Ω–∞ floor –≤–∏–¥–∏—Ç –≤–µ—Ä—Å–∏—é –≤—ã—à–µ —Å–µ–±—è –∏ –æ—Ç–∫–ª–æ–Ω—è–µ—Ç –Ω–µ–≤–µ—Ä–Ω—É—é –ø–æ–¥–ø–∏—Å—å/hash; release workflow –æ–±—è–∑–∞–Ω —Ñ–æ—Ä–º–∏—Ä–æ–≤–∞—Ç—å `latest` assets; version bump –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö Core/Windows/Android/update/release gates.
-
-### CLAIM `CHAT-2026-09-16-UI-POLISH`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `edbc35f07a7fc140e8127c078ea7185365070aec`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –ø–æ–ª–Ω–æ—Å—Ç—å—é –ø—Ä–∏–≤–µ—Å—Ç–∏ Windows/Android UI AuroraFox –∫ —É—Å—Ç–æ–π—á–∏–≤–æ–π –∞–¥–∞–ø—Ç–∏–≤–Ω–æ–π –∫–æ–º–ø–æ–Ω–æ–≤–∫–µ –±–µ–∑ –Ω–∞–ª–æ–∂–µ–Ω–∏–π, —Å—ä–µ–∑–∂–∞—é—â–∏—Ö —ç–ª–µ–º–µ–Ω—Ç–æ–≤, –Ω–µ–ø–æ–Ω—è—Ç–Ω—ã—Ö/–¥—É–±–ª–∏—Ä—É—é—â–∏—Ö –∫–Ω–æ–ø–æ–∫ –∏ –ø—Ä–∏–º–∏—Ç–∏–≤–Ω–æ–≥–æ –≤–∏–∑—É–∞–ª—å–Ω–æ–≥–æ –æ—Ñ–æ—Ä–º–ª–µ–Ω–∏—è; –∞–≤–∞—Ç–∞—Ä/`fox_logo.svg` –ø–æ –ø—Ä—è–º–æ–º—É —É–∫–∞–∑–∞–Ω–∏—é –≤–ª–∞–¥–µ–ª—å—Ü–∞ –Ω–µ –∏–∑–º–µ–Ω—è—Ç—å –¥–æ –ø–æ–ª—É—á–µ–Ω–∏—è –Ω–æ–≤–æ–≥–æ —ç—Ç–∞–ª–æ–Ω–∞.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `scripts/main.gd`, `scripts/main_compat.gd`, `scripts/mobile_ui_adapter.gd`, `scripts/desktop_visual_theme.gd`, `scripts/settings_overlay.gd`, `scripts/settings_visual_fix.gd`, `scripts/voice_overlay.gd`, `scripts/voice_overlay_compat.gd`, `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd`, `scripts/knowledge_base_overlay.gd`, `scripts/self_improvement_overlay.gd`, `work/work_overlay.gd`, `update/update_overlay.gd`, `api/settings_overlay.gd`, `assets/ui/icon_*.svg` –∫—Ä–æ–º–µ `fox_logo.svg`, `tests/desktop_ui_smoke.gd`, `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY` –∏ `CHAT-2026-09-16-VOICE-QUALITY`: research/voice-python —Ñ–∞–π–ª—ã –∏ `.github/workflows/voice-ci.yml` –Ω–µ —Ç—Ä–æ–≥–∞—é—Ç—Å—è; –∂—É—Ä–Ω–∞–ª –≤—Å–µ–≥–¥–∞ –æ–±–Ω–æ–≤–ª—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –ø–æ–≤–µ—Ä—Ö —Å–≤–µ–∂–µ–≥–æ HEAD —Å —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ–º —á—É–∂–æ–≥–æ CLAIM.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: —Ç–µ–∫—É—â–∏–π UI —Å–æ–±–∏—Ä–∞–µ—Ç—Å—è –Ω–µ—Å–∫–æ–ª—å–∫–∏–º–∏ –Ω–µ–∑–∞–≤–∏—Å–∏–º—ã–º–∏ overlay-—Å–∫—Ä–∏–ø—Ç–∞–º–∏ —Å —Ñ–∏–∫—Å–∏—Ä–æ–≤–∞–Ω–Ω—ã–º–∏ popup-—Ä–∞–∑–º–µ—Ä–∞–º–∏ –∏ –æ—Ç–¥–µ–ª—å–Ω—ã–º–∏ –∞–±—Å–æ–ª—é—Ç–Ω—ã–º–∏/floating controls; —ç—Ç–æ —Å–æ–∑–¥–∞—ë—Ç —Ä–µ–∞–ª—å–Ω—ã–µ —Ä–∏—Å–∫–∏ overflow/overlap –Ω–∞ 960px –∏ Android, –∞ —á–∞—Å—Ç—å —Ñ—É–Ω–∫—Ü–∏–π –¥—É–±–ª–∏—Ä—É–µ—Ç—Å—è –∏–ª–∏ –∏–º–µ–µ—Ç —Å–ª–∏—à–∫–æ–º –Ω–µ—è—Å–Ω—ã–µ –ø–æ–¥–ø–∏—Å–∏. –ù—É–∂–Ω—ã –µ–¥–∏–Ω—ã–µ responsive rules, –∫–æ–º–ø–∞–∫—Ç–Ω—ã–µ action surfaces –∏ regression checks.
-- –ü–ª–∞–Ω –ø—Ä–æ–≤–µ—Ä–∫–∏: –¥–æ –∏–Ω—Ç–µ–≥—Ä–∞—Ü–∏–∏ –≤ `main` –∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å –æ—Ç–¥–µ–ª—å–Ω—É—é UI-–≤–µ—Ç–∫—É, —Ä–∞—Å—à–∏—Ä–∏—Ç—å `desktop_ui_smoke.gd` –ø—Ä–æ–≤–µ—Ä–∫–∞–º–∏ –≥–µ–æ–º–µ—Ç—Ä–∏–∏/—Å–∏–≥–Ω–∞–ª–æ–≤/–ø–æ–Ω—è—Ç–Ω–æ—Å—Ç–∏ —ç–ª–µ–º–µ–Ω—Ç–æ–≤ –∏ –ø—Ä–∏–Ω–∏–º–∞—Ç—å —ç—Ç–∞–ø —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ —á–∏—Å—Ç–æ–≥–æ Godot parse + UI smoke + —Å–æ–æ—Ç–≤–µ—Ç—Å—Ç–≤—É—é—â–∏—Ö GitHub Actions.
-
-### CLAIM `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `932f2d5da41923b7e4277aefb794fc4f2c50c058`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: —Å–¥–µ–ª–∞—Ç—å `LearningCurator` –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—ã–º authority –¥–ª—è –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–æ–≥–æ –¥–æ–ª–≥–æ–≤—Ä–µ–º–µ–Ω–Ω–æ–≥–æ web-learning; collector —Ç–æ–ª—å–∫–æ —Å–æ–±–∏—Ä–∞–µ—Ç/–ª–æ–≥–∏—Ä—É–µ—Ç –¥–∞–Ω–Ω—ã–µ; –∑–∞–∫—Ä—ã—Ç—å automatic local-document leakage –∏ –¥–æ–±–∞–≤–∏—Ç—å regression tests.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `agent/research_collector.gd`, `agent/learning_curator.gd`, –æ—Ç–Ω–æ—Å—è—â–∏–µ—Å—è `tests/*research*`/`tests/autonomy_learning_smoke.gd`, `.github/workflows/voice-ci.yml` —Ç–æ–ª—å–∫–æ –µ—Å–ª–∏ –Ω—É–∂–µ–Ω –∑–∞–ø—É—Å–∫ –Ω–æ–≤–æ–≥–æ smoke, `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å –∑–∞–≤–µ—Ä—à—ë–Ω–Ω—ã–º `CHAT_MAIN-2026-09-16-MASTER-CORE`; –ø–µ—Ä–µ–¥ –∫–∞–∂–¥–æ–π –∑–∞–ø–∏—Å—å—é —Å–≤–µ—Ä—è—Ç—å —Å–≤–µ–∂–∏–π HEAD –∏ –Ω–µ –ø–µ—Ä–µ—Ç–∏—Ä–∞—Ç—å –Ω–æ–≤—ã–µ –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω—ã–µ –∏–∑–º–µ–Ω–µ–Ω–∏—è.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: —Å–µ–π—á–∞—Å `ResearchCollector._learn()` –ø–∏—à–µ—Ç –¥–∞–Ω–Ω—ã–µ –≤ memory –¥–æ curator gate, –ø–æ—ç—Ç–æ–º—É rejected content —É–∂–µ –æ–∫–∞–∑—ã–≤–∞–µ—Ç—Å—è –≤—ã—É—á–µ–Ω–Ω—ã–º. Gate –¥–æ–ª–∂–µ–Ω –±—ã—Ç—å –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω–æ–π —Ç–æ—á–∫–æ–π automatic promotion.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥: –≤–Ω–µ—Å—Ç–∏ –º–∏–Ω–∏–º–∞–ª—å–Ω—ã–π —Å–æ–≤–º–µ—Å—Ç–∏–º—ã–π refactor, –∑–∞—Ç–µ–º deterministic GDScript smoke –∏ Core CI.
-
-### CLAIM `CHAT-2026-09-16-VOICE-QUALITY`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `4a013aa31142443192ab5bcd52cf1e00950e5467`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: —É–ª—É—á—à–∏—Ç—å –µ—Å—Ç–µ—Å—Ç–≤–µ–Ω–Ω–æ—Å—Ç—å, —Ä–∞–∑–±–æ—Ä—á–∏–≤–æ—Å—Ç—å –∏ –∑–∞–¥–µ—Ä–∂–∫—É –ª–æ–∫–∞–ª—å–Ω–æ–π —Ä—É—Å—Å–∫–æ–π –æ–∑–≤—É—á–∫–∏ AuroraFox –±–µ–∑ –ø—Ä–µ–≤—Ä–∞—â–µ–Ω–∏—è –≤–Ω–µ—à–Ω–µ–≥–æ TTS/STT –≤ –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—É—é –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç—å.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `voice/python/tts_engine.py`, `voice/python/processor.py`, `voice/config/voice_config.json`, `voice/config/emotions.json` –ø—Ä–∏ –Ω–µ–æ–±—Ö–æ–¥–∏–º–æ—Å—Ç–∏, `tests/test_voice_text.py`, `tests/test_voice_configs.py`, `tests/test_xtts_contract.py` –ø—Ä–∏ –Ω–µ–æ–±—Ö–æ–¥–∏–º–æ—Å—Ç–∏, `voice/README.md`, `docs/PROJECT_MASTER_LOG.md` —Ç–æ–ª—å–∫–æ –¥–ª—è –∏–Ω—Ç–µ–≥—Ä–∞—Ü–∏–∏ —Å—Ç–∞—Ç—É—Å–∞ CLAIM.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`: research files –∏ `.github/workflows/voice-ci.yml` –Ω–µ —Ç—Ä–æ–≥–∞—é—Ç—Å—è; master log –≤—Å–µ–≥–¥–∞ –æ–±–Ω–æ–≤–ª—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –ø–æ–≤–µ—Ä—Ö —Å–≤–µ–∂–µ–≥–æ HEAD —Å —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ–º —á—É–∂–æ–≥–æ CLAIM.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: —Ç–µ–∫—É—â–∏–π Silero baseline –Ω–µ –∏—Å–ø–æ–ª—å–∑—É–µ—Ç –ø–µ—Ä–µ–¥–∞–Ω–Ω—ã–µ `emotion/intensity/speed`, –∞ –ø–æ—Å—Ç–ø—Ä–æ—Ü–µ—Å—Å–æ—Ä —Å–≤—è–∑—ã–≤–∞–µ—Ç —Ç–µ–º–ø –∏ –≤—ã—Å–æ—Ç—É —á–µ—Ä–µ–∑ –ø—Ä–æ—Å—Ç–æ–π —Ä–µ—Å–µ–º–ø–ª–∏–Ω–≥, —á—Ç–æ —É—Ö—É–¥—à–∞–µ—Ç –µ—Å—Ç–µ—Å—Ç–≤–µ–Ω–Ω–æ—Å—Ç—å; –∫–æ–Ω—Ñ–∏–≥—É—Ä–∞—Ü–∏—è `breathing_pauses` –∑–∞—è–≤–ª–µ–Ω–∞, –Ω–æ —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∏ –Ω–µ —Ä–µ–∞–ª–∏–∑–æ–≤–∞–Ω–∞.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥: –ø—Ä–æ–≤–µ—Ä–∏—Ç—å server call path –∏ —Ç–µ–∫—É—â–∏–µ voice tests, –∑–∞—Ç–µ–º –≤–Ω–µ—Å—Ç–∏ —Å–æ–≤–º–µ—Å—Ç–∏–º—ã–π local-only DSP/text-prosody refactor –∏ –ø—Ä–æ–≥–Ω–∞—Ç—å unit/voice CI.
-
-### CLAIM `CHAT-2026-09-16-SERVER-DB`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `996adb626416df2529f78f339dd9a6acf9c72b01`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –¥–æ–≤–µ—Å—Ç–∏ —Å–µ—Ä–≤–µ—Ä–Ω—ã–π –∫–æ–Ω—Ç—É—Ä AuroraFox –∏ –ø–æ—Å—Ç–æ—è–Ω–Ω–æ–µ —Ö—Ä–∞–Ω–∏–ª–∏—â–µ –¥–æ —Ç—Ä–∞–Ω–∑–∞–∫—Ü–∏–æ–Ω–Ω–æ–≥–æ production-ready baseline: –µ–¥–∏–Ω–∞—è SQLite –ë–î –±–µ–∑ –≤–Ω–µ—à–Ω–µ–π –°–£–ë–î, –±–µ–∑–æ–ø–∞—Å–Ω–∞—è –º–∏–≥—Ä–∞—Ü–∏—è —Å—É—â–µ—Å—Ç–≤—É—é—â–∏—Ö JSON/JSONL, –∫–æ–Ω–∫—É—Ä–µ–Ω—Ç–Ω–∞—è –∑–∞–ø–∏—Å—å, integrity/readiness, —Ä–µ–∑–µ—Ä–≤–Ω–æ–µ –∫–æ–ø–∏—Ä–æ–≤–∞–Ω–∏–µ –∏ rollback-safe –æ–±–Ω–æ–≤–ª–µ–Ω–∏–µ REG.RU.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **MINOR** –∏–∑-–∑–∞ –Ω–æ–≤–æ–≥–æ account/guest/device-sync server contract; –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫—É—é –≤–µ—Ä—Å–∏—é —ç—Ç–æ—Ç lane –Ω–µ –º–µ–Ω—è–µ—Ç, –∏—Ç–æ–≥–æ–≤—ã–π bump –≤—ã–ø–æ–ª–Ω—è–µ—Ç release/versioning —ç—Ç–∞–ø.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `api/database.py`, `api/auth.py`, `api/account_store.py`, `api/sync_store.py`, `api/conversation_store.py`, `api/learning_store.py`, `api/learning_sync.py`, `api/server.py`, `api/backup_service.py`, `api/core_candidate_queue.py`, `tests/test_api_gateway.py`, `tests/test_api_database.py`, `tests/test_api_accounts_sync.py`, `tests/test_api_account_network.py`, `tests/test_api_account_restore.py`, `tests/test_api_schema_migrations.py`, `tests/test_api_privacy_contract.py`, `tests/test_backup_service.py`, `tests/test_deployment_contract.py`, `deploy/reg_ru/install.sh`, `deploy/reg_ru/update.sh`, `.github/workflows/api-ci.yml`, `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å: `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`, `CHAT-2026-09-16-UPDATER-VERSIONING`, `CHAT-2026-09-16-CORE-BENCHMARKS`, `CHAT-2026-09-16-LOCAL-OCR`; –∏—Ö –∑–∞–Ω—è—Ç—ã–µ paths –Ω–µ –∏–∑–º–µ–Ω—è—Ç—å.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: flat JSON/JSONL stores –∏–º–µ—é—Ç race/scale/corruption-—Ä–∏—Å–∫ –ø—Ä–∏ –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω–æ–º FastAPI access –∏ –Ω–µ –¥–∞—é—Ç –µ–¥–∏–Ω—ã–π transactional integrity contract. Python `sqlite3` –≤—Å—Ç—Ä–æ–µ–Ω, –Ω–µ —Å–æ–∑–¥–∞—ë—Ç –≤–Ω–µ—à–Ω–µ–π runtime-–∑–∞–≤–∏—Å–∏–º–æ—Å—Ç–∏; personal data —Ç—Ä–µ–±—É–µ—Ç –æ—Ç–¥–µ–ª—å–Ω–æ–≥–æ principal/device/session/sync trust boundary –∏ –Ω–µ –¥–æ–ª–∂–Ω–æ –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏ –ø–æ–ø–∞–¥–∞—Ç—å –≤ shared Core learning.
-- –ü–ª–∞–Ω –ø—Ä–æ–≤–µ—Ä–∫–∏: –º–∏–≥—Ä–∞—Ü–∏—è legacy stores ‚Üí SQLite —Å –∏–¥–µ–º–ø–æ—Ç–µ–Ω—Ç–Ω–æ—Å—Ç—å—é; WAL/busy-timeout/foreign keys/integrity checks; rollback mirrors; account/guest isolation; refresh rotation/replay/revoke; guest migration; persistent sync/conflicts; `/ready`; backup/restore; REG.RU pre-update snapshot; API/deployment/backup tests + exact-head API CI.
-
-### CLAIM `CHAT_MAIN-2026-09-16-MASTER-CORE`
-
-- –°—Ç–∞—Ç—É—Å: **DONE**
-- Started from HEAD: `69f54cc06720a1300b7e7ac1d997ceb1c1b3c2e9`
-- Integrated through: `bb348adeb27c5bfa9ebba9a82e07d11d71ae632c`
-- Journal close commit: `932f2d5da41923b7e4277aefb794fc4f2c50c058`
-- –†–µ–∑—É–ª—å—Ç–∞—Ç: –µ–¥–∏–Ω—ã–π –∂—É—Ä–Ω–∞–ª + strict self-reliance + compatibility isolation + offline proof + self-improvement audit.
-- Checks: Core/Voice `35067895081` SUCCESS; Agent Sync `35067895155` SUCCESS; Evolution `35067895168` SUCCESS; journal Core/Voice `35068214336` SUCCESS.
-- –ü—É—Ç–∏ –æ—Å–≤–æ–±–æ–∂–¥–µ–Ω—ã, –∫—Ä–æ–º–µ –ø—É—Ç–µ–π, –∑–∞–Ω—è—Ç—ã—Ö –Ω–æ–≤—ã–º research claim –≤—ã—à–µ.
-
-### –®–∞–±–ª–æ–Ω –Ω–æ–≤–æ–π –∑–∞—è–≤–∫–∏
-
-```text
-### CLAIM <MODE>-<DATE>-<SHORT-ID>
-- –°—Ç–∞—Ç—É—Å: ACTIVE
-- Started from HEAD: <sha>
-- –†–µ–∂–∏–º: Chat | Work | Codex | Agent
-- –¶–µ–ª—å: <–æ–¥–Ω–∞ —Å–≤—è–∑–Ω–∞—è –∑–∞–¥–∞—á–∞>
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: <paths>
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å: <active claims>
-```
-
-## 15. –ü–æ—Å–ª–µ–¥–Ω—è—è –∑–∞–ø–∏—Å—å –∑–∞–≤–µ—Ä—à—ë–Ω–Ω–æ–≥–æ —ç—Ç–∞–ø–∞
-
-### 2026-09-16 ‚Äî Chat ‚Äî self-reliance hardening
-
-- Base HEAD: `69f54cc...`.
-- Integrated code HEAD: `bb348ade...`.
-- Journal: `932f2d5d...`.
-- –°–¥–µ–ª–∞–Ω–æ: local-only normal path, compatibility isolation, full offline chat/planning/local-tool/memory smoke, deterministic self-improvement authority, bundled bootstrap contract.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: independence –¥–æ–ª–∂–Ω–∞ –ø—Ä–æ–≤–µ—Ä—è—Ç—å—Å—è —Ä–µ–∞–ª—å–Ω—ã–º execution path, –∞ –Ω–µ —Ç–æ–ª—å–∫–æ —Ñ–ª–∞–≥–∞–º–∏.
-- –ü—Ä–æ–≤–µ—Ä–∫–∏: Core/Voice `35067895081` SUCCESS; Agent Sync `35067895155` SUCCESS; Evolution `35067895168` SUCCESS; master-only CI `35068214336` SUCCESS.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥: —Ç–µ–∫—É—â–∏–π ACTIVE research-quality claim.
-
-## 16. –§–æ—Ä–º–∞—Ç –∑–∞–ø–∏—Å–∏ –∑–∞–≤–µ—Ä—à—ë–Ω–Ω–æ–≥–æ —ç—Ç–∞–ø–∞
-
-```text
-### <date-time> ‚Äî <mode> ‚Äî <stage>
-- Base HEAD: ...
-- Commits: ...
-- –°–¥–µ–ª–∞–Ω–æ: ...
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: ...
-- –ü—Ä–æ–≤–µ—Ä–∫–∏: ...
-- –û–≥—Ä–∞–Ω–∏—á–µ–Ω–∏—è/—Ä–∏—Å–∫–∏: ...
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥: ...
-- –û—Å–≤–æ–±–æ–∂–¥—ë–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã: ...
-```
-
----
-
-–ü–æ—Å–ª–µ–¥–Ω–µ–µ –ø—Ä–∞–≤–∏–ª–æ: **–µ—Å–ª–∏ —Ä–∞–∑–≥–æ–≤–æ—Ä/Work/Codex –æ—Å—Ç–∞–Ω–æ–≤–∏–ª—Å—è, —Å–ª–µ–¥—É—é—â–∏–π –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—å –Ω–µ –≤–æ—Å—Å—Ç–∞–Ω–∞–≤–ª–∏–≤–∞–µ—Ç –ø–ª–∞–Ω –ø–æ –¥–æ–≥–∞–¥–∫–∞–º ‚Äî –æ–Ω —á–∏—Ç–∞–µ—Ç —ç—Ç–æ—Ç —Ñ–∞–π–ª, –∞–∫—Ç—É–∞–ª—å–Ω—ã–π Git HEAD –∏ CI, –∑–∞—Ç–µ–º —Å–æ–∑–¥–∞—ë—Ç –Ω–æ–≤—ã–π CLAIM –∏ –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç —Å –ø–µ—Ä–≤–æ–≥–æ –Ω–µ–∑–∞–≤–µ—Ä—à—ë–Ω–Ω–æ–≥–æ –ø—É–Ω–∫—Ç–∞, –Ω–µ –ø–æ–≤—Ç–æ—Ä—è—è —É–∂–µ –≤—ã–ø–æ–ª–Ω–µ–Ω–Ω—É—é –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω—É—é —Ä–∞–±–æ—Ç—É.**
-
-## 17. Work ‚Äî –∫–æ–æ—Ä–¥–∏–Ω–∞—Ü–∏—è –∏ –∞—É–¥–∏—Ç, 2026-09-16
-
-### CLAIM `WORK-2026-09-16-CANDIDATE-QUEUE-AUDIT`
-
-- –°—Ç–∞—Ç—É—Å: **DONE ‚Äî –ª–æ–∫–∞–ª—å–Ω—ã–µ –ø—Ä–æ–≤–µ—Ä–∫–∏; –æ–∂–∏–¥–∞–µ—Ç CI/–∏–Ω—Ç–µ–≥—Ä–∞—Ü–∏–∏**
-- Started from HEAD: `9376c2cbf9bbfb823c74550a52e35e53d2497768`
-- –†–µ–∂–∏–º: Work
-- –¶–µ–ª—å: –ø—Ä–æ–≤–µ—Ä–∏—Ç—å persistent candidate queue, –∏–∑–æ–ª—è—Ü–∏—é submissions –∏ —Ü–µ–ª–æ—Å—Ç–Ω–æ—Å—Ç—å –∞—Ä—Ç–µ—Ñ–∞–∫—Ç–æ–≤; —Å–æ–≥–ª–∞—Å–æ–≤–∞—Ç—å —Å–ª–µ–¥—É—é—â–∏–µ –∑–∞–¥–∞—á–∏ –∞–∫—Ç–∏–≤–Ω—ã—Ö —á–∞—Ç–æ–≤ –±–µ–∑ –ø–æ–≤—Ç–æ—Ä–µ–Ω–∏—è –∏—Ö –∏–∑–º–µ–Ω–µ–Ω–∏–π.
-- –§–∞–π–ª—ã: `api/core_candidate_queue.py`, `tests/test_core_candidate_queue.py`, `docs/PROJECT_MASTER_LOG.md`; –∏—Å—Ö–æ–¥–Ω–æ–µ –ø–æ–ª–Ω–æ–µ –¢–ó `docs/AURORAFOX_FULL_SPECIFICATION_RU.md` –∫–∞–∫ —Ç–µ—Ö–Ω–∏—á–µ—Å–∫–∏–π –¥–æ–∫—É–º–µ–Ω—Ç, –Ω–µ –≤—Ç–æ—Ä–æ–π –∂—É—Ä–Ω–∞–ª.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å –∞–∫—Ç–∏–≤–Ω—ã–º–∏ UI/research/voice/server DB CLAIM. –ù–µ –º–µ–Ω—è—Ç—å –∏—Ö —Ñ–∞–π–ª—ã, release authority –∏ normal local Core.
-- –†–µ—à–µ–Ω–∏–µ: –ø—Ä–µ–∂–Ω–∏–π –ª–æ–∫–∞–ª—å–Ω—ã–π `afd1522` —Å–æ–∑–¥–∞–Ω –Ω–∞ —Å—Ç–∞—Ä–æ–π –∞—Ä—Ö–∏—Ç–µ–∫—Ç—É—Ä–µ; –Ω–µ –ø–µ—Ä–µ–Ω–æ—Å–∏—Ç—å –≤—ã–±–æ—Ä Ollama/provider –∏–ª–∏ –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω—ã–µ –∂—É—Ä–Ω–∞–ª—ã –≤ –Ω–æ–≤—ã–π main. Account foundation —Ç—Ä–µ–±—É–µ—Ç –æ—Ç–¥–µ–ª—å–Ω–æ–≥–æ —Å–æ–≥–ª–∞—Å–æ–≤–∞–Ω–∏—è —Å SERVER-DB, –∞ –Ω–µ —Å–ª–µ–ø–æ–≥–æ merge.
-- –ü—Ä–æ–≤–µ—Ä–∫–∞: –æ—Ç–Ω–æ—Å—è—â–∏–µ—Å—è Python-—Ç–µ—Å—Ç—ã, —Ä–µ–∞–ª—å–Ω—ã–π SQLite restart/concurrency/integrity; —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã –∑–∞–ø–∏—Å–∞—Ç—å –∑–¥–µ—Å—å.
-- –†–µ–∑—É–ª—å—Ç–∞—Ç: –∫–∞–Ω–¥–∏–¥–∞—Ç–Ω–∞—è –æ—á–µ—Ä–µ–¥—å –∏—Å–ø–æ–ª—å–∑—É–µ—Ç —Ñ–∞–π–ª–æ–≤—ã–µ bundles, –Ω–µ SQLite; –∏—Å–ø—Ä–∞–≤–ª–µ–Ω—ã owner/base/target –ø—Ä–æ–≤–µ—Ä–∫–∏ duplicate, –ø–æ–≤—Ç–æ—Ä–Ω–∞—è –ø—Ä–æ–≤–µ—Ä–∫–∞ persistent manifest –ø—Ä–∏ materialization, reserved dot IDs, –æ–ø–∞—Å–Ω–æ–µ –ø–µ—Ä–µ—Å–µ—á–µ–Ω–∏–µ destination —Å –æ—á–µ—Ä–µ–¥—å—é, –º–µ–∂–ø—Ä–æ—Ü–µ—Å—Å–Ω–∞—è —Å–µ—Ä–∏–∞–ª–∏–∑–∞—Ü–∏—è mutations –∏ fsync –¥–∞–Ω–Ω—ã—Ö.
-- –ü—Ä–æ–≤–µ—Ä–µ–Ω–æ –Ω–∞ –∞–∫—Ç—É–∞–ª–∏–∑–∏—Ä–æ–≤–∞–Ω–Ω–æ–π –≤–µ—Ç–∫–µ: 26 tests passed (candidate queue/promotion/master journal), –≤–∫–ª—é—á–∞—è 6 –Ω–∞—Å—Ç–æ—è—â–∏—Ö –ø—Ä–æ—Ü–µ—Å—Å–æ–≤ —Å –ª–∏–º–∏—Ç–æ–º 2 –∏ —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ destination –ø—Ä–∏ –æ—Ç–∫–ª–æ–Ω–µ–Ω–∏–∏ –∏—Å–ø–æ—Ä—á–µ–Ω–Ω–æ–≥–æ manifest.
-- –û–±—â–∏–π Python-–ø—Ä–æ–≥–æ–Ω –Ω–∞ –∏—Å—Ö–æ–¥–Ω–æ–º 9376c2c: **117 passed, 1 failed**. `tests/test_autonomous_evolution_contract.py::test_autonomous_research_is_promoted_to_long_term_knowledge` —Ç—Ä–µ–±—É–µ—Ç `memory.learn(` –≤ collector, —Ö–æ—Ç—è –∞–∫—Ç—É–∞–ª—å–Ω—ã–π collector —É–∂–µ –¥–µ–ª–µ–≥–∏—Ä—É–µ—Ç curator. –ù–µ –∏—Å–ø—Ä–∞–≤–ª—è—Ç—å –ø–æ–≤—Ç–æ—Ä–Ω—ã–º –æ–±—Ö–æ–¥–æ–º curator: RESEARCH-QUALITY –¥–æ–ª–∂–µ–Ω –æ–±–Ω–æ–≤–∏—Ç—å –∫–æ–Ω—Ç—Ä–∞–∫—Ç –ø–æ–¥ –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—É—é —Ç–æ—á–∫—É promotion –∏ –ø–æ–≤—Ç–æ—Ä–∏—Ç—å –æ–±—â–∏–π –Ω–∞–±–æ—Ä.
-- Commits –ª–æ–∫–∞–ª—å–Ω–æ–≥–æ —ç—Ç–∞–ø–∞: `b6b6393`, merge —Å–≤–µ–∂–µ–≥–æ main `4ebcec0` —á–µ—Ä–µ–∑ `02f6f3a`; —á—É–∂–∏–µ CLAIM —Å–æ—Ö—Ä–∞–Ω–µ–Ω—ã –ø—Ä–∏ —Ä–∞–∑—Ä–µ—à–µ–Ω–∏–∏ –∫–æ–Ω—Ñ–ª–∏–∫—Ç–∞ —Ç–æ–ª—å–∫–æ –≤ –æ–±—â–µ–º –∂—É—Ä–Ω–∞–ª–µ.
-- –ù–µ–ø—Ä–æ–≤–µ—Ä–µ–Ω–æ: Windows-–≤–µ—Ç–∫–∞ file lock, —Ä–µ–∞–ª—å–Ω—ã–π full-model inference, native UI/–≥–æ–ª–æ—Å, production VPS; —ç—Ç–æ –Ω–µ –∏—Ç–æ–≥–æ–≤–∞—è –ø—Ä–∏—ë–º–∫–∞ AuroraFox.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥: CI –æ–≥—Ä–∞–Ω–∏—á–µ–Ω–Ω–æ–≥–æ PR; RESEARCH-QUALITY –∑–∞–∫—Ä—ã–≤–∞–µ—Ç –Ω–∞–π–¥–µ–Ω–Ω—ã–π —É—Å—Ç–∞—Ä–µ–≤—à–∏–π test contract, SERVER-DB —Å–æ–≥–ª–∞—Å—É–µ—Ç –¥–∞–ª—å–Ω–µ–π—à—É—é account migration. –û—á–µ—Ä–µ–¥—å corrupt records –ø–æ–∫–∞ —Ç—Ä–µ–±—É–µ—Ç —è–≤–Ω–æ–≥–æ integrity/status gate –≤–º–µ—Å—Ç–æ –º–æ–ª—á–∞–ª–∏–≤–æ–≥–æ –ø—Ä–æ–ø—É—Å–∫–∞.
-- –§–∞–π–ª—ã –æ—Å–≤–æ–±–æ–∂–¥–µ–Ω—ã –ø–æ—Å–ª–µ —ç—Ç–æ–≥–æ –ø–∞–∫–µ—Ç–∞; account/provider –ø—Ä–∞–≤–∫–∏ —Å—Ç–∞—Ä–æ–≥–æ `afd1522` –Ω–µ –æ–ø—É–±–ª–∏–∫–æ–≤–∞–Ω—ã –∏ –Ω–µ –¥–æ–ª–∂–Ω—ã —Å–ª–µ–ø–æ –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞—Ç—å—Å—è.
-
-### –°–ª–µ–¥—É—é—â–∏–µ –∑–∞–¥–∞–Ω–∏—è –∞–∫—Ç–∏–≤–Ω—ã–º —á–∞—Ç–∞–º –æ—Ç –≤–ª–∞–¥–µ–ª—å—Ü–∞ ‚Äî 2026-09-16
-
-–≠—Ç–æ –∑–∞–¥–∞–Ω–∏—è –≤ –æ–±—â–µ–º –∂—É—Ä–Ω–∞–ª–µ, –∞ –Ω–µ —É—Ç–≤–µ—Ä–∂–¥–µ–Ω–∏–µ, —á—Ç–æ –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª–∏ —É–∂–µ –∏—Ö –ø—Ä–æ—á–∏—Ç–∞–ª–∏.
-–ö–∞–∂–¥—ã–π —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç —Å–≤–æ—é —Ç–µ–∫—É—â—É—é –∑–∞–¥–∞—á—É –¥–æ –∑–∞–≤–µ—Ä—à—ë–Ω–Ω–æ–≥–æ –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω–æ–≥–æ –ø–∞–∫–µ—Ç–∞.
-
-| –ò—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—å | –°–ª–µ–¥—É—é—â–∞—è –∑–∞–¥–∞—á–∞ | –û–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–π —Ä–µ–∑—É–ª—å—Ç–∞—Ç |
-|---|---|---|
-| UI-POLISH, PR #27 | –ó–∞–∫–æ–Ω—á–∏—Ç—å –∞–¥–∞–ø—Ç–∏–≤–Ω–æ—Å—Ç—å –∏ –Ω–∞–≤–∏–≥–∞—Ü–∏—é, –∑–∞—Ç–µ–º –≤–∏–∑—É–∞–ª—å–Ω—É—é –ø—Ä–∏—ë–º–∫—É Windows/Android: –≤—Ö–æ–¥/–≥–æ—Å—Ç—å, —á–∞—Ç, –ø–∞–º—è—Ç—å, —Ñ–∞–π–ª—ã, –ø—Ä–æ–µ–∫—Ç—ã, –Ω–∞—Å—Ç—Ä–æ–π–∫–∏, –æ—à–∏–±–∫–∏; —Å–æ–≥–ª–∞—Å–æ–≤–∞—Ç—å –ø—Ä–∞–≤–∏–ª—å–Ω—É—é –ª–∏—Å—É —Å —Ç–µ–∫—É—â–∏–º –≤–ª–∞–¥–µ–ª—å—á–µ—Å–∫–∏–º —ç—Ç–∞–ª–æ–Ω–æ–º. | –ù–∞—Å—Ç–æ—è—â–∏–µ –∫–∞–¥—Ä—ã –æ–±–æ–∏—Ö –∫–ª–∏–µ–Ω—Ç–æ–≤, –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω—ã–µ –∫–ª–∏–∫–∏, –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–µ –Ω–∞–ª–æ–∂–µ–Ω–∏–π –∏ –∑–∞–≥–ª—É—à–µ–∫; —Ä–∞–∑–º–µ—Ä—ã —ç–∫—Ä–∞–Ω–æ–≤ –∏ CI SHA. |
-| RESEARCH-QUALITY | –ó–∞–∫—Ä—ã—Ç—å –æ–±—Ö–æ–¥ curator, –∑–∞—Ç–µ–º –¥–æ–±–∞–≤–∏—Ç—å corroboration/contradiction –∏ —É—Å—Ç–æ–π—á–∏–≤—É—é –æ—á–µ—Ä–µ–¥—å –≤–æ–ø—Ä–æ—Å–æ–≤ –æ –ø—Ä–æ–±–µ–ª–∞—Ö. | Rejected/duplicate/local-document –Ω–µ –ø–æ–ø–∞–¥–∞—é—Ç –≤ automatic knowledge; promoted item –∏–º–µ–µ—Ç URL/hash/quality; –ø–µ—Ä–µ–∑–∞–ø—É—Å–∫ —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç –æ—á–µ—Ä–µ–¥—å. |
-| VOICE-QUALITY | –ü–æ—Å–ª–µ DSP –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–π —Å–æ–∑–¥–∞—Ç—å —Ä–µ–∞–ª—å–Ω—ã–µ —É—Ç—Ä–µ–Ω–Ω–∏–π/–Ω–æ—á–Ω–æ–π/–∏–≥—Ä–∏–≤—ã–π/—Å–µ—Ä—å—ë–∑–Ω—ã–π —Ä—É—Å—Å–∫–∏–µ –æ–±—Ä–∞–∑—Ü—ã –∂–µ–Ω—Å–∫–æ–≥–æ –≥–æ–ª–æ—Å–∞ –∏ –ø—Ä–æ–≤–µ—Ä–∏—Ç—å –ª–æ–∫–∞–ª—å–Ω—É—é –æ–∑–≤—É—á–∫—É –æ–±–µ–∏—Ö –ø–ª–∞—Ç—Ñ–æ—Ä–º. | WAV/–∏–∑–º–µ—Ä–µ–Ω–∏—è –∑–∞–¥–µ—Ä–∂–∫–∏ –∏ –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–µ clipping; —á–µ—Å—Ç–Ω–æ –æ—Ç–º–µ—Ç–∏—Ç—å –ø—Ä–æ—Å–ª—É—à–∏–≤–∞–Ω–∏–µ –∏ –Ω–µ–ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω—ã–π Android –ø—É—Ç—å. |
-| SERVER-DB | –ó–∞–∫–æ–Ω—á–∏—Ç—å –º–∏–≥—Ä–∞—Ü–∏—é/backup/ready, –∑–∞—Ç–µ–º –∞–∫–∫–∞—É–Ω—Ç—ã –∏ personal isolation, rotation/replay/revoke, transactional guest migration –∏ persistent device sync. | –î–≤–∞ –∞–∫–∫–∞—É–Ω—Ç–∞ –∏ –¥–≤–∞ –≥–æ—Å—Ç—è –∏–∑–æ–ª–∏—Ä–æ–≤–∞–Ω—ã; —Ä–µ–∞–ª—å–Ω—ã–µ network/SQLite/restart/conflict/restore tests; –Ω–µ —Å–º–µ—à–∏–≤–∞—Ç—å –æ–±—â–∏–π Core –∏ –ª–∏—á–Ω—É—é –ø–∞–º—è—Ç—å. |
-| MASTER-CORE, —Å–ª–µ–¥—É—é—â–∏–π —Å–≤–æ–±–æ–¥–Ω—ã–π —ç—Ç–∞–ø | –ü—Ä–æ–≤–µ—Ä–∏—Ç—å –Ω–∞—Å—Ç–æ—è—â–∏–π bundled Core –±–µ–∑ Ollama/–∏–Ω—Ç–µ—Ä–Ω–µ—Ç–∞ –Ω–∞ Windows/Android; –∑–∞—Ç–µ–º quality benchmarks –∏ –ø–æ–ª–Ω—ã–µ 3‚Äì10 –∫–∞–Ω–¥–∏–¥–∞—Ç–æ–≤. | –†–µ–∞–ª—å–Ω—ã–µ –æ—Ç–≤–µ—Ç—ã/–ø–ª–∞–Ω–∏—Ä–æ–≤–∞–Ω–∏–µ/–∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç—ã/–ø–∞–º—è—Ç—å, –æ–¥–∏–Ω–∞–∫–æ–≤—ã–µ —Ç–µ—Å—Ç—ã –∫–∞–Ω–¥–∏–¥–∞—Ç–æ–≤, rejected regression –Ω–µ –º–µ–Ω—è–µ—Ç stable; fixture –Ω–µ –≤—ã–¥–∞–≤–∞—Ç—å –∑–∞ –∫–∞—á–µ—Å—Ç–≤–æ LLM. |
-| WORK, —Ç–µ–∫—É—â–∏–π —ç—Ç–∞–ø | –ü—Ä–æ–≤–µ—Ä–∏—Ç—å –∫–∞–Ω–¥–∏–¥–∞—Ç–Ω—É—é —Å–µ—Ä–≤–µ—Ä–Ω—É—é –æ—á–µ—Ä–µ–¥—å –∏ –¥–æ–ª–≥–æ–≤–µ—á–Ω–æ—Å—Ç—å, –∑–∞–∫—Ä—ã—Ç—å –∫–æ–Ω–∫—Ä–µ—Ç–Ω—ã–µ –¥–µ—Ñ–µ–∫—Ç—ã; –∑–∞—Ç–µ–º —Å–æ–≥–ª–∞—Å–æ–≤–∞—Ç—å –æ–≥—Ä–∞–Ω–∏—á–µ–Ω–Ω—ã–µ –∏–∑–º–µ–Ω–µ–Ω–∏—è PR #25 —Å SERVER-DB. | –¢–µ—Å—Ç—ã –Ω–∞ —Ç–µ–∫—É—â–µ–º main –∏ —Ç–æ—á–Ω–∞—è –∑–∞–ø–∏—Å—å —Ä–µ–∑—É–ª—å—Ç–∞—Ç–∞; —Å—Ç–∞—Ä—É—é –≤–µ—Ç–∫—É –Ω–µ —Å–ª–∏–≤–∞—Ç—å —Å –∫–æ–Ω—Ñ–ª–∏–∫—Ç–∞–º–∏ –∏ —É—Å—Ç–∞—Ä–µ–≤—à–∏–º runtime. |
-
-–û–±—â–µ–µ –ø—Ä–∞–≤–∏–ª–æ –ø—Ä–∏—ë–º–∫–∏: ¬´–≥–æ—Ç–æ–≤–æ¬ª ‚Äî —Ç–æ–ª—å–∫–æ —Å –ø—Ä–æ–≤–µ—Ä—è–µ–º—ã–º —Ä–µ–∑—É–ª—å—Ç–∞—Ç–æ–º. –°–∞–º —Å–µ–±—è
-–ø–æ—Ö–≤–∞–ª–∏–ª –≤ –∂—É—Ä–Ω–∞–ª–µ ‚Äî –µ—â—ë –Ω–µ –ø—Ä–æ—à—ë–ª gate üôÇ. –≠–∫–æ–Ω–æ–º–∏—Ç—å —Ç–æ–∫–µ–Ω—ã: –æ–¥–∏–Ω –ø–∞–∫–µ—Ç —á—Ç–µ–Ω–∏—è,
-–æ–¥–∏–Ω —Å–≤—è–∑–∞–Ω–Ω—ã–π –Ω–∞–±–æ—Ä –ø—Ä–∞–≤–æ–∫, –æ—Ç–Ω–æ—Å—è—â–∏–µ—Å—è —Ç–µ—Å—Ç—ã; –ø–æ–≤—Ç–æ—Ä—è—Ç—å —Ç–æ–ª—å–∫–æ –ø—Ä–∏ –≤—ã—è–≤–ª–µ–Ω–Ω–æ–º –¥–µ—Ñ–µ–∫—Ç–µ.
-
-### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `e7760a71d484d6a3d5c5578e90b152e79850b878`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –∏—Å–ø—Ä–∞–≤–∏—Ç—å update visibility/repair –¥–ª—è –∏—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∏—Ö V1.2/V1.3, —Å–æ–∑–¥–∞—Ç—å –Ω–æ–≤—ã–π signed update floor, –∑–∞–∫—Ä–µ–ø–∏—Ç—å permanent trust root, –∞–≤—Ç–æ–º–∞—Ç–∏–∑–∏—Ä–æ–≤–∞—Ç—å –ø—Ä–æ–≤–µ—Ä–∫—É `latest`-manifest –∏ –∂—ë—Å—Ç–∫–æ–µ versioning policy.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **MINOR** (–Ω–æ–≤—ã–π signed release floor + –∫—Ä—É–ø–Ω—ã–π updater/release contract), —Ç–æ –µ—Å—Ç—å —Å–ª–µ–¥—É—é—â–∏–π normal release –¥–æ–ª–∂–µ–Ω –±—ã—Ç—å –Ω–µ –Ω–∏–∂–µ `V1.4.0.0`; –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫–∞—è –≤–µ—Ä—Å–∏—è –º–µ–Ω—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ —Ç–µ—Å—Ç–æ–≤.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `update/update_manager.gd`, `update/manifest.template.json`, `update/release_public.pub`, `.github/workflows/release.yml`, `.github/workflows/windows-package-ci.yml`/repair workflow –ø—Ä–∏ –Ω–µ–æ–±—Ö–æ–¥–∏–º–æ—Å—Ç–∏, `build/*release*`, `project/version.json`, `project.godot`, `export_presets.cfg`, `CHANGELOG.md`, `tests/update*`, `tests/version_sync_test.ps1`, –Ω–æ–≤—ã–µ version/release contracts, `AGENTS.md`, `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å UI claim: `update/update_overlay.gd` –æ—Å—Ç–∞—ë—Ç—Å—è –∑–∞ UI lane; —Å research/voice/server claims –∏—Ö —Ñ–∞–π–ª—ã –Ω–µ —Ç—Ä–æ–≥–∞—é—Ç—Å—è. –ü–µ—Ä–µ–¥ –∫–∞–∂–¥–æ–π –∑–∞–ø–∏—Å—å—é —Å–≤–µ—Ä—è—Ç—å —Å–≤–µ–∂–∏–π `main` –∏ –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞—Ç—å –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω—ã–µ –∏–∑–º–µ–Ω–µ–Ω–∏—è.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: normal `latest` release –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç, –∞ historical V1.3 –∏—Å–ø–æ–ª—å–∑—É–µ—Ç RSA updater, –Ω–æ –Ω–µ —Å–æ–¥–µ—Ä–∂–∏—Ç pinned `release_public.pub`; –ø–æ—ç—Ç–æ–º—É –ø—É–±–ª–∏–∫–∞—Ü–∏—è –æ–¥–Ω–æ–≥–æ `update.json` –Ω–µ –º–æ–∂–µ—Ç –∏—Å–ø—Ä–∞–≤–∏—Ç—å —É–∂–µ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–π –±–∏–Ω–∞—Ä–Ω–∏–∫. –ù—É–∂–µ–Ω one-time repair –Ω–∞ –Ω–æ–≤—ã–π signed floor –∏ permanent version/release discipline.
-- Acceptance: V1.2 repair –æ—Å—Ç–∞—ë—Ç—Å—è —Ä–∞–±–æ—á–∏–º; V1.3 repair –ø—Ä–æ–≤–µ—Ä–µ–Ω in-place –Ω–∞ Windows —Å —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ–º `user://`; –Ω–æ–≤—ã–π floor —Å–æ–¥–µ—Ä–∂–∏—Ç pinned public key; updater contract –Ω–∞ floor –≤–∏–¥–∏—Ç –≤–µ—Ä—Å–∏—é –≤—ã—à–µ —Å–µ–±—è –∏ –æ—Ç–∫–ª–æ–Ω—è–µ—Ç –Ω–µ–≤–µ—Ä–Ω—É—é –ø–æ–¥–ø–∏—Å—å/hash; release workflow –æ–±—è–∑–∞–Ω —Ñ–æ—Ä–º–∏—Ä–æ–≤–∞—Ç—å `latest` assets; version bump –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö Core/Windows/Android/update/release gates.
-–ö–æ–¥: draft [PR #29](https://github.com/Treninem/AI/pull/29), commit `13b5a948363688eb0b38429330e127a9a52ea7a4`. –≠—Ç–∞ –∑–∞–ø–∏—Å—å –ø—É–±–ª–∏–∫—É–µ—Ç —Ç–æ–ª—å–∫–æ –∫–æ–æ—Ä–¥–∏–Ω–∞—Ü–∏—é; –∫–æ–¥ –∏ –ø–æ–ª–Ω—ã–π —Ç–µ–∫—Å—Ç 56 –ø—É–Ω–∫—Ç–æ–≤ –¢–ó –Ω–∞—Ö–æ–¥—è—Ç—Å—è –≤ PR –¥–æ CI/–∏–Ω—Ç–µ–≥—Ä–∞—Ü–∏–∏.
-
-## 18. Core Quality / Performance Benchmark & Regression Gate ‚Äî active lane
-
-### CLAIM `CHAT-2026-09-16-CORE-BENCHMARKS`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `0179f4d3e0f0dc3f6bda1edb84006e8363f50613`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: —Å–æ–∑–¥–∞—Ç—å –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º—ã–π –∏–∑–º–µ—Ä–∏–º—ã–π offline benchmark/regression gate –¥–ª—è bundled AuroraFox Core: —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∞—è –ø–æ–ª–µ–∑–Ω–æ—Å—Ç—å, normal-path self-reliance, –∫–∞—á–µ—Å—Ç–≤–æ, –ø–∞–º—è—Ç—å/knowledge/planning/tool-selection, —É—Å—Ç–æ–π—á–∏–≤–æ—Å—Ç—å –∏ –ø—Ä–æ–∏–∑–≤–æ–¥–∏—Ç–µ–ª—å–Ω–æ—Å—Ç—å –±–µ–∑ Ollama/remote AI/–∏–Ω—Ç–µ—Ä–Ω–µ—Ç–∞.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **PATCH** (Core quality/regression infrastructure); –ø—É–±–ª–∏—á–Ω—É—é/–∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫—É—é –≤–µ—Ä—Å–∏—é —ç—Ç–æ—Ç lane –Ω–µ –º–µ–Ω—è–µ—Ç ‚Äî —Ñ–∏–Ω–∞–ª—å–Ω—ã–π –æ–±—â–∏–π release bump –æ—Å—Ç–∞—ë—Ç—Å—è –∑–∞ release/integration —ç—Ç–∞–ø–æ–º.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: –Ω–æ–≤—ã–µ `benchmarks/core/**`, –Ω–æ–≤—ã–µ benchmark-specific `tests/*core_benchmark*`, –Ω–æ–≤—ã–π isolated CI workflow `.github/workflows/core-benchmarks.yml`; production `core_runtime/`, AgentCore, memory/Core Knowledge/planning –º–µ–Ω—è—é—Ç—Å—è —Ç–æ–ª—å–∫–æ –µ—Å–ª–∏ benchmark –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º–æ –≤—ã—è–≤–∏—Ç orchestration/context/retrieval –¥–µ—Ñ–µ–∫—Ç –∏ –∫–æ–Ω–∫—Ä–µ—Ç–Ω—ã–µ —Ñ–∞–π–ª—ã –Ω–µ –∑–∞–Ω—è—Ç—ã –¥—Ä—É–≥–∏–º ACTIVE CLAIM.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å: `CHAT-2026-09-16-UPDATER-VERSIONING`, `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`, `CHAT-2026-09-16-SERVER-DB`; –∏—Ö –∑–∞—è–≤–ª–µ–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã –Ω–µ –∏–∑–º–µ–Ω—è—Ç—å.
-- –ò–Ω–≤–∞—Ä–∏–∞–Ω—Ç normal path: benchmark –∑–∞–ø—Ä–µ—â–∞–µ—Ç Ollama/OpenAI/–¥—Ä—É–≥–∏–µ AI API/remote inference/network fallback –∏ –¥–æ–ª–∂–µ–Ω –æ—Ç–¥–µ–ª—å–Ω–æ –¥–æ–∫–∞–∑–∞—Ç—å, —á—Ç–æ –¥–∞–∂–µ –ø—Ä–∏ –≤–∫–ª—é—á—ë–Ω–Ω–æ–º legacy compatibility switch normal `AIClient.chat()` –æ—Å—Ç–∞—ë—Ç—Å—è –Ω–∞ bundled AuroraFox Core/runtime.
-- Acceptance: machine-readable JSON report; deterministic/semantic quality checks –æ—Ç–¥–µ–ª—å–Ω–æ –æ—Ç performance; cold/warm latency, throughput-equivalent, peak RSS/RAM, timeout/hang detection –∏ repeatability; relative performance regression rules –≤–º–µ—Å—Ç–æ —Ö—Ä—É–ø–∫–∏—Ö CI absolute timings; –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º—ã–µ failing cases –Ω–µ –º–∞—Å–∫–∏—Ä—É—é—Ç—Å—è –≤–Ω–µ—à–Ω–µ–π –º–æ–¥–µ–ª—å—é.
-
-## 19. Local OCR for Core Knowledge ‚Äî active lane
-
-### CLAIM `CHAT-2026-09-16-LOCAL-OCR`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `2dca22523f3ce2eb7a8dab8d5908998e1742df70`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –≤—Å—Ç—Ä–æ–∏—Ç—å production-ready –ø–æ–ª–Ω–æ—Å—Ç—å—é –ª–æ–∫–∞–ª—å–Ω—ã–π OCR –¥–ª—è image-only/scanned –∏ mixed PDF, –∞ —Ç–∞–∫–∂–µ –∏–∑–æ–±—Ä–∞–∂–µ–Ω–∏–π, –≤ —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π File Intelligence ‚Üí Knowledge/Core Knowledge import flow –Ω–∞ Windows –∏ Android –±–µ–∑ Ollama/remote AI/cloud OCR.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **PATCH** (–∑–∞–∫—Ä—ã—Ç–∏–µ —Å—É—â–µ—Å—Ç–≤—É—é—â–µ–≥–æ Knowledge/document OCR gap); –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫–∞—è –≤–µ—Ä—Å–∏—è –∏ Android versionCode —ç—Ç–∏–º lane –Ω–µ –º–µ–Ω—è—é—Ç—Å—è ‚Äî —Ñ–∏–Ω–∞–ª—å–Ω—ã–π bump –¥–µ–ª–∞–µ—Ç –æ–±—â–∏–π release/integration —ç—Ç–∞–ø.
-- –§–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `file_intelligence/file_service.py`, `file_intelligence/requirements.txt`, `file_intelligence/install_files.ps1`, `file_intelligence/README.md`, `scripts/knowledge_document_importer.gd`, `scripts/file_intelligence_client.gd`, `scripts/knowledge_store.gd` —Ç–æ–ª—å–∫–æ –µ—Å–ª–∏ –Ω—É–∂–µ–Ω —è–≤–Ω—ã–π untrusted metadata contract, `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt`, `android_plugin/plugin/build.gradle.kts`, `android_plugin/settings.gradle.kts`, Android Godot plugin dependency metadata —Ç–æ–ª—å–∫–æ –µ—Å–ª–∏ —Ç—Ä–µ–±—É–µ—Ç—Å—è –¥–ª—è packaging, –Ω–æ–≤—ã–µ OCR-specific tests (`tests/test_local_ocr.py`, `tests/local_ocr_knowledge_smoke.gd`, Android OCR contract tests), –Ω–æ–≤—ã–π isolated `.github/workflows/local-ocr-ci.yml`, `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –ø–µ—Ä–µ—Å–µ–∫–∞–µ—Ç—Å—è —Å: `CHAT-2026-09-16-UPDATER-VERSIONING`, `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`, `CHAT-2026-09-16-SERVER-DB`, `CHAT-2026-09-16-CORE-BENCHMARKS`; –∏—Ö –∑–∞–Ω—è—Ç—ã–µ —Ñ–∞–π–ª—ã, workflow –∏ benchmark paths –Ω–µ –∏–∑–º–µ–Ω—è—Ç—å.
-- –ò–Ω–≤–∞—Ä–∏–∞–Ω—Ç—ã: normal OCR –Ω–µ –≤—ã–∑—ã–≤–∞–µ—Ç OpenAI/Gemini/Claude/Ollama/remote inference/network; text-layer PDF –ø—Ä–æ–ø—É—Å–∫–∞–µ—Ç OCR –Ω–∞ –ø—Ä–∏–≥–æ–¥–Ω—ã—Ö —Å—Ç—Ä–∞–Ω–∏—Ü–∞—Ö; scanned/mixed PDF –æ–±—Ä–∞–±–∞—Ç—ã–≤–∞–µ—Ç—Å—è page-by-page —Å –ª–∏–º–∏—Ç–∞–º–∏; ru+en; page/source metadata —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç—Å—è; OCR content –ø–æ–º–µ—á–∞–µ—Ç—Å—è untrusted document data –∏ –Ω–µ –ø–æ–ª—É—á–∞–µ—Ç executable/system authority; –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–µ OCR runtime –¥–∞—ë—Ç –ø–æ–Ω—è—Ç–Ω—É—é –¥–µ–≥—Ä–∞–¥–∞—Ü–∏—é –±–µ–∑ –ø–∞–¥–µ–Ω–∏—è —á–∞—Ç–∞; baseline runtime/model assets –¥–æ–ª–∂–Ω—ã –±—ã—Ç—å –≤–Ω—É—Ç—Ä–∏ –ø–æ—Å—Ç–∞–≤–ª—è–µ–º–æ–≥–æ –ø—Ä–∏–ª–æ–∂–µ–Ω–∏—è –ª–∏–±–æ –∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å –ª–æ–∫–∞–ª—å–Ω—ã–π —Å–∏—Å—Ç–µ–º–Ω—ã–π –º–µ—Ö–∞–Ω–∏–∑–º, –±–µ–∑ –æ–±—è–∑–∞—Ç–µ–ª—å–Ω–æ–≥–æ runtime-download/setup wizard.
-- Acceptance: regression/unit/integration tests –¥–ª—è text/scanned/mixed/empty/large/corrupt/ru/en/oversize/missing-runtime/duplicate-reimport/untrusted boundary; Windows + Android package/contract gates; relevant tests –∑–µ–ª—ë–Ω—ã–µ –¥–æ –∑–∞–∫—Ä—ã—Ç–∏—è CLAIM.
-
-## 20. Voice Quality ‚Äî coordinator acceptance checkpoint, 2026-09-16
-
-### `CHAT-2026-09-16-VOICE-QUALITY` ‚Äî checkpoint
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî coordinator acceptance –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è**.
-- Base HEAD —ç—Ç–æ–≥–æ –ø–∞–∫–µ—Ç–∞: `bc2f5dfad86be9f8f9addaa4da5ebb09f7cf1d11`.
-- Commits: `8f0ef307d08cf59418c8983f92a0b8cf3871bd2e` (`voice: benchmark persona samples and latency`), `c39df6fce6cae9624805b32084984e27d320ad2c` (`test: lock voice persona acoustic gate`).
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump voice-lane –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **PATCH**; –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫—É—é –≤–µ—Ä—Å–∏—é —ç—Ç–æ—Ç lane –Ω–µ –º–µ–Ω—è–µ—Ç, –∏—Ç–æ–≥–æ–≤—ã–π –∞–≥—Ä–µ–≥–∏—Ä–æ–≤–∞–Ω–Ω—ã–π bump –æ—Å—Ç–∞—ë—Ç—Å—è –∑–∞ release/versioning —ç—Ç–∞–ø–æ–º.
-- –°–¥–µ–ª–∞–Ω–æ: acoustic benchmark —Ä–∞—Å—à–∏—Ä–µ–Ω —Ä–µ–∞–ª—å–Ω—ã–º–∏ —Ä—É—Å—Å–∫–∏–º–∏ –∂–µ–Ω—Å–∫–∏–º–∏ —Å—Ü–µ–Ω–∞—Ä–∏—è–º–∏ `persona_morning`, `persona_night`, `persona_playful`, `persona_serious`; –∫–∞–∂–¥—ã–π —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç raw/final WAV –∏ –∏–∑–º–µ—Ä—è–µ—Ç model-load, synthesis/processor/total wall time, real-time factor, UTMOS, TTS‚ÜíWhisper intelligibility, peak/RMS, clipping/DC/hard-edge. –û—Ç–¥–µ–ª—å–Ω—ã–π regression contract –∑–∞–ø—Ä–µ—â–∞–µ—Ç –ø–æ—Ç–µ—Ä—è—Ç—å —ç—Ç–∏ —á–µ—Ç—ã—Ä–µ —Å—Ü–µ–Ω–∞—Ä–∏—è –∏ latency/clipping evidence.
-- –ò–Ω–∂–µ–Ω–µ—Ä–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞: –∫–æ–æ—Ä–¥–∏–Ω–∞—Ç–æ—Ä —Ç—Ä–µ–±—É–µ—Ç –Ω–µ –¥–µ–∫–ª–∞—Ä–∞—Ü–∏—é ¬´–≥–æ–ª–æ—Å —É–ª—É—á—à–µ–Ω¬ª, –∞ –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º—ã–µ WAV –∏ –∏–∑–º–µ—Ä–µ–Ω–∏—è. –ê–±—Å–æ–ª—é—Ç–Ω—ã–π latency threshold –≤ shared CI –Ω–∞–º–µ—Ä–µ–Ω–Ω–æ –Ω–µ –≤–≤–µ–¥—ë–Ω: —Ñ–∏–∫—Å–∏—Ä—É–µ—Ç—Å—è RTF/wall-time, —á—Ç–æ–±—ã —Å—Ä–∞–≤–Ω–∏–≤–∞—Ç—å —Ä–µ–≥—Ä–µ—Å—Å–∏–∏ –±–µ–∑ –ª–æ–∂–Ω—ã—Ö –ø–∞–¥–µ–Ω–∏–π –∏–∑-–∑–∞ —Ä–∞–∑–Ω—ã—Ö GitHub runners.
-- –ü—Ä–µ–¥—ã–¥—É—â–∏–π –¥–æ–∫–∞–∑–∞–Ω–Ω—ã–π baseline: acoustic run `35078865148` SUCCESS ‚Äî raw UTMOS mean `3.5763`, Aurora `3.5893`, ASR similarity mean `0.9428`, clipping gate –ø—Ä–æ–π–¥–µ–Ω; speaker sweep: `kseniya 3.5763` > `xenia 3.4666` > `baya 3.1718`.
-- –¢–µ–∫—É—â–∏–µ –ø—Ä–æ–≤–µ—Ä–∫–∏: persona acoustic run `35081711227` –Ω–∞ `8f0ef307...` ‚Äî **QUEUED** –Ω–∞ –º–æ–º–µ–Ω—Ç –∑–∞–ø–∏—Å–∏; exact test/Core run `35081841428` –∏ Android APK run `35081841551` –Ω–∞ `c39df6fc...` ‚Äî **QUEUED**. CLAIM –Ω–µ –∑–∞–∫—Ä—ã–≤–∞—Ç—å –¥–æ –ø–æ–ª—É—á–µ–Ω–∏—è —Ñ–∏–Ω–∞–ª—å–Ω—ã—Ö —Å—Ç–∞—Ç—É—Å–æ–≤ –∏ –∞—Ä—Ç–µ—Ñ–∞–∫—Ç–æ–≤.
-- –û–≥—Ä–∞–Ω–∏—á–µ–Ω–∏–µ/—Ä–∏—Å–∫: Windows `prosody_dsp=false` –æ—Å—Ç–∞–≤–ª–µ–Ω –Ω–∞–º–µ—Ä–µ–Ω–Ω–æ, –ø–æ—Ç–æ–º—É —á—Ç–æ —Ä–∞–Ω–Ω–∏–π phase-vocoder/DSP regression –∑–∞–º–µ—Ç–Ω–æ —É—Ö—É–¥—à–∞–ª UTMOS. –ü–æ—ç—Ç–æ–º—É –∑–Ω–∞—á–µ–Ω–∏—è emotion `speed/pitch` –Ω–µ–ª—å–∑—è —Å—á–∏—Ç–∞—Ç—å –¥–æ–∫–∞–∑–∞–Ω–Ω—ã–º –∏–∑–º–µ–Ω–µ–Ω–∏–µ–º —Ç–µ–º–±—Ä–∞/—Ç–µ–º–ø–∞ Windows WAV; persona acceptance —Å–µ–π—á–∞—Å –¥–æ–∫–∞–∑—ã–≤–∞–µ—Ç –∫–∞—á–µ—Å—Ç–≤–æ/—Ä–∞–∑–±–æ—Ä—á–∏–≤–æ—Å—Ç—å/latency/clipping, –Ω–æ —Å—É–±—ä–µ–∫—Ç–∏–≤–Ω—É—é —Ä–∞–∑–ª–∏—á–∏–º–æ—Å—Ç—å —ç–º–æ—Ü–∏–æ–Ω–∞–ª—å–Ω–æ–π –º–∞–Ω–µ—Ä—ã –Ω—É–∂–Ω–æ –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–∞—Ç—å –ø—Ä–æ—Å–ª—É—à–∏–≤–∞–Ω–∏–µ–º –∏–ª–∏ –±–µ–∑–æ–ø–∞—Å–Ω–æ–π model/punctuation prosody –±–µ–∑ –≤–æ–∑–≤—Ä–∞—Ç–∞ —Ä–æ–±–æ—Ç–∏–∑–∏—Ä—É—é—â–µ–≥–æ DSP. Android –∏–º–µ–µ—Ç –ª–æ–∫–∞–ª—å–Ω—ã–π Piper speed/silence shaping, –Ω–æ —Ñ–∏–∑–∏—á–µ—Å–∫–∏–π Android device listen –µ—â—ë –Ω–µ –¥–æ–∫–∞–∑–∞–Ω.
-- –ì—Ä–∞–Ω–∏—Ü—ã: UI/OCR/research/Core/updater/server —Ñ–∞–π–ª—ã –Ω–µ –∏–∑–º–µ–Ω—è–ª–∏—Å—å; `.github/workflows/voice-ci.yml` –Ω–µ —Ç—Ä–æ–≥–∞–ª—Å—è.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥: –¥–æ–∂–¥–∞—Ç—å—Å—è –≤—ã–ø–æ–ª–Ω–µ–Ω–∏—è `35081711227`, –∑–∞–±—Ä–∞—Ç—å `persona_*_aurora.wav` –∏ `report.json`, –∑–∞–ø–∏—Å–∞—Ç—å —Ç–æ—á–Ω—ã–µ latency/RTF/clipping/UTMOS/ASR; –∑–∞—Ç–µ–º –ø—Ä–æ–≤–µ—Ä–∏—Ç—å `35081841428` –∏ `35081841551`. –ï—Å–ª–∏ voice-specific gate –∫—Ä–∞—Å–Ω—ã–π ‚Äî –∏—Å–ø—Ä–∞–≤–ª—è—Ç—å —Ç–æ–ª—å–∫–æ voice-owned paths. –ï—Å–ª–∏ –∑–µ–ª—ë–Ω—ã–π ‚Äî –ø—Ä–æ–≤–µ—Å—Ç–∏/–∑–∞—Ñ–∏–∫—Å–∏—Ä–æ–≤–∞—Ç—å –¥–æ—Å—Ç—É–ø–Ω—É—é Windows listen-–ø—Ä–æ–≤–µ—Ä–∫—É –∏ —á–µ—Å—Ç–Ω–æ –æ—Å—Ç–∞–≤–∏—Ç—å physical Android device listen –æ—Ç–¥–µ–ª—å–Ω—ã–º gate, –µ—Å–ª–∏ —Ä–µ–∞–ª—å–Ω–æ–≥–æ —É—Å—Ç—Ä–æ–π—Å—Ç–≤–∞ –≤ –∫–æ–Ω—Ç—É—Ä–µ –Ω–µ—Ç.
-- –§–∞–π–ª—ã `voice/tools/acoustic_benchmark.py` –∏ `tests/test_voice_configs.py` –æ—Å—Ç–∞—é—Ç—Å—è –∑–∞–Ω—è—Ç—ã–º–∏ —ç—Ç–∏–º ACTIVE CLAIM –¥–æ –∑–∞–≤–µ—Ä—à–µ–Ω–∏—è coordinator acceptance.
-
-## 21. SERVER-DB ‚Äî coordinator acceptance checkpoint, 2026-09-16
-
-### `CHAT-2026-09-16-SERVER-DB` ‚Äî checkpoint
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî account/personal-sync baseline –ø—Ä–∏–Ω—è—Ç –ø–æ exact-head API CI; –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç—Å—è production hardening**.
-- Account/sync package commits: `726f2a6f`, `1c33e3f1`, `34f5e6ef`, `23c34782`, `abae7a02`, `e36acfb2`, `94c14c81`, `22e626bf`, `acd6c37f`, `47c826d2`, `12c49204`, `66600beb`, `50af5e6d`, `5ad72f3a`, `bc82d4dc`, `4193f566`, `1326a9e9`, `08591b08`.
-- –°–¥–µ–ª–∞–Ω–æ: SQLite schema –ø–æ–¥–Ω—è—Ç–∞ –¥–æ v3 —Å additive migration; –¥–æ–±–∞–≤–ª–µ–Ω—ã accounts/guests/devices/auth sessions/rotating refresh token families/account one-time tokens/revisioned sync entities/change cursor/conflicts. Passwords —Ö—ç—à–∏—Ä—É—é—Ç—Å—è `scrypt` + random salt; bearer/refresh/guest tokens –≤ –ë–î —Ç–æ–ª—å–∫–æ –∫–∞–∫ SHA-256 hashes. Refresh rotation –æ–¥–Ω–æ—Ä–∞–∑–æ–≤–∞—è; replay —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç family revoke —Ç—Ä–∞–Ω–∑–∞–∫—Ü–∏–æ–Ω–Ω–æ; device revoke –∏–Ω–≤–∞–ª–∏–¥–∏—Ä—É–µ—Ç sessions.
-- Personal isolation: account/guest bearer principals –∏–º–µ—é—Ç —Å—Ç–∞–±–∏–ª—å–Ω—ã–π server-side owner (`account:<id>` / `guest:<id>`); –¥–≤–∞ –∞–∫–∫–∞—É–Ω—Ç–∞ –∏ –¥–≤–∞ –≥–æ—Å—Ç—è –º–æ–≥—É—Ç –∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å –æ–¥–∏–Ω–∞–∫–æ–≤—ã–µ conversation/entity IDs –±–µ–∑ –ø–µ—Ä–µ—Å–µ—á–µ–Ω–∏—è. Personal scopes –Ω–∞–º–µ—Ä–µ–Ω–Ω–æ –Ω–µ —Å–æ–¥–µ—Ä–∂–∞—Ç `memory.write`/`feedback`; normal account/guest chat –Ω–µ –ø–æ–ø–∞–¥–∞–µ—Ç –≤ shared learning queue. Server normal `auto/agent` path –±–æ–ª—å—à–µ –Ω–µ –¥–µ–ª–∞–µ—Ç –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏–π Ollama fallback; Ollama –æ—Å—Ç–∞—ë—Ç—Å—è —Ç–æ–ª—å–∫–æ explicit `mode=ollama` compatibility.
-- Sync: push/pull cursor, per-entity revisions/checksum/tombstones, idempotent same-content writes, stale-write conflict preservation –∏ explicit conflict resolution. Guest‚Üíaccount migration –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è –æ–¥–Ω–æ–π SQLite transaction: conversations/messages –ø–µ—Ä–µ–Ω–æ—Å—è—Ç—Å—è, collision conversation —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç—Å—è –ø–æ–¥ –Ω–æ–≤—ã–º ID, unique sync data –ø–µ—Ä–µ–Ω–æ—Å–∏—Ç—Å—è, duplicate —Å—Ö–ª–æ–ø—ã–≤–∞–µ—Ç—Å—è, conflicting guest version —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç—Å—è –≤ `sync_conflicts`, guest/device revoke –ø—Ä–æ–∏—Å—Ö–æ–¥–∏—Ç —Ç–æ–ª—å–∫–æ –≤ —Ç–æ–π –∂–µ successful transaction.
-- Backup/restore: export backup –æ—á–∏—â–∞–µ—Ç API keys, access/refresh/account one-time hashes, password hashes/salts –∏ guest bearer hashes —Å `VACUUM`; root-only operational snapshot —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç –ø–æ–ª–Ω—ã–π auth state –¥–ª—è —Ç–æ—á–Ω–æ–≥–æ rollback. Regression `test_api_account_restore.py` –¥–æ–∫–∞–∑—ã–≤–∞–µ—Ç –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ account access session + personal sync –ø–æ—Å–ª–µ snapshot restore.
-- REG.RU: fresh install –∏ updater —Ç–µ–ø–µ—Ä—å –∑–∞–ø—É—Å–∫–∞—é—Ç account/sync/network/schema/privacy/restore gates –¥–æ activation; updater –ø–æ-–ø—Ä–µ–∂–Ω–µ–º—É –¥–µ–ª–∞–µ—Ç root-only DB snapshot + sanitized owner backup –¥–æ checkout, `/ready` + direct SQLite integrity –ø–æ—Å–ª–µ restart –∏ code+DB rollback –ø—Ä–∏ failure.
-- –ü—Ä–æ–≤–µ—Ä–∫–∏: API CI `35084280709` –Ω–∞ `47c826d2...` ‚Äî SUCCESS (python/windows/godot; network account test –≤–∫–ª—é—á—ë–Ω); API CI `35084594540` –Ω–∞ `bc82d4dc...` ‚Äî SUCCESS (–≤–∫–ª—é—á–∞—è restore test); exact deployment/account head API CI `35084740506` –Ω–∞ `08591b08...` ‚Äî **SUCCESS**: `python-api`, `windows-api`, `godot-api` –≤—Å–µ –∑–µ–ª—ë–Ω—ã–µ.
-- –ù–∞–π–¥–µ–Ω–Ω—ã–π –∏ –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–Ω—ã–π test-infra –¥–µ—Ñ–µ–∫—Ç: –ø–µ—Ä–≤—ã–π network run `35084112647` –ø–∞–¥–∞–ª –ø—Ä–∏ collection –∏–∑-–∑–∞ –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—â–µ–≥–æ `httpx`; production code –Ω–µ –ø–∞–¥–∞–ª. CI/install/update —Ç–µ–ø–µ—Ä—å —è–≤–Ω–æ —Å—Ç–∞–≤—è—Ç `httpx==0.28.1` –¥–ª—è FastAPI network contract.
-- –û–≥—Ä–∞–Ω–∏—á–µ–Ω–∏—è/—Ä–∏—Å–∫–∏: —Ñ–∏–∑–∏—á–µ—Å–∫–∏–π REG.RU host —ç—Ç–∏–º —á–∞—Ç–æ–º –Ω–µ –∏–∑–º–µ–Ω—è–ª—Å—è –∏ –Ω–µ —Å—á–∏—Ç–∞–µ—Ç—Å—è –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω—ã–º –±–µ–∑ –¥–æ—Å—Ç—É–ø–Ω–æ–≥–æ SSH/terminal connector. Email verification/reset one-time token storage —Ä–µ–∞–ª–∏–∑–æ–≤–∞–Ω, –Ω–æ production delivery transport –µ—â—ë –Ω–µ –ø–æ–¥–∫–ª—é—á—ë–Ω; dev token exposure –≤—ã–∫–ª—é—á–µ–Ω –ø–æ —É–º–æ–ª—á–∞–Ω–∏—é. –î–æ –ø–æ–ª–Ω–æ–≥–æ server acceptance —Ç–∞–∫–∂–µ –Ω—É–∂–µ–Ω ingress request-body guard –¥–æ –ø–æ–ª–Ω–æ–π JSON materialization –∏ capacity/retention policy –±–µ–∑ —É–¥–∞–ª–µ–Ω–∏—è pending/private data.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥ –ø–æ —É–∫–∞–∑–∞–Ω–∏—é –≥–ª–∞–≤–Ω–æ–≥–æ –∫–æ–æ—Ä–¥–∏–Ω–∞—Ç–æ—Ä–∞: **–Ω–µ —Ç—Ä–æ–≥–∞—Ç—å UI/voice/research/OCR/Core/updater-owned paths**; –≤–Ω—É—Ç—Ä–∏ SERVER-DB lane —Ä–µ–∞–ª–∏–∑–æ–≤–∞—Ç—å production email verification/reset delivery boundary –±–µ–∑ —Ö—Ä–∞–Ω–µ–Ω–∏—è raw long-lived secrets, –∑–∞—Ç–µ–º early HTTP body limit/capacity gates; –ø–æ—Å–ª–µ —ç—Ç–æ–≥–æ –ø—Ä–æ–≤–µ—Ä–∏—Ç—å –¥–æ—Å—Ç—É–ø–Ω—ã–π –ø—É–±–ª–∏—á–Ω—ã–π REG.RU `/health`/`/ready` –∏ –æ—Å—Ç–∞–≤–∏—Ç—å —Ñ–∏–∑–∏—á–µ—Å–∫–∏–π SSH deployment owner/access boundary, –µ—Å–ª–∏ connector –ø–æ-–ø—Ä–µ–∂–Ω–µ–º—É –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç.
-
-## 22. Integration / Regression / Release Readiness Gate ‚Äî active lane
-
-### CLAIM `CHAT-2026-09-16-INTEGRATION-GATE`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `6fd0539e8ee849487d9eb22b1615d4ab54ae4c20`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –Ω–µ–∑–∞–≤–∏—Å–∏–º—ã–π cross-subsystem integration/regression/release-readiness gate –¥–ª—è —Å–≤–µ–∂–µ–≥–æ `main`: —Ä–∞–Ω–æ –Ω–∞—Ö–æ–¥–∏—Ç—å –Ω–µ—Å–æ–≤–º–µ—Å—Ç–∏–º–æ—Å—Ç–∏ –º–µ–∂–¥—É Core/AgentCore/Knowledge/Research/Voice/OCR/API/accounts/UI/updater/package/safety lanes, –Ω–µ –¥—É–±–ª–∏—Ä—É—è –∏—Ö —Ä–µ–∞–ª–∏–∑–∞—Ü–∏—é.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **BUILD**, –µ—Å–ª–∏ –∏–∑–º–µ–Ω–µ–Ω–∏—è –æ—Å—Ç–∞—é—Ç—Å—è —Ç–æ–ª—å–∫–æ integration/CI/test infrastructure; –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫—É—é –≤–µ—Ä—Å–∏—é –∏ Android versionCode —ç—Ç–æ—Ç lane –Ω–µ –º–µ–Ω—è–µ—Ç. –ï—Å–ª–∏ –Ω–∞–π–¥–µ–Ω–Ω—ã–π product fix —Ç—Ä–µ–±—É–µ—Ç –±–æ–ª—å—à–µ–≥–æ bump, –æ–Ω –º–∞—Ä—à—Ä—É—Ç–∏–∑–∏—Ä—É–µ—Ç—Å—è –≤–ª–∞–¥–µ–ª—å—Ü—É production CLAIM.
-- –°–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: —Ç–æ–ª—å–∫–æ –Ω–æ–≤—ã–µ `tests/integration_*`, `tests/release_readiness_*`, `tests/cross_subsystem_*`, –Ω–æ–≤—ã–π `.github/workflows/integration-gate.yml` –ø—Ä–∏ –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–∏ –∫–æ–Ω—Ñ–ª–∏–∫—Ç–∞, integration scripts –∏ `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –∏–∑–º–µ–Ω—è—Ç—å production-—Ñ–∞–π–ª—ã –∏ workflow, –∑–∞–Ω—è—Ç—ã–µ `CHAT-2026-09-16-UPDATER-VERSIONING`, `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`, `CHAT-2026-09-16-SERVER-DB`, `CHAT-2026-09-16-CORE-BENCHMARKS`, `CHAT-2026-09-16-LOCAL-OCR`.
-- –ì–ª–∞–≤–Ω—ã–π gate: normal AuroraFox path –¥–æ–ª–∂–µ–Ω –æ—Å—Ç–∞–≤–∞—Ç—å—Å—è –ø–æ–ª–Ω–æ—Å—Ç—å—é —Ä–∞–±–æ—Ç–æ—Å–ø–æ—Å–æ–±–Ω—ã–º –±–µ–∑ Ollama/OpenAI/Gemini/Claude/remote inference/Internet –∏ –∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å bundled AuroraFox Core; external AI –Ω–µ –º–æ–∂–µ—Ç —Å—Ç–∞—Ç—å –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–º fallback.
-- Acceptance: offline Core; Knowledge/OCR after integration; collector‚Üícurator authority; Account A/B + Guest A/B isolation; Windows package; Android APK + bundled runtime/model/OCR; updater/version contract; UI integration smoke; master stop/snapshot/rollback/privacy/sandbox/candidate verification gates; Core benchmark without blocking regression; CI failures routed by exact CLAIM-ID with job/test/SHA evidence; physical-device tests reported honestly if unavailable.
-
-## 23. Large Knowledge / Memory Performance & Stress ‚Äî active lane
-
-### CLAIM `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `41acd5781d34719c9b257990b40f976e3dd04eb0`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –¥–æ–≤–µ—Å—Ç–∏ –∏–∑–º–µ—Ä–∏–º—ã–π production-readiness contract –¥–ª—è –±–æ–ª—å—à–∏—Ö –ª–æ–∫–∞–ª—å–Ω—ã—Ö Knowledge/Memory datasets: import/streaming, search/retrieval, deduplication, source removal, restart, transaction/rollback, concurrency –∏ memory/disk scaling –Ω–∞ Windows –∏ Android –±–µ–∑ Ollama/remote AI/–∏–Ω—Ç–µ—Ä–Ω–µ—Ç–∞.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **PATCH**; –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫—É—é –≤–µ—Ä—Å–∏—é –∏ Android versionCode —ç—Ç–æ—Ç lane –Ω–µ –º–µ–Ω—è–µ—Ç, —Ñ–∏–Ω–∞–ª—å–Ω—ã–π –æ–±—â–∏–π bump –≤—ã–ø–æ–ª–Ω—è–µ—Ç release/integration —ç—Ç–∞–ø.
-- –°–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–µ —Å–≤–æ–±–æ–¥–Ω—ã–µ —Ñ–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: –Ω–æ–≤—ã–µ `benchmarks/knowledge/**`, –Ω–æ–≤—ã–µ `tests/*knowledge_performance*`, `tests/*knowledge_stress*`, isolated `.github/workflows/knowledge-performance.yml`, `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd`, `scripts/memory_store.gd` —Ç–æ–ª—å–∫–æ –¥–ª—è benchmark-proven performance follow-up, `docs/PROJECT_MASTER_LOG.md`.
-- –ù–µ –∏–∑–º–µ–Ω—è—Ç—å production-—Ñ–∞–π–ª—ã –∏ —Ç–µ—Å—Ç—ã/workflows, –∑–∞–Ω—è—Ç—ã–µ `CHAT-2026-09-16-LOCAL-OCR`, `CHAT-2026-09-16-CORE-BENCHMARKS`, `CHAT-2026-09-16-INTEGRATION-GATE`, `CHAT-2026-09-16-SERVER-DB`, `CHAT-2026-09-16-UI-POLISH`, `CHAT_MAIN-2026-09-16-RESEARCH-QUALITY`, `CHAT-2026-09-16-VOICE-QUALITY`, `CHAT-2026-09-16-UPDATER-VERSIONING`.
-- –û—Å–æ–±–∞—è –≥—Ä–∞–Ω–∏—Ü–∞: `scripts/knowledge_store.gd`, `scripts/knowledge_document_importer.gd`, `scripts/file_intelligence_client.gd`, OCR/File Intelligence –∏ Android document/OCR paths –ø—Ä–∏–Ω–∞–¥–ª–µ–∂–∞—Ç `CHAT-2026-09-16-LOCAL-OCR` –¥–æ –æ—Å–≤–æ–±–æ–∂–¥–µ–Ω–∏—è; –Ω–∞–π–¥–µ–Ω–Ω—ã–µ bottleneck –≤ –Ω–∏—Ö —Ñ–∏–∫—Å–∏—Ä–æ–≤–∞—Ç—å –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º—ã–º benchmark/report –∏ –ø–µ—Ä–µ–¥–∞–≤–∞—Ç—å –≤–ª–∞–¥–µ–ª—å—Ü—É —á–µ—Ä–µ–∑ `PERFORMANCE-BLOCKER`, –Ω–µ –ø—Ä–∞–≤–∏—Ç—å —Å–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω–æ.
-- Performance-follow-up ownership extension: –ø–æ—Å–ª–µ –¥–≤—É—Ö –Ω–µ–∑–∞–≤–∏—Å–∏–º—ã—Ö standard Linux CI –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–µ–Ω–æ –Ω–∞–∫–æ–ø–∏—Ç–µ–ª—å–Ω–æ–µ N‚Üí2N near-4x scaling; `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd`, `scripts/memory_store.gd` —Å–≤–æ–±–æ–¥–Ω—ã –æ—Ç –¥—Ä—É–≥–∏—Ö ACTIVE CLAIM –∏ –∑–∞—Ä–µ–∑–µ—Ä–≤–∏—Ä–æ–≤–∞–Ω—ã —ç—Ç–∏–º lane –¥–ª—è –∞–¥—Ä–µ—Å–Ω—ã—Ö –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–π –ø–æ—Å–ª–µ —Å–æ–æ—Ç–≤–µ—Ç—Å—Ç–≤—É—é—â–µ–≥–æ benchmark evidence. `scripts/knowledge_store.gd` –ø–æ-–ø—Ä–µ–∂–Ω–µ–º—É –Ω–µ —Ç—Ä–æ–≥–∞—Ç—å –¥–æ –æ—Å–≤–æ–±–æ–∂–¥–µ–Ω–∏—è `LOCAL-OCR`.
-- Acceptance: –¥–µ—Ç–µ—Ä–º–∏–Ω–∏—Ä–æ–≤–∞–Ω–Ω–æ –≥–µ–Ω–µ—Ä–∏—Ä—É–µ–º—ã–µ datasets –±–µ–∑ –æ–≥—Ä–æ–º–Ω—ã—Ö Git fixtures; machine-readable JSON report —Å dataset/record/chunk counts, duration/throughput, peak RSS, DB/index size, search p50/p95/p99, restart/removal/rollback, duplicate/error counts –∏ runtime identity; N/2N/4N scaling; correctness gates –¥–ª—è restart/dedup/source removal/failure rollback; self-reliance flags `network_required=false`, `external_runtime_required=false`, `ollama_required=false`; Android-appropriate bounded-memory contract —Å —á–µ—Å—Ç–Ω–æ–π –æ—Ç–º–µ—Ç–∫–æ–π, –µ—Å–ª–∏ physical device –Ω–µ–¥–æ—Å—Ç—É–ø–µ–Ω.
-
-## 24. Work / Computer Agent Reliability & Recovery ‚Äî active lane
-
-### CLAIM `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE**
-- Started from HEAD: `406f77695420818e874f99c64012be70fa0bf713`
-- –†–µ–∂–∏–º: Chat
-- –¶–µ–ª—å: –¥–æ–≤–µ—Å—Ç–∏ Work –∏ Computer Agent –¥–æ production-ready lifecycle/recovery/safety baseline: –¥–µ—Ç–µ—Ä–º–∏–Ω–∏—Ä–æ–≤–∞–Ω–Ω—ã–µ task states, restart/corruption recovery, idempotency/cancellation/retry policy, bounded Computer actions, capability/failure contracts, sandbox/master-stop/privacy boundaries –∏ local-only normal path.
-- –ü—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π bump –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates: **PATCH**; –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫—É—é –≤–µ—Ä—Å–∏—é –∏ Android versionCode —ç—Ç–æ—Ç lane –Ω–µ –º–µ–Ω—è–µ—Ç ‚Äî –∏—Ç–æ–≥–æ–≤—ã–π bump –≤—ã–ø–æ–ª–Ω—è–µ—Ç –æ–±—â–∏–π release/integration —ç—Ç–∞–ø.
-- –°–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã/–ø–æ–¥—Å–∏—Å—Ç–µ–º–∞: `work/work_manager.gd`, `work/work_store.gd`, `computer/computer_service.py`, `computer/install_computer.ps1`, `computer/requirements.txt`, `scripts/computer_client.gd`, –Ω–æ–≤—ã–µ `tests/work_reliability_*`, `tests/computer_agent_*`, `tests/work_computer_e2e_*`, –Ω–æ–≤—ã–π `.github/workflows/work-computer-reliability.yml`, `docs/PROJECT_MASTER_LOG.md`.
-- UI-–≥—Ä–∞–Ω–∏—Ü–∞: `work/work_overlay.gd`, `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd` –∏ –ø—Ä–æ—á–∏–µ UI-owned paths –ø—Ä–∏–Ω–∞–¥–ª–µ–∂–∞—Ç `CHAT-2026-09-16-UI-POLISH` –∏ —ç—Ç–∏–º lane –Ω–µ –∏–∑–º–µ–Ω—è—é—Ç—Å—è. UI-–±–ª–æ–∫–µ—Ä—ã –∞–¥—Ä–µ—Å—É—é—Ç—Å—è –≤–ª–∞–¥–µ–ª—å—Ü—É —á–µ—Ä–µ–∑ `FROM/TO/TYPE/EVIDENCE/ACTION`.
-- –û–±—â–∏–µ safety/Core production paths (`scripts/agent_core.gd`, `scripts/tool_registry.gd`, autonomy/sandbox bridges) –Ω–µ –∏–∑–º–µ–Ω—è—Ç—å –±–µ–∑ –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º–æ–≥–æ –¥–µ—Ñ–µ–∫—Ç–∞, –ø–æ–≤—Ç–æ—Ä–Ω–æ–π –ø—Ä–æ–≤–µ—Ä–∫–∏ —Å–≤–µ–∂–µ–≥–æ master log, —Å–≤–æ–±–æ–¥—ã –∫–æ–Ω–∫—Ä–µ—Ç–Ω–æ–≥–æ —Ñ–∞–π–ª–∞ –∏ –¥–æ–∫–∞–∑–∞–Ω–Ω–æ–π –Ω–µ–æ–±—Ö–æ–¥–∏–º–æ—Å—Ç–∏; –ø–µ—Ä–µ–¥ —Ç–∞–∫–æ–π –ø—Ä–∞–≤–∫–æ–π —Å–Ω–∞—á–∞–ª–∞ —Ä–∞—Å—à–∏—Ä–∏—Ç—å —ç—Ç—É –∑–∞–ø–∏—Å—å evidence/ownership.
-- –ê—Ä—Ö–∏—Ç–µ–∫—Ç—É—Ä–Ω—ã–π –∏–Ω–≤–∞—Ä–∏–∞–Ω—Ç: normal Work/Computer path = bundled AuroraFox Core + local planning + local Work state + local tools/Computer primitives. Ollama/OpenAI/Gemini/Claude/remote inference –Ω–µ –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã –∏ –Ω–µ —è–≤–ª—è—é—Ç—Å—è normal Computer planner; –∏–Ω—Ç–µ—Ä–Ω–µ—Ç –∏—Å–ø–æ–ª—å–∑—É–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –∫–æ–Ω–∫—Ä–µ—Ç–Ω–æ–π –∑–∞–¥–∞—á–µ–π, –∫–æ—Ç–æ—Ä–æ–π –Ω—É–∂–Ω–∞ —Å–µ—Ç—å.
-- Acceptance: create/save/execute/progress/complete/restart/load; pause/resume/cancel/retry/failed/interrupted/partial; atomic resilient store + migration/dedup; invalid transitions rejected; safe/unsafe retry distinction; no blind destructive replay after uncertain result; Computer unavailable/timeout/malformed/permission/screenshot/platform failures –Ω–µ –ª–æ–º–∞—é—Ç chat; bounded calls; path traversal/symlink/command-injection/master-stop/untrusted-authority/privacy regressions; concurrency/stress; Windows contracts –∑–µ–ª—ë–Ω—ã–µ; Android Work + explicit unsupported Computer capability –∑–µ–ª—ë–Ω—ã–π; physical Windows/Android gates –æ—Ç–º–µ—á–∞—é—Ç—Å—è –æ—Ç–¥–µ–ª—å–Ω–æ, –µ—Å–ª–∏ —É—Å—Ç—Ä–æ–π—Å—Ç–≤–∞ –Ω–µ–¥–æ—Å—Ç—É–ø–Ω—ã; –Ω–µ—Ç –∏–∑–≤–µ—Å—Ç–Ω–æ–≥–æ P0/P1 –≤ —Å–æ–±—Å—Ç–≤–µ–Ω–Ω–æ–º scope.
-
-## 25. Integration Gate ‚Äî routed findings and checkpoint, 2026-09-16
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UPDATER-VERSIONING
-TYPE: BLOCKER
-EVIDENCE: Integration Gate run `35087135629` on PR #32 merge SHA `54d7892d54d26a23a6d3e260cc294b130f1a6dbc`: all split candidate verification/safety/trust, API resilience, master-log and Large Knowledge contract/comparison steps were green, while `Updater repair and signed-floor compatibility contract` failed in `tests/test_core_candidate_promotion.py::test_signed_release_enforces_v12_repair_and_v13_signed_update_floor` with `AttributeError` because `test_update_backward_compat.test_manifest_template_is_legacy_readable_but_does_not_claim_legacy_direct_update` no longer exists. The updater claim also currently points to draft PR #29, but current PR #29 is `Harden candidate queue isolation and integrity; coordinate active work`, so that PR reference is stale/mismatched.
-ACTION: Reconcile the release-compat bridge in `tests/test_core_candidate_promotion.py` with the current V1.2/V1.3 repair + V1.4 signed-floor compatibility contract and current function names, correct the updater CLAIM's branch/PR/commit reference, then rerun Core/Voice and Integration Gate. Do not weaken signature, pinned trust-root, repair-floor or version-discipline requirements.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UI-POLISH
-TYPE: NEXT
-EVIDENCE: UI draft PR #27 head `f5eed5e30dfdd1657d1b864fc273ea83041bdc9e` adds a real visual acceptance matrix, but its own `.github/workflows/ui-visual-ci.yml` manifest check explicitly requires `known_missing_client_surfaces == {'login_guest', 'user_memory_management'}`. The coordinator acceptance table requires Windows/Android entry as login/guest plus memory management, while SERVER-DB already has account/guest isolation contracts.
-ACTION: Implement and visually/structurally verify Windows + Android login and explicit guest entry/session UI plus user-memory management against the current SERVER-DB contract; extend UI smoke/capture evidence and preserve Account A/B + Guest A/B isolation. Coordinate API semantics with `CHAT-2026-09-16-SERVER-DB`; do not duplicate server implementation.
-
-- Integration branch: `chat-2026-09-16-integration-gate`; draft PR #32.
-- Gate branch synced without force to main through `62a59ed1af050c9a459e0556fd0ea1aabfef5411`; branch merge head before this journal checkpoint: `2add2f9d0ea49dd13e75be280114c5455fcb84bf`.
-- Own gate changes remain limited to `.github/workflows/integration-gate.yml` and `tests/integration_release_readiness_contract.py`: aggregate same-SHA offline Core/Research lifecycle/Account isolation/Knowledge correctness + comparison + N/2N/4N scaling blockers/Voice diagnostics/API/candidate safety/Godot UI-Work smokes; independently owned OCR/Core-benchmark/Work-Computer artifacts are watched and become mandatory when they land.
-- Previous run `35087135629` proved Godot cross-subsystem green and localized the updater blocker; the old Research failure in that run was an Integration Gate assertion drift, not a Research product regression, and the gate contract was updated to follow the current provenance-key contract.
-- Physical Windows/Android devices and human visual/listen acceptance are still separate evidence boundaries and are not claimed by this CI gate.
-
-## 26. Large Knowledge / Memory Performance ‚Äî benchmark checkpoint, 2026-09-16
-
-### `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` ‚Äî checkpoint
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî correctness baseline green on Linux; reproducible performance blockers found; Windows benchmark portability revalidation in progress**.
-- Base HEAD –ø—Ä–æ–¥–æ–ª–∂–µ–Ω–∏—è: `612c834b6e41747b3219675ce314b1a472502f20`; –∏—Å—Ö–æ–¥–Ω—ã–π CLAIM –Ω–∞—á–∞—Ç –æ—Ç `41acd5781d34719c9b257990b40f976e3dd04eb0`.
-- Benchmark/CI commits —ç—Ç–∞–ø–∞: `c887c02fcdbe89d3dd9dede9c07f19c5f0444d06` (machine-readable performance validator), `8cf55e08c9cacd65173ab51f8f48e916a14e8052` (persistent MemoryStore N/2N/4N), `f7369daa13b1215cf60528ca9802a7519de40d26` (Knowledge search N/2N/4N), `5e083c9ad29c65ecf34e297e0b1d316c2e103b87` (stress-gate unit contract), `5add40f16248db9c84517eecc3402fd78a500d2d` (CI relative blockers), `b1cc2d311fcd9eb334b40045686df00471f23a25` + `753cbfec1154159fed336c839246260c7fbeebbc` (portable benchmark-only Windows execution; production scripts unchanged).
-- –ü—Ä–æ–≤–µ—Ä–∫–∏/correctness: Knowledge Performance run `35086858965`, standard-linux job `104763758491` –Ω–∞ `406f7769...` ‚Äî **SUCCESS**, artifact `10442019189`, digest `sha256:c16a5a8d62d0eb48934d41ca24fb8906891f9217b88c353ca98bf4421c3ab8ba`; –ø–æ–≤—Ç–æ—Ä–Ω—ã–π run `35087303702`, standard-linux job `104768474785` –Ω–∞ `612c834b...` ‚Äî **SUCCESS**, artifact `10443391589`, digest `sha256:1560964f727c26efafba836658e6f4f5cb39614bd79cf32b18c684b964801ac5`. Hard correctness –≤ –æ–±–æ–∏—Ö: import/search correctness, dedupe, A+B+C source removal, rollback, process restart, concurrent import, Unicode/long path –∏ self-reliance –ø—Ä–æ–π–¥–µ–Ω—ã.
-- Reproducible scaling blocker: –ø–µ—Ä–≤—ã–π standard run 8‚Üí16‚Üí32 sources –ø–æ 32 KiB = `192.191 ‚Üí 658.727 ‚Üí 2402.870 ms`, ratios `3.427√ó / 3.648√ó`; –Ω–µ–∑–∞–≤–∏—Å–∏–º—ã–π –ø–æ–≤—Ç–æ—Ä = `295.399 ‚Üí 1134.908 ‚Üí 4412.655 ms`, ratios `3.842√ó / 3.888√ó`. –≠—Ç–æ –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º—ã–π near-quadratic cumulative import path, –Ω–µ runner-noise.
-- 10 MiB evidence: JSONL import ~`4.7‚Äì5.7 s`, CSV ~`4.8‚Äì5.8 s`, TXT ~`2.9 s`, streaming monolithic JSON ~`9.2‚Äì11.4 s`; search correctness –æ—Å—Ç–∞—ë—Ç—Å—è –∑–µ–ª—ë–Ω—ã–º, –Ω–æ p95 –Ω–∞ 10 MiB –æ–±—ã—á–Ω–æ ~`0.8‚Äì1.2 s`, long-query –¥–æ ~`1.8‚Äì3.0 s`. Absolute CI latency –ø–æ–∫–∞ –∏–Ω—Ñ–æ—Ä–º–∞—Ü–∏–æ–Ω–Ω–∞—è; relative scaling gate —Ç–µ–ø–µ—Ä—å –æ—Ç–¥–µ–ª—å–Ω—ã–π.
-- Rollback evidence: malformed ~10 MiB import –æ—Ç–∫–∞—Ç—ã–≤–∞–µ—Ç –ø—Ä–µ–∂–Ω–µ–µ –≤–∞–ª–∏–¥–Ω–æ–µ —Å–æ—Å—Ç–æ—è–Ω–∏–µ/fingerprint –∏ –Ω–µ –æ—Å—Ç–∞–≤–ª—è–µ—Ç partial source; –≤ –ø–µ—Ä–≤–æ–º standard run rollback ~`8.93 s`. Dedupe repeat/same-bytes renamed alias –Ω–µ —Ä–∞–∑–¥—É–≤–∞–µ—Ç chunks; changed source —Å–æ–∑–¥–∞—ë—Ç revision 2. Concurrent 1 MiB+1 MiB import –≤ –∏–∑–º–µ—Ä–µ–Ω–Ω–æ–º Linux run –∑–∞–≤–µ—Ä—à–∏–ª—Å—è –±–µ–∑ corruption. Local semantic MemoryStore 250 records: write ~`1.18 s`, local index ~`72 ms`, search ~`15 ms`, restart ~`8 ms`, provider `aurorafox_local_vector`, `network_required=false`, `external_runtime_required=false`, `ollama_required=false`.
-- Memory/RAM: 10 MiB cases –ø–æ–∫–∞–∑—ã–≤–∞—é—Ç raw process peak –ø–æ—Ä—è–¥–∫–∞ `115‚Äì119 MiB`, –Ω–æ —ç—Ç–æ –≤–∫–ª—é—á–∞–µ—Ç –±–∞–∑–æ–≤—ã–π Godot process; –Ω–æ–≤—ã–π `run_memory_scaling.py` –∏–∑–º–µ—Ä—è–µ—Ç baseline-adjusted RSS –∏ write/index N/2N/4N, —á—Ç–æ–±—ã –Ω–µ –≤—ã–¥–∞–≤–∞—Ç—å raw RSS/dataset ratio –∑–∞ streaming leak.
-- Android: machine-readable contract —Ñ–∏–∫—Å–∏—Ä—É–µ—Ç bounded/incremental/private-storage/no-mandatory-external-service —Ç—Ä–µ–±–æ–≤–∞–Ω–∏—è –∏ `physical_device_proof=false`; desktop CI **–Ω–µ** —Å—á–∏—Ç–∞–µ—Ç—Å—è Android device proof.
-- Windows: run `35087303702`, smoke-windows job `104768475000` —É–ø–∞–ª –¥–æ —Å—Ü–µ–Ω–∞—Ä–∏–µ–≤ —Å benchmark-only parse `Could not resolve external class member "import_file"` –Ω–∞ fresh Windows Godot. Production project/editor parse –±—ã–ª green. –î–ª—è —É—Å—Ç—Ä–∞–Ω–µ–Ω–∏—è test-infra —Ä–∞—Å—Ö–æ–∂–¥–µ–Ω–∏—è –¥–æ–±–∞–≤–ª–µ–Ω portable runtime copy —Å Variant-typed preloaded script handles (`b1cc2d31...`, workflow `753cbfec...`); –Ω–æ–≤—ã–π exact run –¥–æ–ª–∂–µ–Ω –ø–æ–¥—Ç–≤–µ—Ä–¥–∏—Ç—å Windows, –ø—Ä–µ–∂–¥–µ —á–µ–º —Å—á–∏—Ç–∞—Ç—å Windows –¥–æ–∫–∞–∑–∞–Ω–Ω—ã–º.
-
-FROM: CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF
-TO: CHAT-2026-09-16-LOCAL-OCR
-TYPE: PERFORMANCE-BLOCKER
-EVIDENCE: Knowledge Performance standard-linux `35086858965/104763758491` artifact `10442019189` –∏ –ø–æ–≤—Ç–æ—Ä `35087303702/104768474785` artifact `10443391589`: 16‚Üí32 small-source import ratios `3.648√ó` –∏ `3.888√ó`; 10 MiB JSONL/CSV search p95 –æ–∫–æ–ª–æ —Å–µ–∫—É–Ω–¥—ã. Static audit –ø–æ–∫–∞–∑—ã–≤–∞–µ—Ç –≤ OCR-owned `scripts/knowledge_store.gd` unconditional source filtering before new imports –∏ record/chunk append —Å repeated file open/close; —ç—Ç–æ—Ç lane —Ñ–∞–π–ª –Ω–µ –º–µ–Ω—è–µ—Ç.
-ACTION: –í —Ä–∞–º–∫–∞—Ö `LOCAL-OCR` –ø—Ä–∏ —Å–ª–µ–¥—É—é—â–µ–º –±–µ–∑–æ–ø–∞—Å–Ω–æ–º –∏–∑–º–µ–Ω–µ–Ω–∏–∏ `scripts/knowledge_store.gd` —É–±—Ä–∞—Ç—å –ª–∏—à–Ω–∏–π full-store source rewrite –¥–ª—è –∑–∞–≤–µ–¥–æ–º–æ –Ω–æ–≤–æ–≥–æ source –∏ –≤–≤–µ—Å—Ç–∏ –±–µ–∑–æ–ø–∞—Å–Ω—ã–π batch/session append –¥–ª—è streaming records/chunks –±–µ–∑ –æ—Å–ª–∞–±–ª–µ–Ω–∏—è transaction rollback/untrusted metadata/dedupe. –ó–∞—Ç–µ–º rerun —Ç–æ—Ç –∂–µ 8/16/32 benchmark + dedupe/removal/rollback; –Ω–µ –º–∞—Å–∫–∏—Ä–æ–≤–∞—Ç—å —É–≤–µ–ª–∏—á–µ–Ω–∏–µ–º timeout.
-
-FROM: CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF
-TO: CHAT-2026-09-16-UI-POLISH
-TYPE: PERFORMANCE-BLOCKER
-EVIDENCE: —Ç–µ –∂–µ standard Linux artifacts: –æ–¥–∏–Ω 10 MiB direct import –∑–∞–Ω–∏–º–∞–µ—Ç –ø—Ä–∏–º–µ—Ä–Ω–æ `2.9‚Äì11.4 s` –¥–æ –≤–æ–∑–≤—Ä–∞—Ç–∞; `scripts/knowledge_base_overlay.gd` –≤—ã–∑—ã–≤–∞–µ—Ç direct `learn_from_file()` –≤–Ω—É—Ç—Ä–∏ `_import_one()` —Å–∏–Ω—Ö—Ä–æ–Ω–Ω–æ –∏ –¥–µ–ª–∞–µ—Ç `process_frame` —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ –∑–∞–≤–µ—Ä—à–µ–Ω–∏—è —Ñ–∞–π–ª–∞. –ù–∞ –∫—Ä—É–ø–Ω–æ–º source —ç—Ç–æ –ø–æ—Ç–µ–Ω—Ü–∏–∞–ª—å–Ω—ã–π main-thread freeze; –ø–æ–ª–Ω–æ—Ü–µ–Ω–Ω—ã–π storage-level cancel –Ω–µ –¥–æ–∫–∞–∑–∞–Ω.
-ACTION: –°–æ—Ö—Ä–∞–Ω–∏—Ç—å responsive UI/progress –Ω–∞ large import –∏ —Å–¥–µ–ª–∞—Ç—å cancel/error path —è–≤–Ω—ã–º –∏ –±–µ–∑–æ–ø–∞—Å–Ω—ã–º; –Ω–µ –º–µ–Ω—è—Ç—å Knowledge transaction semantics. –ü—Ä–æ–≤–µ—Ä–∏—Ç—å UI profiler/smoke –Ω–∞ –∏—Å–∫—É—Å—Å—Ç–≤–µ–Ω–Ω–æ–º –∫—Ä—É–ø–Ω–æ–º source –ø–æ—Å–ª–µ –∏–Ω—Ç–µ–≥—Ä–∞—Ü–∏–∏ storage fixes.
-
-- –ù–æ–≤—ã–µ hard/relative gates: absolute hosted-runner timing –æ—Å—Ç–∞—ë—Ç—Å—è informational; CI —Ç–µ–ø–µ—Ä—å –º–æ–∂–µ—Ç –ø–∞–¥–∞—Ç—å –Ω–∞ hard correctness/self-reliance –∏ –Ω–∞ –≤–æ—Å–ø—Ä–æ–∏–∑–≤–æ–¥–∏–º—ã–π `suspected_quadratic`/MemoryStore quadratic-write/search superlinear N‚Üí2N finding –≤–º–µ—Å—Ç–æ —Ä–∞—Å—à–∏—Ä–µ–Ω–∏—è timeout.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥ —ç—Ç–æ–≥–æ lane: –ø—Ä–æ–≤–µ—Ä–∏—Ç—å exact Knowledge Performance run –ø–æ—Å–ª–µ `753cbfec...`; –∑–∞–±—Ä–∞—Ç—å MemoryStore 125/250/500 –∏ search 1/2/4 MiB reports. –ï—Å–ª–∏ MemoryStore –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–∞–µ—Ç near-quadratic write, –∏—Å–ø—Ä–∞–≤–∏—Ç—å —Ç–æ–ª—å–∫–æ —Ç–µ–ø–µ—Ä—å claimed —Å–≤–æ–±–æ–¥–Ω—ã–π `scripts/memory_store.gd`; –∑–∞—Ç–µ–º –∞–¥—Ä–µ—Å–Ω–æ –æ–ø—Ç–∏–º–∏–∑–∏—Ä–æ–≤–∞—Ç—å —Å–≤–æ–±–æ–¥–Ω—ã–µ `knowledge_import_transaction.gd`/registry paths, —Å–æ—Ö—Ä–∞–Ω—è—è rollback/restart/dedupe correctness. `scripts/knowledge_store.gd` –Ω–µ —Ç—Ä–æ–≥–∞—Ç—å –¥–æ –æ—Å–≤–æ–±–æ–∂–¥–µ–Ω–∏—è `LOCAL-OCR`. –ü–æ—Å–ª–µ –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–π –ø–æ–≤—Ç–æ—Ä–∏—Ç—å comparable N/2N/4N, Windows smoke –∏ 100/250 MiB memory pressure; —Ñ–∏–∑–∏—á–µ—Å–∫–∏–π Android stress –æ—Å—Ç–∞—ë—Ç—Å—è –æ—Ç–¥–µ–ª—å–Ω—ã–º —á–µ—Å—Ç–Ω—ã–º gate.
-- –û—Å–≤–æ–±–æ–∂–¥—ë–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã: –Ω–µ—Ç; benchmark/test/workflow paths –∏ —Ç—Ä–∏ performance-follow-up production paths –æ—Å—Ç–∞—é—Ç—Å—è –∑–∞–Ω—è—Ç—ã–º–∏ —ç—Ç–∏–º ACTIVE CLAIM –¥–æ –∑–∞–≤–µ—Ä—à–µ–Ω–∏—è acceptance.
-
-## 27. Integration Gate ‚Äî Knowledge alias removal correctness blocker, 2026-09-16
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF
-TYPE: BLOCKER
-EVIDENCE: Knowledge Performance run `35104043312`, Linux smoke job `104820545932` on exact main `dd759df6727aafb7decb32055b79cdd29d1a6333`, and follow-up run `35104450053`, Linux smoke job `104822834774` after main `053e6b77c91bffd18969f6890dd3ec724f095dab`, both reproduce `benchmarks/knowledge/dedupe_alias_removal_probe.gd` with return code 3 after successful Godot project parse. Fresh artifact `10449956878` reports `alias_detached=true` but `canonical_survived=false`, `canonical_registry_after=false`, `post_remove_searchable=false`; remove result reports `removed=128`, `structured_removed=128` while deleting only the alias path. The intended contract is `removing an alias/copy must not delete the canonical shared knowledge`.
-ACTION: Fix alias/canonical ownership and source-removal semantics within `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` owned/free paths so removing a renamed duplicate only detaches that alias and preserves the canonical registry entry plus searchable canonical records. Do not weaken/remove the probe. If the root cause requires OCR-owned `scripts/knowledge_store.gd`, coordinate an explicit handoff with `CHAT-2026-09-16-LOCAL-OCR` instead of editing the claimed file. Rerun the alias probe plus dedupe/source-removal/rollback/restart correctness and Integration Gate on the same SHA.
-
-- Integration Gate draft PR #32 remains limited to `.github/workflows/integration-gate.yml` and `tests/integration_release_readiness_contract.py`; current branch head at this checkpoint is `26bdd07ccc1a4c085ecfabc75a8dc1b514c93240`.
-- Gate now executes landed Research collector privacy contract/smoke and the Knowledge alias-removal safety probe. Godot follow-up smokes, headless UI regression and diagnostics artifact upload use `if: always()` so one subsystem failure cannot hide later integration evidence.
-- Existing updater BLOCKER remains independently reproducible on main Core/Voice run `35104043311`: `tests/test_core_candidate_promotion.py::test_signed_release_enforces_v12_repair_and_v13_signed_update_floor` still calls an obsolete update-compat test function; ownership remains `CHAT-2026-09-16-UPDATER-VERSIONING` and its production files are untouched.
-- Windows Knowledge smoke failure on `dd759df...` is the already-known benchmark portability class-resolution issue documented by the Large Knowledge lane, not a new routed product blocker; no duplicate address record was added.
-- Physical Windows/Android device tests and human visual/listen acceptance remain separate gates and are not inferred from CI.
-
-## 28. Integration Gate ‚Äî Work/Computer UI contract blocker, 2026-09-16
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UI-POLISH
-TYPE: BLOCKER
-EVIDENCE: Draft Work/Computer PR #40 head `23a0c26c1a8c1125ee997d4c8bf912080e575fb1` changes `scripts/computer_client.gd` so `plan()` and `run()` intentionally return `local_core_planning_required`; planning authority moves to bundled AuroraFox Core/AgentCore -> ToolRegistry primitives and Computer control is guarded by `ComputerClient.set_computer_control_enabled(...)`. Current main `scripts/computer_overlay.gd` blob `a9090613b07aa973dff43ffb1e27b10b93fcb6a6` still implements `execute_goal()` via `await computer.run(...)`, `preview_next_action()` via `await computer.plan(...)`, and its UI toggle changes only local `enabled`. Merging PR #40 with that overlay unchanged would make the visible high-level Computer goal/preview flow fail by contract and would not propagate the user permission toggle into the hardened ComputerClient.
-ACTION: In the UI-owned `scripts/computer_overlay.gd`/compat surface, route high-level Computer goals through bundled AuroraFox Core/AgentCore -> ToolRegistry Computer primitives instead of `ComputerClient.run()/plan()`, wire the user Computer toggle to `ComputerClient.set_computer_control_enabled(enabled)` with default-OFF/master-stop behavior preserved, and extend UI smoke for enable/disable + high-level goal routing. Coordinate against `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` PR #40; do not restore service-side planning or add any external-AI planner. Do not merge the Work/Computer contract into release-ready main until this cross-lane interface is reconciled and same-SHA Work/UI integration is green.
-
-## 29. Integration Gate ‚Äî CodeSpecialist self-reliance/startup blocker, 2026-09-16
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-CORE-BENCHMARKS
-TYPE: BLOCKER
-EVIDENCE: UI PR #27 Work Mode run `35110015157`, job `104840973538`, merge SHA `ac3037dfe17a0d5f0bc0be7511f7b2a54b26570b`: project parse and WorkStore smoke pass, then `tests/work_mode_smoke.gd` fails at `CodeSpecialist.setup` with `Invalid access to property or key 'base_url' on a base object of type 'Node (AIClient)'`; the UI branch does not modify `scripts/code_specialist.gd`. Fresh main `04452ca738f7d39ef3da58f2179fe4a0a46e5d8a` still uses `scripts/code_specialist.gd` blob `811a5117543ad7300e74ca82a33e5ee3632fcb0f`, where `setup()` reads removed `ai_client.base_url` and normal `_chat_code()` creates a direct `HTTPRequest` to the Ollama `/api/chat` path using `qwen3-coder:30b` before falling back to `general_ai.chat()`. Integration PR #32 commit `a2fc9876235679c774a570aec74eadba04107037` adds `test_code_specialist_normal_path_is_bundled_core_only()` to lock this startup and self-reliance regression.
-ACTION: In the currently unclaimed `scripts/code_specialist.gd` path, remove the stale `AIClient.base_url` dependency and make normal CodeSpecialist analyze/review/explain generation delegate to `AIClient.chat()` / bundled AuroraFox Core. Any Ollama/provider-specific behavior must remain behind an explicit compatibility-only API and never precede the normal Core path. Extend the Core benchmark/smoke evidence for code-specialist behavior offline, then rerun Work Mode, Core/Voice, real-Core benchmark and Integration Gate on the same SHA. Do not restore a mandatory external coder model or remote/provider fallback.
-
-## 30. Integration Gate ‚Äî Knowledge alias removal blocker resolved, 2026-09-16
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF
-TYPE: READY
-EVIDENCE: Knowledge Performance run `35105876229` on exact main `35275e4c3a6b5cc7b3fa67f0aaebef84e43a903e` (`fix: detach knowledge aliases without deleting canonical source`): contract job `104826816228` SUCCESS; Linux smoke job `104835749250` SUCCESS including `Reproduce dedupe alias removal safety`; standard Linux job `104835749257` SUCCESS. This is the same production fix and same deterministic alias-removal probe that previously reproduced canonical data loss in section 27. The workflow's overall conclusion remains failure only because separate Windows smoke job `104835749449` failed its bounded Windows benchmark; that does not invalidate the Linux runtime proof for alias/canonical removal semantics and remains an independent Large Knowledge portability gate.
-ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the deterministic alias-removal probe in Knowledge Performance and Integration Gate, and keep Windows portability, interrupted-recovery, registry-scaling and remaining performance gates active independently. Re-run the alias probe again on the final release candidate SHA before release readiness is declared.
-
-## 31. Large Knowledge / Memory Performance ‚Äî durability and scaling checkpoint, 2026-09-16
-
-### `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` ‚Äî checkpoint
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî Linux correctness/scaling baseline –ø–æ–¥—Ç–≤–µ—Ä–∂–¥—ë–Ω; durability hardening –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞–Ω; Windows/record-dedupe/registry-only/100‚Äì250 MiB exact runtime evidence –æ–∂–∏–¥–∞–µ—Ç—Å—è**.
-- –ö–∞–Ω–æ–Ω–∏—á–µ—Å–∫–∞—è –≤–µ—Ä—Å–∏—è –æ—Å—Ç–∞—ë—Ç—Å—è **V1.3.0.0**; –ø—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π –∏—Ç–æ–≥–æ–≤—ã–π bump lane ‚Äî **PATCH** —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ –∑–µ–ª—ë–Ω—ã—Ö acceptance-gates. –≠—Ç–æ—Ç checkpoint –≤–µ—Ä—Å–∏—é –∏ Android `versionCode` –Ω–µ –º–µ–Ω—è–µ—Ç.
-- –ü–æ—Å–ª–µ–¥–Ω–∏–π –¥–æ–∫–∞–∑–∞–Ω–Ω—ã–π exact Linux baseline: Knowledge Performance run `35105876229` –Ω–∞ `35275e4c3a6b5cc7b3fa67f0aaebef84e43a903e`; contract `104826816228` SUCCESS, smoke-linux `104835749250` SUCCESS, standard-linux `104835749257` SUCCESS. Standard artifact `10453990990`, digest `sha256:1cfe0f08f35ef4605e9b5c7c1679ac09409140d0aefae795146b4a4254c9d88b`.
-- Alias/canonical correctness: Integration Gate section 30 –ø–µ—Ä–µ–≤—ë–ª –ø—Ä–µ–∂–Ω–∏–π blocker –≤ **READY** –Ω–∞ —Ç–æ–º –∂–µ exact Linux runtime; alias-removal probe —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç—Å—è –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–º regression-gate.
-- –¢–µ–∫—É—â–∏–π many-source baseline –ø–æ—Å–ª–µ —É–∂–µ –≤–Ω–µ—Å—ë–Ω–Ω—ã—Ö performance fixes: 8‚Üí16‚Üí32 sources –ø–æ 32 KiB = `134.868 ‚Üí 410.054 ‚Üí 1370.210 ms`, ratios `3.040√ó / 3.342√ó`. –§–æ—Ä–º–∞–ª—å–Ω—ã–π `>=3.5√ó` quadratic blocker –Ω–∞ —ç—Ç–æ–º run –Ω–µ —Å—Ä–∞–±–æ—Ç–∞–ª, –Ω–æ –Ω–∞–∫–æ–ø–∏—Ç–µ–ª—å–Ω—ã–π –ø—É—Ç—å –æ—Å—Ç–∞—ë—Ç—Å—è —Ç—è–∂—ë–ª—ã–º; –¥–æ–±–∞–≤–ª–µ–Ω –æ—Ç–¥–µ–ª—å–Ω—ã–π registry-only 16/32/64 gate, —á—Ç–æ–±—ã –Ω–µ –ø—Ä–∏–ø–∏—Å—ã–≤–∞—Ç—å –≤–µ—Å—å –æ—Å—Ç–∞—Ç–æ–∫ `KnowledgeStore` –±–µ–∑ –∏–∑–º–µ—Ä–µ–Ω–∏—è.
-- Persistent MemoryStore scaling –Ω–∞ —ç—Ç–æ–º artifact: 125‚Üí250 durable write `1.971√ó`, 250‚Üí500 `2.024√ó`; semantic index/flush —Ç–∞–∫–∂–µ –æ–∫–æ–ª–æ 2√ó. –†–∞–Ω–µ–µ –Ω–∞–π–¥–µ–Ω–Ω—ã–π MemoryStore quadratic-write blocker **–∑–∞–∫—Ä—ã—Ç –∏–∑–º–µ—Ä–µ–Ω–∏–µ–º**, –Ω–µ —Ç–æ–ª—å–∫–æ static code review.
-- Knowledge search N/2N/4N: 1‚Üí2 MiB selected p95 `1.971√ó`, 2‚Üí4 MiB `2.027√ó`; superlinear blocker –Ω–µ –≤–æ—Å–ø—Ä–æ–∏–∑–≤–µ–¥—ë–Ω. Absolute hosted-runner latency –æ—Å—Ç–∞—ë—Ç—Å—è informational –∏ –Ω–µ –ø—Ä–µ–≤—Ä–∞—â–µ–Ω–∞ –≤ —Ö—Ä—É–ø–∫–∏–π fixed threshold.
-- 10 MiB format baseline –Ω–∞ —ç—Ç–æ–º run: JSONL `5553.733 ms` (~`1.801 MiB/s`), CSV `5726.309 ms` (~`1.746 MiB/s`), TXT `2911.180 ms` (~`3.435 MiB/s`), streaming monolithic JSON `11377.462 ms` (~`0.879 MiB/s`). Malformed ~10 MiB rollback –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–∏–ª committed state –∑–∞ `8372.334 ms`. Concurrent import –∏ self-reliant semantic memory –ø—Ä–æ—à–ª–∏.
-- Durability hardening commits: `1787ac73e93c566e3f5da7058a964b0bbc793560` ‚Äî retry-safe import recovery/durable phases; `28920d7a3f8d30baeec35da81b604b5a56222c1c` ‚Äî crash-safe `sources.json` replacement; `c437cdcded27886868c77dca9a0a8116d4d699ef` + `e177b5564f9a44b26c6737b683d5ee0fd9b20a78` ‚Äî same-isolated-profile Windows warm-up –¥–ª—è generic/interrupted probes.
-- Canonical source removal —Ç–µ–ø–µ—Ä—å —Ç–∞–∫–∂–µ transaction-scoped –±–µ–∑ –∏–∑–º–µ–Ω–µ–Ω–∏—è OCR-owned `scripts/knowledge_store.gd`: `84c4235ec9a592593fb1bd892bd47d49cd983892` + `c7e8568b7634e09e81489771e8a1e9f277b23081` –¥–æ–±–∞–≤–ª—è—é—Ç real process-kill removal probe/runner; `ec3f0937308b11de2983a59284472da6b4c795f2` –¥–æ–±–∞–≤–ª—è–µ—Ç `KnowledgeImportTransaction.remove_source()` —Å snapshot ‚Üí Store remove ‚Üí registry remove ‚Üí durable commit marker / rollback; `83dde9ae4b38700219d645d09892240640cdd9c1` –ø–µ—Ä–µ–≤–æ–¥–∏—Ç canonical `KnowledgeManager.remove_source()` –Ω–∞ —ç—Ç–æ—Ç transaction; `fac6a648765a70baa89cb7bbdf885a08bb7f789b` —Ñ–∏–∫—Å–∏—Ä—É–µ—Ç contract; `2781b303cb2e0e0a2cda84eed2c3a922e043eabe` –≤–∫–ª—é—á–∞–µ—Ç interrupted-removal gate –≤ Linux+Windows smoke.
-- Record dedupe / registry isolation: `7bbac6da522f01f868a5237b48f2b3c2959648bd` –¥–æ–±–∞–≤–ª—è–µ—Ç same-source/cross-source shared-record lifecycle probe; `5d57b1a3f105f2d6d6f046be12adb39e2463b343` + `d03c64987ed3238c81b2df760bf0d0356cd190bf` –¥–æ–±–∞–≤–ª—è—é—Ç registry-only scaling; `792c49d8cef2b0c6f25a61d032077d3879ffccd9`, `eb1de38a5e462955f409a2f7cde49a474f462ae5`, `d2065b210cbed79b167f72f7f97d4f88f4a82f86`, `9dee5e9d555eea39f6019f69ba28082bf454c9d8` –≤–∫–ª—é—á–∞—é—Ç relative blocker, workflow wiring –∏ regression contracts.
-- **–ù–µ —Å—á–∏—Ç–∞—Ç—å –ø—Ä–æ–π–¥–µ–Ω–Ω—ã–º–∏ –¥–æ artifact:** exact-head Knowledge run `35117014347` –Ω–∞ `2781b303...` –≤ –º–æ–º–µ–Ω—Ç checkpoint –≤—Å—ë –µ—â—ë QUEUED; therefore transactional removal process-kill, current Windows portability, current record-level dedupe –∏ registry-only scaling –µ—â—ë –Ω–µ –∏–º–µ—é—Ç runtime verdict. `[knowledge-large]` run `35112699152` —Ç–∞–∫–∂–µ –æ—Å—Ç–∞—ë—Ç—Å—è QUEUED; 100/250 MiB memory-pressure acceptance –µ—â—ë –Ω–µ –¥–æ–∫–∞–∑–∞–Ω.
-- Static audit OCR-owned `scripts/knowledge_store.gd` –ø–æ–∫–∞–∑—ã–≤–∞–µ—Ç –ø–æ—Ç–µ–Ω—Ü–∏–∞–ª—å–Ω—ã–π record-dedupe —Ä–∏—Å–∫: structured identity –≤–∫–ª—é—á–∞–µ—Ç `record_path`, –∞ normalized `_append()` –Ω–µ –¥–µ–ª–∞–µ—Ç persisted-ID check. –≠—Ç–æ **–Ω–µ –æ–±—ä—è–≤–ª—è–µ—Ç—Å—è runtime blocker –±–µ–∑ probe artifact**. –§–∞–π–ª –Ω–µ –∏–∑–º–µ–Ω—è–ª—Å—è —ç—Ç–∏–º lane; `CHAT-2026-09-16-LOCAL-OCR` –æ—Å—Ç–∞—ë—Ç—Å—è –≤–ª–∞–¥–µ–ª—å—Ü–µ–º.
-- Android: machine-readable bounded/private/local-only contract —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç—Å—è; `physical_device_proof=false`. Desktop/Linux/Windows CI –Ω–µ –≤—ã–¥–∞—ë—Ç—Å—è –∑–∞ Android device proof.
-- –°–ª–µ–¥—É—é—â–∏–π —à–∞–≥: –ø–µ—Ä–≤—ã–º –¥–µ–ª–æ–º –∑–∞–±—Ä–∞—Ç—å `35117014347` –∏ `35112699152`. –ï—Å–ª–∏ record-dedupe probe –ø–∞–¥–∞–µ—Ç ‚Äî –ø–µ—Ä–µ–¥–∞—Ç—å —Ç–æ—á–Ω—ã–π `PERFORMANCE-BLOCKER` –≤–ª–∞–¥–µ–ª—å—Ü—É `CHAT-2026-09-16-LOCAL-OCR` —Å run/job/artifact –∏ —Ç—Ä–µ–±–æ–≤–∞–Ω–∏–µ–º content-based within-source dedupe –±–µ–∑ –ø–æ—Ç–µ—Ä–∏ provenance/shared-source removal. –ï—Å–ª–∏ registry-only doubling `>=3.5√ó` ‚Äî –∏—Å–ø—Ä–∞–≤–∏—Ç—å —Å–≤–æ–±–æ–¥–Ω—ã–π registry path –∏ –ø–æ–≤—Ç–æ—Ä–∏—Ç—å 16/32/64. –ï—Å–ª–∏ interrupted-removal –ø–∞–¥–∞–µ—Ç ‚Äî –∏—Å–ø—Ä–∞–≤–ª—è—Ç—å —Ç–æ–ª—å–∫–æ transaction/manager/recovery path. –ü–æ—Å–ª–µ —ç—Ç–æ–≥–æ –∑–∞–∫—Ä—ã—Ç—å Windows current-runtime proof –∏ 100/250 MiB stress; OCR 100-page scanned/mixed stress –¥–æ–±–∞–≤–ª—è—Ç—å —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ –∏–Ω—Ç–µ–≥—Ä–∞—Ü–∏–∏ `LOCAL-OCR`.
-- –û—Å–≤–æ–±–æ–∂–¥—ë–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã: –Ω–µ—Ç; `benchmarks/knowledge/**`, related Knowledge performance/stress tests/workflow, `scripts/knowledge_import_transaction.gd`, `scripts/knowledge_source_registry.gd` –∏ performance-follow-up `scripts/memory_store.gd` –æ—Å—Ç–∞—é—Ç—Å—è –≤ ACTIVE CLAIM. `scripts/knowledge_store.gd` –ø–æ-–ø—Ä–µ–∂–Ω–µ–º—É –Ω–µ —Ç—Ä–æ–≥–∞—Ç—å –¥–æ –æ—Å–≤–æ–±–æ–∂–¥–µ–Ω–∏—è `LOCAL-OCR`.
-
-## 32. Large Knowledge / Memory Performance ‚Äî Wave-B resilience preparation, 2026-09-16
-
-### `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` ‚Äî checkpoint
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî benchmark/CI-only Wave-B –ø–∞–∫–µ—Ç —Å–æ–±—Ä–∞–Ω; runtime gate —É–¥–µ—Ä–∂–∏–≤–∞–µ—Ç—Å—è –∫–æ–æ—Ä–¥–∏–Ω–∞—Ç–æ—Ä–æ–º –¥–æ –∑–∞–≤–µ—Ä—à–µ–Ω–∏—è UI Wave A**.
-- Base HEAD –ø–æ–¥–≥–æ—Ç–æ–≤–∫–∏: `ab2103acf6667eb3812f969b4c926902a37ccece`; –ø–µ—Ä–µ–¥ —ç—Ç–æ–π –∑–∞–ø–∏—Å—å—é —Å–≤–µ–∂–∏–π `main` –ø—Ä–æ–≤–µ—Ä–µ–Ω –¥–æ `1e9503537493b9cdd29d164005d3a12c3b59e17f`. –ò–∑–º–µ–Ω–µ–Ω–∏—è –º–µ–∂–¥—É –Ω–∏–º–∏ –Ω–µ –∑–∞—Ç—Ä–∞–≥–∏–≤–∞—é—Ç Knowledge-owned paths —ç—Ç–æ–≥–æ –ø–∞–∫–µ—Ç–∞.
-- Branch: `chat-knowledge-races-v2-20260916`; draft PR #64 —Å—É—â–µ—Å—Ç–≤—É–µ—Ç, –Ω–æ **–≤—Ä–µ–º–µ–Ω–Ω–æ CLOSED –±–µ–∑ merge** –ø–æ —è–≤–Ω–æ–º—É coordinator CI wave control. Coordinator comment `5702362208`: –ø—Ä–æ–¥–æ–ª–∂–∞—Ç—å —ç—Ç—É –∂–µ –≤–µ—Ç–∫—É, –Ω–µ —Å–æ–∑–¥–∞–≤–∞—Ç—å replacement PR, –∑–∞–∫–æ–Ω—á–∏—Ç—å consolidated race/scaling/failure-injection batch –∏ –ø–µ—Ä–µ–æ—Ç–∫—Ä—ã—Ç—å **—Ç–æ—Ç –∂–µ PR #64** —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ —Å–∏–≥–Ω–∞–ª–∞ Wave B.
-- Commits —Ç–µ–∫—É—â–µ–≥–æ –ø–∞–∫–µ—Ç–∞: `886ae50eaabf889c8822d6d87c4642bcee441f92` ‚Äî deterministic duplicate-import + search/remove race proof; `d11b9f59e72f85e6f659b9948f3d3379339d87ba` + `e5562e6f6f9135cce7466047e280703803abaffe` ‚Äî consolidated resilience runner; `180680bfd125ba7b463cf799d2c93dca47f983f0` ‚Äî isolated Windows profile warm-up –¥–ª—è registry scaling; `1ee5beb6d641b305b135f81b2aa865c186c68e88`, `242a4d83dcb6a05a3aba8868a219216b9cbfb5d4`, `4c43a503b23df85bca23e4c8734961ea97fb3265` ‚Äî regression contracts; `e1ba76e35f96d2cd3bb25bd0ca4100c4f55c680f` + `5d3719421aeaf77e48155e1c2c6360ed3d3cdae4` ‚Äî isolated Linux/Windows resilience workflow.
-- Consolidated batch –æ–¥–Ω–∏–º machine-readable JSON –æ–±—ä–µ–¥–∏–Ω—è–µ—Ç: concurrent byte-identical import; search + canonical remove race; record-level/shared-source dedupe; alias-preservation; legacy pre-registry rollback; registry write-failure rollback; truncated registry temp rejection; real process-kill interrupted import recovery; real process-kill interrupted removal recovery; registry N‚Üí2N‚Üí4N scaling. Self-reliance contract —Ñ–∏–∫—Å–∏—Ä—É–µ—Ç `network_required=false`, `external_runtime_required=false`, `ollama_required=false`; absolute hosted-runner timings –æ—Å—Ç–∞—é—Ç—Å—è informational, registry quadratic finding —è–≤–ª—è–µ—Ç—Å—è relative blocker.
-- Windows benchmark infrastructure –¥–æ–ø–æ–ª–Ω–∏—Ç–µ–ª—å–Ω–æ –≤—ã—Ä–æ–≤–Ω–µ–Ω–∞ —Å —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–º portable contract: `run_registry_scaling.py` —Ç–µ–ø–µ—Ä—å –ø—Ä–æ–≥—Ä–µ–≤–∞–µ—Ç —Ç–æ—Ç –∂–µ isolated Windows Godot profile –¥–æ –∑–∞–ø—É—Å–∫–∞ probe, —á—Ç–æ–±—ã —Ä–∞–Ω–µ–µ –∏–∑–≤–µ—Å—Ç–Ω—ã–π fresh-profile class-resolution –¥–µ—Ñ–µ–∫—Ç –Ω–µ –≤—ã–¥–∞–≤–∞–ª—Å—è –∑–∞ production scaling regression.
-- Production code —ç—Ç–∏–º –ø–∞–∫–µ—Ç–æ–º **–Ω–µ –∏–∑–º–µ–Ω—è–ª—Å—è**. –í —á–∞—Å—Ç–Ω–æ—Å—Ç–∏, OCR-owned `scripts/knowledge_store.gd` –Ω–µ —Ç—Ä–æ–≥–∞–ª—Å—è. Static audit –ø–æ–∫–∞–∑—ã–≤–∞–µ—Ç, —á—Ç–æ duplicate-import —Å–µ—Ä–∏–∞–ª–∏–∑—É–µ—Ç—Å—è `KnowledgeImportTransaction` static mutex; –ø–æ—Ç–µ–Ω—Ü–∏–∞–ª—å–Ω—ã–π Windows search/remove —Ä–∏—Å–∫ –æ—Å—Ç–∞—ë—Ç—Å—è –Ω–∞ —Å—Ç—ã–∫–µ –æ—Ç–∫—Ä—ã—Ç–æ–≥–æ reader –∏ file replacement –≤ OCR-owned Store –∏ –Ω–µ –æ–±—ä—è–≤–ª—è–µ—Ç—Å—è blocker –±–µ–∑ runtime artifact.
-- –°—Ç–∞—Ä—ã–π auxiliary run `35133333541` –Ω–∞ —Ä–∞–Ω–Ω–µ–º head `1a6e2b8b...` –æ—Å—Ç–∞–ª—Å—è QUEUED –ø–æ—Å–ª–µ coordinator closure –∏ **–Ω–µ —Å—á–∏—Ç–∞–µ—Ç—Å—è green/runtime evidence**. –ù–æ–≤—ã–π consolidated batch –µ—â—ë –Ω–µ –∑–∞–ø—É—Å–∫–∞–ª—Å—è –∏–∑-–∑–∞ Wave-A CI control.
-- –ö–∞–Ω–æ–Ω–∏—á–µ—Å–∫–∞—è –≤–µ—Ä—Å–∏—è –æ—Å—Ç–∞—ë—Ç—Å—è **V1.3.0.0**; intended lane bump –ø–æ-–ø—Ä–µ–∂–Ω–µ–º—É **PATCH —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ acceptance**, Android `versionCode` –Ω–µ –º–µ–Ω—è–ª—Å—è.
-
-PROGRESS_COMPLETE: 82%
-PROGRESS_REMAINING: 18%
-
-DONE:
-- –î–æ–∫–∞–∑–∞–Ω–Ω—ã–π Linux baseline, alias correctness, near-linear MemoryStore/search scaling –∏ –ø—Ä–µ–∂–Ω–∏–µ durability fixes –æ—Å—Ç–∞—é—Ç—Å—è –≤–∞–ª–∏–¥–Ω—ã–º baseline section 31.
-- –ù–∞ —Ç–µ–∫—É—â–µ–π Wave-B –≤–µ—Ç–∫–µ —Å–æ–±—Ä–∞–Ω –µ–¥–∏–Ω—ã–π race/scaling/failure-injection –ø–∞–∫–µ—Ç, –æ—Ç–¥–µ–ª—å–Ω—ã–π Linux/Windows workflow –∏ machine-readable aggregate verdict; production-—Ñ–∞–π–ª—ã –Ω–µ –∑–∞—Ç—Ä–æ–Ω—É—Ç—ã.
-- –î–æ–±–∞–≤–ª–µ–Ω—ã duplicate-import –∏ search/remove concurrency proofs, Windows isolated-profile warm-up –¥–ª—è registry scaling –∏ fail-closed regression contracts.
-- Coordinator wave-control —Å–æ–±–ª—é–¥—ë–Ω: –Ω–æ–≤—ã–π replacement PR –ø–æ—Å–ª–µ –∑–∞–∫—Ä—ã—Ç–∏—è #64 –Ω–µ —Å–æ–∑–¥–∞–≤–∞–ª—Å—è, #64 –Ω–µ –ø–µ—Ä–µ–æ—Ç–∫—Ä—ã–≤–∞–ª—Å—è —Å–∞–º–æ–≤–æ–ª—å–Ω–æ.
-REMAINING:
-- –ü–æ—Å–ª–µ coordinator Wave-B signal –ø–µ—Ä–µ–æ—Ç–∫—Ä—ã—Ç—å **—Ç–æ—Ç –∂–µ PR #64** –∏ –ø–æ–ª—É—á–∏—Ç—å exact Linux + Windows artifacts –¥–ª—è consolidated resilience batch.
-- –ï—Å–ª–∏ runtime –≤—ã—è–≤–∏—Ç –¥–µ—Ñ–µ–∫—Ç –≤ `knowledge_import_transaction.gd`/registry ‚Äî –∏—Å–ø—Ä–∞–≤–∏—Ç—å –≤ —ç—Ç–æ–º CLAIM –∏ –ø–æ–≤—Ç–æ—Ä–∏—Ç—å exact batch; –µ—Å–ª–∏ root cause –ø–æ—Ç—Ä–µ–±—É–µ—Ç `scripts/knowledge_store.gd`, –æ—Ñ–æ—Ä–º–∏—Ç—å —Ç–æ—á–Ω—ã–π `PERFORMANCE-BLOCKER` –≤ `CHAT-2026-09-16-LOCAL-OCR`, –Ω–µ –º–µ–Ω—è—Ç—å –∑–∞–Ω—è—Ç—ã–π —Ñ–∞–π–ª.
-- –ü–æ—Å–ª–µ same-SHA green resilience evidence –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞—Ç—å –ø–∞–∫–µ—Ç –±–µ–∑ –æ—Å–ª–∞–±–ª–µ–Ω–∏—è relative gates –∏ –∑–∞–ø—É—Å—Ç–∏—Ç—å —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π `[knowledge-large]` main stress path –¥–ª—è 100/250 MiB memory-pressure evidence.
-- –ó–∞–ø–∏—Å–∞—Ç—å —Ñ–∏–Ω–∞–ª—å–Ω—ã–µ run/job/artifact/digest, timings/RSS –∏ Android physical-device limitation; —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ —ç—Ç–æ–≥–æ –∑–∞–∫—Ä—ã–≤–∞—Ç—å CLAIM/–æ—Å–≤–æ–±–æ–∂–¥–∞—Ç—å –ø—É—Ç–∏.
-
-BLOCKERS:
-- `COORDINATOR CI WAVE CONTROL`: PR #64 –≤—Ä–µ–º–µ–Ω–Ω–æ –∑–∞–∫—Ä—ã—Ç –¥–æ –∑–∞–≤–µ—Ä—à–µ–Ω–∏—è UI Wave A; evidence ‚Äî PR #64 comment `5702362208`. –≠—Ç–æ scheduling blocker, –Ω–µ code failure.
-- Runtime verdict –Ω–æ–≤–æ–≥–æ consolidated batch –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç –ø–æ —Ç–æ–π –∂–µ –ø—Ä–∏—á–∏–Ω–µ. `35133333541` –æ—Å—Ç–∞—ë—Ç—Å—è queued –∏ –Ω–µ —è–≤–ª—è–µ—Ç—Å—è –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–æ–º –ø—Ä–æ—Ö–æ–∂–¥–µ–Ω–∏—è.
-- –ü–æ—Ç–µ–Ω—Ü–∏–∞–ª—å–Ω—ã–π cross-lane blocker –≤ OCR-owned `scripts/knowledge_store.gd` –æ–±—ä—è–≤–ª—è—Ç—å —Ç–æ–ª—å–∫–æ –µ—Å–ª–∏ search/remove –∏–ª–∏ record-dedupe probe –≤–æ—Å–ø—Ä–æ–∏–∑–≤–µ–¥—ë—Ç –µ–≥–æ –Ω–∞ runtime.
-
-NEXT:
-- –°–æ—Ö—Ä–∞–Ω—è—Ç—å `chat-knowledge-races-v2-20260916` –±–µ–∑ –Ω–æ–≤–æ–≥–æ PR –∏ —Å–∏–Ω—Ö—Ä–æ–Ω–∏–∑–∏—Ä–æ–≤–∞—Ç—å —Ç–æ–ª—å–∫–æ –ø—Ä–∏ —Ä–µ–ª–µ–≤–∞–Ω—Ç–Ω–æ–º Knowledge overlap. –ù–∞ coordinator Wave-B signal –ø–µ—Ä–µ–æ—Ç–∫—Ä—ã—Ç—å PR #64, –≤—ã–ø–æ–ª–Ω–∏—Ç—å consolidated Linux/Windows batch, —Ä–∞–∑–æ–±—Ä–∞—Ç—å JSON artifacts –∏ –ª–∏–±–æ –∏—Å–ø—Ä–∞–≤–∏—Ç—å –¥–æ–∫–∞–∑–∞–Ω–Ω—ã–π owned-path defect, –ª–∏–±–æ –≤—ã–ø–∏—Å–∞—Ç—å —Ç–æ—á–Ω—ã–π OCR `PERFORMANCE-BLOCKER`; –ø–æ—Å–ª–µ green same-SHA evidence –∑–∞–ø—É—Å—Ç–∏—Ç—å 100/250 MiB stress gate.
-
-- –û—Å–≤–æ–±–æ–∂–¥—ë–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã: –Ω–µ—Ç; CLAIM –æ—Å—Ç–∞—ë—Ç—Å—è ACTIVE –¥–æ runtime/large-stress acceptance.
-
-## 33. Voice Quality ‚Äî Android female local TTS candidate, 2026-09-16
-
-### `CHAT-2026-09-16-VOICE-QUALITY` ‚Äî ownership extension
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî coordinator acceptance; Android female TTS candidate isolated before integration**.
-- Fresh main checked through: `b6cdcaa76f51649ffa1f0302fc987ee05b17e423`; existing voice coordinator acceptance remains under the same CLAIM and intended bump remains **PATCH** only after relevant green gates.
-- Ownership extension for this substage: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt`, `android_plugin/setup_native.ps1`, `tests/test_android_contract.py`, plus already claimed voice acceptance files. `android_plugin/plugin/build.gradle.kts`, `android_plugin/settings.gradle.kts`, `AndroidFileRuntime.kt` and OCR/package metadata remain owned by `CHAT-2026-09-16-LOCAL-OCR` and must not be modified by VOICE-QUALITY.
-- Evidence/blocker: current Android local TTS packages `vits-piper-ru_RU-denis-medium` and reports `sherpa-onnx-piper-denis`; this is a male voice and therefore does not satisfy the coordinator requirement for Russian female voice evidence on both platforms. Current Android package/install/launch proof validates the local Piper path but not that requirement.
-- Candidate selection: Piper `ru_RU-irina-medium` is not accepted for a distributable AuroraFox baseline because its upstream model metadata leaves the dataset/license status unclear. Supertonic 3 is evaluated instead as a fully local ONNX candidate. The existing pinned `sherpa-onnx 1.13.4` already contains `OfflineTtsSupertonicModelConfig`, so this candidate does **not** require touching OCR-owned Gradle/settings or changing the sherpa version.
-- Speaker mapping is deterministic in sherpa v1.13.4: its `generate_voices_bin.py` sorts `*.json` filenames before packing them, so `F1..F5` are `sid 0..4` and `M1..M5` are `sid 5..9`. The current Supertonic 3 int8 model payload is about 145 MiB and supports Russian via generation `extra["lang"] = "ru"`; exact packaged size/RSS/startup/RTF remain acceptance measurements rather than assumptions.
-- Licensing/supply boundary: the Supertonic model card states an OpenRAIL-M model license while the sherpa mirror also carries upstream code/license material. Candidate testing may proceed, but a release must preserve the applicable upstream model license/notice and must not silently download a required TTS model at normal runtime. Model assets must be bundled/staged by the build, with integrity validation added before acceptance.
-- Acceptance for this substage: create a separate branch from fresh `main`; stage the Supertonic int8 assets without OCR Gradle/settings changes; synthesize the same Russian persona/number/unit phrases with **all F1‚ÄìF5** on Android/emulator-capable tooling; record duration/RTF, peak/clipping, ASR round-trip and package/model footprint; select a female speaker from measured evidence, not by name alone; then require Android voice contract + APK build/sign/install/launch and a real TTS invocation that produces a WAV. Physical-device human listening remains an explicit separate gate if no real Android device is available.
-- Next step: create the isolated Android female-voice candidate branch from the freshest main, change only the newly reserved Android voice files/tests, and reject the candidate if it materially —Ä–µ–≥—Ä–µ—Åes intelligibility, clipping, latency/memory/package limits or local-only operation.
-
-## 34. Integration Gate ‚Äî release-train delta and routed status, 2026-09-16
-
-- Fresh release-train code checkpoint: `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` (`test: tighten integration updater and branding gates`) on parent `5bca4a1353ff66731073515533414ab1d0369e15`. Integration-owned changes only: `.github/workflows/integration-gate.yml` and new `tests/test_release_branding_contract.py`; production UI/Core/updater files and canonical version were not modified.
-- Integration workflow stale updater selector was corrected to `test_signed_release_enforces_v12_v13_repair_and_v14_signed_update_floor`, matching updater fix commit `99b2c144dbeb675caafb527ad528f5db18a32b50` and current `tests/test_core_candidate_promotion.py`.
-- Owner-approved immutable branding source masters are now release-gated by Git blob identity: `assets/ui/aurorafox_avatar_master.png` = `89ff783b171733f88b5153acd24c6a28fb2953dd`; `assets/ui/aurorafox_background_master.png` = `ed17e933244b7ce0f520b28897c0ca1ad50a5347`. The contract also requires runtime use of those paths and forbids active legacy `fox_logo.svg` / `aurora_background.svg` substitution.
-- Exact-head Integration Gate run `35147689311` on `cc44cce8...` remains **PENDING** with no jobs at this checkpoint; it is explicitly not green evidence. Exact-head Updater Repair Validation run `35147697509` remains **QUEUED**. Per coordinator NO-QUEUE policy no duplicate rerun was started.
-- Current `scripts/code_specialist.gd` after `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` no longer reads `AIClient.base_url` or directly calls Ollama in the normal path; `_chat_code()` delegates to `general_ai.chat()`. This is static fix evidence only; section 29 is not closed until runtime/real-Core proof is green.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UI-POLISH
-TYPE: BLOCKER
-EVIDENCE: Exact main checkpoint `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` contains byte-exact owner masters above, while active runtime `scripts/main.gd` still preloads `res://assets/ui/aurora_background.svg` and `res://assets/ui/fox_logo.svg`. Integration commit `cc44cce8...` adds `tests/test_release_branding_contract.py` and the `Owner-approved branding identity contract` step so this mismatch cannot silently ship. Run `35147689311` is still pending, therefore this blocker is based on deterministic source/runtime mismatch, not a claimed CI failure.
-ACTION: In UI-owned runtime/package surfaces, make Windows and Android use `assets/ui/aurorafox_avatar_master.png` and `assets/ui/aurorafox_background_master.png` as the active canonical branding without modifying their source bytes; remove legacy `fox_logo.svg` / `aurora_background.svg` from active runtime substitution. If any derived platform asset is unavoidable, prove exact-pixel identity from the canonical master and keep the master bytes unchanged. Extend UI/package smoke/capture evidence and rerun Integration Gate on the same resulting SHA.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UPDATER-VERSIONING
-TYPE: NEXT
-EVIDENCE: Updater bridge selector drift from section 25 is statically reconciled by updater commit `99b2c144dbeb675caafb527ad528f5db18a32b50` plus integration commit `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b`; current composite function name and Integration workflow selector both target the V1.2/V1.3 repair + V1.4 signed-floor contract. Exact-head Integration run `35147689311` is PENDING and Updater Repair Validation `35147697509` is QUEUED, so runtime acceptance is not yet proven.
-ACTION: Do not reopen the stale function-name fix. Keep section 25 runtime blocker open only until an exact-head updater compatibility step plus repair/signing validation is green; preserve V1.2/V1.3 repair, pinned trust root and V1.4 signed floor without weakening signing/version discipline.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-CORE-BENCHMARKS
-TYPE: NEXT
-EVIDENCE: CodeSpecialist production fix `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` removes the stale `AIClient.base_url` access and direct normal-path Ollama `/api/chat` call; current `scripts/code_specialist.gd::_chat_code()` delegates to `general_ai.chat()`. Exact runtime Work Mode / real bundled-Core CodeSpecialist proof after this fix has not yet been accepted by Integration Gate.
-ACTION: Preserve the bundled-Core-only CodeSpecialist path, add/retain a real bundled-Core CodeSpecialist smoke/benchmark, and close section 29 only with same-SHA runtime evidence that setup + analyze/review/explain work without Ollama/remote AI.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT_MAIN-2026-09-16-RESEARCH-QUALITY
-TYPE: READY
-EVIDENCE: AuroraFox Research Quality CI run `35112565080` on exact SHA `adb5ae35b19b2e5412b565133c820d3be7d1437c` completed SUCCESS. The landed Integration Gate retains Research evidence-lifecycle, collector-privacy and source-resilience contracts/smokes so future cross-subsystem regression remains covered.
-ACTION: Coordinator-authorized Research source-resilience acceptance is satisfied. Mark the Research lane DONE/free its production/test paths unless a newer coordinator assignment exists; preserve collector‚Üícurator single-authority, provenance/privacy and source-resilience coverage in the final release candidate gate.
-
-PROGRESS_COMPLETE: 66%
-PROGRESS_REMAINING: 34%
-
-DONE:
-- Integration workflow/test infrastructure is on main and its stale updater selector is corrected.
-- Byte-exact canonical branding release contract is on main and routes the current runtime mismatch to UI ownership.
-- Research Quality source-resilience gate has exact successful run evidence and is routed READY.
-- Updater and CodeSpecialist old findings are separated into static-fix vs runtime-acceptance status rather than being falsely marked green.
-
-REMAINING:
-- Obtain a non-pending exact-head Integration Gate run after queue wave execution and triage each step independently.
-- Obtain exact updater repair/signing validation before closing section 25.
-- Obtain real bundled-Core CodeSpecialist runtime evidence before closing section 29.
-- Recheck UI branding/login-guest/memory/Work-Computer fixes after UI lane lands, then Windows/Android package/device boundaries and final release matrix.
-
-BLOCKERS:
-- UI canonical branding mismatch is a current source/runtime release blocker.
-- Integration run `35147689311` and updater repair run `35147697509` are queued/pending and therefore cannot be counted as green.
-- Physical Windows/Android device + human visual/listening acceptance remains a separate evidence boundary.
-
-NEXT:
-- Follow coordinator CI wave control without duplicate reruns. On the next executable exact-main gate, inspect updater, branding, Research, Work/Computer, Core/CodeSpecialist, Account/Guest, OCR, Voice and package steps separately; route only reproducible failures to the exact owning CLAIM and do not change their production files.
-
-## 35. Integration Gate ‚Äî UI candidate regressions and handoff, 2026-09-16
-
-- Integration-owned branding contract follow-up commit: `b19719bdb4b88cbafbd07310ed34330c6c80660e` (`test: validate branding through active UI runtime`). The gate still pins both owner-master Git blobs byte-for-byte, but now validates the actual product entrypoint `main.tscn -> scripts/main_compat.gd` and permits legacy base placeholders only when the active compatibility layer replaces/removes them before final UI rendering. This avoids a false failure for the UI candidate architecture without weakening owner-art identity.
-- Exact-main Integration Gate run `35148889897` on `b19719bd...` is **PENDING**; no manual duplicate rerun was started under coordinator NO-QUEUE policy.
-- UI PR #27 remains draft at head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b`, `mergeable=false`, and is still based on pre-integration main `5bca4a1353ff66731073515533414ab1d0369e15`; it must be reconciled non-force before merge.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UI-POLISH
-TYPE: BLOCKER
-EVIDENCE: UI Visual CI run `35147641336`, job `104967664697`, on UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b`: `Parse UI project headlessly` succeeded, then `Run headless layout interaction smoke` failed with exit code `66` and the exact assertion `Portrait owner background is not right-biased`. All downstream owner-art/navigation/render-matrix steps were skipped. The candidate `scripts/main_compat.gd::_owner_background_texture()` derives its crop from `get_viewport_rect().size`; the portrait smoke observed a crop with no positive rightward X offset.
-ACTION: Fix the UI-owned owner-background crop so portrait/narrow rendering derives from the effective target viewport/content-scale after resize and produces the intended right-biased focal region while retaining the immutable `aurorafox_background_master.png` bytes and neutral rendering. Re-run `desktop_ui_smoke.gd`, owner-art smoke, pointer/navigation and render matrix on the same candidate SHA before calling UI Wave A ready.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UI-POLISH
-TYPE: REGRESSION
-EVIDENCE: UI PR #27 head `987f5bd0e23b4895daae60f7fa26fa28c2023c5b` has unique non-UI patches against current main that delete SERVER-DB-owned resilience behavior: `api/account_store.py::revoke_account_token`, the `_deliver_account_token` SMTP-failure revocation path in `api/server.py`, and the regressions `test_smtp_failure_revokes_issued_token_and_immediate_resend_is_not_cooldown_blocked` plus `test_undelivered_account_token_revoke_allows_immediate_retry_inside_cooldown`. These paths are explicitly owned by `CHAT-2026-09-16-SERVER-DB`; removing them would reintroduce an undelivered-token cooldown/retry defect unrelated to UI work.
-ACTION: Re-sync/reconcile PR #27 non-force with fresh `main` and preserve the current SERVER-DB token revoke/retry implementation plus both regression tests. Any intentional server semantic change must be coordinated with `CHAT-2026-09-16-SERVER-DB`; otherwise eliminate —ç—Ç–∏ API/test diffs from the UI branch. Require API CI + UI Visual CI + Integration Gate on one same SHA before merge.
-
-FROM: CHAT-2026-09-16-INTEGRATION-GATE
-TO: CHAT-2026-09-16-UI-POLISH
-TYPE: NEXT
-EVIDENCE: The current PR #27 `scripts/computer_overlay.gd` patch statically addresses section 28: the visible Computer toggle propagates through `set_computer_control_enabled(enabled)`, high-level goal execution delegates to `AgentCore.run_task()`, preview delegates to local `AIClient.chat()`, and the overlay no longer calls `ComputerClient.run()` / `plan()` as a service-side planner. This preserves bundled AuroraFox Core as planning authority, but same-SHA Work/UI runtime evidence is still queued/not accepted.
-ACTION: Preserve this local-Core/default-OFF permission architecture while fixing the remaining UI blockers. Close section 28 only after the reconciled PR SHA has green Work Mode + UI Visual + Integration evidence proving enable/disable, high-level goal routing and no service-side/external-AI planning regression.
-
-PROGRESS_COMPLETE: 68%
-PROGRESS_REMAINING: 32%
-
-DONE:
-- Integration-owned branding gate is corrected for the actual `main_compat.gd` runtime architecture without relaxing immutable owner-master identity.
-- UI Visual failure is localized to the portrait/right-biased owner-background crop with exact run/job/assertion evidence.
-- Cross-lane SERVER-DB regression inside UI PR #27 is identified at concrete production functions and test names before merge.
-- Work/Computer UI candidate is statically reconciled with bundled-Core planning authority and process-wide permission semantics; runtime acceptance remains separate.
-
-REMAINING:
-- UI lane must fix portrait crop and remove/reconcile accidental SERVER-DB diffs, then produce one same-SHA green UI/API/Work/Integration set.
-- Exact-main Integration Gate `35148889897` must execute and be triaged step-by-step.
-- Updater repair/signing and CodeSpecialist bundled-Core runtime acceptance remain open until green exact evidence.
-- Windows/Android package plus physical-device/human visual/listening boundaries remain before final release readiness.
-
-BLOCKERS:
-- `CHAT-2026-09-16-UI-POLISH`: UI Visual run `35147641336/104967664697` fails portrait owner-background focal crop.
-- `CHAT-2026-09-16-UI-POLISH` cross-lane regression: PR #27 currently deletes SERVER-DB token-delivery revoke/retry safety code/tests.
-- Exact-main Integration Gate `35148889897` is pending, not green evidence.
-- Physical Windows/Android device and human visual/listening acceptance remain external evidence boundaries.
-
-NEXT:
-- Do not merge or manually rerun the stale UI candidate. Let `CHAT-2026-09-16-UI-POLISH` reconcile the two routed blockers against fresh main; then inspect the next UI head's API/UI/Work exact-SHA results and feed only the reconciled candidate into the release-train Integration Gate. Preserve coordinator Wave-A/Wave-B queue control.
-
-## 36. Coordinator continuity and fresh executor-chat handoff, 2026-09-17
-
-- Coordinator decision: **the current coordinator chat remains the single main AuroraFox coordinator. No replacement coordinator chat will be created.** Merge authority, release-train sequencing, cross-lane arbitration, final version bump decision and final Windows/Android release acceptance remain with this coordinator.
-- Fresh verified `main` before this coordination update: `047fe827c5dfee6aad967767d4d1a46f6487228b` (`server: satisfy explicit SMTP security contract`). `AGENTS.md` and the full canonical master log were reread before this write.
-- Reason for rollover: old executor conversations are approaching maximum conversation length. The owner will stop using those old conversations and create fresh executor chats. This is a **chat-session rollover**, not permission to discard their branches, commits, PRs, artifacts or unresolved defects.
-- Target operating set: **10 concurrent chats total = this coordinator + 9 fresh executor chats.** Creating an additional coordinator is explicitly unnecessary.
-- Old executor chats are retired as active human/chat sessions after the rollover. Their old CLAIM names remain historical evidence and their occupied production paths remain protected until a fresh replacement executor explicitly performs TAKEOVER/RECONCILE in this master log. No fresh executor may assume an old claim is free merely because the old conversation is no longer used.
-- A replacement executor MUST start from fresh `main`, read `AGENTS.md`, read this full master log, inspect current open PRs/heads/workflow runs, identify the old lane it replaces, and create a new takeover CLAIM before changing implementation. The takeover entry must state the old CLAIM/PR/branch/head being inherited and whether it will continue, reconcile or supersede that candidate. No blind merge of stale branches.
-- Canonical version and Android `versionCode` are unchanged by this coordination-only update. Intended bump: **NONE**.
-
-### Fresh executor topology
-
-1. `CHAT-2026-09-17-UI-VISUAL` ‚Äî UI/UX/Visual for Windows + Android: responsive layout, navigation, owner-approved art, account/guest/memory surfaces, Work/Computer UI integration, accessibility and visual regression. Inherits/reconciles `CHAT-2026-09-16-UI-POLISH` / PR #27 and any sync-only UI PRs; must preserve Server-owned fixes while reconciling.
-2. `CHAT-2026-09-17-VOICE-AUDIO` ‚Äî local Voice/STT/TTS/audio quality on Windows + Android, female-voice acceptance, prosody, latency, cache/interruption and package assets. Inherits/reconciles `CHAT-2026-09-16-VOICE-QUALITY` / PR #34 and related voice candidate work.
-3. `CHAT-2026-09-17-CORE-CODER` ‚Äî bundled AuroraFox Core intelligence, SpecialistTeam, CodeSpecialist, real offline benchmarks, Windows/Android local inference, quality/performance and candidate comparison. Inherits/reconciles `CHAT-2026-09-16-CORE-BENCHMARKS` / PR #30 and section 29 runtime acceptance.
-4. `CHAT-2026-09-17-WORK-COMPUTER-AGENT` ‚Äî Work lifecycle/store, Computer Agent primitives, Agent reliability/autonomy-state durability, permission/master-stop/sandbox/rollback/idempotency/recovery. Inherits/reconciles `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / PR #40 and autonomy durability candidate PR #72 where relevant; must not take UI-owned overlays without handoff.
-5. `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR` ‚Äî unified Knowledge/Memory/document/OCR ownership to remove the former KnowledgeStore handoff bottleneck: local OCR, import/streaming, dedupe/provenance/aliases/removal/recovery, large-scale performance/stress on Windows/Android. Inherits/reconciles both `CHAT-2026-09-16-LOCAL-OCR` / PR #66 (and prior OCR candidate history) and `CHAT-2026-09-16-LARGE-KNOWLEDGE-PERF` / PR #64. This fresh lane must explicitly reconcile overlapping Store/transaction ownership before editing.
-6. `CHAT-2026-09-17-SERVER-API-DB` ‚Äî Server/API/SQLite/account/auth/guest/device sync/mail/request limits/privacy/deployment/rollback. Inherits current `CHAT-2026-09-16-SERVER-DB` state and must start from the current server-updated main, not stale PR #25 history.
-7. `CHAT-2026-09-17-PLATFORM-RELEASE` ‚Äî Windows + Android packaging/export/install/launch, Android signing continuity, updater/signatures/trust-root/repair bridge, deterministic build supply chain and release artifacts. Inherits/reconciles `CHAT-2026-09-16-UPDATER-VERSIONING` and current package workflows. Final canonical version bump remains coordinator-authorized only after global acceptance.
-8. `CHAT-2026-09-17-RESEARCH-SELF-IMPROVEMENT` ‚Äî Research collector/curator, provenance/corroboration/retraction/privacy, controlled self-improvement/candidate queue/tournament/promotion safety. Inherits accepted Research Quality evidence including run `35112565080`; must not redo already green work and should continue from the first remaining research/self-improvement gap.
-9. `CHAT-2026-09-17-INTEGRATION-REGRESSION` ‚Äî independent same-SHA integration/regression/release-readiness gate. It owns integration tests/workflow and failure classification, not other lanes' production code. Old probe PR #69 is stale and must never be treated as the final merge candidate; build fresh integration evidence from current main plus current accepted candidate heads.
-
-### Coordinator rules for the fresh topology
-
-- This coordinator continuously checks all nine executors, current `main`, open PR heads and exact-head CI. Idle/finished executors are reassigned to an independent bottleneck, integration evidence or final release regression instead of waiting.
-- Production ownership overlaps are intentionally minimized: UI+Visual together; Core+Coder together; Knowledge+Memory+OCR together; Work+Computer+Agent reliability together; Platform+Updater together. This replaces the less efficient old split where OCR/Knowledge and package/updater repeatedly blocked each other.
-- Fresh executors must preserve useful old work. A new branch from current `main` may cherry-pick/reimplement only verified relevant deltas from old PRs; stale unrelated diffs must not be carried forward.
-- A lane may be called READY only with exact commit SHA + relevant green tests/workflow run IDs/artifacts and no known P0/P1 blocker in its scope. Static source inspection is not runtime proof.
-- Final merge order is not predetermined. The coordinator chooses it from current overlap, CI and dependency evidence; no executor self-merges a red or stale integration candidate.
-
-PROGRESS_COMPLETE: 100%
-PROGRESS_REMAINING: 0%
-
-DONE:
-- Fresh 10-chat operating topology is defined: one continuing coordinator plus nine replacement executor roles.
-- Old chat sessions are explicitly retired without discarding their Git/CI evidence, and takeover/reconciliation rules preserve file ownership until a replacement claim is recorded.
-- Coordinator/release authority and no-extra-coordinator rule are explicit.
-- No production code, product version or Android versionCode was changed by this coordination update.
-
-REMAINING:
-- Coordination rollover itself: none. Product acceptance work remains in the nine executor lanes and coordinator release train.
-
-BLOCKERS:
-- none for the chat-topology rollover. Individual product blockers remain documented in the preceding lane sections and current GitHub CI.
-
-NEXT:
-- Owner creates the nine fresh executor chats using their assigned prompts. Each replacement chat immediately fetches current `main`, reads `AGENTS.md` + this journal, creates its takeover/reconcile CLAIM, inspects its inherited PR/branch/run evidence and resumes from the first unaccepted item. Coordinator then tracks their new CLAIMs and prevents duplicate/stale work.
-
-## 37. Coordinator topology correction ‚Äî seven fresh executors, 2026-09-17
-
-- This section **supersedes only the executor-count/topology instructions in section 36**. All historical Git/CI/PR evidence and the takeover/reconcile safety rules from section 36 remain valid.
-- Coordinator remains this current chat. No replacement coordinator is created.
-- Final operating set is **8 chats total = this coordinator + 7 fresh executor chats**. This consolidation is chosen to reduce ownership handoffs and duplicated CI while retaining independent parallel work.
-- Old executor conversations are retired as active sessions, but their branches, PRs, commits, artifacts, failures and useful work are not discarded. Old production ownership remains protected until the corresponding new executor writes an explicit TAKEOVER/RECONCILE claim from fresh `main`.
-- Canonical product version and Android `versionCode` remain unchanged. This is coordination-only; intended bump **NONE**.
-
-### Final seven executor lanes
-
-1. `CHAT-2026-09-17-UI-VISUAL-UX` ‚Äî UI + UX + Visual for Windows/Android. Takes over/reconciles old UI-POLISH / PR #27 and UI sync candidates. Owns responsive layout, navigation, canonical owner artwork integration, account/guest/memory surfaces, Work/Computer presentation, accessibility and visual regression. Must preserve Server-owned semantics while reconciling stale UI diffs.
-2. `CHAT-2026-09-17-CORE-CODER-RESEARCH` ‚Äî bundled AuroraFox Core + CodeSpecialist/SpecialistTeam + real offline benchmarks + Research/Self-Improvement. Takes over/reconciles CORE-BENCHMARKS / PR #30, CodeSpecialist runtime acceptance, accepted Research Quality evidence (including run `35112565080`), and remaining candidate-queue/tournament/promotion/corroboration work. Already-green research work must not be redone. External AI remains optional/non-authoritative.
-3. `CHAT-2026-09-17-VOICE-AUDIO` ‚Äî local Voice/STT/TTS/audio for Windows/Android. Takes over/reconciles VOICE-QUALITY / PR #34 and Android female-voice candidate work. Owns voice quality, prosody, latency, interruption/cache/device degradation and acoustic/package evidence.
-4. `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY` ‚Äî Work + Computer Agent + Agent/Autonomy reliability. Takes over/reconciles WORK-COMPUTER-RELIABILITY / PR #40 and autonomy-state durability / PR #72 where applicable. Owns lifecycle/recovery/idempotency/concurrency, Computer primitives, sandbox/master-stop/permission/rollback and autonomy-state durability. UI overlays remain with UI lane unless explicitly handed off.
-5. `CHAT-2026-09-17-KNOWLEDGE-MEMORY-OCR` ‚Äî unified Knowledge + Memory + OCR/document intelligence. Takes over/reconciles LOCAL-OCR / PR #66 and LARGE-KNOWLEDGE-PERF / PR #64, intentionally removing the former `knowledge_store.gd` ownership bottleneck. Owns local OCR, streaming import, dedupe/provenance/aliases/removal/recovery, large-data stress/performance, bounded memory and Windows/Android document paths.
-6. `CHAT-2026-09-17-SERVER-API-DB` ‚Äî Server + API + accounts/auth/guest/device sync + SQLite + mail + privacy + deployment/rollback. Takes over current SERVER-DB state and starts from current server-updated `main`; stale PR #25 is historical input only, never a blind merge source.
-7. `CHAT-2026-09-17-PLATFORM-UPDATER-INTEGRATION` ‚Äî Windows/Android packaging + installer/APK + signing continuity + updater/repair/trust-root + deterministic build supply chain + same-SHA integration/regression/release-readiness. This consolidates the former PLATFORM/UPDATER and separate INTEGRATION lanes because their current work is tightly coupled at package/release gates. It inherits UPDATER-VERSIONING, integration-gate history and current package workflows. Old probe PR #69 remains stale and must never be merged as a final candidate. This executor may classify product failures but must route production fixes to the owning lane rather than silently taking its files. Final merge/version bump/release authority stays with the coordinator.
-
-### Consolidated rollover rules
-
-- Section 36 roles `RESEARCH-SELF-IMPROVEMENT` and `INTEGRATION-REGRESSION` are **not separate fresh chats anymore**: Research/Self-Improvement is absorbed into `CORE-CODER-RESEARCH`; Integration/Regression is absorbed into `PLATFORM-UPDATER-INTEGRATION`.
-- All seven fresh executors must first fetch current `main`, read `AGENTS.md` and the complete master log, inspect inherited PR/branch/head/workflow evidence, and write an explicit takeover/reconcile CLAIM before touching implementation.
-- A fresh executor must continue from the first unaccepted item, not restart already-proven work. Stale unrelated diffs are excluded; verified useful deltas may be reconciled onto fresh `main` non-force.
-- Exact-head evidence remains mandatory: commit SHA + relevant tests/workflow run IDs/artifacts. Static inspection alone is not runtime proof.
-- Finished/blocked executors do not idle: after releasing owned files they help an independent bottleneck, regression or release evidence without editing another active lane's occupied production files.
-
-PROGRESS_COMPLETE: 100%
-PROGRESS_REMAINING: 0%
-
-DONE:
-- Final rollover topology corrected to one continuing coordinator + seven fresh executor chats.
-- Research is consolidated with Core/Coder; Integration is consolidated with Platform/Updater; OCR and Large Knowledge remain consolidated.
-- Old work/PR/CI evidence is preserved through explicit takeover/reconcile instead of being discarded.
-- No production code or public version metadata changed.
-
-REMAINING:
-- Coordination topology: none. Product work continues under the seven fresh takeover claims.
-
-BLOCKERS:
-- none for this coordination correction; subsystem blockers remain those proven by current Git/CI evidence.
-
-NEXT:
-- Owner opens exactly seven fresh executor chats. Each uses the assigned standalone prompt, writes its new takeover/reconcile CLAIM, then begins real work from current `main`. Coordinator tracks all seven and performs merge/release arbitration.
-
-## 38. Mandatory blocked/waiting escalation through coordinator, 2026-09-17
-
-This section is a **mandatory coordination rule** for all seven executor lanes and supersedes any older habit of silently waiting on another lane, a queued check, ownership conflict or unknown next step.
-
-### Executor rule
-
-If an executor chat reaches **any state that prevents useful forward progress**, it MUST report the condition in this `docs/PROJECT_MASTER_LOG.md` immediately instead of waiting indefinitely, starting duplicate work or crossing another lane's ownership boundary. This includes, but is not limited to:
-
-- a failing test/workflow that belongs to another lane;
-- waiting for another lane's code, API, artifact or merge;
-- ownership/file conflict;
-- stale/incompatible branch or PR state;
-- CI queue/scheduling blocker that prevents the next required gate;
-- missing external/device/credential/access boundary;
-- architectural decision requiring coordinator arbitration;
-- uncertainty about whether a candidate can be merged;
-- any other condition where the executor has no safe independent next action inside its own scope.
-
-The executor records a `COORDINATOR-BLOCKER` entry using this minimum format:
-
-```text
-COORDINATOR-BLOCKER:
-FROM: <current CLAIM>
-STATUS: BLOCKED | WAITING | OWNERSHIP-CONFLICT | CI-BLOCKED | DECISION-REQUIRED
-CURRENT_SHA: <exact branch/head SHA>
-BLOCKED_ON: <claim/pr/run/job/file/external boundary>
-EVIDENCE: <exact failing test/workflow/run/job/artifact/diff or factual reason>
-ALREADY_TRIED: <only factual attempts already made>
-SAFE_PARALLEL_WORK: <independent work that can still continue, or NONE>
-NEEDS_COORDINATOR: <specific decision/routing needed>
-```
-
-After writing the escalation, the executor MUST NOT silently take another active lane's production files or weaken/remove a failing acceptance test merely to continue. If `SAFE_PARALLEL_WORK` exists, it should continue that independent work while waiting for coordinator routing. If none exists, it waits for the coordinator decision recorded in this journal rather than inventing a new ownership scope.
-
-### Coordinator rule
-
-The coordinator continuously reads these `COORDINATOR-BLOCKER` entries and resolves them through the same journal. For each unresolved escalation the coordinator must verify the available Git/CI evidence and write a `COORDINATOR-DECISION` entry with:
-
-```text
-COORDINATOR-DECISION:
-FOR: <blocked CLAIM>
-DECISION: CONTINUE | REROUTE | HANDOFF | MERGE-FIRST | REBASE/RECONCILE | WAIT-EXTERNAL | DROP-STALE | SPLIT-WORK | OTHER
-OWNER: <claim responsible for next action>
-ACTION: <exact next safe action>
-DEPENDENCY: <what must become true before the original lane resumes, or NONE>
-EVIDENCE: <SHA/run/job/diff/contract supporting the decision>
-PARALLEL_ACTION: <what the blocked lane should do meanwhile, or NONE>
-```
-
-The coordinator is responsible for preventing queue deadlocks: if a dependency can be removed by changing merge order, reconciling a stale candidate, routing a defect to its true owner, splitting an independent test wave, or moving an idle/finished executor to an unowned bottleneck, the coordinator does so and records—ã–≤–∞–µ—Ç that decision here.
-
-### No-idle / no-deadlock rule
-
-- No executor should remain in an undefined `waiting` state without a journal escalation and coordinator decision.
-- A red aggregate Integration gate does not force unrelated green lanes to stop when the failing subsystem has been identified and isolated by exact evidence.
-- A finished executor releases its files and may be reassigned by the coordinator to independent regression, evidence collection, packaging or another unowned bottleneck.
-- A blocked executor may continue only explicitly safe parallel work; it must not duplicate the blocker owner's implementation.
-- Every blocker must have an owner, evidence, a coordinator decision and a next action. `–ñ–¥—ë–º`, `–Ω–µ–ø–æ–Ω—è—Ç–Ω–æ –∫—Ç–æ –¥–µ–ª–∞–µ—Ç`, `–ø—Ä–æ–≤–µ—Ä–∏–º –ø–æ—Ç–æ–º` are not valid terminal states.
-- Final merge, final version bump and release authority remain coordinator-only.
-
-PROGRESS_COMPLETE: 100%
-PROGRESS_REMAINING: 0%
-
-DONE:
-- Mandatory executor‚Üícoordinator escalation protocol is defined for blockers, waits, ownership conflicts, CI scheduling and architecture/merge decisions.
-- Mandatory coordinator‚Üíexecutor decision protocol is defined in the same canonical journal.
-- No-idle/no-deadlock behavior is explicit: executors continue safe independent work where possible and do not cross ownership boundaries while blocked.
-- This coordination-only change does not modify production code, canonical product version or Android versionCode.
-
-REMAINING:
-- Product lanes continue normally under section 37; every new blocker/wait condition must now use this section 38 protocol.
-
-BLOCKERS:
-- none for this coordination rule.
-
-NEXT:
-- Coordinator continues monitoring all seven lanes. On the first `COORDINATOR-BLOCKER` entry, verify its exact evidence, publish a `COORDINATOR-DECISION` here, reroute ownership/merge order/CI as needed, and keep all independent lanes moving.
-
-## 39. Work / Computer / Autonomy ‚Äî TAKEOVER/RECONCILE, 2026-09-17
-
-### CLAIM `CHAT-2026-09-17-WORK-COMPUTER-AUTONOMY`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî TAKEOVER/RECONCILE**.
-- Fresh baseline: `b574546cc133a7bd9aa6b24e65414ca3328949d7`; branch head before this claim: `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`.
-- –†–µ–∂–∏–º: Chat. Intended bump after acceptance: **PATCH**; version/versionCode/final merge/release remain coordinator-only.
-- Inherits `CHAT-2026-09-16-WORK-COMPUTER-RELIABILITY` / draft PR #40, verified head `f4ad58377752020823900fea107914af49021349`: Work lifecycle/recovery, atomic WorkStore, safe/unsafe retry + uncertain-result protection, bounded local Computer primitives, default-OFF/master-stop, sandbox/idempotency/privacy, tests. Old exact-head evidence: Work Computer Reliability `35147796178` SUCCESS; Work Mode `35147796111` SUCCESS; Windows Package `35147796213` SUCCESS; Android APK `35147795977` SUCCESS; Agent Sync `35147796112` SUCCESS; Core/Voice `35147796205` SUCCESS.
-- Inherits PR #72 head `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa`, already merged into main as `5479a05e36aa8888fdeb96bbf9b9bac397b7780f`: temp/backup atomic autonomy-state save, interrupted/corrupt recovery, legacy schema, fail-closed autonomy boot. Exact-head evidence: Agent Sync `35150755820` SUCCESS; Core/Voice `35150755870` SUCCESS; Windows Package `35150755901` SUCCESS; Android APK `35150755919` SUCCESS. Windows artifact `10469683226` digest `sha256:965ecd3670ca26bfc2ea478c1135deeda01c13ae87c3166ca90350ca26d05eaf`; Android artifact `10469586976` digest `sha256:fa9c968aa8b54e2ad7e8770f8a6c25b60e5d8231b1d0863441fc15fb17431ca4`.
-- Current reconcile candidate `af652c3e76254eb3f7981907a9adf8c8b82c7d91` was produced concurrently from fresh main and merged into this branch as `f4eaca0229c8767ddb371ee8da59fe30fb49af4a`; it is **not accepted by assertion alone**. Audit already found five unrelated stale workflow diffs (`agent-sync-ci.yml`, `android-apk-artifact.yml`, `release-identity-ci.yml`, `voice-ci.yml`, `windows-package-ci.yml`); those must be removed before candidate acceptance.
-- Owned scope: `work/work_manager.gd`, `work/work_store.gd`, `computer/computer_service.py`, `computer/install_computer.ps1`, `computer/requirements.txt`, `scripts/computer_client.gd`, Work/Computer reliability tests and `.github/workflows/work-computer-reliability.yml`; `scripts/agent_core.gd`, `scripts/tool_registry.gd`, `scripts/sandbox_manager.gd`, `agent/autonomous_coordinator.gd` only with runtime evidence/rechecked ownership.
-- UI boundary: do not edit `scripts/computer_overlay.gd`, `scripts/computer_overlay_compat.gd`, `work/work_overlay.gd`; UI contract defects route to `CHAT-2026-09-17-UI-VISUAL-UX`.
-- Architecture invariant: high-level goal = bundled AuroraFox Core / AgentCore ‚Üí ToolRegistry ‚Üí bounded Computer primitives. `ComputerClient.plan()` / `run()` and sidecar service are not planners; no mandatory external AI/model.
-
-PROGRESS_COMPLETE: 35%
-PROGRESS_REMAINING: 65%
-
-DONE:
-- Fresh main/AGENTS/full master log, old claims, PR #40/#72 exact heads/diffs/CI/artifacts audited.
-- PR #72 is already integrated and preserved; no reimplementation.
-- PR #40 useful work identified, and stale unrelated workflow contamination in current reconcile candidate is explicitly identified before acceptance.
-
-REMAINING:
-- Remove unrelated workflow diffs; verify resulting diff contains only owned/relevant Work/Computer safety changes plus this journal entry.
-- Create/open a draft takeover PR; obtain same-SHA Work Computer Reliability + Work Mode CI and inspect exact failure-injection results.
-- Extend any missing runtime gates for state corruption/both-corrupt/fail-closed, concurrency, service crash/timeout/malformed/permission/screenshot/idempotency/destructive uncertain replay, Windows supported capability and Android graceful unsupported Computer.
-
-BLOCKERS:
-- none preventing safe owned-scope cleanup/testing now. UI runtime acceptance remains cross-lane and will be routed, not edited here.
-
-NEXT:
-- Restore the five unrelated workflows from fresh main, verify net diff, then trigger draft-PR CI and classify failures by exact run/job/test before further implementation.
-
-## 40. Unified executor takeover of all unfinished lanes ‚Äî 2026-09-17
-
-### CLAIM `CHAT-2026-09-17-UNIFIED-EXECUTION-TAKEOVER`
-
-- –°—Ç–∞—Ç—É—Å: **ACTIVE ‚Äî OWNER-DIRECTED TAKEOVER/RECONCILE ALL EXECUTOR LANES**.
-- Started from exact fresh `main`: `54fa827854320adf864d578ad3831e9e375a9e3f` (`Merge Platform/Updater/Integration CI hardening`).
-- –†–µ–∂–∏–º: Chat.
-- Owner instruction: the other executor conversations can no longer be continued by the owner. This chat therefore takes direct implementation responsibility for every unfinished item previously assigned to the seven executor lanes in section 37.
-- This takeover **does not discard or invalidate** their branches, PRs, commits, workflow runs, artifacts, accepted tests or historical failure evidence. Existing work is inherited and reconciled from exact Git facts; already accepted green work is not reimplemented without a new regression.
-- This takeover supersedes executor-to-executor production ownership boundaries for unfinished work: UI/UX/Visual, Core/Coder/Research/Self-Improvement, Voice/Audio, Work/Computer/Autonomy, Knowledge/Memory/OCR, Server/API/DB, Platform/Updater/Integration/Packaging may now be changed by this unified executor after fresh-main reconciliation and exact evidence. Safety/trust boundaries in sections 0‚Äì1 remain unchanged.
-- Higher-level coordinator/leader authority is **not** taken over: final merge arbitration, canonical public version/versionCode bump, production signing/release and final Windows/Android release acceptance remain coordinator/leader decisions unless the owner explicitly changes that authority later.
-- Aggregated intended release bump remains **at least MINOR** because the existing release train includes a new signed update floor and broad accepted server/product changes; canonical `V1.3.0.0` and Android `versionCode=100005` are not changed by this takeover entry and remain test-first/version-last.
-- First execution rule: audit current open PRs and current exact-head Actions, preserve useful deltas, drop stale/unrelated diffs, and work from the first unaccepted reproducible blocker rather than replaying historical work.
-
-### Leader report / acknowledgement request
-
-LEADER-NOTIFY:
-FROM: `CHAT-2026-09-17-UNIFIED-EXECUTION-TAKEOVER`
-TO: current AuroraFox coordinator/leader
-TYPE: OWNER-DIRECTED EXECUTION TAKEOVER
-CURRENT_MAIN: `54fa827854320adf864d578ad3831e9e375a9e3f`
-REPORT: By direct owner instruction, this chat has taken responsibility for all unfinished implementation/testing tasks previously delegated to the seven executor chats. Their Git/CI work remains inherited evidence; final merge/version/release authority remains with the coordinator/leader.
-ACK_REQUEST: In the coordinator/leader's **next owner-facing response**, explicitly confirm that this takeover report was received from the journal. Do not claim acknowledgement before the coordinator/leader actually reads this entry.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-
-DONE:
-- Fresh `main` `54fa827854320adf864d578ad3831e9e375a9e3f` verified immediately before takeover.
-- Root `AGENTS.md` and the complete canonical master log through section 39 were reread before this write.
-- All previous executor work is formally inherited instead of being abandoned; existing exact SHAs/PRs/runs/artifacts remain evidence.
-- Unified implementation ownership is recorded while coordinator/leader merge/version/release authority and all safety/trust invariants remain intact.
-- Leader notification and explicit next-response acknowledgement request are recorded in the canonical journal.
-
-REMAINING:
-- Enumerate every current open PR/head and exact workflow status against fresh main; classify stale, mergeable, red and already-green candidates.
-- Reconcile/fix current runtime blockers across Core, Android/platform, Knowledge/OCR, Server/API, UI, Voice and Work/Computer in evidence-driven batches.
-- Produce a single same-SHA integrated candidate with all required local/offline, safety, updater, API, UI, package and platform gates green.
-- Complete available Windows/Android install/launch/package evidence and report external physical-device/owner-signing boundaries honestly where inaccessible.
-- Hand the exact candidate SHA/runs/artifacts/checksums to the coordinator/leader for final version bump/signing/release decision.
-
-BLOCKERS:
-- No repository/code blocker prevents unified work now.
-- Owner-controlled production signing secrets and any unavailable physical Windows/Android device remain external acceptance boundaries; they do not block code/CI hardening.
-
-NEXT:
-- Inspect current open PRs and exact-head Actions; begin with the highest-severity reproducible current blocker on top of `54fa827...`, preserving all already-green subsystem evidence and avoiding duplicate heavy CI.
-
-## 41. Unified execution checkpoint ‚Äî journal-first discipline and current exact evidence, 2026-09-17
-
-### `CHAT-2026-09-17-UNIFIED-EXECUTION-TAKEOVER` ‚Äî checkpoint
-
-- Owner explicitly reaffirmed that the canonical `docs/PROJECT_MASTER_LOG.md` must be read and updated around every meaningful implementation stage. From this checkpoint onward the unified executor treats a PR comment as supplemental evidence only; it does not replace this journal.
-- Fresh `main` before this journal write: `9ca5fafd1f65038d855d00e1e1e0db876938d17f` (`docs: unify executor takeover under current chat`), parent `54fa827854320adf864d578ad3831e9e375a9e3f`.
-- Platform/Integration infrastructure was merged as `54fa827854320adf864d578ad3831e9e375a9e3f`: Integration now installs `httpx==0.28.1` and uses current durability/readiness contracts, so missing-httpx/stale-meta false reds are no longer accepted as product failures.
-- Knowledge/Memory/OCR active PR #82 exact head `693126d033057eb8382160c8e16f51faf5548176` is mergeable. Its reconciled candidate carries local Windows Tesseract `rus+eng` packaging, Android PDFBox+Tesseract export, Android NDK pin `28.1.13356709` and the corrected Android OCR contract. Integration run `35191781320`: `godot-cross-subsystem` SUCCESS; alias removal, record/shared-source dedupe, legacy rollback, registry write-failure rollback, truncated-temp rejection, interrupted reimport and interrupted canonical removal all SUCCESS. The cross-subsystem aggregate remained red only on UI branding. Heavy 100/250 MiB and genuine >=1 GiB Knowledge Pack acceptance remain open and therefore this lane is not 100% ready.
-- Work/Computer active PR #86 exact head `4d5007d7b7f933f3ee3a4b47c88edfad2f223500` is mergeable and non-draft. Exact-head Work Mode `35191682282`, Work Computer Reliability `35191682119`, Agent Sync `35191682275`, Core/Voice `35191682234` and API CI `35191682195` are SUCCESS. Windows Package `35191682187` and Android APK `35191682264` were still running at the last exact check; do not call final same-SHA package acceptance until their final status is recorded.
-- UI PR #84 was reconciled without importing its stale master-log delta; latest UI cleanup commit recorded by this unified executor is `4e72fd9075dd215bb1d8d114dc103e3a479c951f`. Prior UI Visual evidence remains accepted for its own old head, but final UI release acceptance still requires same-SHA rerun after backend/release-train reconciliation and does not substitute for physical-device tap/visual acceptance.
-- Core/Coder/Research PR #78 was reconciled non-force onto the release train as merge commit `431c3be296b095e4e3318faa1c098bb918e86028`, then bounded-runtime/test hardening advanced the branch through `8d0cfe0ecf645781b47bdf1eef9a4ee110e30bba`, `a4a73fa275f5272853e43a73cb5a6ac441ca4e77` and exact head `738128444d8723ae69842a2fcad1c4a76c565d8c`. Historical run `35186317354` had timed out SpecialistTeam/CodeSpecialist after 360 seconds. On the new exact head, Core Benchmarks run `35192337079` proves the timeout blocker itself is resolved: gate-contract SUCCESS, verified bundled Core preparation SUCCESS, **real SpecialistTeam / CodeSpecialist offline smoke SUCCESS**, and the real bundled Core benchmark actually executed. The workflow remains FAILURE for a new genuine quality finding: benchmark runner reported `exit=2`, peak RSS `3817.29 MiB`, evaluator reported `quality=False performance=True relative=False`; artifact `10484628030`, digest `sha256:b3c4bd35a66b70b3197357d9aa5eaba26bc966b110d7c8ed7a8a021a64e58640`. This is now a quality/debug blocker rather than an infrastructure-timeout blocker and must be fixed from the artifact evidence without weakening the quality gate. Core/Voice `35192336941`, Agent Sync `35192337036`, Core Bootstrap `35192336993`, Research Quality `35192336943` and Evolution Tournament `35192336994` are SUCCESS on the same branch head/PR merge context.
-- Core Android remains independently red on exact head: Core Android Benchmark `35192336947` FAILURE and Core Android E2E `35192336879` FAILURE. These must be inspected by exact job/log before changing Android production/package code; historical duplicate `libc++_shared.so` packaging evidence is not assumed to be the current root cause.
-- Voice candidate has prior exact local Supertonic F1‚ÄìF5 acceptance evidence and remains open; it still needs a current same-SHA package/install/launch set before final merge acceptance. Server/API remains largely green by exact contract evidence but physical REG.RU deployment remains an access boundary.
-
-PROGRESS_COMPLETE: 89%
-PROGRESS_REMAINING: 11%
-
-DONE:
-- Unified ownership is active and journal-first execution discipline is explicitly reaffirmed.
-- Platform/Integration false-red infrastructure is landed in main.
-- Knowledge runtime correctness P0 is closed on PR #82 exact-head Integration runtime evidence; remaining Knowledge risk is heavy-scale/real-pack/platform acceptance, not the four former durability probes.
-- Work/Computer own-scope reliability and network-response safety are green on current exact head; heavy package completion remains to be recorded.
-- Core SpecialistTeam/CodeSpecialist real offline execution now passes; the previous 360-second timeout is no longer the blocker.
-- Core benchmark now reaches real inference and exposes a genuine quality failure with a machine-readable artifact instead of failing before quality measurement.
-
-REMAINING:
-- Download/inspect Core artifact `10484628030`, identify the exact failing quality scenarios and fix the smallest real Core/Coder defect; rerun the same real-Core gate without weakening thresholds.
-- Inspect current Core Android Benchmark/E2E failures separately and reconcile only their current root cause.
-- Complete Knowledge 100/250 MiB stress plus the required genuine >=1 GiB `.afknowledge` production-pack gate and Windows/Android import/query evidence.
-- Record final Windows/Android package results for Work/Computer and other candidates; reconcile UI/Voice onto the eventual integrated SHA and rerun exact acceptance.
-- Build the final same-SHA release candidate; only then perform coordinator-authorized version/versionCode bump and owner-signing/release flow.
-
-BLOCKERS:
-- P0 current internal blocker: Core benchmark quality (`quality=False`) on real bundled inference, artifact `10484628030`.
-- Core Android real-runtime acceptance remains red pending exact failure classification.
-- Genuine >=1 GiB Knowledge Pack and physical-device/production-signing boundaries remain incomplete.
-
-NEXT:
-- Before the next code mutation, reread fresh `main` and this complete journal. Then inspect artifact `10484628030` and the two Core Android job logs; change only the reproduced root cause. After that implementation/test stage, append its exact SHA/run/result to this journal before moving to another lane.
-
-## 42. Core/Android blocker classification ‚Äî exact artifact/log evidence, 2026-09-17
-
-### `CHAT-2026-09-17-UNIFIED-EXECUTION-TAKEOVER` ‚Äî classification checkpoint
-
-- Fresh canonical `main` was rechecked immediately before this journal write and remains `d06ac6088445edd9197dca0584b64245b920b58b` (`docs: record unified execution checkpoint`). The complete current journal blob `d2e59c1a81b7b293b9bd817ca72de7cd8592e264` was reread before classification.
-- Core benchmark artifact `10484628030` from run `35192337079` was downloaded and inspected directly. `code-specialist-smoke.json` is green: all 8 operations passed on `aurora_core_desktop`, with no external AI requirement. In `core-benchmark-report.json` / raw report, **20 of 21 quality scenarios pass**. The sole failing scenario is `corrupted_input`: `passed=false`, runtime `aurora_core_desktop`, elapsed `5995.096 ms`, output excerpt exactly `IVORY-29`. The other scenarios ‚Äî self-reliance/offline identity, RU/EN dialogue, instructions, multi-turn, local memory, Core Knowledge retrieval, planning, tool selection, text/code generation, explanation, reasoning, long context, compatibility isolation and repeatability ‚Äî pass. Performance gate itself remains green; reported cold response `6331.216 ms`, warm median `8327.302 ms`, peak RSS about `3817.29 MiB`; no benchmark timeout.
-- This narrows the real desktop product-quality blocker to context/retrieval isolation around malformed input. `IVORY-29` is evidence that the corrupted-input request received unrelated retained Knowledge/context content from an earlier scenario rather than demonstrating a generic model crash. The acceptance threshold is **not** weakened; the next code step must first inspect the exact benchmark scenario and AIClient/context orchestration and decide whether the defect is benchmark state leakage or production retrieval behavior.
-- Core Android E2E run `35192336879` was inspected by exact job log. Verified bundled Core preparation, Android plugin build, APK export, temporary CI signing and install all succeeded. The job failed **before launching the AuroraFox benchmark**: after `cmd connectivity airplane-mode enable`, `settings put global airplane_mode_on 1`, Wi-Fi/data disable, the script read `settings get global airplane_mode_on` as an empty string (`airplane_mode=`) and `test "$state" = '1'` exited 1. Therefore this run does **not** prove an Android Core inference failure; it proves the offline-device-state CI assertion is not valid on this API-35 emulator configuration. The offline requirement itself remains mandatory and must be re-proven with a reliable connectivity/network-blocked assertion, not deleted.
-- Core Android Benchmark run `35192336947`, failing job `105107868118`, was also inspected. The production Android runtime/plugin build completed successfully before the emulator stage. Inside `reactivecircus/android-emulator-runner`, the script assigns `apk='benchmarks/core/android_probe/app/build/outputs/apk/debug/app-debug.apk'` and then later executes `adb install -r "$apk"`; the action wrapper executes script lines in separate shell invocations, so `$apk` is empty and adb exits with `filename doesn't end .apk or .apex:`. The app/Core benchmark is never reached. This is a workflow shell-scope defect, not current evidence of Android model/runtime failure.
-- Toolchain reproducibility issue found while inspecting the same Android logs: workflow provisioning explicitly installs/exports NDK `28.1.13356709`, while Gradle later requests and auto-installs NDK `27.0.12077973`. This mismatch is not the immediate failure above, but deterministic Android supply-chain acceptance is incomplete until workflow and Gradle use one pinned NDK version.
-
-PROGRESS_COMPLETE: 90%
-PROGRESS_REMAINING: 10%
-
-DONE:
-- Previous generic `Core quality=False` blocker is reduced to one exact failing scenario with output evidence; CodeSpecialist/SpecialistTeam are independently confirmed green.
-- Both exact-head Android Core failures are classified as pre-runtime CI/workflow defects; neither current red run reached Android Core inference.
-- Android build/export/sign/install success is separated from Android inference acceptance instead of falsely treating the whole red run as product failure.
-- Deterministic NDK mismatch is recorded as an independent platform reproducibility issue.
-
-REMAINING:
-- Inspect `corrupted_input` benchmark source and the AIClient/Knowledge/context path that produced `IVORY-29`; fix the smallest reproduced isolation defect without changing expected quality semantics.
-- Fix Android Benchmark emulator script variable scope so the built probe APK is actually installed/launched and the real benchmark report is collected.
-- Replace the fragile API-35 `airplane_mode_on` property assertion with a reliable offline proof while preserving the mandatory no-network normal-path gate.
-- Unify Android Gradle/workflow NDK pin, then rerun both Android Core gates and the desktop real-Core benchmark on the resulting exact branch SHA.
-
-BLOCKERS:
-- Product P0 remains only the reproduced desktop `corrupted_input` context/retrieval isolation failure until source inspection says otherwise.
-- Android Core runtime acceptance is **unproven**, not product-red: current jobs stop before inference.
-
-NEXT:
-- Reread fresh `main` and this journal, then inspect the exact Core benchmark scenario, AIClient/context builder and the two Android workflow files. Make only evidence-backed minimal fixes, run the affected exact gates, and write the resulting commit SHA/run IDs/results back into this journal before moving to Knowledge/Work/UI/Voice.
-
-## 43. Work final engineer ‚Äî owner-directed TAKEOVER/RECONCILE, 2026-09-17
-
-### CLAIM `WORK-2026-09-17-FINAL-RELEASE`
-
-- Status: **ACTIVE ‚Äî OWNER-DIRECTED TAKEOVER/RECONCILE**.
-- Starting main: `031aebaad16fc25a39dfc45c58f96fadb658cac2`; inherited draft PR #92 / `chat-2026-09-17-unified-finalization` exact head `30d054bb9a9419e63430ced1d841c8931068d79d`.
-- AGENTS.md and full canonical log read. Acknowledge section 40 LEADER-NOTIFY: prior unified executor takeover received; useful code/evidence is preserved.
-- Owner appoints this session final engineer with integration/release responsibility. Reconciles unfinished section 40‚Äì42 claims and historical seven-lane claims; does not assume their percentages are verified.
-- Intended accumulated release bump: MINOR / V1.4.0.0, test first/version last. No canonical bump now.
-- First owned batch: `benchmarks/core/run_android_godot_e2e.sh`, Android APK/E2E workflows, relevant runner tests, this journal. Other production files only after reproduced defect and updated claim.
-- Current exact candidate: 24 workflows completed, 22 SUCCESS, Android APK `35253859322` FAILURE (job `105312532029`: logcat collection exit 255 after install/monkey success), Android Core E2E `35253859198` FAILURE (job `105312896359`: no collected report after 1200 s).
-- Source evidence: E2E builds --export-release, then attempts run-as against a non-debuggable package and suppresses errors; it also stops on the first report file although the app writes status=running before inference. Both are evidence collection defects, not proof of product inference success. Preserve actual release runtime and require completed report.
-- Knowledge 1GiB workflow `35253859168` is a synthetic JSONL stress test. It cannot establish genuine >=1GiB production knowledge pack/provenance/licenses or Android import acceptance.
-
-PROGRESS_COMPLETE: 0%
-PROGRESS_REMAINING: 100%
-DONE:
-- Fresh main, complete instructions/log, open PR and exact candidate workflow conclusions checked; clone at exact candidate available.
-REMAINING:
-- Full component audit from files/logs/artifacts; repair Android evidence collection, run relevant tests and exact CI; genuine pack and device/signing acceptance; final version and release gates.
-BLOCKERS:
-- Android release-runtime E2E remains unproven. No physical Windows/Android device or production signing availability verified.
-NEXT:
-- Fix release APK report collection using root on the disposable API35 emulator, wait for completed status, retain partial report/filtered app diagnostics and reject missing mandatory scenarios. Test runner lifecycle with adb simulation before real CI.
-
-
-## 44. Final engineer audit and first Android evidence batch ‚Äî 2026-09-17
-
-CLAIM: `WORK-2026-09-17-FINAL-RELEASE` ‚Äî ACTIVE.
-Starting main: `031aebaad16fc25a39dfc45c58f96fadb658cac2`.
-Audited candidate: `30d054bb9a9419e63430ced1d841c8931068d79d` (PR #92); many workflows actually check out PR merge `8b11b2f29daa4b24af187eedcd996c97dbe92d45`, while explicit-head Knowledge/chat gates check out `30d054bb...`. These identities must not be conflated. New implementation commit: `8c61086b7ef9dfba3631b53a3e3624ba321d737f`.
-
-### Coordination / repository facts
-
-- Full main AGENTS/master log read before implementation; section 40 takeover notification acknowledged in section 43.
-- Only open PR found: #92, draft, mergeable, 108 files / 128 commits at the audited head. It is NOT accepted for merge.
-- Branch search paginated: 123 branch names returned. Old/superseded candidates include PR #64 race/scaling history, #66 OCR, #78 Core, #82 Knowledge, #84 UI, #86 Work and numerous temporary/sync branches. Names alone do not prove obsolete/redundant commits; none deleted, none blindly merged.
-- No open GitHub issues returned; unresolved work is in canonical log and release gates, not necessarily GitHub issues.
-- Releases API returned only `repair-v1.2-windows`, prerelease (2026-09-16). No normal V1.4 release/update asset set was returned.
-- Source canonical version remains V1.3.0.0 / Android code 100005. Pinned update floor is 1.4.0.0. Permanent public identity exists, private signing availability not inspected/assumed.
-
-### Component audit
-
-Percentages below are conservative evidence coverage, not a guarantee of quality equivalence to commercial assistants: 20 points each for inspected source/contract, green automated gate, relevant observed runtime evidence, complete platform/package evidence, final V1.4 device/release acceptance. Missing proofs never count as a pass. No component has final acceptance. SHA for rows is audited candidate `30d054bb...` / workflow checkout `8b11b2f...` as above unless explicitly noted.
-
-| COMPONENT | % | CURRENT STATUS / PROOF / TEST RESULT | WHAT IS MISSING |
-|---|---:|---|---|
-| Core | 60 | Windows real Core benchmark 35253859144 / job 105312715775 SUCCESS: SpecialistTeam/CodeSpecialist offline gate OK, benchmark exit 0, quality=True performance=True; peak RSS 4100.37 MiB. Android native probe 35253859334 / 105312834106 SUCCESS without INTERNET, llama.cpp / verified weights; cold 218780.915 ms, warm median 182518.543 ms, PSS 1311.397 MiB. | Full Godot AIClient Android E2E red; real physical Android benchmark and usability/performance acceptance; packaged final V1.4 benchmark. No proof of ChatGPT/Claude-level capability from this small suite. |
-| Knowledge | 60 | Knowledge Performance 35253859283 SUCCESS; source streaming/transaction/registry paths inspected. Exact-head synthetic 1GiB stress 35253859168 / 105312675022 SUCCESS: 1073742199 dataset bytes, peak RSS 901017600 bytes, restart_ok=true, no external runtime. | Genuine >=1GiB bootstrap pack, sharded manifest/hashes/provenance/licenses and Windows/Android import/query proof. Stress generator uses repeated filler/x.repeat(700); cannot satisfy genuine pack requirement. Export and final packaged device acceptance not independently proven. |
-| Memory | 40 | memory_store/local semantic contracts, Semantic Memory CI 35253859240 SUCCESS, Knowledge Performance SUCCESS. | Full report contents/real Android restart/search/export/restore at production scale, final device acceptance. |
-| OCR | 40 | Local Tesseract rus+eng Windows packaging and PDFBox+Tesseract4Android source/dependency/bounds/cancel contracts inspected; Windows package and Android Plugin CI 35253859261 SUCCESS. | Android installed APK real scanned/mixed ru/en OCR and large-PDF runtime; final offline-device proof; independent OCR report inspection. |
-| Voice | 40 | Android Voice 35253859478 proves asset layout and Kotlin compile only. Supertonic Acceptance 35253859172 SUCCESS with evidence artifact 10511768376. | Windows package CI AND release.yml both use -SkipVoiceSetup. This package proof does not guarantee bundled Windows voice backend/models, local STT/TTS invocation on installed package or offline voice. Android installed voice invocation and human listening still missing. |
-| UI | 60 | UI Visual 35253859237 / 105312822181 SUCCESS: structural/portrait/owner-art/keyboard/loading/offline/error/cancel/pointer/render-matrix steps all green. Actual runtime main_compat surfaces inspected. | Independently view captured frames and test physical Android keyboard/taps/orientation; installed signed V1.4 UI acceptance. |
-| Work Agent | 40 | Work Mode 35253859280 and Work Computer Reliability 35253859599 SUCCESS; WorkStore failure/concurrency smokes present. | Inspect exact runtime failure-injection outputs, installed Windows/Android Work lifecycle/restart and final release acceptance. |
-| Computer Agent | 40 | Reliability 35253859599 SUCCESS; bounded local primitives/default-OFF permission integration in client/overlay, new source paths retained. | Real installed Windows screenshot/actions/master-stop test; Android explicit unsupported behavior/device proof, final acceptance. |
-| Android | 40 | Build/export/test-sign/install succeeded in failed APK/E2E jobs; API35 native no-INTERNET probe succeeds. APK workflow fails logcat collection (exit255), E2E suppresses run-as failure and never collects report. | New runner CI; full normal-path Core/Voice/Knowledge/OCR installed behavior, physical device, permanent signing continuity, signed V1.4 versionCode increase. |
-| Windows | 60 | Windows Package 35253859209 / 105312824372 SUCCESS: EXE smoke, installer, silent install/uninstall, installed model hash, V1.2/V1.3 bridge steps. | Offline installed voice/Computer/File functionality beyond 3-frame headless startup, final signed-floor/update/package V1.4 acceptance. |
-| API | 40 | API CI 35253859249 SUCCESS; account/guest/privacy/SQLite/request/mail contracts present and inherited. | Inspect full exact test reports; real production deployment/ingress/account delivery and final candidate regression evidence. |
-| Server | 20 | REG.RU deploy/install/update/rollback scripts and local readiness contracts exist; API CI green is not deployed-host evidence. | Authenticated host deployment, /ready, DB backup/restore/rollback and production mail transport proof. No host access verified in this session. |
-| Updater | 40 | Release Identity 35253859409 SUCCESS; pinned public cert/key/floor contracts and Windows V1.2/V1.3 repair smoke SUCCESS. | Actual signed V1.4 latest update.json + update.sig/assets, invalid-signature/hash rejection in installed floor and upgrade/repair/rollback end-to-end. |
-| Installer | 60 | Windows package job builds Inno installer, performs silent install/model-integrity/app smoke/uninstall and historical bridges SUCCESS. | Final V1.4 installer with all voice dependencies/assets and full installed offline functionality, signed release/update linkage. |
-| Release | 20 | Version/signing/release contracts present; source still V1.3, one repair prerelease only. | Final same-SHA all gates, genuine knowledge payload, devices/listening, version metadata/changelog bump, RC/full CI, then main merge and production release. |
-
-Artifact metadata personally fetched (contents not downloaded through UTF-8-only connector): Windows artifact 10513160789 digest sha256:337b99ce3b50fe1d0ea162f92dec2a1684b7cd09ff33eb74d9993d9715146513; Core 10511848740 digest sha256:d338f4a47410999f98cafb4946ed055fc591fd724e605f1aeb0c0adeaa41d0bb; Android native 10512234902 digest sha256:27f48c6d05776bc1a162ed7bb823448a9adcb20717a7f693de8266f63d46d8ea; synthetic stress 10515131891 digest sha256:a173d67e0df4481cda703840194d05731fdc2bab6497068685ddf30ac93addb6. Logs for these four jobs read directly. Artifact existence/digest alone is not content/visual acceptance.
-
-### ACTION / FILES / DIFF / TEST / RESULT / COMMIT
-
-ACTION: repair Android release-report transport/lifecycle and fail-closed launch diagnostics.
-FILES: benchmarks/core/run_android_godot_e2e.sh; benchmarks/core/run_android_apk_smoke.sh; tests/test_android_e2e_runner.py; tests/test_android_contract.py; .github/workflows/core-android-e2e.yml; .github/workflows/android-apk-artifact.yml.
-DIFF: root only on disposable google_apis emulator reads release APK private report without making product debuggable; waits for completed status, preserves running report, detects early process exit, filters app diagnostics, required.issubset(rows) rejects missing mandatory scenarios even with extra rows. APK smoke executes in one Bash process with pipefail; retries logcat transport at most3 times with timeout30s, records stderr, still rejects persistent collection failure, empty PID, wrong version and app crash. Relevant CI runs new runner unit tests.
-TEST: python -m unittest tests.test_android_e2e_runner -v; python tests/test_android_contract.py; direct invocation of both tests/test_core_android_e2e_contract.py functions; bash -n on both runners; git diff --check.
-RESULT: 8 runtime lifecycle/fault-injection simulation tests PASS (3.013s), Android contract OK V1.3.0.0/code100005, 2 E2E contracts PASS; Bash syntax/diff checks PASS. Simulated adb tests are NOT Android inference/device proof. Real CI remains pending on new commit.
-COMMIT: 8c61086b7ef9dfba3631b53a3e3624ba321d737f (non-force advance of existing PR #92; no replacement PR/main merge/version bump).
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-Readiness uses 20 equally weighted release checkpoints for this audit, 8 confirmed automated boundaries: Windows Core; Android native Core; chat learning attachment smoke; Knowledge/Memory durability/scaling; synthetic1GiB stress/restart; research/evolution safety; Work/Computer contracts; API/account contracts. Remaining12: Android full normal-path E2E; installed APK launch; Windows installed offline voice/files/computer; installed Android voice/OCR/Knowledge; genuine knowledge corpus; sharded pack/provenance/licenses; real Windows/Android device benchmark; human UI/voice acceptance; deployed server/rollback/mail; final version/versionCode/metadata; same-SHA complete RC CI; production signing/update/release. Thus 40% is release acceptance coverage, not average table percentages or inherited 90% prose.
-DONE:
-- Current repository/PR/branches/releases and 24 workflow statuses audited; direct benchmark/stress/package logs and artifact metadata checked.
-- First implementation batch committed with passing local fault-injection tests; new CI automatically follows PR update.
-REMAINING:
-- Twelve acceptance checkpoints above. Plain arbitrary-name TXT/PDF/documents are analyzed as chat attachments; auto-learning classification requires filename/manifest markers. The broad user-import requirement needs a concrete explicit chat import flow/test before acceptance; do not silently treat analysis as persistent Knowledge import.
-BLOCKERS:
-- Actual genuine corpus is not supplied/proven; current synthetic pack is filler.
-- Current Windows CI/release packaging deliberately skips voice provisioning, so full offline voice acceptance is absent.
-- Physical devices, human listening and authenticated production host/signing availability not verified.
-NEXT:
-- Inspect new exact candidate Android CI/job outputs before declaring runner repair accepted. If product fails, use preserved partial report/app log to fix reproduced cause. In parallel audit/fix Windows full offline voice packaging and explicit chat import coverage in a newly extended claim; genuine owner-supplied Library knowledge archive must be inspected for content/provenance rather than counted by ZIP size.
-- Keep PR #92 draft until final acceptance; never bump/publish changed normal binaries as V1.3.
-
-
-## 45. Knowledge archive byte audit; offline Windows voice packaging claim extension
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, intended accumulated MINOR unchanged.
-- Original user archive `AuroraFox_Knowledge_CUMULATIVE_2026_09_v14(1).zip` fetched and inspected as data only. ZIP SHA256 `e2564095ae05bc086143517cc2bf8195eefaba947f44d4b59427a359740ab11c`; 29 top-level entries, immediate expanded bytes 201126321; recursive 10 ZIP containers hold 899 JSONL files / 10125430370 leaf JSONL bytes, including historical duplication. This is not a claim of 10GB unique genuine knowledge.
-- Manifests explicitly distinguish 4.22M physical rows and 72M logical Cartesian cases; sampled cases are synthetic_skill_case and resource_locator_url Google search templates, not source-document content. v14 truth metadata explicitly says schema PASS is not truth PASS. The archive does not prove >=1GiB genuine redistributable knowledge, production shard contract or Android import. Embedded Python scripts were not executed; no useful existing pack content discarded.
-- New owned batch: build/build_windows.ps1, voice/build_backend.ps1, voice/python/aurora_voice_server.py, Windows package/release workflows, new installed offline voice smoke, relevant packaging tests and this journal. Reconciles previous VOICE/PLATFORM ownership under owner-appointed final engineer; no change to default voice quality or signing identities.
-- Reproduced source blocker: both CI and release skip Windows voice provisioning. Secondary source blocker: frozen backend uses __file__ for config root despite builder staging config beside executable; resolve frozen root from executable. Stop accepting copied non-relocatable .venv as a complete portable release fallback.
-- Required acceptance: full staged backend/models, installed package local TTS+STT real HTTP invocation with offline model flags and an outbound firewall rule for the executable, report/WAV retained. Keep subjective listening separate. Use ZIP64-capable packaging rather than Compress-Archive's large-file boundary for expanded voice payload.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: genuine archive vs synthetic stress evidence separated; source packaging omissions reproduced.
-REMAINING: full Windows offline voice packaging/run acceptance and twelve release checkpoints.
-BLOCKERS: genuine production corpus remains missing/unproven; devices/host/signing availability unverified.
-NEXT: implement full portable voice packaging and installed offline smoke, then exact Windows CI; no version bump/merge/release.
-
-
-## 46. WORK-2026-09-17-FINAL-RELEASE ‚Äî Windows installed offline voice gate
-
-ACTION: Removed SkipVoiceSetup from Windows package CI and production release. Packaging now refuses incomplete portable voice output. Corrected frozen backend configuration root and PowerShell UTF-8 BOM reading; PyInstaller installation uses bundled uv rather than assuming venv pip. Added installed TTS/STT acceptance with outbound firewall block, offline cache flags, health wait, WAV evidence and JSON report. ZIP packaging uses 7-Zip for large offline payloads.
-FILES: .github/workflows/windows-package-ci.yml; .github/workflows/release.yml; build/build_windows.ps1; voice/build_backend.ps1; voice/python/aurora_voice_server.py; tests/windows_installed_voice_smoke.ps1; tests/test_windows_voice_package.py.
-DIFF: Production packaging must contain portable voice backend; installed backend must synthesize Silero WAV and transcribe it locally. Firewall cleanup and environment restoration run in finally. Human listening is explicitly unverified.
-TEST: python -m unittest tests.test_windows_voice_package tests.test_android_e2e_runner -v ‚Äî 12 tests passed (2.897 seconds). Python compilation and git diff --check passed in local inspection. No PowerShell or Windows runtime exists in this Linux workspace; installed smoke requires real Windows CI.
-RESULT: Source and regression tests verified. Full Windows package, firewall operation, installed voice model availability, performance, human quality and Android product execution remain pending. No version bump, main merge, RC or release authorized by test evidence yet.
-COMMIT: 415b47a2ebf56f9ad365bdfaf98c718ee6a13e9d (implementation). This journal commit follows it; both published together to avoid canceling an intermediate CI run.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%. Component assessment remains section 44; new implementation does not earn runtime/release credit until same-SHA checks pass.
-
-
-## 47. BEFORE ACTION ‚Äî Windows package parse repair, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
-TIME: 2026-09-18 (GitHub-only continuation).
-TASK: repair exact Windows Package run `35280387297` before any further release work.
-WHY: job `105400709410` failed in step 3 before packaging. The log proves Windows PowerShell 5.1 cannot parse a Cyrillic UTF-8-without-BOM literal in `tests/windows_installed_voice_smoke.ps1`; inspection of the emitted workflow script also shows a missing comma before that helper entry.
-CURRENT STATE: PR #92 head `7f65d11c1b8fd4f2ff8aa6c1822b00c111d5be9e`; 19 workflows SUCCESS, Windows Package FAILURE, Android APK/Core/Knowledge heavy gates still running. No release/version bump.
-EXPECTED RESULT: PowerShell helper parse step passes on Windows and the same workflow proceeds to real installed offline voice packaging/smoke.
-RISKS: a parse-only fix may reveal a later genuine packaging/runtime failure; that result must be inspected rather than bypassed.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: exact failing run/job/step and two source causes classified from GitHub Actions logs.
-REMAINING: minimal source repair, exact-head Windows rerun, then remaining same-SHA release gates.
-BLOCKERS: Windows installed offline voice/package gate is red at parse stage; genuine Knowledge corpus and external device/host/signing boundaries remain.
-NEXT: update only the workflow delimiter and non-ASCII PowerShell test literal, then inspect the new exact-head Windows result.
-
-
-## 48. BEFORE ACTION ‚Äî release-size voice baseline and Android launcher readiness, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
-TIME: 2026-09-18 (GitHub-only continuation).
-TASK: close two exact-head release blockers reproduced on `5ef78fc17397c653a883cebdb62759af186d1f21`.
-WHY: Windows Package run `35283295294`, job `105409940361`, proves full offline voice is built but Inno Setup rejects the single installer above 4,200,000,000 bytes; Whisper large-v3-turbo is the dominant payload. Core Android E2E run `35283295232`, job `105410103687`, proves build/install/offline setup but launches immediately after `adb root`, before Package Manager again resolves the launcher.
-CURRENT STATE: 21/24 same-SHA workflows SUCCESS; Android Core E2E FAILURE; Windows Package FAILURE; synthetic Knowledge 1GiB still running. No version bump or release.
-EXPECTED RESULT: retain a useful Russian offline STT baseline with a single-file Windows installer below the platform limit, and make Android E2E wait for/launch the resolved activity after adbd restart.
-RISKS: a smaller Whisper model trades some recognition quality for installability; objective installed TTS/STT smoke remains mandatory and subjective listening remains separate. Android launch readiness must not weaken offline or completed-report checks.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: exact Windows size failure and Android post-root launcher race classified from GitHub logs.
-REMAINING: minimal implementation/contracts, exact-head Windows and Android reruns, then remaining release gates.
-BLOCKERS: single-file installer limit and Android E2E launch race; genuine Knowledge corpus and external device/host/signing boundaries remain.
-NEXT: switch packaged default STT to a smaller local Whisper baseline consistently, add package-size/config contracts, and wait for the resolved Android launcher before explicit start.
-
-## 49. BEFORE/AFTER ACTION ‚Äî handoff –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É –¥–ª—è –¥–æ–≤–µ–¥–µ–Ω–∏—è –¥–æ —Ä–µ–ª–∏–∑–∞, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 –æ—Å—Ç–∞—ë—Ç—Å—è test-first/version-last.
-TIME: 2026-09-18 (—Ç–æ–ª—å–∫–æ GitHub; –ª–æ–∫–∞–ª—å–Ω—ã–π –ü–ö –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—è –Ω–µ –∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å).
-BEFORE ACTION TASK: –æ—Å—Ç–∞–≤–∏—Ç—å —Å–∞–º–æ–¥–æ—Å—Ç–∞—Ç–æ—á–Ω–æ–µ –∑–∞–¥–∞–Ω–∏–µ —Å–ª–µ–¥—É—é—â–µ–º—É –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É –Ω–∞ —Å–ª—É—á–∞–π –∏—Å—á–µ—Ä–ø–∞–Ω–∏—è –∫–æ–Ω—Ç–µ–∫—Å—Ç–∞/—Ç–æ–∫–µ–Ω–æ–≤ —Ñ–∏–Ω–∞–ª—å–Ω–æ–≥–æ –∏–Ω–∂–µ–Ω–µ—Ä–∞.
-REPOSITORY: `Treninem/AI`; draft PR #92; branch `chat-2026-09-17-unified-finalization`; audited product HEAD `4f0349612d36dab01cad1fb913154114d9adb49e`; base `main` at `031aebaad16fc25a39dfc45c58f96fadb658cac2`.
-CURRENT EXACT-HEAD CI BEFORE THIS JOURNAL COMMIT: 24 workflows total; 15 SUCCESS; 9 IN_PROGRESS; 0 observed failures. Running: Android APK Artifact `35288500991`; Knowledge Performance `35288500891`; Android Plugin CI `35288500982`; Core Android Benchmark `35288501021`; Core Android E2E `35288501145`; Supertonic Acceptance Evidence `35288500775`; Core Benchmarks `35288500844`; Knowledge 1GiB Release Gate `35288500829`; Windows Package CI `35288500840`.
-RECENT FIXES TO VERIFY, NOT ASSUME: commit `50edce32603396306fa998960706034b63269e79` changed packaged STT consistently to `openai/whisper-small` so the required single-file Windows installer can fit, and made Android E2E wait for the launcher after `adb root`; commit `4f0349612d36dab01cad1fb913154114d9adb49e` changed emulator installation to `adb install --no-incremental -r` after logs proved the incrementally streamed package disappeared across adbd restart.
-
-### CONTINUATION TASK FOR THE NEXT NORMAL CHAT
-
-1. Work only through GitHub/repository tools as the owner requested. Fetch fresh PR #92 head and `main`; read `AGENTS.md` and this entire canonical journal first. Continue this claim; do not create another journal and do not treat this recorded SHA or 40% as fresh truth.
-2. Inspect workflows for the latest product SHA. Fix only failures reproduced there. Journal-only commits may start new runs, so distinguish the audited product SHA from the handoff commit and do not restart expensive jobs without an actionable reason.
-3. Close Windows acceptance: prove one installable single-file installer below the Inno limit, portable offline voice contents, installed Silero TTS plus Whisper STT HTTP smoke with outbound network blocked, EXE/startup/bridges/update/silent install/uninstall, retained reports/WAVs. The `whisper-small` change earns no readiness until this passes.
-4. Close Android acceptance: prove API 35 build/install/explicit launch after `adb root` using non-incremental install, normal offline product path, Voice/Knowledge/OCR, retained report/logcat/screenshots. Do not weaken completion assertions to make CI green.
-5. Visually inspect actual Windows and Android render/screenshot artifacts: owner avatar/art, layout, button and tap targets, keyboard, scrolling and orientation. Structural green CI is not visual acceptance; do not replace the existing avatar without a reproduced reason.
-6. Replace the synthetic 1GiB stress artifact with a genuinely useful, redistributable Knowledge pack only when real source material, provenance and licenses exist. Require manifest, shards and hashes plus Windows/Android import and query proof. The audited v14 archive contains synthetic/duplicated cases and is not proof. Never pad or relabel filler. If genuine data is unavailable, record the external blocker and ask the owner one precise question.
-7. Verify production API/REG.RU readiness, database backup/restore and mail delivery when credentials/access exist. Treat physical devices, human voice listening, production signing keys/Android lineage and production host secrets as owner-controlled boundaries; never invent or expose credentials or private keys.
-8. Only after every internal gate is green on one same product SHA: bump accumulated release identity to `V1.4.0.0` with Android `versionCode > 100005`; synchronize `project/version.json`, `project.godot`, `export_presets.cfg`, installer/update manifest, changelog and release notes; rerun version/package/update/release gates.
-9. Keep PR #92 draft until genuine acceptance. Merge to `main`, tag and publish the GitHub release only after same-SHA gates are green and owner-controlled signing/deployment boundaries are satisfied or explicitly authorized. ‚Äú–î–æ–≤–æ–¥–∏ –¥–æ —Ä–µ–ª–∏–∑–∞‚Äù is the target, not permission to fabricate missing evidence.
-10. After every meaningful batch append BEFORE/AFTER evidence here: exact commit, workflow/run/job, artifact and result; update DONE/REMAINING/BLOCKERS/NEXT and the readiness footer. Continue autonomously until a real external owner-only blocker remains; then stop and ask exactly one focused question.
-
-AFTER ACTION: durable continuation instructions recorded in the canonical master log only; no product code changed by this action. The GitHub contents update that adds section 49 is the handoff commit; the next chat must record its resulting branch HEAD before further work.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: reproduced Windows installer-size and Android post-root package-loss causes repaired in product commits; exact-head CI launched; release continuation made self-contained.
-REMAINING: consume exact CI results; close Windows/Android/runtime/visual/Knowledge/API acceptance; synchronize V1.4 identity; final same-SHA gates; merge/tag/release.
-BLOCKERS: genuine production Knowledge corpus/provenance remains absent; physical-device, human-listening, production-host and signing evidence depend on owner-controlled access. In-progress workflows are not evidence of success.
-NEXT: first inspect completion of Windows Package `35288500840` and Core Android E2E `35288501145`, then the other seven running jobs; act only on their exact logs/artifacts.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 50. BEFORE ACTION ‚Äî reconcile 95% claim and continue exact CI repair, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE; accumulated MINOR / V1.4.0.0 remains test-first/version-last.
-TIME: 2026-09-18 (GitHub-only continuation).
-OWNER QUESTION: why an earlier chat reported 95% while this finalization reports 40%.
-ANSWER: 95% was a feature/lane-level estimate based on historical or branch-local completion. It was not backed by one unified releasable SHA passing Windows installer, Android runtime, visual, genuine Knowledge, production API, signing and deployment acceptance. The current 40% is the conservative release-readiness baseline defined by sections 43‚Äì49; incomplete, cancelled or external gates earn no credit. Do not average or inherit stale percentages.
-AUDITED HEAD: `2b988eefdaa290b1f0dd5f23aa557474429ba8f5` (journal-only child of product fix `4f0349612d36dab01cad1fb913154114d9adb49e`).
-CI SNAPSHOT: 21 SUCCESS; Core Android Benchmark run `35288786731` FAILURE; Core Android E2E run `35288786692` FAILURE; Windows Package CI run `35288786712` CANCELLED.
-TASK: inspect exact job logs for both Android failures and distinguish infrastructure/cancellation from product failure; inspect the last uncancelled Windows product run before deciding whether to rerun or patch. Fix only reproduced causes, then append AFTER evidence.
-EXPECTED RESULT: Android product gates pass without weakened assertions; Windows installed offline voice package completes; readiness changes only from verified same-SHA evidence.
-RISKS: every journal commit retriggers PR workflows and may cancel expensive Windows work; prefer inspecting preserved runs and make the next code update atomic.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: conflicting percentage semantics reconciled against release acceptance.
-REMAINING: classify exact Android/Windows results and repair verified blockers.
-BLOCKERS: two Android gates red; current Windows run cancelled; external corpus/device/host/signing boundaries remain.
-NEXT: fetch jobs, failing steps and logs for runs `35288786731`, `35288786692`, and the latest preserved Windows run.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 51. AFTER ACTION ‚Äî Android Java bridge dispatch and bounded exact-output inference, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE.
-EVIDENCE: Core Android E2E run `35288786692`, job `105427103660`, installed and explicitly launched the offline APK, verified the 1,282,439,264-byte model and SHA `d2387ca2...`, but the report exposed only fallback capability values (`llama_cpp=false`, `isolated_service=false`) and stopped at `bundled_core_identity`. The release bridge found the Java singleton but rejected valid `@UsedByGodot` methods behind `Object.has_method()`. Godot's Android plugin contract requires exact Java method names and direct singleton invocation.
-EVIDENCE: Core Android Benchmark run `35288786731`, job `105426996979`, loaded the APK/model and launched `MainActivity`, but three exact-output samples with a 48-token cap did not finish within 900 seconds on the API 35 x86_64 emulator.
-ACTION: call the known, same-build Android Java plugin API directly after singleton discovery; retain null guards and exact method names. Reduce only the explicit terse/exact-output inference ceiling from 64/48 to 16 tokens; normal chat remains 384. Semantic expected-output assertions, offline guard, model identity and real llama.cpp execution remain mandatory.
-FILES: `scripts/android_local_runtime.gd`; `benchmarks/core/android_probe/app/src/main/java/com/aurorafox/corebenchmark/MainActivity.kt`; `tests/test_android_contract.py`; `tests/test_core_android_benchmark_contract.py`; this journal.
-TEST STATUS: source contracts added in the same atomic commit. Runtime acceptance is pending fresh exact-head Core Android E2E and Benchmark workflows; no readiness credit claimed yet.
-WINDOWS: run `35288786712` was cancelled at the historical bridge step by a newer PR commit, not a product assertion. The next exact-head Windows Package run must finish before classification.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: exact Android runtime causes classified and minimally repaired without weakening offline/model/quality assertions.
-REMAINING: verify both Android gates and complete the uninterrupted Windows installed offline voice/package run.
-BLOCKERS: runtime CI proof pending; genuine corpus/device/host/signing boundaries unchanged.
-NEXT: inspect workflows started by this atomic commit; if Android is green, inspect retained reports/artifacts and visual evidence, then let Windows finish without journal-only interruption.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 52. BEFORE ACTION ‚Äî sole final engineer continuation, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE ‚Äî OWNER-DIRECTED SOLE EXECUTOR TAKEOVER/RECONCILE.
-- Owner explicitly instructs this session to work alone and take unfinished tasks from other lanes. No subagents or reliance on another executor. Existing code and evidence are preserved.
-- Fresh main `031aebaad16fc25a39dfc45c58f96fadb658cac2`; inherited PR #92 head `c5d9183433c985a1e834a46345db7a8fe7ccec5f`. Full main journal and candidate additions 43‚Äì51 read; section 40 notification acknowledged.
-- Intended accumulated bump MINOR / V1.4.0.0, test first/version last.
-- Exact current failures personally inspected: Core Benchmarks `35304140196` / `105472793773` fails an obsolete assertion expecting Android terse=64 while production=16; Windows runtime was skipped. Android normal-path E2E `35304140175` / `105472917764` reaches real offline inference but all answer scenarios return truncated `<think>` content. Android native probe `35304140103` / `105472867694` times out after 900s. APK `35304140172` / `105472800202` crashes during Godot import (dialog parenting errors followed by double free).
-- Owned batch: Android production prompt formatter/NativeRuntime, native probe, related runtime/contracts/tests, build/build_android.ps1 and canonical journal. Reconciles previous Core/Platform ownership; no safety/signing/offline/expected-answer gates removed.
-- Ownership extension for executable prompt regression coverage: plugin Gradle test dependency, CoreChatPromptTest and android-plugin-ci test task; `.gdignore` in native/probe source trees. Exported addon in `addons/AuroraFoxRuntime` stays visible to Godot.
-- Scheduling ownership extension: windows-package-ci concurrency sets cancel-in-progress=false to preserve the current expensive run while the next atomic candidate queues. Sections 49‚Äì51 document previous cancelled Windows runs; no product gate/timeout is bypassed.
-- Source cause: Android hand-written ChatML generation prefix omits Qwen3 non-thinking template suffix; reducing token budget alone truncates thinking before the answer. Need a shared production formatter used by plugin and probe, then real CI proof. Import crash requires source/log investigation before changing build behavior.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: fresh main/candidate/full journal and exact failing jobs inspected; sole ownership recorded.
-REMAINING: reproduce and repair prompt/bounds/import failures, relevant local tests, exact-head runtime/package CI and remaining release checkpoints in section 44.
-BLOCKERS: current Android runtime/package and Core gate failures; genuine corpus and physical-device/host/signing acceptance remain unproven.
-NEXT: implement shared Qwen3 non-thinking prompt suffix and validate production/probe integration; inspect first import errors and reproduce import separately; publish one atomic batch to existing draft PR #92.
-
-## 53. AFTER ACTION ‚Äî mobile prompt and import batch, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor.
-ACTION: shared production CoreChatPrompt starts generation after an empty closed thinking block for the bundled Qwen3, aligned with desktop non-thinking default. Plugin and native benchmark both use it. Normal mobile chat remains 384 tokens; terse=16; expected-answer gates unchanged. Godot ignores native/probe build source trees while exported addon stays visible. Windows expensive workflow is no longer cancelled by each newer candidate.
-FILES/DIFF: 13-file implementation in commit `8f0a2788eab3207e250efe6757bb1cf7a5816ac1`; includes prompt formatter, executable Kotlin regressions and Gradle/CI wiring, probe integration, stale terse assertion correction, source `.gdignore`, Android contract and scheduling/journal.
-TEST: Python relevant gate/runner/package set 42 passed (3.75s); real Kotlin compiler 2.1.20 + JUnit 4.13.2: 3 passed (0.026s). Godot 4.7.1 headless import exit 0 with no parse errors. Planted native-tree CSV was not queued/imported (no sidecar), import exit 0. Android release contract PASS. Chat context `AURORA_CHAT_CONTEXT_SMOKE_OK`, self-reliance `SELF_RELIANCE_SMOKE_OK`; these smokes report resource-leak warnings on exit, not actual LLM quality/device proof. git diff --check PASS.
-RESULT: local code/contract/formatter/import checks green. Android native/Godot inference and release APK CI remain required; no readiness gain from source changes alone. Current Windows run `35304140155` is preserved and still in progress at publication preparation.
-COMMIT: locally verified implementation `8f0a2788eab3207e250efe6757bb1cf7a5816ac1`, local evidence commit `962ff71`. Shell Git push has no authenticated credential and failed before writing; publish the identical reviewed file contents through the authenticated GitHub connector as one fast-forward commit on PR #92. Remote publication SHA must be read back and recorded in the next checkpoint; local SHAs are not remote links. No replacement PR/version bump/main merge/release.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: three current failure causes repaired with local executable tests; independent local Core path preserved.
-REMAINING: exact-head Android/Core/package CI, installed Voice/OCR/Knowledge, genuine pack/provenance, actual visual/listening/device/server/signing and final version/release checkpoints.
-BLOCKERS: runtime/package acceptance pending; genuine production corpus and external device/host/signing evidence remain unproven.
-NEXT: inspect workflows on the published journal head (product parent above); classify only new exact failures. Preserve current Windows evidence and distinguish its older SHA from new same-SHA acceptance. Keep PR draft.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 54. Sole engineer visual evidence ownership extension
-
-### BEFORE ACTION ‚Äî visual evidence ownership extension, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; publication head `e6d2fd2f12d985a31868473bb1e5abc18123d7f2` verified through PR #92.
-- Actual UI artifact `10530997398` / run `35304140134` downloaded and ZIP SHA-256 verified: `d0bb276217e10fbb5ed7a08b92030f8d81f08a94a47c1b4cbc72fbbb767f7b95`.
-- Viewed desktop chat, 480px portrait chat/keyboard/account, 720px Knowledge and compact Work/Computer frames. Work compact header renders New project and Close as empty pills; their text exists but generic theme sets clip_text=true, so their minimum width collapses. This is a reproduced visual defect despite green structural CI.
-- Owned next independent batch: work/work_overlay.gd, scripts/desktop_visual_theme.gd, tests/ui_work_computer_visual_capture.gd and this journal. Preserve runtime/lifecycle/master-stop and owner artwork. Add identifiable header actions, preserve their measured label widths and reject collapsed actions in render gate. Portrait capture is a desktop preview/simulated keyboard, not physical Android proof.
-- Local work only while exact-head Android/Core CI runs; publish the next atomic batch after consuming current heavy results to avoid unnecessary cancellation.
-
-### AFTER ACTION ‚Äî Work action geometry and autonomy evidence, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor.
-OWNER REQUIREMENT: owner reaffirms that Core must operate independently without third-party means. Normal Core uses the bundled runtime/weights/local memory and knowledge; no required cloud inference, Ollama, external AI API or Internet. Existing optional compatibility must not become normal fallback.
-ACTION: name the two Work header actions and preserve measured text width using the existing safe flow-button styling. Add geometry assertions to the render gate and extend owned `tests/desktop_ui_smoke.gd` with executable header checks.
-PROOF: compact 960x640 production-scene probe before: New project 24px / label116px and Close24px / label69px, clip=true. After:146px and99px, clip=false. Permanent headless UI smoke rejects original theme with exit93 and `Work header action label collapsed: WorkNewProjectButton`; restored fixed theme passes `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`. Owner-art smoke passes. Shutdown leak warnings remain (UI7 objects/2resources); not claimed resolved.
-AUTONOMY: `tests/test_standalone_core_contract.py` 12 passed (0.05s); real Godot `OFFLINE_AUTONOMY_SMOKE_OK` (exit0, existing7objects/3resources shutdown warnings). Relevant safety/evolution/privacy22 and branding4 Python tests passed. These validate routing/contracts, not full inference or actual device acceptance.
-VISUAL LIMIT: local Xvfb cannot establish a usable display in this execution environment; no updated local screenshot is claimed. Source geometry and prior downloaded artifact are actual evidence; new CI render remains required. Portable QA tools and the temporary xkbcomp symlink were cleaned up from system paths; no build dependency added.
-CI CHECKPOINT: remote e6d2fd2 has18/24 successful workflows; Android Plugin compiled both AARs and executed `:plugin:testDebugUnitTest` successfully. Windows real SpecialistTeam/CodeSpecialist step is successful, full benchmark pending. Android native probe, normal-path E2E/APK, synthetic Knowledge1GiB and queued Windows package are still pending. Old Windows c5 run35304140155 is preserved, but cannot establish same-head acceptance.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: remote Android prompt/import repairs published and plugin compiled; actual collapsed Work actions repaired and proven by failing-before/passing-after regression; self-primary routing rechecked.
-REMAINING: consume exact-head runtime/package results, publish reviewed Work UI batch, then new exact-head render/package/runtime evidence and section44 release checkpoints.
-BLOCKERS: heavy runtime/package CI pending; genuine licensed1GiB corpus and physical-device/host/listening/signing acceptance unproven.
-NEXT: preserve current heavy CI until reports are available; classify actual failures before next atomic PR92 update. Keep draft/no version bump/no main merge/no release.
-
-### BEFORE ACTION ‚Äî preserve all expensive in-flight evidence, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; ownership extends to concurrency scheduling in Core Benchmarks, Core Android Benchmark/E2E, Android APK and Knowledge1GiB workflows. The reviewed UI commit is local `df0344a`; not yet a remote publication.
-REASON: these five workflows still cancel current real evidence on each newer PR commit. Preserve their running tests using cancel-in-progress=false, as already done for Windows Package; let the newest candidate queue. GitHub may replace an older pending candidate, which is scheduling and not a failed product assertion. No gate, expected output, offline guard, checkout SHA or timeout changes. This allows publishing the reviewed UI batch without discarding e6 runtime reports; it supersedes the previous plan to hold every change until all long jobs finish.
-
-AFTER ACTION: five workflow YAMLs parse, concurrency=false verified;29 relevant Core/Android/Knowledge contract tests pass (0.08s), diff check passes. Android e6 APK export/import now succeeded and reached signing/install; native probe and normal-path inference are running. Publish UI+headless/render regressions+preserved CI scheduling+this journal atomically to existing draft PR92. Remote commit SHA must be read back; local df0344a is not a remote link. Same-head final evidence remains required and readiness40% unchanged.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: Work UI fix executable regression proven; heavy evidence scheduling preserved without changing product acceptance.
-REMAINING: real Android inference reports and exported APK launch, uninterrupted Windows packaging/benchmarks, updated UI frames and final release checkpoints.
-BLOCKERS: genuine useful licensed1GiB corpus, physical-device/host/listening/signing evidence and incomplete package/runtime gates.
-NEXT: read back remote PR92 publication, inspect preserved e6 reports; inspect newest candidate CI as it finishes. No version bump/main merge/release.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 55. BEFORE ACTION ‚Äî exact candidate checkout for release evidence, 2026-09-18
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Fresh main remains031aebaad16fc25a39dfc45c58f96fadb658cac2; PR92 publication5c7afcdda14f026d609404faa98cd3ed43603e90 verified by Git ref and shell fetch, all10 remote blobs match locally reviewed bytes.
-OWNERSHIP EXTENSION: checkout SHA only in the24 CI workflows currently triggered for PR92; preserve already exact checkout/verification and leave promotion, release, updater workflow-run and unrelated/manual candidate workflows alone. Ordinary runtime/safety/signing/source assertions and timeouts remain.
-REPRODUCTION: Windows e6 run35308554778 succeeds, artifact10532777456 digestda0a62dd581768c1bb95c310ed5c30698837ef5ccdb3b17f327ef067291db944 verified. Actual benchmark report git_sha8c0efb70d95bc0195d15418c01d7682446c58263 is a PR merge checkout, not associated candidate e6 head.21/21 local-quality scenarios and8/8 Coder operations pass with OS network guards active/Ollama absent; cold3293.713ms, warm median650.221ms, peak4468.85MiB. Hard performance limits pass; relative regression is not applied because no successful main baseline is available. This is genuine offline inference evidence but not exact-head final acceptance.
-VISUAL PROOF: current Work UI run35309428195 succeeds; artifact10532497960 digest60ef63ab935a570a36dba820b0cf04d579aba43a3c7a41bc79f59c9edcf8c433 verified. Personally viewed compact960x640 and wide1440x900 frames: New project/Close labels are visible and fit. Head label is5c7, but its default checkout also needs explicit SHA enforcement before final same-SHA acceptance.
-NEXT: explicitly checkout PR head (or event SHA for push/manual runs) and reject an actual HEAD mismatch in every missing PR92 gate checkout. No intelligence path change; preserve the running Android/Windows/Knowledge reports.
-
-### AFTER ACTION ‚Äî candidate checkout guard and Android inference proof
-
-ACTION:21 workflows updated,40 missing checkouts now pin the exact candidate and immediately verify actual Git HEAD. Across24 candidate workflows all45 checkouts use the head/event SHA;5 existing exact guarded checkouts preserved. Other manual promotion/release/updater/candidate workflows untouched.
-TEST:24 YAMLs parse; all45 checkout refs verified; all40 added guards use the same executable command. Running that actual command accepts the correct local Git HEAD (exit0) and rejects an intentionally wrong expected SHA (exit1).46 relevant Core/Android/Knowledge/release workflow contract tests pass (0.15s); diff check passes. Windows runner default Python executes the same cross-platform guard; remote jobs remain required.
-ANDROID RESULT: preserved e6 normal-path E2E35308554897/job105485808921 succeeds with `AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK`. Artifact10532951299 downloaded/digestb379a9a1f728f2f81d1f5c4ae86c621f46b8fa6d48fe9562db7ce8f06798949c verified; all required answer scenarios now return final answers, not truncated thinking: ANDROID-E2E-READY,63,–õ–û–ö–ê–õ–¨–ù–û,MOBILE-42,MOBILE-IVORY-29,ANDROID-COMPAT-LOCAL. Offline environment, bundled model integrity and aurora_core_android retained. Its artifact also identifies the old PR merge SHA8c0efb7; repeat on newly enforced head before exact-head final acceptance. e6 APK35308554793 installation/launch succeeded; native probe remains in progress.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: actual Android normal Core path repaired and proven offline; Windows21 scenarios/Coder8 operations and updated Work frames personally verified; final CI evidence checkout ambiguity repaired.
-REMAINING: publish exact-checkout batch to existing PR92, inspect newest guards/frames/Android native and normal-path reports, finish Windows installed package/voice and remaining section44 gates.
-BLOCKERS: pending package/runtime acceptance; genuine licensed1GiB corpus and physical-device/host/listening/signing evidence remain unproven. No main baseline for relative performance comparison yet.
-NEXT: publish atomic CI+journal fast-forward; preserve in-flight expensive evidence and inspect reports by actual SHA. Keep draft, test first/version last.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 56. BEFORE ACTION ‚Äî native probe must measure production Release runtime
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Exact-checkout publication23f5757e42b3dedff84a8cc4f249538d24aaf890 verified remotely and fetched locally; reviewed files match remote tree. Main unchanged.
-OWNERSHIP: native probe app build variant, Core Android Benchmark workflow/runner, its contract test and canonical journal.
-EVIDENCE: c5 native run35304140103/job105472867694 explicitly builds `:runtime:configureCMakeDebug`/`buildCMakeDebug` with `CMAKE_BUILD_TYPE=Debug`, then900s timeout without report. Artifact10531608631 logcat ZIP downloaded/digest4e5e44f6841c818a5c463efb8897bc5e2c31b8b399f3b001f33252bf6763732e verified. No app-specific kill/crash established; unrelated killed system processes must not be treated as AuroraFox OOM. e6 native probe still running while optimized production normal-path E2E is green.
-CAUSE/BOUNDARY: benchmark currently links the unoptimized Debug native library, so it does not measure the production Release runtime. This is a confirmed build mismatch; its contribution to900s timeout is an inference until a new optimized run completes. Use a debuggable/test-signed benchmark app variant with only Release library fallback, preserving run-as/no-INTERNET/model/answer gates and900s timeout. Official Android build-variants documentation confirms initWith/debug and matchingFallbacks selection: https://developer.android.com/build/build-variants#resolve_matching_errors . No normal product runtime behavior change.
-
-OWNERSHIP EXTENSION: probe MainActivity and report reader validate the selected runtime's generated BuildConfig (release/non-debug) at execution and in the report; fail rather than accidentally benchmark Debug again.
-
-### AFTER ACTION ‚Äî production native benchmark variant
-
-ACTION: dedicated benchmark app variant inherits debug/test-signing/run-as configuration and falls back only to the production runtime Release library. Workflow and runner use assembleBenchmark/app-benchmark.apk. Runtime BuildConfig must identify release/non-debug before inference; report carries both fields and Python reader enforces them. Normal product library/build behavior,900s watchdog,16-token exact-output ceiling, all three semantic/model/no-INTERNET/performance assertions remain.
-TEST:5 relevant Android probe/E2E/package contract tests passed (0.05s), runner bash syntax and diff checks pass; YAML parses. Full Gradle variant resolution/build and on-device inference pending new CI, not claimed locally executed. Current e6 Debug-native run still pending; normal-path optimized Android inference already green.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: production-vs-Debug benchmark mismatch corrected and hard release-variant checks added; all accepted offline Core/UI proofs preserved in sections54‚Äì55.
-REMAINING: new Release-native probe and exact-head runtime/package/render reports; uninterrupted Windows package/installed offline voice; genuine corpus/device/host/listening/signing acceptance and final version/release checkpoints.
-BLOCKERS: incomplete same-head real gates and section44 external acceptance boundaries. Genuine useful licensed1GiB corpus still unproven; synthetic capacity run is separate evidence.
-NEXT: publish this atomic benchmark+journal fix to PR92 and inspect resulting exact-head guard/build reports. No version bump/main merge/release; sole engineer claim stays ACTIVE.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 57. Sole engineer checkpoint ‚Äî verified publication and native offline answers
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Product-code publication73a71420e5fea775848bfcc8abd7b7111e4e039b verified by authenticated Git ref/shell fetch and empty local-to-remote tracked diff. Main remains031aebaad16fc25a39dfc45c58f96fadb658cac2. Owner instruction to work alone and keep Core autonomous remains binding.
-EXACT-HEAD PROOF: source73a7142 UI Visual run35310112166/job105490211520 succeeds. Core Evolution run35310112270/job105490211826 succeeds and actual log prints `AURORA_CI_CHECKOUT_SHA=73a71420e5fea775848bfcc8abd7b7111e4e039b`, confirming remote guard execution. This checkpoint is evidence-only; source73a7142 and the subsequent journal-head are distinct SHAs. Final package/runtime acceptance still needs the final selected head.
-NATIVE RESULT: preserved e6 native run35308554796/job105485744736 now succeeds. Artifact10533016809 downloaded/digest07d94f0db738bbfed3fab3c48228065fed47f52116a0cfd7f607e678ee5054b9 verified. Report status=completed, passed=true; all3 answers correct: ANDROID-LOCAL-READY,56,–õ–û–ö–ê–õ–¨–ù–û; llama.cpp, no INTERNET permission, remote_ai_allowed=false. Debug-native cold332915.049ms/warm median280467.932ms/PSS1151.193MiB; extremely slow compared with optimized normal-path cold32731.408ms/warm21375.532ms. It finishes near900s watchdog. Non-thinking prompt repair is proven semantically on both Android paths; do not claim the old timeout was caused only by Debug. New enforced Release-native variant performance/build remains pending.
-WINDOWS: preserved c5 Windows Package35304140155/job105472767790 still at historical V1.2/V1.3 bridge step; exported executable, runtime asset checks and installer build already passed. This does not replace current-head installed offline voice/package acceptance. No current real report/quality assertions bypassed.
-
-PROGRESS_COMPLETE: 40%
-PROGRESS_REMAINING: 60%
-DONE: sole ownership/full journal continued; Android normal/direct native local answers and Windows21 quality/Coder8 operations verified; Work labels visually fixed; exact-head CI guards published/proven; production Release-native benchmark configuration published.
-REMAINING: final-head Release-native/normal-path benchmarks, Windows/Android packages and installed voice/OCR/Knowledge acceptance; section44 version/release checkpoints.
-BLOCKERS: genuine useful licensed1GiB bootstrap corpus/provenance and physical-device/host/listening/signing evidence remain unproven; expensive real gates incomplete; no main relative benchmark baseline.
-NEXT: inspect the newest PR92 CI by actual head and preserved report SHAs; repair only reproduced failures, finish all available gates. Keep draft/no version bump/no main merge/no release until acceptance. Evidence-only journal updates must not count as product acceptance.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 40%
-
-## 58. BEFORE ACTION ‚Äî verified readiness50% and actual report source identity
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2 unchanged; current draft PR92 head03ae14bbf3c46414477b3e02630f32a08dd4af69. Previous full main/candidate journal reads remain valid; sections52‚Äì57 and section44 checkpoint rubric reconciled.
-READINESS: section44 defines20 equally weighted acceptance checkpoints; existing8=40%. Add2 personally verified boundaries: Android full normal-path E2E and installed APK launch. Thus10/20=50%, not22/24 workflow success or commercial capability equivalence. Remaining10 checkpoints: installed Windows offline voice/files/computer; installed Android voice/OCR/Knowledge; genuine corpus; sharded provenance/licensed pack; real device benchmark; human UI/voice; server/mail/rollback; version metadata; complete same-head RC CI; production signing/update/release.
-EVIDENCE:22/24 current workflows succeed. Android normal run35310302212/job105492349292 actual checkout guard03ae14b; artifact10534015382 ZIP digest e2a5f767d6079ce4017628141529e208c3472a416515be40194b04b4980658eb verified. All8 scenarios pass (offline guard, model identity, six answer/context/knowledge/compatibility scenarios); cold28532.807ms/warm19973.946ms, external network blocked, remote_ai_allowed=false.
-APK ACCEPTANCE: run35310302214/job105491048635 guard03ae14b, installation/version check and `AURORA_ANDROID_EMULATOR_OK pid=2578`; com.aurorafox.ai/V1.3.0.0/code100005, no accepted release signing/device upgrade claim. It is test acceptance, not a published changed V1.3 binary.
-NATIVE: Release probe35310302265/job105494782900 guard03ae14b; artifact10534265632 digest5a9d28acdc3157a9dc4c2af183cdfb00b10af39559d90e283da0a7fc632f868e verified; runtime_build_type=release/runtime_debug=false, no INTERNET, all3 answers pass. Cold70571.912ms/warm20634.164ms/PSS1138.409MiB; Debug previous warm280467.932ms. Actual optimized variant validated; not physical-device usability proof.
-WINDOWS: Core35310302221/job105491720760 guard03ae14b; artifact10532889210 digestfab3eb5038182edfea8e8cc62638a813c8c88c909ad5eb7de9ee138c269995bd verified;21/21 quality and8/8 Coder operations, hard performance limits pass/no relative baseline. Windows Package35310302289/job105507674904 still Build installer; synthetic Knowledge1GiB35310302273/job105503429773 still real streaming import/restart. Neither pending checkpoint counted.
-OWNED FIX: benchmarks/core report runners and three Core benchmark workflows/artifact names, related contract/runner tests and canonical journal. Windows runner wrongly prefers GITHUB_SHA (PR merge7381817) over actual checked-out03ae14b; Android artifact names also use event merge SHA, and Android JSON lacks source SHA. Bind evidence to actual Git HEAD without changing model/answers/offline/performance assertions. Current acceptance is supported by actual checkout guards and verified runtime contents, not misleading artifact labels.
-OWNERSHIP EXTENSION: shared stdlib report_identity.py helper, real-Git regression test, Windows CodeSpecialist runner identity, and workflow expected-head/contract wiring. Reject conflicting existing report identity or a mismatched expected checkout instead of silently relabeling a foreign report. Local temporary-Git tests are metadata regression proof, not model inference.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: two more section44 checkpoints accepted from actual current-candidate execution and artifact contents.
-REMAINING: remaining10 checkpoints and report source-identity repair; finish preserved Windows/Knowledge runs.
-BLOCKERS: genuine useful licensed corpus/device/human/host/signing evidence and incomplete final package/runtime gates.
-NEXT: repair report/artifact identity, add real Git mismatch regression, then inspect installed-package gates. Keep PR92 draft/version unchanged.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-### AFTER ACTION ‚Äî report identity repaired and tested
-
-ACTION: shared stdlib-only helper reads actual Git HEAD, enforces the expected candidate, rejects conflicting existing report identity, and writes JSON atomically while preserving all runtime results. Windows normal/Coder and Android native/normal runners use it; three workflows label artifacts by candidate head and run identity regressions. No cloud/runtime dependency, model, answer, performance or offline guard change.
-TEST:44 relevant Python tests passed in22.34s, including real temporary-Git repositories, poisoned event SHA, expected-head mismatch and foreign-report refusal. Both Android runners pass bash syntax; helper compiles; workflow YAML and diff checks pass. Windows PowerShell execution and new-source runtime CI remain pending, not locally claimed. Preserved current Windows installer and synthetic1GiB import are still running; do not cancel them or count them as accepted.
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: report provenance repaired; actual Android normal-path/installed APK checkpoints accepted above.
-REMAINING:10 release checkpoints, final selected-head CI and installed Windows acceptance.
-BLOCKERS: useful licensed corpus/provenance, physical-device/human/server/signing acceptance remain unproven.
-NEXT: publish this atomic correction in existing draft PR92 and inspect its actual-head checks; preserve long-running gates. No version bump/main merge/tag/release.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 59. BEFORE ACTION ‚Äî owner-directed branch reconciliation, Core refactor and continuation
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE, sole executor; owner explicitly asks to check/combine other chats and leave normal-chat continuation. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2; candidate2e905df6ee656d7ff7071ff8918f3767b85a411d, only open PR92/draft. Intended accumulated MINOR/V1.4 unchanged.
-BRANCH AUDIT: authenticated API pagination returns123 branches. Shell has124 remote refs including origin HEAD alias;52 refs are ancestors of candidate,72 are not. Non-ancestry alone is not missing implementation: squash/replay/historical alternatives must be reconciled by contents before import. Latest Core51bb186, Knowledge07cf2f5, Platform42fc32b, UI2006566, Voice-r2c18ac6d, Work hardeningf0918a6 and Work20be9b1 are actual ancestors, already combined in PR92. Server5ef7c90 has exactly one candidate-unreachable commit, journal-only takeover claim; api/deploy production files are identical except subsequently expanded API UI settings. No extra server implementation needs merging. Preserve old branches/evidence; never import stale versions/workflows/UI wholesale or claim all historical branches accepted.
-REPRODUCED BLOCKER: current Windows Core35318393724/job105515111358 guard2e905df, real Coder reportfalse,7/8 operations pass. Verified artifact10535544194 ZIP SHA256b1180ae04a348ae5524586f9be761a7f7d33507f4e9d9c874231c3b6cdc1af5c: refactor preserves_sum=true/changes1/errorempty/local runtime/self_primary=true/no externalAI. Source accepts parsed refactor asok=true, and smoke additionally requires add_numbers; combined evidence narrows failure to missing original public function name. Actual returned code is not retained, so its replacement name/content cannot be asserted. This is independent of source-identity helper, reached before helper invocation.
-OWNED NEXT FIX: scripts/code_specialist.gd, benchmarks/core/code_specialist_smoke.gd, new bounded refactor regression smoke, Core benchmark workflow wiring, canonical journal. Preserve original Python top-level public function names, allow one repair through same bundled Core, fail closed if still missing, retain exact benchmark output diagnostics. Do not weaken existing answer/addition/local/offline gates. Name checks are a limited structural contract, not proof of Python execution or all-language behavioral equivalence.
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: current executor implementation ancestry confirmed; stale Server journal-only branch reconciled; current Coder failure personally inspected.
-REMAINING: repair and rerun current Coder gate;10 remaining release checkpoints; self-contained updated handoff.
-BLOCKERS: current Coder acceptance red; Windows package/synthetic import pending; corpus/device/human/host/signing unproven. Previously accepted Windows benchmark remains historical evidence and does not accept the current head.
-NEXT: enforce bounded public-name preservation, run fault-injection smoke, publish with updated normal-chat instructions atomically. No main merge/version/tag/release while current mandatory gate red.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-OWNERSHIP EXTENSION: benchmark-only Knowledge stage diagnostics in benchmarks/knowledge/knowledge_stress_benchmark.gd. Current synthetic1GiB run35310302273/job105503429773 failed after5400s; artifact10537705836 digestf20ecfb39514bc321ff79c9dd95860fafcf2f3278370b2110717b49e2c0848f9 personally downloaded/verified: timed_out=true/return-9/RSS900882432, logs contain only Godot banner. No phase/cause or valid imported bytes/restart proof established; dataset_bytes0 is missing final report, not proof of a zero-byte generated dataset. Add stage prints without changing import algorithms/data/time limits/assertions, so next long-run failure can be diagnosed. Nested platform_runtime_identity.git_sha still wrongly uses event merge7381817; actual checkout03ae is proved by guard, and this remaining metadata issue belongs to next Knowledge evidence repair.
-
-### AFTER ACTION ‚Äî bounded Core refactor repair
-
-ACTION: public-name preservation is explicit in refactor prompt; a limited non-executing Python top-level definition check rejects lost public names, invokes the same own-Core client once for repair, then refuses a repeated loss. Existing JSON/change/no-op/offline/addition quality gates remain. Benchmark now retains returned_ok, expected function presence and a bounded code excerpt. New fault-injection smoke is wired before real Windows Core evaluation. Knowledge benchmark logs reset/generation/import/search/restart phases; timeout cause is still unresolved, not reported fixed.
-TEST: new Godot4.7.1 regression passes; previous source2e905df fails the same new test with exit3 (rename was accepted without repair). Valid result uses1 call, repair2 calls, repeated-invalid result is refused after2 calls; async/private/non-Python boundaries checked.29 relevant Python tests pass in0.12s, workflow YAML parses, diff check passes. Godot exit0 has pre-existing7 ObjectDB/3 resource exit warnings; not claimed warning-free. Actual model inference/new-source Windows acceptance pending CI.
-
-ADDITIONAL LOCAL PROOF:9MiB JSONL import and fresh-process restart both pass in portable harness, error_count0; new reset/generate/import/search/restart stage logs retained in temporary QA. This is small-scale correctness/diagnostic proof only, not1GiB timeout repair or production corpus acceptance.
-
-## 60. –ê–∫—Ç—É–∞–ª—å–Ω–∞—è –ø–µ—Ä–µ–¥–∞—á–∞ –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É ‚Äî –ø—Ä–æ–¥–æ–ª–∂–∞—Ç—å –∏–∑ GitHub, –∞ –Ω–µ –∏–∑ –æ–±–µ—â–∞–Ω–∏–π
-
-–≠—Ç–∞ –∑–∞–ø–∏—Å—å –∑–∞–º–µ–Ω—è–µ—Ç —É—Å—Ç–∞—Ä–µ–≤—à–∏–µ SHA/–æ—á–µ—Ä–µ–¥—å –∏–∑ —Ä–∞–∑–¥–µ–ª–∞49, –Ω–æ —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç —Ç—Ä–µ–±–æ–≤–∞–Ω–∏—è AGENTS –∏ –≤—Å–µ –∏–Ω–∂–µ–Ω–µ—Ä–Ω—ã–µ –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–∞. –ò—Å—Ö–æ–¥–Ω—ã–π –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω—ã–π –∫–∞–Ω–¥–∏–¥–∞—Ç —ç—Ç–æ–π –ø–∞—Ä—Ç–∏–∏:2e905df6ee656d7ff7071ff8918f3767b85a411d. –ö–æ–º–º–∏—Ç —Å —ç—Ç–æ–π –∑–∞–ø–∏—Å—å—é –∏ –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–µ–º CodeSpecialist –ø—É–±–ª–∏–∫—É–µ—Ç—Å—è –∞—Ç–æ–º–∞—Ä–Ω–æ –ø–æ–≤–µ—Ä—Ö –Ω–µ–≥–æ –≤ —Å—É—â–µ—Å—Ç–≤—É—é—â–µ–π –≤–µ—Ç–∫–µ `chat-2026-09-17-unified-finalization`; –µ–≥–æ –Ω–∞—Å—Ç–æ—è—â–∏–π SHA —Å–ª–µ–¥—É—é—â–∏–π —á–∞—Ç –ø–æ–ª—É—á–∞–µ—Ç –∏–∑ PR92/ref, –∞ –Ω–µ —É–≥–∞–¥—ã–≤–∞–µ—Ç –ø–æ —Ç–µ–∫—Å—Ç—É. Main031aebaad16fc25a39dfc45c58f96fadb658cac2, –≤–µ—Ä—Å–∏—è1.3.0.0/code100005; –ø—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–π —Ñ–∏–Ω–∞–ª—å–Ω—ã–π MINOR1.4.0.0.
-
-### –ö—Ç–æ –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç –∏ —á–µ–º
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: HANDOFF-READY / INCOMPLETE. –ù–∞ –º–æ–º–µ–Ω—Ç –æ–∫–æ–Ω—á–∞–Ω–∏—è –æ—Ç–≤–µ—Ç–∞ —ç—Ç–æ—Ç –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—å –Ω–µ –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç —Ä–∞–±–æ—Ç—É –≤ —Ñ–æ–Ω–µ. –°–ª–µ–¥—É—é—â–∏–π –æ–±—ã—á–Ω—ã–π Chat/Codex/Work –º–æ–∂–µ—Ç —Å—Ä–∞–∑—É –≤–∑—è—Ç—å –Ω–µ–∑–∞–≤–µ—Ä—à—ë–Ω–Ω—É—é —Ä–∞–±–æ—Ç—É –Ω–∞ —Å–µ–±—è, –∑–∞–ø–∏—Å–∞–≤ TAKEOVER/RECONCILE –∑–¥–µ—Å—å; —Å–≤—è–∑—ã–≤–∞—Ç—å—Å—è —Å–æ —Å—Ç–∞—Ä—ã–º–∏ —á–∞—Ç–∞–º–∏ –∏ –∂–¥–∞—Ç—å –∏—Ö –Ω–µ –Ω—É–∂–Ω–æ. –í–ª–∞–¥–µ–ª–µ—Ü —Ç—Ä–µ–±—É–µ—Ç –æ–¥–Ω–æ–≥–æ –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—è. –ò—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∏–µ ACTIVE-–∑–∞–ø–∏—Å–∏ –ø—Ä–µ–∂–Ω–∏—Ö lanes –Ω–µ –æ–∑–Ω–∞—á–∞—é—Ç, —á—Ç–æ –∏—Ö –æ—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–µ —á–∞—Ç—ã —Å–µ–π—á–∞—Å —Ä–∞–±–æ—Ç–∞—é—Ç; —ç—Ç–∞ –ø–µ—Ä–µ–¥–∞—á–∞ —Ä–∞–∑—Ä–µ—à–∞–µ—Ç –µ–¥–∏–Ω—ã–π takeover, –Ω–µ –æ—Ç–º–µ–Ω—è—è safety/signing/privacy gates.
-
-–û–±—ã—á–Ω—ã–π —á–∞—Ç —Å–ø–æ—Å–æ–±–µ–Ω –∏–∑–º–µ–Ω—è—Ç—å –ø—Ä–æ–µ–∫—Ç —Ç–æ–ª—å–∫–æ –ø—Ä–∏ —Ä–µ–∞–ª—å–Ω–æ –¥–æ—Å—Ç—É–ø–Ω–æ–º GitHub-–∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç–µ —Å –ø—Ä–∞–≤–æ–º –∑–∞–ø–∏—Å–∏. –ù–∞–ª–∏—á–∏–µ —Å—Å—ã–ª–∫–∏/—É–ø–æ–º–∏–Ω–∞–Ω–∏—è GitHub —Å–∞–º–æ –ø–æ —Å–µ–±–µ –Ω–µ –¥–∞—ë—Ç —Ç–∞–∫–æ–≥–æ –ø—Ä–∞–≤–∞. –°–Ω–∞—á–∞–ª–∞ –ø—Ä–æ–≤–µ—Ä—å –¥–æ—Å—Ç—É–ø —á—Ç–µ–Ω–∏–µ–º PR92, —Å–≤–µ–∂–µ–≥–æ main –∏ AGENTS; –∑–∞—Ç–µ–º –∏—Å–ø–æ–ª—å–∑—É–π —Ç–æ–ª—å–∫–æ —Ä–µ–∞–ª—å–Ω–æ –¥–æ—Å—Ç—É–ø–Ω—ã–µ –æ–ø–µ—Ä–∞—Ü–∏–∏ –∑–∞–ø–∏—Å–∏. –ï—Å–ª–∏ shell –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç, –≤—ã–ø–æ–ª–Ω—è–π acceptance —á–µ—Ä–µ–∑ GitHub Actions –ø–æ—Å–ª–µ –∞—Ç–æ–º–∞—Ä–Ω–æ–≥–æ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è –≤–µ—Ç–∫–∏, –Ω–µ –Ω–∞–∑—ã–≤–∞—è –∏—Ö –ª–æ–∫–∞–ª—å–Ω–æ –ø—Ä–æ–π–¥–µ–Ω–Ω—ã–º–∏. –ï—Å–ª–∏ –¥–æ—Å—Ç—É–ø–Ω–æ —Ç–æ–ª—å–∫–æ —á—Ç–µ–Ω–∏–µ –∏–ª–∏ –∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç–∞ –Ω–µ—Ç ‚Äî —á–µ—Å—Ç–Ω–æ –Ω–∞–∑–æ–≤–∏ –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—â—É—é –≤–æ–∑–º–æ–∂–Ω–æ—Å—Ç—å –∏ –ø–æ–ø—Ä–æ—Å–∏ –ø–æ–¥–∫–ª—é—á–∏—Ç—å GitHub/–¥–∞—Ç—å write-–¥–æ—Å—Ç—É–ø; –Ω–µ –∏–∑–æ–±—Ä–∞–∂–∞–π edits/CI/merge. –ù–µ –ø—É–±–ª–∏–∫—É–π —Ç–æ–∫–µ–Ω—ã/—Å–µ–∫—Ä–µ—Ç—ã/–∫–ª—é—á–∏.
-
-–ü—Ä–∏ –Ω–∞–ª–∏—á–∏–∏ shell –∏ –∫–ª–æ–Ω–∞: `git fetch origin`, –∑–∞—Ç–µ–º —á–∏—Ç–∞–π `AGENTS.md` –∏ –í–ï–°–¨ `docs/PROJECT_MASTER_LOG.md` –∏–∑ –∞–∫—Ç—É–∞–ª—å–Ω—ã—Ö main –∏ –∫–∞–Ω–¥–∏–¥–∞—Ç–∞. –î–µ–ª–∞–π —Ä–∞–±–æ—Ç—É –æ—Ç –Ω–∞—Å—Ç–æ—è—â–µ–≥–æ PR head; –ª–æ–∫–∞–ª—å–Ω–∞—è –≤–µ—Ç–∫–∞ Work –º–æ–≥–ª–∞ –∏–º–µ—Ç—å –¥—Ä—É–≥–∏–µ commit IDs –ø—Ä–∏ –ø–æ–ª–Ω–æ—Å—Ç—å—é —Å–æ–≤–ø–∞–¥–∞—é—â–∏—Ö —Ñ–∞–π–ª–∞—Ö, –ø–æ—ç—Ç–æ–º—É –ø—Ä–æ–≤–µ—Ä—è–π diff –∏ SHA —É–¥–∞–ª—ë–Ω–Ω–æ–π –≤–µ—Ç–∫–∏. Scratch-–ø—É—Ç—å —ç—Ç–æ–≥–æ —Å–µ–∞–Ω—Å–∞ –Ω–µ –≥–∞—Ä–∞–Ω—Ç–∏—Ä–æ–≤–∞–Ω —Å–ª–µ–¥—É—é—â–µ–º—É —á–∞—Ç—É; –≤–æ—Å—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∏–µ –≤–µ–¥–∏ –∏–∑ GitHub, –∞ –Ω–µ –∏—â–∏ –∏—Å—á–µ–∑–Ω—É–≤—à–∏–µ –≤—Ä–µ–º–µ–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã.
-
-### –ü–µ—Ä–≤—ã–µ –∏—Å–ø–æ–ª–Ω–∏–º—ã–µ –¥–µ–π—Å—Ç–≤–∏—è —Å–ª–µ–¥—É—é—â–µ–≥–æ —á–∞—Ç–∞
-
-1. –ü–æ–ª—É—á–∏ —Å–≤–µ–∂–∏–µ `main`, PR92/head, —Å–ø–∏—Å–æ–∫ –æ—Ç–∫—Ä—ã—Ç—ã—Ö PR –∏ –í–°–ï —Å—Ç—Ä–∞–Ω–∏—Ü—ã branches. –ó–∞–ø–∏—à–∏ —Å–≤–æ—é –∑–∞—è–≤–∫—É —Å –∏—Å—Ö–æ–¥–Ω—ã–º–∏ SHA, —Ñ–∞–π–ª–∞–º–∏ –∏ –ø—Ä–µ–¥–ø–æ–ª–∞–≥–∞–µ–º—ã–º bump –î–û –∫–æ–¥–∞. –ï–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—ã–π –∂—É—Ä–Ω–∞–ª ‚Äî —ç—Ç–æ—Ç —Ñ–∞–π–ª. –ï—Å–ª–∏ –¥—Ä—É–≥–æ–π –∂–∏–≤–æ–π –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—å —É–∂–µ –¥–æ–±–∞–≤–∏–ª –Ω–æ–≤—ã–µ –∏–∑–º–µ–Ω–µ–Ω–∏—è, —Å–æ—Ö—Ä–∞–Ω–∏ –∏—Ö –∏ —Å–æ–≥–ª–∞—Å—É–π takeover –ø–æ —Å–≤–µ–∂–∏–º —Ñ–∞–∫—Ç–∞–º.
-2. –ü—Ä–æ–≤–µ—Ä—å CI –∫–æ–º–º–∏—Ç–∞ —Å —Ç–µ–∫—É—â–µ–π –∑–∞–ø–∏—Å—å—é. –ò–∑-–∑–∞ pull_request —Å–æ–±—ã—Ç–∏–µ GITHUB_SHA –º–æ–∂–µ—Ç –±—ã—Ç—å —Å–ª—É–∂–µ–±–Ω—ã–º merge SHA: —Ä–µ–∞–ª—å–Ω–æ–µ –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–æ ‚Äî `AURORA_CI_CHECKOUT_SHA=<head>` –≤ job –∏ —Å–æ–¥–µ—Ä–∂–∏–º–æ–µ –æ—Ç—á—ë—Ç–∞. Core artifact/helper —Ç–µ–ø–µ—Ä—å –∏—Å–ø–æ–ª—å–∑—É—é—Ç actual head. Nested Knowledge identity –µ—â—ë –∏—Å–ø–æ–ª—å–∑—É–µ—Ç eventSHA; –∏—Å–ø—Ä–∞–≤—å metadata –æ—Ç–¥–µ–ª—å–Ω–æ, –Ω–µ –≤—ã–¥–∞–≤–∞—è mergeSHA –∑–∞ source –∏ –Ω–µ –ø–µ—Ä–µ–ø–∏—Å—ã–≤–∞—è —á—É–∂–æ–π –æ—Ç—á—ë—Ç –±–µ–∑ –ø—Ä–æ–≤–µ—Ä–∫–∏.
-3. –°–Ω–∞—á–∞–ª–∞ –∑–∞–∫—Ä–æ–π —Ä–µ–∞–ª—å–Ω—ã–π CodeSpecialist —Å–±–æ–π. –ò—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∞—è –æ—à–∏–±–∫–∞35318393724/job105515111358/artifact10535544194:7/8, refactor missing public name; –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–µ —ç—Ç–æ–π –ø–∞—Ä—Ç–∏–∏ –∏–º–µ–µ—Ç –ª–æ–∫–∞–ª—å–Ω—É—é regression proof, –Ω–æ —Ç—Ä–µ–±—É–µ—Ç —É—Å–ø–µ—à–Ω–æ–≥–æ –ù–û–í–û–ì–û real-core-windows. –ü—Ä–æ–≤–µ—Ä—å –≤—Å–µ8 –æ–ø–µ—Ä–∞—Ü–∏–π –∏21 quality scenarios, —Å–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–π Core, –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–µ Ollama/–≤–Ω–µ—à–Ω–µ–π —Å–µ—Ç–∏, hashes/quality/performance. –ù–µ —É–±–∏—Ä–∞–π add_numbers/a+b –∏–ª–∏ hard gates. –ï—Å–ª–∏ —Å–Ω–æ–≤–∞ –∫—Ä–∞—Å–Ω—ã–π, —Ç–µ–ø–µ—Ä—å —á–∏—Ç–∞–π bounded returned code excerpt –∏ precise error.
-4. –†–∞–∑–±–µ—Ä–∏ –Ω–∞—Å—Ç–æ—è—â–∏–π Knowledge timeout:35310302273/job105503429773/source03ae14b/artifact10537705836,5400s/-9/RSS900882432, phase —Ä–∞–Ω–µ–µ –Ω–µ–∏–∑–≤–µ—Å—Ç–Ω–∞. –í –Ω–æ–≤–æ–π –ø–∞—Ä—Ç–∏–∏ –ø–æ—è–≤–ª—è—é—Ç—Å—è stage logs. –°–Ω–∞—á–∞–ª–∞ —É—Å—Ç–∞–Ω–æ–≤–∏ reset/generate/import/search/restart, –≤–æ—Å–ø—Ä–æ–∏–∑–≤–µ–¥–∏ –Ω–∞ –Ω–µ–±–æ–ª—å—à–æ–º –∏ —É–≤–µ–ª–∏—á–µ–Ω–Ω–æ–º –æ–±—ä—ë–º–µ —Å –∑–∞–º–µ—Ä–æ–º; —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ —ç—Ç–æ–≥–æ –∏—Å–ø—Ä–∞–≤–ª—è–π –∞–ª–≥–æ—Ä–∏—Ç–º. –ù–µ –ø–æ–≤—ã—à–∞–π timeout –≤–º–µ—Å—Ç–æ –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–∞, –Ω–µ –æ—Å–ª–∞–±–ª—è–π restart/integrity/RSS –∏ –Ω–µ —Å—á–∏—Ç–∞–π —Å–∏–Ω—Ç–µ—Ç–∏—á–µ—Å–∫–∏–π JSONL –Ω–∞—Å—Ç–æ—è—â–∏–º –∫–æ—Ä–ø—É—Å–æ–º.
-5. –°–æ—Ö—Ä–∞–Ω–∏ –¥–ª–∏—Ç–µ–ª—å–Ω—É—é Windows-—Å–±–æ—Ä–∫—É35310302289/job105507674904/source03ae14b: installer —É–∂–µ –ø—Ä–æ—à—ë–ª, –Ω–∞ –ø–æ—Å–ª–µ–¥–Ω–µ–π –ø—Ä–æ–≤–µ—Ä–∫–µ –∏–¥—ë—Ç –∏—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∏–π V1.2/V1.3 bridge. –ù–æ–≤—ã–µ Windows/Knowledge –∑–∞–ø—É—Å–∫–∞—é—Ç—Å—è –≤ –æ—á–µ—Ä–µ–¥–∏ —Å cancel-in-progress=false. –ù–µ –æ—Ç–º–µ–Ω—è–π —Ç–µ–∫—É—â–∏–µ –¥–æ—Ä–æ–≥–∏–µ –ø—Ä–æ–≤–µ—Ä–∫–∏ —Ä–∞–¥–∏ journal-only commit. –ü–æ—Ç—Ä–µ–±—É—é—Ç—Å—è —Ç–∞–∫–∂–µ –æ–∫–æ–Ω—á–∞—Ç–µ–ª—å–Ω—ã–µ same-head runs: —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–π offline Silero TTS+Whisper-small STT, firewall block, WAV/JSON, —Ñ–∞–π–ª—ã/Computer/master-stop, silent install/uninstall/bridges. –ü—Ä–µ–¥—ã–¥—É—â–∏–π —Ä–µ–∑—É–ª—å—Ç–∞—Ç –Ω–µ –ø—Ä–∏–Ω–∏–º–∞–µ—Ç –Ω–æ–≤—ã–π head.
-6. Android normal-path E2E –∏ APK launch –ø—Ä–∏–Ω—è—Ç—ã –∫–∞–∫ –æ—Ç–¥–µ–ª—å–Ω—ã–µ checkpoints —Ä–∞–∑–¥–µ–ª58 –Ω–∞03ae14b; Release-native report —Ç–∞–∫–∂–µ –ª–∏—á–Ω–æ –ø—Ä–æ–≤–µ—Ä–µ–Ω. –î–ª—è –Ω–æ–≤–æ–≥–æ —Ñ–∏–Ω–∞–ª—å–Ω–æ–≥–æ head –æ–ø—è—Ç—å –Ω—É–∂–Ω—ã native/normal/APK —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã, –∞ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–π Voice/OCR/Knowledge –∏ —Ñ–∏–∑–∏—á–µ—Å–∫–æ–µ —É—Å—Ç—Ä–æ–π—Å—Ç–≤–æ –æ—Å—Ç–∞—é—Ç—Å—è –Ω–µ–ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω—ã–º–∏. Native E2E/–Ω–µ-thinking prompt –Ω–µ –∑–∞–º–µ–Ω—è—é—Ç installed voice/OCR.
-7. –†–∞–±–æ—Ç—ã –∞–∫—Ç—É–∞–ª—å–Ω—ã—Ö –ø—Ä–µ–∂–Ω–∏—Ö lanes —É–∂–µ –Ω–∞—Ö–æ–¥—è—Ç—Å—è –≤ PR92: Core51bb186, Knowledge07cf2f5, Platform42fc32b, UI2006566, Voice-r2c18ac6d, Workf0918a6/20be9b1 ‚Äî ancestors. Server5ef7c90 –æ—Ç–ª–∏—á–∞–µ—Ç—Å—è –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—ã–º journal-only claim, –Ω–µ –Ω–æ–≤—ã–º implementation. –ù–µ –¥–µ–ª–∞–π –¥—É–±–ª–∏–∫–∞—Ç—ã.72 –¥—Ä—É–≥–∏—Ö remote refs –Ω–µ —è–≤–ª—è—é—Ç—Å—è ancestors; –º–Ω–æ–≥–∏–µ —Å—Ç–∞—Ä—ã–µ/squash/replay –∞–ª—å—Ç–µ—Ä–Ω–∞—Ç–∏–≤—ã, –Ω–æ —É–Ω–∏–≤–µ—Ä—Å–∞–ª—å–Ω–∞—è patch-equivalence –Ω–µ –¥–æ–∫–∞–∑–∞–Ω–∞. –î–ª—è –Ω—É–∂–Ω–æ–π —Å—Ç–∞—Ä–æ–π –≤–µ—Ç–∫–∏ —Å—Ä–∞–≤–Ω–∏ –Ω–∞—Å—Ç–æ—è—â–∏–π –ø–æ–ª–µ–∑–Ω—ã–π delta/—Ç–µ—Å—Ç—ã —Å —Ç–µ–∫—É—â–∏–º –∫–æ–¥–æ–º; –Ω–µ —Å–ª–∏–≤–∞–π —Å—Ç–∞—Ä—ã–µ versions/workflows/assets —Ä–∞–¥–∏ –∫–æ–ª–∏—á–µ—Å—Ç–≤–∞ merges, –Ω–µ —É–¥–∞–ª—è–π –∏—Å—Ç–æ—Ä–∏—é.
-8. –ó–∞–∫—Ä–æ–π10 –Ω–µ–¥–æ—Å—Ç–∞—é—â–∏—Ö release checkpoints —Ä–∞–∑–¥–µ–ª58. –†–µ–∞–ª—å–Ω—ã–π –ø–æ–ª–µ–∑–Ω—ã–π >=1GiB licensed/sharded pack/provenance –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç: v14 synthetic/duplicate archive –Ω–µ –≤—ã–ø–æ–ª–Ω—è–µ—Ç —Ç—Ä–µ–±–æ–≤–∞–Ω–∏–µ. –§–∏–∑–∏—á–µ—Å–∫–∏–µ —É—Å—Ç—Ä–æ–π—Å—Ç–≤–∞, human voice/UI, REG.RU deployment/mail/rollback, signing lineage/–∫–ª—é—á–∏ ‚Äî –æ—Ç–¥–µ–ª—å–Ω—ã–µ —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∏–µ –≥—Ä–∞–Ω–∏—Ü—ã. –ù–µ –ø—Ä–µ–¥–ø–æ–ª–∞–≥–∞–π, —á—Ç–æ –æ–Ω–∏ –ø—Ä–æ—à–ª–∏.
-9. –õ–∏—à—å –ø–æ—Å–ª–µ relevant gates –∏ –æ—Ç—Å—É—Ç—Å—Ç–≤–∏—è P0/P1: —Ñ–∏–Ω–∞–ª—å–Ω—ã–π –µ–¥–∏–Ω—ã–π bump1.4.0.0/code>100005, sync JSON/Godot/export/installer/updater/changelog –∏ –Ω–æ–≤—ã–µ package/update/release –ø—Ä–æ–≤–µ—Ä–∫–∏. PR92 –¥–æ —ç—Ç–æ–≥–æ draft; main merge/tag/production release –Ω–µ –¥–µ–ª–∞—Ç—å —Å –∫—Ä–∞—Å–Ω—ã–º –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–º gate. –í–ª–∞–¥–µ–ª–µ—Ü —Ä–∞–∑—Ä–µ—à–∏–ª –ø–æ–ª–µ–∑–Ω—ã–µ —Å–ª–∏—è–Ω–∏—è, –∞ –Ω–µ –ª–æ–∂–Ω—É—é –ø—Ä–∏—ë–º–∫—É.
-10. –ö–∞–∂–¥—É—é –≤—ã–ø–æ–ª–Ω–µ–Ω–Ω—É—é –ø–∞—Ä—Ç–∏—é –∑–∞–ø–∏—Å—ã–≤–∞–π BEFORE/AFTER –∑–¥–µ—Å—å —Å actualSHA/run/job/artifact/hash/test output, DONE/REMAINING/BLOCKERS/NEXT. –î–æ–≤–æ–¥–∏ –¥–æ—Å—Ç—É–ø–Ω—É—é —Ä–∞–±–æ—Ç—É —Å–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω–æ. –†–µ–∞–ª—å–Ω—ã–π –≤–Ω–µ—à–Ω–∏–π blocker –Ω–∞–∑—ã–≤–∞–π —Ç–æ—á–Ω–æ; pending/cancelled –Ω–µ —Ä–∞–≤–Ω–æ pass, –ø–æ–≤—Ç–æ—Ä—ë–Ω–Ω—ã–π –∑–∞–ø—É—Å–∫ –Ω–µ —Ä–∞–≤–Ω–æ repair.
-
-### –ö–æ—Ä–æ—Ç–∫–∏–π –∑–∞–ø—Ä–æ—Å, –∫–æ—Ç–æ—Ä—ã–π –≤–ª–∞–¥–µ–ª–µ—Ü –º–æ–∂–µ—Ç –ø–µ—Ä–µ–Ω–µ—Å—Ç–∏ –≤ –Ω–æ–≤—ã–π —á–∞—Ç
-
-¬´–ü—Ä–æ–¥–æ–ª–∂–∏ AuroraFox –∏–∑ https://github.com/Treninem/AI. –†–∞–±–æ—Ç–∞–π –æ–¥–∏–Ω. –°–Ω–∞—á–∞–ª–∞ –ø–æ–ª—É—á–∏ –∞–∫—Ç—É–∞–ª—å–Ω—ã–µ main –∏ PR92/head, –ø–æ–ª–Ω–æ—Å—Ç—å—é –ø—Ä–æ—á–∏—Ç–∞–π AGENTS.md –∏ docs/PROJECT_MASTER_LOG.md, –æ—Å–æ–±–µ–Ω–Ω–æ –ø–æ—Å–ª–µ–¥–Ω—é—é –ø–µ—Ä–µ–¥–∞—á—É —Ä–∞–∑–¥–µ–ª60. –ü—Ä–æ–≤–µ—Ä—å –Ω–∞—Å—Ç–æ—è—â–∏–µ –∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç—ã —á—Ç–µ–Ω–∏—è/–∑–∞–ø–∏—Å–∏ GitHub. –ó–∞–ø–∏—à–∏ TAKEOVER –¥–æ –∫–æ–¥–∞; –ø—Ä–æ–¥–æ–ª–∂–∞–π —Å Core refactor CI –∏ Knowledge timeout/Windows installed gate, –±–µ–∑ –ø–æ–≤—Ç–æ—Ä–µ–Ω–∏—è —É–∂–µ –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞–Ω–Ω—ã—Ö lanes. –°–æ—Ö—Ä–∞–Ω—è–π –∞–≤—Ç–æ–Ω–æ–º–Ω–æ—Å—Ç—å —Å–æ–±—Å—Ç–≤–µ–Ω–Ω–æ–≥–æ Core. –ò—Å–ø—Ä–∞–≤–ª—è–π —Ä–µ–∞–ª—å–Ω—ã–µ failures, –ø—É–±–ª–∏–∫—É–π –∞—Ç–æ–º–∞—Ä–Ω—ã–µ –ø–∞—Ä—Ç–∏–∏ –≤ —Ç–µ–∫—É—â–µ–º draft PR92 –∏ –∑–∞–ø–∏—Å—ã–≤–∞–π evidence –≤ –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—ã–π –∂—É—Ä–Ω–∞–ª. –ù–µ –æ–±–µ—â–∞–π —Ñ–æ–Ω–æ–≤–æ–π —Ä–∞–±–æ—Ç—ã –ø–æ—Å–ª–µ –æ—Å—Ç–∞–Ω–æ–≤–∫–∏ –∏ –Ω–µ –æ–±—ä—è–≤–ª—è–π —Ä–µ–ª–∏–∑ –±–µ–∑ –≤—Å–µ—Ö gates. –ü—Ä–æ—Ü–µ–Ω—Ç ‚Äî —Ç–æ–ª—å–∫–æ –ø–æ —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∏–º acceptance checkpoints¬ª.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: –∞–∫—Ç—É–∞–ª—å–Ω—ã–µ executor branches —Å–≤–µ–¥–µ–Ω—ã —Ä–∞–Ω–µ–µ –∏ –ª–∏—á–Ω–æ –ø—Ä–æ–≤–µ—Ä–µ–Ω—ã –ø–æ ancestry; Server journal-only –æ—Å—Ç–∞—Ç–æ–∫ reconciled; bounded refactor repair –∏ regression; –¥–∏–∞–≥–Ω–æ—Å—Ç–∏–∫–∞ Knowledge —ç—Ç–∞–ø–æ–≤; –∏—Å–ø–æ–ª–Ω–∏–º–∞—è –ø–µ—Ä–µ–¥–∞—á–∞ –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É.
-REMAINING:10 release checkpoints, –Ω–æ–≤—ã–π —Ç–µ–∫—É—â–∏–π Core CI, —Ä–∞–∑–±–æ—Ä5400s Knowledge failure –∏ installed Windows proof.
-BLOCKERS: red Coder/Knowledge real gates –¥–æ –Ω–æ–≤–æ–≥–æ —É—Å–ø–µ—à–Ω–æ–≥–æ –∑–∞–ø—É—Å–∫–∞; genuine corpus/device/human/host/signing unproven. –ü–æ–ª–Ω–∞—è —ç–∫–≤–∏–≤–∞–ª–µ–Ω—Ç–Ω–æ—Å—Ç—å72 –∏—Å—Ç–æ—Ä–∏—á–µ—Å–∫–∏—Ö refs –Ω–µ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–∞; –æ–Ω–∏ –Ω–µ –∑–∞—è–≤–ª–µ–Ω—ã —Å–ª–∏—Ç—ã–º–∏/–ø—Ä–∏–Ω—è—Ç—ã–º–∏.
-NEXT: –ø–æ–ª—É—á–∏—Ç—å –Ω–∞—Å—Ç–æ—è—â–∏–π –Ω–æ–≤—ã–π PR92/head –∏ —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã –µ–≥–æ Windows Core/Knowledge; —á–∏—Ç–∞—Ç—å –Ω–æ–≤—ã–µ refactor excerpts/stage logs, —Å–æ—Ö—Ä–∞–Ω–∏—Ç—å –¥–æ—Ä–æ–≥—É—é Windows-—Å–±–æ—Ä–∫—É.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 61. BEFORE ACTION ‚Äî resumed sole ownership, green Core/Knowledge and bounded Windows bridge
-
-CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE ‚Äî sole executor resumes section60 handoff. Fresh main031aebaad16fc25a39dfc45c58f96fadb658cac2/candidate96beca1eef36e022da33b51c40b3ffe1f5100352, PR92/draft; instructions/current canonical continuation reconciled. Accumulated intended MINOR/V1.4 remains version-last.
-CURRENT FACTS:23/24 candidate workflowsSUCCESS; Windows Package35325857421/job105554749059 CANCELLED. Coder/realWindows35325857344/job105538675377 succeeds: actual checkout guard96beca1 and AURORA_REPORT_SOURCE_SHA96beca1, all owned regression/real-code/benchmark gates pass. Knowledge1GiB35325857519/job105543423201 succeeds with two cases/error_count0, no timeout increase; this is synthetic capacity, not genuine pack. Previous5400s failure is a runtime variability/performance risk, not asserted algorithmically solved by stage prints.
-WINDOWS EVIDENCE: build/export/runtime/exe/installer steps pass, full installer compile2055.078s. Last visible bridge event is V1.2 fixture compile27.079s at10:25:37Z, then no per-operation output until cancelled12:42:18Z. Old03ae run35310302289 is alsoCANCELLED at bridge. Neither proves a failed assertion or exact blocked installer/app phase. Source uses unbounded Start-Process -Wait for fixture install/repair/app smoke/uninstall, losing phase diagnostics and potentially waiting for descendants after main exit. Do not call descendants the proven cause without a rerun.
-OWNED NEXT BATCH: tests/windows_v12_bridge_smoke.ps1, tests/windows_v13_bridge_smoke.ps1, shared bounded process helper + real PowerShell helper smoke, Windows workflow helper parse/fast regression wiring and failure diagnostics artifact, relevant backwards-compatibility tests and canonical journal. Log explicit phase/installer logs; bound each child process, cleanup only its process tree, preserve every marker/trust/user-data/exitcode assertion. Let V1.3 reuse the already-built current installer when requested, retaining standalone compile fallback; this avoids confirmed redundant compression, not claimed the current hang cause.
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: new Core/Knowledge real gates green; actual source guard/report identity executed remotely.
-REMAINING: Windows installed/package acceptance,10 release checkpoints and remaining Knowledge report identity/performance boundaries.
-BLOCKERS: Windows bridge phase unknown/unbounded, installed voice not reached; genuine corpus/device/human/host/signing absent.
-NEXT: add bounded phase-level diagnostics and regression, reuse current installer for V1.3, publish coherent batch and inspect its real Windows result. No version/main merge/release.
-
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-OWNER STEERING/TAKEOVER: owner reiterates to audit/take all chats and authorizes deletion of unnecessary branches only after takeover. Full123-branch ancestry and branch-relative text-path/blob audit completed:51 ancestors/72 non-ancestors;54 unique older text paths absent at candidate. Absence is not acceptance evidence: deprecated parallel journals/fake release overlay/old workflows are excluded, and remaining useful source must be reconciled. Genuine missing feature found in file-intelligence-epub-rar-v1/a187628: current file_service lists EPUB as generic ZIP and RAR only warns, unlike old chapter/RAR analyzers. Extend ownership to file_intelligence/extended_formats.py, current file_service/requirements, meaningful EPUB/RAR regressions and relevant CI, preserving current OCR/limits/local autonomy. Audit catches unsafe old lstrip path normalization and unbounded EPUB member reads; do not import those defects or the stale launcher wrapper. Production-path takeover continues under sole claim; old spec/probes remain retained until reconciled.
-BRANCH CLEANUP: no authenticated delete-ref operation exposed in current GitHub connector; shell push previously unauthenticated. Prepare only exact-SHA ancestor alias cleanup with preserved refs/evidence and available authenticated means; never say a branch was deleted until remote readback proves it. Owner authorization persists, no repeat permission required.
-
-### BEFORE: —Ä–∞–∑—Ä–µ—à—ë–Ω–Ω–æ–µ —É–¥–∞–ª–µ–Ω–∏–µ –¥–æ–∫–∞–∑–∞–Ω–Ω—ã—Ö –≤—Ä–µ–º–µ–Ω–Ω—ã—Ö –≤–µ—Ç–æ–∫
-
-–í–ª–∞–¥–µ–ª–µ—Ü —è–≤–Ω–æ —Ä–∞–∑—Ä–µ—à–∏–ª —É–¥–∞–ª—è—Ç—å –Ω–µ–Ω—É–∂–Ω—ã–µ –≤–µ—Ç–∫–∏ –ü–û–°–õ–ï –ø–µ—Ä–µ–Ω–æ—Å–∞ —Ä–∞–±–æ—Ç. CLAIM —Ä–∞—Å—à–∏—Ä–µ–Ω –Ω–∞ `.github/workflows/retire-verified-branches.yml` –∏ `build/retire_verified_branches.py`: —É–¥–∞–ª–∏—Ç—å —Ç–æ–ª—å–∫–æ —Ñ–∏–∫—Å–∏—Ä–æ–≤–∞–Ω–Ω—ã–π —Å–ø–∏—Å–æ–∫ –≤—Ä–µ–º–µ–Ω–Ω—ã—Ö aliases –Ω–∏–∂–µ, —á—å–∏ SHA –ª–∏—á–Ω–æ –ø—Ä–æ–≤–µ—Ä–µ–Ω—ã –∫–∞–∫ ancestors –∫–∞–Ω–¥–∏–¥–∞—Ç–∞96beca. Main, PR92, canonical lanes –∏72 –≤–µ—Ç–∫–∏ —Å –Ω–µ–ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω—ã–º delta –Ω–µ —É–¥–∞–ª—è—Ç—å. –ü—Ä—è–º–æ–π GitHub DELETE-ref –∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç, shell push –Ω–µ –∏–º–µ–µ—Ç –∞–≤—Ç–æ—Ä–∏–∑–∞—Ü–∏–∏; –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è –æ–±—ã—á–Ω–∞—è –∞–≤—Ç–æ—Ä–∏–∑–æ–≤–∞–Ω–Ω–∞—è Actions-–æ–ø–µ—Ä–∞—Ü–∏—è —Å job-scoped contents:write, –±–µ–∑ –≤—ã–¥–∞—á–∏/–ø–µ—á–∞—Ç–∏ —Ç–æ–∫–µ–Ω–æ–≤. –ü–µ—Ä–µ–¥ –∫–∞–∂–¥–æ–π –æ–ø–µ—Ä–∞—Ü–∏–µ–π –∑–∞–Ω–æ–≤–æ –ø—Ä–æ–≤–µ—Ä–∏—Ç—å protected/open-PR/head-SHA/ancestry; —É–¥–∞–ª–µ–Ω–∏–µ —Ç–æ–ª—å–∫–æ —á–µ—Ä–µ–∑ compare-and-swap lease. –î–æ readback –Ω–µ –ø–∏—Å–∞—Ç—å ¬´—É–¥–∞–ª–µ–Ω–æ¬ª.
-
-- `chat-2026-09-17-work-computer-autonomy-please-stop` ‚Üí `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58`; ancestor, –æ–∂–∏–¥–∞–µ—Ç –±–µ–∑–æ–ø–∞—Å–Ω–æ–≥–æ —É–¥–∞–ª–µ–Ω–∏—è.
-- `tmp-ignore` ‚Üí `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, –æ–∂–∏–¥–∞–µ—Ç –±–µ–∑–æ–ø–∞—Å–Ω–æ–≥–æ —É–¥–∞–ª–µ–Ω–∏—è.
-- `tmp-main-for-voice-sync` ‚Üí `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, –æ–∂–∏–¥–∞–µ—Ç –±–µ–∑–æ–ø–∞—Å–Ω–æ–≥–æ —É–¥–∞–ª–µ–Ω–∏—è.
-- `tmp-main-for-voice-sync-2` ‚Üí `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, –æ–∂–∏–¥–∞–µ—Ç –±–µ–∑–æ–ø–∞—Å–Ω–æ–≥–æ —É–¥–∞–ª–µ–Ω–∏—è.
-- `tmp-main-for-voice-sync-final` ‚Üí `031aebaad16fc25a39dfc45c58f96fadb658cac2`; ancestor, –æ–∂–∏–¥–∞–µ—Ç –±–µ–∑–æ–ø–∞—Å–Ω–æ–≥–æ —É–¥–∞–ª–µ–Ω–∏—è.
-- `tmp-never-use` ‚Üí `c41a9996692d4588592ecf5735e2c72a10ceb9f2`; ancestor, –æ–∂–∏–¥–∞–µ—Ç –±–µ–∑–æ–ø–∞—Å–Ω–æ–≥–æ —É–¥–∞–ª–µ–Ω–∏—è.
-
-### AFTER: –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω–∞—è –ø–∞—Ä—Ç–∏—è –∏ –ø–æ–ª–Ω—ã–π —Ä–µ–µ—Å—Ç—Ä takeover
-
-–õ–æ–∫–∞–ª—å–Ω–æ36 passed (0.67s): `tests/test_extended_formats.py`, `test_file_intelligence.py`, `test_project_index.py`, `test_update_backward_compat.py`, `test_windows_voice_package.py`. –†–µ–∞–ª—å–Ω—ã–µ EPUB ZIP/OPF/spine/nav –∏ RAR3 CRC fixtures –ø—Ä–æ–≤–µ—Ä–µ–Ω—ã, –≤–∫–ª—é—á–∞—è dispatch file_service, traversal rejection, bounds –∏ –∑–∞–ø—Ä–µ—Ç –≤–Ω–µ—à–Ω–∏—Ö –ø—Ä–æ—Ü–µ—Å—Å–æ–≤ –¥–ª—è RAR. –°–∂–∞—Ç—ã–π RAR –ø–µ—Ä–µ—á–∏—Å–ª—è–µ—Ç—Å—è —Å —è–≤–Ω—ã–º –ø—Ä–µ–¥—É–ø—Ä–µ–∂–¥–µ–Ω–∏–µ–º: –ø–æ–ª–Ω–æ—Ü–µ–Ω–Ω–∞—è —Ä–∞—Å–ø–∞–∫–æ–≤–∫–∞ —Å–∂–∞—Ç—ã—Ö entries –ù–ï –∑–∞—è–≤–ª–µ–Ω–∞. –°—Ç–∞—Ä—ã–π launcher-wrapper –Ω–µ –≤–æ–∑–≤—Ä–∞—â—ë–Ω; –Ω–æ–≤—ã–π –º–æ–¥—É–ª—å –≤—Ö–æ–¥–∏—Ç –≤ Windows package file list. RAR parser ‚Äî pure-Python rarfile4.2; —Å–æ–±—Å—Ç–≤–µ–Ω–Ω—ã–π Core –Ω–µ –ø–æ–ª—É—á–∞–µ—Ç –≤–Ω–µ—à–Ω–µ–≥–æ inference dependency. YAML –≤—Å–µ—Ö32 workflows –∏ Python syntax –ø—Ä–æ–≤–µ—Ä–µ–Ω—ã; diff whitespace clean. –†–µ–∞–ª—å–Ω—ã–π –ª–æ–∫–∞–ª—å–Ω—ã–π bare Git –¥–æ–∫–∞–∑–∞–ª, —á—Ç–æ stale deletion lease —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç advanced ref, –∞ —Ç–æ—á–Ω—ã–π lease —É–¥–∞–ª—è–µ—Ç —Ç–æ–ª—å–∫–æ –≤—ã–±—Ä–∞–Ω–Ω—ã–π ref.
-
-Windows bounded process helper –∏–º–µ–µ—Ç –æ—Ç–¥–µ–ª—å–Ω—É—é –±—ã—Å—Ç—Ä—É—é —Ä–µ–∞–ª—å–Ω—É—é PowerShell regression –≤ CI, phase markers –∏ installer logs; timeout –∫–∞–∂–¥–æ–π —Ñ–∞–∑—ã –ø—Ä–µ–∫—Ä–∞—â–∞–µ—Ç —Ç–æ–ª—å–∫–æ –µ—ë parent/owned descendants. Cleanup parent/dispose –∑–∞—â–∏—â—ë–Ω –≤–ª–æ–∂–µ–Ω–Ω—ã–º–∏ finally. V1.3 reuse —É–∂–µ –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω–æ–≥–æ installer –∏—Å–∫–ª—é—á–∞–µ—Ç –≤—Ç–æ—Ä—É—é –¥–æ–ª–≥—É—é –∫–æ–º–ø—Ä–µ—Å—Å–∏—é, –ù–ï –æ–±—ä—è–≤–ª—è–µ—Ç—Å—è –ø—Ä–∏—á–∏–Ω–æ–π —Å—Ç–∞—Ä–æ–≥–æ –∑–∞–≤–∏—Å–∞–Ω–∏—è. –õ–æ–∫–∞–ª—å–Ω–æ–≥–æ PowerShell –Ω–µ—Ç: regression/package/voice –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–µ–Ω–∏–µ –∂–¥—ë—Ç –Ω–æ–≤–æ–≥–æ CI. –°—Ç–∞—Ä—ã–µ –º–æ—Å—Ç–æ–≤—ã–µ marker/user-data/hash/voice assertions —Å–æ—Ö—Ä–∞–Ω–µ–Ω—ã.
-
-–ù–∞96beca –ª–∏—á–Ω–æ –ø—Ä–æ—á–∏—Ç–∞–Ω—ã CI:23/24 success, Windows run35325857421/job105554749059 cancelled –ø–æ—Å–ª–µ180min; last output ‚Äî V1.2 fixture compiler10:25:37Z, —Ç–æ—á–Ω–∞—è –∑–∞–≤–∏—Å—à–∞—è —É—Å—Ç–∞–Ω–æ–≤–∫–∞/app/uninstall –Ω–µ–∏–∑–≤–µ—Å—Ç–Ω–∞. Core Windows35325857344/job105538675377:8/8 Coder –∏21 quality scenarios green. Knowledge35325857519/job105543423201:2 cases,0 errors, ~88min synthetic1GiB; —ç—Ç–æ –ù–ï –Ω–∞—Å—Ç–æ—è—â–∏–π licensed production pack. –ü—Ä–µ–¥—ã–¥—É—â–∞—è –æ—à–∏–±–∫–∞ CodeSpecialist –∑–∞–∫—Ä—ã—Ç–∞ –Ω–∞96beca; final same-head verification –¥–ª—è –Ω–æ–≤–æ–π –ø–∞—Ä—Ç–∏–∏ –æ—Å—Ç–∞—ë—Ç—Å—è.
-
-–ù–∏–∂–µ123 remote branches –æ—Ç–Ω–æ—Å–∏—Ç–µ–ª—å–Ω–æ96beca:51 ANCESTOR —É–∂–µ –≤ –∏—Å—Ç–æ—Ä–∏–∏,72 DELTA —Ç—Ä–µ–±—É—é—Ç reconcile. –î–ª—è DELTA —á–∏—Å–ª–∞ I/D/M ‚Äî identical/different/missing text paths –æ—Ç–Ω–æ—Å–∏—Ç–µ–ª—å–Ω–æ —Ç–µ–∫—É—â–µ–≥–æ –∫–∞–Ω–¥–∏–¥–∞—Ç–∞, –∞ –Ω–µ –æ–±–µ—â–∞–Ω–∏–µ —Ñ—É–Ω–∫—Ü–∏–æ–Ω–∞–ª—å–Ω–æ–π —ç–∫–≤–∏–≤–∞–ª–µ–Ω—Ç–Ω–æ—Å—Ç–∏. –°—Ç–∞—Ä—ã–µ journals, fake progress overlay, –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã–µ Ollama/external-model dependencies –Ω–µ –≤–æ–∑–≤—Ä–∞—â–∞—Ç—å. –í—Å–µ –Ω–µ–∑–∞–≤–µ—Ä—à—ë–Ω–Ω—ã–µ –∑–∞–¥–∞—á–∏ –±–µ—Ä—É –Ω–∞ —Å–µ–±—è; —Å–ª–µ–¥—É—é—â–∏–µ –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—â–∏–µ –ø–æ–ª–µ–∑–Ω—ã–µ —á–∞—Å—Ç–∏ –ø—Ä–æ–≤–µ—Ä—è—Ç—å –ø–æ —Ç–æ—á–Ω–æ–º—É SHA, –Ω–µ –∂–¥–∞—Ç—å —Å—Ç–∞—Ä—ã–µ —á–∞—Ç—ã. Canonical source: GitHub/PR92; –ª–æ–∫–∞–ª—å–Ω—ã–π qa JSON –Ω–µ –Ω—É–∂–µ–Ω —Å–ª–µ–¥—É—é—â–µ–º—É —á–∞—Ç—É.
-
-| –í–µ—Ç–∫–∞ | SHA | –ü—Ä–æ–≤–µ—Ä–∫–∞ | I/D/M |
-|---|---|---|---|
-| `aurora-agent-sync-v1` | `f6f525a43bf015240db09d57ba6ab4805feb68ba` | DELTA | 2/2/0 |
-| `aurora-api-gateway-v1` | `4cc9522b7685f8204188c17ce2a7fb6b3f773475` | DELTA | 4/14/1 |
-| `aurora-api-gateway-v2` | `6ae0e75a43db4396db3e9fcc45c08ab13d633ed3` | DELTA | 4/14/0 |
-| `aurora-pc-release-v1` | `78f7ffc6c9766933955f71296df381886f091c96` | DELTA | 0/3/0 |
-| `aurora-ui-assets-v2` | `ed3b32962445c7957deca2f0732dbbdf794f4696` | DELTA | 0/3/1 |
-| `autonomy-foundation-2026-08` | `b16d8cc0fb892c371fd798bd408acf883d2710a1` | DELTA | 0/6/12 |
-| `bugfix-v1.1.1.1` | `0dd0fe12c198040db0d822330daff4f08504319e` | DELTA | 4/15/0 |
-| `build-v1.0.0.0-android` | `5710fd5eb895a5737bcc4d68b9a9824641f94ce2` | DELTA | 0/0/0 |
-| `build-v1.0.0.0-windows-installer` | `23d76b1504dc577353688da2ab5112997f87ff42` | DELTA | 0/0/1 |
-| `chat-2026-09-16-integration-gate` | `c08aa335bce30978199ed3ea2727e64fa511095e` | DELTA | 0/2/0 |
-| `chat-2026-09-16-large-knowledge-perf` | `4f3162bc5d08ccb2e29265e9d1400d78f8b5ee81` | DELTA | 0/2/3 |
-| `chat-2026-09-16-local-ocr` | `38f03adb2bed9cdf5e0cd0c2caa485072ee7152b` | DELTA | 10/7/2 |
-| `chat-2026-09-16-local-ocr-replay` | `9eaf9d08e49c7ff5928cdcac6d90eacc905cc5ca` | DELTA | 0/5/0 |
-| `chat-2026-09-17-knowledge-memory-ocr` | `07cf2f54cf0fdf4ab6ff33d019986f14942db1b1` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-platform-integration` | `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-platform-integration-v2` | `42fc32b664005e007175c8542f49030bc7bb4a0b` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-server-api-db` | `5ef7c9002950a4b59c962888bd869cbc677dd9ef` | DELTA | 0/0/0 |
-| `chat-2026-09-17-ui-visual` | `2006566710a5662bba9074c5cbb47c48988ae603` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-unified-execution` | `9ca5fafd1f65038d855d00e1e1e0db876938d17f` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-unified-finalization` | `96beca1eef36e022da33b51c40b3ffe1f5100352` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-voice-audio` | `7d6d074ec597b21ff0a0a906e3a04871cae2158a` | DELTA | 0/0/1 |
-| `chat-2026-09-17-voice-audio-r2` | `c18ac6d29950fc277345734850aed1422bb86ae0` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-voice-main-sync` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-voice-main-sync-2` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-voice-main-sync-3` | `011a73e93e3869b0c6097edf4f36a79d00838e0b` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-123` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-actual` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-ci` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-draft` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-final` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-last` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-please-stop` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-pr` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-pr0` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-review` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-stop` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-x` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-autonomy-z` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-2026-09-17-work-computer-hardening` | `f0918a64c78e38262634991116a0051369590aad` | ANCESTOR | ‚Äî |
-| `chat-autonomy-state-durability-20260916` | `3434f70ba32f74462c4b9f5216cf26cd5ddb2afa` | ANCESTOR | ‚Äî |
-| `chat-knowledge-races-20260916` | `bfd9c23dbca44c31508f44e531407aa47560423d` | DELTA | 0/2/2 |
-| `chat-knowledge-races-v2-20260916` | `1bc4003170e45394d181d6010453cb8560312784` | DELTA | 0/4/12 |
-| `chat-large-knowledge-complete-scaling-gates` | `338e2f54070ccdb2cd463a2843556eeb93908cea` | DELTA | 0/2/0 |
-| `chat-large-knowledge-complete-scaling-gates-v2` | `bdf79c211fab40a0431f50a92ee9f4df549a30fb` | DELTA | 0/2/0 |
-| `chat-large-knowledge-concurrency-isolation` | `f62c18f4138f0710456376dffce78cf62b2fbc92` | DELTA | 1/1/0 |
-| `chat-large-knowledge-concurrency-isolation-v2` | `afecd94e02482261fe13d513e7002541ea0245c7` | DELTA | 1/1/0 |
-| `chat-large-knowledge-concurrency-isolation-v3` | `bc403203ec575a0f1188329ddb09bfd0f0587551` | DELTA | 1/1/0 |
-| `chat-large-knowledge-data-safety` | `02b931a85044a7df88662614d45f22db7c4330a4` | DELTA | 0/4/1 |
-| `chat-large-knowledge-data-safety-v2` | `d2294bacaaeff27f661ea75f73dd218687f6f4ba` | DELTA | 0/3/1 |
-| `chat-large-knowledge-hard-gates` | `098fa166d6ff0e1bd34ab5b6c6fe8778c8e94cf6` | DELTA | 0/2/0 |
-| `chat-large-knowledge-lost-registry-validation` | `899d6bb091db906354d86f3793a5e7194838ba74` | DELTA | 0/0/2 |
-| `chat-large-knowledge-registry-recovery` | `2f8d4b4b7c22d1f01dadc0829ea8d1c9441ac1c7` | DELTA | 0/2/2 |
-| `chat-large-knowledge-source-removal-gate` | `5c22e0ae195444e291792624a5533375f9ece070` | DELTA | 0/2/0 |
-| `chat-large-knowledge-stress-evidence` | `8a2c95d01d0c5eaf1730d34dfa2c69be25225c57` | DELTA | 0/1/0 |
-| `chat-voice-android-female-20260916` | `7e81c373e4190567b7b5370de257aad5b8b2972f` | ANCESTOR | ‚Äî |
-| `chat-work-computer-autonomy-20260917` | `0edb9262e0f6efeea3801f61d2cf667a97abd5cc` | DELTA | 7/1/0 |
-| `chat-work-computer-autonomy-ci-trigger` | `20be9b108c2de2e1d18cadb6cd2c75ba1e0e4d58` | ANCESTOR | ‚Äî |
-| `chat-work-computer-reliability-20260916` | `a716b14e63a9c15453e1f2d214e26f33fb030dbc` | DELTA | 6/1/0 |
-| `chat/core-benchmarks-20260916` | `1fcaa6c5f3210cd20411ee9449610d6b1eec4c93` | DELTA | 6/13/0 |
-| `chat/core-benchmarks-20260916-sync-test` | `c41a9996692d4588592ecf5735e2c72a10ceb9f2` | ANCESTOR | ‚Äî |
-| `chat/core-benchmarks-clean-stage` | `9b051ac01f9bdbfc1055a6f2c16a321329264e0f` | DELTA | 6/13/0 |
-| `chat/core-benchmarks-clean-stage2` | `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` | ANCESTOR | ‚Äî |
-| `chat/core-benchmarks-clean-stage3` | `cc44cce8f1d3ccc97a5d4ef3bba9cc9c6efb7b4b` | ANCESTOR | ‚Äî |
-| `chat/core-coder-research-20260917` | `51bb1860c17bc86c104d4b164367ca2d0f541649` | ANCESTOR | ‚Äî |
-| `chat/knowledge-record-dedup-probe-20260916` | `e0d2987947ed4d2261996527340fb7f42da18b82` | DELTA | 0/0/1 |
-| `chat/large-knowledge-alias-safety-20260916` | `34ce75a02ea9f37cb3ccabc03fb0d014a502c29c` | DELTA | 0/4/0 |
-| `chat/large-knowledge-consolidated-20260916` | `575575b46cf12a9234e5de04441ccb0481f75ded` | DELTA | 0/3/3 |
-| `chat/large-knowledge-final-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | ‚Äî |
-| `chat/large-knowledge-hard-gates-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | ‚Äî |
-| `chat/large-knowledge-perf-continue-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | ‚Äî |
-| `chat/large-knowledge-perf-harness-20260916` | `a4c64e0f9f7bbc9394dc947f6d3aeb96596dcdf4` | DELTA | 0/2/2 |
-| `chat/large-knowledge-record-dedup-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | ‚Äî |
-| `chat/large-knowledge-windows-bootstrap-20260916` | `a395070ac64fe154474159c2547b4ecb2a5b8e26` | DELTA | 0/2/0 |
-| `chat/large-knowledge-windows-bootstrap-port-20260916` | `612c834b6e41747b3219675ce314b1a472502f20` | ANCESTOR | ‚Äî |
-| `chatgpt/aurorafox-kb-v7-server` | `aedb76d1ad2cbdaa5ac66700391e3f851bb48351` | DELTA | 2/0/0 |
-| `coord/ci-scheduling-20260916` | `8507b8b8db10bb59276f6e8b6a50c65a6043c261` | DELTA | 0/5/0 |
-| `coord/updater-contract-drift-20260916` | `22d95766482a095cee429f6f12cfdb0147cc0f42` | DELTA | 1/0/0 |
-| `coord/work-ui-integration-20260916` | `218a5a83d1e7d0a90ad612415e6aae02fad28045` | DELTA | 13/4/0 |
-| `desktop-ui-smoke-v1` | `364f40c678ca4f733c940597e1685680ab47ddb8` | DELTA | 0/2/0 |
-| `diag/android-apk-stage-split` | `b8fb2f936d9e86235751efca235b2d9fe01691e0` | DELTA | 0/3/0 |
-| `feat/premium-fox-adaptive-voice` | `961186474521a04c61b54ce3cce5ce1b3948412d` | ANCESTOR | ‚Äî |
-| `file-intelligence-epub-rar-v1` | `a187628b65ac8b4d60dd7a8d3c750d52a72de26d` | DELTA | 0/2/2 |
-| `fix/android-apk-gate-timeout` | `cd3841372cfff7d97b42f701f77685233fcdbf6a` | DELTA | 5/16/0 |
-| `fix/reg-ru-ssh-availability` | `08026f02cadf67cc07e63a1933ce214dfc4d9659` | DELTA | 0/2/0 |
-| `fix/ui-polish-2026-09-16` | `5336e8388e745dbffa3e460e74296bde09c132ce` | DELTA | 15/8/0 |
-| `fix/ui-visual-2026-09-17` | `8feed40e3327b8ea02bb0ad6b1d23b17be7dd0a9` | ANCESTOR | ‚Äî |
-| `main` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | ‚Äî |
-| `model-bootstrap-e2e/v1` | `f5a2ce0762ef008e18811880a8e6cf4e5edf4f01` | DELTA | 0/0/0 |
-| `model-bootstrap-e2e/v2` | `924e8a2f7bca3b090934ab104a7b5a3984f8acce` | DELTA | 0/0/0 |
-| `ocr-backup-437d` | `437d513523cb712f0cd2c08bab3a5908d8794625` | DELTA | 2/12/1 |
-| `ocr-backup-old` | `5bf5676499dba42a4369de9a1704c1530ad36d43` | DELTA | 0/5/0 |
-| `ocr-backup-pre-d2065b2` | `53e9f06712fe6318b1798954cdf69a5d4dc691e9` | DELTA | 4/11/1 |
-| `ocr-noop-temp` | `9eaf9d08e49c7ff5928cdcac6d90eacc905cc5ca` | DELTA | 0/5/0 |
-| `ocr-replay-temp` | `da44196223de58abb3126c045bf68bc0c9e68fd0` | ANCESTOR | ‚Äî |
-| `ocr-work-fresh` | `5436eec13e34236cf7b6482bc934dfebd8223d73` | ANCESTOR | ‚Äî |
-| `release-ci-validation` | `d9e717077dc9a667c0e616ce204b98c295b6c2c9` | DELTA | 8/23/1 |
-| `release-v1.1.0.0` | `f138ded4d7901973a0d0b717df4e41fc70563b7d` | DELTA | 0/3/0 |
-| `release/v1.4-integration` | `99b2c144dbeb675caafb527ad528f5db18a32b50` | ANCESTOR | ‚Äî |
-| `semantic-memory-v1` | `158f021bfcdf3afb5622687e8ac84f9be6543ea9` | DELTA | 0/5/0 |
-| `sync-main-ui-owner-assets-2026-09-16` | `34872816166cd85b70ed6d005c59a6f495d2c475` | DELTA | 0/0/0 |
-| `tmp-ignore` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | ‚Äî |
-| `tmp-main-for-voice-sync` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | ‚Äî |
-| `tmp-main-for-voice-sync-2` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | ‚Äî |
-| `tmp-main-for-voice-sync-final` | `031aebaad16fc25a39dfc45c58f96fadb658cac2` | ANCESTOR | ‚Äî |
-| `tmp-never-use` | `c41a9996692d4588592ecf5735e2c72a10ceb9f2` | ANCESTOR | ‚Äî |
-| `validation/v1.2.0.0-full` | `6bfbecd3cf2023d0932e1ca4733917c9ea8ef1c5` | DELTA | 0/0/0 |
-| `verify-v1.1.0.0-artifact` | `fd235d6deab6d98e8697f0fc25f730aea2ccb392` | DELTA | 0/0/0 |
-| `visual-assets-fix-v1` | `ef49029307bf7b201259fde5e65905495b5aec4e` | DELTA | 0/4/0 |
-| `visual-ui-assets-v1.1.2.2` | `13d83aed7b2d15ab5a6bfe2a6613928f30e0f56a` | DELTA | 0/0/0 |
-| `visual-ui-v1.1.2.2` | `8d11c0a477595fea658a37aed2552798bca46776` | DELTA | 0/1/5 |
-| `voice-android-female-supertonic-20260916` | `758961b2bd93be994e5299e8f2051d09688b2832` | ANCESTOR | ‚Äî |
-| `voice-quality-android-female-supertonic-20260916` | `6cfa3316e6837a175cecdd79fd0ecc4b0e4ca393` | ANCESTOR | ‚Äî |
-| `voice-quality-native-prosody-20260916` | `cea8142818b9d612adc468dc522332ad8ceb3304` | DELTA | 3/1/0 |
-| `voice-quality-native-prosody-integration-20260916` | `345934b37e12f648a1c919515818bb5b1b949092` | DELTA | 0/4/0 |
-| `voice-quality-ssml-ab-20260916` | `7d9655421da6a74cd7089196ce6b8480b200713f` | DELTA | 0/2/3 |
-| `voice-quality-targeted-prosody-20260916` | `fae479d469706b2e3eff6356222eb4071fee72e2` | DELTA | 0/1/0 |
-| `windows-package-fix-v1` | `39e785fe020e4ba1597a2251d42131d511d0920b` | DELTA | 0/1/0 |
-| `windows-package-validation-v1` | `77e29540f955bfdae84115831a08f1fa7ce6e443` | DELTA | 0/0/0 |
-| `windows-stability-ui-v1` | `ae0d4ee0f2b6996c788a47131d88a9bebf036dc4` | DELTA | 1/5/0 |
-| `windows-ui-stabilization-v1` | `23c5a48bc110c96b0a582629f81fed8fe585cea7` | DELTA | 0/2/1 |
-| `work/coordination-2026-09-16` | `72b0368056fd43028c6f99d7034797a12767bb1d` | DELTA | 0/2/1 |
-| `x-temp-ocr` | `5436eec13e34236cf7b6482bc934dfebd8223d73` | ANCESTOR | ‚Äî |
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–∞ –≤—ã—à–µ; branch deletion –µ—â—ë –æ–∂–∏–¥–∞–µ—Ç actual CI/readback.
-REMAINING: Windows installed voice/bridges/package, production Knowledge>=1GiB, physical devices/human UI+voice, deployment/mail/rollback/signing –∏ final same-head acceptance ‚Äî10/20 checkpoints —Ä–∞–∑–¥–µ–ª58.
-BLOCKERS: —Å—Ç–∞—Ä—ã–π Windows timeout –Ω–µ –ø—Ä–∏–∑–Ω–∞–Ω –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–Ω—ã–º –±–µ–∑ –Ω–æ–≤–æ–≥–æ phase/acceptance evidence; –Ω–∏–∫–∞–∫–∏—Ö –ª–æ–∂–Ω—ã—Ö release approvals.
-NEXT: –æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å —ç—Ç—É –∞—Ç–æ–º–∞—Ä–Ω—É—é –ø–∞—Ä—Ç–∏—é –ø–æ–≤–µ—Ä—Ö96beca –≤ PR92, –ª–∏—á–Ω–æ –ø—Ä–æ—á–∏—Ç–∞—Ç—å fast process-contract/file-intelligence/retire job, —Å–≤–µ—Ä–∏—Ç—å branch deletion readback; –∑–∞—Ç–µ–º –¥–æ–≤–µ—Å—Ç–∏ –∫–æ–Ω–∫—Ä–µ—Ç–Ω—É—é Windows —Ñ–∞–∑—É –ø–æ logs. –ù–µ bump/merge/tag/release –¥–æ –≤—Å–µ—Ö –æ–±—è–∑–∞—Ç–µ–ª—å–Ω—ã—Ö gates. –ï—Å–ª–∏ —á–∞—Ç –æ—Å—Ç–∞–Ω–æ–≤–∏—Ç—Å—è, —Å–µ–∫—Ü–∏—è60 –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç –¥–µ–π—Å—Ç–≤–æ–≤–∞—Ç—å; —ç—Ç–æ—Ç AFTER —É—Ç–æ—á–Ω—è–µ—Ç –∞–∫—Ç—É–∞–ª—å–Ω—ã–π –∫–æ–¥/—Ä–µ–µ—Å—Ç—Ä –∏ –∑–∞–º–µ–Ω—è–µ—Ç —É—Å—Ç–∞—Ä–µ–≤—à–∏–µ —Å–≤–µ–¥–µ–Ω–∏—è –æ–± –æ–∂–∏–¥–∞—é—â–∏—Ö96beca CI.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-### AFTER: —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–æ–µ —É–¥–∞–ª–µ–Ω–∏–µ –∏ –Ω–æ–≤—ã–µ –±—ã—Å—Ç—Ä—ã–µ CI-–¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–∞
-
-–û–ø—É–±–ª–∏–∫–æ–≤–∞–Ω remote commit `8ac6bd1a4f2925881c8378812bd8d1949456a341`, tree `69170b8eff7db3e1d52999b56b52225a256e6d43`, parent96beca. –í—Å–µ14 GitHub blob SHA —Å–≤–µ—Ä–µ–Ω—ã —Å –ª–æ–∫–∞–ª—å–Ω—ã–º git hash-object, fetch –∏ diff HEAD/FETCH_HEAD –ø—É—Å—Ç–æ–π. –õ–æ–∫–∞–ª—å–Ω—ã–π commit2bb660a ‚Äî —Ç–æ—Ç –∂–µ –∫–æ–¥, –ù–ï remote identity.
-
-Retire run35349142205/job105612779076 SUCCESS; actual checkout8ac6bd1,6 AURORA_BRANCH_DELETED, –∫–∞–∂–¥–∞—è —Å exact lease –∏ API readback. –£–¥–∞–ª–µ–Ω—ã –∏–º–µ–Ω–Ω–æ6 –≤–µ—Ç–æ–∫ –∏–∑ —Ñ–∏–∫—Å–∏—Ä–æ–≤–∞–Ω–Ω–æ–≥–æ BEFORE —Å–ø–∏—Å–∫–∞: `chat-2026-09-17-work-computer-autonomy-please-stop`, `tmp-ignore`, `tmp-main-for-voice-sync`, `tmp-main-for-voice-sync-2`, `tmp-main-for-voice-sync-final`, `tmp-never-use`. –û—à–∏–±–∫–∞ –ø—Ä–µ–¥—ã–¥—É—â–µ–≥–æ –∫–æ–º–º–µ–Ω—Ç–∞—Ä–∏—è ¬´—Å–µ–º—å¬ª –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∞: —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∏–π manifest —Å–æ–¥–µ—Ä–∂–∏—Ç6 entries (–≤–≤–æ–¥–Ω—ã–π docstring helper —Å–æ —Å–ª–æ–≤–æ–º seven –∫–æ—Å–º–µ—Ç–∏—á–µ—Å–∫–∏ —É—Å—Ç–∞—Ä–µ–ª, –ª–æ–≥–∏–∫–∞ —É–¥–∞–ª–µ–Ω–∏—è –æ–ø—Ä–µ–¥–µ–ª—è–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ —à–µ—Å—Ç—å—é exact-SHA entries). –ü–æ–≤—Ç–æ—Ä–Ω–æ–µ —á—Ç–µ–Ω–∏–µ –æ–±–µ–∏—Ö —Å—Ç—Ä–∞–Ω–∏—Ü GitHub branches –ø–æ–¥—Ç–≤–µ—Ä–¥–∏–ª–æ117 –≤–º–µ—Å—Ç–æ123; –≤—Å–µ6 refs –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—Ç, main031aebaad16fc25a39dfc45c58f96fadb658cac2 –Ω–µ–∏–∑–º–µ–Ω–µ–Ω. –£–∫–∞–∑–∞–Ω–Ω—ã–µ SHA/—Ä–∞–±–æ—Ç—ã —Å–æ—Ö—Ä–∞–Ω–µ–Ω—ã –≤ –∏—Å—Ç–æ—Ä–∏–∏ –∏ —Ä–µ–µ—Å—Ç—Ä–µ –≤—ã—à–µ. –í—Å–µ72 DELTA branches –∏ canonical lanes —Å–æ—Ö—Ä–∞–Ω–µ–Ω—ã.
-
-Windows run35349142330/process-contract job105612779804 SUCCESS –Ω–∞8ac6bd1: exit17 preserved, parent-exit0 –≤–µ—Ä–Ω—É–ª—Å—è –±–µ–∑ –æ–∂–∏–¥–∞–Ω–∏—è descendant, owned pwsh/conhost stopped; timeout1sec refused –∏ parent cleanup; AURORA_WINDOWS_BOUNDED_PROCESS_SMOKE_OK. –≠—Ç–æ —Ä–µ–∞–ª—å–Ω–æ –≤—ã–ø–æ–ª–Ω–µ–Ω–æ Windows CI, –Ω–µ –ª–æ–∫–∞–ª—å–Ω—ã–π PowerShell. Package job105612934621 queued –Ω–∞ –º–æ–º–µ–Ω—Ç –∑–∞–ø–∏—Å–∏; —É—Å–ø–µ—à–Ω–∞—è regression –ù–ï –ø—Ä–∏–Ω–∏–º–∞–µ—Ç installer/voice.
-
-Core/Voice run35349141942/file-intelligence job105612778995 SUCCESS –Ω–∞8ac6bd1; –ª–∏—á–Ω–æ –ø—Ä–æ—á–∏—Ç–∞–Ω job log:19 passed in0.70s (parser/index/EPUB/RAR). Windows-integration105612778743 –∏ python-voice105612778997 —Ç–∞–∫–∂–µ SUCCESS. –û–±—â–∏–π godot-core –µ—â—ë in_progress; –æ—Å—Ç–∞–ª—å–Ω—ã–µ —Ç—è–∂—ë–ª—ã–µ same-head gates –Ω–µ –æ–±—ä—è–≤–ª—è—Ç—å –∑–µ–ª—ë–Ω—ã–º–∏ –∑–∞—Ä–∞–Ω–µ–µ.
-
-–≠—Ç–∞ –ø–æ—Å–ª–µ–¥—É—é—â–∞—è journal-only –∑–∞–ø–∏—Å—å —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∏–µ —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã, –ù–ï –º–µ–Ω—è–µ—Ç –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω—ã–π –∫–æ–¥8ac6bd1 –∏ –ù–ï —è–≤–ª—è–µ—Ç—Å—è –Ω–æ–≤–æ–π final same-head release acceptance. –ü—Ä–∏ —Å–ª–µ–¥—É—é—â–µ–º –Ω–∞—Å—Ç–æ—è—â–µ–º –∏–∑–º–µ–Ω–µ–Ω–∏–∏ –∏—Å–ø—Ä–∞–≤—å –∫–æ—Å–º–µ—Ç–∏—á–µ—Å–∫–∏–π docstring helper, –Ω–µ –ø–µ—Ä–µ–∑–∞–ø—É—Å–∫–∞—è –¥–æ—Ä–æ–≥—É—é —É–ø–∞–∫–æ–≤–∫—É —Ç–æ–ª—å–∫–æ —Ä–∞–¥–∏ —á–∏—Å–ª–∞ –≤ –∫–æ–º–º–µ–Ω—Ç–∞—Ä–∏–∏.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE:6 –¥–æ–∫–∞–∑–∞–Ω–Ω—ã—Ö aliases —É–¥–∞–ª–µ–Ω—ã —Å readback;36 –ª–æ–∫–∞–ª—å–Ω—ã—Ö tests, –Ω–æ–≤–∞—è Windows lifecycle regression –∏ file-intelligence CI –∑–µ–ª—ë–Ω—ã–µ.
-REMAINING:10 checkpoints —Ä–∞–∑–¥–µ–ª58;72 —Å—Ç–∞—Ä—ã—Ö DELTA –≤–µ—Ç–∫–∏ —Ç—Ä–µ–±—É—é—Ç –≤—ã–±–æ—Ä–æ—á–Ω–æ–≥–æ —Ñ—É–Ω–∫—Ü–∏–æ–Ω–∞–ª—å–Ω–æ–≥–æ reconcile; –ø–æ–ª–Ω–æ–µ –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–æ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω–æ–≥–æ Windows voice/bridges –µ—â—ë –Ω–µ –ø–æ–ª—É—á–µ–Ω–æ.
-BLOCKERS: –ø—Ä–µ–∂–Ω–∏–π Windows timeout source96beca, –Ω–æ–≤—ã–π package queued; –Ω–∞—Å—Ç–æ—è—â–∏–π production Knowledge corpus/devices/deployment/signing –µ—â—ë –Ω–µ –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–µ–Ω—ã.
-NEXT: —á–∏—Ç–∞—Ç—å Windows package35349142330/job105612934621 –ø–æ—Å–ª–µ –∑–∞–ø—É—Å–∫–∞ –∏ –Ω–æ–≤—ã–µ —Ñ–∞–∑–æ–≤—ã–µ installer logs; –∏—Å–ø—Ä–∞–≤–ª—è—Ç—å –∫–æ–Ω–∫—Ä–µ—Ç–Ω—ã–π —Å–±–æ–π –±–µ–∑ –æ—Å–ª–∞–±–ª–µ–Ω–∏—è checks. –û–±—ã—á–Ω—ã–π —á–∞—Ç –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç –ø–æ —Ä–∞–∑–¥–µ–ª—É60 –∏ —ç—Ç–æ–º—É —Ä–µ–µ—Å—Ç—Ä—É; –ø–æ—Å–ª–µ –æ—Å—Ç–∞–Ω–æ–≤–∫–∏ —Ç–µ–∫—É—â–∏–π –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—å –≤ —Ñ–æ–Ω–µ –Ω–µ —Ä–∞–±–æ—Ç–∞–µ—Ç. PR92 –æ—Å—Ç–∞—ë—Ç—Å—è draft, –≤–µ—Ä—Å–∏—è1.3.0.0/code100005, bump/main/tag/release –Ω–µ –≤—ã–ø–æ–ª–Ω–µ–Ω—ã.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 62. BEFORE: —ç–∫–æ–Ω–æ–º–Ω–∞—è –ø–∞—Ä—Ç–∏—è –ø–æ –Ω–∞—Å—Ç–æ—è—â–∏–º –Ω–æ–≤—ã–º —Å–±–æ—è–º
-
-TAKEOVER WORK-2026-09-17-FINAL-RELEASE ACTIVE. Fresh main031aeba, PR92/headbd219fc, —Ä–µ–∞–ª–∏–∑–∞—Ü–∏—è8ac6bd1. –ë–µ—Ä—É `android_plugin/setup_native.ps1`, `tests/android_native_download_smoke.ps1`, `.github/workflows/android-plugin-ci.yml`, `benchmarks/core/code_specialist_smoke.gd` –∏ —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π –æ–±—â–∏–π –∂—É—Ä–Ω–∞–ª; intended BUILD diagnostics/network robustness, accumulated MINOR1.4.0.0 remains version-last. –°—Ç–∞—Ä—ã–µ claims reconcile –µ–¥–∏–Ω—ã–º –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª–µ–º; –¥—Ä—É–≥–∏–µ —á–∞—Ç—ã –Ω–µ –∑–∞–ø—É—Å–∫–∞—é.
-
-Core run35349142031/job105612828523/artifact10549936248 SHA256a0178c7fc04e5075d34ff00eb2b7cf3e31e59fa9fea511414c6b3892326bfd7e:7/8. Refactor —Ç–µ–ø–µ—Ä—å PASS, generate_tests –ø–æ—Å–ª–µ bounded repair incomplete. Report –ø–æ—Ç–µ—Ä—è–ª raw –æ—Ç–≤–µ—Ç–∞: –∏—Å–ø—Ä–∞–≤–∏—Ç—å bounded diagnostic evidence, –ù–ï –∑–∞—è–≤–ª—è—Ç—å –≥–µ–Ω–µ—Ä–∞—Ç–æ—Ä –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–Ω—ã–º –∏ –ù–ï –¥–æ–±–∞–≤–ª—è—Ç—å canned tests/–æ—Å–ª–∞–±–ª—è—Ç—å >=2 cases. Android run35349142055/job105612778791: GitHub Server Error –Ω–∞ setup_native.ps1:85 –ø—Ä–∏ –∑–∞–≥—Ä—É–∑–∫–µ sherpa1.13.4. –î–æ–±–∞–≤–∏—Ç—å –º–∞–∫—Å–∏–º—É–º3 –ø–æ–ø—ã—Ç–∫–∏ —Å –≤—Ä–µ–º–µ–Ω–Ω—ã–º —Ñ–∞–π–ª–æ–º/cleanup, –Ω–µ –º–µ–Ω—è—Ç—å pinned hashes/revisions –∏ –Ω–µ –¥–µ–ª–∞—Ç—å unbounded retry. Windows35349142330/job105612934621 –∏–¥—ë—Ç Build installer, —Å–æ—Ö—Ä–∞–Ω–∏—Ç—å run. –†–∞–±–æ—Ç–∞ –∏–∑ —Å—Ç–∞—Ä—ã—Ö –≤–µ—Ç–æ–∫ —É–∂–µ —Å—Ä–∞–≤–Ω–∏–≤–∞–ª–∞—Å—å; —Å–≤–µ–∂–∏–µ —Ñ—É–Ω–∫—Ü–∏–æ–Ω–∞–ª—å–Ω—ã–µ –æ—à–∏–±–∫–∏ –∏–º–µ—é—Ç –ø—Ä–∏–æ—Ä–∏—Ç–µ—Ç –Ω–∞–¥ blind merge —Å—Ç–∞—Ä—ã—Ö workflows.
-
-### AFTER: –Ω–µ–±–æ–ª—å—à–∞—è —Å–æ–≥–ª–∞—Å–æ–≤–∞–Ω–Ω–∞—è –ø–∞—Ä—Ç–∏—è –±–µ–∑ –ø–æ–≤—Ç–æ—Ä–µ–Ω–∏—è —Å—Ç–∞—Ä—ã—Ö —Ä–∞–±–æ—Ç
-
-–†–µ–∞–ª–∏–∑–æ–≤–∞–Ω –º–∞–∫—Å–∏–º—É–º3 download attempts, TimeoutSec600, –æ–≥—Ä–∞–Ω–∏—á–µ–Ω–Ω–∞—è –ø–∞—É–∑–∞3/6sec; HTTP4xx –∫—Ä–æ–º–µ429 –Ω–µ retry, –≤—Ä–µ–º–µ–Ω–Ω—ã–π .download —É–¥–∞–ª—è–µ—Ç—Å—è –ø—Ä–∏ –∫–∞–∂–¥–æ–º —Å–±–æ–µ –∏ –≤ finally, cache destination –ø—É–±–ª–∏–∫—É–µ—Ç—Å—è —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ –∑–∞–≤–µ—Ä—à—ë–Ω–Ω–æ–π –∑–∞–≥—Ä—É–∑–∫–∏. –í—Å–µ native revisions/hash/size assertions —Å–æ—Ö—Ä–∞–Ω–µ–Ω—ã. –ù–æ–≤–∞—è PowerShell fault-injection regression –ø—Ä–æ–≤–µ—Ä—è–µ—Ç interrupted partial‚Üícomplete retry, cache reuse, –æ–∫–æ–Ω—á–∞—Ç–µ–ª—å–Ω—ã–π –æ—Ç–∫–∞–∑ –ø–æ—Å–ª–µ3 attempts –∏ –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–µ –ø–æ–≤—Ä–µ–∂–¥—ë–Ω–Ω–æ–≥–æ cache/partial; wired –ø–µ—Ä–µ–¥ –¥–æ—Ä–æ–≥–∏–º–∏ Android toolchain/build steps. –õ–æ–∫–∞–ª—å–Ω–æ–≥–æ pwsh –Ω–µ—Ç, –µ—ë pass –µ—â—ë –ù–ï –∑–∞—è–≤–ª–µ–Ω.
-
-Core diagnostic report —Ç–µ–ø–µ—Ä—å —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç returned_ok, test_code_excerpt –∏ rejected_response_excerpt –º–∞–∫—Å–∏–º—É–º4000chars. –ì–µ–Ω–µ—Ä–∞—Ü–∏—è —Ç–µ—Å—Ç–æ–≤ –ù–ï –æ–±—ä—è–≤–ª—è–µ—Ç—Å—è –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–Ω–æ–π; –Ω–µ—Ç canned fallback/—É–≤–µ–ª–∏—á–µ–Ω–∏—è inference retries/–æ—Å–ª–∞–±–ª–µ–Ω–∏—è two-case gate. –ü—Ä–∏—á–∏–Ω—É –Ω–µ–ø–æ–ª–Ω–æ–≥–æ JSON —Å–ª–µ–¥—É—é—â–∞—è real-Core –ø—Ä–æ–≤–µ—Ä–∫–∞ –ø–æ–∫–∞–∂–µ—Ç –Ω–µ–ø–æ—Å—Ä–µ–¥—Å—Ç–≤–µ–Ω–Ω–æ.
-
-–õ–æ–∫–∞–ª—å–Ω–æ8 passed0.03s: test_core_specialist_team_runtime_contract.py –∏ test_android_voice_supertonic_contract.py. Godot4.7.1 --check-only code_specialist_smoke.gd exit0. –í—Å–µ workflow YAML parsed, git diff --check clean. –õ–∏—á–Ω–æ —Å–æ–ø–æ—Å—Ç–∞–≤–ª–µ–Ω—ã —Å—Ç–∞—Ä—ã–µ –≤–µ—Ç–∫–∏: chatgpt/aurorafox-kb-v7-server aedb76d —Å–æ–¥–µ—Ä–∂–∏—Ç api/__init__.py –∏ api/knowledge_bundle.py —É–∂–µ –∏–¥–µ–Ω—Ç–∏—á–Ω—ã–µ –∫–∞–Ω–¥–∏–¥–∞—Ç—É; coord/updater-contract-drift-20260916 22d9576 —Å–æ–¥–µ—Ä–∂–∏—Ç test_core_candidate_promotion.py —É–∂–µ –∏–¥–µ–Ω—Ç–∏—á–Ω—ã–π. –ü–µ—Ä–µ–Ω–æ—Å–∏—Ç—å –ø–æ–≤—Ç–æ—Ä–Ω–æ –Ω–µ—á–µ–≥–æ. diag/android-apk-stage-split b8fb2f9 —Å–æ–ø–æ—Å—Ç–∞–≤–ª–µ–Ω–∞ —Å —Ç–µ–∫—É—â–∏–º APK workflow: –∫–∞–Ω–¥–∏–¥–∞—Ç —É–∂–µ –∏–º–µ–µ—Ç stage layout/exact-head guard/—Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ expensive runs –∏ –±–æ–ª–µ–µ —É–∑–∫–∏–µ test selectors, blind merge –≤–µ—Ä–Ω—É–ª –±—ã —Å—Ç–∞—Ä—ã–µ checkout/cancellation contracts. fix/android-apk-gate-timeout cd38413 –∏–º–µ–µ—Ç16 –æ—Ç–ª–∏—á–∞—é—â–∏—Ö—Å—è paths –∏ –Ω–µ –ø–æ–ª—É—á–∞–µ—Ç –ª–æ–∂–Ω–æ–π patch-equivalence –ø—Ä–∏—ë–º–∫–∏.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: bounded native downloader –∏ failure evidence —É–ª—É—á—à–µ–Ω—ã;8 local tests/Godot parse/YAML green; –¥–≤–µ —Å—Ç–∞—Ä—ã–µ –≤–µ—Ç–∫–∏ —Å–æ–¥–µ—Ä–∂–∞—Ç–µ–ª—å–Ω–æ —É–∂–µ –≤–∑—è—Ç—ã.
-REMAINING: —Ä–µ–∞–ª—å–Ω–∞—è Android download regression/build, —Ä–µ–∞–ª—å–Ω—ã–π Test Engineer corrected output, —Ç–µ–∫—É—â–∏–π Windows installer/bridges/installed voice –∏ –æ—Å—Ç–∞–ª—å–Ω—ã–µ10 release checkpoints.
-BLOCKERS: Core35349142031/job105612828523 generate_tests incomplete; Android35349142055/job105612778791 download GitHub server error; Windows35349142330/job105612934621 –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç installer.
-NEXT: –∞—Ç–æ–º–∞—Ä–Ω–æ –æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å —ç—Ç—É –ø–∞—Ä—Ç–∏—é –≤ PR92 –ø–æ–≤–µ—Ä—Öbd219fc, –ø—Ä–æ–≤–µ—Ä–∏—Ç—å –±—ã—Å—Ç—Ä—ã–π native download smoke –∏ —Å–æ—Ö—Ä–∞–Ω–∏—Ç—å —Ç–µ–∫—É—â—É—é expensive Windows evidence; –ø–æ –Ω–æ–≤–æ–º—É bounded rejected-response —á–∏–Ω–∏—Ç—å —Ñ–∞–∫—Ç–∏—á–µ—Å–∫—É—é Test Engineer –ø—Ä–∏—á–∏–Ω—É, –Ω–µ –ø–µ—Ä–µ–∑–∞–ø—É—Å–∫–∞—Ç—å —Å–ª–µ–ø–æ. –°–ª–µ–¥—É—é—â–µ–º—É –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É –ø—Ä–æ–¥–æ–ª–∂–∞—Ç—å –ø–æ —Ä–∞–∑–¥–µ–ª—É60; –∏—Å—Ç–æ—á–Ω–∏–∫ —Ç–µ–∫—É—â–µ–≥–æ SHA ‚Äî PR/ref, canonical version –ø–æ–∫–∞1.3.0.0/code100005.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 63. BEFORE: Knowledge identity –∏ –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–∞ —Å—Ç–∞—Ä—ã—Ö –≤–µ—Ç–æ–∫
-
-WORK-2026-09-17-FINAL-RELEASE ACTIVE, takeover/reconcile –ø—Ä–µ–∂–Ω–∏—Ö lanes –æ–¥–Ω–∏–º –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª–µ–º. Fresh main031aeba, PR92/head ae4f55bcd5291b32580fbe8352782c60658abfa1. Claims: benchmarks/knowledge/run_knowledge_benchmark.py, tests/test_knowledge_report_identity.py, .github/workflows/knowledge-performance.yml, .github/workflows/knowledge-1g-release-gate.yml –∏ —ç—Ç–æ—Ç –∂—É—Ä–Ω–∞–ª. Intended BUILD evidence bugfix, accumulated MINOR1.4.0.0 version-last. Own existing report_identity.py –ø–µ—Ä–µ–∏—Å–ø–æ–ª—å–∑–æ–≤–∞—Ç—å, –Ω–µ –¥—É–±–ª–∏—Ä–æ–≤–∞—Ç—å SHA validation.
-
-–ù–∞–π–¥–µ–Ω –æ—Å—Ç–∞–≤—à–∏–π—Å—è —Ä–µ–∞–ª—å–Ω—ã–π defect: Knowledge platform_runtime_identity.git_sha –±–µ—Ä—ë—Ç—Å—è –∏–∑ GITHUB_SHA, –∫–æ—Ç–æ—Ä—ã–π –ø—Ä–∏ PR –æ–±–æ–∑–Ω–∞—á–∞–µ—Ç merge event –≤–º–µ—Å—Ç–æ –ø—Ä–æ–≤–µ—Ä–µ–Ω–Ω–æ–≥–æ source head. –ü—Ä–æ–≤–µ—Ä—è—Ç—å actual git HEAD –∏ expected –¥–æ –∑–∞–ø—É—Å–∫–∞ expensive benchmark, —Å—á–∏—Ç–∞—Ç—å –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–µ Git/–Ω–µ—Å–æ–≤–ø–∞–¥–µ–Ω–∏–µ hard error, report —Å–æ—Ö—Ä–∞–Ω—è—Ç—å —Å actual SHA. –ù–µ –ø–µ—Ä–µ–ø–∏—Å—ã–≤–∞—Ç—å —Å—Ç–∞—Ä—ã–π foreign report –∏ –Ω–µ –≤—ã–¥–∞–≤–∞—Ç—å —ç—Ç—É metadata —Ä–∞–±–æ—Ç—É –∑–∞ —É—Å–∫–æ—Ä–µ–Ω–∏–µ Knowledge –∏–ª–∏ production1GiB corpus. –¢–µ–∫—É—â–∏–π ownCore35350878591/job105618637412 –µ—â—ë –≤—ã–ø–æ–ª–Ω—è–µ—Ç SpecialistTeam; Windows35349142330/job105612934621 –µ—â—ë installer. Native download smoke –Ω–∞ ae4f55b run35350878384/job105618447139 —É–∂–µ success, native build –µ—â—ë –∏–¥—ë—Ç.
-
-### AFTER: identity correction –∏ –µ—â—ë –æ–¥–Ω–∞ —Å—Ç–∞—Ä–∞—è –≤–µ—Ç–∫–∞ —Å–≤–µ—Ä–µ–Ω–∞
-
-Knowledge –∏—Å–ø–æ–ª—å–∑—É–µ—Ç –µ–¥–∏–Ω—ã–π stdlib checkout_sha helper –∏–∑ benchmarks/core/report_identity.py. –ü—Ä–æ–≤–µ—Ä–∫–∞ actual/expected SHA –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è –î–û logs/Godot/import; –ø–æ–≤—Ç–æ—Ä–Ω–∞—è –ø—Ä–æ–≤–µ—Ä–∫–∞ source_sha –ø–µ—Ä–µ–¥ report –∑–∞–ø—Ä–µ—â–∞–µ—Ç relabel –ø—Ä–∏ –∏–∑–º–µ–Ω–µ–Ω–∏–∏ HEAD –≤–æ –≤—Ä–µ–º—è —Ä–∞–±–æ—Ç—ã. platform_runtime_identity.git_sha ‚Äî –Ω–∞—Å—Ç–æ—è—â–∏–π HEAD; GITHUB_SHA –Ω–µ –∏—Å–ø–æ–ª—å–∑—É–µ—Ç—Å—è. –û–±–µ Knowledge workflows –ø–µ—Ä–µ–¥–∞—é—Ç exact PR-head/normal SHA —á–µ—Ä–µ–∑ AURORAFOX_BENCHMARK_EXPECTED_SHA; –Ω–æ–≤—ã–µ tests –≤–∫–ª—é—á–µ–Ω—ã –≤ –∏—Ö –±—ã—Å—Ç—Ä—ã–µ contracts –∏ path selectors.
-
-33 passed0.16s: report identity, performance contract/compare, stress gates,1GiB contract, workflow contract; stdlib unittest3 cases0.035s —Ç–∞–∫–∂–µ OK (–Ω–∏–∫–∞–∫–∏—Ö –Ω–æ–≤—ã—Ö pytest dependencies –≤ CI). –†–µ–∞–ª—å–Ω—ã–µ temporary Git repos –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–∞—é—Ç foreign PR merge ignored, mismatch rejects –î–û Godot/—Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏—è report –∏ —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π evidence —Ñ–∞–π–ª, missing Git rejects. YAML –≤—Å–µ—Ö workflows –∏ changed Python compile OK, diff whitespace clean. –≠—Ç–æ –Ω–µ –Ω–æ–≤–∞—è1GiB production acceptance –∏ –Ω–µ —É—Å—Ç—Ä–∞–Ω–µ–Ω–∏–µ Test Engineer –æ—à–∏–±–∫–∏.
-
-–î–æ–ø–æ–ª–Ω–∏—Ç–µ–ª—å–Ω–æ –ø—Ä–æ—á–∏—Ç–∞–Ω—ã api/learning_pull.py –∏ api/learning_daemon.py –∏–∑ autonomy-foundation-2026-08 b16d8cc. –°—Ç–∞—Ä—ã–π daemon –∏—Å–ø–æ–ª—å–∑—É–µ—Ç flush(...,max_seconds=60), –Ω–µ—Å–æ–≤–º–µ—Å—Ç–∏–º—ã–π —Å –Ω—ã–Ω–µ—à–Ω–∏–º LearningSynchronizer.flush(limit); –Ω—ã–Ω–µ—à–Ω–∏–π server –≤—ã–ø–æ–ª–Ω—è–µ—Ç learning.flush(25) –ø–æ—Å–ª–µ —É—Å–ø–µ—à–Ω–æ–≥–æ chat –∏ –∏–º–µ–µ—Ç —è–≤–Ω—ã–π sync endpoint, storage —Ç–µ–ø–µ—Ä—å SQLite/RLock. –û—Ç–¥–µ–ª—å–Ω—ã–π –∞–≤—Ç–æ–Ω–æ–º–Ω—ã–π periodic daemon —ç—Ç–∏–º –ù–ï –¥–æ–∫–∞–∑–∞–Ω: –µ–≥–æ –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—â–∏–π –º–µ—Ö–∞–Ω–∏–∑–º –æ—Å—Ç–∞—ë—Ç—Å—è –∑–∞–¥–∞—á–µ–π reconcile. –í–æ–∑–≤—Ä–∞—â–∞—Ç—å —Å—Ç–∞—Ä—ã–µ daemon/file_lock/store –≤–º–µ—Å—Ç–æ –¥–µ–π—Å—Ç–≤—É—é—â–∏—Ö –º–µ—Ö–∞–Ω–∏–∑–º–æ–≤ –Ω–µ–ª—å–∑—è. –°—Ç–∞—Ä—ã–π remote pull –æ–∂–∏–¥–∞–µ—Ç /v1/learning/pending –∏ /ack –ø–ª—é—Å learning.sync credential ‚Äî —Ç–∞–∫–∏—Ö current server endpoints –Ω–µ—Ç; –Ω–µ–æ–±—Å–ª–µ–¥–æ–≤–∞–Ω–Ω—ã–π remote trust/privacy feature –Ω–µ –æ–±—ä—è–≤–ª—è–µ—Ç—Å—è –ø–µ—Ä–µ–Ω–µ—Å—ë–Ω–Ω—ã–º/–≥–æ—Ç–æ–≤—ã–º. –ù–µ –≤–æ–∑–≤—Ä–∞—â–∞—Ç—å –ø–∞—Ä–∞–ª–ª–µ–ª—å–Ω—ã–µ autonomy journals. –ü–æ–ª–µ–∑–Ω—ã–µ —Ç—Ä–µ–±–æ–≤–∞–Ω–∏—è/–¥–µ–ª—Ç—ã –æ—Å—Ç–∞—é—Ç—Å—è –ø–æ–¥ –µ–¥–∏–Ω—ã–º takeover, –≤–µ—Ç–∫–∞ —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∞.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE:33 local tests+3 stdlib identity cases green, source SHA correction+CI contracts –≤—ã–ø–æ–ª–Ω–µ–Ω—ã, —Å—Ç–∞—Ä—ã–π learning delta –ª–∏—á–Ω–æ —Ä–∞–∑–æ–±—Ä–∞–Ω.
-REMAINING: ownCore generate_tests –∏ Windows installed package/voice gates; –æ—Å—Ç–∞–ª—å–Ω—ã–µ10 release checkpoints —Ä–∞–∑–¥–µ–ª58.
-BLOCKERS: real-Core35350878591/job105618637412 –µ—â—ë –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è; Windows35349142330/job105612934621 –µ—â—ë installer; genuine corpus/devices/deployed/signing acceptance –Ω–µ –ø–æ–ª—É—á–µ–Ω—ã.
-NEXT: –æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å —ç—Ç—É –µ–¥–∏–Ω—É—é –ø–∞—Ä—Ç–∏—é –ø–æ–≤–µ—Ä—Öae4f55b –≤ PR92; —á–∏—Ç–∞—Ç—å –∑–∞–≤–µ—Ä—à—ë–Ω–Ω—ã–π Core artifact —Å bounded Test Engineer response –∏ Windows phase logs, –∏—Å–ø—Ä–∞–≤–ª—è—Ç—å —Ç–æ—á–Ω—ã–π —Å–±–æ–π. –ù–µ —Å—á–∏—Ç–∞—Ç—å —á—É–∂–æ–π SHA/—Å–∏–Ω—Ç–µ—Ç–∏–∫—É/offline smoke —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–º product release. –°–µ–∫—Ü–∏—è60 –æ—Å—Ç–∞—ë—Ç—Å—è –∏–Ω—Å—Ç—Ä—É–∫—Ü–∏–µ–π —Å–ª–µ–¥—É—é—â–µ–º—É –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É; –≤–µ—Ä—Å–∏—è –ø–æ–∫–∞1.3.0.0/code100005, PR92 draft.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 64. BEFORE: takeover/reconcile Windows firewall fix –∏–∑ —Å–≤–µ–∂–µ–≥–æ main
-
-–ï–¥–∏–Ω—ã–π WORK-2026-09-17-FINAL-RELEASE ACTIVE. Fresh main4c6fe649af69c9be0eb080863f0e94b80cc3e082, PR92/head27c5a8a25c335e66e35eec69c76e8117a8368ae0; journal/AGENTS –ø—Ä–µ–¥—ã–¥—É—â–∏–µ –ø—Ä–∞–≤–∏–ª–∞ —Å–æ—Ö—Ä–∞–Ω—è—é—Ç—Å—è. Claims tests/windows_installed_voice_smoke.ps1, tests/test_windows_voice_package.py –∏ –∂—É—Ä–Ω–∞–ª. Intended BUILD test-isolation correction, accumulated MINOR1.4.0.0 deferred. –í main fc582b0 –≤–ª–∞–¥–µ–ª–µ—Ü/–¥—Ä—É–≥–æ–π —á–∞—Ç –≤–Ω—ë—Å loopback firewall fix; –æ–Ω –Ω–µ –≤—Ö–æ–¥–∏—Ç –≤ candidate. –ï–≥–æ IPv6 ::/1+8000::/1 –≤—Å—ë –µ—â—ë –±–ª–æ–∫–∏—Ä—É–µ—Ç ::1, –∞ –ø–æ–ª–Ω—ã–π —Å—Ç–∞—Ä—ã–π —Ñ–∞–π–ª —Ç–µ—Ä—è–µ—Ç offline env/state/WAV assertions –∏ startup logs –∫–∞–Ω–¥–∏–¥–∞—Ç–∞. –ü–µ—Ä–µ–Ω–µ—Å—Ç–∏ –ø–æ–ª–µ–∑–Ω–æ–µ external-address –ø—Ä–∞–≤–∏–ª–æ —Å –∫–æ—Ä—Ä–µ–∫—Ç–Ω—ã–º –∏—Å–∫–ª—é—á–µ–Ω–∏–µ–º IPv6 loopback, —Å–æ—Ö—Ä–∞–Ω–∏—Ç—å –≤—Å–µ —Å–∏–ª—å–Ω—ã–µ candidate checks.
-
-–ü—Ä–æ–≤–µ—Ä–æ—á–Ω—ã–π merge –≤—ã—è–≤–∏–ª add/add conflict, abort –≤—ã–ø–æ–ª–Ω–µ–Ω –±–µ–∑ —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏—è edits; main –∏–Ω—Ç–µ–≥—Ä–∏—Ä—É–µ—Ç—Å—è –ø–æ—Å–ª–µ —ç—Ç–æ–π –∑–∞—è–≤–∫–∏ —Å —è–≤–Ω—ã–º reconcile —Ñ–∞–π–ª–∞. –õ–∏—á–Ω–æ –ø—Ä–æ—á–∏—Ç–∞–Ω latest Windows35362712313/job105711893012 –Ω–∞27c5a8a:install/app –∏ V1.2/V1.3 bridges success, TTS WinError10013;24/25 latest workflows success, Windows failure. Own Core35350878591/job105618637412 –Ω–∞ae4f55b success, –Ω–æ —ç—Ç–æ –Ω–µ same-head current release. –í–µ—Ä—Å–∏—è –Ω–µ –º–µ–Ω—è–µ—Ç—Å—è.
-
-CLAIM64 —Ä–∞—Å—à–∏—Ä–µ–Ω BEFORE –Ω–∞ voice/build_backend.ps1 –∏ voice/python/tts_engine.py: –ª–∏—á–Ω–æ –ø—Ä–æ—á–∏—Ç–∞–Ω exact pinned silero0.5.5 wheel. silero_tts –∏—â–µ—Ç models.yml –≤ package parents –ª–∏–±–æ latest_silero_models.yml –≤ CWD, –ø—Ä–∏ –æ—Ç—Å—É—Ç—Å—Ç–≤–∏–∏ –¥–µ–ª–∞–µ—Ç torch.hub.download_url_to_file –≤–Ω–µ—à–Ω–µ–≥–æ YAML. Install –∑–∞—Ä–∞–Ω–µ–µ –≥—Ä—É–∑–∏—Ç –º–æ–¥–µ–ª—å, –Ω–æ backend builder –Ω–µ –≥–∞—Ä–∞–Ω—Ç–∏—Ä—É–µ—Ç YAML –≤ —Å–≤–æ—ë–º CWD. Firewall-only fix –ù–ï –¥–æ—Å—Ç–∞—Ç–æ—á–Ω–æ–µ –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–æ: packaged backend –¥–æ–ª–∂–µ–Ω —è–≤–Ω–æ –∑–∞–≥—Ä—É–∂–∞—Ç—å —É–∂–µ —Å–∫–∞—á–∞–Ω–Ω—ã–π local package —á–µ—Ä–µ–∑ torch.package.PackageImporter, –±–µ–∑ online manifest lookup. Builder –æ–ø—Ä–µ–¥–µ–ª—è–µ—Ç exact downloaded source package –ø–æ —Å—É—â–µ—Å—Ç–≤—É—é—â–µ–º—É model manifest/config, –∫–æ–ø–∏—Ä—É–µ—Ç –µ–≥–æ –≤ backend/models/silero –∏ –∑–∞–¥–∞—ë—Ç package_path; missing package/manifest ‚Äî build error, runtime download fallback –¥–ª—è packaged path –∑–∞–ø—Ä–µ—â—ë–Ω.
-
-### AFTER: main –∏–Ω—Ç–µ–≥—Ä–∏—Ä–æ–≤–∞–Ω, –∫–æ–Ω—Ñ–ª–∏–∫—Ç —Ä–∞–∑—Ä–µ—à—ë–Ω –±–µ–∑ –ø–æ—Ç–µ—Ä–∏ –∫–∞–Ω–¥–∏–¥–∞—Ç–Ω—ã—Ö –ø—Ä–æ–≤–µ—Ä–æ–∫
-
-–†–∞–∑—Ä–µ—à—ë–Ω –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—ã–π add/add conflict tests/windows_installed_voice_smoke.ps1: —Å–æ—Ö—Ä–∞–Ω–µ–Ω—ã user state/offline environment/restoration, stdout/stderr/working directory, TTS WAV/duration –∏ STT assertions –∫–∞–Ω–¥–∏–¥–∞—Ç–∞; –∏–∑ main –ø–µ—Ä–µ–Ω–µ—Å—ë–Ω external-only firewall. IPv4127/8 –∏ IPv6::1 –∏—Å–∫–ª—é—á–µ–Ω—ã, IPv6 remote range ::2-ffff:... –≤–º–µ—Å—Ç–æ –æ—à–∏–±–æ—á–Ω—ã—Ö ::/1+8000::/1. Main4c6fe64 –≤–∫–ª—é—á–∞–µ—Ç—Å—è –æ—Ç–¥–µ–ª—å–Ω—ã–º parent –ø—Ä–∏ GitHub commit, main –Ω–µ –ø–µ—Ä–µ–ø–∏—Å—ã–≤–∞–µ—Ç—Å—è.
-
-Builder —Ç–µ–ø–µ—Ä—å –æ–ø—Ä–µ–¥–µ–ª—è–µ—Ç —É–∂–µ —Å–∫–∞—á–∞–Ω–Ω—ã–π Silero package –ø–æ —Å—É—â–µ—Å—Ç–≤—É—é—â–µ–º—É –º–æ–¥–µ–ª–∏ manifest –∏ voice config, —Ç—Ä–µ–±—É–µ—Ç local file, –∫–æ–ø–∏—Ä—É–µ—Ç –µ–≥–æ –≤ backend/models/silero/aurorafox-silero.pt –∏ —Ñ–∏–∫—Å–∏—Ä—É–µ—Ç package_path. Runtime –ø—Ä–∏ package_path –∏—Å–ø–æ–ª—å–∑—É–µ—Ç torch.package.PackageImporter.load_pickle –∏ model.to(device); –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—â–∏–π package ‚Äî —è–≤–Ω—ã–π FileNotFoundError –±–µ–∑ fallback/download. –ù–æ—Ä–º–∞–ª—å–Ω—ã–π packaged path –Ω–µ –≤—ã–∑—ã–≤–∞–µ—Ç silero_tts –∏ network manifest. Legacy development path –±–µ–∑ package_path —Å–æ—Ö—Ä–∞–Ω—ë–Ω; installed silence/offline baseline –æ–±—è–∑–∞–Ω packaged config.
-
-–õ–æ–∫–∞–ª—å–Ω–æ19 passed+7 address subtests0.05s: test_windows_voice_package –∏ test_update_backward_compat. –ù–æ–≤–∞—è fault-injection –ø—Ä–æ–≤–µ—Ä–∫–∞ –≤—ã–ø–æ–ª–Ω—è–µ—Ç —Ä–µ–∞–ª—å–Ω—ã–π _load method –∏–∑ AST: local package path/caching/device transfer, online manifest forbidden, missing package refuses. Address coverage –∏—Å–ø–æ–ª—å–∑—É–µ—Ç stdlib ipaddress –∏ –ø—Ä–æ–≤–µ—Ä—è–µ—Ç127/8,::1, external/private/linklocal destinations. Python compile –∏ git diff whitespace OK. –õ–æ–∫–∞–ª—å–Ω–æ–≥–æ Windows/PowerShell –Ω–µ—Ç: –Ω–∞—Å—Ç–æ—è—â–∞—è firewall syntax –∏ real TTS/STT –µ—â—ë —Ç—Ä–µ–±—É—é—Ç CI. –ù–µ–ª—å–∑—è —Å—á–∏—Ç–∞—Ç—å17/19 local tests —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–º –≥–æ–ª–æ—Å–æ–º.
-
-Latest27c5a8a:24/25 workflows success; Windows35362712313/job105711893012 —É—Å—Ç–∞–Ω–æ–≤–∫–∞ –∏ –æ–±–∞ bridges success, TTS WinError10013 failure. Readiness –Ω–µ –ø–æ–≤—ã—à–µ–Ω–∞: Windows installed voice/files/computer checkpoint –µ—â—ë –Ω–µ –ø—Ä–∏–Ω—è—Ç, production corpus/devices/human/deployment/signing –∏ final same-head release gates –æ—Å—Ç–∞—é—Ç—Å—è.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: —Å–≤–µ–∂–∏–π main reconciled, firewall IPv6 –∏—Å–∫–ª—é—á–µ–Ω–∏–µ –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–æ, explicit local TTS package/runtime –∏ regression tests –≤—ã–ø–æ–ª–Ω–µ–Ω—ã.
-REMAINING: –Ω–æ–≤–∞—è installed offline TTS+STT/package acceptance –∏10 release checkpoints —Ä–∞–∑–¥–µ–ª58.
-BLOCKERS: –ø—Ä–µ–∂–Ω–∏–π Windows TTS WinError10013; actual patched Windows run –ø–æ–∫–∞ –Ω–µ –ø–æ–ª—É—á–µ–Ω.
-NEXT: –æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å —ç—Ç—É –∞—Ç–æ–º–∞—Ä–Ω—É—é –ø–∞—Ä—Ç–∏—é –≤ PR92 —Å parents27c5a8a+main4c6fe64, –ø—Ä–æ–≤–µ—Ä–∏—Ç—å Windows build/installed voice. –ñ–î–ê–¢–¨ –∑–∞–≤–µ—Ä—à–µ–Ω–∏—è –Ω–æ–≤–æ–≥–æ Windows run –ø–µ—Ä–µ–¥ –ø–æ–≤—Ç–æ—Ä–Ω–æ–π –ø—Ä–æ–≤–µ—Ä–∫–æ–π (—Å–±–æ—Ä–∫–∞ —Ä–∞–Ω–µ–µ —Ç—Ä–µ–±–æ–≤–∞–ª–∞ –¥–µ—Å—è—Ç–∫–∏ –º–∏–Ω—É—Ç); –µ—Å–ª–∏ –æ–Ω failed ‚Äî —Å—Ä–∞–∑—É —Ä–∞–∑–æ–±—Ä–∞—Ç—å precise log. –°–ª–µ–¥—É—é—â–∏–π —á–∞—Ç –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç –ø–æ —Ä–∞–∑–¥–µ–ª—É60; –Ω–µ–ª—å–∑—è –ø—Ä–æ—Å—Ç–æ –ø–µ—Ä–µ–Ω–æ—Å–∏—Ç—å main —Ñ–∞–π–ª –ø–æ–≤–µ—Ä—Ö —Å–∏–ª—å–Ω–æ–≥–æ –∫–∞–Ω–¥–∏–¥–∞—Ç–∞ –∏–ª–∏ —Å—á–∏—Ç–∞—Ç—å scheduled run pass. –í–µ—Ä—Å–∏—è –ø–æ–∫–∞1.3.0.0/code100005, PR92 draft, release/bump –Ω–µ –≤—ã–ø–æ–ª–Ω–µ–Ω—ã.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 65. BEFORE: —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–π Windows File/Computer –±–µ–∑ —Å–µ—Ç–µ–≤–æ–≥–æ bootstrap
-
-`WORK-2026-09-17-FINAL-RELEASE` –æ—Å—Ç–∞—ë—Ç—Å—è ACTIVE —É –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω–æ–≥–æ –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—è. Fresh GitHub `main` ‚Äî `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head ‚Äî `6705f0ab13ebd46cc0071103df00748cbcf5f062`; PR draft, –≤–µ—Ä—Å–∏—è `1.3.0.0`, Android code `100005`. –¢–µ–∫—É—â–∞—è –ø–∞—Ä—Ç–∏—è –±–µ—Ä—ë—Ç `computer/install_computer.ps1`, `scripts/computer_client.gd`, `build/build_windows.ps1`, –Ω–æ–≤—ã–π Windows installed-services smoke, `.github/workflows/windows-package-ci.yml`, `.github/workflows/release.yml`, —Å–æ–æ—Ç–≤–µ—Ç—Å—Ç–≤—É—é—â–∏–µ contract tests –∏ —ç—Ç–æ—Ç –∂—É—Ä–Ω–∞–ª. Intended bump —ç—Ç–æ–π –Ω–∞–∫–æ–ø–ª–µ–Ω–Ω–æ–π —Ä–µ–ª–∏–∑–Ω–æ–π —Ä–∞–±–æ—Ç—ã –æ—Å—Ç–∞—ë—Ç—Å—è MINOR `1.4.0.0`, version-last.
-
-–ü—Ä–æ–≤–µ—Ä–µ–Ω—ã —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–∏–µ —Ä–µ–∑—É–ª—å—Ç–∞—Ç—ã —Ç–æ—á–Ω–æ–≥–æ head `6705f0a`: Windows Package run `35385401079` SUCCESS, package job `105731284214` SUCCESS. –õ–æ–≥ —Å–æ–¥–µ—Ä–∂–∏—Ç `AURORA_WINDOWS_V12_TO_CURRENT_BRIDGE_OK`, `AURORA_WINDOWS_V13_TRUST_ROOT_REPAIR_OK` –∏ `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK`; —Ç–µ–∫—É—â–∞—è —É—Å—Ç–∞–Ω–æ–≤–∫–∞/–∑–∞–ø—É—Å–∫/—É–¥–∞–ª–µ–Ω–∏–µ –∑–∞–≤–µ—Ä—à–∏–ª–∏—Å—å —Å exit 0. –ê—Ä—Ç–µ—Ñ–∞–∫—Ç Windows diagnostics `10565482935`, digest `sha256:ac26f29a5b50b12bbf6bb19294e3fe2acf41e6d96eb0aa2049fe3da574740a92`; –æ—Å–Ω–æ–≤–Ω–æ–π Windows artifact `10565383330`, digest `sha256:f549d52a98e9b4e396076b27795dc3798185e7e9ffe91e43c9927dff38d33dd8`. Core/Voice run `35385401002` SUCCESS. –í—Å–µ 26 workflow runs, –ø—Ä–∏–≤—è–∑–∞–Ω–Ω—ã–µ GitHub –∫ exact head `6705f0a`, –∑–∞–≤–µ—Ä—à–µ–Ω—ã SUCCESS.
-
-Readiness –ø–æ–∫–∞ –Ω–µ –ø–æ–≤—ã—à–∞–µ—Ç—Å—è: checkpoint —Ä–∞–∑–¥–µ–ª–∞ 58 –æ–±—ä–µ–¥–∏–Ω—è–µ—Ç —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–π Windows offline voice/files/computer. Voice –¥–æ–∫–∞–∑–∞–Ω, File Intelligence portable runtime —É–ø–∞–∫–æ–≤–∞–Ω, –Ω–æ Computer Agent –≤—Å—ë –µ—â—ë –ø–æ–ª—É—á–∞–µ—Ç –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç–∏ —Ç–æ–ª—å–∫–æ —á–µ—Ä–µ–∑ `uv pip install` –ø–æ—Å–ª–µ —É—Å—Ç–∞–Ω–æ–≤–∫–∏ –∏ `ComputerClient` —Ä–∞—Å–ø–æ–∑–Ω–∞—ë—Ç –ª–∏—à—å `.venv`. –≠—Ç–æ –Ω–∞—Ä—É—à–∞–µ—Ç —Ç—Ä–µ–±–æ–≤–∞–Ω–∏–µ –≥–æ—Ç–æ–≤–æ–≥–æ —Å–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω–æ–≥–æ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω–æ–≥–æ –ø—Ä–æ–¥—É–∫—Ç–∞ –±–µ–∑ —Å–µ—Ç–∏. –†–µ—à–µ–Ω–∏–µ: —Å–æ–±–∏—Ä–∞—Ç—å relocatable Computer Python/vendor –ø—Ä–∏ packaging, –∑–∞–ø—É—Å–∫–∞—Ç—å –µ–≥–æ –∫–∞–∫ –æ—Å–Ω–æ–≤–Ω–æ–π –ø—É—Ç—å –∏ –¥–æ–±–∞–≤–∏—Ç—å —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω—ã–π offline HTTP smoke –¥–ª—è File Intelligence –∏ Computer —Å –∑–∞–ø—Ä–µ—Ç–æ–º –≤–Ω–µ—à–Ω–µ–≥–æ —Ç—Ä–∞—Ñ–∏–∫–∞, sandbox write/read –∏ —Ä–µ–∞–ª—å–Ω—ã–º –∞–Ω–∞–ª–∏–∑–æ–º TXT. –ù–µ –æ—Å–ª–∞–±–ª—è—Ç—å permission/master-stop/sandbox/network contracts; –Ω–∏–∫–∞–∫–∏—Ö –≤–Ω–µ—à–Ω–∏—Ö AI/runtime –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç–µ–π.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: exact-head Windows offline voice/bridges –∏ 26/26 workflow SUCCESS –ø–æ–¥—Ç–≤–µ—Ä–∂–¥–µ–Ω—ã –ø–æ job logs/API; –∞—Ä—Ç–µ—Ñ–∞–∫—Ç–Ω—ã–µ digest –∑–∞–ø–∏—Å–∞–Ω—ã.
-REMAINING: installed File/Computer runtime evidence –∏ –æ—Å—Ç–∞–ª—å–Ω—ã–µ 10 checkpoints —Ä–∞–∑–¥–µ–ª–∞ 58.
-BLOCKERS: Computer Agent –≤ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω–æ–º –ø–∞–∫–µ—Ç–µ —Ç—Ä–µ–±—É–µ—Ç post-install network dependency install; production Knowledge pack/devices/human/deployment/signing –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—Ç.
-NEXT: —Å–æ–±—Ä–∞—Ç—å portable Computer runtime, –≤—ã–ø–æ–ª–Ω–∏—Ç—å –ª–æ–∫–∞–ª—å–Ω—ã–µ contracts, –æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å –æ–¥–Ω–æ–π –∞—Ç–æ–º–∞—Ä–Ω–æ–π –ø–∞—Ä—Ç–∏–µ–π –∏ –ø—Ä–∏–Ω—è—Ç—å Windows checkpoint —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ –Ω–æ–≤–æ–≥–æ installed offline services CI marker. –ï—Å–ª–∏ —á–∞—Ç –æ—Å—Ç–∞–Ω–æ–≤–∏—Ç—Å—è, –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É –Ω–∞—á–∞—Ç—å —Å fresh `main` –∏ PR #92/head, –ø—Ä–æ—á–∏—Ç–∞—Ç—å AGENTS.md –∏ —ç—Ç–æ—Ç —Ä–∞–∑–¥–µ–ª, –Ω–µ bump/merge/tag/release –∏ –Ω–µ —Å—á–∏—Ç–∞—Ç—å claim –∑–∞–∫—Ä—ã—Ç—ã–º –±–µ–∑ –Ω–æ–≤–æ–≥–æ Windows job log.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-### AFTER: —Å–∞–º–æ—Å—Ç–æ—è—Ç–µ–ª—å–Ω—ã–π installed Computer runtime –∏ –æ–±—â–∏–π offline services gate
-
-`computer/install_computer.ps1 -PreparePortable` —Ç–µ–ø–µ—Ä—å –∏—Å–ø–æ–ª—å–∑—É–µ—Ç —Ç–æ–ª—å–∫–æ —É–ø—Ä–∞–≤–ª—è–µ–º—ã–π AuroraFox Python 3.11/uv –Ω–∞ build-—ç—Ç–∞–ø–µ, –∫–æ–ø–∏—Ä—É–µ—Ç relocatable Python –∏ —Å—Ç–∞–≤–∏—Ç –∑–∞–≤–∏—Å–∏–º–æ—Å—Ç–∏ –≤ –æ—Ç–¥–µ–ª—å–Ω—ã–π `vendor`; –≥–æ—Ç–æ–≤–Ω–æ—Å—Ç—å –º–æ–¥—É–ª–µ–π –ø—Ä–æ–≤–µ—Ä—è–µ—Ç—Å—è –±–µ–∑ –∑–∞–ø—É—Å–∫–∞ GUI. `build_windows.ps1` —Ç—Ä–µ–±—É–µ—Ç –∏ —É–ø–∞–∫–æ–≤—ã–≤–∞–µ—Ç –æ–±–∞ –∫–∞—Ç–∞–ª–æ–≥–∞, –ø–æ—ç—Ç–æ–º—É –æ–±—ã—á–Ω–æ–º—É –ø–æ–ª—å–∑–æ–≤–∞—Ç–µ–ª—é –Ω–µ –Ω—É–∂–µ–Ω system Python –∏–ª–∏ post-install download. `ComputerClient` –ø—Ä–µ–¥–ø–æ—á–∏—Ç–∞–µ—Ç portable runtime, –ø–µ—Ä–µ–¥–∞—ë—Ç –µ–º—É `PYTHONPATH` —Ç–æ–ª—å–∫–æ –Ω–∞ –º–æ–º–µ–Ω—Ç –∑–∞–ø—É—Å–∫–∞ –∏ –≤–æ—Å—Å—Ç–∞–Ω–∞–≤–ª–∏–≤–∞–µ—Ç –ø—Ä–µ–∂–Ω–µ–µ –æ–∫—Ä—É–∂–µ–Ω–∏–µ; legacy `.venv` –æ—Å—Ç–∞—ë—Ç—Å—è recovery/developer fallback.
-
-–ù–æ–≤—ã–π `windows_installed_local_services_smoke.ps1` –∑–∞–ø—É—Å–∫–∞–µ—Ç—Å—è –∏–∑ —Ä–µ–∞–ª—å–Ω–æ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω–æ–≥–æ –∫–∞—Ç–∞–ª–æ–≥–∞ –ø–æ—Å–ª–µ voice smoke. –î–ª—è –æ–±–æ–∏—Ö Python executables –≤–Ω–µ—à–Ω–∏–µ IPv4/IPv6 destinations –±–ª–æ–∫–∏—Ä—É—é—Ç—Å—è Windows Firewall —Å —Å–æ—Ö—Ä–∞–Ω–µ–Ω–∏–µ–º loopback. Computer –ø—Ä–æ–≤–µ—Ä—è–µ—Ç authenticated capabilities, AuroraFox Core –∫–∞–∫ planning owner –∏ —Ä–µ–∞–ª—å–Ω—ã–π sandbox write/read –ø—Ä–∏ –≤—ã–∫–ª—é—á–µ–Ω–Ω–æ–º degraded exec. File Intelligence –ø—Ä–æ–≤–µ—Ä—è–µ—Ç bundled rus+eng OCR health –∏ —Ç–æ—á–Ω—ã–π UTF-8 TXT analyze. JSON/log evidence –¥–æ–±–∞–≤–ª–µ–Ω—ã –≤ Windows artifact; production release workflow –≤—ã–ø–æ–ª–Ω—è–µ—Ç —Ç–æ—Ç –∂–µ gate. –ü—Ä–æ–≤–µ—Ä–∫–∏ permission/master-stop/sandbox –Ω–µ –æ—Å–ª–∞–±–ª–µ–Ω—ã, –≤–Ω–µ—à–Ω–µ–µ AI –Ω–µ –¥–æ–±–∞–≤–ª–µ–Ω–æ.
-
-–õ–æ–∫–∞–ª—å–Ω–æ: `26 passed, 13 subtests passed` –∑–∞ `0.06s` (`test_windows_voice_package`, Computer routing contracts, local OCR static contracts); Python compile OK; Godot 4.7.1 parse `computer_client.gd` OK; –æ–±–∞ –∏–∑–º–µ–Ω—ë–Ω–Ω—ã—Ö workflow YAML parsed; `git diff --check` clean. –†–∞—Å—à–∏—Ä–µ–Ω–Ω—ã–π —Å—Ç–∞—Ä—ã–π `computer_agent_reliability_test.py` –ª–æ–∫–∞–ª—å–Ω–æ –Ω–µ –∑–∞–ø—É—â–µ–Ω: –¥–æ—Å—Ç—É–ø–Ω–æ–µ test-python –æ–∫—Ä—É–∂–µ–Ω–∏–µ –Ω–µ —Å–æ–¥–µ—Ä–∂–∏—Ç `httpx` –∏ –æ—Å—Ç–∞–Ω–æ–≤–∏–ª–æ—Å—å –ø—Ä–∏ collection –¥–æ —Ç–µ—Å—Ç–∞; —ç—Ç–æ —á–µ—Å—Ç–Ω–æ –Ω–µ —Å—á–∏—Ç–∞–µ—Ç—Å—è product failure –∏–ª–∏ pass. –†–µ–∞–ª—å–Ω—ã–π PowerShell/portable build/installed services —Ç—Ä–µ–±—É—é—Ç Windows CI.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: portable Computer implementation –∏ installed offline Files/Computer gate –≥–æ—Ç–æ–≤—ã; –ª–æ–∫–∞–ª—å–Ω—ã–µ –¥–æ—Å—Ç—É–ø–Ω—ã–µ contracts –∑–µ–ª—ë–Ω—ã–µ; –ø—Ä–µ–∂–Ω–∏–π exact-head Voice/bridges –¥–æ–∫–∞–∑–∞–Ω.
-REMAINING: –æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å –∏ –ø–æ–ª—É—á–∏—Ç—å `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK` –Ω–∞ –Ω–æ–≤–æ–º exact head; —Ç–æ–ª—å–∫–æ —Ç–æ–≥–¥–∞ Windows checkpoint –º–æ–∂–µ—Ç —Å—Ç–∞—Ç—å 11/20.
-BLOCKERS: –ª–æ–∫–∞–ª—å–Ω–æ–≥–æ PowerShell/Windows runtime –Ω–µ—Ç; production Knowledge pack, physical devices/human acceptance, deployment/mail/rollback/signing –æ—Å—Ç–∞—é—Ç—Å—è –≤–Ω–µ—à–Ω–∏–º–∏ release boundaries.
-NEXT: fast-forward publish –ø–æ–≤–µ—Ä—Ö —Å–≤–µ–∂–µ–≥–æ PR #92/head, –ø—Ä–æ–≤–µ—Ä–∏—Ç—å –Ω–æ–≤—ã–π Windows package job –∏ –µ–≥–æ marker/report. –ü—Ä–∏ –æ—Å—Ç–∞–Ω–æ–≤–∫–µ –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É: fresh fetch PR/head –∏ main, —á–∏—Ç–∞—Ç—å —ç—Ç–æ—Ç —Ä–∞–∑–¥–µ–ª; –µ—Å–ª–∏ Windows failed ‚Äî –∏—Å–ø—Ä–∞–≤–∏—Ç—å —Ç–æ—á–Ω—É—é —Ñ–∞–∑—É, –µ—Å–ª–∏ SUCCESS —Å –æ–±–æ–∏–º–∏ voice –∏ files/computer markers ‚Äî –∑–∞–ø–∏—Å–∞—Ç—å 55%, –∑–∞—Ç–µ–º –≤—ã–±—Ä–∞—Ç—å —Å–ª–µ–¥—É—é—â–∏–π –∏–∑ –æ—Å—Ç–∞–≤—à–∏—Ö—Å—è 9 checkpoints. –ù–µ bump/merge/tag/release –∑–∞—Ä–∞–Ω–µ–µ.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 66. BEFORE: —Ç–æ—á–Ω—ã–π File Intelligence port/startup failure –Ω–∞ —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω–æ–º Windows –ø–∞–∫–µ—Ç–µ
-
-`WORK-2026-09-17-FINAL-RELEASE` ACTIVE —É –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω–æ–≥–æ –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—è. Fresh GitHub `main` ‚Äî `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head ‚Äî `1302f112fdd3552da63b5b5113a3c034d37ba9cc`; draft, version `1.3.0.0`/code `100005`. –ë–µ—Ä—É `tests/windows_installed_local_services_smoke.ps1`, `file_intelligence/file_service.py`, `tests/test_windows_voice_package.py` –∏ —ç—Ç–æ—Ç –∂—É—Ä–Ω–∞–ª. Intended accumulated bump MINOR `1.4.0.0`, version-last.
-
-–§–∞–∫—Ç–∏—á–µ—Å–∫–∏–π Windows Package run `35426429648`, package job `105853137492`: build, packaged runtime validation, Inno installer, V1.2/V1.3 bridges, installed EXE –∏ `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK` SUCCESS. Terminating failure —Ç–æ–ª—å–∫–æ –≤ installed local-services smoke: –ø–æ—Å–ª–µ —É—Å–ø–µ—à–Ω–æ–≥–æ Computer —ç—Ç–∞–ø–∞ File health `http://127.0.0.1:18867/health` –Ω–µ –ø–æ—è–≤–∏–ª—Å—è; stdout/stderr –ø—É—Å—Ç—ã, —Å—Ç–∞—Ä—ã–π helper –Ω–µ –∑–∞–ø–∏—Å–∞–ª PID/HasExited/listening sockets. Build log –æ—Ç–¥–µ–ª—å–Ω–æ –¥–æ–∫–∞–∑—ã–≤–∞–µ—Ç `AURORA_FILE_PORTABLE_READY` –∏ `AURORA_COMPUTER_PORTABLE_READY`. PyInstaller `torch.distributed` warnings –Ω–µ –ø—Ä–∏—á–∏–Ω–∞.
-
-–ò—Å—Ö–æ–¥–Ω–∏–∫ —É–∂–µ –≤—ã—Å—Ç–∞–≤–ª—è–ª `AURORAFOX_FILES_PORT=18867`, –∞ `file_service.py` —É–∂–µ —á–∏—Ç–∞–ª –∏–º–µ–Ω–Ω–æ –µ–≥–æ, –ø–æ—ç—Ç–æ–º—É —Å–ª–µ–ø–æ–µ –ø–æ–≤—Ç–æ—Ä–µ–Ω–∏–µ —Ç–æ–π –∂–µ –ø–∞—Ä—ã –Ω–µ —è–≤–ª—è–µ—Ç—Å—è –¥–æ—Å—Ç–∞—Ç–æ—á–Ω—ã–º fix. –ò—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–µ –¥–æ–ª–∂–Ω–æ –∏–º–µ—Ç—å –æ–¥–∏–Ω canonical `AURORAFOX_LOCAL_SERVICES_PORT` —Å backward-compatible `AURORAFOX_FILES_PORT`/`AURORAFOX_API_PORT`, —è–≤–Ω—ã–π `python -m uvicorn file_service:app --host 127.0.0.1 --port <—Ç–æ—Ç –∂–µ –ø–æ—Ä—Ç>`, health URL –∏–∑ —Ç–æ–π –∂–µ –ø–µ—Ä–µ–º–µ–Ω–Ω–æ–π –∏ –æ–∂–∏–¥–∞–Ω–∏–µ —Ñ–∞–∫—Ç–∏—á–µ—Å–∫–æ–≥–æ listen socket. Failure evidence –æ–±—è–∑–∞–Ω–æ —Å–æ–¥–µ—Ä–∂–∞—Ç—å PID, exit state/code, command line, expected-port owner, –æ–±—â–∏–µ listening sockets –∏ logs.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: —Ç–æ—á–Ω—ã–π failing job/phase –ø—Ä–æ—á–∏—Ç–∞–Ω; –ª–æ–∂–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞ Inno/PyInstaller –∏—Å–∫–ª—é—á–µ–Ω–∞ evidence.
-REMAINING: —Ä–µ–∞–ª–∏–∑–æ–≤–∞—Ç—å deterministic port/startup –∏ –ø–æ–¥—Ç–≤–µ—Ä–¥–∏—Ç—å –Ω–æ–≤—ã–º installed Windows marker.
-BLOCKERS: current head `1302f11` red –Ω–∞ File health; readiness –Ω–µ –ø–æ–≤—ã—à–∞—Ç—å.
-NEXT: –∏–∑–º–µ–Ω–∏—Ç—å —Ç–æ–ª—å–∫–æ –∑–∞—è–≤–ª–µ–Ω–Ω—ã–µ —Ñ–∞–π–ª—ã, –≤—ã–ø–æ–ª–Ω–∏—Ç—å local contracts/compile/diff checks, fast-forward publish –≤ PR #92 –∏ —á–∏—Ç–∞—Ç—å –Ω–æ–≤—ã–π Windows job. –û–±—ã—á–Ω–æ–º—É —á–∞—Ç—É –ø–æ—Å–ª–µ –æ—Å—Ç–∞–Ω–æ–≤–∫–∏ –ø—Ä–æ–¥–æ–ª–∂–∞—Ç—å —Å —ç—Ç–æ–≥–æ —Ä–∞–∑–¥–µ–ª–∞ –∏ fresh PR head, –Ω–µ –ø–æ–≤—Ç–æ—Ä—è—Ç—å —É–∂–µ —É—Å–ø–µ—à–Ω—ã–µ installer/voice fixes.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-### AFTER: –µ–¥–∏–Ω—ã–π –ø–æ—Ä—Ç, —è–≤–Ω—ã–π launcher –∏ –¥–∏–∞–≥–Ω–æ—Å—Ç–∏—Ä—É–µ–º–æ–µ –æ–∂–∏–¥–∞–Ω–∏–µ listen
-
-`file_service.py` –≤—ã–±–∏—Ä–∞–µ—Ç –ø–æ—Ä—Ç –≤ –æ–¥–Ω–æ–º –ø–æ—Ä—è–¥–∫–µ: `AURORAFOX_LOCAL_SERVICES_PORT`, —Å–æ–≤–º–µ—Å—Ç–∏–º—ã–π `AURORAFOX_FILES_PORT`, —Å–æ–≤–º–µ—Å—Ç–∏–º—ã–π `AURORAFOX_API_PORT`, –∑–∞—Ç–µ–º product default `8767`. Installed smoke –∑–∞–¥–∞—ë—Ç –≤—Å–µ —Ç—Ä–∏ aliases –æ–¥–Ω–∏–º `$localServicesPort=18867`, –∑–∞–ø—É—Å–∫–∞–µ—Ç —Ç–æ—á–Ω—ã–π –º–æ–¥—É–ª—å —á–µ—Ä–µ–∑ `python -m uvicorn file_service:app --host 127.0.0.1 --port 18867 --log-level info` –∏ —Å—Ç—Ä–æ–∏—Ç health URL –∏–∑ —Ç–æ–≥–æ –∂–µ –∑–Ω–∞—á–µ–Ω–∏—è. –¢–∞–∫–∏–º –æ–±—Ä–∞–∑–æ–º env, launcher –∏ probe –±–æ–ª—å—à–µ –Ω–µ –º–æ–≥—É—Ç —Ä–∞–∑–æ–π—Ç–∏—Å—å.
-
-Wait helper —Å–Ω–∞—á–∞–ª–∞ —Ç—Ä–µ–±—É–µ—Ç –Ω–∞—Å—Ç–æ—è—â–∏–π TCP LISTEN –Ω–∞ –æ–∂–∏–¥–∞–µ–º–æ–º –ø–æ—Ä—Ç—É –∏ –ª–∏—à—å –∑–∞—Ç–µ–º –¥–µ–ª–∞–µ—Ç HTTP —Å 10-second timeout; process refresh –≤—ã–ø–æ–ª–Ω—è–µ—Ç—Å—è –Ω–∞ –∫–∞–∂–¥–æ–π –∏—Ç–µ—Ä–∞—Ü–∏–∏. –ü—Ä–∏ failure —Å–æ—Ö—Ä–∞–Ω—è—é—Ç—Å—è expected port, PID, HasExited/exit code, last request error, Win32 command line, owner –æ–∂–∏–¥–∞–µ–º–æ–≥–æ –ø–æ—Ä—Ç–∞, –≤—Å–µ loopback/all-interface listeners –∏ stdout/stderr. –û–∂–∏–¥–∞–Ω–∏–µ —Ç–µ–ø–µ—Ä—å bounded –ø—Ä–∏–º–µ—Ä–Ω–æ 120 seconds –≤–º–µ—Å—Ç–æ –ø—Ä–µ–∂–Ω–∏—Ö –ø–æ—Å–ª–µ–¥–æ–≤–∞—Ç–µ–ª—å–Ω—ã—Ö HTTP timeouts –¥–æ ~270 seconds.
-
-–õ–æ–∫–∞–ª—å–Ω–æ `27 passed, 13 subtests passed` –∑–∞ `0.10s`; –¥–æ–±–∞–≤–ª–µ–Ω–æ AST-–≤—ã–ø–æ–ª–Ω–µ–Ω–∏–µ –Ω–∞—Å—Ç–æ—è—â–µ–≥–æ PORT assignment —Å canonical/FILES/API/default cases. Python compile –∏ `git diff --check` —É—Å–ø–µ—à–Ω—ã. PowerShell parse/runtime –æ—Å—Ç–∞—ë—Ç—Å—è —Ç–æ–ª—å–∫–æ Windows CI boundary; pass –¥–æ –Ω–µ–≥–æ –Ω–µ –∑–∞—è–≤–ª—è–µ—Ç—Å—è.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: deterministic installed File launcher/port contract –∏ actionable diagnostics —Ä–µ–∞–ª–∏–∑–æ–≤–∞–Ω—ã; local contracts green.
-REMAINING: –Ω–æ–≤—ã–π Windows package installed File/Computer marker –Ω–∞ exact published head.
-BLOCKERS: –ø—Ä–µ–∂–Ω–∏–π run `35426429648` –æ—Å—Ç–∞—ë—Ç—Å—è red evidence; readiness 10/20.
-NEXT: fast-forward publish –æ–¥–Ω–æ–π –ø–∞—Ä—Ç–∏–µ–π –ø–æ–≤–µ—Ä—Ö `1302f11`; —á–∏—Ç–∞—Ç—å –Ω–æ–≤—ã–π Windows job. –ï—Å–ª–∏ failure –ø–æ–≤—Ç–æ—Ä–∏—Ç—Å—è, –∏—Å–ø—Ä–∞–≤–ª—è—Ç—å –ø–æ –Ω–æ–≤—ã–º PID/socket/command/log –¥–∞–Ω–Ω—ã–º; –µ—Å–ª–∏ –æ–±–∞ installed markers SUCCESS ‚Äî –∑–∞–ø–∏—Å–∞—Ç—å Windows checkpoint –∏ 55%.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 67. BEFORE: –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–µ –ª–æ–∂–Ω–æ–≥–æ TXT kind assertion –±–µ–∑ –æ—Å–ª–∞–±–ª–µ–Ω–∏—è content contract
-
-`WORK-2026-09-17-FINAL-RELEASE` ACTIVE —É –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω–æ–≥–æ –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—è. Fresh GitHub `main` ‚Äî `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head ‚Äî `8af10a7c4a47d76e1e3e2b3d75418cc72bb97dd6`; draft, version `1.3.0.0`/code `100005`. Claim: `tests/windows_installed_local_services_smoke.ps1`, relevant File Intelligence contract tests and —ç—Ç–æ—Ç –∂—É—Ä–Ω–∞–ª. Intended accumulated MINOR `1.4.0.0`, version-last.
-
-–§–∞–∫—Ç–∏—á–µ—Å–∫–∏–π Windows run `35438103314`, package job `105884214195`: deterministic port fix —Å—Ä–∞–±–æ—Ç–∞–ª ‚Äî Computer Agent –∑–∞–ø—É—â–µ–Ω, File Intelligence —Å–ª—É—à–∞–µ—Ç `127.0.0.1:18867`, `/health` –∏ bundled rus+eng OCR assertions –ø—Ä–æ–π–¥–µ–Ω—ã. Terminating failure —Ç–æ–ª—å–∫–æ —Å—Ç—Ä–æ–∫–∞ 157 `Installed File Intelligence TXT analysis failed`; voice marker —Ç–∞–∫–∂–µ SUCCESS. –õ–æ–∫–∞–ª—å–Ω–æ–µ –≤—ã–ø–æ–ª–Ω–µ–Ω–∏–µ –Ω–∞—Å—Ç–æ—è—â–µ–≥–æ `_analyze` –Ω–∞ —Ç–æ—á–Ω–æ–º UTF-8 fixture –¥–æ–∫–∞–∑–∞–ª–æ: expected –∏ actual content –∏–¥–µ–Ω—Ç–∏—á–Ω—ã (`33` —Å–∏–º–≤–æ–ª–∞), actual kind ‚Äî `text/code`. –≠—Ç–æ –¥–µ–π—Å—Ç–≤—É—é—â–∏–π –Ω–∞–º–µ—Ä–µ–Ω–Ω—ã–π –∫–æ–Ω—Ç—Ä–∞–∫—Ç: `tests/test_file_intelligence.py` —É–∂–µ —Ç—Ä–µ–±—É–µ—Ç `text/code`, `scripts/attachment_manager.gd` –º–∞—Ä—à—Ä—É—Ç–∏–∑–∏—Ä—É–µ—Ç –µ–≥–æ. –ú–µ–Ω—è—Ç—å service kind –Ω–∞ `text` –æ–∑–Ω–∞—á–∞–ª–æ –±—ã —Ä–µ–≥—Ä–µ—Å—Å–∏—é —Ä–∞–¥–∏ –æ—à–∏–±–æ—á–Ω–æ–≥–æ smoke.
-
-–ò—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–µ: installed smoke –¥–æ–ª–∂–µ–Ω –æ–∂–∏–¥–∞—Ç—å canonical project kind `text/code`, –ø—Ä–æ–¥–æ–ª–∂–∞—Ç—å —Å—Ç—Ä–æ–≥–æ —Å—Ä–∞–≤–Ω–∏–≤–∞—Ç—å —Ç–æ—á–Ω–æ–µ —Å–æ–¥–µ—Ä–∂–∏–º–æ–µ –±–µ–∑ strip/newline normalization –∏ –ø—Ä–∏ –ª—é–±–æ–º —Ä–∞—Å—Ö–æ–∂–¥–µ–Ω–∏–∏ –ø–µ—á–∞—Ç–∞—Ç—å ok/kind/length/bracketed content/full JSON response. –î–æ–±–∞–≤–∏—Ç—å regression, –≤—ã–ø–æ–ª–Ω—è—é—â—É—é –Ω–∞—Å—Ç–æ—è—â–∏–π `_analyze` –∏ –¥–æ–∫–∞–∑—ã–≤–∞—é—â—É—é exact content + kind.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: —Ç–æ—á–Ω–∞—è –ø—Ä–∏—á–∏–Ω–∞ –≤–æ—Å–ø—Ä–æ–∏–∑–≤–µ–¥–µ–Ω–∞ –∏—Å—Ö–æ–¥–Ω—ã–º analyzer, startup/port/package –Ω–µ —è–≤–ª—è—é—Ç—Å—è —Ç–µ–∫—É—â–∏–º blocker.
-REMAINING: –∏—Å–ø—Ä–∞–≤–∏—Ç—å smoke –∏ –ø–æ–ª—É—á–∏—Ç—å installed marker –Ω–∞ –Ω–æ–≤–æ–º Windows run.
-BLOCKERS: head `8af10a7` red —Ç–æ–ª—å–∫–æ –∏–∑-–∑–∞ –Ω–µ–≤–µ—Ä–Ω–æ–≥–æ expected kind; readiness –ø–æ–∫–∞ 10/20.
-NEXT: –º–∏–Ω–∏–º–∞–ª—å–Ω–∞—è contract/test/journal –ø–∞—Ä—Ç–∏—è, local tests, fast-forward publish; –Ω–µ –º–µ–Ω—è—Ç—å production analyzer contract –∏ –Ω–µ –ø–æ–≤—Ç–æ—Ä—è—Ç—å port fix.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-### AFTER: smoke —Å–æ–≥–ª–∞—Å–æ–≤–∞–Ω —Å –¥–µ–π—Å—Ç–≤—É—é—â–∏–º TXT contract
-
-Installed smoke —Ç–µ–ø–µ—Ä—å –æ–∂–∏–¥–∞–µ—Ç –∫–∞–Ω–æ–Ω–∏—á–µ—Å–∫–∏–π –¥–ª—è –ø—Ä–æ–µ–∫—Ç–∞ `kind=text/code`, —Å—Ç—Ä–æ–∏—Ç `/analyze` URL –∏–∑ —Ç–æ–≥–æ –∂–µ `$localServicesPort` –∏ –ø–æ-–ø—Ä–µ–∂–Ω–µ–º—É —Ç—Ä–µ–±—É–µ—Ç —Ç–æ—á–Ω–æ–µ —Ä–µ–≥–∏—Å—Ç—Ä–æ–∑–∞–≤–∏—Å–∏–º–æ–µ —Å–æ–≤–ø–∞–¥–µ–Ω–∏–µ —Å–æ–¥–µ—Ä–∂–∏–º–æ–≥–æ —á–µ—Ä–µ–∑ `-cne`. –ù–∏–∫–∞–∫–æ–π `strip` –∏–ª–∏ –Ω–æ—Ä–º–∞–ª–∏–∑–∞—Ü–∏–∏ –ø–µ—Ä–µ–≤–æ–¥–æ–≤ —Å—Ç—Ä–æ–∫ –Ω–µ –¥–æ–±–∞–≤–ª–µ–Ω–æ. –ü—Ä–∏ —Ä–∞—Å—Ö–æ–∂–¥–µ–Ω–∏–∏ Windows job –Ω–∞–ø–µ—á–∞—Ç–∞–µ—Ç expected/actual kind, –¥–ª–∏–Ω—ã, —Å–æ–¥–µ—Ä–∂–∏–º–æ–µ –≤ —Å–∫–æ–±–∫–∞—Ö –∏ –ø–æ–ª–Ω—ã–π JSON response.
-
-–î–æ–±–∞–≤–ª–µ–Ω –±—ã—Å—Ç—Ä—ã–π regression, –∫–æ—Ç–æ—Ä—ã–π —á–µ—Ä–µ–∑ AST –≤—ã–ø–æ–ª–Ω—è–µ—Ç –Ω–∞—Å—Ç–æ—è—â–∏–µ `_read_text` –∏ `_analyze` –∏–∑ `file_service.py` –Ω–∞ UTF-8 TXT –±–µ–∑ BOM –∏ —Ç—Ä–µ–±—É–µ—Ç –æ–¥–Ω–æ–≤—Ä–µ–º–µ–Ω–Ω–æ `text/code` –∏ —Ç–æ—á–Ω–æ–µ –∏—Å—Ö–æ–¥–Ω–æ–µ —Å–æ–¥–µ—Ä–∂–∏–º–æ–µ. –õ–æ–∫–∞–ª—å–Ω–æ: `28 passed, 13 subtests passed` –∑–∞ `0.09s`; Python compile –∏ `git diff --check` —É—Å–ø–µ—à–Ω—ã. PowerShell/installed boundary –æ—Å—Ç–∞—ë—Ç—Å—è –∑–∞ –Ω–æ–≤—ã–º Windows CI run.
-
-PROGRESS_COMPLETE: 50%
-PROGRESS_REMAINING: 50%
-DONE: –ª–æ–∂–Ω–æ–µ –æ–∂–∏–¥–∞–Ω–∏–µ `text` –∏—Å–ø—Ä–∞–≤–ª–µ–Ω–æ –±–µ–∑ –∏–∑–º–µ–Ω–µ–Ω–∏—è production contract; —Å—Ç—Ä–æ–≥–∞—è content assertion –∏ –ø–æ–¥—Ä–æ–±–Ω–∞—è –¥–∏–∞–≥–Ω–æ—Å—Ç–∏–∫–∞ —Å–æ—Ö—Ä–∞–Ω–µ–Ω—ã; local contracts green.
-REMAINING: –æ–ø—É–±–ª–∏–∫–æ–≤–∞—Ç—å –ø–∞—Ä—Ç–∏—é –∏ –ø–æ–ª—É—á–∏—Ç—å `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK` –Ω–∞ exact –Ω–æ–≤–æ–º head.
-BLOCKERS: Windows installed marker –µ—â—ë –Ω–µ –ø–æ–¥—Ç–≤–µ—Ä–∂–¥—ë–Ω –Ω–æ–≤—ã–º run; readiness –æ—Å—Ç–∞—ë—Ç—Å—è 10/20.
-NEXT: –æ–±—ã—á–Ω–æ–º—É —á–∞—Ç—É –ø–æ—Å–ª–µ –æ—Å—Ç–∞–Ω–æ–≤–∫–∏ —Å–¥–µ–ª–∞—Ç—å fresh fetch PR #92/main, –Ω–∞–π—Ç–∏ Windows Package run –ø–æ exact –æ–ø—É–±–ª–∏–∫–æ–≤–∞–Ω–Ω–æ–º—É SHA –∏ —á–∏—Ç–∞—Ç—å –µ–≥–æ. –ü—Ä–∏ SUCCESS –æ–±–æ–∏—Ö installed markers –ø—Ä–∏–Ω—è—Ç—å Windows checkpoint 11/20=55%; –ø—Ä–∏ FAILURE –∏—Å–ø—Ä–∞–≤–ª—è—Ç—å —Ç–æ–ª—å–∫–æ —Ç–æ—á–Ω—É—é terminating assertion –ø–æ artifact/log evidence.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 50%
-
-## 68. AFTER: –ø—Ä–∏–Ω—è—Ç Windows checkpoint –∏ –¢–ó —Å–ª–µ–¥—É—é—â–µ–≥–æ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è
-
-`WORK-2026-09-17-FINAL-RELEASE` –æ—Å—Ç–∞—ë—Ç—Å—è –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—ã–º –∞–∫—Ç–∏–≤–Ω—ã–º –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª–µ–º. Exact PR #92/head `601dce11c8eb810c4c6b05c13bca2b3fe3b09ee7`, main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, version `1.3.0.0`/Android code `100005`; —Ñ–∏–Ω–∞–ª—å–Ω—ã–π MINOR `1.4.0.0` –≤—Å—ë –µ—â—ë version-last. –õ–∏—á–Ω–æ –ø—Ä–æ—á–∏—Ç–∞–Ω Windows Package run `35441302848`, package job `105892466312`, SUCCESS. –û–Ω –∏—Å–ø–æ–ª–Ω–∏–ª exact checkout `601dce1`; –ª–æ–≥ —Å–æ–¥–µ—Ä–∂–∏—Ç `AURORA_WINDOWS_INSTALLED_OFFLINE_VOICE_OK` –∏ `AURORA_WINDOWS_INSTALLED_OFFLINE_FILES_COMPUTER_OK`. –í—Å–µ 25 workflow runs, –ø—Ä–∏–≤—è–∑–∞–Ω–Ω—ã–µ GitHub –∫ —ç—Ç–æ–º—É exact head, –∑–∞–≤–µ—Ä—à–∏–ª–∏—Å—å SUCCESS, –≤–∫–ª—é—á–∞—è Windows, Android APK/E2E, Knowledge 1GiB, Integration, Work/Computer –∏ Evolution Tournament.
-
-Windows installed offline voice/files/computer checkpoint –ø—Ä–∏–Ω—è—Ç: `11/20 = 55%`. –≠—Ç–æ –Ω–µ –æ–∑–Ω–∞—á–∞–µ—Ç –≥–æ—Ç–æ–≤—ã–π –∫–æ–º–º–µ—Ä—á–µ—Å–∫–∏–π —Ä–µ–ª–∏–∑: –æ—Å—Ç–∞—é—Ç—Å—è installed Android Voice/OCR/Knowledge, –Ω–∞—Å—Ç–æ—è—â–∏–π –ø–æ–ª–µ–∑–Ω—ã–π –ª–∏—Ü–µ–Ω–∑–∏—Ä–æ–≤–∞–Ω–Ω—ã–π corpus+provenance, —Ñ–∏–∑–∏—á–µ—Å–∫–æ–µ device/human acceptance, server/mail/rollback, version metadata, final same-head RC –∏ production signing/update/release.
-
-### Owner T–ó —Å–ª–µ–¥—É—é—â–µ–≥–æ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è ‚Äî Universal Intake, Multi-Model RAG –∏ Evolution
-
-–ù–ï –¥–æ–±–∞–≤–ª—è—Ç—å —ç—Ç—É –∞—Ä—Ö–∏—Ç–µ–∫—Ç—É—Ä—É –≤ —Ç–µ–∫—É—â–∏–π release candidate: –æ–Ω–∞ –º–µ–Ω—è–µ—Ç runtime, storage, –±–µ–∑–æ–ø–∞—Å–Ω–æ—Å—Ç—å –∏ acceptance surface, –ø–æ—ç—Ç–æ–º—É —Ç—Ä–µ–±—É–µ—Ç –æ—Ç–¥–µ–ª—å–Ω–æ–≥–æ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è/–≤–µ—Ç–∫–∏ –ø–æ—Å–ª–µ —Å—Ç–∞–±–∏–ª—å–Ω–æ–≥–æ —Ä–µ–ª–∏–∑–∞. –¶–µ–ª—å ‚Äî –ø—Ä–∏–Ω—è—Ç—å –≤–ª–æ–∂–µ–Ω–∏–µ —á–µ—Ä–µ–∑ —á–∞—Ç, –æ–ø—Ä–µ–¥–µ–ª–∏—Ç—å –µ–≥–æ —Ç–∏–ø –ø–æ —Å–æ–¥–µ—Ä–∂–∏–º–æ–º—É, –±–µ–∑–æ–ø–∞—Å–Ω–æ –∑–∞—Ä–µ–≥–∏—Å—Ç—Ä–∏—Ä–æ–≤–∞—Ç—å –∏ –ø—Ä–∏–º–µ–Ω–∏—Ç—å –ø–æ –Ω–∞–∑–Ω–∞—á–µ–Ω–∏—é; ¬´–ø—Ä–∏–Ω—è—Ç—å –ª—é–±–æ–π —Ñ–∞–π–ª¬ª –æ–∑–Ω–∞—á–∞–µ—Ç —Å–æ—Ö—Ä–∞–Ω–∏—Ç—å –∏ –ø–æ–∫–∞–∑–∞—Ç—å —Ä–µ–∑—É–ª—å—Ç–∞—Ç –∫–ª–∞—Å—Å–∏—Ñ–∏–∫–∞—Ü–∏–∏, –∞ –Ω–µ –∞–≤—Ç–æ–º–∞—Ç–∏—á–µ—Å–∫–∏ –≤—ã–ø–æ–ª–Ω–∏—Ç—å –∏–ª–∏ –¥–æ–≤–µ—Ä—è—Ç—å —Å–æ–¥–µ—Ä–∂–∏–º–æ–º—É.
-
-1. **Universal Intake —á–µ—Ä–µ–∑ —á–∞—Ç.** –û–¥–∏–Ω inbox/transaction registry —Å hash, —Ä–∞–∑–º–µ—Ä–æ–º, MIME/signature, provenance, –≤–ª–∞–¥–µ–ª—å—Ü–µ–º, —Å—Ç–∞—Ç—É—Å–æ–º (`staged`, `quarantine`, `accepted`, `rejected`), rollback/recovery/dedupe. –ú–∞—Ä—à—Ä—É—Ç—ã: Knowledge dataset/document; training dataset; skill description; local model weights; embedding model; archive; unknown. –ù–µ–∏–∑–≤–µ—Å—Ç–Ω–æ–µ —Ö—Ä–∞–Ω–∏—Ç—å –∫–∞–∫ staged attachment —Å –ø–æ–Ω—è—Ç–Ω—ã–º —Å–æ–æ–±—â–µ–Ω–∏–µ–º, –Ω–µ —Ç–µ—Ä—è—Ç—å –∏ –Ω–µ –∏—Å–ø–æ–ª–Ω—è—Ç—å.
-2. **–ù–µ—Å–∫–æ–ª—å–∫–æ –º–æ–¥–µ–ª–µ–π, –≤–∫–ª—é—á–∞—è GGUF.** –ù–µ –∑–∞–º–µ–Ω—è—Ç—å –∞–∫—Ç–∏–≤–Ω—É—é –º–æ–¥–µ–ª—å –ø—Ä–∏ –∫–∞–∂–¥–æ–º upload: –æ—Ç–¥–µ–ª—å–Ω—ã–π model registry –ø–æ–¥–¥–µ—Ä–∂–∏–≤–∞–µ—Ç –º–Ω–æ–≥–æ –∑–∞–ø–∏—Å–µ–π, SHA-256, source/license, architecture/quantization/context metadata, required RAM/storage, health/quarantine, compatibility test, explicit activate/deactivate/rollback. Router –≤—ã–±–∏—Ä–∞–µ—Ç –æ–¥–Ω—É —Å–æ–≤–º–µ—Å—Ç–∏–º—É—é –º–æ–¥–µ–ª—å –¥–ª—è –∑–∞–ø—Ä–æ—Å–∞; –æ–¥–Ω–æ–≤—Ä–µ–º–µ–Ω–Ω–∞—è –∑–∞–≥—Ä—É–∑–∫–∞ –≤—Å–µ—Ö –º–æ–¥–µ–ª–µ–π –Ω–µ —Ç—Ä–µ–±—É–µ—Ç—Å—è –∏ –Ω–µ –¥–æ–ø—É—Å–∫–∞–µ—Ç—Å—è –ø—Ä–∏ –Ω–µ—Ö–≤–∞—Ç–∫–µ –ø–∞–º—è—Ç–∏. Chat GGUF import ‚Äî confirmation ‚Üí transactional copy ‚Üí hash/compatibility smoke ‚Üí registry ‚Üí optional activation; –ø–æ–≤—Ä–µ–∂–¥—ë–Ω–Ω—ã–π/–Ω–µ—Å–æ–≤–º–µ—Å—Ç–∏–º—ã–π —Ñ–∞–π–ª quarantine. Existing `LocalModelManager.install_local_gguf` ‚Äî —Ñ—É–Ω–¥–∞–º–µ–Ω—Ç, –Ω–æ –µ—â—ë –Ω–µ chat/multi-model registry.
-3. **Embeddings + RAG.** Local embedding provider/model registry, chunking, embedding version, vector index, source-level provenance/citations, hybrid retrieval, reindex/remove/rollback and offline bounded-RAM tests. RAG –¥–æ–ø–æ–ª–Ω—è–µ—Ç KnowledgeStore; –Ω–µ –ø–æ–¥–º–µ–Ω—è–µ—Ç –ø–∞–º—è—Ç—å –¥–∏–∞–ª–æ–≥–∞ –∏ –Ω–µ –ø—Ä–µ–≤—Ä–∞—â–∞–µ—Ç document text –≤ authority.
-4. **–ü–∞–º—è—Ç—å/–∏–Ω—Å—Ç—Ä—É–º–µ–Ω—Ç—ã/–æ—Ü–µ–Ω–∫–∞.** –†–∞–∑–¥–µ–ª—è—Ç—å –∫—Ä–∞—Ç–∫—É—é –ø–∞–º—è—Ç—å –¥–∏–∞–ª–æ–≥–∞, user memory –∏ curated knowledge; —Å–æ—Ö—Ä–∞–Ω—è—Ç—å user scope/privacy. Tools –æ—Å—Ç–∞—é—Ç—Å—è allowlisted, consent-gated –∏ sandboxed. –î–æ–±–∞–≤–∏—Ç—å offline answer-evaluation set: factuality against cited sources, relevance, safety, latency/resource budget, regression holdouts –∏ explicit failure reports.
-5. **AuroraFox Evolution Engine.** –û—Ç–¥–µ–ª—å–Ω—ã–π Candidate sandbox: analyzer ‚Üí experiment manager ‚Üí 3‚Äì10 bounded mutations ‚Üí test runner/evaluator ‚Üí improvement registry ‚Üí human/automatic policy gate ‚Üí blue/green accept or rollback. –ù–∏–∫–∞–∫–∏—Ö –ø—Ä—è–º—ã—Ö self-edits Stable Core, no tool/secret escalation, no auto-training arbitrary uploaded weights. –ö–∞–∂–¥–æ–µ accepted improvement –∏–º–µ–µ—Ç diff, provenance, tests, metrics and rollback.
-
-NEXT: –ø—Ä–æ–¥–æ–ª–∂–∞—Ç—å —Ç–µ–∫—É—â–∏–π release –±–µ–∑ —Ä–µ–∞–ª–∏–∑–∞—Ü–∏–∏ —ç—Ç–æ–≥–æ —Å–ª–µ–¥—É—é—â–µ–≥–æ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è. –ë–ª–∏–∂–∞–π—à–∏–π –¥–æ—Å—Ç—É–ø–Ω—ã–π —Ä–µ–ª–∏–∑–Ω—ã–π blocker ‚Äî –¥–æ–∫–∞–∑–∞—Ç—å/–ø–æ–ª—É—á–∏—Ç—å –æ—Ç—Å—É—Ç—Å—Ç–≤—É—é—â–∏–µ external acceptance boundaries, –ø—Ä–µ–∂–¥–µ –≤—Å–µ–≥–æ –Ω–∞—Å—Ç–æ—è—â–∏–π –ª–∏—Ü–µ–Ω–∑–∏—Ä–æ–≤–∞–Ω–Ω—ã–π –ø–æ–ª–µ–∑–Ω—ã–π Knowledge corpus —Å provenance –∏ Android installed Voice/OCR/Knowledge; –∑–∞—Ç–µ–º final version/RC/signing only after all gates. –û–±—ã—á–Ω—ã–π —á–∞—Ç –ø–æ—Å–ª–µ –æ—Å—Ç–∞–Ω–æ–≤–∫–∏ —Å–Ω–∞—á–∞–ª–∞ –¥–µ–ª–∞–µ—Ç fresh fetch PR92/main, —á–∏—Ç–∞–µ—Ç —ç—Ç–æ—Ç —Ä–∞–∑–¥–µ–ª, –Ω–µ —Å–º–µ—à–∏–≤–∞–µ—Ç next-update architecture —Å —Ç–µ–∫—É—â–∏–º candidate –∏ –Ω–µ –ø–æ–≤—ã—à–∞–µ—Ç readiness –±–µ–∑ exact evidence.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: installed Windows voice/files/computer –¥–æ–∫–∞–∑–∞–Ω exact run/job markers; all exact-head workflows SUCCESS; –¢–ó —Å–ª–µ–¥—É—é—â–µ–≥–æ –æ–±–Ω–æ–≤–ª–µ–Ω–∏—è –∑–∞–ø–∏—Å–∞–Ω–æ –∫–∞–∫ –æ—Ç–¥–µ–ª—å–Ω–∞—è –±–µ–∑–æ–ø–∞—Å–Ω–∞—è –≥—Ä–∞–Ω–∏—Ü–∞.
-REMAINING: 9 –∏–∑ 20 acceptance checkpoints –∏ –∏—Ö –≤–Ω–µ—à–Ω–∏–µ –¥–æ–∫–∞–∑–∞—Ç–µ–ª—å—Å—Ç–≤–∞.
-BLOCKERS: –Ω–æ–≤—ã–π Universal Intake/Multi-Model/RAG/Evolution –Ω–µ —Ä–µ–∞–ª–∏–∑—É–µ—Ç—Å—è –≤ —Ç–µ–∫—É—â–µ–º RC –ø–æ —Ä–µ—à–µ–Ω–∏—é –≤–ª–∞–¥–µ–ª—å—Ü–∞; external corpus/device/human/server/signing evidence –æ—Ç—Å—É—Ç—Å—Ç–≤—É–µ—Ç.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-## 69. BEFORE: —É—Å—Ç—Ä–∞–Ω–µ–Ω–∏–µ Inno race –æ—Ç generated API virtualenv
-
-`WORK-2026-09-17-FINAL-RELEASE` ACTIVE —É –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω–æ–≥–æ –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª—è. Fresh main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`, PR #92/head `bec633240582c2f4bdc3d45afc8dc98589b23b1e`; intended bump BUILD –¥–ª—è packaging-only correction, public version –æ—Å—Ç–∞—ë—Ç—Å—è version-last. Claim: `build/AuroraFox.iss`, `.github/workflows/windows-package-ci.yml`, `tests/test_windows_voice_package.py` –∏ —ç—Ç–æ—Ç –∂—É—Ä–Ω–∞–ª.
-
-Exact Windows Package run `35449964366`, package job `105915327224` failed —Ç–æ–ª—å–∫–æ –Ω–∞ Build installer; export/runtime/asset checks –ø—Ä–æ—à–ª–∏. –õ–∏—á–Ω–æ –ø—Ä–æ—á–∏—Ç–∞–Ω terminating log: broad `Source: "windows\\*"` enters generated `build\\windows\\api\\.venv`, Inno compresses `uvicorn\\lifespan\\__pycache__\\on.cpython-311.pyc.<temporary-id>` and immediately fails `The system cannot find the file specified`. API build copy explicitly selects —Ç–æ–ª—å–∫–æ top-level `.py`/`.ps1`/`requirements.txt`; API `start_api.ps1` recreates `.venv` through `install_api.ps1` –ø–æ—Å–ª–µ —É—Å—Ç–∞–Ω–æ–≤–∫–∏. –°–ª–µ–¥–æ–≤–∞—Ç–µ–ª—å–Ω–æ `.venv` –Ω–µ —è–≤–ª—è–µ—Ç—Å—è installer payload, –∞ –∏–∑–º–µ–Ω—á–∏–≤–æ–µ generated output must be excluded. PyInstaller warnings –Ω–µ terminating cause.
-
-–ò—Å–ø—Ä–∞–≤–ª–µ–Ω–∏–µ: exclude —Ç–æ–ª—å–∫–æ `api\\.venv\\*` –∏–∑ broad Inno source, –Ω–µ —É–¥–∞–ª—è—è portable voice/Computer/File runtimes; –ø–µ—Ä–µ–¥ ISCC –ø—Ä–æ–≤–µ—Ä–∏—Ç—å script/package root/required staged API+Core files –∏ –¥–∞—Ç—å –∫–æ–Ω–∫—Ä–µ—Ç–Ω—ã–π missing-path error. –î–æ–±–∞–≤–∏—Ç—å static regression, —á—Ç–æ–±—ã broad include –Ω–µ –≤–µ—Ä–Ω—É–ª API virtualenv –∏ preflight –Ω–µ –∏—Å—á–µ–∑.
-
-### AFTER: Inno packages stable API payload only
-
-`build/AuroraFox.iss` —Å–æ—Ö—Ä–∞–Ω—è–µ—Ç –µ–¥–∏–Ω—É—é recursive package entry, –Ω–æ –∏—Å–∫–ª—é—á–∞–µ—Ç –ª–∏—à—å `api\\.venv\\*`. –ü–æ—ç—Ç–æ–º—É normal installed API –ø—Ä–æ–¥–æ–ª–∂–∞–µ—Ç –∏–º–µ—Ç—å `server.py`, clients, scripts and requirements, –∞ `start_api.ps1` —Å–æ–∑–¥–∞—ë—Ç fresh per-user `.venv` —á–µ—Ä–µ–∑ existing managed-runtime installer; portable Voice, Computer –∏ File Intelligence –Ω–µ –∑–∞—Ç—Ä–æ–Ω—É—Ç—ã. Workflow –ø–µ—Ä–µ–¥ ISCC resolve-–∏—Ç exact `.iss` –∏ package root, —Ç—Ä–µ–±—É–µ—Ç staged API/Core payload –∏ –æ—Å—Ç–∞–≤–ª—è–µ—Ç path/exit-code diagnostics –≤–º–µ—Å—Ç–æ –æ–±—â–µ–≥–æ `Inno Setup failed`.
-
-–õ–æ–∫–∞–ª—å–Ω–æ `24 passed, 13 subtests passed` –∑–∞ `0.21s` (`test_windows_voice_package.py`, `test_update_backward_compat.py`), Python compile –∏ `git diff --check` successful. Local Linux does not have Inno Setup/PowerShell, –ø–æ—ç—Ç–æ–º—É –Ω–∞—Å—Ç–æ—è—â–∏–π recursive enumeration/install proof –æ—Å—Ç–∞—ë—Ç—Å—è –Ω–æ–≤—ã–º Windows Package CI boundary.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: exact generated-file race identified from Windows log; targeted installer exclusion, preflight and regression contract implemented locally.
-REMAINING: fast-forward publish and real Windows installer/bridges/installed services proof on new exact head; other 9 release checkpoints remain.
-BLOCKERS: current head `bec6332` Windows package red only at Inno compile; no local Windows/Inno runtime.
-NEXT: publish this coherent BUILD correction, then wait for and inspect the exact Windows Package job before any further release mutation; do not change hidden imports or production API behavior.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-## 70. BEFORE: installed Android Voice/OCR/Knowledge runtime acceptance
-
-`WORK-2026-09-17-FINAL-RELEASE` –æ—Å—Ç–∞—ë—Ç—Å—è –µ–¥–∏–Ω—Å—Ç–≤–µ–Ω–Ω—ã–º –∞–∫—Ç–∏–≤–Ω—ã–º –∏—Å–ø–æ–ª–Ω–∏—Ç–µ–ª–µ–º. Remote exact PR #92/head `40d45dca1225050315944593388dbad8813ffe36`, tree `23919971979a782f2a69a5b2b0702fd71fb91056`, main `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; version `1.3.0.0`/Android code `100005`, —Ñ–∏–Ω–∞–ª—å–Ω—ã–π MINOR –æ—Å—Ç–∞—ë—Ç—Å—è version-last. Claim: `benchmarks/core/android_godot_benchmark.gd`, `benchmarks/core/run_android_godot_e2e.sh`, `tests/test_core_android_e2e_contract.py`, `tests/test_android_e2e_runner.py`, stale `tests/test_android_voice_quality_contract.py`, `.github/workflows/core-android-e2e.yml` —Ç–æ–ª—å–∫–æ –µ—Å–ª–∏ –Ω–µ–æ–±—Ö–æ–¥–∏–º path trigger, –∏ —ç—Ç–æ—Ç –∂—É—Ä–Ω–∞–ª. Unrelated owner asset `assets/ui/aurorafox_background_master.png` –Ω–µ –ø—Ä–∏–Ω–∞–¥–ª–µ–∂–∏—Ç claim –∏ –Ω–µ –º–µ–Ω—è–µ—Ç—Å—è.
-
-Windows packaging correction section 69 –ø–æ–¥—Ç–≤–µ—Ä–∂–¥—ë–Ω exact Windows Package run `35451459634`: process-contract job `105919229958` SUCCESS –∏ package job `105919312960` SUCCESS; Build installer, historical V1.2/V1.3 bridges, silent install, installed-app smoke –∏ artifact upload –∑–∞–≤–µ—Ä—à–∏–ª–∏—Å—å —É—Å–ø–µ—à–Ω–æ. –í—Å–µ 25 workflows exact head `40d45dc` –∑–∞–≤–µ—Ä—à–∏–ª–∏—Å—å SUCCESS. –≠—Ç–æ –∑–∞–∫—Ä—ã–≤–∞–µ—Ç regression —Å–∞–º–æ–π Inno-–ø–æ–ø—Ä–∞–≤–∫–∏, –Ω–æ –Ω–µ –¥–æ–±–∞–≤–ª—è–µ—Ç –Ω–æ–≤—ã–π readiness checkpoint —Å–≤–µ—Ä—Ö —É–∂–µ –ø—Ä–∏–Ω—è—Ç–æ–≥–æ Windows installed checkpoint section 68.
-
-BEFORE GAP: —Ç–µ–∫—É—â–∏–π Android APK smoke –¥–æ–∫–∞–∑—ã–≤–∞–µ—Ç install/version/launch/no-crash, –∞ Android normal-path E2E –¥–æ–∫–∞–∑—ã–≤–∞–µ—Ç offline Core, multi-turn –∏ Core Knowledge import/retrieval. –ù–∏ –æ–¥–∏–Ω installed-emulator gate –Ω–µ –≤—ã–∑—ã–≤–∞–µ—Ç packaged Supertonic/Whisper voice assets –∏ packaged `rus+eng` Tesseract OCR —á–µ—Ä–µ–∑ production Godot/Kotlin bridge. Static Kotlin/asset/contract checks –Ω–µ —Å—á–∏—Ç–∞—é—Ç—Å—è runtime acceptance.
-
-INTENDED CHANGE: —Ä–∞—Å—à–∏—Ä–∏—Ç—å —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π disposable exact-production-runtime Android E2E, –Ω–µ –¥–æ–±–∞–≤–ª—è—è test hook –≤ —Ä–∞–±–æ—á—É—é main scene –∏ –Ω–µ —Å–æ–∑–¥–∞–≤–∞—è –≤—Ç–æ—Ä–æ–π —Ç—è–∂—ë–ª—ã–π APK job. –í —É—Å—Ç–∞–Ω–æ–≤–ª–µ–Ω–Ω–æ–º release APK –ø—Ä–∏ –æ—Ç–∫–ª—é—á—ë–Ω–Ω–æ–π –≤–Ω–µ—à–Ω–µ–π —Å–µ—Ç–∏: –≤—ã–∑–≤–∞—Ç—å packaged Russian TTS –∏ –ª–æ–∫–∞–ª—å–Ω—ã–π STT –Ω–∞ —Å–æ–∑–¥–∞–Ω–Ω–æ–º WAV; —Å–æ–∑–¥–∞—Ç—å high-contrast bilingual ru/en image –≤–Ω—É—Ç—Ä–∏ app sandbox, –ø—Ä–æ–ø—É—Å—Ç–∏—Ç—å –µ—ë —á–µ—Ä–µ–∑ normal `FileIntelligenceClient` Android OCR path; —Å–æ—Ö—Ä–∞–Ω–∏—Ç—å bounded hashes/metadata/errors –≤ —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π report; —Å–æ—Ö—Ä–∞–Ω–∏—Ç—å —É–∂–µ —Å—É—â–µ—Å—Ç–≤—É—é—â–∏–π Core Knowledge import/retrieval scenario. Runner –æ–±—è–∑–∞–Ω —Ç—Ä–µ–±–æ–≤–∞—Ç—å –Ω–æ–≤—ã–µ scenario IDs –∏ –æ—Ç–¥–µ–ª—å–Ω—ã–π marker —Ç–æ–ª—å–∫–æ –ø–æ—Å–ª–µ completed/passed report. –ù–∏–∫–∞–∫–æ–≥–æ —Å–Ω–∏–∂–µ–Ω–∏—è —Å—É—â–µ—Å—Ç–≤—É—é—â–∏—Ö Core assertions –∏–ª–∏ —Å–µ—Ç–µ–≤–æ–≥–æ guard.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: Inno regression accepted on exact head; missing Android installed runtime boundary identified without crediting static tests.
-REMAINING: implement locally, parse/contract-test, publish coherent BUILD candidate, then require real Android 35 emulator evidence before readiness changes.
-BLOCKERS: installed TTS/STT/OCR evidence does not yet exist; emulator CI is the first authoritative runtime boundary.
-NEXT: add the three bounded scenarios to the already installed/offline Android normal-path benchmark and keep version unchanged until final release identity gate.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-### AFTER: exact installed-runtime scenarios are mandatory
-
-Existing disposable Android normal-path APK now performs three additional calls after the already accepted Core Knowledge import/retrieval: packaged Supertonic Russian TTS must create a non-empty WAV with exact engine/language metadata; packaged Whisper STT must transcribe that WAV locally; `FileIntelligenceClient` must send a runtime-rendered high-contrast `AURORA 7429` + `–ê–í–†–û–†–ê 5183` PNG through the asynchronous Android plugin and receive both markers with `tesseract4android`, `rus+eng`, `offline=true`, `external_ai_required=false`. The emulator remains in airplane mode with Wi-Fi/data disabled and the pre-existing external ping/HTTP probes blocked. The runner requires all 11 scenario IDs and prints `AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK` only after the completed report passes; a regression verifies the marker is absent on scenario failure.
-
-The benchmark remains a disposable scene selected only in the CI checkout, so the production `main.tscn`, stable Core and shipped UI receive no test backdoor. The previously orphaned quality test still required removed Piper Denis strings and contradicted the active pinned Supertonic contract; it now checks the current offline Supertonic engine/cache identity and rejects Piper. No production voice implementation changed.
-
-LOCAL EVIDENCE: Godot `4.7.1-stable` imported the project and parsed `android_godot_benchmark.gd` with exit 0; `28 passed` across Android E2E runner/report, APK/OCR, Supertonic and voice-quality contracts; standalone Android contract printed `AURORA_ANDROID_CONTRACT_OK`; shell syntax and `git diff --check` pass. A broad unprovisioned local pytest collection cannot represent CI because this container lacks optional FastAPI/requests dependencies; the affected isolated release contracts above are green. Real packaged TTS/STT/Tesseract execution remains deliberately uncredited until the exact Android emulator job returns its new marker.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: production-path installed Android Voice/OCR/Knowledge acceptance implemented locally with fail-closed report/runner contract; stale Piper-only test corrected to active Supertonic.
-REMAINING: publish exact candidate and inspect the real Android 35 offline emulator report/logcat; only then may installed Android checkpoint increase readiness to 12/20.
-BLOCKERS: local Linux cannot execute the packaged Android Kotlin/ONNX/Tesseract runtime; CI marker is mandatory.
-NEXT: commit only claimed files (never the unrelated owner background), publish to PR #92, then wait for exact-head Core Android E2E instead of spending tokens polling prematurely.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-## 71. BEFORE: release Android OCR bridge must call exported plugin methods
-
-Exact PR #92/head `56697577383b333eb5329be218b3dd095bad91b1`; Android Core E2E run `35466043477`, real-normal-path job `105958581074` failed only at installed OCR. Build, test-sign, Android 35 install/launch, offline Core, reasoning, Russian dialog, Knowledge retrieval, Supertonic TTS, Whisper STT and compatibility all passed. Exact report failure: `installed_ocr_bilingual` received `engine=tesseract4android`, empty content and `Android runtime does not expose File Intelligence`.
-
-The proposed "skip if external AI required" is rejected: product contract is offline local `tesseract4android`, and the diagnostic `external_ai_required=true` is only the benchmark's default for a malformed error response. Root cause is local: `scripts/android_local_runtime.gd` already documents that Godot Android release singleton methods may dispatch correctly through `call()` while `has_method()` falsely returns false; `scripts/file_intelligence_client.gd` nevertheless gates every exported File Intelligence method on `has_method()`. Claim: `scripts/file_intelligence_client.gd`, Android E2E contract/runner regression only as necessary, and this journal. Do not change Kotlin OCR assets, change scenario to skipped, or relax OCR assertions.
-
-INTENDED FIX: for an existing `AuroraFoxRuntime` singleton invoke its known `@UsedByGodot` File Intelligence methods directly, parse/fail closed on malformed native response, and retain async OCR cancellation/polling path. This restores the actual local bridge rather than masking an unavailable capability.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: exact failing scenario isolated from Android CI evidence.
-REMAINING: bridge correction, local parse/contracts, publish and rerun exact Android E2E.
-BLOCKERS: no local Android emulator/runtime proof; only a new CI report may accept installed OCR.
-NEXT: remove unreliable reflection gates for declared Android plugin methods.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-### AFTER: local OCR is invoked, never reclassified as an external fallback
-
-`FileIntelligenceClient` now invokes known exported `AuroraFoxRuntime` APIs through `plugin.call()` after verifying the singleton exists. It no longer uses false-negative `has_method()` reflection for `getCapabilitiesJson`, synchronous File Intelligence, OCR async start/poll/cancel, tree, or shutdown cancellation. Unknown/malformed native output still fails closed through existing JSON parsing; no external OCR, skip path, or capability downgrade was introduced. The async image/PDF OCR route is therefore selected in the installed release APK and receives the actual `startAnalyzeLocalFile` response from Kotlin.
-
-Regression coverage explicitly rejects restoration of the false reflection gate and of the misleading `Android runtime does not expose File Intelligence` path. Local verification: `29 passed` selected Android E2E/runner/APK/OCR/Supertonic contracts; `AURORA_ANDROID_CONTRACT_OK`; Godot 4.7.1 parse, shell syntax and diff check succeed. Actual Android 35 Tesseract execution remains pending a new exact CI run.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: exact release OCR failure repaired at the Godot-to-Kotlin bridge without weakening the local-only acceptance contract.
-REMAINING: publish and require `AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK` plus a completed report with nonempty bilingual OCR content.
-BLOCKERS: only the real emulator validates packaged JNI/assets and recognition.
-NEXT: publish this minimal correction and wait for its exact Android E2E job before further release mutation.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-## 72. BEFORE: deterministic bilingual bitmap and fail-closed empty OCR response
-
-Exact PR #92/head `d2d11fa369bc01b1f915aa30cae0eeef642e642f`; Android Core E2E job `105962815237` reaches Kotlin OCR bridge. TTS, STT, Core, Knowledge and all other scenarios pass. The OCR response has `engine=tesseract4android`, `offline=false` is not reported, no error, but empty `content`, proving the bridge call now occurs but its input contains no recognisable pixels.
-
-Native inspection matters here: `AndroidFileRuntime.analyzeOcr()` delegates image files to `AndroidOcrRuntime.extractImage()`, which loads the bitmap, initializes Tesseract with pinned `rus+eng`, calls `getUTF8Text()` and returns it as `content`. Therefore no invented replacement Kotlin API is required. The benchmark's prior `SubViewport`-rendered fixture is the unstable component: it can capture an unrendered frame in the no-window emulator. Claim: `benchmarks/core/android_godot_benchmark.gd`, `scripts/file_intelligence_client.gd`, Android E2E contracts and this journal. No OCR skip, no external fallback, and no relaxation of required bilingual markers.
-
-INTENDED FIX: replace the runtime off-screen render with a deterministic, high-contrast 1280√ó420 PNG payload containing actual DejaVu Sans glyphs `AURORA 7429` and `–ê–í–†–û–†–ê 5183`; persist those bytes inside the app sandbox and retain SHA evidence. On the Godot wrapper, a successful image OCR JSON with blank `content` becomes `ok=false, error=Android OCR returned empty content` before decoration, so an input/bridge regression cannot look healthy.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: exact empty-content failure traced to test fixture capture, not a missing Tesseract invocation.
-REMAINING: fixture/wrapper correction, local parse/contracts, exact Android rerun.
-BLOCKERS: Russian recognition is only authoritative on packaged Android Tesseract data.
-NEXT: make the fixture pixel-deterministic and preserve strict gate semantics.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-### AFTER: OCR fixture contains deterministic text pixels
-
-The Android benchmark no longer depends on `SubViewport`/frame-post-draw timing. It decodes an embedded 1280√ó420 DejaVu Sans Bold PNG, verified before inclusion by local Tesseract (`AURORA 7429`, second Cyrillic line rendered as visible glyphs), validates dimensions, writes exactly those bytes to `user://android-installed-ocr-e2e.png`, and records its SHA. This makes the packaged Tesseract input deterministic under the no-window emulator.
-
-`FileIntelligenceClient` additionally changes `ok=true` plus blank OCR `content` into `ok=false` with `Android OCR returned empty content`; the benchmark still requires every English/Russian marker and has no skip route. Local verification: `29 passed` selected contracts, `AURORA_ANDROID_CONTRACT_OK`, Godot 4.7.1 parse, shell syntax and diff check succeed.
-
-PROGRESS_COMPLETE: 55%
-PROGRESS_REMAINING: 45%
-DONE: deterministic bitmap source and explicit empty-OCR rejection implemented without altering native engine or gate semantics.
-REMAINING: publish and inspect actual Android 35 `rus+eng` report content/marker.
-BLOCKERS: only the packaged emulator can prove the pinned Russian traineddata recognizes the second line.
-NEXT: publish minimal candidate and wait for exact Core Android E2E.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 55%
-
-### ACCEPTED: installed Android Voice/OCR/Knowledge checkpoint
-
-Exact PR #92/head `11371893d654c30b5d900f44e1f405dc85b4fa37`; all 25 GitHub workflows attached to that head are SUCCESS. The authoritative Android Core E2E run `35468876578`, real-normal-path job `105966140759`, built and test-signed the disposable production-runtime APK, installed/started it on Android 35 with airplane mode plus Wi-Fi/data disabled, and completed the report. Evidence artifact `10591862955`, SHA-256 `042b195bb8af1d6fdece669c9cbf153fd349880575e0165fefbbae4e1ba65432`, contains report `git_sha=11371893...` and passed `installed_ocr_bilingual`: `content_excerpt="AURORA 7429\\n–ê–í–†–û–†–ê 5183"`, engine `tesseract4android`, languages `[rus, eng]`, `offline=true`, `external_ai_required=false`, duration `1666.587ms`. It also records packaged Supertonic TTS WAV (`370588` bytes) and local Whisper STT. Thus this is actual installed/offline Voice + OCR + Knowledge evidence, not static source evidence.
-
-Checkpoint accepted: installed Android Voice/OCR/Knowledge raises release acceptance from `11/20` to `12/20 = 60%`. This does not imply release readiness beyond the defined boundary: remaining are genuine useful licensed corpus/provenance, physical-device and human UI/listening acceptance, server/mail/rollback, final version metadata, final same-SHA RC and production signing/update/release.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: Android installed offline Voice/OCR/Knowledge accepted from exact artifact and all exact-head workflows success.
-REMAINING: 8 release checkpoints, chiefly external/product evidence and final release identity.
-BLOCKERS: no genuine corpus/provenance or physical/human/server-production acceptance yet.
-NEXT: preserve this accepted evidence, then address the next independently demonstrable release boundary without changing version before final identity gate.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 60%
-
-## 73. BEFORE: make UI Godot bootstrap retryable and cached
-
-Exact PR #92/head `03d0b1116853d8b7e1f9b8647571470402a2434b`; UI Visual job `106032550831` verified `AURORA_CI_CHECKOUT_SHA=03d0b111...` then failed before project import/tests because GitHub release download returned curl `(35) Recv failure: Connection reset by peer`. This is runner/network infrastructure, not a UI or product failure. Claim: `.github/workflows/ui-visual-ci.yml`, a narrow workflow regression test if added, and this journal. Unrelated owner background remains untouched.
-
-The UI workflow has a distinct release boundary: desktop/Android portrait layout, actual pointer navigation, and 34 rendered acceptance surfaces. It cannot be silently merged into Core/Android/package jobs because it needs Xvfb/GL rendering and its own artifacts. Repeated Godot downloads occur because GitHub jobs are isolated; however bootstrap can be cached and transient release-asset resets retried without duplicating UI assertions.
-
-INTENDED FIX: cache only the verified Godot 4.7.1 Linux executable under a fixed key; on cache miss use HTTP/1.1, connection/total timeouts, `--retry-all-errors`, bounded exponential-style retry delay and archive integrity test before extraction. Keep the actual UI gates unchanged and no retry of a failing product test.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: exact infrastructure-only failure classified before any product claim changed.
-REMAINING: resilient bootstrap implementation/local YAML check/new UI job.
-BLOCKERS: external GitHub release connection reset; no application failure observed.
-NEXT: make only the downloader retry/cache boundary resilient.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 60%
-
-### AFTER: UI bootstrap retries transient Godot delivery failures
-
-UI Visual CI restores/saves only the pinned Godot 4.7.1 Linux executable cache (`aurorafox-godot-linux-4.7.1-stable-a13da4feb`). On a miss it uses `curl --http1.1 --connect-timeout 30 --max-time 300 --retry 8 --retry-all-errors --retry-delay 5 --retry-max-time 300`, validates ZIP structure before extraction, and still verifies `./godot --version`. This retries transport resets such as curl 35 but does not retry or hide a product/UI test failure. The workflow's distinct Xvfb/pointer/render artifact gates remain intact.
-
-LOCAL EVIDENCE: dedicated workflow regression `1 passed`; YAML parses with PyYAML; `git diff --check` succeeds. A broad branding test was intentionally not used as this change's acceptance because the shared worktree has a pre-existing, unrelated modified owner background PNG; it is not staged or claimed and remains unchanged. The remote exact branch retains the approved asset.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: transient UI bootstrap failure made retryable/cacheable without deleting UI coverage.
-REMAINING: publish and accept a new exact UI Visual run; remaining external release checkpoints unchanged.
-BLOCKERS: GitHub asset delivery remains external, but resets now have bounded retry and future cache hits avoid download.
-NEXT: publish minimal workflow/test/journal change, then wait for exact UI evidence rather than rerunning unrelated checks locally.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 60%
-
-## 74. BEFORE: remove 1 GiB search-sampling timeout instability
-
-Exact PR #92/head `f943958f246b5dcb47ae001fe915ad938ad89de0`; Knowledge run `35493971205`, job `106043170612`, artifact `10602033376` was downloaded and inspected. Godot installation succeeded. The actual report records a bounded timeout after `5400s`, return `-9`, peak RSS `901107712`, and the stage log proves generation/import completed (`1073742199` bytes, `1221299` generated records, `1221202` imported chunks, import `348486.762ms`) before the process remained in the search matrix. No final result/restart evidence was emitted.
-
-Comparison with the immediately preceding successful exact-parent run `35493583972`, job `106032591110`, artifact `10600946637` proves the gate is timing-fragile rather than a new product regression: its import process consumed `5050429ms`, including eight search cases repeated five times over a `3751630715`-byte store, and restart consumed another `271702ms`. Total work completed only about 78 seconds inside the 5400-second bound. Individual full-scan searches were approximately 115-188 seconds, so 40 repetitions dominate runtime.
-
-CLAIM: benchmark/workflow diagnostics only. Preserve all eight correctness queries, the 1 GiB threshold, restart proof, RSS ceiling and failure exit. For the >=1 GiB correctness/RSS gate run each query once; smaller performance/scaling profiles retain five samples. Emit per-query stage timing, print the JSON report before returning the captured benchmark status, and make the independent Godot download resilient without treating retry as a product pass.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: exact artifact cause established; curl/Godot misdiagnosis rejected.
-REMAINING: implement bounded sample policy, workflow report printing and regression coverage; run local contracts and publish one candidate.
-BLOCKERS: new exact remote runtime evidence is required after the repair.
-NEXT: reduce redundant 1 GiB scans without removing a correctness case or raising the timeout.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 60%
-
-### AFTER: 1 GiB keeps correctness coverage without 40 full scans
-
-`knowledge_stress_benchmark.gd` now selects one sample per search case only when `target_mb >= 1024`; all eight cases remain (`empty`, exact rare marker, common, multiple tokens, Russian, mixed RU/EN, very long and malformed), and every required query still verifies the expected source. Profiles below 1 GiB retain five samples and percentile evidence. Each case now prints its name, sample count, elapsed time and correctness, so a later interruption identifies the exact phase. The 5400-second bound, 1 GiB dataset, restart process, RSS limit and hard failure behavior are unchanged.
-
-The workflow captures the runner status, prints `knowledge-1g.json` when present, then exits with the original status. Missing report is a failure. Godot transport now uses HTTP/1.1, bounded connection/total timeouts, eight all-error retries with delay/max time, and ZIP integrity validation. Product tests are not retried.
-
-LOCAL EVIDENCE: six stdlib workflow/report identity tests pass; workflow YAML parses; Godot 4.7.1 downloaded with the new command and passed archive validation/version check. A real portable 1 MiB import + separate-process restart smoke passed: 1,048,655 dataset bytes, 1,201 imported records/chunks, `hard_correctness.passed=true`, `error_count=0`; its search report proves smaller profiles still execute five samples for every case and emits the new per-case diagnostics. Full editor import encountered only the pre-existing unrelated modified/corrupt owner background PNG and is not used as acceptance; that owner file remains untouched and unstaged.
-
-REMOTE STATE BEFORE PUBLICATION: exact `f943958` has 24 successful workflows including Windows Package `35493971222`; only Knowledge run `35493971205` is FAILURE, localized above. This change therefore targets the sole exact-head red gate.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: timeout cause fixed without weakening size/correctness/restart/RSS gates; failure diagnostics made visible.
-REMAINING: publish one candidate and inspect its exact 1 GiB report/artifact.
-BLOCKERS: remote 1 GiB runtime proof is pending; external release acceptance boundaries remain unchanged.
-NEXT: commit/push only these Knowledge files, then wait for the single serialized heavy gate rather than launching duplicates manually.
-–û–ë–©–ê–Ø –ì–û–¢–û–í–ù–û–°–¢–¨ AURORAFOX: 60%
+Y™Áäx-ÆÈ‹j◊ù¢Îi∫⁄+äßj[hëÈ‹¢ÈÌ◊^<”‘Ëµ©h∫⁄n∂XßzÕH»]\õ‹òQõﬁ8†%ì“ëP’PT’Tà—¬Çèà
+ä¥%t%4&4't*Ù&H4&¥$4't'¥'t&4)Ù%t(t&¥&4&H4%¥(Ù(4't$4&»4'Ù(4'¥%t&¥(¥$ääÇèÇèà4+t`¥/¥`à4a4,4.t.»4/¥,tcÙ-Ù,4`¥-t.Ù-t/H4-4.Ùc»4aÙ`¥-t/t.4c»4.4/¥,t/t/¥,¥.Ù-t/t.4c»4,¥`t-t/4.4`4-t-¥.4/4,4/4.4`4,4-Ù`4,4,t/¥`¥.¥.à4/¥,tbÙaÙ/tbÙ.H⁄]‘taÙ,4`ã€‹öÀ€Ÿ^4.Ù/¥.¥,4.Ùc4/tbÙ-KÙ`t-t`4,¥-t`4/tbÙ-H4,4,Ù-t/t`¥b»4.4.Ùc¥,t/¥.H4-4`4`Ù,Ù/¥.H4/Ù`4/¥a¥-t`t`K4.¥/¥`¥/¥`4bÙ.H4/4-t/tcÙ-t`àô[ö[ô[K–RXÇèÇèà4%4`4`Ù,Ù.4aH4/Ù,4`4,4.Ù.Ù-t.Ùc4/tbÙaH4-¥`Ù`4/t,4.Ù/¥,à4`4,4-Ù`4,4,t/¥`¥.¥.Ù.¥/¥/¥`4-4.4/t,4a¥.4.4,tbÙ`¥c4/t-H4-4/¥.Ù-¥/t/ãà4(4-t/Ù/¥-Ù.4`¥/¥`4.4.H4.4`4-t-Ù`Ù.Ùc4`¥,4`¥b»“H4cÙ,¥.ÙcÙc¥`¥`tc»4/¥.¥/¥/taÙ,4`¥-t.Ùc4/tbÙ/4`¥-tat/t.4aÙ-t`t.¥.4/4.4`t`¥/¥aÙ/t.4.¥/¥/4.4`t`¥.4/tbŒ»4ct`¥/¥`à4a4,4.t.»4cÙ,¥.ÙcÙ-t`¥`tc»4-t-4.4/tbÙ/4.4`t`¥/¥aÙ/t.4.¥/¥/4.¥/¥/¥`4-4.4/t,4a¥.4.4`4-tb4-t/t.4.K4,¥bÙ/Ù/¥.Ù/t-t/t/t/¥,Ù/à4(¥%»4.4/Ù.Ù,4/t,4/Ù`4/¥-4/¥.Ù-¥-t/t.4cÀÇÇà»»à4'¥,tcÙ-Ù,4`¥-t.Ùc4/tbÙ.H4/Ù`4/¥`¥/¥.¥/¥.»4-4.Ùc»⁄]»€‹ö»»€Ÿ^»4,4,Ù-t/t`¥/¥,ÇÇ¥'Ù-t`4-t-
+ä¥.Ùc¥,t/¥.Jäà4-Ù,4/Ù.4`tc4cà4,à4`4-t/Ù/¥-Ù.4`¥/¥`4.4.H4.4`t/Ù/¥.Ù/t.4`¥-t.Ùc4/¥,tcÙ-Ù,4/NÇÇåKà4'Ù/¥.Ù`ÙaÙ.4`¥c4,4.¥`¥`Ù,4.Ùc4/tbÙ.HPQ4,¥-t`¥.¥.XZ[ò4.4/t-H4`4,4,t/¥`¥,4`¥c4/Ù/à4`t`¥,4`4/¥.H4.¥/¥/Ù.4.Çåãà4'Ù/¥.Ù/t/¥`t`¥c4cà4/Ù`4/¥aÙ.4`¥,4`¥c4ct`¥/¥`àÿ‹À‘ì“ëP’”PT’Tó”—ÀõYÇåÀà4'Ù`4/¥,¥-t`4.4`¥c4`4,4-Ù-4-t.»
+ä¥$4.¥`¥.4,¥/tbÙ-H4`4,4,t/¥`¥b»4.4-Ù,4/tcÙ`¥bÙ-H4a4,4.t.Ùb äãÇçà4%4/à4.4-Ù/4-t/t-t/t.4c»4.¥/¥-4,4-Ù,4/Ù.4`t,4`¥c4,à4ct`¥/¥`à4a4,4.t.»4`t,¥/¥cà4`4,4,t/¥aÙ`Ùcà4-Ù,4cÙ,¥.¥`Œà4.¥`¥/ãÙ`4-t-¥.4/4a¥-t.Ùc4/Ù/¥-4`t.4`t`¥-t/4,4/Ù`4-t-4/Ù/¥.Ù,4,Ù,4-t/4bÙ-H4a4,4.t.Ùb»4.4.4`tat/¥-4/tbÙ.HPQÇçKà4%t`t.Ù.4/t`Ù-¥/tbÙ.H4a4,4.t.»4`Ù-¥-H4-Ù,4/tcÙ`à4-4`4`Ù,Ù.4/4,4.¥`¥.4,¥/tbÙ/4.4`t/Ù/¥.Ù/t.4`¥-t.Ù-t/4/t-H4/Ù-t`4-t`¥.4`4,4`¥c4-t,Ù/ãà4't`Ù-¥/t/à4.Ù.4,t/à4,¥-ÙcÙ`¥c4-4`4`Ù,Ù`Ùcà4/t-t-Ù,4,¥.4`t.4/4`Ùcà4-Ù,4-4,4aÙ`À4.Ù.4,t/à4`t/t,4aÙ,4.Ù,4.4/t`¥-t,Ù`4.4`4/¥,¥,4`¥c4`Ù-¥-H4`t-4-t.Ù,4/t/tbÙ-H4.4-Ù/4-t/t-t/t.4c»4`H4,4.¥`¥`Ù,4.Ùc4/t/¥,Ù/àXZ[òÇçãà4't-H4-4-t.Ù,4`¥c4/Ù,4`4,4.Ù.Ù-t.Ùc4/t/à4`¥`»4-¥-H4-Ù,4-4,4aÙ`À4.¥/¥`¥/¥`4`Ùcà4`Ù-¥-H4,¥bÙ/Ù/¥.Ù/tcÙ-t`à4-4`4`Ù,Ù/¥.H⁄]’€‹öÀ–€Ÿ^–YŸ[ùà4'Ù-t`4-t-4.¥,4-¥-4bÙ/4.¥`4`Ù/Ù/tbÙ/4ct`¥,4/Ù/¥/4/Ù/¥,¥`¥/¥`4/t/à4`t,¥-t`4cÙ`¥c4`t,¥-t-¥.4.HPQ4.4/t/¥,¥bÙ-H€€[Z]ÀÇçÀà4%4-t.Ù,4`¥c4.4-Ù/4-t/t-t/t.4c»4.¥`4`Ù/Ù/tbÙ/4-Ù,4.¥/¥/taÙ-t/t/tbÙ/4ct`¥,4/Ù/¥/4-Ù,4`¥-t/4-Ù,4/Ù`Ù`t.¥,4`¥c4/¥`¥/t/¥`tcÙbt.4-t`tc»4.à4/t-t/4`»4`¥-t`t`¥bÀ–“KÇéà4'Ù/¥`t.Ù-H4ct`¥,4/Ù,4/¥,t/t/¥,¥.4`¥c
+ä¥ct`¥/¥`à4-¥-H4a4,4.t. äéà€€[Z]“K4aÙ`¥/à4`t-4-t.Ù,4/t/ã4.¥`4,4`¥.¥/¥-H4.4/t-¥-t/t-t`4/t/¥-H4/¥,t/¥`t/t/¥,¥,4/t.4-K4/Ù`4/¥,¥-t`4.¥.‹ù[àQÀ4.4-Ù,¥-t`t`¥/tbÙ-H4/¥,Ù`4,4/t.4aÙ-t/t.4cÀ4`t.Ù-t-4`Ùc¥bt.4.H4b4,4,»4.4.¥,4.¥.4-H4a4,4.t.Ùb»4/¥`t,¥/¥,t/¥-¥-4-t/tbÀÇéKà4'Ù`4.4-Ù,4,¥-t`4b4-t/t.4.4`t,¥/¥-t.H4`4,4,t/¥`¥b»4/¥`t`¥,4,¥.4`¥c4`¥/¥aÙ/tbÙ.H4/Ù`4/¥-4/¥.Ù-¥.4`¥-t.Ùc4/tbÙ.H4/Ù.Ù,4/H4`¥,4.ã4aÙ`¥/¥,tb»4-4`4`Ù,Ù/¥.H⁄]’€‹öÀ–€Ÿ^4/4/¥,»4`t`4,4-Ù`»4/Ù`4/¥-4/¥.Ù-¥.4`¥c4,t-t-»4,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4c»4.¥/¥/t`¥-t.¥`t`¥,4.4-»4`4,4-Ù,Ù/¥,¥/¥`4,ÇÇ¥'t-t.Ùc4-Ùc»4`t/¥-Ù-4,4,¥,4`¥c4/¥`¥-4-t.Ùc4/tbÙ.H“U”—ÿ”‘í◊”—ÿ”—V”—ÿ”‘í◊–””‘ëSêUS”òUëS‘QSï”—ÿ4.4.Ù.4-4`4`Ù,Ù/¥.H4.¥/¥/t.¥`Ù`4.4`4`Ùc¥bt.4.H4-¥`Ù`4/t,4.Àà4)Ù,4`t`¥bÙ-H4-Ù,4/Ù.4`t.4,¥`t-taH4.4`t/Ù/¥.Ù/t.4`¥-t.Ù-t.H4-4-t.Ù,4c¥`¥`tc»4-Ù-4-t`tcà4(4,4-Ù`4-tb4-t/tb»4`¥-tat/t.4aÙ-t`t.¥.4-H4-4/¥.¥`Ù/4-t/t`¥b»4/Ù/¥-4`t.4`t`¥-t/4/t/à4/¥/t.4/t-H4-Ù,4/4-t/tcÙc¥`à4ct`¥/¥`à4-¥`Ù`4/t,4.»4.4/t-H4.4`t/Ù/¥.Ùc4-Ù`Ùc¥`¥`tc»4.¥,4.à4/Ù,4`4,4.Ù.Ù-t.Ùc4/t,4c»4/¥aÙ-t`4-t-4c4`4,4,t/¥`ãÇÇà»»»4)Ù`¥/à4/Ù.4`t,4`¥c4,à4-¥`Ù`4/t,4.¬Ç¥%Ù,4/Ù.4`tbÙ,¥,4-t`¥`tc»
+ä¥.¥`4,4`¥.¥/¥-H4/Ù`4/¥,¥-t`4cÙ-t/4/¥-H4.4/t-¥-t/t-t`4/t/¥-H4/¥,t/¥`t/t/¥,¥,4/t.4-Jäéà4/Ù`4/¥,t.Ù-t/4,4,¥bÙ,t`4,4/t/t/¥-H4`4-tb4-t/t.4-K4/Ù/¥aÙ-t/4`»4/¥/t/à4,t-t-Ù/¥/Ù,4`t/t-t-KÙ/t,4-4dt-¥/t-t-H4,4.Ùc4`¥-t`4/t,4`¥.4,ã4a4,4.¥`¥.4aÙ-t`t.¥.4-H4`¥-t`t`¥b»4.4/¥`t`¥,4,¥b4.4-t`tc»4`4.4`t.¥.à4't-H4`¥`4-t,t`Ù-t`¥`tc»4.4/t-H4-4/¥.Ù-¥/t,4`t/¥at`4,4/tcÙ`¥c4`tc»4`t.¥`4bÙ`¥,4c»4,¥/t`Ù`¥`4-t/t/tcÙc»4a¥-t/Ù/¥aÙ.¥,4`4,4`t`t`Ù-¥-4-t/t.4.H4/4/¥-4-t.Ù.»4-4.Ùc»4/Ù`4/¥-4/¥.Ù-¥-t/t.4c»4`4,4,t/¥`¥b»4-4/¥`t`¥,4`¥/¥aÙ/t/à4.4/t-¥-t/t-t`4/t/¥,Ù/àò][€ò[K4.4`tat/¥-4/tbÙaH4`¥`4-t,t/¥,¥,4/t.4.K€€[Z]À4`¥-t`t`¥/¥,à4.4`¥/¥aÙ/t/¥,Ù/à4/Ù.Ù,4/t,ÇÇà»»»4't-t/Ù`4.4.¥/¥`t/t/¥,¥-t/t/tbÙ-H4,Ù`4,4/t.4a¥b¬Ç¥'t.⁄]4/t.€‹öÀ4/t.€Ÿ^4/t.4,4,¥`¥/¥/t/¥/4/t/¥-H4`Ù.Ù`ÙaÙb4-t/t.4-H4/t-H4-4/¥.Ù-¥/tb»4/¥`t.Ù,4,t.ÙcÙ`¥c4,t-t-»4/¥`¥-4-t.Ùc4/t/¥,Ù/à4cÙ,¥/t/¥,Ù/à4`4-tb4-t/t.4c»4,¥.Ù,4-4-t.Ùc4a¥,4.4/Ù/¥.Ù/t/¥a¥-t/t/t/¥.H4/4.4,Ù`4,4a¥.4.ÇÇãH4/Ù/¥.Ùc4-Ù/¥,¥,4`¥-t.Ùc4`t.¥.4.HX\›\à›‹»4,¥bÙ.¥.Ùc¥aÙ-t/t.4-H4,4,¥`¥/¥/t/¥/4.4.¬ãH€ò\⁄›‹õ€òX⁄»4.4,¥/¥`t`t`¥,4/t/¥,¥.Ù-t/t.4-H4/Ù`4-t-4bÙ-4`Ùbt.4aH4,¥-t`4`t.4.N¬ãH[›€\›4a¥-t.Ù-t.H4`t,4/4/¥.4-Ù/4-t/t-t/t.4c»€‹ôN¬ãH4/t-t-Ù,4,¥.4`t.4/4`Ùcà4/Ù`4/¥,¥-t`4.¥`»ÿ[ôY]H4/Ù-t`4-t-4/Ù`4/¥-4,¥.4-¥-t/t.4-t/¬ãH4/Ù/¥-4/Ù.4`tc4/¥,t/t/¥,¥.Ù-t/t.4.H4.4-Ù,4.¥`4-t/Ù.Ùdt/t/t`Ùcàù\›Y[ù]N¬ãH[ôõ⁄Y⁄Y€ö[ô»€€ù[ùZ]N¬ãH4`4,4-Ù-4-t.Ù-t/t.4-H€‹ôHÿ[ôY]H›XõZ\‹⁄[€à4.ô[X\ŸH]]‹ö]N¬ãH4.Ù/¥.¥,4.Ùc4/t`Ùcà4/Ù`4.4,¥,4`¥/t/¥`t`¥c4/Ù-t`4`t/¥/t,4.Ùc4/t/¥.H4/Ù,4/4cÙ`¥.¬ãH4-Ù,4/Ù`4-t`à4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥/¥,Ù/à4.4`t/Ù/¥.Ù/t-t/t.4c»4.¥/¥-4,Ù.4/t`t`¥`4`Ù.¥a¥.4.H4.4-»4.4/4/Ù/¥`4`¥.4`4/¥,¥,4/t/tbÙaH4-4/¥.¥`Ù/4-t/t`¥/¥,é¬ãHÿ[ôõﬁ‹\õZ\‹⁄[€àõ›[ô\öY\»€€\]\àYŸ[ù4.4.4`t/Ù/¥.Ù/tcÙ-t/4bÙaH4`4,4`tb4.4`4-t/t.4.N¬ãH
+ä¥`t,4/4/¥`t`¥/¥cÙ`¥-t.Ùc4/t/¥`t`¥c]\õ‹òQõﬁ€‹ôH4.4-Ù,4/Ù`4-t`à4/Ù`4-t,¥`4,4bt,4`¥c4,¥/t-tb4/t.4.HRK€[Ÿ[‹Ÿ\ùöXŸH4,à4/¥,tcÙ-Ù,4`¥-t.Ùc4/t`Ùcà4/¥`t/t/¥,¥`»4.4/t`¥-t.Ù.Ù-t.¥`¥,ääÇÇà»»Kà4$Ù.Ù,4,¥/t,4c»4a¥-t.Ùc»4-t-4.4/t/¥-H4(¥%¬Çê]\õ‹òQõﬁ8†%4`t`Ùbt-t`t`¥,¥`Ùc¥bt.4.H4.Ù/¥.¥,4.Ùc4/tbÙ.HRKt/Ù/¥/4/¥bt/t.4.à4/t,€Ÿ›çÀåH4-4.Ùc»⁄[ô›‹»4.[ôõ⁄Yà4'Ù`4/¥-t.¥`à
+ä¥/t-H4`t/¥-Ù-4,4dt`¥`tc»4-Ù,4/t/¥,¥/ääãà4't/¥,¥bÙ-H4ct`¥,4/Ùb»4.4/t`¥-t,Ù`4.4`4`Ùc¥`¥`tc»4,à4`t`Ùbt-t`t`¥,¥`Ùc¥bt`Ùcà4,4`4at.4`¥-t.¥`¥`Ù`4`À4/Ù,4/4cÙ`¥c€‹ôH€õ›€YŸK4,4,¥`¥/¥/t/¥/4.4cã€€ùõ€YŸ[ãZ[\õ›ô[Y[ù\]\ã⁄[ô›‹À–[ôõ⁄Y€Y[ùÀTK\›»4.ô[X\ŸH\[[ôKÇÇà»»»KåKà4%¥ t(t(¥&¥&4&H4$4(4)t&4(¥%t&¥(¥(Ù(4't*Ù&H4&4't$¥$4(4&4$4't(éà]\õ‹òQõﬁ4-Ù,4,¥.4`t.4`à4.4/Ù/¥.Ù,4,Ù,4-t`¥`tc»4`¥/¥.Ùc4.¥/à4/t,4`t-t,tc¬Çääê]\õ‹òQõﬁ4't%H4cÙ,¥.ÙcÙ-t`¥`tc»4/¥,t/¥.Ù/¥aÙ.¥/¥.H4/t,4-€[XK‹[êRHTK4/¥,t.Ù,4aÙ/t/¥.HH4.4.Ù.4-4`4`Ù,Ù.4/RKt.¥.Ù.4-t/t`¥/¥/à4'¥`t/t/¥,¥/¥.H4.4/t`¥-t.Ù.Ù-t.¥`¥,4cÙ,¥.ÙcÙ-t`¥`tc»4`¥/¥.Ùc4.¥/à4`t/¥,t`t`¥,¥-t/t/tbÙ.H]\õ‹òQõﬁ€‹ôK4-t,Ù/à4`t/¥,t`t`¥,¥-t/t/tbÙ-H4.Ù/¥.¥,4.Ùc4/tbÙ-H4-4,4/t/tbÙ-K4/Ù,4/4cÙ`¥c4-Ù/t,4/t.4cÀ4,4,Ù-t/t`¥b»4.4.4/t`t`¥`4`Ù/4-t/t`¥bÀääÇÇ¥'¥,tcÙ-Ù,4`¥-t.Ùc4/t/¥-H4/Ù/¥,¥-t-4-t/t.4-NÇÇãH4`t/¥,t`t`¥,¥-t/t/t,4c»4.Ù/¥.¥,4.Ùc4/t,4c»4/4/¥-4-t.Ùc‹ù[ù[YH]\õ‹òQõﬁ8†%ö[X\ûH4.õŸX›Yò][¬ãH4,t,4-Ù/¥,¥bÙ.H4aÙ,4`ã4`4,4`t`t`Ù-¥-4-t/t.4-K4/Ù.Ù,4/t.4`4/¥,¥,4/t.4-K4.¥`4.4`¥.4.¥,4`4-tb4-t/t.4cÀ4,Ù-t/t-t`4,4a¥.4c»4`¥-t.¥`t`¥,Ù.¥/¥-4,4.Ù/¥.¥,4.Ùc4/t,4c»4/Ù,4/4cÙ`¥c4.€‹ôH€õ›€YŸH4`4,4,t/¥`¥,4c¥`à4,t-t-»€[XK4,¥/t-tb4/t.4aHRHTK4/¥,t.Ù,4aÙ/tbÙaH4/4/¥-4-t.Ù-t.H4.ô[[›H[ôô\ô[òŸN¬ãH]\õ‹òQõﬁ4`t/¥at`4,4/tcÙ-t`à4/¥/ÙbÙ`à4,à4`t/¥,t`t`¥,¥-t/t/t/¥.H4/Ù,4/4cÙ`¥.–€‹ôH€õ›€YŸK‹⁄⁄[Àÿ⁄X⁄‹⁄[ùŒ¬ãH]\õ‹òQõﬁ4/4/¥-¥-t`à4.4`t`t.Ù-t-4/¥,¥,4`¥c4`4,4-Ù`4-tb4dt/t/tbÙ-H4.4/t`¥-t`4/t-t`ãt.4`t`¥/¥aÙ/t.4.¥.4/t/à4.4/t`¥-t`4/t-t`à4cÙ,¥.ÙcÙ-t`¥`tc»4.4`t`¥/¥aÙ/t.4.¥/¥/
+ä¥-4,4/t/tbÙaJäã4,4/t-H4`Ù-4,4.Ùdt/t/tbÙ/4/4/¥-Ù,Ù/¥/¬ãH4-4/à4`t/¥at`4,4/t-t/t.4c»4,4,¥`¥/¥/t/¥/4/t/à4/t,4.t-4-t/t/t/¥,Ù/àŸXãt.¥/¥/t`¥-t/t`¥,4,à4-4/¥.Ù,Ù/¥,¥`4-t/4-t/t/t/¥-H4-Ù/t,4/t.4-H4-4/¥.Ù-¥-t/H4`t`Ùbt-t`t`¥,¥/¥,¥,4`¥c4.Ù/¥.¥,4.Ùc4/tbÙ.H]X[]K‹õ›ô[ò[òŸHÿ]N»€€X›‹à4/t-H4-4/¥.Ù-¥-t/H4/¥,tat/¥-4.4`¥c›\ò]‹é¬ãH4.Ù/¥.¥,4.Ùc4/tbÙ-H4/Ù/¥.Ùc4-Ù/¥,¥,4`¥-t.Ùc4`t.¥.4-H4-4/¥.¥`Ù/4-t/t`¥b»4/t-H4-4/¥.Ù-¥/tb»4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.4`t`¥,4/t/¥,¥.4`¥c4`tc»4,4,¥`¥/¥/t/¥/4/t/à4`t/¥,t`4,4/t/tbÙ/€‹ôH€õ›€YŸH4,t-t-»4cÙ,¥/t/¥,Ù/à€õ›€YŸK⁄[\‹ùõ›Œ¬ãH]\õ‹òQõﬁ4,¥bÙ/Ù/¥.Ù/tcÙ-t`à4`4,4-Ù`4-tb4dt/t/tbÙ-H4-4-t.t`t`¥,¥.4c»4aÙ-t`4-t-»YŸ[ù€‹ôK–€€\]\àYŸ[ùŸö[K›€‹ö‹‹XŸK‹ÿ[ôõﬁ€€[ô»4.4/Ù`4/¥,¥-t`4cÙ-t`à4`4-t-Ù`Ù.Ùc4`¥,4`é¬ãH4,Ù/¥.Ù/¥`H4.4/4-t-t`àÿÿ[ò\Ÿ[[ôH’’Œ¬ãH4-4/¥.¥`Ù/4-t/t`¥b»4`4,4-Ù,t.4`4,4c¥`¥`tc»ÿÿ[ò\Ÿ[[ôH4`¥,4/4,Ù-4-H4a4/¥`4/4,4`à4/Ù/¥-4-4-t`4-¥,4/N»€›Y–‘ã–RH4/t-H4`t`¥,4/t/¥,¥.4`¥`tc»4/¥,tcÙ-Ù,4`¥-t.Ùc4/tbÙ/¬ãH€€ùõ€YŸ[ãZ[\õ›ô[Y[ùàÿ[ôY]H8°§à€›\òŸK‹ÿYô]H€€ùòX›8°§àò\Ÿ[[ôH8°§àÿ[ôY]H\›»8°§à]\õZ[ö\›X»€€\\ö\€€à8°§àÿÿ[€€\\ò]]ôHô]öY]»8°§à[ô\[ô[ùô\öYöXÿ][€ã‹õ€[›[€é¬ãHÿYô]Hÿ]\ÀX\›\à›‹õ€òX⁄À\]\àù\›ö]òXﬁH4.ÿ[ôõﬁ4/t-H4/4/¥,Ù`Ù`à4,tbÙ`¥c4/¥`¥.¥.Ùc¥aÙ-t/tb»4`t,4/4/¥.4-Ù/4-t/t-t/t.4-t/¬ãH€[XKÙ`t`¥/¥`4/¥/t/t.4-H4/4/¥-4-t.Ù.–RHTH8†%4`¥/¥.Ùc4.¥/à‹[€ò[€€\]Xö[]KŸ[ö[òŸ[Y[ù›€€¬ãH4`4-t-Ù`Ù.Ùc4`¥,4`¥b»4`t,4.t`¥/¥,ã4-4/¥.¥`Ù/4-t/t`¥/¥,ã4,¥/t-tb4/t.4aH4/4/¥-4-t.Ù-t.H4.4.¥/¥-4,4cÙ,¥.ÙcÙc¥`¥`tc»[ùù\›Y[ú]Ÿ]H4.4/t-H4/Ù/¥.Ù`ÙaÙ,4c¥`à4`t.4`t`¥-t/4/tbÙ-H4/Ù/¥.Ù/t/¥/4/¥aÙ.4cÀÇÇää¥&¥`4.4`¥-t`4.4.H4`4-t,Ù`4-t`t`t.4.ääà4-t`t.Ù.4`Ù-4,4.Ù.4`¥cÙ,¥bÙ.¥.Ùc¥aÙ.4`¥c€[XK4,¥/t-tb4/t.4-HRK–TH4.4/¥`¥.¥.Ùc¥aÙ.4`¥c4.4/t`¥-t`4/t-t`ã]\õ‹òQõﬁ4-4/¥.Ù-¥/t,4-Ù,4/Ù`Ù`t.¥,4`¥c4`t/¥,t`t`¥,¥-t/t/tbÙ.H€‹ôK4/¥`¥,¥-taÙ,4`¥c4.Ù/¥.¥,4.Ùc4/t/ã4.4`t/Ù/¥.Ùc4-Ù/¥,¥,4`¥c4.Ù/¥.¥,4.Ùc4/t`Ùcà4/Ù,4/4cÙ`¥cÙ-Ù/t,4/t.4cÀ4/Ù.Ù,4/t.4`4/¥,¥,4`¥c4.Ù/¥.¥,4.Ùc4/tbÙ-H4-Ù,4-4,4aÙ.4.4.4`t/Ù/¥.Ùc4-Ù/¥,¥,4`¥c4/Ù/¥-4-4-t`4-¥.4,¥,4-t/4bÙ-H4.Ù/¥.¥,4.Ùc4/tbÙ-H4.4/t`t`¥`4`Ù/4-t/t`¥bÀÇÇà»»»Kåãà4'¥`t`¥,4.Ùc4/tbÙ-H4/¥,tcÙ-Ù,4`¥-t.Ùc4/tbÙ-H4`¥`4-t,t/¥,¥,4/t.4c¬ÇãH4`Ù`t`¥,4/t/¥,¥.¥,4-4,4dt`à4`4,4,t/¥aÙ.4.HRKtaÙ,4`à4,t-t-»4/¥`¥-4-t.Ùc4/t/¥,Ù/àKt.¥.Ù.4-t/t`¥,¬ãH4`t/¥,t`t`¥,¥-t/t/tbÙ.H]\õ‹òQõﬁ€‹ôH4.4/t-t/¥,tat/¥-4.4/4bÙ-H4,¥-t`t,4/Ù/¥`t`¥,4,¥.ÙcÙc¥`¥`tc»4`H4/Ù`4.4.Ù/¥-¥-t/t.4-t/¬ãH⁄[ô›‹»4.[ôõ⁄Y4.4`t/Ù/¥.Ùc4-Ù`Ùc¥`àÿÿ[[ôô\ô[òŸN¬ãH4.Ù/¥.¥,4.Ùc4/tbÙ-H4/Ù,4/4cÙ`¥cÙ-Ù/t,4/t.4cÀ‹⁄⁄[Àÿ⁄X⁄‹⁄[ù»4/t-H4-Ù,4,¥.4`tcÙ`à4/¥`à4,¥/t-tb4/t-t,Ù/àRN¬ãH4/Ù/¥.Ùc4-Ù/¥,¥,4`¥-t.Ùc4/4/¥-¥-t`à4-Ù,4,Ù`4`Ù-¥,4`¥c4/Ù/¥-4-4-t`4-¥.4,¥,4-t/4bÙ-H4,t,4-Ùb»4.4-4/¥.¥`Ù/4-t/t`¥b»4/Ù`4/¥.4-Ù,¥/¥.Ùc4/t/¥,Ù/à4.4/4-t/t.¬ãH4,t/¥.Ùc4b4.4-H4,t,4-Ùb»4/¥,t`4,4,t,4`¥bÙ,¥,4c¥`¥`tc»4/Ù/¥`¥/¥.¥/¥,¥/é¬ãHõ⁄XŸKŸö[\À–€€\]\àYŸ[ù’€‹öÀ–TH4/t-H4-4/¥.Ù-¥/tb»4.Ù/¥/4,4`¥c4/¥`t/t/¥,¥/t/¥.H⁄]4/Ù`4.4`t,¥/¥-t.H4/t-t-4/¥`t`¥`Ù/Ù/t/¥`t`¥.¬ãH\]\»4/Ù`4/¥,¥-t`4cÙc¥`à4a¥-t.Ù/¥`t`¥/t/¥`t`¥c4.4/Ù/¥-4-4-t`4-¥.4,¥,4c¥`à4,t-t-Ù/¥/Ù,4`t/tbÙ.HZY‹ò][€ã‹õ€òX⁄»€€ùòX›¬ãH4.4`t`¥/¥`4.4aÙ-t`t.¥.4-HåKåã’åKå»4`H4/t-t/Ù/¥.Ù/t/¥.Hù\›X⁄Z[à4-4/¥.Ù-¥/tb»4.4/4-t`¥c€ôK][YHô\Z\ã–úöYŸH4/t,4/t/¥,¥bÙ.H4/Ù/¥-4/Ù.4`t,4/t/tbÙ.Hõ€‹é»4/Ù/¥`t.Ù-H⁄Y€ôYõ€‹à4/¥,t/t/¥,¥.Ù-t/t.4c»4/¥,tcÙ-Ù,4/tb»4`4,4,t/¥`¥,4`¥c4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.¬ãH4,¥`t-H4`4-tb4-t/t.4cÀÙ/Ù`4/¥,¥-t`4.¥.Ù/Ù.Ù,4/tb»4,¥-t-4`Ù`¥`tc»4`¥/¥.Ùc4.¥/à4-Ù-4-t`tcÇÇà»»»KåÀà4%¥ t(t(¥&¥'¥%H4'Ù(4$4$¥&4&Ù'à4$¥%t(4(t&4'¥'t&4(4'¥$¥$4't&4+¬Çê]\õ‹òQõﬁ4.4`t/Ù/¥.Ùc4-Ù`Ù-t`à4a4/¥`4/4,4`àPRì‘ãìRSì‘ãîU“êïRS
+KêãêÀë
+Kà4't-t.Ùc4-Ùc»4,¥bÙ/Ù`Ù`t.¥,4`¥c4a4`Ù/t.¥a¥.4/¥/t,4.Ùc4/t/à4.4-Ù/4-t/tdt/t/tbÙ.H4/Ù`4/¥-4`Ù.¥`à4/Ù/¥-4`¥-t/4-¥-H4/t/¥/4-t`4/¥/4aÙ`¥/à4`Ù-¥-H4,tbÙ.»4`t/¥,t`4,4/KÙ/Ù-t`4-t-4,4/H4/Ù/¥.Ùc4-Ù/¥,¥,4`¥-t.ÙcÙ/ÇÇãHPRì‘ò
+X
+H8†%4/t-t`t/¥,¥/4-t`t`¥.4/4,4c»4,4`4at.4`¥-t.¥`¥`Ù`4/t,4c»4/4.4,Ù`4,4a¥.4c»4.4.Ù.4.¥`4`Ù/Ù/t,4c»4`t/4-t/t,4/Ù`4/¥-4`Ù.¥`¥,Ù-4,4/t/tbÙaK–TK4`¥`4-t,t`Ùc¥bt,4c»4/¥`t/¥-Ù/t,4/t/t/¥,Ù/à4/Ù-t`4-tat/¥-4,ÇãHRSì‘ò
+ò
+H8†%4.¥`4`Ù/Ù/t,4c»4/t/¥,¥,4c»4,¥/¥-Ù/4/¥-¥/t/¥`t`¥c4`t,4/4/¥`t`¥/¥cÙ`¥-t.Ùc4/tbÙ.H4.¥`4`Ù/Ù/tbÙ.H4,t.Ù/¥.ã4-Ù,4/4-t`¥/t,4c»4/Ù-t`4-t`4,4,t/¥`¥.¥,4/t-t`t.¥/¥.Ùc4.¥.4aH4/Ù/¥-4`t.4`t`¥-t/4.4.Ù.4/t/¥,¥bÙ.Hô[X\ŸHõ€‹ãÇãHU“
+ÿ
+H8†%4-Ù,4,¥-t`4b4dt/t/t/¥-H4`Ù.Ù`ÙaÙb4-t/t.4-KÙ/Ù-t`4-t`4,4,t/¥`¥.¥,4`t`Ùbt-t`t`¥,¥`Ùc¥bt-t,Ù/à4,t.Ù/¥.¥,àRK4,Ù/¥.Ù/¥`K4/Ù,4/4cÙ`¥c€õ›€YŸK\]\ã€‹ôH]X[]K€€\]\àYŸ[ù4.4`ã¥/Àã4-t`t.Ù.4`t/¥,¥/4-t`t`¥.4/4/¥`t`¥c4`t/¥at`4,4/tcÙ-t`¥`tcÀÇãHïRS
+
+H8†%4`¥/¥aÙ-taÙ/tbÙ.H4.4`t/Ù`4,4,¥.Ù-t/t/tbÙ.H4-4-ta4-t.¥`ã⁄›ö^‹X⁄ÿY⁄[ô»ö^4,t-t-»4.4-Ù/4-t/t-t/t.4c»4/¥,tbt-t,Ù/à4/Ù/¥.Ùc4-Ù/¥,¥,4`¥-t.Ùc4`t.¥/¥,Ù/à4.¥/¥/t`¥`4,4.¥`¥,ÇÇ¥'¥,tcÙ-Ù,4`¥-t.Ùc4/tbÙ.H4/Ù`4/¥a¥-t`t`NÇÇåKà4'Ù`4.4/t,4aÙ,4.Ù-H4.4-Ù/4-t/t-t/t.4c»4.4`t/Ù/¥.Ù/t.4`¥-t.Ùc4-Ù,4/Ù.4`tbÙ,¥,4-t`à4,à”RSH4/Ù`4-t-4/Ù/¥.Ù,4,Ù,4-t/4bÙ.H4`Ù`4/¥,¥-t/tcù[\4/t/à
+ä¥/t-H4/4-t/tcÙ-t`à4.¥,4/t/¥/t.4aÙ-t`t.¥`Ùcà4,¥-t`4`t.4cà4-Ù,4`4,4/t-t-JäãÇåãà4(t/t,4aÙ,4.Ù,4.¥/¥-Ù`4-t`t`Ù`4`tb»4/Ù`4/¥at/¥-4cÙ`à4/¥`¥/t/¥`tcÙbt.4-t`tc»4.à4/t.4/[ö]‹€[⁄ŸK⁄[ùY‹ò][€ã‹X⁄ÿYŸKŸ]öXŸK‹ô[X\ŸKYÿ]\ÀÇåÀà4$t.Ù/¥.à4`taÙ.4`¥,4-t`¥`tc»4/Ù`4.4/tcÙ`¥bÙ/4`¥/¥.Ùc4.¥/à4.¥/¥,Ù-4,ô[]ò[ù\›»4-Ù-t.Ùdt/tbÙ-H4.4-4.Ùc»4.4-Ù/4-t/tdt/t/t/¥,Ù/à4,t.Ù/¥.¥,4/t-t`à4.4-Ù,¥-t`t`¥/t/¥,Ù/à‘H4-4-ta4-t.¥`¥,4-4-t.Ù,4c¥bt-t,Ù/à4/t/¥,¥`Ùcà4`4-t,4.Ù.4-Ù,4a¥.4cà4at`Ù-¥-KÙ/t-t`4,4,t/¥`¥/¥`t/Ù/¥`t/¥,t/t/¥.KÇçà4(¥/¥.Ùc4.¥/à4/Ù/¥`t.Ù-H4ct`¥/¥,Ù/à4,¥bÙ/Ù/¥.Ù/tcÙ-t`¥`tc»ô\ú⁄[€àù[\4/¥`¥-4-t.Ùc4/tbÙ/4-Ù,4,¥-t`4b4,4c¥bt.4/4ct`¥,4/Ù/¥/4.4`t.4/tat`4/¥/t.4-Ù.4`4`Ùc¥`¥`tc»õ⁄ôX››ô\ú⁄[€ãöú€€òõ⁄ôX›ô€Ÿ›[ôõ⁄Yô\ú⁄[€ê€ŸX[ú›[\ã›\]HY]Y]K“Së—S—»4.ô[X\ŸHX[öYô\›ÿ€€ùòX›ÀÇçKà4'Ù/¥`t.Ù-Hù[\4/¥,tcÙ-Ù,4`¥-t.Ùc4/tb»4/Ù/¥,¥`¥/¥`4/tbÙ-Hô\ú⁄[€ã\ﬁ[ò»
+»X⁄ÿYŸK›\]K‹ô[X\ŸH\›Àà4%t`t.Ù.4/¥/t.4.¥`4,4`t/tbÙ-K4/t/¥,¥,4c»4,¥-t`4`t.4c»4/t-H4`taÙ.4`¥,4-t`¥`tc»4,Ù/¥`¥/¥,¥/¥.KÇçãà4%t`t.Ù.4,à4/¥-4/t/¥/4`4-t.Ù.4-Ù-H4/t,4.¥/¥/Ù.4.Ù/¥`tc4/t-t`t.¥/¥.Ùc4.¥/à4-Ù,4.¥/¥/taÙ-t/t/tbÙaH4.4-Ù/4-t/t-t/t.4.K4/Ù`4.4/4-t/tcÙ-t`¥`tc»
+ä¥/t,4.4,t/¥.Ùc4b4.4.Jäà4`¥`4-t,t`Ù-t/4bÙ.Hù[\à4't-H4/t`Ù-¥/t/à4.4`t.¥`Ù`t`t`¥,¥-t/t/t/à4/Ù/¥,¥bÙb4,4`¥c4/t/¥/4-t`4/Ù/¥`t.Ù-H4.¥,4-¥-4/¥,Ù/à4,¥/t`Ù`¥`4-t/t/t-t,Ù/à€€[Z]4/t/à4/t-t.Ùc4-Ùc»4/¥`¥-4,4`¥cÙ/¥/Ù`Ù,t.Ù.4.¥/¥,¥,4`¥c4.4-Ù/4-t/tdt/t/tbÙ.H4,t.4/t,4`4/t.4.à4/Ù/¥-4`t`¥,4`4bÙ/4/t/¥/4-t`4/¥/ÇçÀà4&Ùc¥,t/¥-H4a4`Ù/t.¥a¥.4/¥/t,4.Ùc4/t/¥-H4.4-Ù/4-t/t-t/t.4-H4/Ù/¥`t.Ù-H4`Ù-¥-H4/¥/Ù`Ù,t.Ù.4.¥/¥,¥,4/t/t/¥,Ù/àõ‹õX[ô[X\ŸH4/¥,tcÙ-Ù,4`¥-t.Ùc4/t/à4,¥-t-4dt`à4.à4,¥-t`4`t.4.4`t`¥`4/¥,Ù/à4,¥bÙb4-H4/¥/Ù`Ù,t.Ù.4.¥/¥,¥,4/t/t/¥.KÇéà[ôõ⁄Yô\ú⁄[€ê€ŸX4`Ù,¥-t.Ù.4aÙ.4,¥,4-t`¥`tc»4-4.Ùc»4.¥,4-¥-4/¥,Ù/à[ú›[XõH[ôõ⁄Yô[X\ŸH4.4/t.4.¥/¥,Ù-4,4/t-H4`Ù/4-t/tc4b4,4-t`¥`tcÀÙ/t-H4/Ù/¥,¥`¥/¥`4cÙ-t`¥`tcÀÇéKà4(t.Ù/¥,¥,0™Ù.4-4-t,4.Ùc4/t/ãÙ,Ù/¥`¥/¥,¥/∞Æ»4,à4-¥`Ù`4/t,4.Ù-H4/¥-Ù/t,4aÙ,4c¥`à4/Ù`4/¥,¥-t`4cÙ-t/4bÙ.HXÿŸ\[òŸHÿ]Nà4,¥`t-H4/¥`¥/t/¥`tcÙbt.4-t`tc»4`¥-t`t`¥b»4-Ù-t.Ùdt/tbÙ-H4.4/t-t`à4.4-Ù,¥-t`t`¥/t/¥,Ù/à4,t.Ù/¥.¥.4`4`Ùc¥bt-t,Ù/à4-4-ta4-t.¥`¥,»4,4,t`t/¥.Ùc¥`¥/t/¥-H4/¥`¥`t`Ù`¥`t`¥,¥.4-H4,t`Ù-4`Ùbt.4aH4`Ù.Ù`ÙaÙb4-t/t.4.H4/t-H4/Ù/¥-4`4,4-Ù`Ù/4-t,¥,4-t`¥`tcÀÇÇà»»ãà4(¥-t.¥`Ùbt.4.Hò\Ÿ[[ôBÇãHô\‹⁄]‹ûNàô[ö[ô[K–RXãHúò[ò⁄àXZ[òãH4$¥-t`4`t.4cŒà
+äïåKåÀåå
+äÇãH[ôõ⁄Yô\ú⁄[€ê€ŸXà
+äåLJäÇãH€Ÿ›à
+äççÀåJäÇãHX⁄ÿYŸHò\Ÿ[[ôNàéYçMÿÃçÃåLLÃçŸMÿXÃYNMÿŸXåXÃXåÿÃôNXÇãHŸ[ã\ô[X[òŸH€ŸHò\Ÿ[[ôNàòåÕYXåçÿÕXôòNYXòòNXNôLŸLYÃXYMåÃòÿÇãHõ›\õò[€€ú€€Y][€à€€[Z]àLÃôåôYMNLåÿçŸMçÕÿYYòçŒMòÕåòÕLÃNÇÇ¥'Ù`4/¥,¥-t`4.¥.ÇÇãH€‹ôK’õ⁄XŸHÕLçŒMLX4/t,òåÕYKããò8†%’P–—T‘Œ¬ãHYŸ[ùﬁ[ò»ÕLçŒMLMMX8†%’P–—T‘Œ¬ãH]õ€][€àÕLçŒMLMé8†%’P–—T‘Œ¬ãHõ›\õò[[€õH€‹ôK’õ⁄XŸHÕLéåMÃÕò4/t,LÃôåôYããò8†%’P–—T‘Œ¬ãH[ôõ⁄YÕLçŒMLÃX4/¥`à4/Ù`4-t-4bÙ-4`Ùbt-t,Ù/à€ŸKZXY4,¥bÙ/Ù/¥.Ù/tcÙ.Ù`tc»4/Ù`4.4/Ù/¥`t.Ù-t-4/t-t.H4/Ù`4/¥,¥-t`4.¥-H4.4/t-H4`taÙ.4`¥,4-t`¥`tc»4-Ù,4,¥-t`4b4dt/t/tbÙ/4`4-t-Ù`Ù.Ùc4`¥,4`¥/¥/4-4/àö[ò[›]\ÀÇÇ¥(4,4/t-t-H4/t,X⁄ÿYŸHò\Ÿ[[ôH4,tbÙ.Ù.4-Ù-t.Ùdt/tbÙ/4.⁄[ô›‹»X⁄ÿYŸHÕLMéMMçMÿ[ôõ⁄YT»ÕLMéMMçÕò€‹ôK’õ⁄XŸHÕLMéMMÕòYŸ[ùﬁ[ò»ÕLMéMMÃMò€‹ôHõ€››ò\ÕLMéMMÕÃX]õ€][€àÕLMéMMéòÇÇà»»Àà4(t,4/4/¥`t`¥/¥cÙ`¥-t.Ùc4/t/¥-H]\õ‹òQõﬁ€‹ôBÇò]\õ‹òPù[ôY€‹ôS[Ÿ[ÇÇãHô\ŒãÀ€[Ÿ[Àÿ]\õ‹òYõﬁX€‹ôKôŸ›Yò¬ãH⁄[ô›‹»€‹ôW‹ù[ù[YKŸ[ô⁄[ôKÿ]\õ‹òYõﬁX€‹ôKôŸ›Yò¬ãHû]\»LéçŒLçç¬ãH“KLçMàåŒÿÿLôôôYLôôòXòŸMÃLåÕÕÃYÿLåéLÃLòòÃôåLLŒôŒMXòÕÿçXÇÇï⁄[ô›‹»4.4`t/Ù/¥.Ùc4-Ù`Ù-t`àX⁄ÿYŸY[XK\Ÿ\ùô\ãô^X4.ô\öYöYYù[ôYŸZY⁄Àà[ôõ⁄Y4.¥/¥/Ù.4`4`Ù-t`àù[ôY—’Qà4,àö]ò]H›‹òYŸH4aÙ-t`4-t-»[\
+»⁄^ôK€XY⁄XÀ‘“Hò[Y][€à4.4.4`t/Ù/¥.Ùc4-Ù`Ù-t`àò]]ôH[XKò‹Y⁄[à]ÇÇìõ‹õX[]ÇÇãHRP€Y[ùò⁄]
+
+X8°§à]\õ‹òP€‹ôTù[ù[YKò⁄]€ÿÿ[€€õJ
+X¬ãHYŸ[ù€‹ôK–€Ÿ€ö][€ì^Y\ã‹Ÿ[ãZ[\õ›ô[Y[ù4.4`t/Ù/¥.Ùc4-Ù`Ùc¥`àõ‹õX[RP€Y[ùò⁄]
+
+X¬ãH⁄]›⁄]ÿ€€\]Xö[]J
+X8†%4/¥`¥-4-t.Ùc4/tbÙ.H^X⁄]YÿXﬁKŸ]ô[‹\àTN¬ãHù[ù[YW⁄[ôõÿàŸ[ó‹ö[X\ûO]ùYX^\õò[ÿZW‹ô\]Z\ôYYò[ŸXõ‹õX[ÿ⁄]Ÿ^\õò[Ÿò[òX⁄œYò[ŸX‹\ò][€ò[›⁄]›]€€[XO]ùYX¬ãH4,¥.¥.Ùc¥aÙdt/t/tbÙ.H€€\]Xö[]H›⁄]⁄4/t-H4/4-t/tcÙ-t`àõ‹õX[]¬ãH[ôõ⁄Y^\õò[”€[XHò[òX⁄»4/¥`¥`t`Ù`¥`t`¥,¥`Ù-t`é¬ãHõ€››ò\4,t/¥.Ùc4b4-H4/t-H4/Ù`4-t-4.Ù,4,Ù,4-t`àõ‹õX[\Ÿ\à4,¥bÙ,t.4`4,4`¥cÙ`t.¥,4aÙ.4,¥,4`¥c4,¥/t-tb4/tc¥cà4/4/¥-4-t.ÙcÇÇà»»à€‹ôH€õ›€YŸH»4a4,4.t.Ùb»»4,t/¥.Ùc4b4.4-H4,t,4-Ùb¬Ç¥(4-t,4.Ù.4-Ù/¥,¥,4/tb»\òö]ò\ûHö[[ò[Y\Œ»î””ã“î””ì–‘’ã›^ÿ€ŸKŸ]N»–÷”—‘ïã—TPé»öX⁄ÿ›[Y[ù]4-4.Ùc»ã÷À÷÷”—À‘»[ôõ⁄Yà^^Y\é»›ôX[Z[ô»\ôŸHî””ì–‘’ã›^»[€õ€]X»î””à›ôX[Z[ôŒ»€›\òŸHôY⁄\›ûKŸö[ôŸ\úö[ùÿ[X\Ÿ\À‹ô]ö\⁄[€úŒ»\Xÿ]H›\ô\‹⁄[€é»€›\òŸHò[úÿX›[€àõ€òX⁄Œ»[ùù\›Y[\‹ùõ›[ô\ûKÇÇ¥'¥`t`¥,4,¥b4.4.t`tc»4/Ù`4/¥,t-t.Œà[XYŸK[€õK‹ÿÿ[õôYà4/t`Ù-¥-4,4-t`¥`tc»4,à4/Ù/¥.Ù/t/¥a¥-t/t/t/¥/ÿÿ[–‘àò\Ÿ[[ôKÇÇà»»Kà4'Ù,4/4cÙ`¥c»4.Ù/¥.¥,4.Ùc4/t/¥-H4/¥,t`ÙaÙ-t/t.4-BÇìÿÿ[Ÿ[X[ùXÀ›ôX›‹àô]öY]ò[ÇÇãHõ›öY\à]\õ‹òYõﬁ€ÿÿ[›ôX›‹ò¬ãHô]€‹ö◊‹ô\]Z\ôYYò[ŸX¬ãH^\õò[‹ù[ù[YW‹ô\]Z\ôYYò[ŸX¬ãH€[XW‹ô\]Z\ôYYò[ŸX¬ãHÿÿ[^Xÿ[ò[òX⁄ÀÇÇìŸôõ[ôH[ùY‹ò][€à€[⁄ŸH4/Ù`4/¥,¥-t`4cÙ-t`àYŸ[ù€‹ôH8°§àÿÿ[[õö[ô»8°§àÿÿ[€€8°§àÿÿ[Y[[‹ûH4/Ù`4.4,¥.¥.Ùc¥aÙdt/t/t/¥/YÿXﬁH€€\]Xö[]H›⁄]⁄4.4-Ù,4/Ù`4-tbt,4-t`à4`Ùat/¥-4,à€€\]Xö[]Hù[ù[YKÇÇà»»ãà€€ùõ€YŸ[ãZ[\õ›ô[Y[ùÇ¥(4-t,4.Ù.4-Ù/¥,¥,4/tb»]]][€ã››\õò[Y[ù»[›€\›Y\ôŸ]Œ»õ›X›Y\]\ã–TK‹ù[ù[YK€[Ÿ[À›€‹öŸõ›‹Œ»XõX»ù[ò›[€úÀ‹⁄Y€ò[Àÿò\ŸH€€ùòX›Œ»[ôŸ\õ›\»ö[Z]]ôH[Z]Œ»€›\òŸH‹õ››[Z]»]\õZ[ö\›X»ò\Ÿ[[ôKÿÿ[ôY]H›Z]\Œ»õÀ\ôY‹ô\‹⁄[€à€€\\ö\€€à4-4/à]X[]]]ôHô]öY]Œ»ÿÿ[€‹ôHõ‹‹ÿ[‹ô]öY]Œ»[ô\[ô[ùô\öYöXÿ][€ã‹õ€[›[€é»4`4,4-Ù-4-t.Ù-t/t.4-Hÿ[ôY]H›XõZ\‹⁄[€à4.ô[X\ŸH]]‹ö]N»4-Ù,4bt.4btdt/t/tbÙ-HX\›\à›‹‹õ€òX⁄ÀÇÇît,4`Ù-4.4`à4,¥/t-tb4/t-t.H4/4/¥-4-t.Ù.4-Ù,4.¥`4bÙ`éàõ‹õX[Ÿ[ãZ[\õ›ô[Y[ùõ‹‹ÿ[Ÿ]ò[X][€à4/t-H4`¥`4-t,t`Ù-t`à^\õò[RKÇÇà»»Àà]]€õ€[›\»ô\ŸX\ò⁄8†%4`¥-t.¥`Ùbt.4.H4,4`Ù-4.4`ÇÇà»»»4(Ù-¥-H4/Ù`4,4,¥.4.Ùc4/t/ÇÇòX\õö[ô–›\ò]‹òÇÇãH4/¥a¥-t/t.4,¥,4-t`à€›\òŸK€Y]Y]K›]K‹›[[X\ûN¬ãH4.4/4-t-t`àZ[ö[][Hõ€[›[€àÿ€‹ôN¬ãHö[ôŸ\úö[ù‹ŸY[àY\N¬ãH4/¥`¥.¥.Ù/¥/tcÙ-t`àÿÿ[Ÿÿ›[Y[ùÿ4.4-»]]€X]X»€‹ôH€õ›€YŸHõ›Œ¬ãH4.4/4/Ù/¥`4`¥.4`4`Ù-t`àõ€[›YŸXà][H4aÙ-t`4-t-»RP€Y[ùö[\‹ù⁄€õ›€YŸW›^
+
+X¬ãH4`t`¥,4,¥.4`àÿ€‹OX€‹ôW⁄€õ›€YŸX⁄[ô\ô\ŸX\ò⁄⁄€õ›€YŸX[ùù\›YŸ^\õò[]ùYX€›\òŸW›\õ]X[]W‹ÿ€‹ôX[Y\›[\¬ãH€õ›€YŸH^4`t/¥-4-t`4-¥.4`à’SïïT’Q—VTìêS‘ëT—PTê“—UWXÇÇà»»»4't,4.t-4-t/t/tbÙ.H4-4-ta4-t.¥`àåçãLKLMÇÇòô\ŸX\ò⁄€€X›‹ãò€€X›
+
+X4`t-t.taÙ,4`H4-4/à4`t/¥,tbÙ`¥.4c»ô\ŸX\ò⁄ÿ€€\]Y4,¥bÙ-ÙbÙ,¥,4-t`à€X\õä][JX4-4.Ùc»
+ä¥,¥`t-taJäà4`t/¥,t`4,4/t/tbÙaH][\»4.4/Ù.4b4-t`à4.4aH4,àY[[‹ûT›‹ôXà4+t`¥/à4/Ù`4/¥.4`tat/¥-4.4`à
+ä¥-4/ääà›\ò]‹à]X[]KŸY\Hÿ]Kà4(t.Ù-t-4`t`¥,¥.4cŒÇÇãH4/t.4-Ù.¥/¥.¥,4aÙ-t`t`¥,¥-t/t/tbÙ.HŸXàô\›[4/4/¥-¥-t`à4/Ù/¥/Ù,4`t`¥c4,à4-4/¥.Ù,Ù/¥,¥`4-t/4-t/t/t`Ùcà4/Ù,4/4cÙ`¥c4-4,4-¥-H4-t`t.Ù.›\ò]‹à4/Ù/¥`¥/¥/4-t,Ù/à4/¥`¥,¥-t`4,Ù/t-t`é¬ãHÿÿ[Ÿÿ›[Y[ùÿ4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.4-Ù,4/Ù.4`tbÙ,¥,4c¥`¥`tc»4,àY[[‹ûH4.¥,4.à]]€õ€[›\»ô\ŸX\ò⁄4at/¥`¥c»›\ò]‹à4`t/Ù-ta¥.4,4.Ùc4/t/à4-Ù,4/Ù`4-tbt,4-t`à4.4aH]]€X]X»õ€[›[€à4,à€‹ôH€õ›€YŸN¬ãH4`t`Ùbt-t`t`¥,¥`Ùc¥`à4-4,¥-H4.¥/¥/t.¥`Ù`4.4`4`Ùc¥bt.4-H4.Ù.4/t.4.X\õö[ô»
+ô\ŸX\ò⁄€€X›‹ãó€X\õò4.X\õö[ô–›\ò]‹ò
+K4/Ù/¥ct`¥/¥/4`»]X[]Hÿ]H4/t-H4cÙ,¥.ÙcÙ-t`¥`tc»]]‹ö]KÇÇää¥$¥bÙ,t`4,4/t/t/¥-H4.4`t/Ù`4,4,¥.Ù-t/t.4-Nääà€€X›‹à4-4/¥.Ù-¥-t/H4`¥/¥.Ùc4.¥/à4`t/¥,t.4`4,4`¥cÙ/t/¥`4/4,4.Ù.4-Ù/¥,¥,4`¥c‹õ›ô[ò[òŸK€Ÿ»][\Àà4&Ùc¥,t,4c»4-4/¥.Ù,Ù/¥,¥`4-t/4-t/t/t,4c»]]€X]X»X\õö[ô»õ€[›[€à4-4/¥.Ù-¥/t,4/Ù`4/¥at/¥-4.4`¥c4aÙ-t`4-t-»›\ò]‹ãà4%4.Ùc»ÿÿ[ÿ›[Y[ù»4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.4.Hõ€[›[€à4-4/¥.Ù-¥-t/H4/¥`t`¥,4,¥,4`¥c4`tc»4-Ù,4/Ù`4-tbtdt/t/tbÙ/»4cÙ,¥/tbÙ.H\Ÿ\à€õ›€YŸHò\ŸHõ›»4/¥`t`¥,4dt`¥`tc»4/¥`¥-4-t.Ùc4/tbÙ/ÇÇ¥'Ù/¥`t.Ù-H4ct`¥/¥,Ù/à4ct`¥,4/Ù,4-4/¥,t,4,¥.4`¥côY‹ô\‹⁄[€à€[⁄ŸK4.¥/¥`¥/¥`4bÙ.H4-4/¥.¥,4-ÙbÙ,¥,4-t`éàôZôX›YŸ\Xÿ]K€ÿÿ[Yÿ›[Y[ù][\»4/t-H4/Ù/¥cÙ,¥.ÙcÙc¥`¥`tc»4,à]]€õ€[›\»€ôÀ]\õHY[[‹ûK–€‹ôH€õ›€YŸKõ€[›YŸXà][H4/Ù/¥.Ù`ÙaÙ,4-t`àõ›ô[ò[òŸK⁄\⁄‹]X[]HY]Y]KÇÇà»»à\]K‹⁄Y€ö[ô¬Çï⁄[ô›‹»åKåà4.4/4-t-t`à4/¥/Ù`Ù,t.Ù.4.¥/¥,¥,4/t/tbÙ.H€ôK][YHô\Z\àúöYŸKà4&4`t`¥/¥`4.4aÙ-t`t.¥.4-HåKåã’åKå»ö[ò\öY\»4,tbÙ.Ù.4`t/¥,t`4,4/tb»4-4/à4.¥/¥`4`4-t.¥`¥/t/¥,Ù/à4-Ù,4.¥`4-t/Ù.Ù-t/t.4c»ô[X\ŸW‹XõXÀúXò4/Ù/¥ct`¥/¥/4`»4/¥/t.4/t-H4/4/¥,Ù`Ù`à4,t-t-Ù/¥/Ù,4`t/t/à4/t,4aÙ,4`¥c⁄Y€ôY]]À]\]H4-Ù,4-4/t.4/4aÙ.4`t.Ù/¥/4`¥/¥.Ùc4.¥/à4/Ù`Ù,t.Ù.4.¥,4a¥.4-t.H\]Köú€€òà4%4.Ùc»4/t.4aH4`¥`4-t,t`Ù-t`¥`tc»€ôK][YHô\Z\à4/t,4/t/¥,¥bÙ.H⁄Y€ôYõ€‹ãà4'Ù/¥`t.Ù-H4/t/¥,¥/¥,Ù/à⁄Y€ôYõ€‹à\]\à4/¥,tcÙ-Ù,4/H4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.4,¥.4-4-t`¥c4,¥`t-H4/Ù/¥`t.Ù-t-4`Ùc¥bt.4-H4,¥-t`4`t.4.4aÙ-t`4-t-»4`t`¥,4,t.4.Ùc4/tbÙ.Hô[X\Ÿ\À€]\›Ÿ›€õÿY›\]Köú€€ò
+»\]Kú⁄YÿÇÇîõŸX›[€àô[X\ŸH⁄Y€ö[ô»Y[ù]Y\»8†%›€ô\ãX€€ùõ€Yõ›[ô\ûKàö]ò]H⁄Y€ö[ô»Ÿ^\»4-Ù,4/Ù`4-tbt-t/t/à4.¥/¥/4/4.4`¥.4`¥cÙ,¥bÙ-4,4,¥,4`¥c4.¥.Ù.4-t/t`¥`t.¥/¥/4`»€‹ôKà4+t`¥/à4/t,4/4-t`4-t/t/t,4c»4,Ù`4,4/t.4a¥,4-4/¥,¥-t`4.4cÀ4,4/t-H^\õò[RH\[ô[òﬁKÇÇà»»Kà4$Ù/¥.Ù/¥`H»€€\]\àYŸ[ù»€‹ö»»TBÇ¥(t/¥at`4,4/tcÙc¥`¥`tc»ÿÿ[’’À’êQ›ÿZŸKÿò\ôŸKZ[é»€€\]\àYŸ[ùÿ‹ôY[ú⁄›’RH]]€X][€ã›ö\⁄[€àò[òX⁄»
+»ÿ[ôõﬁ»€‹öÀ‹õ⁄ôX›Œ»THúöYŸK‹ö]òXﬁN»⁄[ô›‹»⁄YXÿ\úŒ»[ôõ⁄Yò]]ôHY⁄[à]Œ»€ò\⁄›‹õ€òX⁄À‹ù[ù[YH^[ú⁄[€úÀÇÇì€õ[ôH€€»4/t-H4-Ù,4/4-t/tcÙc¥`àYŸ[ù€‹ôKà4'¥`¥.¥,4-»õ⁄XŸKŸö[\Àÿ€€\]\ã–TK€€õ[ôH[ö[òŸ[Y[ù4/t-H4-4/¥.Ù-¥-t/H4.Ù/¥/4,4`¥c4/¥`t/t/¥,¥/t/¥.Hÿÿ[⁄]ÇÇà»»Là4&¥/¥/t`t/¥.Ù.4-4.4`4/¥,¥,4/t/t,4c»4.4`t`¥/¥`4.4c¬Çà»»»åçãLKLMH8†%ÿÿ[Yö\ú›ZY‹ò][€ÇÇê]\õ‹òH€‹ôHö[X\ûN»€[XH‹[€ò[»ÿÿ[[Ÿ[]X\ò[ù[ôKŸòZ[›ô\é»4`4,4`tb4.4`4-t/t/tbÙ.H€õ›€YŸN»›ôX[Z[ôŒ»ôY⁄\›ûK‹õ€òX⁄Œ»ÿÿ[Ÿ[X[ùX»Y[[‹ûN»Ÿ[ãZ[\õ›ô[Y[ùô[ò⁄X\ö‹Œ»õ€[›[€àŸ\\ò]Yúõ€Hô[X\ŸH]]‹ö]N»[ôõ⁄Yÿÿ[ÿ›[Y[ù]ÀÇÇà»»»åçãLKLMà8†%\]\ã‹⁄Y€ö[ô¬Ç¥&4`t`¥/¥`4.4aÙ-t`t.¥,4c»åKåà4/Ù`4/¥,¥-t`4-t/t,»4/¥,t/t,4`4`Ù-¥-t/H4/¥`¥`t`Ù`¥`t`¥,¥`Ùc¥bt.4.Hù\›õ€›»4`t-4-t.Ù,4/H⁄[ô›‹»åKå∏°§ïåKå»ô\Z\é»€€ùòX›4.4`t/Ù`4,4,¥.Ù-t/H4/t,ô\Z\ã]õ›Y⁄UåKåé»4-4,4.Ùc4/t-t.tb4.4.H4,4`Ù-4.4`à4/Ù/¥.¥,4-Ù,4.À4aÙ`¥/à4.4`t`¥/¥`4.4aÙ-t`t.¥,4c»åKå»4`¥,4.¥-¥-H4/t-H4`t/¥-4-t`4-¥.4`à4-Ù,4.¥`4-t/Ù.Ùdt/t/t/¥,Ù/àù\›õ€›4/Ù/¥ct`¥/¥/4`»4/t/¥,¥bÙ.H⁄Y€ôYõ€‹à4-4/¥.Ù-¥-t/H4,tbÙ`¥c4,¥bÙb4-HåKåÀÇÇà»»»åçãLKLMà8†%ù[ôY€‹ôBÇêù[ôY€‹ôHŸZY⁄»
+»⁄[ô›‹»[ô⁄[ôH
+»[ôõ⁄Y\‹Ÿ]€ò]]ôH]»õ‹õX[[Ÿ[Ÿ]\⁄^ò\ô4`Ù-4,4.Ùdt/N»Ÿ][ô‹»4/t-H4`¥`4-t,t`Ùc¥`à[Ÿ[X[òYŸ[Y[ù»ÿ\õ]\‹òXŸHö^Y»X⁄ÿYŸH“H4/Ù`4/¥,¥-t`4cÙ.»4,t/¥.Ùc4b4.4-H\ùYòX›ÀÇÇà»»»åçãLKLMà8†%4-t-4.4/tbÙ.H4-¥`Ù`4/t,4.¬Ç¥(t/¥-Ù-4,4/Hì“ëP’”PT’Tó”—ÀõY»õ€›Q—SïÀõY4`¥`4-t,t`Ù-t`àôXYÿ€Z[K›‹ö]N»4.¥/¥/t.¥`Ù`4.4`4`Ùc¥bt.4-Hõ›\õò[»4`Ù-4,4.Ù-t/tbŒ»“H4-Ù,4/Ù`4-tbt,4-t`à4.4aH4,¥/¥-Ù,¥`4,4`é»ëPQQH4/Ù`4.4,¥-t-4dt/H4.àåKåÀÿù[ôY€‹ôKÇÇà»»»åçãLKLMà8†%Ÿ[ã\ô[X[òŸH\ô[ö[ô¬Ç¥&¥.Ùc¥aÙ-t,¥bÙ-H€€[Z]ŒÇÇãHçÿLôòÃKããòXõX»ÿÿ[[€õH[ôô\ô[òŸHTN¬ãHôçÃŸããòö[X\ûH⁄]ÿÿ[[€õN¬ãHXYôéåããòÿÿ[[€õH
+»[ùù\›YŸXà€€ùòX›Œ¬ãHÿMÿNNXéKããòŸ[ã\ô[X[òŸH€[⁄ŸN¬ãHçôNKããò“H€[⁄ŸN¬ãHòÕMÕççÀããò\úŸ\àôY‹ô\‹⁄[€àö^¬ãHNéYÕYãããòõ€››ò\õ‹õX[ú»^X⁄]€€\]Xö[]N¬ãHMNÀããòõ»\Ÿ\à^\õò[[Ÿ[Ÿ]\¬ãHôLLMçXÀããòŸ[ãZ[\õ›ô[Y[ùô[ò⁄X\ö»]]‹ö]H€€ùòX›¬ãHÕéLNéÀããòù[Ÿôõ[ôH⁄]‹[õö[ôÀ€ÿÿ[]€€€Y[[‹ûH€[⁄ŸN¬ãHYMŒLLãããòŸôõ[ôH€[⁄ŸH[à“N¬ãHòåÕYKããò€‹úôX›^X›][€ã[‹ô\à€€ùòX›¬ãHLÃôåôYããò€€ú€€Y]Y›\úô[ùX\›\àõ›\õò[ÇÇà»»LKà4(Ù-¥-H4`t/¥/¥`¥,¥-t`¥`t`¥,¥`Ù-t`à4`t,4/4/¥`t`¥/¥cÙ`¥-t.Ùc4/t/¥`t`¥.»4/¥`t`¥,4,¥b4.4-t`tc»4-Ù,4-4,4aÙ.Çà»»»”ëBÇãHù[ôYÿÿ[€‹ôH⁄[ô›‹À–[ôõ⁄Y¬ãHõ‹õX[⁄]–YŸ[ù€‹ôK‹[õö[ôÀ‹Ÿ[ãZ[\õ›ô[Y[ùÿÿ[[€õN¬ãH€€\]Xö[]H\€€]Y¬ãHõ»X[ô]‹ûH€[XK‹ô[[›HRN¬ãHÿÿ[Y[[‹ûK“€õ›€YŸK‹Ÿ[X[ùX»ô]öY]ò[¬ãH\ôŸKYö[H[\‹ù¬ãHÿÿ[õ⁄XŸHò\Ÿ[[ôN¬ãHÿ[ôõﬁ‹€ò\⁄›‹õ€òX⁄Œ¬ãH]\õZ[ö\›X»€€ùõ€YŸ[ãZ[\õ›ô[Y[ù¬ãHŸXàX\öŸY[ùù\›Y‹õ›ô[ò[òŸH]›\ò]‹à›YŸN¬ãHŸôõ[ôH[ùY‹ò][€à€[⁄ŸN¬ãHX⁄ÿYŸHõ€››ò\⁄]›]^\õò[[Ÿ[Ÿ]\ÇÇà»»»—¬ÇåKà–P’UëWHô\ŸX\ò⁄€€X›‹à8°§à›\ò]‹à⁄[ô€H]]‹ö]]]ôHõ€[›[€à]»›õ€ôŸ\àõ›ô[ò[òŸKŸY\KŸ]öY[òŸH[ô[ôÀÇåãàÿÿ[–‘àõ‹à[XYŸK[€õK‹ÿÿ[õôYãÇåÀàõ⁄XŸH]X[]K€][òﬁH[\õ›ô[Y[ùÀÇçàô[ò⁄X\öÀYö]ô[à€‹ôH[ù[YŸ[òŸK€Y[[‹ûK‹[õö[ô»]X[]KÇçKàôX[⁄[ô›‹À–[ôõ⁄Y]öXŸHôY‹ô\‹⁄[€úÀÇçãà›€ô\à⁄Y€ö[ô»õ€››ò\
+»õŸX›[€àô[X\ŸH[ô]ÀY[ôô\öYöXÿ][€ãÇçÀàô\Z\à\›‹öXÿ[åKå»€ù»Hô]»⁄Y€ôY\]Hõ€‹ã[àô\öYûH]\›]\]H]X›[€à[ô]ÀY[ôÇÇà»»Lãà4$¥/t-tb4/t.4-H4,Ù`4,4/t.4a¥bÀ4/t-H4cÙ,¥.ÙcÙc¥bt.4-t`tc»4-Ù,4,¥.4`t.4/4/¥`t`¥c4cà4.4/t`¥-t.Ù.Ù-t.¥`¥,ÇãH›€ô\ãX€€ùõ€YõŸX›[€à⁄Y€ö[ô»ŸX‹ô]Œ¬ãH4`t-t`¥c4`¥/¥.Ùc4.¥/à4-4.Ùc»4-Ù,4-4,4aÀ4`4-t,4.Ùc4/t/à4`¥`4-t,t`Ùc¥bt.4aH4`t-t`¥c¬ãH[ôõ⁄Y⁄Y€ö[ô»[ôXYŸH[ôõ‹òŸYûH‘Œ¬ãH4.¥,4aÙ-t`t`¥,¥/à4.¥/¥/t.¥`4-t`¥/t/¥.Hù[ôY4/4/¥-4-t.Ù.4`¥`4-t,t`Ù-t`à4-4,4.Ùc4/t-t.tb4.4aHô[ò⁄X\ö‹ÀÇÇà»»LÀà4'Ù.Ù,4/H4/Ù`4/¥-4/¥.Ù-¥-t/t.4c»4/Ù/à4/Ù`4.4/¥`4.4`¥-t`¥`¬Çà»»»8†%Ÿ[ã\ô[X[òŸBÇãH—”ëWH⁄[ô€HX\›\àõ›\õò[
+»Q—SïŒ¬ãH—”ëWHÿÿ[[€õHõ‹õX[]¬ãH—”ëWHŸôõ[ôH[ùY‹ò][€à€[⁄ŸN¬ãH—”ëWH^X›ZXY€‹ôK’õ⁄XŸH‹ôY[é¬ãH—”ëWHŸ[ãZ[\õ›ô[Y[ùÿÿ[õ‹‹ÿ[‹ô]öY]»
+»]\õZ[ö\›X»]]‹ö]KÇÇà»»»8†%]]€õ€[›\»ô\ŸX\ò⁄]X[]BÇãH–P’UëWH4`Ù,t`4,4`¥c4/¥,tat/¥-›\ò]‹à4aÙ-t`4-t-»ô\ŸX\ò⁄€€X›‹ãó€X\õò¬ãH–P’UëWH⁄[ô€Hõ€[›[€à]]‹ö]HHX\õö[ô–›\ò]‹ò¬ãH–P’UëWH4`Ù`t.4.Ù.4`¥c€€ù[ùö[ôŸ\úö[ùÿÿ[õ€öXÿ[Tì‹õ›ô[ò[òŸKŸ]öY[òŸHY]Y]N¬ãH–P’UëWHôY‹ô\‹⁄[€à€[⁄ŸH4-4.Ùc»ôZôX›YŸ\Xÿ]K€ÿÿ[Yÿ›[Y[ùú»õ€[›YŸXà][N¬ãH”ëVH€€ùòYX›[€ãÿ€‹úõÿõ‹ò][€à[Ÿ[4-4.Ùc»4/t-t`t.¥/¥.Ùc4.¥.4aH4/t-t-Ù,4,¥.4`t.4/4bÙaH4.4`t`¥/¥aÙ/t.4.¥/¥,ãÇÇà»»»8†%\]\ã›ô\ú⁄[€ö[ô»ô\Z\ÇÇãH–P’UëWH\›‹öXÿ[åKå»€ôK][YHô\Z\à]4/t,4/t/¥,¥bÙ.H⁄Y€ôYõ€‹é¬ãH–P’UëWH4-Ù,4.¥`4-t/Ù.4`¥c\õX[ô[ùXõX»\]Hù\›õ€›4,à4/Ù`4.4.Ù/¥-¥-t/t.4.¬ãH–P’UëWH“H€€ùòX›àõ‹õX[]\›ô[X\ŸH4/¥,tcÙ-Ù,4/H4`t/¥-4-t`4-¥,4`¥c\]Köú€€ò\]Kú⁄Yÿ]õ‹õH\‹Ÿ]»4.4,¥-t`4`t.4cà4,¥bÙb4-H4.¥.Ù.4-t/t`¥,¬ãH–P’UëWHô\ú⁄[€ö[ô»€XﬁH
+»]]€X]Yô\ú⁄[€ãY\ÿ⁄\[ôH€€ùòX›¬ãH”ëVH4/Ù/¥`t.Ù-H4-Ù-t.Ùdt/tbÙaHÿ]\»4/Ù/¥-4/tcÙ`¥c4,¥-t`4`t.4cà4/Ù/à4/Ù`4,4,¥.4.Ù`»4/4,4.¥`t.4/4,4.Ùc4/t/¥,Ù/à4`¥`4-t,t`Ù-t/4/¥,Ù/àù[\4.4/Ù-t`4-t`t/¥,t`4,4`¥c⁄[ô›‹À–[ôõ⁄YÇÇà»»»H8†%ô[X\ŸHôXY[ô\‹¬ÇãH’–RUSë»’”ëTàì’SëTñWHö]ò]HõŸX›[€à\]HŸ^HŸX‹ô]
+»[ôõ⁄Yô[X\ŸHY[ù]N¬ãH4/Ù/¥`t.Ù-Hõ€››ò\›€ô\àY[ù]H4/Ù`4/¥,¥-t`4.4`¥c⁄Y€ôYô[X\ŸK›\]H[ô]ÀY[ôÇÇà»»»à8†%4.¥,4aÙ-t`t`¥,¥/ÇÇãHÿÿ[–‘é¬ãH]öXŸH\›Œ¬ãHõ⁄XŸH]X[]N¬ãH€‹ö»V¬ãH\ôŸH€õ›€YŸH\ôõ‹õX[òŸN¬ãH€‹ôHô[ò⁄X\ö‹ÀÇÇà»»Mà4$4.¥`¥.4,¥/tbÙ-H4`4,4,t/¥`¥b»4.4-Ù,4/tcÙ`¥bÙ-H4a4,4.t.Ùb¬à»»»”RSH“ULåçãLKLMãUTUTãUëTî“S”íSëÿÇãH4(t`¥,4`¥`Ù`Nà
+äêP’UëJäÇãH›\ùYúõ€HPQàMÕÕåMÃYòLŸXÕMMŒNLåMLôMŒNLéŒãH4(4-t-¥.4/à⁄]ãH4)¥-t.Ùcà4.4`t/Ù`4,4,¥.4`¥c\]Hö\⁄Xö[]K‹ô\Z\à4-4.Ùc»4.4`t`¥/¥`4.4aÙ-t`t.¥.4aHåKåã’åKåÀ4`t/¥-Ù-4,4`¥c4/t/¥,¥bÙ.H⁄Y€ôY\]Hõ€‹ã4-Ù,4.¥`4-t/Ù.4`¥c\õX[ô[ùù\›õ€›4,4,¥`¥/¥/4,4`¥.4-Ù.4`4/¥,¥,4`¥c4/Ù`4/¥,¥-t`4.¥`»]\›[X[öYô\›4.4-¥dt`t`¥.¥/¥-Hô\ú⁄[€ö[ô»€XﬁKÇãH4'Ù`4-t-4/Ù/¥.Ù,4,Ù,4-t/4bÙ.Hù[\4/Ù/¥`t.Ù-H4-Ù-t.Ùdt/tbÙaHXÿŸ\[òŸKYÿ]\Œà
+äìRSì‘ääà
+4/t/¥,¥bÙ.H⁄Y€ôYô[X\ŸHõ€‹à
+»4.¥`4`Ù/Ù/tbÙ.H\]\ã‹ô[X\ŸH€€ùòX›
+K4`¥/à4-t`t`¥c4`t.Ù-t-4`Ùc¥bt.4.Hõ‹õX[ô[X\ŸH4-4/¥.Ù-¥-t/H4,tbÙ`¥c4/t-H4/t.4-¥-HåKçåå»4.¥,4/t/¥/t.4aÙ-t`t.¥,4c»4,¥-t`4`t.4c»4/4-t/tcÙ-t`¥`tc»4`¥/¥.Ùc4.¥/à4/Ù/¥`t.Ù-H4`¥-t`t`¥/¥,ãÇãH4)4,4.t.ÙbÀÙ/Ù/¥-4`t.4`t`¥-t/4,à\]K›\]W€X[òYŸ\ãôŸ\]K€X[öYô\›ù[\]Köú€€ò\]K‹ô[X\ŸW‹XõXÀúXòô⁄]Xã›€‹öŸõ›‹À‹ô[X\ŸKû[[ô⁄]Xã›€‹öŸõ›‹À›⁄[ô›‹À\X⁄ÿYŸKX⁄Kû[[‹ô\Z\à€‹öŸõ›»4/Ù`4.4/t-t/¥,tat/¥-4.4/4/¥`t`¥.ùZ[ úô[X\ŸJòõ⁄ôX››ô\ú⁄[€ãöú€€òõ⁄ôX›ô€Ÿ›^‹ù‹ô\Ÿ]ÀòŸôÿ“Së—S—ÀõY\›À›\]Jò\›À›ô\ú⁄[€ó‹ﬁ[ò◊›\›úÃX4/t/¥,¥bÙ-Hô\ú⁄[€ã‹ô[X\ŸH€€ùòX›ÀQ—SïÀõYÿ‹À‘ì“ëP’”PT’Tó”—ÀõYÇãH4't-H4/Ù-t`4-t`t-t.¥,4-t`¥`tc»4`HRH€Z[Nà\]K›\]W€›ô\õ^KôŸ4/¥`t`¥,4dt`¥`tc»4-Ù,RH[ôN»4`Hô\ŸX\ò⁄›õ⁄XŸK‹Ÿ\ùô\à€Z[\»4.4aH4a4,4.t.Ùb»4/t-H4`¥`4/¥,Ù,4c¥`¥`tcÀà4'Ù-t`4-t-4.¥,4-¥-4/¥.H4-Ù,4/Ù.4`tc4cà4`t,¥-t`4cÙ`¥c4`t,¥-t-¥.4.HXZ[ò4.4.4/t`¥-t,Ù`4.4`4/¥,¥,4`¥c4/Ù,4`4,4.Ù.Ù-t.Ùc4/tbÙ-H4.4-Ù/4-t/t-t/t.4cÀÇãH4&4/t-¥-t/t-t`4/t,4c»4/Ù`4.4aÙ.4/t,àõ‹õX[]\›ô[X\ŸH4/¥`¥`t`Ù`¥`t`¥,¥`Ù-t`ã4,\›‹öXÿ[åKå»4.4`t/Ù/¥.Ùc4-Ù`Ù-t`àî–H\]\ã4/t/à4/t-H4`t/¥-4-t`4-¥.4`à[õôYô[X\ŸW‹XõXÀúXò»4/Ù/¥ct`¥/¥/4`»4/Ù`Ù,t.Ù.4.¥,4a¥.4c»4/¥-4/t/¥,Ù/à\]Köú€€ò4/t-H4/4/¥-¥-t`à4.4`t/Ù`4,4,¥.4`¥c4`Ù-¥-H4`Ù`t`¥,4/t/¥,¥.Ù-t/t/tbÙ.H4,t.4/t,4`4/t.4.ãà4't`Ù-¥-t/H€ôK][YHô\Z\à4/t,4/t/¥,¥bÙ.H⁄Y€ôYõ€‹à4.\õX[ô[ùô\ú⁄[€ã‹ô[X\ŸH\ÿ⁄\[ôKÇãHXÿŸ\[òŸNàåKåàô\Z\à4/¥`t`¥,4dt`¥`tc»4`4,4,t/¥aÙ.4/»åKå»ô\Z\à4/Ù`4/¥,¥-t`4-t/H[ã\XŸH4/t,⁄[ô›‹»4`H4`t/¥at`4,4/t-t/t.4-t/\Ÿ\éãÀÿ»4/t/¥,¥bÙ.Hõ€‹à4`t/¥-4-t`4-¥.4`à[õôYXõX»Ÿ^N»\]\à€€ùòX›4/t,õ€‹à4,¥.4-4.4`à4,¥-t`4`t.4cà4,¥bÙb4-H4`t-t,tc»4.4/¥`¥.¥.Ù/¥/tcÙ-t`à4/t-t,¥-t`4/t`Ùcà4/Ù/¥-4/Ù.4`tc⁄\⁄»ô[X\ŸH€‹öŸõ›»4/¥,tcÙ-Ù,4/H4a4/¥`4/4.4`4/¥,¥,4`¥c]\›\‹Ÿ]Œ»ô\ú⁄[€àù[\4,¥bÙ/Ù/¥.Ù/tcÙ-t`¥`tc»4`¥/¥.Ùc4.¥/à4/Ù/¥`t.Ù-H4-Ù-t.Ùdt/tbÙaH€‹ôK’⁄[ô›‹À–[ôõ⁄Y›\]K‹ô[X\ŸHÿ]\ÀÇÇà»»»”RSH“ULåçãLKLMãURKT”T“ÇãH4(t`¥,4`¥`Ù`Nà
+äêP’UëJäÇãH›\ùYúõ€HPQàYòÃÕYåÿMŸòÃMNLçÿÃŒXMÃNLÕçLÃYXÿãH4(4-t-¥.4/à⁄]ãH4)¥-t.Ùcà4/Ù/¥.Ù/t/¥`t`¥c4cà4/Ù`4.4,¥-t`t`¥.⁄[ô›‹À–[ôõ⁄YRH]\õ‹òQõﬁ4.à4`Ù`t`¥/¥.taÙ.4,¥/¥.H4,4-4,4/Ù`¥.4,¥/t/¥.H4.¥/¥/4/Ù/¥/t/¥,¥.¥-H4,t-t-»4/t,4.Ù/¥-¥-t/t.4.K4`tb¥-t-Ù-¥,4c¥bt.4aH4ct.Ù-t/4-t/t`¥/¥,ã4/t-t/Ù/¥/tcÙ`¥/tbÙaKÙ-4`Ù,t.Ù.4`4`Ùc¥bt.4aH4.¥/t/¥/Ù/¥.à4.4/Ù`4.4/4.4`¥.4,¥/t/¥,Ù/à4,¥.4-Ù`Ù,4.Ùc4/t/¥,Ù/à4/¥a4/¥`4/4.Ù-t/t.4cŒ»4,4,¥,4`¥,4`ÿõﬁ€Ÿ€Àú›ôÿ4/Ù/à4/Ù`4cÙ/4/¥/4`»4`Ù.¥,4-Ù,4/t.4cà4,¥.Ù,4-4-t.Ùc4a¥,4/t-H4.4-Ù/4-t/tcÙ`¥c4-4/à4/Ù/¥.Ù`ÙaÙ-t/t.4c»4/t/¥,¥/¥,Ù/à4ct`¥,4.Ù/¥/t,ÇãH4)4,4.t.ÙbÀÙ/Ù/¥-4`t.4`t`¥-t/4,àÿ‹ö\À€XZ[ãôŸÿ‹ö\À€XZ[óÿ€€\]ôŸÿ‹ö\À€[ÿö[W›ZWÿY\\ãôŸÿ‹ö\ÀŸ\⁄›‹›ö\›X[›[YKôŸÿ‹ö\À‹Ÿ][ô‹◊€›ô\õ^KôŸÿ‹ö\À‹Ÿ][ô‹◊›ö\›X[Ÿö^ôŸÿ‹ö\À›õ⁄XŸW€›ô\õ^KôŸÿ‹ö\À›õ⁄XŸW€›ô\õ^Wÿ€€\]ôŸÿ‹ö\Àÿ€€\]\ó€›ô\õ^KôŸÿ‹ö\Àÿ€€\]\ó€›ô\õ^Wÿ€€\]ôŸÿ‹ö\À⁄€õ›€YŸWÿò\ŸW€›ô\õ^KôŸÿ‹ö\À‹Ÿ[ó⁄[\õ›ô[Y[ù€›ô\õ^KôŸ€‹öÀ›€‹ö◊€›ô\õ^KôŸ\]K›\]W€›ô\õ^KôŸ\K‹Ÿ][ô‹◊€›ô\õ^KôŸ\‹Ÿ]À›ZK⁄X€€ó ãú›ôÿ4.¥`4/¥/4-Hõﬁ€Ÿ€Àú›ôÿ\›ÀŸ\⁄›‹›ZW‹€[⁄ŸKôŸÿ‹À‘ì“ëP’”PT’Tó”—ÀõYÇãH4't-H4/Ù-t`4-t`t-t.¥,4-t`¥`tc»4`H“U”PRSãLåçãLKLMãTëT—PTê“TUPSUX4.“ULåçãLKLMãUì“P—KTUPSUXàô\ŸX\ò⁄›õ⁄XŸK\]€à4a4,4.t.Ùb»4.ô⁄]Xã›€‹öŸõ›‹À›õ⁄XŸKX⁄Kû[[4/t-H4`¥`4/¥,Ù,4c¥`¥`tcŒ»4-¥`Ù`4/t,4.»4,¥`t-t,Ù-4,4/¥,t/t/¥,¥.ÙcÙ-t`¥`tc»4`¥/¥.Ùc4.¥/à4/Ù/¥,¥-t`4aH4`t,¥-t-¥-t,Ù/àPQ4`H4`t/¥at`4,4/t-t/t.4-t/4aÙ`Ù-¥/¥,Ù/à”RSKÇãH4&4/t-¥-t/t-t`4/t,4c»4/Ù`4.4aÙ.4/t,à4`¥-t.¥`Ùbt.4.HRH4`t/¥,t.4`4,4-t`¥`tc»4/t-t`t.¥/¥.Ùc4.¥.4/4.4/t-t-Ù,4,¥.4`t.4/4bÙ/4.›ô\õ^Kt`t.¥`4.4/Ù`¥,4/4.4`H4a4.4.¥`t.4`4/¥,¥,4/t/tbÙ/4.‹\t`4,4-Ù/4-t`4,4/4.4.4/¥`¥-4-t.Ùc4/tbÙ/4.4,4,t`t/¥.Ùc¥`¥/tbÙ/4.Ÿõÿ][ô»€€ùõ€Œ»4ct`¥/à4`t/¥-Ù-4,4dt`à4`4-t,4.Ùc4/tbÙ-H4`4.4`t.¥.›ô\ôõ›À€›ô\õ\4/t,Må4.[ôõ⁄Y4,4aÙ,4`t`¥c4a4`Ù/t.¥a¥.4.H4-4`Ù,t.Ù.4`4`Ù-t`¥`tc»4.4.Ù.4.4/4-t-t`à4`t.Ù.4b4.¥/¥/4/t-tcÙ`t/tbÙ-H4/Ù/¥-4/Ù.4`t.à4't`Ù-¥/tb»4-t-4.4/tbÙ-Hô\‹€ú⁄]ôHù[\À4.¥/¥/4/Ù,4.¥`¥/tbÙ-HX›[€à›\ôòXŸ\»4.ôY‹ô\‹⁄[€à⁄X⁄‹ÀÇãH4'Ù.Ù,4/H4/Ù`4/¥,¥-t`4.¥.à4-4/à4.4/t`¥-t,Ù`4,4a¥.4.4,àXZ[ò4.4`t/Ù/¥.Ùc4-Ù/¥,¥,4`¥c4/¥`¥-4-t.Ùc4/t`ÙcàRKt,¥-t`¥.¥`À4`4,4`tb4.4`4.4`¥c\⁄›‹›ZW‹€[⁄ŸKôŸ4/Ù`4/¥,¥-t`4.¥,4/4.4,Ù-t/¥/4-t`¥`4.4.Ù`t.4,Ù/t,4.Ù/¥,ãÙ/Ù/¥/tcÙ`¥/t/¥`t`¥.4ct.Ù-t/4-t/t`¥/¥,à4.4/Ù`4.4/t.4/4,4`¥c4ct`¥,4/»4`¥/¥.Ùc4.¥/à4/Ù/¥`t.Ù-H4aÙ.4`t`¥/¥,Ù/à€Ÿ›\úŸH
+»RH€[⁄ŸH
+»4`t/¥/¥`¥,¥-t`¥`t`¥,¥`Ùc¥bt.4aH⁄]XàX›[€úÀÇÇà»»»”RSH“U”PRSãLåçãLKLMãTëT—PTê“TUPSUXÇãH4(t`¥,4`¥`Ù`Nà
+äêP’UëJäÇãH›\ùYúõ€HPQàLÃôåôYMNLåÿçŸMçÕÿYYòçŒMòÕåòÕLÃNãH4(4-t-¥.4/à⁄]ãH4)¥-t.Ùcà4`t-4-t.Ù,4`¥cX\õö[ô–›\ò]‹ò4-t-4.4/t`t`¥,¥-t/t/tbÙ/]]‹ö]H4-4.Ùc»4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥/¥,Ù/à4-4/¥.Ù,Ù/¥,¥`4-t/4-t/t/t/¥,Ù/àŸXã[X\õö[ôŒ»€€X›‹à4`¥/¥.Ùc4.¥/à4`t/¥,t.4`4,4-t`ãÙ.Ù/¥,Ù.4`4`Ù-t`à4-4,4/t/tbÙ-N»4-Ù,4.¥`4bÙ`¥c]]€X]X»ÿÿ[Yÿ›[Y[ùXZÿYŸH4.4-4/¥,t,4,¥.4`¥côY‹ô\‹⁄[€à\›ÀÇãH4)4,4.t.ÙbÀÙ/Ù/¥-4`t.4`t`¥-t/4,àYŸ[ù‹ô\ŸX\ò⁄ÿ€€X›‹ãôŸYŸ[ù€X\õö[ô◊ÿ›\ò]‹ãôŸ4/¥`¥/t/¥`tcÙbt.4-t`tc»\›À úô\ŸX\ò⁄
+òÿ\›Àÿ]]€õ€^W€X\õö[ô◊‹€[⁄ŸKôŸô⁄]Xã›€‹öŸõ›‹À›õ⁄XŸKX⁄Kû[[4`¥/¥.Ùc4.¥/à4-t`t.Ù.4/t`Ù-¥-t/H4-Ù,4/Ù`Ù`t.à4/t/¥,¥/¥,Ù/à€[⁄ŸKÿ‹À‘ì“ëP’”PT’Tó”—ÀõYÇãH4't-H4/Ù-t`4-t`t-t.¥,4-t`¥`tc»4`H4-Ù,4,¥-t`4b4dt/t/tbÙ/“U”PRSãLåçãLKLMãSPT’TãP”‘ëX»4/Ù-t`4-t-4.¥,4-¥-4/¥.H4-Ù,4/Ù.4`tc4cà4`t,¥-t`4cÙ`¥c4`t,¥-t-¥.4.HPQ4.4/t-H4/Ù-t`4-t`¥.4`4,4`¥c4/t/¥,¥bÙ-H4/Ù,4`4,4.Ù.Ù-t.Ùc4/tbÙ-H4.4-Ù/4-t/t-t/t.4cÀÇãH4&4/t-¥-t/t-t`4/t,4c»4/Ù`4.4aÙ.4/t,à4`t-t.taÙ,4`Hô\ŸX\ò⁄€€X›‹ãó€X\õä
+X4/Ù.4b4-t`à4-4,4/t/tbÙ-H4,àY[[‹ûH4-4/à›\ò]‹àÿ]K4/Ù/¥ct`¥/¥/4`»ôZôX›Y€€ù[ù4`Ù-¥-H4/¥.¥,4-ÙbÙ,¥,4-t`¥`tc»4,¥bÙ`ÙaÙ-t/t/tbÙ/àÿ]H4-4/¥.Ù-¥-t/H4,tbÙ`¥c4-t-4.4/t`t`¥,¥-t/t/t/¥.H4`¥/¥aÙ.¥/¥.H]]€X]X»õ€[›[€ãÇãH4(t.Ù-t-4`Ùc¥bt.4.H4b4,4,Œà4,¥/t-t`t`¥.4/4.4/t.4/4,4.Ùc4/tbÙ.H4`t/¥,¥/4-t`t`¥.4/4bÙ.HôYòX›‹ã4-Ù,4`¥-t/]\õZ[ö\›X»—ÿ‹ö\€[⁄ŸH4.€‹ôH“KÇÇà»»»”RSH“ULåçãLKLMãUì“P—KTUPSUXÇãH4(t`¥,4`¥`Ù`Nà
+äêP’UëJäÇãH›\ùYúõ€HPQàLLÿXLÃLMçÃNLòXçXòŸLòŸåYLMLMMçÿãH4(4-t-¥.4/à⁄]ãH4)¥-t.Ùcà4`Ù.Ù`ÙaÙb4.4`¥c4-t`t`¥-t`t`¥,¥-t/t/t/¥`t`¥c4`4,4-Ù,t/¥`4aÙ.4,¥/¥`t`¥c4.4-Ù,4-4-t`4-¥.¥`»4.Ù/¥.¥,4.Ùc4/t/¥.H4`4`Ù`t`t.¥/¥.H4/¥-Ù,¥`ÙaÙ.¥.]\õ‹òQõﬁ4,t-t-»4/Ù`4-t,¥`4,4bt-t/t.4c»4,¥/t-tb4/t-t,Ù/àÀ‘’4,à4/¥,tcÙ-Ù,4`¥-t.Ùc4/t`Ùcà4-Ù,4,¥.4`t.4/4/¥`t`¥cÇãH4)4,4.t.ÙbÀÙ/Ù/¥-4`t.4`t`¥-t/4,àõ⁄XŸK‹]€ã›◊Ÿ[ô⁄[ôKúXõ⁄XŸK‹]€ã‹õÿŸ\‹€‹ãúXõ⁄XŸKÿ€€ôöYÀ›õ⁄XŸWÿ€€ôöYÀöú€€òõ⁄XŸKÿ€€ôöYÀŸ[[›[€úÀöú€€ò4/Ù`4.4/t-t/¥,tat/¥-4.4/4/¥`t`¥.\›À›\››õ⁄XŸW›^úX\›À›\››õ⁄XŸWÿ€€ôöY‹ÀúX\›À›\›ﬁ◊ÿ€€ùòX›úX4/Ù`4.4/t-t/¥,tat/¥-4.4/4/¥`t`¥.õ⁄XŸK‘ëPQQKõYÿ‹À‘ì“ëP’”PT’Tó”—ÀõY4`¥/¥.Ùc4.¥/à4-4.Ùc»4.4/t`¥-t,Ù`4,4a¥.4.4`t`¥,4`¥`Ù`t,”RSKÇãH4't-H4/Ù-t`4-t`t-t.¥,4-t`¥`tc»4`H“U”PRSãLåçãLKLMãTëT—PTê“TUPSUXàô\ŸX\ò⁄ö[\»4.ô⁄]Xã›€‹öŸõ›‹À›õ⁄XŸKX⁄Kû[[4/t-H4`¥`4/¥,Ù,4c¥`¥`tcŒ»X\›\àŸ»4,¥`t-t,Ù-4,4/¥,t/t/¥,¥.ÙcÙ-t`¥`tc»4`¥/¥.Ùc4.¥/à4/Ù/¥,¥-t`4aH4`t,¥-t-¥-t,Ù/àPQ4`H4`t/¥at`4,4/t-t/t.4-t/4aÙ`Ù-¥/¥,Ù/à”RSKÇãH4&4/t-¥-t/t-t`4/t,4c»4/Ù`4.4aÙ.4/t,à4`¥-t.¥`Ùbt.4.H⁄[\õ»ò\Ÿ[[ôH4/t-H4.4`t/Ù/¥.Ùc4-Ù`Ù-t`à4/Ù-t`4-t-4,4/t/tbÙ-H[[›[€ã⁄[ù[ú⁄]K‹‹YY4,4/Ù/¥`t`¥/Ù`4/¥a¥-t`t`t/¥`4`t,¥cÙ-ÙbÙ,¥,4-t`à4`¥-t/4/»4.4,¥bÙ`t/¥`¥`»4aÙ-t`4-t-»4/Ù`4/¥`t`¥/¥.H4`4-t`t-t/4/Ù.Ù.4/t,À4aÙ`¥/à4`Ùat`Ù-4b4,4-t`à4-t`t`¥-t`t`¥,¥-t/t/t/¥`t`¥c»4.¥/¥/ta4.4,Ù`Ù`4,4a¥.4c»úôX][ô◊‹]\Ÿ\ÿ4-Ù,4cÙ,¥.Ù-t/t,4/t/à4a4,4.¥`¥.4aÙ-t`t.¥.4/t-H4`4-t,4.Ù.4-Ù/¥,¥,4/t,ÇãH4(t.Ù-t-4`Ùc¥bt.4.H4b4,4,Œà4/Ù`4/¥,¥-t`4.4`¥cŸ\ùô\àÿ[]4.4`¥-t.¥`Ùbt.4-Hõ⁄XŸH\›À4-Ù,4`¥-t/4,¥/t-t`t`¥.4`t/¥,¥/4-t`t`¥.4/4bÙ.Hÿÿ[[€õH‘›^\õ‹€ŸHôYòX›‹à4.4/Ù`4/¥,Ù/t,4`¥c[ö]›õ⁄XŸH“KÇÇà»»»”RSH“ULåçãLKLMãT—TïëTãQòÇãH4(t`¥,4`¥`Ù`Nà
+äêP’UëJäÇãH›\ùYúõ€HPQàNMòYçåççMôåçLéYçŒåÃŒYXMòXŸéXÕÃòåXãH4(4-t-¥.4/à⁄]ãH4)¥-t.Ùcà4-4/¥,¥-t`t`¥.4`t-t`4,¥-t`4/tbÙ.H4.¥/¥/t`¥`Ù`]\õ‹òQõﬁ4.4/Ù/¥`t`¥/¥cÙ/t/t/¥-H4at`4,4/t.4.Ù.4bt-H4-4/à4`¥`4,4/t-Ù,4.¥a¥.4/¥/t/t/¥,Ù/àõŸX›[€ã\ôXYHò\Ÿ[[ôNà4-t-4.4/t,4c»‘S]H4$t%4,t-t-»4,¥/t-tb4/t-t.H4(t(Ù$t%4,t-t-Ù/¥/Ù,4`t/t,4c»4/4.4,Ù`4,4a¥.4c»4`t`Ùbt-t`t`¥,¥`Ùc¥bt.4aHî””ã“î””ì4.¥/¥/t.¥`Ù`4-t/t`¥/t,4c»4-Ù,4/Ù.4`tc[ùY‹ö]K‹ôXY[ô\‹À4`4-t-Ù-t`4,¥/t/¥-H4.¥/¥/Ù.4`4/¥,¥,4/t.4-H4.õ€òX⁄À\ÿYôH4/¥,t/t/¥,¥.Ù-t/t.4-HëQÀîïKÇãH4'Ù`4-t-4/Ù/¥.Ù,4,Ù,4-t/4bÙ.Hù[\4/Ù/¥`t.Ù-H4-Ù-t.Ùdt/tbÙaHXÿŸ\[òŸKYÿ]\Œà
+äìRSì‘ääà4.4-Àt-Ù,4/t/¥,¥/¥,Ù/àXÿ€›[ùŸ›Y\›Ÿ]öXŸK\ﬁ[ò»Ÿ\ùô\à€€ùòX›»4.¥,4/t/¥/t.4aÙ-t`t.¥`Ùcà4,¥-t`4`t.4cà4ct`¥/¥`à[ôH4/t-H4/4-t/tcÙ-t`ã4.4`¥/¥,Ù/¥,¥bÙ.Hù[\4,¥bÙ/Ù/¥.Ù/tcÙ-t`àô[X\ŸK›ô\ú⁄[€ö[ô»4ct`¥,4/ÀÇãH4)4,4.t.ÙbÀÙ/Ù/¥-4`t.4`t`¥-t/4,à\KŸ]Xò\ŸKúX\Kÿ]]úX\KÿXÿ€›[ù‹›‹ôKúX\K‹ﬁ[ò◊‹›‹ôKúX\Kÿ€€ùô\úÿ][€ó‹›‹ôKúX\K€X\õö[ô◊‹›‹ôKúX\K€X\õö[ô◊‹ﬁ[òÀúX\K‹Ÿ\ùô\ãúX\KÿòX⁄›\‹Ÿ\ùöXŸKúX\Kÿ€‹ôWÿÿ[ôY]W‹]Y]YKúX\›À›\›ÿ\WŸÿ]]ÿ^KúX\›À›\›ÿ\WŸ]Xò\ŸKúX\›À›\›ÿ\WÿXÿ€›[ù◊‹ﬁ[òÀúX\›À›\›ÿ\WÿXÿ€›[ù€ô]€‹öÀúX\›À›\›ÿ\WÿXÿ€›[ù‹ô\›‹ôKúX\›À›\›ÿ\W‹ÿ⁄[XW€ZY‹ò][€úÀúX\›À›\›ÿ\W‹ö]òXﬁWÿ€€ùòX›úX\›À›\›ÿòX⁄›\‹Ÿ\ùöXŸKúX\›À›\›Ÿ\ﬁ[Y[ùÿ€€ùòX›úX\ﬁK‹ôY◊‹ùK⁄[ú›[ú⁄\ﬁK‹ôY◊‹ùK›\]Kú⁄ô⁄]Xã›€‹öŸõ›‹Àÿ\KX⁄Kû[[ÿ‹À‘ì“ëP’”PT’Tó”—ÀõYÇãH4't-H4/Ù-t`4-t`t-t.¥,4-t`¥`tc»4`Nà“ULåçãLKLMãURKT”T““U”PRSãLåçãLKLMãTëT—PTê“TUPSUX“ULåçãLKLMãUì“P—KTUPSUX“ULåçãLKLMãUTUTãUëTî“S”íSëÿ“ULåçãLKLMãP”‘ëKPëSê“PTí‘ÿ“ULåçãLKLMãS––SS–‘ò»4.4aH4-Ù,4/tcÙ`¥bÙ-H]»4/t-H4.4-Ù/4-t/tcÙ`¥cÇãH4&4/t-¥-t/t-t`4/t,4c»4/Ù`4.4aÙ.4/t,àõ]î””ã“î””ì›‹ô\»4.4/4-tc¥`àòXŸK‹ÿÿ[Kÿ€‹úù\[€ãt`4.4`t.à4/Ù`4.4/Ù,4`4,4.Ù.Ù-t.Ùc4/t/¥/ò\›THXÿŸ\‹»4.4/t-H4-4,4c¥`à4-t-4.4/tbÙ.Hò[úÿX›[€ò[[ùY‹ö]H€€ùòX›à]€à‹[]Lÿ4,¥`t`¥`4/¥-t/K4/t-H4`t/¥-Ù-4,4dt`à4,¥/t-tb4/t-t.Hù[ù[YKt-Ù,4,¥.4`t.4/4/¥`t`¥.»\ú€€ò[]H4`¥`4-t,t`Ù-t`à4/¥`¥-4-t.Ùc4/t/¥,Ù/àö[ò⁄\[Ÿ]öXŸK‹Ÿ\‹⁄[€ã‹ﬁ[ò»ù\›õ›[ô\ûH4.4/t-H4-4/¥.Ù-¥/t/à4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.4/Ù/¥/Ù,4-4,4`¥c4,à⁄\ôY€‹ôHX\õö[ôÀÇãH4'Ù.Ù,4/H4/Ù`4/¥,¥-t`4.¥.à4/4.4,Ù`4,4a¥.4c»YÿXﬁH›‹ô\»8°§à‘S]H4`H4.4-4-t/4/Ù/¥`¥-t/t`¥/t/¥`t`¥c4cé»–Sÿù\ﬁK][Y[›]Ÿõ‹ôZY€àŸ^\À⁄[ùY‹ö]H⁄X⁄‹Œ»õ€òX⁄»Z\úõ‹úŒ»Xÿ€›[ùŸ›Y\›\€€][€é»ôYúô\⁄õ›][€ã‹ô\^K‹ô]õ⁄ŸN»›Y\›ZY‹ò][€é»\ú⁄\›[ùﬁ[òÀÿ€€ôõX›Œ»‹ôXYX»òX⁄›\‹ô\›‹ôN»ëQÀîïHôK]\]H€ò\⁄›»TKŸ\ﬁ[Y[ùÿòX⁄›\\›»
+»^X›ZXYTH“KÇÇà»»»”RSH“U”PRSãLåçãLKLMãSPT’TãP”‘ëXÇãH4(t`¥,4`¥`Ù`Nà
+äë”ëJäÇãH›\ùYúõ€HPQàéYçMÿÃçÃåLLÃçŸMÿXÃYNMÿŸXåXÃXåÿÃôNXãH[ùY‹ò]Yõ›Y⁄àòåÕYXåçÿÕXôòNYXòòNXNôLŸLYÃXYMåÃòÿãHõ›\õò[€‹ŸH€€[Z]àLÃôåôYMNLåÿçŸMçÕÿYYòçŒMòÕåòÕLÃNãH4(4-t-Ù`Ù.Ùc4`¥,4`éà4-t-4.4/tbÙ.H4-¥`Ù`4/t,4.»
+»›öX›Ÿ[ã\ô[X[òŸH
+»€€\]Xö[]H\€€][€à
+»Ÿôõ[ôHõ€Ÿà
+»Ÿ[ãZ[\õ›ô[Y[ù]Y]ÇãH⁄X⁄‹Œà€‹ôK’õ⁄XŸHÕLçŒMLX’P–—T‘Œ»YŸ[ùﬁ[ò»ÕLçŒMLMMX’P–—T‘Œ»]õ€][€àÕLçŒMLMé’P–—T‘Œ»õ›\õò[€‹ôK’õ⁄XŸHÕLéåMÃÕò’P–—T‘ÀÇãH4'Ù`Ù`¥.4/¥`t,¥/¥,t/¥-¥-4-t/tbÀ4.¥`4/¥/4-H4/Ù`Ù`¥-t.K4-Ù,4/tcÙ`¥bÙaH4/t/¥,¥bÙ/ô\ŸX\ò⁄€Z[H4,¥bÙb4-KÇÇà»»»4*4,4,t.Ù/¥/H4/t/¥,¥/¥.H4-Ù,4cÙ,¥.¥.Çò^à»»»”RSHS—OãOUOãO“‘ïRQÇãH4(t`¥,4`¥`Ù`NàP’UëBãH›\ùYúõ€HPQà⁄OÇãH4(4-t-¥.4/à⁄]€‹ö»€Ÿ^YŸ[ùãH4)¥-t.Ùcà4/¥-4/t,4`t,¥cÙ-Ù/t,4c»4-Ù,4-4,4aÙ,ÇãH4)4,4.t.ÙbÀÙ/Ù/¥-4`t.4`t`¥-t/4,à]œÇãH4't-H4/Ù-t`4-t`t-t.¥,4-t`¥`tc»4`NàX›]ôH€Z[\œÇòÇà»»MKà4'Ù/¥`t.Ù-t-4/tcÙc»4-Ù,4/Ù.4`tc4-Ù,4,¥-t`4b4dt/t/t/¥,Ù/à4ct`¥,4/Ù,Çà»»»åçãLKLMà8†%⁄]8†%Ÿ[ã\ô[X[òŸH\ô[ö[ô¬ÇãHò\ŸHPQàéYçMÿÀããòÇãH[ùY‹ò]Y€ŸHPQàòåÕYKããòÇãHõ›\õò[àLÃôåôYããòÇãH4(t-4-t.Ù,4/t/éàÿÿ[[€õHõ‹õX[]€€\]Xö[]H\€€][€ãù[Ÿôõ[ôH⁄]‹[õö[ôÀ€ÿÿ[]€€€Y[[‹ûH€[⁄ŸK]\õZ[ö\›X»Ÿ[ãZ[\õ›ô[Y[ù]]‹ö]Kù[ôYõ€››ò\€€ùòX›ÇãH4&4/t-¥-t/t-t`4/t,4c»4/Ù`4.4aÙ.4/t,à[ô\[ô[òŸH4-4/¥.Ù-¥/t,4/Ù`4/¥,¥-t`4cÙ`¥c4`tc»4`4-t,4.Ùc4/tbÙ/^X›][€à]4,4/t-H4`¥/¥.Ùc4.¥/à4a4.Ù,4,Ù,4/4.ÇãH4'Ù`4/¥,¥-t`4.¥.à€‹ôK’õ⁄XŸHÕLçŒMLX’P–—T‘Œ»YŸ[ùﬁ[ò»ÕLçŒMLMMX’P–—T‘Œ»]õ€][€àÕLçŒMLMé’P–—T‘Œ»X\›\ã[€õH“HÕLéåMÃÕò’P–—T‘ÀÇãH4(t.Ù-t-4`Ùc¥bt.4.H4b4,4,Œà4`¥-t.¥`Ùbt.4.HP’UëHô\ŸX\ò⁄\]X[]H€Z[KÇÇà»»Mãà4)4/¥`4/4,4`à4-Ù,4/Ù.4`t.4-Ù,4,¥-t`4b4dt/t/t/¥,Ù/à4ct`¥,4/Ù,Çò^à»»»]K][YOà8†%[ŸOà8†%›YŸOÇãHò\ŸHPQàããÇãH€€[Z]ŒàããÇãH4(t-4-t.Ù,4/t/éàããÇãH4&4/t-¥-t/t-t`4/t,4c»4/Ù`4.4aÙ.4/t,àããÇãH4'Ù`4/¥,¥-t`4.¥.àããÇãH4'¥,Ù`4,4/t.4aÙ-t/t.4cÀÙ`4.4`t.¥.àããÇãH4(t.Ù-t-4`Ùc¥bt.4.H4b4,4,ŒàããÇãH4'¥`t,¥/¥,t/¥-¥-4dt/t/tbÙ-H4a4,4.t.ÙbŒàããÇòÇãKKBÇ¥'Ù/¥`t.Ù-t-4/t-t-H4/Ù`4,4,¥.4.Ù/éà
+ä¥-t`t.Ù.4`4,4-Ù,Ù/¥,¥/¥`’€‹öÀ–€Ÿ^4/¥`t`¥,4/t/¥,¥.4.Ù`tcÀ4`t.Ù-t-4`Ùc¥bt.4.H4.4`t/Ù/¥.Ù/t.4`¥-t.Ùc4/t-H4,¥/¥`t`t`¥,4/t,4,¥.Ù.4,¥,4-t`à4/Ù.Ù,4/H4/Ù/à4-4/¥,Ù,4-4.¥,4/8†%4/¥/H4aÙ.4`¥,4-t`à4ct`¥/¥`à4a4,4.t.À4,4.¥`¥`Ù,4.Ùc4/tbÙ.H⁄]PQ4.“K4-Ù,4`¥-t/4`t/¥-Ù-4,4dt`à4/t/¥,¥bÙ.H”RSH4.4/Ù`4/¥-4/¥.Ù-¥,4-t`à4`H4/Ù-t`4,¥/¥,Ù/à4/t-t-Ù,4,¥-t`4b4dt/t/t/¥,Ù/à4/Ù`Ù/t.¥`¥,4/t-H4/Ù/¥,¥`¥/¥`4cÙc»4`Ù-¥-H4,¥bÙ/Ù/¥.Ù/t-t/t/t`Ùcà4/Ù,4`4,4.Ù.Ù-t.Ùc4/t`Ùcà4`4,4,t/¥`¥`ÀääÇÇà»»MÀà€‹ö»8†%4.¥/¥/¥`4-4.4/t,4a¥.4c»4.4,4`Ù-4.4`ãåçãLKLMÇÇà»»»”RSH”‘íÀLåçãLKLMãP–SëQUKTUQUQKPUQUÇãH4(t`¥,4`¥`Ù`Nà
+äë”ëH8†%4.Ù/¥.¥,4.Ùc4/tbÙ-H4/Ù`4/¥,¥-t`4.¥.»4/¥-¥.4-4,4-t`à“KÙ.4/t`¥-t,Ù`4,4a¥.4.
+äÇãH›\ùYúõ€HPQàLÕÕòÃòÿôéXòôòéåÿÕÕMLMLôLÕYMLŸçMÕÕéãH4(4-t-¥.4/à€‹ö¬ãH4)¥-t.Ùcà4/Ù`4/¥,¥-t`4.4`¥c\ú⁄\›[ùÿ[ôY]H]Y]YK4.4-Ù/¥.ÙcÙa¥.4cà›XõZ\‹⁄[€ú»4.4a¥-t.Ù/¥`t`¥/t/¥`t`¥c4,4`4`¥-ta4,4.¥`¥/¥,é»4`t/¥,Ù.Ù,4`t/¥,¥,4`¥c4`t.Ù-t-4`Ùc¥bt.4-H4-Ù,4-4,4aÙ.4,4.¥`¥.4,¥/tbÙaH4aÙ,4`¥/¥,à4,t-t-»4/Ù/¥,¥`¥/¥`4-t/t.4c»4.4aH4.4-Ù/4-t/t-t/t.4.KÇãH4)4,4.t.ÙbŒà\Kÿ€‹ôWÿÿ[ôY]W‹]Y]YKúX\›À›\›ÿ€‹ôWÿÿ[ôY]W‹]Y]YKúXÿ‹À‘ì“ëP’”PT’Tó”—ÀõY»4.4`tat/¥-4/t/¥-H4/Ù/¥.Ù/t/¥-H4(¥%»ÿ‹À–UTì‘êQì÷—ïS‘‘P“QíP–US”ó‘ïKõY4.¥,4.à4`¥-tat/t.4aÙ-t`t.¥.4.H4-4/¥.¥`Ù/4-t/t`ã4/t-H4,¥`¥/¥`4/¥.H4-¥`Ù`4/t,4.ÀÇãH4't-H4/Ù-t`4-t`t-t.¥,4-t`¥`tc»4`H4,4.¥`¥.4,¥/tbÙ/4.RK‹ô\ŸX\ò⁄›õ⁄XŸK‹Ÿ\ùô\àà”RSKà4't-H4/4-t/tcÙ`¥c4.4aH4a4,4.t.ÙbÀô[X\ŸH]]‹ö]H4.õ‹õX[ÿÿ[€‹ôKÇãH4(4-tb4-t/t.4-Nà4/Ù`4-t-¥/t.4.H4.Ù/¥.¥,4.Ùc4/tbÙ.HYôMLåò4`t/¥-Ù-4,4/H4/t,4`t`¥,4`4/¥.H4,4`4at.4`¥-t.¥`¥`Ù`4-N»4/t-H4/Ù-t`4-t/t/¥`t.4`¥c4,¥bÙ,t/¥`€[XK‹õ›öY\à4.4.Ù.4/Ù,4`4,4.Ù.Ù-t.Ùc4/tbÙ-H4-¥`Ù`4/t,4.Ùb»4,à4/t/¥,¥bÙ.HXZ[ãàXÿ€›[ùõ›[ô][€à4`¥`4-t,t`Ù-t`à4/¥`¥-4-t.Ùc4/t/¥,Ù/à4`t/¥,Ù.Ù,4`t/¥,¥,4/t.4c»4`H—TïëTãQã4,4/t-H4`t.Ù-t/Ù/¥,Ù/àY\ôŸKÇãH4'Ù`4/¥,¥-t`4.¥,à4/¥`¥/t/¥`tcÙbt.4-t`tc»]€ãt`¥-t`t`¥bÀ4`4-t,4.Ùc4/tbÙ.H‘S]Hô\›\ùÿ€€ò›\úô[òﬁK⁄[ùY‹ö]N»4`4-t-Ù`Ù.Ùc4`¥,4`¥b»4-Ù,4/Ù.4`t,4`¥c4-Ù-4-t`tcÇãH4(4-t-Ù`Ù.Ùc4`¥,4`éà4.¥,4/t-4.4-4,4`¥/t,4c»4/¥aÙ-t`4-t-4c4.4`t/Ù/¥.Ùc4-Ù`Ù-t`à4a4,4.t.Ù/¥,¥bÙ-Hù[ô\À4/t-H‘S]N»4.4`t/Ù`4,4,¥.Ù-t/tb»›€ô\ãÿò\ŸK›\ôŸ]4/Ù`4/¥,¥-t`4.¥.\Xÿ]K4/Ù/¥,¥`¥/¥`4/t,4c»4/Ù`4/¥,¥-t`4.¥,\ú⁄\›[ùX[öYô\›4/Ù`4.X]\öX[^ò][€ãô\Ÿ\ùôY›QÀ4/¥/Ù,4`t/t/¥-H4/Ù-t`4-t`t-taÙ-t/t.4-H\›[ò][€à4`H4/¥aÙ-t`4-t-4c4cã4/4-t-¥/Ù`4/¥a¥-t`t`t/t,4c»4`t-t`4.4,4.Ù.4-Ù,4a¥.4c»]]][€ú»4.úﬁ[ò»4-4,4/t/tbÙaKÇãH4'Ù`4/¥,¥-t`4-t/t/à4/t,4,4.¥`¥`Ù,4.Ù.4-Ù.4`4/¥,¥,4/t/t/¥.H4,¥-t`¥.¥-Nàçà\›»\‹ŸY
+ÿ[ôY]H]Y]YK‹õ€[›[€ã€X\›\àõ›\õò[
+K4,¥.¥.Ùc¥aÙ,4c»à4/t,4`t`¥/¥cÙbt.4aH4/Ù`4/¥a¥-t`t`t/¥,à4`H4.Ù.4/4.4`¥/¥/à4.4`t/¥at`4,4/t-t/t.4-H\›[ò][€à4/Ù`4.4/¥`¥.¥.Ù/¥/t-t/t.4.4.4`t/Ù/¥`4aÙ-t/t/t/¥,Ù/àX[öYô\›ÇãH4'¥,tbt.4.H]€ãt/Ù`4/¥,Ù/¥/H4/t,4.4`tat/¥-4/t/¥/LÕÕòÃòŒà
+äåLM»\‹ŸYHòZ[Y
+äãà\›À›\›ÿ]]€õ€[›\◊Ÿ]õ€][€óÿ€€ùòX›úNéù\›ÿ]]€õ€[›\◊‹ô\ŸX\ò⁄⁄\◊‹õ€[›Y›◊€€ô◊›\õW⁄€õ›€YŸX4`¥`4-t,t`Ù-t`àY[[‹ûKõX\õä4,à€€X›‹ã4at/¥`¥c»4,4.¥`¥`Ù,4.Ùc4/tbÙ.H€€X›‹à4`Ù-¥-H4-4-t.Ù-t,Ù.4`4`Ù-t`à›\ò]‹ãà4't-H4.4`t/Ù`4,4,¥.ÙcÙ`¥c4/Ù/¥,¥`¥/¥`4/tbÙ/4/¥,tat/¥-4/¥/›\ò]‹éàëT—PTê“TUPSUH4-4/¥.Ù-¥-t/H4/¥,t/t/¥,¥.4`¥c4.¥/¥/t`¥`4,4.¥`à4/Ù/¥-4-t-4.4/t`t`¥,¥-t/t/t`Ùcà4`¥/¥aÙ.¥`»õ€[›[€à4.4/Ù/¥,¥`¥/¥`4.4`¥c4/¥,tbt.4.H4/t,4,t/¥`ÇãH€€[Z]»4.Ù/¥.¥,4.Ùc4/t/¥,Ù/à4ct`¥,4/Ù,àçòçåŒLÿY\ôŸH4`t,¥-t-¥-t,Ù/àXZ[àXòŸXÃ4aÙ-t`4-t-»ôçôåÿX»4aÙ`Ù-¥.4-H”RSH4`t/¥at`4,4/t-t/tb»4/Ù`4.4`4,4-Ù`4-tb4-t/t.4.4.¥/¥/ta4.Ù.4.¥`¥,4`¥/¥.Ùc4.¥/à4,à4/¥,tbt-t/4-¥`Ù`4/t,4.Ù-KÇãH4't-t/Ù`4/¥,¥-t`4-t/t/éà⁄[ô›‹Àt,¥-t`¥.¥,ö[Hÿ⁄À4`4-t,4.Ùc4/tbÙ.Hù[[[Ÿ[[ôô\ô[òŸKò]]ôHRKÙ,Ù/¥.Ù/¥`KõŸX›[€àîŒ»4ct`¥/à4/t-H4.4`¥/¥,Ù/¥,¥,4c»4/Ù`4.4dt/4.¥,]\õ‹òQõﬁÇãH4(t.Ù-t-4`Ùc¥bt.4.H4b4,4,Œà“H4/¥,Ù`4,4/t.4aÙ-t/t/t/¥,Ù/àé»ëT—PTê“TUPSUH4-Ù,4.¥`4bÙ,¥,4-t`à4/t,4.t-4-t/t/tbÙ.H4`Ù`t`¥,4`4-t,¥b4.4.H\›€€ùòX›—TïëTãQà4`t/¥,Ù.Ù,4`t`Ù-t`à4-4,4.Ùc4/t-t.tb4`ÙcàXÿ€›[ùZY‹ò][€ãà4'¥aÙ-t`4-t-4c€‹úù\ôX€‹ô»4/Ù/¥.¥,4`¥`4-t,t`Ù-t`à4cÙ,¥/t/¥,Ù/à[ùY‹ö]K‹›]\»ÿ]H4,¥/4-t`t`¥/à4/4/¥.ÙaÙ,4.Ù.4,¥/¥,Ù/à4/Ù`4/¥/Ù`Ù`t.¥,ÇãH4)4,4.t.Ùb»4/¥`t,¥/¥,t/¥-¥-4-t/tb»4/Ù/¥`t.Ù-H4ct`¥/¥,Ù/à4/Ù,4.¥-t`¥,»Xÿ€›[ù‹õ›öY\à4/Ù`4,4,¥.¥.4`t`¥,<„Õ=∂âûÀk∫wµÁH4/t,4.¥,4-¥-4/¥.H4.4`¥-t`4,4a¥.4.à4'Ù`4.òZ[\ôH4`t/¥at`4,4/tcÙc¥`¥`tc»^X›Y‹ùQ\—^]YŸ^]€ŸK\›ô\]Y\›\úõ‹ã⁄[åÃà€€[X[ô[ôK›€ô\à4/¥-¥.4-4,4-t/4/¥,Ù/à4/Ù/¥`4`¥,4,¥`t-H€‹òX⁄Àÿ[Z[ù\ôòXŸH\›[ô\ú»4.››]‹›\úãà4'¥-¥.4-4,4/t.4-H4`¥-t/Ù-t`4cõ›[ôY4/Ù`4.4/4-t`4/t/àLåŸX€€ô»4,¥/4-t`t`¥/à4/Ù`4-t-¥/t.4aH4/Ù/¥`t.Ù-t-4/¥,¥,4`¥-t.Ùc4/tbÙaH[Y[›]»4-4/àåçÃŸX€€ôÀÇÇ¥&Ù/¥.¥,4.Ùc4/t/àç»\‹ŸYL»›Xù\›»\‹ŸY4-Ù,åLÿ»4-4/¥,t,4,¥.Ù-t/t/àT’t,¥bÙ/Ù/¥.Ù/t-t/t.4-H4/t,4`t`¥/¥cÙbt-t,Ù/à‘ï\‹⁄Y€õY[ù4`Hÿ[õ€öXÿ[—íSTÀ–TKŸYò][ÿ\Ÿ\Àà]€à€€\[H4.⁄]YôàKX⁄X⁄ÿ4`Ù`t/Ù-tb4/tbÀà›Ÿ\î⁄[\úŸK‹ù[ù[YH4/¥`t`¥,4dt`¥`tc»4`¥/¥.Ùc4.¥/à⁄[ô›‹»“Hõ›[ô\ûN»\‹»4-4/à4/t-t,Ù/à4/t-H4-Ù,4cÙ,¥.ÙcÙ-t`¥`tcÀÇÇîì—‘ëT‘◊–””TUNàL	Bîì—‘ëT‘◊‘ëSPRSíSëŒàL	Bë”ëNà]\õZ[ö\›X»[ú›[Yö[H][ò⁄\ã‹‹ù€€ùòX›4.X›[€òXõHXY€õ‹›X‹»4`4-t,4.Ù.4-Ù/¥,¥,4/tbŒ»ÿÿ[€€ùòX›»‹ôY[ãÇîëSPRSíSëŒà4/t/¥,¥bÙ.H⁄[ô›‹»X⁄ÿYŸH[ú›[Yö[K–€€\]\àX\öŸ\à4/t,^X›Xõ\⁄YXYÇêì–“—TîŒà4/Ù`4-t-¥/t.4.Hù[àÕMççéMç4/¥`t`¥,4dt`¥`tc»ôY]öY[òŸN»ôXY[ô\‹»LÃåÇìëVàò\›Yõ‹ùÿ\ôXõ\⁄4/¥-4/t/¥.H4/Ù,4`4`¥.4-t.H4/Ù/¥,¥-t`4aHLÃôåLX»4aÙ.4`¥,4`¥c4/t/¥,¥bÙ.H⁄[ô›‹»õÿãà4%t`t.Ù.òZ[\ôH4/Ù/¥,¥`¥/¥`4.4`¥`tcÀ4.4`t/Ù`4,4,¥.ÙcÙ`¥c4/Ù/à4/t/¥,¥bÙ/Q‹€ÿ⁄Ÿ]ÿ€€[X[ô€Ÿ»4-4,4/t/tbÙ/»4-t`t.Ù.4/¥,t,[ú›[YX\öŸ\ú»’P–—T‘»8†%4-Ù,4/Ù.4`t,4`¥c⁄[ô›‹»⁄X⁄‹⁄[ù4.MIKÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àL	BÇà»»çÀàëQì‘ëNà4.4`t/Ù`4,4,¥.Ù-t/t.4-H4.Ù/¥-¥/t/¥,Ù/à⁄[ô\‹Ÿ\ù[€à4,t-t-»4/¥`t.Ù,4,t.Ù-t/t.4c»€€ù[ù€€ùòX›Çò”‘íÀLåçãLKLMÀQíSêSTëSPT—XP’UëH4`»4-t-4.4/t`t`¥,¥-t/t/t/¥,Ù/à4.4`t/Ù/¥.Ù/t.4`¥-t.ÙcÀàúô\⁄⁄]XàXZ[ò8†%ÕôôMçXYçéXŒXôLXååŸåNMéÿÃŸLòàŒLã⁄XY8†%YåLMÿÕMŸÕôLYLŸLòåŸÕMNÿÕÃòòéMŸò»òYùô\ú⁄[€àKåÀååÿ€ŸHLXà€Z[Nà\›À›⁄[ô›‹◊⁄[ú›[Y€ÿÿ[‹Ÿ\ùöXŸ\◊‹€[⁄ŸKúÃXô[]ò[ùö[H[ù[YŸ[òŸH€€ùòX›\›»[ô4ct`¥/¥`à4-¥`Ù`4/t,4.Àà[ù[ôYXÿ›[][]YRSì‘àKçååô\ú⁄[€ã[\›ÇÇ¥)4,4.¥`¥.4aÙ-t`t.¥.4.H⁄[ô›‹»ù[àÕMŒLÃÃMX⁄ÿYŸHõÿàLNåMNMXà]\õZ[ö\›X»‹ùö^4`t`4,4,t/¥`¥,4.»8†%€€\]\àYŸ[ù4-Ù,4/Ù`Ùbt-t/Kö[H[ù[YŸ[òŸH4`t.Ù`Ùb4,4-t`àLçÀåååNåNçÿ⁄X[4.ù[ôYù\ Ÿ[ô»–‘à\‹Ÿ\ù[€ú»4/Ù`4/¥.t-4-t/tbÀà\õZ[ò][ô»òZ[\ôH4`¥/¥.Ùc4.¥/à4`t`¥`4/¥.¥,MM»[ú›[Yö[H[ù[YŸ[òŸH[ò[\⁄\»òZ[Y»õ⁄XŸHX\öŸ\à4`¥,4.¥-¥-H’P–—T‘Àà4&Ù/¥.¥,4.Ùc4/t/¥-H4,¥bÙ/Ù/¥.Ù/t-t/t.4-H4/t,4`t`¥/¥cÙbt-t,Ù/àÿ[ò[^ôX4/t,4`¥/¥aÙ/t/¥/UãNö^\ôH4-4/¥.¥,4-Ù,4.Ù/éà^X›Y4.X›X[€€ù[ù4.4-4-t/t`¥.4aÙ/tb»
+Ãÿ4`t.4/4,¥/¥.Ù,
+KX›X[⁄[ô8†%^ÿ€ŸXà4+t`¥/à4-4-t.t`t`¥,¥`Ùc¥bt.4.H4/t,4/4-t`4-t/t/tbÙ.H4.¥/¥/t`¥`4,4.¥`éà\›À›\›Ÿö[W⁄[ù[YŸ[òŸKúX4`Ù-¥-H4`¥`4-t,t`Ù-t`à^ÿ€ŸXÿ‹ö\Àÿ]X⁄Y[ù€X[òYŸ\ãôŸ4/4,4`4b4`4`Ù`¥.4-Ù.4`4`Ù-t`à4-t,Ù/ãà4'4-t/tcÙ`¥cŸ\ùöXŸH⁄[ô4/t,^4/¥-Ù/t,4aÙ,4.Ù/à4,tb»4`4-t,Ù`4-t`t`t.4cà4`4,4-4.4/¥b4.4,t/¥aÙ/t/¥,Ù/à€[⁄ŸKÇÇ¥&4`t/Ù`4,4,¥.Ù-t/t.4-Nà[ú›[Y€[⁄ŸH4-4/¥.Ù-¥-t/H4/¥-¥.4-4,4`¥cÿ[õ€öXÿ[õ⁄ôX›⁄[ô^ÿ€ŸX4/Ù`4/¥-4/¥.Ù-¥,4`¥c4`t`¥`4/¥,Ù/à4`t`4,4,¥/t.4,¥,4`¥c4`¥/¥aÙ/t/¥-H4`t/¥-4-t`4-¥.4/4/¥-H4,t-t-»›ö\€ô]€[ôHõ‹õX[^ò][€à4.4/Ù`4.4.Ùc¥,t/¥/4`4,4`tat/¥-¥-4-t/t.4.4/Ù-taÙ,4`¥,4`¥c⁄À⁄⁄[ô€[ô›ÿúòX⁄Ÿ]Y€€ù[ùŸù[î””àô\‹€úŸKà4%4/¥,t,4,¥.4`¥côY‹ô\‹⁄[€ã4,¥bÙ/Ù/¥.Ù/tcÙc¥bt`Ùcà4/t,4`t`¥/¥cÙbt.4.Hÿ[ò[^ôX4.4-4/¥.¥,4-ÙbÙ,¥,4c¥bt`Ùcà^X›€€ù[ù
+»⁄[ôÇÇîì—‘ëT‘◊–””TUNàL	Bîì—‘ëT‘◊‘ëSPRSíSëŒàL	Bë”ëNà4`¥/¥aÙ/t,4c»4/Ù`4.4aÙ.4/t,4,¥/¥`t/Ù`4/¥.4-Ù,¥-t-4-t/t,4.4`tat/¥-4/tbÙ/[ò[^ô\ã›\ù\‹‹ù‹X⁄ÿYŸH4/t-H4cÙ,¥.ÙcÙc¥`¥`tc»4`¥-t.¥`Ùbt.4/õÿ⁄Ÿ\ãÇîëSPRSíSëŒà4.4`t/Ù`4,4,¥.4`¥c€[⁄ŸH4.4/Ù/¥.Ù`ÙaÙ.4`¥c[ú›[YX\öŸ\à4/t,4/t/¥,¥/¥/⁄[ô›‹»ù[ãÇêì–“—TîŒàXYYåLMÿôY4`¥/¥.Ùc4.¥/à4.4-Àt-Ù,4/t-t,¥-t`4/t/¥,Ù/à^X›Y⁄[ô»ôXY[ô\‹»4/Ù/¥.¥,LÃåÇìëVà4/4.4/t.4/4,4.Ùc4/t,4c»€€ùòX››\›⁄õ›\õò[4/Ù,4`4`¥.4cÀÿÿ[\›Àò\›Yõ‹ùÿ\ôXõ\⁄»4/t-H4/4-t/tcÙ`¥cõŸX›[€à[ò[^ô\à€€ùòX›4.4/t-H4/Ù/¥,¥`¥/¥`4cÙ`¥c‹ùö^Ç¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àL	BÇà»»»QïTéà€[⁄ŸH4`t/¥,Ù.Ù,4`t/¥,¥,4/H4`H4-4-t.t`t`¥,¥`Ùc¥bt.4/€€ùòX›Çí[ú›[Y€[⁄ŸH4`¥-t/Ù-t`4c4/¥-¥.4-4,4-t`à4.¥,4/t/¥/t.4aÙ-t`t.¥.4.H4-4.Ùc»4/Ù`4/¥-t.¥`¥,⁄[ô]^ÿ€ŸX4`t`¥`4/¥.4`àÿ[ò[^ôXTì4.4-»4`¥/¥,Ù/à4-¥-H	ÿÿ[Ÿ\ùöXŸ\‘‹ù4.4/Ù/ãt/Ù`4-t-¥/t-t/4`»4`¥`4-t,t`Ù-t`à4`¥/¥aÙ/t/¥-H4`4-t,Ù.4`t`¥`4/¥-Ù,4,¥.4`t.4/4/¥-H4`t/¥,¥/Ù,4-4-t/t.4-H4`t/¥-4-t`4-¥.4/4/¥,Ù/à4aÙ-t`4-t-»X€ôXà4't.4.¥,4.¥/¥.H›ö\4.4.Ù.4/t/¥`4/4,4.Ù.4-Ù,4a¥.4.4/Ù-t`4-t,¥/¥-4/¥,à4`t`¥`4/¥.à4/t-H4-4/¥,t,4,¥.Ù-t/t/ãà4'Ù`4.4`4,4`tat/¥-¥-4-t/t.4.⁄[ô›‹»õÿà4/t,4/Ù-taÙ,4`¥,4-t`à^X›YÿX›X[⁄[ô4-4.Ù.4/tbÀ4`t/¥-4-t`4-¥.4/4/¥-H4,à4`t.¥/¥,t.¥,4aH4.4/Ù/¥.Ù/tbÙ.Hî””àô\‹€úŸKÇÇ¥%4/¥,t,4,¥.Ù-t/H4,tbÙ`t`¥`4bÙ.HôY‹ô\‹⁄[€ã4.¥/¥`¥/¥`4bÙ.H4aÙ-t`4-t-»T’4,¥bÙ/Ù/¥.Ù/tcÙ-t`à4/t,4`t`¥/¥cÙbt.4-H‹ôXY›^4.ÿ[ò[^ôX4.4-»ö[W‹Ÿ\ùöXŸKúX4/t,UãN4,t-t-»ì”H4.4`¥`4-t,t`Ù-t`à4/¥-4/t/¥,¥`4-t/4-t/t/t/à^ÿ€ŸX4.4`¥/¥aÙ/t/¥-H4.4`tat/¥-4/t/¥-H4`t/¥-4-t`4-¥.4/4/¥-Kà4&Ù/¥.¥,4.Ùc4/t/éàé\‹ŸYL»›Xù\›»\‹ŸY4-Ù,å\ÿ»]€à€€\[H4.⁄]YôàKX⁄X⁄ÿ4`Ù`t/Ù-tb4/tbÀà›Ÿ\î⁄[⁄[ú›[Yõ›[ô\ûH4/¥`t`¥,4dt`¥`tc»4-Ù,4/t/¥,¥bÙ/⁄[ô›‹»“Hù[ãÇÇîì—‘ëT‘◊–””TUNàL	Bîì—‘ëT‘◊‘ëSPRSíSëŒàL	Bë”ëNà4.Ù/¥-¥/t/¥-H4/¥-¥.4-4,4/t.4-H^4.4`t/Ù`4,4,¥.Ù-t/t/à4,t-t-»4.4-Ù/4-t/t-t/t.4c»õŸX›[€à€€ùòX›»4`t`¥`4/¥,Ù,4c»€€ù[ù\‹Ÿ\ù[€à4.4/Ù/¥-4`4/¥,t/t,4c»4-4.4,4,Ù/t/¥`t`¥.4.¥,4`t/¥at`4,4/t-t/tbŒ»ÿÿ[€€ùòX›»‹ôY[ãÇîëSPRSíSëŒà4/¥/Ù`Ù,t.Ù.4.¥/¥,¥,4`¥c4/Ù,4`4`¥.4cà4.4/Ù/¥.Ù`ÙaÙ.4`¥cUTì‘êW’“Së’‘◊“Sî’SQ”—ëìSëW—íST◊–””TUTó”“ÿ4/t,^X›4/t/¥,¥/¥/XYÇêì–“—TîŒà⁄[ô›‹»[ú›[YX\öŸ\à4-tbtdH4/t-H4/Ù/¥-4`¥,¥-t`4-¥-4dt/H4/t/¥,¥bÙ/ù[é»ôXY[ô\‹»4/¥`t`¥,4dt`¥`tc»LÃåÇìëVà4/¥,tbÙaÙ/t/¥/4`»4aÙ,4`¥`»4/Ù/¥`t.Ù-H4/¥`t`¥,4/t/¥,¥.¥.4`t-4-t.Ù,4`¥cúô\⁄ô]⁄àŒLã€XZ[ã4/t,4.t`¥.⁄[ô›‹»X⁄ÿYŸHù[à4/Ù/à^X›4/¥/Ù`Ù,t.Ù.4.¥/¥,¥,4/t/t/¥/4`»“H4.4aÙ.4`¥,4`¥c4-t,Ù/ãà4'Ù`4.’P–—T‘»4/¥,t/¥.4aH[ú›[YX\öŸ\ú»4/Ù`4.4/tcÙ`¥c⁄[ô›‹»⁄X⁄‹⁄[ùLKÃåMMIN»4/Ù`4.êRSTëH4.4`t/Ù`4,4,¥.ÙcÙ`¥c4`¥/¥.Ùc4.¥/à4`¥/¥aÙ/t`Ùcà\õZ[ò][ô»\‹Ÿ\ù[€à4/Ù/à\ùYòX›€Ÿ»]öY[òŸKÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àL	BÇà»»éàQïTéà4/Ù`4.4/tcÙ`à⁄[ô›‹»⁄X⁄‹⁄[ù4.4(¥%»4`t.Ù-t-4`Ùc¥bt-t,Ù/à4/¥,t/t/¥,¥.Ù-t/t.4c¬Çò”‘íÀLåçãLKLMÀQíSêSTëSPT—X4/¥`t`¥,4dt`¥`tc»4-t-4.4/t`t`¥,¥-t/t/tbÙ/4,4.¥`¥.4,¥/tbÙ/4.4`t/Ù/¥.Ù/t.4`¥-t.Ù-t/à^X›àŒLã⁄XYåYŸLLXŒXéLÕÕòåXÃLÿòÿLòåŸôLÿåYYMÿXZ[àÕôôMçXYçéXŒXôLXååŸåNMéÿÃŸLòô\ú⁄[€àKåÀåå–[ôõ⁄Y€ŸHLX»4a4.4/t,4.Ùc4/tbÙ.HRSì‘àKçåå4,¥`tdH4-tbtdHô\ú⁄[€ã[\›à4&Ù.4aÙ/t/à4/Ù`4/¥aÙ.4`¥,4/H⁄[ô›‹»X⁄ÿYŸHù[àÕMLÃéX⁄ÿYŸHõÿàLNLççåÃLò’P–—T‘Àà4'¥/H4.4`t/Ù/¥.Ù/t.4.»^X›⁄X⁄€›]åYŸLX»4.Ù/¥,»4`t/¥-4-t`4-¥.4`àUTì‘êW’“Së’‘◊“Sî’SQ”—ëìSëW’ì“P—W”“ÿ4.UTì‘êW’“Së’‘◊“Sî’SQ”—ëìSëW—íST◊–””TUTó”“ÿà4$¥`t-HçH€‹öŸõ›»ù[úÀ4/Ù`4.4,¥cÙ-Ù,4/t/tbÙ-H⁄]Xà4.à4ct`¥/¥/4`»^X›XY4-Ù,4,¥-t`4b4.4.Ù.4`tc’P–—T‘À4,¥.¥.Ùc¥aÙ,4c»⁄[ô›‹À[ôõ⁄YTÀ—LëK€õ›€YŸHQ⁄Pã[ùY‹ò][€ã€‹öÀ–€€\]\à4.]õ€][€à›\õò[Y[ùÇÇï⁄[ô›‹»[ú›[YŸôõ[ôHõ⁄XŸKŸö[\Àÿ€€\]\à⁄X⁄‹⁄[ù4/Ù`4.4/tcÙ`éàLKÃåHMIXà4+t`¥/à4/t-H4/¥-Ù/t,4aÙ,4-t`à4,Ù/¥`¥/¥,¥bÙ.H4.¥/¥/4/4-t`4aÙ-t`t.¥.4.H4`4-t.Ù.4-Œà4/¥`t`¥,4c¥`¥`tc»[ú›[Y[ôõ⁄Yõ⁄XŸK”–‘ã“€õ›€YŸK4/t,4`t`¥/¥cÙbt.4.H4/Ù/¥.Ù-t-Ù/tbÙ.H4.Ù.4a¥-t/t-Ù.4`4/¥,¥,4/t/tbÙ.H€‹ú\ ‹õ›ô[ò[òŸK4a4.4-Ù.4aÙ-t`t.¥/¥-H]öXŸK⁄[X[àXÿŸ\[òŸKŸ\ùô\ã€XZ[‹õ€òX⁄Àô\ú⁄[€àY]Y]Kö[ò[ÿ[YKZXYê»4.õŸX›[€à⁄Y€ö[ôÀ›\]K‹ô[X\ŸKÇÇà»»»›€ô\à4%»4`t.Ù-t-4`Ùc¥bt-t,Ù/à4/¥,t/t/¥,¥.Ù-t/t.4c»8†%[ö]ô\úÿ[[ùZŸK][KS[Ÿ[êQ»4.]õ€][€ÇÇ¥'t%H4-4/¥,t,4,¥.ÙcÙ`¥c4ct`¥`»4,4`4at.4`¥-t.¥`¥`Ù`4`»4,à4`¥-t.¥`Ùbt.4.Hô[X\ŸHÿ[ôY]Nà4/¥/t,4/4-t/tcÙ-t`àù[ù[YK›‹òYŸK4,t-t-Ù/¥/Ù,4`t/t/¥`t`¥c4.XÿŸ\[òŸH›\ôòXŸK4/Ù/¥ct`¥/¥/4`»4`¥`4-t,t`Ù-t`à4/¥`¥-4-t.Ùc4/t/¥,Ù/à4/¥,t/t/¥,¥.Ù-t/t.4cÀÙ,¥-t`¥.¥.4/Ù/¥`t.Ù-H4`t`¥,4,t.4.Ùc4/t/¥,Ù/à4`4-t.Ù.4-Ù,à4)¥-t.Ùc8†%4/Ù`4.4/tcÙ`¥c4,¥.Ù/¥-¥-t/t.4-H4aÙ-t`4-t-»4aÙ,4`ã4/¥/Ù`4-t-4-t.Ù.4`¥c4-t,Ù/à4`¥.4/»4/Ù/à4`t/¥-4-t`4-¥.4/4/¥/4`À4,t-t-Ù/¥/Ù,4`t/t/à4-Ù,4`4-t,Ù.4`t`¥`4.4`4/¥,¥,4`¥c4.4/Ù`4.4/4-t/t.4`¥c4/Ù/à4/t,4-Ù/t,4aÙ-t/t.4cé»0™Ù/Ù`4.4/tcÙ`¥c4.Ùc¥,t/¥.H4a4,4.t.Æ»4/¥-Ù/t,4aÙ,4-t`à4`t/¥at`4,4/t.4`¥c4.4/Ù/¥.¥,4-Ù,4`¥c4`4-t-Ù`Ù.Ùc4`¥,4`à4.¥.Ù,4`t`t.4a4.4.¥,4a¥.4.4,4/t-H4,4,¥`¥/¥/4,4`¥.4aÙ-t`t.¥.4,¥bÙ/Ù/¥.Ù/t.4`¥c4.4.Ù.4-4/¥,¥-t`4cÙ`¥c4`t/¥-4-t`4-¥.4/4/¥/4`ÀÇÇåKà
+äï[ö]ô\úÿ[[ùZŸH4aÙ-t`4-t-»4aÙ,4`ãääà4'¥-4.4/H[òõﬁ›ò[úÿX›[€àôY⁄\›ûH4`H\⁄4`4,4-Ù/4-t`4/¥/RSQK‹⁄Y€ò]\ôKõ›ô[ò[òŸK4,¥.Ù,4-4-t.Ùc4a¥-t/4`t`¥,4`¥`Ù`t/¥/
+›YŸY]X\ò[ù[ôXXÿŸ\YôZôX›Y
+Kõ€òX⁄À‹ôX€›ô\ûKŸY\Kà4'4,4`4b4`4`Ù`¥bŒà€õ›€YŸH]\Ÿ]Ÿÿ›[Y[ù»òZ[ö[ô»]\Ÿ]»⁄⁄[\ÿ‹ö\[€é»ÿÿ[[Ÿ[ŸZY⁄Œ»[XôY[ô»[Ÿ[»\ò⁄]ôN»[ö€õ›€ãà4't-t.4-Ù,¥-t`t`¥/t/¥-H4at`4,4/t.4`¥c4.¥,4.à›YŸY]X⁄Y[ù4`H4/Ù/¥/tcÙ`¥/tbÙ/4`t/¥/¥,tbt-t/t.4-t/4/t-H4`¥-t`4cÙ`¥c4.4/t-H4.4`t/Ù/¥.Ù/tcÙ`¥cÇåãà
+ä¥'t-t`t.¥/¥.Ùc4.¥/à4/4/¥-4-t.Ù-t.K4,¥.¥.Ùc¥aÙ,4c»—’Qãääà4't-H4-Ù,4/4-t/tcÙ`¥c4,4.¥`¥.4,¥/t`Ùcà4/4/¥-4-t.Ùc4/Ù`4.4.¥,4-¥-4/¥/\ÿYà4/¥`¥-4-t.Ùc4/tbÙ.H[Ÿ[ôY⁄\›ûH4/Ù/¥-4-4-t`4-¥.4,¥,4-t`à4/4/t/¥,Ù/à4-Ù,4/Ù.4`t-t.K“KLçMã€›\òŸK€XŸ[úŸK\ò⁄]X›\ôK‹]X[ù^ò][€ãÿ€€ù^Y]Y]Kô\]Z\ôYêSK‹›‹òYŸKX[‹]X\ò[ù[ôK€€\]Xö[]H\›^X⁄]X›]ò]KŸXX›]ò]K‹õ€òX⁄Ààõ›]\à4,¥bÙ,t.4`4,4-t`à4/¥-4/t`»4`t/¥,¥/4-t`t`¥.4/4`Ùcà4/4/¥-4-t.Ùc4-4.Ùc»4-Ù,4/Ù`4/¥`t,»4/¥-4/t/¥,¥`4-t/4-t/t/t,4c»4-Ù,4,Ù`4`Ù-Ù.¥,4,¥`t-taH4/4/¥-4-t.Ù-t.H4/t-H4`¥`4-t,t`Ù-t`¥`tc»4.4/t-H4-4/¥/Ù`Ù`t.¥,4-t`¥`tc»4/Ù`4.4/t-tat,¥,4`¥.¥-H4/Ù,4/4cÙ`¥.à⁄]—’Qà[\‹ù8†%€€ôö\õX][€à8°§àò[úÿX›[€ò[€‹H8°§à\⁄ÿ€€\]Xö[]H€[⁄ŸH8°§àôY⁄\›ûH8°§à‹[€ò[X›]ò][€é»4/Ù/¥,¥`4-t-¥-4dt/t/tbÙ.KÙ/t-t`t/¥,¥/4-t`t`¥.4/4bÙ.H4a4,4.t.»]X\ò[ù[ôKà^\›[ô»ÿÿ[[Ÿ[X[òYŸ\ãö[ú›[€ÿÿ[ŸŸ›Yò8†%4a4`Ù/t-4,4/4-t/t`ã4/t/à4-tbtdH4/t-H⁄]€][K[[Ÿ[ôY⁄\›ûKÇåÀà
+äë[XôY[ô‹»
+»êQÀääàÿÿ[[XôY[ô»õ›öY\ã€[Ÿ[ôY⁄\›ûK⁄[ö⁄[ôÀ[XôY[ô»ô\ú⁄[€ãôX›‹à[ô^€›\òŸK[]ô[õ›ô[ò[òŸKÿ⁄]][€úÀXúöYô]öY]ò[ôZ[ô^‹ô[[›ôK‹õ€òX⁄»[ôŸôõ[ôHõ›[ôYTêSH\›ÀàêQ»4-4/¥/Ù/¥.Ù/tcÙ-t`à€õ›€YŸT›‹ôN»4/t-H4/Ù/¥-4/4-t/tcÙ-t`à4/Ù,4/4cÙ`¥c4-4.4,4.Ù/¥,Ù,4.4/t-H4/Ù`4-t,¥`4,4bt,4-t`àÿ›[Y[ù^4,à]]‹ö]KÇçà
+ä¥'Ù,4/4cÙ`¥cÙ.4/t`t`¥`4`Ù/4-t/t`¥bÀÙ/¥a¥-t/t.¥,ääà4(4,4-Ù-4-t.ÙcÙ`¥c4.¥`4,4`¥.¥`Ùcà4/Ù,4/4cÙ`¥c4-4.4,4.Ù/¥,Ù,\Ÿ\àY[[‹ûH4.›\ò]Y€õ›€YŸN»4`t/¥at`4,4/tcÙ`¥c\Ÿ\àÿ€‹K‹ö]òXﬁKà€€»4/¥`t`¥,4c¥`¥`tc»[›€\›Y€€úŸ[ùYÿ]Y4.ÿ[ôõﬁYà4%4/¥,t,4,¥.4`¥cŸôõ[ôH[ú›Ÿ\ãY]ò[X][€àŸ]àòX›X[]HYÿZ[ú›⁄]Y€›\òŸ\Àô[]ò[òŸKÿYô]K][òﬁK‹ô\€›\òŸHùYŸ]ôY‹ô\‹⁄[€à€›]»4.^X⁄]òZ[\ôHô\‹ùÀÇçKà
+äê]\õ‹òQõﬁ]õ€][€à[ô⁄[ôKääà4'¥`¥-4-t.Ùc4/tbÙ.Hÿ[ôY]Hÿ[ôõﬁà[ò[^ô\à8°§à^\ö[Y[ùX[òYŸ\à8°§à¯†$ÃLõ›[ôY]]][€ú»8°§à\›ù[õô\ãŸ]ò[X]‹à8°§à[\õ›ô[Y[ùôY⁄\›ûH8°§à[X[ãÿ]]€X]X»€XﬁHÿ]H8°§àõYKŸ‹ôY[àXÿŸ\‹àõ€òX⁄Àà4't.4.¥,4.¥.4aH4/Ù`4cÙ/4bÙaHŸ[ãYY]»›XõH€‹ôKõ»€€‹ŸX‹ô]\ÿÿ[][€ãõ»]]À]òZ[ö[ô»\òö]ò\ûH\ÿYYŸZY⁄Àà4&¥,4-¥-4/¥-HXÿŸ\Y[\õ›ô[Y[ù4.4/4-t-t`àYôãõ›ô[ò[òŸK\›ÀY]öX‹»[ôõ€òX⁄ÀÇÇìëVà4/Ù`4/¥-4/¥.Ù-¥,4`¥c4`¥-t.¥`Ùbt.4.Hô[X\ŸH4,t-t-»4`4-t,4.Ù.4-Ù,4a¥.4.4ct`¥/¥,Ù/à4`t.Ù-t-4`Ùc¥bt-t,Ù/à4/¥,t/t/¥,¥.Ù-t/t.4cÀà4$t.Ù.4-¥,4.tb4.4.H4-4/¥`t`¥`Ù/Ù/tbÙ.H4`4-t.Ù.4-Ù/tbÙ.Hõÿ⁄Ÿ\à8†%4-4/¥.¥,4-Ù,4`¥cÙ/Ù/¥.Ù`ÙaÙ.4`¥c4/¥`¥`t`Ù`¥`t`¥,¥`Ùc¥bt.4-H^\õò[XÿŸ\[òŸHõ›[ô\öY\À4/Ù`4-t-¥-4-H4,¥`t-t,Ù/à4/t,4`t`¥/¥cÙbt.4.H4.Ù.4a¥-t/t-Ù.4`4/¥,¥,4/t/tbÙ.H4/Ù/¥.Ù-t-Ù/tbÙ.H€õ›€YŸH€‹ú\»4`Hõ›ô[ò[òŸH4.[ôõ⁄Y[ú›[Yõ⁄XŸK”–‘ã“€õ›€YŸN»4-Ù,4`¥-t/ö[ò[ô\ú⁄[€ã‘êÀ‹⁄Y€ö[ô»€õHYù\à[ÿ]\Àà4'¥,tbÙaÙ/tbÙ.H4aÙ,4`à4/Ù/¥`t.Ù-H4/¥`t`¥,4/t/¥,¥.¥.4`t/t,4aÙ,4.Ù,4-4-t.Ù,4-t`àúô\⁄ô]⁄éLã€XZ[ã4aÙ.4`¥,4-t`à4ct`¥/¥`à4`4,4-Ù-4-t.À4/t-H4`t/4-tb4.4,¥,4-t`àô^]\]H\ò⁄]X›\ôH4`H4`¥-t.¥`Ùbt.4/ÿ[ôY]H4.4/t-H4/Ù/¥,¥bÙb4,4-t`àôXY[ô\‹»4,t-t-»^X›]öY[òŸKÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNà[ú›[Y⁄[ô›‹»õ⁄XŸKŸö[\Àÿ€€\]\à4-4/¥.¥,4-Ù,4/H^X›ù[ã⁄õÿàX\öŸ\úŒ»[^X›ZXY€‹öŸõ›‹»’P–—T‘Œ»4(¥%»4`t.Ù-t-4`Ùc¥bt-t,Ù/à4/¥,t/t/¥,¥.Ù-t/t.4c»4-Ù,4/Ù.4`t,4/t/à4.¥,4.à4/¥`¥-4-t.Ùc4/t,4c»4,t-t-Ù/¥/Ù,4`t/t,4c»4,Ù`4,4/t.4a¥,ÇîëSPRSíSëŒàH4.4-»åXÿŸ\[òŸH⁄X⁄‹⁄[ù»4.4.4aH4,¥/t-tb4/t.4-H4-4/¥.¥,4-Ù,4`¥-t.Ùc4`t`¥,¥,Çêì–“—TîŒà4/t/¥,¥bÙ.H[ö]ô\úÿ[[ùZŸK”][KS[Ÿ[‘êQÀ—]õ€][€à4/t-H4`4-t,4.Ù.4-Ù`Ù-t`¥`tc»4,à4`¥-t.¥`Ùbt-t/ê»4/Ù/à4`4-tb4-t/t.4cà4,¥.Ù,4-4-t.Ùc4a¥,»^\õò[€‹ú\ÀŸ]öXŸK⁄[X[ã‹Ÿ\ùô\ã‹⁄Y€ö[ô»]öY[òŸH4/¥`¥`t`Ù`¥`t`¥,¥`Ù-t`ãÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»éKàëQì‘ëNà4`Ù`t`¥`4,4/t-t/t.4-H[õõ»òXŸH4/¥`àŸ[ô\ò]YTHö\ùX[[ùÇÇò”‘íÀLåçãLKLMÀQíSêSTëSPT—XP’UëH4`»4-t-4.4/t`t`¥,¥-t/t/t/¥,Ù/à4.4`t/Ù/¥.Ù/t.4`¥-t.ÙcÀàúô\⁄XZ[àÕôôMçXYçéXŒXôLXååŸåNMéÿÃŸLòàŒLã⁄XYôXÕåÃÃçNòÃôçôÃŸXYòŒŒNNXååÿåYX»[ù[ôYù[\ïRS4-4.Ùc»X⁄ÿY⁄[ôÀ[€õH€‹úôX›[€ãXõX»ô\ú⁄[€à4/¥`t`¥,4dt`¥`tc»ô\ú⁄[€ã[\›à€Z[NàùZ[–]\õ‹òQõﬁö\‹ÿô⁄]Xã›€‹öŸõ›‹À›⁄[ô›‹À\X⁄ÿYŸKX⁄Kû[[\›À›\››⁄[ô›‹◊›õ⁄XŸW‹X⁄ÿYŸKúX4.4ct`¥/¥`à4-¥`Ù`4/t,4.ÀÇÇë^X›⁄[ô›‹»X⁄ÿYŸHù[àÕMNMçÕçòX⁄ÿYŸHõÿàLNLMLÃçÃåçòZ[Y4`¥/¥.Ùc4.¥/à4/t,ùZ[[ú›[\é»^‹ù‹ù[ù[YKÿ\‹Ÿ]⁄X⁄‹»4/Ù`4/¥b4.Ù.à4&Ù.4aÙ/t/à4/Ù`4/¥aÙ.4`¥,4/H\õZ[ò][ô»ŸŒàúõÿY€›\òŸNàù⁄[ô›‹◊
+àò[ù\ú»Ÿ[ô\ò]YùZ[⁄[ô›‹◊\Wùô[ùò[õõ»€€\ô\‹Ÿ\»]öX€‹õóYô\‹[ó◊‹XÿX⁄W◊◊€ãò‹]€ãLÃLKúXÀè[\‹ò\ûKZYò[ô[[YYX][HòZ[»Hﬁ\›[Hÿ[õõ›ö[ôHö[H‹X⁄YöYYàTHùZ[€‹H^X⁄]HŸ[X›»4`¥/¥.Ùc4.¥/à‹[]ô[úXÿúÃXÿô\]Z\ô[Y[ùÀù»TH›\ùÿ\KúÃXôX‹ôX]\»ùô[ùòõ›Y⁄[ú›[ÿ\KúÃX4/Ù/¥`t.Ù-H4`Ù`t`¥,4/t/¥,¥.¥.à4(t.Ù-t-4/¥,¥,4`¥-t.Ùc4/t/àùô[ùò4/t-H4cÙ,¥.ÙcÙ-t`¥`tc»[ú›[\à^[ÿY4,4.4-Ù/4-t/taÙ.4,¥/¥-HŸ[ô\ò]Y›]]]\›ôH^€YYàR[ú›[\àÿ\õö[ô‹»4/t-H\õZ[ò][ô»ÿ]\ŸKÇÇ¥&4`t/Ù`4,4,¥.Ù-t/t.4-Nà^€YH4`¥/¥.Ùc4.¥/à\Wùô[ùó
+ò4.4-»úõÿY[õõ»€›\òŸK4/t-H4`Ù-4,4.ÙcÙc»‹ùXõHõ⁄XŸK–€€\]\ã—ö[Hù[ù[Y\Œ»4/Ù-t`4-t-T––»4/Ù`4/¥,¥-t`4.4`¥cÿ‹ö\‹X⁄ÿYŸHõ€›‹ô\]Z\ôY›YŸYTJ–€‹ôHö[\»4.4-4,4`¥c4.¥/¥/t.¥`4-t`¥/tbÙ.HZ\‹⁄[ôÀ\]\úõ‹ãà4%4/¥,t,4,¥.4`¥c›]X»ôY‹ô\‹⁄[€ã4aÙ`¥/¥,tb»úõÿY[ò€YH4/t-H4,¥-t`4/t`Ù.»THö\ùX[[ùà4.ôYõY⁄4/t-H4.4`taÙ-t-ÀÇÇà»»»QïTéà[õõ»X⁄ÿYŸ\»›XõHTH^[ÿY€õBÇòùZ[–]\õ‹òQõﬁö\‹ÿ4`t/¥at`4,4/tcÙ-t`à4-t-4.4/t`ÙcàôX›\ú⁄]ôHX⁄ÿYŸH[ùûK4/t/à4.4`t.¥.Ùc¥aÙ,4-t`à4.Ù.4b4c\Wùô[ùó
+òà4'Ù/¥ct`¥/¥/4`»õ‹õX[[ú›[YTH4/Ù`4/¥-4/¥.Ù-¥,4-t`à4.4/4-t`¥cŸ\ùô\ãúX€Y[ùÀÿ‹ö\»[ôô\]Z\ô[Y[ùÀ4,›\ùÿ\KúÃX4`t/¥-Ù-4,4dt`àúô\⁄\ã]\Ÿ\àùô[ùò4aÙ-t`4-t-»^\›[ô»X[òYŸY\ù[ù[YH[ú›[\é»‹ùXõHõ⁄XŸK€€\]\à4.ö[H[ù[YŸ[òŸH4/t-H4-Ù,4`¥`4/¥/t`Ù`¥bÀà€‹öŸõ›»4/Ù-t`4-t-T––»ô\€€ôKt.4`à^X›ö\‹ÿ4.X⁄ÿYŸHõ€›4`¥`4-t,t`Ù-t`à›YŸYTK–€‹ôH^[ÿY4.4/¥`t`¥,4,¥.ÙcÙ-t`à]Ÿ^]X€ŸHXY€õ‹›X‹»4,¥/4-t`t`¥/à4/¥,tbt-t,Ù/à[õõ»Ÿ]\òZ[YÇÇ¥&Ù/¥.¥,4.Ùc4/t/àç\‹ŸYL»›Xù\›»\‹ŸY4-Ù,åå\ÿ
+\››⁄[ô›‹◊›õ⁄XŸW‹X⁄ÿYŸKúX\››\]WÿòX⁄›ÿ\ôÿ€€\]úX
+K]€à€€\[H4.⁄]YôàKX⁄X⁄ÿ›XÿŸ\‹Ÿù[àÿÿ[[ù^Ÿ\»õ›]ôH[õõ»Ÿ]\‘›Ÿ\î⁄[4/Ù/¥ct`¥/¥/4`»4/t,4`t`¥/¥cÙbt.4.HôX›\ú⁄]ôH[ù[Y\ò][€ã⁄[ú›[õ€Ÿà4/¥`t`¥,4dt`¥`tc»4/t/¥,¥bÙ/⁄[ô›‹»X⁄ÿYŸH“Hõ›[ô\ûKÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNà^X›Ÿ[ô\ò]YYö[HòXŸHY[ùYöYYúõ€H⁄[ô›‹»ŸŒ»\ôŸ]Y[ú›[\à^€\⁄[€ãôYõY⁄[ôôY‹ô\‹⁄[€à€€ùòX›[\[Y[ùYÿÿ[KÇîëSPRSíSëŒàò\›Yõ‹ùÿ\ôXõ\⁄[ôôX[⁄[ô›‹»[ú›[\ãÿúöYŸ\À⁄[ú›[YŸ\ùöXŸ\»õ€Ÿà€àô]»^X›XY»›\àHô[X\ŸH⁄X⁄‹⁄[ù»ô[XZ[ãÇêì–“—TîŒà›\úô[ùXYôXÕåÃÃò⁄[ô›‹»X⁄ÿYŸHôY€õH][õõ»€€\[N»õ»ÿÿ[⁄[ô›‹À“[õõ»ù[ù[YKÇìëVàXõ\⁄\»€⁄\ô[ùïRS€‹úôX›[€ã[àÿZ]õ‹à[ô[ú‹X›H^X›⁄[ô›‹»X⁄ÿYŸHõÿàôYõ‹ôH[ûHù\ù\àô[X\ŸH]]][€é»»õ›⁄[ôŸHY[à[\‹ù»‹àõŸX›[€àTHôZ]ö[‹ãÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»ÃàëQì‘ëNà[ú›[Y[ôõ⁄Yõ⁄XŸK”–‘ã“€õ›€YŸHù[ù[YHXÿŸ\[òŸBÇò”‘íÀLåçãLKLMÀQíSêSTëSPT—X4/¥`t`¥,4dt`¥`tc»4-t-4.4/t`t`¥,¥-t/t/tbÙ/4,4.¥`¥.4,¥/tbÙ/4.4`t/Ù/¥.Ù/t.4`¥-t.Ù-t/àô[[›H^X›àŒLã⁄XYYÿLLåçLLÃMNMNLÃŒòYLŸôôLÕòôYHåŒLNNMÃNMŒXMŒôåòMéXMXåòåÃôôÃYòéLLMòXZ[àÕôôMçXYçéXŒXôLXååŸåNMéÿÃŸLò»ô\ú⁄[€àKåÀåå–[ôõ⁄Y€ŸHLX4a4.4/t,4.Ùc4/tbÙ.HRSì‘à4/¥`t`¥,4dt`¥`tc»ô\ú⁄[€ã[\›à€Z[Nàô[ò⁄X\ö‹Àÿ€‹ôKÿ[ôõ⁄YŸ€Ÿ›ÿô[ò⁄X\öÀôŸô[ò⁄X\ö‹Àÿ€‹ôK‹ù[óÿ[ôõ⁄YŸ€Ÿ›ŸLôKú⁄\›À›\›ÿ€‹ôWÿ[ôõ⁄YŸLôWÿ€€ùòX›úX\›À›\›ÿ[ôõ⁄YŸLôW‹ù[õô\ãúX›[H\›À›\›ÿ[ôõ⁄Y›õ⁄XŸW‹]X[]Wÿ€€ùòX›úXô⁄]Xã›€‹öŸõ›‹Àÿ€‹ôKX[ôõ⁄YYLôKû[[4`¥/¥.Ùc4.¥/à4-t`t.Ù.4/t-t/¥,tat/¥-4.4/]öYŸŸ\ã4.4ct`¥/¥`à4-¥`Ù`4/t,4.Àà[úô[]Y›€ô\à\‹Ÿ]\‹Ÿ]À›ZKÿ]\õ‹òYõﬁÿòX⁄Ÿ‹õ›[ô€X\›\ãúôÿ4/t-H4/Ù`4.4/t,4-4.Ù-t-¥.4`à€Z[H4.4/t-H4/4-t/tcÙ-t`¥`tcÀÇÇï⁄[ô›‹»X⁄ÿY⁄[ô»€‹úôX›[€àŸX›[€àéH4/Ù/¥-4`¥,¥-t`4-¥-4dt/H^X›⁄[ô›‹»X⁄ÿYŸHù[àÕMLMNMåÕàõÿŸ\‹ÀX€€ùòX›õÿàLNLNLåéNMN’P–—T‘»4.X⁄ÿYŸHõÿàLNLNLÃLéMå’P–—T‘Œ»ùZ[[ú›[\ã\›‹öXÿ[åKåã’åKå»úöYŸ\À⁄[[ù[ú›[[ú›[YX\€[⁄ŸH4.\ùYòX›\ÿY4-Ù,4,¥-t`4b4.4.Ù.4`tc4`Ù`t/Ù-tb4/t/ãà4$¥`t-HçH€‹öŸõ›‹»^X›XYYÿ4-Ù,4,¥-t`4b4.4.Ù.4`tc’P–—T‘Àà4+t`¥/à4-Ù,4.¥`4bÙ,¥,4-t`àôY‹ô\‹⁄[€à4`t,4/4/¥.H[õõÀt/Ù/¥/Ù`4,4,¥.¥.4/t/à4/t-H4-4/¥,t,4,¥.ÙcÙ-t`à4/t/¥,¥bÙ.HôXY[ô\‹»⁄X⁄‹⁄[ù4`t,¥-t`4aH4`Ù-¥-H4/Ù`4.4/tcÙ`¥/¥,Ù/à⁄[ô›‹»[ú›[Y⁄X⁄‹⁄[ùŸX›[€àéÇÇêëQì‘ëH–Tà4`¥-t.¥`Ùbt.4.H[ôõ⁄YT»€[⁄ŸH4-4/¥.¥,4-ÙbÙ,¥,4-t`à[ú›[›ô\ú⁄[€ã€][ò⁄€õÀX‹ò\⁄4,[ôõ⁄Yõ‹õX[\]LëH4-4/¥.¥,4-ÙbÙ,¥,4-t`àŸôõ[ôH€‹ôK][K]\õà4.€‹ôH€õ›€YŸH[\‹ù‹ô]öY]ò[à4't.4/¥-4.4/H[ú›[YY[][]‹àÿ]H4/t-H4,¥bÙ-ÙbÙ,¥,4-t`àX⁄ÿYŸY›\\ù€öXÀ’⁄\‹\àõ⁄XŸH\‹Ÿ]»4.X⁄ÿYŸYù\ Ÿ[ôÿ\‹Ÿ\òX›–‘à4aÙ-t`4-t-»õŸX›[€à€Ÿ›“€›[àúöYŸKà›]X»€›[ãÿ\‹Ÿ]ÿ€€ùòX›⁄X⁄‹»4/t-H4`taÙ.4`¥,4c¥`¥`tc»ù[ù[YHXÿŸ\[òŸKÇÇíSïSëQ“Së—Nà4`4,4`tb4.4`4.4`¥c4`t`Ùbt-t`t`¥,¥`Ùc¥bt.4.H\‹‹ÿXõH^X›\õŸX›[€ã\ù[ù[YH[ôõ⁄YLëK4/t-H4-4/¥,t,4,¥.ÙcÙc»\›€⁄»4,à4`4,4,t/¥aÙ`ÙcàXZ[àÿŸ[ôH4.4/t-H4`t/¥-Ù-4,4,¥,4c»4,¥`¥/¥`4/¥.H4`¥cÙ-¥dt.ÙbÙ.HT»õÿãà4$à4`Ù`t`¥,4/t/¥,¥.Ù-t/t/t/¥/ô[X\ŸHT»4/Ù`4.4/¥`¥.¥.Ùc¥aÙdt/t/t/¥.H4,¥/t-tb4/t-t.H4`t-t`¥.à4,¥bÙ-Ù,¥,4`¥cX⁄ÿYŸYù\‹⁄X[à»4.4.Ù/¥.¥,4.Ùc4/tbÙ.H’4/t,4`t/¥-Ù-4,4/t/t/¥/–Ué»4`t/¥-Ù-4,4`¥cY⁄X€€ùò\›ö[[ô›X[ùKŸ[à[XYŸH4,¥/t`Ù`¥`4.\ÿ[ôõﬁ4/Ù`4/¥/Ù`Ù`t`¥.4`¥c4-tdH4aÙ-t`4-t-»õ‹õX[ö[R[ù[YŸ[òŸP€Y[ù[ôõ⁄Y–‘à]»4`t/¥at`4,4/t.4`¥cõ›[ôY\⁄\À€Y]Y]KŸ\úõ‹ú»4,à4`t`Ùbt-t`t`¥,¥`Ùc¥bt.4.Hô\‹ù»4`t/¥at`4,4/t.4`¥c4`Ù-¥-H4`t`Ùbt-t`t`¥,¥`Ùc¥bt.4.H€‹ôH€õ›€YŸH[\‹ù‹ô]öY]ò[ÿŸ[ò\ö[Ààù[õô\à4/¥,tcÙ-Ù,4/H4`¥`4-t,t/¥,¥,4`¥c4/t/¥,¥bÙ-HÿŸ[ò\ö[»Q»4.4/¥`¥-4-t.Ùc4/tbÙ.HX\öŸ\à4`¥/¥.Ùc4.¥/à4/Ù/¥`t.Ù-H€€\]Y‹\‹ŸYô\‹ùà4't.4.¥,4.¥/¥,Ù/à4`t/t.4-¥-t/t.4c»4`t`Ùbt-t`t`¥,¥`Ùc¥bt.4aH€‹ôH\‹Ÿ\ù[€ú»4.4.Ù.4`t-t`¥-t,¥/¥,Ù/à›X\ôÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNà[õõ»ôY‹ô\‹⁄[€àXÿŸ\Y€à^X›XY»Z\‹⁄[ô»[ôõ⁄Y[ú›[Yù[ù[YHõ›[ô\ûHY[ùYöYY⁄]›]‹ôY][ô»›]X»\›ÀÇîëSPRSíSëŒà[\[Y[ùÿÿ[K\úŸKÿ€€ùòX›]\›Xõ\⁄€⁄\ô[ùïRSÿ[ôY]K[àô\]Z\ôHôX[[ôõ⁄YÕH[][]‹à]öY[òŸHôYõ‹ôHôXY[ô\‹»⁄[ôŸ\ÀÇêì–“—TîŒà[ú›[YÀ‘’”–‘à]öY[òŸHŸ\»õ›Y]^\›»[][]‹à“H\»Hö\ú›]]‹ö]]]ôHù[ù[YHõ›[ô\ûKÇìëVàYHôYHõ›[ôYÿŸ[ò\ö[‹»»H[ôXYH[ú›[Y€Ÿôõ[ôH[ôõ⁄Yõ‹õX[\]ô[ò⁄X\ö»[ôŸY\ô\ú⁄[€à[ò⁄[ôŸY[ù[ö[ò[ô[X\ŸHY[ù]Hÿ]KÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»»QïTéà^X›[ú›[Y\ù[ù[YHÿŸ[ò\ö[‹»\ôHX[ô]‹ûBÇë^\›[ô»\‹‹ÿXõH[ôõ⁄Yõ‹õX[\]T»õ›»\ôõ‹õ\»ôYHY][€ò[ÿ[»Yù\àH[ôXYHXÿŸ\Y€‹ôH€õ›€YŸH[\‹ù‹ô]öY]ò[àX⁄ÿYŸY›\\ù€öX»ù\‹⁄X[à»]\›‹ôX]HHõ€ãY[\H–Uà⁄]^X›[ô⁄[ôK€[ô›XYŸHY]Y]N»X⁄ÿYŸY⁄\‹\à’]\›ò[úÿ‹öXôH]–Uàÿÿ[N»ö[R[ù[YŸ[òŸP€Y[ù]\›Ÿ[ôHù[ù[YK\ô[ô\ôYY⁄X€€ùò\›UTì‘êHÕéX
+»4$4$¥(4'¥(4$LNÿë»õ›Y⁄H\ﬁ[ò⁄õ€õ›\»[ôõ⁄YY⁄[à[ôôXŸZ]ôHõ›X\öŸ\ú»⁄]\‹Ÿ\òX›[ôõ⁄Yù\ Ÿ[ôÿŸôõ[ôO]ùYX^\õò[ÿZW‹ô\]Z\ôYYò[ŸXàH[][]‹àô[XZ[ú»[àZ\ú[ôH[ŸH⁄]⁄KQöKŸ]H\ÿXõY[ôHôKY^\›[ô»^\õò[[ôÀ“õÿô\»õÿ⁄ŸYàHù[õô\àô\]Z\ô\»[LHÿŸ[ò\ö[»Q»[ôö[ù»UTì‘êQì÷–Sëì“Q“Sî’SQ’ì“P—W”–‘ó“”ì’”Q—W”“ÿ€õHYù\àH€€\]Yô\‹ù\‹Ÿ\Œ»HôY‹ô\‹⁄[€àô\öYöY\»HX\öŸ\à\»XúŸ[ù€àÿŸ[ò\ö[»òZ[\ôKÇÇïHô[ò⁄X\ö»ô[XZ[ú»H\‹‹ÿXõHÿŸ[ôHŸ[X›Y€õH[àH“H⁄X⁄€›]€»HõŸX›[€àXZ[ãùÿ€ò›XõH€‹ôH[ô⁄\YRHôXŸZ]ôHõ»\›òX⁄Ÿ€‹ãàHô]ö[›\€H‹ú[ôY]X[]H\››[ô\]Z\ôYô[[›ôY\\à[ö\»›ö[ô‹»[ô€€ùòYX›YHX›]ôH[õôY›\\ù€öX»€€ùòX›»]õ›»⁄X⁄‹»H›\úô[ùŸôõ[ôH›\\ù€öX»[ô⁄[ôKÿÿX⁄HY[ù]H[ôôZôX›»\\ãàõ»õŸX›[€àõ⁄XŸH[\[Y[ù][€à⁄[ôŸYÇÇì––SUíQSê—Nà€Ÿ›çÀåK\›XõX[\‹ùYHõ⁄ôX›[ô\úŸY[ôõ⁄YŸ€Ÿ›ÿô[ò⁄X\öÀôŸ⁄]^]»é\‹ŸYX‹õ‹‹»[ôõ⁄YLëHù[õô\ã‹ô\‹ùTÀ”–‘ã›\\ù€öX»[ôõ⁄XŸK\]X[]H€€ùòX›Œ»›[ô[€ôH[ôõ⁄Y€€ùòX›ö[ùYUTì‘êW–Sëì“Q–””ïêP’”“ÿ»⁄[ﬁ[ù^[ô⁄]YôàKX⁄X⁄ÿ\‹ÀàHúõÿY[úõ›ö\⁄[€ôYÿÿ[]\›€€X›[€àÿ[õõ›ô\ô\Ÿ[ù“HôXÿ]\ŸH\»€€ùZ[ô\àX⁄‹»‹[€ò[ò\›TK‹ô\]Y\›»\[ô[ò⁄Y\Œ»HYôôX›Y\€€]Yô[X\ŸH€€ùòX›»Xõ›ôH\ôH‹ôY[ãàôX[X⁄ÿYŸYÀ‘’’\‹Ÿ\òX›^X›][€àô[XZ[ú»[Xô\ò][H[ò‹ôY]Y[ù[H^X›[ôõ⁄Y[][]‹àõÿàô]\õú»]»ô]»X\öŸ\ãÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNàõŸX›[€ã\][ú›[Y[ôõ⁄Yõ⁄XŸK”–‘ã“€õ›€YŸHXÿŸ\[òŸH[\[Y[ùYÿÿ[H⁄]òZ[X€‹ŸYô\‹ù‹ù[õô\à€€ùòX›»›[H\\ã[€õH\›€‹úôX›Y»X›]ôH›\\ù€öXÀÇîëSPRSíSëŒàXõ\⁄^X›ÿ[ôY]H[ô[ú‹X›HôX[[ôõ⁄YÕHŸôõ[ôH[][]‹àô\‹ù€Ÿÿÿ]»€õH[àX^H[ú›[Y[ôõ⁄Y⁄X⁄‹⁄[ù[ò‹ôX\ŸHôXY[ô\‹»»LãÃåÇêì–“—TîŒàÿÿ[[ù^ÿ[õõ›^X›]HHX⁄ÿYŸY[ôõ⁄Y€›[ã””ìñ’\‹Ÿ\òX›ù[ù[YN»“HX\öŸ\à\»X[ô]‹ûKÇìëVà€€[Z]€õH€Z[YYö[\»
+ô]ô\àH[úô[]Y›€ô\àòX⁄Ÿ‹õ›[ô
+KXõ\⁄»àŒLã[àÿZ]õ‹à^X›ZXY€‹ôH[ôõ⁄YLëH[ú›XYŸà‹[ô[ô»⁄Ÿ[ú»€[ô»ô[X]\ô[KÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»ÃKàëQì‘ëNàô[X\ŸH[ôõ⁄Y–‘àúöYŸH]\›ÿ[^‹ùYY⁄[àY]Ÿ¬Çë^X›àŒLã⁄XYMçéMÕMÕÃŒÿåÃÃŸXçLÃéXôLåNåŸMXòYLXåX»[ôõ⁄Y€‹ôHLëHù[àÕMçåÕÕÿôX[[õ‹õX[\]õÿàLNMNNLÕòZ[Y€õH][ú›[Y–‘ãàùZ[\›\⁄Y€ã[ôõ⁄YÕH[ú›[€][ò⁄Ÿôõ[ôH€‹ôKôX\€€ö[ôÀù\‹⁄X[àX[ŸÀ€õ›€YŸHô]öY]ò[›\\ù€öX»À⁄\‹\à’[ô€€\]Xö[]H[\‹ŸYà^X›ô\‹ùòZ[\ôNà[ú›[Y€ÿ‹óÿö[[ô›X[ôXŸZ]ôY[ô⁄[ôO]\‹Ÿ\òX›[ôõ⁄Y[\H€€ù[ù[ô[ôõ⁄Yù[ù[YHŸ\»õ›^‹ŸHö[H[ù[YŸ[òŸXÇÇïHõ‹‹ŸYú⁄⁄\Yà^\õò[RHô\]Z\ôYà\»ôZôX›YàõŸX›€€ùòX›\»Ÿôõ[ôHÿÿ[\‹Ÿ\òX›[ôõ⁄Y[ôHXY€õ‹›X»^\õò[ÿZW‹ô\]Z\ôY]ùYX\»€õHHô[ò⁄X\ö…‹»Yò][õ‹àHX[õ‹õYY\úõ‹àô\‹€úŸKàõ€›ÿ]\ŸH\»ÿÿ[àÿ‹ö\Àÿ[ôõ⁄Y€ÿÿ[‹ù[ù[YKôŸ[ôXYHÿ›[Y[ù»]€Ÿ›[ôõ⁄Yô[X\ŸH⁄[ô€]€àY]Ÿ»X^H\‹]⁄€‹úôX›Hõ›Y⁄ÿ[
+
+X⁄[H\◊€Y]Ÿ
+
+Xò[Ÿ[Hô]\õú»ò[ŸN»ÿ‹ö\ÀŸö[W⁄[ù[YŸ[òŸWÿ€Y[ùôŸô]ô\ù[\‹»ÿ]\»]ô\ûH^‹ùYö[H[ù[YŸ[òŸHY]Ÿ€à\◊€Y]Ÿ
+
+Xà€Z[Nàÿ‹ö\ÀŸö[W⁄[ù[YŸ[òŸWÿ€Y[ùôŸ[ôõ⁄YLëH€€ùòX›‹ù[õô\àôY‹ô\‹⁄[€à€õH\»ôXŸ\‹ÿ\ûK[ô\»õ›\õò[à»õ›⁄[ôŸH€›[à–‘à\‹Ÿ]À⁄[ôŸHÿŸ[ò\ö[»»⁄⁄\Y‹àô[^–‘à\‹Ÿ\ù[€úÀÇÇíSïSëQíVàõ‹à[à^\›[ô»]\õ‹òQõﬁù[ù[YX⁄[ô€]€à[ùõ⁄ŸH]»€õ›€à\ŸYûQ€Ÿ›ö[H[ù[YŸ[òŸHY]Ÿ»\ôX›K\úŸKŸòZ[€‹ŸY€àX[õ‹õYYò]]ôHô\‹€úŸK[ôô]Z[à\ﬁ[ò»–‘àÿ[òŸ[][€ã‹€[ô»]à\»ô\›‹ô\»HX›X[ÿÿ[úöYŸHò]\à[àX\⁄⁄[ô»[à[ò]òZ[XõHÿ\Xö[]KÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNà^X›òZ[[ô»ÿŸ[ò\ö[»\€€]Yúõ€H[ôõ⁄Y“H]öY[òŸKÇîëSPRSíSëŒàúöYŸH€‹úôX›[€ãÿÿ[\úŸKÿ€€ùòX›ÀXõ\⁄[ôô\ù[à^X›[ôõ⁄YLëKÇêì–“—TîŒàõ»ÿÿ[[ôõ⁄Y[][]‹ã‹ù[ù[YHõ€Ÿé»€õHHô]»“Hô\‹ùX^HXÿŸ\[ú›[Y–‘ãÇìëVàô[[›ôH[úô[XXõHôYõX›[€àÿ]\»õ‹àX€\ôY[ôõ⁄YY⁄[àY]ŸÀÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»»QïTéàÿÿ[–‘à\»[ùõ⁄ŸYô]ô\àôX€\‹⁄YöYY\»[à^\õò[ò[òX⁄¬Çòö[R[ù[YŸ[òŸP€Y[ùõ›»[ùõ⁄Ÿ\»€õ›€à^‹ùY]\õ‹òQõﬁù[ù[YXT\»õ›Y⁄Y⁄[ãòÿ[
+
+XYù\àô\öYûZ[ô»H⁄[ô€]€à^\›Àà]õ»€ôŸ\à\Ÿ\»ò[ŸK[ôYÿ]]ôH\◊€Y]Ÿ
+
+XôYõX›[€àõ‹àŸ]ÿ\Xö[]Y\“ú€€òﬁ[ò⁄õ€õ›\»ö[H[ù[YŸ[òŸK–‘à\ﬁ[ò»›\ù‹€ÿÿ[òŸ[ôYK‹à⁄]›€àÿ[òŸ[][€ãà[ö€õ›€ã€X[õ‹õYYò]]ôH›]]›[òZ[»€‹ŸYõ›Y⁄^\›[ô»î””à\ú⁄[ôŒ»õ»^\õò[–‘ã⁄⁄\]‹àÿ\Xö[]H›€ô‹òYHÿ\»[ùõŸXŸYàH\ﬁ[ò»[XYŸK‘à–‘àõ›]H\»\ôYõ‹ôHŸ[X›Y[àH[ú›[Yô[X\ŸHT»[ôôXŸZ]ô\»HX›X[›\ù[ò[^ôSÿÿ[ö[Xô\‹€úŸHúõ€H€›[ãÇÇîôY‹ô\‹⁄[€à€›ô\òYŸH^X⁄]HôZôX›»ô\›‹ò][€àŸàHò[ŸHôYõX›[€àÿ]H[ôŸàHZ\€XY[ô»[ôõ⁄Yù[ù[YHŸ\»õ›^‹ŸHö[H[ù[YŸ[òŸX]àÿÿ[ô\öYöXÿ][€éàéH\‹ŸYŸ[X›Y[ôõ⁄YLëK‹ù[õô\ã–TÀ”–‘ã‘›\\ù€öX»€€ùòX›Œ»UTì‘êW–Sëì“Q–””ïêP’”“ÿ»€Ÿ›çÀåH\úŸK⁄[ﬁ[ù^[ôYôà⁄X⁄»›XÿŸYYàX›X[[ôõ⁄YÕH\‹Ÿ\òX›^X›][€àô[XZ[ú»[ô[ô»Hô]»^X›“Hù[ãÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNà^X›ô[X\ŸH–‘àòZ[\ôHô\Z\ôY]H€Ÿ›]ÀR€›[àúöYŸH⁄]›]ŸXZŸ[ö[ô»Hÿÿ[[€õHXÿŸ\[òŸH€€ùòX›ÇîëSPRSíSëŒàXõ\⁄[ôô\]Z\ôHUTì‘êQì÷–Sëì“Q“Sî’SQ’ì“P—W”–‘ó“”ì’”Q—W”“ÿ\»H€€\]Yô\‹ù⁄]õ€ô[\Hö[[ô›X[–‘à€€ù[ùÇêì–“—TîŒà€õHHôX[[][]‹àò[Y]\»X⁄ÿYŸYìíKÿ\‹Ÿ]»[ôôX€Ÿ€ö][€ãÇìëVàXõ\⁄\»Z[ö[X[€‹úôX›[€à[ôÿZ]õ‹à]»^X›[ôõ⁄YLëHõÿàôYõ‹ôHù\ù\àô[X\ŸH]]][€ãÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»ÃãàëQì‘ëNà]\õZ[ö\›X»ö[[ô›X[ö]X\[ôòZ[X€‹ŸY[\H–‘àô\‹€úŸBÇë^X›àŒLã⁄XYôLYòLÕéXòÃXåYéLMXXLÃÿYLYYYççôMçôò»[ôõ⁄Y€‹ôHLëHõÿàLNMåéMLåÕÿôXX⁄\»€›[à–‘àúöYŸKàÀ’€‹ôK€õ›€YŸH[ô[›\àÿŸ[ò\ö[‹»\‹ÀàH–‘àô\‹€úŸH\»[ô⁄[ôO]\‹Ÿ\òX›[ôõ⁄YŸôõ[ôOYò[ŸX\»õ›ô\‹ùYõ»\úõ‹ãù][\H€€ù[ùõ›ö[ô»HúöYŸHÿ[õ›»ÿÿ›\ú»ù]]»[ú]€€ùZ[ú»õ»ôX€Ÿ€ö\ÿXõH^[ÀÇÇìò]]ôH[ú‹X›[€àX]\ú»\ôNà[ôõ⁄Yö[Tù[ù[YKò[ò[^ôSÿ‹ä
+X[Yÿ]\»[XYŸHö[\»»[ôõ⁄Yÿ‹îù[ù[YKô^òX›[XYŸJ
+X⁄X⁄ÿY»Hö]X\[ö]X[^ô\»\‹Ÿ\òX›⁄][õôYù\ Ÿ[ôÿÿ[»Ÿ]Ué^
+
+X[ôô]\õú»]\»€€ù[ùà\ôYõ‹ôHõ»[ùô[ùYô\XŸ[Y[ù€›[àTH\»ô\]Z\ôYàHô[ò⁄X\ö…‹»ö[‹à›XïöY]‹‹ù\ô[ô\ôYö^\ôH\»H[ú›XõH€€\€ô[ùà]ÿ[àÿ\\ôH[à[úô[ô\ôYúò[YH[àHõÀ]⁄[ô›»[][]‹ãà€Z[Nàô[ò⁄X\ö‹Àÿ€‹ôKÿ[ôõ⁄YŸ€Ÿ›ÿô[ò⁄X\öÀôŸÿ‹ö\ÀŸö[W⁄[ù[YŸ[òŸWÿ€Y[ùôŸ[ôõ⁄YLëH€€ùòX›»[ô\»õ›\õò[àõ»–‘à⁄⁄\õ»^\õò[ò[òX⁄À[ôõ»ô[^][€àŸàô\]Z\ôYö[[ô›X[X\öŸ\úÀÇÇíSïSëQíVàô\XŸHHù[ù[YHŸôã\ÿ‹ôY[àô[ô\à⁄]H]\õZ[ö\›XÀY⁄X€€ùò\›Lé0ÂÕåë»^[ÿY€€ùZ[ö[ô»X›X[ZòUùHÿ[ú»€\»UTì‘êHÕéX[ô4$4$¥(4'¥(4$LNÿ»\ú⁄\›‹ŸHû]\»[ú⁄YHH\ÿ[ôõﬁ[ôô]Z[à“H]öY[òŸKà€àH€Ÿ›‹ò\\ãH›XÿŸ\‹Ÿù[[XYŸH–‘àî””à⁄]õ[ö»€€ù[ùôX€€Y\»⁄œYò[ŸK\úõ‹èP[ôõ⁄Y–‘àô]\õôY[\H€€ù[ùôYõ‹ôHX€‹ò][€ã€»[à[ú]ÿúöYŸHôY‹ô\‹⁄[€àÿ[õõ›€⁄»X[KÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNà^X›[\KX€€ù[ùòZ[\ôHòXŸY»\›ö^\ôHÿ\\ôKõ›HZ\‹⁄[ô»\‹Ÿ\òX›[ùõÿÿ][€ãÇîëSPRSíSëŒàö^\ôK›‹ò\\à€‹úôX›[€ãÿÿ[\úŸKÿ€€ùòX›À^X›[ôõ⁄Yô\ù[ãÇêì–“—TîŒàù\‹⁄X[àôX€Ÿ€ö][€à\»€õH]]‹ö]]]ôH€àX⁄ÿYŸY[ôõ⁄Y\‹Ÿ\òX›]KÇìëVàXZŸHHö^\ôH^[Y]\õZ[ö\›X»[ôô\Ÿ\ùôH›öX›ÿ]HŸ[X[ùX‹ÀÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»»QïTéà–‘àö^\ôH€€ùZ[ú»]\õZ[ö\›X»^^[¬ÇïH[ôõ⁄Yô[ò⁄X\ö»õ»€ôŸ\à\[ô»€à›XïöY]‹‹ùŸúò[YK\‹›Yò]»[Z[ôÀà]X€Ÿ\»[à[XôYYLé0ÂÕåZòUùHÿ[ú»õ€ëÀô\öYöYYôYõ‹ôH[ò€\⁄[€àûHÿÿ[\‹Ÿ\òX›
+UTì‘êHÕéXŸX€€ôﬁ\ö[X»[ôHô[ô\ôY\»ö\⁄XõH€\ Kò[Y]\»[Y[ú⁄[€úÀ‹ö]\»^X›H‹ŸHû]\»»\Ÿ\éãÀÿ[ôõ⁄YZ[ú›[Y[ÿ‹ãYLôKúôÿ[ôôX€‹ô»]»“Kà\»XZŸ\»HX⁄ÿYŸY\‹Ÿ\òX›[ú]]\õZ[ö\›X»[ô\àHõÀ]⁄[ô›»[][]‹ãÇÇòö[R[ù[YŸ[òŸP€Y[ùY][€ò[H⁄[ôŸ\»⁄œ]ùYX\»õ[ö»–‘à€€ù[ù[ù»⁄œYò[ŸX⁄][ôõ⁄Y–‘àô]\õôY[\H€€ù[ù»Hô[ò⁄X\ö»›[ô\]Z\ô\»]ô\ûH[ô€\⁄‘ù\‹⁄X[àX\öŸ\à[ô\»õ»⁄⁄\õ›]Kàÿÿ[ô\öYöXÿ][€éàéH\‹ŸYŸ[X›Y€€ùòX›ÀUTì‘êW–Sëì“Q–””ïêP’”“ÿ€Ÿ›çÀåH\úŸK⁄[ﬁ[ù^[ôYôà⁄X⁄»›XÿŸYYÇÇîì—‘ëT‘◊–””TUNàMIBîì—‘ëT‘◊‘ëSPRSíSëŒàIBë”ëNà]\õZ[ö\›X»ö]X\€›\òŸH[ô^X⁄][\KS–‘àôZôX›[€à[\[Y[ùY⁄]›][\ö[ô»ò]]ôH[ô⁄[ôH‹àÿ]HŸ[X[ùX‹ÀÇîëSPRSíSëŒàXõ\⁄[ô[ú‹X›X›X[[ôõ⁄YÕHù\ Ÿ[ôÿô\‹ù€€ù[ù€X\öŸ\ãÇêì–“—TîŒà€õHHX⁄ÿYŸY[][]‹àÿ[àõ›ôHH[õôYù\‹⁄X[àòZ[ôY]HôX€Ÿ€ö^ô\»HŸX€€ô[ôKÇìëVàXõ\⁄Z[ö[X[ÿ[ôY]H[ôÿZ]õ‹à^X›€‹ôH[ôõ⁄YLëKÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àMIBÇà»»»P–—TQà[ú›[Y[ôõ⁄Yõ⁄XŸK”–‘ã“€õ›€YŸH⁄X⁄‹⁄[ùÇë^X›àŒLã⁄XYLLÕÃNLŸçMÃÃçYLçLYçYŒXçòLÕÿ»[çH⁄]Xà€‹öŸõ›‹»]X⁄Y»]XY\ôH’P–—T‘ÀàH]]‹ö]]]ôH[ôõ⁄Y€‹ôHLëHù[àÕMéÕçMŒôX[[õ‹õX[\]õÿàLNMçåMÕNXùZ[[ô\›\⁄Y€ôYH\‹‹ÿXõHõŸX›[€ã\ù[ù[YHTÀ[ú›[Y‹›\ùY]€à[ôõ⁄YÕH⁄]Z\ú[ôH[ŸH\»⁄KQöKŸ]H\ÿXõY[ô€€\]YHô\‹ùà]öY[òŸH\ùYòX›LNLNåéMMX“KLçMàòåNMXòéYåYôôXŸMçéXŒXÿôåMLŸôÕNMÕYLMçYôYòòòYMLXòMçMÃò€€ùZ[ú»ô\‹ù⁄]‹⁄OLLLÕÃNLÀããò[ô\‹ŸY[ú›[Y€ÿ‹óÿö[[ô›X[à€€ù[ùŸ^Ÿ\úHêUTì‘êHÕéW¥$4$¥(4'¥(4$LN»ò[ô⁄[ôH\‹Ÿ\òX›[ôõ⁄Y[ô›XYŸ\»‹ù\À[ô◊XŸôõ[ôO]ùYX^\õò[ÿZW‹ô\]Z\ôYYò[ŸX\ò][€àMççãçN€\ÿà][€»ôX€‹ô»X⁄ÿYŸY›\\ù€öX»»–Uà
+ÕÃNû]\ H[ôÿÿ[⁄\‹\à’à\»\»\»X›X[[ú›[Y€Ÿôõ[ôHõ⁄XŸH
+»–‘à
+»€õ›€YŸH]öY[òŸKõ››]X»€›\òŸH]öY[òŸKÇÇê⁄X⁄‹⁄[ùXÿŸ\Yà[ú›[Y[ôõ⁄Yõ⁄XŸK”–‘ã“€õ›€YŸHòZ\Ÿ\»ô[X\ŸHXÿŸ\[òŸHúõ€HLKÃå»LãÃåHå	Xà\»Ÿ\»õ›[\Hô[X\ŸHôXY[ô\‹»ô^[€ôHYö[ôYõ›[ô\ûNàô[XZ[ö[ô»\ôHŸ[ùZ[ôH\ŸYù[XŸ[úŸY€‹ú\À‹õ›ô[ò[òŸK\⁄Xÿ[Y]öXŸH[ô[X[àRK€\›[ö[ô»XÿŸ\[òŸKŸ\ùô\ã€XZ[‹õ€òX⁄Àö[ò[ô\ú⁄[€àY]Y]Kö[ò[ÿ[YKT“Hê»[ôõŸX›[€à⁄Y€ö[ôÀ›\]K‹ô[X\ŸKÇÇîì—‘ëT‘◊–””TUNàå	Bîì—‘ëT‘◊‘ëSPRSíSëŒà	Bë”ëNà[ôõ⁄Y[ú›[YŸôõ[ôHõ⁄XŸK”–‘ã“€õ›€YŸHXÿŸ\Yúõ€H^X›\ùYòX›[ô[^X›ZXY€‹öŸõ›‹»›XÿŸ\‹ÀÇîëSPRSíSëŒàô[X\ŸH⁄X⁄‹⁄[ùÀ⁄YYõH^\õò[‹õŸX›]öY[òŸH[ôö[ò[ô[X\ŸHY[ù]KÇêì–“—TîŒàõ»Ÿ[ùZ[ôH€‹ú\À‹õ›ô[ò[òŸH‹à\⁄Xÿ[⁄[X[ã‹Ÿ\ùô\ã\õŸX›[€àXÿŸ\[òŸHY]ÇìëVàô\Ÿ\ùôH\»XÿŸ\Y]öY[òŸK[àYô\‹»Hô^[ô\[ô[ùH[[€ú›òXõHô[X\ŸHõ›[ô\ûH⁄]›]⁄[ô⁄[ô»ô\ú⁄[€àôYõ‹ôHö[ò[Y[ù]Hÿ]KÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àå	BÇà»»ÃÀàëQì‘ëNàXZŸHRH€Ÿ›õ€››ò\ô]ûXXõH[ôÿX⁄YÇë^X›àŒLã⁄XYŸåLLMéLŸçŸLYéXéçÕMÃMÃòLçÕò»RHö\›X[õÿàLåÃçMLÃXô\öYöYYUTì‘êW–“W–“P“”’U‘“OLŸåLLKããò[àòZ[YôYõ‹ôHõ⁄ôX›[\‹ù›\›»ôXÿ]\ŸH⁄]Xàô[X\ŸH›€õÿYô]\õôY›\õ
+ÕJHôX›àòZ[\ôNà€€õôX›[€àô\Ÿ]ûHY\òà\»\»ù[õô\ã€ô]€‹ö»[ôúò\›ùX›\ôKõ›HRH‹àõŸX›òZ[\ôKà€Z[Nàô⁄]Xã›€‹öŸõ›‹À›ZK]ö\›X[X⁄Kû[[Hò\úõ›»€‹öŸõ›»ôY‹ô\‹⁄[€à\›YàYY[ô\»õ›\õò[à[úô[]Y›€ô\àòX⁄Ÿ‹õ›[ôô[XZ[ú»[ù›X⁄YÇÇïHRH€‹öŸõ›»\»H\›[ò›ô[X\ŸHõ›[ô\ûNà\⁄›‹–[ôõ⁄Y‹ùòZ]^[›]X›X[⁄[ù\àò]öYÿ][€ã[ôÕô[ô\ôYXÿŸ\[òŸH›\ôòXŸ\Àà]ÿ[õõ›ôH⁄[[ùHY\ôŸY[ù»€‹ôK–[ôõ⁄Y‹X⁄ÿYŸHõÿú»ôXÿ]\ŸH]ôYY»ôòã—”ô[ô\ö[ô»[ô]»›€à\ùYòX›Ààô\X]Y€Ÿ››€õÿY»ÿÿ›\àôXÿ]\ŸH⁄]Xàõÿú»\ôH\€€]Y»›Ÿ]ô\àõ€››ò\ÿ[àôHÿX⁄Y[ôò[ú⁄Y[ùô[X\ŸKX\‹Ÿ]ô\Ÿ]»ô]öYY⁄]›]\Xÿ][ô»RH\‹Ÿ\ù[€úÀÇÇíSïSëQíVàÿX⁄H€õHHô\öYöYY€Ÿ›çÀåH[ù^^X›]XõH[ô\àHö^YŸ^N»€àÿX⁄HZ\‹»\ŸHÃKåK€€õôX›[€ã››[[Y[›]ÀK\ô]ûKX[Y\úõ‹úÿõ›[ôY^€ô[ùX[\›[Hô]ûH[^H[ô\ò⁄]ôH[ùY‹ö]H\›ôYõ‹ôH^òX›[€ãàŸY\HX›X[RHÿ]\»[ò⁄[ôŸY[ôõ»ô]ûHŸàHòZ[[ô»õŸX›\›ÇÇîì—‘ëT‘◊–””TUNàå	Bîì—‘ëT‘◊‘ëSPRSíSëŒà	Bë”ëNà^X›[ôúò\›ùX›\ôK[€õHòZ[\ôH€\‹⁄YöYYôYõ‹ôH[ûHõŸX›€Z[H⁄[ôŸYÇîëSPRSíSëŒàô\⁄[Y[ùõ€››ò\[\[Y[ù][€ã€ÿÿ[PSS⁄X⁄À€ô]»RHõÿãÇêì–“—TîŒà^\õò[⁄]Xàô[X\ŸH€€õôX›[€àô\Ÿ]»õ»\Xÿ][€àòZ[\ôHÿúŸ\ùôYÇìëVàXZŸH€õHH›€õÿY\àô]ûKÿÿX⁄Hõ›[ô\ûHô\⁄[Y[ùÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àå	BÇà»»»QïTéàRHõ€››ò\ô]öY\»ò[ú⁄Y[ù€Ÿ›[]ô\ûHòZ[\ô\¬ÇïRHö\›X[“Hô\›‹ô\À‹ÿ]ô\»€õHH[õôY€Ÿ›çÀåH[ù^^X›]XõHÿX⁄H
+]\õ‹òYõﬁY€Ÿ›[[ù^MçÀåK\›XõKXLLŸMôXò
+Kà€àHZ\‹»]\Ÿ\»›\õKZKåHKX€€õôX›][Y[›]ÃK[X^][YHÃK\ô]ûHK\ô]ûKX[Y\úõ‹ú»K\ô]ûKY[^HHK\ô]ûK[X^][YHÃò[Y]\»íT›ùX›\ôHôYõ‹ôH^òX›[€ã[ô›[ô\öYöY\»ãŸ€Ÿ›K]ô\ú⁄[€òà\»ô]öY\»ò[ú‹‹ùô\Ÿ]»›X⁄\»›\õÕHù]Ÿ\»õ›ô]ûH‹àYHHõŸX›’RH\›òZ[\ôKàH€‹öŸõ›…‹»\›[ò›ôòã‹⁄[ù\ã‹ô[ô\à\ùYòX›ÿ]\»ô[XZ[à[ùX›ÇÇì––SUíQSê—NàYXÿ]Y€‹öŸõ›»ôY‹ô\‹⁄[€àH\‹ŸY»PSS\úŸ\»⁄]VPSS»⁄]YôàKX⁄X⁄ÿ›XÿŸYYÀàHúõÿYúò[ô[ô»\›ÿ\»[ù[ù[€ò[Hõ›\ŸY\»\»⁄[ôŸI‹»XÿŸ\[òŸHôXÿ]\ŸHH⁄\ôY€‹ö›ôYH\»HôKY^\›[ôÀ[úô[]Y[ŸYöYY›€ô\àòX⁄Ÿ‹õ›[ôëŒ»]\»õ››YŸY‹à€Z[YY[ôô[XZ[ú»[ò⁄[ôŸYàHô[[›H^X›úò[ò⁄ô]Z[ú»H\õ›ôY\‹Ÿ]ÇÇîì—‘ëT‘◊–””TUNàå	Bîì—‘ëT‘◊‘ëSPRSíSëŒà	Bë”ëNàò[ú⁄Y[ùRHõ€››ò\òZ[\ôHXYHô]ûXXõKÿÿX⁄XXõH⁄]›][][ô»RH€›ô\òYŸKÇîëSPRSíSëŒàXõ\⁄[ôXÿŸ\Hô]»^X›RHö\›X[ù[é»ô[XZ[ö[ô»^\õò[ô[X\ŸH⁄X⁄‹⁄[ù»[ò⁄[ôŸYÇêì–“—TîŒà⁄]Xà\‹Ÿ][]ô\ûHô[XZ[ú»^\õò[ù]ô\Ÿ]»õ›»]ôHõ›[ôYô]ûH[ôù]\ôHÿX⁄H]»]õ⁄Y›€õÿYÇìëVàXõ\⁄Z[ö[X[€‹öŸõ›À›\›⁄õ›\õò[⁄[ôŸK[àÿZ]õ‹à^X›RH]öY[òŸHò]\à[àô\ù[õö[ô»[úô[]Y⁄X⁄‹»ÿÿ[KÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àå	BÇà»»ÕàëQì‘ëNàô[[›ôHH⁄PàŸX\ò⁄\ÿ[\[ô»[Y[›][ú›Xö[]BÇë^X›àŒLã⁄XYéMŒMNåçòçYÿçÿYLYôNLMXYLŒYYL»€õ›€YŸHù[àÕMLŒMÃLåXõÿàLåÃMÃåLò\ùYòX›LååÃÃÕÕòÿ\»›€õÿYY[ô[ú‹X›Yà€Ÿ›[ú›[][€à›XÿŸYYYàHX›X[ô\‹ùôX€‹ô»Hõ›[ôY[Y[›]Yù\àMÿô]\õàNXXZ»î‘»LLLÕÃLò[ôH›YŸHŸ»õ›ô\»Ÿ[ô\ò][€ã⁄[\‹ù€€\]Y
+LÃÕÕåNNXû]\ÀLååLéNXŸ[ô\ò]YôX€‹ôÀLååLåò[\‹ùY⁄[ö‹À[\‹ùÕãçÕåõ\ÿ
+HôYõ‹ôHHõÿŸ\‹»ô[XZ[ôY[àHŸX\ò⁄X]ö^àõ»ö[ò[ô\›[‹ô\›\ù]öY[òŸHÿ\»[Z]YÇÇê€€\\ö\€€à⁄]H[[YYX][HôXŸY[ô»›XÿŸ\‹Ÿù[^X›\\ô[ùù[àÕMLÕNŒMÃòõÿàLåÃçNLLLL\ùYòX›LåMçåÕÿõ›ô\»Hÿ]H\»[Z[ôÀYúòY⁄[Hò]\à[àHô]»õŸX›ôY‹ô\‹⁄[€éà]»[\‹ùõÿŸ\‹»€€ú›[YYLLé[\ÿ[ò€Y[ô»ZY⁄ŸX\ò⁄ÿ\Ÿ\»ô\X]Yö]ôH[Y\»›ô\àHÕÕLMåÃÃMXXû]H›‹ôK[ôô\›\ù€€ú›[YY[õ›\àçÃMÃõ\ÿà›[€‹ö»€€\]Y€õHXõ›]ŒŸX€€ô»[ú⁄YHHM\ŸX€€ôõ›[ôà[ô]öYX[ù[\ÿÿ[àŸX\ò⁄\»Ÿ\ôH\õﬁ[X][HLMKLNŸX€€ôÀ€»ô\]][€ú»€Z[ò]Hù[ù[YKÇÇê”RSNàô[ò⁄X\öÀ›€‹öŸõ›»XY€õ‹›X‹»€õKàô\Ÿ\ùôH[ZY⁄€‹úôX›ô\‹»]Y\öY\ÀHH⁄Pàô\⁄€ô\›\ùõ€Ÿãî‘»ŸZ[[ô»[ôòZ[\ôH^]àõ‹àHèLH⁄Pà€‹úôX›ô\‹À‘î‘»ÿ]Hù[àXX⁄]Y\ûH€òŸN»€X[\à\ôõ‹õX[òŸK‹ÿÿ[[ô»õŸö[\»ô]Z[àö]ôHÿ[\\Àà[Z]\ã\]Y\ûH›YŸH[Z[ôÀö[ùHî””àô\‹ùôYõ‹ôHô]\õö[ô»Hÿ\\ôYô[ò⁄X\ö»›]\À[ôXZŸHH[ô\[ô[ù€Ÿ››€õÿYô\⁄[Y[ù⁄]›]ôX][ô»ô]ûH\»HõŸX›\‹ÀÇÇîì—‘ëT‘◊–””TUNàå	Bîì—‘ëT‘◊‘ëSPRSíSëŒà	Bë”ëNà^X›\ùYòX›ÿ]\ŸH\›Xõ\⁄Y»›\õ—€Ÿ›Z\ŸXY€õ‹⁄\»ôZôX›YÇîëSPRSíSëŒà[\[Y[ùõ›[ôYÿ[\H€XﬁK€‹öŸõ›»ô\‹ùö[ù[ô»[ôôY‹ô\‹⁄[€à€›ô\òYŸN»ù[àÿÿ[€€ùòX›»[ôXõ\⁄€ôHÿ[ôY]KÇêì–“—TîŒàô]»^X›ô[[›Hù[ù[YH]öY[òŸH\»ô\]Z\ôYYù\àHô\Z\ãÇìëVàôYXŸHôY[ô[ùH⁄Pàÿÿ[ú»⁄]›]ô[[›ö[ô»H€‹úôX›ô\‹»ÿ\ŸH‹àòZ\⁄[ô»H[Y[›]Ç¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àå	BÇà»»»QïTéàH⁄PàŸY\»€‹úôX›ô\‹»€›ô\òYŸH⁄]›]ù[ÿÿ[ú¬Çò€õ›€YŸW‹›ô\‹◊ÿô[ò⁄X\öÀôŸõ›»Ÿ[X›»€ôHÿ[\H\àŸX\ò⁄ÿ\ŸH€õH⁄[à\ôŸ]€XàèHLç»[ZY⁄ÿ\Ÿ\»ô[XZ[à
+[\X^X›ò\ôHX\öŸ\ã€€[[€ã][\H⁄Ÿ[úÀù\‹⁄X[ãZ^YïK—Sãô\ûH€ô»[ôX[õ‹õYY
+K[ô]ô\ûHô\]Z\ôY]Y\ûH›[ô\öYöY\»H^X›Y€›\òŸKàõŸö[\»ô[›»H⁄Pàô]Z[àö]ôHÿ[\\»[ô\òŸ[ù[H]öY[òŸKàXX⁄ÿ\ŸHõ›»ö[ù»]»ò[YKÿ[\H€›[ù[\ŸY[YH[ô€‹úôX›ô\‹À€»H]\à[ù\úù\[€àY[ùYöY\»H^X›\ŸKàHM\ŸX€€ôõ›[ôH⁄Pà]\Ÿ]ô\›\ùõÿŸ\‹Àî‘»[Z][ô\ôòZ[\ôHôZ]ö[‹à\ôH[ò⁄[ôŸYÇÇïH€‹öŸõ›»ÿ\\ô\»Hù[õô\à›]\Àö[ù»€õ›€YŸKLYÀöú€€ò⁄[àô\Ÿ[ù[à^]»⁄]H‹öY⁄[ò[›]\ÀàZ\‹⁄[ô»ô\‹ù\»HòZ[\ôKà€Ÿ›ò[ú‹‹ùõ›»\Ÿ\»ÃKåKõ›[ôY€€õôX›[€ã››[[Y[›]ÀZY⁄[Y\úõ‹àô]öY\»⁄][^K€X^[YK[ôíT[ùY‹ö]Hò[Y][€ãàõŸX›\›»\ôHõ›ô]öYYÇÇì––SUíQSê—Nà⁄^›Xà€‹öŸõ›À‹ô\‹ùY[ù]H\›»\‹Œ»€‹öŸõ›»PSS\úŸ\Œ»€Ÿ›çÀåH›€õÿYY⁄]Hô]»€€[X[ô[ô\‹ŸY\ò⁄]ôHò[Y][€ã›ô\ú⁄[€à⁄X⁄ÀàHôX[‹ùXõHHZPà[\‹ù
+»Ÿ\\ò]K\õÿŸ\‹»ô\›\ù€[⁄ŸH\‹ŸYàKçMH]\Ÿ]û]\ÀKåH[\‹ùYôX€‹ôÀÿ⁄[ö‹À\ôÿ€‹úôX›ô\‹Àú\‹ŸY]ùYX\úõ‹óÿ€›[ùL»]»ŸX\ò⁄ô\‹ùõ›ô\»€X[\àõŸö[\»›[^X›]Hö]ôHÿ[\\»õ‹à]ô\ûHÿ\ŸH[ô[Z]»Hô]»\ãXÿ\ŸHXY€õ‹›X‹Ààù[Y]‹à[\‹ù[ò€›[ù\ôY€õHHôKY^\›[ô»[úô[]Y[ŸYöYYÿ€‹úù\›€ô\àòX⁄Ÿ‹õ›[ôë»[ô\»õ›\ŸY\»XÿŸ\[òŸN»]›€ô\àö[Hô[XZ[ú»[ù›X⁄Y[ô[ú›YŸYÇÇîëSS’H’UHëQì‘ëHPìP–US”éà^X›éMŒMN\»ç›XÿŸ\‹Ÿù[€‹öŸõ›‹»[ò€Y[ô»⁄[ô›‹»X⁄ÿYŸHÕMLŒMÃLååò»€õH€õ›€YŸHù[àÕMLŒMÃLåX\»êRSTëKÿÿ[^ôYXõ›ôKà\»⁄[ôŸH\ôYõ‹ôH\ôŸ]»H€€H^X›ZXYôYÿ]KÇÇîì—‘ëT‘◊–””TUNàå	Bîì—‘ëT‘◊‘ëSPRSíSëŒà	Bë”ëNà[Y[›]ÿ]\ŸHö^Y⁄]›]ŸXZŸ[ö[ô»⁄^ôKÿ€‹úôX›ô\‹À‹ô\›\ù‘î‘»ÿ]\Œ»òZ[\ôHXY€õ‹›X‹»XYHö\⁄XõKÇîëSPRSíSëŒàXõ\⁄€ôHÿ[ôY]H[ô[ú‹X›]»^X›H⁄Pàô\‹ùÿ\ùYòX›Çêì–“—TîŒàô[[›HH⁄Pàù[ù[YHõ€Ÿà\»[ô[ôŒ»^\õò[ô[X\ŸHXÿŸ\[òŸHõ›[ô\öY\»ô[XZ[à[ò⁄[ôŸYÇìëVà€€[Z]‹\⁄€õH\ŸH€õ›€YŸHö[\À[àÿZ]õ‹àH⁄[ô€HŸ\öX[^ôYX]ûHÿ]Hò]\à[à][ò⁄[ô»\Xÿ]\»X[ùX[KÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àå	BÇà»»ÕKàõŸX›[€àXŸ[úŸY€õ›€YŸHX⁄»€€ùòX›[ô^X›\ùYòX›ô\öYöXÿ][€ÇÇà»»»ëQì‘ëBÇò”‘íÀLåçãLKLMÀQíSêSTëSPT—Xô[XZ[ú»P’UëH[ô\àH€€H€€‹ô[ò]‹ãŸ^X›]‹ãàúô\⁄‹öY⁄[ã€XZ[ò\»ÕôôMçXYçéXŒXôLXååŸåNMéÿÃŸLò»^X›àŒLã⁄XY\»ÕMçXåçåòÿXŒMXŸåÿLLYòŒYNLÃŸåÕXŒ»XõX»ô\ú⁄[€àô[XZ[ú»KåÀåå–[ôõ⁄Y€ŸHLX⁄]HXÿ›[][]YRSì‘àKçåå›[ô\ú⁄[€ã[\›àH[úô[]Y›€ô\ã[[ŸYöYY\‹Ÿ]À›ZKÿ]\õ‹òYõﬁÿòX⁄Ÿ‹õ›[ô€X\›\ãúôÿô[XZ[ú»›]⁄YH\»€Z[H[ô]\›õ›ôH›YŸY‹àô\Z\ôYÇÇë^X›ZXYXÿŸ\[òŸH\»õ›»€€\]Nà[çH€‹öŸõ›‹»õ‹àÕMçXò\ôH’P–—T‘Àà€õ›€YŸHH⁄Pàù[àÕMLçÕÃÃNLõÿàLåMÕÕçÕÕÿ\ùYòX›LåéLÕÃçÿô\‹ù»⁄]‹⁄OMÕMçXãããò€»\‹ŸYÿ\Ÿ\ÀLÃÕÕåNNX]\Ÿ]û]\ÀLååLåò[\‹ùY⁄[ö‹À‹ôX€‹ôÀô\õ»\úõ‹úÀŸ\Xÿ]\À\ô€‹úôX›ô\‹»[ôŸ\\ò]K\õÿŸ\‹»ô\›\ùõ€Ÿãõ»ô]€‹öÀŸ^\õò[ù[ù[YK”€[XK‹ô[[›H[ôô\ô[òŸKà[\‹ùÿ[[YH\»LŒNMçLç\ÿô\›\ùÿ[[YHççMÕÀçååõ\ÿXZ»[\‹ùî‘»LLŒ»Hÿ]Hô[úõ€HHö[‹àL[Z[ù]H[Y[›]»Xõ›]éZ[ù]\»⁄[Hô]Z[ö[ô»[ZY⁄€‹úôX›ô\‹»]Y\öY\ÀÇÇê”RSNàYH€X[õŸX›[€ã\X⁄»ò[Y]‹à€€ùòX›ô[X\ŸHY]Y]H[ô\›»[ô\àô]»€€À⁄€õ›€YŸW‹X⁄À äò€õ›€YŸW‹X⁄À äò\›À›\›‹õŸX›[€ó⁄€õ›€YŸW‹X⁄ÀúX[ô\»õ›\õò[àõ»èLH⁄Pà^[ÿY[ù\ú»⁄]àH[ô\[ô[ùHô\Ÿ\ùôY\ùYòX›]\õ‹òQõﬁR€õ›€YŸKTïKLåçãåKåK]åKù\ãûú›\»éKNLéHX⁄ŸYû]\»⁄]“KLçMàòÃåÃLççÃMçLÕXYéåÃNLÿÿLNXMNçéXÕåNôMÃMXôYYLçåM»]»\à›ôX[H€€ùZ[ú»åõ›[ôYî””ì⁄\ô»\»X[öYô\›öú€€òàHX[öYô\›€Z[\»KLçÕKååHŸ[ùZ[ôH€€ù[ùû]\ÀKNãåã»î””ìû]\»[ôÕKÃHôX€‹ô»úõ€HH[õôYù\‹⁄X[à⁄Z⁄\YXHåçãLKLH€›\òŸHŸY€Y[ù[ô\à–»ñKT–Håà\ŸH€Z[\»\ôHõ›XÿŸ\Y[ù[[à[ã\ô\»ò[Y]‹à[ô\[ô[ùH›ôX[\»H^X›\ò⁄]ôKô\öYöY\»]ô\ûH⁄\ô\⁄‹⁄^ôKÿ€›[ù‹ÿ⁄[XK‹õ›ô[ò[òŸK€XŸ[úŸK]X›»\Xÿ]HQÀÿ€€ù[ù[ôõ›ô\»HX[öYô\››[»⁄]›]^òX›[ô»Hù[X⁄ÀÇÇîì—‘ëT‘◊–””TUNàå	Bîì—‘ëT‘◊‘ëSPRSíSëŒà	Bë”ëNà^X›ÕMçXò[]€‹öŸõ›»[ôH⁄Pàﬁ[ù]X»ÿ\X⁄]K‹ô\›\ù]öY[òŸHXÿŸ\Y»ô\Ÿ\ùôYõŸX›[€à\ùYòX›Y[ù]Hô\öYöYY]H›]\à“H[ô\ò⁄]ôKZ[ùY‹ö]H]ô[ÇîëSPRSíSëŒà[\[Y[ù[ôù[à[ô\[ô[ù^X›õŸX›[€ã\X⁄»ò[Y][€é»[à[ùY‹ò]Hõ›[ôY[ú›[Y⁄[ô›‹À–[ôõ⁄Y[\‹ù‹]Y\ûH]öY[òŸHôYõ‹ôH‹ôY][ô»€õ›€YŸHô[X\ŸHôXY[ô\‹ÀÇêì–“—TîŒàõŸX›[€à\ùYòX›\»õ›Y]\‹ŸYHô]»[ô\[ô[ù\ã\ôX€‹ô‹\ã\⁄\ôò[Y]‹é»\⁄Xÿ[Y]öXŸK⁄[X[ã‹Ÿ\ùô\ã‹⁄Y€ö[ô»õ›[ô\öY\»ô[XZ[à^\õò[ÇìëVà[\[Y[ùòZ[X€‹ŸY›ôX[Z[ô»ò[Y][€à⁄]›][ŸYûZ[ô»H›XõH€‹ôH‹à€€[Z][ô»^[ÿYû]\ÀÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àå	BÇà»»»QïTéàHô\Ÿ\ùôYõŸX›[€à\ùYòX›\‹Ÿ\»[ô\[ô[ùù[\›ôX[Hò[Y][€ÇÇêYY€õ›€YŸW‹X⁄À‹õŸX›[€ó‹X⁄Àöú€€ò\»H€X[⁄]]òX⁄ŸYô[X\ŸHY[ù]Nà^X›\ùYòX›ò[YK‹⁄^ôK‘“KLçMãõŸX›[€àX[öYô\››[Àå\⁄\ôÃÃàZPàõ›[ô\ûK[õôY€›\òŸH[\[ú]\⁄[ô›XYŸKŸ€XZ[à[ô€€\]H–»ñKT–Hå]öXù][€ãàYYH›Xàò[Y]‹à[ô‹\ò]‹àëPQQKàHò[Y]‹à\⁄\»H›]\à\ò⁄]ôK›ôX[\»Hú›\à€òŸH⁄]›]ù[^òX›[€ãô\]Z\ô\»X[öYô\›öú€€òö\ú›[ô[à^X›ÿYôHY[Xô\àŸ]\⁄\»[ô€›[ù»]ô\ûH⁄\ô\úŸ\»]ô\ûHUãNî””ìôX€‹ô⁄X⁄‹»ÿ⁄[XH[ô€›\òŸK€XŸ[úŸK‹õ›ô[ò[òŸH€€ú⁄\›[òﬁKôZôX›»[\HôX€‹ôÀ\Xÿ]HQÀÿ€€ù[ù[ô⁄\ô»Xõ›ôHHõ›[ô[ô\[ô[ùHôX€€\]\»[YŸ‹ôYÿ]H›[À[ô[ôõ‹òŸ\»Ÿ[ùZ[ôH€€ù[ùèLH⁄PãÇÇëïSTïQêP’UíQSê—NàH^X›éKNLéKXû]H\ò⁄]ôH\‹ŸYà€€\]Y“KLçMà\»òÃåÃLççÃMçLÕXYéåÃNLÿÿLNXMNçéXÕåNôMÃMXôYYLçåM»åÕå⁄\ôÀÕKÃHôX€‹ôÀKNãåã»î””ìû]\»[ôKLçÕKååH€€ù[ùû]\»Ÿ\ôHôXY»\Xÿ]HQ»H[ô\Xÿ]H€€ù[ùHà]ô\ûHôX€‹ôX]⁄Yù\‹⁄X[à⁄Z⁄\YXH€›\òŸHô\ú⁄[€àåçåLXô]ö\⁄[€ã[]ô[õ›ô[ò[òŸHöY[À–»ñKT–HåTì[ô€€ùöXù]‹à]öXù][€ãàôYHõÿ›\ŸY€€ùòX›ŸòZ[X€‹ŸY\›»\‹»õ›Y⁄\ôX››Xà[ùõÿÿ][€é»õ›[\[Y[ù][€ã›\›ö[\»€€\[H⁄]Wÿ€€\[Xà\»[ùö\õ€õY[ùX⁄‹»]\›€»õ»]\›^X›]XõHô\›[\»€Z[YYÇÇï\»€‹Ÿ\»[òŸ\ùZ[ùH]Hô\Ÿ\ùôY\ùYòX›\»ö[\à‹à[à[ùô\öYöYYX[öYô\›ù]ô[X\ŸHôXY[ô\‹»›^\»]å	H[ù[HõŸX›[€à\ùYòX›\»€€õôX›Y»õ›[ôY⁄[ô›‹À–[ôõ⁄Y[\‹ù‹]Y\ûHXÿŸ\[òŸKàHù[ù[YHô[XZ[ú»Ÿ[ã\ö[X\ûK€Ÿôõ[ôN»ú›\»€õHHô[X\ŸKÿùZ[ò[Y][€à€€õ›[à[ù[YŸ[òŸH\[ô[òﬁKàõ»XõX»ô\ú⁄[€à⁄[ôŸY[ôH\ôŸH^[ÿYô[XZ[ú»›]⁄YH⁄]ÇÇîì—‘ëT‘◊–””TUNàå	Bîì—‘ëT‘◊‘ëSPRSíSëŒà	Bë”ëNà^X›ZXY“H\»[‹ôY[é»Ÿ[ùZ[ôHXŸ[úŸYõŸX›[€à€‹ú\»[ô]ô\ûH⁄\ô‹ôX€‹ô‹õ›ô[ò[òŸH›[\ôH[ô\[ô[ùHò[Y]Yúõ€HH^X›ô\Ÿ\ùôY\ùYòX›ÇîëSPRSíSëŒàYõ›[ôY[ú›[⁄[\‹ù‹]Y\ûH€€ú›[\[€àŸà\»^X›X⁄»€à⁄[ô›‹»[ô[ôõ⁄Y»\⁄Xÿ[Y]öXŸK⁄[X[ã‹Ÿ\ùô\ã›ô\ú⁄[€ã‹ÿ[YKT“K‹⁄Y€ö[ô»ÿ]\»ô[XZ[ãÇêì–“—TîŒà›\úô[ù]\õ‹òQõﬁù[ù[YH[\‹ù»î””ìö[\Àõ›H›]\à\ãûú›ô[X\ŸH\ùYòX›»[ú›[Y‹õ‹‹À\]õ‹õHõŸX›[€ã\X⁄»]öY[òŸHŸ\»õ›Y]^\›ÇìëVà\⁄Y€àH€X[\›òZ[X€‹ŸY›ôX[Z[ô»X⁄»[ú›[\à]ô\öYöY\»H[õôY\ùYòX›[ôôYY»⁄\ô»õ›Y⁄H^\›[ô»ò[úÿX›[€ò[€õ›€YŸH[\‹ù\à⁄]›]ÿY[ô»H€‹ú\»[ù»êSKÇ¥'¥$t*t$4+»4$Ù'¥(¥'¥$¥'t'¥(t(¥+UTì‘êQì÷àå	B
