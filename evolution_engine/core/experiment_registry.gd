@@ -95,7 +95,8 @@ func _compact_result(result: Dictionary) -> Dictionary:
 		"tournament_id": str(result.get("tournament_id", "")).substr(0, 160),
 		"candidate_id": str(result.get("candidate_id", "")).substr(0, 160),
 		"sha256": str(result.get("sha256", result.get("candidate_sha256", ""))).substr(0, 64),
-		"promotion": str(result.get("promotion", "")).substr(0, 120)
+		"promotion": str(result.get("promotion", "")).substr(0, 120),
+		"candidate_count": (result.get("candidate_ledger", []) as Array).size() if result.get("candidate_ledger", []) is Array else 0
 	}
 
 func _compact_metadata(metadata: Dictionary) -> Dictionary:

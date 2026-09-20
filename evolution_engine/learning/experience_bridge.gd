@@ -3,6 +3,7 @@ extends RefCounted
 
 const SOURCE := "aurorafox_evolution_engine"
 const KIND := "evolution_experience"
+const MAX_CANDIDATES := 10
 
 var memory
 
@@ -27,6 +28,7 @@ func record(event: String, goal: String, result: Dictionary, experiment: Diction
 		"population_size": int(result.get("population_size", 0)),
 		"verified_count": int(result.get("verified_count", 0)),
 		"winner": _compact_winner(result.get("winner", {})),
+		"candidates": _compact_candidates(result.get("candidate_ledger", [])),
 		"metrics": _compact_metrics(result.get("metrics", {})),
 		"error": str(result.get("error", "")).substr(0, 1200),
 		"recorded_at": Time.get_datetime_string_from_system(true)
@@ -40,7 +42,8 @@ func record(event: String, goal: String, result: Dictionary, experiment: Diction
 		"kind": KIND,
 		"source": SOURCE,
 		"category": category,
-		"experiment_id": payload["experiment_id"]
+		"experiment_id": payload["experiment_id"],
+		"candidate_count": payload["candidates"].size()
 	}
 
 func _category(event: String, result: Dictionary) -> String:
@@ -66,6 +69,29 @@ func _compact_winner(value: Variant) -> Dictionary:
 		"delta": float(winner.get("delta", 0.0)),
 		"verified": bool(winner.get("verified", false))
 	}
+
+func _compact_candidates(value: Variant) -> Array:
+	var out: Array = []
+	if not value is Array:
+		return out
+	for row in value:
+		if out.size() >= MAX_CANDIDATES:
+			break
+		if not row is Dictionary:
+			continue
+		out.append({
+			"candidate_id": str(row.get("candidate_id", "")).substr(0, 180),
+			"strategy": str(row.get("strategy", "")).substr(0, 180),
+			"sha256": str(row.get("sha256", "")).substr(0, 64),
+			"reason": str(row.get("reason", "")).substr(0, 500),
+			"verified": bool(row.get("verified", false)),
+			"score": float(row.get("score", 0.0)),
+			"delta": float(row.get("delta", 0.0)),
+			"outcome": str(row.get("outcome", "")).substr(0, 40),
+			"failure_stage": str(row.get("failure_stage", "")).substr(0, 120),
+			"failure_error": str(row.get("failure_error", "")).substr(0, 500)
+		})
+	return out
 
 func _compact_metrics(value: Variant) -> Dictionary:
 	if not value is Dictionary:

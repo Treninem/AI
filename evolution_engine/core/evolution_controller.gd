@@ -11,6 +11,7 @@ var foundation := AuroraEvolutionFoundationAdapter.new()
 var policy := AuroraEvolutionPolicy.new()
 var execution_guard := AuroraEvolutionExecutionGuard.new()
 var experiments := AuroraEvolutionExperimentRegistry.new()
+var candidates := AuroraEvolutionCandidateLedger.new()
 var metrics := AuroraEvolutionMetricsAdapter.new()
 var tournament := AuroraEvolutionTournamentAdapter.new()
 var core_tournament := AuroraEvolutionCoreTournamentAdapter.new()
@@ -285,6 +286,7 @@ func _finish_action(experiment_id: String, kind: String, goal: String, result: D
 
 func _finalize_result(experiment_id: String, kind: String, goal: String, result: Dictionary, event: String) -> Dictionary:
 	result["experiment_id"] = experiment_id
+	result["candidate_ledger"] = candidates.build(experiment_id, result)
 	result["metrics"] = metrics.summarize(kind, result)
 	var record := experiments.complete(experiment_id, result)
 	result["experiment"] = record

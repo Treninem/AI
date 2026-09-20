@@ -357,9 +357,17 @@ func _public_scoreboard(candidates: Array) -> Array:
 	return out
 
 func _public_candidate(candidate: Dictionary) -> Dictionary:
+	var proposal = candidate.get("proposal", {})
+	var path := ""
+	var reason := ""
+	if proposal is Dictionary:
+		path = str(proposal.get("path", "")).substr(0, 500)
+		reason = str(proposal.get("reason", "")).substr(0, 1200)
 	return {
 		"index": int(candidate.get("index", -1)),
 		"strategy": str(candidate.get("strategy", "")).substr(0, 200),
+		"path": path,
+		"reason": reason,
 		"sha256": str(candidate.get("sha256", "")).substr(0, 64),
 		"verified": bool(candidate.get("verified", false)),
 		"score": float(candidate.get("score", 0.0)),
