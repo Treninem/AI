@@ -2273,3 +2273,47 @@ REMAINING: publish the minimal BUILD candidate and require the exact Android ben
 BLOCKERS: local environment does not reproduce the hosted Android SDK/NDK/emulator packaging boundary.
 NEXT: publish only the four claimed files, then wait for the exact Core Android Benchmark run rather than starting duplicate work.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### ACCEPTED: exact Android package and offline Core runtime
+
+Exact head `1c6e2fd0ce6075a8b07245138df018c2fffb8da9` completed all 25 attached workflows successfully. Android Core Benchmark run `35507363754`, jobs `106069333821`/`106069422076`, built `:app:assembleBenchmark` successfully in `3m21s`, installed it on Android 35 and completed the no-INTERNET runtime gate. Evidence artifact `10604382356` has SHA-256 `f0db79f8d378c0ec53f97005788dbd5578cea5245fcdb73ee3ef0dba0099e6e4` and exact `git_sha=1c6e2fd...`. It proves release `llama.cpp`, `runtime_debug=false`, native library loaded, exact 1,282,439,264-byte model/SHA, local cold response `ANDROID-LOCAL-READY`, reasoning `56`, Russian response `ЛОКАЛЬНО`, no INTERNET permission and no remote AI. The capacity report shows 76 GiB disk available and 14 GiB memory available, confirming the previous failure was JVM heap policy; the retained Gradle log ends `BUILD SUCCESSFUL`.
+
+The correction is accepted without increasing the 12/20 release checkpoint count because Android real-Core runtime was already an accepted checkpoint; this closes a regression on that evidence lane rather than adding a new release boundary.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: Android ApkFlinger correction and exact installed offline Core benchmark accepted; all exact-head workflows green.
+REMAINING: production Knowledge Pack consumption, physical/human/server/version/final signing boundaries.
+BLOCKERS: none inside the Android benchmark lane.
+NEXT: connect the independently verified production Knowledge Pack to the existing bounded transactional importer.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 77. BEFORE: resumable extracted production Knowledge Pack installation
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE, sole executor, exact accepted head `1c6e2fd`; accumulated MINOR remains version-last. Claim: new `scripts/knowledge_pack_installer.gd`, focused smoke/contract tests, `project.godot` only if class registration requires it, and this journal. Existing `knowledge_import_transaction.gd`, stores and registry are read-only dependencies unless a reproduced defect requires an explicit claim extension.
+
+The production archive itself is correctly kept outside Git and validated at release/build time. Runtime installation must not require loading 1.98 GiB into memory or adding zstd as an intelligence dependency. The smallest cross-platform boundary is an already extracted directory containing the signed/hashed `manifest.json` and bounded JSONL shards: validate schema/production floor/source/shard member safety, exact size and SHA-256 for every shard, then feed shards sequentially through `KnowledgeImportTransaction`. Persist progress after each committed shard so interruption resumes safely; duplicate registry handling makes replay idempotent. Archive extraction remains an installer/updater concern.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact production artifact and existing per-source transactional streaming importer independently accepted.
+REMAINING: implement directory/manifest verification, resumable sequential install and focused failure/restart evidence.
+BLOCKERS: installed Windows/Android tests need a bounded fixture first; full production payload remains outside Git by design.
+NEXT: add the adapter without changing normalized Knowledge storage or Core authority.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: verified shards install sequentially and resume idempotently
+
+Added `KnowledgePackInstaller` as a thin offline adapter over the accepted `KnowledgeImportTransaction`. It consumes an already extracted pack directory, requires the canonical pack/record schemas and complete pack identity/license/attribution, enforces the >=1 GiB content floor for `production=true`, rejects unsafe/duplicate member names, missing shards, size/limit/hash mismatches and inconsistent manifest totals. Only after every shard passes integrity inspection does installation feed one bounded JSONL shard at a time through the existing transactional importer with pack/shard provenance metadata.
+
+Progress is atomically persisted after each committed shard under `user://knowledge/pack-installs`; restart with the same manifest SHA skips completed shards, while a changed manifest/version starts a distinct state. The adapter has no HTTP, external process, external AI or archive-decompression dependency. Thus Windows/Android installers/updaters may extract the separately distributed artifact, while normal Knowledge ingestion remains offline and self-contained.
+
+LOCAL EVIDENCE: two focused Python source contracts pass; `py_compile` and `git diff --check` pass. A real Godot 4.7.1 isolated-user-data smoke created a JSONL shard/manifest, verified and imported it, repeated installation with `skipped_shards=1`, then changed the fixture to `production=true` and confirmed rejection below 1 GiB. Marker: `AURORA_KNOWLEDGE_PACK_INSTALLER_OK verified=true resumable=true offline=true`.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: bounded verified/resumable pack-to-transaction adapter implemented and exercised in the actual engine; stable Knowledge storage/Core remain unchanged.
+REMAINING: publish and add installed Windows/Android fixture gates; then run the exact production pack through the platform staging/import boundary before crediting readiness.
+BLOCKERS: full 1.98 GiB platform import evidence remains expensive/external; this local smoke proves control flow, not production payload duration/RSS.
+NEXT: publish the adapter/tests/journal, inspect exact CI, then wire a small packaged fixture into existing installed platform gates before scheduling one full production import.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
