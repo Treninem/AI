@@ -21,6 +21,8 @@ var pipeline
 var _pending_winners: Dictionary = {}
 var _tournament_sequence := 0
 var _owns_pipeline_lock := false
+var _pipeline_lock_epoch := 0
+var _active_pipeline_lock_token := 0
 var _pipeline_lock_acquired_at := 0
 
 func bind(value) -> void:
@@ -55,8 +57,9 @@ func run(goal: String, requested_target := "", requested_count := 5) -> Dictiona
 	var lock := _acquire_pipeline_lock()
 	if not bool(lock.get("ok", false)):
 		return lock
+	var lock_token := int(lock.get("lock_token", 0))
 	var result: Dictionary = await _run_locked(goal, requested_target, requested_count)
-	result["pipeline_lock_release"] = _release_pipeline_lock()
+	result["pipeline_lock_release"] = _release_pipeline_lock(lock_token)
 	return result
 
 func prepare_winner(tournament_id: String) -> Dictionary:
@@ -69,8 +72,9 @@ func prepare_winner(tournament_id: String) -> Dictionary:
 	var lock := _acquire_pipeline_lock()
 	if not bool(lock.get("ok", false)):
 		return lock
+	var lock_token := int(lock.get("lock_token", 0))
 	var result: Dictionary = await _prepare_winner_locked(tournament_id)
-	result["pipeline_lock_release"] = _release_pipeline_lock()
+	result["pipeline_lock_release"] = _release_pipeline_lock(lock_token)
 	return result
 
 func lock_status() -> Dictionary:
@@ -79,6 +83,7 @@ func lock_status() -> Dictionary:
 		held_seconds = maxi(0, int(Time.get_unix_time_from_system()) - _pipeline_lock_acquired_at)
 	return {
 		"owned": _owns_pipeline_lock,
+		"lock_token": _active_pipeline_lock_token,
 		"acquired_at": _pipeline_lock_acquired_at,
 		"held_seconds": held_seconds
 	}
@@ -86,7 +91,9 @@ func lock_status() -> Dictionary:
 func emergency_release_owned_lock(reason := "manual safety recovery") -> Dictionary:
 	if not _owns_pipeline_lock:
 		return {"ok": true, "released": false, "reason": reason}
-	var release := _release_pipeline_lock()
+	var token := _active_pipeline_lock_token
+	var release := _release_pipeline_lock(token)
+	_pipeline_lock_epoch += 1
 	release["emergency"] = true
 	release["reason"] = reason.substr(0, 500)
 	return release
@@ -99,19 +106,35 @@ func _acquire_pipeline_lock() -> Dictionary:
 	if bool(pipeline.get("_running")):
 		return {"ok": false, "stage": "busy", "error": "Existing CoreImprovementPipeline is already running"}
 	pipeline.set("_running", true)
+	_pipeline_lock_epoch += 1
+	_active_pipeline_lock_token = _pipeline_lock_epoch
 	_owns_pipeline_lock = true
 	_pipeline_lock_acquired_at = int(Time.get_unix_time_from_system())
-	return {"ok": true, "owned": true, "acquired_at": _pipeline_lock_acquired_at}
+	return {
+		"ok": true,
+		"owned": true,
+		"lock_token": _active_pipeline_lock_token,
+		"acquired_at": _pipeline_lock_acquired_at
+	}
 
-func _release_pipeline_lock() -> Dictionary:
+func _release_pipeline_lock(lock_token: int) -> Dictionary:
 	if not _owns_pipeline_lock:
-		return {"ok": true, "released": false}
+		return {"ok": true, "released": false, "superseded": true}
+	if lock_token <= 0 or lock_token != _active_pipeline_lock_token:
+		return {
+			"ok": true,
+			"released": false,
+			"superseded": true,
+			"requested_lock_token": lock_token,
+			"active_lock_token": _active_pipeline_lock_token
+		}
 	if pipeline != null:
 		pipeline.set("_running", false)
 	var held_seconds := maxi(0, int(Time.get_unix_time_from_system()) - _pipeline_lock_acquired_at) if _pipeline_lock_acquired_at > 0 else 0
 	_owns_pipeline_lock = false
+	_active_pipeline_lock_token = 0
 	_pipeline_lock_acquired_at = 0
-	return {"ok": true, "released": true, "held_seconds": held_seconds}
+	return {"ok": true, "released": true, "held_seconds": held_seconds, "lock_token": lock_token}
 
 func _preflight(requested_count: int) -> Dictionary:
 	var contract := contract_status()

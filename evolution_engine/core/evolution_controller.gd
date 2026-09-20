@@ -260,6 +260,23 @@ func activate_verified_winner(goal: String, tournament_result: Dictionary) -> Di
 	var gate := _gate(true, true, true)
 	if not gate.get("ok", false):
 		return gate
+	if _cycle_running:
+		return {"ok": false, "stage": "busy", "error": "Cannot activate a winner while an Evolution experiment is running"}
+	var source_experiment_id := str(tournament_result.get("experiment_id", "")).strip_edges()
+	if source_experiment_id.is_empty():
+		return {"ok": false, "stage": "activation_lineage", "error": "Evolution experiment_id is required for activation"}
+	var source_experiment := experiments.get_record(source_experiment_id)
+	if source_experiment.is_empty():
+		return {"ok": false, "stage": "activation_lineage", "error": "Source Evolution experiment is unknown or expired"}
+	if str(source_experiment.get("kind", "")) != "hot_mutation_tournament" or str(source_experiment.get("status", "")) != "accepted":
+		return {"ok": false, "stage": "activation_lineage", "error": "Only an accepted hot-mutation Evolution experiment may be activated"}
+	var source_result = source_experiment.get("result", {})
+	if not source_result is Dictionary:
+		return {"ok": false, "stage": "activation_lineage", "error": "Source Evolution experiment result is invalid"}
+	var recorded_sha := str(source_result.get("sha256", "")).to_lower()
+	var presented_sha := str(tournament_result.get("sha256", "")).to_lower()
+	if recorded_sha.is_empty() or recorded_sha != presented_sha:
+		return {"ok": false, "stage": "activation_lineage", "error": "Presented winner does not match accepted Evolution experiment SHA"}
 	var evidence := evidence_gate.validate_tournament(tournament_result)
 	if not bool(evidence.get("ok", false)):
 		return {
@@ -268,7 +285,7 @@ func activate_verified_winner(goal: String, tournament_result: Dictionary) -> Di
 			"error": "Tournament evidence is insufficient for activation",
 			"details": evidence
 		}
-	var record := experiments.begin("hot_extension_activation", goal, 0, {"source": str(tournament_result.get("experiment_id", ""))})
+	var record := experiments.begin("hot_extension_activation", goal, 0, {"source": source_experiment_id})
 	var experiment_id := str(record.get("id", ""))
 	experiments.advance(experiment_id, "activation")
 	var stage_path := str(evidence.get("stage_path", ""))

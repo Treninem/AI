@@ -51,14 +51,22 @@ func leave() -> Dictionary:
 	return {"ok": true, "active": false, "restored": true, "restored_hot_improvements": restored}
 
 func fail_closed(reason := "Evolution controller unavailable") -> Dictionary:
+	if not _active:
+		return {
+			"ok": true,
+			"active": false,
+			"fail_closed": false,
+			"changed": false,
+			"reason": reason.substr(0, 500)
+		}
 	if coordinator != null:
 		coordinator.set("autonomous_hot_improvements", false)
-	_active = true
 	_fail_closed = true
 	return {
 		"ok": true,
 		"active": true,
 		"fail_closed": true,
+		"changed": true,
 		"legacy_hot_improvements": false,
 		"reason": reason.substr(0, 500)
 	}
