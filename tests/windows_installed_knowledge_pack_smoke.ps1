@@ -51,24 +51,55 @@ try {
         -RedirectStandardOutput $stdoutLog `
         -RedirectStandardError $stderrLog `
         -PassThru
-    if (-not $process.WaitForExit(120000)) {
+
+    # The exported console launcher can remain alive after the embedded
+    # SceneTree has persisted its final result. Observe the fail-closed durable
+    # proof as well as process exit instead of blocking on the wrapper alone.
+    $fixtureComplete = $false
+    $stateFile = $null
+    $manifestFile = $null
+    $shardFile = $null
+    for ($attempt = 0; $attempt -lt 480; $attempt++) {
+        $process.Refresh()
+        $stateFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'aurorafox-smoke.json' -Recurse -File -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        $manifestFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'manifest.json' -Recurse -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.FullName -like '*knowledge_pack_installer_smoke*' } |
+            Select-Object -First 1
+        $shardFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'knowledge-00000.jsonl' -Recurse -File -ErrorAction SilentlyContinue |
+            Select-Object -First 1
+        if ($stateFile -and $manifestFile -and $shardFile) {
+            try {
+                $probeState = Get-Content -LiteralPath $stateFile.FullName -Raw | ConvertFrom-Json
+                $probeManifest = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
+                if ($probeState.status -eq 'ready' -and
+                    @($probeState.completed_shards).Count -eq 1 -and
+                    [bool]$probeManifest.production) {
+                    $fixtureComplete = $true
+                    break
+                }
+            } catch { }
+        }
+        if ($process.HasExited) { break }
+        Start-Sleep -Milliseconds 250
+    }
+    if ($fixtureComplete -and -not $process.HasExited) {
         Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
-        throw 'Installed Knowledge Pack smoke timed out after 120 seconds'
+        $process.WaitForExit(10000) | Out-Null
     }
     $process.Refresh()
+    if (-not $fixtureComplete -and -not $process.HasExited) {
+        $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
+        $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        throw "Installed Knowledge Pack smoke timed out after 120 seconds.`nProcessId: $($process.Id)`nstdout:`n$stdout`nstderr:`n$stderr"
+    }
     $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
     $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
-    if ($process.ExitCode -ne 0) {
+    if (-not $fixtureComplete -and $process.ExitCode -ne 0) {
         throw "Installed Knowledge Pack smoke exited with $($process.ExitCode).`nstdout:`n$stdout`nstderr:`n$stderr"
     }
 
-    $stateFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'aurorafox-smoke.json' -Recurse -File |
-        Select-Object -First 1
-    $manifestFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'manifest.json' -Recurse -File |
-        Where-Object { $_.FullName -like '*knowledge_pack_installer_smoke*' } |
-        Select-Object -First 1
-    $shardFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'knowledge-00000.jsonl' -Recurse -File |
-        Select-Object -First 1
     if (-not $stateFile -or -not $manifestFile -or -not $shardFile) {
         throw "Installed Knowledge Pack did not persist its fixture/state.`nstdout:`n$stdout`nstderr:`n$stderr"
     }
@@ -102,6 +133,7 @@ try {
         completed_shards = @($state.completed_shards).Count
         production_floor_rejection_exercised = [bool]$manifest.production
         marker_present = $markerPresent
+        durable_completion_observed = $fixtureComplete
         state_sha256 = (Get-FileHash -LiteralPath $stateFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
         manifest_sha256 = (Get-FileHash -LiteralPath $manifestFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
         shard_sha256 = $shardHash
