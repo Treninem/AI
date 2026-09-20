@@ -355,3 +355,6 @@ def test_code_specialist_has_real_offline_inference_gate() -> None:
     assert "run_windows_code_specialist_smoke.ps1" in workflow
     assert "code-specialist-smoke.json" in workflow
     assert "steps.code_specialist_smoke.outcome" in workflow
+    assert "AURORAFOX_SPECIALIST_TEAM_CODE_SPECIALIST_SMOKE_FAILED" in smoke
+    assert "guard_expected=%s" in smoke
+    assert "operations_ok=%s" in smoke
