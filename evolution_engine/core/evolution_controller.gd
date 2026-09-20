@@ -21,6 +21,8 @@ var experience := AuroraEvolutionExperienceBridge.new()
 var context := AuroraEvolutionContextBridge.new()
 
 var _cycle_running := false
+var _cycle_epoch := 0
+var _active_cycle_token := 0
 var _active_experiment_id := ""
 var _last_report: Dictionary = {}
 
@@ -29,6 +31,7 @@ func _exit_tree() -> void:
 		execution_guard.emergency_release("Evolution controller left scene tree")
 	core_tournament.emergency_release_owned_lock("Evolution controller left scene tree")
 	_cycle_running = false
+	_active_cycle_token = 0
 	_active_experiment_id = ""
 
 func bind_foundation(
@@ -74,6 +77,7 @@ func status() -> Dictionary:
 		"exclusive_guard": execution_guard.status(),
 		"stale_guard": execution_guard.stale_status(STALE_GUARD_SECONDS),
 		"active_experiment_id": _active_experiment_id,
+		"active_cycle_token": _active_cycle_token,
 		"update_gate": foundation.update_gate_status(),
 		"last_report": _last_report.duplicate(true),
 		"recent_experiments": experiments.recent(10),
@@ -121,6 +125,9 @@ func run_experiment(goal: String, requested_count := 5, cycle_context: Dictionar
 	phase_changed.emit("mutation_tournament", {"goal": goal, "requested": requested_count, "experiment_id": experiment_id})
 
 	var raw_result: Dictionary = await tournament.run(goal, requested_count)
+	var cycle_token := int(begin.get("cycle_token", 0))
+	if not _cycle_is_current(cycle_token, experiment_id):
+		return _superseded_result(experiment_id, cycle_token)
 	var result: Dictionary = raw_result.duplicate(true)
 	var evidence := evidence_gate.validate_tournament(raw_result)
 	result["evolution_evidence"] = evidence
@@ -163,10 +170,14 @@ func run_core_experiment(goal: String, requested_target := "", requested_count :
 		"goal": goal,
 		"target": requested_target,
 		"requested": requested_count,
-		"experiment_id": experiment_id
+		"experiment_id": experiment_id,
+		"recovered_cycle_token": recovered_token
 	})
 
 	var result: Dictionary = await core_tournament.run(goal, requested_target, requested_count)
+	var cycle_token := int(begin.get("cycle_token", 0))
+	if not _cycle_is_current(cycle_token, experiment_id):
+		return _superseded_result(experiment_id, cycle_token)
 	result["promotion_prepared"] = false
 	result["cycle_context"] = cycle_context
 	result = _finish_exclusive_cycle(experiment_id, "core_mutation_tournament", goal, result, "core_tournament_verified" if bool(result.get("ok", false)) else "core_tournament_rejected")
@@ -221,6 +232,9 @@ func prepare_core_promotion(goal: String, tournament_id: String) -> Dictionary:
 	})
 
 	var result: Dictionary = await core_tournament.prepare_winner(tournament_id)
+	var cycle_token := int(begin.get("cycle_token", 0))
+	if not _cycle_is_current(cycle_token, experiment_id):
+		return _superseded_result(experiment_id, cycle_token)
 	result["release_authority_granted"] = false
 	return _finish_exclusive_cycle(experiment_id, "core_promotion_handoff", goal, result, "core_promotion_handoff" if bool(result.get("ok", false)) else "core_promotion_rejected")
 
@@ -295,17 +309,21 @@ func _begin_exclusive_cycle(kind: String, goal: String, requested_count: int, me
 	if not bool(exclusive.get("ok", false)):
 		return exclusive
 	var record := experiments.begin(kind, goal, requested_count, metadata)
+	_cycle_epoch += 1
+	_active_cycle_token = _cycle_epoch
 	_active_experiment_id = str(record.get("id", ""))
 	_cycle_running = true
 	return {
 		"ok": true,
 		"experiment_id": _active_experiment_id,
+		"cycle_token": _active_cycle_token,
 		"experiment": record,
 		"exclusive": exclusive
 	}
 
 func _finish_exclusive_cycle(experiment_id: String, kind: String, goal: String, result: Dictionary, event: String) -> Dictionary:
 	_cycle_running = false
+	_active_cycle_token = 0
 	_active_experiment_id = ""
 	var release := execution_guard.release()
 	result["guard_release"] = release
@@ -331,6 +349,9 @@ func recover_stuck_cycle(reason := "manual safety recovery") -> Dictionary:
 	if not _cycle_running and not bool(guard_status.get("held", false)) and not bool(core_lock.get("owned", false)):
 		return {"ok": true, "recovered": false, "reason": "no stuck Evolution state"}
 	var experiment_id := _active_experiment_id
+	var recovered_token := _active_cycle_token
+	_cycle_epoch += 1
+	_active_cycle_token = 0
 	var guard_release := execution_guard.emergency_release(reason)
 	var core_release := core_tournament.emergency_release_owned_lock(reason)
 	_cycle_running = false
@@ -351,6 +372,25 @@ func recover_stuck_cycle(reason := "manual safety recovery") -> Dictionary:
 		result["experience"] = experience.record("stuck_cycle_recovery", reason, result, record)
 	_last_report = result.duplicate(true)
 	return result
+
+func _cycle_is_current(cycle_token: int, experiment_id: String) -> bool:
+	return (
+		_cycle_running
+		and cycle_token > 0
+		and cycle_token == _active_cycle_token
+		and experiment_id == _active_experiment_id
+	)
+
+func _superseded_result(experiment_id: String, cycle_token: int) -> Dictionary:
+	return {
+		"ok": false,
+		"stage": "cycle_superseded",
+		"error": "Evolution cycle was recovered or superseded before the asynchronous operation returned",
+		"experiment_id": experiment_id,
+		"cycle_token": cycle_token,
+		"active_experiment_id": _active_experiment_id,
+		"active_cycle_token": _active_cycle_token
+	}
 
 func _compact_analysis(analysis: Dictionary) -> Dictionary:
 	var sync = analysis.get("sync", {})
