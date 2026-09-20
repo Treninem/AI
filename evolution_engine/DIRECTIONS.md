@@ -109,6 +109,7 @@ Authoritative safety:
 Tasks:
 - enforce levels 0–4;
 - master stop/update guard fail closed;
+- require Evolution managed mode before Levels 2–4 so the legacy AutonomousCoordinator cannot auto-activate hot winners in parallel;
 - serialize with existing autonomous cycles and Core pipeline lock;
 - preserve emergency rollback/recovery;
 - ensure Evolution cannot sign, publish, auto-merge or grant itself release authority;

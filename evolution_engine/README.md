@@ -24,7 +24,8 @@ AuroraFox Evolution Engine is a thin orchestration layer over the self-improveme
 - `AuroraEvolutionMetricsAdapter` — normalizes evidence that actually exists; unavailable metrics remain explicitly unavailable.
 - `AuroraEvolutionDecisionRecord` — explicit Accept/Reject/Handoff/Rollback decision record.
 - `AuroraEvolutionEvidenceGate` — scoreboard/winner/SHA/final-verification integrity.
-- `AuroraEvolutionExecutionGuard` — serialization with existing autonomous hot improvement.
+- `AuroraEvolutionExecutionGuard` — serialization with existing autonomous work.
+- `AuroraEvolutionManagedModeGuard` — disables the legacy automatic hot-winner activation path while Evolution Levels 2–4 are in control.
 - `AuroraEvolutionCoreTournamentAdapter` — 3–10 Core candidates over one stable baseline using existing CoreImprovementPipeline primitives.
 - `AuroraEvolutionExperienceBridge` / `ContextBridge` — reuse existing Memory/Knowledge without creating a parallel database.
 
@@ -41,7 +42,7 @@ Analysis
 → winner staging or rejection
 → bounded experience record in existing MemoryStore
 
-Hot-extension activation remains a separate Level-4 action. Core promotion preparation remains a separate Level-3 handoff to the existing signed-update path.
+Before any Level 2–4 operation, Evolution must enter managed mode. Managed mode disables only `AuroraAutonomousCoordinator.autonomous_hot_improvements`, preventing the legacy coordinator from auto-activating a winner behind Evolution permission gates; autonomous research remains available. Hot-extension activation remains a separate Level-4 action. Core promotion preparation remains a separate Level-3 handoff to the existing signed-update path.
 
 ## Permission levels
 
@@ -55,7 +56,7 @@ Hot-extension activation remains a separate Level-4 action. Core promotion prepa
 
 ## Recovery and release authority
 
-Evolution tracks its own exclusive guard and ownership of the Core pipeline lock. Recovery is explicit; normal status reads never silently unlock a long-running experiment. Emergency recovery can release only locks owned by Evolution. Rollback reuses existing RuntimeExtensionManager authority.
+Evolution tracks managed-mode authority, its own exclusive guard and ownership of the Core pipeline lock. Recovery is explicit; normal status reads never silently unlock a long-running experiment. Emergency recovery can release only locks owned by Evolution. Rollback reuses existing RuntimeExtensionManager authority.
 
 Evolution never signs, publishes, auto-merges, changes the canonical version, or grants itself release authority.
 

@@ -10,6 +10,7 @@ const STALE_GUARD_SECONDS := 14400
 var foundation := AuroraEvolutionFoundationAdapter.new()
 var policy := AuroraEvolutionPolicy.new()
 var execution_guard := AuroraEvolutionExecutionGuard.new()
+var managed_mode := AuroraEvolutionManagedModeGuard.new()
 var experiments := AuroraEvolutionExperimentRegistry.new()
 var candidates := AuroraEvolutionCandidateLedger.new()
 var metrics := AuroraEvolutionMetricsAdapter.new()
@@ -30,6 +31,7 @@ func _exit_tree() -> void:
 	if bool(execution_guard.status().get("held", false)):
 		execution_guard.emergency_release("Evolution controller left scene tree")
 	core_tournament.emergency_release_owned_lock("Evolution controller left scene tree")
+	managed_mode.fail_closed("Evolution controller left scene tree")
 	_cycle_running = false
 	_active_cycle_token = 0
 	_active_experiment_id = ""
@@ -57,6 +59,7 @@ func bind_foundation(
 		sandbox
 	)
 	execution_guard.bind(coordinator)
+	managed_mode.bind(coordinator)
 	tournament.bind(improver)
 	core_tournament.bind(core_pipeline)
 	experience.bind(memory)
@@ -65,6 +68,20 @@ func bind_foundation(
 
 func set_permission_level(value: int) -> int:
 	return policy.set_permission_level(value)
+
+func enter_managed_mode() -> Dictionary:
+	var result := managed_mode.enter()
+	if bool(result.get("ok", false)) and experience.available():
+		result["experience"] = experience.record("managed_mode_entered", "Evolution managed mode", result)
+	return result
+
+func leave_managed_mode() -> Dictionary:
+	if _cycle_running or bool(core_tournament.lock_status().get("owned", false)):
+		return {"ok": false, "stage": "managed_mode", "error": "Cannot leave managed mode while Evolution work is active"}
+	var result := managed_mode.leave()
+	if bool(result.get("ok", false)) and experience.available():
+		result["experience"] = experience.record("managed_mode_left", "Evolution managed mode", result)
+	return result
 
 func status() -> Dictionary:
 	var foundation_status := foundation.inspect()
@@ -75,6 +92,7 @@ func status() -> Dictionary:
 		"policy": policy.status(),
 		"foundation": foundation_status,
 		"exclusive_guard": execution_guard.status(),
+		"managed_mode": managed_mode.status(),
 		"stale_guard": execution_guard.stale_status(STALE_GUARD_SECONDS),
 		"active_experiment_id": _active_experiment_id,
 		"active_cycle_token": _active_cycle_token,
@@ -410,6 +428,8 @@ func _gate(require_proposal: bool, require_experiment: bool, require_activation 
 	if not policy.master_enabled(settings):
 		return {"ok": false, "stage": "master_stop", "error": "AuroraFox autonomy master stop is active or unavailable"}
 	if require_experiment or require_activation:
+		if not managed_mode.permits_evolution():
+			return {"ok": false, "stage": "managed_mode", "error": "Evolution managed mode is required so the legacy automatic hot-activation path stays disabled"}
 		var update_gate := foundation.update_gate_status()
 		if not bool(update_gate.get("ok", false)):
 			return {"ok": false, "stage": "update_guard", "error": str(update_gate.get("reason", "Update safety gate blocked Evolution")), "details": update_gate}
