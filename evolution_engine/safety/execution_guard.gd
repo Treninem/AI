@@ -43,17 +43,17 @@ func emergency_release(reason := "unknown") -> Dictionary:
 	result["emergency"] = true
 	return result
 
-func recover_if_stale(max_age_seconds := DEFAULT_STALE_SECONDS) -> Dictionary:
+func stale_status(max_age_seconds := DEFAULT_STALE_SECONDS) -> Dictionary:
 	if not _held:
-		return {"ok": true, "recovered": false}
+		return {"held": false, "stale": false, "held_seconds": 0}
 	var now := int(Time.get_unix_time_from_system())
 	var age := maxi(0, now - _acquired_at) if _acquired_at > 0 else max_age_seconds
-	if age < max_age_seconds:
-		return {"ok": true, "recovered": false, "held_seconds": age}
-	var result := emergency_release("stale Evolution exclusive guard recovered after %d seconds" % age)
-	result["recovered"] = true
-	result["held_seconds"] = age
-	return result
+	return {
+		"held": true,
+		"stale": age >= max_age_seconds,
+		"held_seconds": age,
+		"threshold_seconds": max_age_seconds
+	}
 
 func _restore_state() -> Dictionary:
 	if coordinator != null:

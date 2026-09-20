@@ -19,12 +19,15 @@ var experience := AuroraEvolutionExperienceBridge.new()
 var context := AuroraEvolutionContextBridge.new()
 
 var _cycle_running := false
+var _active_experiment_id := ""
 var _last_report: Dictionary = {}
 
 func _exit_tree() -> void:
 	if bool(execution_guard.status().get("held", false)):
 		execution_guard.emergency_release("Evolution controller left scene tree")
+	core_tournament.emergency_release_owned_lock("Evolution controller left scene tree")
 	_cycle_running = false
+	_active_experiment_id = ""
 
 func bind_foundation(
 	coordinator,
@@ -59,7 +62,6 @@ func set_permission_level(value: int) -> int:
 	return policy.set_permission_level(value)
 
 func status() -> Dictionary:
-	var recovery := _recover_stale_cycle()
 	var foundation_status := foundation.inspect()
 	var core_contract := core_tournament.contract_status()
 	return {
@@ -68,7 +70,8 @@ func status() -> Dictionary:
 		"policy": policy.status(),
 		"foundation": foundation_status,
 		"exclusive_guard": execution_guard.status(),
-		"stale_recovery": recovery,
+		"stale_guard": execution_guard.stale_status(STALE_GUARD_SECONDS),
+		"active_experiment_id": _active_experiment_id,
 		"update_gate": foundation.update_gate_status(),
 		"last_report": _last_report.duplicate(true),
 		"recent_experiments": experiments.recent(10),
@@ -255,24 +258,24 @@ func core_promotion_status() -> Dictionary:
 	}
 
 func _begin_exclusive_cycle(kind: String, goal: String, requested_count: int, metadata: Dictionary) -> Dictionary:
-	var recovery := _recover_stale_cycle()
 	if _cycle_running:
-		return {"ok": false, "stage": "busy", "error": "Evolution cycle is already running", "stale_recovery": recovery}
+		return {"ok": false, "stage": "busy", "error": "Evolution cycle is already running", "active_experiment_id": _active_experiment_id}
 	var exclusive := execution_guard.acquire()
 	if not bool(exclusive.get("ok", false)):
 		return exclusive
 	var record := experiments.begin(kind, goal, requested_count, metadata)
+	_active_experiment_id = str(record.get("id", ""))
 	_cycle_running = true
 	return {
 		"ok": true,
-		"experiment_id": record.get("id", ""),
+		"experiment_id": _active_experiment_id,
 		"experiment": record,
-		"exclusive": exclusive,
-		"stale_recovery": recovery
+		"exclusive": exclusive
 	}
 
 func _finish_exclusive_cycle(experiment_id: String, kind: String, goal: String, result: Dictionary, event: String) -> Dictionary:
 	_cycle_running = false
+	_active_experiment_id = ""
 	var release := execution_guard.release()
 	result["guard_release"] = release
 	return _finalize_result(experiment_id, kind, goal, result, event)
@@ -289,14 +292,34 @@ func _finalize_result(experiment_id: String, kind: String, goal: String, result:
 	_last_report = result.duplicate(true)
 	return result
 
-func _recover_stale_cycle() -> Dictionary:
-	var recovery := execution_guard.recover_if_stale(STALE_GUARD_SECONDS)
-	if bool(recovery.get("recovered", false)):
-		_cycle_running = false
-	return recovery
+func recover_stuck_cycle(reason := "manual safety recovery") -> Dictionary:
+	var guard_status := execution_guard.status()
+	var core_lock := core_tournament.lock_status()
+	if not _cycle_running and not bool(guard_status.get("held", false)) and not bool(core_lock.get("owned", false)):
+		return {"ok": true, "recovered": false, "reason": "no stuck Evolution state"}
+	var experiment_id := _active_experiment_id
+	var guard_release := execution_guard.emergency_release(reason)
+	var core_release := core_tournament.emergency_release_owned_lock(reason)
+	_cycle_running = false
+	_active_experiment_id = ""
+	var result := {
+		"ok": false,
+		"stage": "stuck_cycle_recovery",
+		"error": reason.substr(0, 1200),
+		"recovered": true,
+		"guard_release": guard_release,
+		"core_lock_release": core_release,
+		"experiment_id": experiment_id
+	}
+	if not experiment_id.is_empty():
+		result["metrics"] = metrics.summarize("stuck_cycle_recovery", result)
+		var record := experiments.fail(experiment_id, "stuck_cycle_recovery", reason)
+		result["experiment"] = record
+		result["experience"] = experience.record("stuck_cycle_recovery", reason, result, record)
+	_last_report = result.duplicate(true)
+	return result
 
 func _gate(require_proposal: bool, require_experiment: bool, require_activation := false) -> Dictionary:
-	_recover_stale_cycle()
 	var foundation_status := foundation.inspect()
 	if not bool(foundation_status.get("ok", false)):
 		return {"ok": false, "stage": "foundation", "error": "Evolution foundation is incomplete", "details": foundation_status}
