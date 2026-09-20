@@ -1,6 +1,8 @@
 class_name AuroraEvolutionExecutionGuard
 extends RefCounted
 
+const DEFAULT_STALE_SECONDS := 14400
+
 var coordinator
 var _held := false
 var _saved_hot_improvements := false
@@ -25,17 +27,14 @@ func acquire() -> Dictionary:
 	_saved_hot_improvements = bool(hot)
 	coordinator.set("autonomous_hot_improvements", false)
 	_held = true
-	_acquired_at = Time.get_unix_time_from_system()
+	_acquired_at = int(Time.get_unix_time_from_system())
 	return {"ok": true, "held": true, "saved_hot_improvements": _saved_hot_improvements}
 
 func release() -> Dictionary:
 	if not _held:
 		return {"ok": true, "released": false}
-	_restore_state()
-	return {"ok": true, "released": true, "restored_hot_improvements": _saved_hot_improvements}
+	return _restore_state()
 
-# Emergency path. Used after failures/cancellation so a broken experiment
-# cannot leave AuroraFox permanently locked in Evolution mode.
 func emergency_release(reason := "unknown") -> Dictionary:
 	if not _held:
 		return {"ok": true, "released": false, "reason": reason}
@@ -44,16 +43,33 @@ func emergency_release(reason := "unknown") -> Dictionary:
 	result["emergency"] = true
 	return result
 
+func recover_if_stale(max_age_seconds := DEFAULT_STALE_SECONDS) -> Dictionary:
+	if not _held:
+		return {"ok": true, "recovered": false}
+	var now := int(Time.get_unix_time_from_system())
+	var age := maxi(0, now - _acquired_at) if _acquired_at > 0 else max_age_seconds
+	if age < max_age_seconds:
+		return {"ok": true, "recovered": false, "held_seconds": age}
+	var result := emergency_release("stale Evolution exclusive guard recovered after %d seconds" % age)
+	result["recovered"] = true
+	result["held_seconds"] = age
+	return result
+
 func _restore_state() -> Dictionary:
 	if coordinator != null:
 		coordinator.set("autonomous_hot_improvements", _saved_hot_improvements)
+	var restored := _saved_hot_improvements
 	_held = false
 	_acquired_at = 0
-	return {"ok": true, "released": true, "restored_hot_improvements": _saved_hot_improvements}
+	return {"ok": true, "released": true, "restored_hot_improvements": restored}
 
 func status() -> Dictionary:
+	var held_seconds := 0
+	if _held and _acquired_at > 0:
+		held_seconds = maxi(0, int(Time.get_unix_time_from_system()) - _acquired_at)
 	return {
 		"held": _held,
 		"saved_hot_improvements": _saved_hot_improvements,
-		"acquired_at": _acquired_at
+		"acquired_at": _acquired_at,
+		"held_seconds": held_seconds
 	}

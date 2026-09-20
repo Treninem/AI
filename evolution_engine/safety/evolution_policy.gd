@@ -38,7 +38,7 @@ func clamp_population_size(value: int) -> int:
 	return clampi(value, MIN_MUTATIONS, MAX_MUTATIONS)
 
 func master_enabled(settings: Dictionary) -> bool:
-	return bool(settings.get("master_enabled", true))
+	return bool(settings.get("master_enabled", false))
 
 func status() -> Dictionary:
 	return {
