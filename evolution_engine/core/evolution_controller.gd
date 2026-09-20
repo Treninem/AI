@@ -8,6 +8,7 @@ signal cycle_rejected(report: Dictionary)
 var foundation := AuroraEvolutionFoundationAdapter.new()
 var policy := AuroraEvolutionPolicy.new()
 var tournament := AuroraEvolutionTournamentAdapter.new()
+var core_tournament := AuroraEvolutionCoreTournamentAdapter.new()
 var evidence_gate := AuroraEvolutionEvidenceGate.new()
 var experience := AuroraEvolutionExperienceBridge.new()
 var context := AuroraEvolutionContextBridge.new()
@@ -38,6 +39,7 @@ func bind_foundation(
 		sandbox
 	)
 	tournament.bind(improver)
+	core_tournament.bind(core_pipeline)
 	experience.bind(memory)
 	context.bind(memory, knowledge)
 	return foundation.inspect()
@@ -47,6 +49,7 @@ func set_permission_level(value: int) -> int:
 
 func status() -> Dictionary:
 	var foundation_status := foundation.inspect()
+	var core_contract := core_tournament.contract_status()
 	return {
 		"ok": bool(foundation_status.get("ok", false)),
 		"running": _cycle_running,
@@ -54,8 +57,9 @@ func status() -> Dictionary:
 		"foundation": foundation_status,
 		"update_gate": foundation.update_gate_status(),
 		"last_report": _last_report.duplicate(true),
-		"core_autonomous_promotion_enabled": false,
-		"core_promotion_reason": "CoreImprovementPipeline is single-candidate; 3..10 Core candidate tournament adapter is required first"
+		"core_tournament": core_contract,
+		"core_release_authority": false,
+		"core_release_authority_reason": "Evolution may prepare a verified signed-update candidate but cannot sign, publish or bypass the existing promotion authority"
 	}
 
 func analyze(goal: String) -> Dictionary:
@@ -120,6 +124,40 @@ func run_experiment(goal: String, requested_count := 5) -> Dictionary:
 		cycle_rejected.emit(_last_report)
 	return result
 
+func run_core_experiment(goal: String, requested_target := "", requested_count := 5) -> Dictionary:
+	var gate := _gate(true, true)
+	if not gate.get("ok", false):
+		return gate
+	if _cycle_running:
+		return {"ok": false, "stage": "busy", "error": "Evolution cycle is already running"}
+	if not policy.valid_population_size(requested_count):
+		return {"ok": false, "stage": "population", "error": "Core mutation population must be within 3..10"}
+	_cycle_running = true
+	phase_changed.emit("core_mutation_tournament", {"goal": goal, "target": requested_target, "requested": requested_count})
+	var result: Dictionary = await core_tournament.run(goal, requested_target, requested_count)
+	_cycle_running = false
+	result["promotion_prepared"] = false
+	result["experience"] = experience.record("core_tournament_verified" if bool(result.get("ok", false)) else "core_tournament_rejected", goal, result)
+	_last_report = result.duplicate(true)
+	if bool(result.get("ok", false)):
+		cycle_completed.emit(_last_report)
+	else:
+		cycle_rejected.emit(_last_report)
+	return result
+
+func prepare_core_promotion(goal: String, tournament_id: String) -> Dictionary:
+	var gate := _gate(true, true)
+	if not gate.get("ok", false):
+		return gate
+	if not policy.can_prepare_promotion():
+		return {"ok": false, "stage": "permission", "error": "Level 3 is required for Core promotion handoff"}
+	phase_changed.emit("core_promotion_handoff", {"goal": goal, "tournament_id": tournament_id})
+	var result: Dictionary = await core_tournament.prepare_winner(tournament_id)
+	result["release_authority_granted"] = false
+	result["experience"] = experience.record("core_promotion_handoff" if bool(result.get("ok", false)) else "core_promotion_rejected", goal, result)
+	_last_report = result.duplicate(true)
+	return result
+
 func activate_verified_winner(goal: String, tournament_result: Dictionary) -> Dictionary:
 	var gate := _gate(true, true, true)
 	if not gate.get("ok", false):
@@ -157,8 +195,8 @@ func core_promotion_status() -> Dictionary:
 		"ok": true,
 		"stage": "promotion_handoff",
 		"core_pipeline": foundation.core_status(),
-		"autonomous_core_promotion_enabled": false,
-		"reason": "A 3..10 candidate Core tournament adapter is required before CoreImprovementPipeline may be invoked by Evolution Engine"
+		"core_tournament": core_tournament.contract_status(),
+		"release_authority_granted": false
 	}
 
 func _gate(require_proposal: bool, require_experiment: bool, require_activation := false) -> Dictionary:

@@ -37,7 +37,7 @@ No direct rewrite of production Core is performed by this package.
 - Level 3 — promotion/handoff preparation only; no release authority.
 - Level 4 — activation of an already verified staged hot extension through the existing RuntimeExtensionManager.
 
-Core-file rewriting is intentionally not exposed here yet. The current `CoreImprovementPipeline.run_candidate()` is a single-candidate path, while the hard Evolution invariant requires 3–10 competing candidates before autonomous Core promotion. A later adapter must create that tournament around the existing Core benchmark/proposal primitives before this engine may invoke Core promotion.
+`CoreImprovementPipeline.run_candidate()` remains unused because it is a single-candidate entrypoint. Evolution instead has an isolated Core tournament adapter that reuses the pipeline's existing target allowlist, proposal, source-contract, sandbox benchmark, comparative-review and candidate-storage primitives across 3–10 distinct candidates from one baseline. The winner is independently reverified before Level 3 may store it for the existing signed-update promotion path. Evolution never signs, publishes, auto-merges or grants itself release authority.
 
 ## Release isolation
 

@@ -59,7 +59,7 @@ Foundation owners:
 Goal:
 - adapt existing tournament and benchmark evidence;
 - preserve stable-baseline/no-regression rules;
-- later add a 3–10 candidate wrapper for Core-file candidates before Core promotion can be enabled.
+- maintain the isolated 3–10 Core candidate tournament adapter over the existing CoreImprovementPipeline primitives;\n- keep Level 2 tournament evaluation separate from Level 3 signed-promotion handoff.
 
 ## Direction 5 — Safety / Integration
 
