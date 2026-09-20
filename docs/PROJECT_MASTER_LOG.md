@@ -1230,3 +1230,36 @@ BLOCKERS:
 
 NEXT:
 - Continue development only inside `evolution_engine/**`; first executable acceptance step is full static + Godot runner on Windows/Godot 4.7.1. Do not modify release workflows or `main` to obtain that evidence.
+
+
+### 2026-09-21 — Chat — Evolution concurrency + rollback hardening
+
+- Commits: `21b0666e665684c938e50836e4dfdae13502a45d`, `692f73491e5281952e0152c16d02e0c0307ec9bb`.
+- Сделано:
+  - добавлен `AuroraEvolutionExecutionGuard`, который использует существующие поля `AuroraAutonomousCoordinator._cycle_running` и `autonomous_hot_improvements`;
+  - Evolution не стартует новый tournament, если существующий autonomous cycle уже идёт;
+  - на время Evolution experiment/core tournament существующий hot-improvement flag временно выключается и после блока восстанавливается;
+  - Foundation contract теперь требует existing `RuntimeExtensionManager.deactivate()`;
+  - добавлен emergency `rollback_hot_extension()`, который делегирует rollback существующему RuntimeExtensionManager и намеренно не блокируется master stop;
+  - controller smoke полностью синхронизирован с фактическим foundation contract: coordinator cycle/hot state, memory retrieval, extension deactivate, exclusive restore, overlap rejection, emergency rollback.
+- Repository contract audit на HEAD `692f73491e5281952e0152c16d02e0c0307ec9bb`: **14/14 PASS**.
+- Release scope: запрещённых изменений **0**; feature-head GitHub Actions runs **0**.
+- Acceptance status не повышен: Godot/Windows runtime smokes всё ещё не выполнены.
+
+PROGRESS_COMPLETE: 30%
+PROGRESS_REMAINING: 70%
+
+DONE:
+- Concurrency with existing autonomous coordinator is explicitly serialized.
+- Emergency hot-extension rollback reuses existing RuntimeExtensionManager authority.
+- Smoke fixtures now match the actual foundation contract.
+
+REMAINING:
+- Run the committed acceptance runner with Godot 4.7.1 and Windows Core tournament smoke.
+- Fix any parse/runtime defects found by those executable tests before runtime wiring.
+
+BLOCKERS:
+- No Godot binary / Windows execution surface is available in the current chat tool environment.
+
+NEXT:
+- Keep release/main untouched; next acceptance-changing action must be executable Godot/Windows evidence or a code correction discovered from that evidence.
