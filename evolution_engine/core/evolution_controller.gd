@@ -15,6 +15,8 @@ var experiments := AuroraEvolutionExperimentRegistry.new()
 var candidates := AuroraEvolutionCandidateLedger.new()
 var metrics := AuroraEvolutionMetricsAdapter.new()
 var decisions := AuroraEvolutionDecisionRecord.new()
+var learning_signal := AuroraEvolutionLearningSignal.new()
+var proposals := AuroraEvolutionProposalRecord.new()
 var tournament := AuroraEvolutionTournamentAdapter.new()
 var core_tournament := AuroraEvolutionCoreTournamentAdapter.new()
 var evidence_gate := AuroraEvolutionEvidenceGate.new()
@@ -220,15 +222,36 @@ func run_evolution_cycle(goal: String, mode := "hot", requested_target := "", re
 			"cycle_mode": clean_mode,
 			"analysis": analysis_summary
 		}
-	phase_changed.emit("cycle_experiment", {"goal": goal, "mode": clean_mode})
-	var cycle_context := {"analysis": analysis_summary, "mode": clean_mode}
+	var full_context = analysis.get("experience_context", {})
+	var learning := learning_signal.derive(full_context if full_context is Dictionary else {})
+	var proposal := proposals.build(goal, clean_mode, requested_target, requested_count, learning)
+	phase_changed.emit("cycle_proposal", {
+		"goal": goal,
+		"mode": clean_mode,
+		"proposal_id": proposal.get("id", "")
+	})
+	var experiment_goal := learning_signal.augment_goal(goal, learning)
+	phase_changed.emit("cycle_experiment", {
+		"goal": goal,
+		"mode": clean_mode,
+		"proposal_id": proposal.get("id", "")
+	})
+	var cycle_context := {
+		"analysis": analysis_summary,
+		"mode": clean_mode,
+		"proposal": proposal,
+		"learning_signal": learning,
+		"original_goal": goal.substr(0, 2000)
+	}
 	var result: Dictionary
 	if clean_mode == "core":
-		result = await run_core_experiment(goal, requested_target, requested_count, cycle_context)
+		result = await run_core_experiment(experiment_goal, requested_target, requested_count, cycle_context)
 	else:
-		result = await run_experiment(goal, requested_count, cycle_context)
+		result = await run_experiment(experiment_goal, requested_count, cycle_context)
 	result["cycle_mode"] = clean_mode
 	result["analysis"] = analysis_summary
+	result["proposal"] = proposal
+	result["learning_signal"] = learning
 	result["cycle_complete"] = true
 	return result
 

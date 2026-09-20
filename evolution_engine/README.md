@@ -27,14 +27,13 @@ AuroraFox Evolution Engine is a thin orchestration layer over the self-improveme
 - `AuroraEvolutionExecutionGuard` — serialization with existing autonomous work.
 - `AuroraEvolutionManagedModeGuard` — disables the legacy automatic hot-winner activation path while Evolution Levels 2–4 are in control.
 - `AuroraEvolutionCoreTournamentAdapter` — 3–10 Core candidates over one stable baseline using existing CoreImprovementPipeline primitives.
-- `AuroraEvolutionExperienceBridge` / `ContextBridge` — reuse existing Memory/Knowledge without creating a parallel database.
+- `AuroraEvolutionExperienceBridge` / `ContextBridge` — reuse existing Memory/Knowledge without creating a parallel database.\n- `AuroraEvolutionLearningSignal` — derives bounded strategy/failure metadata only from AuroraFox's own Evolution experience; canonical Knowledge contributes provenance references, not executable prompt instructions.\n- `AuroraEvolutionProposalRecord` — records the improvement hypothesis/constraints without becoming a second candidate generator.
 
 ## Evolution lifecycle
 
 `run_evolution_cycle()` coordinates:
 
-Analysis
-→ existing proposal/candidate generation
+Analysis\n→ bounded learning signal + improvement proposal record\n→ existing proposal/candidate generation
 → 3–10 mutation tournament
 → isolated verification
 → evaluation/no-regression

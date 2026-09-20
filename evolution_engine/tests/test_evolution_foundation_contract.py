@@ -234,3 +234,25 @@ def test_execution_guard_reserves_legacy_coordinator_cycle_lock():
     assert 'coordinator.set("_cycle_running", false)' in guard
     assert "var _owns_coordinator_cycle_lock := false" in guard
     assert '"owns_coordinator_cycle_lock"' in guard
+
+
+def test_learning_signal_uses_only_own_evolution_memory_as_generation_metadata():
+    learning = read("evolution_engine/learning/learning_signal.gd")
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    assert 'EVOLUTION_SOURCE := "aurorafox_evolution_engine"' in learning
+    assert 'EVOLUTION_KIND := "evolution_experience"' in learning
+    assert "raw_knowledge_instructions_used" in learning
+    assert "knowledge_refs" in learning
+    assert "learning_signal.derive" in controller
+    assert "learning_signal.augment_goal" in controller
+    assert 'phase_changed.emit("cycle_proposal"' in controller
+
+
+def test_proposal_record_is_metadata_not_second_candidate_generator():
+    proposal = read("evolution_engine/core/proposal_record.gd")
+    assert "class_name AuroraEvolutionProposalRecord" in proposal
+    assert "reuse_existing_aurorafox_foundation" in proposal
+    assert "population_3_to_10" in proposal
+    assert "no_release_authority" in proposal
+    assert "ai.chat" not in proposal
+    assert "propose_improvement" not in proposal

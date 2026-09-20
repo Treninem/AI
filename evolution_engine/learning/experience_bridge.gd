@@ -127,7 +127,39 @@ func _compact_cycle_context(value: Variant) -> Dictionary:
 		return {}
 	var context: Dictionary = value
 	var analysis = context.get("analysis", {})
+	var proposal = context.get("proposal", {})
+	var learning = context.get("learning_signal", {})
 	return {
 		"mode": str(context.get("mode", "")).substr(0, 40),
-		"analysis": analysis.duplicate(true) if analysis is Dictionary else {}
+		"original_goal": str(context.get("original_goal", "")).substr(0, 1200),
+		"analysis": analysis.duplicate(true) if analysis is Dictionary else {},
+		"proposal": _compact_proposal(proposal),
+		"learning_signal": _compact_learning_signal(learning)
+	}
+
+func _compact_proposal(value: Variant) -> Dictionary:
+	if not value is Dictionary:
+		return {}
+	var proposal: Dictionary = value
+	return {
+		"id": str(proposal.get("id", "")).substr(0, 160),
+		"mode": str(proposal.get("mode", "")).substr(0, 40),
+		"target": str(proposal.get("target", "")).substr(0, 500),
+		"requested_count": int(proposal.get("requested_count", 0)),
+		"hypothesis": str(proposal.get("hypothesis", "")).substr(0, 700),
+		"constraints": proposal.get("constraints", [])
+	}
+
+func _compact_learning_signal(value: Variant) -> Dictionary:
+	if not value is Dictionary:
+		return {}
+	var signal: Dictionary = value
+	return {
+		"parsed_evolution_experiences": int(signal.get("parsed_evolution_experiences", 0)),
+		"successful_strategies": signal.get("successful_strategies", []),
+		"rejected_stages": signal.get("rejected_stages", []),
+		"rollback_count": int(signal.get("rollback_count", 0)),
+		"blocked_count": int(signal.get("blocked_count", 0)),
+		"knowledge_refs": signal.get("knowledge_refs", []),
+		"raw_knowledge_instructions_used": false
 	}
