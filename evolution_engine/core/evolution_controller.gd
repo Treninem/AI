@@ -7,6 +7,7 @@ signal cycle_rejected(report: Dictionary)
 
 var foundation := AuroraEvolutionFoundationAdapter.new()
 var policy := AuroraEvolutionPolicy.new()
+var execution_guard := AuroraEvolutionExecutionGuard.new()
 var tournament := AuroraEvolutionTournamentAdapter.new()
 var core_tournament := AuroraEvolutionCoreTournamentAdapter.new()
 var evidence_gate := AuroraEvolutionEvidenceGate.new()
@@ -38,6 +39,7 @@ func bind_foundation(
 		update_guard,
 		sandbox
 	)
+	execution_guard.bind(coordinator)
 	tournament.bind(improver)
 	core_tournament.bind(core_pipeline)
 	experience.bind(memory)
@@ -55,6 +57,7 @@ func status() -> Dictionary:
 		"running": _cycle_running,
 		"policy": policy.status(),
 		"foundation": foundation_status,
+		"exclusive_guard": execution_guard.status(),
 		"update_gate": foundation.update_gate_status(),
 		"last_report": _last_report.duplicate(true),
 		"core_tournament": core_contract,
@@ -95,10 +98,15 @@ func run_experiment(goal: String, requested_count := 5) -> Dictionary:
 		return {"ok": false, "stage": "busy", "error": "Evolution cycle is already running"}
 	if not policy.valid_population_size(requested_count):
 		return {"ok": false, "stage": "population", "error": "mutation population must be within 3..10"}
+	var exclusive := execution_guard.acquire()
+	if not bool(exclusive.get("ok", false)):
+		return exclusive
+
 	_cycle_running = true
 	phase_changed.emit("mutation_tournament", {"goal": goal, "requested": requested_count})
 	var raw_result: Dictionary = await tournament.run(goal, requested_count)
 	_cycle_running = false
+	execution_guard.release()
 
 	var result: Dictionary = raw_result.duplicate(true)
 	var evidence := evidence_gate.validate_tournament(raw_result)
@@ -132,10 +140,16 @@ func run_core_experiment(goal: String, requested_target := "", requested_count :
 		return {"ok": false, "stage": "busy", "error": "Evolution cycle is already running"}
 	if not policy.valid_population_size(requested_count):
 		return {"ok": false, "stage": "population", "error": "Core mutation population must be within 3..10"}
+	var exclusive := execution_guard.acquire()
+	if not bool(exclusive.get("ok", false)):
+		return exclusive
+
 	_cycle_running = true
 	phase_changed.emit("core_mutation_tournament", {"goal": goal, "target": requested_target, "requested": requested_count})
 	var result: Dictionary = await core_tournament.run(goal, requested_target, requested_count)
 	_cycle_running = false
+	execution_guard.release()
+
 	result["promotion_prepared"] = false
 	result["experience"] = experience.record("core_tournament_verified" if bool(result.get("ok", false)) else "core_tournament_rejected", goal, result)
 	_last_report = result.duplicate(true)
@@ -151,8 +165,14 @@ func prepare_core_promotion(goal: String, tournament_id: String) -> Dictionary:
 		return gate
 	if not policy.can_prepare_promotion():
 		return {"ok": false, "stage": "permission", "error": "Level 3 is required for Core promotion handoff"}
+	var exclusive := execution_guard.acquire()
+	if not bool(exclusive.get("ok", false)):
+		return exclusive
+
 	phase_changed.emit("core_promotion_handoff", {"goal": goal, "tournament_id": tournament_id})
 	var result: Dictionary = await core_tournament.prepare_winner(tournament_id)
+	execution_guard.release()
+
 	result["release_authority_granted"] = false
 	result["experience"] = experience.record("core_promotion_handoff" if bool(result.get("ok", false)) else "core_promotion_rejected", goal, result)
 	_last_report = result.duplicate(true)
@@ -182,6 +202,24 @@ func activate_verified_winner(goal: String, tournament_result: Dictionary) -> Di
 	result["stage"] = "activation"
 	result["evolution_evidence"] = evidence
 	result["experience"] = experience.record("winner_activation", goal, result)
+	_last_report = result.duplicate(true)
+	return result
+
+func rollback_hot_extension(extension_id: String, reason := "manual safety rollback") -> Dictionary:
+	var clean_id := extension_id.strip_edges()
+	if clean_id.is_empty():
+		return {"ok": false, "stage": "rollback", "error": "extension id is required"}
+	if foundation.extensions == null or not foundation.extensions.has_method("deactivate"):
+		return {"ok": false, "stage": "rollback", "error": "existing RuntimeExtensionManager rollback API is unavailable"}
+	phase_changed.emit("rollback", {"extension_id": clean_id, "reason": reason})
+	var rolled_back = foundation.extensions.deactivate(clean_id)
+	if not rolled_back is Dictionary:
+		return {"ok": false, "stage": "rollback", "error": "RuntimeExtensionManager returned invalid rollback result"}
+	var result: Dictionary = rolled_back
+	result["stage"] = "rollback"
+	result["reason"] = reason.substr(0, 1000)
+	if experience.available():
+		result["experience"] = experience.record("winner_rollback", reason, result)
 	_last_report = result.duplicate(true)
 	return result
 

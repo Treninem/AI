@@ -126,3 +126,17 @@ def test_foundation_requires_existing_memory_retrieval_contract():
     foundation = read("evolution_engine/integration/foundation_adapter.gd")
     assert '_require_method(missing, "memory", memory, "remember")' in foundation
     assert '_require_method(missing, "memory", memory, "retrieve")' in foundation
+
+
+def test_evolution_serializes_against_existing_autonomous_cycle_and_reuses_rollback():
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    guard = read("evolution_engine/safety/execution_guard.gd")
+    foundation = read("evolution_engine/integration/foundation_adapter.gd")
+    assert 'coordinator.get("_cycle_running")' in guard
+    assert 'coordinator.set("autonomous_hot_improvements", false)' in guard
+    assert 'coordinator.set("autonomous_hot_improvements", _saved_hot_improvements)' in guard
+    assert "execution_guard.acquire()" in controller
+    assert "execution_guard.release()" in controller
+    assert "rollback_hot_extension" in controller
+    assert "extensions.deactivate(clean_id)" in controller
+    assert '_require_method(missing, "extensions", extensions, "deactivate")' in foundation
