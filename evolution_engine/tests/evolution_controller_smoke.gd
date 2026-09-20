@@ -5,6 +5,9 @@ const SHA64 := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
 class FakeCoordinator:
 	extends RefCounted
 	var sync_calls := 0
+	var _cycle_running := false
+	var autonomous_hot_improvements := true
+
 	func synchronize_all() -> Dictionary:
 		sync_calls += 1
 		return {"ok": true, "compatible": true, "observations": {}}
@@ -12,6 +15,7 @@ class FakeCoordinator:
 class FakeImprover:
 	extends RefCounted
 	var tournament_calls := 0
+
 	func propose_improvement(goal: String, mutation_index := 0, strategy := "balanced", previous_signatures: Array = []) -> Dictionary:
 		return {
 			"ok": true,
@@ -24,6 +28,7 @@ class FakeImprover:
 				"previous_count": previous_signatures.size()
 			}
 		}
+
 	func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 		tournament_calls += 1
 		var scoreboard: Array = []
@@ -53,31 +58,42 @@ class FakeImprover:
 class FakeExtensions:
 	extends RefCounted
 	var activations := 0
+	var deactivations := 0
+
 	func activate_staged(stage_path: String, expected_sha256 := "") -> Dictionary:
 		activations += 1
 		return {"ok": not stage_path.is_empty() and expected_sha256 == SHA64, "id": "fake", "tools": []}
 
+	func deactivate(id: String) -> Dictionary:
+		deactivations += 1
+		return {"ok": not id.is_empty(), "id": id}
+
 class FakeMemory:
 	extends RefCounted
 	var records := 0
+
 	func remember(_kind: String, _content: String, _source := "", _importance := 0.55, _confidence := 0.85) -> void:
 		records += 1
+
 	func retrieve(_query: String, _limit := 8, _include_memory := true, _include_knowledge := true) -> Array:
 		return [{"id": "memory-1", "kind": "evolution_experience", "content": "prior safe result", "source": "test"}]
 
 class FakeKnowledge:
 	extends RefCounted
+
 	func search(_query: String, _limit := 6) -> Array:
 		return [{"id": "knowledge-1", "kind": "knowledge", "text": "existing AuroraFox knowledge", "source": "test"}]
 
 class FakeCorePipeline:
 	extends RefCounted
+
 	func status() -> Dictionary:
 		return {"ok": true}
 
 class FakeAutonomySettings:
 	extends RefCounted
 	var master := true
+
 	func get_settings() -> Dictionary:
 		return {"master_enabled": master}
 
@@ -85,6 +101,7 @@ class FakeUpdateGuard:
 	extends RefCounted
 	var paused := false
 	var updater_bound := true
+
 	func status() -> Dictionary:
 		return {
 			"paused_hot_improvements": paused,
@@ -95,8 +112,10 @@ class FakeUpdateGuard:
 
 class FakeSandbox:
 	extends RefCounted
+
 	func snapshot(_label := "checkpoint") -> Dictionary:
 		return {"ok": true, "snapshot": "fake"}
+
 	func rollback(_snapshot_ref: String) -> Dictionary:
 		return {"ok": true}
 
@@ -161,6 +180,16 @@ func _run() -> void:
 	if improver.tournament_calls != 1 or memory.records != 1:
 		_fail("Existing SelfImprover/MemoryStore adapters were not used exactly once", 10)
 		return
+	if not coordinator.autonomous_hot_improvements:
+		_fail("Exclusive guard did not restore existing hot-improvement setting", 17)
+		return
+
+	coordinator._cycle_running = true
+	var concurrent_blocked: Dictionary = await engine.run_experiment("must not overlap", 5)
+	if bool(concurrent_blocked.get("ok", false)) or str(concurrent_blocked.get("stage", "")) != "exclusive_guard":
+		_fail("Existing autonomous cycle did not block Evolution tournament", 18)
+		return
+	coordinator._cycle_running = false
 
 	var denied_activation: Dictionary = engine.activate_verified_winner("improve safely", tournament_result)
 	if bool(denied_activation.get("ok", false)):
@@ -188,6 +217,11 @@ func _run() -> void:
 		return
 
 	settings.master = false
+	var rolled_back: Dictionary = engine.rollback_hot_extension("fake", "emergency smoke rollback")
+	if not bool(rolled_back.get("ok", false)) or extensions.deactivations != 1:
+		_fail("Emergency rollback was blocked or did not use RuntimeExtensionManager.deactivate", 19)
+		return
+
 	var master_blocked: Dictionary = await engine.analyze("must stop")
 	if bool(master_blocked.get("ok", false)) or str(master_blocked.get("stage", "")) != "master_stop":
 		_fail("Master stop did not fail closed", 15)
@@ -201,7 +235,7 @@ func _run() -> void:
 		return
 
 	engine.queue_free()
-	print("AURORA_EVOLUTION_CONTROLLER_SMOKE_OK reuse=true context=true evidence=true master_stop=true update_guard=true staged_activation=true")
+	print("AURORA_EVOLUTION_CONTROLLER_SMOKE_OK reuse=true context=true evidence=true exclusive=true rollback=true master_stop=true update_guard=true staged_activation=true")
 	quit(0)
 
 func _fail(message: String, code: int) -> void:
