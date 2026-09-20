@@ -121,11 +121,16 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 				result["recovered_with_local_fallback"] = true
 			return result
 		var error := str(result.get("error", "local model failed"))
-		_record_model_failure(candidate, error)
+		var model_failure := bool(result.get("model_failure", true))
+		if model_failure:
+			_record_model_failure(candidate, error)
 		failures.append({
 			"model_path": candidate,
 			"runtime": result.get("runtime", "aurora_core"),
 			"error": error.substr(0, 600),
+			"failure_scope": result.get("failure_scope", "model" if model_failure else "request"),
+			"model_failure": model_failure,
+			"retryable": result.get("retryable", false),
 			"health": _model_failure_summary(candidate)
 		})
 	var first_error := "local runtime unavailable"
