@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[2]
 STATIC_TESTS = (
     "evolution_engine/tests/test_evolution_foundation_contract.py",
     "evolution_engine/tests/test_core_tournament_adapter_contract.py",
+    "evolution_engine/tests/test_acceptance_runner_contract.py",
 )
 
 GODOT_SMOKES = (
