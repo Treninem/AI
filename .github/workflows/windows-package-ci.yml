@@ -1,5 +1,7 @@
 name: AuroraFox Windows Package CI
 
+# Installed Knowledge smoke uses durable completion evidence.
+
 on:
   push:
     branches: [main]
