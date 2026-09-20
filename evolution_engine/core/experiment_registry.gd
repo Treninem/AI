@@ -96,7 +96,8 @@ func _compact_result(result: Dictionary) -> Dictionary:
 		"candidate_id": str(result.get("candidate_id", "")).substr(0, 160),
 		"sha256": str(result.get("sha256", result.get("candidate_sha256", ""))).substr(0, 64),
 		"promotion": str(result.get("promotion", "")).substr(0, 120),
-		"candidate_count": (result.get("candidate_ledger", []) as Array).size() if result.get("candidate_ledger", []) is Array else 0
+		"candidate_count": (result.get("candidate_ledger", []) as Array).size() if result.get("candidate_ledger", []) is Array else 0,
+		"decision": _compact_decision(result.get("decision", {}))
 	}
 
 func _compact_metadata(metadata: Dictionary) -> Dictionary:
@@ -111,3 +112,15 @@ func _trim() -> void:
 	while _recent.size() > MAX_RECENT:
 		var old_id := _recent.pop_back()
 		_records.erase(old_id)
+
+
+func _compact_decision(value: Variant) -> Dictionary:
+	if not value is Dictionary:
+		return {}
+	var decision: Dictionary = value
+	return {
+		"outcome": str(decision.get("outcome", "")).substr(0, 80),
+		"accepted": bool(decision.get("accepted", false)),
+		"stage": str(decision.get("stage", "")).substr(0, 120),
+		"winner_sha256": str(decision.get("winner_sha256", "")).substr(0, 64)
+	}

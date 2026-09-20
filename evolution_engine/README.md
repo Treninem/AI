@@ -5,39 +5,59 @@ AuroraFox Evolution Engine is a thin orchestration layer over the self-improveme
 ## Existing foundation reused
 
 - `agent/autonomous_coordinator.gd` — observation/synchronization, goals and existing autonomy state.
-- `scripts/self_improver.gd` — authoritative 3–10 mutation population, isolated verification, scoring, tournament and winner staging.
+- `scripts/self_improver.gd` — authoritative hot-extension 3–10 mutation population, isolated verification, scoring, tournament and winner staging.
 - `scripts/core_candidate_benchmark.gd` — source/public-contract and deterministic baseline/candidate benchmark comparison.
-- `scripts/core_improvement_pipeline.gd` — existing Core candidate validation/storage/promotion handoff.
+- `scripts/core_improvement_pipeline.gd` — existing Core proposal, validation, benchmark, comparative review and signed-update candidate storage.
 - `scripts/sandbox_manager.gd` — isolated workspaces, snapshots and rollback.
-- `scripts/runtime_extension_manager.gd` — verified staged-extension activation.
+- `scripts/runtime_extension_manager.gd` — verified staged-extension activation/deactivation.
 - `scripts/autonomy_settings_manager.gd` — master stop and autonomy preferences.
 - `scripts/update_autonomy_guard.gd` — pauses autonomy around update activity.
 - `scripts/memory_store.gd` — existing local experience persistence.
-- `scripts/knowledge_store.gd` — existing local knowledge retrieval.
+- `scripts/knowledge_store.gd` — existing canonical local knowledge retrieval.
 - Existing Core candidate queue / signed promotion path remains the only Core release authority.
+
+## Evolution components
+
+- `AuroraEvolutionEngine` — orchestration and full-cycle entry point.
+- `AuroraEvolutionExperimentRegistry` — bounded in-memory experiment lifecycle/phase registry.
+- `AuroraEvolutionCandidateLedger` — bounded 3–10 candidate metadata ledger; persisted only through existing MemoryStore experience.
+- `AuroraEvolutionMetricsAdapter` — normalizes evidence that actually exists; unavailable metrics remain explicitly unavailable.
+- `AuroraEvolutionDecisionRecord` — explicit Accept/Reject/Handoff/Rollback decision record.
+- `AuroraEvolutionEvidenceGate` — scoreboard/winner/SHA/final-verification integrity.
+- `AuroraEvolutionExecutionGuard` — serialization with existing autonomous hot improvement.
+- `AuroraEvolutionCoreTournamentAdapter` — 3–10 Core candidates over one stable baseline using existing CoreImprovementPipeline primitives.
+- `AuroraEvolutionExperienceBridge` / `ContextBridge` — reuse existing Memory/Knowledge without creating a parallel database.
 
 ## Evolution lifecycle
 
+`run_evolution_cycle()` coordinates:
+
 Analysis
-→ proposal/candidate generation in the existing SelfImprover
+→ existing proposal/candidate generation
 → 3–10 mutation tournament
 → isolated verification
-→ evaluation against the stable baseline
-→ winner staging
-→ explicit activation/integration gate
-→ experience record in existing MemoryStore
+→ evaluation/no-regression
+→ explicit decision
+→ winner staging or rejection
+→ bounded experience record in existing MemoryStore
 
-No direct rewrite of production Core is performed by this package.
+Hot-extension activation remains a separate Level-4 action. Core promotion preparation remains a separate Level-3 handoff to the existing signed-update path.
 
 ## Permission levels
 
 - Level 0 — analysis only.
 - Level 1 — analysis + proposal preview.
-- Level 2 — isolated mutation tournament; winner may be staged but is not activated by Evolution Engine.
-- Level 3 — promotion/handoff preparation only; no release authority.
-- Level 4 — activation of an already verified staged hot extension through the existing RuntimeExtensionManager.
+- Level 2 — isolated mutation tournament; a hot winner may be staged but is not activated.
+- Level 3 — Core promotion/handoff preparation only; no release authority.
+- Level 4 — activation of an already verified staged hot extension through existing RuntimeExtensionManager.
 
-`CoreImprovementPipeline.run_candidate()` remains unused because it is a single-candidate entrypoint. Evolution instead has an isolated Core tournament adapter that reuses the pipeline's existing target allowlist, proposal, source-contract, sandbox benchmark, comparative-review and candidate-storage primitives across 3–10 distinct candidates from one baseline. The winner is independently reverified before Level 3 may store it for the existing signed-update promotion path. Evolution never signs, publishes, auto-merges or grants itself release authority.
+`CoreImprovementPipeline.run_candidate()` remains unused because it is a single-candidate entrypoint. Evolution instead reuses its lower-level proposal/contract/benchmark/review/storage primitives across 3–10 distinct candidates from one stable baseline. If fewer than three candidates verify, the adapter may continue generating distinct candidates up to the hard maximum of ten before rejecting the tournament.
+
+## Recovery and release authority
+
+Evolution tracks its own exclusive guard and ownership of the Core pipeline lock. Recovery is explicit; normal status reads never silently unlock a long-running experiment. Emergency recovery can release only locks owned by Evolution. Rollback reuses existing RuntimeExtensionManager authority.
+
+Evolution never signs, publishes, auto-merges, changes the canonical version, or grants itself release authority.
 
 ## Release isolation
 
@@ -47,4 +67,4 @@ Until explicit acceptance, `evolution_engine/**` is not wired into autoload/runt
 - version files;
 - existing production self-improvement modules.
 
-This keeps release testing independent while the Evolution layer is developed and verified.
+This keeps current release testing independent while the Evolution layer is developed and verified.

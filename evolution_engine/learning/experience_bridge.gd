@@ -30,6 +30,8 @@ func record(event: String, goal: String, result: Dictionary, experiment: Diction
 		"winner": _compact_winner(result.get("winner", {})),
 		"candidates": _compact_candidates(result.get("candidate_ledger", [])),
 		"metrics": _compact_metrics(result.get("metrics", {})),
+		"decision": _compact_decision(result.get("decision", {})),
+		"cycle_context": _compact_cycle_context(result.get("cycle_context", {})),
 		"error": str(result.get("error", "")).substr(0, 1200),
 		"recorded_at": Time.get_datetime_string_from_system(true)
 	}
@@ -103,4 +105,29 @@ func _compact_metrics(value: Variant) -> Dictionary:
 		"stability": metrics.get("stability", {}),
 		"speed": metrics.get("speed", {}),
 		"memory": metrics.get("memory", {})
+	}
+
+
+func _compact_decision(value: Variant) -> Dictionary:
+	if not value is Dictionary:
+		return {}
+	var decision: Dictionary = value
+	return {
+		"outcome": str(decision.get("outcome", "")).substr(0, 80),
+		"accepted": bool(decision.get("accepted", false)),
+		"reason": str(decision.get("reason", "")).substr(0, 800),
+		"stage": str(decision.get("stage", "")).substr(0, 120),
+		"winner_sha256": str(decision.get("winner_sha256", "")).substr(0, 64),
+		"release_authority_granted": bool(decision.get("release_authority_granted", false)),
+		"activation_performed": bool(decision.get("activation_performed", false))
+	}
+
+func _compact_cycle_context(value: Variant) -> Dictionary:
+	if not value is Dictionary:
+		return {}
+	var context: Dictionary = value
+	var analysis = context.get("analysis", {})
+	return {
+		"mode": str(context.get("mode", "")).substr(0, 40),
+		"analysis": analysis.duplicate(true) if analysis is Dictionary else {}
 	}

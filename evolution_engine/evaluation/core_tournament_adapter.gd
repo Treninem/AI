@@ -144,7 +144,7 @@ func _run_locked(goal: String, requested_target: String, requested_count: int) -
 	var generation_errors: Array = []
 	var attempt := 0
 
-	while population.size() < requested_count and attempt < MAX_GENERATION_ATTEMPTS:
+	while (population.size() < requested_count or finalists.size() < MIN_MUTATIONS) and population.size() < MAX_MUTATIONS and attempt < MAX_GENERATION_ATTEMPTS:
 		var strategy := str(STRATEGIES[attempt % STRATEGIES.size()])
 		var mutation_goal := "%s\nMutation %d strategy: %s. Produce a materially distinct candidate from other strategies while preserving all public contracts." % [
 			clean_goal,

@@ -4,82 +4,119 @@ All chats work on the same branch:
 
 `feature/aurorafox-evolution-engine`
 
-No chat creates a new branch unless the coordinator explicitly authorizes an isolated experiment. Every chat reads `AGENTS.md` and `docs/PROJECT_MASTER_LOG.md` first.
+No chat creates a new branch unless the coordinator explicitly authorizes an isolated experiment. Every chat reads `AGENTS.md` and the complete `docs/PROJECT_MASTER_LOG.md` first. The master log remains the only project journal.
+
+## Shared rules for every direction
+
+- Do not edit `main`, release/update/package/version files or `.github/workflows/**`.
+- Do not rewrite existing AuroraFox foundations from zero.
+- Reuse `SelfImprover`, `CoreImprovementPipeline`, `MemoryStore`, `KnowledgeStore`, `SandboxManager`, `RuntimeExtensionManager`, `AutonomySettingsManager`, `UpdateAutonomyGuard` and existing agent infrastructure.
+- Before editing, compare fresh `main` and `feature/aurorafox-evolution-engine`, then check active claims in the master log.
+- Multiple chats may audit one direction, but only one primary executor edits a claimed file set at a time.
+- New chats continue the same direction and branch; they do not create replacement branches just because a chat changed.
+- Until the coordinator opens runtime integration, production foundation files are read-only for Evolution work.
+- Current owner instruction: continue code development/audit in large batches; do not disturb release tests.
 
 ## Direction 1 — Evolution Core
 
-Primary files:
+Primary ownership:
 - `evolution_engine/core/**`
 - `evolution_engine/integration/**`
 
-Goal:
-- coordinate the existing AuroraFox self-improvement foundation;
-- maintain the Evolution lifecycle;
-- expose state/status without changing production Core.
+Current foundation:
+- `AuroraEvolutionEngine`
+- `AuroraEvolutionExperimentRegistry`
+- `AuroraEvolutionFoundationAdapter`
 
-Do not reimplement SelfImprover, AgentCore or CoreImprovementPipeline.
+Tasks:
+- maintain the complete Analysis → Experiment → Evaluation → Decision → Experience lifecycle;
+- keep experiment IDs, phase history and bounded recent state;
+- coordinate existing modules without becoming a second AgentCore/SelfImprover;
+- expose deterministic status and recovery state.
+
+Handoff prompt:
+> You are Direction 1 — Evolution Core. Work only on the shared `feature/aurorafox-evolution-engine` branch. Read AGENTS.md and PROJECT_MASTER_LOG.md first. Reuse existing AuroraFox foundations. Do not touch release/main/workflows. Continue the Evolution lifecycle/controller/registry integration, check for duplicate architecture and coordinate file ownership through the master log.
 
 ## Direction 2 — Mutation Engine
 
-Primary files:
-- adapters/contracts under `evolution_engine/mutation/**` when needed.
+Primary ownership:
+- adapters/metadata under `evolution_engine/learning/**` and mutation-specific additions approved by coordinator.
 
-Foundation owner:
-- `scripts/self_improver.gd` remains the mutation implementation.
+Authoritative generator:
+- `scripts/self_improver.gd` remains the hot-extension mutation implementation.
+- Core mutations reuse `CoreImprovementPipeline` primitives through the Evolution Core tournament adapter.
 
-Goal:
-- reuse the existing 3–10 mutation tournament;
-- add only missing orchestration/metadata contracts.
+Tasks:
+- preserve 3–10 distinct candidates, default 5;
+- keep mutation ID/tag, strategy, reason, SHA, verification outcome and failure reason;
+- reject duplicate candidates;
+- do not implement another mutation generator.
 
-Do not create a second mutation generator.
+Handoff prompt:
+> You are Direction 2 — Mutation Engine. Do not create a new generator. Audit and extend metadata/adapters around the existing SelfImprover and CoreImprovementPipeline tournaments. Preserve the 3–10 invariant, distinct SHA candidates and candidate ledger. Work only in the shared Evolution branch and avoid release files.
 
 ## Direction 3 — Learning System
 
-Primary files:
+Primary ownership:
 - `evolution_engine/learning/**`
 
-Foundation owners:
+Authoritative storage/retrieval:
 - `scripts/memory_store.gd`
 - `scripts/knowledge_store.gd`
 
-Goal:
-- write bounded Evolution experience through existing MemoryStore;
-- read existing Knowledge for context;
-- never bypass research/knowledge curation by automatically writing Evolution output into Core Knowledge.
+Tasks:
+- record successful, rejected, blocked and rollback experience through MemoryStore;
+- preserve candidate-level failed/rejected evidence;
+- read existing Memory and Knowledge without duplicating the same source;
+- never auto-import Evolution output into canonical Core Knowledge.
+
+Handoff prompt:
+> You are Direction 3 — Learning System. Reuse MemoryStore and KnowledgeStore; do not create a new database. Improve bounded Evolution experience/context/candidate learning, dedupe retrieval, provenance and useful rejected-experiment memory. Never bypass Knowledge curation.
 
 ## Direction 4 — Evaluation / Tournament
 
-Primary files:
+Primary ownership:
 - `evolution_engine/evaluation/**`
 
-Foundation owners:
+Authoritative evaluation:
 - `scripts/self_improver.gd`
 - `scripts/core_candidate_benchmark.gd`
+- existing comparative review in `CoreImprovementPipeline`
 
-Goal:
-- adapt existing tournament and benchmark evidence;
-- preserve stable-baseline/no-regression rules;
-- maintain the isolated 3–10 Core candidate tournament adapter over the existing CoreImprovementPipeline primitives;\n- keep Level 2 tournament evaluation separate from Level 3 signed-promotion handoff.
+Tasks:
+- preserve same-baseline comparison;
+- require 3–10 distinct candidates and at least 3 verified finalists;
+- keep stable Core as incumbent through baseline/candidate no-regression + comparative improvement;
+- independently reverify the winner;
+- keep Level 2 evaluation separate from Level 3 signed-promotion handoff;
+- report unavailable speed/memory metrics as unavailable rather than inventing numbers.
+
+Handoff prompt:
+> You are Direction 4 — Evaluation/Tournament. Reuse existing benchmarks and reviews. Strengthen evidence integrity, metrics and winner verification without changing release authority. Never accept a single-candidate autonomous Core promotion.
 
 ## Direction 5 — Safety / Integration
 
-Primary files:
+Primary ownership:
 - `evolution_engine/safety/**`
-- `evolution_engine/tests/**`
+- Evolution integration contracts; tests only when owner reopens test phase.
 
-Foundation owners:
+Authoritative safety:
 - `scripts/sandbox_manager.gd`
 - `scripts/runtime_extension_manager.gd`
 - `scripts/autonomy_settings_manager.gd`
 - `scripts/update_autonomy_guard.gd`
 
-Goal:
-- enforce permission levels and master stop;
-- keep staged candidates separate from activation;
-- preserve snapshot/rollback and signed-release authority;
-- prove Evolution is isolated from release paths.
+Tasks:
+- enforce levels 0–4;
+- master stop/update guard fail closed;
+- serialize with existing autonomous cycles and Core pipeline lock;
+- preserve emergency rollback/recovery;
+- ensure Evolution cannot sign, publish, auto-merge or grant itself release authority;
+- keep Evolution unwired from runtime/release until coordinator explicitly opens integration.
 
-## Shared rule
+Handoff prompt:
+> You are Direction 5 — Safety/Integration. Audit permission gates, locks, rollback and release isolation. Do not weaken master stop, updater trust, sandbox or promotion authority. Work only in the Evolution branch and do not wire project.godot/workflows until the coordinator authorizes integration.
 
-Until the coordinator explicitly opens integration, these production files are read-only for Evolution work:
-`scripts/self_improver.gd`, `scripts/core_improvement_pipeline.gd`, `scripts/core_candidate_benchmark.gd`, `scripts/sandbox_manager.gd`, `scripts/memory_store.gd`, `scripts/knowledge_store.gd`, release/update/workflow/version files.
+## Coordinator rule
+
+The coordinator owns cross-direction architecture, conflicting file claims, final integration and any future decision to touch runtime wiring. Chats report real code/files/commits and blockers through `docs/PROJECT_MASTER_LOG.md`; this file is only the stable direction map, not a second progress journal.

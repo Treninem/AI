@@ -13,6 +13,7 @@ var execution_guard := AuroraEvolutionExecutionGuard.new()
 var experiments := AuroraEvolutionExperimentRegistry.new()
 var candidates := AuroraEvolutionCandidateLedger.new()
 var metrics := AuroraEvolutionMetricsAdapter.new()
+var decisions := AuroraEvolutionDecisionRecord.new()
 var tournament := AuroraEvolutionTournamentAdapter.new()
 var core_tournament := AuroraEvolutionCoreTournamentAdapter.new()
 var evidence_gate := AuroraEvolutionEvidenceGate.new()
@@ -106,7 +107,7 @@ func propose(goal: String) -> Dictionary:
 	phase_changed.emit("proposal", {"goal": goal})
 	return await tournament.preview_proposal(goal)
 
-func run_experiment(goal: String, requested_count := 5) -> Dictionary:
+func run_experiment(goal: String, requested_count := 5, cycle_context: Dictionary = {}) -> Dictionary:
 	var gate := _gate(true, true)
 	if not gate.get("ok", false):
 		return gate
@@ -129,6 +130,7 @@ func run_experiment(goal: String, requested_count := 5) -> Dictionary:
 		result["error"] = "Existing tournament returned incomplete or unsafe promotion evidence: %s" % str(evidence.get("reason", "unknown"))
 	result["activation_performed"] = false
 	result["activation_requires_level"] = AuroraEvolutionPolicy.LEVEL_VERIFIED_ACTIVATION
+	result["cycle_context"] = cycle_context
 	result = _finish_exclusive_cycle(experiment_id, "hot_mutation_tournament", goal, result, "tournament_verified" if bool(result.get("ok", false)) else "tournament_rejected")
 
 	if bool(result.get("ok", false)):
@@ -143,7 +145,7 @@ func run_experiment(goal: String, requested_count := 5) -> Dictionary:
 		cycle_rejected.emit(_last_report)
 	return result
 
-func run_core_experiment(goal: String, requested_target := "", requested_count := 5) -> Dictionary:
+func run_core_experiment(goal: String, requested_target := "", requested_count := 5, cycle_context: Dictionary = {}) -> Dictionary:
 	var gate := _gate(true, true)
 	if not gate.get("ok", false):
 		return gate
@@ -166,11 +168,39 @@ func run_core_experiment(goal: String, requested_target := "", requested_count :
 
 	var result: Dictionary = await core_tournament.run(goal, requested_target, requested_count)
 	result["promotion_prepared"] = false
+	result["cycle_context"] = cycle_context
 	result = _finish_exclusive_cycle(experiment_id, "core_mutation_tournament", goal, result, "core_tournament_verified" if bool(result.get("ok", false)) else "core_tournament_rejected")
 	if bool(result.get("ok", false)):
 		cycle_completed.emit(_last_report)
 	else:
 		cycle_rejected.emit(_last_report)
+	return result
+
+func run_evolution_cycle(goal: String, mode := "hot", requested_target := "", requested_count := 5) -> Dictionary:
+	var clean_mode := mode.strip_edges().to_lower()
+	if clean_mode not in ["hot", "core"]:
+		return {"ok": false, "stage": "cycle_mode", "error": "Evolution cycle mode must be hot or core"}
+	phase_changed.emit("cycle_analysis", {"goal": goal, "mode": clean_mode})
+	var analysis: Dictionary = await analyze(goal)
+	var analysis_summary := _compact_analysis(analysis)
+	if not bool(analysis.get("ok", false)):
+		return {
+			"ok": false,
+			"stage": "analysis",
+			"error": str(analysis.get("error", "Evolution analysis failed")),
+			"cycle_mode": clean_mode,
+			"analysis": analysis_summary
+		}
+	phase_changed.emit("cycle_experiment", {"goal": goal, "mode": clean_mode})
+	var cycle_context := {"analysis": analysis_summary, "mode": clean_mode}
+	var result: Dictionary
+	if clean_mode == "core":
+		result = await run_core_experiment(goal, requested_target, requested_count, cycle_context)
+	else:
+		result = await run_experiment(goal, requested_count, cycle_context)
+	result["cycle_mode"] = clean_mode
+	result["analysis"] = analysis_summary
+	result["cycle_complete"] = true
 	return result
 
 func prepare_core_promotion(goal: String, tournament_id: String) -> Dictionary:
@@ -288,6 +318,7 @@ func _finalize_result(experiment_id: String, kind: String, goal: String, result:
 	result["experiment_id"] = experiment_id
 	result["candidate_ledger"] = candidates.build(experiment_id, result)
 	result["metrics"] = metrics.summarize(kind, result)
+	result["decision"] = decisions.build(experiment_id, kind, result)
 	var record := experiments.complete(experiment_id, result)
 	result["experiment"] = record
 	result["experience"] = experience.record(event, goal, result, record)
@@ -320,6 +351,16 @@ func recover_stuck_cycle(reason := "manual safety recovery") -> Dictionary:
 		result["experience"] = experience.record("stuck_cycle_recovery", reason, result, record)
 	_last_report = result.duplicate(true)
 	return result
+
+func _compact_analysis(analysis: Dictionary) -> Dictionary:
+	var sync = analysis.get("sync", {})
+	var experience_context = analysis.get("experience_context", {})
+	return {
+		"ok": bool(analysis.get("ok", false)),
+		"compatible": bool(sync.get("compatible", sync.get("ok", false))) if sync is Dictionary else false,
+		"memory_count": int(experience_context.get("memory_count", 0)) if experience_context is Dictionary else 0,
+		"knowledge_count": int(experience_context.get("knowledge_count", 0)) if experience_context is Dictionary else 0
+	}
 
 func _gate(require_proposal: bool, require_experiment: bool, require_activation := false) -> Dictionary:
 	var foundation_status := foundation.inspect()
