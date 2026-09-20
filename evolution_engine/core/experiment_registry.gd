@@ -86,6 +86,8 @@ func recent(limit := 10) -> Array:
 	return out
 
 func _compact_result(result: Dictionary) -> Dictionary:
+	var ledger = result.get("candidate_ledger", [])
+	var candidate_count := ledger.size() if ledger is Array else 0
 	return {
 		"ok": bool(result.get("ok", false)),
 		"stage": str(result.get("stage", "")).substr(0, 120),
@@ -96,7 +98,7 @@ func _compact_result(result: Dictionary) -> Dictionary:
 		"candidate_id": str(result.get("candidate_id", "")).substr(0, 160),
 		"sha256": str(result.get("sha256", result.get("candidate_sha256", ""))).substr(0, 64),
 		"promotion": str(result.get("promotion", "")).substr(0, 120),
-		"candidate_count": (result.get("candidate_ledger", []) as Array).size() if result.get("candidate_ledger", []) is Array else 0,
+		"candidate_count": candidate_count,
 		"decision": _compact_decision(result.get("decision", {}))
 	}
 

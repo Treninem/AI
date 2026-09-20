@@ -226,3 +226,11 @@ def test_core_success_exposes_full_population_for_learning_not_only_finalists():
     core = read("evolution_engine/evaluation/core_tournament_adapter.gd")
     assert '"scoreboard": _public_scoreboard(finalists)' in core
     assert '"candidates": _public_scoreboard(population)' in core
+
+
+def test_execution_guard_reserves_legacy_coordinator_cycle_lock():
+    guard = read("evolution_engine/safety/execution_guard.gd")
+    assert 'coordinator.set("_cycle_running", true)' in guard
+    assert 'coordinator.set("_cycle_running", false)' in guard
+    assert "var _owns_coordinator_cycle_lock := false" in guard
+    assert '"owns_coordinator_cycle_lock"' in guard

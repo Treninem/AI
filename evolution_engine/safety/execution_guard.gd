@@ -6,6 +6,7 @@ const DEFAULT_STALE_SECONDS := 14400
 var coordinator
 var _held := false
 var _saved_hot_improvements := false
+var _owns_coordinator_cycle_lock := false
 var _acquired_at := 0
 
 func bind(value) -> void:
@@ -26,6 +27,8 @@ func acquire() -> Dictionary:
 		return {"ok": false, "stage": "exclusive_guard", "error": "AutonomousCoordinator hot-improvement state is unavailable"}
 	_saved_hot_improvements = bool(hot)
 	coordinator.set("autonomous_hot_improvements", false)
+	coordinator.set("_cycle_running", true)
+	_owns_coordinator_cycle_lock = true
 	_held = true
 	_acquired_at = int(Time.get_unix_time_from_system())
 	return {"ok": true, "held": true, "saved_hot_improvements": _saved_hot_improvements}
@@ -58,8 +61,11 @@ func stale_status(max_age_seconds := DEFAULT_STALE_SECONDS) -> Dictionary:
 func _restore_state() -> Dictionary:
 	if coordinator != null:
 		coordinator.set("autonomous_hot_improvements", _saved_hot_improvements)
+		if _owns_coordinator_cycle_lock:
+			coordinator.set("_cycle_running", false)
 	var restored := _saved_hot_improvements
 	_held = false
+	_owns_coordinator_cycle_lock = false
 	_acquired_at = 0
 	return {"ok": true, "released": true, "restored_hot_improvements": restored}
 
@@ -70,6 +76,7 @@ func status() -> Dictionary:
 	return {
 		"held": _held,
 		"saved_hot_improvements": _saved_hot_improvements,
+		"owns_coordinator_cycle_lock": _owns_coordinator_cycle_lock,
 		"acquired_at": _acquired_at,
 		"held_seconds": held_seconds
 	}
