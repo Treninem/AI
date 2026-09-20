@@ -98,12 +98,26 @@ def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> 
     assert 'options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)' in runtime
     assert 'clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)' in runtime
     assert 'payload["reasoning_effort"] = "none"' in runtime
+    assert "_is_strict_structured_request(messages)" in runtime
+    assert 'prompt.contains("return strict json only")' in runtime
+    assert '"model_failure": false' in runtime
+    assert 'if not raw.strip_edges().is_empty()' in runtime
     assert '"--ctx-size", str(DEFAULT_CONTEXT_SIZE)' in runtime
     assert "DEFAULT_CHAT_MAX_TOKENS := 384" in android
     assert "TERSE_CHAT_MAX_TOKENS := 16" in android
     assert 'request_options["max_tokens"] = TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS' in android
     assert "[int]$TimeoutSeconds = 900" in runner
     assert "AURORAFOX_CODE_SPECIALIST_TIMEOUT_DIAGNOSTICS" in runner
+
+
+def test_request_scoped_core_failures_do_not_quarantine_a_valid_model() -> None:
+    runtime = DESKTOP_RUNTIME.read_text(encoding="utf-8")
+    core = (ROOT / "scripts" / "aurora_core_runtime.gd").read_text(encoding="utf-8")
+    assert '"failure_scope": "request"' in runtime
+    assert 'var model_failure := bool(result.get("model_failure", true))' in core
+    assert "if model_failure:" in core
+    assert "_record_model_failure(candidate, error)" in core
+    assert core.index("if model_failure:") < core.index("_record_model_failure(candidate, error)")
 
 
 def test_core_engine_resolution_uses_actions_token_without_weakening_verification() -> None:
