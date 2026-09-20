@@ -298,6 +298,16 @@ func _run() -> void:
 	}
 	_write_report(report_path, report)
 	print("AURORAFOX_SPECIALIST_TEAM_CODE_SPECIALIST_SMOKE " + JSON.stringify(report))
+	if not passed:
+		print("AURORAFOX_SPECIALIST_TEAM_CODE_SPECIALIST_SMOKE_FAILED")
+		print("guard_expected=%s" % guard_expected)
+		print("network_blocked=%s" % network_blocked)
+		print("team_setup_ok=%s" % team_setup_ok)
+		print("operations_ok=%s" % operations_ok)
+		print("last_runtime=%s" % str(runtime_after.get("last_runtime", "")))
+		print("ollama_failures=%s" % str(runtime_after.get("ollama_failures", -1)))
+		print("self_primary=%s" % str(runtime_after.get("self_primary", false)))
+		print("external_ai_required=%s" % str(runtime_after.get("external_ai_required", true)))
 
 	if client.core_runtime != null and client.core_runtime.desktop_runtime != null:
 		client.core_runtime.desktop_runtime.stop()
