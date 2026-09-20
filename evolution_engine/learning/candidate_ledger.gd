@@ -18,15 +18,20 @@ func build(experiment_id: String, result: Dictionary) -> Array:
 		var row: Dictionary = raw
 		var index := int(row.get("index", out.size()))
 		var mutation_tag := str(row.get("mutation_tag", "")).strip_edges()
-		var candidate_id := mutation_tag
-		if candidate_id.is_empty():
-			candidate_id = "%s-c%02d" % [experiment_id, index + 1]
+		var candidate_id := "%s-c%02d" % [experiment_id, index + 1]
+		if not mutation_tag.is_empty():
+			candidate_id = "%s-%s" % [experiment_id, mutation_tag]
 		var failure = row.get("failure", {})
 		var failure_stage := ""
 		var failure_error := ""
 		if failure is Dictionary:
 			failure_stage = str(failure.get("stage", "")).substr(0, 120)
 			failure_error = str(failure.get("error", "")).substr(0, 800)
+		if not bool(row.get("verified", false)) and failure_stage.is_empty():
+			var verification = row.get("verification", {})
+			if verification is Dictionary:
+				failure_stage = str(verification.get("stage", "")).substr(0, 120)
+				failure_error = str(verification.get("error", "")).substr(0, 800)
 		out.append({
 			"candidate_id": candidate_id.substr(0, 180),
 			"index": index,

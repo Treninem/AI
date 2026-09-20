@@ -69,13 +69,13 @@ func _fingerprints(rows: Array) -> Dictionary:
 	return seen
 
 func _fingerprint(row: Dictionary) -> String:
+	var content := str(row.get("content", "")).strip_edges().to_lower()
+	if not content.is_empty():
+		return "content:" + content.substr(0, 700)
 	var id := str(row.get("id", "")).strip_edges()
 	if not id.is_empty():
 		return "id:" + id
-	var content := str(row.get("content", "")).strip_edges().to_lower()
-	if content.is_empty():
-		return ""
-	return "content:" + content.substr(0, 700)
+	return ""
 
 func _compact_row(row: Dictionary) -> Dictionary:
 	return {
