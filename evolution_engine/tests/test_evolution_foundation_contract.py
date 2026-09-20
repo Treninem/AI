@@ -120,3 +120,9 @@ def test_evolution_is_not_wired_into_release_runtime_or_workflows_yet():
         text = workflow.read_text(encoding="utf-8")
         assert "evolution_engine/" not in text
         assert "AuroraEvolutionEngine" not in text
+
+
+def test_foundation_requires_existing_memory_retrieval_contract():
+    foundation = read("evolution_engine/integration/foundation_adapter.gd")
+    assert '_require_method(missing, "memory", memory, "remember")' in foundation
+    assert '_require_method(missing, "memory", memory, "retrieve")' in foundation

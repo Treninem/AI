@@ -40,9 +40,35 @@ func contract_status() -> Dictionary:
 	]:
 		if not pipeline.has_method(method):
 			missing.append(method)
+	if pipeline.get("_running") == null:
+		missing.append("_running")
 	return {"ok": missing.is_empty(), "missing": missing}
 
 func run(goal: String, requested_target := "", requested_count := 5) -> Dictionary:
+	var preflight := _preflight(requested_count)
+	if not bool(preflight.get("ok", false)):
+		return preflight
+	if bool(pipeline.get("_running")):
+		return {"ok": false, "stage": "busy", "error": "Existing CoreImprovementPipeline is already running"}
+	pipeline.set("_running", true)
+	var result: Dictionary = await _run_locked(goal, requested_target, requested_count)
+	pipeline.set("_running", false)
+	return result
+
+func prepare_winner(tournament_id: String) -> Dictionary:
+	if not _pending_winners.has(tournament_id):
+		return {"ok": false, "stage": "handoff", "error": "Unknown or expired Core tournament winner"}
+	var preflight := _preflight(MIN_MUTATIONS)
+	if not bool(preflight.get("ok", false)):
+		return preflight
+	if bool(pipeline.get("_running")):
+		return {"ok": false, "stage": "busy", "error": "Existing CoreImprovementPipeline is already running"}
+	pipeline.set("_running", true)
+	var result: Dictionary = await _prepare_winner_locked(tournament_id)
+	pipeline.set("_running", false)
+	return result
+
+func _preflight(requested_count: int) -> Dictionary:
 	var contract := contract_status()
 	if not bool(contract.get("ok", false)):
 		return {"ok": false, "stage": "core_contract", "error": "CoreImprovementPipeline contract is incomplete", "details": contract}
@@ -55,10 +81,9 @@ func run(goal: String, requested_target := "", requested_count := 5) -> Dictiona
 		return {"ok": false, "stage": "setup", "error": "Existing CoreImprovementPipeline dependencies are not ready"}
 	if bool(pipeline._signed_update_busy()):
 		return {"ok": false, "stage": "update_guard", "error": "signed product update has priority", "deferred": true}
-	var pipeline_status = pipeline.status()
-	if pipeline_status is Dictionary and bool(pipeline_status.get("running", false)):
-		return {"ok": false, "stage": "busy", "error": "Existing CoreImprovementPipeline is already running"}
+	return {"ok": true}
 
+func _run_locked(goal: String, requested_target: String, requested_count: int) -> Dictionary:
 	var clean_goal := goal.strip_edges()
 	if clean_goal.is_empty():
 		clean_goal = "Improve AuroraFox Core quality and robustness without regressions"
@@ -182,7 +207,9 @@ func run(goal: String, requested_target := "", requested_count := 5) -> Dictiona
 			"details": _compact_error("winner_final_verification", final_verification),
 			"scoreboard": _public_scoreboard(finalists)
 		}
-	final_verification["source_contract"] = winner.get("validation", {}).get("source_contract", {})
+	var winner_validation = winner.get("validation", {})
+	if winner_validation is Dictionary:
+		final_verification["source_contract"] = winner_validation.get("source_contract", {})
 	var final_review = await pipeline._comparative_review(clean_goal, target, original, winner_content, final_verification, winner_proposal)
 	if not final_review is Dictionary or not bool(final_review.get("ok", false)):
 		return {
@@ -204,10 +231,7 @@ func run(goal: String, requested_target := "", requested_count := 5) -> Dictiona
 		"goal": clean_goal,
 		"target": target,
 		"baseline_sha256": baseline_sha,
-		"original": original,
-		"winner": winner,
-		"final_verification": final_verification,
-		"final_review": final_review
+		"winner": winner
 	}
 	_trim_pending()
 
@@ -229,17 +253,7 @@ func run(goal: String, requested_target := "", requested_count := 5) -> Dictiona
 		"applied_to_dev_checkout": false
 	}
 
-func prepare_winner(tournament_id: String) -> Dictionary:
-	if not _pending_winners.has(tournament_id):
-		return {"ok": false, "stage": "handoff", "error": "Unknown or expired Core tournament winner"}
-	var contract := contract_status()
-	if not bool(contract.get("ok", false)):
-		return {"ok": false, "stage": "core_contract", "error": "CoreImprovementPipeline contract changed", "details": contract}
-	if OS.get_name() != "Windows":
-		return {"ok": false, "stage": "platform", "error": "Core promotion preparation currently requires Windows", "platform": OS.get_name()}
-	if bool(pipeline._signed_update_busy()):
-		return {"ok": false, "stage": "update_guard", "error": "signed product update has priority", "deferred": true}
-
+func _prepare_winner_locked(tournament_id: String) -> Dictionary:
 	var pending: Dictionary = _pending_winners[tournament_id]
 	var target := str(pending.get("target", ""))
 	var source_result = pipeline._read_res_source(target)

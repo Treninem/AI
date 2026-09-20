@@ -63,3 +63,12 @@ def test_core_promotion_handoff_rechecks_baseline_and_never_grants_release_autho
     assert "signed product update has priority" in adapter
     assert 'result["release_authority_granted"] = false' in controller
     assert '"release_authority_granted": false' in controller
+
+
+def test_core_tournament_shares_existing_pipeline_running_lock():
+    adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
+    pipeline = read("scripts/core_improvement_pipeline.gd")
+    assert "var _running := false" in pipeline
+    assert 'pipeline.get("_running")' in adapter
+    assert 'pipeline.set("_running", true)' in adapter
+    assert 'pipeline.set("_running", false)' in adapter

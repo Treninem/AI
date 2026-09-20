@@ -46,6 +46,6 @@ func _is_sha256(value: String) -> bool:
 	if value.length() != 64:
 		return false
 	for i in range(value.length()):
-		if HEX.find(value[i]) < 0:
+		if HEX.find(value.substr(i, 1)) < 0:
 			return false
 	return true

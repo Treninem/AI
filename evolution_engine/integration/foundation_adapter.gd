@@ -38,7 +38,7 @@ func inspect() -> Dictionary:
 	_require_method(missing, "improver", improver, "propose_improvement")
 	_require_method(missing, "improver", improver, "run_mutation_tournament")
 	_require_method(missing, "extensions", extensions, "activate_staged")
-	_require_method(missing, "memory", memory, "remember")
+	_require_method(missing, "memory", memory, "remember")\n\t_require_method(missing, "memory", memory, "retrieve")
 	_require_method(missing, "knowledge", knowledge, "search")
 	_require_method(missing, "autonomy_settings", autonomy_settings, "get_settings")
 	_require_method(missing, "update_guard", update_guard, "status")
