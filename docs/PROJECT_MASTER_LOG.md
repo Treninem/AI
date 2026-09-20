@@ -317,6 +317,20 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Core benchmarks.
 
 ## 14. Активные работы и занятые файлы
+### CLAIM `CHAT-2026-09-21-AURORAFOX-EVOLUTION-ENGINE`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `4c6fe649af69c9be0eb080863f0e94b80cc3e082`
+- Рабочая ветка: `feature/aurorafox-evolution-engine`
+- Режим: Chat / главный координатор Evolution
+- Цель: построить AuroraFox Evolution Engine **поверх существующего готового фундамента**, без переписывания SelfImprover/Mutation/Sandbox/Memory/Knowledge с нуля.
+- Используемый фундамент: `scripts/self_improver.gd`, `scripts/core_improvement_pipeline.gd`, `scripts/core_candidate_benchmark.gd`, `scripts/sandbox_manager.gd`, `agent/autonomous_coordinator.gd`, `scripts/memory_store.gd`, `scripts/knowledge_store.gd`, существующий candidate promotion path.
+- Предполагаемый bump после полного acceptance: **MINOR**; каноническая версия на этом этапе не меняется.
+- Занятые файлы: `evolution_engine/**` и эта запись в `docs/PROJECT_MASTER_LOG.md`.
+- Граница релиза: **не изменять** `main`, `.github/workflows/**`, `update/**`, `build/**`, packaging/version files и перечисленные production-файлы фундамента, пока текущие release/CI проверки идут. В этом этапе они только читаются и вызываются через существующие интерфейсы.
+- Не пересекается с активными release/UI/research/voice/server/knowledge/core-benchmark claims.
+- Первый acceptance-блок: заменить ранний дублирующий prototype в `evolution_engine/**` на thin orchestration/adapters к существующему фундаменту; добавить изолированные contract checks, не подключая Evolution Engine к runtime/autoload и не влияя на release CI.
+
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
