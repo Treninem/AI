@@ -1,60 +1,85 @@
-# AuroraFox Evolution Engine Directions
+# AuroraFox Evolution Engine — directions
 
-## Main coordinator
-Owns architecture, integration decisions and conflict control.
+All chats work on the same branch:
+
+`feature/aurorafox-evolution-engine`
+
+No chat creates a new branch unless the coordinator explicitly authorizes an isolated experiment. Every chat reads `AGENTS.md` and `docs/PROJECT_MASTER_LOG.md` first.
 
 ## Direction 1 — Evolution Core
-Owner goal:
-Create the controlled improvement lifecycle.
 
-Tasks:
-- improvement cycle state;
-- experiment registry;
-- proposal lifecycle;
-- integration contracts.
+Primary files:
+- `evolution_engine/core/**`
+- `evolution_engine/integration/**`
 
-Do not modify production Core directly.
+Goal:
+- coordinate the existing AuroraFox self-improvement foundation;
+- maintain the Evolution lifecycle;
+- expose state/status without changing production Core.
+
+Do not reimplement SelfImprover, AgentCore or CoreImprovementPipeline.
 
 ## Direction 2 — Mutation Engine
-Owner goal:
-Create safe candidate generation.
 
-Tasks:
-- mutation record;
-- candidate identity;
-- isolated candidate metadata;
-- mutation history.
+Primary files:
+- adapters/contracts under `evolution_engine/mutation/**` when needed.
 
-Rules:
-- 3-10 candidates per tournament;
-- no direct promotion.
+Foundation owner:
+- `scripts/self_improver.gd` remains the mutation implementation.
+
+Goal:
+- reuse the existing 3–10 mutation tournament;
+- add only missing orchestration/metadata contracts.
+
+Do not create a second mutation generator.
 
 ## Direction 3 — Learning System
-Owner goal:
-Store improvement experience.
 
-Tasks:
-- accepted/rejected experience records;
-- links to Memory/Knowledge interfaces;
-- reusable improvement knowledge.
+Primary files:
+- `evolution_engine/learning/**`
+
+Foundation owners:
+- `scripts/memory_store.gd`
+- `scripts/knowledge_store.gd`
+
+Goal:
+- write bounded Evolution experience through existing MemoryStore;
+- read existing Knowledge for context;
+- never bypass research/knowledge curation by automatically writing Evolution output into Core Knowledge.
 
 ## Direction 4 — Evaluation / Tournament
-Owner goal:
-Compare candidates against baseline.
 
-Tasks:
-- metrics contract;
-- benchmark result storage;
-- winner selection rules.
+Primary files:
+- `evolution_engine/evaluation/**`
+
+Foundation owners:
+- `scripts/self_improver.gd`
+- `scripts/core_candidate_benchmark.gd`
+
+Goal:
+- adapt existing tournament and benchmark evidence;
+- preserve stable-baseline/no-regression rules;
+- later add a 3–10 candidate wrapper for Core-file candidates before Core promotion can be enabled.
 
 ## Direction 5 — Safety / Integration
-Owner goal:
-Protect AuroraFox.
 
-Tasks:
-- permission levels;
-- rollback contract;
-- audit events;
-- sandbox boundaries.
+Primary files:
+- `evolution_engine/safety/**`
+- `evolution_engine/tests/**`
 
-Parallel workers must read the master log before changes and avoid editing the same files.
+Foundation owners:
+- `scripts/sandbox_manager.gd`
+- `scripts/runtime_extension_manager.gd`
+- `scripts/autonomy_settings_manager.gd`
+- `scripts/update_autonomy_guard.gd`
+
+Goal:
+- enforce permission levels and master stop;
+- keep staged candidates separate from activation;
+- preserve snapshot/rollback and signed-release authority;
+- prove Evolution is isolated from release paths.
+
+## Shared rule
+
+Until the coordinator explicitly opens integration, these production files are read-only for Evolution work:
+`scripts/self_improver.gd`, `scripts/core_improvement_pipeline.gd`, `scripts/core_candidate_benchmark.gd`, `scripts/sandbox_manager.gd`, `scripts/memory_store.gd`, `scripts/knowledge_store.gd`, release/update/workflow/version files.
