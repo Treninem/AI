@@ -44,6 +44,7 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	var ready := await ensure_server(absolute_model)
 	if not bool(ready.get("ok", false)): return ready
 	var terse_request := _is_explicit_terse_request(messages)
+	var structured_request := _is_strict_structured_request(messages)
 	var default_max_tokens := TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS
 	var max_tokens := clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)
 	var request_timeout := clampf(float(options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)), 5.0, 600.0)
@@ -54,12 +55,12 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 		"max_tokens": max_tokens,
 		"stream": false
 	}
-	# Explicitly terse user requests do not benefit from hundreds of hidden
-	# reasoning tokens. Current bundled llama.cpp understands the OpenAI-style
-	# reasoning_effort override and maps "none" to enable_thinking=false. This
-	# improves exact-format compliance and latency without disabling reasoning
-	# for normal, complex AuroraFox conversations.
-	if terse_request and not options.has("reasoning_effort"):
+	# Exact terse and strict structured responses do not benefit from hidden
+	# reasoning tokens that can consume the whole request deadline before any
+	# visible JSON is emitted. Current bundled llama.cpp maps the OpenAI-style
+	# "none" override to enable_thinking=false. Normal conversations retain the
+	# full reasoning path and strict JSON keeps the normal 2048-token ceiling.
+	if (terse_request or structured_request) and not options.has("reasoning_effort"):
 		payload["reasoning_effort"] = "none"
 	elif options.has("reasoning_effort"):
 		payload["reasoning_effort"] = str(options.get("reasoning_effort", ""))
@@ -68,11 +69,11 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	var data: Dictionary = response.get("data", {})
 	var choices: Array = data.get("choices", [])
 	if choices.is_empty() or not choices[0] is Dictionary:
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core вернул ответ без choices", "raw": data}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core вернул ответ без choices", "raw": data, "failure_scope": "request", "model_failure": false, "retryable": true}
 	var message = choices[0].get("message", {})
 	if not message is Dictionary:
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core вернул некорректное сообщение", "raw": data}
-	return {"ok": true, "runtime": "aurora_core_desktop", "content": str(message.get("content", "")), "raw": data, "model": MODEL_ALIAS, "model_path": model_path, "max_tokens": max_tokens, "terse_request": terse_request}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core вернул некорректное сообщение", "raw": data, "failure_scope": "request", "model_failure": false, "retryable": true}
+	return {"ok": true, "runtime": "aurora_core_desktop", "content": str(message.get("content", "")), "raw": data, "model": MODEL_ALIAS, "model_path": model_path, "max_tokens": max_tokens, "terse_request": terse_request, "structured_request": structured_request}
 
 func ensure_server(model_absolute_path: String) -> Dictionary:
 	if not is_available():
@@ -173,6 +174,18 @@ func _is_explicit_terse_request(messages: Array) -> bool:
 			return true
 	return false
 
+func _is_strict_structured_request(messages: Array) -> bool:
+	var prompt := ""
+	for i in range(messages.size() - 1, -1, -1):
+		if messages[i] is Dictionary and str(messages[i].get("role", "")) == "user":
+			prompt = str(messages[i].get("content", "")).to_lower()
+			break
+	return (
+		prompt.contains("return strict json only")
+		or prompt.contains("return one strict json object only")
+		or prompt.contains("верни только строгий json")
+	)
+
 func _request_json(path: String, method: HTTPClient.Method, payload: Dictionary, timeout: float) -> Dictionary:
 	var req := HTTPRequest.new()
 	req.timeout = timeout
@@ -182,14 +195,22 @@ func _request_json(path: String, method: HTTPClient.Method, payload: Dictionary,
 	var err := req.request(BASE_URL + path, headers, method, body)
 	if err != OK:
 		req.queue_free()
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Core Engine request: %s" % error_string(err)}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Core Engine request: %s" % error_string(err), "failure_scope": "request", "model_failure": false, "retryable": true}
 	var result: Array = await req.request_completed
 	req.queue_free()
+	var transport_result := int(result[0])
 	var code := int(result[1])
 	var raw := (result[3] as PackedByteArray).get_string_from_utf8()
-	var parsed = JSON.parse_string(raw)
+	if transport_result != HTTPRequest.RESULT_SUCCESS:
+		return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "transport_result": transport_result, "error": "Core Engine request failed: transport result %d" % transport_result, "failure_scope": "request", "model_failure": false, "retryable": true}
+	var parsed = null
+	if not raw.strip_edges().is_empty():
+		parsed = JSON.parse_string(raw)
 	if code >= 200 and code < 300:
-		return {"ok": true, "http": code, "data": parsed if parsed is Dictionary else {}, "raw": raw}
+		if not parsed is Dictionary:
+			var detail := "empty response" if raw.strip_edges().is_empty() else "invalid JSON response"
+			return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": "Core Engine returned %s" % detail, "raw": raw.substr(0, 3000), "failure_scope": "request", "model_failure": false, "retryable": true}
+		return {"ok": true, "http": code, "data": parsed, "raw": raw}
 	return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": raw.substr(0, 3000)}
 
 func _candidate_roots() -> Array[String]:
