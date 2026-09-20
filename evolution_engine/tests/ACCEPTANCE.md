@@ -8,7 +8,7 @@ Run:
 
 `python evolution_engine/tests/run_evolution_checks.py --static-only`
 
-This checks that Evolution:
+This runs all Python contract files in `evolution_engine/tests/`, including the acceptance-runner contract. It checks that Evolution:
 - reuses the existing SelfImprover 3–10 tournament;
 - reuses sandbox/master-stop/update-guard/runtime-extension authorities;
 - does not call the single-candidate Core `run_candidate()`;
