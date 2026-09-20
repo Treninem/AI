@@ -8,6 +8,7 @@ var memory
 var knowledge
 var core_pipeline
 var autonomy_settings
+var update_guard
 var sandbox
 
 func bind(
@@ -18,6 +19,7 @@ func bind(
 	knowledge_value,
 	core_pipeline_value = null,
 	autonomy_settings_value = null,
+	update_guard_value = null,
 	sandbox_value = null
 ) -> void:
 	coordinator = coordinator_value
@@ -27,6 +29,7 @@ func bind(
 	knowledge = knowledge_value
 	core_pipeline = core_pipeline_value
 	autonomy_settings = autonomy_settings_value
+	update_guard = update_guard_value
 	sandbox = sandbox_value
 
 func inspect() -> Dictionary:
@@ -37,27 +40,47 @@ func inspect() -> Dictionary:
 	_require_method(missing, "extensions", extensions, "activate_staged")
 	_require_method(missing, "memory", memory, "remember")
 	_require_method(missing, "knowledge", knowledge, "search")
+	_require_method(missing, "autonomy_settings", autonomy_settings, "get_settings")
+	_require_method(missing, "update_guard", update_guard, "status")
+	_require_method(missing, "sandbox", sandbox, "snapshot")
+	_require_method(missing, "sandbox", sandbox, "rollback")
 	if core_pipeline != null:
 		_require_method(missing, "core_pipeline", core_pipeline, "status")
-	if autonomy_settings != null:
-		_require_method(missing, "autonomy_settings", autonomy_settings, "get_settings")
-	if sandbox != null:
-		_require_method(missing, "sandbox", sandbox, "snapshot")
-		_require_method(missing, "sandbox", sandbox, "rollback")
 	return {
 		"ok": missing.is_empty(),
 		"missing": missing,
 		"core_pipeline_bound": core_pipeline != null,
 		"autonomy_settings_bound": autonomy_settings != null,
+		"update_guard_bound": update_guard != null,
 		"sandbox_bound": sandbox != null
 	}
 
 func current_autonomy_settings() -> Dictionary:
-	if autonomy_settings != null and autonomy_settings.has_method("get_settings"):
-		var value = autonomy_settings.get_settings()
-		if value is Dictionary:
-			return value
-	return {"master_enabled": true}
+	if autonomy_settings == null or not autonomy_settings.has_method("get_settings"):
+		return {"master_enabled": false, "unavailable": true}
+	var value = autonomy_settings.get_settings()
+	if value is Dictionary:
+		return value
+	return {"master_enabled": false, "invalid": true}
+
+func update_gate_status() -> Dictionary:
+	if update_guard == null or not update_guard.has_method("status"):
+		return {"ok": false, "paused": true, "reason": "UpdateAutonomyGuard is unavailable"}
+	var value = update_guard.status()
+	if not value is Dictionary:
+		return {"ok": false, "paused": true, "reason": "UpdateAutonomyGuard returned invalid status"}
+	var state: Dictionary = value
+	if not bool(state.get("updater_bound", false)):
+		return {"ok": false, "paused": true, "reason": "UpdateAutonomyGuard is not bound to updater", "status": state}
+	var paused := bool(state.get("paused_hot_improvements", false)) or bool(state.get("paused_core_candidates", false))
+	if paused:
+		return {
+			"ok": false,
+			"paused": true,
+			"reason": str(state.get("reason", "update activity paused autonomy")),
+			"status": state
+		}
+	return {"ok": true, "paused": false, "status": state}
 
 func core_status() -> Dictionary:
 	if core_pipeline == null or not core_pipeline.has_method("status"):

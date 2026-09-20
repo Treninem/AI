@@ -26,12 +26,15 @@ def test_existing_safety_foundation_remains_authoritative():
     sandbox = read("scripts/sandbox_manager.gd")
     extensions = read("scripts/runtime_extension_manager.gd")
     autonomy = read("scripts/autonomy_settings_manager.gd")
+    update_guard = read("scripts/update_autonomy_guard.gd")
     assert "func snapshot(" in sandbox
     assert "func rollback(" in sandbox
     assert "master_stop" in sandbox
     assert "func activate_staged(" in extensions
     assert '"master_enabled": true' in autonomy
     assert "func set_master_enabled" in autonomy
+    assert "func status()" in update_guard
+    assert '"paused_hot_improvements"' in update_guard
 
 
 def test_controller_preserves_stage_then_activate_separation():
@@ -41,6 +44,16 @@ def test_controller_preserves_stage_then_activate_separation():
     assert "activate_verified_winner" in controller
     assert "LEVEL_VERIFIED_ACTIVATION" in controller
     assert "activate_staged(stage_path, sha256)" in controller
+
+
+def test_controller_fails_closed_on_master_stop_and_update_guard():
+    controller = read("evolution_engine/core/evolution_controller.gd")
+    foundation = read("evolution_engine/integration/foundation_adapter.gd")
+    assert "master stop is active or unavailable" in controller
+    assert "update_gate_status" in controller
+    assert "UpdateAutonomyGuard is unavailable" in foundation
+    assert '"master_enabled": false' in foundation
+    assert '"updater_bound"' in foundation
 
 
 def test_controller_does_not_bypass_core_tournament_requirement():

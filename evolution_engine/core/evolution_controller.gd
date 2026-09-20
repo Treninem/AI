@@ -21,6 +21,7 @@ func bind_foundation(
 	knowledge,
 	core_pipeline = null,
 	autonomy_settings = null,
+	update_guard = null,
 	sandbox = null
 ) -> Dictionary:
 	foundation.bind(
@@ -31,6 +32,7 @@ func bind_foundation(
 		knowledge,
 		core_pipeline,
 		autonomy_settings,
+		update_guard,
 		sandbox
 	)
 	tournament.bind(improver)
@@ -47,6 +49,7 @@ func status() -> Dictionary:
 		"running": _cycle_running,
 		"policy": policy.status(),
 		"foundation": foundation_status,
+		"update_gate": foundation.update_gate_status(),
 		"last_report": _last_report.duplicate(true),
 		"core_autonomous_promotion_enabled": false,
 		"core_promotion_reason": "CoreImprovementPipeline is single-candidate; 3..10 Core candidate tournament adapter is required first"
@@ -148,7 +151,11 @@ func _gate(require_proposal: bool, require_experiment: bool, require_activation 
 		return {"ok": false, "stage": "foundation", "error": "Evolution foundation is incomplete", "details": foundation_status}
 	var settings := foundation.current_autonomy_settings()
 	if not policy.master_enabled(settings):
-		return {"ok": false, "stage": "master_stop", "error": "AuroraFox autonomy master stop is active"}
+		return {"ok": false, "stage": "master_stop", "error": "AuroraFox autonomy master stop is active or unavailable"}
+	if require_experiment or require_activation:
+		var update_gate := foundation.update_gate_status()
+		if not bool(update_gate.get("ok", false)):
+			return {"ok": false, "stage": "update_guard", "error": str(update_gate.get("reason", "Update safety gate blocked Evolution")), "details": update_gate}
 	if require_activation and not policy.can_activate_verified_extension():
 		return {"ok": false, "stage": "permission", "error": "Level 4 is required for verified staged activation"}
 	if require_experiment and not policy.can_experiment():
