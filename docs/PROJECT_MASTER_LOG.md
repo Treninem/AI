@@ -2129,3 +2129,17 @@ REMAINING: publish and inspect actual Android 35 `rus+eng` report content/marker
 BLOCKERS: only the packaged emulator can prove the pinned Russian traineddata recognizes the second line.
 NEXT: publish minimal candidate and wait for exact Core Android E2E.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 55%
+
+### ACCEPTED: installed Android Voice/OCR/Knowledge checkpoint
+
+Exact PR #92/head `11371893d654c30b5d900f44e1f405dc85b4fa37`; all 25 GitHub workflows attached to that head are SUCCESS. The authoritative Android Core E2E run `35468876578`, real-normal-path job `105966140759`, built and test-signed the disposable production-runtime APK, installed/started it on Android 35 with airplane mode plus Wi-Fi/data disabled, and completed the report. Evidence artifact `10591862955`, SHA-256 `042b195bb8af1d6fdece669c9cbf153fd349880575e0165fefbbae4e1ba65432`, contains report `git_sha=11371893...` and passed `installed_ocr_bilingual`: `content_excerpt="AURORA 7429\\nАВРОРА 5183"`, engine `tesseract4android`, languages `[rus, eng]`, `offline=true`, `external_ai_required=false`, duration `1666.587ms`. It also records packaged Supertonic TTS WAV (`370588` bytes) and local Whisper STT. Thus this is actual installed/offline Voice + OCR + Knowledge evidence, not static source evidence.
+
+Checkpoint accepted: installed Android Voice/OCR/Knowledge raises release acceptance from `11/20` to `12/20 = 60%`. This does not imply release readiness beyond the defined boundary: remaining are genuine useful licensed corpus/provenance, physical-device and human UI/listening acceptance, server/mail/rollback, final version metadata, final same-SHA RC and production signing/update/release.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: Android installed offline Voice/OCR/Knowledge accepted from exact artifact and all exact-head workflows success.
+REMAINING: 8 release checkpoints, chiefly external/product evidence and final release identity.
+BLOCKERS: no genuine corpus/provenance or physical/human/server-production acceptance yet.
+NEXT: preserve this accepted evidence, then address the next independently demonstrable release boundary without changing version before final identity gate.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
