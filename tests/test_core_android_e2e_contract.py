@@ -20,6 +20,11 @@ def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
     assert "ollama_failures" in script
     assert "fallback_from" in script
     assert "core_knowledge_retrieval" in script
+    assert "installed_knowledge_pack" in script
+    assert "KnowledgePackInstallerScript.new()" in script
+    assert 'int(resumed.get("skipped_shards", 0)) == 1' in script
+    assert 'client.knowledge.search("aurora pack android 7319", 4)' in script
+    assert 'not bool(installed.get("external_ai_required", true))' in script
     assert "installed_voice_tts" in script
     assert "installed_voice_stt" in script
     assert "synthesize_speech(" in script
@@ -76,4 +81,7 @@ def test_android_godot_e2e_workflow_runs_offline_phase_in_one_shell() -> None:
     assert "aurora_core_android" in runner
     assert "AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK" in runner
     assert "AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK" in runner
+    assert "installed_knowledge_pack" in runner
+    assert "knowledge_pack_contract" in runner
+    assert "resumed_skipped_shards" in runner
     assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in runner

@@ -11,7 +11,8 @@ RUNNER = ROOT / 'benchmarks/core/run_android_godot_e2e.sh'
 REQUIRED = [
     'offline_network_guard', 'bundled_core_identity', 'cold_start_first_response',
     'basic_reasoning', 'russian_dialog', 'multi_turn_context',
-    'core_knowledge_retrieval', 'installed_voice_tts', 'installed_voice_stt',
+    'core_knowledge_retrieval', 'installed_knowledge_pack',
+    'installed_voice_tts', 'installed_voice_stt',
     'installed_ocr_bilingual', 'compatibility_switch_isolation',
 ]
 ADB = '''#!/usr/bin/env python3
@@ -60,7 +61,7 @@ elif args[:2] == ['logcat', '-d']:
 
 
 def completed_report():
-    return {
+    report = {
         'status': 'completed', 'passed': True, 'platform': 'Android',
         'environment': {'external_network_probe_blocked': True},
         'core': {
@@ -70,6 +71,13 @@ def completed_report():
         'scenarios': [{'id': name, 'passed': True, 'runtime': 'aurora_core_android'} for name in REQUIRED],
         'performance': {'cold_first_response_ms': 10, 'warm_median_ms': 5, 'suite_wall_ms': 30},
     }
+    pack = next(row for row in report['scenarios'] if row['id'] == 'installed_knowledge_pack')
+    pack.update({
+        'status': 'ready', 'imported_shards': 1, 'resumed_skipped_shards': 1,
+        'resumable': True, 'offline': True, 'external_ai_required': False,
+        'query_match': True,
+    })
+    return report
 
 
 class AndroidE2ERunnerTests(unittest.TestCase):
@@ -125,6 +133,14 @@ class AndroidE2ERunnerTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn('scenario_failure', result.stderr)
         self.assertNotIn('AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK', result.stdout)
+
+    def test_incomplete_knowledge_pack_contract_is_rejected(self):
+        report = completed_report()
+        pack = next(row for row in report['scenarios'] if row['id'] == 'installed_knowledge_pack')
+        pack['query_match'] = False
+        result, _, _ = self.run_runner([report])
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn('knowledge_pack_contract', result.stderr)
 
     def test_process_exit_preserves_partial_report_and_app_diagnostics(self):
         result, saved, _ = self.run_runner([{'status': 'running'}], FAKE_CRASH='1')

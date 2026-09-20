@@ -2317,3 +2317,33 @@ REMAINING: publish and add installed Windows/Android fixture gates; then run the
 BLOCKERS: full 1.98 GiB platform import evidence remains expensive/external; this local smoke proves control flow, not production payload duration/RSS.
 NEXT: publish the adapter/tests/journal, inspect exact CI, then wire a small packaged fixture into existing installed platform gates before scheduling one full production import.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 78. Installed Android Knowledge Pack fixture in the existing normal-path gate
+
+### BEFORE
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; exact PR #92/head is `28437fa5f1cfc4649688b3bbf362f5e4853a8a6d`; public version remains `1.3.0.0`/Android code `100005`, with the accumulated MINOR `1.4.0.0` still version-last. All 25 workflows on this exact head are SUCCESS. The unrelated owner-modified `assets/ui/aurorafox_background_master.png` remains outside this claim and must not be staged or repaired.
+
+CLAIM: extend only the existing installed Android normal-path E2E through `benchmarks/core/android_godot_benchmark.gd`, `benchmarks/core/run_android_godot_e2e.sh`, focused Android E2E contract/runner tests and this journal. Add a small locally generated pack fixture inside the installed offline APK run, verify the same production installer contract, first import, idempotent/resumable second install and direct local Knowledge search. Do not add another workflow, model inference call, network dependency or production payload; do not weaken any existing Core, voice, OCR, identity or offline gate.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact `28437fa` has 25/25 green workflows; the standalone Knowledge Pack installer smoke and contract tests are already accepted.
+REMAINING: implement the installed Android fixture scenario, run focused local checks, publish one atomic candidate and obtain same-SHA Android E2E evidence; full production-pack Windows/Android import remains separate acceptance work.
+BLOCKERS: none for the small installed fixture; physical-device/human/server/signing and full production-payload boundaries remain external.
+NEXT: add the fixture to the existing Android E2E and raise its required scenario set from 11 to 12 without launching duplicate CI.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: installed release APK now gates pack verification, resume and query
+
+The existing Android normal-path suite now creates a one-record pack inside the installed app sandbox and uses `KnowledgePackInstaller` against the real `AIClient.knowledge` store. The twelfth required scenario fails unless manifest/shard integrity succeeds, exactly one shard is imported, a second install skips that committed shard, the local Knowledge index returns the marker, and the result remains explicitly resumable/offline with `external_ai_required=false`. The runner independently checks those fields instead of trusting only the scenario `passed` flag. No extra inference request, workflow, network call, external tool or repository payload was added.
+
+LOCAL EVIDENCE: `tests/test_android_e2e_runner.py` passes 11/11 simulated release-report cases including rejection of an incomplete pack contract; all three `test_core_android_e2e_contract.py` functions pass; shell syntax, Python compilation and `git diff --check` pass. Godot 4.7.1 parses the changed benchmark with `--check-only`. A fresh isolated real-engine `knowledge_pack_installer_smoke.gd` run prints `AURORA_KNOWLEDGE_PACK_INSTALLER_OK verified=true resumable=true offline=true`. These checks prove syntax/control contracts locally; the installed Android result is intentionally still pending exact-head CI.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: installed Android gate extended from 11 to 12 required scenarios with fail-closed pack details; all focused local tests pass.
+REMAINING: publish this atomic candidate and require exact-head Android APK/emulator evidence; full 1.98 GiB production artifact import on Android/Windows is not claimed by the small fixture.
+BLOCKERS: no implementation blocker; hosted Android package/emulator acceptance is pending.
+NEXT: commit/publish only the four implementation/test files plus this journal, then wait for the single automatically triggered Android E2E instead of dispatching duplicate runs.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%

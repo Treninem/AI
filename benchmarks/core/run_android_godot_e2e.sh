@@ -119,7 +119,8 @@ data = json.loads(Path('artifacts/core-benchmark-android-e2e.json').read_text(en
 required = {
     'offline_network_guard', 'bundled_core_identity', 'cold_start_first_response',
     'basic_reasoning', 'russian_dialog', 'multi_turn_context',
-    'core_knowledge_retrieval', 'installed_voice_tts', 'installed_voice_stt',
+    'core_knowledge_retrieval', 'installed_knowledge_pack',
+    'installed_voice_tts', 'installed_voice_stt',
     'installed_ocr_bilingual', 'compatibility_switch_isolation'
 }
 rows = {row.get('id'): row for row in data.get('scenarios', []) if isinstance(row, dict)}
@@ -135,6 +136,16 @@ if int(runtime_after.get('ollama_failures', -1)) != 0: failures.append('ollama_f
 if not required.issubset(rows): failures.append('missing_scenarios')
 if any(not bool(rows[name].get('passed', False)) for name in required if name in rows): failures.append('scenario_failure')
 if any(str(rows[name].get('runtime', '')) not in ('', 'aurora_core_android') for name in required if name in rows): failures.append('unexpected_runtime')
+pack = rows.get('installed_knowledge_pack', {})
+if pack and (
+    pack.get('status') != 'ready'
+    or int(pack.get('imported_shards', 0)) != 1
+    or int(pack.get('resumed_skipped_shards', 0)) != 1
+    or pack.get('resumable') is not True
+    or pack.get('offline') is not True
+    or pack.get('external_ai_required') is not False
+    or pack.get('query_match') is not True
+): failures.append('knowledge_pack_contract')
 perf = data.get('performance', {})
 if float(perf.get('cold_first_response_ms', 0) or 0) <= 0: failures.append('cold_measurement')
 if float(perf.get('warm_median_ms', 0) or 0) <= 0: failures.append('warm_measurement')
