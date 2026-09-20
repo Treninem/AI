@@ -1181,3 +1181,52 @@ BLOCKERS:
 
 NEXT:
 - Reread fresh `main` and this journal, then inspect the exact Core benchmark scenario, AIClient/context builder and the two Android workflow files. Make only evidence-backed minimal fixes, run the affected exact gates, and write the resulting commit SHA/run IDs/results back into this journal before moving to Knowledge/Work/UI/Voice.
+
+### 2026-09-21 — Chat — AuroraFox Evolution Engine foundation + tournament isolation
+
+- Base release HEAD: `4c6fe649af69c9be0eb080863f0e94b80cc3e082`.
+- Branch: `feature/aurorafox-evolution-engine`.
+- Evolution commits in this batch: `70aee425256871be8d4c87bda24db0dda288fb90`, `a9c9b2ecefd8218b44a01b2ba7c2133e6e5602cb`, `32e4d7b4cfeddd901078edd9975fd856a6f1a7bc`, `8f1a7962455bb3b9b26feb0b408f466e53f4f6c4`, `ea3eb4fbfefa41e8b32039be501a6b46b53e1e6c`, `11256effa027d8a239db852a46bf7d3258ed3024`, `7ea8917442ab48d5c1cdf9e90e86c3085d86da77`, `47d7924af155d9b1c41fa877564b96aaa37d2be7`, `ae8c7b65a506840d40ce4297ab089412ec5c82f6`, `7efe0d4b026cacaa23d752fa363c41b6a2bce257`.
+- Сделано:
+  - ранние дублирующие `evolution_state`/`mutation_record`/самодельный cycle удалены;
+  - новый controller стал thin orchestration layer над существующими `AuroraAutonomousCoordinator`, `SelfImprover`, `RuntimeExtensionManager`, `MemoryStore`, `KnowledgeStore`, `CoreImprovementPipeline`, `AutonomySettingsManager`, `UpdateAutonomyGuard`, `SandboxManager`;
+  - уровни 0–4 реализованы как policy gate; master stop и update guard работают fail-closed;
+  - hot-extension mutation path переиспользует существующий `SelfImprover.run_mutation_tournament()`; staging отделён от Level-4 activation;
+  - добавлен независимый Evolution evidence gate: population 3..10, >=3 verified, scoreboard, verified winner, safe generated stage path, SHA-256, final verification;
+  - опыт пишется через существующий `MemoryStore.remember()`; existing Memory/Knowledge retrieval используется для анализа; automatic Core Knowledge promotion не добавлялся;
+  - добавлен изолированный Core tournament adapter поверх существующих private primitives `CoreImprovementPipeline`: один stable baseline, 3–10 distinct candidate SHA, тот же source contract, те же sandbox benchmark/comparative-review gates, минимум три finalists, повторная final verification/review;
+  - Core tournament использует тот же `CoreImprovementPipeline._running` lock, поэтому старый single-candidate path не может выполняться параллельно;
+  - Level 2 Core tournament ничего не кладёт в promotion queue; Level 3 повторно сверяет baseline/content, ещё раз verify/review и только затем вызывает существующий `_store_candidate()` с `promotion=signed_update`; dev checkout и release authority не выдаются;
+  - добавлен isolated acceptance runner и smokes; он сначала включает существующие `self_improver_smoke.gd` и `core_candidate_benchmark_smoke.gd`, затем новые policy/evidence/controller smokes; Windows-only Core tournament smoke проверяет population=5, second verification, no store before handoff и exactly-one winner store.
+- Проверка scope/evidence на HEAD `7efe0d4b026cacaa23d752fa363c41b6a2bce257`:
+  - repository contract audit: **22/22 условий PASS**;
+  - compare `main...feature/aurorafox-evolution-engine`: только `evolution_engine/**` + эта запись в `docs/PROJECT_MASTER_LOG.md`;
+  - запрещённых изменений в `.github/workflows/**`, `update/**`, `build/**`, `project.godot`, `project/version.json`, `export_presets.cfg`, `CHANGELOG.md`: **0**;
+  - `project.godot` не содержит Evolution autoload/wiring;
+  - GitHub Actions runs для feature HEAD: **0**, то есть текущие release tests этой веткой не запускались и не сбивались.
+- Не считается проверенным:
+  - Godot executable отсутствует в доступном рабочем окружении этого чата, поэтому новые GDScript smokes ещё не были реально запущены;
+  - Windows-only Core tournament smoke ещё требует Windows + Godot 4.7.1;
+  - Evolution пока намеренно не подключён к runtime/autoload и не интегрирован в release CI;
+  - Core tournament adapter опирается на существующие internal methods CoreImprovementPipeline; contract tests фиксируют их наличие, но перед merge нужен реальный Windows runtime smoke.
+- Освобождённые production/release файлы: они и не занимались; Evolution claim продолжает владеть только `evolution_engine/**` и своей записью master log.
+
+PROGRESS_COMPLETE: 30%
+PROGRESS_REMAINING: 70%
+
+DONE:
+- Existing self-improvement foundation reused instead of rewritten.
+- Hot-extension controlled tournament orchestration, safety gates, evidence gate, Memory/Knowledge reuse and Core 3–10 tournament/handoff layer implemented in isolated branch.
+- Release/main/workflow/version scope remains untouched; no feature-head workflows were triggered.
+
+REMAINING:
+- Execute Python contracts and all Godot smokes through `evolution_engine/tests/run_evolution_checks.py` on a real checkout with Godot 4.7.1.
+- Execute Windows Core tournament smoke and correct any compile/runtime contract defects.
+- After isolated tests are green, design runtime wiring without changing current release test behavior; then add integration tests before any merge.
+- Only after all above: evaluate controlled merge/integration and final version bump policy.
+
+BLOCKERS:
+- Current chat execution environment has no Godot binary and cannot directly run the Windows/Godot acceptance suite. This is an evidence blocker, not a release blocker because Evolution remains unwired and isolated.
+
+NEXT:
+- Continue development only inside `evolution_engine/**`; first executable acceptance step is full static + Godot runner on Windows/Godot 4.7.1. Do not modify release workflows or `main` to obtain that evidence.
