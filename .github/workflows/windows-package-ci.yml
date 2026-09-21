@@ -225,6 +225,12 @@ jobs:
           Get-Content $stderr -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { throw "Exported AuroraFox.exe exited with $($p.ExitCode)" }
 
+      - name: Smoke exported Knowledge Pack route before installer
+        shell: pwsh
+        run: |
+          $packageDir = (Resolve-Path '.\build\windows').Path
+          .\tests\windows_installed_knowledge_pack_smoke.ps1 -InstallDir $packageDir -ReportDir 'artifacts\windows-offline-knowledge-pack'
+
       - name: Build installer
         shell: pwsh
         run: |
@@ -294,7 +300,6 @@ jobs:
           if ($installedSha -ne 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5') { throw 'Installed AuroraFox Core integrity check failed' }
           $runExit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'current-installed-app' -TimeoutSeconds 90
           if ($runExit -ne 0) { throw "Installed AuroraFox.exe exited with $runExit" }
-          .\tests\windows_installed_knowledge_pack_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-knowledge-pack'
           .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
           .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
