@@ -2487,7 +2487,8 @@ This closes one release checkpoint: installed Windows Knowledge Pack integrity/r
 
 PROGRESS_COMPLETE: 65%
 PROGRESS_REMAINING: 35%
-DONE: 13/20 release checkpoints now have exact evidence; all exact-head automated workflows are green.REMAINING: full production-payload Windows/Android consumption; physical-device and human UI/listening acceptance; deployed server/mail/backup/rollback; final version/versionCode metadata; final same-SHA RC; production signing/update/release.
+DONE: 13/20 release checkpoints now have exact evidence; all exact-head automated workflows are green.
+REMAINING: full production-payload Windows/Android consumption; physical-device and human UI/listening acceptance; deployed server/mail/backup/rollback; final version/versionCode metadata; final same-SHA RC; production signing/update/release.
 BLOCKERS: physical devices, authenticated production host and private release signing authority are external boundaries; full production archive was not yet locally available at this checkpoint.
 NEXT: obtain the exact pinned production archive without regenerating it, verify its size/SHA, then run one bounded full-payload import/query acceptance path rather than another fixture or synthetic stress run.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
@@ -2523,4 +2524,3 @@ REMAINING: obtain exact archive bytes, validate/extract them, execute this runne
 BLOCKERS: exact 429588529-byte saved artifact transfer currently fails with HTTP 502; Godot runtime is absent locally; physical/device/host/signing boundaries remain external.
 NEXT: commit this isolated preparation batch. On the next available transfer attempt, verify SHA-256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`, run the full acceptance once, and fix only a reproduced failure. Do not start CI or raise readiness for source-only preparation.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
-
