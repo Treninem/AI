@@ -2620,3 +2620,33 @@ REMAINING: download/install artifact `10666242273` and execute the two-process f
 BLOCKERS: the installed full-payload evidence requires the owner-local extracted pack and Windows host; no additional CI rerun is required.
 NEXT: owner downloads `https://github.com/Treninem/AI/actions/runs/35651438651/artifacts/10666242273`, verifies the artifact digest, installs the contained Setup into an isolated directory, and runs `tests\windows_installed_production_knowledge_pack.ps1` from exact head `fbcb6be` with the existing extracted pack directory. If this chat stops, the next ordinary chat must start from section 89 and must not rebuild or repeat the source-tree pack acceptance.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
+
+## 90. BEFORE: Windows installed full-pack harness exit-code correction
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; exact release-branch journal head is `bc912de439806412341495efb7bf5cfbfcb864c1`; the packaged product candidate remains `fbcb6be180422f2cd776f2940082c516e3e95f85`. Intended bump remains the accumulated MINOR `1.4.0.0`, version-last.
+
+The owner executed the installed full-pack harness against the exact 5.45 GB artifact and exact production corpus. Artifact SHA-256 matched. The installed first phase genuinely returned `passed=true`, `installed=true`, `offline=true`, `external_ai_required=false`, imported all 60 shards/75,871 records, and matched a production-provenance query. The harness nevertheless threw because Windows PowerShell exposed an empty `Process.ExitCode` after the proof appeared; the code had not unconditionally completed the parameterless `WaitForExit()` synchronization before reading `ExitCode`. This is a harness-only false negative, not a product/import failure.
+
+CLAIM: change only `tests/windows_installed_production_knowledge_pack.ps1`, its focused static contract, and this journal. Synchronize the exited process before reading and caching its exit code, reject a still-running process, retain proof/stdout/stderr diagnostics, and publish without rebuilding the already accepted product artifact or triggering duplicate long CI.
+
+PROGRESS_COMPLETE: 70%
+PROGRESS_REMAINING: 30%
+DONE: exact installed binary completed the full first import/query phase successfully; the false-negative cause is isolated to PowerShell process-exit observation.
+REMAINING: correct and contract-test the harness, publish it, then rerun the two-process acceptance against the same installed artifact/corpus to prove restart skips all 60 shards.
+BLOCKERS: owner Windows host is required for the final two-process report; no product rebuild is required.
+NEXT: add deterministic process-finalization/exit-code capture, run focused contracts, publish the small harness correction, and give the owner one exact rerun command.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
+
+### AFTER: false-negative exit observation corrected
+
+The harness now treats process completion and proof completion as separate requirements. After the bounded wait succeeds or `HasExited` is observed, it unconditionally calls the parameterless `WaitForExit()` to finalize the Windows process handle and drain redirected stdout/stderr, refreshes the process, and caches `ExitCode` before assertions. A missing exit code now produces its own fail-closed diagnostic instead of being compared as if it were a real nonzero result. Product code, installer bytes, production corpus, firewall isolation and the two-process restart gate are unchanged.
+
+LOCAL EVIDENCE: all four focused functions in `tests/test_production_pack_acceptance.py` pass by direct standard-Python invocation; the module compiles; `git diff --check` passes. This Linux workspace has no PowerShell runtime, so the final Windows verdict remains owner-local. The retained owner proof is accepted only for the first installed phase: exact artifact hash matched, all 60 shards/75,871 records imported offline, and the production-provenance query passed. The checkpoint does not advance until the corrected harness also proves a separate restart imports zero and skips all 60 durable shards.
+
+PROGRESS_COMPLETE: 70%
+PROGRESS_REMAINING: 30%
+DONE: reproduced false negative corrected without rebuilding or modifying the product candidate; focused contracts are green; successful installed first-phase evidence retained.
+REMAINING: publish this harness-only correction and run it once on the owner Windows host against the same installed artifact and exact pack; accept only a complete `report.json` with the restart proof.
+BLOCKERS: PowerShell/installed runtime/exact corpus remain owner-local; no automated product workflow needs to be rerun for this harness-only change.
+NEXT: publish the two test files plus this journal with CI skipped, then rerun the corrected harness and return only the final report or the first exact exception.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
