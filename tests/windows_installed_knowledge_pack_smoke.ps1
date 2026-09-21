@@ -19,9 +19,11 @@ $localAppData = Join-Path $profileRoot 'AppData\Local'
 New-Item -ItemType Directory -Force $appData,$localAppData | Out-Null
 $stdoutLog = Join-Path $reportRoot 'knowledge-pack.stdout.log'
 $stderrLog = Join-Path $reportRoot 'knowledge-pack.stderr.log'
+$resultFile = Join-Path $reportRoot 'knowledge-pack.result.json'
 
 $previousAppData = [Environment]::GetEnvironmentVariable('APPDATA', 'Process')
 $previousLocalAppData = [Environment]::GetEnvironmentVariable('LOCALAPPDATA', 'Process')
+$previousSmokeResult = [Environment]::GetEnvironmentVariable('AURORAFOX_KNOWLEDGE_SMOKE_RESULT', 'Process')
 $externalIpv4 = @('0.0.0.0-126.255.255.255','128.0.0.0-255.255.255.255')
 $externalIpv6 = @('::2-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff')
 $rulePrefix = 'AuroraFoxInstalledKnowledge-' + [Guid]::NewGuid().ToString('N')
@@ -31,6 +33,7 @@ $started = [Diagnostics.Stopwatch]::StartNew()
 try {
     [Environment]::SetEnvironmentVariable('APPDATA', $appData, 'Process')
     [Environment]::SetEnvironmentVariable('LOCALAPPDATA', $localAppData, 'Process')
+    [Environment]::SetEnvironmentVariable('AURORAFOX_KNOWLEDGE_SMOKE_RESULT', $resultFile, 'Process')
 
     $programs = @(@($primaryExe,$launcher) | Select-Object -Unique)
     for ($index = 0; $index -lt $programs.Count; $index++) {
@@ -57,25 +60,15 @@ try {
     # SceneTree has persisted its final result. Observe the fail-closed durable
     # proof as well as process exit instead of blocking on the wrapper alone.
     $fixtureComplete = $false
-    $stateFile = $null
-    $manifestFile = $null
-    $shardFile = $null
+    $proof = $null
     for ($attempt = 0; $attempt -lt 480; $attempt++) {
         $process.Refresh()
-        $stateFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'aurorafox-smoke.json' -Recurse -File -ErrorAction SilentlyContinue |
-            Select-Object -First 1
-        $manifestFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'manifest.json' -Recurse -File -ErrorAction SilentlyContinue |
-            Where-Object { $_.FullName -like '*knowledge_pack_installer_smoke*' } |
-            Select-Object -First 1
-        $shardFile = Get-ChildItem -LiteralPath $profileRoot -Filter 'knowledge-00000.jsonl' -Recurse -File -ErrorAction SilentlyContinue |
-            Select-Object -First 1
-        if ($stateFile -and $manifestFile -and $shardFile) {
+        if (Test-Path -LiteralPath $resultFile) {
             try {
-                $probeState = Get-Content -LiteralPath $stateFile.FullName -Raw | ConvertFrom-Json
-                $probeManifest = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
-                if ($probeState.status -eq 'ready' -and
-                    @($probeState.completed_shards).Count -eq 1 -and
-                    [bool]$probeManifest.production) {
+                $proof = Get-Content -LiteralPath $resultFile -Raw | ConvertFrom-Json
+                if ($proof.schema -eq 'aurorafox.installed-knowledge-smoke.v1' -and
+                    [bool]$proof.passed -and [bool]$proof.offline -and
+                    -not [bool]$proof.external_ai_required) {
                     $fixtureComplete = $true
                     break
                 }
@@ -101,12 +94,20 @@ try {
         throw "Installed Knowledge Pack smoke exited with $($process.ExitCode).`nstdout:`n$stdout`nstderr:`n$stderr"
     }
 
-    if (-not $stateFile -or -not $manifestFile -or -not $shardFile) {
-        throw "Installed Knowledge Pack did not persist its fixture/state.`nstdout:`n$stdout`nstderr:`n$stderr"
+    if (-not $proof) {
+        throw "Installed Knowledge Pack did not persist its completion proof.`nstdout:`n$stdout`nstderr:`n$stderr"
     }
-    $state = Get-Content -LiteralPath $stateFile.FullName -Raw | ConvertFrom-Json
-    $manifest = Get-Content -LiteralPath $manifestFile.FullName -Raw | ConvertFrom-Json
-    $shardHash = (Get-FileHash -LiteralPath $shardFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+    $statePath = [string]$proof.state_path
+    $manifestPath = [string]$proof.manifest_path
+    $shardPath = [string]$proof.shard_path
+    foreach ($path in @($statePath,$manifestPath,$shardPath)) {
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+            throw "Installed Knowledge Pack proof references a missing file: $path"
+        }
+    }
+    $state = Get-Content -LiteralPath $statePath -Raw | ConvertFrom-Json
+    $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+    $shardHash = (Get-FileHash -LiteralPath $shardPath -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($state.status -ne 'ready' -or @($state.completed_shards).Count -ne 1) {
         throw 'Installed Knowledge Pack durable resume state is invalid'
     }
@@ -118,6 +119,11 @@ try {
     }
     if ([string](@($state.completed_shards)[0]) -ne $shardHash) {
         throw 'Installed Knowledge Pack durable state does not identify the verified shard'
+    }
+    if ([string]$proof.shard_sha256 -ne $shardHash -or
+        [string]$proof.state_sha256 -ne (Get-FileHash -LiteralPath $statePath -Algorithm SHA256).Hash.ToLowerInvariant() -or
+        [string]$proof.manifest_sha256 -ne (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()) {
+        throw 'Installed Knowledge Pack completion proof hash validation failed'
     }
     $markerPresent = ($stdout + "`n" + $stderr).Contains('AURORA_KNOWLEDGE_PACK_INSTALLER_OK')
     $started.Stop()
@@ -135,8 +141,8 @@ try {
         production_floor_rejection_exercised = [bool]$manifest.production
         marker_present = $markerPresent
         durable_completion_observed = $fixtureComplete
-        state_sha256 = (Get-FileHash -LiteralPath $stateFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
-        manifest_sha256 = (Get-FileHash -LiteralPath $manifestFile.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        state_sha256 = (Get-FileHash -LiteralPath $statePath -Algorithm SHA256).Hash.ToLowerInvariant()
+        manifest_sha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
         shard_sha256 = $shardHash
         wall_ms = $started.ElapsedMilliseconds
     } | ConvertTo-Json -Depth 8 | Set-Content (Join-Path $reportRoot 'report.json') -Encoding UTF8
@@ -146,4 +152,5 @@ try {
     foreach ($rule in $rules) { Remove-NetFirewallRule -DisplayName $rule -ErrorAction SilentlyContinue }
     [Environment]::SetEnvironmentVariable('APPDATA', $previousAppData, 'Process')
     [Environment]::SetEnvironmentVariable('LOCALAPPDATA', $previousLocalAppData, 'Process')
+    [Environment]::SetEnvironmentVariable('AURORAFOX_KNOWLEDGE_SMOKE_RESULT', $previousSmokeResult, 'Process')
 }
