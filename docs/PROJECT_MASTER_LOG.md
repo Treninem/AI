@@ -2524,3 +2524,39 @@ REMAINING: obtain exact archive bytes, validate/extract them, execute this runne
 BLOCKERS: exact 429588529-byte saved artifact transfer currently fails with HTTP 502; Godot runtime is absent locally; physical/device/host/signing boundaries remain external.
 NEXT: commit this isolated preparation batch. On the next available transfer attempt, verify SHA-256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`, run the full acceptance once, and fix only a reproduced failure. Do not start CI or raise readiness for source-only preparation.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
+
+## 85. Production Knowledge acceptance runner: real Godot parse/import correction
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; PR #92/head is `71d2b78656a7a0b5259ae9f328e9b877207934a7`. All 25 workflows attached to code head `8bafb1035582d227d4658604802d0a6a7a78747f` completed successfully, including Knowledge 1 GiB run `35609087432`, Android E2E `35609087226` and Windows Package `35609086929`. The later three candidate commits change only this journal. Windows artifact `10646213723` is 5.45 GB with workflow digest `0b3950649b9b55496aabf3eb74c1e0cff7aec291c6778adf2825e8a2730ddd8a`.
+
+The first real Godot 4.7.1 execution of the new production-pack probe reproduced a parse failure at the statically resolved `installer.install(...)` member. A fresh checkout also has no global class cache before editor import, so its dependent `KnowledgeImportTransaction`, `KnowledgeStore` and `KnowledgeDocumentImporter` types were unavailable. The runner could therefore time out without ever writing its report even though its source-only contract tests passed.
+
+The probe now invokes the already validated installer method through a checked dynamic boundary and rejects a missing method or non-Dictionary result. The Python runner first performs a bounded Godot editor import in the exact isolated environment, retains separate import stdout/stderr evidence, and fails before the acceptance probe if that import fails or times out. This changes only the evidence harness; the production installer/store, corpus and release contract remain unchanged.
+
+LOCAL EVIDENCE: the two focused Python contracts pass by direct invocation; both modules compile; a clean-project Godot 4.7.1 editor import completed in 6.486 seconds; the corrected probe then executed and fail-closed on a deliberately incomplete copy of the real manifest in 0.501 seconds with exit 3 and `Knowledge Pack shard is missing: knowledge-00000.jsonl`. Warm-up `return_code=0`, probe `timed_out=false`, peak RSS `114626560`. This proves the runtime path is executable and rejects truncated input; it is not full-payload acceptance.
+
+Three authenticated Library transfer attempts for exact saved artifact `libfile_a84d4b8533808191950f7527806ab930` progressed as far as hundreds of megabytes but ended with HTTP 502 and removed the temporary transfer. The existing 98,779,136-byte local file remains rejected as truncated. No substitute corpus or partial pass is claimed.
+
+PROGRESS_COMPLETE: 65%
+PROGRESS_REMAINING: 35%
+DONE: all current candidate workflows are green; the full-pack runner now parses and runs under real Godot from a clean project and fails closed on incomplete data.
+REMAINING: obtain all 429,588,529 archive bytes, verify SHA-256, extract safely, run full import/resume/restart/query evidence, then complete platform/device/host/signing/version-last release gates.
+BLOCKERS: Library byte transfer currently terminates with HTTP 502 near the end; physical-device, production-host and signing boundaries remain external.
+NEXT: publish this three-file runner correction without starting duplicate long CI; retry the exact archive only after the transfer path is healthy, then run the bounded full acceptance once.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
+
+## 86. External-owner verification: exact production Knowledge Pack recovered
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Journal-only claim from local HEAD `4a655e6d833da96ec767348285b17f8baa23f1b9`: record owner-supplied verification evidence for the exact release input; no product code, corpus bytes, release version or CI workflow is changed. Intended version bump remains the accumulated MINOR `1.4.0.0`, version-last.
+
+The owner verified the exact archive locally after managed transfer repeatedly returned HTTP 502. The archived filename was restored to the contract name `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`; observed size was `429588529` bytes and SHA-256 was `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`, exactly matching `knowledge_pack/production_pack.json`. A full streaming Zstandard/tar traversal completed: `manifest.json` was first, total members `61`, JSONL members `60`, and the returned manifest states `pack_id=aurorafox-bootstrap-ru`, `pack_version=2026.09.01`, `production=true`, `record_count=75871`, `content_bytes=1924345221`, `file_bytes=1982822407`, Russian Wikipedia 20260901 provenance and CC BY-SA 4.0. The final success marker was subject to Windows console encoding, but the assertions completed without an exception and the complete manifest was emitted.
+
+This closes only archive identity/structural availability. It does not substitute for the already prepared full platform importer acceptance: the exact 60 shards must still be consumed through the bounded import/resume/restart/query runner, then demonstrated through installed Windows and Android boundaries. The archive must remain full and external to Git; do not trim or regenerate it. If a starter subset is later required, create it as a separately hashed optional distribution while retaining this full master artifact unchanged.
+
+PROGRESS_COMPLETE: 65%
+PROGRESS_REMAINING: 35%
+DONE: exact production artifact SHA/size and complete tar member structure independently confirmed on the owner Windows machine.
+REMAINING: full import/resume/restart/query/RSS evidence using the exact artifact; installed Windows/Android consumption; physical device, production host, signing, version-last and same-SHA RC gates.
+BLOCKERS: exact bytes are locally available to the owner but still unavailable to this execution workspace because managed transfer returns HTTP 502; physical-device, host and signing boundaries remain external.
+NEXT: run the prepared full-pack acceptance against the owner-local archive or materialize the same verified archive once transfer is healthy; fix only a reproduced importer/runtime failure and do not dispatch duplicate long CI.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
