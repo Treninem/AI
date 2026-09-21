@@ -1,5 +1,9 @@
 extends Control
 
+const InstalledKnowledgePackSmokeScript = preload("res://scripts/installed_knowledge_pack_smoke.gd")
+const INSTALLED_SMOKE_ENV := "AURORAFOX_INSTALLED_SMOKE_MODE"
+const INSTALLED_KNOWLEDGE_SMOKE_MODE := "knowledge-pack-v1"
+
 signal ai_working_started(state: String)
 signal ai_working_finished
 signal assistant_response_ready(text: String)
@@ -53,7 +57,23 @@ const MUTED := Color("8d98ad")
 const WHITE := Color("f3f6ff")
 const BORDER := Color(0.34, 0.39, 0.55, 0.45)
 
+var installed_smoke_mode := false
+
+func _enter_tree() -> void:
+	installed_smoke_mode = OS.get_environment(INSTALLED_SMOKE_ENV) == INSTALLED_KNOWLEDGE_SMOKE_MODE
+	if not installed_smoke_mode:
+		return
+	# The exported executable must exercise its real entry scene. Detach normal
+	# application children before they enter the tree so the isolated smoke does
+	# not start network-capable services or consume user state.
+	for child in get_children():
+		remove_child(child)
+		child.free()
+
 func _ready() -> void:
+	if installed_smoke_mode:
+		call_deferred("_run_installed_knowledge_pack_smoke")
+		return
 	theme = _build_global_theme()
 	add_child(ai)
 	add_child(memory)
@@ -78,6 +98,13 @@ func _ready() -> void:
 		else "AuroraFox Core запускается — локальный чат останется основным режимом",
 		available
 	)
+
+func _run_installed_knowledge_pack_smoke() -> void:
+	var result_path := OS.get_environment("AURORAFOX_KNOWLEDGE_SMOKE_RESULT")
+	var result: Dictionary = InstalledKnowledgePackSmokeScript.new().run(result_path)
+	if not bool(result.get("ok", false)):
+		push_error(str(result.get("error", "installed knowledge smoke failed")))
+	get_tree().quit(int(result.get("exit_code", 1)))
 
 func _style(fill: Color, border: Color = Color.TRANSPARENT, radius := 16, border_width := 1) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
