@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import os
-import platform
 import shutil
 import subprocess
 import sys
@@ -22,9 +21,6 @@ GODOT_SMOKES = (
     "evolution_engine/tests/evolution_policy_smoke.gd",
     "evolution_engine/tests/evolution_evidence_smoke.gd",
     "evolution_engine/tests/evolution_controller_smoke.gd",
-)
-
-WINDOWS_GODOT_SMOKES = (
     "evolution_engine/tests/core_tournament_windows_smoke.gd",
 )
 
@@ -75,12 +71,6 @@ def main() -> int:
 
     for script in GODOT_SMOKES:
         run([godot, "--headless", "--path", str(ROOT), "--script", script])
-
-    if platform.system() == "Windows":
-        for script in WINDOWS_GODOT_SMOKES:
-            run([godot, "--headless", "--path", str(ROOT), "--script", script])
-    else:
-        print("CORE_TOURNAMENT_WINDOWS_SMOKE_SKIPPED platform=" + platform.system())
 
     print("AURORAFOX_EVOLUTION_ACCEPTANCE_OK")
     return 0

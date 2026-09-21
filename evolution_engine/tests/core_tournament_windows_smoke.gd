@@ -1,5 +1,14 @@
 extends SceneTree
 
+class ContractTestAdapter:
+	extends AuroraEvolutionCoreTournamentAdapter
+
+	func _platform_supported() -> bool:
+		return true
+
+	func _platform_name() -> String:
+		return "contract-test"
+
 class FakeCorePipeline:
 	extends RefCounted
 
@@ -83,13 +92,9 @@ func _init() -> void:
 	call_deferred("_run")
 
 func _run() -> void:
-	if OS.get_name() != "Windows":
-		push_error("core_tournament_windows_smoke.gd must run on Windows")
-		quit(77)
-		return
-
 	var pipeline := FakeCorePipeline.new()
-	var adapter := AuroraEvolutionCoreTournamentAdapter.new()
+	var native_windows := OS.get_name() == "Windows"
+	var adapter = AuroraEvolutionCoreTournamentAdapter.new() if native_windows else ContractTestAdapter.new()
 	adapter.bind(pipeline)
 
 	var contract := adapter.contract_status()
@@ -153,7 +158,7 @@ func _run() -> void:
 		_fail("Signed update activity did not block Core tournament", 17)
 		return
 
-	print("AURORA_CORE_TOURNAMENT_WINDOWS_SMOKE_OK population=5 handoff=1 second_verify=true signed_update=true lock=true")
+	print("AURORA_CORE_TOURNAMENT_SMOKE_OK population=5 handoff=1 second_verify=true signed_update=true lock=true native_windows=%s" % str(native_windows).to_lower())
 	quit(0)
 
 func _fail(message: String, code: int) -> void:

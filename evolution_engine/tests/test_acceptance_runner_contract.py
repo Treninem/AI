@@ -29,12 +29,16 @@ def test_acceptance_runner_imports_clean_checkout_before_godot_smokes():
     assert text.index(import_command) < text.index("for script in GODOT_SMOKES")
 
 
-def test_windows_core_tournament_smoke_is_platform_scoped():
+def test_core_tournament_logic_runs_everywhere_without_weakening_windows_gate():
     text = (ROOT / "evolution_engine/tests/run_evolution_checks.py").read_text(encoding="utf-8")
     smoke = (ROOT / "evolution_engine/tests/core_tournament_windows_smoke.gd").read_text(encoding="utf-8")
-    assert 'platform.system() == "Windows"' in text
+    adapter = (ROOT / "evolution_engine/evaluation/core_tournament_adapter.gd").read_text(encoding="utf-8")
     assert "core_tournament_windows_smoke.gd" in text
-    assert 'OS.get_name() != "Windows"' in smoke
+    assert "class ContractTestAdapter" in smoke
+    assert "var native_windows := OS.get_name() == \"Windows\"" in smoke
+    assert "AuroraEvolutionCoreTournamentAdapter.new() if native_windows else ContractTestAdapter.new()" in smoke
+    assert 'return OS.get_name() == "Windows"' in adapter
+    assert "if not _platform_supported()" in adapter
     assert "store_calls != 0" in smoke
     assert "store_calls != 1" in smoke
     assert "signed_update" in smoke

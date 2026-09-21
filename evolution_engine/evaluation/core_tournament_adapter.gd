@@ -157,8 +157,8 @@ func _preflight(requested_count: int) -> Dictionary:
 	var contract := contract_status()
 	if not bool(contract.get("ok", false)):
 		return {"ok": false, "stage": "core_contract", "error": "CoreImprovementPipeline contract is incomplete", "details": contract}
-	if OS.get_name() != "Windows":
-		return {"ok": false, "stage": "platform", "error": "Core source tournament verification currently requires Windows", "platform": OS.get_name()}
+	if not _platform_supported():
+		return {"ok": false, "stage": "platform", "error": "Core source tournament verification currently requires Windows", "platform": _platform_name()}
 	if requested_count < MIN_MUTATIONS or requested_count > MAX_MUTATIONS:
 		return {"ok": false, "stage": "population", "error": "Core mutation population must be within 3..10"}
 	pipeline._bind_existing()
@@ -167,6 +167,12 @@ func _preflight(requested_count: int) -> Dictionary:
 	if bool(pipeline._signed_update_busy()):
 		return {"ok": false, "stage": "update_guard", "error": "signed product update has priority", "deferred": true}
 	return {"ok": true}
+
+func _platform_supported() -> bool:
+	return OS.get_name() == "Windows"
+
+func _platform_name() -> String:
+	return OS.get_name()
 
 func _run_locked(goal: String, requested_target: String, requested_count: int, lock_token: int) -> Dictionary:
 	var clean_goal := goal.strip_edges()

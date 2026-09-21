@@ -26,6 +26,15 @@ def test_core_tournament_wraps_existing_pipeline_primitives():
         assert method in adapter
 
 
+def test_core_tournament_production_platform_gate_remains_windows_only():
+    adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
+    smoke = read("evolution_engine/tests/core_tournament_windows_smoke.gd")
+    assert 'return OS.get_name() == "Windows"' in adapter
+    assert '"Core source tournament verification currently requires Windows"' in adapter
+    assert "class ContractTestAdapter" in smoke
+    assert "native_windows" in smoke
+
+
 def test_core_tournament_never_uses_single_candidate_entrypoint():
     adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
     assert "run_candidate(" not in adapter
