@@ -153,13 +153,13 @@ func _compact_proposal(value: Variant) -> Dictionary:
 func _compact_learning_signal(value: Variant) -> Dictionary:
 	if not value is Dictionary:
 		return {}
-	var signal: Dictionary = value
+	var learning_data: Dictionary = value
 	return {
-		"parsed_evolution_experiences": int(signal.get("parsed_evolution_experiences", 0)),
-		"successful_strategies": signal.get("successful_strategies", []),
-		"rejected_stages": signal.get("rejected_stages", []),
-		"rollback_count": int(signal.get("rollback_count", 0)),
-		"blocked_count": int(signal.get("blocked_count", 0)),
-		"knowledge_refs": signal.get("knowledge_refs", []),
+		"parsed_evolution_experiences": int(learning_data.get("parsed_evolution_experiences", 0)),
+		"successful_strategies": learning_data.get("successful_strategies", []),
+		"rejected_stages": learning_data.get("rejected_stages", []),
+		"rollback_count": int(learning_data.get("rollback_count", 0)),
+		"blocked_count": int(learning_data.get("blocked_count", 0)),
+		"knowledge_refs": learning_data.get("knowledge_refs", []),
 		"raw_knowledge_instructions_used": false
 	}

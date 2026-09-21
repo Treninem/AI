@@ -44,6 +44,15 @@ def test_controller_preserves_stage_then_activate_separation():
     assert "activate_verified_winner" in controller
     assert "LEVEL_VERIFIED_ACTIVATION" in controller
     assert "activate_staged(stage_path, sha256)" in controller
+    assert "experiments.mark_consumed(source_experiment_id" in controller
+
+
+def test_activation_source_is_single_use_after_success():
+    registry = read("evolution_engine/core/experiment_registry.gd")
+    smoke = read("evolution_engine/tests/evolution_controller_smoke.gd")
+    assert "func mark_consumed(" in registry
+    assert 'record["status"] = "activated"' in registry
+    assert "Consumed tournament winner was activated more than once" in smoke
 
 
 def test_controller_requires_independent_evolution_evidence_gate():
@@ -246,6 +255,9 @@ def test_learning_signal_uses_only_own_evolution_memory_as_generation_metadata()
     assert "learning_signal.derive" in controller
     assert "learning_signal.augment_goal" in controller
     assert 'phase_changed.emit("cycle_proposal"' in controller
+    assert "func augment_goal(goal: String, learning_data: Dictionary)" in learning
+    assert "var signal:" not in read("evolution_engine/learning/experience_bridge.gd")
+    assert '"recovered_cycle_token": recovered_token' not in controller
 
 
 def test_proposal_record_is_metadata_not_second_candidate_generator():

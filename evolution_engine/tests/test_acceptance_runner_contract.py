@@ -22,6 +22,13 @@ def test_acceptance_runner_requires_godot_unless_static_only():
     assert "AURORAFOX_EVOLUTION_ACCEPTANCE_OK" in text
 
 
+def test_acceptance_runner_imports_clean_checkout_before_godot_smokes():
+    text = (ROOT / "evolution_engine/tests/run_evolution_checks.py").read_text(encoding="utf-8")
+    import_command = 'run([godot, "--headless", "--path", str(ROOT), "--import"])'
+    assert import_command in text
+    assert text.index(import_command) < text.index("for script in GODOT_SMOKES")
+
+
 def test_windows_core_tournament_smoke_is_platform_scoped():
     text = (ROOT / "evolution_engine/tests/run_evolution_checks.py").read_text(encoding="utf-8")
     smoke = (ROOT / "evolution_engine/tests/core_tournament_windows_smoke.gd").read_text(encoding="utf-8")

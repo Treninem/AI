@@ -190,8 +190,7 @@ func run_core_experiment(goal: String, requested_target := "", requested_count :
 		"goal": goal,
 		"target": requested_target,
 		"requested": requested_count,
-		"experiment_id": experiment_id,
-		"recovered_cycle_token": recovered_token
+		"experiment_id": experiment_id
 	})
 
 	var result: Dictionary = await core_tournament.run(goal, requested_target, requested_count)
@@ -324,6 +323,9 @@ func activate_verified_winner(goal: String, tournament_result: Dictionary) -> Di
 	var result: Dictionary = activated
 	result["stage"] = "activation"
 	result["evolution_evidence"] = evidence
+	result["source_experiment_id"] = source_experiment_id
+	if bool(result.get("ok", false)):
+		result["source_experiment"] = experiments.mark_consumed(source_experiment_id, "winner_activated")
 	return _finish_action(experiment_id, "hot_extension_activation", goal, result, "winner_activation" if bool(result.get("ok", false)) else "winner_activation_rejected")
 
 func rollback_hot_extension(extension_id: String, reason := "manual safety rollback") -> Dictionary:

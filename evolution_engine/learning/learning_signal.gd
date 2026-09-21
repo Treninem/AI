@@ -97,15 +97,15 @@ func derive(context: Dictionary) -> Dictionary:
 		"raw_knowledge_instructions_used": false
 	}
 
-func augment_goal(goal: String, signal: Dictionary) -> String:
+func augment_goal(goal: String, learning_data: Dictionary) -> String:
 	var lines: Array[String] = []
-	var strategies = signal.get("successful_strategies", [])
+	var strategies = learning_data.get("successful_strategies", [])
 	if strategies is Array and not strategies.is_empty():
 		lines.append("Previously successful bounded strategies: " + _labels(strategies))
-	var rejected = signal.get("rejected_stages", [])
+	var rejected = learning_data.get("rejected_stages", [])
 	if rejected is Array and not rejected.is_empty():
 		lines.append("Previously rejected verification stages to avoid repeating: " + _labels(rejected))
-	if int(signal.get("rollback_count", 0)) > 0:
+	if int(learning_data.get("rollback_count", 0)) > 0:
 		lines.append("Prior Evolution history contains rollback events; prefer minimal regression-first changes.")
 	if lines.is_empty():
 		return goal

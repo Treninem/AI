@@ -75,6 +75,21 @@ func get_record(experiment_id: String) -> Dictionary:
 		return {}
 	return (_records[experiment_id] as Dictionary).duplicate(true)
 
+func mark_consumed(experiment_id: String, phase := "consumed") -> Dictionary:
+	if not _records.has(experiment_id):
+		return {"ok": false, "error": "unknown experiment", "experiment_id": experiment_id}
+	var record: Dictionary = _records[experiment_id]
+	if str(record.get("status", "")) != "accepted":
+		return {"ok": false, "error": "experiment is not an accepted activation source", "experiment_id": experiment_id}
+	var now := int(Time.get_unix_time_from_system())
+	record["status"] = "activated"
+	record["phase"] = phase.substr(0, 120)
+	record["updated_unix"] = now
+	record["consumed_at"] = Time.get_datetime_string_from_system(true)
+	record["consumed_unix"] = now
+	_records[experiment_id] = record
+	return record.duplicate(true)
+
 func recent(limit := 10) -> Array:
 	var out: Array = []
 	var count := clampi(limit, 1, MAX_RECENT)
@@ -87,7 +102,7 @@ func recent(limit := 10) -> Array:
 
 func _compact_result(result: Dictionary) -> Dictionary:
 	var ledger = result.get("candidate_ledger", [])
-	var candidate_count := ledger.size() if ledger is Array else 0
+	var candidate_count: int = ledger.size() if ledger is Array else 0
 	return {
 		"ok": bool(result.get("ok", false)),
 		"stage": str(result.get("stage", "")).substr(0, 120),
@@ -112,7 +127,7 @@ func _compact_metadata(metadata: Dictionary) -> Dictionary:
 
 func _trim() -> void:
 	while _recent.size() > MAX_RECENT:
-		var old_id := _recent.pop_back()
+		var old_id: String = str(_recent.pop_back())
 		_records.erase(old_id)
 
 

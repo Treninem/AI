@@ -207,16 +207,21 @@ func _run() -> void:
 	update_guard.paused = false
 
 	engine.set_permission_level(AuroraEvolutionPolicy.LEVEL_VERIFIED_ACTIVATION)
+	var forged := tournament_result.duplicate(true)
+	forged["sha256"] = "bad"
+	var forged_activation: Dictionary = engine.activate_verified_winner("forged", forged)
+	if bool(forged_activation.get("ok", false)) or str(forged_activation.get("stage", "")) != "activation_lineage" or extensions.activations != 0:
+		_fail("Forged tournament evidence reached activation", 16)
+		return
+
 	var activated: Dictionary = engine.activate_verified_winner("improve safely", tournament_result)
 	if not bool(activated.get("ok", false)) or extensions.activations != 1:
 		_fail("Verified Level 4 activation did not delegate to RuntimeExtensionManager", 15)
 		return
 
-	var forged := tournament_result.duplicate(true)
-	forged["sha256"] = "bad"
-	var forged_activation: Dictionary = engine.activate_verified_winner("forged", forged)
-	if bool(forged_activation.get("ok", false)) or str(forged_activation.get("stage", "")) != "activation_evidence":
-		_fail("Forged tournament evidence reached activation", 16)
+	var replay_activation: Dictionary = engine.activate_verified_winner("replay", tournament_result)
+	if bool(replay_activation.get("ok", false)) or str(replay_activation.get("stage", "")) != "activation_lineage" or extensions.activations != 1:
+		_fail("Consumed tournament winner was activated more than once", 21)
 		return
 
 	settings.master = false
@@ -243,7 +248,7 @@ func _run() -> void:
 		return
 
 	engine.queue_free()
-	print("AURORA_EVOLUTION_CONTROLLER_SMOKE_OK managed=true context=true evidence=true exclusive=true rollback=true master_stop=true update_guard=true staged_activation=true")
+	print("AURORA_EVOLUTION_CONTROLLER_SMOKE_OK managed=true context=true evidence=true exclusive=true rollback=true master_stop=true update_guard=true staged_activation=true replay_blocked=true")
 	quit(0)
 
 func _fail(message: String, code: int) -> void:

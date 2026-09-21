@@ -68,6 +68,11 @@ def main() -> int:
         )
         return 2
 
+    # A clean checkout has no Godot global-class cache yet. Import the project
+    # before executing scripts so class_name dependencies resolve exactly as
+    # they do after opening the project in the editor or in package CI.
+    run([godot, "--headless", "--path", str(ROOT), "--import"])
+
     for script in GODOT_SMOKES:
         run([godot, "--headless", "--path", str(ROOT), "--script", script])
 
