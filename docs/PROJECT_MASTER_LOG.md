@@ -2478,6 +2478,7 @@ REMAINING: publish the atomic candidate and require the automatically triggered 
 BLOCKERS: hosted Windows execution only; unrelated owner-modified UI asset remains untouched and outside this claim.
 NEXT: publish once, do not dispatch duplicates, then inspect the early Knowledge gate and complete package job on the exact SHA. If this chat stops, the next ordinary chat must fetch PR #92/head, read this section and the actual run, and fix only the first failing exact phase rather than repeating timeout/speculation changes.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
 ## 83. ACCEPTED: installed Windows Knowledge Pack and exact-head package train
 
 Exact candidate `82b9f616d595c0850b2cc4ed7acd0ebc6d5b1cf8` completed all 25 automatically attached workflows successfully. Windows Package run `35589431854`, jobs `106300222794` and `106300379048`, passed the exported main-scene Knowledge Pack proof, installer compilation, historical bridges, silent install, ordinary installed launch, offline Voice and local File/Computer services. Windows artifact `10635947773` is 5.45 GB with SHA-256 `86fa579c96a617f6b560453f19c92d34a6648b5593838a74c272c9bd2d165b48`; diagnostics artifact `10636337275` has SHA-256 `40659468e74a1d92d68cdc370e06f9d4b8a4aaa5efa3895fd252349fc7b35317`. Remote candidate tree was independently compared with locally tested commit `245da0b9b25a2d3d813100474c2445f597119e8f` and is byte-identical.
@@ -2489,6 +2490,7 @@ PROGRESS_REMAINING: 35%
 DONE: 13/20 release checkpoints now have exact evidence; all exact-head automated workflows are green.
 REMAINING: full production-payload Windows/Android consumption; physical-device and human UI/listening acceptance; deployed server/mail/backup/rollback; final version/versionCode metadata; final same-SHA RC; production signing/update/release.
 BLOCKERS: physical devices, authenticated production host and private release signing authority are external boundaries; full production archive was not yet locally available at this checkpoint.
+
 NEXT: obtain the exact pinned production archive without regenerating it, verify its size/SHA, then run one bounded full-payload import/query acceptance path rather than another fixture or synthetic stress run.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
 
