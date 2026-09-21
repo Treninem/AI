@@ -14,7 +14,8 @@ def test_production_pack_probe_is_strict_offline_and_provenance_aware() -> None:
     assert 'bool(manifest.get("production", false))' in source
     assert 'RELEASE_CONTRACT_PATH := "res://knowledge_pack/production_pack.json"' in source
     assert 'production release input provenance mismatch' in source
-    assert 'installer.install(StoreScript.new(), pack_dir)' in source
+    assert 'installer.call("install", StoreScript.new(), pack_dir)' in source
+    assert 'installer.has_method("install")' in source
     assert 'int(resumed.get("skipped_shards", -1))' in source
     assert 'metadata.get("pack_id", "")' in source
     assert '"offline": true' in source
@@ -29,6 +30,8 @@ def test_production_pack_runner_has_timeout_isolation_and_rss_evidence() -> None
     assert 'default=21600' in source
     assert 'TemporaryDirectory(prefix="aurorafox-production-pack-")' in source
     assert 'base.base_environment(user_data' in source
+    assert '[str(godot), "--headless", "--editor", "--path", str(ROOT), "--quit"]' in source
+    assert '"warmup": warmup' in source
     assert '"AURORAFOX_OFFLINE": "1"' in source
     assert '"AURORAFOX_DISABLE_NETWORK": "1"' in source
     assert "base.process_rss_bytes(process.pid)" in source
