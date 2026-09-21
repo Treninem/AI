@@ -46,6 +46,27 @@ func _init() -> void:
 	if bool(rejected.get("ok", false)) or not str(rejected.get("error", "")).contains("below 1 GiB"):
 		_fail("production floor was not enforced", 8)
 		return
+	var result_path := OS.get_environment("AURORAFOX_KNOWLEDGE_SMOKE_RESULT").strip_edges()
+	if result_path.is_empty():
+		_fail("AURORAFOX_KNOWLEDGE_SMOKE_RESULT is missing", 9)
+		return
+	var state_path := "user://knowledge/pack-installs/aurorafox-smoke.json"
+	var proof := {
+		"schema": "aurorafox.installed-knowledge-smoke.v1",
+		"passed": true,
+		"offline": true,
+		"external_ai_required": false,
+		"pack_id": "aurorafox-smoke",
+		"state_path": ProjectSettings.globalize_path(state_path),
+		"manifest_path": ProjectSettings.globalize_path(ROOT.path_join("manifest.json")),
+		"shard_path": ProjectSettings.globalize_path(shard_path),
+		"state_sha256": FileAccess.get_sha256(state_path).to_lower(),
+		"manifest_sha256": FileAccess.get_sha256(ROOT.path_join("manifest.json")).to_lower(),
+		"shard_sha256": FileAccess.get_sha256(shard_path).to_lower(),
+	}
+	if not _write_result_atomic(result_path, JSON.stringify(proof)):
+		_fail("cannot persist installed smoke result", 10)
+		return
 	print("AURORA_KNOWLEDGE_PACK_INSTALLER_OK verified=true resumable=true offline=true")
 	quit(0)
 
@@ -56,6 +77,16 @@ func _write(path: String, content: String) -> bool:
 	file.store_string(content)
 	file.close()
 	return true
+
+func _write_result_atomic(path: String, content: String) -> bool:
+	DirAccess.make_dir_recursive_absolute(path.get_base_dir())
+	var temporary := path + ".tmp"
+	if not _write(temporary, content):
+		return false
+	if FileAccess.file_exists(path) and DirAccess.remove_absolute(path) != OK:
+		DirAccess.remove_absolute(temporary)
+		return false
+	return DirAccess.rename_absolute(temporary, path) == OK
 
 func _fail(message: String, code: int) -> void:
 	push_error(message)
