@@ -150,10 +150,19 @@ class WindowsVoicePackageTests(unittest.TestCase):
             self.assertNotIn('-SkipVoiceSetup', text)
             self.assertIn('windows_installed_voice_smoke.ps1 -InstallDir $installDir', text)
             self.assertIn('windows_installed_local_services_smoke.ps1 -InstallDir $installDir', text)
-            self.assertIn('windows_installed_knowledge_pack_smoke.ps1 -InstallDir $installDir', text)
+            knowledge_root = '$packageDir' if name == 'windows-package-ci.yml' else '$installDir'
+            self.assertIn(
+                f'windows_installed_knowledge_pack_smoke.ps1 -InstallDir {knowledge_root}',
+                text,
+            )
             self.assertIn('artifacts/windows-offline-services/**', text)
             self.assertIn('artifacts/windows-offline-knowledge-pack/**', text)
             self.assertIn('7z.exe', text)
+        package_workflow = (ROOT / '.github/workflows/windows-package-ci.yml').read_text(encoding='utf-8')
+        self.assertLess(
+            package_workflow.index('Smoke exported Knowledge Pack route before installer'),
+            package_workflow.index('Build installer'),
+        )
         builder = (ROOT / 'voice/build_backend.ps1').read_text(encoding="utf-8")
         self.assertNotIn('$python -m pip', builder)
         self.assertIn('$uv pip install --python $python', builder)
@@ -219,7 +228,10 @@ class WindowsVoicePackageTests(unittest.TestCase):
     def test_installed_windows_knowledge_pack_runs_embedded_offline_smoke(self):
         path = ROOT / 'tests/windows_installed_knowledge_pack_smoke.ps1'
         text = path.read_text(encoding='utf-8')
-        self.assertIn("'--headless','--script','res://tests/knowledge_pack_installer_smoke.gd'", text)
+        self.assertIn("'AURORAFOX_INSTALLED_SMOKE_MODE'", text)
+        self.assertIn("'knowledge-pack-v1'", text)
+        self.assertIn("-ArgumentList @('--headless')", text)
+        self.assertNotIn("'--script'", text)
         self.assertIn('$fixtureComplete = $false', text)
         self.assertIn("'AURORAFOX_KNOWLEDGE_SMOKE_RESULT'", text)
         self.assertRegex(
@@ -235,11 +247,13 @@ class WindowsVoicePackageTests(unittest.TestCase):
         self.assertIn("$statePath = [string]$proof.state_path", text)
         gdscript = (ROOT / 'tests/knowledge_pack_installer_smoke.gd').read_text(encoding='utf-8')
         self.assertIn('OS.get_environment("AURORAFOX_KNOWLEDGE_SMOKE_RESULT")', gdscript)
-        self.assertIn('"schema": "aurorafox.installed-knowledge-smoke.v1"', gdscript)
-        self.assertRegex(
-            gdscript,
-            r'_write_(?:result|json)_atomic\(result_path,\s*(?:JSON\.stringify\(proof\)|proof)\)',
-        )
+        self.assertIn('InstalledSmokeScript.new().run(result_path)', gdscript)
+        runner = (ROOT / 'scripts/installed_knowledge_pack_smoke.gd').read_text(encoding='utf-8')
+        self.assertIn('"schema": "aurorafox.installed-knowledge-smoke.v1"', runner)
+        self.assertIn('_write_json_atomic(result_path, proof)', runner)
+        main = (ROOT / 'scripts/main.gd').read_text(encoding='utf-8')
+        self.assertIn('INSTALLED_KNOWLEDGE_SMOKE_MODE := "knowledge-pack-v1"', main)
+        self.assertIn('InstalledKnowledgePackSmokeScript.new().run(result_path)', main)
         self.assertIn("$state.status -ne 'ready'", text)
         self.assertIn('@($state.completed_shards).Count -ne 1', text)
         self.assertIn("$manifest.schema -ne 'aurorafox.knowledge-pack.v1'", text)

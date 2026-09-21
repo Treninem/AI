@@ -23,6 +23,7 @@ $resultFile = Join-Path $reportRoot 'knowledge-pack.result.json'
 $previousAppData = [Environment]::GetEnvironmentVariable('APPDATA', 'Process')
 $previousLocalAppData = [Environment]::GetEnvironmentVariable('LOCALAPPDATA', 'Process')
 $previousSmokeResult = [Environment]::GetEnvironmentVariable('AURORAFOX_KNOWLEDGE_SMOKE_RESULT', 'Process')
+$previousSmokeMode = [Environment]::GetEnvironmentVariable('AURORAFOX_INSTALLED_SMOKE_MODE', 'Process')
 $externalIpv4 = @('0.0.0.0-126.255.255.255','128.0.0.0-255.255.255.255')
 $externalIpv6 = @('::2-ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff')
 $rulePrefix = 'AuroraFoxInstalledKnowledge-' + [Guid]::NewGuid().ToString('N')
@@ -33,6 +34,7 @@ try {
     [Environment]::SetEnvironmentVariable('APPDATA', $appData, 'Process')
     [Environment]::SetEnvironmentVariable('LOCALAPPDATA', $localAppData, 'Process')
     [Environment]::SetEnvironmentVariable('AURORAFOX_KNOWLEDGE_SMOKE_RESULT', $resultFile, 'Process')
+    [Environment]::SetEnvironmentVariable('AURORAFOX_INSTALLED_SMOKE_MODE', 'knowledge-pack-v1', 'Process')
 
     $programs = @(@($primaryExe,$launcher) | Select-Object -Unique)
     for ($index = 0; $index -lt $programs.Count; $index++) {
@@ -41,7 +43,9 @@ try {
         $rules += $rule
     }
 
-    $process = Start-Process -FilePath $launcher -WorkingDirectory $installRoot -ArgumentList @('--headless','--script','res://tests/knowledge_pack_installer_smoke.gd') -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
+    # Exported release executables own their main scene and do not reliably
+    # honor --script. Exercise the installed product's guarded main-scene route.
+    $process = Start-Process -FilePath $launcher -WorkingDirectory $installRoot -ArgumentList @('--headless') -RedirectStandardOutput $stdoutLog -RedirectStandardError $stderrLog -PassThru
     $fixtureComplete = $false
     $proof = $null
     $lastJsonError = ''
@@ -103,7 +107,7 @@ try {
     @{
         passed = $true; installed = $true; offline = $true; external_ai_required = $false
         outbound_firewall_block = $true; launcher = [IO.Path]::GetFileName($launcher)
-        script = 'res://tests/knowledge_pack_installer_smoke.gd'; pack_id = [string]$manifest.pack_id
+        entrypoint = 'main-scene:knowledge-pack-v1'; pack_id = [string]$manifest.pack_id
         status = [string]$state.status; completed_shards = @($state.completed_shards).Count
         production_floor_rejection_exercised = [bool]$manifest.production; marker_present = $markerPresent
         durable_completion_observed = $fixtureComplete
@@ -118,4 +122,5 @@ try {
     [Environment]::SetEnvironmentVariable('APPDATA', $previousAppData, 'Process')
     [Environment]::SetEnvironmentVariable('LOCALAPPDATA', $previousLocalAppData, 'Process')
     [Environment]::SetEnvironmentVariable('AURORAFOX_KNOWLEDGE_SMOKE_RESULT', $previousSmokeResult, 'Process')
+    [Environment]::SetEnvironmentVariable('AURORAFOX_INSTALLED_SMOKE_MODE', $previousSmokeMode, 'Process')
 }

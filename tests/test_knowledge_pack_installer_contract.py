@@ -22,7 +22,7 @@ def test_installer_is_bounded_verified_resumable_and_offline() -> None:
 
 
 def test_smoke_requires_verification_resume_and_production_floor() -> None:
-    smoke = (ROOT / "tests/knowledge_pack_installer_smoke.gd").read_text(encoding="utf-8")
+    smoke = (ROOT / "scripts/installed_knowledge_pack_smoke.gd").read_text(encoding="utf-8")
     assert "installer.inspect(ROOT)" in smoke
     assert "installer.install(StoreScript.new(), ROOT)" in smoke
     assert 'int(resumed.get("skipped_shards", 0)) != 1' in smoke
