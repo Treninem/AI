@@ -1,8 +1,10 @@
 extends Control
 
 const InstalledKnowledgePackSmokeScript = preload("res://scripts/installed_knowledge_pack_smoke.gd")
+const InstalledProductionKnowledgePackSmokeScript = preload("res://scripts/installed_production_knowledge_pack_smoke.gd")
 const INSTALLED_SMOKE_ENV := "AURORAFOX_INSTALLED_SMOKE_MODE"
 const INSTALLED_KNOWLEDGE_SMOKE_MODE := "knowledge-pack-v1"
+const INSTALLED_PRODUCTION_KNOWLEDGE_SMOKE_MODE := "knowledge-pack-production-v1"
 
 signal ai_working_started(state: String)
 signal ai_working_finished
@@ -60,7 +62,10 @@ const BORDER := Color(0.34, 0.39, 0.55, 0.45)
 var installed_smoke_mode := false
 
 func _enter_tree() -> void:
-	installed_smoke_mode = OS.get_environment(INSTALLED_SMOKE_ENV) == INSTALLED_KNOWLEDGE_SMOKE_MODE
+	installed_smoke_mode = OS.get_environment(INSTALLED_SMOKE_ENV) in [
+		INSTALLED_KNOWLEDGE_SMOKE_MODE,
+		INSTALLED_PRODUCTION_KNOWLEDGE_SMOKE_MODE,
+	]
 	if not installed_smoke_mode:
 		return
 	# The exported executable must exercise its real entry scene. Detach normal
@@ -101,7 +106,13 @@ func _ready() -> void:
 
 func _run_installed_knowledge_pack_smoke() -> void:
 	var result_path := OS.get_environment("AURORAFOX_KNOWLEDGE_SMOKE_RESULT")
-	var result: Dictionary = InstalledKnowledgePackSmokeScript.new().run(result_path)
+	var mode := OS.get_environment(INSTALLED_SMOKE_ENV)
+	var result: Dictionary
+	if mode == INSTALLED_PRODUCTION_KNOWLEDGE_SMOKE_MODE:
+		var pack_dir := OS.get_environment("AURORAFOX_PRODUCTION_PACK_DIR")
+		result = InstalledProductionKnowledgePackSmokeScript.new().run(result_path, pack_dir)
+	else:
+		result = InstalledKnowledgePackSmokeScript.new().run(result_path)
 	if not bool(result.get("ok", false)):
 		push_error(str(result.get("error", "installed knowledge smoke failed")))
 	get_tree().quit(int(result.get("exit_code", 1)))
