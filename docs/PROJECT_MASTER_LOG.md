@@ -2487,10 +2487,8 @@ This closes one release checkpoint: installed Windows Knowledge Pack integrity/r
 
 PROGRESS_COMPLETE: 65%
 PROGRESS_REMAINING: 35%
-DONE: 13/20 release checkpoints now have exact evidence; all exact-head automated workflows are green.
-REMAINING: full production-payload Windows/Android consumption; physical-device and human UI/listening acceptance; deployed server/mail/backup/rollback; final version/versionCode metadata; final same-SHA RC; production signing/update/release.
+DONE: 13/20 release checkpoints now have exact evidence; all exact-head automated workflows are green.REMAINING: full production-payload Windows/Android consumption; physical-device and human UI/listening acceptance; deployed server/mail/backup/rollback; final version/versionCode metadata; final same-SHA RC; production signing/update/release.
 BLOCKERS: physical devices, authenticated production host and private release signing authority are external boundaries; full production archive was not yet locally available at this checkpoint.
-
 NEXT: obtain the exact pinned production archive without regenerating it, verify its size/SHA, then run one bounded full-payload import/query acceptance path rather than another fixture or synthetic stress run.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
 
