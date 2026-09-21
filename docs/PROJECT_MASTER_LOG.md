@@ -2560,3 +2560,19 @@ REMAINING: full import/resume/restart/query/RSS evidence using the exact artifac
 BLOCKERS: exact bytes are locally available to the owner but still unavailable to this execution workspace because managed transfer returns HTTP 502; physical-device, host and signing boundaries remain external.
 NEXT: run the prepared full-pack acceptance against the owner-local archive or materialize the same verified archive once transfer is healthy; fix only a reproduced importer/runtime failure and do not dispatch duplicate long CI.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 65%
+
+## 87. ACCEPTED: exact production Knowledge Pack full offline import/resume/query
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. The owner executed the bounded production acceptance runner from exact published head `5dee3404de6e48101180734e6e2a084d7e4ae760` in an isolated Windows worktree and user-data directory with Godot 4.7.1. The input was the exact full archive `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`: `429588529` bytes, SHA-256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`. Safe streaming extraction completed before the product acceptance run.
+
+The generated `aurorafox.production-knowledge-acceptance.v1` report has `passed=true`, `offline=true`, `external_ai_required=false`, `record_count=75871`, `shards=60`, `content_bytes=1924345221`, and no stderr. Manifest inspection and the release contract passed with `pack_id=aurorafox-bootstrap-ru`, `pack_version=2026.09.01`, manifest SHA-256 `bc395f76c0797e9b3751f11fcb7a52b9999ce5c5857ece1f433778bf1fd75cbd` and extracted-pack SHA-256 `9446aea1a724ca3158a99246ff8af1827cbbe9fad9b5b0476aca38bbc7d30195`. The first install imported all 60 shards and reached `status=ready`; the resume pass imported zero, skipped all 60 durable shards and again reached `status=ready`. After restart, a real lookup returned one row with matching production-pack provenance. Godot warm-up returned zero without timeout; the acceptance process returned zero without timeout in approximately 594.5 seconds. Reported static memory peak was `79960087` bytes.
+
+This is genuine full-payload source-tree Windows/Godot acceptance, not the synthetic 1 GiB benchmark and not a fixture. It closes the production corpus import/resume/restart/query checkpoint. It does not prove that the same full corpus was consumed through the installed Windows package or an Android device, and it does not replace physical-device, human UI/listening, deployment, signing, update or same-SHA release-candidate gates. The full master archive remains external to Git and must not be trimmed or regenerated.
+
+PROGRESS_COMPLETE: 70%
+PROGRESS_REMAINING: 30%
+DONE: 14/20 release checkpoints now have exact evidence; the full Russian production corpus is identity-verified and has passed a complete offline import/resume/restart/query run.
+REMAINING: full-payload installed Windows/Android consumption; physical-device and human UI/listening acceptance; deployed server/mail/backup/rollback; final version/versionCode metadata; production signing/update/release and final same-SHA RC.
+BLOCKERS: installed/device acceptance, authenticated production host and private signing authority remain external boundaries; do not weaken these gates or rerun the already accepted source-tree corpus path.
+NEXT: retain this report and archive unchanged, then exercise the full corpus through the installed Windows boundary and Android/device boundary. If this chat stops, the next ordinary chat must read section 87 first, accept this exact source-tree result, and continue from the remaining platform boundary instead of repeating extraction or the ten-minute import.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
