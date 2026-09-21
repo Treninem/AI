@@ -222,7 +222,11 @@ class WindowsVoicePackageTests(unittest.TestCase):
         self.assertIn("'--headless','--script','res://tests/knowledge_pack_installer_smoke.gd'", text)
         self.assertIn('$fixtureComplete = $false', text)
         self.assertIn("'AURORAFOX_KNOWLEDGE_SMOKE_RESULT'", text)
-        self.assertIn("$proof.schema -eq 'aurorafox.installed-knowledge-smoke.v1'", text)
+        self.assertRegex(
+            text,
+            r"\$(?:candidate|proof)\.schema\s+-eq\s+'aurorafox\.installed-knowledge-smoke\.v1'",
+        )
+        self.assertIn('$proof = $candidate', text)
         self.assertIn("$proof.shard_sha256 -ne $shardHash", text)
         self.assertIn('durable_completion_observed = $fixtureComplete', text)
         self.assertIn('stdout:', text)
@@ -232,13 +236,19 @@ class WindowsVoicePackageTests(unittest.TestCase):
         gdscript = (ROOT / 'tests/knowledge_pack_installer_smoke.gd').read_text(encoding='utf-8')
         self.assertIn('OS.get_environment("AURORAFOX_KNOWLEDGE_SMOKE_RESULT")', gdscript)
         self.assertIn('"schema": "aurorafox.installed-knowledge-smoke.v1"', gdscript)
-        self.assertIn('_write_result_atomic(result_path, JSON.stringify(proof))', gdscript)
+        self.assertRegex(
+            gdscript,
+            r'_write_(?:result|json)_atomic\(result_path,\s*(?:JSON\.stringify\(proof\)|proof)\)',
+        )
         self.assertIn("$state.status -ne 'ready'", text)
         self.assertIn('@($state.completed_shards).Count -ne 1', text)
         self.assertIn("$manifest.schema -ne 'aurorafox.knowledge-pack.v1'", text)
         self.assertIn("$manifest.pack_id -ne 'aurorafox-smoke'", text)
         self.assertIn('-not [bool]$manifest.production', text)
-        self.assertIn('@($state.completed_shards)[0]) -ne $shardHash', text)
+        self.assertRegex(
+            text,
+            r'\[string\]\s*\(?@\(\$state\.completed_shards\)\[0\]\)?\s+-ne\s+\$shardHash',
+        )
         self.assertIn('AURORA_WINDOWS_INSTALLED_OFFLINE_KNOWLEDGE_PACK_OK', text)
         self.assertIn('outbound_firewall_block = $true', text)
         self.assertIn('external_ai_required = $false', text)
