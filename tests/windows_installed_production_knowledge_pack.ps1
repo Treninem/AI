@@ -90,7 +90,15 @@ function Invoke-InstalledProductionPhase {
             throw "Installed production phase $Name wrote a result but did not exit"
         }
     }
-    $script:activeProcess.Refresh()
+    $exitCode = $null
+    if ($script:activeProcess.HasExited) {
+        # Windows PowerShell can leave ExitCode unset after the timed overload or
+        # a HasExited poll. The parameterless wait finalizes the process handle
+        # and drains redirected output before ExitCode is read.
+        $script:activeProcess.WaitForExit()
+        $script:activeProcess.Refresh()
+        $exitCode = $script:activeProcess.ExitCode
+    }
     $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
     $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
     if (-not $proof) {
@@ -99,8 +107,11 @@ function Invoke-InstalledProductionPhase {
         }
         throw "Installed production phase $Name produced no proof within $TimeoutSeconds seconds.`nProcessId: $($script:activeProcess.Id)`nProcessExited: $($script:activeProcess.HasExited)`nLast JSON error: $lastJsonError`nstdout:`n$stdout`nstderr:`n$stderr"
     }
-    if (-not [bool]$proof.passed -or $script:activeProcess.ExitCode -ne 0) {
-        throw "Installed production phase $Name failed with exit $($script:activeProcess.ExitCode).`nProof:`n$($proof | ConvertTo-Json -Depth 12)`nstdout:`n$stdout`nstderr:`n$stderr"
+    if ($null -eq $exitCode) {
+        throw "Installed production phase $Name produced proof but its process exit code is unavailable.`nProcessId: $($script:activeProcess.Id)`nProcessExited: $($script:activeProcess.HasExited)`nProof:`n$($proof | ConvertTo-Json -Depth 12)`nstdout:`n$stdout`nstderr:`n$stderr"
+    }
+    if (-not [bool]$proof.passed -or $exitCode -ne 0) {
+        throw "Installed production phase $Name failed with exit $exitCode.`nProof:`n$($proof | ConvertTo-Json -Depth 12)`nstdout:`n$stdout`nstderr:`n$stderr"
     }
     return $proof
 }
