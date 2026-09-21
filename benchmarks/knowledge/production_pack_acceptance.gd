@@ -45,12 +45,12 @@ func _run() -> void:
 		_finish(report, report_path, started, str(query_probe.get("error", "query probe failed")), 5)
 		return
 
-	var installed: Dictionary = installer.install(StoreScript.new(), pack_dir)
+	var installed := _install_pack(installer, pack_dir)
 	report["install"] = installed
 	if not bool(installed.get("ok", false)) or str(installed.get("status", "")) != "ready":
 		_finish(report, report_path, started, "production pack installation failed", 6)
 		return
-	var resumed: Dictionary = installer.install(StoreScript.new(), pack_dir)
+	var resumed := _install_pack(installer, pack_dir)
 	report["resume"] = resumed
 	if not bool(resumed.get("ok", false)) or int(resumed.get("skipped_shards", -1)) != int(inspected.get("shard_count", 0)):
 		_finish(report, report_path, started, "production pack resume failed", 7)
@@ -91,6 +91,15 @@ func _run() -> void:
 	report["content_bytes"] = inspected.get("content_bytes", 0)
 	report["record_count"] = inspected.get("record_count", 0)
 	_finish(report, report_path, started, "", 0)
+
+
+func _install_pack(installer: Object, pack_dir: String) -> Dictionary:
+	if installer == null or not installer.has_method("install"):
+		return {"ok": false, "error": "Knowledge Pack installer method is unavailable"}
+	var value = installer.call("install", StoreScript.new(), pack_dir)
+	if not value is Dictionary:
+		return {"ok": false, "error": "Knowledge Pack installer returned an invalid result"}
+	return value
 
 
 func _query_probe(inspected: Dictionary) -> Dictionary:
