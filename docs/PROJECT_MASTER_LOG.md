@@ -2606,3 +2606,17 @@ REMAINING: publish the code, produce one candidate Windows artifact, run `tests\
 BLOCKERS: this workspace has neither Godot/PowerShell nor the exact corpus/installed Windows binary; owner Windows execution is required for the checkpoint.
 NEXT: review and commit this five-file implementation plus journal. After publication, allow exactly one candidate package build and use that artifact for the owner-local installed full-payload run; do not repeat the accepted source-tree import.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
+
+## 89. Exact-head automation accepted; owner installed full-pack run is next
+
+Exact published candidate `fbcb6be180422f2cd776f2940082c516e3e95f85` completed all 25 PR #92 workflows successfully: the authenticated Actions page reports 25 successful, zero failed and zero in-progress runs. Windows Package run `35651438651` (`AuroraFox Windows Package CI #903`) is `Success`; both `process-contract` and `package-windows` passed in 1h03m45s. The only annotations are GitHub's Node.js 20 deprecation warnings for standard actions, not product failures.
+
+The resulting `AuroraFox-Windows` artifact is ID `10666242273`, size 5.45 GB, workflow digest SHA-256 `bc88907a24a0a9dda80446a5171b8352135f057d8c9d6050b78828ac469c514d`. Diagnostics artifact `Windows-installer-diagnostics-fbcb6be180422f2cd776f2940082c516e3e95f85` is ID `10666282475`, size 1.57 MB, digest SHA-256 `ebc8798ed0e720e215fe2a320cc5a216e6fecf901183aad42e60c2dd7f2ab7b7`. This proves that the new guarded mode parses, exports and packages without regressing the accepted automated train. It does not replace the owner-local full-payload installed run because the 429 MB production archive intentionally remains outside CI.
+
+PROGRESS_COMPLETE: 70%
+PROGRESS_REMAINING: 30%
+DONE: exact-head code publication verified byte-for-byte; 25/25 automated workflows including Windows package and Android gates green; candidate Windows artifact retained with digest.
+REMAINING: download/install artifact `10666242273` and execute the two-process full production Knowledge harness against the already extracted exact pack; then Android full-payload/device, production host, signing, version-last and same-SHA RC gates.
+BLOCKERS: the installed full-payload evidence requires the owner-local extracted pack and Windows host; no additional CI rerun is required.
+NEXT: owner downloads `https://github.com/Treninem/AI/actions/runs/35651438651/artifacts/10666242273`, verifies the artifact digest, installs the contained Setup into an isolated directory, and runs `tests\windows_installed_production_knowledge_pack.ps1` from exact head `fbcb6be` with the existing extracted pack directory. If this chat stops, the next ordinary chat must start from section 89 and must not rebuild or repeat the source-tree pack acceptance.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
