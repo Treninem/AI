@@ -2446,3 +2446,35 @@ REMAINING: publish and require the exact Windows Package run to pass; full produ
 BLOCKERS: exact installed execution is Windows-hosted only.
 NEXT: publish the three-file correction once and wait for automatically attached CI.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+## 82. Installed Windows Knowledge Pack: real exported entrypoint
+
+### BEFORE
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact candidate head `61f3bc89557a2534620d01be78a544eeb13b2893` failed Windows Package run `35567400695`, job `106231963299`, after packaging, installer, bridge and normal installed launch had all passed. The installed Knowledge smoke timed out after 120 seconds with no completion result. Its log contained only the normal application startup plus unrelated persisted-JSON parse warnings. The previous polling/atomic-result corrections therefore fixed diagnostics and publication races but did not fix execution: an exported release executable owns its main scene and did not execute the supplied `--script` smoke entrypoint.
+
+CLAIM: `scripts/main.gd`, a reusable installed Knowledge smoke runner under `scripts/`, the existing GDScript/PowerShell wrappers, focused contracts, `.github/workflows/windows-package-ci.yml`, and this journal. Intended bump: BUILD inside the accumulated unreleased MINOR; canonical version remains version-last. Replace the unsupported exported `--script` route with an exact, environment-guarded main-scene mode; keep isolated profile, firewall, integrity, resume and production-floor assertions. Add the same exported-executable gate before the expensive installer, then avoid repeating that identical embedded-PCK check after installation in package CI. Signed Release keeps the installed check.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact repeated failure and false assumption identified from the hosted log.
+REMAINING: implement, prove the packed main-scene route locally, publish once and require exact Windows evidence.
+BLOCKERS: Windows PowerShell/firewall execution remains hosted-runner-only.
+NEXT: validate the actual exported resource pack rather than another source-tree-only wrapper.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
+
+### AFTER: exported main scene produces the durable offline proof
+
+The product main scene now recognizes only the exact `AURORAFOX_INSTALLED_SMOKE_MODE=knowledge-pack-v1` value. Before ordinary child nodes enter, it detaches them so services and user state do not initialize, then calls the same reusable `InstalledKnowledgePackSmoke` implementation used by the standalone wrapper. The Windows harness launches only `--headless`, restores every changed environment variable in `finally`, and retains firewall isolation, atomic completion proof, hashes, durable state, resume/idempotence and production-floor rejection checks.
+
+Windows Package now runs this proof directly against `build/windows/AuroraFox.exe` before the 30+ minute Inno Setup phase. Because the Knowledge implementation is compiled inside the executable/PCK and installation cannot change it, the identical package-CI invocation was removed from the later installed phase; installed file inventory, ordinary launch, Voice and local-services checks remain. The signed Release workflow still executes the corrected Knowledge proof from the installed directory.
+
+LOCAL EVIDENCE: 43 focused Python tests plus 13 subtests pass; Python compilation and `git diff --check` pass. Godot 4.7.1 successfully imports the project, runs the standalone wrapper, runs the unchanged normal main scene, and runs the new guarded main-scene route with an isolated profile. Most importantly, a Windows Desktop export PCK was created and launched through its packed main scene (not `--script`): exit `0`, marker `AURORA_KNOWLEDGE_PACK_INSTALLER_OK`, schema `aurorafox.installed-knowledge-smoke.v1`, `passed=true`, `offline=true`, `external_ai_required=false`, and all three persisted file SHA-256 values matched. PowerShell is absent locally, so its exact parser/firewall boundary is not claimed before hosted CI.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: real exported main-scene entrypoint and pre-installer fail-fast gate are locally proven; duplicate late package-CI Knowledge invocation removed.
+REMAINING: publish the atomic candidate and require the automatically triggered exact-head Windows Package job; no readiness credit until it passes.
+BLOCKERS: hosted Windows execution only; unrelated owner-modified UI asset remains untouched and outside this claim.
+NEXT: publish once, do not dispatch duplicates, then inspect the early Knowledge gate and complete package job on the exact SHA. If this chat stops, the next ordinary chat must fetch PR #92/head, read this section and the actual run, and fix only the first failing exact phase rather than repeating timeout/speculation changes.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
