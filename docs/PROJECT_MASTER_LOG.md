@@ -2576,3 +2576,33 @@ REMAINING: full-payload installed Windows/Android consumption; physical-device a
 BLOCKERS: installed/device acceptance, authenticated production host and private signing authority remain external boundaries; do not weaken these gates or rerun the already accepted source-tree corpus path.
 NEXT: retain this report and archive unchanged, then exercise the full corpus through the installed Windows boundary and Android/device boundary. If this chat stops, the next ordinary chat must read section 87 first, accept this exact source-tree result, and continue from the remaining platform boundary instead of repeating extraction or the ten-minute import.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
+
+## 88. BEFORE: installed Windows full production Knowledge Pack boundary
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; exact PR #92/head is `89c95277ef530a4a0a55bbf3fc4af29d632894b6`. Public version remains `1.3.0.0`/Android code `100005`; the accumulated MINOR `1.4.0.0` remains version-last. The source-tree full production pack gate is accepted in section 87 and must not be rerun merely to exercise the same path.
+
+CLAIM: add an external-pack, environment-guarded installed main-scene mode through `scripts/main.gd`, a new production-only installed Knowledge runner under `scripts/`, a bounded Windows PowerShell harness under `tests/`, focused static contracts, and this journal. The installed executable must inspect the exact release contract, import the owner-supplied extracted production pack with outbound traffic blocked and isolated user data, restart, prove all 60 shards are durably skipped, and query a row with matching pack provenance. Do not bundle the 429 MB archive into Git or CI, alter the accepted importer/store, weaken the existing fixture package gate, start a duplicate workflow, or claim acceptance before the owner runs the resulting installed executable against the exact pack.
+
+PROGRESS_COMPLETE: 70%
+PROGRESS_REMAINING: 30%
+DONE: exact archive and source-tree full import/resume/restart/query evidence are accepted.
+REMAINING: implement and contract-test the installed full-payload boundary, publish it, then execute it once on owner Windows; Android full-payload/device and remaining release gates follow.
+BLOCKERS: exact corpus and Windows runtime are owner-local, so this workspace can prepare and test contracts but cannot earn the installed full-payload checkpoint itself.
+NEXT: implement the fail-closed installed production mode and bounded two-process Windows harness, run focused contracts, and publish only after local review.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
+
+### AFTER: installed full-payload runner implemented; runtime acceptance still pending
+
+Added the separate guarded mode `knowledge-pack-production-v1`. Normal startup and the already accepted one-shard installed fixture remain unchanged. In the new mode the exported main scene detaches normal application children, reads only an explicit external pack directory, reuses the production installer, compares the manifest with the bundled pinned release contract, performs the import, reopens the local store, and requires a query match with both the production `pack_id` and exact shard source. Its atomic proof records production identity/counts, import/skip counts, state and manifest hashes, query evidence, elapsed time and memory peak; it has no HTTP/process-execution path.
+
+Added `tests/windows_installed_production_knowledge_pack.ps1` as an owner-local acceptance harness. It requires an already installed candidate and the already extracted exact pack, validates the pinned 60-shard/75,871-record/size identity before launch, creates a unique profile, blocks external IPv4/IPv6 destinations for the installed executable, and runs two separate product processes. The first must import all 60 shards and query successfully; after process restart the second must import zero, skip all 60, query successfully, and expose a ready 60-hash state whose SHA-256 is independently recomputed. Timeout is bounded to two hours per phase and failures retain proof/stdout/stderr diagnostics. The archive remains outside Git and no CI workflow was added.
+
+LOCAL EVIDENCE: all four focused production acceptance contract functions pass by direct standard-Python execution; all 13 Windows packaging/voice contract tests pass; `git diff --check` passes. A broad unittest discovery executed 82 tests but ended with 17 import errors because this workspace lacks existing optional test dependencies (`pytest`, `fastapi`, `requests`); no product assertion failure was reported in that run. Godot and PowerShell are not installed here, so no installed runtime pass is claimed. Readiness remains unchanged until the exported Windows candidate executes this harness against the exact owner-local corpus.
+
+PROGRESS_COMPLETE: 70%
+PROGRESS_REMAINING: 30%
+DONE: fail-closed installed production mode and two-process Windows acceptance harness implemented and focused contracts green.
+REMAINING: publish the code, produce one candidate Windows artifact, run `tests\windows_installed_production_knowledge_pack.ps1 -InstallDir <installed-candidate> -PackDir D:\Desktop\AuroraFox-production-test-20260921-223011\knowledge-pack`, then record exact report evidence; Android full-payload/device and remaining release gates follow.
+BLOCKERS: this workspace has neither Godot/PowerShell nor the exact corpus/installed Windows binary; owner Windows execution is required for the checkpoint.
+NEXT: review and commit this five-file implementation plus journal. After publication, allow exactly one candidate package build and use that artifact for the owner-local installed full-payload run; do not repeat the accepted source-tree import.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
