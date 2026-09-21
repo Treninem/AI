@@ -1343,3 +1343,68 @@ BLOCKERS:
 
 NEXT:
 - Run `python evolution_engine/tests/run_evolution_checks.py --godot <Godot-4.7.1.exe>` on Windows exact HEAD, record the full output/run artifact, then continue to guarded runtime wiring only if green.
+
+
+### 2026-09-21 — Work — Evolution Core tournament executable logic on every host
+
+DIRECTION:
+- Evolution Engine.
+
+ACTION:
+- `AuroraEvolutionCoreTournamentAdapter` получил минимальный overridable platform seam; production implementation по-прежнему разрешает source tournament только при `OS.get_name() == "Windows"`.
+- Core tournament smoke теперь на каждом host исполняет полный алгоритм population=5: stable baseline, distinct mutations, tournament, second verification, exactly-one handoff, signed-update exclusion и pipeline lock lifecycle. На non-Windows используется только test subclass, который обходит platform preflight; production policy не ослаблена.
+- Acceptance runner больше не пропускает этот smoke на Linux. Документация явно различает cross-platform algorithm evidence и ещё обязательный native Windows end-to-end evidence.
+- Предпринята реальная попытка получить Windows evidence локально: загружен официальный Godot 4.7.1 Windows и установлен Wine 9.0. Контейнер блокирует `wineserver` на создании Unix socket (`Operation not permitted`), поэтому native Windows результат не заявляется.
+
+FILES:
+- `evolution_engine/README.md`
+- `evolution_engine/evaluation/core_tournament_adapter.gd`
+- `evolution_engine/tests/ACCEPTANCE.md`
+- `evolution_engine/tests/core_tournament_windows_smoke.gd`
+- `evolution_engine/tests/run_evolution_checks.py`
+- `evolution_engine/tests/test_acceptance_runner_contract.py`
+- `evolution_engine/tests/test_core_tournament_adapter_contract.py`
+- `docs/PROJECT_MASTER_LOG.md`
+
+COMMIT:
+- `dc821ec0028b2ace7b0be07a2948d43018767194` (`evolution: exercise Core tournament on every host`).
+
+TEST:
+- `python3 -m pytest -q evolution_engine/tests`: **37 passed**.
+- `python3 evolution_engine/tests/run_evolution_checks.py --godot /tmp/aurorafox-godot-4.7.1/Godot_v4.7.1-stable_linux.x86_64`: PASS.
+- Existing `self_improver_smoke.gd` and `core_candidate_benchmark_smoke.gd`: PASS.
+- Evolution policy/evidence/controller smokes: PASS.
+- Core tournament smoke: PASS, marker `AURORA_CORE_TOURNAMENT_SMOKE_OK population=5 handoff=1 second_verify=true signed_update=true lock=true native_windows=false`.
+- Runner final marker: `AURORAFOX_EVOLUTION_ACCEPTANCE_OK`.
+- `git diff --check`: PASS; code commit changes only seven files under `evolution_engine/**`.
+- Remote feature ref advanced fast-forward from `5f423701fdec7ba286843556b68451938de3a5c1`; `main` remains `4c6fe649af69c9be0eb080863f0e94b80cc3e082`.
+
+RESULT:
+- Core tournament orchestration is no longer an unexecuted Windows-only test body on Linux: its complete control flow now runs in every full acceptance pass while the real production platform boundary remains unchanged.
+- Release workflows, version metadata, product runtime wiring and `main` were not modified.
+
+BLOCKERS:
+- Native Windows + Godot 4.7.1 execution is still required to prove the real Core source verification primitives and production platform preflight end to end. This Linux container cannot supply that evidence because Wine socket creation is denied by the host security policy.
+- Controlled runtime/autoload integration and same-SHA package/update acceptance remain unstarted.
+
+NEXT:
+- Run the exact feature HEAD acceptance command on a native Windows executor and archive the `native_windows=true` marker. If green, begin a separate guarded runtime-wiring batch with integration tests and no release-authority changes.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+
+DONE:
+- Full Core tournament/handoff control flow is executable and green on every acceptance host.
+- Production Windows-only gate remains intact and is contract-tested.
+- Python contracts and Linux Godot 4.7.1 acceptance are green on the published code commit.
+
+REMAINING:
+- Native Windows Core tournament evidence with `native_windows=true`.
+- Guarded runtime wiring and integration tests without release regression.
+- Same-SHA Windows/Android/package/update acceptance before merge/version action.
+
+BLOCKERS:
+- Native Windows executor; Wine fallback is blocked by the current container security policy.
+
+NEXT:
+- Execute `python evolution_engine/tests/run_evolution_checks.py --godot <Godot-4.7.1.exe>` on native Windows at the exact feature HEAD, retain the output artifact, then proceed only on green evidence.
