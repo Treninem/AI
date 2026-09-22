@@ -2822,3 +2822,18 @@ REMAINING: implement and contract-test the native invocation compatibility fix, 
 BLOCKERS: Windows emulator/runtime execution remains owner-local; authenticated production host and private signing authority remain external.
 NEXT: make native command stderr capture non-terminating only inside the checked invocation helper, preserve exit-code enforcement, add a regression contract and publish the hotfix.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+### AFTER: Windows PowerShell 5 native stderr compatibility hotfix published
+
+Published implementation commit `9c7e183cb22cfc47ab3562d53c9c51a5472e8288` after claim commit `8be582e95fa52761946cd654997c23c2d114405c`. `Invoke-Checked` now temporarily changes only its local native-command error preference to `Continue`, redirects both native streams, saves `$LASTEXITCODE`, restores the caller preference in `finally`, and still throws with complete output for every non-zero native exit. This prevents a successful `sdkmanager.bat` deprecation warning from aborting Windows PowerShell 5 while preserving all actual SDK-tool failures.
+
+The focused contract now pins the save/restore behavior, captured exit code and non-zero enforcement. Exact committed script/test blobs `da4b9c3a170f9dc5f495dc3aa840c4d59942255b` and `66c09b4004d01c9db8829ff0e8eab28c54bef250` passed remote exact-content verification for all five regression assertions. Artifact digest, SDK/image pinning, acceleration, adb-root, one-device and strict production Knowledge gates are unchanged. Windows runtime proof remains pending on the owner PC. The hotfix claim is DONE and its owned implementation/test files are released; the parent final-release claim remains ACTIVE.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: reproduced PowerShell 5 `NativeCommandError`; published commit `9c7e183cb22cfc47ab3562d53c9c51a5472e8288`; exact-source regression contract verified; strict acceptance gates preserved.
+REMAINING: fetch the hotfix on the owner PC, rerun the emulator orchestrator and accept only its complete strict Android report; subsequent release gates remain unchanged.
+BLOCKERS: Windows emulator/runtime execution is owner-local; authenticated production host and private signing authority remain external.
+NEXT: fast-forward the owner repository, create a fresh detached worktree at the new exact head, and rerun `windows_android_production_knowledge_orchestrator.ps1` with the discovered SDK root.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
