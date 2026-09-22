@@ -2717,3 +2717,25 @@ DONE: Windows installed full production pack is accepted at exact source/report 
 REMAINING: implement and contract-test the Android acceptance APK/harness, publish it, execute it with the exact corpus on an Android emulator/device, then complete human/device, production host, signing/version-last and same-SHA RC gates.
 BLOCKERS: exact corpus and Android runtime/device boundary are owner-local; production signing and authenticated host boundaries remain external.
 NEXT: implement the isolated Android production-pack scene and two-process ADB harness, run focused contracts, publish, then build exactly one acceptance APK and execute it against the retained exact corpus.
+
+
+## 94. AFTER: Android production Knowledge acceptance APK built
+
+The isolated Android full-payload acceptance tooling is published. The production importer/store and normal main scene were not changed. New acceptance scene `benchmarks/knowledge/android_production_pack_acceptance.tscn` invokes the existing strict installed production runner against `user://android-production-pack`; the PowerShell/ADB harness pins the exact 60-shard identity, clears app state, pushes the owner-local extracted corpus once, restores app UID and SELinux labels, disables external networking, launches two separate installed processes, requires first-import 60 / restart-import 0 / restart-skip 60, verifies provenance queries and independently pulls/hashes the durable state.
+
+Exact build source is `993dd23f93ec1ad6ee7a045d497414751d9b3f66`. GitHub Actions run `35688129695` (`AuroraFox Android Production Knowledge Acceptance APK #4`) completed SUCCESS. Focused contracts (3/3), exact checkout, toolchain setup, Godot import/parse, production-runtime APK build, test signing and artifact upload all passed. Artifact `android-production-knowledge-acceptance-993dd23f93ec1ad6ee7a045d497414751d9b3f66` has ID `10678445830`, size `1633882559` bytes and workflow ZIP digest SHA-256 `d47ba0a96d9aa2321e89cce850deac85bfa80890fda6eb1196ef3ab78683601b`; it expires 2026-10-06. Direct artifact page: `https://github.com/Treninem/AI/actions/runs/35688129695/artifacts/10678445830`.
+
+The workflow is returned to manual-only after this one build so future release-branch commits do not duplicate the 1.6 GB artifact. The corpus itself was not uploaded to GitHub. Runtime acceptance is still pending because the exact extracted corpus and adb-root Android emulator/device are owner-local. On a Windows host with exactly one rooted test emulator visible in `adb devices`, download/extract the artifact and run:
+
+`& '<repo>\\tests\\android_installed_production_knowledge_pack.ps1' -ApkPath '<artifact>\\AuroraFox-Android-Production-Knowledge-Acceptance.apk' -PackDir 'D:\\Desktop\\AuroraFox-production-test-20260921-223011\\knowledge-pack' -ReportDir ('D:\\Desktop\\AuroraFox-android-production-test-' + (Get-Date -Format 'yyyyMMdd-HHmmss')) -TimeoutSeconds 7200`
+
+Accept only `AURORA_ANDROID_INSTALLED_PRODUCTION_KNOWLEDGE_OK` plus complete `report.json`. A physical non-root device remains a separate honest boundary; this harness intentionally requires adb-root only for injecting the owner-local corpus into isolated app-private storage and does not weaken the shipped sandbox.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+
+DONE: Android exact-pack acceptance scene/harness/contracts are implemented; exact-source 1.6 GB APK build/sign/upload is green at run 35688129695; no production runtime or normal UI file changed.
+REMAINING: execute the APK with the exact corpus on Android and record import/restart/query/state evidence; then physical-device/human UI-listening, production host/mail/backup/rollback, production signing/version-last and final same-SHA RC gates remain.
+BLOCKERS: exact corpus plus adb-root Android emulator/device are owner-local; authenticated production host and private signing authority remain external.
+NEXT: download artifact 10678445830, start one rooted Android emulator with sufficient free space, execute the pinned harness once, and return report.json or the first exact exception. Do not rebuild or re-upload the already accepted APK.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%

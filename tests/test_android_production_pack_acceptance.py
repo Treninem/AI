@@ -45,8 +45,7 @@ def test_workflow_is_manual_only_and_never_packages_corpus() -> None:
     source = WORKFLOW.read_text(encoding="utf-8")
     assert "workflow_dispatch:" in source
     assert "pull_request:" not in source
-    assert "push:" in source
-    assert "branches: [chat-2026-09-17-unified-finalization]" in source
+    assert "push:" not in source
     assert 'run/main_scene="res://benchmarks/knowledge/android_production_pack_acceptance.tscn"' in source
     assert "AllowUnsignedRelease" in source
     assert "android-production-knowledge-acceptance" in source

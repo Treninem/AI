@@ -2,14 +2,6 @@ name: AuroraFox Android Production Knowledge Acceptance APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [chat-2026-09-17-unified-finalization]
-    paths:
-      - '.github/workflows/android-production-knowledge-acceptance.yml'
-      - 'benchmarks/knowledge/android_production_pack_acceptance.gd'
-      - 'benchmarks/knowledge/android_production_pack_acceptance.tscn'
-      - 'tests/android_installed_production_knowledge_pack.ps1'
-      - 'tests/test_android_production_pack_acceptance.py'
 
 permissions:
   contents: read
