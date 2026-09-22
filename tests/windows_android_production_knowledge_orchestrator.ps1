@@ -67,13 +67,24 @@ function Invoke-Checked {
         [Parameter(Mandatory=$true)][string[]]$Arguments,
         [string]$InputText = ''
     )
-    if ([string]::IsNullOrEmpty($InputText)) {
-        $output = & $FilePath @Arguments 2>&1
-    } else {
-        $output = $InputText | & $FilePath @Arguments 2>&1
+    # Windows PowerShell 5 promotes native stderr records to terminating
+    # NativeCommandError exceptions when the caller uses Stop. SDK tools may
+    # legitimately write warnings/progress to stderr and still exit 0, so
+    # capture both streams non-terminating and enforce the native exit code.
+    $nativeErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        if ([string]::IsNullOrEmpty($InputText)) {
+            $output = & $FilePath @Arguments 2>&1
+        } else {
+            $output = $InputText | & $FilePath @Arguments 2>&1
+        }
+        $nativeExitCode = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $nativeErrorActionPreference
     }
-    if ($LASTEXITCODE -ne 0) {
-        throw "$FilePath failed ($LASTEXITCODE): $($Arguments -join ' ')$([Environment]::NewLine)$($output -join [Environment]::NewLine)"
+    if ($nativeExitCode -ne 0) {
+        throw "$FilePath failed ($nativeExitCode): $($Arguments -join ' ')$([Environment]::NewLine)$($output -join [Environment]::NewLine)"
     }
     return @($output)
 }

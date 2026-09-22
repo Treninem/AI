@@ -27,6 +27,11 @@ def test_windows_android_orchestrator_is_pinned_bounded_and_reuses_strict_harnes
         "-TimeoutSeconds $AcceptanceTimeoutSeconds",
         "AURORA_WINDOWS_ANDROID_PRODUCTION_ORCHESTRATION_OK",
         "report.json",
+        "$nativeErrorActionPreference = $ErrorActionPreference",
+        "$ErrorActionPreference = 'Continue'",
+        "$nativeExitCode = $LASTEXITCODE",
+        "$ErrorActionPreference = $nativeErrorActionPreference",
+        "if ($nativeExitCode -ne 0)",
     ]:
         assert value in source
     assert "Invoke-WebRequest" not in source
