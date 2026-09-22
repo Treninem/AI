@@ -28,7 +28,7 @@ def test_android_harness_requires_exact_pack_offline_two_processes() -> None:
         "1924345221", "1982822407", "75871", "60",
         "'root'", "'pm', 'clear'", "'stat', '-c', '%u'",
         "'chown', '-R'", "'restorecon', '-RF'", "'airplane-mode', 'enable'",
-        "'wifi', 'disable'", "'data', 'disable'", "'push'",
+        "'wifi', 'disable'", "'data', 'disable'", "$Adb push",
         "Start-AcceptancePhase", "-Phase 'install'", "-Phase 'restart'",
         "[int]$first.imported_shards -ne $ExpectedShards",
         "[int]$resumed.imported_shards -ne 0",

@@ -6,6 +6,10 @@ on:
     branches: [chat-2026-09-17-unified-finalization]
     paths:
       - '.github/workflows/android-production-knowledge-acceptance.yml'
+      - 'benchmarks/knowledge/android_production_pack_acceptance.gd'
+      - 'benchmarks/knowledge/android_production_pack_acceptance.tscn'
+      - 'tests/android_installed_production_knowledge_pack.ps1'
+      - 'tests/test_android_production_pack_acceptance.py'
 
 permissions:
   contents: read
@@ -23,6 +27,16 @@ jobs:
       CORE_CACHE_DIR: ${{ github.workspace }}/.ci/core-model-cache
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+
+      - name: Verify exact acceptance checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.sha }}
+        run: |
+          actual="$(git rev-parse HEAD)"
+          test "$actual" = "$AURORA_EXPECTED_HEAD_SHA"
+          echo "AURORA_ANDROID_ACCEPTANCE_SHA=$actual"
 
       - uses: actions/setup-python@v5
         with:
