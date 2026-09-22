@@ -2,6 +2,8 @@ param(
     [Parameter(Mandatory=$true)][string]$InstallDir,
     [Parameter(Mandatory=$true)][string]$PackDir,
     [string]$ReportDir = 'artifacts/windows-installed-production-knowledge',
+    [string]$ResumeProfileRoot = '',
+    [string]$InstallProofPath = '',
     [int]$TimeoutSeconds = 7200
 )
 
@@ -25,10 +27,18 @@ if ($manifest.schema -ne 'aurorafox.knowledge-pack.v1' -or
     @($manifest.shards).Count -ne 60) {
     throw 'Extracted production Knowledge Pack does not match the pinned release contract'
 }
+if ([string]::IsNullOrWhiteSpace($ResumeProfileRoot) -ne [string]::IsNullOrWhiteSpace($InstallProofPath)) {
+    throw 'ResumeProfileRoot and InstallProofPath must be supplied together'
+}
+$resumeExistingInstall = -not [string]::IsNullOrWhiteSpace($ResumeProfileRoot)
 
 New-Item -ItemType Directory -Force $ReportDir | Out-Null
 $reportRoot = (Resolve-Path $ReportDir).Path
-$profileRoot = Join-Path $reportRoot ('profile-' + [Guid]::NewGuid().ToString('N'))
+$profileRoot = if ($resumeExistingInstall) {
+    (Resolve-Path $ResumeProfileRoot).Path
+} else {
+    Join-Path $reportRoot ('profile-' + [Guid]::NewGuid().ToString('N'))
+}
 $appData = Join-Path $profileRoot 'AppData\Roaming'
 $localAppData = Join-Path $profileRoot 'AppData\Local'
 New-Item -ItemType Directory -Force $appData,$localAppData | Out-Null
@@ -59,9 +69,21 @@ function Invoke-InstalledProductionPhase {
     Remove-Item -LiteralPath $resultFile -Force -ErrorAction SilentlyContinue
     [Environment]::SetEnvironmentVariable('AURORAFOX_KNOWLEDGE_SMOKE_RESULT', $resultFile, 'Process')
 
-    $script:activeProcess = Start-Process -FilePath $launcher -WorkingDirectory $installRoot `
-        -ArgumentList @('--headless') -RedirectStandardOutput $stdoutLog `
-        -RedirectStandardError $stderrLog -PassThru
+    $startInfo = New-Object System.Diagnostics.ProcessStartInfo
+    $startInfo.FileName = $launcher
+    $startInfo.WorkingDirectory = $installRoot
+    $startInfo.Arguments = '--headless'
+    $startInfo.UseShellExecute = $false
+    $startInfo.CreateNoWindow = $true
+    $startInfo.RedirectStandardOutput = $true
+    $startInfo.RedirectStandardError = $true
+    $script:activeProcess = New-Object System.Diagnostics.Process
+    $script:activeProcess.StartInfo = $startInfo
+    if (-not $script:activeProcess.Start()) {
+        throw "Installed production phase $Name could not start"
+    }
+    $stdoutTask = $script:activeProcess.StandardOutput.ReadToEndAsync()
+    $stderrTask = $script:activeProcess.StandardError.ReadToEndAsync()
     $watch = [Diagnostics.Stopwatch]::StartNew()
     $proof = $null
     $lastJsonError = ''
@@ -90,21 +112,27 @@ function Invoke-InstalledProductionPhase {
             throw "Installed production phase $Name wrote a result but did not exit"
         }
     }
+    if (-not $proof -and -not $script:activeProcess.HasExited) {
+        Stop-Process -Id $script:activeProcess.Id -Force -ErrorAction SilentlyContinue
+        [void]$script:activeProcess.WaitForExit(5000)
+    }
     $exitCode = $null
     if ($script:activeProcess.HasExited) {
-        # Windows PowerShell can leave ExitCode unset after the timed overload or
-        # a HasExited poll. The parameterless wait finalizes the process handle
-        # and drains redirected output before ExitCode is read.
         $script:activeProcess.WaitForExit()
         $script:activeProcess.Refresh()
         $exitCode = $script:activeProcess.ExitCode
     }
-    $stdout = if (Test-Path $stdoutLog) { Get-Content $stdoutLog -Raw } else { '' }
-    $stderr = if (Test-Path $stderrLog) { Get-Content $stderrLog -Raw } else { '' }
+    $stdout = if ($stdoutTask.IsCompleted) {
+        $stdoutAwaiter = $stdoutTask.GetAwaiter()
+        $stdoutAwaiter.GetResult()
+    } else { '' }
+    $stderr = if ($stderrTask.IsCompleted) {
+        $stderrAwaiter = $stderrTask.GetAwaiter()
+        $stderrAwaiter.GetResult()
+    } else { '' }
+    Set-Content -LiteralPath $stdoutLog -Value $stdout -Encoding UTF8
+    Set-Content -LiteralPath $stderrLog -Value $stderr -Encoding UTF8
     if (-not $proof) {
-        if (-not $script:activeProcess.HasExited) {
-            Stop-Process -Id $script:activeProcess.Id -Force -ErrorAction SilentlyContinue
-        }
         throw "Installed production phase $Name produced no proof within $TimeoutSeconds seconds.`nProcessId: $($script:activeProcess.Id)`nProcessExited: $($script:activeProcess.HasExited)`nLast JSON error: $lastJsonError`nstdout:`n$stdout`nstderr:`n$stderr"
     }
     if ($null -eq $exitCode) {
@@ -132,7 +160,19 @@ try {
         $rules += $rule
     }
 
-    $installed = Invoke-InstalledProductionPhase -Name 'install'
+    $installed = if ($resumeExistingInstall) {
+        $resolvedInstallProof = (Resolve-Path $InstallProofPath).Path
+        Get-Content -LiteralPath $resolvedInstallProof -Raw | ConvertFrom-Json
+    } else {
+        Invoke-InstalledProductionPhase -Name 'install'
+    }
+    if ($installed.schema -ne 'aurorafox.installed-production-knowledge.v1' -or
+        -not [bool]$installed.passed -or
+        -not [bool]$installed.installed -or
+        -not [bool]$installed.offline -or
+        [bool]$installed.external_ai_required) {
+        throw 'Installed production first-run proof is invalid'
+    }
     if ($installed.status -ne 'ready' -or
         [int]$installed.imported_shards -ne 60 -or
         [int]$installed.skipped_shards -ne 0 -or
