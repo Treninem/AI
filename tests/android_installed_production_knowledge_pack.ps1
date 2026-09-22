@@ -145,97 +145,7 @@ if ([string]::IsNullOrWhiteSpace($launcher)) {
 
 Invoke-AdbChecked -Arguments @('shell', 'pm', 'clear', $Package)
 $appUid = Invoke-AdbText -Arguments @('shell', 'stat', '-c', '%u', "/data/user/0/$Package")
-if ($appUid -notmatch '^[0-9]+
-# Push the already extracted exact corpus once. The archive/payload remains
-# owner-local and is never embedded in Git, APK, or an Actions artifact.
-$pushOutput = & $Adb push (Join-Path $resolvedPack '.') "$remotePack/" 2>&1
-$pushOutput | Set-Content -LiteralPath (Join-Path $ReportDir 'adb-push.txt') -Encoding UTF8
-if ($LASTEXITCODE -ne 0) {
-    throw "adb push failed ($LASTEXITCODE). See adb-push.txt."
-}
-# Root-created test input must retain the same ownership and SELinux label as
-# normal app-private files before the production process is launched.
-Invoke-AdbChecked -Arguments @('shell', 'chown', '-R', "$($appUid):$($appUid)", $appRoot)
-Invoke-AdbChecked -Arguments @('shell', 'restorecon', '-RF', "/data/user/0/$Package")
-
-Invoke-AdbChecked -Arguments @('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
-Invoke-AdbChecked -Arguments @('shell', 'settings', 'put', 'global', 'airplane_mode_on', '1')
-Invoke-AdbChecked -Arguments @('shell', 'svc', 'wifi', 'disable')
-Invoke-AdbChecked -Arguments @('shell', 'svc', 'data', 'disable')
-Start-Sleep -Seconds 2
-& $Adb shell ping -c 1 -W 2 1.1.1.1 *> $null
-if ($LASTEXITCODE -eq 0) {
-    throw 'Android target still has external network connectivity after offline setup.'
-}
-
-$firstPath = Join-Path $ReportDir 'install.result.json'
-$resumePath = Join-Path $ReportDir 'resume.result.json'
-$first = Start-AcceptancePhase -Launcher $launcher -RemoteReport $remoteReport -LocalReport $firstPath -Phase 'install'
-if (
-    [int]$first.imported_shards -ne $ExpectedShards -or
-    [int]$first.skipped_shards -ne 0 -or
-    [int]$first.record_count -ne $ExpectedRecords -or
-    [int64]$first.content_bytes -ne $ExpectedContentBytes -or
-    [string]$first.manifest_sha256 -ne $ExpectedManifestSha256 -or
-    $first.query_match -ne $true -or
-    $first.offline -ne $true -or
-    $first.external_ai_required -ne $false
-) {
-    throw 'Installed Android production first-run proof is invalid.'
-}
-
-$resumed = Start-AcceptancePhase -Launcher $launcher -RemoteReport $remoteReport -LocalReport $resumePath -Phase 'restart'
-if (
-    [int]$resumed.imported_shards -ne 0 -or
-    [int]$resumed.skipped_shards -ne $ExpectedShards -or
-    [int]$resumed.record_count -ne $ExpectedRecords -or
-    [string]$resumed.manifest_sha256 -ne $ExpectedManifestSha256 -or
-    $resumed.query_match -ne $true -or
-    $resumed.offline -ne $true -or
-    $resumed.external_ai_required -ne $false
-) {
-    throw 'Installed Android production restart proof is invalid.'
-}
-
-$stateRemote = [string]$resumed.state_path
-$stateLocal = Join-Path $ReportDir 'pack-state.json'
-Invoke-AdbChecked -Arguments @('pull', $stateRemote, $stateLocal)
-$stateSha = (Get-FileHash -Algorithm SHA256 -LiteralPath $stateLocal).Hash.ToLowerInvariant()
-if ($stateSha -ne [string]$resumed.state_sha256) {
-    throw "Android durable state SHA-256 mismatch: $stateSha"
-}
-$state = Get-Content -LiteralPath $stateLocal -Raw | ConvertFrom-Json
-if (@($state.completed_shards).Count -ne $ExpectedShards) {
-    throw 'Android durable state does not contain all 60 completed shards.'
-}
-
-$final = [ordered]@{
-    schema = 'aurorafox.android-installed-production-knowledge.v1'
-    passed = $true
-    installed = $true
-    platform = 'Android'
-    offline = $true
-    outbound_network_block = $true
-    external_ai_required = $false
-    package = $Package
-    launcher = $launcher
-    pack_id = $ExpectedPackId
-    pack_version = $ExpectedPackVersion
-    manifest_sha256 = $ExpectedManifestSha256
-    shards = $ExpectedShards
-    record_count = $ExpectedRecords
-    content_bytes = $ExpectedContentBytes
-    first_imported_shards = [int]$first.imported_shards
-    restart_skipped_shards = [int]$resumed.skipped_shards
-    first_query_match = [bool]$first.query_match
-    restart_query_match = [bool]$resumed.query_match
-    state_sha256 = $stateSha
-}
-$finalPath = Join-Path $ReportDir 'report.json'
-$final | ConvertTo-Json -Depth 8 | Set-Content -LiteralPath $finalPath -Encoding UTF8
-Write-Host 'AURORA_ANDROID_INSTALLED_PRODUCTION_KNOWLEDGE_OK'
-Write-Host "REPORT=$finalPath"
-) {
+if ($appUid -notmatch '^[0-9]+$') {
     throw "Cannot resolve Android application UID: $appUid"
 }
 $appRoot = "/data/user/0/$Package/files/app_userdata/AuroraFox"
@@ -250,6 +160,10 @@ $pushOutput | Set-Content -LiteralPath (Join-Path $ReportDir 'adb-push.txt') -En
 if ($LASTEXITCODE -ne 0) {
     throw "adb push failed ($LASTEXITCODE). See adb-push.txt."
 }
+# Root-created test input must retain the same ownership and SELinux label as
+# normal app-private files before the production process is launched.
+Invoke-AdbChecked -Arguments @('shell', 'chown', '-R', "$($appUid):$($appUid)", $appRoot)
+Invoke-AdbChecked -Arguments @('shell', 'restorecon', '-RF', "/data/user/0/$Package")
 
 Invoke-AdbChecked -Arguments @('shell', 'cmd', 'connectivity', 'airplane-mode', 'enable')
 Invoke-AdbChecked -Arguments @('shell', 'settings', 'put', 'global', 'airplane_mode_on', '1')
