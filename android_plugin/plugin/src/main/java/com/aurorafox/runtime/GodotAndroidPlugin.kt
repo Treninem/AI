@@ -1,5 +1,6 @@
 package com.aurorafox.runtime
 
+import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
@@ -19,6 +20,10 @@ import java.util.concurrent.Future
 import java.util.concurrent.atomic.AtomicLong
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
+    companion object {
+        private const val PRODUCTION_PACK_PICKER_REQUEST = 64017
+    }
+
     private val native = NativeRuntime()
     private val voice by lazy {
         val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
@@ -27,6 +32,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private val files by lazy {
         val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
         AndroidFileRuntime(ctx, voice)
+    }
+    private val productionPackImport by lazy {
+        val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
+        ProductionPackArchiveImport(ctx)
     }
 
     private class FileAnalysisJob {
@@ -43,6 +52,64 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
+
+    @UsedByGodot
+    fun selectProductionPackArchive(): String {
+        val act = activity ?: return errorJson("No Android activity")
+        val prepared = productionPackImport.prepareSelection()
+        return try {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zstd", "application/octet-stream", "application/x-zstd"))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            }
+            runOnHostThread { act.startActivityForResult(intent, PRODUCTION_PACK_PICKER_REQUEST) }
+            prepared
+        } catch (t: Throwable) {
+            productionPackImport.failSelection(t.message ?: "Cannot open Android archive picker")
+            productionPackImport.poll()
+        }
+    }
+
+    @UsedByGodot
+    fun pollProductionPackArchiveImport(): String = productionPackImport.poll()
+
+    @UsedByGodot
+    fun shareProductionPackAcceptanceReport(reportJson: String): String {
+        val act = activity ?: return errorJson("No Android activity")
+        if (reportJson.length !in 2..250_000) return errorJson("Acceptance report is empty or too large")
+        return try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_SUBJECT, "AuroraFox Android production Knowledge report")
+                putExtra(Intent.EXTRA_TEXT, reportJson)
+            }
+            runOnHostThread {
+                act.startActivity(Intent.createChooser(intent, "Поделиться отчётом AuroraFox"))
+            }
+            JSONObject(mapOf("ok" to true, "chooser_opened" to true)).toString()
+        } catch (t: Throwable) {
+            errorJson("Cannot share acceptance report: ${t.message ?: t.javaClass.simpleName}")
+        }
+    }
+
+    override fun onMainActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != PRODUCTION_PACK_PICKER_REQUEST) return
+        val uri = data?.data
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+            productionPackImport.cancelSelection()
+            return
+        }
+        try {
+            val flags = data.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            activity?.contentResolver?.takePersistableUriPermission(uri, flags and Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (_: Throwable) {
+            // The one-shot read grant is sufficient for the current bounded import.
+        }
+        productionPackImport.begin(uri)
+    }
 
     @UsedByGodot
     fun getPrivateRoot(): String = activity?.filesDir?.absolutePath ?: ""

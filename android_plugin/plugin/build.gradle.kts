@@ -75,6 +75,8 @@ dependencies {
     implementation("org.godotengine:godot:4.7.1.stable")
     implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")
     implementation("cz.adaptech.tesseract4android:tesseract4android:$tesseractAndroidVersion")
+    implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("com.github.luben:zstd-jni:1.5.7-3")
     if (sherpaAar.exists()) compileOnly(files(sherpaAar))
 }
 
