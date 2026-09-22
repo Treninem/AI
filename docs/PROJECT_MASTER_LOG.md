@@ -2773,3 +2773,20 @@ REMAINING: install and execute the rootless APK on the owner's current physical 
 BLOCKERS: the next step is owner interaction on the current non-root physical device; authenticated production host and private signing authority remain external.
 NEXT: owner downloads artifact 10691590889 on Android, extracts the workflow ZIP, installs the APK, selects `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`, enables airplane mode when prompted, completes the first run and separate relaunch, then shares the generated JSON back to this chat.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+## 96. BEFORE: one-command Windows Android emulator acceptance orchestration
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD before this claim is `ad06c29a0beaf503e056ab6ed417022b76205ed7`. The rootless APK is built, but the owner elected to execute the strict adb-root acceptance later from the retained Windows PC, where the exact extracted pack already exists. Existing Android acceptance APK artifact `10691590889` and the accepted Windows pack directory are reusable; neither corpus import code nor product binaries require another change.
+
+CLAIM: add one Windows-only orchestration script and a focused static contract test, plus this journal. The script must discover Android SDK tools, optionally install a pinned emulator/system image, create or reuse a dedicated AVD, boot it with bounded waits, require exactly one target and successful `adb root`, resolve the already downloaded APK artifact and exact extracted pack, invoke the existing strict two-process harness, preserve reports, and stop with precise remediation rather than modifying Windows virtualization settings. Do not rebuild the APK, duplicate the corpus, weaken hashes, edit product code or change release metadata. Intended public bump: none; acceptance tooling only.
+
+Owned files: new `tests/windows_android_production_knowledge_orchestrator.ps1`, new `tests/test_windows_android_production_orchestrator.py`, and this journal.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: Windows installed full-pack proof accepted; exact Android APK and corpus are retained; PC route selected.
+REMAINING: implement/publish the bounded Windows emulator orchestrator, then execute it on the owner's PC and accept only the strict Android report.
+BLOCKERS: final emulator execution requires the owner's Windows virtualization boundary; authenticated production host and private signing authority remain external.
+NEXT: implement and contract-test the one-command orchestrator using the pinned Android API/system image and existing strict harness.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
