@@ -2700,3 +2700,20 @@ REMAINING: Android full-production-payload/device consumption; physical-device a
 BLOCKERS: Android physical/runtime boundary, authenticated production host and private signing authority remain external; Windows full-payload acceptance is no longer a blocker.
 NEXT: preserve the Windows artifact/report/profile, stop rerunning this checkpoint, and move to the smallest bounded Android full-payload/device evidence path without weakening the ≥1 GiB genuine-content requirement.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+## 93. BEFORE: Android installed full production Knowledge Pack boundary
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh release-branch HEAD is `a60b647dbe32d4706455b257250605c8f95ba17f`; `origin/main` remains the merge base, while this branch contains the accepted release train. Section 92 closes the installed Windows full-payload checkpoint at 75%. Public version remains `1.3.0.0` / Android code `100005`; the accumulated MINOR `1.4.0.0` remains version-last.
+
+CLAIM: add a separate Android production-pack acceptance scene, an owner/emulator ADB harness, focused static contracts and an opt-in workflow that builds an installed test-signed APK from the exact release-branch source. The harness must push the already extracted exact 60-shard corpus once into isolated Android app storage, disable external networking, launch two separate app processes, require the first to import all 60 shards and the restart to import zero/skip all 60, verify production provenance/query and hashes, and retain report/logcat evidence. Do not modify the accepted importer/store, normal main scene, production release metadata or corpus; do not put the 429 MB archive or 1.9 GB extracted payload in Git or Actions artifacts.
+
+Owned files: new `benchmarks/knowledge/android_production_pack_acceptance.gd`, new `benchmarks/knowledge/android_production_pack_acceptance.tscn`, new `tests/android_installed_production_knowledge_pack.ps1`, new `tests/test_android_production_pack_acceptance.py`, optional new manual-only `.github/workflows/android-production-knowledge-acceptance.yml`, and `docs/PROJECT_MASTER_LOG.md`. No production subsystem file is claimed. Intended public bump: none for acceptance tooling; the accumulated release bump remains MINOR and version-last.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+
+DONE: Windows installed full production pack is accepted at exact source/report identities; Android production acceptance lane is claimed without touching production runtime files.
+REMAINING: implement and contract-test the Android acceptance APK/harness, publish it, execute it with the exact corpus on an Android emulator/device, then complete human/device, production host, signing/version-last and same-SHA RC gates.
+BLOCKERS: exact corpus and Android runtime/device boundary are owner-local; production signing and authenticated host boundaries remain external.
+NEXT: implement the isolated Android production-pack scene and two-process ADB harness, run focused contracts, publish, then build exactly one acceptance APK and execute it against the retained exact corpus.
