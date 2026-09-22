@@ -2790,3 +2790,18 @@ REMAINING: implement/publish the bounded Windows emulator orchestrator, then exe
 BLOCKERS: final emulator execution requires the owner's Windows virtualization boundary; authenticated production host and private signing authority remain external.
 NEXT: implement and contract-test the one-command orchestrator using the pinned Android API/system image and existing strict harness.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+### AFTER: one-command Windows emulator orchestration published
+
+Added `tests/windows_android_production_knowledge_orchestrator.ps1`. It discovers an existing Windows Android SDK, installs/accepts only the pinned `platform-tools`, emulator and `system-images;android-35;google_apis;x86_64` components when requested, creates or reuses dedicated AVD `AuroraFox_Acceptance_API_35`, runs the emulator acceleration check, boots a clean headless instance with bounded timeout, requires exactly one ready target and UID 0 after `adb root`, verifies the retained workflow artifact ZIP digest `e56bc27f48a5f860f8fa5bb6a0b6fde6f0c809adf1e38f3bfe4928a3e1c82d28` plus its embedded APK SHA file, and invokes the unchanged strict Android full-production harness. Reports, acceleration output, adb-root output and emulator PID are retained under one timestamped report directory. The script never downloads an unpinned executable, changes BIOS/Hyper-V settings, deletes arbitrary directories or rebuilds the APK/corpus.
+
+Focused evidence: `tests/test_windows_android_production_orchestrator.py` passes by direct standard-Python invocation and compiles. It asserts the pinned API 35 image/AVD, exact artifact identity, SHA checks, acceleration/boot/root/one-device gates, strict harness reuse, bounded timeouts, final report marker and absence of network downloader/destructive virtualization commands. This environment cannot execute Windows PowerShell or hardware-accelerated Android virtualization, so the runtime verdict remains correctly pending on the owner PC.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: reusable exact APK/corpus retained; Windows SDK/AVD/root/boot/artifact/harness orchestration implemented and focused contract green.
+REMAINING: execute the published one-command orchestrator on the owner Windows PC and accept only `AURORA_WINDOWS_ANDROID_PRODUCTION_ORCHESTRATION_OK` plus complete `report.json`; then remaining physical/human, production-host, signing/version-last and same-SHA RC gates continue.
+BLOCKERS: Windows hardware virtualization and installed Android SDK boundary are owner-local; authenticated production host and private signing authority remain external.
+NEXT: fetch the resulting exact head on the owner PC, download artifact 10691590889 once, and invoke the orchestrator with `-ArtifactPath`; if it stops, return only its first exact exception.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
