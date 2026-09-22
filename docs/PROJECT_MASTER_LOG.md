@@ -2805,3 +2805,20 @@ REMAINING: execute the published one-command orchestrator on the owner Windows P
 BLOCKERS: Windows hardware virtualization and installed Android SDK boundary are owner-local; authenticated production host and private signing authority remain external.
 NEXT: fetch the resulting exact head on the owner PC, download artifact 10691590889 once, and invoke the orchestrator with `-ArtifactPath`; if it stops, return only its first exact exception.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+## 97. BEFORE: Windows PowerShell 5 native stderr compatibility hotfix
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD before this claim is `355c122ec3ad8b2f69a805e0597d5c2436c61baf`. Owner-PC execution reached the Android SDK command-line boundary and reproduced a deterministic Windows PowerShell 5 failure: the installed `sdkmanager.bat` emits a non-fatal deprecation warning on stderr, but `$ErrorActionPreference = 'Stop'` promotes the native stderr record to `NativeCommandError` before the orchestrator can inspect `$LASTEXITCODE`.
+
+CLAIM: update only the Windows Android production Knowledge orchestrator, its focused static test and this journal so native SDK tools may emit warnings on stderr while non-zero exit codes remain fatal with complete captured output. Do not weaken artifact hashes, SDK/image pinning, emulator/root/device gates or the strict production Knowledge harness. Intended public bump: none; acceptance-tooling hotfix only.
+
+Owned files: `tests/windows_android_production_knowledge_orchestrator.ps1`, `tests/test_windows_android_production_orchestrator.py`, and `docs/PROJECT_MASTER_LOG.md`.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: owner PC proved SDK discovery, adb availability and exact PowerShell 5 stderr failure boundary.
+REMAINING: implement and contract-test the native invocation compatibility fix, publish it, rerun on the owner PC and accept the strict Android report.
+BLOCKERS: Windows emulator/runtime execution remains owner-local; authenticated production host and private signing authority remain external.
+NEXT: make native command stderr capture non-terminating only inside the checked invocation helper, preserve exit-code enforcement, add a regression contract and publish the hotfix.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
