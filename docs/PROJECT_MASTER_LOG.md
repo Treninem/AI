@@ -2739,3 +2739,20 @@ REMAINING: execute the APK with the exact corpus on Android and record import/re
 BLOCKERS: exact corpus plus adb-root Android emulator/device are owner-local; authenticated production host and private signing authority remain external.
 NEXT: download artifact 10678445830, start one rooted Android emulator with sufficient free space, execute the pinned harness once, and return report.json or the first exact exception. Do not rebuild or re-upload the already accepted APK.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+## 95. BEFORE: rootless physical Android production Knowledge acceptance
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD before this claim is `02e3d010ca04a439513fcea394e9a26c721d8938`. Section 94 proved the exact-source Android acceptance APK build, but its adb-root injection boundary cannot run on the owner's current non-root physical Android device. The exact production archive is retained outside Git and independently reverified at SHA-256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`.
+
+CLAIM: extend only the isolated Android acceptance surface and Android bridge needed for Storage Access Framework folder selection/copy, plus focused contracts, the manual acceptance workflow and this journal. Add a rootless physical-device path that lets the owner select an already extracted exact pack directory, copies it into app-private storage with bounded progress and path validation, runs the unchanged strict production importer, persists first-run state, performs a separate restart verification, and exports/displays a complete report without adb or root. Do not change the production Knowledge importer/store, normal main scene, public release metadata, corpus bytes or sandbox policy. Intended public bump: none for acceptance-only tooling; accumulated MINOR `1.4.0.0` remains version-last.
+
+Owned files: `android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt`, a new isolated rootless acceptance helper under the same plugin package if needed, `benchmarks/knowledge/android_production_pack_acceptance.gd`, its scene, `tests/test_android_production_pack_acceptance.py`, `.github/workflows/android-production-knowledge-acceptance.yml`, and this journal.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: exact archive bytes and existing Android APK build are verified; non-root physical-device constraint is reproduced from the harness contract.
+REMAINING: implement, contract-test, build and execute the rootless physical-device acceptance; then human UI/listening, production host/mail/backup/rollback, signing/version-last and same-SHA RC gates remain.
+BLOCKERS: physical-device execution remains owner-interactive after the rootless APK is built; authenticated production host and private signing authority remain external.
+NEXT: add a narrowly scoped Android SAF directory-copy bridge and interactive acceptance state machine, run focused contracts, build one exact-source APK, then give the owner direct install/select/restart instructions.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
