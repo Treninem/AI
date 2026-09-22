@@ -2756,3 +2756,20 @@ REMAINING: implement, contract-test, build and execute the rootless physical-dev
 BLOCKERS: physical-device execution remains owner-interactive after the rootless APK is built; authenticated production host and private signing authority remain external.
 NEXT: add a narrowly scoped Android SAF directory-copy bridge and interactive acceptance state machine, run focused contracts, build one exact-source APK, then give the owner direct install/select/restart instructions.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+### AFTER: rootless physical-device acceptance APK built
+
+The non-root Android boundary now has a dedicated isolated acceptance path. The APK uses Android's system document picker to select the exact owner-held `.tar.zst` archive, hashes the complete compressed stream before extraction, requires archive SHA-256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`, rejects traversal/special entries and bounded-size/file-count violations, extracts only into the app-private acceptance directory, and requires exactly 60 JSONL shards plus a root manifest. No root, adb, PC, broad storage permission, corpus-in-Git or corpus-in-APK is used.
+
+The interactive acceptance scene preserves the existing adb-root automation path while adding a physical-device state machine. It instructs the owner to enable airplane mode after verified local extraction, runs the unchanged strict production importer, requires first-import 60/skip 0 and the exact manifest/count/bytes/query contract, persists the first proof, exits, then on a separately launched process requires import 0/skip 60 and a second provenance query. Success emits `AURORA_ANDROID_ROOTLESS_PRODUCTION_KNOWLEDGE_OK` and exposes the complete JSON through the Android share sheet.
+
+LOCAL EVIDENCE: all four focused Android production acceptance contract functions pass by direct standard-Python invocation; the exact 429,588,529-byte archive was independently listed and confirmed to contain root `manifest.json` plus `knowledge-00000.jsonl` through `knowledge-00059.jsonl`. CI build source `0a9680f03ea84987dd89cd0f69fdae40939c5110` passed exact checkout, 4/4 focused contracts, Android/Kotlin/Gradle compilation with bounded zstd/tar support, Godot import/parse, full production-runtime APK build, test signing and upload in run `35719694874` (SUCCESS). Artifact `android-production-knowledge-acceptance-0a9680f03ea84987dd89cd0f69fdae40939c5110` has ID `10691590889`, size `1633906700` bytes and ZIP digest `sha256:e56bc27f48a5f860f8fa5bb6a0b6fde6f0c809adf1e38f3bfe4928a3e1c82d28`; it expires 2026-10-06. Direct artifact page: `https://github.com/Treninem/AI/actions/runs/35719694874/artifacts/10691590889`. The workflow is restored to manual-only after this one build.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: rootless exact-archive selection, hash verification, bounded private extraction, two-launch strict import/restart/query proof and report sharing are implemented; full APK build/sign/upload is green at run 35719694874.
+REMAINING: install and execute the rootless APK on the owner's current physical Android device and accept only its shared complete report; then human UI/listening, production host/mail/backup/rollback, private signing/version-last and final same-SHA RC gates remain.
+BLOCKERS: the next step is owner interaction on the current non-root physical device; authenticated production host and private signing authority remain external.
+NEXT: owner downloads artifact 10691590889 on Android, extracts the workflow ZIP, installs the APK, selects `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`, enables airplane mode when prompted, completes the first run and separate relaunch, then shares the generated JSON back to this chat.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
