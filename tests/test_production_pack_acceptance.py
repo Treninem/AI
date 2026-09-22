@@ -74,9 +74,19 @@ def test_windows_installed_production_harness_requires_restart_and_exact_pack() 
     assert "-RemoteAddress ($externalIpv4 + $externalIpv6)" in source
     assert "Invoke-InstalledProductionPhase -Name 'install'" in source
     assert "Invoke-InstalledProductionPhase -Name 'resume'" in source
+    assert "[string]$ResumeProfileRoot = ''" in source
+    assert "[string]$InstallProofPath = ''" in source
+    assert "ResumeProfileRoot and InstallProofPath must be supplied together" in source
+    assert "New-Object System.Diagnostics.ProcessStartInfo" in source
+    assert "Start-Process" not in source
+    assert "$startInfo.UseShellExecute = $false" in source
+    assert "$startInfo.RedirectStandardOutput = $true" in source
+    assert "$stdoutTask = $script:activeProcess.StandardOutput.ReadToEndAsync()" in source
     assert "$script:activeProcess.WaitForExit()" in source
     assert "$exitCode = $script:activeProcess.ExitCode" in source
     assert "if ($null -eq $exitCode)" in source
+    assert "Get-Content -LiteralPath $resolvedInstallProof -Raw | ConvertFrom-Json" in source
+    assert "Installed production first-run proof is invalid" in source
     assert "[int]$installed.imported_shards -ne 60" in source
     assert "[int]$resumed.skipped_shards -ne 60" in source
     assert "@($state.completed_shards).Count -ne 60" in source
