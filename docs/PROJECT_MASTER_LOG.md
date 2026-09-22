@@ -2682,3 +2682,21 @@ REMAINING: publish the harness-only correction and execute the short resume-only
 BLOCKERS: final installed restart execution is owner-local; no product rebuild, workflow rerun or corpus re-import is needed.
 NEXT: publish with `[skip ci]`, fetch the resulting exact head, invoke with `-ResumeProfileRoot` and `-InstallProofPath`, and return the final JSON.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 70%
+
+## 92. ACCEPTED: installed Windows full production Knowledge Pack import/restart/query
+
+The owner executed the corrected harness from exact published head `252553900202066bc7b21976caed86acfb54fccb` against the already installed product candidate `fbcb6be180422f2cd776f2940082c516e3e95f85` and the exact extracted production pack. The retained first-process proof had already imported all 60 shards and passed the production-provenance query. A separately launched installed process then reused the isolated durable profile and completed the missing restart phase. The success marker was `AURORA_WINDOWS_INSTALLED_PRODUCTION_KNOWLEDGE_OK`.
+
+The final `aurorafox.windows-installed-production-knowledge.v1` report at `D:\Desktop\AuroraFox-resume-test-20260922-063432\report\report.json` has `passed=true`, `installed=true`, `offline=true`, `external_ai_required=false`, `outbound_firewall_block=true`, `first_imported_shards=60`, `restart_skipped_shards=60`, `first_query_match=true`, and `restart_query_match=true`. Exact identity is `pack_id=aurorafox-bootstrap-ru`, `pack_version=2026.09.01`, 60 shards, 75,871 records and 1,924,345,221 content bytes. Manifest SHA-256 is `bc395f76c0797e9b3751f11fcb7a52b9999ce5c5857ece1f433778bf1fd75cbd`; final durable state SHA-256 is `b9c534b6ece785cf6cdc75cfcab14ad75208d5377f6726773f5444abc5217ee7`. The restart-only wall time was 275,386 ms. Launcher was the installed `AuroraFox.exe`.
+
+The preceding `git fetch` printed an `incorrect old value provided` warning while concurrently updating the local remote-tracking ref, but the exact requested commit was present, the detached worktree was created at `2525539`, and the acceptance ran to completion. This warning did not affect source identity or the runtime verdict. Godot's earlier exit-time leaked-object/resource warnings remain cleanup debt but did not appear as a failure in the final direct-process run and do not invalidate the explicit proof/report contracts.
+
+This closes the installed Windows full-production-payload checkpoint. Do not repeat the archive extraction, source-tree import or Windows full import. The same genuine corpus still requires Android/device consumption evidence; automated Android gates over packaged/synthetic fixtures do not substitute for that boundary.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: 15/20 release checkpoints now have exact evidence; genuine production corpus identity, source-tree import/resume/query and installed Windows import/separate-process restart/query are accepted offline.
+REMAINING: Android full-production-payload/device consumption; physical-device and human UI/listening acceptance; deployed server/mail/backup/rollback; version/versionCode-last metadata; production signing/update/release and final same-SHA RC.
+BLOCKERS: Android physical/runtime boundary, authenticated production host and private signing authority remain external; Windows full-payload acceptance is no longer a blocker.
+NEXT: preserve the Windows artifact/report/profile, stop rerunning this checkpoint, and move to the smallest bounded Android full-payload/device evidence path without weakening the ≥1 GiB genuine-content requirement.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
