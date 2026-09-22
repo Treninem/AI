@@ -1,0 +1,129 @@
+name: AuroraFox Android Production Knowledge Acceptance APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-android-production-knowledge-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-acceptance-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      AURORAFOX_NATIVE_CACHE_DIR: ${{ github.workspace }}/.ci/native-cache
+      CORE_CACHE_DIR: ${{ github.workspace }}/.ci/core-model-cache
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify focused acceptance contracts
+        run: python3 -m pytest -q tests/test_android_production_pack_acceptance.py
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.13'
+          cache-cleanup: on-success
+
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install pinned Android toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager 'platform-tools' 'platforms;android-35' 'build-tools;35.0.1' 'cmake;3.22.1' 'ndk;28.1.13356709'
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/28.1.13356709" >> "$GITHUB_ENV"
+
+      - name: Download Godot 4.7.1 and export templates
+        shell: bash
+        run: |
+          set -euo pipefail
+          base='https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          mkdir -p .ci/godot .ci/templates
+          curl --retry 4 --retry-all-errors -fL "$base/Godot_v4.7.1-stable_linux.x86_64.zip" -o .ci/godot.zip
+          unzip -qo .ci/godot.zip -d .ci/godot
+          GODOT="$(find .ci/godot -maxdepth 1 -type f -name 'Godot*' | head -n1)"
+          chmod +x "$GODOT"
+          template_dir="$HOME/.local/share/godot/export_templates/4.7.1.stable"
+          mkdir -p "$template_dir"
+          curl --retry 4 --retry-all-errors -fL "$base/Godot_v4.7.1-stable_export_templates.tpz" -o .ci/templates.tpz
+          unzip -q .ci/templates.tpz -d .ci/templates
+          cp -a .ci/templates/templates/. "$template_dir/"
+          echo "GODOT=$GODOT" >> "$GITHUB_ENV"
+
+      - name: Restore verified Core model cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .ci/core-model-cache
+          key: aurorafox-core-android-v1-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+
+      - name: Restore pinned Android native cache
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            .ci/native-cache
+            android_plugin/plugin/src/main/cpp/third_party
+            android_plugin/plugin/libs
+            android_plugin/plugin/src/main/assets/voice
+          key: aurorafox-android-native-v1-llama-6d054983-wasm3-2f3123df-sherpa-1.13.4
+
+      - name: Select isolated Android production acceptance scene
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          path = Path('project.godot')
+          source = path.read_text(encoding='utf-8')
+          old = 'run/main_scene="res://main.tscn"'
+          new = 'run/main_scene="res://benchmarks/knowledge/android_production_pack_acceptance.tscn"'
+          if source.count(old) != 1:
+              raise SystemExit('canonical main scene changed; refusing acceptance rewrite')
+          path.write_text(source.replace(old, new), encoding='utf-8')
+          PY
+          "$GODOT" --headless --path . --import
+          "$GODOT" --headless --path . --check-only --script benchmarks/knowledge/android_production_pack_acceptance.gd
+
+      - name: Build acceptance APK with production runtime
+        shell: pwsh
+        run: |
+          ./build/build_android.ps1 -Godot "$env:GODOT" -Gradle 'gradle' -ReleaseOnly -AllowUnsignedRelease -CoreModelCacheDir $env:CORE_CACHE_DIR
+          if ($LASTEXITCODE -ne 0) { throw 'Android production acceptance APK build failed' }
+
+      - name: Test-sign isolated acceptance APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          raw='build/android/AuroraFox.apk'
+          aligned='build/android/AuroraFox-knowledge-acceptance-aligned.apk'
+          final='build/android/AuroraFox-Android-Production-Knowledge-Acceptance.apk'
+          KS="$RUNNER_TEMP/aurorafox-knowledge-acceptance.keystore"
+          keytool -genkeypair -keystore "$KS" -storepass aurorafox -keypass aurorafox -alias knowledge-acceptance -keyalg RSA -keysize 2048 -validity 30 -dname 'CN=AuroraFox Knowledge Acceptance, O=AuroraFox, C=RU'
+          APKSIGNER="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n1)"
+          ZIPALIGN="$(find "$ANDROID_HOME/build-tools" -type f -name zipalign | sort -V | tail -n1)"
+          "$ZIPALIGN" -f -p 4 "$raw" "$aligned"
+          "$APKSIGNER" sign --ks "$KS" --ks-key-alias knowledge-acceptance --ks-pass pass:aurorafox --key-pass pass:aurorafox --out "$final" "$aligned"
+          "$APKSIGNER" verify --verbose "$final"
+          sha256sum "$final" > build/android/production-knowledge-acceptance.sha256
+
+      - name: Upload isolated acceptance APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-production-knowledge-acceptance-${{ github.sha }}
+          path: |
+            build/android/AuroraFox-Android-Production-Knowledge-Acceptance.apk
+            build/android/production-knowledge-acceptance.sha256
+            tests/android_installed_production_knowledge_pack.ps1
+          if-no-files-found: error
+          retention-days: 14
