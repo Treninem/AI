@@ -41,7 +41,9 @@ def test_all_release_secrets_are_required_without_printing_values() -> None:
         "AURORA_ANDROID_KEYSTORE_PASSWORD",
     ):
         assert f"secrets.{name}" in text
-        assert f"{name} is missing." in text
+        assert f"missing+=({name})" in text
+    assert "Missing required secret: %s" in text
+    assert '"${missing[@]}"' in text
     assert "set -x" not in text
     assert '::add-mask::$KEYSTORE_USER' in text
     assert '::add-mask::$KEYSTORE_PASSWORD' in text

@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 114049)
-Total output lines: 3019
+Warning: truncated output (original token count: 114419)
+Total output lines: 3033
 
 # AuroraFox — PROJECT MASTER LOG
 
@@ -689,14 +689,7 @@ ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the det
 - **Не считать пройденными до artifact:** exact-head Knowledge run `35117014347` на `2781b303...` в момент checkpoint всё ещё QUEUED; therefore transactional removal process-kill, current Windows portability, current record-level dedupe и registry-only scaling ещё не имеют runtime verdict. `[knowledge-large]` run `35112699152` также остаётся QUEUED; 100/250 MiB memory-pressure acceptance ещё не доказан.
 - Static audit OCR-owned `scripts/knowledge_store.gd` показывает потенциальный record-dedupe риск: structured identity включает `record_path`, а normalized `_append()` не делает persisted-ID check. Это **не объявляется runtime blocker без probe artifact**. Файл не изменялся этим lane; `CHAT-2026-09-16-LOCAL-OCR` остаётся владельцем.
 - Android: machine-readable bounded/private/local-only contract сохраняется; `physical_device_proof=false`. Desktop/Linux/Windows CI не выдаётся за Android device proof.
-- Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe…64049 tokens truncated…ox and uses `KnowledgePackInstaller` against the real `AIClient.knowledge` store. The twelfth required scenario fails unless manifest/shard integrity succeeds, exactly one shard is imported, a second install skips that committed shard, the local Knowledge index returns the marker, and the result remains explicitly resumable/offline with `external_ai_required=false`. The runner independently checks those fields instead of trusting only the scenario `passed` flag. No extra inference request, workflow, network call, external tool or repository payload was added.
-
-LOCAL EVIDENCE: `tests/test_android_e2e_runner.py` passes 11/11 simulated release-report cases including rejection of an incomplete pack contract; all three `test_core_android_e2e_contract.py` functions pass; shell syntax, Python compilation and `git diff --check` pass. Godot 4.7.1 parses the changed benchmark with `--check-only`. A fresh isolated real-engine `knowledge_pack_installer_smoke.gd` run prints `AURORA_KNOWLEDGE_PACK_INSTALLER_OK verified=true resumable=true offline=true`. These checks prove syntax/control contracts locally; the installed Android result is intentionally still pending exact-head CI.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: installed Android gate extended from 11 to 12 required scenarios with fail-closed pack details; all focused local tests pass.
-REMAINING: publish this atomic candidate and require exact-head Android APK/emulator evidence; full 1.98 GiB production artifact import on Android/Windows is not claimed by the small fixture.
+- Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe…64419 tokens truncated…ion artifact import on Android/Windows is not claimed by the small fixture.
 BLOCKERS: no implementation blocker; hosted Android package/emulator acceptance is pending.
 NEXT: commit/publish only the four implementation/test files plus this journal, then wait for the single automatically triggered Android E2E instead of dispatching duplicate runs.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
@@ -1369,4 +1362,18 @@ DONE: all 25 candidate CI gates green; safe secret identity validation is now re
 REMAINING: publish this correction, dispatch `release.yml` on the release branch with `secrets_only=true`, inspect the exact result, then proceed to version-last only if all four identities are valid.
 BLOCKERS: none before GitHub runtime validation.
 NEXT: publish the follow-up commit and launch the guarded manual preflight from authenticated GitHub Actions.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### RUNTIME RESULT: guarded preflight identifies missing update signing key
+
+Published dispatchable-preflight commit `248fc58260d84907acfa64f34fc22660bc50362b` and manually launched Release run `35914518593` on the exact release branch with `secrets_only=true`. The safety guard worked: `core-gates`, Windows, Android and publish were all skipped. Only `secret-readiness` ran and failed before decoding any key with the exact diagnostic `AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64 is missing.` No build, artifact, tag or release was produced.
+
+The first implementation stopped at the first missing value, so one bounded follow-up changes presence validation to report every missing secret name in the same run while still exposing no values. Identity parsing remains reachable only when all four values exist.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: authenticated GitHub runtime proved the guarded preflight path and absence of the update private-key secret; heavy jobs were correctly skipped.
+REMAINING: publish/rerun the aggregate-name check once; provision every reported missing owner secret, obtain green pinned-identity evidence, then version-last and signed RC.
+BLOCKERS: at least `AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64` is absent from repository secrets.
+NEXT: publish the aggregate missing-name diagnostic, rerun only `secret-readiness`, and use its single result as the owner secret provisioning checklist.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

@@ -39,10 +39,15 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.AURORA_ANDROID_KEYSTORE_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$UPDATE_KEY_B64" || { echo 'AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64 is missing.' >&2; exit 1; }
-          test -n "$KEYSTORE_B64" || { echo 'AURORA_ANDROID_KEYSTORE_BASE64 is missing.' >&2; exit 1; }
-          test -n "$KEYSTORE_USER" || { echo 'AURORA_ANDROID_KEYSTORE_USER is missing.' >&2; exit 1; }
-          test -n "$KEYSTORE_PASSWORD" || { echo 'AURORA_ANDROID_KEYSTORE_PASSWORD is missing.' >&2; exit 1; }
+          missing=()
+          test -n "$UPDATE_KEY_B64" || missing+=(AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64)
+          test -n "$KEYSTORE_B64" || missing+=(AURORA_ANDROID_KEYSTORE_BASE64)
+          test -n "$KEYSTORE_USER" || missing+=(AURORA_ANDROID_KEYSTORE_USER)
+          test -n "$KEYSTORE_PASSWORD" || missing+=(AURORA_ANDROID_KEYSTORE_PASSWORD)
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required secret: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
 
           echo "::add-mask::$KEYSTORE_USER"
           echo "::add-mask::$KEYSTORE_PASSWORD"
