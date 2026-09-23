@@ -2701,7 +2701,6 @@ BLOCKERS: Android physical/runtime boundary, authenticated production host and p
 NEXT: preserve the Windows artifact/report/profile, stop rerunning this checkpoint, and move to the smallest bounded Android full-payload/device evidence path without weakening the ≥1 GiB genuine-content requirement.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
 
-
 ## 93. BEFORE: Android installed full production Knowledge Pack boundary
 
 `WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh release-branch HEAD is `a60b647dbe32d4706455b257250605c8f95ba17f`; `origin/main` remains the merge base, while this branch contains the accepted release train. Section 92 closes the installed Windows full-payload checkpoint at 75%. Public version remains `1.3.0.0` / Android code `100005`; the accumulated MINOR `1.4.0.0` remains version-last.
@@ -2870,3 +2869,19 @@ REMAINING: authenticated REG.RU install/configure/verify evidence; human UI/list
 BLOCKERS: production-host credentials, SMTP settings and private signing authority are owner-controlled and absent here.
 NEXT: on the authenticated production host configure SMTP and run `bash /opt/aurorafox/repository/deploy/reg_ru/verify.sh`; return its final marker or first exact failure. Do not bump/tag/sign before that evidence is accepted.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+## 99. BEFORE: release-branch Python audit dependency and stale Knowledge batch contract
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD before this claim is `86e88a65cc44f3efae16eba374c1c492b7ef2c12`; fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`. Public version remains `1.3.0.0` / Android code `100005`; intended public bump is none for this test-only correction.
+
+SERVER AUDIT EVIDENCE: an isolated Python 3.14 audit environment on the authenticated production host completed 380 tests with five failures. Four are environment-only missing optional format dependencies (`Pillow`/`rarfile`). The fifth is `tests/test_knowledge_store_batch_contract.py`, which still asserts `STRUCTURED_WRITE_BATCH := 128` even though later intentional performance commit `54b726a` changed the production constant to `2048` (`perf: batch and compact large knowledge persistence`). The runtime implementation is not reverted; the stale source-text contract must follow the accepted optimized value.
+
+CLAIM: update only `tests/test_knowledge_store_batch_contract.py` and this journal, then run the focused contract and the expanded host suite after optional test dependencies are installed in `/opt/aurorafox/audit/.venv`. Do not change production Knowledge code, production Python/runtime packages, public version metadata, deployment state or release signing.
+
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+DONE: production-host verify is green; 32/32 focused deployment/release tests and 380 expanded Python tests pass; stale Knowledge batch assertion and four dependency-only failures are classified.
+REMAINING: correct and verify the stale test; install isolated audit-only `Pillow 12.3.0` and `rarfile 4.5` after owner confirmation; rerun the expanded suite and record the exact result. Remaining release gates stay unchanged.
+BLOCKERS: action-time owner confirmation is required before installing the two audit-only Python packages; private signing/version-last/final same-SHA RC and deferred Android acceptance remain outstanding.
+NEXT: commit the claim, change the single stale assertion to `2048`, run the focused test, then request/install only the compatible wheel packages in the isolated audit venv.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
