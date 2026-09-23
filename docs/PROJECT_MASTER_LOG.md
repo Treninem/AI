@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 114419)
-Total output lines: 3033
+Warning: truncated output (original token count: 114889)
+Total output lines: 3047
 
 # AuroraFox — PROJECT MASTER LOG
 
@@ -689,23 +689,7 @@ ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the det
 - **Не считать пройденными до artifact:** exact-head Knowledge run `35117014347` на `2781b303...` в момент checkpoint всё ещё QUEUED; therefore transactional removal process-kill, current Windows portability, current record-level dedupe и registry-only scaling ещё не имеют runtime verdict. `[knowledge-large]` run `35112699152` также остаётся QUEUED; 100/250 MiB memory-pressure acceptance ещё не доказан.
 - Static audit OCR-owned `scripts/knowledge_store.gd` показывает потенциальный record-dedupe риск: structured identity включает `record_path`, а normalized `_append()` не делает persisted-ID check. Это **не объявляется runtime blocker без probe artifact**. Файл не изменялся этим lane; `CHAT-2026-09-16-LOCAL-OCR` остаётся владельцем.
 - Android: machine-readable bounded/private/local-only contract сохраняется; `physical_device_proof=false`. Desktop/Linux/Windows CI не выдаётся за Android device proof.
-- Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe…64419 tokens truncated…ion artifact import on Android/Windows is not claimed by the small fixture.
-BLOCKERS: no implementation blocker; hosted Android package/emulator acceptance is pending.
-NEXT: commit/publish only the four implementation/test files plus this journal, then wait for the single automatically triggered Android E2E instead of dispatching duplicate runs.
-ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
-
-### ACCEPTED: exact installed Android pack evidence
-
-Exact head `94d83f6849e170f34705597d41bec918e61f6dfa` completed all 25 workflows successfully. Core Android E2E run `35524065614`, real installed job `106113115481`, checked out the exact SHA, built and installed the production-runtime APK, disabled external networking and passed all 12 required scenarios. Evidence artifact `10609264894` has ZIP SHA-256 `b4667943267f7bcc96555abe1ede02c7456e79ba691f71d8fb750aafc7a12276`. Its report records `installed_knowledge_pack` passed in `21.369ms`: status `ready`, one imported shard, one skipped shard on resume, `query_match=true`, `offline=true`, `external_ai_required=false`; the overall report is passed with no failed scenarios and exact `git_sha=94d83f6...`.
-
-This accepts the installed Android fixture boundary but does not claim a full 1.98 GiB mobile import. Release-train readiness remains 12/20 (60%) because the fixture closes adapter packaging/control flow, while the mandatory production-payload cross-platform evidence is still pending.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: all exact-head workflows green; installed Android APK verifies pack integrity, import, resume and local query fully offline.
-REMAINING: symmetric installed Windows pack evidence and full production-payload platform import/query; physical/human/server/version/signing boundaries remain.
-BLOCKERS: none for the Windows installed fixture.
-NEXT: add the installed Windows fixture to the existing Windows Package and signed Release paths without a new workflow.
+- Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe…64889 tokens truncated…xisting Windows Package and signed Release paths without a new workflow.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
 
 ## 79. Installed Windows Knowledge Pack fixture in existing package/release gates
@@ -1376,4 +1360,18 @@ DONE: authenticated GitHub runtime proved the guarded preflight path and absence
 REMAINING: publish/rerun the aggregate-name check once; provision every reported missing owner secret, obtain green pinned-identity evidence, then version-last and signed RC.
 BLOCKERS: at least `AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64` is absent from repository secrets.
 NEXT: publish the aggregate missing-name diagnostic, rerun only `secret-readiness`, and use its single result as the owner secret provisioning checklist.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### AFTER: complete owner-secret provisioning checklist confirmed
+
+Published aggregate-diagnostic commit `5047297546c343df3807633eff608500b02c8324` and ran guarded Release preflight `35914825824` with `secrets_only=true`. The exact run used commit `5047297`; core, Windows, Android and publish jobs were skipped. The sole six-second preflight reported all four required repository secrets absent: `AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64`, `AURORA_ANDROID_KEYSTORE_BASE64`, `AURORA_ANDROID_KEYSTORE_USER`, and `AURORA_ANDROID_KEYSTORE_PASSWORD`.
+
+This is an owner-controlled signing-authority blocker, not a product/CI defect. New arbitrary keys must not be substituted because the committed permanent update public-key fingerprint and Android certificate fingerprint are already pinned. The matching private material must be restored from the owner's `build/private` signing bootstrap output (or an intentional pre-release identity migration must be separately approved and fully revalidated).
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: 25/25 candidate workflows green; guarded secret preflight implemented; two authenticated runtime executions proved all four signing secrets absent while every heavy/publish job remained skipped.
+REMAINING: install the four matching owner secrets without exposing values in chat; rerun preflight to obtain `AURORAFOX_RELEASE_SIGNING_SECRETS_READY`; then perform V1.4.0.0/code100006 version-last and final same-SHA signed RC.
+BLOCKERS: owner-controlled private update key, Android keystore, alias and password are not installed as GitHub repository secrets.
+NEXT: on the authenticated owner PC use the existing `build/setup_release_signing.ps1`/private bootstrap material to provision the four secrets, then rerun only Release `secrets_only`; do not rotate pinned identities implicitly.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
