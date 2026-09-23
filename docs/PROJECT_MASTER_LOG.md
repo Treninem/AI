@@ -367,6 +367,19 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Scope exception: прежний общий запрет на `.github/workflows/**` сужается только для **нового** Evolution workflow. Существующие release/package/update workflows остаются неизменными; workflow запускается только для `feature/aurorafox-evolution-engine` или вручную и не даёт promotion/release authority.
 - Acceptance: workflow contract + Linux regression зелёные; Windows job использует exact `${{ github.sha }}`, официальный Godot 4.7.1, existing fail-closed harness и загружает JSON/log artifact даже при failure. Только successful Windows run с `native_windows=true` закрывает platform gate.
 
+### CLAIM `WORK-2026-09-23-EVOLUTION-RUNTIME-WIRING`
+
+- Статус: **ACTIVE — native Windows gate закрыт, начат следующий отдельный integration stage**.
+- Fresh release baseline: `main` / `4c6fe649af69c9be0eb080863f0e94b80cc3e082`.
+- Started from feature code HEAD: `42b2f86ecf0776bfa6023503a697ffdd3ae3db2e` после successful native Windows run `35857488534`.
+- Режим: Work / главный координатор Evolution.
+- Цель этапа: подключить Evolution Engine к существующей main scene через тонкий runtime binder, не дублируя foundation и не выдавая автоматическую mutation/release authority.
+- Предполагаемый итоговый bump после полного Evolution acceptance: **MINOR**; версия сейчас не меняется.
+- Занятые файлы: новый `evolution_engine/integration/runtime_service.gd`, Evolution tests/docs, `main.tscn` и эта запись master log.
+- Не изменять: `project.godot` autoload, существующие foundation scripts, updater/release/build/version/package файлы и любые чужие production claims.
+- Safety contract: startup всегда Level 0; runtime регистрирует только status/analysis tools; повышение уровня требует явного user-confirmed session API и не сохраняется между запусками; mutation/activation/promotion tools агенту не выдаются; managed mode/master stop/update guard/controller gates остаются authority.
+- Acceptance: clean Godot import, runtime binding smoke, default-deny/session-reset/tool-exposure contracts, весь existing Evolution suite на Linux и native Windows CI exact SHA.
+
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
@@ -1497,3 +1510,68 @@ BLOCKERS:
 
 NEXT:
 - Run the committed harness at the exact final feature HEAD on native Windows; use its JSON/log pair as the acceptance input for the next Evolution batch.
+
+
+### 2026-09-23 — Work — Native Windows Core tournament acceptance
+
+DIRECTION:
+- Evolution Engine.
+
+ACTION:
+- Создан отдельный feature-only/read-only workflow `.github/workflows/evolution-engine-ci.yml`; существующие release/package/update workflows не менялись.
+- Workflow автоматически выполнил exact-SHA harness на GitHub-hosted native Windows с официальным Godot 4.7.1, предварительно проверив PowerShell parser.
+- JSON/log evidence загружены отдельным artifact; workflow не имеет promotion, signing, publishing или release authority.
+
+FILES:
+- `.github/workflows/evolution-engine-ci.yml`
+- `evolution_engine/tests/test_evolution_foundation_contract.py`
+- `evolution_engine/tests/ACCEPTANCE.md`
+- `evolution_engine/README.md`
+- `docs/PROJECT_MASTER_LOG.md`
+
+COMMIT:
+- Claim: `139be83a8705dd298f724c26ebfc204e1f2673a5`.
+- Code: `42b2f86ecf0776bfa6023503a697ffdd3ae3db2e` (`ci: verify Evolution tournament on native Windows`).
+
+TEST:
+- Local workflow YAML parse: PASS.
+- Local static contracts: **41 passed**.
+- Local official Godot 4.7.1 full Linux acceptance: PASS, expected `native_windows=false`.
+- GitHub Actions run `35857488534`, job `107169363147`: **SUCCESS** on exact code SHA `42b2f86ecf0776bfa6023503a697ffdd3ae3db2e`.
+- Windows PowerShell parser, official Godot download, full runner and artifact upload steps: SUCCESS.
+- Windows contract suite: **41 passed**.
+- Native marker: `AURORA_CORE_TOURNAMENT_SMOKE_OK population=5 handoff=1 second_verify=true signed_update=true lock=true native_windows=true`.
+- Final marker: `AURORAFOX_EVOLUTION_ACCEPTANCE_OK`.
+- Harness marker: `AURORAFOX_EVOLUTION_WINDOWS_EVIDENCE_OK sha=42b2f86ecf0776bfa6023503a697ffdd3ae3db2e log_sha256=8497fef30e0786728e23fd22cbf41511f96d335a58ec5635243a4a8ca7a4a0e2`.
+- Artifact `10748088663`, name `evolution-windows-42b2f86ecf0776bfa6023503a697ffdd3ae3db2e`, digest `sha256:969a6fcc86d7ae6c9104bc43f46ea27597d1e6e7e21fe4f7dada835744ebe30a`.
+
+RESULT:
+- Обязательный native Windows Core tournament gate закрыт реальным исполнением, а не cross-platform substitute.
+- Platform blocker снят; следующий разрешённый этап — guarded runtime wiring.
+- `main`, release/package/update/version metadata и production foundation не изменены.
+
+BLOCKERS:
+- Native Windows blocker: none.
+- Runtime wiring и его same-SHA integration acceptance ещё не выполнены.
+
+NEXT:
+- Подключить thin runtime binder к существующим main-scene instances с default Level 0 и без agent-accessible elevation/mutation/promotion tools; затем прогнать Linux + native Windows exact-SHA acceptance.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+
+DONE:
+- Isolated architecture and full Linux Godot acceptance.
+- Native Windows Core tournament, second verification, signed-update exclusion and lock lifecycle proven on exact SHA.
+- Hash-bound Windows evidence artifact retained for 30 days.
+
+REMAINING:
+- Guarded runtime binding with default-deny permission semantics.
+- Runtime integration tests and exact-SHA Windows rerun after wiring.
+- Final integration/package/update acceptance before merge/version action.
+
+BLOCKERS:
+- none preventing the guarded runtime-wiring stage.
+
+NEXT:
+- Implement and test the runtime binder only in newly claimed paths; do not expose autonomous permission elevation or release authority.
