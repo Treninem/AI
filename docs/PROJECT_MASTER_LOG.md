@@ -1420,3 +1420,68 @@ BLOCKERS:
 
 NEXT:
 - Execute `python evolution_engine/tests/run_evolution_checks.py --godot <Godot-4.7.1.exe>` on native Windows at the exact feature HEAD, retain the output artifact, then proceed only on green evidence.
+
+
+### 2026-09-23 — Work — Exact native Windows Evolution evidence harness
+
+DIRECTION:
+- Evolution Engine.
+
+ACTION:
+- Добавлен `run_windows_evidence.ps1`, который fail-closed принимает результат только на native Windows, из чистого checkout точного 40-character SHA и с Godot 4.7.1.
+- Harness выполняет полный `run_evolution_checks.py`, требует одновременно общий acceptance marker и Core tournament marker `native_windows=true`, а наличие `native_windows=false` делает результат неприемлемым.
+- Успешный запуск сохраняет полный log и machine-readable JSON с exact SHA, Godot version, exit code, markers, UTC timestamp и SHA-256 лога.
+- Новый Python contract включён в основной Evolution static runner; документация содержит единственную воспроизводимую Windows-команду и не выдаёт cross-platform substitute за native proof.
+
+FILES:
+- `evolution_engine/tests/run_windows_evidence.ps1`
+- `evolution_engine/tests/test_windows_evidence_harness_contract.py`
+- `evolution_engine/tests/run_evolution_checks.py`
+- `evolution_engine/tests/ACCEPTANCE.md`
+- `evolution_engine/README.md`
+- `docs/PROJECT_MASTER_LOG.md`
+
+COMMIT:
+- Claim: `f98468d255069b776e7b96eab63bb692595fe2e8`.
+- Code: `77fe7584fff08849d16453f31960dcf80b1632f5` (`evolution: add exact Windows evidence harness`).
+
+TEST:
+- `/tmp/aurorafox-evolution-venv/bin/python -m pytest -q evolution_engine/tests`: **40 passed**.
+- Static acceptance runner: **40 passed**, marker `EVOLUTION_STATIC_CONTRACTS_OK`.
+- Official Godot `4.7.1.stable.official.a13da4feb` full Linux acceptance: PASS.
+- Existing SelfImprover/Core benchmark and Evolution policy/evidence/controller smokes: PASS.
+- Core tournament control-flow smoke: PASS with `population=5`, exactly-one handoff, second verification, signed-update exclusion, lock lifecycle and expected Linux marker `native_windows=false`.
+- Final runner marker: `AURORAFOX_EVOLUTION_ACCEPTANCE_OK`.
+- `git diff --check`: PASS. Generated Godot `.uid/.import` files were excluded from the commit.
+- PowerShell runtime/parser execution was unavailable in this Linux environment; Windows harness correctness is contract-checked but remains subject to its required native execution.
+
+RESULT:
+- Native Windows evidence now has a deterministic, hash-bound collection path that cannot silently accept Wine/Linux or a different/dirty commit.
+- `main`, workflows, production runtime/autoload, release/version/package/update files and existing foundation remain unchanged.
+- Lane percentage is intentionally unchanged because preparation of a gate is not execution of that gate.
+
+BLOCKERS:
+- Native Windows executor with Godot 4.7.1 is still required. Until the JSON report has `passed=true`, `native_windows=true` and the exact feature SHA, Core source tournament acceptance remains incomplete.
+- Runtime/autoload integration remains blocked behind that evidence.
+
+NEXT:
+- On native Windows, clean-clone the exact final feature HEAD and run `powershell -ExecutionPolicy Bypass -File evolution_engine/tests/run_windows_evidence.ps1 -ExpectedHead <exact-feature-SHA> -Godot <path-to-Godot-4.7.1.exe>`. Preserve both generated evidence files and their hashes; begin runtime wiring only after a passing report.
+
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+
+DONE:
+- Exact-SHA native Windows evidence harness implemented, documented and contract-tested.
+- Full Linux Godot 4.7.1 regression acceptance remains green.
+- Release/main/workflow isolation preserved.
+
+REMAINING:
+- Execute the harness on native Windows and archive a passing `native_windows=true` report.
+- Guarded runtime wiring and integration tests without release regression.
+- Same-SHA Windows/Android/package/update acceptance before merge/version action.
+
+BLOCKERS:
+- Native Windows executor; current environment is Linux and does not provide acceptable platform evidence.
+
+NEXT:
+- Run the committed harness at the exact final feature HEAD on native Windows; use its JSON/log pair as the acceptance input for the next Evolution batch.
