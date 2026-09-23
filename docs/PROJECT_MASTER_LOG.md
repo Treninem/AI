@@ -355,6 +355,18 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Запрещённый scope: `main`, `.github/workflows/**`, production runtime/autoload, updater/release/build/version/package files и существующий фундамент вне `evolution_engine/**`.
 - Acceptance этого блока: static contracts + Linux Godot acceptance остаются зелёными; harness fail-closed отклоняет non-Windows, неверную Godot version, dirty/wrong HEAD и отсутствие native marker. Сам harness не считается native Windows evidence до реального запуска на Windows.
 
+### CLAIM `WORK-2026-09-23-EVOLUTION-WINDOWS-CI`
+
+- Статус: **ACTIVE — расширение Windows evidence блока по прямому решению владельца «всё выполнить самостоятельно»**.
+- Fresh release baseline: `main` / `4c6fe649af69c9be0eb080863f0e94b80cc3e082`.
+- Started from branch HEAD: `55099913aefd964c2f8350d3e7b87a5d56701cc1` (`feature/aurorafox-evolution-engine`).
+- Режим: Work / главный координатор Evolution.
+- Цель этапа: выполнить обязательный native Windows gate без переноса ручной работы на владельца через новый изолированный feature-only GitHub Actions workflow.
+- Предполагаемый итоговый bump после полного Evolution acceptance: **MINOR**; каноническая версия сейчас не меняется.
+- Занятые файлы: новый `.github/workflows/evolution-engine-ci.yml`, `evolution_engine/tests/**`, `evolution_engine/README.md` и эта запись master log.
+- Scope exception: прежний общий запрет на `.github/workflows/**` сужается только для **нового** Evolution workflow. Существующие release/package/update workflows остаются неизменными; workflow запускается только для `feature/aurorafox-evolution-engine` или вручную и не даёт promotion/release authority.
+- Acceptance: workflow contract + Linux regression зелёные; Windows job использует exact `${{ github.sha }}`, официальный Godot 4.7.1, existing fail-closed harness и загружает JSON/log artifact даже при failure. Только successful Windows run с `native_windows=true` закрывает platform gate.
+
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
