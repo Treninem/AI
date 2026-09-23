@@ -63,6 +63,8 @@ Evolution tracks managed-mode authority, its own exclusive guard and ownership o
 
 Evolution never signs, publishes, auto-merges, changes the canonical version, or grants itself release authority.
 
+Native Windows acceptance is collected with `evolution_engine/tests/run_windows_evidence.ps1`. The harness binds the result to one clean commit and Godot 4.7.1, requires the production `native_windows=true` path, and hashes its machine-readable evidence log. Cross-platform test substitution is not accepted as native proof.
+
 ## Release isolation
 
 Until explicit acceptance, `evolution_engine/**` is not wired into autoload/runtime and does not modify:

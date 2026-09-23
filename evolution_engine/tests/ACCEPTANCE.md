@@ -26,3 +26,13 @@ The runner executes the existing AuroraFox self-improvement and Core benchmark s
 The production adapter remains Windows-only because the existing Core source verification pipeline is Windows-only. On non-Windows hosts, that smoke uses a test-only subclass to cross the platform preflight without changing production behavior; its success marker reports `native_windows=false`. On Windows it uses the production adapter and reports `native_windows=true`.
 
 A full acceptance claim requires the Godot smokes to be executed successfully; static contracts alone are not sufficient evidence for runtime readiness. Native Windows acceptance is still required before claiming the real Core source pipeline verified end to end.
+
+## Native Windows evidence
+
+From a clean checkout of the exact feature commit, run in Windows PowerShell:
+
+`powershell -ExecutionPolicy Bypass -File evolution_engine/tests/run_windows_evidence.ps1 -ExpectedHead <40-character-feature-SHA> -Godot <path-to-Godot-4.7.1.exe>`
+
+The harness fails closed unless it is running on native Windows, the checkout is clean and exactly matches `ExpectedHead`, and Godot reports version 4.7.1. Success additionally requires the full runner marker and `native_windows=true`; a non-native marker can never produce a passing report.
+
+Evidence is written under `artifacts/evolution-windows/` as a full log plus JSON containing the exact SHA, Godot version, markers and SHA-256 of the log. These generated artifacts are evidence outputs and must not be committed as source.
