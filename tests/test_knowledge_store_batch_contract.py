@@ -6,7 +6,7 @@ STORE = (ROOT / "scripts" / "knowledge_store.gd").read_text(encoding="utf-8")
 
 
 def test_store_batches_structured_and_normalized_writes():
-    assert "STRUCTURED_WRITE_BATCH := 128" in STORE
+    assert "STRUCTURED_WRITE_BATCH := 2048" in STORE
     assert "func _append_many(" in STORE
     assert '"structured_pending": []' in STORE
     assert '"normalized_pending": []' in STORE

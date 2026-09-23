@@ -2885,3 +2885,15 @@ REMAINING: correct and verify the stale test; install isolated audit-only `Pillo
 BLOCKERS: action-time owner confirmation is required before installing the two audit-only Python packages; private signing/version-last/final same-SHA RC and deferred Android acceptance remain outstanding.
 NEXT: commit the claim, change the single stale assertion to `2048`, run the focused test, then request/install only the compatible wheel packages in the isolated audit venv.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
+
+### AFTER: stale Knowledge batch contract corrected locally
+
+Updated only `tests/test_knowledge_store_batch_contract.py`: the source-text contract now pins the intentional production value `STRUCTURED_WRITE_BATCH := 2048` introduced by performance commit `54b726a`, rather than reverting optimized production code to the obsolete `128` batch size. Both functions in the focused contract were imported and executed directly with standard Python because the local sandbox does not include pytest; both completed successfully. The authenticated host expanded suite remains pending until compatible optional-format wheels are installed in the isolated audit venv.
+
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+DONE: stale assertion corrected; both focused Knowledge batch/removal contract functions pass locally; production Knowledge code remains unchanged.
+REMAINING: install audit-only `Pillow 12.3.0` and `rarfile 4.5` after action-time owner confirmation, mirror this exact test correction to the host audit checkout, rerun the expanded suite and publish the verified commit.
+BLOCKERS: owner confirmation is required for the isolated test-package installation; final release gates remain unchanged.
+NEXT: obtain confirmation, install only the two compatible wheels under `/opt/aurorafox/audit/.venv`, apply the exact one-line test correction in the audit checkout and rerun the expanded Python suite.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
