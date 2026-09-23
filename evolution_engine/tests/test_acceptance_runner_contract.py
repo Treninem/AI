@@ -12,6 +12,7 @@ def test_acceptance_runner_keeps_existing_foundation_smokes():
     assert "evolution_policy_smoke.gd" in text
     assert "evolution_evidence_smoke.gd" in text
     assert "evolution_controller_smoke.gd" in text
+    assert "evolution_runtime_smoke.gd" in text
 
 
 def test_acceptance_runner_requires_godot_unless_static_only():

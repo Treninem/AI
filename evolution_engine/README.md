@@ -26,6 +26,7 @@ AuroraFox Evolution Engine is a thin orchestration layer over the self-improveme
 - `AuroraEvolutionEvidenceGate` — scoreboard/winner/SHA/final-verification integrity.
 - `AuroraEvolutionExecutionGuard` — serialization with existing autonomous work.
 - `AuroraEvolutionManagedModeGuard` — disables the legacy automatic hot-winner activation path while Evolution Levels 2–4 are in control.
+- `AuroraEvolutionRuntime` — scene-scoped binder to the existing live foundation; starts at Level 0 and exposes only read-only status/analysis tools to AgentCore.
 - `AuroraEvolutionCoreTournamentAdapter` — 3–10 Core candidates over one stable baseline using existing CoreImprovementPipeline primitives.
 - `AuroraEvolutionExperienceBridge` / `ContextBridge` — reuse existing Memory/Knowledge without creating a parallel database.
 - `AuroraEvolutionLearningSignal` — derives bounded strategy/failure metadata only from AuroraFox's own Evolution experience; canonical Knowledge contributes provenance references, not executable prompt instructions.
@@ -67,9 +68,11 @@ Native Windows acceptance is collected with `evolution_engine/tests/run_windows_
 
 The dedicated `evolution-engine-ci.yml` workflow is feature-only, read-only and evidence-only. It cannot promote a candidate, publish an update, modify a release or run from an Evolution mutation.
 
+Runtime wiring is intentionally session-scoped and default-deny. `main.tscn` owns one `EvolutionRuntime` node; it reuses the already-running coordinator, improver, Memory, Knowledge, sandbox, updater guard and Core pipeline. Levels 2–4 require explicit user confirmation for the current session, are never persisted, and are reset to Level 0 when managed mode ends or the node exits. AgentCore receives no mutation, activation, permission-elevation or promotion tool.
+
 ## Release isolation
 
-Until explicit acceptance, `evolution_engine/**` is not wired into autoload/runtime and does not modify:
+Evolution is not an autoload and remains isolated from release authority. Its scene-scoped runtime binding does not modify:
 - `main`;
 - release/update/package workflows;
 - version files;

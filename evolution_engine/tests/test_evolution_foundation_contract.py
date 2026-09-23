@@ -193,16 +193,53 @@ def test_permission_policy_matches_declared_levels_and_population():
     assert "const MAX_MUTATIONS := 10" in policy
 
 
-def test_evolution_is_not_wired_into_release_runtime_or_existing_workflows_yet():
+def test_evolution_runtime_wiring_is_scene_scoped_and_not_an_autoload():
     project = read("project.godot")
     assert "evolution_engine/" not in project
     assert "AuroraEvolutionEngine" not in project
+    scene = read("main.tscn")
+    assert 'path="res://evolution_engine/integration/runtime_service.gd"' in scene
+    assert '[node name="EvolutionRuntime" type="Node" parent="."]' in scene
     for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
         if workflow.name == "evolution-engine-ci.yml":
             continue
         text = workflow.read_text(encoding="utf-8")
         assert "evolution_engine/" not in text
         assert "AuroraEvolutionEngine" not in text
+
+
+def test_runtime_service_is_default_deny_and_exposes_read_only_agent_tools():
+    runtime = read("evolution_engine/integration/runtime_service.gd")
+    assert "controller.set_permission_level(AuroraEvolutionPolicy.LEVEL_ANALYSIS)" in runtime
+    assert "Explicit user confirmation is required" in runtime
+    assert '"persisted": false' in runtime
+    assert "func begin_managed_session(" in runtime
+    assert "func end_managed_session()" in runtime
+    assert 'const STATUS_TOOL := "aurora_evolution_status"' in runtime
+    assert 'const ANALYZE_TOOL := "aurora_evolution_analyze"' in runtime
+    for forbidden in (
+        'register_tool("aurora_evolution_run"',
+        'register_tool("aurora_evolution_activate"',
+        'register_tool("aurora_evolution_promote"',
+        "FileAccess.open",
+    ):
+        assert forbidden not in runtime
+
+
+def test_runtime_service_binds_existing_foundation_instances_only():
+    runtime = read("evolution_engine/integration/runtime_service.gd")
+    assert 'main.get_node_or_null("AutonomousCoordinator")' in runtime
+    assert 'main.get("improver")' in runtime
+    assert 'main.get_node_or_null("RuntimeExtensions")' in runtime
+    assert 'main.get("memory")' in runtime
+    assert 'ai.get("knowledge")' in runtime
+    assert 'main.get_node_or_null("CoreImprovementPipeline")' in runtime
+    assert 'main.get_node_or_null("AutonomySettings")' in runtime
+    assert 'main.get_node_or_null("UpdateAutonomyGuard")' in runtime
+    assert 'sandbox_bridge.get("manager")' in runtime
+    assert "SelfImprover.new()" not in runtime
+    assert "MemoryStore.new()" not in runtime
+    assert "KnowledgeStore.new()" not in runtime
 
 
 def test_evolution_windows_ci_is_feature_only_and_has_no_release_authority():
