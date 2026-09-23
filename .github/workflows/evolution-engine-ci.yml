@@ -1,0 +1,80 @@
+name: AuroraFox Evolution Engine
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/aurorafox-evolution-engine
+    paths:
+      - 'evolution_engine/**'
+      - '.github/workflows/evolution-engine-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-evolution-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  native-windows-acceptance:
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout exact feature commit
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install isolated test dependency
+        run: python -m pip install pytest==9.0.2
+
+      - name: Download official Godot 4.7.1
+        id: godot
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = Join-Path $env:RUNNER_TEMP 'godot-4.7.1.zip'
+          $target = Join-Path $env:RUNNER_TEMP 'godot-4.7.1'
+          $url = 'https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_win64.exe.zip'
+          Invoke-WebRequest -Uri $url -OutFile $archive
+          Expand-Archive -Path $archive -DestinationPath $target -Force
+          $console = Get-ChildItem $target -Recurse -Filter '*_console.exe' | Select-Object -First 1
+          if (-not $console) { throw 'Godot 4.7.1 console executable was not found in the official archive' }
+          "path=$($console.FullName)" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Parse Windows evidence harness
+        shell: powershell
+        run: |
+          $tokens = $null
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            (Resolve-Path '.\evolution_engine\tests\run_windows_evidence.ps1'),
+            [ref]$tokens,
+            [ref]$errors
+          ) | Out-Null
+          if ($errors.Count -gt 0) {
+            $errors | ForEach-Object { Write-Error $_.Message }
+            throw 'Evolution Windows evidence harness parse failed'
+          }
+
+      - name: Run exact-SHA native Windows acceptance
+        shell: powershell
+        run: |
+          .\evolution_engine\tests\run_windows_evidence.ps1 `
+            -ExpectedHead '${{ github.sha }}' `
+            -Godot '${{ steps.godot.outputs.path }}' `
+            -Python 'python' `
+            -ReportDir "$env:RUNNER_TEMP\evolution-windows"
+
+      - name: Upload native Windows evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: evolution-windows-${{ github.sha }}
+          path: ${{ runner.temp }}/evolution-windows
+          if-no-files-found: error
+          retention-days: 30

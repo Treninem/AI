@@ -65,6 +65,8 @@ Evolution never signs, publishes, auto-merges, changes the canonical version, or
 
 Native Windows acceptance is collected with `evolution_engine/tests/run_windows_evidence.ps1`. The harness binds the result to one clean commit and Godot 4.7.1, requires the production `native_windows=true` path, and hashes its machine-readable evidence log. Cross-platform test substitution is not accepted as native proof.
 
+The dedicated `evolution-engine-ci.yml` workflow is feature-only, read-only and evidence-only. It cannot promote a candidate, publish an update, modify a release or run from an Evolution mutation.
+
 ## Release isolation
 
 Until explicit acceptance, `evolution_engine/**` is not wired into autoload/runtime and does not modify:

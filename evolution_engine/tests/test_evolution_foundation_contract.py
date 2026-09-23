@@ -193,14 +193,30 @@ def test_permission_policy_matches_declared_levels_and_population():
     assert "const MAX_MUTATIONS := 10" in policy
 
 
-def test_evolution_is_not_wired_into_release_runtime_or_workflows_yet():
+def test_evolution_is_not_wired_into_release_runtime_or_existing_workflows_yet():
     project = read("project.godot")
     assert "evolution_engine/" not in project
     assert "AuroraEvolutionEngine" not in project
     for workflow in (ROOT / ".github" / "workflows").glob("*.yml"):
+        if workflow.name == "evolution-engine-ci.yml":
+            continue
         text = workflow.read_text(encoding="utf-8")
         assert "evolution_engine/" not in text
         assert "AuroraEvolutionEngine" not in text
+
+
+def test_evolution_windows_ci_is_feature_only_and_has_no_release_authority():
+    workflow = read(".github/workflows/evolution-engine-ci.yml")
+    assert "feature/aurorafox-evolution-engine" in workflow
+    assert "runs-on: windows-latest" in workflow
+    assert "run_windows_evidence.ps1" in workflow
+    assert "-ExpectedHead '${{ github.sha }}'" in workflow
+    assert "Godot_v4.7.1-stable_win64.exe.zip" in workflow
+    assert "actions/upload-artifact@v4" in workflow
+    assert "if: always()" in workflow
+    assert "contents: read" in workflow
+    for forbidden in ("release.yml", "update/", "build/", "project/version.json", "git push", "gh release"):
+        assert forbidden not in workflow
 
 
 def test_foundation_requires_existing_memory_and_extension_contracts():

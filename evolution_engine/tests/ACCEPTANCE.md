@@ -36,3 +36,5 @@ From a clean checkout of the exact feature commit, run in Windows PowerShell:
 The harness fails closed unless it is running on native Windows, the checkout is clean and exactly matches `ExpectedHead`, and Godot reports version 4.7.1. Success additionally requires the full runner marker and `native_windows=true`; a non-native marker can never produce a passing report.
 
 Evidence is written under `artifacts/evolution-windows/` as a full log plus JSON containing the exact SHA, Godot version, markers and SHA-256 of the log. These generated artifacts are evidence outputs and must not be committed as source.
+
+The feature-only `.github/workflows/evolution-engine-ci.yml` runs the same harness on GitHub-hosted native Windows for pushes to `feature/aurorafox-evolution-engine` and for manual dispatch. It has read-only repository permissions, does not build or publish a release, and uploads the JSON/log pair as `evolution-windows-<sha>`.
