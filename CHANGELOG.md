@@ -1,5 +1,14 @@
 # AuroraFox Changelog
 
+## V1.4.0.0 — 2026-09-23
+
+- Established the permanent signed updater and Android release identities and verified all four private GitHub signing secrets against their committed public fingerprints.
+- Promoted the verified packaged AuroraFox Core as the primary local runtime with bounded automatic recovery and non-technical user-facing failure handling.
+- Applied the approved AuroraFox owner icon to the project and Windows export identity.
+- Preserved the complete offline-first Core, Knowledge, Memory, OCR, Voice, Work and Computer Agent release train with signed Windows and Android packaging gates.
+- Kept legacy V1.2/V1.3 clients on the explicit one-time repair path while making V1.4.0.0 the permanent signed automatic-update floor.
+- Bumped Android `versionCode` to `100006`.
+
 ## V1.3.0.0 — 2026-09-15
 
 - Made AuroraFox Core local-first on Windows and Android. Ollama remains an optional compatibility fallback and is not required for startup or normal local operation.

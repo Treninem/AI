@@ -3105,3 +3105,35 @@ REMAINING: publish and pull the correction, rerun bootstrap on the owner PC, ins
 BLOCKERS: owner-PC bootstrap rerun is required to create the permanent private identities.
 NEXT: pull over the existing five public-pin deletions and rerun the same explicit reset command; no checkout/reset of the working tree is required.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+## 104. BEFORE: version-last V1.4.0.0 signed release candidate
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD is `87a94f27fd0b324898e1f1328c56858c09d6db1c`. The owner generated the permanent updater RSA identity and Android JKS identity locally, uploaded all four repository secrets without exposing their values, and committed exactly the five public identity files. Independent GitHub inspection recomputed both public fingerprints and matched `update/release_identity.json`.
+
+Guarded Release run `35922892799` completed `success` on exact SHA `87a94f27fd0b324898e1f1328c56858c09d6db1c`. Its `secret-readiness` job emitted `AURORAFOX_RELEASE_SIGNING_SECRETS_READY`; updater private/public identity, Android keystore alias/password/certificate identity all matched. `core-gates`, Windows, Android and publish jobs were explicitly skipped, proving the preflight did not build or publish.
+
+CLAIM: perform the already accumulated test-first/version-last MINOR bump from V1.3.0.0/code100005 to V1.4.0.0/code100006. Synchronize canonical project, Android, manifest, changelog, evolution and focused version-contract files only; retain legacy repair boundary V1.3.0.0 and permanent signed floor V1.4.0.0. Then publish the untagged candidate, accept its CI, run the full signed Release workflow on the exact same SHA without publication, and create the production tag only after the same-SHA RC succeeds.
+
+Owned files: `project/version.json`, `project.godot`, `export_presets.cfg`, `update/manifest.template.json`, `CHANGELOG.md`, `evolution.log`, `tests/test_standalone_core_contract.py`, and this journal.
+
+PROGRESS_COMPLETE: 84%
+PROGRESS_REMAINING: 16%
+DONE: permanent signing identities exist and match; four secrets verified inside GitHub; all heavy/publish jobs skipped during preflight; version-last gate is now authorized.
+REMAINING: synchronize and contract-test V1.4.0.0/code100006, publish candidate, accept exact-SHA CI and full signed no-publish RC, then tag/publish and verify downloadable artifacts/update manifest.
+BLOCKERS: none for version-last implementation; production tagging remains fail-closed until exact-SHA signed RC succeeds.
+NEXT: apply only canonical version surfaces and focused current-version assertions, run release/version/update contracts, then publish without a release tag.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 84%
+
+### AFTER: canonical V1.4.0.0/code100006 synchronized
+
+Canonical release metadata is now synchronized at `V1.4.0.0` and Android `versionCode=100006`: `project/version.json`, `project.godot`, Android export preset, update manifest template, changelog and evolution log agree. The project release-line comment and focused standalone-Core current-version assertions were updated. The permanent signed floor remains `1.4.0.0`; the one-time legacy repair boundary and repair bootstrap remain `1.3.0.0` exactly.
+
+Focused evidence: 52 directly invocable functions pass across standalone Core, release identity/version policy, updater backward compatibility, release branding, master-journal, signing reset and secret-readiness contracts. All seven Python contract modules compile. An independent canonical-version synchronization check reports `AURORA_VERSION_SYNC_OK version=V1.4.0.0 androidCode=100006`; `git diff --check` is clean. This audit environment has no pytest module, so no dependency was installed merely to wrap the same assertions; GitHub CI remains the authoritative pytest runner on the published candidate.
+
+PROGRESS_COMPLETE: 86%
+PROGRESS_REMAINING: 14%
+DONE: signing preflight green; version-last V1.4.0.0/code100006 synchronized; focused release contracts green; candidate ready to publish without a tag.
+REMAINING: publish candidate, accept exact-SHA CI, run full signed Release workflow with `secrets_only=false` on that same SHA, inspect signed artifacts, then create production tag and verify published release/update metadata.
+BLOCKERS: production tag remains intentionally absent pending full same-SHA signed RC.
+NEXT: publish this exact version commit without `[skip ci]`, inspect every triggered workflow, and run full no-publish Release only after required candidate checks are green.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 86%
