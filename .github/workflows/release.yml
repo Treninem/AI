@@ -2,6 +2,12 @@ name: AuroraFox Release
 
 on:
   workflow_dispatch:
+    inputs:
+      secrets_only:
+        description: Validate pinned release signing secrets without building or publishing
+        required: true
+        default: false
+        type: boolean
   push:
     tags:
       - 'v*'
@@ -10,7 +16,69 @@ permissions:
   contents: write
 
 jobs:
+  secret-readiness:
+    if: github.event_name == 'workflow_dispatch' && inputs.secrets_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify private signing identities without publishing
+        shell: bash
+        env:
+          UPDATE_KEY_B64: ${{ secrets.AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64 }}
+          KEYSTORE_B64: ${{ secrets.AURORA_ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_USER: ${{ secrets.AURORA_ANDROID_KEYSTORE_USER }}
+          KEYSTORE_PASSWORD: ${{ secrets.AURORA_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$UPDATE_KEY_B64" || { echo 'AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64 is missing.' >&2; exit 1; }
+          test -n "$KEYSTORE_B64" || { echo 'AURORA_ANDROID_KEYSTORE_BASE64 is missing.' >&2; exit 1; }
+          test -n "$KEYSTORE_USER" || { echo 'AURORA_ANDROID_KEYSTORE_USER is missing.' >&2; exit 1; }
+          test -n "$KEYSTORE_PASSWORD" || { echo 'AURORA_ANDROID_KEYSTORE_PASSWORD is missing.' >&2; exit 1; }
+
+          echo "::add-mask::$KEYSTORE_USER"
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+          umask 077
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+
+          printf '%s' "$UPDATE_KEY_B64" | base64 --decode > "$work/update-private.pem"
+          openssl pkey -in "$work/update-private.pem" -check -noout >/dev/null 2>&1
+          openssl pkey -in "$work/update-private.pem" -pubout -outform DER 2>/dev/null > "$work/update-public.der"
+          expected_update="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('update/release_identity.json').read_text(encoding='utf-8'))['update_signing_public_key_sha256']
+          print(str(value).replace(':', '').lower())
+          PY
+          )"
+          actual_update="$(sha256sum "$work/update-public.der" | awk '{print $1}')"
+          test "$actual_update" = "$expected_update" || { echo 'Update signing private key does not match the pinned public identity.' >&2; exit 1; }
+
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$work/aurorafox-release.keystore"
+          keytool -list -keystore "$work/aurorafox-release.keystore" -storepass "$KEYSTORE_PASSWORD" -alias "$KEYSTORE_USER" >/dev/null 2>&1
+          keytool -exportcert -keystore "$work/aurorafox-release.keystore" -storepass "$KEYSTORE_PASSWORD" -alias "$KEYSTORE_USER" -file "$work/android-cert.der" >/dev/null 2>&1
+          expected_android="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('update/release_identity.json').read_text(encoding='utf-8'))['android_signing_cert_sha256']
+          print(str(value).replace(':', '').lower())
+          PY
+          )"
+          actual_android="$(sha256sum "$work/android-cert.der" | awk '{print $1}')"
+          test "$actual_android" = "$expected_android" || { echo 'Android keystore certificate does not match the pinned release identity.' >&2; exit 1; }
+          echo 'AURORAFOX_RELEASE_SIGNING_SECRETS_READY'
+
   core-gates:
+    if: github.event_name != 'workflow_dispatch' || !inputs.secrets_only
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

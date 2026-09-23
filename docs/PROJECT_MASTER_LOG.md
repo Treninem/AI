@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 113175)
-Total output lines: 2989
+Warning: truncated output (original token count: 114049)
+Total output lines: 3019
 
 # AuroraFox — PROJECT MASTER LOG
 
@@ -689,37 +689,7 @@ ACTION: Section 27 alias-removal correctness blocker is closed. Preserve the det
 - **Не считать пройденными до artifact:** exact-head Knowledge run `35117014347` на `2781b303...` в момент checkpoint всё ещё QUEUED; therefore transactional removal process-kill, current Windows portability, current record-level dedupe и registry-only scaling ещё не имеют runtime verdict. `[knowledge-large]` run `35112699152` также остаётся QUEUED; 100/250 MiB memory-pressure acceptance ещё не доказан.
 - Static audit OCR-owned `scripts/knowledge_store.gd` показывает потенциальный record-dedupe риск: structured identity включает `record_path`, а normalized `_append()` не делает persisted-ID check. Это **не объявляется runtime blocker без probe artifact**. Файл не изменялся этим lane; `CHAT-2026-09-16-LOCAL-OCR` остаётся владельцем.
 - Android: machine-readable bounded/private/local-only contract сохраняется; `physical_device_proof=false`. Desktop/Linux/Windows CI не выдаётся за Android device proof.
-- Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe…63175 tokens truncated…decompression dependency. Thus Windows/Android installers/updaters may extract the separately distributed artifact, while normal Knowledge ingestion remains offline and self-contained.
-
-LOCAL EVIDENCE: two focused Python source contracts pass; `py_compile` and `git diff --check` pass. A real Godot 4.7.1 isolated-user-data smoke created a JSONL shard/manifest, verified and imported it, repeated installation with `skipped_shards=1`, then changed the fixture to `production=true` and confirmed rejection below 1 GiB. Marker: `AURORA_KNOWLEDGE_PACK_INSTALLER_OK verified=true resumable=true offline=true`.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: bounded verified/resumable pack-to-transaction adapter implemented and exercised in the actual engine; stable Knowledge storage/Core remain unchanged.
-REMAINING: publish and add installed Windows/Android fixture gates; then run the exact production pack through the platform staging/import boundary before crediting readiness.
-BLOCKERS: full 1.98 GiB platform import evidence remains expensive/external; this local smoke proves control flow, not production payload duration/RSS.
-NEXT: publish the adapter/tests/journal, inspect exact CI, then wire a small packaged fixture into existing installed platform gates before scheduling one full production import.
-ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
-
-## 78. Installed Android Knowledge Pack fixture in the existing normal-path gate
-
-### BEFORE
-
-`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`; exact PR #92/head is `28437fa5f1cfc4649688b3bbf362f5e4853a8a6d`; public version remains `1.3.0.0`/Android code `100005`, with the accumulated MINOR `1.4.0.0` still version-last. All 25 workflows on this exact head are SUCCESS. The unrelated owner-modified `assets/ui/aurorafox_background_master.png` remains outside this claim and must not be staged or repaired.
-
-CLAIM: extend only the existing installed Android normal-path E2E through `benchmarks/core/android_godot_benchmark.gd`, `benchmarks/core/run_android_godot_e2e.sh`, focused Android E2E contract/runner tests and this journal. Add a small locally generated pack fixture inside the installed offline APK run, verify the same production installer contract, first import, idempotent/resumable second install and direct local Knowledge search. Do not add another workflow, model inference call, network dependency or production payload; do not weaken any existing Core, voice, OCR, identity or offline gate.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: exact `28437fa` has 25/25 green workflows; the standalone Knowledge Pack installer smoke and contract tests are already accepted.
-REMAINING: implement the installed Android fixture scenario, run focused local checks, publish one atomic candidate and obtain same-SHA Android E2E evidence; full production-pack Windows/Android import remains separate acceptance work.
-BLOCKERS: none for the small installed fixture; physical-device/human/server/signing and full production-payload boundaries remain external.
-NEXT: add the fixture to the existing Android E2E and raise its required scenario set from 11 to 12 without launching duplicate CI.
-ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
-
-### AFTER: installed release APK now gates pack verification, resume and query
-
-The existing Android normal-path suite now creates a one-record pack inside the installed app sandbox and uses `KnowledgePackInstaller` against the real `AIClient.knowledge` store. The twelfth required scenario fails unless manifest/shard integrity succeeds, exactly one shard is imported, a second install skips that committed shard, the local Knowledge index returns the marker, and the result remains explicitly resumable/offline with `external_ai_required=false`. The runner independently checks those fields instead of trusting only the scenario `passed` flag. No extra inference request, workflow, network call, external tool or repository payload was added.
+- Следующий шаг: первым делом забрать `35117014347` и `35112699152`. Если record-dedupe probe падает — передать точный `PERFORMANCE-BLOCKER` владельцу `CHAT-2026-09-16-LOCAL-OCR` с run/job/artifact и требованием content-based within-source dedupe…64049 tokens truncated…ox and uses `KnowledgePackInstaller` against the real `AIClient.knowledge` store. The twelfth required scenario fails unless manifest/shard integrity succeeds, exactly one shard is imported, a second install skips that committed shard, the local Knowledge index returns the marker, and the result remains explicitly resumable/offline with `external_ai_required=false`. The runner independently checks those fields instead of trusting only the scenario `passed` flag. No extra inference request, workflow, network call, external tool or repository payload was added.
 
 LOCAL EVIDENCE: `tests/test_android_e2e_runner.py` passes 11/11 simulated release-report cases including rejection of an incomplete pack contract; all three `test_core_android_e2e_contract.py` functions pass; shell syntax, Python compilation and `git diff --check` pass. Godot 4.7.1 parses the changed benchmark with `--check-only`. A fresh isolated real-engine `knowledge_pack_installer_smoke.gd` run prints `AURORA_KNOWLEDGE_PACK_INSTALLER_OK verified=true resumable=true offline=true`. These checks prove syntax/control contracts locally; the installed Android result is intentionally still pending exact-head CI.
 
@@ -1369,4 +1339,34 @@ DONE: 25/25 exact-candidate workflows green; safe GitHub-hosted secret presence/
 REMAINING: publish and manually dispatch the preflight; if green, perform V1.4.0.0/code100006 version-last, rerun exact-SHA package/release gates and publish the signed RC.
 BLOCKERS: actual owner-controlled secret values can only be validated when GitHub executes the workflow.
 NEXT: publish this tooling-only commit, dispatch `release-secret-readiness.yml` on the release branch, and inspect its exact result without polling unrelated workflows.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### TAKEOVER: embed the preflight in the default-branch Release workflow
+
+GitHub correctly does not expose a newly added standalone `workflow_dispatch` until that workflow file exists on the default branch. The tooling commit `f7c5e83c37d21d6011ef85d736956f358894883c` is published, but its standalone manual workflow therefore cannot be dispatched on the release branch before merge. To avoid merging an unversioned candidate or running the full expensive release build merely to inspect secrets, this claim now explicitly takes over `.github/workflows/release.yml` from the already integrated updater/release lane and revises the static contract.
+
+The existing Release workflow will receive a boolean `secrets_only` manual input, a bounded read-only identity check, and an `if` guard that skips `core-gates` (therefore all dependent build/publish jobs) when the preflight-only mode is selected. Tag pushes and ordinary manual release runs retain their existing behavior. The inaccessible standalone workflow will be removed.
+
+Owned files now: `.github/workflows/release.yml`, removal of `.github/workflows/release-secret-readiness.yml`, `tests/test_release_secret_readiness_workflow.py`, and this journal. Intended public bump remains none; this is release acceptance tooling only.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: standalone preflight logic is implemented and its default-branch dispatch limitation is reproduced in authenticated GitHub UI.
+REMAINING: embed and test the input/job/skip contract, publish it, dispatch `release.yml` with `secrets_only=true`, then act on the exact secret identity result.
+BLOCKERS: none for implementation; actual secret validity remains a GitHub-hosted runtime fact.
+NEXT: patch existing Release workflow and focused contract, verify ordinary/tag paths are unchanged, publish and run only the preflight job.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### AFTER: dispatchable secrets-only mode embedded in Release workflow
+
+The existing default-branch `AuroraFox Release` workflow now exposes a boolean manual input `secrets_only` defaulting to false. When true, only the ten-minute signing-identity preflight is eligible to run; `core-gates` is explicitly skipped, so its dependent Windows and Android jobs cannot start, and the publish job remains tag-only. Ordinary manual runs and tag pushes preserve the previous full release behavior. The standalone workflow from `f7c5e83` is removed because GitHub cannot dispatch it before default-branch integration.
+
+Focused evidence: 29 directly invocable release/preflight contract functions pass across the new static contract, release core gates, backward compatibility and release identity/version policy; the changed Python test compiles; the modified Release workflow parses as YAML and has the expected guarded job structure; `git diff --check` is clean.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: all 25 candidate CI gates green; safe secret identity validation is now reachable through the existing GitHub Release workflow without invoking builds or publication.
+REMAINING: publish this correction, dispatch `release.yml` on the release branch with `secrets_only=true`, inspect the exact result, then proceed to version-last only if all four identities are valid.
+BLOCKERS: none before GitHub runtime validation.
+NEXT: publish the follow-up commit and launch the guarded manual preflight from authenticated GitHub Actions.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
