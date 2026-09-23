@@ -2911,3 +2911,19 @@ REMAINING: publish these journal/test commits to the release branch; then comple
 BLOCKERS: this environment has no GitHub push credentials; private signing authority and final owner acceptance remain external. Deferred Android acceptance remains outstanding for the eventual full cross-platform release.
 NEXT: transfer the local commits to the authenticated owner repository, push the release branch, then execute the next version-last/signing preflight without weakening the deferred Android gate.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
+
+## 100. OWNER WAIVER: Android full-production Knowledge payload acceptance deferred
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch source for this decision is `245b98ca0347b29e7022277b3613e3d0e4f33729`. The authenticated production-host verifier is green, the complete release-branch Python audit is green (`421 passed, 1 skipped`), and the installed Windows full-production Knowledge proof remains accepted.
+
+OWNER DECISION: the separate 1.9 GB Android full-production Knowledge payload acceptance attempted on the owner's Windows emulator is waived for the current release decision. The observed `emulator-5554 offline` runs produced no valid strict report, so this checkpoint is recorded as `OWNER_WAIVED_NOT_EXECUTED`, never as a technical pass. It no longer blocks the current release continuation.
+
+The ordinary Android production release gates are not weakened: `.github/workflows/release.yml` must still build with the pinned package/version and permanent signing identity, verify the finished APK certificate, install and launch the signed APK on Android 35, reject a package crash, and publish the Android artifact only after those checks succeed. The deferred 1.9 GB Knowledge import must be completed later before claiming the separate full-payload Android capability as verified.
+
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+DONE: owner waiver is explicit and auditable; the failed local emulator attempt is not misrepresented; current release work may continue; standard signed Android CI gates remain mandatory.
+REMAINING: verify owner-controlled GitHub signing-secret names, perform version/versionCode-last for V1.4.0.0, run the final same-SHA signed Windows/Android RC and publish only after the mandatory release workflow is green. Complete the waived full-payload Android Knowledge acceptance later.
+BLOCKERS: private signing-secret readiness is not readable through the connected GitHub App and must be checked from the authenticated owner environment before version-last/tagging.
+NEXT: run `build/bridge_release_readiness.ps1` from the authenticated owner PC without `-SkipGitHubSecrets` and return its final marker or first exact failure.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
