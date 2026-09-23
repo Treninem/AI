@@ -3045,3 +3045,35 @@ REMAINING: install the four matching owner secrets without exposing values in ch
 BLOCKERS: owner-controlled private update key, Android keystore, alias and password are not installed as GitHub repository secrets.
 NEXT: on the authenticated owner PC use the existing `build/setup_release_signing.ps1`/private bootstrap material to provision the four secrets, then rerun only Release `secrets_only`; do not rotate pinned identities implicitly.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+## 103. BEFORE: controlled reset of an unpublished signing identity
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE. Exact release-branch HEAD is `cd367e2f0af398aca0e3a47319e6d5095772a0a5`; its tree `fbcff2384d350aba70f09433bc42156914621903` restores the complete 3047-line journal byte-for-byte after the API truncation defect. Owner-PC search found no updater private key, Android release keystore or their base64 backups under Desktop/Documents/Downloads. GitHub release inventory contains only the Windows-only `repair-v1.2-windows` prerelease and no normal/signed V1.4 or Android release using the pinned identities.
+
+CLAIM: extend `build/setup_release_signing.ps1` with an explicit, confirmation-guarded reset path allowed only before the V1.4 signed floor and only when both private identities are absent. It must archive the old public pins locally, regenerate the complete update/Android public identity set consistently, validate the new keys, configure the four GitHub secrets through authenticated `gh`, and never silently overwrite an existing private key or keystore. Add focused contracts and record the exact owner-PC procedure. Intended public bump: none; pre-release signing bootstrap repair.
+
+Owned files: `build/setup_release_signing.ps1`, new `tests/test_unpublished_identity_reset_contract.py`, public identity files only after owner-PC generation, and this journal.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: complete journal restored; exhaustive owner-path key search is empty; GitHub confirms no published signed-floor/Android release consumes the lost identity.
+REMAINING: implement/publish the guarded reset, execute it once on the owner PC, commit the newly generated public pins, obtain green secret preflight, then version-last and signed RC.
+BLOCKERS: matching private material is irrecoverable from searched owner locations; intentional pre-release reset is required.
+NEXT: implement fail-closed reset guards, complete public-pin regeneration and static regression contracts without generating any private key in Git or this environment.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### AFTER: guarded unpublished-identity bootstrap is ready for the owner PC
+
+`build/setup_release_signing.ps1` now exposes an explicit `-ResetUnpublishedIdentity` path guarded by the exact confirmation phrase `RESET_UNPUBLISHED_AURORAFOX_RELEASE_IDENTITY`. The reset is refused if either private updater key or Android keystore already exists, and is refused at or above the permanent signed floor `1.4.0.0`. Before any public pin is archived, the script verifies `keytool`; unless explicitly running local-only mode, it also verifies GitHub CLI availability and authentication. Existing public pins are copied into the ignored `build/private/retired-unpublished-identity-<timestamp>` directory before removal.
+
+The one-time bootstrap regenerates and cross-checks the complete public identity set: updater public key and fingerprint, `release_identity.json`, Android certificate PEM and certificate fingerprint. It then uploads the updater private-key base64, Android keystore base64, alias and password through authenticated `gh` standard input without printing secret values. It never generates private signing material in CI, Git or this audit environment.
+
+Focused evidence: all 29 directly invocable functions across the new reset contract, backward-compatibility contract, release identity/version policy and GitHub secret-readiness contract pass; all four Python files compile; `git diff --check` is clean. This Linux audit environment has no PowerShell interpreter, so the actual key-generation execution remains intentionally assigned to the owner Windows PC with Android Studio JBR already present.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: safe and explicit pre-release identity reset implemented; destructive ordering hardened; complete public-pin regeneration and four-secret upload covered by focused contracts.
+REMAINING: publish this tooling commit; execute the one-time bootstrap on the owner PC; commit only regenerated public pins; obtain green GitHub `secrets_only` preflight; then version-last and final signed same-SHA RC.
+BLOCKERS: the new permanent private identities must be generated and backed up by the owner; they must never be posted in chat or committed.
+NEXT: pull the tooling commit, install/authenticate GitHub CLI, run the exact confirmed bootstrap once, and return only its terminal status plus `git status --short`—never key, keystore, base64 or password content.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
