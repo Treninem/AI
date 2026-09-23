@@ -2897,3 +2897,17 @@ REMAINING: install audit-only `Pillow 12.3.0` and `rarfile 4.5` after action-tim
 BLOCKERS: owner confirmation is required for the isolated test-package installation; final release gates remain unchanged.
 NEXT: obtain confirmation, install only the two compatible wheels under `/opt/aurorafox/audit/.venv`, apply the exact one-line test correction in the audit checkout and rerun the expanded Python suite.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
+
+### AFTER: complete release-branch Python audit is green
+
+The exact one-line Knowledge contract correction was mirrored to the authenticated host audit checkout. Owner-approved optional dependencies were installed only under `/opt/aurorafox/audit/.venv`; no production Python environment, service, data or deployment state was modified. The complete release-branch Python suite then passed without exclusions: `421 passed, 1 skipped, 942 warnings in 16.74s`. The seven initially failing local-OCR tests passed after adding their declared PDF renderer dependency `pypdfium2 5.13.0` to the isolated audit environment. The earlier four optional-format dependency failures also pass with the isolated compatible wheels.
+
+This closes the repository Python-audit defect and dependency-classification boundary. It does not claim Android runtime acceptance, private-key availability, a version bump, signed artifacts, a tag or a published same-SHA release.
+
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+DONE: production-host verification is green; 32/32 focused deployment/release tests pass; the complete release-branch Python audit passes 421/421 executed tests with one skip; the stale Knowledge batch contract is corrected without changing production runtime code.
+REMAINING: publish these journal/test commits to the release branch; then complete human UI/listening, private signing readiness, version/versionCode-last, final same-SHA signed RC and publication. Android full-production-payload acceptance remains explicitly deferred and unverified.
+BLOCKERS: this environment has no GitHub push credentials; private signing authority and final owner acceptance remain external. Deferred Android acceptance remains outstanding for the eventual full cross-platform release.
+NEXT: transfer the local commits to the authenticated owner repository, push the release branch, then execute the next version-last/signing preflight without weakening the deferred Android gate.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
