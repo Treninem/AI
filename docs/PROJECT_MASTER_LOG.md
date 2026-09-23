@@ -343,6 +343,18 @@ Bundled Core weights + Windows engine + Android asset/native path; normal model 
 - Запрещённый scope этого этапа: `main`, `.github/workflows/**`, `update/**`, `build/**`, version/package metadata и production-файлы существующего фундамента. Runtime/autoload wiring не выполняется до зелёных изолированных executable checks.
 - Первый acceptance-блок: полный diff/audit 17 commits, `run_evolution_checks.py`, прямой `pytest` contract suite, проверка наличия/версии Godot и scope audit против `main`; затем единый исправляющий commit только при доказанном дефекте.
 
+### CLAIM `WORK-2026-09-23-EVOLUTION-WINDOWS-EVIDENCE`
+
+- Статус: **ACTIVE — продолжение текущего Evolution takeover без смены архитектурной цели**.
+- Fresh release baseline: `main` / `4c6fe649af69c9be0eb080863f0e94b80cc3e082`.
+- Started from branch HEAD: `dd07094a4459400c5bda905a06abcebd3e75d128` (`feature/aurorafox-evolution-engine`).
+- Режим: Work / главный координатор Evolution.
+- Цель этапа: подготовить воспроизводимый native Windows evidence harness для обязательного Core tournament gate: exact Git SHA, чистый checkout, Godot 4.7.1, полный acceptance runner, обязательный `native_windows=true` marker и machine-readable result/hash.
+- Предполагаемый итоговый bump после полного Evolution acceptance: **MINOR**; версия и Android `versionCode` на этом этапе не меняются.
+- Занятые файлы: только `evolution_engine/tests/**`, `evolution_engine/README.md` и эта запись `docs/PROJECT_MASTER_LOG.md`.
+- Запрещённый scope: `main`, `.github/workflows/**`, production runtime/autoload, updater/release/build/version/package files и существующий фундамент вне `evolution_engine/**`.
+- Acceptance этого блока: static contracts + Linux Godot acceptance остаются зелёными; harness fail-closed отклоняет non-Windows, неверную Godot version, dirty/wrong HEAD и отсутствие native marker. Сам harness не считается native Windows evidence до реального запуска на Windows.
+
 ### CLAIM `CHAT-2026-09-16-UPDATER-VERSIONING`
 
 - Статус: **ACTIVE**
