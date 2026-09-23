@@ -3,6 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = (ROOT / "build/setup_release_signing.ps1").read_text(encoding="utf-8")
+KEYGEN = (ROOT / "build/create_update_signing_key.ps1").read_text(encoding="utf-8")
 
 
 def test_reset_requires_an_explicit_confirmation_and_prefloor_version() -> None:
@@ -49,3 +50,20 @@ def test_private_material_stays_local_and_existing_secret_uploader_is_reused() -
     ):
         assert f"Set-GitHubSecret '{secret}'" in SCRIPT
     assert "GitHub Actions signing secrets configured" in SCRIPT
+
+
+def test_update_key_generation_is_compatible_with_windows_powershell_51() -> None:
+    assert "ExportPkcs8PrivateKey" not in KEYGEN
+    assert "ExportSubjectPublicKeyInfo" not in KEYGEN
+    assert "Find-OpenSsl" in KEYGEN
+    assert "Git\\usr\\bin\\openssl.exe" in KEYGEN
+    assert "Invoke-OpenSsl" in KEYGEN
+    assert "RedirectStandardError = $true" in KEYGEN
+
+
+def test_update_key_generation_is_transactional() -> None:
+    assert "aurorafox-signing-" in KEYGEN
+    assert "Move-Item -LiteralPath $tempPrivate" in KEYGEN
+    assert "Move-Item -LiteralPath $tempPublic" in KEYGEN
+    assert "Remove-Item -LiteralPath $privatePath,$publicPath,$privateBase64Path" in KEYGEN
+    assert "Remove-Item -LiteralPath $tempDir -Recurse" in KEYGEN

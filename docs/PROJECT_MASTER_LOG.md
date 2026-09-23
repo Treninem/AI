@@ -3077,3 +3077,31 @@ REMAINING: publish this tooling commit; execute the one-time bootstrap on the ow
 BLOCKERS: the new permanent private identities must be generated and backed up by the owner; they must never be posted in chat or committed.
 NEXT: pull the tooling commit, install/authenticate GitHub CLI, run the exact confirmed bootstrap once, and return only its terminal status plus `git status --short`—never key, keystore, base64 or password content.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### RUNTIME CORRECTION: Windows PowerShell 5.1 key generation compatibility
+
+Owner execution on Windows reached the confirmed reset path, archived all old public pins under `build/private/retired-unpublished-identity-20260924-000524`, and then stopped before producing any new private key. Exact failure: Windows PowerShell 5.1 returned `RSACng does not contain a method named ExportPkcs8PrivateKey` from `build/create_update_signing_key.ps1`. Git status consequently showed only the five expected public-pin deletions; no secret was exposed or committed.
+
+The claim expands to `build/create_update_signing_key.ps1`. Replace the unsupported modern .NET RSA export methods with the OpenSSL shipped by Git for Windows. Generate and validate the RSA private/public pair in a unique temporary directory, derive the public DER fingerprint there, and move files into their permanent ignored/public locations only after validation. On any failure, remove every partially installed new key file and always remove the temporary directory. Execute OpenSSL through redirected `ProcessStartInfo` so progress written to stderr cannot become a terminating `NativeCommandError` under Windows PowerShell 5.1 with `ErrorActionPreference=Stop`.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: owner runtime reproduced the sole compatibility defect without creating or leaking a key; previous public identity is recoverable from the ignored archive.
+REMAINING: publish the compatibility correction, pull it over the five intentional working-tree deletions, rerun the same confirmed bootstrap, validate public pins and GitHub secrets, then continue version-last.
+BLOCKERS: Windows-compatible key generator correction must be published before the bootstrap is retried.
+NEXT: implement/test/publish the transactional OpenSSL generator and provide the owner a non-destructive pull/rerun command.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### AFTER: transactional OpenSSL generator verified
+
+`build/create_update_signing_key.ps1` no longer calls `ExportPkcs8PrivateKey` or `ExportSubjectPublicKeyInfo`. It discovers OpenSSL from PATH or the standard Git for Windows locations, launches it through `ProcessStartInfo` with asynchronously drained stdout/stderr, creates the RSA pair and public DER in a unique temporary directory, validates the private key, and installs the permanent files only after every generation step succeeds. A catch path removes all partially installed new identity files; the finally path removes the temporary directory.
+
+Focused evidence: 31 directly invocable release/reset/backward-compatibility/identity/readiness contract functions pass; all affected Python tests compile; the exact OpenSSL `genpkey`, private-key check, public PEM and public DER sequence completed with a fresh 3072-bit test identity; `git diff --check` is clean. No production private key was generated in this environment.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: Windows PowerShell 5.1 incompatibility removed; native stderr handling and transactional cleanup hardened; focused contracts and OpenSSL execution green.
+REMAINING: publish and pull the correction, rerun bootstrap on the owner PC, inspect the five regenerated public pins, obtain green GitHub secret preflight, then version-last and final signed RC.
+BLOCKERS: owner-PC bootstrap rerun is required to create the permanent private identities.
+NEXT: pull over the existing five public-pin deletions and rerun the same explicit reset command; no checkout/reset of the working tree is required.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
