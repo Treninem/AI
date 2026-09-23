@@ -6,6 +6,10 @@ CODE_SPECIALIST = ROOT / "scripts" / "code_specialist.gd"
 AGENT_CORE = ROOT / "scripts" / "agent_core.gd"
 DESKTOP_RUNTIME = ROOT / "scripts" / "desktop_local_runtime.gd"
 ANDROID_RUNTIME = ROOT / "scripts" / "android_local_runtime.gd"
+BUNDLED_CORE = ROOT / "scripts" / "bundled_core_model.gd"
+CORE_RUNTIME = ROOT / "scripts" / "aurora_core_runtime.gd"
+AI_CLIENT = ROOT / "scripts" / "ai_client.gd"
+MAIN = ROOT / "scripts" / "main.gd"
 SMOKE_RUNNER = ROOT / "benchmarks" / "core" / "run_windows_code_specialist_smoke.ps1"
 WORKFLOW = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
 
@@ -118,6 +122,30 @@ def test_request_scoped_core_failures_do_not_quarantine_a_valid_model() -> None:
     assert "if model_failure:" in core
     assert "_record_model_failure(candidate, error)" in core
     assert core.index("if model_failure:") < core.index("_record_model_failure(candidate, error)")
+
+
+def test_windows_prefers_packaged_core_and_normal_chat_recovers_without_setup() -> None:
+    bundled = BUNDLED_CORE.read_text(encoding="utf-8")
+    core = CORE_RUNTIME.read_text(encoding="utf-8")
+    client = AI_CLIENT.read_text(encoding="utf-8")
+    main = MAIN.read_text(encoding="utf-8")
+
+    windows_block = bundled.split('if OS.get_name() == "Windows":', 1)[1].split('if _valid_gguf(ACTIVE_MODEL):', 1)[0]
+    assert "_valid_bundled_file(packaged)" in windows_block
+    assert "return packaged" in windows_block
+    assert bundled.index("return packaged") < bundled.index("return ACTIVE_MODEL")
+    assert "AuroraBundledCoreModel.windows_packaged_path()" in core
+    assert "if packaged != model_path and _looks_like_gguf(packaged):" in core
+    assert "func retry_local_now()" in core
+    assert "_model_failures.clear()" in core
+    assert "desktop_runtime.stop()" in core
+    assert "func retry_core_now()" in client
+    assert "core_runtime.retry_local_now()" in client
+    assert 'if answer.begins_with("Ошибка модели:"):' in main
+    assert "ai.retry_core_now()" in main
+    assert main.count("await agent.run_task(task)") == 2
+    assert "ничего устанавливать или настраивать не нужно" in main
+    assert main.index("ai.retry_core_now()") < main.index('chats.add_message("assistant", answer)')
 
 
 def test_core_engine_resolution_uses_actions_token_without_weakening_verification() -> None:

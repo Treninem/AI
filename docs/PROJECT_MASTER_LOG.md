@@ -2941,3 +2941,19 @@ REMAINING: implement and test the bounded icon/Core recovery correction, publish
 BLOCKERS: GitHub secret-name readiness and local pytest availability remain separate owner-environment preflight items.
 NEXT: add failing contracts for canonical icon, packaged-Core priority/fallback and bounded user-facing recovery, then implement the minimal runtime/UI correction.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
+
+### AFTER: canonical owner icon and bounded automatic Core recovery implemented
+
+The canonical byte-pinned `aurorafox_avatar_master.png` is now the project icon and explicit Windows export icon. Godot 4.7 supports generating the Windows executable/taskbar icon from this PNG through `application/icon`, so the legacy `fox_logo.svg` is no longer the installed application identity. The in-app owner avatar/background masters are unchanged byte-for-byte.
+
+Windows runtime selection now prefers the verified packaged Core before any valid-header `user://` model left by an older installation. The packaged Core is also inserted into the bounded failover candidate list when a different model was selected. Normal chat performs exactly one automatic recovery reset/restart and retry; if the owned Core still cannot answer, the internal `Ошибка модели` diagnostic is replaced before chat persistence, speech and UI display with a non-technical notice stating that no installation or configuration is required. Work and Computer failure classification remains fail-closed and unchanged.
+
+Focused evidence: all 15 branding/Core static contract functions pass by direct standard-Python invocation; all 20 release/update identity contract functions pass the same way; both changed Python files compile; `git diff --check` is clean. This sandbox has no Godot executable or pytest module, so parser/export/package verification remains assigned to the existing GitHub integration and Windows package workflows on the exact published commit.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: owner-master app icon wired; verified packaged Core prioritized and retained in failover; one bounded automatic normal-chat recovery added; raw model diagnostics removed from user chat; 35 focused contracts pass.
+REMAINING: publish the exact implementation, accept CI, verify the four owner-controlled GitHub signing-secret names, then perform V1.4.0.0 version/versionCode-last and final same-SHA signed RC.
+BLOCKERS: GitHub secret names cannot be read through the connected GitHub App; the owner PC lacks `gh` and pytest, but the 20 release contracts themselves are green in the audited environment.
+NEXT: publish the implementation to the release branch and inspect triggered integration/package checks; install/authenticate GitHub CLI on the owner PC only for secret-name verification.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

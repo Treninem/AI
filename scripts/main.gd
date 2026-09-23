@@ -837,6 +837,14 @@ func _submit_current() -> void:
 	AuroraVoice.set_ai_working(true, work_state)
 	var task := shown + attachments.build_context(attachment_copy)
 	var answer := await agent.run_task(task)
+	if answer.begins_with("Ошибка модели:"):
+		# A stale override or transient Core startup failure is repaired once in
+		# place. Normal users never need to select, download or configure a model.
+		ai.retry_core_now()
+		await get_tree().create_timer(0.75).timeout
+		answer = await agent.run_task(task)
+	if answer.begins_with("Ошибка модели:"):
+		answer = "Встроенный AI автоматически восстанавливается. Сообщение сохранено; ничего устанавливать или настраивать не нужно."
 	AuroraVoice.set_ai_working(false)
 	ai_working_finished.emit()
 	chats.add_message("assistant", answer)

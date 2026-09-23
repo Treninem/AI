@@ -177,6 +177,12 @@ func _available_model_paths() -> Array[String]:
 	var out: Array[String] = []
 	if FileAccess.file_exists(model_path):
 		out.append(model_path)
+	# Keep the verified package Core in the same failover set even when a stale
+	# user:// override was selected by an older AuroraFox installation.
+	if OS.get_name() == "Windows":
+		var packaged := AuroraBundledCoreModel.windows_packaged_path()
+		if packaged != model_path and _looks_like_gguf(packaged):
+			out.append(packaged)
 	var absolute_dir := ProjectSettings.globalize_path(LOCAL_MODEL_DIR)
 	if not DirAccess.dir_exists_absolute(absolute_dir):
 		return out
@@ -230,6 +236,15 @@ func _record_model_failure(path: String, message: String) -> void:
 
 func _reset_model_failure(path: String) -> void:
 	_model_failures.erase(path)
+
+func retry_local_now() -> void:
+	# One user-request retry may clear transient startup quarantine and restart
+	# the owned Windows backend. Integrity checks and candidate bounds remain in
+	# force when the request is attempted again.
+	_model_failures.clear()
+	_last_local_error = ""
+	if OS.get_name() == "Windows":
+		desktop_runtime.stop()
 
 func _model_circuit_open(path: String) -> bool:
 	if not _model_failures.has(path):

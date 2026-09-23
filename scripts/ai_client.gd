@@ -96,6 +96,9 @@ func warmup() -> Dictionary:
 		}
 	return {"ok": not bundled.is_empty(), "runtime": "aurora_core", "bundled_core": not bundled.is_empty()}
 
+func retry_core_now() -> void:
+	core_runtime.retry_local_now()
+
 # Primary intelligence path. This method deliberately bypasses every external
 # compatibility adapter even if a developer/user explicitly enabled one.
 # AgentCore, self-improvement and normal product chat therefore depend only on
