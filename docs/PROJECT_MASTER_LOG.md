@@ -2837,3 +2837,36 @@ REMAINING: fetch the hotfix on the owner PC, rerun the emulator orchestrator and
 BLOCKERS: Windows emulator/runtime execution is owner-local; authenticated production host and private signing authority remain external.
 NEXT: fast-forward the owner repository, create a fresh detached worktree at the new exact head, and rerun `windows_android_production_knowledge_orchestrator.ps1` with the discovered SDK root.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+## 98. BEFORE: owner-directed Android deferral and production-host release continuation
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Fresh release-branch HEAD is `392fffaf7e8b6de040d19ee09cc8b695047f006c`; fresh `origin/main` is `4c6fe649af69c9be0eb080863f0e94b80cc3e082`. Public version remains `1.3.0.0` / Android code `100005`; accumulated MINOR `1.4.0.0` remains version-last.
+
+OWNER DECISION: defer the Android full-production-payload emulator/device acceptance for the current continuation because Android is not release-critical now. The repeated `emulator-5554 offline` outcome on Emulator 37.1.11 and 36.6.11 is not accepted as a product pass and is not a reason to keep the Windows/server release work idle. The Android checkpoint remains explicitly unverified and the production release workflow keeps its existing fail-closed Android gates.
+
+CLAIM: audit and exercise the existing production-host deployment, mail, backup, restore/rollback and release-preflight contracts; fix only a reproduced repository-side defect, if any, and add focused regression coverage before implementation. Owned scope is limited to `deploy/`, related focused tests/workflow contracts, release-preflight diagnostics and this journal. Do not access or invent production credentials, deploy externally, weaken signing/platform gates, merge `main`, tag a release or bump the public version early.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: installed Windows exact full-production Knowledge proof remains accepted; Android runtime acceptance is honestly deferred rather than misreported.
+REMAINING: identify and close the next repository-side production-host/preflight defect; authenticated host execution, human UI/listening, version/versionCode-last, production signing/update/release and final same-SHA RC remain external or later gates.
+BLOCKERS: authenticated production host and private signing authority are unavailable in this environment; Android device acceptance is deferred by owner decision.
+NEXT: run focused deployment/persistence/release contract tests, inspect the first exact failure, and make one bounded test-first correction or record the existing boundary as ready.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
+
+
+### AFTER: repository deployment and signing boundary is ready; external execution remains
+
+No repository-side defect was reproduced in the claimed boundary, so no production deployment, backup, signing or release code was changed. `install.sh`, `update.sh` and `verify.sh` pass `bash -n`; the API and focused Python contracts compile. Nine deployment contracts pass, including pinned SFTP backup, GitHub-main-only fast-forward updates, database snapshot/rollback, fail-closed production verification, SMTP/TLS boundaries and the self-cleaning CI verifier. Seven executable persistence-maintenance tests pass against temporary SQLite stores, including WAL-aware capacity warnings, protected private/sync state, refresh replay preservation and persisted maintenance cadence. Twenty-five release identity, signing-order, version-policy and legacy update compatibility contracts pass.
+
+The committed update public key parses successfully and its DER SHA-256 is `9cd72647edfa647a2988cc094080597860de8ce386bcfb1b40c2360e363d8ae7`, matching `update/release_identity.json`. The committed Android certificate DER SHA-256 is `79b9451912d74ed9bffb1b4070795786470e6a26d1bc2833213de3092d793c93`, also matching the pinned identity. Full pytest was unavailable in this environment; the seven fixture-dependent persistence tests were executed with isolated temporary paths and equivalent environment/exception fixtures, and all other focused tests were invoked directly with standard Python.
+
+This proves repository readiness only. It does not prove REG.RU DNS/TLS, real SMTP delivery, live backup retrieval, rollback on the authenticated host, availability of private signing keys, or a published same-SHA release. Those gates require owner-controlled access and must remain fail-closed. The production release workflow still requires both Windows and Android jobs; Android full-payload acceptance remains deferred, not passed. Public version and Android versionCode remain unchanged for version-last.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: Android deferral recorded; deployment/mail/backup/rollback contracts and pinned public identities revalidated; no repository-side blocker found.
+REMAINING: authenticated REG.RU install/configure/verify evidence; human UI/listening; private-key readiness; version/versionCode-last; final same-SHA signed RC and publication. Deferred Android acceptance remains outstanding for the full cross-platform release.
+BLOCKERS: production-host credentials, SMTP settings and private signing authority are owner-controlled and absent here.
+NEXT: on the authenticated production host configure SMTP and run `bash /opt/aurorafox/repository/deploy/reg_ru/verify.sh`; return its final marker or first exact failure. Do not bump/tag/sign before that evidence is accepted.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 75%
