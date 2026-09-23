@@ -21,7 +21,7 @@ With Godot 4.7.1 available:
 
 `python evolution_engine/tests/run_evolution_checks.py --godot <path-to-godot>`
 
-The runner executes the existing AuroraFox self-improvement and Core benchmark smokes before the new Evolution policy/evidence/controller/runtime smokes. The runtime smoke verifies binding to existing instances, Level-0 startup, read-only AgentCore tools, explicit session confirmation, managed-mode exclusion and permission reset. It also runs `core_tournament_windows_smoke.gd` on every platform so the complete 3–10 candidate tournament, second verification, handoff, signed-update exclusion and lock lifecycle are always exercised.
+The runner executes the existing AuroraFox self-improvement and Core benchmark smokes before the new Evolution policy/evidence/controller/runtime/user-control smokes. The runtime smoke verifies binding to existing instances, Level-0 startup, read-only AgentCore tools, explicit session confirmation, managed-mode exclusion and permission reset. The user-control smoke proves that cancel performs no action, confirmation cannot be replayed, invalid populations never reach the runtime and ending a managed session restores Level 0. It also runs `core_tournament_windows_smoke.gd` on every platform so the complete 3–10 candidate tournament, second verification, handoff, signed-update exclusion and lock lifecycle are always exercised.
 
 The production adapter remains Windows-only because the existing Core source verification pipeline is Windows-only. On non-Windows hosts, that smoke uses a test-only subclass to cross the platform preflight without changing production behavior; its success marker reports `native_windows=false`. On Windows it uses the production adapter and reports `native_windows=true`.
 

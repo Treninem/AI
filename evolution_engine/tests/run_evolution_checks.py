@@ -23,6 +23,7 @@ GODOT_SMOKES = (
     "evolution_engine/tests/evolution_evidence_smoke.gd",
     "evolution_engine/tests/evolution_controller_smoke.gd",
     "evolution_engine/tests/evolution_runtime_smoke.gd",
+    "evolution_engine/tests/evolution_user_control_smoke.gd",
     "evolution_engine/tests/core_tournament_windows_smoke.gd",
 )
 

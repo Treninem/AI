@@ -242,6 +242,31 @@ def test_runtime_service_binds_existing_foundation_instances_only():
     assert "KnowledgeStore.new()" not in runtime
 
 
+def test_user_control_surface_requires_confirmation_and_stays_session_only():
+    controls = read("evolution_engine/integration/user_control_surface.gd")
+    scene = read("main.tscn")
+    assert 'path="res://evolution_engine/integration/user_control_surface.gd"' in scene
+    assert '[node name="UserControlSurface" type="Node" parent="EvolutionRuntime"]' in scene
+    assert "func request_session_level(" in controls
+    assert "func request_experiment(" in controls
+    assert "func confirm_pending_action(" in controls
+    assert "func cancel_pending_action(" in controls
+    assert "MIN_MUTATIONS := 3" in controls
+    assert "MAX_MUTATIONS := 10" in controls
+    assert "runtime.begin_managed_session(level, true)" in controls
+    assert "runtime.run_cycle_from_user(" in controls
+    assert '"pending_confirmation": true' in controls
+    assert "release authority=false" in controls
+    for forbidden in (
+        "FileAccess.open",
+        "ConfigFile.new",
+        'register_tool("aurora_evolution',
+        "activate_verified_winner_from_user(",
+        "prepare_core_promotion_from_user(",
+    ):
+        assert forbidden not in controls
+
+
 def test_evolution_windows_ci_is_feature_only_and_has_no_release_authority():
     workflow = read(".github/workflows/evolution-engine-ci.yml")
     assert "feature/aurorafox-evolution-engine" in workflow
