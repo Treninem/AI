@@ -2927,3 +2927,17 @@ REMAINING: verify owner-controlled GitHub signing-secret names, perform version/
 BLOCKERS: private signing-secret readiness is not readable through the connected GitHub App and must be checked from the authenticated owner environment before version-last/tagging.
 NEXT: run `build/bridge_release_readiness.ps1` from the authenticated owner PC without `-SkipGitHubSecrets` and return its final marker or first exact failure.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
+
+## 101. BEFORE: canonical application icon and silent bundled-Core recovery
+
+`WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD before this claim is `7b4806fa74b3034c9cbf09144c5e30bfd6461050`. Owner screenshots from the installed V1.3 package reproduce two release-facing defects: the Windows shell/title icon still uses the legacy SVG placeholder instead of the approved white-fox master, and normal chat exposes the internal `Ошибка модели` quarantine diagnostic after a valid-header user GGUF fails to load.
+
+CLAIM: use the existing byte-pinned `assets/ui/aurorafox_avatar_master.png` as the canonical project/Windows application icon; make the verified packaged Windows Core the primary runtime candidate while retaining local user GGUF only as fallback; include the packaged Core in failover discovery; perform one bounded automatic Core recovery retry for normal chat; and replace any final internal model diagnostic with a non-technical message that explicitly requires no installation or configuration. Add focused static contracts and journal evidence. Do not weaken model integrity, signing, offline, privacy, Work/Computer failure or release gates.
+
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+DONE: owner screenshots classified; exact legacy icon and model-quarantine paths reproduced in source; canonical owner artwork and verified packaged Core already exist.
+REMAINING: implement and test the bounded icon/Core recovery correction, publish it, then rerun signing preflight and version-last gates.
+BLOCKERS: GitHub secret-name readiness and local pytest availability remain separate owner-environment preflight items.
+NEXT: add failing contracts for canonical icon, packaged-Core priority/fallback and bounded user-facing recovery, then implement the minimal runtime/UI correction.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 80%
