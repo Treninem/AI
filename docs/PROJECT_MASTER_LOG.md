@@ -3137,3 +3137,33 @@ REMAINING: publish candidate, accept exact-SHA CI, run full signed Release workf
 BLOCKERS: production tag remains intentionally absent pending full same-SHA signed RC.
 NEXT: publish this exact version commit without `[skip ci]`, inspect every triggered workflow, and run full no-publish Release only after required candidate checks are green.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 86%
+
+### RC RUNTIME RESULT: signed Android APK built but emulator install path lost
+
+Full no-publish Release run `35951510016` executed exact V1.4 candidate `f83c398566f6d41334c7758b181c6c48265d9546`. `core-gates` completed `success`; Android contract, canonical version, Java/Gradle/SDK setup, Python privacy/voice/file gates, Godot Core gates, stable signing-key requirement, Android plugin build, signed APK build and signed-artifact validation all completed `success`. The job failed only in `Install and launch signed APK on Android 35` after the emulator booted successfully.
+
+Exact log evidence: the emulator action invoked `apk='dist/AuroraFox-Android.apk'` and `adb install -r "$apk"` as separate `/usr/bin/sh -c` commands. The shell-local variable therefore did not persist, producing `adb: filename doesn't end .apk or .apex:` with an empty filename. This is a release-workflow harness defect, not an APK build, signature, package, version or emulator-boot failure.
+
+CLAIM extension: own `.github/workflows/release.yml` and `tests/test_release_identity_version_policy.py`. Replace the cross-line local variable with the explicit signed artifact path and add a focused static regression contract. Do not alter application code, Android package identity, signing identity, canonical V1.4 version or release payload.
+
+PROGRESS_COMPLETE: 90%
+PROGRESS_REMAINING: 10%
+DONE: 25/25 candidate workflows green; full RC Core gates green; signed Android APK built and validated; exact empty-path defect reproduced from authoritative log.
+REMAINING: publish the harness-only correction, accept exact-SHA CI, rerun full signed no-publish RC, inspect Windows/Android artifacts, then tag and verify production publication.
+BLOCKERS: Android RC emulator install must pass on the corrected exact SHA before tagging.
+NEXT: apply the explicit APK path, run focused release contracts, publish without tag, and rerun only the required acceptance sequence.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+### AFTER: Android RC emulator install-path correction verified
+
+The release emulator step now installs `dist/AuroraFox-Android.apk` by explicit path and no longer depends on cross-line shell state. A focused regression contract extracts that exact workflow block, requires the direct install command, and rejects both the former local assignment and `$apk` install form.
+
+Evidence: 25 directly invocable release identity/version, secret-readiness and updater backward-compatibility contract functions pass; all three Python modules compile; the focused block check emits `AURORA_ANDROID_RELEASE_EMULATOR_INSTALL_PATH_OK`; `git diff --check` is clean. The still-running Windows job from the superseded RC has not failed and remains useful diagnostic evidence, but the corrected commit will require a new exact-SHA RC before publication.
+
+PROGRESS_COMPLETE: 90%
+PROGRESS_REMAINING: 10%
+DONE: empty Android install path fixed and regression-locked without altering the signed APK or product code.
+REMAINING: publish correction, accept exact-SHA checks, run corrected full signed no-publish RC, inspect artifacts, then tag/publish.
+BLOCKERS: corrected exact-SHA Android emulator acceptance is pending.
+NEXT: publish the three-file harness correction without a tag and monitor only its exact-SHA release checks.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%

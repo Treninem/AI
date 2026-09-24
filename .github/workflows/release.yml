@@ -459,10 +459,10 @@ jobs:
           disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            # android-emulator-runner executes this block with POSIX /bin/sh.
+            # android-emulator-runner executes script lines independently; do not
+            # rely on a shell-local variable surviving into the next line.
             set -eu
-            apk='dist/AuroraFox-Android.apk'
-            adb install -r "$apk"
+            adb install -r dist/AuroraFox-Android.apk
             adb shell pm path com.aurorafox.ai | tee build/android/release-emulator-package.txt
             grep -q '^package:' build/android/release-emulator-package.txt
             adb logcat -c

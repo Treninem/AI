@@ -86,6 +86,14 @@ def test_release_workflow_signs_manifest_and_checks_update_key_pair() -> None:
         assert asset in workflow
 
 
+def test_release_android_emulator_installs_the_signed_apk_without_cross_line_shell_state() -> None:
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    emulator = workflow.split("- name: Install and launch signed APK on Android 35", 1)[1].split("- name: Upload Android artifact", 1)[0]
+    assert "adb install -r dist/AuroraFox-Android.apk" in emulator
+    assert "apk='dist/AuroraFox-Android.apk'" not in emulator
+    assert 'adb install -r "$apk"' not in emulator
+
+
 def test_repair_releases_cannot_occupy_stable_latest() -> None:
     workflow = (ROOT / ".github/workflows/updater-repair-validation.yml").read_text(encoding="utf-8")
     assert "repair-v1.2-windows" in workflow
