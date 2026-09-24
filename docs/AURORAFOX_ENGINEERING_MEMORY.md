@@ -425,6 +425,15 @@
 - **Evidence:** owner-PC actual hash `394bdb678f2d0c6deba82d2343ae34256c1e48d571364acbc993c55ae648a8e0`; root-cause fix `438c587f0ed38b1cd3ce94239e3211d3717f7ffa`.
 - **Статус:** RESOLVED in source; published asset replacement required for V1.4.0.0.
 
+#### AF-MEM-079 — приложение отрицало собственный опубликованный release
+
+- **Симптом:** установленная V1.4.0.0 сообщила, что релиз `Treninem/AI v1.4.0.0` не подтверждён, сослалась на старый HEAD `4c6fe649...` и baseline V1.3.0.0.
+- **Причина:** ответ строился по stale internal/project knowledge или ненадёжному поиску GitHub вместо embedded signed build identity.
+- **Решение:** сведения «какая версия установлена» читать из локальной встроенной version/release metadata; отдельно показывать последний проверенный signed update status. Сетевой поиск не является authority для self-identification.
+- **Профилактика:** packaged offline smoke спрашивает версию и требует точное совпадение с canonical embedded version/commit; stale master-log/search text не может переопределить signed local metadata.
+- **Evidence:** публичный release `v1.4.0.0`, commit `c3693426e34d8c94b23b622a7050f7d78831beb7`, publish run `35992779591` SUCCESS.
+- **Статус:** ACTIVE for next product update; release itself is confirmed and stable.
+
 ### Network, downloads и CI stability
 
 #### AF-MEM-080 — transient download/curl error 35
