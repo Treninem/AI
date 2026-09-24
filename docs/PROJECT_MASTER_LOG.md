@@ -3187,3 +3187,33 @@ REMAINING: создать справочник, закрепить обязат�
 BLOCKERS: none.
 NEXT: добавить технический engineering-memory документ, затем обновить `AGENTS.md` и enforcement test.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
+
+
+### AFTER: общая инженерная память ошибок закреплена для всех исполнителей
+
+CLAIM `WORK-2026-09-24-ENGINEERING-MEMORY` — **DONE**. Создан технический справочник `docs/AURORAFOX_ENGINEERING_MEMORY.md`, который консолидирует подтверждённые ошибки, ограничения среды, нерабочие обходы, root causes, исправления и профилактические правила из master log, предыдущих Chat/Work/Codex-сессий, owner-PC запусков и GitHub Actions. Он явно не является вторым журналом координации: CLAIM/status/commits/CI/NEXT остаются только в этом master log.
+
+`AGENTS.md` теперь обязывает каждый ChatGPT Chat, Work, Codex, agent и automation до работы читать engineering memory, искать по подсистеме/tool/error, не повторять известный нерабочий обход и до закрытия CLAIM добавлять новую подтверждённую проблему с environment/SHA, симптомом, причиной или маркированной гипотезой, важными failed attempts, fix, prevention и evidence. WAIVED/SKIPPED запрещено называть PASS. Секреты, пароли, private keys, keystores и token values запрещено сохранять.
+
+Добавлен `tests/test_engineering_memory_contract.py`: он защищает обязательность протокола, разделение master log/technical memory, схему записи и критические уроки Git/PowerShell/Android/Core/Knowledge/Windows/SMTP/signing/cross-run artifacts/GitHub 2-GiB asset/idempotent publish/heartbeat. Второй проход добавил защиту от прежнего обрезания большого master log при API update, рассинхрона main/release, warning-vs-root-cause, Android package size/disk, TXT newline/kind, tag bootstrap и shell-state loss.
+
+Commits:
+
+- `7af555076f0a5268688893d6a369ec199ef92066` — CLAIM;
+- `ee59963f2839ce69ff94b9aa4bf89f9058386c35` — initial engineering failure memory;
+- `71d645d424154a3e0ead392e0fed2364b46cdd1d` — mandatory AGENTS protocol;
+- `da3193957c50159c44c23645684a072e11409105` — enforcement contract;
+- `2cbf57e6c2244b6bf454d7eb3fd8592fe76ce517` — complete recurring-failure catalog;
+- `3d5d8f18202068b870171c02f5be7e02e468316f` — pin master-log truncation regression.
+
+Checks: fetched current main copies of all three files; required-protocol and 17 critical-ID content assertions report no missing values; Python `compile()` of `tests/test_engineering_memory_contract.py` reports `AURORA_ENGINEERING_MEMORY_CONTRACT_SYNTAX_OK`. Release run `35992779591` independently confirms `publish` SUCCESS, including size-safe Windows assets, manifest/signature, evidence commit and final publication of verified product commit `c3693426e34d8c94b23b622a7050f7d78831beb7`.
+
+Remaining limitation: no model can guarantee recall outside available conversation/repository context; therefore the repository protocol is the durable source of truth. Future sessions must read it, and future confirmed problems must continue to be appended rather than trusted to transient chat memory.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+DONE: engineering memory created; mandatory cross-session read/update rule enforced; regression contract added; release publication independently confirmed green.
+REMAINING: none for this CLAIM; continue appending future verified incidents under the documented schema.
+BLOCKERS: none.
+NEXT: every future AuroraFox task starts with fresh main + full master log + full engineering memory, then records any new reusable failure before closing its CLAIM.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
