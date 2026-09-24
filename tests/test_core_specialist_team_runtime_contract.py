@@ -96,8 +96,9 @@ def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> 
     runner = SMOKE_RUNNER.read_text(encoding="utf-8")
     assert "DEFAULT_CHAT_MAX_TOKENS := 2048" in runtime
     assert "TERSE_CHAT_MAX_TOKENS := 128" in runtime
-    assert "DEFAULT_CONTEXT_SIZE := 16384" in runtime
-    assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 180.0" in runtime
+    assert "DEFAULT_CONTEXT_SIZE := 4096" in runtime
+    assert "DEFAULT_PARALLEL_SLOTS := 1" in runtime
+    assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0" in runtime
     assert '"max_tokens": max_tokens' in runtime
     assert 'options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)' in runtime
     assert 'clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)' in runtime
@@ -143,8 +144,9 @@ def test_windows_prefers_packaged_core_and_normal_chat_recovers_without_setup() 
     assert "core_runtime.retry_local_now()" in client
     assert 'if answer.begins_with("Ошибка модели:"):' in main
     assert "ai.retry_core_now()" in main
-    assert main.count("await agent.run_task(task)") == 2
-    assert "ничего устанавливать или настраивать не нужно" in main
+    assert main.count("await agent.run_task(task)") == 1
+    assert "call_deferred(\"_recover_core_background\")" in main
+    assert "устанавливать или настраивать ничего не нужно" in main
     assert main.index("ai.retry_core_now()") < main.index('chats.add_message("assistant", answer)')
 
 

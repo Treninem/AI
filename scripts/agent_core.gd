@@ -280,7 +280,10 @@ func _is_direct_conversation(task: String) -> bool:
 		"создай", "сделай", "измени", "исправ", "установ", "запусти", "открой",
 		"скачай", "отправ", "удали", "нажми", "компьютер", "экран", "мыш",
 		"код", "скрипт", "проект", "репозитор", "godot", "python", "javascript",
-		"typescript", "c++", "c#", "java", "rust", "sql", "api", "проанализ"
+		"typescript", "c++", "c#", "java", "rust", "sql", "api", "проанализ",
+		" use ", "run ", "open ", "create ", "change ", "fix ", "install ",
+		"download ", "send ", "delete ", "analyze ", "search ", "find ",
+		"offline", "integration"
 	]:
 		if q.contains(marker):
 			return false
