@@ -8,9 +8,23 @@ Before editing any file:
 
 1. Fetch the latest `main` HEAD.
 2. Read **all of `docs/PROJECT_MASTER_LOG.md`**.
-3. Read its `Активные работы и занятые файлы` section.
-4. Add an ACTIVE claim to that same master log before touching implementation files.
-5. Do not edit files/subsystems claimed by another active lane unless you first integrate the latest `main` and explicitly take over/reconcile the claim in the master log.
+3. Read **all of `docs/AURORAFOX_ENGINEERING_MEMORY.md`** and search it for the subsystem, tool and exact error text involved.
+4. Read the master log's `Активные работы и занятые файлы` section.
+5. Add an ACTIVE claim to that same master log before touching implementation files.
+6. Do not edit files/subsystems claimed by another active lane unless you first integrate the latest `main` and explicitly take over/reconcile the claim in the master log.
+
+## Mandatory engineering-memory protocol
+
+`docs/AURORAFOX_ENGINEERING_MEMORY.md` is the durable technical memory of confirmed failures, constraints, unsuccessful workarounds, root causes, fixes and prevention rules shared by **all** ChatGPT Chat, Work, Codex, agent and automation sessions.
+
+- Before proposing a workaround or repeating a failed command, search that file by subsystem, tool and exact error text.
+- Repository state, current CI and reproducible logs override remembered chat prose. Correct stale entries instead of following them blindly.
+- Every newly confirmed blocker or materially useful workaround MUST be added or reconciled before the owning CLAIM is closed. Record symptom, environment/exact SHA, root cause (or label it as an unconfirmed hypothesis), failed attempts worth avoiding, fix, prevention test/preflight, evidence and status.
+- A waiver, skipped test or owner deferral is never recorded as PASS. Use explicit `WAIVED` / `OWNER_WAIVED_NOT_EXECUTED` status and keep the missing evidence visible.
+- Never store passwords, tokens, private keys, keystores, secret values or personal credentials. Secret names and public fingerprints are allowed when needed for diagnostics.
+- Do not delete old lessons merely because the immediate bug is fixed. Mark them `RESOLVED`, preserve prevention guidance and merge duplicates by reference.
+- The engineering-memory file is technical reference material, not a competing progress journal. CLAIMs, current status, commits, CI runs, release readiness and exact NEXT remain exclusively in `docs/PROJECT_MASTER_LOG.md`.
+- A work batch that encountered a new failure is incomplete until the reusable lesson and its prevention mechanism are recorded, unless no repository write was authorized; in that case the handoff must state the exact pending memory entry.
 
 ## One journal only
 
