@@ -1,1 +1,2 @@
 AuroraFox V1.3.0.0 final standalone-Core package rebuild after updater recovery and master-log hardening.
+Evolution integration acceptance trigger: 0ac2a04902560fcad74be6cd15ccaf9de8c68886

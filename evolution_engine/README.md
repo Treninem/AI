@@ -82,3 +82,6 @@ Evolution is not an autoload and remains isolated from release authority. Its sc
 - existing production self-improvement modules.
 
 This keeps current release testing independent while the Evolution layer is developed and verified.
+## Integration acceptance
+
+The merge candidate must rerun Evolution, Windows package, and Android APK gates on one exact feature SHA after integrating the current `main`. This documentation-only marker intentionally triggers the feature Evolution workflow; it grants no merge, signing, publishing, versioning, or release authority.
