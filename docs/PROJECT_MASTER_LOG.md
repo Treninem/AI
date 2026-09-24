@@ -3167,3 +3167,23 @@ REMAINING: publish correction, accept exact-SHA checks, run corrected full signe
 BLOCKERS: corrected exact-SHA Android emulator acceptance is pending.
 NEXT: publish the three-file harness correction without a tag and monitor only its exact-SHA release checks.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+
+## 108. CLAIM `WORK-2026-09-24-ENGINEERING-MEMORY`
+
+- Статус: **ACTIVE**
+- Режим: Work/Codex coordinator.
+- Started from: актуальный `main` после успешной публикации Release run `35992779591`; verified product commit `c3693426e34d8c94b23b622a7050f7d78831beb7`.
+- Цель: собрать подтверждённые ошибки, блокеры, ограничения среды и рабочие обходы AuroraFox из канонического журнала, предыдущих Chat/Work/Codex-сессий и GitHub Actions; создать постоянный технический справочник причин/решений/профилактики и обязать всех будущих исполнителей читать и пополнять его.
+- Файлы/подсистема: `AGENTS.md`, `docs/AURORAFOX_ENGINEERING_MEMORY.md`, `tests/test_engineering_memory_contract.py`, этот канонический журнал.
+- Предполагаемый bump: **none** — документация и enforcement-contract, без изменения продукта/пакетов.
+- Границы: новый справочник не является параллельным журналом задач или координации; статусы, CLAIM, commits, CI и NEXT по-прежнему записываются только в `docs/PROJECT_MASTER_LOG.md`. Секреты, пароли, приватные ключи и токены в справочник не попадают.
+- Acceptance: `AGENTS.md` требует прочитать справочник до работы и обновлять его после нового подтверждённого сбоя; справочник содержит симптом, причину, решение, профилактику, evidence/status; contract-test защищает обязательный протокол и критические release/runtime уроки; запись завершения содержит commit и проверки.
+
+PROGRESS_COMPLETE: 20%
+PROGRESS_REMAINING: 80%
+DONE: подтверждён успешный publish job Release run `35992779591`; перечень повторяющихся проблем собран из текущей истории и личного контекста.
+REMAINING: создать справочник, закрепить обязательные правила, добавить contract-test, проверить содержимое и закрыть CLAIM.
+BLOCKERS: none.
+NEXT: добавить технический engineering-memory документ, затем обновить `AGENTS.md` и enforcement test.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
