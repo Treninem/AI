@@ -94,6 +94,18 @@ def test_release_android_emulator_installs_the_signed_apk_without_cross_line_she
     assert 'adb install -r "$apk"' not in emulator
 
 
+
+def test_release_windows_reassembler_extracts_only_the_sha256_token() -> None:
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    block = workflow.split("cat > dist/AuroraFox_Setup_Windows.reassemble.ps1", 1)[1].split("\n          PS1", 1)[0]
+    assert r"-split '\s+'" in block
+    assert r"-split '\\s+'" not in block
+
+    expected = "a" * 64
+    checksum_line = f"{expected}  AuroraFox_Setup_Windows.exe"
+    assert re.split(r"\s+", checksum_line, maxsplit=1)[0] == expected
+
+
 def test_release_windows_smokes_wait_only_for_the_aurorafox_parent_process() -> None:
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     assert workflow.count(". .\\tests\\windows_bounded_process.ps1") >= 2
