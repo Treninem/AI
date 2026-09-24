@@ -3237,3 +3237,20 @@ REMAINING: patch + contract + validation + published asset replacement + owner r
 BLOCKERS: none.
 NEXT: correct heredoc escaping and add a regression assertion before touching the release asset.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
+
+
+### CHECKPOINT: reassembler root cause fixed; installer parts proven intact
+
+Source fix `438c587f0ed38b1cd3ce94239e3211d3717f7ffa` changes the generated PowerShell parser from the incorrect double-backslash regex to `-split '\\s+'`. Contract commit `26a81de441e273dd049ddf23511477d9768aade8` requires the fixed form, rejects the double-backslash regression and proves extraction of the first token from a sha256sum-format line. Engineering memory commit `9238c8b1026753ac3fb950b3e0c91d6ec6bc5038` records AF-MEM-078.
+
+Authoritative published `AuroraFox_Setup_Windows.parts.sha256` declares installer hash `394bdb678f2d0c6deba82d2343ae34256c1e48d571364acbc993c55ae648a8e0`. The owner-PC reassembler reported the exact same computed hash, proving the two downloaded parts concatenate to the correct installer; no large part needs to be downloaded again. The failure is exclusively the expected-token parsing bug in the small published script.
+
+Focused validation: current workflow block contains the single-backslash form and not the broken double-backslash form; contract function exists and rejects the broken form; parser probe emits `AURORA_WINDOWS_REASSEMBLER_HASH_PARSE_OK`.
+
+PROGRESS_COMPLETE: 85%
+PROGRESS_REMAINING: 15%
+DONE: root cause fixed in main; regression contract added; exact owner hash matches published expected installer hash; binary parts proven intact.
+REMAINING: owner patches/re-runs the already downloaded script; replace the small public release script asset so future users need no local correction; then close CLAIM.
+BLOCKERS: public asset replacement requires an authenticated GitHub release upload surface.
+NEXT: run the one-line local script correction and reassembler; after owner success, replace the public script asset without rebuilding/reuploading installer parts.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
