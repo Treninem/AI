@@ -627,7 +627,7 @@ jobs:
               }
           } finally { $stream.Dispose() }
           $checks = Get-Content -LiteralPath (Join-Path $root 'AuroraFox_Setup_Windows.parts.sha256')
-          $expected = (($checks | Select-Object -First 1) -split '\\s+')[0].ToLowerInvariant()
+          $expected = (($checks | Select-Object -First 1) -split '\s+')[0].ToLowerInvariant()
           $actual = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($actual -ne $expected) { Remove-Item -LiteralPath $output -Force; throw "Installer SHA-256 mismatch: $actual" }
           Write-Host "AuroraFox installer reconstructed and verified: $output" -ForegroundColor Green
