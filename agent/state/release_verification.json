@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "verified": true,
+  "version": "V1.4.0.0",
+  "commit": "c3693426e34d8c94b23b622a7050f7d78831beb7",
+  "verified_at": "2026-09-24T11:30:50.707842+00:00",
+  "passed_gates": [
+    "android_apk",
+    "android_emulator",
+    "windows_package",
+    "windows_install",
+    "voice_core",
+    "api_gateway",
+    "api_privacy",
+    "semantic_memory",
+    "local_semantic_memory",
+    "local_model_failover",
+    "knowledge_registry",
+    "large_knowledge_streaming",
+    "monolithic_json_streaming",
+    "knowledge_transaction_rollback",
+    "core_candidate_benchmark",
+    "core_candidate_promotion",
+    "work_mode",
+    "updater"
+  ],
+  "artifacts": {
+    "windows_sha256": "b6b846732edde8df15d665cddafdba3974946f235bd25760fc0c2e3ea2997fb1",
+    "android_sha256": "758ec4c6295ef294860284d0c7c73057ce9b4ce908ddb9266e789c83f2f5bf62"
+  }
+}
