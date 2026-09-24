@@ -561,6 +561,78 @@ jobs:
           test -s dist/AuroraFox_Setup_Windows.exe
           test -s dist/AuroraFox-Android.apk
 
+      - name: Prepare GitHub-size-safe Windows release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+
+          source = Path('dist/AuroraFox-Windows.zip')
+          target = Path('dist/AuroraFox-Windows.slim.zip')
+          excluded = (
+              'voice/.venv/', 'voice/models/',
+              'computer/.venv/', 'computer/models/',
+              'file_intelligence/.venv/',
+              'runtime/windows/python/', 'runtime/windows/cache/',
+          )
+          kept = 0
+          skipped = 0
+          with ZipFile(source, 'r') as src, ZipFile(target, 'w', compression=ZIP_DEFLATED, compresslevel=9, allowZip64=True) as dst:
+              for info in src.infolist():
+                  normalized = str(PurePosixPath(info.filename.replace('\\', '/'))).lstrip('./').lower()
+                  if any(normalized.startswith(prefix) for prefix in excluded):
+                      skipped += info.file_size
+                      continue
+                  if info.is_dir():
+                      dst.writestr(info, b'')
+                      continue
+                  with src.open(info, 'r') as reader, dst.open(info, 'w', force_zip64=True) as writer:
+                      while True:
+                          chunk = reader.read(8 * 1024 * 1024)
+                          if not chunk:
+                              break
+                          writer.write(chunk)
+                  kept += info.file_size
+          print(f'AURORA_WINDOWS_SLIM_ZIP kept_uncompressed={kept} skipped_uncompressed={skipped} size={target.stat().st_size}')
+          PY
+          mv dist/AuroraFox-Windows.slim.zip dist/AuroraFox-Windows.zip
+          max_asset=2147483648
+          win_size="$(stat -c%s dist/AuroraFox-Windows.zip)"
+          test "$win_size" -lt "$max_asset" || { echo "Slim Windows update ZIP still exceeds GitHub's 2 GiB asset limit: $win_size" >&2; exit 1; }
+
+          installer_sha="$(sha256sum dist/AuroraFox_Setup_Windows.exe | awk '{print $1}')"
+          split -b 1900M -d -a 2 dist/AuroraFox_Setup_Windows.exe dist/AuroraFox_Setup_Windows.exe.part-
+          part_count="$(find dist -maxdepth 1 -type f -name 'AuroraFox_Setup_Windows.exe.part-*' | wc -l)"
+          test "$part_count" -ge 2
+          for part in dist/AuroraFox_Setup_Windows.exe.part-*; do
+            test "$(stat -c%s "$part")" -lt "$max_asset"
+          done
+          {
+            echo "$installer_sha  AuroraFox_Setup_Windows.exe"
+            sha256sum dist/AuroraFox_Setup_Windows.exe.part-* | sed 's#  dist/#  #'
+          } > dist/AuroraFox_Setup_Windows.parts.sha256
+          cat > dist/AuroraFox_Setup_Windows.reassemble.ps1 <<'PS1'
+          $ErrorActionPreference = 'Stop'
+          $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+          $parts = @(Get-ChildItem -LiteralPath $root -Filter 'AuroraFox_Setup_Windows.exe.part-*' | Sort-Object Name)
+          if ($parts.Count -lt 2) { throw 'Installer parts are missing.' }
+          $output = Join-Path $root 'AuroraFox_Setup_Windows.exe'
+          $stream = [IO.File]::Open($output, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+          try {
+              foreach ($part in $parts) {
+                  $input = [IO.File]::OpenRead($part.FullName)
+                  try { $input.CopyTo($stream) } finally { $input.Dispose() }
+              }
+          } finally { $stream.Dispose() }
+          $checks = Get-Content -LiteralPath (Join-Path $root 'AuroraFox_Setup_Windows.parts.sha256')
+          $expected = (($checks | Select-Object -First 1) -split '\\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { Remove-Item -LiteralPath $output -Force; throw "Installer SHA-256 mismatch: $actual" }
+          Write-Host "AuroraFox installer reconstructed and verified: $output" -ForegroundColor Green
+          PS1
+
       - name: Generate verified update manifest and release evidence
         shell: bash
         run: |
@@ -637,23 +709,26 @@ jobs:
           rm -f "$key" "$derived"
           echo "Signed update.json with pinned key fingerprint $committed_fp"
 
-      - name: Create draft GitHub Release
+      - name: Create or update draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           tag="$RELEASE_TAG"
-          gh release create "$tag" \
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --title "AuroraFox $tag" --generate-notes --draft
+          fi
+          gh release upload "$tag" \
             dist/AuroraFox-Windows.zip \
-            dist/AuroraFox_Setup_Windows.exe \
+            dist/AuroraFox_Setup_Windows.exe.part-* \
+            dist/AuroraFox_Setup_Windows.reassemble.ps1 \
+            dist/AuroraFox_Setup_Windows.parts.sha256 \
             dist/AuroraFox-Android.apk \
             dist/update.json \
             dist/update.sig \
             dist/release_verification.json \
-            --title "AuroraFox $tag" \
-            --generate-notes \
-            --draft
+            --clobber
 
       - name: Record verified release evidence on main
         env:
