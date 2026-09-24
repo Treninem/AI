@@ -3254,3 +3254,121 @@ REMAINING: owner patches/re-runs the already downloaded script; replace the smal
 BLOCKERS: public asset replacement requires an authenticated GitHub release upload surface.
 NEXT: run the one-line local script correction and reassembler; after owner success, replace the public script asset without rebuilding/reuploading installer parts.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
+
+
+## 110. CLAIM `WORK-2026-09-24-WEB-ACCOUNTS-ROADMAP`
+
+- Статус: **ACTIVE — journal/specification only; implementation deferred by owner**.
+- Started from HEAD: `343d75237be555c6b79a14250a73337ade081c6b`.
+- Режим: Work/Codex coordinator.
+- Цель: зафиксировать следующий owner-directed production roadmap: web-версия на `aurorafox.ru`, account/email-verification platform, tenant-isolated chats/data, Developer/Standard/Trial roles и controlled-learning boundaries.
+- Триггер реализации: **не начинать тяжёлую реализацию сейчас**. Стартовать после завершения текущего согласованного update/Evolution plan либо после отдельной явной команды владельца. Стабильный V1.4.0.0 не ломать.
+- Файлы/подсистема на этом этапе: только этот журнал и engineering memory. Будущие implementation paths будут заняты отдельным CLAIM после trigger.
+- Предполагаемый bump: определить test-first при начале реализации; вероятно MINOR из-за web/account platform, но version-last остаётся обязательным.
+
+### CORRECTION: V1.4.0.0 — подтверждённый стабильный release
+
+Сообщение установленной AuroraFox «не получил подтверждения существования релиза V1.4.0.0» является фактически неверным и основано на stale project knowledge/search result. Канонические доказательства:
+
+- публичный release: `https://github.com/Treninem/AI/releases/tag/v1.4.0.0`;
+- tag/verified product commit: `c3693426e34d8c94b23b622a7050f7d78831beb7`;
+- Release publish run: `35992779591`, job `publish` SUCCESS;
+- canonical version: `V1.4.0.0`, Android `versionCode=100006`;
+- owner successfully reconstructed the Windows installer; computed SHA-256 exactly matched the published installer hash.
+
+Product defect for the next update: AuroraFox must identify its own installed version/release status from local signed build metadata (`project/version.json`/embedded release metadata/update trust state), not from remembered repository baseline or an unreliable GitHub search. Offline self-identification must work without network and must distinguish installed version, latest-known signed version and availability of a newer update.
+
+### OWNER ROADMAP: AuroraFox Web + account platform
+
+#### Activation rule
+
+This package is **PLANNED/DEFERRED**, not ACTIVE implementation. Begin only when either:
+
+1. the current approved update/Evolution plan is completed and its acceptance gates are green; or
+2. the owner explicitly says to start this package.
+
+Before implementation create a new ACTIVE CLAIM on fresh `main`, audit current API/account foundation and reserve exact paths. Do not reopen or destabilize V1.4 release artifacts.
+
+#### 1. Web product surface
+
+- `https://aurorafox.ru` becomes the official responsive AuroraFox web client, not a separate intelligence implementation.
+- `https://api.aurorafox.ru` provides authenticated HTTPS API; realtime chat/sync uses authenticated WSS.
+- Web, Windows and Android share the same account/chat/project/memory identity and sync contract while each platform keeps its supported offline behavior.
+- Public unauthenticated surface: product description, login, registration, password recovery, downloads and legal/privacy pages; no private chat data in static/public caches.
+
+#### 2. Registration and email verification
+
+- Registration by email + password; email ownership confirmation is mandatory before normal account activation.
+- Passwords stored only as Argon2id hashes; no plaintext/reversible passwords.
+- One-time, expiring, single-use verification tokens stored hashed; resend throttling and enumeration-safe responses.
+- Login issues short-lived access + rotating refresh sessions; refresh replay detection, revoke/logout-all and per-device session list.
+- Password reset is email-confirmed, expiring, single-use and revokes affected sessions.
+- SMTP credentials stay only in `/etc/aurorafox/account-mail.env`/secret storage, never Git, client or logs.
+- Guest mode may exist with unique `guest_id/device_id`; guest→verified-account migration must be explicit, transactional and idempotent.
+
+#### 3. Strict user/data isolation
+
+Every private object carries and enforces the authenticated principal/tenant identity: conversations, messages, user memory, projects, files, skills, settings, devices, sync events and personal Knowledge sources. Server authorization must derive `user_id` from the verified session, never trust a client-supplied owner ID.
+
+Mandatory guarantees:
+
+- one user cannot enumerate/read/change/delete another user's chats, memory, files, projects, devices or jobs;
+- cache/vector indexes/object-storage keys and WebSocket channels are tenant-scoped;
+- backup/restore preserves tenant ownership and encryption/privacy boundaries;
+- admin/developer diagnostics redact private content by default and all exceptional access is audited;
+- deletion/export/account migration are transactional and testable.
+
+#### 4. Roles and entitlements
+
+Minimum roles:
+
+- **Developer Owner** — permanent owner-controlled account with every product capability needed for development: full Work/Computer tools, diagnostics, model/Knowledge import management, Evolution candidate creation/evaluation, experiment registry, worker/server status and feature flags. Even this role does not bypass signing authority, master stop, safety gates, sandbox, independent promotion verification or secret boundaries.
+- **Standard User** — normal chat, private memory, personal Knowledge/document imports, supported voice/files/projects/sync and approved tools. No shared-Core mutation, global training, candidate promotion, signing/release administration, server secrets or other users' data.
+- **Trial User** — time/quota/storage/rate limited evaluation; reduced expensive tools/voice/files/Computer/worker capabilities; no Evolution, global training, shared-Core writes, bulk automation or administrative surfaces. Limits are enforced server-side, not only hidden in UI.
+
+Entitlements must be policy-driven and auditable rather than scattered UI conditionals. A role change invalidates/reissues relevant sessions and cannot be self-assigned by the client.
+
+#### 5. Learning and anti-poisoning boundary
+
+- Normal conversations may improve only that user's private memory/preferences within consent/privacy settings.
+- User documents and feedback remain private user Knowledge by default and never automatically become shared Core training data.
+- Standard/Trial accounts cannot directly teach, fine-tune, mutate or promote the global AuroraFox Core and cannot upload executable instructions as authority.
+- Shared improvement continues through the existing controlled path: untrusted staging → parse/schema → provenance/hash/dedupe → quality/safety review → 3–10 isolated candidates → deterministic comparison against stable → independent verification → signed promotion/rollback.
+- Developer Owner may submit/inspect controlled candidates and curated datasets, but cannot skip the tournament, safety, signing or rollback gates.
+- Abuse/rate/anomaly controls must detect automated poisoning attempts without mixing private user content into a global dataset.
+
+#### 6. Required implementation phases after activation
+
+1. Audit/migrate existing SQLite account/session/sync schema without data loss.
+2. Complete email verification, password reset, session rotation/revoke and SMTP production readiness.
+3. Add centralized RBAC/entitlement policy and Developer Owner bootstrap/migration.
+4. Enforce tenant scoping across API, DB, files, WebSocket, vector/memory/search and background jobs.
+5. Implement web frontend on `aurorafox.ru` using existing AuroraFox API/Core authority.
+6. Implement Windows/Android/Web conversation and memory sync with conflict handling.
+7. Add Standard/Trial limits and server-side accounting.
+8. Add learning/poisoning boundaries and audited developer candidate submission.
+9. Deploy through staged backup → migration → shadow/canary → health/readiness → rollback-capable production rollout.
+10. Perform version bump only after all affected acceptance gates are green.
+
+#### 7. Mandatory acceptance gates
+
+- registration → verification → login → refresh rotation → revoke → password reset end-to-end;
+- duplicate/expired/replayed token rejection and email-enumeration resistance;
+- cross-user negative tests for every private resource and WebSocket stream;
+- Developer/Standard/Trial authorization matrix with direct API bypass attempts;
+- Trial quota/rate/storage enforcement server-side;
+- guest→account migration without lost/duplicated chats;
+- Windows↔Server↔Android↔Web sync and offline conflict tests;
+- private memory/Knowledge never appears in another tenant or shared Core;
+- malicious document/prompt cannot promote global training or execute code;
+- backup/restore, schema migration, audit log, health/readiness and rollback;
+- responsive web UI, accessibility, TLS/security headers, CSRF/CORS/cookie/token storage review;
+- exact same-SHA CI/deployment evidence before declaring production ready.
+
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+DONE: owner requirements converted into a bounded, security-preserving, implementation-ready roadmap; V1.4 release fact corrected with exact evidence.
+REMAINING: implementation intentionally deferred until the owner trigger/current update-plan completion.
+BLOCKERS: none for planning; production SMTP secret and deployment resources remain owner-controlled boundaries when implementation starts.
+NEXT: continue the current update/Evolution plan; on owner trigger create a fresh implementation CLAIM beginning with account/API schema and isolation audit.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
