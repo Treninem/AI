@@ -167,6 +167,23 @@ class WindowsVoicePackageTests(unittest.TestCase):
         self.assertNotIn('$python -m pip', builder)
         self.assertIn('$uv pip install --python $python', builder)
 
+    def test_windows_builder_hides_generated_runtimes_from_godot_import(self):
+        builder = (ROOT / 'build/build_windows.ps1').read_text(encoding='utf-8')
+        self.assertIn('function Set-GodotIgnoredDirectory', builder)
+        self.assertIn("Set-GodotIgnoredDirectory (Join-Path $root 'build')", builder)
+        for generated in (
+            "(Join-Path $runtimeSource 'windows')",
+            "(Join-Path $coreSource 'engine')",
+            "(Join-Path $fileSource 'vendor')",
+            "(Join-Path $computerSource 'vendor')",
+            "(Join-Path $voiceSource '.venv')",
+        ):
+            self.assertIn(generated, builder)
+        self.assertLess(
+            builder.index('Set-GodotIgnoredDirectory $generatedRuntime'),
+            builder.index('& $Godot --headless --path $root --import'),
+        )
+
     def test_computer_agent_is_built_as_a_portable_offline_runtime(self):
         installer = (ROOT / 'computer/install_computer.ps1').read_text(encoding='utf-8')
         builder = (ROOT / 'build/build_windows.ps1').read_text(encoding='utf-8')

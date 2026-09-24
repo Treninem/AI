@@ -38,6 +38,21 @@ $coreModelBytes = 1282439264
 $coreModelSha = 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5'
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
+# These directories contain generated Python environments, package caches and
+# PyInstaller output.  They are copied beside AuroraFox.exe later in this
+# script; they are not Godot resources.  Without .gdignore, the final import
+# walks tens of thousands of third-party files and Godot can return 1 after a
+# successful scan on Windows runners.
+function Set-GodotIgnoredDirectory([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Container)) { return }
+    $marker = Join-Path $Path '.gdignore'
+    if (-not (Test-Path -LiteralPath $marker)) {
+        [IO.File]::WriteAllText($marker, '', (New-Object Text.UTF8Encoding($false)))
+    }
+}
+
+Set-GodotIgnoredDirectory (Join-Path $root 'build')
+
 # AuroraFox owns its auxiliary runtime and its inference stack. A normal user
 # must never install Ollama, choose GGUF files, or install a separate Core
 # Engine. Every Windows build therefore prepares a complete verified Core.
@@ -99,6 +114,23 @@ if (-not $SkipVoiceSetup) {
         }
     }
     if (-not $portableBuilt) { throw "Portable AuroraVoiceBackend is required for a complete Windows voice package" }
+}
+
+foreach ($generatedRuntime in @(
+    (Join-Path $runtimeSource 'windows'),
+    (Join-Path $coreSource 'engine'),
+    (Join-Path $fileSource 'python'),
+    (Join-Path $fileSource 'vendor'),
+    (Join-Path $fileSource 'ocr_runtime'),
+    (Join-Path $fileSource '.venv'),
+    (Join-Path $computerSource 'python'),
+    (Join-Path $computerSource 'vendor'),
+    (Join-Path $computerSource '.venv'),
+    (Join-Path $voiceSource '.venv'),
+    (Join-Path $voiceSource 'models\cache'),
+    (Join-Path $voiceSource 'runtime')
+)) {
+    Set-GodotIgnoredDirectory $generatedRuntime
 }
 
 Push-Location $root
