@@ -8,6 +8,21 @@ on:
         required: true
         default: false
         type: boolean
+      publish_run_id:
+        description: Reuse artifacts from a completed release run and publish without rebuilding
+        required: false
+        default: ''
+        type: string
+      release_tag:
+        description: Release tag used by publish-only recovery
+        required: false
+        default: ''
+        type: string
+      release_commit:
+        description: Verified source commit used by publish-only recovery evidence
+        required: false
+        default: ''
+        type: string
   push:
     tags:
       - 'v*'
@@ -83,7 +98,7 @@ jobs:
           echo 'AURORAFOX_RELEASE_SIGNING_SECRETS_READY'
 
   core-gates:
-    if: github.event_name != 'workflow_dispatch' || !inputs.secrets_only
+    if: (github.event_name != 'workflow_dispatch' || !inputs.secrets_only) && (github.event_name != 'workflow_dispatch' || inputs.publish_run_id == '')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -498,9 +513,18 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: |
+      always() &&
+      (
+        (startsWith(github.ref, 'refs/tags/v') && needs.windows.result == 'success' && needs.android.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish_run_id != '')
+      )
     needs: [windows, android]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+      RELEASE_COMMIT: ${{ inputs.release_commit || github.sha }}
+      ARTIFACT_RUN_ID: ${{ inputs.publish_run_id || github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -509,26 +533,46 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: aurorafox-windows
-          path: dist
+          path: staged/windows
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          github-token: ${{ github.token }}
 
       - name: Download Android artifact
         uses: actions/download-artifact@v4
         with:
           name: aurorafox-android
-          path: dist
+          path: staged/android
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          github-token: ${{ github.token }}
+
+      - name: Normalize release artifact layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          win="$(find staged/windows -type f -name 'AuroraFox-Windows.zip' -print -quit)"
+          installer="$(find staged/windows -type f -name 'AuroraFox_Setup_Windows.exe' -print -quit)"
+          apk="$(find staged/android -type f -name 'AuroraFox-Android.apk' -print -quit)"
+          test -n "$win" && test -n "$installer" && test -n "$apk"
+          cp "$win" dist/AuroraFox-Windows.zip
+          cp "$installer" dist/AuroraFox_Setup_Windows.exe
+          cp "$apk" dist/AuroraFox-Android.apk
+          test -s dist/AuroraFox-Windows.zip
+          test -s dist/AuroraFox_Setup_Windows.exe
+          test -s dist/AuroraFox-Android.apk
 
       - name: Generate verified update manifest and release evidence
         shell: bash
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_TAG#v}"
           win='dist/AuroraFox-Windows.zip'
           apk='dist/AuroraFox-Android.apk'
           win_sha="$(sha256sum "$win" | awk '{print $1}')"
           apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
           win_size="$(stat -c%s "$win")"
           apk_size="$(stat -c%s "$apk")"
-          python3 - "$version" "$win_sha" "$apk_sha" "$win_size" "$apk_size" "$GITHUB_SHA" <<'PY'
+          python3 - "$version" "$win_sha" "$apk_sha" "$win_size" "$apk_size" "$RELEASE_COMMIT" <<'PY'
           import json, sys
           from datetime import datetime, timezone
           from pathlib import Path
@@ -599,7 +643,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          tag="$GITHUB_REF_NAME"
+          tag="$RELEASE_TAG"
           gh release create "$tag" \
             dist/AuroraFox-Windows.zip \
             dist/AuroraFox_Setup_Windows.exe \
@@ -617,7 +661,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="V${GITHUB_REF_NAME#v}"
+          version="V${RELEASE_TAG#v}"
           git config user.name 'AuroraFox Release Bot'
           git config user.email 'aurorafox-release@users.noreply.github.com'
           git fetch origin main
@@ -643,4 +687,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release edit "$GITHUB_REF_NAME" --draft=false
+          gh release edit "$RELEASE_TAG" --draft=false
