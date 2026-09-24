@@ -3831,3 +3831,67 @@ NEXT:
 
 PROGRESS_COMPLETE: 82%
 PROGRESS_REMAINING: 18%
+
+### 2026-09-24 — Coordinator note — направление следующего обновления после стабильного V1.4
+
+DIRECTION:
+- Evolution Engine / следующее обновление AuroraFox.
+
+ACTION:
+- По прямому решению владельца стабильный опубликованный релиз считается завершённой опорной точкой; дальнейшая разработка может переходить в `main` только после безопасной интеграции уже проверенного Evolution-кандидата.
+- Зафиксировано техническое видение координатора без изменения production-кода, версии, release workflow или опубликованных assets.
+- Новые CI-запуски после этой journal-only записи не требуются; commit обязан использовать `[skip ci]`.
+
+COORDINATOR VIEW:
+- Следующее обновление должно быть не косметическим, а функциональным **MINOR**-этапом. Предварительная цель версии — `1.5.0.0`, но канонический bump выполняется только в конце нового release cycle после всех тестов.
+- Основой обновления должен стать контролируемый Evolution Engine: анализ проблем, предложения, 3–10 изолированных мутаций, единый tournament против stable baseline, независимая повторная проверка, решение ACCEPTED/REJECTED и сохранение опыта.
+- Evolution должен оставаться opt-in и понятным пользователю: Level 0 по умолчанию, явное подтверждение Level 1–3, Level 4 только как разрешённая подготовка продвижения; никакого самостоятельного release/signing/publish.
+- Следующий полезный продуктовый слой после интеграции Evolution — безопасный импорт через чат: Knowledge archives/БД/документы и GGUF-модели распознаются раздельно, проверяются по типу, размеру, свободному месту, SHA-256 и совместимости, требуют подтверждения, тестового запуска и гарантированного rollback.
+- Memory должна хранить личный опыт и результаты решений; Knowledge — проверяемые знания с provenance; веса моделей — отдельный реестр моделей. Внешний документ, архив, сайт или модель всегда остаётся untrusted input и не получает authority над Core.
+- Пользователь должен видеть: что AuroraFox предлагает улучшить, какие кандидаты созданы, какие тесты/метрики сравнивались, почему winner принят или почему сохранён baseline, где snapshot и как выполнить rollback.
+- После merge нужен период обычного использования/soak без автоматического продвижения Core. Ошибки, rejected mutations и rollback causes сохраняются как опыт, но не превращаются в автоматические команды.
+
+CURRENT EVIDENCE:
+- Exact code candidate: `3a34a9050a3e82e1e108dccc22eaf49b0db5c80c`.
+- Draft PR: #93; последний проверенный статус — mergeable/clean.
+- Evolution run `36006115101`: SUCCESS; 44 contracts passed; native Windows tournament/user-control/runtime markers PASS.
+- Evolution artifact `10810651318`, digest `sha256:d9274b39b7069d60c3213c86f728f82de95215d8df4948cc6b465d7c41b1a0f5`.
+- Android run `36006122245`: SUCCESS; Android 35 install/launch PASS.
+- Android artifact `10811537461`, digest `sha256:cbea877490eba4848360bc5799cb98ee6a7bc59dedd18c490670309a8146be64`.
+- API, Work Mode, Core Bootstrap, Agent Sync, Core/Voice, Integration и UI Visual runs на exact code candidate: SUCCESS.
+- Windows package run `36006122213` в последнем наблюдаемом состоянии `pending`, ожидает освобождения concurrency group старым installer job. Это не PASS и не product failure.
+
+RESULT:
+- Стабильный V1.4 и `main` этой записью не изменяются.
+- Evolution-код не меняется; зафиксирован следующий продуктовый вектор и честная граница acceptance.
+- Наиболее безопасный следующий шаг — не запускать дополнительные дублирующие workflows, а позднее один раз проверить итог существующего Windows run.
+
+BLOCKERS:
+- До merge Evolution в `main`: получить финальный результат Windows package run `36006122213`.
+- До выпуска версии `1.5.0.0`: отдельный новый release cycle, version sync, Windows/Android packages, update/release gates и решение владельца.
+
+NEXT:
+- Не тратить CI-кредиты на повторные запуски.
+- При следующем продолжении сначала прочитать фактический статус run `36006122213`.
+- Если Windows SUCCESS — сохранить artifact ID/digest, закрыть Evolution claim и выполнить разрешённую интеграцию PR #93 в `main`.
+- Если Windows FAILURE — исправлять только подтверждённую root cause и запускать один новый exact-SHA gate.
+- После интеграции начать следующий крупный блок: безопасный чат-импорт Knowledge/БД/GGUF с type separation, confirmation, integrity, test activation и rollback.
+
+PROGRESS_COMPLETE: 90%
+PROGRESS_REMAINING: 10%
+
+DONE:
+- Evolution lifecycle и user controls реализованы и приняты Linux/native Windows acceptance.
+- Android exact-SHA package/device gate и все быстрые regression gates зелёные.
+- Направление следующего обновления, безопасность и versioning boundary зафиксированы.
+
+REMAINING:
+- Один Windows exact-code package result.
+- Journal close + разрешённый merge в `main`.
+- Новый release/version cycle для будущего V1.5 выполняется отдельно.
+
+BLOCKERS:
+- Windows run `36006122213` ещё не имел финального результата на момент остановки мониторинга.
+
+NEXT:
+- Позднее сделать один read-only status check run `36006122213`; не dispatch’ить дубликаты.
