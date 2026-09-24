@@ -19,28 +19,80 @@ if (Test-Path $publicPath) {
 
 New-Item -ItemType Directory -Force -Path $privateDir,(Split-Path -Parent $publicPath) | Out-Null
 
-function Write-Pem([string]$Label, [byte[]]$Bytes, [string]$Path) {
-    $body = [Convert]::ToBase64String($Bytes, [Base64FormattingOptions]::InsertLineBreaks)
-    $pem = "-----BEGIN $Label-----`n$body`n-----END $Label-----`n"
-    [IO.File]::WriteAllText($Path, $pem, [Text.Encoding]::ASCII)
+function Find-OpenSsl {
+    $cmd = Get-Command openssl.exe -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    $cmd = Get-Command openssl -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    foreach ($candidate in @(
+        (Join-Path $env:ProgramFiles 'Git\usr\bin\openssl.exe'),
+        (Join-Path $env:ProgramFiles 'Git\mingw64\bin\openssl.exe'),
+        'C:\Program Files\Git\usr\bin\openssl.exe',
+        'C:\Program Files\Git\mingw64\bin\openssl.exe'
+    )) {
+        if (Test-Path -LiteralPath $candidate) { return $candidate }
+    }
+    throw 'OpenSSL was not found. Install Git for Windows (including OpenSSL) and run this script again.'
 }
 
-$rsa = [Security.Cryptography.RSA]::Create($Bits)
+function Invoke-OpenSsl([string]$OpenSsl, [string[]]$Arguments) {
+    $psi = New-Object Diagnostics.ProcessStartInfo
+    $psi.FileName = $OpenSsl
+    $psi.Arguments = (($Arguments | ForEach-Object { '"' + $_.Replace('"', '\"') + '"' }) -join ' ')
+    $psi.UseShellExecute = $false
+    $psi.CreateNoWindow = $true
+    $psi.RedirectStandardOutput = $true
+    $psi.RedirectStandardError = $true
+    $process = New-Object Diagnostics.Process
+    $process.StartInfo = $psi
+    if (-not $process.Start()) { throw "Could not start OpenSSL: $OpenSsl" }
+    try {
+        $stdoutTask = $process.StandardOutput.ReadToEndAsync()
+        $stderrTask = $process.StandardError.ReadToEndAsync()
+        $process.WaitForExit()
+        $stdout = $stdoutTask.Result
+        $stderr = $stderrTask.Result
+        if ($process.ExitCode -ne 0) {
+            throw "OpenSSL failed with exit code $($process.ExitCode): $stderr $stdout"
+        }
+        return $stdout
+    } finally {
+        $process.Dispose()
+    }
+}
+
+$openssl = Find-OpenSsl
+$tempDir = Join-Path ([IO.Path]::GetTempPath()) ("aurorafox-signing-{0}" -f [Guid]::NewGuid().ToString('N'))
+$tempPrivate = Join-Path $tempDir 'update-private.pem'
+$tempPublic = Join-Path $tempDir 'update-public.pem'
+$tempPublicDer = Join-Path $tempDir 'update-public.der'
+New-Item -ItemType Directory -Force -Path $tempDir | Out-Null
+
 try {
-    $private = $rsa.ExportPkcs8PrivateKey()
-    $public = $rsa.ExportSubjectPublicKeyInfo()
-    Write-Pem -Label 'PRIVATE KEY' -Bytes $private -Path $privatePath
-    Write-Pem -Label 'PUBLIC KEY' -Bytes $public -Path $publicPath
+    Invoke-OpenSsl $openssl @('genpkey','-algorithm','RSA','-pkeyopt',"rsa_keygen_bits:$Bits",'-out',$tempPrivate) | Out-Null
+    Invoke-OpenSsl $openssl @('pkey','-in',$tempPrivate,'-check','-noout') | Out-Null
+    Invoke-OpenSsl $openssl @('pkey','-in',$tempPrivate,'-pubout','-out',$tempPublic) | Out-Null
+    Invoke-OpenSsl $openssl @('pkey','-pubin','-in',$tempPublic,'-outform','DER','-out',$tempPublicDer) | Out-Null
+
+    if (-not (Test-Path -LiteralPath $tempPrivate) -or -not (Test-Path -LiteralPath $tempPublic)) {
+        throw 'OpenSSL did not produce both update signing key files.'
+    }
+
+    Move-Item -LiteralPath $tempPrivate -Destination $privatePath
+    Move-Item -LiteralPath $tempPublic -Destination $publicPath
     [Convert]::ToBase64String([IO.File]::ReadAllBytes($privatePath)) | Set-Content -Path $privateBase64Path -Encoding ASCII -NoNewline
 
     $sha = [Security.Cryptography.SHA256]::Create()
     try {
-        $fingerprint = ([BitConverter]::ToString($sha.ComputeHash($public))).Replace('-', ':')
+        $fingerprint = ([BitConverter]::ToString($sha.ComputeHash([IO.File]::ReadAllBytes($tempPublicDer)))).Replace('-', ':')
     } finally {
         $sha.Dispose()
     }
+} catch {
+    Remove-Item -LiteralPath $privatePath,$publicPath,$privateBase64Path -Force -ErrorAction SilentlyContinue
+    throw
 } finally {
-    $rsa.Dispose()
+    Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host ''

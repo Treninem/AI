@@ -11,9 +11,13 @@ on:
       - 'scripts/sandbox_manager.gd'
       - 'tests/work_reliability_*'
       - 'tests/computer_agent_*'
+      - 'tests/computer_client_response_smoke.gd'
+      - 'tests/test_network_json_contract.py'
       - 'tests/work_computer_e2e_*'
       - 'tests/work_computer_attempt_safety_smoke.gd'
       - 'tests/work_computer_master_stop_smoke.gd'
+      - 'tests/work_computer_concurrency_smoke.gd'
+      - 'tests/autonomy_state_failure_injection_smoke.gd'
       - '.github/workflows/work-computer-reliability.yml'
   push:
     branches: [main]
@@ -26,9 +30,13 @@ on:
       - 'scripts/sandbox_manager.gd'
       - 'tests/work_reliability_*'
       - 'tests/computer_agent_*'
+      - 'tests/computer_client_response_smoke.gd'
+      - 'tests/test_network_json_contract.py'
       - 'tests/work_computer_e2e_*'
       - 'tests/work_computer_attempt_safety_smoke.gd'
       - 'tests/work_computer_master_stop_smoke.gd'
+      - 'tests/work_computer_concurrency_smoke.gd'
+      - 'tests/autonomy_state_failure_injection_smoke.gd'
       - '.github/workflows/work-computer-reliability.yml'
   workflow_dispatch:
 
@@ -41,21 +49,37 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       - name: Install contract-test dependencies
         run: python -m pip install --disable-pip-version-check pytest fastapi 'uvicorn[standard]' 'pydantic>=2.11' 'httpx==0.28.1' python-multipart
       - name: Python syntax
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py
-      - name: Computer reliability and routing contracts
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
+      - name: Computer reliability routing failure-injection concurrency and response contracts
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
 
   computer-contract-windows:
     runs-on: windows-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -67,16 +91,24 @@ jobs:
         run: python -c "import pyautogui, pywinauto; from PIL import ImageGrab; print('WINDOWS_COMPUTER_RUNTIME_IMPORT_OK')"
       - name: Python syntax
         shell: pwsh
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py
-      - name: Computer reliability and routing contracts on Windows
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
+      - name: Computer reliability routing failure-injection concurrency and response contracts on Windows
         shell: pwsh
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
 
   work-godot:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -93,6 +125,8 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/work_mode_store_smoke.gd
       - name: Work reliability lifecycle and recovery smoke
         run: timeout 60s ./godot --headless --path . --script tests/work_reliability_store_smoke.gd
+      - name: Work fail-closed corruption and restart smoke
+        run: timeout 40s ./godot --headless --path . --script tests/work_reliability_fail_closed_smoke.gd
       - name: Work cancel and master-stop unsafe-action race smoke
         run: timeout 40s ./godot --headless --path . --script tests/work_computer_e2e_control_smoke.gd
       - name: Work whole-attempt destructive retry smoke
@@ -101,12 +135,26 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/work_computer_e2e_uncertain_result_smoke.gd
       - name: Work and Computer real master-stop binding smoke
         run: timeout 30s ./godot --headless --path . --script tests/work_computer_master_stop_smoke.gd
+      - name: Work concurrent task isolation smoke
+        run: timeout 30s ./godot --headless --path . --script tests/work_computer_concurrency_smoke.gd
+      - name: Computer HTTP response classification smoke
+        run: timeout 30s ./godot --headless --path . --script tests/computer_client_response_smoke.gd
+      - name: Autonomy both-corrupt state fail-closed smoke
+        run: timeout 30s ./godot --headless --path . --script tests/autonomy_state_failure_injection_smoke.gd
 
   source-boundaries:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
       - name: Local-only and protected routing contracts
         shell: bash
         run: |
@@ -122,6 +170,7 @@ jobs:
           grep -q 'attempt_retry_safety' work/work_store.gd
           grep -q 'unsafe_action_seen' work/work_manager.gd
           grep -q 'shared_service_token' scripts/computer_client.gd
+          grep -q '_decode_response' scripts/computer_client.gd
           grep -q 'computer_action' scripts/tool_registry.gd
           grep -q 'X-AuroraFox-Computer-Token' scripts/tool_registry.gd
           grep -q 'X-AuroraFox-Computer-Token' scripts/sandbox_manager.gd

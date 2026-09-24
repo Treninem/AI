@@ -1,0 +1,37 @@
+{
+  "schema": "aurorafox.knowledge-pack-release.v1",
+  "artifact": {
+    "name": "AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst",
+    "bytes": 429588529,
+    "sha256": "bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614"
+  },
+  "manifest": {
+    "schema": "aurorafox.knowledge-pack.v1",
+    "pack_id": "aurorafox-bootstrap-ru",
+    "pack_version": "2026.09.01",
+    "record_schema": "aurorafox.knowledge-record.v1",
+    "production": true,
+    "content_bytes": 1924345221,
+    "file_bytes": 1982822407,
+    "record_count": 75871,
+    "shard_count": 60,
+    "shard_limit_bytes": 33554432,
+    "languages": ["ru"],
+    "domains": ["encyclopedia"],
+    "source": {
+      "name": "Russian Wikipedia",
+      "dump_url": "https://dumps.wikimedia.org/ruwiki/20260901/",
+      "project_url": "https://ru.wikipedia.org",
+      "version": "20260901",
+      "language": "ru",
+      "license": "CC BY-SA 4.0",
+      "license_url": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "attribution": "Russian Wikipedia contributors"
+    },
+    "input_archive": {
+      "name": "ruwiki-20260901-pages-articles-multistream1.xml-p1p224167.bz2",
+      "bytes": 397086180,
+      "sha256": "a0a986c6be354c37496b110662a8a558634a2be91e34138ce13446c141b0fa30"
+    }
+  }
+}

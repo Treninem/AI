@@ -1,5 +1,6 @@
 package com.aurorafox.runtime
 
+import android.app.Activity
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
@@ -13,8 +14,16 @@ import org.godotengine.godot.plugin.UsedByGodot
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
+import java.util.concurrent.atomic.AtomicLong
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
+    companion object {
+        private const val PRODUCTION_PACK_PICKER_REQUEST = 64017
+    }
+
     private val native = NativeRuntime()
     private val voice by lazy {
         val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
@@ -24,8 +33,83 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
         AndroidFileRuntime(ctx, voice)
     }
+    private val productionPackImport by lazy {
+        val ctx = activity?.applicationContext ?: throw IllegalStateException("No Android context")
+        ProductionPackArchiveImport(ctx)
+    }
+
+    private class FileAnalysisJob {
+        val createdAtMs = System.currentTimeMillis()
+        @Volatile var result: String? = null
+        @Volatile var cancelled: Boolean = false
+        @Volatile var future: Future<*>? = null
+    }
+
+    private val fileJobCounter = AtomicLong()
+    private val fileJobs = ConcurrentHashMap<String, FileAnalysisJob>()
+    private val fileExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "AuroraFoxFileAnalysis").apply { isDaemon = true }
+    }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
+
+    @UsedByGodot
+    fun selectProductionPackArchive(): String {
+        val act = activity ?: return errorJson("No Android activity")
+        val prepared = productionPackImport.prepareSelection()
+        return try {
+            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                addCategory(Intent.CATEGORY_OPENABLE)
+                type = "application/octet-stream"
+                putExtra(Intent.EXTRA_MIME_TYPES, arrayOf("application/zstd", "application/octet-stream", "application/x-zstd"))
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
+            }
+            runOnHostThread { act.startActivityForResult(intent, PRODUCTION_PACK_PICKER_REQUEST) }
+            prepared
+        } catch (t: Throwable) {
+            productionPackImport.failSelection(t.message ?: "Cannot open Android archive picker")
+            productionPackImport.poll()
+        }
+    }
+
+    @UsedByGodot
+    fun pollProductionPackArchiveImport(): String = productionPackImport.poll()
+
+    @UsedByGodot
+    fun shareProductionPackAcceptanceReport(reportJson: String): String {
+        val act = activity ?: return errorJson("No Android activity")
+        if (reportJson.length !in 2..250_000) return errorJson("Acceptance report is empty or too large")
+        return try {
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_SUBJECT, "AuroraFox Android production Knowledge report")
+                putExtra(Intent.EXTRA_TEXT, reportJson)
+            }
+            runOnHostThread {
+                act.startActivity(Intent.createChooser(intent, "Поделиться отчётом AuroraFox"))
+            }
+            JSONObject(mapOf("ok" to true, "chooser_opened" to true)).toString()
+        } catch (t: Throwable) {
+            errorJson("Cannot share acceptance report: ${t.message ?: t.javaClass.simpleName}")
+        }
+    }
+
+    override fun onMainActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        if (requestCode != PRODUCTION_PACK_PICKER_REQUEST) return
+        val uri = data?.data
+        if (resultCode != Activity.RESULT_OK || uri == null) {
+            productionPackImport.cancelSelection()
+            return
+        }
+        try {
+            val flags = data.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
+            activity?.contentResolver?.takePersistableUriPermission(uri, flags and Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        } catch (_: Throwable) {
+            // The one-shot read grant is sufficient for the current bounded import.
+        }
+        productionPackImport.begin(uri)
+    }
 
     @UsedByGodot
     fun getPrivateRoot(): String = activity?.filesDir?.absolutePath ?: ""
@@ -40,6 +124,12 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         val freeStorage = if (filesDir != null) StatFs(filesDir.absolutePath).availableBytes else 0L
         val tts = try { voice.isTtsAvailable() } catch (_: Throwable) { false }
         val sherpaStt = try { voice.isSttAvailable() } catch (_: Throwable) { false }
+        val ocrHealth = try {
+            val ctx = activity?.applicationContext
+            if (ctx != null) AndroidOcrRuntime(ctx).health() else JSONObject().put("available", false)
+        } catch (t: Throwable) {
+            JSONObject().put("available", false).put("error", t.message ?: t.javaClass.simpleName)
+        }
         return JSONObject(
             mapOf(
                 "embedded_runtime" to true,
@@ -52,6 +142,10 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
                 "sherpa_stt" to sherpaStt,
                 "local_tts" to tts,
                 "file_intelligence" to true,
+                "local_ocr" to ocrHealth.optBoolean("available", false),
+                "local_ocr_health" to ocrHealth,
+                "file_analysis_async" to true,
+                "file_analysis_cancel" to true,
                 "wasm" to (loaded && native.hasWasm()),
                 "app_update_install" to true,
                 "architecture" to Build.SUPPORTED_ABIS.joinToString(","),
@@ -85,6 +179,86 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         if (!isInsideAppStorage(path)) return errorJson("File must be inside AuroraFox private storage")
         return try { files.analyze(path, question, visual) }
         catch (t: Throwable) { errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}") }
+    }
+
+    @UsedByGodot
+    fun startAnalyzeLocalFile(path: String, question: String, visual: Boolean): String {
+        if (!isInsideAppStorage(path)) return errorJson("File must be inside AuroraFox private storage")
+        cleanupFinishedFileJobs()
+        if (fileJobs.size >= 8) return errorJson("Too many pending Android file-analysis jobs")
+        val runtime = try { files } catch (t: Throwable) {
+            return errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}")
+        }
+        val jobId = "file-${System.currentTimeMillis()}-${fileJobCounter.incrementAndGet()}"
+        val job = FileAnalysisJob()
+        fileJobs[jobId] = job
+        job.future = fileExecutor.submit {
+            val output = try {
+                runtime.analyze(path, question, visual)
+            } catch (t: Throwable) {
+                errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}")
+            }
+            if (!job.cancelled) job.result = output
+        }
+        return JSONObject(mapOf("ok" to true, "job_id" to jobId, "pending" to true)).toString()
+    }
+
+    @UsedByGodot
+    fun pollAnalyzeLocalFile(jobId: String): String {
+        val job = fileJobs[jobId] ?: return errorJson("Unknown Android file-analysis job")
+        val result = job.result
+        if (result == null) {
+            return JSONObject(mapOf("ok" to true, "job_id" to jobId, "pending" to true, "cancelled" to job.cancelled)).toString()
+        }
+        fileJobs.remove(jobId)
+        val parsed = try { JSONObject(result) } catch (_: Throwable) {
+            JSONObject(mapOf("ok" to false, "error" to "Invalid Android File Intelligence job result"))
+        }
+        return JSONObject()
+            .put("ok", true)
+            .put("job_id", jobId)
+            .put("pending", false)
+            .put("cancelled", job.cancelled || parsed.optBoolean("cancelled", false))
+            .put("result", parsed)
+            .toString()
+    }
+
+    @UsedByGodot
+    fun cancelAnalyzeLocalFile(jobId: String): String {
+        val job = fileJobs[jobId] ?: return JSONObject(mapOf("ok" to true, "cancelled" to false, "missing" to true)).toString()
+        job.cancelled = true
+        job.result = cancelledFileJson()
+        job.future?.cancel(true)
+        return JSONObject(mapOf("ok" to true, "job_id" to jobId, "cancelled" to true)).toString()
+    }
+
+    @UsedByGodot
+    fun startDocumentExtraction(path: String): String = startAnalyzeLocalFile(path, "", false)
+
+    @UsedByGodot
+    fun getDocumentExtractionProgress(jobId: String): String {
+        val job = fileJobs[jobId] ?: return errorJson("Unknown Android document-extraction job")
+        val completed = job.result != null
+        return JSONObject(
+            mapOf(
+                "ok" to true,
+                "job_id" to jobId,
+                "pending" to !completed,
+                "completed" to completed,
+                "cancelled" to job.cancelled,
+                "elapsed_ms" to (System.currentTimeMillis() - job.createdAtMs).coerceAtLeast(0L)
+            )
+        ).toString()
+    }
+
+    @UsedByGodot
+    fun cancelDocumentExtraction(jobId: String): String = cancelAnalyzeLocalFile(jobId)
+
+    @UsedByGodot
+    fun extractDocumentText(path: String): String {
+        if (!isInsideAppStorage(path)) return errorJson("Document must be inside AuroraFox private storage")
+        return try { files.analyze(path, "", false) }
+        catch (t: Throwable) { errorJson("Android local document extraction unavailable: ${t.message ?: t.javaClass.simpleName}") }
     }
 
     @UsedByGodot
@@ -176,16 +350,27 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         return native.runWasm(module.absolutePath, workspaceCanonical.absolutePath, args.toTypedArray())
     }
 
+    private fun cleanupFinishedFileJobs() {
+        val cutoff = System.currentTimeMillis() - 10L * 60L * 1000L
+        fileJobs.entries.removeIf { entry -> entry.value.result != null && entry.value.createdAtMs < cutoff }
+    }
+
+    private fun cancelledFileJson(): String = JSONObject(
+        mapOf(
+            "ok" to false,
+            "cancelled" to true,
+            "error" to "Android file analysis cancelled",
+            "external_ai_required" to false,
+        )
+    ).toString()
+
     private fun formatChatPrompt(messages: JSONArray): String {
-        val out = StringBuilder()
+        val items = mutableListOf<Pair<String, String>>()
         for (i in 0 until messages.length()) {
             val item = messages.optJSONObject(i) ?: continue
-            val role = item.optString("role", "user").lowercase().let { if (it in setOf("system", "user", "assistant")) it else "user" }
-            val content = item.optString("content", "")
-            out.append("<|im_start|>").append(role).append('\n').append(content).append("<|im_end|>\n")
+            items.add(item.optString("role", "user") to item.optString("content", ""))
         }
-        out.append("<|im_start|>assistant\n")
-        return out.toString()
+        return CoreChatPrompt.format(items)
     }
 
     private fun isInsideAppStorage(path: String): Boolean {

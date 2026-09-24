@@ -11,13 +11,16 @@ const EXPECTED_SHA256 := "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc
 const METADATA_PATH := "user://models/bundled_core.json"
 
 static func runtime_candidate() -> String:
-	# A developer-installed override remains supported, but normal users never
-	# need to know about GGUF files. The shipped Core is always the fallback.
-	if _valid_gguf(ACTIVE_MODEL):
-		return ACTIVE_MODEL
+	# Windows release packages always prefer the byte-pinned shipped Core. A
+	# valid-header but incompatible model left by an older build must never hide
+	# the known-good built-in model or force normal users into model setup.
 	if OS.get_name() == "Windows":
 		var packaged := windows_packaged_path()
-		return packaged if _valid_bundled_file(packaged) else ""
+		if _valid_bundled_file(packaged):
+			return packaged
+	# Developer/user models remain supported as bounded fallback candidates.
+	if _valid_gguf(ACTIVE_MODEL):
+		return ACTIVE_MODEL
 	if OS.get_name() == "Android":
 		var ready := ensure_android_private_copy()
 		return str(ready.get("path", "")) if bool(ready.get("ok", false)) else ""

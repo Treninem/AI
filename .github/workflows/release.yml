@@ -2,6 +2,27 @@ name: AuroraFox Release
 
 on:
   workflow_dispatch:
+    inputs:
+      secrets_only:
+        description: Validate pinned release signing secrets without building or publishing
+        required: true
+        default: false
+        type: boolean
+      publish_run_id:
+        description: Reuse artifacts from a completed release run and publish without rebuilding
+        required: false
+        default: ''
+        type: string
+      release_tag:
+        description: Release tag used by publish-only recovery
+        required: false
+        default: ''
+        type: string
+      release_commit:
+        description: Verified source commit used by publish-only recovery evidence
+        required: false
+        default: ''
+        type: string
   push:
     tags:
       - 'v*'
@@ -10,7 +31,74 @@ permissions:
   contents: write
 
 jobs:
+  secret-readiness:
+    if: github.event_name == 'workflow_dispatch' && inputs.secrets_only
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Verify private signing identities without publishing
+        shell: bash
+        env:
+          UPDATE_KEY_B64: ${{ secrets.AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64 }}
+          KEYSTORE_B64: ${{ secrets.AURORA_ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_USER: ${{ secrets.AURORA_ANDROID_KEYSTORE_USER }}
+          KEYSTORE_PASSWORD: ${{ secrets.AURORA_ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          missing=()
+          test -n "$UPDATE_KEY_B64" || missing+=(AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64)
+          test -n "$KEYSTORE_B64" || missing+=(AURORA_ANDROID_KEYSTORE_BASE64)
+          test -n "$KEYSTORE_USER" || missing+=(AURORA_ANDROID_KEYSTORE_USER)
+          test -n "$KEYSTORE_PASSWORD" || missing+=(AURORA_ANDROID_KEYSTORE_PASSWORD)
+          if [ "${#missing[@]}" -gt 0 ]; then
+            printf 'Missing required secret: %s\n' "${missing[@]}" >&2
+            exit 1
+          fi
+
+          echo "::add-mask::$KEYSTORE_USER"
+          echo "::add-mask::$KEYSTORE_PASSWORD"
+          umask 077
+          work="$(mktemp -d)"
+          trap 'rm -rf "$work"' EXIT
+
+          printf '%s' "$UPDATE_KEY_B64" | base64 --decode > "$work/update-private.pem"
+          openssl pkey -in "$work/update-private.pem" -check -noout >/dev/null 2>&1
+          openssl pkey -in "$work/update-private.pem" -pubout -outform DER 2>/dev/null > "$work/update-public.der"
+          expected_update="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('update/release_identity.json').read_text(encoding='utf-8'))['update_signing_public_key_sha256']
+          print(str(value).replace(':', '').lower())
+          PY
+          )"
+          actual_update="$(sha256sum "$work/update-public.der" | awk '{print $1}')"
+          test "$actual_update" = "$expected_update" || { echo 'Update signing private key does not match the pinned public identity.' >&2; exit 1; }
+
+          printf '%s' "$KEYSTORE_B64" | base64 --decode > "$work/aurorafox-release.keystore"
+          keytool -list -keystore "$work/aurorafox-release.keystore" -storepass "$KEYSTORE_PASSWORD" -alias "$KEYSTORE_USER" >/dev/null 2>&1
+          keytool -exportcert -keystore "$work/aurorafox-release.keystore" -storepass "$KEYSTORE_PASSWORD" -alias "$KEYSTORE_USER" -file "$work/android-cert.der" >/dev/null 2>&1
+          expected_android="$(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          value = json.loads(Path('update/release_identity.json').read_text(encoding='utf-8'))['android_signing_cert_sha256']
+          print(str(value).replace(':', '').lower())
+          PY
+          )"
+          actual_android="$(sha256sum "$work/android-cert.der" | awk '{print $1}')"
+          test "$actual_android" = "$expected_android" || { echo 'Android keystore certificate does not match the pinned release identity.' >&2; exit 1; }
+          echo 'AURORAFOX_RELEASE_SIGNING_SECRETS_READY'
+
   core-gates:
+    if: (github.event_name != 'workflow_dispatch' || !inputs.secrets_only) && (github.event_name != 'workflow_dispatch' || inputs.publish_run_id == '')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -81,7 +169,7 @@ jobs:
   windows:
     needs: core-gates
     runs-on: windows-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -133,21 +221,23 @@ jobs:
       - name: Build Windows core package
         shell: pwsh
         run: |
-          .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup -SkipVoiceSetup
+          .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup
 
       - name: Smoke exported Windows executable
         shell: pwsh
         run: |
+          . .\tests\windows_bounded_process.ps1
           $exe = '.\build\windows\AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'AuroraFox.exe was not produced' }
-          $p = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-          if ($p.ExitCode -ne 0) { throw "Exported AuroraFox.exe exited with $($p.ExitCode)" }
+          $exit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'release-exported-app' -TimeoutSeconds 120
+          if ($exit -ne 0) { throw "Exported AuroraFox.exe exited with $exit" }
 
       - name: Create Windows updater ZIP
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force dist | Out-Null
-          Compress-Archive -Path build\windows\* -DestinationPath dist\AuroraFox-Windows.zip -CompressionLevel Optimal -Force
+          & 'C:\Program Files\7-Zip\7z.exe' a -tzip dist\AuroraFox-Windows.zip '.\build\windows\*'
+          if ($LASTEXITCODE -ne 0) { throw 'ZIP64 Windows update package creation failed' }
 
       - name: Build Windows installer
         shell: pwsh
@@ -166,14 +256,18 @@ jobs:
       - name: Silent install, launch and uninstall Windows release
         shell: pwsh
         run: |
+          . .\tests\windows_bounded_process.ps1
           $installDir = Join-Path $env:RUNNER_TEMP 'AuroraFoxReleaseInstalled'
           $installer = (Resolve-Path 'build\release\AuroraFox_Setup_Windows.exe').Path
           $install = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
           if ($install.ExitCode -notin @(0,3010)) { throw "Installer exited with $($install.ExitCode)" }
           $exe = Join-Path $installDir 'AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe is missing' }
-          $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-          if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
+          $runExit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'release-installed-app' -TimeoutSeconds 120
+          if ($runExit -ne 0) { throw "Installed AuroraFox.exe exited with $runExit" }
+          .\tests\windows_installed_knowledge_pack_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-knowledge-pack'
+          .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
+          .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
           if (-not $uninstaller) { throw 'Uninstaller is missing' }
           $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
@@ -187,6 +281,9 @@ jobs:
           path: |
             dist/AuroraFox-Windows.zip
             dist/AuroraFox_Setup_Windows.exe
+            artifacts/windows-offline-voice/**
+            artifacts/windows-offline-services/**
+            artifacts/windows-offline-knowledge-pack/**
           if-no-files-found: error
 
   android:
@@ -379,10 +476,10 @@ jobs:
           disable-linux-hw-accel: auto
           emulator-options: -no-snapshot-save -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -camera-front none
           script: |
-            # android-emulator-runner executes this block with POSIX /bin/sh.
+            # android-emulator-runner executes script lines independently; do not
+            # rely on a shell-local variable surviving into the next line.
             set -eu
-            apk='dist/AuroraFox-Android.apk'
-            adb install -r "$apk"
+            adb install -r dist/AuroraFox-Android.apk
             adb shell pm path com.aurorafox.ai | tee build/android/release-emulator-package.txt
             grep -q '^package:' build/android/release-emulator-package.txt
             adb logcat -c
@@ -416,9 +513,18 @@ jobs:
           if-no-files-found: error
 
   publish:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: |
+      always() &&
+      (
+        (startsWith(github.ref, 'refs/tags/v') && needs.windows.result == 'success' && needs.android.result == 'success') ||
+        (github.event_name == 'workflow_dispatch' && inputs.publish_run_id != '')
+      )
     needs: [windows, android]
     runs-on: ubuntu-latest
+    env:
+      RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+      RELEASE_COMMIT: ${{ inputs.release_commit || github.sha }}
+      ARTIFACT_RUN_ID: ${{ inputs.publish_run_id || github.run_id }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -427,26 +533,118 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: aurorafox-windows
-          path: dist
+          path: staged/windows
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          github-token: ${{ github.token }}
 
       - name: Download Android artifact
         uses: actions/download-artifact@v4
         with:
           name: aurorafox-android
-          path: dist
+          path: staged/android
+          run-id: ${{ env.ARTIFACT_RUN_ID }}
+          github-token: ${{ github.token }}
+
+      - name: Normalize release artifact layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          win="$(find staged/windows -type f -name 'AuroraFox-Windows.zip' -print -quit)"
+          installer="$(find staged/windows -type f -name 'AuroraFox_Setup_Windows.exe' -print -quit)"
+          apk="$(find staged/android -type f -name 'AuroraFox-Android.apk' -print -quit)"
+          test -n "$win" && test -n "$installer" && test -n "$apk"
+          cp "$win" dist/AuroraFox-Windows.zip
+          cp "$installer" dist/AuroraFox_Setup_Windows.exe
+          cp "$apk" dist/AuroraFox-Android.apk
+          test -s dist/AuroraFox-Windows.zip
+          test -s dist/AuroraFox_Setup_Windows.exe
+          test -s dist/AuroraFox-Android.apk
+
+      - name: Prepare GitHub-size-safe Windows release assets
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path, PurePosixPath
+          from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
+
+          source = Path('dist/AuroraFox-Windows.zip')
+          target = Path('dist/AuroraFox-Windows.slim.zip')
+          excluded = (
+              'voice/.venv/', 'voice/models/',
+              'computer/.venv/', 'computer/models/',
+              'file_intelligence/.venv/',
+              'runtime/windows/python/', 'runtime/windows/cache/',
+          )
+          kept = 0
+          skipped = 0
+          with ZipFile(source, 'r') as src, ZipFile(target, 'w', compression=ZIP_DEFLATED, compresslevel=9, allowZip64=True) as dst:
+              for info in src.infolist():
+                  normalized = str(PurePosixPath(info.filename.replace('\\', '/'))).lstrip('./').lower()
+                  if any(normalized.startswith(prefix) for prefix in excluded):
+                      skipped += info.file_size
+                      continue
+                  if info.is_dir():
+                      dst.writestr(info, b'')
+                      continue
+                  with src.open(info, 'r') as reader, dst.open(info, 'w', force_zip64=True) as writer:
+                      while True:
+                          chunk = reader.read(8 * 1024 * 1024)
+                          if not chunk:
+                              break
+                          writer.write(chunk)
+                  kept += info.file_size
+          print(f'AURORA_WINDOWS_SLIM_ZIP kept_uncompressed={kept} skipped_uncompressed={skipped} size={target.stat().st_size}')
+          PY
+          mv dist/AuroraFox-Windows.slim.zip dist/AuroraFox-Windows.zip
+          max_asset=2147483648
+          win_size="$(stat -c%s dist/AuroraFox-Windows.zip)"
+          test "$win_size" -lt "$max_asset" || { echo "Slim Windows update ZIP still exceeds GitHub's 2 GiB asset limit: $win_size" >&2; exit 1; }
+
+          installer_sha="$(sha256sum dist/AuroraFox_Setup_Windows.exe | awk '{print $1}')"
+          split -b 1900M -d -a 2 dist/AuroraFox_Setup_Windows.exe dist/AuroraFox_Setup_Windows.exe.part-
+          part_count="$(find dist -maxdepth 1 -type f -name 'AuroraFox_Setup_Windows.exe.part-*' | wc -l)"
+          test "$part_count" -ge 2
+          for part in dist/AuroraFox_Setup_Windows.exe.part-*; do
+            test "$(stat -c%s "$part")" -lt "$max_asset"
+          done
+          {
+            echo "$installer_sha  AuroraFox_Setup_Windows.exe"
+            sha256sum dist/AuroraFox_Setup_Windows.exe.part-* | sed 's#  dist/#  #'
+          } > dist/AuroraFox_Setup_Windows.parts.sha256
+          cat > dist/AuroraFox_Setup_Windows.reassemble.ps1 <<'PS1'
+          $ErrorActionPreference = 'Stop'
+          $root = Split-Path -Parent $MyInvocation.MyCommand.Path
+          $parts = @(Get-ChildItem -LiteralPath $root -Filter 'AuroraFox_Setup_Windows.exe.part-*' | Sort-Object Name)
+          if ($parts.Count -lt 2) { throw 'Installer parts are missing.' }
+          $output = Join-Path $root 'AuroraFox_Setup_Windows.exe'
+          $stream = [IO.File]::Open($output, [IO.FileMode]::Create, [IO.FileAccess]::Write, [IO.FileShare]::None)
+          try {
+              foreach ($part in $parts) {
+                  $input = [IO.File]::OpenRead($part.FullName)
+                  try { $input.CopyTo($stream) } finally { $input.Dispose() }
+              }
+          } finally { $stream.Dispose() }
+          $checks = Get-Content -LiteralPath (Join-Path $root 'AuroraFox_Setup_Windows.parts.sha256')
+          $expected = (($checks | Select-Object -First 1) -split '\\s+')[0].ToLowerInvariant()
+          $actual = (Get-FileHash -LiteralPath $output -Algorithm SHA256).Hash.ToLowerInvariant()
+          if ($actual -ne $expected) { Remove-Item -LiteralPath $output -Force; throw "Installer SHA-256 mismatch: $actual" }
+          Write-Host "AuroraFox installer reconstructed and verified: $output" -ForegroundColor Green
+          PS1
 
       - name: Generate verified update manifest and release evidence
         shell: bash
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
+          version="${RELEASE_TAG#v}"
           win='dist/AuroraFox-Windows.zip'
           apk='dist/AuroraFox-Android.apk'
           win_sha="$(sha256sum "$win" | awk '{print $1}')"
           apk_sha="$(sha256sum "$apk" | awk '{print $1}')"
           win_size="$(stat -c%s "$win")"
           apk_size="$(stat -c%s "$apk")"
-          python3 - "$version" "$win_sha" "$apk_sha" "$win_size" "$apk_size" "$GITHUB_SHA" <<'PY'
+          python3 - "$version" "$win_sha" "$apk_sha" "$win_size" "$apk_size" "$RELEASE_COMMIT" <<'PY'
           import json, sys
           from datetime import datetime, timezone
           from pathlib import Path
@@ -511,23 +709,26 @@ jobs:
           rm -f "$key" "$derived"
           echo "Signed update.json with pinned key fingerprint $committed_fp"
 
-      - name: Create draft GitHub Release
+      - name: Create or update draft GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
-          tag="$GITHUB_REF_NAME"
-          gh release create "$tag" \
+          tag="$RELEASE_TAG"
+          if ! gh release view "$tag" >/dev/null 2>&1; then
+            gh release create "$tag" --title "AuroraFox $tag" --generate-notes --draft
+          fi
+          gh release upload "$tag" \
             dist/AuroraFox-Windows.zip \
-            dist/AuroraFox_Setup_Windows.exe \
+            dist/AuroraFox_Setup_Windows.exe.part-* \
+            dist/AuroraFox_Setup_Windows.reassemble.ps1 \
+            dist/AuroraFox_Setup_Windows.parts.sha256 \
             dist/AuroraFox-Android.apk \
             dist/update.json \
             dist/update.sig \
             dist/release_verification.json \
-            --title "AuroraFox $tag" \
-            --generate-notes \
-            --draft
+            --clobber
 
       - name: Record verified release evidence on main
         env:
@@ -535,7 +736,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          version="V${GITHUB_REF_NAME#v}"
+          version="V${RELEASE_TAG#v}"
           git config user.name 'AuroraFox Release Bot'
           git config user.email 'aurorafox-release@users.noreply.github.com'
           git fetch origin main
@@ -561,4 +762,4 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          gh release edit "$GITHUB_REF_NAME" --draft=false
+          gh release edit "$RELEASE_TAG" --draft=false

@@ -10,6 +10,10 @@ const STATE_PATH := "user://core_candidates/state.json"
 const MAX_SOURCE_BYTES := 1024 * 1024
 const MAX_HISTORY := 30
 const MIN_REVIEW_IMPROVEMENT := 1.0
+const MIN_TOURNAMENT_CANDIDATES := 3
+const MAX_TOURNAMENT_CANDIDATES := 10
+const DEFAULT_TOURNAMENT_CANDIDATES := 5
+const PROPOSAL_ATTEMPT_MULTIPLIER := 3
 const CORE_TARGETS := [
 	"scripts/cognition_layer.gd",
 	"scripts/agent_core.gd",
@@ -23,7 +27,8 @@ const NEVER_TOUCH_PREFIXES := [
 ]
 
 @export var autonomous_core_candidates := true
-@export var auto_apply_dev_checkout := true
+@export var auto_apply_dev_checkout := false
+@export_range(3, 10, 1) var tournament_candidate_count := DEFAULT_TOURNAMENT_CANDIDATES
 @export_range(3600.0, 604800.0, 60.0) var candidate_cooldown_seconds := 21600.0
 
 var ai: AIClient
@@ -70,14 +75,14 @@ func _register_tools() -> void:
 	if not tools.tools.has("aurora_core_candidate"):
 		tools.register_tool(
 			"aurora_core_candidate",
-			"Создать, сравнить с текущим ядром, проверить и безопасно подготовить реальное улучшение разрешённой части AuroraFox.",
+			"Создать турнир локальных мутаций, сравнить их с текущим ядром и безопасно подготовить единственного доказанного победителя.",
 			{"goal":"string", "target":"string"},
 			Callable(self, "_tool_candidate")
 		)
 	if not tools.tools.has("aurora_core_candidate_status"):
 		tools.register_tool(
 			"aurora_core_candidate_status",
-			"Показать историю проверенных кандидатов улучшения ядра AuroraFox.",
+			"Показать историю проверенных турниров улучшения ядра AuroraFox.",
 			{},
 			Callable(self, "_tool_status")
 		)
@@ -127,28 +132,138 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 	if not bool(source_result.get("ok", false)):
 		return source_result
 	var original := str(source_result.get("content", ""))
+	var baseline_sha := _sha256_text(original)
+	var desired_count := clampi(tournament_candidate_count, MIN_TOURNAMENT_CANDIDATES, MAX_TOURNAMENT_CANDIDATES)
 	_running = true
 	core_candidate_started.emit(clean_goal, target)
 
-	var proposal_result := await _propose(clean_goal, target, original)
-	if not bool(proposal_result.get("ok", false)):
-		return _finish_rejected(proposal_result)
-	var proposal: Dictionary = proposal_result.get("proposal", {})
-	var validation := _validate_candidate(target, original, proposal)
-	if not bool(validation.get("ok", false)):
-		return _finish_rejected(validation)
+	# Every mutation is generated from the exact same incumbent source. Nothing is
+	# applied to the checkout while the tournament is running.
+	var participants: Array = []
+	var reviewed_candidates: Array = []
+	var candidate_payloads := {}
+	var seen_sha := {baseline_sha: true}
+	var max_attempts := desired_count * PROPOSAL_ATTEMPT_MULTIPLIER
+	var attempt := 0
+	while participants.size() < desired_count and attempt < max_attempts:
+		var proposal_result := await _propose(clean_goal, target, original, attempt, desired_count)
+		attempt += 1
+		if not bool(proposal_result.get("ok", false)):
+			continue
+		var proposal: Dictionary = proposal_result.get("proposal", {})
+		var validation := _validate_candidate(target, original, proposal)
+		if not bool(validation.get("ok", false)):
+			continue
+		var candidate_content := str(proposal.get("content", ""))
+		var candidate_sha := _sha256_text(candidate_content)
+		if candidate_sha.is_empty() or seen_sha.has(candidate_sha):
+			continue
+		seen_sha[candidate_sha] = true
+		var participant_index := participants.size()
+		var participant := {
+			"kind": "mutation",
+			"index": participant_index,
+			"candidate_sha256": candidate_sha,
+			"hard_gates_passed": false,
+			"scored": false,
+			"eligible": false,
+			"stage": "verification"
+		}
+		var verification := await _verify_in_workspace(clean_goal, target, candidate_content)
+		verification["source_contract"] = validation.get("source_contract", {})
+		if not bool(verification.get("ok", false)):
+			participant["stage"] = str(verification.get("stage", "verification"))
+			participant["error"] = str(verification.get("error", "candidate failed hard gates"))
+			participant["verification"] = _compact(verification)
+			participants.append(participant)
+			continue
+		participant["hard_gates_passed"] = true
+		participant["stage"] = "comparative_review"
+		var review := await _comparative_review(clean_goal, target, original, candidate_content, verification, proposal)
+		participant["review"] = _compact(review)
+		participant["scored"] = true
+		participant["eligible"] = bool(review.get("ok", false)) and bool(review.get("improved", false))
+		participant["stage"] = "eligible" if bool(participant["eligible"]) else "review_rejected"
+		participants.append(participant)
+		reviewed_candidates.append(participant.duplicate(true))
+		candidate_payloads[candidate_sha] = {
+			"proposal": proposal,
+			"validation": validation,
+			"verification": verification,
+			"content": candidate_content
+		}
 
-	var candidate_content := str(proposal.get("content", ""))
-	var verification := await _verify_in_workspace(clean_goal, target, candidate_content)
-	if not bool(verification.get("ok", false)):
-		return _finish_rejected(verification)
-	verification["source_contract"] = validation.get("source_contract", {})
+	if participants.size() < MIN_TOURNAMENT_CANDIDATES:
+		return _finish_rejected({
+			"stage": "tournament_generation",
+			"error": "fewer than three distinct isolated mutations were produced",
+			"goal": clean_goal,
+			"target": target,
+			"baseline_sha256": baseline_sha,
+			"requested_candidates": desired_count,
+			"created_candidates": participants.size(),
+			"attempts": attempt,
+			"participants": _compact(participants),
+			"promotion": "none"
+		})
 
-	var review := await _comparative_review(clean_goal, target, original, candidate_content, verification, proposal)
-	if not bool(review.get("ok", false)):
-		return _finish_rejected(review)
-	verification["comparative_review"] = review
+	var selection := _select_tournament_winner(reviewed_candidates)
+	if not bool(selection.get("ok", false)):
+		return _finish_rejected({
+			"stage": "tournament_no_winner",
+			"error": str(selection.get("error", "no mutation proved better than the incumbent")),
+			"goal": clean_goal,
+			"target": target,
+			"baseline_sha256": baseline_sha,
+			"requested_candidates": desired_count,
+			"created_candidates": participants.size(),
+			"attempts": attempt,
+			"incumbent": selection.get("incumbent", {}),
+			"participants": _compact(participants),
+			"promotion": "none"
+		})
 
+	var winner: Dictionary = selection.get("winner", {})
+	var winner_sha := str(winner.get("candidate_sha256", ""))
+	var payload: Dictionary = candidate_payloads.get(winner_sha, {})
+	if payload.is_empty():
+		return _finish_rejected({"stage":"tournament_integrity", "error":"selected mutation payload is unavailable", "promotion":"none"})
+	var winner_content := str(payload.get("content", ""))
+	if _sha256_text(winner_content) != winner_sha:
+		return _finish_rejected({"stage":"tournament_integrity", "error":"selected mutation content hash changed", "promotion":"none"})
+
+	# Only the tournament winner is allowed into a second clean workspace. This
+	# independently re-imports the unchanged incumbent, re-runs baseline gates,
+	# writes the winner and re-runs the same target-specific tests/benchmarks.
+	var independent_verification := await _verify_in_workspace(clean_goal, target, winner_content)
+	independent_verification["source_contract"] = payload.get("validation", {}).get("source_contract", {})
+	if not bool(independent_verification.get("ok", false)):
+		return _finish_rejected({
+			"stage": "independent_verification",
+			"error": "tournament winner failed the second clean verification pass",
+			"goal": clean_goal,
+			"target": target,
+			"candidate_sha256": winner_sha,
+			"details": _compact(independent_verification),
+			"promotion": "none"
+		})
+
+	var first_verification: Dictionary = payload.get("verification", {})
+	var first_review: Dictionary = winner.get("review", {})
+	var verification := first_verification.duplicate(true)
+	verification["source_contract"] = payload.get("validation", {}).get("source_contract", {})
+	verification["comparative_review"] = first_review
+	verification["independent_verification"] = _compact(independent_verification)
+	verification["tournament"] = {
+		"requested_candidates": desired_count,
+		"created_candidates": participants.size(),
+		"attempts": attempt,
+		"incumbent": selection.get("incumbent", {}),
+		"winner": winner,
+		"participants": _compact(participants),
+		"second_clean_pass": true
+	}
+	var proposal: Dictionary = payload.get("proposal", {})
 	var stored := _store_candidate(clean_goal, target, original, proposal, verification)
 	if not bool(stored.get("ok", false)):
 		return _finish_rejected(stored)
@@ -160,30 +275,33 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 		"candidate_id": stored.get("candidate_id", ""),
 		"candidate_path": stored.get("candidate_path", ""),
 		"manifest_path": stored.get("manifest_path", ""),
-		"base_sha256": _sha256_text(original),
-		"candidate_sha256": _sha256_text(candidate_content),
+		"base_sha256": baseline_sha,
+		"candidate_sha256": winner_sha,
 		"reason": str(proposal.get("reason", "")).substr(0, 2000),
 		"verified": true,
 		"benchmark_verified": true,
 		"review_improved": true,
+		"tournament_verified": true,
+		"independent_verification_passed": true,
+		"tournament": verification.get("tournament", {}),
 		"verification": _compact(verification),
-		"promotion": "signed_update",
+		"promotion": "signed_update_candidate",
 		"applied_to_dev_checkout": false
 	}
 
-	# Dev checkout receives only a candidate that passed source contracts,
-	# baseline/candidate behavioral benchmarks and comparative improvement review.
-	# Packaged builds still never rewrite their signed runtime in place.
+	# Automatic source rewriting is OFF by default. An editor checkout may opt in,
+	# but only after the bounded tournament and second clean verification passed.
+	# Packaged/signed builds never rewrite their runtime in place.
 	if OS.has_feature("editor") and auto_apply_dev_checkout:
 		var applied = await tools.call_tool("project_apply_file", {
 			"project_path": "res://",
 			"relative_path": target,
-			"sandbox_path": verification.get("sandbox_path", "")
+			"sandbox_path": independent_verification.get("sandbox_path", "")
 		})
 		result["apply"] = _compact(applied)
 		result["applied_to_dev_checkout"] = bool(applied is Dictionary and applied.get("ok", false))
 		if bool(result.get("applied_to_dev_checkout", false)):
-			result["promotion"] = "dev_checkout_with_backup_then_signed_update"
+			result["promotion"] = "verified_dev_checkout_candidate_then_signed_update"
 			if tools.tools.has("index_project"):
 				result["reindex"] = _compact(await tools.call_tool("index_project", {"path":"res://", "max_files":30000, "force":false}))
 
@@ -195,9 +313,10 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 	core_candidate_verified.emit(result)
 	return result
 
-func _propose(goal: String, target: String, original: String) -> Dictionary:
+func _propose(goal: String, target: String, original: String, mutation_index: int, mutation_count: int) -> Dictionary:
 	var prompt := """
-Ты улучшаешь ОДИН разрешённый файл собственного ядра AuroraFox. Работа будет независимо сравнена с текущей версией на полной копии проекта Godot 4.7.1.
+Ты создаёшь ОДНУ из %d независимых мутаций разрешённого файла собственного ядра AuroraFox. Все мутации строятся от ОДНОГО неизменного baseline и позже будут проверены в изолированных workspace. Ты — собственный локальный AuroraFox Core; внешние AI/API не являются источником решения.
+Номер мутации: %d
 Цель: %s
 Файл: %s
 
@@ -205,21 +324,23 @@ func _propose(goal: String, target: String, original: String) -> Dictionary:
 {"path":"%s","content":"ПОЛНЫЙ новый текст файла","reason":"какое измеримое улучшение внесено","verification":"какие регрессии особенно важно проверить"}
 
 Правила:
+- придумай самостоятельный вариант, а не косметическую перестановку;
 - сохраняй назначение файла и совместимость публичных методов/сигналов;
 - не удаляй существующие публичные функции ради упрощения;
 - не трогай updater, подписи, sandbox, разрешения, секреты, project.godot или другие файлы;
 - не добавляй новые process/network primitives, обходы ограничений, скрытые каналы или ослабление проверок;
 - не используй TODO/FIXME/placeholder;
 - изменение должно давать конкретное улучшение устойчивости, качества, памяти, планирования, отказоустойчивости или производительности;
-- кандидат будет отклонён, если только компилируется, но не проходит baseline/candidate benchmarks и сравнительное ревью;
+- scoring разрешён только после source/safety/test/benchmark hard-gates;
 - не утверждай, что тесты прошли: их запустит AuroraFox независимо.
 
-Текущий файл:
+Неизменный baseline:
 --- BEGIN CURRENT SOURCE ---
 %s
 --- END CURRENT SOURCE ---
-""" % [goal, target, target, original]
-	var response := await ai.chat([{"role":"user", "content":prompt}], 0.12)
+""" % [mutation_count, mutation_index + 1, goal, target, target, original]
+	var temperature := clampf(0.08 + float(mutation_index % MAX_TOURNAMENT_CANDIDATES) * 0.025, 0.08, 0.30)
+	var response := await ai.chat([{"role":"user", "content":prompt}], temperature)
 	if not bool(response.get("ok", false)):
 		return {"ok": false, "stage": "proposal", "error": str(response.get("error", "local proposal generation failed"))}
 	var text := str(response.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
@@ -306,7 +427,7 @@ func _verify_in_workspace(goal: String, target: String, content: String) -> Dict
 		"benchmark": _compact(runtime_comparison),
 		"compare": _compact(compared),
 		"sandbox_path": sandbox_path,
-		"verification_mode": "baseline_then_candidate_godot_4_7_1_target_benchmarks_plus_hash_compare"
+		"verification_mode": "clean_baseline_then_candidate_godot_4_7_1_target_benchmarks_plus_hash_compare"
 	}
 
 func _run_benchmark_commands(commands: Array) -> Array:
@@ -337,21 +458,21 @@ func _comparative_review(goal: String, target: String, original: String, candida
 		"requested_verification": str(proposal.get("verification", "")).substr(0, 1500)
 	}
 	var prompt := """
-Ты независимый финальный reviewer AuroraFox. Сравни текущий файл и уже прошедший компиляцию/регрессионные тесты кандидат.
+Ты локальный независимый reviewer AuroraFox. Сравни неизменный incumbent и уже прошедшую source/safety/test/benchmark hard-gates мутацию.
 Цель: %s
 Файл: %s
 
 Верни ТОЛЬКО JSON:
 {"baseline_score":0-100,"candidate_score":0-100,"improved":true|false,"reasons":["..."],"risks":["..."]}
 
-Оценивай только реальное качество кода относительно цели: корректность, устойчивость, понятность, производительность, отказоустойчивость, сохранение контрактов. Не давай бонус за размер или новизну сами по себе. Если улучшение не доказано, improved=false. Кандидат уже обязан сохранить safety/update/permission boundaries и пройти одинаковые target-specific тесты.
+Оценивай только доказанное качество относительно цели: корректность, устойчивость, понятность, производительность, отказоустойчивость, сохранение контрактов. Не давай бонус за размер или новизну сами по себе. Если улучшение не доказано, improved=false. Scoring идёт только после hard-gates и не может отменить их провал.
 
 Проверочная информация:
 %s
 
---- CURRENT ---
+--- INCUMBENT ---
 %s
---- CANDIDATE ---
+--- MUTATION ---
 %s
 """ % [goal, target, JSON.stringify(_compact(evidence)), original.substr(0, 120000), candidate.substr(0, 120000)]
 	var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)
@@ -378,6 +499,45 @@ func _comparative_review(goal: String, target: String, original: String, candida
 		"error": "candidate was not demonstrably better than baseline" if not improved else ""
 	}
 
+func _select_tournament_winner(reviewed_candidates: Array) -> Dictionary:
+	var incumbent_score := 0.0
+	var baseline_observations := 0
+	for row in reviewed_candidates:
+		if not row is Dictionary:
+			continue
+		var review = row.get("review", {})
+		if not review is Dictionary or not review.has("baseline_score"):
+			continue
+		incumbent_score = maxf(incumbent_score, float(review.get("baseline_score", 0.0)))
+		baseline_observations += 1
+	var incumbent := {
+		"kind": "incumbent",
+		"score": incumbent_score,
+		"baseline_observations": baseline_observations,
+		"eligible": true
+	}
+	if baseline_observations == 0:
+		return {"ok": false, "error": "no mutation reached post-hard-gate scoring", "incumbent": incumbent}
+	var winner: Dictionary = {}
+	var best_score := -1.0
+	for row in reviewed_candidates:
+		if not row is Dictionary or not bool(row.get("hard_gates_passed", false)) or not bool(row.get("eligible", false)):
+			continue
+		var review = row.get("review", {})
+		if not review is Dictionary:
+			continue
+		var score := float(review.get("candidate_score", 0.0))
+		if score < incumbent_score + MIN_REVIEW_IMPROVEMENT:
+			continue
+		if winner.is_empty() or score > best_score or (is_equal_approx(score, best_score) and str(row.get("candidate_sha256", "")) < str(winner.get("candidate_sha256", ""))):
+			winner = row.duplicate(true)
+			best_score = score
+	if winner.is_empty():
+		return {"ok": false, "error": "all mutations were worse, tied, inconclusive or failed hard gates", "incumbent": incumbent}
+	winner["tournament_score"] = best_score
+	winner["incumbent_score"] = incumbent_score
+	return {"ok": true, "winner": winner, "incumbent": incumbent}
+
 func _store_candidate(goal: String, target: String, original: String, proposal: Dictionary, verification: Dictionary) -> Dictionary:
 	var content := str(proposal.get("content", ""))
 	var candidate_sha := _sha256_text(content)
@@ -401,10 +561,13 @@ func _store_candidate(goal: String, target: String, original: String, proposal: 
 		"requested_verification": str(proposal.get("verification", "")).substr(0, 3000),
 		"verified": true,
 		"benchmark_verified": bool(verification.get("benchmark", {}).get("ok", false)) if verification.get("benchmark", {}) is Dictionary else false,
+		"tournament_verified": bool(verification.get("tournament", {}).get("second_clean_pass", false)) if verification.get("tournament", {}) is Dictionary else false,
 		"comparative_review": verification.get("comparative_review", {}),
+		"independent_verification": verification.get("independent_verification", {}),
+		"tournament": verification.get("tournament", {}),
 		"verification": _compact(verification),
 		"created_at": Time.get_datetime_string_from_system(true),
-		"promotion": "signed_update"
+		"promotion": "signed_update_candidate"
 	}
 	var manifest_file := FileAccess.open(manifest_path, FileAccess.WRITE)
 	if manifest_file == null:
@@ -461,6 +624,9 @@ func status() -> Dictionary:
 		"running": _running,
 		"autonomous_core_candidates": autonomous_core_candidates,
 		"auto_apply_dev_checkout": auto_apply_dev_checkout,
+		"tournament_candidate_count": clampi(tournament_candidate_count, MIN_TOURNAMENT_CANDIDATES, MAX_TOURNAMENT_CANDIDATES),
+		"tournament_candidate_min": MIN_TOURNAMENT_CANDIDATES,
+		"tournament_candidate_max": MAX_TOURNAMENT_CANDIDATES,
 		"candidate_cooldown_seconds": candidate_cooldown_seconds,
 		"last_candidate_unix": _last_candidate_unix,
 		"minimum_review_improvement": MIN_REVIEW_IMPROVEMENT,
@@ -489,6 +655,8 @@ func _history_entry(result: Dictionary) -> Dictionary:
 		"verified": bool(result.get("verified", false)),
 		"benchmark_verified": bool(result.get("benchmark_verified", false)),
 		"review_improved": bool(result.get("review_improved", false)),
+		"tournament_verified": bool(result.get("tournament_verified", false)),
+		"independent_verification_passed": bool(result.get("independent_verification_passed", false)),
 		"promotion": str(result.get("promotion", "")),
 		"applied_to_dev_checkout": bool(result.get("applied_to_dev_checkout", false)),
 		"stage": str(result.get("stage", "")),

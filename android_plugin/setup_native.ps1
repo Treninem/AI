@@ -82,9 +82,44 @@ function Patch-Wasm3AndroidCompatibility {
 function Download-IfMissing($url, $dest) {
     if (-not (Test-Path $dest)) {
         Write-Host "Downloading $(Split-Path $dest -Leaf)..."
-        Invoke-WebRequest -Uri $url -OutFile $dest
+        $partial = "$dest.download"
+        try {
+            for ($attempt = 1; $attempt -le 3; $attempt++) {
+                try {
+                    Invoke-WebRequest -Uri $url -OutFile $partial -TimeoutSec 600
+                    Move-Item -LiteralPath $partial -Destination $dest -Force
+                    return
+                } catch {
+                    Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+                    $status = if ($_.Exception.Response) { [int]$_.Exception.Response.StatusCode } else { 0 }
+                    if ($attempt -eq 3 -or ($status -ne 0 -and $status -ne 429 -and $status -lt 500)) {
+                        throw "Pinned download failed: $(Split-Path $dest -Leaf) attempt=$attempt HTTP=$status"
+                    }
+                    Write-Host "Retrying pinned download attempt=$attempt HTTP=$status"
+                    Start-Sleep -Seconds (3 * $attempt)
+                }
+            }
+        } finally {
+            Remove-Item -LiteralPath $partial -Force -ErrorAction SilentlyContinue
+        }
     } else {
         Write-Host "Using cached $(Split-Path $dest -Leaf)."
+    }
+}
+
+function Assert-FileIdentity($path, [long]$expectedBytes, $expectedSha256) {
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
+        throw "Pinned asset is missing: $path"
+    }
+    $actualBytes = (Get-Item -LiteralPath $path).Length
+    if ($actualBytes -ne $expectedBytes) {
+        Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+        throw "Pinned asset byte mismatch: $actualBytes != $expectedBytes"
+    }
+    $actualSha256 = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($actualSha256 -ne $expectedSha256.ToLowerInvariant()) {
+        Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+        throw "Pinned asset SHA-256 mismatch: $actualSha256 != $expectedSha256"
     }
 }
 
@@ -111,15 +146,56 @@ $sherpaVersion = "1.13.4"
 $sherpaAar = Join-Path $libs "sherpa-onnx-$sherpaVersion.aar"
 Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/v$sherpaVersion/sherpa-onnx-$sherpaVersion.aar" $sherpaAar
 
-# Russian Piper fallback voice.
-$ttsName = "vits-piper-ru_RU-denis-medium"
+# Russian-capable local female TTS candidate. The archive identity is pinned to
+# the official sherpa-onnx tts-models release and must fail closed on drift.
+$ttsName = "sherpa-onnx-supertonic-3-tts-int8-2026-05-11"
 $ttsArchive = Join-Path $temp "$ttsName.tar.bz2"
 $ttsFolder = Join-Path $voiceAssets $ttsName
-if (-not (Test-Path -LiteralPath $ttsFolder)) {
-    Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$ttsName.tar.bz2" $ttsArchive
+$ttsArchiveBytes = 128774318
+$ttsArchiveSha256 = "82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427"
+$ttsRequiredFiles = @(
+    "duration_predictor.int8.onnx",
+    "text_encoder.int8.onnx",
+    "vector_estimator.int8.onnx",
+    "vocoder.int8.onnx",
+    "tts.json",
+    "unicode_indexer.bin",
+    "voice.bin"
+)
+$ttsMarker = Join-Path $ttsFolder ".aurorafox-source.sha256"
+
+Download-IfMissing "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/$ttsName.tar.bz2" $ttsArchive
+Assert-FileIdentity $ttsArchive $ttsArchiveBytes $ttsArchiveSha256
+
+$needsTtsExtract = -not (Test-Path -LiteralPath $ttsFolder -PathType Container)
+if (-not $needsTtsExtract) {
+    if (-not (Test-Path -LiteralPath $ttsMarker -PathType Leaf)) {
+        $needsTtsExtract = $true
+    } elseif (([IO.File]::ReadAllText($ttsMarker)).Trim().ToLowerInvariant() -ne $ttsArchiveSha256) {
+        $needsTtsExtract = $true
+    }
+    foreach ($required in $ttsRequiredFiles) {
+        if (-not (Test-Path -LiteralPath (Join-Path $ttsFolder $required) -PathType Leaf)) {
+            $needsTtsExtract = $true
+        }
+    }
+}
+
+if ($needsTtsExtract) {
+    if (Test-Path -LiteralPath $ttsFolder) { Remove-Item -LiteralPath $ttsFolder -Recurse -Force }
     Extract-TarBz2 $ttsArchive $voiceAssets $ttsName
+    if (-not (Test-Path -LiteralPath $ttsFolder -PathType Container)) {
+        throw "Supertonic archive root is missing after extraction: $ttsName"
+    }
+    foreach ($required in $ttsRequiredFiles) {
+        if (-not (Test-Path -LiteralPath (Join-Path $ttsFolder $required) -PathType Leaf)) {
+            throw "Supertonic required file is missing after extraction: $required"
+        }
+    }
+    $utf8 = New-Object Text.UTF8Encoding($false)
+    [IO.File]::WriteAllText($ttsMarker, $ttsArchiveSha256, $utf8)
 } else {
-    Write-Host "Using cached extracted model $ttsName."
+    Write-Host "Using verified extracted model $ttsName."
 }
 
 # Multilingual Whisper tiny through sherpa-onnx for fully offline Android STT.
@@ -137,5 +213,6 @@ Write-Host "Native and Android voice sources are ready." -ForegroundColor Green
 Write-Host "llama.cpp  $llamaRevision"
 Write-Host "wasm3       $wasm3Revision"
 Write-Host "sherpa-onnx $sherpaVersion"
+Write-Host "Android TTS $ttsName ($ttsArchiveSha256)"
 Write-Host "Voice assets: $voiceAssets"
 Write-Host "Native cache: $cacheRoot"

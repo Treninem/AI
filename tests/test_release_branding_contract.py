@@ -26,6 +26,16 @@ def test_owner_approved_branding_masters_are_byte_exact() -> None:
         assert _git_blob_sha(path) == expected, f"branding master changed byte-for-byte: {relative}"
 
 
+def test_owner_avatar_is_the_canonical_application_icon() -> None:
+    project = (ROOT / "project.godot").read_text(encoding="utf-8")
+    presets = (ROOT / "export_presets.cfg").read_text(encoding="utf-8")
+    canonical = 'res://assets/ui/aurorafox_avatar_master.png'
+    assert f'config/icon="{canonical}"' in project
+    windows = presets.split("[preset.1]", 1)[0]
+    assert f'application/icon="{canonical}"' in windows
+    assert 'config/icon="res://assets/ui/fox_logo.svg"' not in project
+
+
 def test_active_runtime_compat_layer_uses_owner_approved_branding() -> None:
     scene = (ROOT / "main.tscn").read_text(encoding="utf-8")
     compat = (ROOT / "scripts/main_compat.gd").read_text(encoding="utf-8")

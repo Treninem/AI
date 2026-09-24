@@ -14,7 +14,10 @@ $spec = Join-Path $repoRoot "build\.voice_spec"
 if (-not (Test-Path $python)) { throw "Voice .venv is missing. Run voice/install_voice.ps1 first." }
 if (-not (Test-Path $server)) { throw "aurora_voice_server.py is missing" }
 
-& $python -m pip install --disable-pip-version-check "pyinstaller==6.16.0"
+$uv = Join-Path $repoRoot 'runtime/windows/uv/uv.exe'
+if (-not (Test-Path $uv)) { throw 'Managed uv is missing. Run voice/install_voice.ps1 first.' }
+# uv-created environments do not contain pip by default.
+& $uv pip install --python $python "pyinstaller==6.16.0"
 if ($LASTEXITCODE -ne 0) { throw "PyInstaller installation failed" }
 
 if (Test-Path $OutputDir) { Remove-Item $OutputDir -Recurse -Force }
@@ -51,6 +54,36 @@ if (-not (Test-Path $exe)) { throw "Portable voice backend executable was not pr
 Copy-Item (Join-Path $voiceRoot 'config') (Join-Path $backend 'config') -Recurse -Force
 $configPath = Join-Path $backend 'config\voice_config.json'
 $config = Get-Content $configPath -Raw | ConvertFrom-Json
+# Resolve the already prepared pinned TTS package without any network lookup.
+$modelName = [string]$config.silero.model
+$env:AURORAFOX_BUILD_SILERO_MODEL = $modelName
+try {
+    $resolveSilero = @'
+import os
+from pathlib import Path
+from urllib.parse import urlparse
+import silero
+from omegaconf import OmegaConf
+root = Path(silero.__file__).resolve().parent
+manifest = root.parent.parent / 'models.yml'
+if not manifest.is_file():
+    manifest = Path.cwd() / 'latest_silero_models.yml'
+assert manifest.is_file(), 'Prepared Silero manifest is missing'
+config = OmegaConf.load(manifest)
+url = config.tts_models.ru[os.environ['AURORAFOX_BUILD_SILERO_MODEL']].latest.package
+package = root / 'model' / Path(urlparse(url).path).name
+assert package.is_file(), 'Prepared Silero model package is missing'
+print(package)
+'@
+    $sileroPackage = & $python -c $resolveSilero
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve prepared local Silero package' }
+    $sileroDir = Join-Path $backend 'models/silero'
+    New-Item -ItemType Directory -Force -Path $sileroDir | Out-Null
+    Copy-Item -LiteralPath ([string]$sileroPackage).Trim() -Destination (Join-Path $sileroDir 'aurorafox-silero.pt') -Force
+    $config.silero | Add-Member -NotePropertyName package_path -NotePropertyValue 'models/silero/aurorafox-silero.pt' -Force
+} finally {
+    Remove-Item Env:AURORAFOX_BUILD_SILERO_MODEL -ErrorAction SilentlyContinue
+}
 $config.wake.vosk_model = 'models/vosk-model-small-ru-0.22'
 $config | ConvertTo-Json -Depth 12 | Set-Content -Path $configPath -Encoding UTF8
 

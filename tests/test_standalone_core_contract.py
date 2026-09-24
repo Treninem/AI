@@ -12,11 +12,11 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_canonical_version_is_v1_3() -> None:
+def test_canonical_version_is_v1_4() -> None:
     state = json.loads(read("project/version.json"))
-    assert state["version"] == "V1.3.0.0"
-    assert state["numeric"] == "1.3.0.0"
-    assert state["android_version_code"] == 100005
+    assert state["version"] == "V1.4.0.0"
+    assert state["numeric"] == "1.4.0.0"
+    assert state["android_version_code"] == 100006
 
 
 def test_bundled_core_has_pinned_integrity_contract() -> None:
@@ -69,9 +69,15 @@ def test_agent_core_uses_only_normal_self_primary_ai_path() -> None:
 
 def test_core_improvement_uses_normal_self_primary_ai_path() -> None:
     pipeline = read("scripts/core_improvement_pipeline.gd")
-    assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.12)' in pipeline
-    assert 'var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)' in pipeline
+    proposal = pipeline.split("func _propose", 1)[1].split("func _validate_candidate", 1)[0]
+    review = pipeline.split("func _comparative_review", 1)[1].split("func _select_tournament_winner", 1)[0]
+    assert 'await ai.chat([{"role":"user", "content":prompt}], temperature)' in proposal
+    assert 'await ai.chat([{"role":"user", "content":prompt}], 0.0)' in review
     assert "chat_with_compatibility" not in pipeline
+    assert "MIN_TOURNAMENT_CANDIDATES := 3" in pipeline
+    assert "MAX_TOURNAMENT_CANDIDATES := 10" in pipeline
+    assert "DEFAULT_TOURNAMENT_CANDIDATES := 5" in pipeline
+    assert "auto_apply_dev_checkout := false" in pipeline
 
 
 def test_core_improvement_deterministic_gates_are_authoritative() -> None:
@@ -79,10 +85,17 @@ def test_core_improvement_deterministic_gates_are_authoritative() -> None:
     benchmark = read("scripts/core_candidate_benchmark.gd")
 
     # Validate the actual execution order, not the textual order of helper
-    # function definitions in the source file. run_candidate() must validate
-    # source contracts before workspace verification and only then call review.
+    # definitions. Every mutation must pass source validation and deterministic
+    # workspace gates before scoring; only the winner gets a second clean pass.
     run_candidate = pipeline.split("func run_candidate", 1)[1].split("func _propose", 1)[0]
     assert run_candidate.index("_validate_candidate") < run_candidate.index("_verify_in_workspace") < run_candidate.index("await _comparative_review")
+    assert "while participants.size() < desired_count" in run_candidate
+    assert "participants.size() < MIN_TOURNAMENT_CANDIDATES" in run_candidate
+    assert "_select_tournament_winner(reviewed_candidates)" in run_candidate
+    assert run_candidate.count("await _verify_in_workspace") >= 2
+    assert '"stage": "tournament_no_winner"' in run_candidate
+    assert '"stage": "independent_verification"' in run_candidate
+    assert '"promotion": "none"' in run_candidate
 
     validation = pipeline.split("func _validate_candidate", 1)[1].split("func _verify_in_workspace", 1)[0]
     assert "benchmark.source_contract(original, content, target)" in validation
@@ -100,7 +113,15 @@ def test_core_improvement_deterministic_gates_are_authoritative() -> None:
     assert 'return {"ok": false, "stage": "baseline_benchmark"' in verification
     assert 'return {"ok": false, "stage": "candidate_benchmark"' in verification
     assert '"benchmark_verified": true' in pipeline
-    assert '"promotion": "signed_update"' in pipeline
+    assert '"tournament_verified": true' in pipeline
+    assert '"independent_verification_passed": true' in pipeline
+    assert '"promotion": "signed_update_candidate"' in pipeline
+
+    selection = pipeline.split("func _select_tournament_winner", 1)[1].split("func _store_candidate", 1)[0]
+    assert '"kind": "incumbent"' in selection
+    assert 'bool(row.get("hard_gates_passed", false))' in selection
+    assert "score < incumbent_score + MIN_REVIEW_IMPROVEMENT" in selection
+    assert "all mutations were worse, tied, inconclusive or failed hard gates" in selection
 
     assert '"scripts/memory_store.gd"' in benchmark
     assert '"scripts/agent_core.gd"' in benchmark
@@ -164,7 +185,7 @@ def test_android_build_and_export_require_bundled_weights() -> None:
     assert MODEL_SHA in build
     assert 'include_filter="update/release_public.pub,models/aurorafox-core.gguf"' in presets
     assert 'package/unique_name="com.aurorafox.ai"' in presets
-    assert 'version/name="1.3.0.0"' in presets
+    assert 'version/name="1.4.0.0"' in presets
 
 
 def test_windows_and_android_package_strategies_are_intentional() -> None:

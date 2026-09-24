@@ -1,0 +1,171 @@
+name: AuroraFox Knowledge 1GiB Release Gate
+
+on:
+  pull_request:
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/json_stream_reader.gd'
+      - 'tests/test_knowledge_1g_release_contract.py'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
+      - '.github/workflows/knowledge-1g-release-gate.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'benchmarks/knowledge/**'
+      - 'scripts/knowledge_store.gd'
+      - 'scripts/knowledge_import_transaction.gd'
+      - 'scripts/knowledge_manager.gd'
+      - 'scripts/knowledge_source_registry.gd'
+      - 'scripts/large_json_knowledge_importer.gd'
+      - 'scripts/json_stream_reader.gd'
+      - 'tests/test_knowledge_1g_release_contract.py'
+      - 'tests/test_knowledge_report_identity.py'
+      - 'benchmarks/core/report_identity.py'
+      - '.github/workflows/knowledge-1g-release-gate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  AURORAFOX_BENCHMARK_EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+concurrency:
+  group: aurorafox-knowledge-1g-${{ github.workflow }}-${{ github.ref }}
+  # Preserve real runtime evidence; queue the newest candidate until it finishes.
+  cancel-in-progress: false
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "KNOWLEDGE_1G_HEAD_SHA=$actual"
+          test "$actual" = "$EXPECTED_SHA"
+      - name: Validate 1GiB release contract
+        run: python -m unittest tests.test_knowledge_1g_release_contract tests.test_knowledge_report_identity -v
+
+  real-one-gib-import:
+    needs: contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout exact SHA
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact SHA
+        shell: bash
+        env:
+          EXPECTED_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "KNOWLEDGE_1G_HEAD_SHA=$actual"
+          test "$actual" = "$EXPECTED_SHA"
+      - name: Download Godot 4.7.1
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl \
+            --location \
+            --fail \
+            --show-error \
+            --http1.1 \
+            --connect-timeout 30 \
+            --max-time 300 \
+            --retry 8 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --retry-max-time 300 \
+            --output godot.zip \
+            https://github.com/godotengine/godot/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -tq godot.zip
+          unzip -q godot.zip
+          godot="$(find . -maxdepth 1 -type f -name 'Godot_v4.7.1-stable_linux.x86_64*' | head -n1)"
+          test -n "$godot"
+          mv "$godot" godot
+          chmod +x godot
+          ./godot --version
+      - name: Parse integrated project
+        run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Run real 1GiB streaming JSONL import and restart
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts/knowledge-1g
+          status=0
+          python benchmarks/knowledge/run_knowledge_benchmark_portable.py \
+            --godot ./godot \
+            --profile stress \
+            --scenario import_jsonl \
+            --target-mb 1024 \
+            --timeout-seconds 5400 \
+            --report artifacts/knowledge-1g/knowledge-1g.json || status=$?
+          if test -f artifacts/knowledge-1g/knowledge-1g.json; then
+            python -m json.tool artifacts/knowledge-1g/knowledge-1g.json
+          else
+            echo 'Knowledge benchmark report was not generated' >&2
+            status=1
+          fi
+          exit "$status"
+      - name: Enforce 1GiB correctness self-reliance and bounded RSS
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          path = Path('artifacts/knowledge-1g/knowledge-1g.json')
+          report = json.loads(path.read_text(encoding='utf-8'))
+          hard = report.get('hard_correctness') or {}
+          assert hard.get('passed') is True, hard
+          self_reliance = report.get('self_reliance_contract') or {}
+          assert self_reliance.get('network_required') is False, self_reliance
+          assert self_reliance.get('external_runtime_required') is False, self_reliance
+          assert self_reliance.get('ollama_required') is False, self_reliance
+          rows = report.get('results') or []
+          imports = [row for row in rows if row.get('scenario') == 'import_jsonl' and row.get('ok')]
+          restarts = [row for row in rows if row.get('scenario') == 'restart_check' and row.get('ok')]
+          assert len(imports) == 1, rows
+          assert len(restarts) == 1, rows
+          dataset_bytes = int((imports[0].get('dataset') or {}).get('bytes', 0))
+          peak_rss_bytes = int(imports[0].get('peak_rss_bytes', 0))
+          assert dataset_bytes >= 1024 * 1024 * 1024, dataset_bytes
+          assert peak_rss_bytes > 0, peak_rss_bytes
+          assert peak_rss_bytes <= 1536 * 1024 * 1024, peak_rss_bytes
+          print(json.dumps({
+              'ok': True,
+              'dataset_bytes': dataset_bytes,
+              'peak_rss_bytes': peak_rss_bytes,
+              'restart_ok': True,
+              'network_required': False,
+              'external_runtime_required': False,
+              'ollama_required': False,
+          }))
+          PY
+      - name: Upload 1GiB Knowledge evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: knowledge-1g-release-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/knowledge-1g/
+          if-no-files-found: error

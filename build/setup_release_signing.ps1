@@ -1,7 +1,9 @@
 param(
     [string]$Repository = 'Treninem/AI',
     [string]$AndroidAlias = 'aurorafox',
-    [switch]$SkipGitHubSecrets
+    [switch]$SkipGitHubSecrets,
+    [switch]$ResetUnpublishedIdentity,
+    [string]$ResetConfirmation = ''
 )
 
 $ErrorActionPreference = 'Stop'
@@ -12,7 +14,10 @@ $androidBase64 = Join-Path $privateDir 'AURORA_ANDROID_KEYSTORE_BASE64.txt'
 $updatePrivate = Join-Path $privateDir 'aurora_update_signing_private.pem'
 $updateBase64 = Join-Path $privateDir 'AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64.txt'
 $updatePublic = Join-Path $root 'update/release_public.pub'
+$updateFingerprintFile = Join-Path $root 'update/release_public_fingerprint.sha256'
 $releaseIdentity = Join-Path $root 'update/release_identity.json'
+$androidCertificate = Join-Path $root 'release/android_release_certificate.pem'
+$androidCertificateFingerprint = Join-Path $root 'release/android_release_certificate_sha256.txt'
 $androidPackage = 'com.aurorafox.ai'
 $signedFloor = '1.4.0.0'
 $legacyRepairThrough = '1.3.0.0'
@@ -75,6 +80,12 @@ function Get-PublicKeyFingerprint([string]$Path) {
     return Get-Sha256Hex ([Convert]::FromBase64String($base64))
 }
 
+function Format-ColonFingerprint([string]$Hex) {
+    $clean = $Hex.Replace(':','').ToUpperInvariant()
+    if ($clean -notmatch '^[0-9A-F]{64}$') { throw "Invalid SHA-256 fingerprint: $Hex" }
+    return ($clean -replace '(.{2})(?=.)', '$1:')
+}
+
 function Get-AndroidCertificateFingerprint([string]$Keytool, [string]$Keystore, [string]$Alias, [string]$Password) {
     $certPath = Join-Path ([IO.Path]::GetTempPath()) ("aurorafox-release-cert-{0}.der" -f [Guid]::NewGuid().ToString('N'))
     try {
@@ -88,7 +99,7 @@ function Get-AndroidCertificateFingerprint([string]$Keytool, [string]$Keystore, 
 
 function Set-GitHubSecret([string]$Name, [string]$Value) {
     $psi = New-Object Diagnostics.ProcessStartInfo
-    $psi.FileName = 'gh'
+    $psi.FileName = $script:ghExecutable
     $psi.Arguments = "secret set $Name --repo $Repository"
     $psi.UseShellExecute = $false
     $psi.RedirectStandardInput = $true
@@ -131,7 +142,7 @@ function Write-OrVerifyReleaseIdentity([string]$UpdateFingerprint, [string]$Andr
         schema_version = 1
         android_package = $androidPackage
         android_alias = $AndroidAlias
-        android_signing_cert_sha256 = $AndroidFingerprint
+        android_signing_cert_sha256 = (Format-ColonFingerprint $AndroidFingerprint)
         update_signing_public_key_sha256 = $UpdateFingerprint
         signed_update_floor = $signedFloor
         legacy_repair_required_through = $legacyRepairThrough
@@ -142,7 +153,51 @@ function Write-OrVerifyReleaseIdentity([string]$UpdateFingerprint, [string]$Andr
     Write-Host "Created public release identity pin: $releaseIdentity" -ForegroundColor Green
 }
 
-New-Item -ItemType Directory -Force -Path $privateDir,(Split-Path -Parent $releaseIdentity) | Out-Null
+$keytool = Find-Keytool
+$script:ghExecutable = 'gh'
+if (-not $SkipGitHubSecrets) {
+    $gh = Get-Command gh.exe -ErrorAction SilentlyContinue
+    if (-not $gh) { $gh = Get-Command gh -ErrorAction SilentlyContinue }
+    if (-not $gh) {
+        throw 'GitHub CLI (gh) is not installed. Install/authenticate gh, or use -SkipGitHubSecrets only for an intentionally local bootstrap.'
+    }
+    $script:ghExecutable = $gh.Source
+    & $script:ghExecutable auth status | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI is not authenticated. Run: gh auth login' }
+}
+
+if ($ResetUnpublishedIdentity) {
+    $requiredConfirmation = 'RESET_UNPUBLISHED_AURORAFOX_RELEASE_IDENTITY'
+    if ($ResetConfirmation -cne $requiredConfirmation) {
+        throw "Intentional reset requires -ResetConfirmation $requiredConfirmation"
+    }
+    if (Test-Path -LiteralPath $updatePrivate) {
+        throw "Refusing identity reset because an update private key exists: $updatePrivate"
+    }
+    if (Test-Path -LiteralPath $androidKeystore) {
+        throw "Refusing identity reset because an Android release keystore exists: $androidKeystore"
+    }
+
+    $versionState = Get-Content -LiteralPath (Join-Path $root 'project/version.json') -Raw | ConvertFrom-Json
+    $currentVersion = [Version]([string]$versionState.numeric)
+    if ($currentVersion -ge [Version]$signedFloor) {
+        throw "Unpublished identity reset is forbidden at or above the signed floor V$signedFloor (current V$currentVersion)."
+    }
+
+    $retiredDir = Join-Path $privateDir ("retired-unpublished-identity-{0}" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+    New-Item -ItemType Directory -Force -Path $retiredDir | Out-Null
+    foreach ($path in @($updatePublic,$updateFingerprintFile,$releaseIdentity,$androidCertificate,$androidCertificateFingerprint)) {
+        if (Test-Path -LiteralPath $path) {
+            Copy-Item -LiteralPath $path -Destination (Join-Path $retiredDir (Split-Path $path -Leaf)) -Force
+            Remove-Item -LiteralPath $path -Force
+        }
+    }
+    Write-Host "Archived unpublished public identity files under: $retiredDir" -ForegroundColor Yellow
+} elseif (-not [string]::IsNullOrWhiteSpace($ResetConfirmation)) {
+    throw '-ResetConfirmation is valid only together with -ResetUnpublishedIdentity.'
+}
+
+New-Item -ItemType Directory -Force -Path $privateDir,(Split-Path -Parent $releaseIdentity),(Split-Path -Parent $androidCertificate) | Out-Null
 
 if (-not (Test-Path -LiteralPath $updatePublic)) {
     if (Test-Path -LiteralPath $updatePrivate) { throw "Private update key exists but pinned public key is missing: $updatePrivate / $updatePublic. Restore the matching public key; do not generate a new pair." }
@@ -155,7 +210,6 @@ if (-not (Test-Path -LiteralPath $updateBase64)) {
     [Convert]::ToBase64String([IO.File]::ReadAllBytes($updatePrivate)) | Set-Content -LiteralPath $updateBase64 -Encoding ASCII -NoNewline
 }
 
-$keytool = Find-Keytool
 $password = Read-MatchingPassword
 try {
     if (-not (Test-Path -LiteralPath $androidKeystore)) {
@@ -169,17 +223,25 @@ try {
     $updateFingerprint = Get-PublicKeyFingerprint $updatePublic
     $androidFingerprint = Get-AndroidCertificateFingerprint $keytool $androidKeystore $AndroidAlias $password
     Write-OrVerifyReleaseIdentity $updateFingerprint $androidFingerprint
+    [IO.File]::WriteAllText(
+        $updateFingerprintFile,
+        "$updateFingerprint  release_public.pub`n",
+        (New-Object Text.UTF8Encoding($false))
+    )
+    Remove-Item -LiteralPath $androidCertificate -Force -ErrorAction SilentlyContinue
+    & $keytool -exportcert -rfc -keystore $androidKeystore -storepass $password -alias $AndroidAlias -file $androidCertificate | Out-Null
+    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $androidCertificate)) { throw 'Could not export Android release certificate PEM' }
+    [IO.File]::WriteAllText(
+        $androidCertificateFingerprint,
+        (Format-ColonFingerprint $androidFingerprint) + "`n",
+        (New-Object Text.UTF8Encoding($false))
+    )
     [Convert]::ToBase64String([IO.File]::ReadAllBytes($androidKeystore)) | Set-Content -LiteralPath $androidBase64 -Encoding ASCII -NoNewline
 
     Write-Host "Update public-key SHA-256: $updateFingerprint" -ForegroundColor Cyan
     Write-Host "Android signing-cert SHA-256: $androidFingerprint" -ForegroundColor Cyan
 
     if (-not $SkipGitHubSecrets) {
-        $gh = Get-Command gh.exe -ErrorAction SilentlyContinue
-        if (-not $gh) { $gh = Get-Command gh -ErrorAction SilentlyContinue }
-        if (-not $gh) { throw 'GitHub CLI (gh) is not installed. Re-run with -SkipGitHubSecrets to only generate local signing material, or install/authenticate gh.' }
-        & $gh.Source auth status | Out-Null
-        if ($LASTEXITCODE -ne 0) { throw 'GitHub CLI is not authenticated. Run: gh auth login' }
         Set-GitHubSecret 'AURORA_UPDATE_SIGNING_PRIVATE_KEY_BASE64' (Get-Content -LiteralPath $updateBase64 -Raw)
         Set-GitHubSecret 'AURORA_ANDROID_KEYSTORE_BASE64' (Get-Content -LiteralPath $androidBase64 -Raw)
         Set-GitHubSecret 'AURORA_ANDROID_KEYSTORE_USER' $AndroidAlias
@@ -194,13 +256,16 @@ Write-Host ''
 Write-Host 'AuroraFox permanent release signing bootstrap is ready.' -ForegroundColor Green
 Write-Host 'Commit ONLY public identity files:' -ForegroundColor Cyan
 Write-Host "  $updatePublic"
+Write-Host "  $updateFingerprintFile"
 Write-Host "  $releaseIdentity"
+Write-Host "  $androidCertificate"
+Write-Host "  $androidCertificateFingerprint"
 Write-Host "Keep this Android keystore private and backed up: $androidKeystore" -ForegroundColor Yellow
 Write-Host "Keep this updater private key private and backed up: $updatePrivate" -ForegroundColor Yellow
 Write-Host 'Do not regenerate either identity for normal updates.' -ForegroundColor Yellow
 Write-Host ''
 Write-Host 'Next steps:' -ForegroundColor Cyan
-Write-Host '  git add update/release_public.pub update/release_identity.json'
+Write-Host '  git add update/release_public.pub update/release_public_fingerprint.sha256 update/release_identity.json release/android_release_certificate.pem release/android_release_certificate_sha256.txt'
 Write-Host '  git commit -m "release: initialize AuroraFox permanent signing identity"'
 Write-Host '  git push'
 Write-Host 'Then run build/bridge_release_readiness.ps1 and the AuroraFox Release workflow (or push the matching v<version> tag).'

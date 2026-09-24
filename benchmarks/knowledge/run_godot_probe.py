@@ -52,28 +52,47 @@ def main() -> int:
             return 1
 
         command = [args.godot, "--headless", "--path", str(repo), "--script", args.script]
+        stdout_log = report.with_name(report.stem + ".stdout.log")
+        stderr_log = report.with_name(report.stem + ".stderr.log")
         started = time.perf_counter()
         peak_rss = 0
-        proc = subprocess.Popen(
-            command,
-            cwd=repo,
-            env=env,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-        )
         timed_out = False
-        while proc.poll() is None:
-            peak_rss = max(peak_rss, base.process_rss_bytes(proc.pid))
-            if time.perf_counter() - started > args.timeout_seconds:
+
+        # Never leave a verbose Godot child blocked on an unread PIPE. Windows
+        # pipe buffers are small enough that editor/script diagnostics can fill
+        # them before SceneTree.quit() runs, producing a false 120 s "hang".
+        # File-backed capture preserves full evidence while RSS/time monitoring
+        # remains active and the timeout contract stays unchanged.
+        with stdout_log.open("w", encoding="utf-8", errors="replace") as stdout_file, stderr_log.open(
+            "w", encoding="utf-8", errors="replace"
+        ) as stderr_file:
+            proc = subprocess.Popen(
+                command,
+                cwd=repo,
+                env=env,
+                stdout=stdout_file,
+                stderr=stderr_file,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+            )
+            while proc.poll() is None:
+                peak_rss = max(peak_rss, base.process_rss_bytes(proc.pid))
+                if time.perf_counter() - started > args.timeout_seconds:
+                    timed_out = True
+                    proc.kill()
+                    break
+                time.sleep(0.05)
+            try:
+                proc.wait(timeout=10)
+            except subprocess.TimeoutExpired:
                 timed_out = True
                 proc.kill()
-                break
-            time.sleep(0.05)
-        stdout, stderr = proc.communicate(timeout=10)
+                proc.wait(timeout=10)
+
         wall_ms = (time.perf_counter() - started) * 1000.0
+        stdout = stdout_log.read_text(encoding="utf-8", errors="replace") if stdout_log.exists() else ""
+        stderr = stderr_log.read_text(encoding="utf-8", errors="replace") if stderr_log.exists() else ""
         parsed = None
         for line in reversed(stdout.splitlines()):
             if line.startswith(args.prefix):
@@ -90,6 +109,8 @@ def main() -> int:
             "runner_wall_ms": wall_ms,
             "peak_rss_bytes": peak_rss,
             "timed_out": timed_out,
+            "stdout_log": str(stdout_log),
+            "stderr_log": str(stderr_log),
             "stderr": stderr[-4000:],
             "isolated_profile_warmup": warm,
         })

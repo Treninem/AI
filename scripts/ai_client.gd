@@ -7,6 +7,20 @@ extends Node
 const LEGACY_OLLAMA_DEFAULT_MODEL := "qwen3:8b"
 const LEGACY_OLLAMA_DEFAULT_URL := "http://127.0.0.1:11434"
 const CORE_SETTINGS_PATH := "user://aurora_core_settings.json"
+const KNOWLEDGE_QUERY_STOPWORDS := [
+	"a", "an", "the", "and", "or", "but", "of", "to", "in", "on", "for", "from", "at", "by", "with",
+	"is", "are", "was", "were", "be", "been", "being", "this", "that", "these", "those", "it", "its",
+	"what", "which", "who", "whom", "whose", "when", "where", "why", "how", "do", "does", "did",
+	"can", "could", "should", "would", "will", "may", "might", "must", "please", "reply", "answer",
+	"и", "а", "но", "или", "в", "во", "на", "с", "со", "к", "ко", "по", "из", "у", "за", "для",
+	"от", "до", "о", "об", "про", "это", "этот", "эта", "эти", "то", "что", "как", "когда", "где",
+	"почему", "кто", "какой", "какая", "какие", "не", "ни", "же", "ли", "бы", "быть", "есть", "был",
+	"была", "были", "можно", "нужно", "ответь", "пожалуйста"
+]
+const KNOWLEDGE_QUERY_SEPARATORS := [
+	"\n", "\r", "\t", ".", ",", ";", ":", "!", "?", "\"", "'", "`", "(", ")", "[", "]", "{", "}",
+	"<", ">", "|", "\\", "/", "=", "+", "*", "&", "^", "%", "$", "#", "@", "~"
+]
 var compatibility_url := LEGACY_OLLAMA_DEFAULT_URL
 var compatibility_model := LEGACY_OLLAMA_DEFAULT_MODEL
 var android_model_path := "user://models/aurorafox-main.gguf"
@@ -82,6 +96,9 @@ func warmup() -> Dictionary:
 		}
 	return {"ok": not bundled.is_empty(), "runtime": "aurora_core", "bundled_core": not bundled.is_empty()}
 
+func retry_core_now() -> void:
+	core_runtime.retry_local_now()
+
 # Primary intelligence path. This method deliberately bypasses every external
 # compatibility adapter even if a developer/user explicitly enabled one.
 # AgentCore, self-improvement and normal product chat therefore depend only on
@@ -110,7 +127,10 @@ func supported_learning_files() -> PackedStringArray:
 	return knowledge.supported_import_extensions()
 
 func search_knowledge(query: String, limit := 6) -> Array:
-	return knowledge.search(query, limit)
+	var filtered_query := _knowledge_query(query)
+	if filtered_query.is_empty():
+		return []
+	return knowledge.search(filtered_query, limit)
 
 func knowledge_sources() -> Array:
 	return knowledge_manager.sources()
@@ -133,6 +153,20 @@ func reindex_knowledge_source(source: String, extracted_text := "", metadata: Di
 		return knowledge_transaction.import_extracted_file(knowledge, source, extracted_text, meta)
 	return knowledge_transaction.import_file(knowledge, source, meta)
 
+func _knowledge_query(query: String) -> String:
+	var normalized := query.to_lower()
+	for separator in KNOWLEDGE_QUERY_SEPARATORS:
+		normalized = normalized.replace(str(separator), " ")
+	var terms: Array[String] = []
+	var seen: Dictionary = {}
+	for raw_term in normalized.split(" ", false):
+		var term := str(raw_term).strip_edges()
+		if term.length() < 2 or term in KNOWLEDGE_QUERY_STOPWORDS or seen.has(term):
+			continue
+		seen[term] = true
+		terms.append(term)
+	return " ".join(terms)
+
 func _with_knowledge(messages: Array) -> Array:
 	var copied := messages.duplicate(true)
 	var query := ""
@@ -142,7 +176,10 @@ func _with_knowledge(messages: Array) -> Array:
 			break
 	if query.is_empty():
 		return copied
-	var context := knowledge.context_for(query)
+	var filtered_query := _knowledge_query(query)
+	if filtered_query.is_empty():
+		return copied
+	var context := knowledge.context_for(filtered_query)
 	if context.is_empty():
 		return copied
 	copied.push_front({

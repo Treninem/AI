@@ -93,8 +93,19 @@ func _start_backend_if_installed() -> void:
 	if executable.is_empty() or not FileAccess.file_exists(executable):
 		_clear_bootstrap_environment()
 		return
+	var vendor := str(found.get("vendor", ""))
+	var inject_vendor := not vendor.is_empty() and DirAccess.dir_exists_absolute(vendor)
+	var had_pythonpath := OS.has_environment("PYTHONPATH")
+	var previous_pythonpath := OS.get_environment("PYTHONPATH") if had_pythonpath else ""
+	if inject_vendor:
+		OS.set_environment("PYTHONPATH", vendor)
 	backend_pid = OS.create_process(executable, PackedStringArray([str(found.get("service", ""))]), false)
 	_clear_bootstrap_environment()
+	if inject_vendor:
+		if had_pythonpath:
+			OS.set_environment("PYTHONPATH", previous_pythonpath)
+		else:
+			OS.unset_environment("PYTHONPATH")
 
 func _clear_bootstrap_environment() -> void:
 	OS.unset_environment("AURORAFOX_COMPUTER_TOKEN")
@@ -103,10 +114,23 @@ func _clear_bootstrap_environment() -> void:
 func _find_runtime() -> Dictionary:
 	for root in _candidate_roots():
 		var service := root.path_join("computer_service.py")
+		if not FileAccess.file_exists(service):
+			continue
+		var portable_pythonw := root.path_join("python/pythonw.exe")
+		var portable_python := root.path_join("python/python.exe")
+		if FileAccess.file_exists(portable_pythonw) or FileAccess.file_exists(portable_python):
+			return {
+				"root": root,
+				"service": service,
+				"pythonw": portable_pythonw,
+				"python": portable_python,
+				"vendor": root.path_join("vendor"),
+				"portable": true
+			}
 		var pythonw := root.path_join(".venv/Scripts/pythonw.exe")
 		var python := root.path_join(".venv/Scripts/python.exe")
 		if FileAccess.file_exists(service) and (FileAccess.file_exists(pythonw) or FileAccess.file_exists(python)):
-			return {"root": root, "service": service, "pythonw": pythonw, "python": python}
+			return {"root": root, "service": service, "pythonw": pythonw, "python": python, "vendor": "", "portable": false}
 	return {}
 
 func _candidate_roots() -> Array[String]:
@@ -142,25 +166,36 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 	var result_code := int(completed[0])
 	var response_code := int(completed[1])
 	var raw: PackedByteArray = completed[3]
+	return _decode_response(result_code, response_code, raw)
+
+func _decode_response(result_code: int, response_code: int, raw: PackedByteArray) -> Dictionary:
 	if result_code != HTTPRequest.RESULT_SUCCESS:
 		return {"ok": false, "error": "transport_failure", "message": "Computer service transport failed (%s)" % result_code, "retryable": true}
 	var text := raw.get_string_from_utf8().strip_edges()
-	if text.is_empty():
-		return {"ok": false, "error": "empty_response", "message": "Computer service returned an empty response", "http": response_code, "retryable": response_code >= 500}
-	var data = JSON.parse_string(text)
-	if not data is Dictionary:
-		return {"ok": false, "error": "malformed_response", "message": "Computer service returned invalid JSON", "http": response_code, "retryable": response_code >= 500}
-	var response: Dictionary = data
 	if response_code < 200 or response_code >= 300:
-		var detail = response.get("detail", response.get("message", "Computer service error"))
+		var error_code := "http_error"
+		var detail := "Computer service error"
+		if not text.is_empty():
+			var parsed = JSON.parse_string(text)
+			if parsed is Dictionary:
+				var error_body: Dictionary = parsed
+				error_code = str(error_body.get("error", "http_error"))
+				detail = str(error_body.get("detail", error_body.get("message", detail)))
+			else:
+				detail = text
 		return {
 			"ok": false,
-			"error": str(response.get("error", "http_error")),
-			"message": str(detail).substr(0, 2048),
+			"error": error_code,
+			"message": detail.substr(0, 2048),
 			"http": response_code,
 			"retryable": response_code in [408, 429, 502, 503, 504],
 		}
-	return response
+	if text.is_empty():
+		return {"ok": false, "error": "empty_response", "message": "Computer service returned an empty response", "http": response_code, "retryable": false}
+	var data = JSON.parse_string(text)
+	if not data is Dictionary:
+		return {"ok": false, "error": "malformed_response", "message": "Computer service returned invalid JSON", "http": response_code, "retryable": false}
+	return data
 
 func health() -> Dictionary:
 	if OS.get_name() != "Windows":

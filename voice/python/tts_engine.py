@@ -88,7 +88,14 @@ class SileroEngine(TTSEngine):
 
     def _load(self):
         if self.model is None:
-            model, _ = silero_tts(language="ru", speaker=self.config.get("model", "v5_5_ru"))
+            package_path = self.config.get("package_path", "")
+            if package_path:
+                local_package = VOICE_ROOT / package_path
+                if not local_package.is_file():
+                    raise FileNotFoundError("Packaged local Silero model is missing")
+                model = torch.package.PackageImporter(str(local_package)).load_pickle("tts_models", "model")
+            else:
+                model, _ = silero_tts(language="ru", speaker=self.config.get("model", "v5_5_ru"))
             model.to(self.device)
             self.model = model
         return self.model

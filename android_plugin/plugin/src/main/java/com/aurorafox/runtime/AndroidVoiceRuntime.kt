@@ -9,7 +9,7 @@ import com.k2fsa.sherpa.onnx.OfflineRecognizerConfig
 import com.k2fsa.sherpa.onnx.OfflineTts
 import com.k2fsa.sherpa.onnx.OfflineTtsConfig
 import com.k2fsa.sherpa.onnx.OfflineTtsModelConfig
-import com.k2fsa.sherpa.onnx.OfflineTtsVitsModelConfig
+import com.k2fsa.sherpa.onnx.OfflineTtsSupertonicModelConfig
 import com.k2fsa.sherpa.onnx.OfflineWhisperModelConfig
 import com.k2fsa.sherpa.onnx.WaveReader
 import org.json.JSONArray
@@ -23,8 +23,12 @@ import kotlin.math.sqrt
 class AndroidVoiceRuntime(private val context: Context) {
     private val assets: AssetManager = context.assets
     private val cacheDir = File(context.filesDir, "voice_cache").apply { mkdirs() }
-    private val ttsAssetRoot = "voice/vits-piper-ru_RU-denis-medium"
+    private val ttsAssetRoot = "voice/sherpa-onnx-supertonic-3-tts-int8-2026-05-11"
     private val sttAssetRoot = "voice/sherpa-onnx-whisper-tiny"
+
+    private val supertonicSpeakerId = 0
+    private val supertonicSpeakerName = "F1"
+    private val supertonicLanguage = "ru"
 
     @Volatile private var tts: OfflineTts? = null
     @Volatile private var recognizer: OfflineRecognizer? = null
@@ -32,8 +36,15 @@ class AndroidVoiceRuntime(private val context: Context) {
     private val sttLock = Any()
 
     fun isTtsAvailable(): Boolean = try {
-        findAsset(ttsAssetRoot) { it.endsWith(".onnx") } != null &&
-            findAsset(ttsAssetRoot) { it.endsWith("tokens.txt") } != null
+        listOf(
+            "duration_predictor.int8.onnx",
+            "text_encoder.int8.onnx",
+            "vector_estimator.int8.onnx",
+            "vocoder.int8.onnx",
+            "tts.json",
+            "unicode_indexer.bin",
+            "voice.bin",
+        ).all { assetExists("$ttsAssetRoot/$it") }
     } catch (_: Throwable) { false }
 
     fun isSttAvailable(): Boolean = try {
@@ -59,7 +70,9 @@ class AndroidVoiceRuntime(private val context: Context) {
                 else -> 0.20f
             }
             val silenceScale = 0.20f + (targetSilence - 0.20f) * power
-            val key = sha256("$spokenText|$safeSpeed|$emotion|$power|piper-denis-v4")
+            val key = sha256(
+                "$spokenText|$safeSpeed|$emotion|$power|supertonic3-$supertonicSpeakerName-$supertonicLanguage-v1"
+            )
             val wav = File(cacheDir, "$key.wav")
             val meta = File(cacheDir, "$key.json")
             if (wav.isFile && meta.isFile) {
@@ -70,7 +83,8 @@ class AndroidVoiceRuntime(private val context: Context) {
             val generation = GenerationConfig(
                 silenceScale = silenceScale,
                 speed = safeSpeed,
-                sid = 0,
+                sid = supertonicSpeakerId,
+                extra = mapOf("lang" to supertonicLanguage),
             )
             val audio = synchronized(ttsLock) { engine.generateWithConfig(spokenText, generation) }
             if (audio.samples.isEmpty()) return error("Android TTS returned empty audio")
@@ -80,7 +94,10 @@ class AndroidVoiceRuntime(private val context: Context) {
             val payload = JSONObject().apply {
                 put("ok", true)
                 put("path", wav.absolutePath)
-                put("engine", "sherpa-onnx-piper-denis")
+                put("engine", "sherpa-onnx-supertonic-3")
+                put("speaker", supertonicSpeakerName)
+                put("speaker_id", supertonicSpeakerId)
+                put("language", supertonicLanguage)
                 put("sample_rate", audio.sampleRate)
                 put("duration", audio.samples.size.toDouble() / audio.sampleRate.toDouble())
                 put("emotion", emotion)
@@ -307,20 +324,17 @@ class AndroidVoiceRuntime(private val context: Context) {
     @Synchronized
     private fun ensureTts(): OfflineTts {
         tts?.let { return it }
-        val model = findAsset(ttsAssetRoot) { it.endsWith(".onnx") && !it.contains("duration", true) }
-            ?: throw IllegalStateException("Russian TTS model.onnx not found")
-        val tokens = findAsset(ttsAssetRoot) { it.endsWith("tokens.txt") }
-            ?: throw IllegalStateException("Russian TTS tokens.txt not found")
-        val dataDir = findAssetDirectory(ttsAssetRoot, "espeak-ng-data") ?: "$ttsAssetRoot/espeak-ng-data"
-        val lexicon = findAsset(ttsAssetRoot) { it.endsWith("lexicon.txt") } ?: ""
+        if (!isTtsAvailable()) throw IllegalStateException("Supertonic 3 Android TTS assets are incomplete")
         val config = OfflineTtsConfig(
             model = OfflineTtsModelConfig(
-                vits = OfflineTtsVitsModelConfig(
-                    model = model,
-                    tokens = tokens,
-                    dataDir = dataDir,
-                    lexicon = lexicon,
-                    lengthScale = 1.0f,
+                supertonic = OfflineTtsSupertonicModelConfig(
+                    durationPredictor = "$ttsAssetRoot/duration_predictor.int8.onnx",
+                    textEncoder = "$ttsAssetRoot/text_encoder.int8.onnx",
+                    vectorEstimator = "$ttsAssetRoot/vector_estimator.int8.onnx",
+                    vocoder = "$ttsAssetRoot/vocoder.int8.onnx",
+                    ttsJson = "$ttsAssetRoot/tts.json",
+                    unicodeIndexer = "$ttsAssetRoot/unicode_indexer.bin",
+                    voiceStyle = "$ttsAssetRoot/voice.bin",
                 ),
                 numThreads = min(4, max(2, Runtime.getRuntime().availableProcessors() - 1)),
                 debug = false,
@@ -360,25 +374,20 @@ class AndroidVoiceRuntime(private val context: Context) {
         return OfflineRecognizer(assetManager = assets, config = config).also { recognizer = it }
     }
 
+    private fun assetExists(path: String): Boolean {
+        return try {
+            assets.open(path).use { true }
+        } catch (_: Throwable) {
+            false
+        }
+    }
+
     private fun findAsset(root: String, predicate: (String) -> Boolean): String? {
         fun walk(path: String): String? {
             val children = assets.list(path) ?: emptyArray()
             if (children.isEmpty()) return if (predicate(path)) path else null
             for (child in children) {
                 val full = if (path.isEmpty()) child else "$path/$child"
-                val found = walk(full)
-                if (found != null) return found
-            }
-            return null
-        }
-        return walk(root)
-    }
-
-    private fun findAssetDirectory(root: String, name: String): String? {
-        fun walk(path: String): String? {
-            if (path.substringAfterLast('/') == name && (assets.list(path)?.isNotEmpty() == true)) return path
-            for (child in assets.list(path) ?: emptyArray()) {
-                val full = "$path/$child"
                 val found = walk(full)
                 if (found != null) return found
             }

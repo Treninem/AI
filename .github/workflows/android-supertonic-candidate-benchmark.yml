@@ -1,0 +1,95 @@
+name: AuroraFox Supertonic Female Candidate Benchmark
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - chat-2026-09-17-voice-audio-r2
+    paths:
+      - 'voice/tools/android_supertonic_candidate_benchmark.py'
+      - '.github/workflows/android-supertonic-candidate-benchmark.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-supertonic-candidates-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  benchmark-f1-f5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install pinned speech benchmark runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install --upgrade pip
+          python -m pip install 'sherpa-onnx==1.13.4' 'numpy>=2.0,<3' 'soundfile>=0.12,<1'
+
+      - name: Download and verify benchmark models
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p .ci/voice-models
+          tts_name='sherpa-onnx-supertonic-3-tts-int8-2026-05-11'
+          tts_archive=".ci/voice-models/${tts_name}.tar.bz2"
+          curl --retry 4 --retry-all-errors -fL \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/${tts_name}.tar.bz2" \
+            -o "$tts_archive"
+          test "$(stat -c '%s' "$tts_archive")" = '128774318'
+          test "$(sha256sum "$tts_archive" | awk '{print $1}')" = '82fa96f91c4ef8abaae3a14a3f4153facf88bed821d1f7331cec2700f432c427'
+          tar -xjf "$tts_archive" -C .ci/voice-models
+
+          whisper_name='sherpa-onnx-whisper-tiny'
+          whisper_archive=".ci/voice-models/${whisper_name}.tar.bz2"
+          curl --retry 4 --retry-all-errors -fL \
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/asr-models/${whisper_name}.tar.bz2" \
+            -o "$whisper_archive"
+          test -s "$whisper_archive"
+          tar -xjf "$whisper_archive" -C .ci/voice-models
+          echo "WHISPER_BENCHMARK_SOURCE bytes=$(stat -c '%s' "$whisper_archive") sha256=$(sha256sum "$whisper_archive" | awk '{print $1}')"
+
+      - name: Generate F1-F5 Russian samples and measure quality
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf build/voice/supertonic-candidates
+          python voice/tools/android_supertonic_candidate_benchmark.py \
+            --supertonic-dir .ci/voice-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11 \
+            --supertonic-archive .ci/voice-models/sherpa-onnx-supertonic-3-tts-int8-2026-05-11.tar.bz2 \
+            --whisper-dir .ci/voice-models/sherpa-onnx-whisper-tiny \
+            --whisper-archive .ci/voice-models/sherpa-onnx-whisper-tiny.tar.bz2 \
+            --output-dir build/voice/supertonic-candidates
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          report = json.loads(Path('build/voice/supertonic-candidates/report.json').read_text(encoding='utf-8'))
+          selected = report['selected_candidate']
+          print('SELECTED_CANDIDATE', selected)
+          for row in report['speaker_summary']:
+              print(
+                  f"{row['speaker']} sid={row['sid']} similarity={row['mean_asr_similarity']:.4f} "
+                  f"rtf={row['mean_rtf']:.4f} peak={row['max_peak']:.4f} clipping={row['clipping_count']}"
+              )
+          assert len(report['samples']) == 25, report['samples']
+          assert all(int(row['clipping_count']) == 0 for row in report['samples'])
+          PY
+
+      - name: Upload candidate WAV and report evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-supertonic-f1-f5-evidence
+          path: build/voice/supertonic-candidates/
+          if-no-files-found: error
+          retention-days: 30

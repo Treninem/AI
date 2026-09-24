@@ -1,0 +1,87 @@
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / "benchmarks/core/android_godot_benchmark.gd"
+SCENE = ROOT / "benchmarks/core/android_godot_benchmark.tscn"
+RUNNER = ROOT / "benchmarks/core/run_android_godot_e2e.sh"
+WORKFLOW = ROOT / ".github/workflows/core-android-e2e.yml"
+FILE_CLIENT = ROOT / "scripts/file_intelligence_client.gd"
+
+
+def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
+    script = SCRIPT.read_text(encoding="utf-8")
+    scene = SCENE.read_text(encoding="utf-8")
+    assert "AIClient.new()" in script
+    assert "client.chat(" in script
+    assert "AuroraBundledCoreModel.runtime_candidate()" in script
+    assert "set_ollama_fallback(true)" in script
+    assert "chat_with_compatibility" not in script
+    assert '"aurora_core_android"' in script
+    assert "ollama_failures" in script
+    assert "fallback_from" in script
+    assert "core_knowledge_retrieval" in script
+    assert "installed_knowledge_pack" in script
+    assert "KnowledgePackInstallerScript.new()" in script
+    assert 'int(resumed.get("skipped_shards", 0)) == 1' in script
+    assert 'client.knowledge.search("aurora pack android 7319", 4)' in script
+    assert 'not bool(installed.get("external_ai_required", true))' in script
+    assert "installed_voice_tts" in script
+    assert "installed_voice_stt" in script
+    assert "synthesize_speech(" in script
+    assert "transcribe(" in script
+    assert "installed_ocr_bilingual" in script
+    assert "FileIntelligenceClient.new()" in script
+    assert "BILINGUAL_OCR_FIXTURE_PNG_BASE64" in script
+    assert "image.load_png_from_buffer" in script
+    assert "SubViewport.new()" not in script
+    assert 'ocr_meta.get("offline", false)' in script
+    assert 'ocr_meta.get("external_ai_required", true)' in script
+    assert '"rus" in ocr_languages' in script
+    assert '"eng" in ocr_languages' in script
+    assert "multi_turn_context" in script
+    assert "offline_network_guard" in script
+    assert "http://1.1.1.1/" in script
+    assert "external_network_probe_blocked" in script
+    assert "android_godot_benchmark.gd" in scene
+
+
+def test_android_file_intelligence_uses_callable_exported_plugin_methods() -> None:
+    client = FILE_CLIENT.read_text(encoding="utf-8")
+    # Godot Android release singleton reflection can hide @UsedByGodot methods
+    # even though Object.call() correctly dispatches them.
+    assert 'plugin.call("startAnalyzeLocalFile"' in client
+    assert 'plugin.call("pollAnalyzeLocalFile"' in client
+    assert 'plugin.call("analyzeLocalFile"' in client
+    assert 'plugin.call("getCapabilitiesJson")' in client
+    assert 'plugin.has_method("startAnalyzeLocalFile")' not in client
+    assert 'plugin.has_method("analyzeLocalFile")' not in client
+    assert 'Android runtime does not expose File Intelligence' not in client
+    assert "Android OCR returned empty content" in client
+
+
+def test_android_godot_e2e_workflow_runs_offline_phase_in_one_shell() -> None:
+    workflow = WORKFLOW.read_text(encoding="utf-8")
+    runner = RUNNER.read_text(encoding="utf-8")
+    assert "build/build_android.ps1" in workflow
+    assert "--check-only --script benchmarks/core/android_godot_benchmark.gd" in workflow
+    assert 'run/main_scene="res://benchmarks/core/android_godot_benchmark.tscn"' in workflow
+    assert "reactivecircus/android-emulator-runner@v2.38.0" in workflow
+    assert 'bash benchmarks/core/run_android_godot_e2e.sh "$BENCHMARK_APK"' in workflow
+    assert "benchmarks/core/run_android_godot_e2e.sh" in workflow
+
+    assert "set -euo pipefail" in runner
+    assert "airplane-mode enable" in runner
+    assert "svc wifi disable" in runner
+    assert "svc data disable" in runner
+    assert "ping -c 1 -W 2 1.1.1.1" in runner
+    assert "external_ping_blocked" in runner
+    assert "core-benchmark-android-e2e.json" in runner
+    assert "offline_network_guard" in runner
+    assert "external_network_probe_blocked" in runner
+    assert "aurora_core_android" in runner
+    assert "AURORAFOX_ANDROID_NORMAL_PATH_GATE_OK" in runner
+    assert "AURORAFOX_ANDROID_INSTALLED_VOICE_OCR_KNOWLEDGE_OK" in runner
+    assert "installed_knowledge_pack" in runner
+    assert "knowledge_pack_contract" in runner
+    assert "resumed_skipped_shards" in runner
+    assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in runner

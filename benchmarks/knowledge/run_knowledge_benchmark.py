@@ -20,6 +20,10 @@ import tempfile
 import time
 from typing import Any
 
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "benchmarks" / "core"))
+from report_identity import checkout_sha
+
 RESULT_PREFIX = "AURORA_KNOWLEDGE_BENCH_RESULT="
 MB = 1024 * 1024
 
@@ -301,7 +305,7 @@ def _godot_version(runtime: dict[str, Any]) -> str:
     return version + (f"-{status}" if status else "")
 
 
-def comparable_identity(results: list[dict[str, Any]] | None = None) -> dict[str, Any]:
+def comparable_identity(results: list[dict[str, Any]] | None = None, repo: Path = ROOT) -> dict[str, Any]:
     identity: dict[str, Any] = {
         "os": platform.system(),
         "os_release": platform.release(),
@@ -312,7 +316,7 @@ def comparable_identity(results: list[dict[str, Any]] | None = None) -> dict[str
         "runner_name": os.environ.get("RUNNER_NAME", ""),
         "runner_os": os.environ.get("RUNNER_OS", ""),
         "runner_arch": os.environ.get("RUNNER_ARCH", ""),
-        "git_sha": os.environ.get("GITHUB_SHA", ""),
+        "git_sha": checkout_sha(repo),
     }
     for row in results or []:
         runtime = row.get("runtime", {}) if isinstance(row, dict) else {}
@@ -358,6 +362,8 @@ def aggregate_counts(results: list[dict[str, Any]], hard_errors: list[dict[str, 
 def main() -> int:
     args = parse_args()
     repo = Path.cwd().resolve()
+    source_sha = checkout_sha(repo)
+    print("AURORA_KNOWLEDGE_SOURCE_SHA=" + source_sha, flush=True)
     godot = str(Path(args.godot).resolve()) if not os.path.isabs(args.godot) else args.godot
     report_path = Path(args.report)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -425,11 +431,12 @@ def main() -> int:
 
     scaling = scaling_findings(results)
     counts = aggregate_counts(results, hard_errors)
+    checkout_sha(repo, source_sha)  # Do not relabel results if HEAD moved during the run.
     report: dict[str, Any] = {
         "schema": "aurorafox_knowledge_performance_v1",
         "generated_at_unix": time.time(),
         "profile": args.profile,
-        "platform_runtime_identity": comparable_identity(results),
+        "platform_runtime_identity": comparable_identity(results, repo),
         "summary_counts": counts,
         "error_count": counts["error_count"],
         "duplicate_count": counts["duplicate_count"],

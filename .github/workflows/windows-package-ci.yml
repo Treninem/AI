@@ -1,5 +1,7 @@
 name: AuroraFox Windows Package CI
 
+# Installed Knowledge smoke uses durable completion evidence.
+
 on:
   push:
     branches: [main]
@@ -18,6 +20,10 @@ on:
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
+      - 'tests/windows_bounded_process*.ps1'
+      - 'tests/windows_installed_voice_smoke.ps1'
+      - 'tests/windows_installed_local_services_smoke.ps1'
+      - 'tests/windows_installed_knowledge_pack_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -38,6 +44,10 @@ on:
       - 'build/**'
       - 'tests/windows_v12_bridge_smoke.ps1'
       - 'tests/windows_v13_bridge_smoke.ps1'
+      - 'tests/windows_bounded_process*.ps1'
+      - 'tests/windows_installed_voice_smoke.ps1'
+      - 'tests/windows_installed_local_services_smoke.ps1'
+      - 'tests/windows_installed_knowledge_pack_smoke.ps1'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -49,15 +59,42 @@ permissions:
 
 concurrency:
   group: aurorafox-windows-package-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  # Preserve the expensive installer/offline-voice evidence from the running
+  # candidate. A newer candidate waits instead of repeatedly cancelling it.
+  cancel-in-progress: false
 
 jobs:
-  package-windows:
+  process-contract:
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == os.environ['AURORA_EXPECTED_HEAD_SHA'] else 'Candidate checkout SHA mismatch')"
+      - name: Run bounded process lifecycle regression
+        shell: pwsh
+        run: .\tests\windows_bounded_process_smoke.ps1
+
+  package-windows:
+    needs: process-contract
+    runs-on: windows-latest
+    timeout-minutes: 180
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+
+      - name: Verify exact candidate checkout
+        env:
+          AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: >-
+          python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
 
       - name: Parse Windows build and release helpers
         shell: powershell
@@ -70,7 +107,12 @@ jobs:
             '.\build\create_update_signing_key.ps1',
             '.\build\setup_release_signing.ps1',
             '.\tests\windows_v12_bridge_smoke.ps1',
-            '.\tests\windows_v13_bridge_smoke.ps1'
+            '.\tests\windows_v13_bridge_smoke.ps1',
+            '.\tests\windows_bounded_process.ps1',
+            '.\tests\windows_bounded_process_smoke.ps1',
+            '.\tests\windows_installed_voice_smoke.ps1',
+            '.\tests\windows_installed_local_services_smoke.ps1',
+            '.\tests\windows_installed_knowledge_pack_smoke.ps1'
           )) {
             if (-not (Test-Path $script)) { throw "Required Windows/release helper missing: $script" }
             $tokens = $null
@@ -81,6 +123,10 @@ jobs:
               throw "$script parse failed"
             }
           }
+
+      - name: Validate portable voice configuration contracts
+        shell: pwsh
+        run: python -m unittest tests.test_windows_voice_package -v
 
       - name: Restore bundled AuroraFox Core model cache
         uses: actions/cache@v4
@@ -128,7 +174,7 @@ jobs:
 
       - name: Build Windows package
         shell: pwsh
-        run: .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup -SkipVoiceSetup
+        run: .\build\build_windows.ps1 -Godot '${{ steps.godot.outputs.path }}' -SkipModelSetup
 
       - name: Verify packaged runtime assets and embedded Core
         shell: pwsh
@@ -138,6 +184,8 @@ jobs:
             'build\windows\models\install_models.ps1',
             'build\windows\voice\install_voice.ps1',
             'build\windows\computer\install_computer.ps1',
+            'build\windows\computer\python\python.exe',
+            'build\windows\computer\vendor\fastapi',
             'build\windows\file_intelligence\install_files.ps1',
             'build\windows\core_runtime\install_core.ps1',
             'build\windows\core_runtime\engine\llama-server.exe',
@@ -163,8 +211,25 @@ jobs:
       - name: Smoke exported executable
         shell: pwsh
         run: |
-          $p = Start-Process -FilePath '.\build\windows\AuroraFox.exe' -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
+          $stdout = Join-Path $env:RUNNER_TEMP 'aurorafox-export-stdout.log'
+          $stderr = Join-Path $env:RUNNER_TEMP 'aurorafox-export-stderr.log'
+          $p = Start-Process -FilePath '.\build\windows\AuroraFox.exe' -ArgumentList @('--headless','--verbose','--quit-after','3') -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+          $finished = $p.WaitForExit(120000)
+          if (-not $finished) {
+            Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+            Get-Content $stdout -ErrorAction SilentlyContinue
+            Get-Content $stderr -ErrorAction SilentlyContinue
+            throw 'Exported AuroraFox.exe did not honor the bounded headless shutdown'
+          }
+          Get-Content $stdout -ErrorAction SilentlyContinue
+          Get-Content $stderr -ErrorAction SilentlyContinue
           if ($p.ExitCode -ne 0) { throw "Exported AuroraFox.exe exited with $($p.ExitCode)" }
+
+      - name: Smoke exported Knowledge Pack route before installer
+        shell: pwsh
+        run: |
+          $packageDir = (Resolve-Path '.\build\windows').Path
+          .\tests\windows_installed_knowledge_pack_smoke.ps1 -InstallDir $packageDir -ReportDir 'artifacts\windows-offline-knowledge-pack'
 
       - name: Build installer
         shell: pwsh
@@ -175,8 +240,27 @@ jobs:
           $version = $Matches[1]
           $iscc = 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe'
           if (-not (Test-Path $iscc)) { throw 'Inno Setup compiler not found' }
-          & $iscc "/DMyAppVersion=$version" build\AuroraFox.iss
-          if ($LASTEXITCODE -ne 0) { throw 'Inno Setup failed' }
+          $iss = (Resolve-Path 'build\AuroraFox.iss').Path
+          $packageRoot = (Resolve-Path 'build\windows').Path
+          foreach ($relative in @(
+            'AuroraFox.exe',
+            'api\server.py',
+            'api\local_core_client.py',
+            'api\runtime_bridge.py',
+            'api\ollama_client.py',
+            'api\install_api.ps1',
+            'api\start_api.ps1',
+            'api\requirements.txt',
+            'core_runtime\engine\llama-server.exe',
+            'core_runtime\engine\aurorafox-core.gguf'
+          )) {
+            $path = Join-Path $packageRoot $relative
+            if (-not (Test-Path -LiteralPath $path)) { throw "Installer source missing: $path" }
+          }
+          Write-Host "Using Inno script: $iss"
+          Write-Host "Using package root: $packageRoot"
+          & $iscc "/DMyAppVersion=$version" $iss
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed with exit code $LASTEXITCODE" }
           if (-not (Test-Path build\release\AuroraFox_Setup_Windows.exe)) { throw 'Installer was not produced' }
 
       - name: Verify historical V1.2 and V1.3 in-place bridge mechanics
@@ -185,15 +269,19 @@ jobs:
           $state = Get-Content project\version.json -Raw | ConvertFrom-Json
           $current = [string]$state.numeric
           .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
-          .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $current
+          .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $current -CurrentInstaller '.\build\release\AuroraFox_Setup_Windows.exe'
 
       - name: Silent install and installed-app smoke
         shell: pwsh
         run: |
+          . .\tests\windows_bounded_process.ps1
+          $logDir = Join-Path $PWD 'artifacts\installer-smoke'
+          New-Item -ItemType Directory -Force -Path $logDir | Out-Null
           $installDir = Join-Path $env:RUNNER_TEMP 'AuroraFoxInstalled'
           $installer = (Resolve-Path 'build\release\AuroraFox_Setup_Windows.exe').Path
-          $p = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
-          if ($p.ExitCode -notin @(0,3010)) { throw "Installer exited with $($p.ExitCode)" }
+          $installLog = Join-Path $logDir 'current-install.log'
+          $installExit = Invoke-AuroraBoundedProcess -FilePath $installer -ArgumentList @('/SP-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"","/LOG=`"$installLog`"") -Phase 'current-install' -TimeoutSeconds 1200
+          if ($installExit -notin @(0,3010)) { throw "Installer exited with $installExit" }
           $exe = Join-Path $installDir 'AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe missing' }
           foreach ($relative in @(
@@ -210,12 +298,15 @@ jobs:
           $installedModel = Join-Path $installDir 'core_runtime\engine\aurorafox-core.gguf'
           $installedSha = (Get-FileHash $installedModel -Algorithm SHA256).Hash.ToLowerInvariant()
           if ($installedSha -ne 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5') { throw 'Installed AuroraFox Core integrity check failed' }
-          $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-          if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
+          $runExit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'current-installed-app' -TimeoutSeconds 90
+          if ($runExit -ne 0) { throw "Installed AuroraFox.exe exited with $runExit" }
+          .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
+          .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'
           $uninstaller = Get-ChildItem $installDir -Filter 'unins*.exe' | Select-Object -First 1
           if (-not $uninstaller) { throw 'Uninstaller missing' }
-          $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -PassThru -Wait
-          if ($un.ExitCode -ne 0) { throw "Uninstaller exited with $($un.ExitCode)" }
+          $uninstallLog = Join-Path $logDir 'current-uninstall.log'
+          $uninstallExit = Invoke-AuroraBoundedProcess -FilePath $uninstaller.FullName -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/LOG=`"$uninstallLog`"") -Phase 'current-uninstall' -TimeoutSeconds 180
+          if ($uninstallExit -ne 0) { throw "Uninstaller exited with $uninstallExit" }
 
       - name: Create portable ZIP, setup and hashes
         shell: pwsh
@@ -226,12 +317,22 @@ jobs:
           New-Item -ItemType Directory -Force dist | Out-Null
           $portable = "dist\AuroraFox-V$version-Windows-Portable.zip"
           $setup = "dist\AuroraFox-V$version-Setup-Windows.exe"
-          Compress-Archive -Path build\windows\* -DestinationPath $portable -CompressionLevel Optimal -Force
+          & 'C:\Program Files\7-Zip\7z.exe' a -tzip $portable '.\build\windows\*'
+          if ($LASTEXITCODE -ne 0) { throw 'ZIP64 portable package creation failed' }
           Copy-Item build\release\AuroraFox_Setup_Windows.exe $setup -Force
           Get-FileHash $setup -Algorithm SHA256 | ForEach-Object { "SETUP  $($_.Hash.ToLower())" } | Set-Content dist\SHA256SUMS.txt
           Get-FileHash $portable -Algorithm SHA256 | ForEach-Object { "PORTABLE  $($_.Hash.ToLower())" } | Add-Content dist\SHA256SUMS.txt
           Get-Content dist\SHA256SUMS.txt
           Get-ChildItem dist | Select-Object Name,Length
+
+      - name: Preserve installer diagnostics on every outcome
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Windows-installer-diagnostics-${{ github.event.pull_request.head.sha || github.sha }}
+          path: artifacts/installer-smoke/**
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -241,5 +342,8 @@ jobs:
             dist/AuroraFox-V*-Setup-Windows.exe
             dist/AuroraFox-V*-Windows-Portable.zip
             dist/SHA256SUMS.txt
+            artifacts/windows-offline-voice/**
+            artifacts/windows-offline-services/**
+            artifacts/windows-offline-knowledge-pack/**
           if-no-files-found: error
           retention-days: 14
