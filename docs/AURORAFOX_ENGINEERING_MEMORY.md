@@ -416,6 +416,15 @@
 - **Профилактика:** preflight подтверждает отсутствие conflicting tag/release; create/update/publish — отдельные идемпотентные фазы.
 - **Статус:** RESOLVED.
 
+#### AF-MEM-078 — Windows reassembler всегда сообщал SHA mismatch
+
+- **Симптом:** после объединения `part-00` и `part-01` скрипт удаляет готовый EXE и сообщает `Installer SHA-256 mismatch`, включая фактический hash.
+- **Причина:** generated PowerShell содержал `-split '\\\\s+'` вместо `-split '\\s+'`. Regex искал literal backslash и не разделял строку `<hash>  <filename>`; `$expected` становился всей строкой.
+- **Решение:** генерировать whitespace regex с одним backslash, извлекать первый 64-hex token и проверять reconstructed EXE; заменить только маленький release script asset, не части installer.
+- **Профилактика:** static contract требует один backslash и отвергает double-backslash form; parser fixture проверяет строку формата `sha256sum`.
+- **Evidence:** owner-PC actual hash `394bdb678f2d0c6deba82d2343ae34256c1e48d571364acbc993c55ae648a8e0`; root-cause fix `438c587f0ed38b1cd3ce94239e3211d3717f7ffa`.
+- **Статус:** RESOLVED in source; published asset replacement required for V1.4.0.0.
+
 ### Network, downloads и CI stability
 
 #### AF-MEM-080 — transient download/curl error 35
