@@ -274,6 +274,11 @@ func _is_direct_conversation(task: String) -> bool:
 	if task.length() > 600:
 		return false
 	var q := task.to_lower()
+	# An explicitly named registered tool is always an action request, even
+	# when the surrounding command is short or written in English.
+	for tool_name in tools.tools.keys():
+		if q.contains(str(tool_name).to_lower()):
+			return false
 	for marker in [
 		"[вложение", "прикреп", "файл", "документ", "изображен", "архив",
 		"найди", "поищи", "интернет", "сайт", "сегодня", "сейчас", "актуальн",
@@ -281,7 +286,7 @@ func _is_direct_conversation(task: String) -> bool:
 		"скачай", "отправ", "удали", "нажми", "компьютер", "экран", "мыш",
 		"код", "скрипт", "проект", "репозитор", "godot", "python", "javascript",
 		"typescript", "c++", "c#", "java", "rust", "sql", "api", "проанализ",
-		" use ", "run ", "open ", "create ", "change ", "fix ", "install ",
+		"use ", "run ", "open ", "create ", "change ", "fix ", "install ",
 		"download ", "send ", "delete ", "analyze ", "search ", "find ",
 		"offline", "integration"
 	]:

@@ -51,3 +51,10 @@ def test_greeting_fast_path_and_status_labels_are_explicit() -> None:
     assert "локальных записей памяти: %d" in main
     assert "Текстовый интерфейс готов • Core запускается в фоне" in main
     assert '"Готово • %d инструментов • память %d"' not in main
+
+
+def test_named_tools_and_english_commands_keep_the_agent_path() -> None:
+    agent = _text("scripts/agent_core.gd")
+    assert "for tool_name in tools.tools.keys():" in agent
+    assert "q.contains(str(tool_name).to_lower())" in agent
+    assert '"use ", "run ", "open "' in agent
