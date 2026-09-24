@@ -15,7 +15,7 @@ def test_signed_release_is_blocked_by_core_gates() -> None:
     assert "  core-gates:\n" in text
     assert "  windows:\n    needs: core-gates\n" in text
     assert "  android:\n    needs: core-gates\n" in text
-    publish = text[text.index("  publish:\\n") :]
+    publish = text[text.index("  publish:\n") :]
     assert "needs: [windows, android]" in publish
     assert "startsWith(github.ref, 'refs/tags/v')" in publish
     assert "needs.windows.result == 'success'" in publish

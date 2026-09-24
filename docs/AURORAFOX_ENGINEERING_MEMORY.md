@@ -515,4 +515,4 @@
 - **Решение:** проверять отдельно `needs: [windows, android]`, tag guard, успешные результаты обоих build jobs и ограниченный manual recovery с непустым `publish_run_id`.
 - **Профилактика:** workflow contracts проверяют смысловые clauses; форматирование не является API, release safety clauses остаются обязательными.
 - **Evidence:** run `36005534925`; godot-core/windows-integration/file-intelligence PASS, единственный failure — stale Python string assertion.
-- **Статус:** RESOLVED pending exact-head rerun.
+- **Статус:** RESOLVED pending exact-head rerun; first fix required an escaping correction on the next candidate.

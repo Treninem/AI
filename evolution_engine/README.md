@@ -87,3 +87,5 @@ This keeps current release testing independent while the Evolution layer is deve
 The merge candidate must rerun Evolution, Windows package, and Android APK gates on one exact feature SHA after integrating the current `main`. This documentation-only marker intentionally triggers the feature Evolution workflow; it grants no merge, signing, publishing, versioning, or release authority.
 
 Exact-head rerun marker after release-contract reconciliation: `0a5aa5c256c0377df0afc15c97bae270770e11ba`.
+
+Exact-head rerun marker after contract escape correction: `f5a5efdb2081e8b2bdafaae9e46532947e62b6ef`.

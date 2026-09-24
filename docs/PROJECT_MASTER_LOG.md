@@ -3796,3 +3796,38 @@ NEXT:
 
 PROGRESS_COMPLETE: 82%
 PROGRESS_REMAINING: 18%
+
+### 2026-09-24 — Work — Release contract escape correction
+
+DIRECTION:
+- Evolution Engine / Safety Integration.
+
+ACTION:
+- Повторный Core/Voice run `36005836014`, job `107653646054` подтвердил ошибку patch: Python source искал буквальный `\\n`, а не newline.
+- Исправлен только escape в test contract; Evolution README обновлён в том же commit для единого exact-head rerun.
+
+FILES:
+- `tests/test_release_core_gates.py`
+- `evolution_engine/README.md`
+- `docs/AURORAFOX_ENGINEERING_MEMORY.md`
+- `docs/PROJECT_MASTER_LOG.md`
+
+COMMIT:
+- Failing SHA: `f5a5efdb2081e8b2bdafaae9e46532947e62b6ef`.
+- Corrected candidate: текущий commit.
+
+TEST:
+- Failure before correction: **1 failed, 66 passed**; exact `ValueError: substring not found`.
+- Exact-head rerun pending.
+
+RESULT:
+- Production release workflow и main не изменены; исправлена только тестовая строка и CI trigger documentation.
+
+BLOCKERS:
+- Final exact-head workflows pending.
+
+NEXT:
+- Не двигать candidate SHA; дождаться всех Evolution/Windows/Android/regression results.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
