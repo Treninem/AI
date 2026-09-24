@@ -211,10 +211,11 @@ jobs:
       - name: Smoke exported Windows executable
         shell: pwsh
         run: |
+          . .\tests\windows_bounded_process.ps1
           $exe = '.\build\windows\AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'AuroraFox.exe was not produced' }
-          $p = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-          if ($p.ExitCode -ne 0) { throw "Exported AuroraFox.exe exited with $($p.ExitCode)" }
+          $exit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'release-exported-app' -TimeoutSeconds 120
+          if ($exit -ne 0) { throw "Exported AuroraFox.exe exited with $exit" }
 
       - name: Create Windows updater ZIP
         shell: pwsh
@@ -240,14 +241,15 @@ jobs:
       - name: Silent install, launch and uninstall Windows release
         shell: pwsh
         run: |
+          . .\tests\windows_bounded_process.ps1
           $installDir = Join-Path $env:RUNNER_TEMP 'AuroraFoxReleaseInstalled'
           $installer = (Resolve-Path 'build\release\AuroraFox_Setup_Windows.exe').Path
           $install = Start-Process -FilePath $installer -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=$installDir") -PassThru -Wait
           if ($install.ExitCode -notin @(0,3010)) { throw "Installer exited with $($install.ExitCode)" }
           $exe = Join-Path $installDir 'AuroraFox.exe'
           if (-not (Test-Path $exe)) { throw 'Installed AuroraFox.exe is missing' }
-          $run = Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait
-          if ($run.ExitCode -ne 0) { throw "Installed AuroraFox.exe exited with $($run.ExitCode)" }
+          $runExit = Invoke-AuroraBoundedProcess -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -Phase 'release-installed-app' -TimeoutSeconds 120
+          if ($runExit -ne 0) { throw "Installed AuroraFox.exe exited with $runExit" }
           .\tests\windows_installed_knowledge_pack_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-knowledge-pack'
           .\tests\windows_installed_voice_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-voice'
           .\tests\windows_installed_local_services_smoke.ps1 -InstallDir $installDir -ReportDir 'artifacts\windows-offline-services'

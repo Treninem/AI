@@ -94,6 +94,14 @@ def test_release_android_emulator_installs_the_signed_apk_without_cross_line_she
     assert 'adb install -r "$apk"' not in emulator
 
 
+def test_release_windows_smokes_wait_only_for_the_aurorafox_parent_process() -> None:
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert workflow.count(". .\\tests\\windows_bounded_process.ps1") >= 2
+    assert "-Phase 'release-exported-app' -TimeoutSeconds 120" in workflow
+    assert "-Phase 'release-installed-app' -TimeoutSeconds 120" in workflow
+    assert "Start-Process -FilePath $exe -ArgumentList @('--headless','--quit-after','3') -PassThru -Wait" not in workflow
+
+
 def test_repair_releases_cannot_occupy_stable_latest() -> None:
     workflow = (ROOT / ".github/workflows/updater-repair-validation.yml").read_text(encoding="utf-8")
     assert "repair-v1.2-windows" in workflow
