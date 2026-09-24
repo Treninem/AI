@@ -588,4 +588,16 @@ def shutdown():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    # PyInstaller builds the portable backend with --windowed. In that mode
+    # sys.stdout/sys.stderr are None, while Uvicorn's default colour formatter
+    # probes stream.isatty() during startup and crashes before binding localhost.
+    # Voice is a sidecar, so it must start without depending on a console.
+    uvicorn.run(
+        app,
+        host=HOST,
+        port=PORT,
+        log_level="warning",
+        log_config=None,
+        access_log=False,
+        use_colors=False,
+    )

@@ -478,6 +478,28 @@
 
 ## Проверенные опорные результаты
 
+#### AF-MEM-085 — Uvicorn crash в PyInstaller `--windowed` backend
+
+- **Дата/среда:** 2026-09-24; установленная Windows AuroraFox V1.4.0.0; source HEAD `b667dd0ee43ed48e409829287eadd7c9436066ca`.
+- **Симптом:** `aurora_voice_server` завершается до bind localhost: `AttributeError: 'NoneType' object has no attribute 'isatty'`, затем `ValueError: Unable to configure formatter 'default'` из `uvicorn.logging`.
+- **Причина:** portable voice backend собирается PyInstaller с `--windowed`; в no-console процессе `sys.stdout`/`sys.stderr` могут быть `None`, а стандартный Uvicorn colour formatter определяет TTY через `isatty()`.
+- **Нерабочие попытки:** перезапуск AuroraFox не исправляет детерминированную несовместимость logging configuration; ожидание chat response не восстанавливает упавший voice sidecar.
+- **Решение:** запускать embedded Uvicorn без console-dependent default dictConfig: `log_config=None`, `access_log=False`, `use_colors=False`; voice failure не должен блокировать text Core.
+- **Профилактика:** contract требует no-console-safe параметры; installed Windows smoke обязан запускать именно `AuroraVoiceBackend.exe` из `--windowed` сборки и проверять `/health`.
+- **Evidence:** owner traceback; `voice/build_backend.ps1` содержит `--windowed`; source hotfix CLAIM `WORK-2026-09-24-V1.4-RUNTIME-RECOVERY-HOTFIX`.
+- **Статус:** RESOLVED IN SOURCE; rebuilt installed-package acceptance pending.
+
+#### AF-MEM-086 — обычный чат ошибочно проходит многовызовный agent pipeline
+
+- **Дата/среда:** 2026-09-24; установленная Windows AuroraFox V1.4.0.0; owner request `привет` at 22:22:15, recovery notice at 22:25:56.
+- **Симптом:** простой разговорный запрос ждёт минуты; после неудачи UI синхронно повторяет Core request и затем показывает recovery notice вместо ответа. Status `Готово • 45 инструментов • память 61` создаёт ложное впечатление готовой модели.
+- **Причина:** подтверждённая source chain: AgentCore выполняет planning, answer и verification даже когда tool/action не требуется; desktop joined warmup допускает 120 секунд, chat request 180 секунд, а `main.gd` повторяет весь request после model error. Дополнительная resource-risk гипотеза до owner diagnostic: fixed context 16,384 повышает RAM/latency на consumer PC.
+- **Нерабочие попытки:** ждать часами; повторять тот же запрос внутри одного UI submit; считать число зарегистрированных tools/memory доказательством готовности inference runtime.
+- **Решение:** прямой one-call Core path для обычной беседы; immediate deterministic greeting while background warmup continues; no second synchronous retry; joined warmup 30 seconds; chat timeout 90 seconds; default context 4,096 with one parallel slot; direct chat caps output at 128 tokens and carries at most two compact memory hits plus four short history turns; honest recovery status. Complex/action requests retain planner/tools/verifier gates.
+- **Профилактика:** focused contract limits direct conversation to one `ai.chat`, rejects planning/verification there, locks bounded waits and explicit status terminology. Add installed first-run conversational smoke before distributing hotfix.
+- **Evidence:** owner screenshot/timestamps; owner hardware diagnostic: Pentium Gold G6405, 7.9 GiB RAM, model health OK after ~31 seconds at ctx 4096, prompt ~3.81 tok/s and generation ~3.06 tok/s; source inspection of `scripts/agent_core.gd`, `scripts/main.gd`, `scripts/desktop_local_runtime.gd`; focused direct tests pass without pytest runner.
+- **Статус:** ACTIVE SOURCE FIX; owner hardware/runtime diagnostic and Windows package acceptance pending.
+
 - Windows installed production Knowledge: `AURORA_WINDOWS_INSTALLED_PRODUCTION_KNOWLEDGE_OK`; offline; external AI not required; 60/60 shards; restart skipped 60; 75,871 records; 1,924,345,221 bytes.
 - Signing secret preflight: Release run `35922892799` SUCCESS.
 - Verified release candidate: `c3693426e34d8c94b23b622a7050f7d78831beb7`; Windows and Android package/device gates green.

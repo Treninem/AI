@@ -39,6 +39,12 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 	if not guard_reason.is_empty():
 		return EXECUTION_CONTROL_PREFIX + guard_reason
 	memory.remember("user_task", task, "chat", 0.72, 0.98)
+	# Ordinary conversation must not pay the latency of the autonomous agent
+	# pipeline (planning + answer + verification) when no tool/action is needed.
+	# It still uses the same local AuroraFox Core, private chat context and
+	# relevant local memory; action-oriented requests continue through all gates.
+	if _is_direct_conversation(task):
+		return await _run_direct_conversation(task, conversation_context, execution_guard)
 	var useful_skills := experience.relevant_skills(task, 5)
 	var recent_failures := experience.recent_failures(5)
 	var specialist_context: Dictionary = {}
@@ -219,6 +225,66 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 		if not ideas.is_empty():
 			memory.remember("improvement_ideas", JSON.stringify(ideas), "dream_cycle", 0.62, 0.65)
 	return final_answer
+
+func _run_direct_conversation(task: String, conversation_context: Array, execution_guard: Callable) -> String:
+	var guard_reason := _execution_guard_reason(execution_guard, "before_direct_chat", {})
+	if not guard_reason.is_empty():
+		return EXECUTION_CONTROL_PREFIX + guard_reason
+	var retrieved_context: Array = await memory.retrieve(task, 2, true, true)
+	var memory_lines: Array[String] = []
+	for item in retrieved_context:
+		memory_lines.append(str(item).substr(0, 240))
+	var messages: Array = [{
+		"role": "system",
+		"content": "[AURORA_DIRECT_CHAT] Ты AuroraFox. Ответь кратко и по существу на языке пользователя. Не выдумывай факты или выполненные действия. Память: %s" % " | ".join(memory_lines)
+	}]
+	_append_direct_conversation_context(messages, conversation_context)
+	messages.append({"role": "user", "content": task})
+	var result := await ai.chat(messages)
+	guard_reason = _execution_guard_reason(execution_guard, "after_direct_chat", {})
+	if not guard_reason.is_empty():
+		return EXECUTION_CONTROL_PREFIX + guard_reason
+	if not bool(result.get("ok", false)):
+		experience.record_failure(task, "Direct chat model error: " + str(result.get("error", "unknown")))
+		return "Ошибка модели: " + str(result.get("error", "unknown"))
+	var answer := str(result.get("content", "")).strip_edges()
+	if answer.is_empty():
+		experience.record_failure(task, "Direct chat returned an empty answer")
+		return "Ошибка модели: AuroraFox Core вернул пустой ответ"
+	memory.remember("assistant_answer", answer, "assistant", 0.58, 0.72)
+	return answer
+
+func _append_direct_conversation_context(messages: Array, conversation_context: Array) -> void:
+	var source: Array = conversation_context
+	if source.is_empty():
+		source = _active_chat_context()
+	var start := maxi(0, source.size() - 4)
+	for i in range(start, source.size()):
+		var item = source[i]
+		if not item is Dictionary:
+			continue
+		var role := str(item.get("role", ""))
+		if role not in ["user", "assistant"]:
+			continue
+		var content := str(item.get("content", "")).strip_edges().substr(0, 800)
+		if not content.is_empty():
+			messages.append({"role": role, "content": content})
+
+func _is_direct_conversation(task: String) -> bool:
+	if task.length() > 600:
+		return false
+	var q := task.to_lower()
+	for marker in [
+		"[вложение", "прикреп", "файл", "документ", "изображен", "архив",
+		"найди", "поищи", "интернет", "сайт", "сегодня", "сейчас", "актуальн",
+		"создай", "сделай", "измени", "исправ", "установ", "запусти", "открой",
+		"скачай", "отправ", "удали", "нажми", "компьютер", "экран", "мыш",
+		"код", "скрипт", "проект", "репозитор", "godot", "python", "javascript",
+		"typescript", "c++", "c#", "java", "rust", "sql", "api", "проанализ"
+	]:
+		if q.contains(marker):
+			return false
+	return true
 
 func _complete_tool_args(task: String, tool_name: String, original_args: Dictionary) -> Dictionary:
 	var args := original_args.duplicate(true)

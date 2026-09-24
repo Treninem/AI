@@ -3372,3 +3372,45 @@ REMAINING: implementation intentionally deferred until the owner trigger/current
 BLOCKERS: none for planning; production SMTP secret and deployment resources remain owner-controlled boundaries when implementation starts.
 NEXT: continue the current update/Evolution plan; on owner trigger create a fresh implementation CLAIM beginning with account/API schema and isolation audit.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
+
+
+## 111. CLAIM `WORK-2026-09-24-V1.4-RUNTIME-RECOVERY-HOTFIX`
+
+- Статус: **ACTIVE — owner-reproduced installed V1.4 runtime defect**.
+- Started from HEAD: `b667dd0ee43ed48e409829287eadd7c9436066ca`.
+- Режим: Work/Codex coordinator.
+- Симптомы: установленная Windows V1.4 на простое `привет` показывала `AuroraFox думает...` 3 минуты 41 секунду, затем вернула не разговорный ответ, а recovery notice; portable `AuroraVoiceBackend.exe` отдельно завершился с `AttributeError: 'NoneType' object has no attribute 'isatty'` / `ValueError: Unable to configure formatter 'default'` в `uvicorn.logging`.
+- Подтверждённая voice root cause: backend собирается PyInstaller `--windowed`, поэтому `sys.stdout`/`sys.stderr` могут быть `None`, а стандартная Uvicorn logging configuration пытается определить TTY/color support.
+- Core latency root cause: первый запрос может последовательно ждать joined warmup до 120 секунд, затем синхронный UI retry повторяет model path; обычный chat timeout дополнительно допускает 180 секунд. Voice failure не должен блокировать text chat, но текущая UX не даёт bounded fast fallback.
+- Файлы/подсистема: `voice/python/aurora_voice_server.py`, `scripts/desktop_local_runtime.gd`, `scripts/main.gd`, `scripts/agent_core.gd`, focused voice/runtime/UI contract tests, `docs/AURORAFOX_ENGINEERING_MEMORY.md`, этот журнал.
+- Предполагаемый bump: **BUILD hotfix**; canonical version меняется только после green tests/package acceptance.
+- Acceptance: windowed backend logging не обращается к отсутствующему TTY; installed voice smoke/contract защищает no-console startup; text chat остаётся доступным при voice failure; короткое приветствие имеет немедленный local fallback во время warmup; обычный разговорный вопрос делает один прямой Core call вместо обязательной цепочки planning → answer → verify; startup/chat ожидания bounded и нет второго синхронного многоминутного retry; status объясняет, что `45 инструментов` — зарегистрированные локальные возможности, а `память 61` — число локальных записей, не готовность модели; focused Python/GDScript contracts green; Windows package/install smoke pending before delivery.
+
+PROGRESS_COMPLETE: 20%
+PROGRESS_REMAINING: 80%
+DONE: owner screenshots/timestamps and exact traceback correlated with source; root causes located; affected paths reserved.
+REMAINING: implement voice no-console fix, bounded Core recovery/fast greeting, status clarification, tests, engineering-memory entry, commit/push and package acceptance.
+BLOCKERS: none for source fix; rebuilt Windows artifact will require release CI after code acceptance.
+NEXT: patch backend logging and bounded text-chat recovery, add focused regression contracts, run tests.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+### CHECKPOINT: source hotfix implemented; installed Core diagnostic pending
+
+Implemented source changes:
+
+- portable `--windowed` voice backend starts Uvicorn with no console-dependent logging configuration;
+- ordinary conversation takes one direct local-Core call instead of mandatory planning → answer → verification;
+- exact short greetings receive an immediate local response while Core warmup continues;
+- a failed request no longer triggers a second synchronous multi-minute retry;
+- joined background warmup is bounded to 30 seconds for the foreground request, chat HTTP timeout to 90 seconds and the owner-hardware profile uses context 4,096 with one parallel slot;
+- recovery status no longer says plain `Готово`; `45 инструментов` is relabelled as registered tools and `память 61` as local memory-record count, explicitly separating both from Core readiness.
+
+Focused contract `tests/test_v14_runtime_recovery_hotfix.py` covers no-console Uvicorn, one-call direct chat, bounded waits/context, greeting fallback and honest status labels. The three functions pass when invoked directly; Python AST/compile and `git diff --check` pass. Existing `tests.test_windows_voice_package` passes 14/14 under `unittest`; all directly invocable `test_voice_configs` (9) and `test_standalone_core_contract` (11) functions pass. The environment does not contain `pytest`, so no full pytest-runner result is claimed. AF-MEM-085/086 preserve the voice and chat-latency incidents.
+
+PROGRESS_COMPLETE: 65%
+PROGRESS_REMAINING: 35%
+DONE: source fix, focused contracts, direct contract execution, Python syntax and diff checks; engineering memory updated.
+REMAINING: owner diagnostic of installed `llama-server`/GGUF on actual hardware; GDScript import/parse; commit/push; exact-SHA Windows package/install voice + first-chat acceptance; version-last hotfix release decision.
+BLOCKERS: model is healthy but owner hardware is constrained (Pentium Gold G6405, 7.9 GiB RAM, ~3 tokens/s); Russian UTF-8 response quality and rebuilt Windows acceptance remain pending. This source environment has no Godot or pytest runner.
+NEXT: finish low-resource direct-chat profile and UTF-8 diagnostic, publish the hotfix on a review branch, then run Windows acceptance before generating an update.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
