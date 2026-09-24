@@ -73,6 +73,22 @@
 - **Профилактика:** scalar-cast всех IDs и путей перед native CLI.
 - **Статус:** RESOLVED.
 
+#### AF-MEM-005 — большой master log был обрезан при API-редактировании
+
+- **Симптом:** после записи через API канонический журнал неожиданно стал короче и потерял исторические разделы; позднее пришлось восстанавливать полное 3047-строчное дерево.
+- **Причина:** в update был передан только отображённый/line-limited/truncated фрагмент вместо полного исходного содержимого.
+- **Решение:** восстановить файл из последнего полного tree/commit; для append/update всегда получать полный blob и текущий blob SHA.
+- **Профилактика:** никогда не заменять `PROJECT_MASTER_LOG.md` содержимым preview, excerpt или вывода с пометкой `truncated`; до commit проверять, что прежний byte/line count не уменьшился без явной задачи на сокращение.
+- **Статус:** RESOLVED/INVARIANT.
+
+#### AF-MEM-006 — `main` отставал от release branch
+
+- **Симптом:** release evidence/guards видят разные истории; `main` был на сотни commits позади финализационной ветки.
+- **Причина:** длительная работа велась в release branch без своевременной интеграции.
+- **Решение:** доказать ancestry и выполнить только fast-forward `main` к проверенному candidate, без merge rewrite.
+- **Профилактика:** перед RC фиксировать единственный exact SHA, ancestry `main`↔release и ветку, из которой создаётся tag.
+- **Статус:** RESOLVED.
+
 ### Windows PowerShell и инструменты
 
 #### AF-MEM-010 — native stderr превращается в terminating error
@@ -108,6 +124,14 @@
 - **Решение:** использовать `npm.cmd` либо согласованно менять policy только в допустимом scope.
 - **Профилактика:** Windows-инструкции должны явно различать `.ps1` и `.cmd`.
 - **Статус:** ENVIRONMENT.
+
+#### AF-MEM-014 — warning принимается за root cause
+
+- **Симптом:** диагностика останавливается на PyInstaller `Hidden import not found`/deprecation warnings, хотя package и installer продолжают успешно собираться.
+- **Причина:** выбран самый заметный stderr, а не первый terminating step/exit code.
+- **Решение:** читать job до первого реально failed step и его конечного exception; warnings классифицировать отдельно.
+- **Профилактика:** в отчёте всегда указывать `failing job → failing step → final error → preceding successful gates`.
+- **Статус:** INVARIANT.
 
 ### Android SDK, emulator и release APK
 
@@ -245,6 +269,14 @@
 - **Профилактика:** machine-readable status enum и явная граница device/CI/desktop.
 - **Статус:** INVARIANT.
 
+#### AF-MEM-045 — Android `packageBenchmark` и огромный bundled model
+
+- **Симптом:** Gradle `:app:packageBenchmark` падает при APK с моделью около 1.28 GiB либо создаёт артефакт, близкий к инфраструктурным лимитам.
+- **Причина:** очень большой asset усиливает требования к disk/RAM/ZIP/runner/upload; обычный unit build не проверяет полный packaging path.
+- **Решение:** отдельный package job с disk preflight, точным model hash/size, достаточным heap/temp space и проверкой финального APK; не дублировать модель в нескольких путях.
+- **Профилактика:** size budget и free-space gate до Gradle/Godot export; release upload limit проверять отдельно от build success.
+- **Статус:** RESOLVED для V1.4 CI; monitor.
+
 ### Windows package, services и voice
 
 #### AF-MEM-050 — Godot импортирует generated Python/PyInstaller directories
@@ -285,6 +317,14 @@
 - **Причина:** `.iss` содержит stale/missing source path.
 - **Решение:** validate every installer source before compile; синхронизировать packaging manifest.
 - **Профилактика:** installer file-existence contract и clean-room build.
+- **Статус:** RESOLVED.
+
+#### AF-MEM-055 — local service TXT assertion не учитывал newline/kind
+
+- **Симптом:** health endpoint зелёный, но installed local-services smoke падает на сравнении TXT content.
+- **Причина:** test сравнивал представление текста без нормализации newline/record kind.
+- **Решение:** проверять семантическое значение после нормализации допустимых line endings и точный expected record kind.
+- **Профилактика:** fixtures включают CRLF/LF и не смешивают transport formatting с payload correctness.
 - **Статус:** RESOLVED.
 
 ### Server, SMTP и deployment
@@ -368,6 +408,14 @@
 - **Профилактика:** не удалять publish-only recovery path, size checks, idempotent draft update или signed evidence.
 - **Статус:** RESOLVED; release published.
 
+#### AF-MEM-077 — временный release/tag bootstrap оставил placeholder state
+
+- **Симптом:** для запуска tag-bound release пришлось создавать временный prerelease, затем удалять placeholder, сохраняя tag; при ошибке мог остаться неполный release object.
+- **Причина:** создание tag и GitHub Release было сцеплено с workflow publication.
+- **Решение:** tag создавать отдельно и только после same-SHA RC; workflow работает draft-first и умеет продолжить существующий draft.
+- **Профилактика:** preflight подтверждает отсутствие conflicting tag/release; create/update/publish — отдельные идемпотентные фазы.
+- **Статус:** RESOLVED.
+
 ### Network, downloads и CI stability
 
 #### AF-MEM-080 — transient download/curl error 35
@@ -392,6 +440,22 @@
 - **Причина:** silent waits и отсутствие phase heartbeat.
 - **Решение:** каждая длительная фаза печатает start/progress/end, PID/path/report, bounded timeout; failure report создаётся даже при exception.
 - **Профилактика:** это acceptance requirement для новых harnesses.
+- **Статус:** INVARIANT.
+
+#### AF-MEM-083 — недостаток диска на VPS/runner/owner PC
+
+- **Симптом:** крупные model/Knowledge/APK/installer artifacts заполняют temp/workspace; REG.RU VPS исторически имел около 10 GiB диска.
+- **Причина:** одновременно хранятся source, caches, unpacked runtime, staging и финальные archives.
+- **Решение:** до build/import/publish вычислять требуемый запас; чистить только воспроизводимые caches/staging после hash/evidence; production data и private keys не удалять.
+- **Профилактика:** disk-space preflight и отдельные staging directories; крупный Knowledge pack не помещать в Git history.
+- **Статус:** INVARIANT.
+
+#### AF-MEM-084 — разные shells/процессы не сохраняют локальные переменные
+
+- **Симптом:** команда, отправленная следующей строкой/step, получает пустые `$sdk`, `$testRepo`, `$apk` или другой локальный state.
+- **Причина:** каждый script line/CI step может выполняться в новом shell/process.
+- **Решение:** передавать явные пути/arguments; в GitHub Actions использовать step outputs или `GITHUB_ENV`; owner-PC блоки запускать целиком в одной PowerShell session.
+- **Профилактика:** инструкции помечают границы сессий; critical path не зависит от неэкспортированной переменной.
 - **Статус:** INVARIANT.
 
 ## Проверенные опорные результаты
