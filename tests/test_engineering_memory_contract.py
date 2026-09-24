@@ -46,6 +46,7 @@ def test_critical_historical_release_and_runtime_lessons_are_pinned() -> None:
     memory = MEMORY.read_text(encoding="utf-8")
     required_ids = {
         "AF-MEM-001",  # stale branch / non-fast-forward
+        "AF-MEM-005",  # master-log truncation protection
         "AF-MEM-010",  # PowerShell native stderr
         "AF-MEM-011",  # Windows PowerShell 5.1 RSA
         "AF-MEM-025",  # local emulator offline
