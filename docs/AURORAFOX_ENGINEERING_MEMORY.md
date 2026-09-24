@@ -505,3 +505,14 @@
 - **Профилактика:** перед каждым PR выполнять UTF-8 strict decode, NUL check и запрещать неожиданное массовое удаление master-log history.
 - **Evidence:** repair commit `7ad05479ab9b6c866bdb43f8291bff5e00117778`; после исправления file=UTF-8, diff к старому main: 561 additions / 1 deletion.
 - **Статус:** RESOLVED; prevention gate pending automation.
+
+#### AF-MEM-087 — release contract сравнивал YAML по устаревшему форматированию
+
+- **Дата/среда:** 2026-09-24; exact candidate `4e15741d98c7d21496974391dcc1a86aa655e2af`; Core/Voice run `36005534925`, job `107652596637`.
+- **Симптом:** `1 failed, 66 passed`; `test_signed_release_is_blocked_by_core_gates` ожидал буквальный однострочный `publish.if`, хотя текущий release workflow использует multiline guard и publish-only recovery.
+- **Причина:** тест закреплял формат YAML, а не обязательные safety-семантики после изменения опубликованного release recovery path.
+- **Нерабочие попытки:** возвращать production workflow к старому форматированию ради строкового assert или ослаблять зависимости publish.
+- **Решение:** проверять отдельно `needs: [windows, android]`, tag guard, успешные результаты обоих build jobs и ограниченный manual recovery с непустым `publish_run_id`.
+- **Профилактика:** workflow contracts проверяют смысловые clauses; форматирование не является API, release safety clauses остаются обязательными.
+- **Evidence:** run `36005534925`; godot-core/windows-integration/file-intelligence PASS, единственный failure — stale Python string assertion.
+- **Статус:** RESOLVED pending exact-head rerun.

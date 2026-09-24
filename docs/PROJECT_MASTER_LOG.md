@@ -3759,3 +3759,40 @@ BLOCKERS:
 
 NEXT:
 - Observe PR #93 checks on the merge commit and act only on reproducible failures.
+
+### 2026-09-24 — Work — Evolution integration regression correction
+
+DIRECTION:
+- Evolution Engine / Safety Integration.
+
+ACTION:
+- Exact candidate `4e15741d98c7d21496974391dcc1a86aa655e2af` запустил Evolution, Windows, Android и regression workflows.
+- Core/Voice run `36005534925` классифицирован по job log: `godot-core`, `windows-integration`, `file-intelligence` PASS; единственный failure — stale formatting assertion в `tests/test_release_core_gates.py`.
+- Production `.github/workflows/release.yml` не изменён. Contract обновлён на семантическую проверку обязательных publish guards.
+
+FILES:
+- `tests/test_release_core_gates.py`
+- `docs/AURORAFOX_ENGINEERING_MEMORY.md`
+- `docs/PROJECT_MASTER_LOG.md`
+
+COMMIT:
+- Failing exact SHA: `4e15741d98c7d21496974391dcc1a86aa655e2af`.
+- Fix commit: текущий commit, содержащий эту запись.
+
+TEST:
+- Failure evidence: run `36005534925`, job `107652596637`: **1 failed, 66 passed**.
+- Root cause: expected legacy one-line `publish.if`; actual main uses multiline tag + successful Windows/Android + bounded publish-only recovery guard.
+- Exact-head rerun pending.
+
+RESULT:
+- Release workflow, signing, version, published assets и main не изменены.
+- Test сохраняет Windows/Android dependency и проверяет обе разрешённые publish ветки по смыслу.
+
+BLOCKERS:
+- Новый exact-head Evolution/Windows/Android/regression rerun pending.
+
+NEXT:
+- Дождаться всех checks нового SHA; не повышать readiness до зелёных package artifacts.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
