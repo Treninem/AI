@@ -3217,3 +3217,23 @@ REMAINING: none for this CLAIM; continue appending future verified incidents und
 BLOCKERS: none.
 NEXT: every future AuroraFox task starts with fresh main + full master log + full engineering memory, then records any new reusable failure before closing its CLAIM.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
+
+
+## 109. CLAIM `WORK-2026-09-24-WINDOWS-REASSEMBLER-HOTFIX`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `394855e7c2a2439e159708573e46b1b6c6a5abb8`.
+- Режим: Work/Codex coordinator.
+- Цель: исправить опубликованный Windows installer reassembler V1.4.0.0, который ложно сообщает SHA-256 mismatch после корректной конкатенации частей.
+- Root cause: quoted bash heredoc записал в PowerShell `-split '\\\\s+'`; PowerShell передал regex, ищущий literal backslash, вместо whitespace regex `\s+`. В результате first checksum line не разделялась и `$expected` содержал всю строку с filename.
+- Файлы/подсистема: `.github/workflows/release.yml`, `tests/test_release_identity_version_policy.py` или отдельный focused release contract, `docs/AURORAFOX_ENGINEERING_MEMORY.md`, этот master log; published asset `AuroraFox_Setup_Windows.reassemble.ps1` после проверки.
+- Предполагаемый bump: **BUILD/hotfix для tooling asset**, без изменения уже проверенных Windows/Android binaries, tag или signing identity.
+- Acceptance: generated PowerShell содержит ровно `-split '\\s+'`; focused contract отвергает double-backslash regression; reconstructed hash parser извлекает только 64 hex chars; опубликованный маленький script asset заменён идемпотентно, installer parts не перезаливаются.
+
+PROGRESS_COMPLETE: 25%
+PROGRESS_REMAINING: 75%
+DONE: owner-PC failure reproduced logically; exact escaping defect located in release workflow source; binary parts are not yet classified as corrupt.
+REMAINING: patch + contract + validation + published asset replacement + owner retry.
+BLOCKERS: none.
+NEXT: correct heredoc escaping and add a regression assertion before touching the release asset.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 100%
