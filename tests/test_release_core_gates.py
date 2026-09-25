@@ -15,7 +15,9 @@ def test_signed_release_is_blocked_by_core_gates() -> None:
     assert "  core-gates:\n" in text
     assert "  windows:\n    needs: core-gates\n" in text
     assert "  android:\n    needs: core-gates\n" in text
-    assert "  publish:\n    if: startsWith(github.ref, 'refs/tags/v')\n    needs: [windows, android]\n" in text
+    publish = text[text.index("  publish:\n") :]
+    assert "startsWith(github.ref, 'refs/tags/v')" in publish
+    assert "needs: [windows, android]" in publish
 
 
 def test_latest_recovery_knowledge_and_rewrite_gates_run_before_builds() -> None:

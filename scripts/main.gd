@@ -30,6 +30,7 @@ var pending_attachments: Array = []
 var attachment_bar: HFlowContainer
 var request_busy := false
 var file_processing_busy := false
+var core_recovery_busy := false
 var queued_voice_text := ""
 var rename_dialog: AcceptDialog
 var rename_input: LineEdit
@@ -836,26 +837,52 @@ func _submit_current() -> void:
 	ai_working_started.emit(work_state)
 	AuroraVoice.set_ai_working(true, work_state)
 	var task := shown + attachments.build_context(attachment_copy)
-	var answer := await agent.run_task(task)
-	if answer.begins_with("Ошибка модели:"):
-		# A stale override or transient Core startup failure is repaired once in
-		# place. Normal users never need to select, download or configure a model.
-		ai.retry_core_now()
-		await get_tree().create_timer(0.75).timeout
+	var answer := _fast_local_reply(shown, attachment_copy)
+	var core_failed := false
+	if answer.is_empty():
 		answer = await agent.run_task(task)
 	if answer.begins_with("Ошибка модели:"):
-		answer = "Встроенный AI автоматически восстанавливается. Сообщение сохранено; ничего устанавливать или настраивать не нужно."
+		core_failed = true
+		# Never make the same user request wait through a second multi-minute
+		# startup attempt. Recovery continues independently and text chat remains
+		# responsive; the user can retry when the honest status becomes ready.
+		ai.retry_core_now()
+		if not core_recovery_busy:
+			core_recovery_busy = true
+			call_deferred("_recover_core_background")
+		answer = "Встроенный AI ещё запускается в фоне. Сообщение сохранено; повторите его через несколько секунд — устанавливать или настраивать ничего не нужно."
 	AuroraVoice.set_ai_working(false)
 	ai_working_finished.emit()
 	chats.add_message("assistant", answer)
 	_render_active_chat()
 	_refresh_chat_list()
-	_set_status("Готово • %d инструментов • память %d" % [tools.tools.size(), memory.memory.size()], true)
+	if core_failed:
+		_set_status("Текстовый интерфейс готов • Core запускается в фоне • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()])
+	else:
+		_set_status("Готово • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()], true)
 	assistant_response_ready.emit(answer)
 	AuroraVoice.say(answer)
 	request_busy = false
 	if not queued_voice_text.is_empty():
 		call_deferred("_submit_queued_voice")
+
+func _recover_core_background() -> void:
+	var result := await ai.warmup()
+	core_recovery_busy = false
+	if bool(result.get("ok", false)):
+		_set_status("AuroraFox Core готов • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()], true)
+	else:
+		_set_status("Текстовый режим доступен • AuroraFox Core продолжит восстановление при следующем запросе")
+
+func _fast_local_reply(text: String, attachment_copy: Array) -> String:
+	if not attachment_copy.is_empty():
+		return ""
+	var normalized := text.to_lower().strip_edges()
+	while normalized.ends_with("!") or normalized.ends_with(".") or normalized.ends_with(","):
+		normalized = normalized.substr(0, normalized.length() - 1).strip_edges()
+	if normalized in ["привет", "здравствуй", "здравствуйте", "добрый день", "добрый вечер", "доброе утро", "hello", "hi"]:
+		return "Привет! Я AuroraFox. Чем могу помочь?"
+	return ""
 
 func _show_tools_info() -> void:
 	var settings_panel := get_node_or_null("SettingsOverlay")

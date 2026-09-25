@@ -6,10 +6,12 @@ const PORT := 8766
 const BASE_URL := "http://127.0.0.1:8766"
 const MODEL_ALIAS := "AuroraFox-Core"
 const STARTUP_ATTEMPTS := 480
+const JOINED_WARMUP_ATTEMPTS := 120
 const DEFAULT_CHAT_MAX_TOKENS := 2048
 const TERSE_CHAT_MAX_TOKENS := 128
-const DEFAULT_CHAT_TIMEOUT_SECONDS := 180.0
-const DEFAULT_CONTEXT_SIZE := 16384
+const DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0
+const DEFAULT_CONTEXT_SIZE := 4096
+const DEFAULT_PARALLEL_SLOTS := 1
 
 var server_pid := 0
 var active_model := ""
@@ -81,8 +83,8 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 
 	# WindowsStartupCoordinator warms the Core in the background. A real user
 	# message can arrive while that same model is still loading. Never stop that
-	# startup or return "already starting"; join it and let the first message use
-	# the server as soon as /health becomes ready.
+	# startup or return "already starting". A foreground request joins it only
+	# for a bounded 30 seconds; background warmup may continue independently.
 	if starting:
 		return await _wait_for_existing_start(model_absolute_path)
 
@@ -98,6 +100,7 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		"--host", HOST,
 		"--port", str(PORT),
 		"--ctx-size", str(DEFAULT_CONTEXT_SIZE),
+		"--parallel", str(DEFAULT_PARALLEL_SLOTS),
 		"--alias", MODEL_ALIAS,
 		"--jinja"
 	])
@@ -121,7 +124,7 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться за 120 секунд"}
 
 func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
-	for _attempt in range(STARTUP_ATTEMPTS):
+	for _attempt in range(JOINED_WARMUP_ATTEMPTS):
 		if not starting:
 			if server_pid > 0 and OS.is_process_running(server_pid) and active_model == model_absolute_path:
 				var final_health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 2.0)
@@ -131,7 +134,15 @@ func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 		if active_model != model_absolute_path and not active_model.is_empty():
 			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core занят подготовкой другого внутреннего профиля"}
 		await get_tree().create_timer(0.25).timeout
-	return {"ok": false, "runtime": "aurora_core_desktop", "error": "Ожидание фоновой подготовки AuroraFox Core превысило 120 секунд"}
+	return {
+		"ok": false,
+		"runtime": "aurora_core_desktop",
+		"error": "AuroraFox Core продолжает подготовку в фоне; повторите запрос через несколько секунд",
+		"failure_scope": "startup",
+		"model_failure": false,
+		"retryable": true,
+		"background_warmup_continues": true
+	}
 
 func stop() -> void:
 	if server_pid > 0 and OS.is_process_running(server_pid): OS.kill(server_pid)
@@ -153,11 +164,15 @@ func runtime_info() -> Dictionary:
 		"default_chat_max_tokens": DEFAULT_CHAT_MAX_TOKENS,
 		"terse_chat_max_tokens": TERSE_CHAT_MAX_TOKENS,
 		"default_chat_timeout_seconds": DEFAULT_CHAT_TIMEOUT_SECONDS,
-		"context_size": DEFAULT_CONTEXT_SIZE
+		"context_size": DEFAULT_CONTEXT_SIZE,
+		"parallel_slots": DEFAULT_PARALLEL_SLOTS
 	}
 
 func _is_explicit_terse_request(messages: Array) -> bool:
 	var prompt := ""
+	for message in messages:
+		if message is Dictionary and str(message.get("role", "")) == "system" and str(message.get("content", "")).contains("[AURORA_DIRECT_CHAT]"):
+			return true
 	for i in range(messages.size() - 1, -1, -1):
 		if messages[i] is Dictionary and str(messages[i].get("role", "")) == "user":
 			prompt = str(messages[i].get("content", "")).to_lower().strip_edges()
