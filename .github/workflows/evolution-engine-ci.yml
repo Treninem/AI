@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - feature/aurorafox-evolution-engine
       - feature/evolution-engine-impuls-bridge
     paths:
       - 'evolution_engine/**'
@@ -12,10 +13,6 @@ on:
       - 'tests/test_community_learning.py'
       - 'main.tscn'
       - '.github/workflows/evolution-engine-ci.yml'
-
-# Legacy isolated lane marker retained for the accepted foundation contract:
-# feature/aurorafox-evolution-engine
-# The active continuation lane is feature/evolution-engine-impuls-bridge.
 
 permissions:
   contents: read
