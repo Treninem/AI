@@ -8,6 +8,7 @@ const STATUS_TOOL := "aurora_evolution_status"
 const ANALYZE_TOOL := "aurora_evolution_analyze"
 
 var controller := AuroraEvolutionEngine.new()
+var community_learning := AuroraCommunityLearningBridge.new()
 var _bound := false
 var _binding := false
 var _tools
@@ -18,6 +19,8 @@ var _last_binding: Dictionary = {}
 func _ready() -> void:
 	controller.name = "Controller"
 	add_child(controller)
+	community_learning.name = "CommunityLearningBridge"
+	add_child(community_learning)
 	controller.set_permission_level(AuroraEvolutionPolicy.LEVEL_ANALYSIS)
 	call_deferred("_bootstrap")
 
@@ -55,6 +58,7 @@ func bind_now() -> Dictionary:
 	var sandbox = sandbox_bridge.get("manager") if sandbox_bridge != null else null
 	_tools = main.get("tools")
 
+	community_learning.bind(memory)
 	var foundation_status := controller.bind_foundation(
 		coordinator,
 		improver,
@@ -84,8 +88,14 @@ func status() -> Dictionary:
 		"agent_tools": [STATUS_TOOL, ANALYZE_TOOL] if _tools_registered() else [],
 		"release_authority": false,
 		"binding": _last_binding.duplicate(true),
-		"engine": engine_status
+		"engine": engine_status,
+		"community_learning": community_learning.status()
 	}
+
+func sync_community_now() -> Dictionary:
+	# This only pulls already-sanitized observations into candidate experience.
+	# It never raises Evolution permission level and never promotes Stable Core.
+	return await community_learning.sync_now()
 
 func authorize_session_level(value: int, user_confirmed: bool) -> Dictionary:
 	if not user_confirmed:
