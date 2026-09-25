@@ -13,6 +13,10 @@ on:
       - 'main.tscn'
       - '.github/workflows/evolution-engine-ci.yml'
 
+# Legacy isolated lane marker retained for the accepted foundation contract:
+# feature/aurorafox-evolution-engine
+# The active continuation lane is feature/evolution-engine-impuls-bridge.
+
 permissions:
   contents: read
 
