@@ -12,6 +12,7 @@ var curator := AuroraCommunityLanguageCurator.new()
 var _timer := Timer.new()
 var _running := false
 var _enabled := false
+var _bound := false
 var _api_url := ""
 var _api_key := ""
 var _last_status: Dictionary = {
@@ -32,19 +33,22 @@ func _ready() -> void:
 	_timer.timeout.connect(_on_timer)
 	add_child(_timer)
 	_load_environment_config()
-	if _enabled:
-		_timer.start()
-		call_deferred("sync_now")
 
 func bind(memory_value) -> void:
 	curator.bind(memory_value)
+	_bound = memory_value != null and memory_value.has_method("remember")
+	if _enabled and _bound:
+		_timer.start()
+		call_deferred("sync_now")
+	else:
+		_timer.stop()
 
 func configure(api_url: String, api_key: String, enabled := true, interval_seconds := DEFAULT_INTERVAL_SECONDS) -> Dictionary:
 	_api_url = _normalize_base_url(api_url)
 	_api_key = api_key.strip_edges()
 	_enabled = enabled and not _api_url.is_empty() and not _api_key.is_empty()
 	_timer.wait_time = clampf(interval_seconds, 30.0, 3600.0)
-	if _enabled:
+	if _enabled and _bound:
 		_timer.start()
 	else:
 		_timer.stop()
@@ -54,6 +58,7 @@ func configure(api_url: String, api_key: String, enabled := true, interval_secon
 func status() -> Dictionary:
 	var out := _last_status.duplicate(true)
 	out["enabled"] = _enabled
+	out["bound"] = _bound
 	out["configured"] = not _api_url.is_empty() and not _api_key.is_empty()
 	out["api_host"] = _safe_host(_api_url)
 	out["api_key_present"] = not _api_key.is_empty()
@@ -66,6 +71,12 @@ func status() -> Dictionary:
 func sync_now() -> Dictionary:
 	if not _enabled:
 		return status()
+	if not _bound:
+		var unbound := status()
+		unbound["ok"] = false
+		unbound["stage"] = "foundation"
+		unbound["error"] = "Local Memory is not bound; community events were not pulled"
+		return unbound
 	if _running:
 		return {"ok": false, "stage": "busy", "error": "Community learning sync is already running"}
 	_running = true
@@ -213,5 +224,5 @@ func _failure(message: String) -> Dictionary:
 	}
 
 func _on_timer() -> void:
-	if _enabled and not _running:
+	if _enabled and _bound and not _running:
 		sync_now()
