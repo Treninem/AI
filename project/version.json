@@ -1,13 +1,13 @@
 {
-  "version": "V1.4.0.0",
-  "numeric": "1.4.0.0",
+  "version": "V1.4.0.1",
+  "numeric": "1.4.0.1",
   "major": 1,
   "minor": 4,
   "patch": 0,
-  "build": 0,
-  "android_version_code": 100006,
+  "build": 1,
+  "android_version_code": 100007,
   "status": "evolving",
   "auto_increment": true,
-  "updated_at": "2026-09-23T21:43:42Z",
-  "reason": "Final signed-release candidate after permanent update/Android identity initialization and accepted Core, Knowledge, Memory, OCR, Voice, Work, Computer, updater and packaging gates"
+  "updated_at": "2026-09-27T18:07:00Z",
+  "reason": "Accepted Windows chat and voice runtime hotfix from PR #94; version-last BUILD bump after 12/12 source CI gates"
 }
