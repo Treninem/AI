@@ -1,7 +1,8 @@
 # AuroraFox Changelog
 
-## V1.4.0.1 — 2026-09-27
+## V1.4.1.1 — 2026-09-28
 
+- Added controlled Evolution Engine lifecycle with bounded 3–10 candidate tournaments, session permission controls, evidence gates and existing release authority separation.
 - Fixed stalled ordinary Windows chat with a single bounded local Core call and responsive greeting during warmup.
 - Fixed windowed VoiceBackend startup without a console, removed synchronous repeated Core request, and clarified runtime status.
 - Reduced default context and parallelism for 8 GiB Windows machines; Android `versionCode` is `100007`.
