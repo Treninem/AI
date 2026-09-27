@@ -522,3 +522,14 @@
 ```
 
 Новые записи добавляются по ID, существующие не удаляются ради «чистоты». Если причина уточнилась, старая формулировка сохраняется кратко в истории записи, а актуальная помечается датой. Дубли объединяются ссылкой на исходный ID.
+
+#### AF-MEM-087 — signed update floor confused with latest version ceiling
+
+- **Дата/среда:** 2026-09-28; PR #96 head `9de9a81525df751e15baf7627f56c8a0f25b5d7f`, Release Identity CI `36353897008`.
+- **Симптом:** `test_current_version_does_not_exceed_declared_signed_floor_before_release` rejects V1.4.1.1 because it asserts current <= 1.4.0.0.
+- **Причина:** permanent signed update floor means minimum version with pinned signing trust, not a maximum current release version.
+- **Нерабочие попытки:** changing permanent identity/floor to the new version would incorrectly break trust-floor history.
+- **Решение:** assert current >= pinned floor and template floor equals public release identity; retain 1.4.0.0 as the permanent floor.
+- **Профилактика:** release identity CI validates new versions against the permanent minimum without changing cryptographic identity.
+- **Evidence:** failed job `108717681705`, 1 failed/22 passed; targeted test contract fix on release/v1.4.1.1.
+- **Статус:** RESOLVED IN SOURCE; exact-SHA CI pending.
