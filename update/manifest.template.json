@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "version": "1.4.0.0",
+  "version": "1.4.0.1",
   "channel": "stable",
   "mandatory": false,
   "published_at": "",
-  "notes": "AuroraFox transition to permanent signed update identity",
+  "notes": "Windows chat responsiveness and windowed voice backend hotfix",
   "compatibility": {
     "legacy_manifest": true,
     "legacy_manifest_readable": true,
