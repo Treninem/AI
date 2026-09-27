@@ -83,10 +83,12 @@ AuroraFox uses four-part versions `MAJOR.MINOR.PATCH.BUILD`.
 
 Every user-visible or functional change must be assigned an intended bump level in its ACTIVE claim, but **the canonical version must not be bumped before the changed block passes its relevant acceptance tests**. Versioning is the final release step, not a substitute for testing.
 
-- `MAJOR`: incompatible architecture/product/data/API migration requiring an intentional transition.
-- `MINOR`: major new capability, broad multi-subsystem improvement, or a new release/update floor.
-- `PATCH`: accepted improvement/rework of an existing block such as UI, voice, memory, knowledge, updater, Core quality or Computer Agent while compatibility is preserved.
-- `BUILD`: narrow bugfix/hotfix/packaging-only correction.
+- `MAJOR` (A): full reconstruction of the product.
+- `MINOR` (B): global change across the product.
+- `PATCH` (C): addition of functionality.
+- `BUILD` (D): fixes.
+
+The owner defined this A.B.C.D meaning on 2026-09-27. An unreleased candidate does not consume a public version; for the Evolution Engine addition plus hotfix the next version is V1.4.1.1.
 
 Required sequence for every lane:
 
