@@ -8,6 +8,8 @@ from fastapi import APIRouter, Header, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from api.account_store import AccountError, AccountStore, AuthenticationError
+from api.auth import KeyStore
+from api.community_learning import create_community_learning_router
 
 
 SECURITY_HEADERS = {
@@ -56,6 +58,13 @@ def create_account_web_router(accounts: AccountStore) -> APIRouter:
     # also owns the small personal-session logout endpoint so it can use the
     # AccountStore already injected by api.server without duplicating auth state.
     router = APIRouter()
+
+    # The 24/7 community-learning mailbox is mounted through this already-loaded
+    # router to keep the stable api.server/runtime paths untouched. KeyStore is a
+    # lightweight view over the same SQLite root; verify() always reads current
+    # key state, so integration-key creation/revocation remains authoritative.
+    integration_keys = KeyStore(accounts.root)
+    router.include_router(create_community_learning_router(accounts.root, integration_keys))
 
     @router.get("/verify-email", response_class=HTMLResponse, include_in_schema=False)
     def verify_email_page(token: str = Query(min_length=16, max_length=512)) -> HTMLResponse:
