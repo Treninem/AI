@@ -3448,3 +3448,19 @@ REMAINING: исправить два stale contract expectation; получит�
 BLOCKERS: current main Integration Gate красный на stale `V1.4.0.0` assertions; PR #93 latest runs имеют `startup_failure` и не считаются acceptance evidence.
 NEXT: обновить только version expectations в `tests/test_standalone_core_contract.py`, выполнить focused local tests и опубликовать один атомарный fix.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 76%
+
+### CHECKPOINT 2026-09-27 — stale V1.4.0.0 contract corrected; owner-requested stop
+
+- Исправлен только воспроизведённый blocker Integration Gate: `tests/test_standalone_core_contract.py` теперь сверяет фактические canonical values `V1.4.0.1`, numeric `1.4.0.1`, Android `versionCode=100007` и export `version/name="1.4.0.1"`.
+- Product/runtime/release metadata не изменялись. Это test-contract reconciliation после уже выполненного version-last bump, а не новый bump или ослабление gate.
+- Локальная проверка: все 12 напрямую вызываемых contract functions в `tests/test_standalone_core_contract.py` PASS; `py_compile` PASS; `git diff --check` PASS. Полный pytest не заявлен: runtime сообщает `No module named pytest`.
+- По указанию владельца работа после этого атомарного исправления останавливается. PR #93/Evolution Engine не слит; тяжёлые Windows/Android workflows вручную не запускались. Автоматический Integration Gate нового commit остаётся обязательным внешним verdict.
+- Статус CLAIM: **PAUSED — атомарный main repair завершён локально; дальнейшая Evolution-интеграция отложена до следующей команды**.
+
+PROGRESS_COMPLETE: 76%
+PROGRESS_REMAINING: 24%
+DONE: stale version assertions исправлены и локально проверены; scope не расширен; Evolution merge и release promotion не выполнялись.
+REMAINING: получить автоматический exact-SHA Integration Gate; затем отдельно reconciliate и принять PR #93/Evolution Engine.
+BLOCKERS: exact-SHA GitHub Actions verdict ещё отсутствует; PR #93 latest runs остаются `startup_failure`.
+NEXT: остановиться; при следующей команде сначала проверить новый main HEAD и автоматически запущенный Integration Gate, не создавая duplicate CI.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 76%
