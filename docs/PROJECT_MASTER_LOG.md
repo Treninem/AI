@@ -3429,3 +3429,22 @@ REMAINING: canonical version synchronization, post-bump same-SHA CI, signed publ
 BLOCKERS: signed release workflow/tag and owner-PC acceptance not yet executed.
 NEXT: synchronize the five canonical release metadata files, then inspect same-SHA CI and launch signed release workflow.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+## 112. CLAIM `CODEX-2026-09-27-EVOLUTION-MAIN-RECONCILE`
+
+- Статус: **ACTIVE — стабилизация current main перед интеграцией Evolution Engine**.
+- Started from HEAD: `675e8c1c5adcdcc8c9b3e6c731748a4bb626fd44`.
+- Режим: Codex, единственный координатор; owner разрешил продолжать непосредственно в `main` и попросил экономить CI/кредиты.
+- Цель: сначала вернуть обязательный Integration Gate текущего `main` в зелёное состояние после version-last bump `V1.4.0.1`, затем безопасно reconciliate уже реализованный Evolution Engine из PR #93 без обхода release/sandbox/rollback authority.
+- Файлы/подсистема первого атомарного пакета: `tests/test_standalone_core_contract.py`, этот журнал. После зелёного focused gate отдельным пакетом: существующие `evolution_engine/**`, `.github/workflows/evolution-engine-ci.yml`, `api/community_learning.py`, минимальные integration bindings и их tests из PR #93.
+- Предполагаемый bump: **MINOR** для Evolution Engine, но canonical version не меняется до полной same-SHA acceptance. Текущий `V1.4.0.1` остаётся release candidate hotfix и не публикуется/не продвигается этим CLAIM автоматически.
+- Фактический blocker: Integration Gate run `36339545917`, job `108676817542`, exact main `675e8c1...` — `2 failed, 55 passed`; оба падения являются stale assertions `V1.4.0.0` после уже синхронизированного `V1.4.0.1` (`project/version.json` и Android export version/name). Godot cross-subsystem job `108676817782` — SUCCESS.
+- Границы: не запускать вручную дубли тяжёлых Windows/Android workflows; не сливать PR #93 вслепую; сначала проверить его 71 уникальный commit/40-file delta относительно merge-base `d7da2fac...`, устранить startup-failure workflow и получить deterministic local acceptance.
+
+PROGRESS_COMPLETE: 76%
+PROGRESS_REMAINING: 24%
+DONE: актуальный main/PR/CI проверены; stale version-contract root cause локализован; Evolution delta отделён от шести новых main release-metadata commits.
+REMAINING: исправить два stale contract expectation; получить зелёный Integration Gate; проверить и интегрировать Evolution Engine; выполнить same-SHA Evolution acceptance без release promotion.
+BLOCKERS: current main Integration Gate красный на stale `V1.4.0.0` assertions; PR #93 latest runs имеют `startup_failure` и не считаются acceptance evidence.
+NEXT: обновить только version expectations в `tests/test_standalone_core_contract.py`, выполнить focused local tests и опубликовать один атомарный fix.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 76%
