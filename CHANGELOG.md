@@ -1,5 +1,12 @@
 # AuroraFox Changelog
 
+## V1.4.0.1 — 2026-09-27
+
+- Fixed stalled ordinary Windows chat with a single bounded local Core call and responsive greeting during warmup.
+- Fixed windowed VoiceBackend startup without a console, removed synchronous repeated Core request, and clarified runtime status.
+- Reduced default context and parallelism for 8 GiB Windows machines; Android `versionCode` is `100007`.
+
+
 ## V1.4.0.0 — 2026-09-23
 
 - Established the permanent signed updater and Android release identities and verified all four private GitHub signing secrets against their committed public fingerprints.
