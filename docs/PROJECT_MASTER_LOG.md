@@ -3414,3 +3414,18 @@ REMAINING: owner diagnostic of installed `llama-server`/GGUF on actual hardware;
 BLOCKERS: model is healthy but owner hardware is constrained (Pentium Gold G6405, 7.9 GiB RAM, ~3 tokens/s); Russian UTF-8 response quality and rebuilt Windows acceptance remain pending. This source environment has no Godot or pytest runner.
 NEXT: finish low-resource direct-chat profile and UTF-8 diagnostic, publish the hotfix on a review branch, then run Windows acceptance before generating an update.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+### CHECKPOINT 2026-09-27 — merged hotfix and version-last release preparation
+
+- PR #94 merged into main at `d7da2fac2a30f87a761b4659662c7522f73f85bc` (source `4f692dd9311f1ae4f52edef23f1c88a9a5fc01c7`).
+- Exact source SHA has 12/12 successful workflow runs, including Windows Package `36065692046`, Android APK `36065692045`, Core Benchmarks `36065692092`; no source CI blocker remains.
+- Takeover of existing active CLAIM for release version synchronization only: `project/version.json`, `project.godot`, `export_presets.cfg`, `update/manifest.template.json`, `CHANGELOG.md`, and this master log. Intended bump BUILD to V1.4.0.1, Android versionCode 100007. Existing signed floor stays V1.4.0.0.
+- Post-bump acceptance still requires same-SHA version-sync, Windows/Android package and signed release gates, followed by installed first-chat acceptance on owner hardware. Never ship under V1.4.0.0 again.
+
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: merged source hotfix and 12/12 exact source checks green.
+REMAINING: canonical version synchronization, post-bump same-SHA CI, signed publication and installed first-chat verification.
+BLOCKERS: signed release workflow/tag and owner-PC acceptance not yet executed.
+NEXT: synchronize the five canonical release metadata files, then inspect same-SHA CI and launch signed release workflow.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
