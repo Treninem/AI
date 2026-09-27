@@ -3464,3 +3464,18 @@ REMAINING: получить автоматический exact-SHA Integration G
 BLOCKERS: exact-SHA GitHub Actions verdict ещё отсутствует; PR #93 latest runs остаются `startup_failure`.
 NEXT: остановиться; при следующей команде сначала проверить новый main HEAD и автоматически запущенный Integration Gate, не создавая duplicate CI.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 76%
+
+### CHECKPOINT 2026-09-28 — Evolution Engine + runtime hotfix accepted for versioned release candidate
+
+- Owner resumed paused CLAIM 112 and selected one combined update: Evolution Engine plus Windows chat/voice hotfix, version `V1.4.1.1` under explicit A.B.C.D policy (A full reconstruction, B global change, C added functionality, D fixes).
+- PR #95 integrates the 40-file Evolution delta from PR #93 on top of the merged runtime fix; exact PR head `f628be7a225507dd19023425eb1a15cc241f91eb` passed 10/10 workflows: Evolution `36340755794`, Windows Package `36340755773`, Android APK `36340755858`, Integration Gate `36340755805`, Core/Voice `36340755796`, API `36340755792`, UI `36340755787`, Work `36340755782`, Agent Sync `36340755817`, Core Bootstrap `36340755819`. PR #95 merged to main at `9bfea05f3fba33706df5e166f451e8997f6d2e58`.
+- Prepared canonical `V1.4.1.1` across version.json, project.godot, Android export, updater template, changelog and pinned version contract; Android versionCode remains `100007` because candidate V1.4.0.1 was never distributed (published V1.4.0.0 uses 100006). The signed-update floor remains V1.4.0.0.
+- Owner-defined version semantics supersede prior bump categories; AGENTS.md updated. This is a release candidate, not a published update. New exact-SHA version/package/release gates still required.
+
+PROGRESS_COMPLETE: 85%
+PROGRESS_REMAINING: 15%
+DONE: integrated Evolution with source hotfix; 10/10 pre-bump CI green; version metadata and policy staged.
+REMAINING: post-bump exact-SHA CI and signed release publication, then installed first-chat check on owner hardware.
+BLOCKERS: post-bump package/signature evidence pending; installed Windows first chat still unverified.
+NEXT: evaluate CI on release/v1.4.1.1, merge version PR after green, build signed release from exact main commit.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
