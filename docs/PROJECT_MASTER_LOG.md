@@ -3479,3 +3479,17 @@ REMAINING: post-bump exact-SHA CI and signed release publication, then installed
 BLOCKERS: post-bump package/signature evidence pending; installed Windows first chat still unverified.
 NEXT: evaluate CI on release/v1.4.1.1, merge version PR after green, build signed release from exact main commit.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
+
+### CHECKPOINT 2026-09-28 — Release Identity CI floor regression
+
+- PR #96 head `9de9a81525df751e15baf7627f56c8a0f25b5d7f`: Windows Package `36353897056`, Android APK `36353896995`, Integration `36353896986`, Core/Voice `36353896970`, Agent Sync `36353897029`, UI `36353897026`, Research `36353896994` SUCCESS. Release Identity `36353897008` failed one stale assertion (22 passed, 1 failed): current V1.4.1.1 was incorrectly required to be <= permanent signed floor V1.4.0.0.
+- Corrected the contract to require current >= permanent floor and agreement between manifest template and release identity. No signing identity, trust root, private key or historical floor changed. Recorded AF-MEM-087.
+- Final candidate SHA after this documentation checkpoint requires Release Identity CI revalidation; previous green package evidence belongs to the preceding versioned source and the only code change is the focused contract.
+
+PROGRESS_COMPLETE: 85%
+PROGRESS_REMAINING: 15%
+DONE: root cause isolated and focused release identity contract corrected; previous Windows/Android package gates green.
+REMAINING: exact-SHA Release Identity verdict, merge PR #96 and signed publication/installed first-chat acceptance.
+BLOCKERS: Release Identity rerun pending for corrected candidate.
+NEXT: inspect automatic CI on the new PR #96 head; merge only if green.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
