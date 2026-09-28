@@ -14,8 +14,8 @@ def read(path: str) -> str:
 
 def test_canonical_version_is_v1_4() -> None:
     state = json.loads(read("project/version.json"))
-    assert state["version"] == "V1.4.0.1"
-    assert state["numeric"] == "1.4.0.1"
+    assert state["version"] == "V1.4.1.1"
+    assert state["numeric"] == "1.4.1.1"
     assert state["android_version_code"] == 100007
 
 
@@ -185,7 +185,7 @@ def test_android_build_and_export_require_bundled_weights() -> None:
     assert MODEL_SHA in build
     assert 'include_filter="update/release_public.pub,models/aurorafox-core.gguf"' in presets
     assert 'package/unique_name="com.aurorafox.ai"' in presets
-    assert 'version/name="1.4.0.1"' in presets
+    assert 'version/name="1.4.1.1"' in presets
 
 
 def test_windows_and_android_package_strategies_are_intentional() -> None:

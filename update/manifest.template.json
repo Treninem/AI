@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "version": "1.4.0.1",
+  "version": "1.4.1.1",
   "channel": "stable",
   "mandatory": false,
   "published_at": "",
-  "notes": "Windows chat responsiveness and windowed voice backend hotfix",
+  "notes": "Evolution Engine controlled self-improvement plus Windows chat and voice fixes",
   "compatibility": {
     "legacy_manifest": true,
     "legacy_manifest_readable": true,

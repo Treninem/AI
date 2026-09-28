@@ -139,8 +139,11 @@ def test_version_policy_is_hierarchical_and_test_first() -> None:
     assert "ЖЁСТКОЕ ПРАВИЛО ВЕРСИОНИРОВАНИЯ" in master
 
 
-def test_current_version_does_not_exceed_declared_signed_floor_before_release() -> None:
+def test_current_version_is_at_or_above_permanent_signed_floor() -> None:
     state = json.loads((ROOT / "project/version.json").read_text(encoding="utf-8"))
     identity = json.loads((ROOT / "update/release_identity.json").read_text(encoding="utf-8"))
-    assert _version(state["numeric"]) <= _version(identity["signed_update_floor"])
+    manifest = json.loads((ROOT / "update/manifest.template.json").read_text(encoding="utf-8"))
+    floor = identity["signed_update_floor"]
+    assert _version(state["numeric"]) >= _version(floor)
+    assert manifest["compatibility"]["signed_update_floor"] == floor
     assert state["version"] == "V" + state["numeric"]
