@@ -166,12 +166,17 @@ func download_update(manual := true) -> Dictionary:
 	downloading = true
 	if manual:
 		download_started.emit(latest_info)
-	_log("download started url=%s manual=%s" % [url, manual])
+	_log("download started url=%s manual=%s size=%d" % [url, manual, int(asset.get("size", 0))])
 	var req := HTTPRequest.new()
-	req.timeout = 1800.0
+	# Large signed release packages can take longer than 30 minutes on slow links.
+	# The signed manifest size sets a bounded transfer window; integrity is
+	# still checked against the signed SHA-256 before the package is applied.
+	var timeout_seconds := _package_timeout_seconds(int(asset.get("size", 0)))
+	req.timeout = timeout_seconds
 	req.download_file = absolute
 	add_child(req)
 	var headers := PackedStringArray(["User-Agent: AuroraFox-Updater/%s" % current_version])
+	_log("download transfer timeout_seconds=%.0f" % timeout_seconds)
 	var err := req.request(url, headers, HTTPClient.METHOD_GET)
 	if err != OK:
 		downloading = false
@@ -233,6 +238,12 @@ func _platform_asset(info: Dictionary) -> Dictionary:
 	if OS.get_name() == "Windows": return assets.get("windows", {})
 	if OS.get_name() == "Android": return assets.get("android", {})
 	return {}
+
+func _package_timeout_seconds(size_bytes: int) -> float:
+	# The previous fixed 1800-second timeout cut off the 1.99 GB Windows ZIP
+	# on the owner PC twice, exactly at 30 minutes. Allow at least an hour and
+	# budget down to 256 KiB/s, capped at three hours for a stalled transfer.
+	return clampf(float(maxi(0, size_bytes)) / 262144.0, 3600.0, 10800.0)
 
 func _fetch_manifest_signature() -> Dictionary:
 	if not FileAccess.file_exists(PUBLIC_KEY_PATH):
