@@ -16,6 +16,8 @@ const UPDATES_DIR := "user://updates"
 const LOG_PATH := "user://logs/aurora_update.log"
 const MANIFEST_URL := "https://github.com/Treninem/AI/releases/latest/download/update.json"
 const MANIFEST_SIG_URL := "https://github.com/Treninem/AI/releases/latest/download/update.sig"
+const RELEASE_API_URL := "https://api.github.com/repos/Treninem/AI/releases/latest"
+const RELEASE_ASSET_API_PREFIX := "https://api.github.com/repos/Treninem/AI/releases/assets/"
 const RELEASE_PAGE_URL := "https://github.com/Treninem/AI/releases/latest"
 const PUBLIC_KEY_PATH := "res://update/release_public.pub"
 
@@ -35,6 +37,7 @@ var downloaded_path := ""
 var checking := false
 var downloading := false
 var _timer := 0.0
+var _next_retry_unix := 0.0
 
 func _ready() -> void:
 	current_version = str(ProjectSettings.get_setting("application/config/version", "0.0.0"))
@@ -51,7 +54,7 @@ func _process(delta: float) -> void:
 	_timer = 0.0
 	var last := float(settings.get("last_check_unix", 0.0))
 	var hours := maxf(1.0, float(settings.get("check_interval_hours", 1)))
-	if Time.get_unix_time_from_system() - last >= hours * 3600.0:
+	if Time.get_unix_time_from_system() >= _next_retry_unix and Time.get_unix_time_from_system() - last >= hours * 3600.0:
 		check_for_updates(false)
 
 func _initial_check() -> void:
@@ -66,30 +69,21 @@ func check_for_updates(manual := true) -> Dictionary:
 	if manual:
 		update_check_started.emit()
 	_log("update check started version=%s manual=%s" % [current_version, manual])
-	var req := HTTPRequest.new()
-	req.timeout = 25.0
-	add_child(req)
-	var headers := PackedStringArray(["Accept: application/json", "User-Agent: AuroraFox-Updater/%s" % current_version])
-	var err := req.request(MANIFEST_URL, headers, HTTPClient.METHOD_GET)
-	if err != OK:
-		checking = false
-		req.queue_free()
-		return _fail("Не удалось запустить проверку обновлений: %s" % error_string(err), manual)
-	var result: Array = await req.request_completed
-	req.queue_free()
-	settings["last_check_unix"] = Time.get_unix_time_from_system()
-	_save_settings()
-	var code := int(result[1])
+	var manifest_response := await _fetch_release_asset("update.json", MANIFEST_URL)
+	var code := int(manifest_response.get("code", 0))
 	if code == 404:
 		checking = false
+		settings["last_check_unix"] = Time.get_unix_time_from_system()
+		_save_settings()
 		_log("no published update manifest yet")
 		if manual: no_update.emit(current_version)
 		return {"ok": true, "available": false, "version": current_version}
-	if code < 200 or code >= 300:
+	if not bool(manifest_response.get("ok", false)):
 		checking = false
-		return _fail("Сервер обновлений ответил кодом %d" % code, manual)
+		_next_retry_unix = Time.get_unix_time_from_system() + 300.0
+		return _fail("Не удалось проверить stable-обновление: %s" % str(manifest_response.get("error", "нет ответа")), manual)
 
-	var manifest_bytes: PackedByteArray = result[3]
+	var manifest_bytes: PackedByteArray = manifest_response.get("body", PackedByteArray())
 	var raw := manifest_bytes.get_string_from_utf8()
 	var untrusted_parsed = JSON.parse_string(raw)
 	if not FileAccess.file_exists(PUBLIC_KEY_PATH):
@@ -116,11 +110,15 @@ func check_for_updates(manual := true) -> Dictionary:
 	var signature_result := await _fetch_manifest_signature()
 	if not signature_result.get("ok", false):
 		checking = false
+		_next_retry_unix = Time.get_unix_time_from_system() + 300.0
 		return _fail(str(signature_result.get("error", "Подпись update.json недоступна")), manual)
 	if not _verify_manifest_signature(manifest_bytes, signature_result.get("signature", PackedByteArray())):
 		checking = false
 		return _fail("Криптографическая подпись update.json недействительна. Обновление отклонено.", manual)
 	_log("update manifest RSA-SHA256 signature verified")
+	settings["last_check_unix"] = Time.get_unix_time_from_system()
+	_next_retry_unix = 0.0
+	_save_settings()
 
 	var parsed = untrusted_parsed
 	checking = false
@@ -183,9 +181,10 @@ func download_update(manual := true) -> Dictionary:
 	req.queue_free()
 	downloading = false
 	var code := int(result[1])
-	if code < 200 or code >= 300:
+	var transport := int(result[0])
+	if transport != HTTPRequest.RESULT_SUCCESS or code < 200 or code >= 300:
 		DirAccess.remove_absolute(absolute)
-		return _fail("Ошибка загрузки обновления: HTTP %d" % code, manual)
+		return _fail("Ошибка загрузки обновления: %s" % _request_failure(transport, code), manual)
 	var actual := _sha256_file(absolute)
 	if actual.is_empty() or actual != expected:
 		DirAccess.remove_absolute(absolute)
@@ -238,23 +237,79 @@ func _platform_asset(info: Dictionary) -> Dictionary:
 func _fetch_manifest_signature() -> Dictionary:
 	if not FileAccess.file_exists(PUBLIC_KEY_PATH):
 		return {"ok": false, "error": "В этой сборке отсутствует публичный ключ обновлений AuroraFox"}
-	var req := HTTPRequest.new()
-	req.timeout = 25.0
-	add_child(req)
-	var headers := PackedStringArray(["Accept: application/octet-stream", "User-Agent: AuroraFox-Updater/%s" % current_version])
-	var err := req.request(MANIFEST_SIG_URL, headers, HTTPClient.METHOD_GET)
-	if err != OK:
-		req.queue_free()
-		return {"ok": false, "error": "Не удалось запросить подпись update.sig: %s" % error_string(err)}
-	var result: Array = await req.request_completed
-	req.queue_free()
-	var code := int(result[1])
-	if code < 200 or code >= 300:
-		return {"ok": false, "error": "Подпись update.sig недоступна: HTTP %d" % code}
-	var signature: PackedByteArray = result[3]
+	var response := await _fetch_release_asset("update.sig", MANIFEST_SIG_URL)
+	if not bool(response.get("ok", false)):
+		return {"ok": false, "error": "Подпись update.sig недоступна: %s" % str(response.get("error", "нет ответа"))}
+	var signature: PackedByteArray = response.get("body", PackedByteArray())
 	if signature.size() < 128:
 		return {"ok": false, "error": "Файл update.sig слишком короткий"}
 	return {"ok": true, "signature": signature}
+
+func _fetch_release_asset(filename: String, direct_url: String) -> Dictionary:
+	var direct := await _request_bytes(direct_url, "application/octet-stream")
+	if bool(direct.get("ok", false)) or int(direct.get("code", 0)) == 404:
+		return direct
+	# A failed redirect/TLS/DNS request to github.com can still leave the
+	# official GitHub API reachable. Asset bytes remain untrusted until RSA
+	# signature verification (and the package SHA-256 gate).
+	var release := await _request_bytes(RELEASE_API_URL, "application/vnd.github+json")
+	if not bool(release.get("ok", false)):
+		return {"ok": false, "error": "%s; GitHub API: %s" % [str(direct.get("error", "нет ответа")), str(release.get("error", "нет ответа"))]}
+	var release_bytes: PackedByteArray = release.get("body", PackedByteArray())
+	var metadata = JSON.parse_string(release_bytes.get_string_from_utf8())
+	if not metadata is Dictionary or bool(metadata.get("draft", true)) or bool(metadata.get("prerelease", true)):
+		return {"ok": false, "error": "GitHub API не вернул опубликованный stable-релиз"}
+	var assets = metadata.get("assets", [])
+	if not assets is Array:
+		return {"ok": false, "error": "GitHub API не вернул список файлов релиза"}
+	for asset in assets:
+		if asset is Dictionary and str(asset.get("name", "")) == filename:
+			var api_url := str(asset.get("url", ""))
+			if not api_url.begins_with(RELEASE_ASSET_API_PREFIX):
+				return {"ok": false, "error": "GitHub API вернул неожиданный адрес файла"}
+			_log("stable asset fallback via GitHub API name=%s tag=%s" % [filename, str(metadata.get("tag_name", ""))])
+			var fallback := await _request_bytes(api_url, "application/octet-stream")
+			if bool(fallback.get("ok", false)):
+				return fallback
+			return {"ok": false, "error": "%s; GitHub API asset: %s" % [str(direct.get("error", "нет ответа")), str(fallback.get("error", "нет ответа"))]}
+	return {"ok": false, "error": "В stable-релизе отсутствует %s" % filename}
+
+func _request_bytes(url: String, accept: String) -> Dictionary:
+	for attempt in range(2):
+		var req := HTTPRequest.new()
+		req.timeout = 25.0
+		add_child(req)
+		var headers := PackedStringArray(["Accept: " + accept, "User-Agent: AuroraFox-Updater/%s" % current_version])
+		var start_error := req.request(url, headers, HTTPClient.METHOD_GET)
+		if start_error != OK:
+			req.queue_free()
+			return {"ok": false, "error": "запрос не запущен: %s" % error_string(start_error), "code": 0}
+		var result: Array = await req.request_completed
+		req.queue_free()
+		var transport := int(result[0])
+		var code := int(result[1])
+		_log("update HTTP url=%s result=%d status=%d attempt=%d" % [url, transport, code, attempt + 1])
+		if transport == HTTPRequest.RESULT_SUCCESS and code >= 200 and code < 300:
+			return {"ok": true, "body": result[3], "code": code}
+		var detail := _request_failure(transport, code)
+		if attempt == 0 and (transport != HTTPRequest.RESULT_SUCCESS or code >= 500):
+			await get_tree().create_timer(1.0).timeout
+			continue
+		return {"ok": false, "error": detail, "code": code, "result": transport}
+	return {"ok": false, "error": "повторный запрос не завершился", "code": 0}
+
+func _request_failure(result: int, code: int) -> String:
+	if result == HTTPRequest.RESULT_SUCCESS:
+		if code == 0: return "сервер не прислал HTTP-ответ"
+		return "HTTP %d" % code
+	match result:
+		HTTPRequest.RESULT_CANT_RESOLVE: return "не удалось определить адрес сервера (DNS), код Godot %d" % result
+		HTTPRequest.RESULT_CANT_CONNECT: return "нет соединения с сервером, код Godot %d" % result
+		HTTPRequest.RESULT_CONNECTION_ERROR: return "соединение прервано, код Godot %d" % result
+		HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR: return "ошибка защищённого соединения TLS, код Godot %d" % result
+		HTTPRequest.RESULT_TIMEOUT: return "истекло время ожидания сети, код Godot %d" % result
+		HTTPRequest.RESULT_REDIRECT_LIMIT_REACHED: return "слишком много перенаправлений, код Godot %d" % result
+		_: return "сетевая ошибка Godot %d, HTTP %d" % [result, code]
 
 func _verify_manifest_signature(payload: PackedByteArray, signature: PackedByteArray) -> bool:
 	var key := CryptoKey.new()
