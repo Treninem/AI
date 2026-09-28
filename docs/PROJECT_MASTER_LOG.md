@@ -85,10 +85,12 @@ AuroraFox — существующий локальный AI-помощник н
 
 AuroraFox использует формат `MAJOR.MINOR.PATCH.BUILD` (`A.B.C.D`). Нельзя выпускать функционально изменённый продукт под тем же номером, что уже был собран/передан пользователям.
 
-- `MAJOR` (`A`) — несовместимая архитектурная миграция или крупная смена продукта/данных/API, требующая осознанного перехода.
-- `MINOR` (`B`) — крупная новая возможность, самостоятельный крупный блок, заметная переработка нескольких подсистем или новый release floor.
-- `PATCH` (`C`) — завершённое улучшение/переработка существующего блока: UI, голос, память, knowledge, updater, Core quality, Computer Agent и т.п., если совместимость сохраняется.
-- `BUILD` (`D`) — точечный исправленный дефект/hotfix/packaging fix без изменения общего пользовательского контракта.
+- `MAJOR` (`A`) — полная реконструкция продукта.
+- `MINOR` (`B`) — глобальное изменение продукта.
+- `PATCH` (`C`) — добавление функционала.
+- `BUILD` (`D`) — исправления.
+
+Это точная семантика владельца от 2026-09-27; исторические трактовки уровней в ранних CLAIM ниже не назначают версии будущих выпусков. Версия меняется последним шагом после acceptance, а не на каждом внутреннем коммите.
 
 Обязательный процесс:
 
@@ -3493,3 +3495,67 @@ REMAINING: exact-SHA Release Identity verdict, merge PR #96 and signed publicati
 BLOCKERS: Release Identity rerun pending for corrected candidate.
 NEXT: inspect automatic CI on the new PR #96 head; merge only if green.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
+
+## 113. OWNER DIRECTION / CLAIM `CODEX-2026-09-28-PLATFORM-FOUNDATION`
+
+- Статус: **ACTIVE — independent UI/runtime foundation work on `feature/aurorafox-platform-foundation`**. Source baseline main `caba7d34eb497e6a25b37a61d300f1cd6fb029cd`, publicly released V1.4.1.1. Existing updater PR #97 `fix/windows-update-transport-result` remains its own active lane and owns `update/update_manager.gd`, updater tests and signing flow; reconcile its journal edits when merging.
+- Режим: Codex. Owner expressly authorized beginning the next update and combining changes with a common foundation. The stale `CHAT-2026-09-16-UI-POLISH` claim is taken over for current desktop/mobile presentation work; preserve its accumulated implementation and `fox_logo.svg` owner asset. This claim owns `scripts/settings_overlay.gd`, `scripts/settings_visual_fix.gd`, `scripts/main.gd`, `scripts/mobile_ui_adapter.gd`, `api/settings_overlay.gd` (only Settings window binding), relevant UI/Work tests/screenshots and this journal. Reserve Android runtime code only after measuring it; do not edit updater files concurrently with PR #97.
+- Intended A.B.C.D bump: **V1.5.0.0** if a verified global client presentation/runtime change ships; A=full reconstruction, B=global change, C=new functionality, D=fix. Candidate only, never change canonical version before acceptance. If scope shrinks to fixes, use the appropriate D bump instead. Published V1.4.1.1 stays stable; updater repair V1.4.1.2 has priority and can ship independently. Every installable Android release increases versionCode.
+
+### Owner requirements recorded verbatim in engineering terms
+
+1. Future Windows and Android updates must finish after network interruptions: small, sequential verified chunks, durable completed parts, retry/backoff on reconnection and restart, recheck signed manifest and per-part/full-package hash, then apply with existing rollback/health gates. No fixed overall wall-clock timeout; detect a genuinely stalled transfer, show progress and resume only missing bytes. Never execute or apply unverified data. The installed V1.4.0.0 cannot acquire this code retroactively; a one-time installer may be needed.
+2. Settings must remain open when clicking outside. On Windows they should act as a separate usable window with taskbar identity and icon; on Android remain a correctly sized in-app surface. A visible close control and explicit close behavior are required.
+3. Windows and Android should become responsive: diagnose startup, synchronous persistence, UI rebuilds and Core response timing separately. Android symptom from owner: actions are announced as complete in background but UI content appears only after application restart; acceptance must cover same-session refresh and bounded interaction latency, without reducing Core/tool/voice/file features.
+4. Remove visible Godot branding on production startup, provide AuroraFox icon on taskbar and launch surface, polish adaptive layouts. New actions must not overlap existing controls at supported desktop sizes, Android portrait/landscape, safe areas and keyboard states. Verify geometry in code and inspect actual captured images; do not call a UI pixel-perfect solely from static checks.
+5. Evaluate a ChatGPT-like desktop/mobile shell against measured current Godot bottlenecks. Retain existing local Core, sandboxes, offline data, permissions, tools, voice, update trust and Android signing. A full replacement of Godot would be an A-level reconstruction and requires a working migration prototype with parity and performance evidence; no blind rewrite.
+6. Previously agreed functional update on the shared data foundation follows: Universal Intake (chat file classification and quarantine), multi-GGUF registry/activation, local Embeddings/RAG, source provenance and rollback. This is a separate C-level feature package unless all its acceptance gates can be completed together with the platform foundation. Web/accounts/sync remain a later production package. Evolution Engine is already in V1.4.1.1.
+
+### Initial source audit and acceptance
+
+- `scripts/settings_overlay.gd` uses `PopupPanel.popup_centered()`, whose popup semantics explain closing on outside click. `project.godot` has an AuroraFox project icon, but Windows native window/taskbar export identity must be inspected on a real packaged binary. `scripts/main.gd` recreates all message controls on every append and resize; `ChatStore.save_all()` rewrites the whole JSON chat store synchronously per message. These are confirmed source costs, not yet a measured explanation for every Android stall.
+- Begin with a narrow UI change: persistent desktop Settings window; mobile settings kept compatible; incremental chat rendering/refresh measured against existing behavior. Relevant Godot parse, UI smoke, small geometry tests and screenshot review first, then automatic same-head CI; no manual duplicate Windows/Android heavy workflows. No new version metadata until source acceptance.
+- Updater reliability must be integrated from PR #97 before any V1.5 package. A larger timeout alone is insufficient for an intermittent link; the signed release pipeline and client need a durable sharded or range-resume contract, with interruption/restart tests and real Windows/Android acceptance. Keep the pinned RSA public key, permanent manifest URL, SHA-256, atomic apply and rollback.
+
+PROGRESS_COMPLETE: 10%
+PROGRESS_REMAINING: 90%
+DONE: owner architecture, symptoms and exact A.B.C.D policy captured; source baseline and separate updater ownership reconciled; concrete UI rebuild/popup costs located.
+REMAINING: UI/runtime implementation and visual/device proof; durable chunked updater/release integration and interrupted-network proof; source/version/package/release acceptance.
+BLOCKERS: hardware-dependent UI/performance symptoms lack profiler traces; old V1.4.0.0 binary has fixed download timeout; PR #97 is independent and pending CI.
+NEXT: implement focused persistent Settings window and same-session chat presentation fix on this branch; separately extend PR #97 with resumable verified chunks, then measure/accept before version-last release.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+### CHECKPOINT 2026-09-28 — first platform UI source block
+
+- On `feature/aurorafox-platform-foundation`: desktop Settings now uses a persistent non-transient `Window` (native in exported Windows), with explicit close; Android retains PopupPanel. Settings paints before local Core/file health probes. Chat preserves existing message card nodes when appending and refits card widths on resize instead of rebuilding all rows. AuroraFox Windows icon has 16/32/48/64/128/256 ICO variants derived from the existing owner-approved avatar; project taskbar native icon/export preset and branded Godot boot splash are configured. No Core, sandbox or signing changes.
+- Focused UI smoke checks desktop vs mobile window class and incremental card identity. Local `git diff --check` and ICO/config inspection pass; this workspace lacks a Godot executable, so GDScript parse/UI screenshots/Windows taskbar/Android installed behavior are **not yet verified**. Do not present this source candidate as a finished visual/performance fix.
+- User's durable chunk/reconnect updater requirement remains a separate work item built on top of PR #97. The current 1–3 hour timeout in that PR is only a bounded mitigation, not a resumable downloader; version-last V1.4.1.2 may ship as emergency repair, but must not be described as meeting the new no-loss resume contract.
+
+PROGRESS_COMPLETE: 10%
+PROGRESS_REMAINING: 90%
+DONE: independent UI source candidate and regression checks; icon and splash configuration; local diff/icon checks.
+REMAINING: exact-head Godot/UI CI, screenshot inspection, installed Windows taskbar/settings, Android same-session/latency acceptance; durable chunked updater and complete release train.
+BLOCKERS: no Godot/Windows/Android installed runtime in this workspace; owner UI symptoms need measured device evidence; PR #97 updater has no resume contract yet.
+NEXT: publish UI candidate as a draft PR for automatic CI and visual artifacts; then implement chunked signed release and restartable client download on a reconciled updater branch.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+### CHECKPOINT 2026-09-28 — focused local UI acceptance
+
+- Godot 4.7.1-stable imported the exact candidate and ran `tests/desktop_ui_smoke.gd`: `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`, exit 0. The first run exposed a real integration assumption in `api/settings_overlay.gd`: account nav was injected only when Settings was `PopupPanel`. Changed the binding to accept `Window`, without changing account/auth behavior. `tests/work_mode_smoke.gd` now checks the desktop Window background and prints `AURORA_WORK_MODE_SMOKE_OK`, exit 0. No visual screenshot or installed Windows taskbar evidence yet.
+- Local import/smoke produced nonfatal Godot ObjectDB/resource cleanup warnings at exit; they are not treated as screenshot/device proof. `git diff --check` and ICO sizes/config pass.
+
+PROGRESS_COMPLETE: 20%
+PROGRESS_REMAINING: 80%
+DONE: persistent desktop Settings, live chat append, icon/splash and account/Work binding; focused Godot desktop/mobile UI and Work smoke pass locally.
+REMAINING: publish corrected candidate, exact-head automatic CI, screenshot and installed device/performance evidence; resumable updater integration and version-last release.
+BLOCKERS: Windows taskbar and Android installed interaction have not been observed; PR #97 chunked updater unaccepted.
+NEXT: update draft PR #98 with corrected API/Work binding, inspect automatic UI CI, then visually review captured layouts.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+PROGRESS_COMPLETE: 10%
+PROGRESS_REMAINING: 90%
+DONE: independent UI source candidate and regression checks; icon and splash configuration; local diff/icon checks.
+REMAINING: exact-head Godot/UI CI, screenshot inspection, installed Windows taskbar/settings, Android same-session/latency acceptance; durable chunked updater and complete release train.
+BLOCKERS: no Godot/Windows/Android installed runtime in this workspace; owner UI symptoms need measured device evidence; PR #97 updater has no resume contract yet.
+NEXT: publish UI candidate as a draft PR for automatic CI and visual artifacts; then implement chunked signed release and restartable client download on a reconciled updater branch.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%

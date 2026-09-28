@@ -16,11 +16,16 @@ func _apply() -> void:
 	if overlay == null:
 		return
 	var popup = overlay.get("popup")
-	if not popup is PopupPanel:
+	if not popup is Window:
 		return
-	var panel := popup as PopupPanel
-	panel.add_theme_stylebox_override("panel", _panel_style())
-	panel.transparent_bg = false
+	var panel := popup as Window
+	if panel is PopupPanel:
+		(panel as PopupPanel).add_theme_stylebox_override("panel", _panel_style())
+		(panel as PopupPanel).transparent_bg = false
+	else:
+		var background := panel.get_node_or_null("SettingsWindowBackground") as Panel
+		if background != null:
+			background.add_theme_stylebox_override("panel", _panel_style())
 	if overlay.has_method("_fit_popup"):
 		overlay.call("_fit_popup")
 	_hide_legacy_model_management(panel)
@@ -39,7 +44,7 @@ func _apply() -> void:
 					break
 			overlay.call("_select_page", current_key)
 
-func _hide_legacy_model_management(panel: PopupPanel) -> void:
+func _hide_legacy_model_management(panel: Window) -> void:
 	# Bundled AuroraFox Core is the normal self-contained product path. New UI
 	# does not create a model-management button at all; this guard only neutralizes
 	# a legacy/compatibility control if an older overlay injects one at runtime.
@@ -66,7 +71,7 @@ func _hide_legacy_model_management(panel: PopupPanel) -> void:
 func _is_mobile_layout() -> bool:
 	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
 
-func _fix_mobile_navigation(panel: PopupPanel) -> void:
+func _fix_mobile_navigation(panel: Window) -> void:
 	if not _is_mobile_layout():
 		return
 	# Current mobile settings use one OptionButton selector. Keep this legacy
