@@ -18,7 +18,9 @@ var active_model := ""
 var starting := false
 
 func _exit_tree() -> void:
-	stop()
+	# Tree teardown is the one path that must always terminate an owned process,
+	# even when the model is still loading.
+	stop(true)
 
 func is_available() -> bool:
 	return OS.get_name() == "Windows" and not engine_path().is_empty()
@@ -144,7 +146,13 @@ func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 		"background_warmup_continues": true
 	}
 
-func stop() -> void:
+func stop(force := false) -> void:
+	# A foreground chat can time out its short join while the background loader
+	# still legitimately owns the same llama-server startup. Generic recovery
+	# must not kill that process and reset a slow machine back to zero. Explicit
+	# teardown remains available through force=true from _exit_tree().
+	if starting and not force:
+		return
 	if server_pid > 0 and OS.is_process_running(server_pid): OS.kill(server_pid)
 	server_pid = 0
 	active_model = ""
