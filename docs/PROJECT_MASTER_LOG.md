@@ -3493,3 +3493,22 @@ REMAINING: exact-SHA Release Identity verdict, merge PR #96 and signed publicati
 BLOCKERS: Release Identity rerun pending for corrected candidate.
 NEXT: inspect automatic CI on the new PR #96 head; merge only if green.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
+
+### CLAIM `CODEX-2026-09-28-WINDOWS-UPDATE-TRANSPORT`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `caba7d34eb497e6a25b37a61d300f1cd6fb029cd` (published V1.4.1.1).
+- Режим: Codex; ветка `fix/windows-update-transport-result`.
+- Цель: диагностировать и исправить отказ проверки stable-обновления на установленной Windows AuroraFox: «Сервер обновлений ответил кодом 0».
+- Предполагаемый bump после зелёных acceptance-gates: **BUILD** (следующий выпуск V1.4.1.2); текущую опубликованную V1.4.1.1 не перепаковывать.
+- Файлы/подсистема: `update/update_manager.gd`, относящиеся `tests/update*`, `docs/AURORAFOX_ENGINEERING_MEMORY.md`, этот журнал. UI overlay, signing identity и release workflow не менять.
+- Takeover/reconcile: исторический `CHAT-2026-09-16-UPDATER-VERSIONING` закреплял updater до V1.4 signed floor, который уже опубликован; этот новый дефект на свежем main принят владельцем после V1.4.1.1 и расследуется отдельно поверх завершённого release. Старую заявку не удалять.
+- Evidence: owner screenshot V1.4.0.0/1.4.1.1 Windows settings, code 0; `update.json` и `update.sig` публично опубликованы в V1.4.1.1, release publish run `36393173336` SUCCESS. Причина transport failure на owner PC пока неизвестна: HTTPRequest result enum сейчас теряется.
+- NEXT: сохранить transport result/HTTP code и точный URL, добавить ограниченное повторение для transient errors и проверяемый regression contract; запросить owner log для установления сетевой причины; не ослаблять RSA/SHA trust gates.
+
+PROGRESS_COMPLETE: 30%
+PROGRESS_REMAINING: 70%
+DONE: опубликованный release и исходный transport handling проверены; область исправления ограничена.
+REMAINING: source fix, targeted test/CI, owner Windows acceptance, version-last V1.4.1.2.
+BLOCKERS: нет фактического HTTPRequest result из owner log, поэтому сетевой root cause пока гипотеза.
+NEXT: реализовать диагностируемый bounded transport retry, затем проверить точные gates.
