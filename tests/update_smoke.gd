@@ -58,6 +58,17 @@ func _init() -> void:
 		quit(37)
 		return
 
+	# The signed 2 GB Windows package must not be cut off at the old
+	# 30-minute HTTPRequest limit; the fallback remains bounded.
+	if updater._package_timeout_seconds(1998889332) <= 1800.0:
+		push_error("Windows package still has the 30-minute timeout")
+		quit(38)
+		return
+	if updater._package_timeout_seconds(0) != 3600.0 or updater._package_timeout_seconds(9223372036854775807) != 10800.0:
+		push_error("Package transfer timeout escaped its bounds")
+		quit(39)
+		return
+
 	var source := FileAccess.get_file_as_string("res://update/update_manager.gd")
 	if not source.contains('response["apply"] = apply_downloaded_update(manual)'):
 		push_error("Verified updates are not automatically applied")
