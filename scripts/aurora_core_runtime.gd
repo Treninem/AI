@@ -238,13 +238,13 @@ func _reset_model_failure(path: String) -> void:
 	_model_failures.erase(path)
 
 func retry_local_now() -> void:
-	# One user-request retry may clear transient startup quarantine and restart
-	# the owned Windows backend. Integrity checks and candidate bounds remain in
-	# force when the request is attempted again.
+	# A user retry clears only transient model quarantine. Do not eagerly kill a
+	# live or still-loading Windows Core: DesktopLocalRuntime.ensure_server()
+	# already joins an active warmup and health-checks a running process before
+	# deciding whether a restart is actually necessary. Eager stop here created
+	# a restart loop on slower PCs because every retry reset model loading to 0%.
 	_model_failures.clear()
 	_last_local_error = ""
-	if OS.get_name() == "Windows":
-		desktop_runtime.stop()
 
 func _model_circuit_open(path: String) -> bool:
 	if not _model_failures.has(path):

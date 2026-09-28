@@ -128,6 +128,7 @@ def test_request_scoped_core_failures_do_not_quarantine_a_valid_model() -> None:
 def test_windows_prefers_packaged_core_and_normal_chat_recovers_without_setup() -> None:
     bundled = BUNDLED_CORE.read_text(encoding="utf-8")
     core = CORE_RUNTIME.read_text(encoding="utf-8")
+    runtime = DESKTOP_RUNTIME.read_text(encoding="utf-8")
     client = AI_CLIENT.read_text(encoding="utf-8")
     main = MAIN.read_text(encoding="utf-8")
 
@@ -138,8 +139,11 @@ def test_windows_prefers_packaged_core_and_normal_chat_recovers_without_setup() 
     assert "AuroraBundledCoreModel.windows_packaged_path()" in core
     assert "if packaged != model_path and _looks_like_gguf(packaged):" in core
     assert "func retry_local_now()" in core
-    assert "_model_failures.clear()" in core
-    assert "desktop_runtime.stop()" in core
+    retry_body = core.split("func retry_local_now() -> void:", 1)[1].split("func _model_circuit_open", 1)[0]
+    assert "_model_failures.clear()" in retry_body
+    assert "desktop_runtime.stop()" not in retry_body
+    assert "func stop(force := false) -> void:" in runtime
+    assert "if starting and not force:" in runtime
     assert "func retry_core_now()" in client
     assert "core_runtime.retry_local_now()" in client
     assert 'if answer.begins_with("Ошибка модели:"):' in main
