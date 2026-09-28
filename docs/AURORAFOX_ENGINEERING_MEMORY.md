@@ -542,5 +542,5 @@
 - **Нерабочие попытки:** increasing Core timeouts or waiting for `PopupPanel` to stay open cannot change popup close semantics; restarting Android reveals persisted content but does not solve live presentation.
 - **Решение:** separate non-transient native desktop Settings `Window`; mobile retains embedded PopupPanel; show settings before asynchronous health probes; append only new message cards and refit widths on resize. Source candidate on `feature/aurorafox-platform-foundation`.
 - **Профилактика:** desktop/mobile UI smoke asserts window class and verifies old card identity after append; Windows installed taskbar/window proof, Android same-session response and visual screenshots still required.
-- **Evidence:** owner report; source inspection; local static icon/diff validation. No installed performance measurement yet.
+- **Evidence:** owner report; source inspection; Godot 4.7.1 desktop/mobile UI smoke and Work smoke exit 0 after correcting `api/settings_overlay.gd` to inject account navigation into a `Window`; local icon/diff validation. No installed performance measurement yet.
 - **Статус:** ACTIVE SOURCE CANDIDATE; CI and installed device validation pending.
