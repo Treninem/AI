@@ -43,6 +43,21 @@ func _init() -> void:
 			quit(21)
 			return
 
+	# A response_code of 0 is not a server HTTP status; keep the
+	# transport result visible so owner diagnostics can identify DNS/TLS/timeouts.
+	if not updater._request_failure(HTTPRequest.RESULT_CANT_CONNECT, 0).contains("соединения"):
+		push_error("Updater concealed transport failure as HTTP 0")
+		quit(35)
+		return
+	if not updater._request_failure(HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR, 0).contains("TLS"):
+		push_error("Updater concealed TLS failure as HTTP 0")
+		quit(36)
+		return
+	if updater._request_failure(HTTPRequest.RESULT_SUCCESS, 503) != "HTTP 503":
+		push_error("Updater lost real HTTP response status")
+		quit(37)
+		return
+
 	var source := FileAccess.get_file_as_string("res://update/update_manager.gd")
 	if not source.contains('response["apply"] = apply_downloaded_update(manual)'):
 		push_error("Verified updates are not automatically applied")
