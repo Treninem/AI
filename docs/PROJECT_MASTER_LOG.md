@@ -3526,3 +3526,18 @@ DONE: source diagnosis, bounded fallback and focused error-class smoke committed
 REMAINING: exact-head CI, owner-PC network diagnosis, Windows installed acceptance, version-last delivery.
 BLOCKERS: owner Windows transport cause not known from V1.4.1.1's log; CI in progress on PR #97.
 NEXT: inspect automatic CI once completed, fix any concrete failure; ask owner to check direct manifest reachability; then accept and release a BUILD bump if installed update path works.
+
+### CHECKPOINT 2026-09-28 — owner log confirms Windows ZIP timeout
+
+- Owner installed `1.4.0.0` log: signed manifest verified and update `1.4.1.1` found; Windows ZIP starts `16:28:51` and `17:29:30` each fail at `16:58:49` / `17:59:30` with old `HTTP 0` label. Fixed `HTTPRequest.timeout=1800.0` in shipped source matches both 30-minute cutoffs. Public release ZIP is 1,998,889,332 bytes (SHA-256 digest remains manifest-bound).
+- PR #97 branch adds size-dependent package transfer window (`1–3 h`, 256 KiB/s allowance) and a focused Godot smoke guard. Existing signed manifest and package SHA-256 verification remain required. Intermittent 25-second metadata failures are a separate transport symptom; old binary did not log Godot transport result.
+- Previous candidate head `bb4906c57ff7451ae41eb056c669828b94cf24f2`: Core/Voice `36451610389`, Agent Sync `36451610026`, Release Identity `36451610097`, Integration `36451610308`, Android APK `36451610131` SUCCESS; Windows Package `36451610385` was in progress at last inspection. These results do not apply to the new timeout change. Automatic CI for new branch head must be checked once; no manual duplicates.
+- Delivery caveat: installed V1.4.0.0 cannot inherit source changes and needs a one-time manual newer installer if its link cannot deliver the large ZIP inside 30 minutes. Final release version remains version-last, intended V1.4.1.2.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: 30-minute package cutoff confirmed from owner timestamps and source; size-bound timeout and regression added to PR #97; metadata fallback remains.
+REMAINING: automatic exact-head CI and Windows installed updater acceptance, then version bump/package/sign/release; provide one-time migration path for existing 1.4.0.0.
+BLOCKERS: installed 1.4.0.0 has a hardcoded 1800-second limit; old binaries cannot be fixed in place without receiving a new build.
+NEXT: inspect automatic PR #97 CI on final candidate; merge once accepted, then version-last V1.4.1.2 and signed release; owner uses one-time installer if old auto-update still times out.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
