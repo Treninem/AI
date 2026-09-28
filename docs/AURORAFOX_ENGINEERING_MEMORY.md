@@ -533,3 +533,14 @@
 - **Профилактика:** release identity CI validates new versions against the permanent minimum without changing cryptographic identity.
 - **Evidence:** failed job `108717681705`, 1 failed/22 passed; targeted test contract fix on release/v1.4.1.1.
 - **Статус:** RESOLVED IN SOURCE; exact-SHA CI pending.
+
+#### AF-MEM-088 — Windows updater displayed transport failure as HTTP 0
+
+- **Дата/среда:** 2026-09-28; owner Windows installed AuroraFox V1.4.0.0/V1.4.1.1; source base `caba7d34eb497e6a25b37a61d300f1cd6fb029cd`.
+- **Симптом:** Settings → Updates: «Обновление сейчас недоступно • Сервер обновлений ответил кодом 0» при опубликованном stable release V1.4.1.1.
+- **Причина:** подтверждённый source defect: `HTTPRequest.request_completed` содержит transport result отдельно от HTTP response_code, но updater читал только `result[1]`; при отсутствии HTTP-ответа число 0 ошибочно показывалось как серверный код. Первичная причина сетевого отказа на owner PC (DNS/TLS/connect/redirect/timeout) пока **не подтверждена** без `aurora_update.log`.
+- **Нерабочие попытки:** повторять кнопку вслепую и трактовать 0 как HTTP-ошибку release сервера; опубликованный подписанный manifest уже присутствует.
+- **Решение:** различать `result[0]` и `result[1]`, сообщать точный transport class, логировать URL/result/status, ограниченно повторять малые metadata-запросы; при transport/5xx проблеме direct release URL пробовать официальный GitHub Releases API и asset endpoint. Любой полученный manifest остаётся недоверенным до pinned RSA-SHA256 verification; пакет остаётся под SHA-256 gate.
+- **Профилактика:** `tests/update_smoke.gd` различает transport 0/HTTP 503 и TLS/connect; owner log требуется для решения конкретной сетевой причины; installed Windows acceptance и version-last следующего выпуска обязательны.
+- **Evidence:** user screenshots; release publish `36393173336` SUCCESS, signed assets present; source branch `fix/windows-update-transport-result`.
+- **Статус:** ACTIVE; source candidate готовится, owner-PC transport result и CI ещё не проверены.
