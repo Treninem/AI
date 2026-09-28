@@ -42,6 +42,18 @@ def test_foreground_chat_does_not_repeat_long_core_startup() -> None:
     assert ".substr(0, 800)" in direct
 
 
+def test_retry_does_not_kill_an_active_background_core_warmup() -> None:
+    runtime = _text("scripts/desktop_local_runtime.gd")
+    core = _text("scripts/aurora_core_runtime.gd")
+    assert "func stop(force := false) -> void:" in runtime
+    stop_body = runtime.split("func stop(force := false) -> void:", 1)[1].split("func runtime_info", 1)[0]
+    assert "if starting and not force:" in stop_body
+    assert "return" in stop_body.split("if starting and not force:", 1)[1].split("OS.kill", 1)[0]
+    assert "OS.kill(server_pid)" in stop_body
+    assert "stop(true)" in runtime.split("func _exit_tree() -> void:", 1)[1].split("func is_available", 1)[0]
+    assert "desktop_runtime.stop()" in core
+
+
 def test_greeting_fast_path_and_status_labels_are_explicit() -> None:
     main = _text("scripts/main.gd")
     assert "func _fast_local_reply" in main
