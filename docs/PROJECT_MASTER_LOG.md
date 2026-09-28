@@ -3512,3 +3512,17 @@ DONE: опубликованный release и исходный transport handlin
 REMAINING: source fix, targeted test/CI, owner Windows acceptance, version-last V1.4.1.2.
 BLOCKERS: нет фактического HTTPRequest result из owner log, поэтому сетевой root cause пока гипотеза.
 NEXT: реализовать диагностируемый bounded transport retry, затем проверить точные gates.
+
+### CHECKPOINT 2026-09-28 — Windows updater HTTP 0 candidate in PR #97
+
+- Base HEAD: `caba7d34eb497e6a25b37a61d300f1cd6fb029cd`; branch `fix/windows-update-transport-result`, PR #97 head before checkpoint `d4f00d2eeecafe48b16836ba559f05049a949ca4`.
+- Changed: `update/update_manager.gd` now inspects Godot transport result separately from HTTP code, gives DNS/connect/TLS/timeout diagnostics, retries small metadata requests once, and falls back to official GitHub Releases API asset bytes when the direct transport fails. Signature and SHA-256 validation remain mandatory. `tests/update_smoke.gd` verifies error classification. `AF-MEM-088` records the failure and unconfirmed network cause.
+- Acceptance: PR #97 automatically triggered Integration Gate `36451485376`, Core/Voice `36451485069`, Windows Package `36451485544`, Android APK `36451484972`, Release Identity `36451485128`, Agent Sync `36451485412`; all were still running at this checkpoint. No duplicate workflow was dispatched.
+- Limit: the already installed V1.4.1.1 binary cannot inherit source changes; owner PC has only the old `HTTP 0` text, not the transport result. No claim that its network path is repaired yet. Next BUILD version V1.4.1.2 only after green targeted acceptance and Windows reproduction.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: source diagnosis, bounded fallback and focused error-class smoke committed to PR #97; signing gates unchanged.
+REMAINING: exact-head CI, owner-PC network diagnosis, Windows installed acceptance, version-last delivery.
+BLOCKERS: owner Windows transport cause not known from V1.4.1.1's log; CI in progress on PR #97.
+NEXT: inspect automatic CI once completed, fix any concrete failure; ask owner to check direct manifest reachability; then accept and release a BUILD bump if installed update path works.
