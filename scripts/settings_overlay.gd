@@ -12,7 +12,7 @@ const MUTED := Color("8d98ad")
 const WHITE := Color("f3f6ff")
 const WARNING := Color("ffbd75")
 
-var popup: PopupPanel
+var popup: Window
 var page_stack: TabContainer
 var nav_buttons: Array[Button] = []
 var nav_keys: Array[String] = []
@@ -114,11 +114,20 @@ func _set_mic_mode(value: String) -> void:
 		voice.call("set_mic_mode", value)
 
 func show_settings(initial_page := "general") -> void:
-	await _sync_status()
-	_refresh_project_list()
 	_select_page(initial_page)
 	_fit_popup()
-	popup.popup_centered()
+	if _is_mobile_layout():
+		popup.popup_centered()
+	else:
+		# A normal native window remains open when the user clicks the chat.
+		# Do not use PopupPanel here: it closes on outside input by design.
+		popup.position = get_window().position + (get_window().size - popup.size) / 2
+		popup.show()
+		popup.grab_focus()
+	# Health probes can involve a slow local Core or file runtime. Paint the
+	# window first and refresh its status without blocking the opening action.
+	call_deferred("_sync_status")
+	call_deferred("_refresh_project_list")
 
 func _is_mobile_layout() -> bool:
 	return OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false))
@@ -161,11 +170,26 @@ func _build_ui() -> void:
 	layer.layer = 110
 	add_child(layer)
 
-	popup = PopupPanel.new()
+	popup = PopupPanel.new() if _is_mobile_layout() else Window.new()
 	popup.name = "SettingsPopup"
 	popup.size = Vector2i(1000, 760)
-	popup.add_theme_stylebox_override("panel", _panel_style())
+	popup.visible = false
+	if popup is PopupPanel:
+		(popup as PopupPanel).add_theme_stylebox_override("panel", _panel_style())
+	else:
+		popup.title = "Настройки AuroraFox"
+		popup.force_native = OS.get_name() == "Windows" and not OS.has_feature("editor")
+		popup.transient = false
+		popup.exclusive = false
+		popup.close_requested.connect(func(): popup.hide())
 	layer.add_child(popup)
+	if not popup is PopupPanel:
+		var background := Panel.new()
+		background.name = "SettingsWindowBackground"
+		background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		background.add_theme_stylebox_override("panel", _panel_style())
+		popup.add_child(background)
 
 	var legacy_sink := VBoxContainer.new()
 	legacy_sink.name = "LegacySettingsInjectionSink"

@@ -3524,3 +3524,17 @@ REMAINING: UI/runtime implementation and visual/device proof; durable chunked up
 BLOCKERS: hardware-dependent UI/performance symptoms lack profiler traces; old V1.4.0.0 binary has fixed download timeout; PR #97 is independent and pending CI.
 NEXT: implement focused persistent Settings window and same-session chat presentation fix on this branch; separately extend PR #97 with resumable verified chunks, then measure/accept before version-last release.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%
+
+### CHECKPOINT 2026-09-28 — first platform UI source block
+
+- On `feature/aurorafox-platform-foundation`: desktop Settings now uses a persistent non-transient `Window` (native in exported Windows), with explicit close; Android retains PopupPanel. Settings paints before local Core/file health probes. Chat preserves existing message card nodes when appending and refits card widths on resize instead of rebuilding all rows. AuroraFox Windows icon has 16/32/48/64/128/256 ICO variants derived from the existing owner-approved avatar; project taskbar native icon/export preset and branded Godot boot splash are configured. No Core, sandbox or signing changes.
+- Focused UI smoke checks desktop vs mobile window class and incremental card identity. Local `git diff --check` and ICO/config inspection pass; this workspace lacks a Godot executable, so GDScript parse/UI screenshots/Windows taskbar/Android installed behavior are **not yet verified**. Do not present this source candidate as a finished visual/performance fix.
+- User's durable chunk/reconnect updater requirement remains a separate work item built on top of PR #97. The current 1–3 hour timeout in that PR is only a bounded mitigation, not a resumable downloader; version-last V1.4.1.2 may ship as emergency repair, but must not be described as meeting the new no-loss resume contract.
+
+PROGRESS_COMPLETE: 10%
+PROGRESS_REMAINING: 90%
+DONE: independent UI source candidate and regression checks; icon and splash configuration; local diff/icon checks.
+REMAINING: exact-head Godot/UI CI, screenshot inspection, installed Windows taskbar/settings, Android same-session/latency acceptance; durable chunked updater and complete release train.
+BLOCKERS: no Godot/Windows/Android installed runtime in this workspace; owner UI symptoms need measured device evidence; PR #97 updater has no resume contract yet.
+NEXT: publish UI candidate as a draft PR for automatic CI and visual artifacts; then implement chunked signed release and restartable client download on a reconciled updater branch.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%

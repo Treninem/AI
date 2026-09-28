@@ -533,3 +533,14 @@
 - **Профилактика:** release identity CI validates new versions against the permanent minimum without changing cryptographic identity.
 - **Evidence:** failed job `108717681705`, 1 failed/22 passed; targeted test contract fix on release/v1.4.1.1.
 - **Статус:** RESOLVED IN SOURCE; exact-SHA CI pending.
+
+#### AF-MEM-089 — Settings PopupPanel closes on outside click; full chat redraw stalls presentation
+
+- **Дата/среда:** 2026-09-28; owner Windows/Android V1.4.0.0/V1.4.1.1 reports Settings disappearing on incidental click and Android responses appearing only after restart. Source main `caba7d34eb497e6a25b37a61d300f1cd6fb029cd`.
+- **Симптом:** Settings click outside hides the popup; chat recreates every message control when a new message arrives and after viewport resize. Android may announce completion before presentation catches up, but the entire minutes-long delay is not yet attributed to this UI cost alone.
+- **Причина:** confirmed source behavior: `SettingsOverlay` creates `PopupPanel`; `main.gd::_render_active_chat` clears/rebuilds all message cards and `_on_viewport_resized` invokes it. `ChatStore.save_all()` additionally serializes/writes the full conversation store on every message, an unmeasured risk for long histories.
+- **Нерабочие попытки:** increasing Core timeouts or waiting for `PopupPanel` to stay open cannot change popup close semantics; restarting Android reveals persisted content but does not solve live presentation.
+- **Решение:** separate non-transient native desktop Settings `Window`; mobile retains embedded PopupPanel; show settings before asynchronous health probes; append only new message cards and refit widths on resize. Source candidate on `feature/aurorafox-platform-foundation`.
+- **Профилактика:** desktop/mobile UI smoke asserts window class and verifies old card identity after append; Windows installed taskbar/window proof, Android same-session response and visual screenshots still required.
+- **Evidence:** owner report; source inspection; local static icon/diff validation. No installed performance measurement yet.
+- **Статус:** ACTIVE SOURCE CANDIDATE; CI and installed device validation pending.
