@@ -98,7 +98,7 @@ def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> 
     assert "DEFAULT_THREADS := 2" in runtime
     assert '"--threads", str(DEFAULT_THREADS)' in runtime
     assert "TERSE_CHAT_MAX_TOKENS := 128" in runtime
-    assert "DEFAULT_CONTEXT_SIZE := 2048" in runtime
+    assert "DEFAULT_CONTEXT_SIZE := 4096" in runtime
     assert "DEFAULT_PARALLEL_SLOTS := 1" in runtime
     assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0" in runtime
     assert '"max_tokens": max_tokens' in runtime
