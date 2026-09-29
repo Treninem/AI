@@ -147,7 +147,7 @@ def test_p0_runtime_limits_and_lazy_startup_are_contractual():
     runtime = read("scripts/desktop_local_runtime.gd")
     startup = read("scripts/windows_startup_coordinator.gd")
     assert "const DEFAULT_CHAT_MAX_TOKENS := 768" in runtime
-    assert "const DEFAULT_CONTEXT_SIZE := 2048" in runtime
+    assert "const DEFAULT_CONTEXT_SIZE := 4096" in runtime
     assert "const DEFAULT_THREADS := 2" in runtime
     assert '"--threads", str(DEFAULT_THREADS)' in runtime
     assert '"--batch-size", str(DEFAULT_BATCH_SIZE)' in runtime
