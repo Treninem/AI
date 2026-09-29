@@ -26,7 +26,7 @@ const NEVER_TOUCH_PREFIXES := [
 	"scripts/core_improvement_pipeline.gd"
 ]
 
-@export var autonomous_core_candidates := true
+@export var autonomous_core_candidates := false
 @export var auto_apply_dev_checkout := false
 @export_range(3, 10, 1) var tournament_candidate_count := DEFAULT_TOURNAMENT_CANDIDATES
 @export_range(3600.0, 604800.0, 60.0) var candidate_cooldown_seconds := 21600.0
