@@ -533,3 +533,34 @@
 - **Профилактика:** release identity CI validates new versions against the permanent minimum without changing cryptographic identity.
 - **Evidence:** failed job `108717681705`, 1 failed/22 passed; targeted test contract fix on release/v1.4.1.1.
 - **Статус:** RESOLVED IN SOURCE; exact-SHA CI pending.
+
+#### AF-MEM-088 — Windows updater displayed transport failure as HTTP 0 and discarded long transfers
+
+- **Дата/среда:** 2026-09-28; installed Windows V1.4.0.0/V1.4.1.1; source base `caba7d34eb497e6a25b37a61d300f1cd6fb029cd`.
+- **Симптом:** updater reported server code 0; two roughly 1.999 GB Windows transfers ended after about 1800 seconds and restarted from zero.
+- **Причина:** transport result and HTTP response code were conflated; the legacy whole-file `HTTPRequest` also used a fixed 1800-second timeout and removed the partial package on failure.
+- **Нерабочие попытки:** treating 0 as an HTTP status; blindly pressing retry; only increasing the whole-file timeout to 1–3 hours. A larger timeout still loses progress after an interruption.
+- **Решение:** distinguish Godot transport result from HTTP status, retry signed metadata with GitHub API fallback, and supersede whole-file delivery with the AF-MEM-090 part contract.
+- **Профилактика:** update smoke distinguishes TLS/connect/timeout from HTTP status and guards the resumable signed-part path.
+- **Evidence:** owner updater log times; PR #97 source; consolidated V1.5 candidate tests.
+- **Статус:** RESOLVED IN CONSOLIDATED SOURCE; installed acceptance pending.
+
+#### AF-MEM-089 — Settings PopupPanel closes on outside click; full chat redraw stalls presentation
+
+- **Дата/среда:** 2026-09-28; owner Windows/Android V1.4.0.0/V1.4.1.1; source main `caba7d34eb497e6a25b37a61d300f1cd6fb029cd`.
+- **Симптом:** Settings hides on outside click; Android can announce completion while the live chat does not present the result until restart.
+- **Причина:** confirmed source costs: desktop Settings used outside-dismiss `PopupPanel`; every append/resize rebuilt all message controls; `ChatStore.add_message()` synchronously serialized and rewrote the full history before the caller could render.
+- **Решение:** desktop non-transient native `Window`; mobile PopupPanel retained; settings paints before health probes; append only new cards; resize only refits widths; message persistence is deferred to the next idle turn and uses a temporary file before replacement.
+- **Профилактика:** UI smoke asserts desktop/mobile window classes and old-card identity; persistence contract requires deferred append; installed Windows taskbar and Android same-session evidence remain mandatory.
+- **Evidence:** Godot 4.7.1 `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`, `AURORA_WORK_MODE_SMOKE_OK`; source candidate based on PR #98.
+- **Статус:** RESOLVED IN SOURCE CANDIDATE; packaged/device/visual acceptance pending.
+
+#### AF-MEM-090 — durable signed-part updater for interrupted networks
+
+- **Дата/среда:** 2026-09-29; consolidated V1.5 platform candidate from exact main `de1313f8ef53be7fa8092823d3ef5980b9702d75`.
+- **Симптом:** a multi-gigabyte update could lose all downloaded bytes after timeout, connection loss, application restart or OS restart.
+- **Причина:** one monolithic HTTP request and one temporary destination had no durable verified checkpoints.
+- **Решение:** signed schema-v2 manifest keeps the backward-compatible whole asset and adds ordered 64 MiB parts with URL/size/SHA-256. The client verifies and retains each completed part, resumes a partial current part with HTTP Range plus validated Content-Range, retries stalled/missing parts with bounded backoff but no total update deadline, streams assembly, then verifies the whole-package SHA-256 before existing atomic apply/health/rollback.
+- **Профилактика:** reject traversal/duplicate names, non-HTTPS URLs, invalid hashes, oversized parts and aggregate-size mismatch; signed manifest generation asserts part counts/sizes and release uploads every declared part.
+- **Evidence:** Godot 4.7.1 update smoke `AURORA_UPDATE_GODOT_SMOKE_OK automatic=true resumable_parts=true`; five focused Python contracts pass; GDScript fixture reuses verified part and assembles in signed order.
+- **Статус:** SOURCE ACCEPTED LOCALLY; exact-SHA CI, real interrupted transfer and installed Windows/Android acceptance pending.

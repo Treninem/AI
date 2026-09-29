@@ -97,7 +97,7 @@ func _inject_personal_settings_page() -> void:
 			selector.set_item_metadata(selector.item_count - 1, "account")
 	else:
 		var settings_popup = settings.get("popup")
-		var nav = settings_popup.find_child("SettingsNavigation", true, false) if settings_popup is PopupPanel else null
+		var nav = settings_popup.find_child("SettingsNavigation", true, false) if settings_popup is Window else null
 		if nav is Container and settings.has_method("_add_nav_button"):
 			settings.call("_add_nav_button", nav, "account", "Аккаунт и память")
 
@@ -934,7 +934,7 @@ func _inject_settings_button() -> void:
 	if settings == null:
 		return
 	var settings_popup = settings.get("popup")
-	if not settings_popup is PopupPanel:
+	if not settings_popup is Window:
 		return
 	if settings_popup.find_child("SettingsPages", true, false) != null:
 		return

@@ -43,6 +43,91 @@ func _init() -> void:
 			quit(21)
 			return
 
+	# A response_code of 0 is not a server HTTP status; keep the
+	# transport result visible so owner diagnostics can identify DNS/TLS/timeouts.
+	if not updater._request_failure(HTTPRequest.RESULT_CANT_CONNECT, 0).contains("соединения"):
+		push_error("Updater concealed transport failure as HTTP 0")
+		quit(35)
+		return
+	if not updater._request_failure(HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR, 0).contains("TLS"):
+		push_error("Updater concealed TLS failure as HTTP 0")
+		quit(36)
+		return
+	if updater._request_failure(HTTPRequest.RESULT_SUCCESS, 503) != "HTTP 503":
+		push_error("Updater lost real HTTP response status")
+		quit(37)
+		return
+
+	# The signed 2 GB Windows package must not be cut off at the old
+	# 30-minute HTTPRequest limit; the fallback remains bounded.
+	if updater._package_timeout_seconds(1998889332) <= 1800.0:
+		push_error("Windows package still has the 30-minute timeout")
+		quit(38)
+		return
+	if updater._package_timeout_seconds(0) != 3600.0 or updater._package_timeout_seconds(9223372036854775807) != 10800.0:
+		push_error("Package transfer timeout escaped its bounds")
+		quit(39)
+		return
+	if updater._part_timeout_seconds(128 * 1024 * 1024) <= 120.0 or updater._part_timeout_seconds(128 * 1024 * 1024) > 900.0:
+		push_error("Chunk stall timeout is outside its bounded per-part window")
+		quit(40)
+		return
+	var valid_parts := {
+		"size": 7,
+		"parts": [
+			{"name": "package.chunk-000", "url": "https://example.invalid/package.chunk-000", "size": 3, "sha256": "a".repeat(64)},
+			{"name": "package.chunk-001", "url": "https://example.invalid/package.chunk-001", "size": 4, "sha256": "b".repeat(64)}
+		]
+	}
+	if not bool(updater._validate_part_plan(valid_parts).get("ok", false)):
+		push_error("Valid signed chunk plan was rejected")
+		quit(41)
+		return
+	var traversal_parts := valid_parts.duplicate(true)
+	traversal_parts["parts"][0]["name"] = "../escape.chunk"
+	if bool(updater._validate_part_plan(traversal_parts).get("ok", false)):
+		push_error("Chunk plan accepted path traversal")
+		quit(42)
+		return
+	var wrong_total := valid_parts.duplicate(true)
+	wrong_total["size"] = 8
+	if bool(updater._validate_part_plan(wrong_total).get("ok", false)):
+		push_error("Chunk plan accepted a mismatched aggregate size")
+		quit(43)
+		return
+	var resume_dir := ProjectSettings.globalize_path("user://update-resume-smoke")
+	DirAccess.make_dir_recursive_absolute(resume_dir)
+	var first_path := resume_dir.path_join("fixture.chunk-000")
+	var second_path := resume_dir.path_join("fixture.chunk-001")
+	var first_file := FileAccess.open(first_path, FileAccess.WRITE)
+	var second_file := FileAccess.open(second_path, FileAccess.WRITE)
+	if first_file == null or second_file == null:
+		push_error("Cannot create resumable update fixture")
+		quit(45)
+		return
+	first_file.store_buffer("Aurora".to_utf8_buffer())
+	second_file.store_buffer("Fox".to_utf8_buffer())
+	first_file.close()
+	second_file.close()
+	var fixture_parts := [
+		{"name": "fixture.chunk-000", "size": 6, "sha256": updater._sha256_file(first_path)},
+		{"name": "fixture.chunk-001", "size": 3, "sha256": updater._sha256_file(second_path)}
+	]
+	if not updater._verified_file(first_path, 6, str(fixture_parts[0]["sha256"])):
+		push_error("Verified completed update part was not reusable")
+		quit(46)
+		return
+	var assembled_path := resume_dir.path_join("AuroraFox.bin")
+	var assembled := updater._assemble_verified_parts(fixture_parts, resume_dir, assembled_path)
+	if not bool(assembled.get("ok", false)) or FileAccess.get_file_as_string(assembled_path) != "AuroraFox":
+		push_error("Verified update parts were not assembled in signed order")
+		quit(47)
+		return
+	DirAccess.remove_absolute(assembled_path)
+	DirAccess.remove_absolute(first_path)
+	DirAccess.remove_absolute(second_path)
+	DirAccess.remove_absolute(resume_dir)
+
 	var source := FileAccess.get_file_as_string("res://update/update_manager.gd")
 	if not source.contains('response["apply"] = apply_downloaded_update(manual)'):
 		push_error("Verified updates are not automatically applied")
@@ -52,6 +137,11 @@ func _init() -> void:
 		push_error("Background/manual visibility mode is not preserved through download")
 		quit(11)
 		return
+	for required in ["_download_chunked_asset", "_verified_file", "_assemble_verified_parts", "update part resumed", "There is no total"]:
+		if not source.contains(required):
+			push_error("Durable chunk updater contract missing: " + required)
+			quit(44)
+			return
 	if not source.contains("func set_auto_apply"):
 		push_error("Updater auto_apply state is not exposed")
 		quit(12)
@@ -163,7 +253,7 @@ func _init() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(public_path))
 
 	updater.free()
-	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true legacy_repair_through=1.3.0.0 signed_floor=1.4.0.0")
+	print("AURORA_UPDATE_GODOT_SMOKE_OK automatic=true resumable_parts=true legacy_repair_through=1.3.0.0 signed_floor=1.4.0.0")
 	quit(0)
 
 func _sha256(data: PackedByteArray) -> PackedByteArray:

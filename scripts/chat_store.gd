@@ -6,6 +6,8 @@ const ATTACHMENT_EXCERPT_CHARS := 6000
 
 var chats: Array = []
 var active_chat_id := ""
+var _save_queued := false
+var _save_in_progress := false
 
 func _ready() -> void:
 	load_all()
@@ -23,7 +25,7 @@ func create_chat(title: String = "Новый чат") -> String:
 		"attachments": []
 	})
 	active_chat_id = id
-	save_all()
+	queue_save()
 	return id
 
 func get_active_chat() -> Dictionary:
@@ -54,7 +56,9 @@ func add_message(role: String, content: String, attachments: Array = []) -> void
 	if role == "user" and messages.size() == 1:
 		var clean := content.strip_edges().replace("\n", " ")
 		chat["title"] = clean.substr(0, 38) if clean.length() > 0 else "Новый чат"
-	save_all()
+	# Paint the newly appended message in the same frame. Persist on the next
+	# idle turn so long Android histories cannot block live presentation.
+	queue_save()
 
 func _compact_attachments(items: Array) -> Array:
 	var out: Array = []
@@ -113,10 +117,34 @@ func search(query: String) -> Array:
 	return result
 
 func save_all() -> void:
-	var file := FileAccess.open(SAVE_PATH, FileAccess.WRITE)
+	_save_queued = false
+	_save_in_progress = true
+	var temporary := SAVE_PATH + ".tmp"
+	var file := FileAccess.open(temporary, FileAccess.WRITE)
 	if file:
 		file.store_string(JSON.stringify({"active_chat_id": active_chat_id, "chats": chats}))
 		file.close()
+		var target := ProjectSettings.globalize_path(SAVE_PATH)
+		var source := ProjectSettings.globalize_path(temporary)
+		if FileAccess.file_exists(SAVE_PATH):
+			DirAccess.remove_absolute(target)
+		DirAccess.rename_absolute(source, target)
+	_save_in_progress = false
+
+func queue_save() -> void:
+	if _save_queued:
+		return
+	_save_queued = true
+	call_deferred("_flush_queued_save")
+
+func _flush_queued_save() -> void:
+	if not _save_queued or _save_in_progress:
+		return
+	save_all()
+
+func _exit_tree() -> void:
+	if _save_queued and not _save_in_progress:
+		save_all()
 
 func load_all() -> void:
 	if not FileAccess.file_exists(SAVE_PATH): return

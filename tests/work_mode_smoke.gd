@@ -43,10 +43,11 @@ func _run() -> void:
 	settings.call("show_settings")
 	await process_frame
 	var popup = settings.get("popup")
-	if not popup is PopupPanel:
+	if not popup is Window:
 		_fail("Settings popup missing", 8)
 		return
-	var panel_style := (popup as PopupPanel).get_theme_stylebox("panel")
+	var background := (popup as Window).get_node_or_null("SettingsWindowBackground") as Panel
+	var panel_style := background.get_theme_stylebox("panel") if background != null else (popup as Window).get_theme_stylebox("panel")
 	if not panel_style is StyleBoxFlat:
 		_fail("Settings panel does not have opaque StyleBoxFlat", 9)
 		return

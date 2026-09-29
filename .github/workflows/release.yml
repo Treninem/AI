@@ -602,6 +602,14 @@ jobs:
           win_size="$(stat -c%s dist/AuroraFox-Windows.zip)"
           test "$win_size" -lt "$max_asset" || { echo "Slim Windows update ZIP still exceeds GitHub's 2 GiB asset limit: $win_size" >&2; exit 1; }
 
+          # App updates are additionally published as small independently
+          # hashed parts. The signed manifest lets clients retain completed
+          # parts across disconnects/restarts and assemble only after all pass.
+          split -b 64M -d -a 3 dist/AuroraFox-Windows.zip dist/AuroraFox-Windows.zip.chunk-
+          split -b 64M -d -a 3 dist/AuroraFox-Android.apk dist/AuroraFox-Android.apk.chunk-
+          test "$(find dist -maxdepth 1 -type f -name 'AuroraFox-Windows.zip.chunk-*' | wc -l)" -ge 2
+          test "$(find dist -maxdepth 1 -type f -name 'AuroraFox-Android.apk.chunk-*' | wc -l)" -ge 2
+
           installer_sha="$(sha256sum dist/AuroraFox_Setup_Windows.exe | awk '{print $1}')"
           split -b 1900M -d -a 2 dist/AuroraFox_Setup_Windows.exe dist/AuroraFox_Setup_Windows.exe.part-
           part_count="$(find dist -maxdepth 1 -type f -name 'AuroraFox_Setup_Windows.exe.part-*' | wc -l)"
@@ -645,22 +653,44 @@ jobs:
           win_size="$(stat -c%s "$win")"
           apk_size="$(stat -c%s "$apk")"
           python3 - "$version" "$win_sha" "$apk_sha" "$win_size" "$apk_size" "$RELEASE_COMMIT" <<'PY'
-          import json, sys
+          import hashlib, json, sys
           from datetime import datetime, timezone
           from pathlib import Path
           version, win_sha, apk_sha, win_size, apk_size, commit = sys.argv[1:]
           tag = 'v' + version
           base = f'https://github.com/${{ github.repository }}/releases/download/{tag}'
           now = datetime.now(timezone.utc).isoformat()
+          def sha256(path):
+              digest = hashlib.sha256()
+              with path.open('rb') as handle:
+                  for block in iter(lambda: handle.read(4 * 1024 * 1024), b''):
+                      digest.update(block)
+              return digest.hexdigest()
+          def parts_for(asset_name, expected_size):
+              paths = sorted(Path('dist').glob(asset_name + '.chunk-*'))
+              if len(paths) < 2 or sum(path.stat().st_size for path in paths) != int(expected_size):
+                  raise SystemExit(f'invalid chunk plan for {asset_name}')
+              return [
+                  {
+                      'name': path.name,
+                      'url': base + '/' + path.name,
+                      'sha256': sha256(path),
+                      'size': path.stat().st_size,
+                  }
+                  for path in paths
+              ]
+          windows_parts = parts_for('AuroraFox-Windows.zip', win_size)
+          android_parts = parts_for('AuroraFox-Android.apk', apk_size)
           manifest = {
+              'schema_version': 2,
               'version': version,
               'channel': 'stable',
               'mandatory': False,
               'published_at': now,
               'notes': f'AuroraFox {version}',
               'assets': {
-                  'windows': {'url': base + '/AuroraFox-Windows.zip', 'sha256': win_sha, 'size': int(win_size), 'format': 'zip'},
-                  'android': {'url': base + '/AuroraFox-Android.apk', 'sha256': apk_sha, 'size': int(apk_size), 'format': 'apk'},
+                  'windows': {'url': base + '/AuroraFox-Windows.zip', 'sha256': win_sha, 'size': int(win_size), 'format': 'zip', 'chunk_size': 67108864, 'parts': windows_parts},
+                  'android': {'url': base + '/AuroraFox-Android.apk', 'sha256': apk_sha, 'size': int(apk_size), 'format': 'apk', 'chunk_size': 67108864, 'parts': android_parts},
               },
           }
           evidence = {
@@ -721,10 +751,12 @@ jobs:
           fi
           gh release upload "$tag" \
             dist/AuroraFox-Windows.zip \
+            dist/AuroraFox-Windows.zip.chunk-* \
             dist/AuroraFox_Setup_Windows.exe.part-* \
             dist/AuroraFox_Setup_Windows.reassemble.ps1 \
             dist/AuroraFox_Setup_Windows.parts.sha256 \
             dist/AuroraFox-Android.apk \
+            dist/AuroraFox-Android.apk.chunk-* \
             dist/update.json \
             dist/update.sig \
             dist/release_verification.json \
