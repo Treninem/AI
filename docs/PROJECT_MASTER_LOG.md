@@ -3545,3 +3545,18 @@ REMAINING: publish the focused contract fix; obtain exact-head Integration/UI/Wi
 BLOCKERS: Windows and Android runners are still pending/in progress; installed owner-hardware checks remain outside this Linux workspace.
 NEXT: commit and publish the two-file contract/journal fix to PR #100, then evaluate the new exact-head CI matrix before any merge or version bump.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 61%
+
+### CHECKPOINT 2026-09-29 — visual artifact review found compact Settings clipping
+
+- PR #100 head `13f8d48e33cf29dd8146a5422233e7bc5a600fe8`: Integration Gate, UI Visual, Core/Voice, API, Agent Sync, Work Mode, Chat Learning Attachments and Release Identity are SUCCESS (8/10). Android and Windows package workflows are serialized behind earlier expensive runs; this is queue state, not a candidate failure.
+- Downloaded and manually inspected the exact-head UI artifact `AuroraFox-UI-Visual-Acceptance-13f8d48...` rather than accepting the green structural gate alone. Android 480x960/720x1280 and the desktop chat matrices show no critical overlap. The `desktop_compact_settings_960x640` capture exposed right/bottom clipping of the independent Settings window.
+- Root cause: non-native embedded subwindows use parent-local coordinates, but `show_settings()` added the root OS window position before centering. Native Windows requires absolute screen coordinates; Linux/editor/CI embedded windows must use only the centered local offset.
+- Source fix selects absolute positioning only when `popup.force_native` is true. Visual acceptance now fails when compact Settings position/size exceeds the 960x640 capture bounds, so the previously silent clipping cannot regress.
+
+PROGRESS_COMPLETE: 64%
+PROGRESS_REMAINING: 36%
+DONE: 8/10 exact-head CI green; actual render matrix inspected; compact Settings clipping reproduced and corrected with an explicit visual bound assertion.
+REMAINING: publish the visual correction; obtain refreshed UI/Integration plus serialized Windows/Android package verdicts; inspect refreshed compact capture; installed-platform proof; version-last and signed release acceptance.
+BLOCKERS: local Godot binary is unavailable in this resumed workspace; exact rendering must be revalidated by the already authoritative UI CI. Windows/Android package lanes remain serialized behind earlier runs.
+NEXT: commit/publish the three-file positioning, visual assertion and journal checkpoint; inspect the refreshed 960x640 artifact before accepting the UI source candidate.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 64%

@@ -121,7 +121,12 @@ func show_settings(initial_page := "general") -> void:
 	else:
 		# A normal native window remains open when the user clicks the chat.
 		# Do not use PopupPanel here: it closes on outside input by design.
-		popup.position = get_window().position + (get_window().size - popup.size) / 2
+		var centered_offset := (get_window().size - popup.size) / 2
+		# Native Windows use absolute screen coordinates. Embedded subwindows
+		# (editor/Linux visual CI) use parent-local coordinates; adding the OS
+		# window position there shifts the Settings surface outside a compact
+		# 960x640 viewport and clips its right/bottom edges.
+		popup.position = get_window().position + centered_offset if popup.force_native else centered_offset
 		popup.show()
 		popup.grab_focus()
 	# Health probes can involve a slow local Core or file runtime. Paint the

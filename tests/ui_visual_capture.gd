@@ -364,6 +364,10 @@ func _capture_desktop_compact(packed: PackedScene) -> bool:
 	var settings := await _open_settings_by_click(main)
 	if settings == null:
 		return false
+	var popup_end := settings.popup.position + settings.popup.size
+	if settings.popup.position.x < 0 or settings.popup.position.y < 0 or popup_end.x > size.x or popup_end.y > size.y:
+		_fail("Compact Settings window exceeds 960x640 capture bounds: position=%s size=%s" % [str(settings.popup.position), str(settings.popup.size)], 24)
+		return false
 	if not await _capture("desktop_compact_settings_960x640", "settings_compact"):
 		return false
 	if not await _capture_settings_page(settings, "account", "Настройки → Аккаунт и память", "desktop_compact_account_960x640", "login_guest_compact"):
