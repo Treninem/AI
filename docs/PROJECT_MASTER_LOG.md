@@ -3530,3 +3530,18 @@ REMAINING: exact-SHA Release Identity verdict, merge PR #96 and signed publicati
 BLOCKERS: Release Identity rerun pending for corrected candidate.
 NEXT: inspect automatic CI on the new PR #96 head; merge only if green.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
+
+### CHECKPOINT 2026-09-29 — PR #100 exact-tree publication and branding gate correction
+
+- Owner explicitly authorized publication of `integration/v1.5-platform-foundation` and CI. Draft PR #100 targets `main`; remote head `5547cf84bcd7a26ed9701c78c7634835586d7082` has exact tree `cbea43b3004726310b017d977ca87e0ae5e68574`, identical to local candidate `1893937f8ef2eeedbef33e95f25190f87cda3805` (17 files, 716 additions, 83 deletions).
+- First CI wave: Core/Voice, API, Agent Sync, Work Mode, Chat Learning Attachments and Release Identity succeeded. Integration Godot cross-subsystem job succeeded; only the owner-branding Python contract failed because it still required the canonical PNG in the Windows export preset after the Windows-native multi-size ICO was added for executable/taskbar identity.
+- Corrected only the stale branding contract: `project.godot` must retain the owner-approved PNG as canonical icon, while Windows project/export settings must use the byte-pinned `assets/ui/aurorafox_windows.ico` (`aab5079e...`). Production assets and runtime behavior were not changed by this correction.
+- Local direct-assert evidence: all five branding contract functions and all five resumable-update contract functions PASS. The workspace runtime has no pytest package, so no full local pytest result is claimed; automatic PR CI remains authoritative.
+
+PROGRESS_COMPLETE: 61%
+PROGRESS_REMAINING: 39%
+DONE: exact source tree published in draft PR #100; six workflows green; Integration failure reproduced and corrected without weakening branding identity.
+REMAINING: publish the focused contract fix; obtain exact-head Integration/UI/Windows/Android results; inspect UI artifacts; perform installed platform proofs; version-last V1.5.0.0 and signed release acceptance.
+BLOCKERS: Windows and Android runners are still pending/in progress; installed owner-hardware checks remain outside this Linux workspace.
+NEXT: commit and publish the two-file contract/journal fix to PR #100, then evaluate the new exact-head CI matrix before any merge or version bump.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 61%
