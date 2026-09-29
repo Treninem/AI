@@ -3576,3 +3576,14 @@ REMAINING: real network interruption/restart resume proof; installed Android sam
 BLOCKERS: physical installed-runtime evidence cannot be produced in the current Linux workspace (no Windows desktop, Android device/emulator, adb or Godot); canonical version bump and release remain intentionally blocked by those acceptance items.
 NEXT: execute the installed Windows/Android acceptance script on owner hardware and capture results; if green, synchronize all V1.5.0.0/versionCode surfaces on this release branch, run exact-head CI, merge, sign and publish.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+
+## 2026-09-29 — P0 installed-runtime correction after physical Windows evidence
+
+- Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains the single active package; no parallel journal was created.
+- Real installed screenshots supersede the earlier CI-only readiness estimate: Windows became unresponsive, windows opened in up to a minute, some knowledge actions collapsed to blank controls, Core stayed in startup, and `files (2).zip` plus the explicit command `изучи` was not imported as knowledge.
+- Root cause: three heavyweight startup paths ran together (autonomous evolution, core-candidate generation and model warmup), while llama-server had no conservative CPU/batch limits. Attachment learning intent was inferred from filenames before the user instruction existed.
+- P0 branch: `fix/v1.5-p0-runtime` from release checkpoint `0b9dd80f8dd378fe3f3c60dbb6f36787aad0cc41`.
+- Implemented candidate: autonomy and core candidates require explicit opt-in, previous unsafe settings migrate once to disabled, Core starts on the first real request with bounded threads/context/batches, attachment selection is instant and analysis uses the submitted instruction, archives are imported from locally extracted text, knowledge actions have fixed readable geometry, and duplicated native Settings chrome is removed.
+- Verification status: source contracts added; exact GitHub Actions, Windows installed smoke and physical responsiveness proof are still required. Version remains `V1.4.1.1`; release promotion is blocked until those proofs pass.
+- Readiness reset: 56%. This percentage may rise only from exact-head CI and installed-package evidence, not from source completion alone.
