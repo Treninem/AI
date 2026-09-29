@@ -11,8 +11,8 @@ const STATE_TEMP_PATH := STATE_PATH + ".tmp"
 const STATE_BACKUP_PATH := STATE_PATH + ".bak"
 const STATE_SCHEMA_VERSION := 1
 
-@export var autonomous_enabled := true
-@export var autonomous_hot_improvements := true
+@export var autonomous_enabled := false
+@export var autonomous_hot_improvements := false
 @export var autonomous_research_enabled := true
 @export_range(60.0, 86400.0, 1.0) var cycle_interval_seconds := 300.0
 @export_range(60.0, 604800.0, 1.0) var mutation_cooldown_seconds := 900.0
@@ -58,6 +58,9 @@ func _bootstrap() -> void:
 		return
 	_register_coordination_tools()
 	_setup_timer()
+	if not autonomous_enabled:
+		_record_event("automatic_startup_disabled", {"reason": "manual_opt_in_required"})
+		return
 	var report: Dictionary = await synchronize_all()
 	if not bool(report.get("compatible", false)):
 		_record_event("initial_sync_pending", {
