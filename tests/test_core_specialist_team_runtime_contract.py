@@ -95,7 +95,7 @@ def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> 
     android = ANDROID_RUNTIME.read_text(encoding="utf-8")
     runner = SMOKE_RUNNER.read_text(encoding="utf-8")
     assert "DEFAULT_CHAT_MAX_TOKENS := 768" in runtime
-    assert "DEFAULT_THREADS := 2" in runtime
+    assert "DEFAULT_THREADS := 4" in runtime
     assert '"--threads", str(DEFAULT_THREADS)' in runtime
     assert "TERSE_CHAT_MAX_TOKENS := 128" in runtime
     assert "DEFAULT_CONTEXT_SIZE := 4096" in runtime
