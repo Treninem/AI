@@ -3493,3 +3493,51 @@ REMAINING: exact-SHA Release Identity verdict, merge PR #96 and signed publicati
 BLOCKERS: Release Identity rerun pending for corrected candidate.
 NEXT: inspect automatic CI on the new PR #96 head; merge only if green.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
+
+### CLAIM `CODEX-2026-09-28-WINDOWS-UPDATE-TRANSPORT`
+
+- Статус: **ACTIVE**
+- Started from HEAD: `caba7d34eb497e6a25b37a61d300f1cd6fb029cd` (published V1.4.1.1).
+- Режим: Codex; ветка `fix/windows-update-transport-result`.
+- Цель: диагностировать и исправить отказ проверки stable-обновления на установленной Windows AuroraFox: «Сервер обновлений ответил кодом 0».
+- Предполагаемый bump после зелёных acceptance-gates: **BUILD** (следующий выпуск V1.4.1.2); текущую опубликованную V1.4.1.1 не перепаковывать.
+- Файлы/подсистема: `update/update_manager.gd`, относящиеся `tests/update*`, `docs/AURORAFOX_ENGINEERING_MEMORY.md`, этот журнал. UI overlay, signing identity и release workflow не менять.
+- Takeover/reconcile: исторический `CHAT-2026-09-16-UPDATER-VERSIONING` закреплял updater до V1.4 signed floor, который уже опубликован; этот новый дефект на свежем main принят владельцем после V1.4.1.1 и расследуется отдельно поверх завершённого release. Старую заявку не удалять.
+- Evidence: owner screenshot V1.4.0.0/1.4.1.1 Windows settings, code 0; `update.json` и `update.sig` публично опубликованы в V1.4.1.1, release publish run `36393173336` SUCCESS. Причина transport failure на owner PC пока неизвестна: HTTPRequest result enum сейчас теряется.
+- NEXT: сохранить transport result/HTTP code и точный URL, добавить ограниченное повторение для transient errors и проверяемый regression contract; запросить owner log для установления сетевой причины; не ослаблять RSA/SHA trust gates.
+
+PROGRESS_COMPLETE: 30%
+PROGRESS_REMAINING: 70%
+DONE: опубликованный release и исходный transport handling проверены; область исправления ограничена.
+REMAINING: source fix, targeted test/CI, owner Windows acceptance, version-last V1.4.1.2.
+BLOCKERS: нет фактического HTTPRequest result из owner log, поэтому сетевой root cause пока гипотеза.
+NEXT: реализовать диагностируемый bounded transport retry, затем проверить точные gates.
+
+### CHECKPOINT 2026-09-28 — Windows updater HTTP 0 candidate in PR #97
+
+- Base HEAD: `caba7d34eb497e6a25b37a61d300f1cd6fb029cd`; branch `fix/windows-update-transport-result`, PR #97 head before checkpoint `d4f00d2eeecafe48b16836ba559f05049a949ca4`.
+- Changed: `update/update_manager.gd` now inspects Godot transport result separately from HTTP code, gives DNS/connect/TLS/timeout diagnostics, retries small metadata requests once, and falls back to official GitHub Releases API asset bytes when the direct transport fails. Signature and SHA-256 validation remain mandatory. `tests/update_smoke.gd` verifies error classification. `AF-MEM-088` records the failure and unconfirmed network cause.
+- Acceptance: PR #97 automatically triggered Integration Gate `36451485376`, Core/Voice `36451485069`, Windows Package `36451485544`, Android APK `36451484972`, Release Identity `36451485128`, Agent Sync `36451485412`; all were still running at this checkpoint. No duplicate workflow was dispatched.
+- Limit: the already installed V1.4.1.1 binary cannot inherit source changes; owner PC has only the old `HTTP 0` text, not the transport result. No claim that its network path is repaired yet. Next BUILD version V1.4.1.2 only after green targeted acceptance and Windows reproduction.
+
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: source diagnosis, bounded fallback and focused error-class smoke committed to PR #97; signing gates unchanged.
+REMAINING: exact-head CI, owner-PC network diagnosis, Windows installed acceptance, version-last delivery.
+BLOCKERS: owner Windows transport cause not known from V1.4.1.1's log; CI in progress on PR #97.
+NEXT: inspect automatic CI once completed, fix any concrete failure; ask owner to check direct manifest reachability; then accept and release a BUILD bump if installed update path works.
+
+### CHECKPOINT 2026-09-28 — owner log confirms Windows ZIP timeout
+
+- Owner installed `1.4.0.0` log: signed manifest verified and update `1.4.1.1` found; Windows ZIP starts `16:28:51` and `17:29:30` each fail at `16:58:49` / `17:59:30` with old `HTTP 0` label. Fixed `HTTPRequest.timeout=1800.0` in shipped source matches both 30-minute cutoffs. Public release ZIP is 1,998,889,332 bytes (SHA-256 digest remains manifest-bound).
+- PR #97 branch adds size-dependent package transfer window (`1–3 h`, 256 KiB/s allowance) and a focused Godot smoke guard. Existing signed manifest and package SHA-256 verification remain required. Intermittent 25-second metadata failures are a separate transport symptom; old binary did not log Godot transport result.
+- Previous candidate head `bb4906c57ff7451ae41eb056c669828b94cf24f2`: Core/Voice `36451610389`, Agent Sync `36451610026`, Release Identity `36451610097`, Integration `36451610308`, Android APK `36451610131` SUCCESS; Windows Package `36451610385` was in progress at last inspection. These results do not apply to the new timeout change. Automatic CI for new branch head must be checked once; no manual duplicates.
+- Delivery caveat: installed V1.4.0.0 cannot inherit source changes and needs a one-time manual newer installer if its link cannot deliver the large ZIP inside 30 minutes. Final release version remains version-last, intended V1.4.1.2.
+
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: 30-minute package cutoff confirmed from owner timestamps and source; size-bound timeout and regression added to PR #97; metadata fallback remains.
+REMAINING: automatic exact-head CI and Windows installed updater acceptance, then version bump/package/sign/release; provide one-time migration path for existing 1.4.0.0.
+BLOCKERS: installed 1.4.0.0 has a hardcoded 1800-second limit; old binaries cannot be fixed in place without receiving a new build.
+NEXT: inspect automatic PR #97 CI on final candidate; merge once accepted, then version-last V1.4.1.2 and signed release; owner uses one-time installer if old auto-update still times out.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 90%

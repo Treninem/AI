@@ -43,6 +43,32 @@ func _init() -> void:
 			quit(21)
 			return
 
+	# A response_code of 0 is not a server HTTP status; keep the
+	# transport result visible so owner diagnostics can identify DNS/TLS/timeouts.
+	if not updater._request_failure(HTTPRequest.RESULT_CANT_CONNECT, 0).contains("соединения"):
+		push_error("Updater concealed transport failure as HTTP 0")
+		quit(35)
+		return
+	if not updater._request_failure(HTTPRequest.RESULT_TLS_HANDSHAKE_ERROR, 0).contains("TLS"):
+		push_error("Updater concealed TLS failure as HTTP 0")
+		quit(36)
+		return
+	if updater._request_failure(HTTPRequest.RESULT_SUCCESS, 503) != "HTTP 503":
+		push_error("Updater lost real HTTP response status")
+		quit(37)
+		return
+
+	# The signed 2 GB Windows package must not be cut off at the old
+	# 30-minute HTTPRequest limit; the fallback remains bounded.
+	if updater._package_timeout_seconds(1998889332) <= 1800.0:
+		push_error("Windows package still has the 30-minute timeout")
+		quit(38)
+		return
+	if updater._package_timeout_seconds(0) != 3600.0 or updater._package_timeout_seconds(9223372036854775807) != 10800.0:
+		push_error("Package transfer timeout escaped its bounds")
+		quit(39)
+		return
+
 	var source := FileAccess.get_file_as_string("res://update/update_manager.gd")
 	if not source.contains('response["apply"] = apply_downloaded_update(manual)'):
 		push_error("Verified updates are not automatically applied")
