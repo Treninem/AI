@@ -35,6 +35,8 @@ var queued_voice_text := ""
 var rename_dialog: AcceptDialog
 var rename_input: LineEdit
 var rename_target_id := ""
+var _rendered_chat_id := ""
+var _rendered_message_count := 0
 
 const BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background.svg")
 const FOX_LOGO: Texture2D = preload("res://assets/ui/fox_logo.svg")
@@ -515,7 +517,7 @@ func _set_status(text: String, good := false, error := false) -> void:
 	status.add_theme_color_override("font_color", DANGER if error else (GREEN if good else MUTED))
 
 func _on_viewport_resized() -> void:
-	call_deferred("_render_active_chat")
+	call_deferred("_fit_message_widths")
 
 func _new_chat() -> void:
 	if request_busy or file_processing_busy:
@@ -608,18 +610,41 @@ func _confirm_rename_chat() -> void:
 func _render_active_chat() -> void:
 	if message_list == null:
 		return
-	for child in message_list.get_children():
-		child.queue_free()
 	var chat := chats.get_active_chat()
 	active_title.text = str(chat.get("title", "Новый чат")) if active_title != null else "Новый чат"
 	var messages: Array = chat.get("messages", [])
+	var changed_chat := _rendered_chat_id != chats.active_chat_id or messages.size() < _rendered_message_count
+	if changed_chat:
+		for child in message_list.get_children():
+			child.queue_free()
+		_rendered_chat_id = chats.active_chat_id
+		_rendered_message_count = 0
 	if messages.is_empty():
-		_add_welcome_state()
+		if changed_chat or message_list.get_child_count() == 0:
+			_add_welcome_state()
 	else:
-		for message in messages:
+		if _rendered_message_count == 0 and not changed_chat:
+			for child in message_list.get_children():
+				child.queue_free()
+		for i in range(_rendered_message_count, messages.size()):
+			var message = messages[i]
 			if message is Dictionary:
 				_add_message_card(message)
+	_rendered_message_count = messages.size()
 	call_deferred("_scroll_messages_to_bottom")
+
+func _fit_message_widths() -> void:
+	if message_list == null:
+		return
+	var width := _bubble_width()
+	for row in message_list.get_children():
+		var card := row.get_node_or_null("MessageCard") as PanelContainer
+		if card == null:
+			continue
+		card.custom_minimum_size.x = width
+		var content := card.find_child("MessageContent", true, false) as RichTextLabel
+		if content != null:
+			content.custom_minimum_size.x = maxf(176.0, width - 44.0)
 
 func _add_welcome_state() -> void:
 	var center := VBoxContainer.new()
@@ -674,6 +699,7 @@ func _add_message_card(message: Dictionary) -> void:
 
 	var bubble_width := _bubble_width()
 	var card := PanelContainer.new()
+	card.name = "MessageCard"
 	card.custom_minimum_size.x = bubble_width
 	card.size_flags_horizontal = Control.SIZE_SHRINK_END if is_user else Control.SIZE_SHRINK_BEGIN
 	card.add_theme_stylebox_override("panel", _style(USER_BUBBLE if is_user else ASSISTANT_BUBBLE, Color(CYAN.r, CYAN.g, CYAN.b, 0.34) if is_user else Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.38), 18, 1))
@@ -693,6 +719,7 @@ func _add_message_card(message: Dictionary) -> void:
 	meta.add_theme_color_override("font_color", CYAN if is_user else ACCENT)
 	body.add_child(meta)
 	var content := RichTextLabel.new()
+	content.name = "MessageContent"
 	content.bbcode_enabled = false
 	content.fit_content = true
 	content.scroll_active = false

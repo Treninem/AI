@@ -26,13 +26,17 @@
       "url": "",
       "sha256": "",
       "size": 0,
-      "format": "zip"
+      "format": "zip",
+      "chunk_size": 67108864,
+      "parts": []
     },
     "android": {
       "url": "",
       "sha256": "",
       "size": 0,
-      "format": "apk"
+      "format": "apk",
+      "chunk_size": 67108864,
+      "parts": []
     }
   }
 }

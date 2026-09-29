@@ -12,6 +12,12 @@ EXPECTED_MASTER_BLOBS = {
     "assets/ui/aurorafox_background_master.png": "ed17e933244b7ce0f520b28897c0ca1ad50a5347",
 }
 
+EXPECTED_PLATFORM_BLOBS = {
+    # Windows needs a native multi-size ICO for the executable and taskbar.
+    # The owner-approved PNG above remains the canonical in-app/application art.
+    "assets/ui/aurorafox_windows.ico": "aab5079eaf67722988bf52fa2de7ba0267883faf",
+}
+
 
 def _git_blob_sha(path: Path) -> str:
     payload = path.read_bytes()
@@ -30,10 +36,17 @@ def test_owner_avatar_is_the_canonical_application_icon() -> None:
     project = (ROOT / "project.godot").read_text(encoding="utf-8")
     presets = (ROOT / "export_presets.cfg").read_text(encoding="utf-8")
     canonical = 'res://assets/ui/aurorafox_avatar_master.png'
+    windows_native = 'res://assets/ui/aurorafox_windows.ico'
     assert f'config/icon="{canonical}"' in project
+    assert f'config/windows_native_icon="{windows_native}"' in project
     windows = presets.split("[preset.1]", 1)[0]
-    assert f'application/icon="{canonical}"' in windows
+    assert f'application/icon="{windows_native}"' in windows
     assert 'config/icon="res://assets/ui/fox_logo.svg"' not in project
+
+    for relative, expected in EXPECTED_PLATFORM_BLOBS.items():
+        path = ROOT / relative
+        assert path.is_file(), f"missing platform branding asset: {relative}"
+        assert _git_blob_sha(path) == expected, f"platform branding asset changed byte-for-byte: {relative}"
 
 
 def test_active_runtime_compat_layer_uses_owner_approved_branding() -> None:

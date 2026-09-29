@@ -178,6 +178,14 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if settings_overlay == null:
 		_fail("Settings controller missing", 31)
 		return false
+	if mobile:
+		if not settings_overlay.popup is PopupPanel:
+			_fail("Android settings must remain an embedded mobile panel", 92)
+			return false
+	else:
+		if settings_overlay.popup is Popup or settings_overlay.popup.transient or settings_overlay.popup.exclusive:
+			_fail("Desktop settings must be a persistent independent window", 93)
+			return false
 	settings_overlay.call("_select_page", "account")
 	if settings_pages.current_tab != int(settings_overlay.nav_indices.get("account", -1)):
 		_fail("Account/memory navigation does not switch pages", 32)
@@ -330,6 +338,13 @@ func _exercise_chat(main: Control) -> bool:
 	main.call("_render_active_chat")
 	await process_frame
 	await process_frame
+	var first_card := main.find_child("MessageCard", true, false)
+	store.add_message("assistant", "Дополнительный ответ без перерисовки старых карточек.")
+	main.call("_render_active_chat")
+	main.call("_fit_message_widths")
+	if first_card == null or not is_instance_valid(first_card) or first_card != main.find_child("MessageCard", true, false):
+		_fail("Adding a chat message rebuilt the entire conversation", 94)
+		return false
 	if _visible_placeholder_fox(main):
 		_fail("Assistant message rendered temporary avatar artwork", 62)
 		return false

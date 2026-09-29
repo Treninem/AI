@@ -3480,6 +3480,43 @@ BLOCKERS: post-bump package/signature evidence pending; installed Windows first 
 NEXT: evaluate CI on release/v1.4.1.1, merge version PR after green, build signed release from exact main commit.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
 
+## 113. CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`
+
+- Статус: **ACTIVE — consolidated Windows/Android platform and updater foundation**.
+- Started from exact `main`: `de1313f8ef53be7fa8092823d3ef5980b9702d75` (PR #99 merge).
+- Режим: Codex, главный координатор.
+- Цель: один общий фундамент вместо повторных возвратов к тем же подсистемам: включить merged Core retry fix PR #99; persistent Windows Settings window; Windows taskbar/application icon and branded startup; incremental chat presentation; same-session Android refresh/latency diagnosis and correction; adaptive pixel-aligned Windows/Android layouts; durable resumable signed updates.
+- Предполагаемый bump: **MINOR `V1.5.0.0`** по owner-defined `A.B.C.D` (`A` полная реконструкция, `B` глобальное изменение, `C` новая функция, `D` исправление). Canonical version remains `V1.4.1.1` until the whole block passes acceptance; permanent signed floor remains `V1.4.0.0`.
+- Updater contract: signed manifest describes small sequential parts and whole-package identity; every part and the assembled package has SHA-256; completed verified parts persist across connection loss, application restart and OS restart; partial current part resumes by HTTP Range/Content-Range when supported and safely restarts only that part otherwise; retry/backoff continues after reconnection with no fixed overall wall-clock deadline; only a bounded no-progress stall is retried; apply remains atomic with existing signature, health, backup and rollback gates. Already downloaded verified bytes are never discarded merely because a timeout elapsed.
+- Settings/UI contract: Windows Settings is a separate non-transient native window with explicit close, independent focus/taskbar identity and AuroraFox icon; Android remains a correctly sized in-app surface. Clicking the main window must not hide or destroy Settings. Production launch must not display Godot branding. New controls must not overlap at supported Windows sizes, Android portrait/landscape, safe areas or software keyboard states; geometry assertions and real captured-image inspection are both required.
+- Performance contract: measure startup, Core warmup, chat orchestration, synchronous persistence and UI rendering separately. Preserve all Core, Knowledge, Memory, voice, files, Computer/Work, sandbox, signing and rollback functionality. Android must show completed work in the same session without restart and must not rebuild the entire conversation for one appended message.
+- Platform decision: do not rewrite away from Godot blindly. A replacement shell is an `A`-level reconstruction and is allowed only after a working migration prototype proves full feature/sandbox/offline/update parity plus better measured latency and layout. Until then optimize the current client without losing functionality.
+- Область: platform branch UI/settings/presentation/icon changes; `update/update_manager.gd`, update manifest/release packaging and interruption/restart tests; measured chat/persistence/mobile presentation fixes; visual/layout tests and captures; canonical version/release surfaces only after green acceptance; engineering memory and this journal.
+- Acceptance: focused Core retry tests; update interruption/restart/Range/fallback/hash/signature/assembly/rollback tests; Godot parse/UI/Work smokes; Windows taskbar/settings installed proof; Android same-session response and bounded-latency proof; inspected render matrix with no overlaps; exact-SHA Windows/Android package and signed release gates; owner-PC messages `1+4`, `привет`, `изучи` without Core restart loop.
+
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+DONE: PR #99 merged to exact main `de1313f`; existing platform candidate and updater transport candidate located; owner requirements and A.B.C.D decision are now recorded as one bounded package.
+REMAINING: reconcile candidates on current main; implement true durable chunk/range resume; measure and fix Android same-session/persistence path; visual/device proof; version-last; exact-SHA package/update/release acceptance and installed owner smoke.
+BLOCKERS: no source blocker; Windows taskbar and Android installed behavior require packaged/device evidence; current updater candidate extends timeout/retry but does not yet satisfy durable no-loss resume.
+NEXT: integrate the non-overlapping platform and updater transport candidates over exact main, run focused regression gates, then implement the missing chunk manifest/download state machine before any version bump.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 35%
+
+### CHECKPOINT 2026-09-29 — platform candidates reconciled; resumable updater implemented locally
+
+- Reconciled over exact main `de1313f8ef53be7fa8092823d3ef5980b9702d75`: PR #98 persistent desktop Settings/incremental chat/icon candidate and PR #97 transport diagnostics/retry candidate. PR #99 Core process-preservation code remains the baseline and was not overwritten.
+- Extended the updater beyond PR #97: signed schema-v2 release manifest now publishes ordered 64 MiB Windows ZIP and Android APK parts with per-part size/SHA-256 while retaining legacy whole-asset fields. The client persists verified parts, resumes the current partial part with `Range` and validated `Content-Range`, retries without a total wall-clock deadline, streams assembly and verifies the final signed whole-package SHA-256 before apply.
+- Android live-presentation source path no longer performs a synchronous full-history JSON rewrite inside `add_message`; persistence is deferred until the next idle turn, while the previously integrated renderer appends only new cards. Explicit rename/delete saves remain immediate.
+- Local evidence on Godot 4.7.1: project import/parse succeeds; `AURORA_UPDATE_GODOT_SMOKE_OK automatic=true resumable_parts=true`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; `AURORA_WORK_MODE_SMOKE_OK`. Five focused Python resumable-update/persistence contracts pass; `git diff --check` passes. Headless framebuffer capture is unavailable with the dummy renderer, so no local screenshot is falsely claimed.
+
+PROGRESS_COMPLETE: 58%
+PROGRESS_REMAINING: 42%
+DONE: Core/UI/updater candidates reconciled; durable parts/Range/assembly contract implemented; same-session message presentation source bottlenecks reduced; focused Godot/Python gates green.
+REMAINING: exact-head automated CI; render artifact inspection; installed Windows native settings/taskbar proof; Android installed same-session and latency proof; real interrupted transfer; version-last V1.5.0.0; package/sign/publish/owner smoke.
+BLOCKERS: visual framebuffer and Windows/Android installed boundaries are unavailable in this Linux workspace; they require CI/package/device evidence.
+NEXT: commit and publish the source candidate without bumping the version, accept automatic focused/CI gates, inspect UI artifacts, then apply version-last only after source acceptance.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 58%
+
 ### CHECKPOINT 2026-09-28 — Release Identity CI floor regression
 
 - PR #96 head `9de9a81525df751e15baf7627f56c8a0f25b5d7f`: Windows Package `36353897056`, Android APK `36353896995`, Integration `36353896986`, Core/Voice `36353896970`, Agent Sync `36353897029`, UI `36353897026`, Research `36353896994` SUCCESS. Release Identity `36353897008` failed one stale assertion (22 passed, 1 failed): current V1.4.1.1 was incorrectly required to be <= permanent signed floor V1.4.0.0.
@@ -3493,3 +3530,33 @@ REMAINING: exact-SHA Release Identity verdict, merge PR #96 and signed publicati
 BLOCKERS: Release Identity rerun pending for corrected candidate.
 NEXT: inspect automatic CI on the new PR #96 head; merge only if green.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 85%
+
+### CHECKPOINT 2026-09-29 — PR #100 exact-tree publication and branding gate correction
+
+- Owner explicitly authorized publication of `integration/v1.5-platform-foundation` and CI. Draft PR #100 targets `main`; remote head `5547cf84bcd7a26ed9701c78c7634835586d7082` has exact tree `cbea43b3004726310b017d977ca87e0ae5e68574`, identical to local candidate `1893937f8ef2eeedbef33e95f25190f87cda3805` (17 files, 716 additions, 83 deletions).
+- First CI wave: Core/Voice, API, Agent Sync, Work Mode, Chat Learning Attachments and Release Identity succeeded. Integration Godot cross-subsystem job succeeded; only the owner-branding Python contract failed because it still required the canonical PNG in the Windows export preset after the Windows-native multi-size ICO was added for executable/taskbar identity.
+- Corrected only the stale branding contract: `project.godot` must retain the owner-approved PNG as canonical icon, while Windows project/export settings must use the byte-pinned `assets/ui/aurorafox_windows.ico` (`aab5079e...`). Production assets and runtime behavior were not changed by this correction.
+- Local direct-assert evidence: all five branding contract functions and all five resumable-update contract functions PASS. The workspace runtime has no pytest package, so no full local pytest result is claimed; automatic PR CI remains authoritative.
+
+PROGRESS_COMPLETE: 61%
+PROGRESS_REMAINING: 39%
+DONE: exact source tree published in draft PR #100; six workflows green; Integration failure reproduced and corrected without weakening branding identity.
+REMAINING: publish the focused contract fix; obtain exact-head Integration/UI/Windows/Android results; inspect UI artifacts; perform installed platform proofs; version-last V1.5.0.0 and signed release acceptance.
+BLOCKERS: Windows and Android runners are still pending/in progress; installed owner-hardware checks remain outside this Linux workspace.
+NEXT: commit and publish the two-file contract/journal fix to PR #100, then evaluate the new exact-head CI matrix before any merge or version bump.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 61%
+
+### CHECKPOINT 2026-09-29 — visual artifact review found compact Settings clipping
+
+- PR #100 head `13f8d48e33cf29dd8146a5422233e7bc5a600fe8`: Integration Gate, UI Visual, Core/Voice, API, Agent Sync, Work Mode, Chat Learning Attachments and Release Identity are SUCCESS (8/10). Android and Windows package workflows are serialized behind earlier expensive runs; this is queue state, not a candidate failure.
+- Downloaded and manually inspected the exact-head UI artifact `AuroraFox-UI-Visual-Acceptance-13f8d48...` rather than accepting the green structural gate alone. Android 480x960/720x1280 and the desktop chat matrices show no critical overlap. The `desktop_compact_settings_960x640` capture exposed right/bottom clipping of the independent Settings window.
+- Root cause: non-native embedded subwindows use parent-local coordinates, but `show_settings()` added the root OS window position before centering. Native Windows requires absolute screen coordinates; Linux/editor/CI embedded windows must use only the centered local offset.
+- Source fix selects absolute positioning only when `popup.force_native` is true. Visual acceptance now fails when compact Settings position/size exceeds the 960x640 capture bounds, so the previously silent clipping cannot regress.
+
+PROGRESS_COMPLETE: 64%
+PROGRESS_REMAINING: 36%
+DONE: 8/10 exact-head CI green; actual render matrix inspected; compact Settings clipping reproduced and corrected with an explicit visual bound assertion.
+REMAINING: publish the visual correction; obtain refreshed UI/Integration plus serialized Windows/Android package verdicts; inspect refreshed compact capture; installed-platform proof; version-last and signed release acceptance.
+BLOCKERS: local Godot binary is unavailable in this resumed workspace; exact rendering must be revalidated by the already authoritative UI CI. Windows/Android package lanes remain serialized behind earlier runs.
+NEXT: commit/publish the three-file positioning, visual assertion and journal checkpoint; inspect the refreshed 960x640 artifact before accepting the UI source candidate.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 64%
