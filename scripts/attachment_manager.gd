@@ -53,7 +53,7 @@ func analyze(path: String, question := "", visual := true) -> Dictionary:
 	if not item.get("ok", false):
 		return item
 
-	var learning_import := await _maybe_import_learning_attachment(item)
+	var learning_import := await _maybe_import_learning_attachment(item, question)
 	if not learning_import.is_empty():
 		item["learning_import"] = learning_import
 		if bool(learning_import.get("ok", false)):
@@ -96,6 +96,17 @@ func analyze(path: String, question := "", visual := true) -> Dictionary:
 	item["private_copy"] = result.get("private_copy", "")
 	item["visual_requested"] = visual
 	item["analyzed"] = true
+	var deferred_type := _learning_type(item, question)
+	if not deferred_type.is_empty() and str(item.get("extension", "")) in ARCHIVE_EXTENSIONS:
+		var extracted_import := await _import_extracted_knowledge(path, str(item.get("content", "")), deferred_type)
+		item["learning_import"] = extracted_import
+		if bool(extracted_import.get("ok", false)):
+			item["kind"] = "learning/%s" % deferred_type
+			item["content"] = _learning_import_summary(extracted_import)
+		else:
+			var extracted_warnings: Array = item.get("warnings", [])
+			extracted_warnings.append("Импорт извлечённых знаний не выполнен: %s" % str(extracted_import.get("error", "неизвестная ошибка")))
+			item["warnings"] = extracted_warnings
 	return item
 
 func extract_for_knowledge(path: String, question := "") -> Dictionary:
@@ -146,8 +157,8 @@ func restart_file_backend() -> void:
 func clear_file_cache() -> Dictionary:
 	return await intelligence.clear_cache()
 
-func _maybe_import_learning_attachment(item: Dictionary) -> Dictionary:
-	var learning_type := _learning_type(item)
+func _maybe_import_learning_attachment(item: Dictionary, question := "") -> Dictionary:
+	var learning_type := _learning_type(item, question)
 	if learning_type.is_empty():
 		return {}
 	var path := str(item.get("path", ""))
@@ -155,9 +166,16 @@ func _maybe_import_learning_attachment(item: Dictionary) -> Dictionary:
 		return {"ok": false, "type": learning_type, "error": "Файл обучения недоступен"}
 	if learning_type == "skill":
 		return _import_skill_file(path, item)
+	# Archives require File Intelligence extraction before they can enter the
+	# transactional Knowledge store. Do not report a false direct-import error.
+	if str(item.get("extension", "")) in ARCHIVE_EXTENSIONS:
+		return {}
 	return await _import_knowledge_or_training(path, learning_type)
 
-func _learning_type(item: Dictionary) -> String:
+func _learning_type(item: Dictionary, question := "") -> String:
+	var explicit_type := _learning_type_from_instruction(question)
+	if not explicit_type.is_empty():
+		return explicit_type
 	var name := str(item.get("name", "")).to_lower()
 	var filename_type := _learning_type_from_filename(name)
 	if not filename_type.is_empty():
@@ -169,6 +187,18 @@ func _learning_type(item: Dictionary) -> String:
 	if content.begins_with("[") and content.contains("будет обработан потоково"):
 		return ""
 	return _learning_type_from_payload(content, ext)
+
+func _learning_type_from_instruction(question: String) -> String:
+	var lowered := question.to_lower().strip_edges()
+	if lowered.is_empty():
+		return ""
+	for skill_marker in ["импортируй навык", "добавь навык", "научи навыку", "import skill"]:
+		if lowered.contains(skill_marker):
+			return "skill"
+	for knowledge_marker in ["изучи", "обучи", "добавь в базу", "добавь в бд", "запомни файл", "импортируй знания", "learn this", "knowledge base"]:
+		if lowered.contains(knowledge_marker):
+			return "knowledge"
+	return ""
 
 func _learning_type_from_filename(name: String) -> String:
 	var lowered := name.to_lower()
@@ -246,6 +276,38 @@ func _import_knowledge_or_training(path: String, learning_type: String) -> Dicti
 	result["imported_via"] = "chat_attachment"
 	result["auto_execute"] = false
 	return result
+
+func _import_extracted_knowledge(path: String, text: String, learning_type: String) -> Dictionary:
+	if text.strip_edges().is_empty():
+		return {"ok": false, "type": learning_type, "error": "Архив не содержит извлекаемых знаний"}
+	var metadata := {
+		"kind": "training_example" if learning_type == "training" else "knowledge",
+		"scope": "core_knowledge",
+		"imported_via": "chat_attachment_extraction",
+		"user_supplied": true,
+		"untrusted_document": true,
+		"auto_execute": false,
+		"learning_type": learning_type,
+		"extracted": true
+	}
+	var worker := Thread.new()
+	var start_error := worker.start(Callable(self, "_extracted_knowledge_import_worker").bind(path, text, metadata))
+	if start_error != OK:
+		return {"ok": false, "type": learning_type, "error": "Не удалось запустить безопасный импорт: %s" % error_string(start_error)}
+	while worker.is_alive():
+		await get_tree().process_frame
+	var result = worker.wait_to_finish()
+	if not result is Dictionary:
+		return {"ok": false, "type": learning_type, "error": "Импорт извлечённых знаний завершился без результата"}
+	result["type"] = learning_type
+	result["imported_via"] = "chat_attachment_extraction"
+	result["auto_execute"] = false
+	return result
+
+func _extracted_knowledge_import_worker(path: String, text: String, metadata: Dictionary) -> Dictionary:
+	var store := KnowledgeStore.new()
+	var transaction := KnowledgeImportTransaction.new()
+	return transaction.import_extracted_file(store, path, text, metadata)
 
 func _knowledge_import_worker(path: String, metadata: Dictionary) -> Dictionary:
 	var store := KnowledgeStore.new()
