@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 133317)
-Total output lines: 3624
+Warning: truncated output (original token count: 133698)
+Total output lines: 3639
 
 # AuroraFox — PROJECT MASTER LOG
 
@@ -1408,21 +1408,7 @@ CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE — OWNER-DIRECTED SOLE EXECUTOR T
 - Owned batch: Android production prompt formatter/NativeRuntime, native probe, related runtime/contracts/tests, build/build_android.ps1 and canonical journal. Reconciles previous Core/Platform ownership; no safety/signing/offline/expected-answer gates removed.
 - Ownership extension for executable prompt regression coverage: plugin Gradle test dependency, CoreChatPromptTest and android-plugin-ci test task; `.gdignore` in native/probe source trees. Exported addon in `addons/AuroraFoxRuntime` stays visible to Godot.
 - Scheduling ownership extension: windows-package-ci concurrency sets cancel-in-progress=false to preserve the current expensive run while the next atomic candidate queues. Sections 49–51 document previous cancelled Windows runs; no product gate/timeout is bypassed.
-- Source cause: Android hand-written ChatML generation prefix omits Qwen3 non-thinking template suffix; reducing token budget alone truncates thinking before the answer. Need a shared production formatter used by plugin a…33317 tokens truncated…on`. This retries transport resets such as curl 35 but does not retry or hide a product/UI test failure. The workflow's distinct Xvfb/pointer/render artifact gates remain intact.
-
-LOCAL EVIDENCE: dedicated workflow regression `1 passed`; YAML parses with PyYAML; `git diff --check` succeeds. A broad branding test was intentionally not used as this change's acceptance because the shared worktree has a pre-existing, unrelated modified owner background PNG; it is not staged or claimed and remains unchanged. The remote exact branch retains the approved asset.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: transient UI bootstrap failure made retryable/cacheable without deleting UI coverage.
-REMAINING: publish and accept a new exact UI Visual run; remaining external release checkpoints unchanged.
-BLOCKERS: GitHub asset delivery remains external, but resets now have bounded retry and future cache hits avoid download.
-NEXT: publish minimal workflow/test/journal change, then wait for exact UI evidence rather than rerunning unrelated checks locally.
-ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
-
-## 74. BEFORE: remove 1 GiB search-sampling timeout instability
-
-Exact PR #92/head `f943958f246b5dcb47ae001fe915ad938ad89de0`; Knowledge run `35493971205`, job `106043170612`, artifact `10602033376` was downloaded and inspected. Godot installation succeeded. The actual report records a bounded timeout after `5400s`, return `-9`, peak RSS `901107712`, and the stage log proves generation/import completed (`1073742199` bytes, `1221299` generated records, `1221202` imported chunks, import `348486.762ms`) before the process remained in the search matrix. No final result/restart evidence was emitted.
+- Source cause: Android hand-written ChatML generation prefix omits Qwen3 non-thinking template suffix; reducing token budget alone truncates thinking before the answer. Need a shared production formatter used by plugin a…33698 tokens truncated…99` bytes, `1221299` generated records, `1221202` imported chunks, import `348486.762ms`) before the process remained in the search matrix. No final result/restart evidence was emitted.
 
 Comparison with the immediately preceding successful exact-parent run `35493583972`, job `106032591110`, artifact `10600946637` proves the gate is timing-fragile rather than a new product regression: its import process consumed `5050429ms`, including eight search cases repeated five times over a `3751630715`-byte store, and restart consumed another `271702ms`. Total work completed only about 78 seconds inside the 5400-second bound. Individual full-scan searches were approximately 115-188 seconds, so 40 repetitions dominate runtime.
 
@@ -2868,3 +2854,18 @@ NEXT: commit the memory/checkpoint, push `fix/v1.5-archive-knowledge-import`, in
 - Implemented candidate: autonomy and core candidates require explicit opt-in, previous unsafe settings migrate once to disabled, Core starts on the first real request with bounded threads/context/batches, attachment selection is instant and analysis uses the submitted instruction, archives are imported from locally extracted text, knowledge actions have fixed readable geometry, and duplicated native Settings chrome is removed.
 - Verification status: source contracts added; exact GitHub Actions, Windows installed smoke and physical responsiveness proof are still required. Version remains `V1.4.1.1`; release promotion is blocked until those proofs pass.
 - Readiness reset: 56%. This percentage may rise only from exact-head CI and installed-package evidence, not from source completion alone.
+
+### LATEST AUTHORITATIVE CHECKPOINT 2026-09-30 — archive fix ready for exact-SHA CI
+
+- The older 56% source-only reset immediately above is historical and is superseded by the merged PR #101 evidence and the 2026-09-30 continuation/checkpoint recorded in this section.
+- Exact current branch: `fix/v1.5-archive-knowledge-import`; implementation `6dcf015`; engineering-memory/checkpoint commit `90bc00d`; base/current `main` `446ce2c`.
+- Local acceptance remains green: bounded real ZIP text extraction; traversal/binary/expanded-budget/output-cap rejection; 31 focused P0 contracts; Godot 4.7.1 import/parse; explicit-instruction chat-learning smoke; desktop/mobile UI smoke; journal/memory contracts; `git diff --check`.
+- This is not yet merged or versioned. Readiness cannot increase until exact-SHA GitHub workflows pass and installed-runtime boundaries remain open.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: PR #101 integrated; archive false-success root cause fixed and locally accepted; AF-MEM-091 recorded.
+REMAINING: push branch; exact-SHA Core/Voice and Chat Learning CI; installed Windows archive/responsiveness proof; Android same-session reply; updater interruption; version-last/package/sign/publish.
+BLOCKERS: remote CI and installed-device evidence pending; no known source blocker.
+NEXT: publish the exact branch commits without version bump, inspect all triggered workflows, and correct only exact reproduced failures before merge consideration.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
