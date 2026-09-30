@@ -3577,6 +3577,41 @@ BLOCKERS: physical installed-runtime evidence cannot be produced in the current 
 NEXT: execute the installed Windows/Android acceptance script on owner hardware and capture results; if green, synchronize all V1.5.0.0/versionCode surfaces on this release branch, run exact-head CI, merge, sign and publish.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
 
+## 2026-09-30 — continuation after PR #101 merge; real archive-learning gap
+
+- Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains **ACTIVE** under the current Codex coordinator; this entry reconciles the previous source-only checkpoint with fresh `main` and does not create a parallel lane.
+- Started from exact fresh `main`: `446ce2cd2f979a8ab228f63d090062e8ba48a6eb` (`Merge PR #101: restore responsive startup and knowledge import`). The merge records 11/11 successful workflows. Local direct execution on the merge commit passes all 29 affected P0/autonomy/attachment/Core contract functions and `git diff --check`.
+- Current evidence-backed release-train readiness returns to **78%**: PR #101 is integrated and its automated gates are green, but installed Windows responsiveness, Android same-session reply, real interrupted updater transfer and final version/package/sign/publish acceptance remain open.
+- Newly reproduced source defect: for ZIP/7z/tar archives, `file_intelligence/file_service.py::_archive_listing()` returns only member paths and byte sizes. `AttachmentManager` then imports that listing through `_import_extracted_knowledge()` after an explicit command such as `изучи`. Therefore an archive like owner-supplied `files (2).zip` can be reported as imported while the text/JSON/CSV contents were never extracted into Knowledge.
+- Root-cause fix scope: `file_intelligence/file_service.py`, `scripts/attachment_manager.gd`, focused archive/File Intelligence tests, `docs/AURORAFOX_ENGINEERING_MEMORY.md`, and this journal. Preserve untrusted-data treatment, reject unsafe paths, bound entries/member bytes/total expanded bytes/output characters, never execute archive content, and do not weaken the existing Knowledge transaction.
+- Intended bump remains accumulated **MINOR `V1.5.0.0`**, version-last. No canonical version change is authorized by this checkpoint.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: PR #101 merged; 11/11 remote workflows recorded green; 29 focused local contracts green; false archive-content acceptance traced to the exact parser/import boundary.
+REMAINING: implement and test bounded real text extraction for supported archives; rerun affected CI; installed Windows/Android and updater interruption evidence; version-last and signed release acceptance.
+BLOCKERS: no source blocker for archive correction; physical installed-runtime evidence remains an external acceptance boundary.
+NEXT: add bounded safe archive text extraction plus regression fixtures proving content import and traversal/zip-bomb rejection, then run the affected local contract set before publishing any branch.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+### CHECKPOINT 2026-09-30 — bounded real archive content extraction implemented
+
+- Implementation commit: `6dcf015` on `fix/v1.5-archive-knowledge-import`, based directly on merged `main` `446ce2c`.
+- ZIP and tar File Intelligence now reads actual allowlisted text members instead of treating a filename listing as Knowledge. JSONL/NDJSON are first-class text. Extraction is bounded by declared expanded size, per-member bytes, aggregate bytes and strict output characters; unsafe paths, mislabeled binary data and oversized members are skipped without execution.
+- `AttachmentManager` now requires `text_entries_extracted > 0` before archive learning can enter the existing transactional Knowledge import. Unsupported bounded extraction, including current 7z listing-only behavior, produces an honest failure instead of false success.
+- Regression path uses neutral `uploaded_files_2_*.jsonl`: selecting it does not authorize learning, while explicit `Изучи этот файл...` does. This proves the submit-time instruction path rather than the old filename heuristic.
+- Local evidence: Python compile PASS; functional ZIP content/traversal/output-cap fixture `AURORA_ARCHIVE_TEXT_EXTRACTION_OK`; expanded-budget rejection `AURORA_ARCHIVE_BOMB_BUDGET_OK`; 31 directly invoked P0/autonomy/attachment/Core contracts PASS; Godot 4.7.1 project import and AttachmentManager parse PASS; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; `git diff --check` PASS. The first UI run after deleting generated `.import` metadata was an environment-order failure and was rerun correctly after a clean Godot import; no product failure is claimed from it.
+- Engineering memory: AF-MEM-091 records symptom, exact root cause, failed retries, bounded fix and prevention.
+- Canonical version remains `V1.4.1.1`; intended accumulated release remains `V1.5.0.0` version-last. No merge, release or signing action occurred in this batch.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: real bounded ZIP/tar text extraction and honest archive-learning gate implemented; focused Python/Godot/UI evidence green; reusable incident recorded.
+REMAINING: publish branch and obtain exact-SHA Core/Voice + Chat Learning CI; installed Windows `files (2).zip` acceptance and responsiveness; Android same-session reply; real interrupted updater transfer; version-last/package/sign/publish gates.
+BLOCKERS: no source blocker; installed-device evidence and exact remote CI are pending.
+NEXT: commit the memory/checkpoint, push `fix/v1.5-archive-knowledge-import`, inspect every triggered exact-SHA workflow and fix only reproduced failures before proposing integration.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
 
 ## 2026-09-29 — P0 installed-runtime correction after physical Windows evidence
 
@@ -3587,3 +3622,18 @@ NEXT: execute the installed Windows/Android acceptance script on owner hardware 
 - Implemented candidate: autonomy and core candidates require explicit opt-in, previous unsafe settings migrate once to disabled, Core starts on the first real request with bounded threads/context/batches, attachment selection is instant and analysis uses the submitted instruction, archives are imported from locally extracted text, knowledge actions have fixed readable geometry, and duplicated native Settings chrome is removed.
 - Verification status: source contracts added; exact GitHub Actions, Windows installed smoke and physical responsiveness proof are still required. Version remains `V1.4.1.1`; release promotion is blocked until those proofs pass.
 - Readiness reset: 56%. This percentage may rise only from exact-head CI and installed-package evidence, not from source completion alone.
+
+### LATEST AUTHORITATIVE CHECKPOINT 2026-09-30 — archive fix ready for exact-SHA CI
+
+- The older 56% source-only reset immediately above is historical and is superseded by the merged PR #101 evidence and the 2026-09-30 continuation/checkpoint recorded in this section.
+- Exact current branch: `fix/v1.5-archive-knowledge-import`; implementation `6dcf015`; engineering-memory/checkpoint commit `90bc00d`; base/current `main` `446ce2c`.
+- Local acceptance remains green: bounded real ZIP text extraction; traversal/binary/expanded-budget/output-cap rejection; 31 focused P0 contracts; Godot 4.7.1 import/parse; explicit-instruction chat-learning smoke; desktop/mobile UI smoke; journal/memory contracts; `git diff --check`.
+- This is not yet merged or versioned. Readiness cannot increase until exact-SHA GitHub workflows pass and installed-runtime boundaries remain open.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: PR #101 integrated; archive false-success root cause fixed and locally accepted; AF-MEM-091 recorded.
+REMAINING: push branch; exact-SHA Core/Voice and Chat Learning CI; installed Windows archive/responsiveness proof; Android same-session reply; updater interruption; version-last/package/sign/publish.
+BLOCKERS: remote CI and installed-device evidence pending; no known source blocker.
+NEXT: publish the exact branch commits without version bump, inspect all triggered workflows, and correct only exact reproduced failures before merge consideration.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%

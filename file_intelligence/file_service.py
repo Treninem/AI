@@ -44,6 +44,8 @@ MAX_FILE_BYTES = int(os.getenv("AURORAFOX_FILE_MAX_BYTES", str(1024 * 1024 * 102
 MAX_TEXT_CHARS = int(os.getenv("AURORAFOX_FILE_MAX_TEXT", "160000"))
 MAX_ARCHIVE_ENTRIES = int(os.getenv("AURORAFOX_ARCHIVE_MAX_ENTRIES", "5000"))
 MAX_ARCHIVE_EXPANDED = int(os.getenv("AURORAFOX_ARCHIVE_MAX_EXPANDED", str(512 * 1024 * 1024)))
+MAX_ARCHIVE_TEXT_MEMBER_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX", str(8 * 1024 * 1024)))
+MAX_ARCHIVE_TEXT_TOTAL_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_TOTAL_MAX", str(32 * 1024 * 1024)))
 MAX_TREE_ITEMS = 5000
 MAX_PDF_BYTES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_BYTES", str(256 * 1024 * 1024)))
 MAX_PDF_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_PAGES", "1000"))
@@ -74,7 +76,7 @@ class CacheSearchRequest(BaseModel):
 
 
 TEXT_EXT = {
-    ".txt", ".md", ".json", ".csv", ".tsv", ".gd", ".py", ".js", ".ts", ".tsx", ".jsx", ".html", ".css",
+    ".txt", ".md", ".json", ".jsonl", ".ndjson", ".csv", ".tsv", ".gd", ".py", ".js", ".ts", ".tsx", ".jsx", ".html", ".css",
     ".scss", ".xml", ".yaml", ".yml", ".toml", ".ini", ".cfg", ".log", ".shader", ".glsl", ".cpp", ".c",
     ".h", ".hpp", ".cs", ".java", ".kt", ".rs", ".go", ".php", ".rb", ".lua", ".swift", ".dart", ".sql",
     ".sh", ".ps1", ".r", ".jl", ".ex", ".exs",
@@ -405,11 +407,39 @@ def _video_analyze(path: Path, question: str, visual: bool) -> tuple[str, dict[s
     return "\n\n".join(parts), {"frames_analyzed": len(frame_results)}, warnings
 
 
-def _archive_listing(path: Path) -> tuple[str, dict[str, Any], list[str]]:
+def _archive_member_path(name: str) -> tuple[str, bool]:
+    normalized = name.replace("\\", "/")
+    member = Path(normalized)
+    drive_like = len(normalized) >= 2 and normalized[1] == ":"
+    unsafe = member.is_absolute() or drive_like or ".." in member.parts
+    return normalized, unsafe
+
+
+def _decode_archive_text(data: bytes) -> tuple[str, str]:
+    for encoding in ("utf-8-sig", "utf-8", "cp1251", "utf-16", "latin-1"):
+        try:
+            return data.decode(encoding), encoding
+        except UnicodeDecodeError:
+            continue
+    return data.decode("utf-8", errors="replace"), "utf-8-replace"
+
+
+def _clip_archive_text(text: str, limit: int) -> tuple[str, bool]:
+    if len(text) <= limit:
+        return text, False
+    if limit <= 0:
+        return "", True
+    marker = "\n[Архивный текст обрезан по безопасному лимиту]"
+    if limit <= len(marker):
+        return text[:limit], True
+    return text[: limit - len(marker)] + marker, True
+
+
+def _archive_listing(path: Path, max_chars: int = MAX_TEXT_CHARS) -> tuple[str, dict[str, Any], list[str]]:
     warnings: list[str] = []; entries: list[dict[str, Any]] = []; total = 0
     def add(name: str, size: int, is_dir: bool = False) -> None:
         nonlocal total
-        normalized = name.replace("\\", "/"); p = Path(normalized); unsafe = p.is_absolute() or ".." in p.parts
+        normalized, unsafe = _archive_member_path(name)
         entries.append({"path": normalized, "size": int(size), "dir": is_dir, "unsafe": unsafe})
         if not is_dir: total += max(0, int(size))
     suffix = path.suffix.lower()
@@ -427,9 +457,104 @@ def _archive_listing(path: Path) -> tuple[str, dict[str, Any], list[str]]:
     if len(entries) > MAX_ARCHIVE_ENTRIES: warnings.append(f"Архив содержит больше {MAX_ARCHIVE_ENTRIES} записей; список обрезан."); entries = entries[:MAX_ARCHIVE_ENTRIES]
     unsafe_count = sum(1 for e in entries if e["unsafe"])
     if unsafe_count: warnings.append(f"Обнаружено потенциально небезопасных путей: {unsafe_count}; распаковка таких путей запрещена.")
-    if total > MAX_ARCHIVE_EXPANDED: warnings.append(f"Заявленный распакованный размер превышает лимит {MAX_ARCHIVE_EXPANDED} байт; автоматическая распаковка запрещена.")
+    extraction_blocked = total > MAX_ARCHIVE_EXPANDED
+    if extraction_blocked: warnings.append(f"Заявленный распакованный размер превышает лимит {MAX_ARCHIVE_EXPANDED} байт; автоматическое чтение содержимого запрещено.")
     text_lines = [f"{('[DIR] ' if e['dir'] else '')}{e['path']} ({e['size']} B){' [UNSAFE]' if e['unsafe'] else ''}" for e in entries]
-    return "\n".join(text_lines), {"entries": len(entries), "expanded_bytes": total, "unsafe_entries": unsafe_count}, warnings
+    listing, listing_truncated = _clip_archive_text("\n".join(text_lines), min(max(0, max_chars // 4), 40000))
+    parts = ["### Состав архива\n" + listing] if listing else []
+    output_chars = sum(len(part) for part in parts)
+    extracted_entries = 0
+    extracted_bytes = 0
+    encodings: set[str] = set()
+
+    def append_text(name: str, declared_size: int, read_member: Any) -> None:
+        nonlocal extracted_entries, extracted_bytes, output_chars
+        normalized, unsafe = _archive_member_path(name)
+        if unsafe or Path(normalized).suffix.lower() not in TEXT_EXT:
+            return
+        if declared_size < 0 or declared_size > MAX_ARCHIVE_TEXT_MEMBER_BYTES:
+            warnings.append(f"Текстовый файл {normalized} пропущен: размер превышает безопасный лимит {MAX_ARCHIVE_TEXT_MEMBER_BYTES} байт.")
+            return
+        remaining_bytes = MAX_ARCHIVE_TEXT_TOTAL_BYTES - extracted_bytes
+        if remaining_bytes <= 0:
+            return
+        limit = min(MAX_ARCHIVE_TEXT_MEMBER_BYTES, remaining_bytes)
+        data = read_member(limit + 1)
+        if len(data) > limit:
+            warnings.append(f"Текстовый файл {normalized} пропущен: фактический размер превышает безопасный лимит.")
+            return
+        decoded, encoding = _decode_archive_text(data)
+        clean_text = decoded.strip()
+        if not clean_text:
+            return
+        readable = sum(1 for char in clean_text if char.isprintable() or char in "\n\r\t")
+        if "\x00" in clean_text or readable / max(1, len(clean_text)) < 0.85:
+            warnings.append(f"Файл {normalized} пропущен: содержимое не похоже на безопасный текст.")
+            return
+        block = f"### Извлечённый файл: {normalized}\n{clean_text}"
+        separator_chars = 2 if parts else 0
+        remaining_chars = max_chars - output_chars - separator_chars
+        if remaining_chars <= 0:
+            return
+        if len(block) > remaining_chars:
+            block, _ = _clip_archive_text(block, remaining_chars)
+        if not block:
+            return
+        parts.append(block)
+        output_chars += separator_chars + len(block)
+        extracted_entries += 1
+        extracted_bytes += len(data)
+        encodings.add(encoding)
+
+    if not extraction_blocked:
+        if suffix == ".zip":
+            with zipfile.ZipFile(path) as zf:
+                for info in zf.infolist()[:MAX_ARCHIVE_ENTRIES]:
+                    if info.is_dir():
+                        continue
+                    def read_zip(limit: int, item: zipfile.ZipInfo = info) -> bytes:
+                        with zf.open(item) as stream:
+                            return stream.read(limit)
+                    append_text(info.filename, int(info.file_size), read_zip)
+                    if extracted_bytes >= MAX_ARCHIVE_TEXT_TOTAL_BYTES:
+                        break
+        elif tarfile.is_tarfile(path):
+            with tarfile.open(path, mode="r:*") as tf:
+                for info in tf.getmembers()[:MAX_ARCHIVE_ENTRIES]:
+                    if not info.isfile():
+                        continue
+                    def read_tar(limit: int, item: tarfile.TarInfo = info) -> bytes:
+                        stream = tf.extractfile(item)
+                        if stream is None:
+                            return b""
+                        try:
+                            return stream.read(limit)
+                        finally:
+                            stream.close()
+                    append_text(info.name, int(info.size), read_tar)
+                    if extracted_bytes >= MAX_ARCHIVE_TEXT_TOTAL_BYTES:
+                        break
+        elif suffix == ".7z":
+            warnings.append("7z проверен по составу, но текст не извлечён: безопасный потоковый reader для этого контейнера недоступен.")
+
+    if extracted_bytes >= MAX_ARCHIVE_TEXT_TOTAL_BYTES:
+        warnings.append(f"Извлечение текста остановлено на общем лимите {MAX_ARCHIVE_TEXT_TOTAL_BYTES} байт.")
+    if listing_truncated:
+        warnings.append("Список файлов архива обрезан по лимиту вывода.")
+    text = "\n\n".join(parts)
+    metadata = {
+        "entries": len(entries),
+        "expanded_bytes": total,
+        "unsafe_entries": unsafe_count,
+        "text_entries_extracted": extracted_entries,
+        "text_bytes_extracted": extracted_bytes,
+        "text_encodings": sorted(encodings),
+        "extraction_blocked": extraction_blocked,
+        "untrusted_document": True,
+        "content_authority": "data_only",
+        "external_ai_required": False,
+    }
+    return text, metadata, warnings
 
 
 def _analyze(path: Path, question: str, visual: bool, max_chars: int = MAX_TEXT_CHARS) -> dict[str, Any]:
@@ -446,7 +571,7 @@ def _analyze(path: Path, question: str, visual: bool, max_chars: int = MAX_TEXT_
     elif ext in IMAGE_EXT: kind = "image"; text, extra, warnings = _image_analyze(path, question, visual); metadata.update(extra)
     elif ext in AUDIO_EXT: kind = "audio"; text, extra, warnings = _voice_transcribe(path); metadata.update(extra)
     elif ext in VIDEO_EXT: kind = "video"; text, extra, warnings = _video_analyze(path, question, visual); metadata.update(extra)
-    elif ext in ARCHIVE_EXT or zipfile.is_zipfile(path) or tarfile.is_tarfile(path): kind = "archive"; text, extra, warnings = _archive_listing(path); metadata.update(extra)
+    elif ext in ARCHIVE_EXT or zipfile.is_zipfile(path) or tarfile.is_tarfile(path): kind = "archive"; text, extra, warnings = _archive_listing(path, max_chars=max_chars); metadata.update(extra)
     else:
         try:
             text, encoding = _read_text(path)

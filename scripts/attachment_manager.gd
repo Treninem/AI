@@ -98,7 +98,18 @@ func analyze(path: String, question := "", visual := true) -> Dictionary:
 	item["analyzed"] = true
 	var deferred_type := _learning_type(item, question)
 	if not deferred_type.is_empty() and str(item.get("extension", "")) in ARCHIVE_EXTENSIONS:
-		var extracted_import := await _import_extracted_knowledge(path, str(item.get("content", "")), deferred_type)
+		var metadata: Dictionary = item.get("metadata", {})
+		var extracted_entries := int(metadata.get("text_entries_extracted", 0))
+		var extracted_text := str(item.get("content", ""))
+		var extracted_import: Dictionary
+		if extracted_entries <= 0:
+			extracted_import = {
+				"ok": false,
+				"type": deferred_type,
+				"error": "В архиве не найдено безопасно извлекаемых текстовых знаний"
+			}
+		else:
+			extracted_import = await _import_extracted_knowledge(path, extracted_text, deferred_type)
 		item["learning_import"] = extracted_import
 		if bool(extracted_import.get("ok", false)):
 			item["kind"] = "learning/%s" % deferred_type
