@@ -184,6 +184,9 @@ func _build_ui() -> void:
 	else:
 		popup.title = "Настройки AuroraFox"
 		popup.force_native = OS.get_name() == "Windows" and not OS.has_feature("editor")
+		# The app draws its own complete header. Removing duplicated native chrome
+		# avoids the empty white strip seen on Windows while retaining a real window.
+		popup.borderless = true
 		popup.transient = false
 		popup.exclusive = false
 		popup.close_requested.connect(func(): popup.hide())

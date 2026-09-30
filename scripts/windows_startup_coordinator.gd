@@ -29,9 +29,8 @@ func _stabilize_startup() -> void:
 		if voice_popup is PopupPanel:
 			(voice_popup as PopupPanel).hide()
 
-	var ai_value = main.get("ai")
-	if ai_value is AIClient:
-		call_deferred("_warm_core", ai_value)
+	# Core starts only on the first real request. Loading the model during UI
+	# startup made low-resource Windows systems unresponsive for minutes.
 
 	# Keep update UI inside the main header if an older overlay created a
 	# floating button before the header was available.

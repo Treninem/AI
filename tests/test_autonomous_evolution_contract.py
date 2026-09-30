@@ -42,8 +42,15 @@ def test_windows_and_android_support_autonomous_hot_mutations():
     assert 'for name in ["read_file", "write_file"]' in coordinator
 
 
-def test_coordinator_starts_learning_and_evolution_without_manual_trigger():
+def test_coordinator_keeps_evolution_available_but_requires_explicit_opt_in():
     text = read("agent/autonomous_coordinator.gd")
+    settings = read("scripts/autonomy_settings_manager.gd")
+    assert "@export var autonomous_enabled := false" in text
+    assert "@export var autonomous_hot_improvements := false" in text
+    assert 'if not autonomous_enabled:' in text
+    assert '"manual_opt_in_required"' in text
+    assert '"master_enabled": false' in settings
+    assert "SETTINGS_SCHEMA_VERSION := 2" in settings
     assert "cycle_interval_seconds := 300.0" in text
     assert "mutation_cooldown_seconds := 900.0" in text
     assert "research_cooldown_seconds := 300.0" in text
@@ -134,3 +141,32 @@ def test_no_user_confirmation_gate_exists_in_evolution_path():
         assert forbidden not in improver
         assert forbidden not in coordinator
         assert forbidden not in overlay
+
+
+def test_p0_runtime_limits_and_lazy_startup_are_contractual():
+    runtime = read("scripts/desktop_local_runtime.gd")
+    startup = read("scripts/windows_startup_coordinator.gd")
+    assert "const DEFAULT_CHAT_MAX_TOKENS := 768" in runtime
+    assert "const DEFAULT_CONTEXT_SIZE := 4096" in runtime
+    assert "const DEFAULT_THREADS := 4" in runtime
+    assert '"--threads", str(DEFAULT_THREADS)' in runtime
+    assert '"--batch-size", str(DEFAULT_BATCH_SIZE)' in runtime
+    assert 'call_deferred("_warm_core"' not in startup
+
+
+def test_chat_attachment_learning_uses_the_submitted_instruction():
+    manager = read("scripts/attachment_manager.gd")
+    main = read("scripts/main.gd")
+    assert 'attachments.describe(path)' in main
+    assert 'attachments.analyze(path, shown, false)' in main
+    assert '_learning_type_from_instruction(question)' in manager
+    assert '"изучи"' in manager
+    assert 'transaction.import_extracted_file(store, path, text, metadata)' in manager
+
+
+def test_knowledge_actions_cannot_collapse_to_blank_buttons():
+    overlay = read("scripts/knowledge_base_overlay.gd")
+    assert 'reindex.custom_minimum_size = Vector2(176, 42)' in overlay
+    assert 'remove.custom_minimum_size = Vector2(112, 42)' in overlay
+    assert 'reindex.text = "Переиндексировать"' in overlay
+    assert 'remove.text = "Удалить"' in overlay

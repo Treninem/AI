@@ -775,8 +775,10 @@ func _ingest_files(paths: PackedStringArray) -> void:
 				break
 		if duplicate:
 			continue
-		_set_status("Разбираю файл: %s…" % path.get_file())
-		var item := await attachments.analyze(path)
+		_set_status("Добавляю файл: %s…" % path.get_file())
+		# Keep file selection instant. The actual instruction-aware analysis starts
+		# only after Send, when words such as "изучи" are available.
+		var item := attachments.describe(path)
 		if item.get("ok", false):
 			pending_attachments.append(item)
 		else:
@@ -860,6 +862,15 @@ func _submit_current() -> void:
 	_refresh_chat_list()
 	_render_active_chat()
 	var work_state := "AI_READING" if not attachment_copy.is_empty() else "AI_WORKING"
+	if not attachment_copy.is_empty():
+		_set_status("Локально разбираю вложения по вашей команде…")
+		for i in range(attachment_copy.size()):
+			var path := str(attachment_copy[i].get("path", ""))
+			if path.is_empty():
+				continue
+			var analyzed := await attachments.analyze(path, shown, false)
+			if bool(analyzed.get("ok", false)):
+				attachment_copy[i] = analyzed
 	_set_status("AuroraFox думает…")
 	ai_working_started.emit(work_state)
 	AuroraVoice.set_ai_working(true, work_state)

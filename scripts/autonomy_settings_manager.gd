@@ -4,13 +4,14 @@ extends Node
 signal settings_changed(settings: Dictionary)
 
 const SETTINGS_PATH := "user://autonomy_settings.json"
+const SETTINGS_SCHEMA_VERSION := 2
 const DEFAULT_SETTINGS := {
-	"master_enabled": true,
-	"autonomous_learning": true,
-	"autonomous_cycles": true,
-	"hot_improvements": true,
-	"core_candidates": true,
-	"auto_apply_dev_checkout": true
+	"master_enabled": false,
+	"autonomous_learning": false,
+	"autonomous_cycles": false,
+	"hot_improvements": false,
+	"core_candidates": false,
+	"auto_apply_dev_checkout": false
 }
 
 var settings: Dictionary = DEFAULT_SETTINGS.duplicate(true)
@@ -136,6 +137,12 @@ func _load() -> void:
 	file.close()
 	if not parsed is Dictionary:
 		return
+	# Existing installations inherited unsafe opt-out defaults. Require one
+	# explicit opt-in after this migration instead of silently restoring them.
+	if int(parsed.get("settings_schema_version", 0)) < SETTINGS_SCHEMA_VERSION:
+		settings = DEFAULT_SETTINGS.duplicate(true)
+		_save()
+		return
 	for key in DEFAULT_SETTINGS.keys():
 		if parsed.has(key):
 			settings[key] = bool(parsed.get(key, DEFAULT_SETTINGS[key]))
@@ -145,6 +152,7 @@ func _save() -> void:
 	if file == null:
 		return
 	var data := settings.duplicate(true)
+	data["settings_schema_version"] = SETTINGS_SCHEMA_VERSION
 	data["updated_at"] = Time.get_datetime_string_from_system(true)
 	file.store_string(JSON.stringify(data, "  "))
 	file.close()

@@ -381,19 +381,22 @@ func _add_source_card(source: Dictionary) -> void:
 	details.add_theme_color_override("font_color", Color("a9b4c8"))
 	card.add_child(details)
 
-	var source_actions := HFlowContainer.new()
-	source_actions.add_theme_constant_override("h_separation", 8)
-	source_actions.add_theme_constant_override("v_separation", 7)
+	var source_actions := HBoxContainer.new()
+	source_actions.add_theme_constant_override("separation", 8)
 	card.add_child(source_actions)
 	if source_path != "manual":
 		var reindex := Button.new()
 		reindex.text = "Переиндексировать"
+		reindex.custom_minimum_size = Vector2(176, 42)
+		reindex.tooltip_text = "Повторно прочитать исходный файл и обновить знания"
 		reindex.disabled = not FileAccess.file_exists(source_path)
 		reindex.pressed.connect(_reindex.bind(source_path))
 		_apply_main_button(reindex)
 		source_actions.add_child(reindex)
 	var remove := Button.new()
 	remove.text = "Удалить"
+	remove.custom_minimum_size = Vector2(112, 42)
+	remove.tooltip_text = "Удалить этот источник из локальной базы знаний"
 	remove.pressed.connect(_delete_source.bind(source_path))
 	_apply_main_button(remove, true)
 	source_actions.add_child(remove)

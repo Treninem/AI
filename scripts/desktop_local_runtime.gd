@@ -7,11 +7,14 @@ const BASE_URL := "http://127.0.0.1:8766"
 const MODEL_ALIAS := "AuroraFox-Core"
 const STARTUP_ATTEMPTS := 480
 const JOINED_WARMUP_ATTEMPTS := 120
-const DEFAULT_CHAT_MAX_TOKENS := 2048
+const DEFAULT_CHAT_MAX_TOKENS := 768
 const TERSE_CHAT_MAX_TOKENS := 128
 const DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0
 const DEFAULT_CONTEXT_SIZE := 4096
 const DEFAULT_PARALLEL_SLOTS := 1
+const DEFAULT_THREADS := 4
+const DEFAULT_BATCH_SIZE := 64
+const DEFAULT_UBATCH_SIZE := 32
 
 var server_pid := 0
 var active_model := ""
@@ -83,10 +86,8 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 	if not is_available():
 		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует или повреждён", "installer": installer_path()}
 
-	# WindowsStartupCoordinator warms the Core in the background. A real user
-	# message can arrive while that same model is still loading. Never stop that
-	# startup or return "already starting". A foreground request joins it only
-	# for a bounded 30 seconds; background warmup may continue independently.
+	# Multiple messages can arrive while the first on-demand startup is loading.
+	# Join the same bounded startup instead of spawning competing engine processes.
 	if starting:
 		return await _wait_for_existing_start(model_absolute_path)
 
@@ -103,6 +104,10 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		"--port", str(PORT),
 		"--ctx-size", str(DEFAULT_CONTEXT_SIZE),
 		"--parallel", str(DEFAULT_PARALLEL_SLOTS),
+		"--threads", str(DEFAULT_THREADS),
+		"--threads-batch", str(DEFAULT_THREADS),
+		"--batch-size", str(DEFAULT_BATCH_SIZE),
+		"--ubatch-size", str(DEFAULT_UBATCH_SIZE),
 		"--alias", MODEL_ALIAS,
 		"--jinja"
 	])
@@ -173,7 +178,10 @@ func runtime_info() -> Dictionary:
 		"terse_chat_max_tokens": TERSE_CHAT_MAX_TOKENS,
 		"default_chat_timeout_seconds": DEFAULT_CHAT_TIMEOUT_SECONDS,
 		"context_size": DEFAULT_CONTEXT_SIZE,
-		"parallel_slots": DEFAULT_PARALLEL_SLOTS
+		"parallel_slots": DEFAULT_PARALLEL_SLOTS,
+		"threads": DEFAULT_THREADS,
+		"batch_size": DEFAULT_BATCH_SIZE,
+		"ubatch_size": DEFAULT_UBATCH_SIZE
 	}
 
 func _is_explicit_terse_request(messages: Array) -> bool:

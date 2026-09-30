@@ -7,7 +7,8 @@ EXPERIENCE = (ROOT / "scripts" / "experience_store.gd").read_text(encoding="utf-
 
 
 def test_chat_attachment_path_is_real_product_path():
-    assert "attachments.analyze(path)" in MAIN
+    assert "attachments.describe(path)" in MAIN
+    assert "attachments.analyze(path, shown, false)" in MAIN
     assert "attachments.build_context(attachment_copy)" in MAIN
     assert "files_dropped.connect(_on_files_dropped)" in MAIN
 

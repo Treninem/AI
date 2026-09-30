@@ -3560,3 +3560,30 @@ REMAINING: publish the visual correction; obtain refreshed UI/Integration plus s
 BLOCKERS: local Godot binary is unavailable in this resumed workspace; exact rendering must be revalidated by the already authoritative UI CI. Windows/Android package lanes remain serialized behind earlier runs.
 NEXT: commit/publish the three-file positioning, visual assertion and journal checkpoint; inspect the refreshed 960x640 artifact before accepting the UI source candidate.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 64%
+
+### CHECKPOINT 2026-09-29 — PR #100 integrated; installed-package evidence reviewed
+
+- PR #100 exact head `4dbb9c1db857685609befcf4f0cd0dab49c0c8e6` completed 10/10 pull-request workflows successfully and was merged to `main` as `b30dffe95a7749d104d3258b2f535cfbf327d906` after owner instruction to continue integration.
+- Exact-head UI artifact `AuroraFox-UI-Visual-Acceptance-4dbb9c1...` was re-inspected: compact Settings at 960x640 is fully inside bounds; the Done action remains visible; Android narrow, keyboard and safe-area captures show no critical overlap.
+- Windows Package run `36539566957` completed exact-checkout, package build, exported executable smoke, installer build, historical V1.2/V1.3 bridge repair, silent install and installed-app smoke. Installer diagnostics end with successful installation and shortcut creation. Inno uninstall directory error 145 is retry cleanup of non-empty directories and did not fail the job.
+- Android APK run `36539566890` built and signed the exact candidate, installed it on Android 35, launched package `com.aurorafox.ai` and completed successfully.
+- Created `release/v1.5.0.0` from the exact merge commit, but intentionally did not change canonical V1.4.1.1 yet. Version-last remains protected until real interrupted/resumed transfer and installed same-session Android response evidence are obtained; release signing/publication has not started.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: durable updater and responsive client source integrated to main; 10/10 exact-head PR CI green; visual artifact inspected; Windows installed smoke and Android 35 install/launch green.
+REMAINING: real network interruption/restart resume proof; installed Android same-session reply/latency proof; owner-PC Core messages `1+4`, `привет`, `изучи`; version-last V1.5.0.0; post-bump exact-SHA package/update/release gates; signed publication.
+BLOCKERS: physical installed-runtime evidence cannot be produced in the current Linux workspace (no Windows desktop, Android device/emulator, adb or Godot); canonical version bump and release remain intentionally blocked by those acceptance items.
+NEXT: execute the installed Windows/Android acceptance script on owner hardware and capture results; if green, synchronize all V1.5.0.0/versionCode surfaces on this release branch, run exact-head CI, merge, sign and publish.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+
+## 2026-09-29 — P0 installed-runtime correction after physical Windows evidence
+
+- Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains the single active package; no parallel journal was created.
+- Real installed screenshots supersede the earlier CI-only readiness estimate: Windows became unresponsive, windows opened in up to a minute, some knowledge actions collapsed to blank controls, Core stayed in startup, and `files (2).zip` plus the explicit command `изучи` was not imported as knowledge.
+- Root cause: three heavyweight startup paths ran together (autonomous evolution, core-candidate generation and model warmup), while llama-server had no conservative CPU/batch limits. Attachment learning intent was inferred from filenames before the user instruction existed.
+- P0 branch: `fix/v1.5-p0-runtime` from release checkpoint `0b9dd80f8dd378fe3f3c60dbb6f36787aad0cc41`.
+- Implemented candidate: autonomy and core candidates require explicit opt-in, previous unsafe settings migrate once to disabled, Core starts on the first real request with bounded threads/context/batches, attachment selection is instant and analysis uses the submitted instruction, archives are imported from locally extracted text, knowledge actions have fixed readable geometry, and duplicated native Settings chrome is removed.
+- Verification status: source contracts added; exact GitHub Actions, Windows installed smoke and physical responsiveness proof are still required. Version remains `V1.4.1.1`; release promotion is blocked until those proofs pass.
+- Readiness reset: 56%. This percentage may rise only from exact-head CI and installed-package evidence, not from source completion alone.
