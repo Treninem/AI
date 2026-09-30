@@ -1,5 +1,5 @@
-Warning: truncated output (original token count: 132635)
-Total output lines: 3606
+Warning: truncated output (original token count: 133317)
+Total output lines: 3624
 
 # AuroraFox — PROJECT MASTER LOG
 
@@ -1408,35 +1408,7 @@ CLAIM `WORK-2026-09-17-FINAL-RELEASE`: ACTIVE — OWNER-DIRECTED SOLE EXECUTOR T
 - Owned batch: Android production prompt formatter/NativeRuntime, native probe, related runtime/contracts/tests, build/build_android.ps1 and canonical journal. Reconciles previous Core/Platform ownership; no safety/signing/offline/expected-answer gates removed.
 - Ownership extension for executable prompt regression coverage: plugin Gradle test dependency, CoreChatPromptTest and android-plugin-ci test task; `.gdignore` in native/probe source trees. Exported addon in `addons/AuroraFoxRuntime` stays visible to Godot.
 - Scheduling ownership extension: windows-package-ci concurrency sets cancel-in-progress=false to preserve the current expensive run while the next atomic candidate queues. Sections 49–51 document previous cancelled Windows runs; no product gate/timeout is bypassed.
-- Source cause: Android hand-written ChatML generation prefix omits Qwen3 non-thinking template suffix; reducing token budget alone truncates thinking before the answer. Need a shared production formatter used by plugin a…32635 tokens truncated…production signing/update/release.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: Android installed offline Voice/OCR/Knowledge accepted from exact artifact and all exact-head workflows success.
-REMAINING: 8 release checkpoints, chiefly external/product evidence and final release identity.
-BLOCKERS: no genuine corpus/provenance or physical/human/server-production acceptance yet.
-NEXT: preserve this accepted evidence, then address the next independently demonstrable release boundary without changing version before final identity gate.
-ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
-
-## 73. BEFORE: make UI Godot bootstrap retryable and cached
-
-Exact PR #92/head `03d0b1116853d8b7e1f9b8647571470402a2434b`; UI Visual job `106032550831` verified `AURORA_CI_CHECKOUT_SHA=03d0b111...` then failed before project import/tests because GitHub release download returned curl `(35) Recv failure: Connection reset by peer`. This is runner/network infrastructure, not a UI or product failure. Claim: `.github/workflows/ui-visual-ci.yml`, a narrow workflow regression test if added, and this journal. Unrelated owner background remains untouched.
-
-The UI workflow has a distinct release boundary: desktop/Android portrait layout, actual pointer navigation, and 34 rendered acceptance surfaces. It cannot be silently merged into Core/Android/package jobs because it needs Xvfb/GL rendering and its own artifacts. Repeated Godot downloads occur because GitHub jobs are isolated; however bootstrap can be cached and transient release-asset resets retried without duplicating UI assertions.
-
-INTENDED FIX: cache only the verified Godot 4.7.1 Linux executable under a fixed key; on cache miss use HTTP/1.1, connection/total timeouts, `--retry-all-errors`, bounded exponential-style retry delay and archive integrity test before extraction. Keep the actual UI gates unchanged and no retry of a failing product test.
-
-PROGRESS_COMPLETE: 60%
-PROGRESS_REMAINING: 40%
-DONE: exact infrastructure-only failure classified before any product claim changed.
-REMAINING: resilient bootstrap implementation/local YAML check/new UI job.
-BLOCKERS: external GitHub release connection reset; no application failure observed.
-NEXT: make only the downloader retry/cache boundary resilient.
-ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 60%
-
-### AFTER: UI bootstrap retries transient Godot delivery failures
-
-UI Visual CI restores/saves only the pinned Godot 4.7.1 Linux executable cache (`aurorafox-godot-linux-4.7.1-stable-a13da4feb`). On a miss it uses `curl --http1.1 --connect-timeout 30 --max-time 300 --retry 8 --retry-all-errors --retry-delay 5 --retry-max-time 300`, validates ZIP structure before extraction, and still verifies `./godot --version`. This retries transport resets such as curl 35 but does not retry or hide a product/UI test failure. The workflow's distinct Xvfb/pointer/render artifact gates remain intact.
+- Source cause: Android hand-written ChatML generation prefix omits Qwen3 non-thinking template suffix; reducing token budget alone truncates thinking before the answer. Need a shared production formatter used by plugin a…33317 tokens truncated…on`. This retries transport resets such as curl 35 but does not retry or hide a product/UI test failure. The workflow's distinct Xvfb/pointer/render artifact gates remain intact.
 
 LOCAL EVIDENCE: dedicated workflow regression `1 passed`; YAML parses with PyYAML; `git diff --check` succeeds. A broad branding test was intentionally not used as this change's acceptance because the shared worktree has a pre-existing, unrelated modified owner background PNG; it is not staged or claimed and remains unchanged. The remote exact branch retains the approved asset.
 
@@ -2851,17 +2823,6 @@ BLOCKERS: physical installed-runtime evidence cannot be produced in the current 
 NEXT: execute the installed Windows/Android acceptance script on owner hardware and capture results; if green, synchronize all V1.5.0.0/versionCode surfaces on this release branch, run exact-head CI, merge, sign and publish.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
 
-
-## 2026-09-29 — P0 installed-runtime correction after physical Windows evidence
-
-- Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains the single active package; no parallel journal was created.
-- Real installed screenshots supersede the earlier CI-only readiness estimate: Windows became unresponsive, windows opened in up to a minute, some knowledge actions collapsed to blank controls, Core stayed in startup, and `files (2).zip` plus the explicit command `изучи` was not imported as knowledge.
-- Root cause: three heavyweight startup paths ran together (autonomous evolution, core-candidate generation and model warmup), while llama-server had no conservative CPU/batch limits. Attachment learning intent was inferred from filenames before the user instruction existed.
-- P0 branch: `fix/v1.5-p0-runtime` from release checkpoint `0b9dd80f8dd378fe3f3c60dbb6f36787aad0cc41`.
-- Implemented candidate: autonomy and core candidates require explicit opt-in, previous unsafe settings migrate once to disabled, Core starts on the first real request with bounded threads/context/batches, attachment selection is instant and analysis uses the submitted instruction, archives are imported from locally extracted text, knowledge actions have fixed readable geometry, and duplicated native Settings chrome is removed.
-- Verification status: source contracts added; exact GitHub Actions, Windows installed smoke and physical responsiveness proof are still required. Version remains `V1.4.1.1`; release promotion is blocked until those proofs pass.
-- Readiness reset: 56%. This percentage may rise only from exact-head CI and installed-package evidence, not from source completion alone.
-
 ## 2026-09-30 — continuation after PR #101 merge; real archive-learning gap
 
 - Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains **ACTIVE** under the current Codex coordinator; this entry reconciles the previous source-only checkpoint with fresh `main` and does not create a parallel lane.
@@ -2878,3 +2839,32 @@ REMAINING: implement and test bounded real text extraction for supported archive
 BLOCKERS: no source blocker for archive correction; physical installed-runtime evidence remains an external acceptance boundary.
 NEXT: add bounded safe archive text extraction plus regression fixtures proving content import and traversal/zip-bomb rejection, then run the affected local contract set before publishing any branch.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+### CHECKPOINT 2026-09-30 — bounded real archive content extraction implemented
+
+- Implementation commit: `6dcf015` on `fix/v1.5-archive-knowledge-import`, based directly on merged `main` `446ce2c`.
+- ZIP and tar File Intelligence now reads actual allowlisted text members instead of treating a filename listing as Knowledge. JSONL/NDJSON are first-class text. Extraction is bounded by declared expanded size, per-member bytes, aggregate bytes and strict output characters; unsafe paths, mislabeled binary data and oversized members are skipped without execution.
+- `AttachmentManager` now requires `text_entries_extracted > 0` before archive learning can enter the existing transactional Knowledge import. Unsupported bounded extraction, including current 7z listing-only behavior, produces an honest failure instead of false success.
+- Regression path uses neutral `uploaded_files_2_*.jsonl`: selecting it does not authorize learning, while explicit `Изучи этот файл...` does. This proves the submit-time instruction path rather than the old filename heuristic.
+- Local evidence: Python compile PASS; functional ZIP content/traversal/output-cap fixture `AURORA_ARCHIVE_TEXT_EXTRACTION_OK`; expanded-budget rejection `AURORA_ARCHIVE_BOMB_BUDGET_OK`; 31 directly invoked P0/autonomy/attachment/Core contracts PASS; Godot 4.7.1 project import and AttachmentManager parse PASS; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; `git diff --check` PASS. The first UI run after deleting generated `.import` metadata was an environment-order failure and was rerun correctly after a clean Godot import; no product failure is claimed from it.
+- Engineering memory: AF-MEM-091 records symptom, exact root cause, failed retries, bounded fix and prevention.
+- Canonical version remains `V1.4.1.1`; intended accumulated release remains `V1.5.0.0` version-last. No merge, release or signing action occurred in this batch.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: real bounded ZIP/tar text extraction and honest archive-learning gate implemented; focused Python/Godot/UI evidence green; reusable incident recorded.
+REMAINING: publish branch and obtain exact-SHA Core/Voice + Chat Learning CI; installed Windows `files (2).zip` acceptance and responsiveness; Android same-session reply; real interrupted updater transfer; version-last/package/sign/publish gates.
+BLOCKERS: no source blocker; installed-device evidence and exact remote CI are pending.
+NEXT: commit the memory/checkpoint, push `fix/v1.5-archive-knowledge-import`, inspect every triggered exact-SHA workflow and fix only reproduced failures before proposing integration.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+
+## 2026-09-29 — P0 installed-runtime correction after physical Windows evidence
+
+- Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains the single active package; no parallel journal was created.
+- Real installed screenshots supersede the earlier CI-only readiness estimate: Windows became unresponsive, windows opened in up to a minute, some knowledge actions collapsed to blank controls, Core stayed in startup, and `files (2).zip` plus the explicit command `изучи` was not imported as knowledge.
+- Root cause: three heavyweight startup paths ran together (autonomous evolution, core-candidate generation and model warmup), while llama-server had no conservative CPU/batch limits. Attachment learning intent was inferred from filenames before the user instruction existed.
+- P0 branch: `fix/v1.5-p0-runtime` from release checkpoint `0b9dd80f8dd378fe3f3c60dbb6f36787aad0cc41`.
+- Implemented candidate: autonomy and core candidates require explicit opt-in, previous unsafe settings migrate once to disabled, Core starts on the first real request with bounded threads/context/batches, attachment selection is instant and analysis uses the submitted instruction, archives are imported from locally extracted text, knowledge actions have fixed readable geometry, and duplicated native Settings chrome is removed.
+- Verification status: source contracts added; exact GitHub Actions, Windows installed smoke and physical responsiveness proof are still required. Version remains `V1.4.1.1`; release promotion is blocked until those proofs pass.
+- Readiness reset: 56%. This percentage may rise only from exact-head CI and installed-package evidence, not from source completion alone.

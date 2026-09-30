@@ -564,3 +564,14 @@
 - **Профилактика:** reject traversal/duplicate names, non-HTTPS URLs, invalid hashes, oversized parts and aggregate-size mismatch; signed manifest generation asserts part counts/sizes and release uploads every declared part.
 - **Evidence:** Godot 4.7.1 update smoke `AURORA_UPDATE_GODOT_SMOKE_OK automatic=true resumable_parts=true`; five focused Python contracts pass; GDScript fixture reuses verified part and assembles in signed order.
 - **Статус:** SOURCE ACCEPTED LOCALLY; exact-SHA CI, real interrupted transfer and installed Windows/Android acceptance pending.
+
+#### AF-MEM-091 — архив принимался как Knowledge без чтения содержимого
+
+- **Дата/среда:** 2026-09-30; fresh main `446ce2cd2f979a8ab228f63d090062e8ba48a6eb`; owner case `files (2).zip` + команда `изучи`; source fix `6dcf015`.
+- **Симптом:** AuroraFox могла сообщить об импорте ZIP/7z/tar в Knowledge, хотя в базу попадал только перечень имён и размеров файлов; реальные TXT/JSON/JSONL/CSV и другие текстовые данные внутри ZIP не читались.
+- **Причина:** `file_service._archive_listing()` формировал только listing, а `AttachmentManager._import_extracted_knowledge()` принимал любой непустой ответ File Intelligence за извлечённый текст.
+- **Нерабочие попытки:** повторно выбирать архив; переименовывать его в `knowledge*.zip`; повторять `изучи`. Это меняло классификацию, но не добавляло отсутствующее извлечение содержимого.
+- **Решение:** ZIP/tar reader потоково читает только разрешённые текстовые расширения с отдельными лимитами member/total/output; JSONL/NDJSON стали first-class text; unsafe paths и бинарное содержимое не читаются; превышение declared expanded budget блокирует всё content extraction. AttachmentManager импортирует архив только при `text_entries_extracted > 0`, иначе возвращает честную ошибку. 7z остаётся listing-only до появления безопасного bounded reader и не выдаётся за успешный Knowledge import.
+- **Профилактика:** fixture с нейтральным `files (2).zip` требует реальные TXT/JSONL facts, исключает `../escape.txt`, проверяет zip-bomb budget и строгий output cap; Godot smoke использует нейтральное имя и доказывает, что Knowledge import начинается только после явной команды `изучи`.
+- **Evidence:** source commit `6dcf015`; `AURORA_ARCHIVE_TEXT_EXTRACTION_OK`; `AURORA_ARCHIVE_BOMB_BUDGET_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 31 focused P0 contracts PASS; exact-SHA CI pending.
+- **Статус:** RESOLVED IN SOURCE; GitHub CI and installed Windows archive acceptance pending.
