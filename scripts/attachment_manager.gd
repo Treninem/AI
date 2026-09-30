@@ -16,6 +16,7 @@ const MAX_SKILL_STEPS := 64
 const MAX_SKILL_TOOLS := 32
 
 var intelligence := FileIntelligenceClient.new()
+var intent_router := UserIntentRouter.new()
 
 func _ready() -> void:
 	add_child(intelligence)
@@ -96,7 +97,7 @@ func analyze(path: String, question := "", visual := true) -> Dictionary:
 	item["private_copy"] = result.get("private_copy", "")
 	item["visual_requested"] = visual
 	item["analyzed"] = true
-	var deferred_type := _learning_type(item, question)
+	var deferred_type := intent_router.learning_type(question)
 	if not deferred_type.is_empty() and str(item.get("extension", "")) in ARCHIVE_EXTENSIONS:
 		var metadata: Dictionary = item.get("metadata", {})
 		var extracted_entries := int(metadata.get("text_entries_extracted", 0))
@@ -184,74 +185,21 @@ func _maybe_import_learning_attachment(item: Dictionary, question := "") -> Dict
 	return await _import_knowledge_or_training(path, learning_type)
 
 func _learning_type(item: Dictionary, question := "") -> String:
-	var explicit_type := _learning_type_from_instruction(question)
-	if not explicit_type.is_empty():
-		return explicit_type
-	var name := str(item.get("name", "")).to_lower()
-	var filename_type := _learning_type_from_filename(name)
-	if not filename_type.is_empty():
-		return filename_type
-	var ext := str(item.get("extension", "")).to_lower()
-	if ext not in ["json", "jsonl", "ndjson"]:
-		return ""
-	var content := str(item.get("content", ""))
-	if content.begins_with("[") and content.contains("будет обработан потоково"):
-		return ""
-	return _learning_type_from_payload(content, ext)
+	# Durable learning in chat requires the submitted instruction. A filename or
+	# embedded manifest may describe data, but it cannot authorize persistence.
+	return intent_router.learning_type(question)
 
 func _learning_type_from_instruction(question: String) -> String:
-	var lowered := question.to_lower().strip_edges()
-	if lowered.is_empty():
-		return ""
-	for skill_marker in ["импортируй навык", "добавь навык", "научи навыку", "import skill"]:
-		if lowered.contains(skill_marker):
-			return "skill"
-	for knowledge_marker in ["изучи", "обучи", "добавь в базу", "добавь в бд", "запомни файл", "импортируй знания", "learn this", "knowledge base"]:
-		if lowered.contains(knowledge_marker):
-			return "knowledge"
-	return ""
+	return intent_router.learning_type(question)
 
 func _learning_type_from_filename(name: String) -> String:
-	var lowered := name.to_lower()
-	var stem := lowered.get_basename().get_file()
-	if stem in ["knowledge", "knowledge_db", "knowledge-base", "database", "db", "база_знаний", "знания", "бд"]:
-		return "knowledge"
-	if stem in ["training", "training_data", "training_dataset", "learning", "dataset", "обучение", "тренировка"]:
-		return "training"
-	if stem in ["skill", "skills", "abilities", "ability", "навык", "навыки", "умение", "умения"]:
-		return "skill"
-	for marker in ["aurorafox_knowledge", "aurora_knowledge", ".knowledge.", "_knowledge.", "knowledge_base", "knowledge-db", "knowledge_db", "база_знаний", "знания"]:
-		if lowered.contains(marker):
-			return "knowledge"
-	for marker in ["aurorafox_training", "aurora_training", ".training.", "_training.", "training_data", "training-dataset", "training_dataset", "обучение"]:
-		if lowered.contains(marker):
-			return "training"
-	for marker in ["aurorafox_skills", "aurorafox_skill", "aurora_skills", "aurora_skill", ".skills.", ".skill.", "_skills.", "_skill.", "навыки", "умения"]:
-		if lowered.contains(marker):
-			return "skill"
+	# Compatibility helper retained for callers that introspect the class. A
+	# filename is data, never user authorization for durable learning.
 	return ""
 
 func _learning_type_from_payload(content: String, ext: String) -> String:
-	if content.strip_edges().is_empty():
-		return ""
-	if ext == "json":
-		var parsed = JSON.parse_string(content)
-		if parsed is Dictionary:
-			return _normalize_learning_type(str(parsed.get("aurorafox_type", parsed.get("aurorafox_import", ""))))
-		return ""
-	var checked := 0
-	for raw_line in content.split("\n", false):
-		if checked >= 8:
-			break
-		var line := str(raw_line).strip_edges()
-		if line.is_empty():
-			continue
-		checked += 1
-		var parsed = JSON.parse_string(line)
-		if parsed is Dictionary:
-			var normalized := _normalize_learning_type(str(parsed.get("aurorafox_type", parsed.get("aurorafox_import", ""))))
-			if not normalized.is_empty():
-				return normalized
+	# Payload declarations are parsed only after an explicit user instruction.
+	# They may select records inside an approved import, but never authorize it.
 	return ""
 
 func _normalize_learning_type(value: String) -> String:

@@ -575,3 +575,25 @@
 - **Профилактика:** fixture с нейтральным `files (2).zip` требует реальные TXT/JSONL facts, исключает `../escape.txt`, проверяет zip-bomb budget и строгий output cap; Godot smoke использует нейтральное имя и доказывает, что Knowledge import начинается только после явной команды `изучи`.
 - **Evidence:** source commit `6dcf015`; `AURORA_ARCHIVE_TEXT_EXTRACTION_OK`; `AURORA_ARCHIVE_BOMB_BUDGET_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 31 focused P0 contracts PASS; exact-SHA CI pending.
 - **Статус:** RESOLVED IN SOURCE; GitHub CI and installed Windows archive acceptance pending.
+
+#### AF-MEM-092 — API feedback существовал без feedback-контролов основного чата
+
+- **Дата/среда:** 2026-09-30; local branch `fix/v1.5-archive-knowledge-import`; implementation commit `6661c4c`.
+- **Симптом:** API принимал `/v1/feedback`, но ответы основного Windows/Android чата не имели `+ / −`; пользователь не мог связать оценку с точным локальным ответом или безопасно подтвердить обучение на ней.
+- **Причина:** feedback transport/storage был реализован только для API learning sync; `ChatStore` не имел стабильных message IDs/feedback metadata, а message cards не создавали controls.
+- **Нерабочие попытки:** считать API endpoint доказательством готового клиентского UX; автоматически писать положительный/отрицательный feedback в память или веса без owner review.
+- **Решение:** стабильная message identity + runtime/model/version metadata; компактные доступные `+ / −`; локальный Core готовит только bounded analysis proposal; owner ConfirmationDialog отдельно разрешает private ExperienceStore write. Изменение/отмена оценки отзывает ранее подтверждённый feedback experience. Веса/shared Core не меняются.
+- **Профилактика:** Godot runtime smoke проверяет exact prompt/answer identity, proposal state и retraction; UI smoke требует controls под каждым assistant answer; static contract запрещает memory/experience mutation внутри analysis function до подтверждения.
+- **Evidence:** `AURORA_CHAT_FEEDBACK_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 3 focused Python contracts PASS; exact-SHA remote CI pending.
+- **Статус:** RESOLVED IN LOCAL SOURCE; publication/package/device acceptance pending.
+
+#### AF-MEM-093 — имя файла и embedded manifest молча разрешали durable learning
+
+- **Дата/среда:** 2026-09-30; local implementation commit `766dacd`.
+- **Симптом:** файл с именем `training*.jsonl`, `skills*.jsonl` или knowledge-like payload мог импортироваться при выборе без явной команды пользователя; короткий список фраз не покрывал естественные перефразировки.
+- **Причина:** `AttachmentManager._learning_type()` использовал instruction, затем filename, затем payload как равноправные источники разрешения на durable write.
+- **Нерабочие попытки:** бесконечно расширять один список exact phrases; считать filename/payload пользовательским подтверждением; смешивать `прочитай/расскажи/посчитай` с `сохрани/изучи`.
+- **Решение:** отдельный `UserIntentRouter` нормализует русские/английские перефразировки, negation, capability questions, knowledge/training/skill targets. Durable import разрешается только submitted instruction; filename/manifest остаются untrusted classification data и сами не дают write authority. Неясный запрос остаётся analyze-only.
+- **Профилактика:** runtime matrix покрывает `изучи/усвой/запомни/внеси/можешь изучить`, training/skill variants, `не изучай`, `прочитай и расскажи`, capability/how-to questions и calculation requests.
+- **Evidence:** `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; 2 focused Python contracts PASS; exact-SHA remote CI pending.
+- **Статус:** RESOLVED IN LOCAL SOURCE; publication/package/device acceptance pending.

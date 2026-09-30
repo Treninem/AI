@@ -29,6 +29,45 @@ func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRe
 	dream_cycle.setup(ai)
 	team.setup(ai)
 
+func analyze_user_feedback(prompt: String, answer: String, score: int) -> Dictionary:
+	if score not in [-1, 1]:
+		return {"ok": false, "error": "feedback score must be -1 or 1"}
+	var messages: Array = [
+		{
+			"role": "system",
+			"content": """Ты локальный reviewer AuroraFox. Пользователь явно оценил один ответ. Проанализируй только наблюдаемые свойства запроса и ответа, не выдумывай факты и не меняй память, знания, навыки, веса или настройки. Верни только JSON:
+{"summary":"краткий вывод","observed":"что было правильно или неправильно","proposed_lesson":"какой личный паттерн предложить владельцу сохранить","confidence":0.0,"safe_to_save":true}
+Это только предложение. Любое сохранение выполняется отдельно после явного подтверждения владельца."""
+		},
+		{
+			"role": "user",
+			"content": "Оценка: %s\nЗапрос:\n%s\n\nОтвет:\n%s" % ["положительная" if score > 0 else "отрицательная", prompt.substr(0, 12000), answer.substr(0, 20000)]
+		}
+	]
+	var response := await ai.chat(messages, 0.0)
+	if not bool(response.get("ok", false)):
+		return {"ok": false, "error": str(response.get("error", "feedback review failed"))}
+	var cleaned := str(response.get("content", "")).strip_edges()
+	if cleaned.begins_with("```"):
+		cleaned = cleaned.replace("```json", "").replace("```", "").strip_edges()
+	var parsed = JSON.parse_string(cleaned)
+	if not parsed is Dictionary:
+		return {"ok": false, "error": "feedback review returned invalid JSON"}
+	var summary := str(parsed.get("summary", "")).strip_edges().substr(0, 1200)
+	var observed := str(parsed.get("observed", "")).strip_edges().substr(0, 2400)
+	var proposed_lesson := str(parsed.get("proposed_lesson", "")).strip_edges().substr(0, 2400)
+	if summary.is_empty() or proposed_lesson.is_empty():
+		return {"ok": false, "error": "feedback review is incomplete"}
+	return {
+		"ok": true,
+		"summary": summary,
+		"observed": observed,
+		"proposed_lesson": proposed_lesson,
+		"confidence": clampf(float(parsed.get("confidence", 0.0)), 0.0, 1.0),
+		"safe_to_save": bool(parsed.get("safe_to_save", false)),
+		"promotion": "owner_confirmation_required"
+	}
+
 # execution_guard is optional and keeps every existing caller source-compatible.
 # Work supplies it to stop before the next model/tool action when the user
 # cancels, pauses, or activates master stop. The guard never grants authority;

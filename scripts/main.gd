@@ -35,6 +35,11 @@ var queued_voice_text := ""
 var rename_dialog: AcceptDialog
 var rename_input: LineEdit
 var rename_target_id := ""
+var feedback_dialog: ConfirmationDialog
+var feedback_review_busy := false
+var pending_feedback_context: Dictionary = {}
+var pending_feedback_analysis: Dictionary = {}
+var pending_feedback_score := 0
 var _rendered_chat_id := ""
 var _rendered_message_count := 0
 
@@ -504,6 +509,16 @@ func _build_ui() -> void:
 	rename_input.offset_right = -24
 	rename_input.offset_bottom = 126
 
+	feedback_dialog = ConfirmationDialog.new()
+	feedback_dialog.name = "FeedbackReviewDialog"
+	feedback_dialog.title = "Разбор оценки ответа"
+	feedback_dialog.ok_button_text = "Сохранить как личный опыт"
+	feedback_dialog.cancel_button_text = "Не сохранять"
+	feedback_dialog.min_size = Vector2i(420, 260)
+	feedback_dialog.confirmed.connect(_confirm_feedback_learning)
+	feedback_dialog.canceled.connect(_decline_feedback_learning)
+	add_child(feedback_dialog)
+
 func _current_version() -> String:
 	var value := str(ProjectSettings.get_setting("application/config/version", "1.0.0.0"))
 	if not value.to_upper().begins_with("V"):
@@ -728,6 +743,13 @@ func _add_message_card(message: Dictionary) -> void:
 	content.add_theme_font_size_override("normal_font_size", 16)
 	content.add_theme_color_override("default_color", WHITE)
 	body.add_child(content)
+	var metadata: Dictionary = message.get("metadata", {})
+	if not is_user and str(metadata.get("response_origin", "")) == "deterministic_ui_greeting":
+		var origin := Label.new()
+		origin.text = "Быстрый системный ответ • AuroraFox Core не использовался"
+		origin.add_theme_font_size_override("font_size", 10)
+		origin.add_theme_color_override("font_color", MUTED)
+		body.add_child(origin)
 	var message_attachments: Array = message.get("attachments", [])
 	if not message_attachments.is_empty():
 		var files := HFlowContainer.new()
@@ -744,6 +766,139 @@ func _add_message_card(message: Dictionary) -> void:
 			chip.add_theme_color_override("font_color", Color(0.78, 0.84, 0.94, 0.94))
 			chip.add_theme_stylebox_override("normal", _style(Color(0.03, 0.04, 0.065, 0.72), Color(0.3, 0.35, 0.48, 0.55), 9, 1))
 			files.add_child(chip)
+	if not is_user:
+		_add_feedback_controls(body, message)
+
+func _add_feedback_controls(body: VBoxContainer, message: Dictionary) -> void:
+	var message_id := str(message.get("id", ""))
+	if message_id.is_empty():
+		return
+	var feedback: Dictionary = message.get("feedback", {})
+	var current_score := int(feedback.get("score", 0))
+	var controls := HBoxContainer.new()
+	controls.name = "FeedbackControls"
+	controls.add_theme_constant_override("separation", 4)
+	body.add_child(controls)
+	for definition in [
+		{"score": 1, "text": "+", "tooltip": "Полезный и правильный ответ"},
+		{"score": -1, "text": "−", "tooltip": "Неправильный или бесполезный ответ"}
+	]:
+		var button := Button.new()
+		var score := int(definition.score)
+		button.name = "FeedbackPositive" if score > 0 else "FeedbackNegative"
+		button.text = str(definition.text)
+		button.tooltip_text = str(definition.tooltip)
+		button.custom_minimum_size = Vector2(32, 28)
+		button.focus_mode = Control.FOCUS_ALL
+		button.accessibility_name = str(definition.tooltip)
+		_apply_button(button, current_score == score, score < 0, true)
+		button.pressed.connect(_on_message_feedback.bind(message_id, score))
+		controls.add_child(button)
+	var state := str(feedback.get("state", ""))
+	if not state.is_empty():
+		var state_label := Label.new()
+		state_label.text = {
+			"recorded": "Оценка сохранена",
+			"reviewing": "Анализирую…",
+			"awaiting_confirmation": "Разбор готов — требуется подтверждение",
+			"accepted": "Личный опыт сохранён",
+			"declined": "Разбор не сохранён",
+			"review_failed": "Оценка сохранена, разбор не выполнен"
+		}.get(state, "Оценка сохранена")
+		state_label.add_theme_font_size_override("font_size", 10)
+		state_label.add_theme_color_override("font_color", MUTED)
+		controls.add_child(state_label)
+
+func _on_message_feedback(message_id: String, requested_score: int) -> void:
+	if feedback_review_busy:
+		_set_status("Завершаю текущий разбор оценки…")
+		return
+	if not pending_feedback_context.is_empty():
+		_set_status("Сначала подтвердите или отклоните уже подготовленный разбор")
+		return
+	var context := chats.feedback_context(message_id)
+	if context.is_empty():
+		_set_status("Не удалось связать оценку с точным ответом", false, true)
+		return
+	var current: Dictionary = context.get("feedback", {})
+	var score := 0 if int(current.get("score", 0)) == requested_score else requested_score
+	agent.experience.retract_feedback(message_id)
+	if not chats.set_message_feedback(message_id, score):
+		_set_status("Не удалось сохранить оценку ответа", false, true)
+		return
+	_force_chat_rerender()
+	if score == 0:
+		_set_status("Оценка ответа отменена", true)
+		return
+	feedback_review_busy = true
+	chats.set_message_feedback(message_id, score, {}, "reviewing")
+	_force_chat_rerender()
+	_set_status("Локально анализирую оценённый ответ; ничего не изменяю без подтверждения…")
+	var analysis := await agent.analyze_user_feedback(str(context.get("prompt", "")), str(context.get("answer", "")), score)
+	feedback_review_busy = false
+	if not bool(analysis.get("ok", false)):
+		chats.set_message_feedback(message_id, score, analysis, "review_failed")
+		_force_chat_rerender()
+		_set_status("Оценка сохранена, но Core не подготовил честный разбор: " + str(analysis.get("error", "неизвестная ошибка")), false, true)
+		return
+	chats.set_message_feedback(message_id, score, analysis, "awaiting_confirmation")
+	pending_feedback_context = context
+	pending_feedback_context["message_id"] = message_id
+	pending_feedback_analysis = analysis
+	pending_feedback_score = score
+	_force_chat_rerender()
+	feedback_dialog.dialog_text = "%s\n\nНаблюдение: %s\n\nПредлагаемый личный опыт: %s\n\nНичего не будет сохранено в опыт или обучение без вашего подтверждения." % [
+		str(analysis.get("summary", "Разбор готов")),
+		str(analysis.get("observed", "")),
+		str(analysis.get("proposed_lesson", ""))
+	]
+	feedback_dialog.popup_centered(Vector2i(620, 420))
+
+func _confirm_feedback_learning() -> void:
+	if pending_feedback_context.is_empty() or pending_feedback_analysis.is_empty():
+		return
+	var prompt := str(pending_feedback_context.get("prompt", "")).strip_edges()
+	var lesson := str(pending_feedback_analysis.get("proposed_lesson", "")).strip_edges()
+	var message_id := str(pending_feedback_context.get("message_id", ""))
+	if not bool(pending_feedback_analysis.get("safe_to_save", false)):
+		chats.set_message_feedback(message_id, pending_feedback_score, pending_feedback_analysis, "declined")
+		_clear_pending_feedback()
+		_force_chat_rerender()
+		_set_status("Core пометил предложение как небезопасное — личный опыт не изменён", false, true)
+		return
+	if pending_feedback_score < 0:
+		agent.experience.record_failure(prompt, "Подтверждённый владельцем feedback: " + lesson, message_id)
+	else:
+		agent.experience.save_skill({
+			"name": "Подтверждённый полезный ответ",
+			"goal_pattern": prompt,
+			"summary": lesson,
+			"steps": [],
+			"tools": [],
+			"confidence": clampf(float(pending_feedback_analysis.get("confidence", 0.6)), 0.35, 0.9),
+			"source_feedback_id": message_id
+		})
+	chats.set_message_feedback(message_id, pending_feedback_score, pending_feedback_analysis, "accepted")
+	_clear_pending_feedback()
+	_force_chat_rerender()
+	_set_status("Разбор сохранён только как личный опыт; веса и Core не изменялись", true)
+
+func _decline_feedback_learning() -> void:
+	if not pending_feedback_context.is_empty():
+		chats.set_message_feedback(str(pending_feedback_context.get("message_id", "")), pending_feedback_score, pending_feedback_analysis, "declined")
+	_clear_pending_feedback()
+	_force_chat_rerender()
+	_set_status("Оценка сохранена, предложенный опыт не применён", true)
+
+func _clear_pending_feedback() -> void:
+	pending_feedback_context.clear()
+	pending_feedback_analysis.clear()
+	pending_feedback_score = 0
+
+func _force_chat_rerender() -> void:
+	_rendered_chat_id = ""
+	_rendered_message_count = 0
+	_render_active_chat()
 
 func _scroll_messages_to_bottom() -> void:
 	if message_scroll == null:
@@ -876,11 +1031,13 @@ func _submit_current() -> void:
 	AuroraVoice.set_ai_working(true, work_state)
 	var task := shown + attachments.build_context(attachment_copy)
 	var answer := _fast_local_reply(shown, attachment_copy)
+	var response_origin := "deterministic_ui_greeting" if not answer.is_empty() else "aurorafox_core"
 	var core_failed := false
 	if answer.is_empty():
 		answer = await agent.run_task(task)
 	if answer.begins_with("Ошибка модели:"):
 		core_failed = true
+		response_origin = "core_startup_status"
 		# Never make the same user request wait through a second multi-minute
 		# startup attempt. Recovery continues independently and text chat remains
 		# responsive; the user can retry when the honest status becomes ready.
@@ -891,7 +1048,14 @@ func _submit_current() -> void:
 		answer = "Встроенный AI ещё запускается в фоне. Сообщение сохранено; повторите его через несколько секунд — устанавливать или настраивать ничего не нужно."
 	AuroraVoice.set_ai_working(false)
 	ai_working_finished.emit()
-	chats.add_message("assistant", answer)
+	var runtime := ai.runtime_info()
+	chats.add_message("assistant", answer, [], {
+		"response_origin": response_origin,
+		"runtime": str(runtime.get("runtime", "AuroraFox Core")),
+		"active_model": str(runtime.get("last_model_path", runtime.get("model_path", ""))).get_file(),
+		"app_version": _current_version(),
+		"core_failed": core_failed
+	})
 	_render_active_chat()
 	_refresh_chat_list()
 	if core_failed:
