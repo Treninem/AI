@@ -8,7 +8,10 @@ func _init() -> void:
 		"Запомни эти материалы в своей базе знаний",
 		"Внеси информацию из архива в БД",
 		"Можешь изучить этот файл?",
-		"learn this attached document"
+		"learn this attached document",
+		"Прочитай документ и расскажи главное",
+		"Посчитай сумму в таблице",
+		"Найди важные данные в этом файле"
 	]
 	for phrase in knowledge:
 		if router.learning_type(phrase) != "knowledge":
@@ -27,10 +30,8 @@ func _init() -> void:
 			return
 	for phrase in [
 		"Не изучай этот файл",
-		"Прочитай документ и расскажи главное",
 		"Как изучить файл?",
-		"Ты умеешь изучать документы?",
-		"Посчитай сумму в таблице"
+		"Ты умеешь изучать документы?"
 	]:
 		if not router.learning_type(phrase).is_empty():
 			push_error("Non-learning request gained durable-write authority: " + phrase)

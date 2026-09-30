@@ -1,9 +1,9 @@
 class_name UserIntentRouter
 extends RefCounted
 
-# This router decides only whether an attachment is explicitly authorized for
-# durable local learning. Reading, summarizing, calculating and answering stay
-# ordinary Core tasks and must never silently become persistence permission.
+# This router decides whether a user-supplied attachment enters private local
+# Knowledge. Owner policy defines reading a supplied source as remembering it;
+# explicit negation and capability/how-to questions remain non-persistent.
 
 const NEGATED_LEARNING := [
 	"не изуч", "не учи", "не обуч", "не запомин", "не сохраня", "не добав",
@@ -28,6 +28,10 @@ const TRAINING_PATTERNS := [
 const KNOWLEDGE_ACTION_STEMS := [
 	"изуч", "усво", "запом", "внес", "занес", "добав", "импорт", "сохран"
 ]
+const READ_ACTION_STEMS := [
+	"прочит", "расскаж", "посчит", "проанализ", "найд", "выдел", "объясн",
+	"сравн", "проверь", "summar", "read", "calculate", "analy", "find"
+]
 const KNOWLEDGE_TARGET_STEMS := [
 	"файл", "документ", "архив", "материал", "содерж", "информац", "знани",
 	"баз", "бд", "памят", "источник", "вложен", "это", "этот", "эти"
@@ -50,6 +54,8 @@ func classify_attachment_learning(instruction: String) -> Dictionary:
 		return _decision("learn_attachment", "training", 0.96, "explicit_training_instruction")
 	if _has_action(normalized) and (_has_target(normalized) or _is_short_learning_command(normalized)):
 		return _decision("learn_attachment", "knowledge", 0.93, "explicit_knowledge_instruction")
+	if _contains_any(normalized, READ_ACTION_STEMS):
+		return _decision("learn_attachment", "knowledge", 0.91, "owner_read_means_remember")
 	return _decision("analyze_only", "", 0.72, "no_durable_learning_authorization")
 
 func _decision(kind: String, learning_type_value: String, confidence: float, reason: String) -> Dictionary:

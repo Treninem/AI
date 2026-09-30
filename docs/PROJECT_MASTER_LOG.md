@@ -2958,6 +2958,40 @@ BLOCKERS: GitHub secret names cannot be read through the connected GitHub App; t
 NEXT: publish the implementation to the release branch and inspect triggered integration/package checks; install/authenticate GitHub CLI on the owner PC only for secret-name verification.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — авторизованная проверка безопасности
+
+- !!! ОБЯЗАТЕЛЬНО !!! AuroraFox должна уметь проводить **реальное**, а не scripted/stubbed security‑тестирование сайта, приложения или инфраструктуры, принадлежащих владельцу либо явно переданных ему для проверки. До активных действий Fox фиксирует подтверждение полномочий, точные target/scope, среду production/staging/lab, разрешённые методы, временное окно, rate/resource budget и запрещённые воздействия.
+- !!! ОБЯЗАТЕЛЬНО !!! Проверка идёт по ступеням: карта поверхности и версий → безопасные passive/low-impact checks → подтверждение кандидатов → только разрешённая минимальная эксплуатация в scope → доказательство влияния без лишнего доступа → severity/CVSS и приоритет → конкретное исправление → повторный retest. «Уязвимо» без воспроизводимого evidence не считается результатом; успешный exploit без отчёта и remediation тоже не считается завершением.
+- !!! ОБЯЗАТЕЛЬНО !!! Для собственной lab/staging-системы владелец может явно расширить инструменты, интенсивность и exploit‑проверки. На production по умолчанию запрещены разрушение/изменение данных, неконтролируемый DoS, persistence/backdoor, скрытие следов, выход за scope, lateral movement и извлечение реальных секретов/персональных данных сверх минимального доказательства. Эти границы защищают не удобство продукта, а чужие права, данные и доступность; Fox сообщает, почему конкретное действие не выполняется и какой безопасный lab/replay способ даст эквивалентное доказательство.
+- !!! ОБЯЗАТЕЛЬНО !!! Если цель или полномочие неоднозначны, Fox не делает вид, что протестировала систему: она запрашивает недостающий scope. Все команды, результаты, timestamps, версии инструментов, evidence hashes, изменения policy и остановки журналируются; чувствительные значения редактируются. Master stop и отмена владельца прекращают новые действия немедленно.
+- !!! ОБЯЗАТЕЛЬНО !!! Итоговый отчёт должен содержать executive summary, scope/ограничения, проверенную поверхность, подтверждённые и неподтверждённые находки, воспроизводимые безопасные шаги, evidence, severity, вероятность/влияние, исправления по коду/конфигурации/архитектуре, компенсационные меры, regression tests и результат retest. Fox не обещает абсолютную защищённость и явно перечисляет непроверенное.
+- Реализация этого режима не объявляется готовой одной декларацией: требуются изолированный security workspace, scope/authorization gate, audited tool allowlist, rate/concurrency controls, secret/PII redaction, evidence store, отчётность, cancellation/master-stop и end-to-end lab fixtures с намеренно уязвимым локальным target. Внешняя цель без явного разрешения не тестируется активно.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: owner requirement для настоящего авторизованного pentest/retest преобразован в проверяемый контракт без ложных отчётов и заглушек.
+REMAINING: реализовать security workspace/gates/tooling/evidence/report/retest и проверить на локальной intentionally-vulnerable lab; завершить текущий URL/owner-control пакет и остальные UI/performance/device/release gates.
+BLOCKERS: активная проверка конкретной внешней цели требует точного scope и подтверждения полномочий; это не блокирует разработку и lab-тесты самого режима.
+NEXT: завершить и зафиксировать web reader/owner-policy tests, затем включить security-mode компоненты в общий owner-control inventory и отдельный исполнимый пакет.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — публичные ссылки читаются и запоминаются
+
+- !!! ОБЯЗАТЕЛЬНО !!! Когда владелец присылает публичную HTTP/HTTPS-ссылку и просит прочитать, изучить, найти, выделить, рассказать или выполнить другую задачу по её материалу, AuroraFox должна реально получить общедоступное содержимое, извлечь относящиеся к задаче данные, передать их локальному Core как недоверенный источник и сохранить прочитанные знания в приватной Knowledge. Для ссылок **«прочитать» и «запомнить» — одна операция**; отдельная формула `запомни` не требуется.
+- !!! ОБЯЗАТЕЛЬНО !!! Сохранённый источник получает URL, финальный URL после перенаправлений, заголовок, домен, время получения, content type и SHA-256 прочитанного текста. Knowledge дедуплицирует материал и извлекает релевантные фрагменты; содержимое страницы не получает полномочий команды, не запускает код и не может менять разрешения, веса или shared Core.
+- !!! ОБЯЗАТЕЛЬНО !!! Нельзя вводить искусственный список разрешённых сайтов или молча отказывать из-за «необычной» ссылки. Если страницу нельзя прочитать, формат/размер/перенаправление требует иного безопасного пути или сайт возвращает защиту, AuroraFox сразу сообщает владельцу точный адрес, причину, что было и не было сохранено, и просит решение о допустимом следующем шаге.
+- !!! ОБЯЗАТЕЛЬНО !!! Даже после подтверждения владельца AuroraFox не обходит CAPTCHA, обязательную регистрацию/авторизацию, paywall, robots/access control и не обращается к localhost, частным, link-local или служебным адресам через присланную страницу. Если регистрация необязательна и материал действительно публичен, чтение продолжается без регистрации. Для закрытого материала Fox просит владельца предоставить разрешённый экспорт/файл/доступный источник.
+- !!! ОБЯЗАТЕЛЬНО !!! Каждый redirect повторно проходит проверку публичного адреса; запросы имеют конечные лимиты времени/байтов/redirect для защиты устройства. Достижение лимита не выдаётся за окончательный отказ: Fox объясняет предел и предлагает владельцу безопасный управляемый вариант продолжения. Увеличение лимита не может отменить сетевые и access-control запреты.
+- !!! ОБЯЗАТЕЛЬНО !!! Автоматическая запись прочитанной страницы относится только к приватной Knowledge владельца. Дообучение весов, перенос в shared Core, публикация или исполнение найденных инструкций по-прежнему требуют отдельного анализа, проверок и явного подтверждения владельца.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: уточнённый owner contract «прочитать ссылку = запомнить» записан без потери provenance и безопасностных границ; отсутствие искусственного allowlist и обязательное объяснение препятствий закреплены.
+REMAINING: завершить реализацию публичного URL reader/importer; форматы документов и owner-controlled continuation; точные runtime/security/CI проверки; UI/performance/device/release acceptance.
+BLOCKERS: CAPTCHA, обязательная авторизация/paywall/access control и непубличная сеть не могут обходиться; для таких источников нужен разрешённый материал от владельца.
+NEXT: скорректировать URL intent на автоматический private Knowledge import, проверить URL/redirect/SSRF/content tests и затем опубликовать точное дерево для CI без version bump.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
 ## 102. BEFORE: GitHub-hosted signing-secret readiness gate
 
 `WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD is `3791ca6ae2e50189a0e103c0fbfae831a78ff794`; all 25 workflows associated with this exact SHA completed `success`, including Windows package/install/smoke, Android APK/offline E2E, Release Identity, Integration and real Knowledge 1 GiB gates. Public version remains `1.3.0.0` / Android code `100005`; accumulated release bump remains MINOR `V1.4.0.0`, version-last.
@@ -2986,6 +3020,22 @@ DONE: 25/25 exact-candidate workflows green; safe GitHub-hosted secret presence/
 REMAINING: publish and manually dispatch the preflight; if green, perform V1.4.0.0/code100006 version-last, rerun exact-SHA package/release gates and publish the signed RC.
 BLOCKERS: actual owner-controlled secret values can only be validated when GitHub executes the workflow.
 NEXT: publish this tooling-only commit, dispatch `release-secret-readiness.yml` on the release branch, and inspect its exact result without polling unrelated workflows.
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — ограничения управляются владельцем
+
+- !!! ОБЯЗАТЕЛЬНО !!! Во всём AuroraFox эксплуатационные лимиты, автоматические режимы, разрешения и политики должны быть видимыми, объяснимыми, обратимыми и настраиваемыми владельцем. Нельзя прятать неснимаемое продуктовое ограничение в hard-coded числе, silent fallback, scripted success или недоступном конфиге.
+- !!! ОБЯЗАТЕЛЬНО !!! Когда достигается мягкий лимит времени, размера, количества, глубины, повторов или ресурсов, Fox сообщает, какой именно предел достигнут, что уже сделано/сохранено, риск продолжения и предлагает владельцу изменить предел, повторить один раз или отменить действие. Выбор и последствия журналируются; возврат к безопасным defaults всегда доступен.
+- !!! ОБЯЗАТЕЛЬНО !!! Жёсткой границей может быть только доказуемая безопасность/целостность/чужой access control/законодательное или платформенное ограничение: обход CAPTCHA/обязательного входа/paywall, неподтверждённое выполнение недоверенного кода, утечка секретов, нарушение подписи/rollback/master-stop либо несанкционированное воздействие на чужую или служебную систему. Fox обязана назвать конкретную границу и безопасный способ предоставить данные/полномочие; нельзя маскировать обычное дизайнерское решение под «безопасность».
+- !!! ОБЯЗАТЕЛЬНО !!! Это правило применяется не только к ссылкам: Web, Knowledge, Core, Work/Computer, обновления, импорт, память, обучение, UI, сеть, файлы и фоновые процессы проходят единый owner-control audit. Каждое ограничение классифицируется как owner-adjustable default или hard boundary с обоснованием и тестом.
+- Текущая реализация публичных ссылок переводит количество URL, redirects, байты ответа и timeout в owner-adjustable policy с безопасными defaults; нестандартный публичный порт искусственно не запрещается. Сетевые private/service destinations и чужие access controls пока остаются hard boundary и не обходятся redirect-ом.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: универсальный owner-control принцип записан; мягкие web limits стали изменяемой политикой; task-memory больше не дублирует целиком большие веб/файловые контексты.
+REMAINING: добавить настройки/диалог повторного продолжения в UI; построить inventory всех hard-coded limits проекта и классифицировать каждый; продолжить URL document formats, CI, UI/performance/device/release acceptance.
+BLOCKERS: ни одно owner preference не считается блокером; реальные внешние access-control и safety boundaries требуют разрешённого альтернативного пути, а не обхода.
+NEXT: прогнать runtime/contract tests изменяемой web policy, затем создать machine-readable owner-control inventory по всему tracked source и устранить необоснованные неснимаемые пределы пакетами.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 
 ### TAKEOVER: embed the preflight in the default-branch Release workflow
@@ -3692,4 +3742,22 @@ DONE: archive candidate 7/7 remote CI green with Windows artifact; mandatory req
 REMAINING: publish the new exact tree on a non-destructive branch/PR; remote feedback/intent/UI/package gates; broader command/task intent matrix; full UI typography/chat-list/settings redesign and render inspection; physical Windows/Android performance/archive/feedback acceptance; interrupted updater; version-last/sign/publish.
 BLOCKERS: new local feedback/intent commits lack exact-SHA remote CI and package/device proof; physical owner hardware remains required for real latency and broad support evidence.
 NEXT: commit memory/checkpoint, publish the exact local tree without merging or version bump, inspect every triggered workflow, then continue the UI/state/performance audit from reproduced findings only.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### LATEST AUTHORITATIVE CHECKPOINT 2026-09-30 — public sources, owner-controlled limits and authorized security directive
+
+- This checkpoint supersedes the earlier statement in the preceding historical checkpoint that `прочитай/расскажи/посчитай` is always analyze-only. Per the owner's explicit correction, reading a user-supplied URL or attachment means retaining the material in private Knowledge unless the current instruction explicitly negates saving.
+- `PublicWebManager` now performs real bounded public HTTP/HTTPS reading: URL extraction, DNS/public-address validation, redirect-by-redirect revalidation, explicit response-byte/time budgets, HTML text/title extraction without script/style execution, CAPTCHA/auth/paywall/access-denial reporting, final URL/retrieval time/content type/SHA-256 provenance and automatic private Knowledge import. Existing `http_get` is routed through the same policy instead of a separate unsafe fetch.
+- Full page content is chunked into Knowledge; the active Core prompt receives only task-relevant chunks up to a bounded context excerpt. Large web/file bodies are no longer duplicated wholesale into chat memory. Page content remains untrusted data and cannot authorize tools or execute instructions.
+- Web URL count, redirect count, response bytes and timeout are owner-adjustable persisted settings, exposed under Settings → Tools → Public links with reset. Non-standard public ports are not artificially denied. When a soft limit or unsupported format is reached, the result carries `owner_decision_required` and explicitly records that Knowledge was not saved.
+- Machine-readable owner-control audit currently scans 427 source files and reports 3,066 potential restrictions: 26 owner-adjustable, 1 owner-adjustable pending UI, 1 classified hard boundary and **3,038 still unclassified**. The audit deliberately reports `complete=false`; the project-wide owner-control requirement is not being declared finished.
+- The mandatory authorized-security directive above is active: real owner-authorized pentest/retest requires explicit target/scope/authorization and reproducible evidence/remediation, with lab/staging expansion controlled by the owner. No security runner is claimed complete yet; its workspace, gates, audited tooling, evidence and vulnerable-lab E2E remain future implementation work.
+- Local evidence: Godot 4.7.1 project parse/import; `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 11 focused Python contract functions across web/intent/owner-audit/settings PASS; `git diff --check` PASS. Canonical version remains version-last and unchanged.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: real safe public-page reading/private retention; read=remember semantics for supplied sources; provenance and relevant-context routing; visible owner-adjustable web limits; first honest whole-source owner-control inventory; authorized-security acceptance contract; local runtime/UI/contracts green.
+REMAINING: support downloaded document/media URL formats through bounded File Intelligence; natural chat continuation for owner-approved soft-limit retries; classify and remediate 3,038 owner-control findings; implement security workspace/gates/tools/evidence/lab E2E; exact-SHA CI/package/device evidence; full UI/performance/update/version/sign/release acceptance.
+BLOCKERS: no source blocker for the next packages. CAPTCHA/mandatory auth/paywall/external access control and active testing without target authorization require an authorized alternative and are not bypassed. Physical Windows/Android and owner acceptance remain external gates.
+NEXT: commit and publish this exact tree on the existing non-destructive feature branch, run exact-SHA workflows, then continue document-URL routing and owner-control classification without version bump or merge.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

@@ -77,7 +77,10 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 	var guard_reason := _execution_guard_reason(execution_guard, "before_task", {})
 	if not guard_reason.is_empty():
 		return EXECUTION_CONTROL_PREFIX + guard_reason
-	memory.remember("user_task", task, "chat", 0.72, 0.98)
+	# Web/file contexts can be large and already have their own indexed stores.
+	# Keep only a bounded task trace here instead of duplicating whole sources in
+	# conversational memory and slowing every later retrieval.
+	memory.remember("user_task", task.substr(0, 12000), "chat", 0.72, 0.98)
 	# Ordinary conversation must not pay the latency of the autonomous agent
 	# pipeline (planning + answer + verification) when no tool/action is needed.
 	# It still uses the same local AuroraFox Core, private chat context and

@@ -122,21 +122,13 @@ func _computer_permission() -> Dictionary:
 	return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
 
 func _http_get(args: Dictionary) -> Dictionary:
-	var url := str(args.get("url", ""))
-	if not (url.begins_with("http://") or url.begins_with("https://")):
-		return {"ok": false, "error": "Only HTTP/HTTPS allowed"}
-	var req := HTTPRequest.new()
-	req.timeout = 30.0
-	add_child(req)
-	var err := req.request(url, PackedStringArray(["User-Agent: AuroraFox/0.4"]))
-	if err != OK:
-		req.queue_free()
-		return {"ok": false, "error": "request error %s" % err}
-	var result: Array = await req.request_completed
-	req.queue_free()
-	var code := int(result[1])
-	var body: PackedByteArray = result[3]
-	return {"ok": code >= 200 and code < 400, "status": code, "body": body.get_string_from_utf8().substr(0, 200000)}
+	# Compatibility name, hardened implementation. All arbitrary public reads go
+	# through the same SSRF/redirect/size/content/access-control policy as chat.
+	var reader := PublicWebManager.new()
+	add_child(reader)
+	var result := await reader.read_public_url(str(args.get("url", "")))
+	reader.queue_free()
+	return result
 
 func _read_file(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))

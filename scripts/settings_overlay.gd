@@ -614,6 +614,8 @@ func _build_tools_page(page: VBoxContainer) -> void:
 	knowledge_button.pressed.connect(func(): _open_surface("KnowledgeBase", "show_knowledge_base"))
 	knowledge.add_child(knowledge_button)
 
+	_build_web_policy_card(page)
+
 	if _desktop_features():
 		var computer := _add_card(page, "Компьютерный режим", "Отдельное явное разрешение на экран, мышь и клавиатуру. Без включения доступа действия запрещены.")
 		var computer_button := Button.new()
@@ -639,6 +641,88 @@ func _build_tools_page(page: VBoxContainer) -> void:
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		note.add_theme_color_override("font_color", MUTED)
 		mobile_note.add_child(note)
+
+func _build_web_policy_card(page: VBoxContainer) -> void:
+	var reader := _public_web_manager()
+	var limits: Dictionary = reader.owner_limits() if reader != null and reader.has_method("owner_limits") else {
+		"max_urls_per_message": int(ProjectSettings.get_setting("aurorafox/web/max_urls_per_message", 3)),
+		"max_redirects": int(ProjectSettings.get_setting("aurorafox/web/max_redirects", 5)),
+		"max_response_bytes": int(ProjectSettings.get_setting("aurorafox/web/max_response_bytes", 4 * 1024 * 1024)),
+		"request_timeout_seconds": float(ProjectSettings.get_setting("aurorafox/web/request_timeout_seconds", 20.0))
+	}
+	var card := _add_card(page, "Публичные ссылки", "Прочитанные по вашей команде страницы сохраняются в приватной Knowledge. Эти защитные пределы можно менять; при достижении предела Fox сообщает причину и ждёт вашего решения.")
+	var url_count := _owner_number_row(card, "Ссылок в одном сообщении", float(limits.get("max_urls_per_message", 3)), 1.0, 1.0)
+	var redirects := _owner_number_row(card, "Перенаправлений", float(limits.get("max_redirects", 5)), 0.0, 1.0)
+	var response_mb := _owner_number_row(card, "Размер одной страницы, МиБ", float(limits.get("max_response_bytes", 4 * 1024 * 1024)) / (1024.0 * 1024.0), 0.0625, 0.25)
+	var timeout := _owner_number_row(card, "Ожидание ответа, секунд", float(limits.get("request_timeout_seconds", 20.0)), 1.0, 1.0)
+	var state := Label.new()
+	state.name = "SettingsWebPolicyStatus"
+	state.text = "Пределы принадлежат владельцу. CAPTCHA, обязательный вход и чужой access control не обходятся."
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	state.add_theme_font_size_override("font_size", 12)
+	state.add_theme_color_override("font_color", MUTED)
+	card.add_child(state)
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 8)
+	card.add_child(actions)
+	var apply := Button.new()
+	apply.name = "SettingsWebPolicyApply"
+	apply.text = "Сохранить пределы"
+	apply.pressed.connect(func():
+		var current := _public_web_manager()
+		var values := {
+			"max_urls_per_message": int(url_count.value),
+			"max_redirects": int(redirects.value),
+			"max_response_bytes": int(response_mb.value * 1024.0 * 1024.0),
+			"request_timeout_seconds": timeout.value
+		}
+		if current != null and current.has_method("apply_owner_limits"):
+			current.call("apply_owner_limits", values, true)
+		else:
+			for key in values:
+				ProjectSettings.set_setting("aurorafox/web/" + str(key), values[key])
+			ProjectSettings.save()
+		state.text = "Сохранено. Новые значения применяются к следующей ссылке."
+		state.add_theme_color_override("font_color", GREEN)
+	)
+	actions.add_child(apply)
+	var reset := Button.new()
+	reset.name = "SettingsWebPolicyReset"
+	reset.text = "Вернуть безопасные значения"
+	reset.pressed.connect(func():
+		url_count.value = 3
+		redirects.value = 5
+		response_mb.value = 4
+		timeout.value = 20
+		apply.pressed.emit()
+	)
+	actions.add_child(reset)
+
+func _owner_number_row(parent: VBoxContainer, label_text: String, value: float, minimum: float, step: float) -> SpinBox:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	parent.add_child(row)
+	var label := Label.new()
+	label.text = label_text
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(label)
+	var field := SpinBox.new()
+	field.custom_minimum_size.x = 150
+	field.min_value = minimum
+	field.max_value = 4096.0
+	field.allow_greater = true
+	field.step = step
+	field.value = value
+	row.add_child(field)
+	return field
+
+func _public_web_manager() -> Node:
+	var main := get_parent()
+	if main == null:
+		return null
+	var value = main.get("public_web")
+	return value if value is Node else null
 
 func _build_updates_page(page: VBoxContainer) -> void:
 	var updater := _update_manager()

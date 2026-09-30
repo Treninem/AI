@@ -18,6 +18,7 @@ var agent := AgentCore.new()
 var improver := SelfImprover.new()
 var chats := ChatStore.new()
 var attachments := AttachmentManager.new()
+var public_web := PublicWebManager.new()
 
 var chat_list: VBoxContainer
 var message_scroll: ScrollContainer
@@ -95,6 +96,7 @@ func _ready() -> void:
 	add_child(improver)
 	add_child(chats)
 	add_child(attachments)
+	add_child(public_web)
 	agent.setup(ai, memory, tools)
 	improver.setup(tools, ai)
 	_build_ui()
@@ -1029,7 +1031,9 @@ func _submit_current() -> void:
 	_set_status("AuroraFox думает…")
 	ai_working_started.emit(work_state)
 	AuroraVoice.set_ai_working(true, work_state)
-	var task := shown + attachments.build_context(attachment_copy)
+	var web_result := await public_web.process_user_message(shown)
+	var web_context := str(web_result.get("context", "")) if bool(web_result.get("handled", false)) else ""
+	var task := shown + attachments.build_context(attachment_copy) + web_context
 	var answer := _fast_local_reply(shown, attachment_copy)
 	var response_origin := "deterministic_ui_greeting" if not answer.is_empty() else "aurorafox_core"
 	var core_failed := false

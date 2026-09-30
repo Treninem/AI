@@ -597,3 +597,24 @@
 - **Профилактика:** runtime matrix покрывает `изучи/усвой/запомни/внеси/можешь изучить`, training/skill variants, `не изучай`, `прочитай и расскажи`, capability/how-to questions и calculation requests.
 - **Evidence:** `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; 2 focused Python contracts PASS; exact-SHA remote CI pending.
 - **Статус:** RESOLVED IN LOCAL SOURCE; publication/package/device acceptance pending.
+
+#### AF-MEM-094 — generic `http_get` allowed unsafe destinations and raw-page false learning
+
+- **Дата/среда:** 2026-09-30; local continuation after exact remote tree `8ad6044`.
+- **Симптом:** Core имел generic `http_get`, который принимал любой HTTP(S) URL, автоматически следовал redirect, не проверял DNS/private/link-local адреса, не ограничивал тело через `body_size_limit`, возвращал сырой HTML и не связывал чтение с provenance/Knowledge. Ответ по ссылке мог выглядеть как «изучение» без доказуемого сохранения.
+- **Причина:** инструмент создавался как ранний универсальный fetch helper и не проходил отдельный untrusted-web/SSRF/access-control design.
+- **Нерабочие попытки:** считать проверку префикса `http://`/`https://` достаточной; полагаться на модель для выбора безопасного URL; принимать HTTP 3xx как успех без повторной валидации назначения.
+- **Решение:** единый `PublicWebManager`: проверка схемы/credentials/DNS и всех resolved addresses, повторная проверка каждого redirect, bounded timeout/body/redirects, type-aware text extraction без script/style, CAPTCHA/login/access-control reporting, provenance SHA-256 и private Knowledge import. Compatibility `http_get` использует тот же reader.
+- **Профилактика:** runtime smoke для loopback/metadata/private IPv4/IPv6/nonstandard public port/HTML stripping/owner decision; static contract запрещает отдельный сырой HTTPRequest в `http_get`.
+- **Evidence:** `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_PUBLIC_WEB_CONTRACT_OK tests=4`; exact-SHA CI pending.
+- **Статус:** RESOLVED IN LOCAL SOURCE; remote/package/device acceptance pending.
+
+#### AF-MEM-095 — read/analyze intent contradicted owner knowledge contract
+
+- **Дата/среда:** 2026-09-30; owner clarification «прочитать и запомнить — одно и то же».
+- **Симптом:** `UserIntentRouter` специально классифицировал `прочитай/расскажи/посчитай` как analyze-only, поэтому реально прочитанный пользовательский файл мог не сохраниться в Knowledge; веб-источник мог дублироваться целиком в task memory и раздувать следующие prompts.
+- **Причина:** прежняя policy считала durable write допустимым только при отдельном глаголе `изучи/запомни`, что не соответствовало уточнённой модели владельца.
+- **Решение:** чтение/анализ/расчёт/поиск в пользовательском источнике разрешает private Knowledge import с provenance; явное отрицание по-прежнему отменяет сохранение. Веб-страница сохраняется полностью chunked в Knowledge, а Core получает до 24k релевантных фрагментов; user-task trace отдельно ограничен 12k и не дублирует весь источник.
+- **Профилактика:** semantic intent runtime matrix включает read/calculate/find как Knowledge и оставляет negation/capability questions non-persistent; owner-control audit отмечает prompt/memory пределы как отдельную policy.
+- **Evidence:** `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; six focused intent/web contracts PASS.
+- **Статус:** RESOLVED IN LOCAL SOURCE; remote/package/device acceptance pending.

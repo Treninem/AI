@@ -20,7 +20,7 @@ def test_attachment_learning_requires_instruction_not_filename_or_payload() -> N
     assert 'return ""' in payload
 
 
-def test_router_separates_reading_questions_negation_and_durable_learning() -> None:
+def test_router_remembers_read_sources_but_separates_questions_and_negation() -> None:
     router = _text("scripts/user_intent_router.gd")
     assert "explicit_negation" in router
     assert "question_not_authorization" in router
@@ -31,3 +31,6 @@ def test_router_separates_reading_questions_negation_and_durable_learning() -> N
     assert '"усво"' in router
     assert '"для дообучения"' in router
     assert '"save as skill"' in router
+    assert "owner_read_means_remember" in router
+    assert '"прочит"' in router
+    assert '"посчит"' in router
