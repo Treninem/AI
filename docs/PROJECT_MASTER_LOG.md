@@ -2958,6 +2958,20 @@ BLOCKERS: GitHub secret names cannot be read through the connected GitHub App; t
 NEXT: publish the implementation to the release branch and inspect triggered integration/package checks; install/authenticate GitHub CLI on the owner PC only for secret-name verification.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 
+### CHECKPOINT 2026-09-30 — PR #103 first exact-SHA failures reproduced
+
+- Draft PR #103 was created against archive PR #102. Published head `783b46eec6e0409c3d25470fd1f3fa1559f2adfe` has exact tree `789dcec4e49d7e685724cb5ced931f1e43e046cb`, matching local `e2642b9`.
+- First exact-SHA results: Work Mode, Chat Learning, Semantic Memory and Agent Sync succeeded; two Python jobs failed one assertion each. Core Benchmarks `36717626031` passed 30/31 and failed because its contract searched an obsolete two-argument `ChatStore.add_message` spelling after answer metadata was added. Core/Voice `36717625933` passed 69/70 in the Python job while File Intelligence, Windows integration and Godot Core jobs succeeded; its failed contract required a compatibility helper spelling despite the same semantic router being called directly.
+- Correction preserves behavior: Core recovery remains before assistant persistence and the test now matches the stable call prefix; AttachmentManager again delegates through `_learning_type_from_instruction(question)`, which calls the same `UserIntentRouter`. No weakening of read=remember, filename/payload authority, feedback or Core recovery occurred.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: PR #103 exact tree published; both CI failures reduced to exact stale contract causes; minimal compatible fixes prepared.
+REMAINING: run the two exact failed suites locally, publish corrected exact tree, accept all 11 workflows; then continue document URLs, owner-control/security/UI/performance/device gates.
+BLOCKERS: no source blocker; Windows/Android physical acceptance remains external.
+NEXT: execute the 31-test benchmark contract suite and 70-test Core/Voice Python suite, commit only the reproduced corrections, update PR #103 and inspect all workflows for the new SHA.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
 ### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — авторизованная проверка безопасности
 
 - !!! ОБЯЗАТЕЛЬНО !!! AuroraFox должна уметь проводить **реальное**, а не scripted/stubbed security‑тестирование сайта, приложения или инфраструктуры, принадлежащих владельцу либо явно переданных ему для проверки. До активных действий Fox фиксирует подтверждение полномочий, точные target/scope, среду production/staging/lab, разрешённые методы, временное окно, rate/resource budget и запрещённые воздействия.
@@ -3760,4 +3774,18 @@ DONE: real safe public-page reading/private retention; read=remember semantics f
 REMAINING: support downloaded document/media URL formats through bounded File Intelligence; natural chat continuation for owner-approved soft-limit retries; classify and remediate 3,038 owner-control findings; implement security workspace/gates/tools/evidence/lab E2E; exact-SHA CI/package/device evidence; full UI/performance/update/version/sign/release acceptance.
 BLOCKERS: no source blocker for the next packages. CAPTCHA/mandatory auth/paywall/external access control and active testing without target authorization require an authorized alternative and are not bypassed. Physical Windows/Android and owner acceptance remain external gates.
 NEXT: commit and publish this exact tree on the existing non-destructive feature branch, run exact-SHA workflows, then continue document-URL routing and owner-control classification without version bump or merge.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### CHECKPOINT 2026-09-30 — PR #103 stale-contract corrections accepted locally
+
+- PR #103 first head `783b46e` produced two exact, reproducible source-contract failures while all observed runtime jobs in those workflows passed. AF-MEM-096 records the obsolete call spelling/location assumptions.
+- Minimal correction: Core recovery ordering now matches the stable `ChatStore.add_message` call prefix despite added response metadata; attachment learning again passes through its compatibility helper; the semantic phrase assertions follow their real owner, `UserIntentRouter`, and require `owner_read_means_remember`.
+- Exact local replicas of the failed CI commands now pass: Core Benchmarks contract **31/31**; Core/Voice Python contract **70/70**. No runtime, policy, release version or public API behavior was weakened.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: both PR #103 exact-SHA failures diagnosed from logs and corrected; 101/101 exact local Python tests pass.
+REMAINING: publish corrected exact tree and require the full 11-workflow verdict; document/media URL routing; 3,038 owner-control classifications; security lab implementation; UI/performance/device/release gates.
+BLOCKERS: none for source/CI correction; physical device acceptance remains external.
+NEXT: commit and publish the minimal three-file contract correction, inspect every workflow attached to the new SHA, and fix only reproduced failures.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

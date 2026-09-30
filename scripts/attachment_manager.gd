@@ -187,7 +187,7 @@ func _maybe_import_learning_attachment(item: Dictionary, question := "") -> Dict
 func _learning_type(item: Dictionary, question := "") -> String:
 	# Durable learning in chat requires the submitted instruction. A filename or
 	# embedded manifest may describe data, but it cannot authorize persistence.
-	return intent_router.learning_type(question)
+	return _learning_type_from_instruction(question)
 
 func _learning_type_from_instruction(question: String) -> String:
 	return intent_router.learning_type(question)

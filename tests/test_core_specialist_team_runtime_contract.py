@@ -153,7 +153,10 @@ def test_windows_prefers_packaged_core_and_normal_chat_recovers_without_setup() 
     assert main.count("await agent.run_task(task)") == 1
     assert "call_deferred(\"_recover_core_background\")" in main
     assert "устанавливать или настраивать ничего не нужно" in main
-    assert main.index("ai.retry_core_now()") < main.index('chats.add_message("assistant", answer)')
+    # Assistant persistence now carries runtime/model/version metadata after
+    # the answer arguments; the recovery ordering contract must not pin the old
+    # two-argument call spelling.
+    assert main.index("ai.retry_core_now()") < main.index('chats.add_message("assistant", answer')
 
 
 def test_core_engine_resolution_uses_actions_token_without_weakening_verification() -> None:

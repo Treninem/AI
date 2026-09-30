@@ -618,3 +618,14 @@
 - **Профилактика:** semantic intent runtime matrix включает read/calculate/find как Knowledge и оставляет negation/capability questions non-persistent; owner-control audit отмечает prompt/memory пределы как отдельную policy.
 - **Evidence:** `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; six focused intent/web contracts PASS.
 - **Статус:** RESOLVED IN LOCAL SOURCE; remote/package/device acceptance pending.
+
+#### AF-MEM-096 — exact-SHA CI contracts pinned obsolete call spelling
+
+- **Дата/среда:** 2026-09-30; PR #103 head `783b46eec6e0409c3d25470fd1f3fa1559f2adfe`; runs `36717626031` and `36717625933`.
+- **Симптом:** Core Benchmarks failed 1/31 although Godot Core runtime passed; Core/Voice Python failed 1/70 while its File Intelligence, Windows integration and Godot Core jobs passed.
+- **Причина:** tests pinned implementation spelling/location, not behavior: one searched the obsolete two-argument substring `chats.add_message("assistant", answer)` after response metadata was added; another demanded both `_learning_type_from_instruction(question)` and the literal `"изучи"` inside AttachmentManager even though semantic phrases had intentionally moved into `UserIntentRouter`.
+- **Нерабочие попытки:** rerun unchanged jobs; interpret these two assertion errors as model/runtime regressions.
+- **Решение:** ordering contract matches the stable call prefix regardless of added metadata; AttachmentManager routes through its compatibility helper again; the intent contract validates the router call and semantic patterns in `UserIntentRouter`, preserving filename/payload authority boundaries.
+- **Профилактика:** source contracts assert externally relevant order/route invariants and tolerate compatible argument additions; exact failed suites are rerun locally before publishing the correction.
+- **Evidence:** PR #103 runs/jobs `36717626031/109894376434` and `36717625933/109894376571`; corrected exact suites pending.
+- **Статус:** ROOT CAUSE FIXED LOCALLY; exact-SHA rerun pending.
