@@ -46,7 +46,9 @@ func _run() -> void:
 	host.setup_nodes()
 	await process_frame
 
-	knowledge_path = "user://aurorafox_knowledge_%s.jsonl" % token
+	# Deliberately neutral filename: prove that the submitted user instruction
+	# ("изучи"), not a filename heuristic, authorizes Knowledge import.
+	knowledge_path = "user://uploaded_files_2_%s.jsonl" % token
 	training_path = "user://aurorafox_training_%s.jsonl" % token
 	skills_path = "user://aurorafox_skills_%s.jsonl" % token
 
@@ -70,7 +72,10 @@ func _run() -> void:
 		_finish()
 		return
 
-	var knowledge_item := await host.attachments.analyze(knowledge_path)
+	var described := host.attachments.describe(knowledge_path)
+	if described.has("learning_import"):
+		_fail("selecting a neutral attachment imported knowledge before the user instruction")
+	var knowledge_item := await host.attachments.analyze(knowledge_path, "Изучи этот файл и добавь его в локальную базу знаний", false)
 	var knowledge_import: Dictionary = knowledge_item.get("learning_import", {})
 	if not bool(knowledge_import.get("ok", false)):
 		_fail("knowledge chat attachment import failed: " + JSON.stringify(knowledge_import))

@@ -74,6 +74,45 @@ def test_zip_path_traversal_is_detected(tmp_path: Path) -> None:
     assert any("небезопас" in warning.lower() for warning in warnings)
 
 
+def test_zip_extracts_bounded_text_content_for_knowledge(tmp_path: Path) -> None:
+    archive = tmp_path / "files (2).zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("facts/readme.txt", "AURORA_ARCHIVE_FACT=violet-cedar")
+        zf.writestr("facts/data.jsonl", '{"topic":"archive","fact":"local knowledge"}\n')
+        zf.writestr("bin/blob.dat", b"\x00\x01\x02")
+        zf.writestr("../escape.txt", "MUST_NOT_BE_IMPORTED")
+
+    text, meta, warnings = _archive_listing(archive, max_chars=20000)
+
+    assert "AURORA_ARCHIVE_FACT=violet-cedar" in text
+    assert '"fact":"local knowledge"' in text
+    assert "MUST_NOT_BE_IMPORTED" not in text
+    assert meta["text_entries_extracted"] == 2
+    assert meta["text_bytes_extracted"] > 0
+    assert meta["unsafe_entries"] == 1
+    assert meta["untrusted_document"] is True
+    assert meta["content_authority"] == "data_only"
+    assert meta["external_ai_required"] is False
+    assert any("небезопас" in warning.lower() for warning in warnings)
+
+    clipped, _, _ = _archive_listing(archive, max_chars=80)
+    assert len(clipped) <= 80
+
+
+def test_zip_bomb_budget_blocks_content_read(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    archive = tmp_path / "oversized.zip"
+    with zipfile.ZipFile(archive, "w") as zf:
+        zf.writestr("facts.txt", "knowledge that must stay unread")
+
+    monkeypatch.setattr(file_service, "MAX_ARCHIVE_EXPANDED", 4)
+    text, meta, warnings = _archive_listing(archive, max_chars=20000)
+
+    assert "knowledge that must stay unread" not in text
+    assert meta["extraction_blocked"] is True
+    assert meta["text_entries_extracted"] == 0
+    assert any("лимит" in warning.lower() for warning in warnings)
+
+
 def test_binary_does_not_crash(tmp_path: Path) -> None:
     path = tmp_path / "blob.dat"
     path.write_bytes(b"\x00\x01\x02\xff" * 100)

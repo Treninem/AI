@@ -4,6 +4,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ATTACHMENTS = (ROOT / "scripts" / "attachment_manager.gd").read_text(encoding="utf-8")
 MAIN = (ROOT / "scripts" / "main.gd").read_text(encoding="utf-8")
 EXPERIENCE = (ROOT / "scripts" / "experience_store.gd").read_text(encoding="utf-8")
+SMOKE = (ROOT / "tests" / "chat_learning_attachment_smoke.gd").read_text(encoding="utf-8")
 
 
 def test_chat_attachment_path_is_real_product_path():
@@ -55,3 +56,15 @@ def test_imported_skill_is_bounded_and_untrusted():
 def test_chat_reports_import_result_back_to_assistant_context():
     assert "Импорт в локальное обучение AuroraFox" in ATTACHMENTS
     assert "learning_import" in ATTACHMENTS
+
+
+def test_archive_learning_requires_real_extracted_text():
+    assert 'metadata.get("text_entries_extracted", 0)' in ATTACHMENTS
+    assert "В архиве не найдено безопасно извлекаемых текстовых знаний" in ATTACHMENTS
+    assert "_import_extracted_knowledge(path, extracted_text, deferred_type)" in ATTACHMENTS
+
+
+def test_neutral_attachment_waits_for_explicit_learning_instruction():
+    assert "uploaded_files_2_" in SMOKE
+    assert 'analyze(knowledge_path, "Изучи этот файл' in SMOKE
+    assert "imported knowledge before the user instruction" in SMOKE
