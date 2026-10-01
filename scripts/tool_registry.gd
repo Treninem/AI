@@ -20,6 +20,7 @@ func _ready() -> void:
 	register_tool("analyze_file", "Глубоко разобрать локальный файл: PDF, DOCX, XLS/XLSX, PPTX, ODT/ODS, изображение, аудио, видео, архив или исходный код", {"path":"string","question":"string","visual":"bool"}, Callable(self, "_analyze_file"))
 	register_tool("file_tree", "Построить дерево локальной папки проекта или user:// с размерами файлов", {"path":"string","max_items":"int"}, Callable(self, "_file_tree"))
 	register_tool("search_file_cache", "Найти ранее разобранные файлы и фрагменты по локальному индексу File Intelligence", {"query":"string","limit":"int"}, Callable(self, "_search_file_cache"))
+	register_tool("security_configuration_check", "Запустить только явно авторизованную владельцем проверку HTTP/TLS-конфигурации по приватному scope JSON. Не обходит вход, CAPTCHA, редиректы или ограничения доступа.", {"scope_path":"string","baseline_path":"string","output_path":"string","authorized":"bool"}, Callable(self, "_security_configuration_check"))
 	register_tool("git_status", "Проверить git status", {}, Callable(self, "_git_status"))
 	register_tool("git_diff", "Посмотреть git diff", {}, Callable(self, "_git_diff"))
 	register_tool("system_info", "Получить сведения о системе и Godot", {}, Callable(self, "_system_info"))
@@ -122,21 +123,13 @@ func _computer_permission() -> Dictionary:
 	return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
 
 func _http_get(args: Dictionary) -> Dictionary:
-	var url := str(args.get("url", ""))
-	if not (url.begins_with("http://") or url.begins_with("https://")):
-		return {"ok": false, "error": "Only HTTP/HTTPS allowed"}
-	var req := HTTPRequest.new()
-	req.timeout = 30.0
-	add_child(req)
-	var err := req.request(url, PackedStringArray(["User-Agent: AuroraFox/0.4"]))
-	if err != OK:
-		req.queue_free()
-		return {"ok": false, "error": "request error %s" % err}
-	var result: Array = await req.request_completed
-	req.queue_free()
-	var code := int(result[1])
-	var body: PackedByteArray = result[3]
-	return {"ok": code >= 200 and code < 400, "status": code, "body": body.get_string_from_utf8().substr(0, 200000)}
+	# Compatibility name, hardened implementation. All arbitrary public reads go
+	# through the same SSRF/redirect/size/content/access-control policy as chat.
+	var reader := PublicWebManager.new()
+	add_child(reader)
+	var result := await reader.read_public_url(str(args.get("url", "")))
+	reader.queue_free()
+	return result
 
 func _read_file(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))
@@ -203,6 +196,102 @@ func _search_file_cache(args: Dictionary) -> Dictionary:
 		"query": str(args.get("query", "")),
 		"limit": clampi(int(args.get("limit", 20)), 1, 100)
 	}, 30.0)
+
+func _security_configuration_check(args: Dictionary) -> Dictionary:
+	# Authorization is deliberately independent from the scope file: imported
+	# content cannot authorize traffic by merely containing an allow flag.
+	if not bool(args.get("authorized", false)):
+		return {"ok": false, "error": "explicit_owner_authorization_required", "message": "Нужно явное подтверждение владельца для этого точного scope."}
+	if OS.get_name() != "Windows":
+		return {"ok": false, "error": "unsupported_platform", "message": "Интегрированная security-проверка сейчас доступна в Windows-клиенте."}
+	var scope_user := str(args.get("scope_path", "")).strip_edges()
+	var scope_abs := _security_user_path(scope_user, true)
+	if scope_abs.is_empty():
+		return {"ok": false, "error": "scope_path_denied", "message": "Scope должен быть существующим приватным файлом user://."}
+	var baseline_user := str(args.get("baseline_path", "")).strip_edges()
+	var baseline_abs := ""
+	if not baseline_user.is_empty():
+		baseline_abs = _security_user_path(baseline_user, true)
+		if baseline_abs.is_empty():
+			return {"ok": false, "error": "baseline_path_denied", "message": "Baseline должен быть существующим приватным файлом user://."}
+	var output_user := str(args.get("output_path", "")).strip_edges()
+	if output_user.is_empty():
+		output_user = "user://security/evidence-%d.json" % Time.get_ticks_usec()
+	var output_abs := _security_user_path(output_user, false)
+	if output_abs.is_empty():
+		return {"ok": false, "error": "output_path_denied", "message": "Evidence разрешено сохранять только в user://."}
+	DirAccess.make_dir_recursive_absolute(output_abs.get_base_dir())
+	if FileAccess.file_exists(output_abs):
+		DirAccess.remove_absolute(output_abs)
+	var runtime := _security_runtime_paths()
+	if not bool(runtime.get("ok", false)):
+		return runtime
+	var argv := PackedStringArray([
+		str(runtime.get("runner", "")),
+		"--scope", scope_abs,
+		"--authorize",
+		"--output", output_abs
+	])
+	if not baseline_abs.is_empty():
+		argv.append("--baseline")
+		argv.append(baseline_abs)
+	var pid := OS.create_process(str(runtime.get("python", "")), argv, false)
+	if pid <= 0:
+		return {"ok": false, "error": "security_runner_start_failed", "message": "Не удалось запустить локальный security runner."}
+	# Do not block the Godot UI thread while the bounded runner works. Network
+	# budgets live in the owner-reviewed scope and are enforced inside runner.py.
+	while OS.is_process_running(pid):
+		await get_tree().create_timer(0.10).timeout
+	if not FileAccess.file_exists(output_abs):
+		return {"ok": false, "error": "security_runner_rejected_scope", "message": "Проверка не началась или scope был отклонён до создания evidence."}
+	var report_file := FileAccess.open(output_abs, FileAccess.READ)
+	if report_file == null:
+		return {"ok": false, "error": "security_evidence_unreadable", "message": "Evidence создан, но не читается."}
+	var parsed = JSON.parse_string(report_file.get_as_text())
+	report_file.close()
+	if not parsed is Dictionary:
+		return {"ok": false, "error": "security_evidence_invalid", "message": "Security runner вернул некорректный evidence JSON."}
+	var report: Dictionary = parsed
+	var all_checked := true
+	for item in report.get("results", []):
+		if str(item.get("outcome", "")) != "checked":
+			all_checked = false
+			break
+	return {
+		"ok": all_checked,
+		"evidence_path": output_user,
+		"report": report,
+		"message": "Проверка завершена." if all_checked else "Проверка завершена с границей доступа, сетевой ошибкой или другим непроверенным исходом."
+	}
+
+func _security_user_path(value: String, require_existing: bool) -> String:
+	if not value.begins_with("user://"):
+		return ""
+	var root := ProjectSettings.globalize_path("user://").simplify_path().trim_suffix("/")
+	var absolute := ProjectSettings.globalize_path(value).simplify_path()
+	if absolute != root and not absolute.begins_with(root + "/"):
+		return ""
+	if require_existing and not FileAccess.file_exists(absolute):
+		return ""
+	return absolute
+
+func _security_runtime_paths() -> Dictionary:
+	var app_root := OS.get_executable_path().get_base_dir()
+	var candidates := [
+		{
+			"python": app_root.path_join("file_intelligence/python/python.exe"),
+			"runner": app_root.path_join("file_intelligence/security_runner.py")
+		},
+		{
+			"python": ProjectSettings.globalize_path("res://file_intelligence/python/python.exe"),
+			"runner": ProjectSettings.globalize_path("res://security_workspace/runner.py")
+		}
+	]
+	for candidate in candidates:
+		if FileAccess.file_exists(str(candidate.get("python", ""))) and FileAccess.file_exists(str(candidate.get("runner", ""))):
+			candidate["ok"] = true
+			return candidate
+	return {"ok": false, "error": "security_runtime_unavailable", "message": "Локальный Python/security runner не найден; восстановите File Intelligence runtime."}
 
 func _run_process(args: Dictionary) -> Dictionary:
 	var program := str(args.get("program", ""))

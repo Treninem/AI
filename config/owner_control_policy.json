@@ -1,0 +1,55 @@
+{
+  "schema": "aurorafox.owner-control.v1",
+  "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
+  "classifications": [
+    {
+      "path": "scripts/public_web_manager.gd",
+      "pattern": "DEFAULT_MAX_|DEFAULT_REQUEST_TIMEOUT_SECONDS|max_urls_per_message|max_redirects|max_response_bytes|request_timeout_seconds|max_extracted_chars|MAX_EXTRACTED_CHARS",
+      "class": "owner_adjustable",
+      "control": "apply_owner_limits + aurorafox/web/* ProjectSettings",
+      "rationale": "Device protection defaults; the owner can change and persist them."
+    },
+    {
+      "path": "scripts/public_web_manager.gd",
+      "pattern": "private_network_denied|authentication_required|access_restricted|access_denied|interactive_access_required|credentials_denied",
+      "class": "hard_boundary",
+      "control": "provide an authorized public source, export or local file",
+      "rationale": "Prevents SSRF and bypass of another system's authentication/access controls."
+    },
+    {
+      "path": "scripts/agent_core.gd",
+      "pattern": "task.substr\\(0, 12000\\)",
+      "class": "owner_adjustable_pending_ui",
+      "control": "bounded duplicate chat-memory trace; full source remains in Knowledge",
+      "rationale": "Avoids duplicating large indexed sources in every future prompt; expose in advanced settings."
+    },
+    {
+      "path": "tests/*",
+      "pattern": ".*",
+      "class": "test_evidence",
+      "control": "test fixture/assertion; no runtime owner setting",
+      "rationale": "Acceptance inputs, expected values and failure-injection bounds do not impose product runtime restrictions; never weaken them to alter owner controls."
+    },
+    {
+      "path": "file_intelligence/file_service.py",
+      "pattern": "os.getenv\\(\"AURORAFOX_(?:FILE_MAX|ARCHIVE_MAX|ARCHIVE_TEXT|OCR_MAX)",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → File Intelligence limits; persisted ProjectSettings are exported to AURORAFOX_FILE_*/ARCHIVE_*/OCR_* on backend start/restart",
+      "rationale": "Parser resource budgets are visible owner controls and are applied to the local backend without source edits."
+    },
+    {
+      "path": "scripts/public_web_manager.gd",
+      "pattern": "\\.substr\\(0, (?:24000|400)\\)|(?:url.length\\(\\) > 4096)",
+      "class": "owner_adjustable",
+      "control": "Settings → Tools → Public links (URL/title/relevant-context budgets)",
+      "rationale": "Presentation/context ceilings are owner-visible persisted controls."
+    },
+    {
+      "path": "scripts/file_intelligence_client.gd",
+      "pattern": "OWNER_LIMIT_|owner_limits\\(|apply_owner_limits\\(|request_max_text_chars",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → File Intelligence limits",
+      "rationale": "Client persists owner values, exports backend environment settings and restarts the local Windows backend."
+    }
+  ]
+}

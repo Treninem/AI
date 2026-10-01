@@ -82,14 +82,14 @@ func _run() -> void:
 	elif str(knowledge_import.get("type", "")) != "knowledge":
 		_fail("knowledge attachment type mismatch")
 
-	var training_item := await host.attachments.analyze(training_path)
+	var training_item := await host.attachments.analyze(training_path, "Сохрани этот набор примеров как данные для дообучения", false)
 	var training_import: Dictionary = training_item.get("learning_import", {})
 	if not bool(training_import.get("ok", false)):
 		_fail("training chat attachment import failed: " + JSON.stringify(training_import))
 	elif str(training_import.get("type", "")) != "training":
 		_fail("training attachment type mismatch")
 
-	var skills_item := await host.attachments.analyze(skills_path)
+	var skills_item := await host.attachments.analyze(skills_path, "Усвой этот материал как новый навык", false)
 	var skills_import: Dictionary = skills_item.get("learning_import", {})
 	if not bool(skills_import.get("ok", false)):
 		_fail("skills chat attachment import failed: " + JSON.stringify(skills_import))

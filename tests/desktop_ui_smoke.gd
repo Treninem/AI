@@ -348,6 +348,19 @@ func _exercise_chat(main: Control) -> bool:
 	if _visible_placeholder_fox(main):
 		_fail("Assistant message rendered temporary avatar artwork", 62)
 		return false
+	var feedback_controls := main.find_children("FeedbackControls", "HBoxContainer", true, false)
+	if feedback_controls.size() < 2:
+		_fail("Assistant answers do not expose compact feedback controls", 95)
+		return false
+	for controls in feedback_controls:
+		var positive := controls.find_child("FeedbackPositive", true, false) as Button
+		var negative := controls.find_child("FeedbackNegative", true, false) as Button
+		if positive == null or negative == null or positive.text != "+" or negative.text != "−":
+			_fail("Feedback controls are missing accessible + / − actions", 96)
+			return false
+		if positive.tooltip_text.is_empty() or negative.tooltip_text.is_empty():
+			_fail("Feedback controls do not explain their actions", 97)
+			return false
 	var messages := main.find_child("MessageList", true, false)
 	if messages != null:
 		for node in messages.find_children("*", "TextureRect", true, false):

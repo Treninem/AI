@@ -37,19 +37,23 @@ func get_chat(id: String) -> Dictionary:
 			return chat
 	return {}
 
-func add_message(role: String, content: String, attachments: Array = []) -> void:
+func add_message(role: String, content: String, attachments: Array = [], metadata: Dictionary = {}) -> String:
 	var chat := get_active_chat()
 	if chat.is_empty():
 		create_chat()
 		chat = get_active_chat()
 	var messages: Array = chat.get("messages", [])
+	var message_id := _new_message_id()
 	messages.append({
+		"id": message_id,
 		"role": role,
 		"content": content,
 		# Full extraction stays in File Intelligence cache. History keeps a short excerpt so
 		# follow-up questions such as “а что во второй части файла?” retain useful context.
 		"attachments": _compact_attachments(attachments),
-		"time": Time.get_datetime_string_from_system()
+		"time": Time.get_datetime_string_from_system(),
+		"metadata": metadata.duplicate(true),
+		"feedback": {}
 	})
 	chat["messages"] = messages
 	chat["updated_at"] = Time.get_datetime_string_from_system()
@@ -59,6 +63,59 @@ func add_message(role: String, content: String, attachments: Array = []) -> void
 	# Paint the newly appended message in the same frame. Persist on the next
 	# idle turn so long Android histories cannot block live presentation.
 	queue_save()
+	return message_id
+
+func set_message_feedback(message_id: String, score: int, analysis: Dictionary = {}, state := "recorded") -> bool:
+	if message_id.is_empty() or score < -1 or score > 1:
+		return false
+	for chat in chats:
+		if not chat is Dictionary:
+			continue
+		var messages: Array = chat.get("messages", [])
+		for i in range(messages.size()):
+			var message = messages[i]
+			if not message is Dictionary or str(message.get("id", "")) != message_id:
+				continue
+			message["feedback"] = {} if score == 0 else {
+				"score": score,
+				"state": state,
+				"analysis": analysis.duplicate(true),
+				"updated_at": Time.get_datetime_string_from_system(true)
+			}
+			messages[i] = message
+			chat["messages"] = messages
+			chat["updated_at"] = Time.get_datetime_string_from_system()
+			queue_save()
+			return true
+	return false
+
+func feedback_context(message_id: String) -> Dictionary:
+	for chat in chats:
+		if not chat is Dictionary:
+			continue
+		var messages: Array = chat.get("messages", [])
+		for i in range(messages.size()):
+			var message = messages[i]
+			if not message is Dictionary or str(message.get("id", "")) != message_id:
+				continue
+			var prompt := ""
+			for previous in range(i - 1, -1, -1):
+				var candidate = messages[previous]
+				if candidate is Dictionary and str(candidate.get("role", "")) == "user":
+					prompt = str(candidate.get("content", ""))
+					break
+			return {
+				"conversation_id": str(chat.get("id", "")),
+				"message_id": message_id,
+				"prompt": prompt,
+				"answer": str(message.get("content", "")),
+				"metadata": message.get("metadata", {}),
+				"feedback": message.get("feedback", {})
+			}
+	return {}
+
+func _new_message_id() -> String:
+	return "msg_%d_%d_%d" % [Time.get_unix_time_from_system(), Time.get_ticks_usec(), randi_range(1000, 9999)]
 
 func _compact_attachments(items: Array) -> Array:
 	var out: Array = []
@@ -154,6 +211,31 @@ func load_all() -> void:
 	file.close()
 	if typeof(parsed) != TYPE_DICTIONARY: return
 	chats = parsed.get("chats", [])
+	_migrate_message_identity()
 	active_chat_id = str(parsed.get("active_chat_id", ""))
 	if active_chat_id.is_empty() and not chats.is_empty():
 		active_chat_id = str(chats[0].get("id", ""))
+
+func _migrate_message_identity() -> void:
+	var changed := false
+	for chat in chats:
+		if not chat is Dictionary:
+			continue
+		var messages: Array = chat.get("messages", [])
+		for i in range(messages.size()):
+			var message = messages[i]
+			if not message is Dictionary:
+				continue
+			if str(message.get("id", "")).is_empty():
+				message["id"] = _new_message_id()
+				changed = true
+			if not message.has("metadata"):
+				message["metadata"] = {}
+				changed = true
+			if not message.has("feedback"):
+				message["feedback"] = {}
+				changed = true
+			messages[i] = message
+		chat["messages"] = messages
+	if changed:
+		queue_save()

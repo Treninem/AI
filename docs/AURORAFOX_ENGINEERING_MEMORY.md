@@ -575,3 +575,113 @@
 - **Профилактика:** fixture с нейтральным `files (2).zip` требует реальные TXT/JSONL facts, исключает `../escape.txt`, проверяет zip-bomb budget и строгий output cap; Godot smoke использует нейтральное имя и доказывает, что Knowledge import начинается только после явной команды `изучи`.
 - **Evidence:** source commit `6dcf015`; `AURORA_ARCHIVE_TEXT_EXTRACTION_OK`; `AURORA_ARCHIVE_BOMB_BUDGET_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 31 focused P0 contracts PASS; exact-SHA CI pending.
 - **Статус:** RESOLVED IN SOURCE; GitHub CI and installed Windows archive acceptance pending.
+
+#### AF-MEM-092 — API feedback существовал без feedback-контролов основного чата
+
+- **Дата/среда:** 2026-09-30; local branch `fix/v1.5-archive-knowledge-import`; implementation commit `6661c4c`.
+- **Симптом:** API принимал `/v1/feedback`, но ответы основного Windows/Android чата не имели `+ / −`; пользователь не мог связать оценку с точным локальным ответом или безопасно подтвердить обучение на ней.
+- **Причина:** feedback transport/storage был реализован только для API learning sync; `ChatStore` не имел стабильных message IDs/feedback metadata, а message cards не создавали controls.
+- **Нерабочие попытки:** считать API endpoint доказательством готового клиентского UX; автоматически писать положительный/отрицательный feedback в память или веса без owner review.
+- **Решение:** стабильная message identity + runtime/model/version metadata; компактные доступные `+ / −`; локальный Core готовит только bounded analysis proposal; owner ConfirmationDialog отдельно разрешает private ExperienceStore write. Изменение/отмена оценки отзывает ранее подтверждённый feedback experience. Веса/shared Core не меняются.
+- **Профилактика:** Godot runtime smoke проверяет exact prompt/answer identity, proposal state и retraction; UI smoke требует controls под каждым assistant answer; static contract запрещает memory/experience mutation внутри analysis function до подтверждения.
+- **Evidence:** `AURORA_CHAT_FEEDBACK_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 3 focused Python contracts PASS; exact-SHA remote CI pending.
+- **Статус:** RESOLVED IN LOCAL SOURCE; publication/package/device acceptance pending.
+
+#### AF-MEM-093 — имя файла и embedded manifest молча разрешали durable learning
+
+- **Дата/среда:** 2026-09-30; local implementation commit `766dacd`.
+- **Симптом:** файл с именем `training*.jsonl`, `skills*.jsonl` или knowledge-like payload мог импортироваться при выборе без явной команды пользователя; короткий список фраз не покрывал естественные перефразировки.
+- **Причина:** `AttachmentManager._learning_type()` использовал instruction, затем filename, затем payload как равноправные источники разрешения на durable write.
+- **Нерабочие попытки:** бесконечно расширять один список exact phrases; считать filename/payload пользовательским подтверждением; смешивать `прочитай/расскажи/посчитай` с `сохрани/изучи`.
+- **Решение:** отдельный `UserIntentRouter` нормализует русские/английские перефразировки, negation, capability questions, knowledge/training/skill targets. Durable import разрешается только submitted instruction; filename/manifest остаются untrusted classification data и сами не дают write authority. Неясный запрос остаётся analyze-only.
+- **Профилактика:** runtime matrix покрывает `изучи/усвой/запомни/внеси/можешь изучить`, training/skill variants, `не изучай`, `прочитай и расскажи`, capability/how-to questions и calculation requests.
+- **Evidence:** `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; 2 focused Python contracts PASS; exact-SHA remote CI pending.
+- **Статус:** RESOLVED IN LOCAL SOURCE; publication/package/device acceptance pending.
+
+#### AF-MEM-094 — generic `http_get` allowed unsafe destinations and raw-page false learning
+
+- **Дата/среда:** 2026-09-30; local continuation after exact remote tree `8ad6044`.
+- **Симптом:** Core имел generic `http_get`, который принимал любой HTTP(S) URL, автоматически следовал redirect, не проверял DNS/private/link-local адреса, не ограничивал тело через `body_size_limit`, возвращал сырой HTML и не связывал чтение с provenance/Knowledge. Ответ по ссылке мог выглядеть как «изучение» без доказуемого сохранения.
+- **Причина:** инструмент создавался как ранний универсальный fetch helper и не проходил отдельный untrusted-web/SSRF/access-control design.
+- **Нерабочие попытки:** считать проверку префикса `http://`/`https://` достаточной; полагаться на модель для выбора безопасного URL; принимать HTTP 3xx как успех без повторной валидации назначения.
+- **Решение:** единый `PublicWebManager`: проверка схемы/credentials/DNS и всех resolved addresses, повторная проверка каждого redirect, bounded timeout/body/redirects, type-aware text extraction без script/style, CAPTCHA/login/access-control reporting, provenance SHA-256 и private Knowledge import. Compatibility `http_get` использует тот же reader.
+- **Профилактика:** runtime smoke для loopback/metadata/private IPv4/IPv6/nonstandard public port/HTML stripping/owner decision; static contract запрещает отдельный сырой HTTPRequest в `http_get`.
+- **Evidence:** `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_PUBLIC_WEB_CONTRACT_OK tests=4`; exact-SHA CI pending.
+- **Статус:** RESOLVED IN LOCAL SOURCE; remote/package/device acceptance pending.
+
+#### AF-MEM-095 — read/analyze intent contradicted owner knowledge contract
+
+- **Дата/среда:** 2026-09-30; owner clarification «прочитать и запомнить — одно и то же».
+- **Симптом:** `UserIntentRouter` специально классифицировал `прочитай/расскажи/посчитай` как analyze-only, поэтому реально прочитанный пользовательский файл мог не сохраниться в Knowledge; веб-источник мог дублироваться целиком в task memory и раздувать следующие prompts.
+- **Причина:** прежняя policy считала durable write допустимым только при отдельном глаголе `изучи/запомни`, что не соответствовало уточнённой модели владельца.
+- **Решение:** чтение/анализ/расчёт/поиск в пользовательском источнике разрешает private Knowledge import с provenance; явное отрицание по-прежнему отменяет сохранение. Веб-страница сохраняется полностью chunked в Knowledge, а Core получает до 24k релевантных фрагментов; user-task trace отдельно ограничен 12k и не дублирует весь источник.
+- **Профилактика:** semantic intent runtime matrix включает read/calculate/find как Knowledge и оставляет negation/capability questions non-persistent; owner-control audit отмечает prompt/memory пределы как отдельную policy.
+- **Evidence:** `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; six focused intent/web contracts PASS.
+- **Статус:** RESOLVED IN LOCAL SOURCE; remote/package/device acceptance pending.
+
+#### AF-MEM-096 — exact-SHA CI contracts pinned obsolete call spelling
+
+- **Дата/среда:** 2026-09-30; PR #103 head `783b46eec6e0409c3d25470fd1f3fa1559f2adfe`; runs `36717626031` and `36717625933`.
+- **Симптом:** Core Benchmarks failed 1/31 although Godot Core runtime passed; Core/Voice Python failed 1/70 while its File Intelligence, Windows integration and Godot Core jobs passed.
+- **Причина:** tests pinned implementation spelling/location, not behavior: one searched the obsolete two-argument substring `chats.add_message("assistant", answer)` after response metadata was added; another demanded both `_learning_type_from_instruction(question)` and the literal `"изучи"` inside AttachmentManager even though semantic phrases had intentionally moved into `UserIntentRouter`.
+- **Нерабочие попытки:** rerun unchanged jobs; interpret these two assertion errors as model/runtime regressions.
+- **Решение:** ordering contract matches the stable call prefix regardless of added metadata; AttachmentManager routes through its compatibility helper again; the intent contract validates the router call and semantic patterns in `UserIntentRouter`, preserving filename/payload authority boundaries.
+- **Профилактика:** source contracts assert externally relevant order/route invariants and tolerate compatible argument additions; exact failed suites are rerun locally before publishing the correction.
+- **Evidence:** PR #103 runs/jobs `36717626031/109894376434` and `36717625933/109894376571`; corrected exact suites pending.
+- **Статус:** ROOT CAUSE FIXED LOCALLY; exact-SHA rerun pending.
+
+
+#### AF-MEM-097 — binary URL responses were decoded/rejected before File Intelligence
+
+- **Environment:** continuation of PR #103 exact baseline `7c05eee0a673c86bf3289d01e4113db00ff156fb`, 2026-10-01.
+- **Symptom/root cause:** PDF/Office/image/archive URLs failed `unsupported_content_type`; HTTPRequest response bytes were unconditionally decoded as UTF-8. URL flow also ignored explicit no-save instructions despite router support.
+- **Fix:** keep PackedByteArray; select parser using signature/MIME/URL/disposition and Office/EPUB ZIP member identities; private random staging path; invoke existing FileIntelligenceClient; delete staging on successful/failed results; reject binary descriptions and archive listings as Knowledge. Honor router negation and report omitted URLs rather than silently slicing them. Raw download hash and extracted-text hash are distinct provenance fields.
+- **Prevention/evidence:** `tests/public_document_url_smoke.gd` executes staging, byte identity, cleanup, actual Knowledge import/query, no-save, generic ZIP→DOCX selection, archive listing/backend failure, CAPTCHA and owner-limit cases with explicitly substituted transport/parser responses. It proves routing/storage boundaries, not real parser/platform capability. Existing remote File Intelligence parser and Windows/Android package gates remain required. Extraction cap is visible in Settings; downstream parser ceilings remain inventory findings.
+- **Status:** LOCAL ROUTING/STORAGE ACCEPTED; exact-SHA remote parser/package/device acceptance pending.
+
+#### AF-MEM-098 — truncated cached Godot binary segfaulted before startup
+
+- **Environment:** local `.ci/godot-local/Godot_v4.7.1-stable_linux.x86_64`, 2026-10-01.
+- **Symptom:** immediate segmentation fault with empty log even before version/project parsing.
+- **Root cause/evidence:** ELF file had missing section headers and only ~87 MiB; ZIP entry declared 144,583,504 bytes. ZIP CRC test passed.
+- **Fix:** re-extract verified archive to separate scratch directory; recovered executable reports `4.7.1.stable.official.a13da4feb` and parses/runs project smokes. Do not change product source or weaken tests for this environment defect.
+- **Prevention:** validate archive CRC, extracted byte count and `--version` before parser diagnosis.
+- **Status:** RESOLVED ENVIRONMENT.
+
+
+#### AF-MEM-099 — failed security retest must not imply remediation
+
+- **Environment:** authorized security workspace local foundation, 2026-10-01; parent `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`.
+- **Invariant:** target/scope/time authorization is required before traffic; source documents never grant execution permission. Header/cookie configuration checks cannot establish successful exploitation or a whole-system security grade.
+- **Prevention:** exact origin/URL preflight, private-lab explicit opt-in, rechecked expiry, public DNS address validation and pinned socket, validated TLS, no redirects/auth bypass; bounded body/time/request budgets; redacted evidence; retest only same scope and successfully checked targets. Transport/access failure yields `retest_inconclusive`, never resolved.
+- **Evidence:** four `unittest` local HTTP lab cases PASS: actual vulnerable→fixed remediation/retest; denied/expired/out-of-scope/private target produces zero requests; redirect/access boundary; changed scope and failed retest plus body/cookie/query/error redaction. Runner not yet integrated into Core/chat; no external target executed.
+- **Status:** LOCAL CONFIGURATION-CHECK FOUNDATION ACCEPTED; broader authorized test tools/chat integration and live target evidence pending.
+
+
+#### AF-MEM-100 — parser/web operational ceilings were adjustable only outside the product UI
+
+- **Дата/среда:** 2026-10-01; PR #103 continuation after security HEAD 3626fb13d1f1ca8d02e706be3b80d7786471d56b reached 24/24 green checks.
+- **Симптом:** File Intelligence environment budgets existed, but the owner had to edit process environment values manually; public URL length/title/relevant-context ceilings remained source literals.
+- **Корень:** settings exposed only public download/extraction/time limits; FileIntelligenceClient did not persist/export parser budgets and still clamped one request at 500000 characters.
+- **Исправление:** persisted `aurorafox/files/*` owner settings; environment export before backend start/restart; visible Files settings card; owner-controlled request text ceiling in Python health/schema; public URL/title/context controls exposed and persisted.
+- **Профилактика:** `test_owner_runtime_limits_contract.py` rejects reintroduction of the fixed 500000/4096/400/24000 ceilings and requires owner UI plus propagation markers. Inventory remains incomplete until unrelated findings are classified.
+- **Статус:** SOURCE IMPLEMENTED; exact-SHA CI pending for this new commit.
+
+
+#### AF-MEM-101 — fixed-value CI assertion outlived an owner-controlled runtime budget
+
+- **Дата/среда:** 2026-10-01; PR #103 HEAD `cb85b54ef88c1b4d5df561f301368c881667de72`; Chat Learning job `110338029520`.
+- **Симптом:** source contract failed although the changed behavior was intentional: `PublicWebManager` no longer contained literal `.substr(0, 24000)`.
+- **Корень:** an older contract asserted the implementation literal rather than the invariant. The relevant-context budget had been promoted to owner-visible `context_chars`, so preserving the old assertion would force an unwanted hidden product ceiling back into source.
+- **Исправление:** contract now asserts dynamic `.substr(0, context_chars)` plus owner-limit exposure; cheap Chat Learning preflight also executes owner-runtime-limit/security-tool contracts.
+- **Профилактика:** tests for operational limits must assert ownership, persistence and propagation, not a frozen default value. Defaults may remain documented but cannot masquerade as hard boundaries.
+- **Статус:** FIX PREPARED; exact-SHA remote CI pending.
+
+#### AF-MEM-102 — standalone security runner was not reachable from installed chat tools
+
+- **Дата/среда:** 2026-10-01; continuation of AF-MEM-099.
+- **Симптом:** the authorized configuration runner and real remediation/retest lab existed, but the normal Windows ToolRegistry could not invoke the same audited runner and the installer did not place it beside a callable Python runtime.
+- **Корень:** security foundation intentionally stopped before product integration; no private-path bridge/package contract existed.
+- **Исправление:** dedicated `security_configuration_check` tool requires separate explicit authorization, canonical private `user://` scope/baseline/output paths, launches the exact runner asynchronously with the bundled File Intelligence Python, and returns only redacted evidence. Build copies the exact runner; Windows CI requires the packaged file.
+- **Профилактика:** source contract rejects missing authorization/private-path/process/package markers. Scope content alone never authorizes execution; redirects/auth/access controls remain boundaries; failed or absent evidence cannot be called success.
+- **Статус:** SOURCE INTEGRATION PREPARED; exact-SHA parse/package/tool contracts pending.

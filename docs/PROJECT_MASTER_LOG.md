@@ -2958,6 +2958,54 @@ BLOCKERS: GitHub secret names cannot be read through the connected GitHub App; t
 NEXT: publish the implementation to the release branch and inspect triggered integration/package checks; install/authenticate GitHub CLI on the owner PC only for secret-name verification.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 
+### CHECKPOINT 2026-09-30 — PR #103 first exact-SHA failures reproduced
+
+- Draft PR #103 was created against archive PR #102. Published head `783b46eec6e0409c3d25470fd1f3fa1559f2adfe` has exact tree `789dcec4e49d7e685724cb5ced931f1e43e046cb`, matching local `e2642b9`.
+- First exact-SHA results: Work Mode, Chat Learning, Semantic Memory and Agent Sync succeeded; two Python jobs failed one assertion each. Core Benchmarks `36717626031` passed 30/31 and failed because its contract searched an obsolete two-argument `ChatStore.add_message` spelling after answer metadata was added. Core/Voice `36717625933` passed 69/70 in the Python job while File Intelligence, Windows integration and Godot Core jobs succeeded; its failed contract required a compatibility helper spelling despite the same semantic router being called directly.
+- Correction preserves behavior: Core recovery remains before assistant persistence and the test now matches the stable call prefix; AttachmentManager again delegates through `_learning_type_from_instruction(question)`, which calls the same `UserIntentRouter`. No weakening of read=remember, filename/payload authority, feedback or Core recovery occurred.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: PR #103 exact tree published; both CI failures reduced to exact stale contract causes; minimal compatible fixes prepared.
+REMAINING: run the two exact failed suites locally, publish corrected exact tree, accept all 11 workflows; then continue document URLs, owner-control/security/UI/performance/device gates.
+BLOCKERS: no source blocker; Windows/Android physical acceptance remains external.
+NEXT: execute the 31-test benchmark contract suite and 70-test Core/Voice Python suite, commit only the reproduced corrections, update PR #103 and inspect all workflows for the new SHA.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — авторизованная проверка безопасности
+
+- !!! ОБЯЗАТЕЛЬНО !!! AuroraFox должна уметь проводить **реальное**, а не scripted/stubbed security‑тестирование сайта, приложения или инфраструктуры, принадлежащих владельцу либо явно переданных ему для проверки. До активных действий Fox фиксирует подтверждение полномочий, точные target/scope, среду production/staging/lab, разрешённые методы, временное окно, rate/resource budget и запрещённые воздействия.
+- !!! ОБЯЗАТЕЛЬНО !!! Проверка идёт по ступеням: карта поверхности и версий → безопасные passive/low-impact checks → подтверждение кандидатов → только разрешённая минимальная эксплуатация в scope → доказательство влияния без лишнего доступа → severity/CVSS и приоритет → конкретное исправление → повторный retest. «Уязвимо» без воспроизводимого evidence не считается результатом; успешный exploit без отчёта и remediation тоже не считается завершением.
+- !!! ОБЯЗАТЕЛЬНО !!! Для собственной lab/staging-системы владелец может явно расширить инструменты, интенсивность и exploit‑проверки. На production по умолчанию запрещены разрушение/изменение данных, неконтролируемый DoS, persistence/backdoor, скрытие следов, выход за scope, lateral movement и извлечение реальных секретов/персональных данных сверх минимального доказательства. Эти границы защищают не удобство продукта, а чужие права, данные и доступность; Fox сообщает, почему конкретное действие не выполняется и какой безопасный lab/replay способ даст эквивалентное доказательство.
+- !!! ОБЯЗАТЕЛЬНО !!! Если цель или полномочие неоднозначны, Fox не делает вид, что протестировала систему: она запрашивает недостающий scope. Все команды, результаты, timestamps, версии инструментов, evidence hashes, изменения policy и остановки журналируются; чувствительные значения редактируются. Master stop и отмена владельца прекращают новые действия немедленно.
+- !!! ОБЯЗАТЕЛЬНО !!! Итоговый отчёт должен содержать executive summary, scope/ограничения, проверенную поверхность, подтверждённые и неподтверждённые находки, воспроизводимые безопасные шаги, evidence, severity, вероятность/влияние, исправления по коду/конфигурации/архитектуре, компенсационные меры, regression tests и результат retest. Fox не обещает абсолютную защищённость и явно перечисляет непроверенное.
+- Реализация этого режима не объявляется готовой одной декларацией: требуются изолированный security workspace, scope/authorization gate, audited tool allowlist, rate/concurrency controls, secret/PII redaction, evidence store, отчётность, cancellation/master-stop и end-to-end lab fixtures с намеренно уязвимым локальным target. Внешняя цель без явного разрешения не тестируется активно.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: owner requirement для настоящего авторизованного pentest/retest преобразован в проверяемый контракт без ложных отчётов и заглушек.
+REMAINING: реализовать security workspace/gates/tooling/evidence/report/retest и проверить на локальной intentionally-vulnerable lab; завершить текущий URL/owner-control пакет и остальные UI/performance/device/release gates.
+BLOCKERS: активная проверка конкретной внешней цели требует точного scope и подтверждения полномочий; это не блокирует разработку и lab-тесты самого режима.
+NEXT: завершить и зафиксировать web reader/owner-policy tests, затем включить security-mode компоненты в общий owner-control inventory и отдельный исполнимый пакет.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — публичные ссылки читаются и запоминаются
+
+- !!! ОБЯЗАТЕЛЬНО !!! Когда владелец присылает публичную HTTP/HTTPS-ссылку и просит прочитать, изучить, найти, выделить, рассказать или выполнить другую задачу по её материалу, AuroraFox должна реально получить общедоступное содержимое, извлечь относящиеся к задаче данные, передать их локальному Core как недоверенный источник и сохранить прочитанные знания в приватной Knowledge. Для ссылок **«прочитать» и «запомнить» — одна операция**; отдельная формула `запомни` не требуется.
+- !!! ОБЯЗАТЕЛЬНО !!! Сохранённый источник получает URL, финальный URL после перенаправлений, заголовок, домен, время получения, content type и SHA-256 прочитанного текста. Knowledge дедуплицирует материал и извлекает релевантные фрагменты; содержимое страницы не получает полномочий команды, не запускает код и не может менять разрешения, веса или shared Core.
+- !!! ОБЯЗАТЕЛЬНО !!! Нельзя вводить искусственный список разрешённых сайтов или молча отказывать из-за «необычной» ссылки. Если страницу нельзя прочитать, формат/размер/перенаправление требует иного безопасного пути или сайт возвращает защиту, AuroraFox сразу сообщает владельцу точный адрес, причину, что было и не было сохранено, и просит решение о допустимом следующем шаге.
+- !!! ОБЯЗАТЕЛЬНО !!! Даже после подтверждения владельца AuroraFox не обходит CAPTCHA, обязательную регистрацию/авторизацию, paywall, robots/access control и не обращается к localhost, частным, link-local или служебным адресам через присланную страницу. Если регистрация необязательна и материал действительно публичен, чтение продолжается без регистрации. Для закрытого материала Fox просит владельца предоставить разрешённый экспорт/файл/доступный источник.
+- !!! ОБЯЗАТЕЛЬНО !!! Каждый redirect повторно проходит проверку публичного адреса; запросы имеют конечные лимиты времени/байтов/redirect для защиты устройства. Достижение лимита не выдаётся за окончательный отказ: Fox объясняет предел и предлагает владельцу безопасный управляемый вариант продолжения. Увеличение лимита не может отменить сетевые и access-control запреты.
+- !!! ОБЯЗАТЕЛЬНО !!! Автоматическая запись прочитанной страницы относится только к приватной Knowledge владельца. Дообучение весов, перенос в shared Core, публикация или исполнение найденных инструкций по-прежнему требуют отдельного анализа, проверок и явного подтверждения владельца.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: уточнённый owner contract «прочитать ссылку = запомнить» записан без потери provenance и безопасностных границ; отсутствие искусственного allowlist и обязательное объяснение препятствий закреплены.
+REMAINING: завершить реализацию публичного URL reader/importer; форматы документов и owner-controlled continuation; точные runtime/security/CI проверки; UI/performance/device/release acceptance.
+BLOCKERS: CAPTCHA, обязательная авторизация/paywall/access control и непубличная сеть не могут обходиться; для таких источников нужен разрешённый материал от владельца.
+NEXT: скорректировать URL intent на автоматический private Knowledge import, проверить URL/redirect/SSRF/content tests и затем опубликовать точное дерево для CI без version bump.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
 ## 102. BEFORE: GitHub-hosted signing-secret readiness gate
 
 `WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD is `3791ca6ae2e50189a0e103c0fbfae831a78ff794`; all 25 workflows associated with this exact SHA completed `success`, including Windows package/install/smoke, Android APK/offline E2E, Release Identity, Integration and real Knowledge 1 GiB gates. Public version remains `1.3.0.0` / Android code `100005`; accumulated release bump remains MINOR `V1.4.0.0`, version-last.
@@ -2986,6 +3034,22 @@ DONE: 25/25 exact-candidate workflows green; safe GitHub-hosted secret presence/
 REMAINING: publish and manually dispatch the preflight; if green, perform V1.4.0.0/code100006 version-last, rerun exact-SHA package/release gates and publish the signed RC.
 BLOCKERS: actual owner-controlled secret values can only be validated when GitHub executes the workflow.
 NEXT: publish this tooling-only commit, dispatch `release-secret-readiness.yml` on the release branch, and inspect its exact result without polling unrelated workflows.
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — ограничения управляются владельцем
+
+- !!! ОБЯЗАТЕЛЬНО !!! Во всём AuroraFox эксплуатационные лимиты, автоматические режимы, разрешения и политики должны быть видимыми, объяснимыми, обратимыми и настраиваемыми владельцем. Нельзя прятать неснимаемое продуктовое ограничение в hard-coded числе, silent fallback, scripted success или недоступном конфиге.
+- !!! ОБЯЗАТЕЛЬНО !!! Когда достигается мягкий лимит времени, размера, количества, глубины, повторов или ресурсов, Fox сообщает, какой именно предел достигнут, что уже сделано/сохранено, риск продолжения и предлагает владельцу изменить предел, повторить один раз или отменить действие. Выбор и последствия журналируются; возврат к безопасным defaults всегда доступен.
+- !!! ОБЯЗАТЕЛЬНО !!! Жёсткой границей может быть только доказуемая безопасность/целостность/чужой access control/законодательное или платформенное ограничение: обход CAPTCHA/обязательного входа/paywall, неподтверждённое выполнение недоверенного кода, утечка секретов, нарушение подписи/rollback/master-stop либо несанкционированное воздействие на чужую или служебную систему. Fox обязана назвать конкретную границу и безопасный способ предоставить данные/полномочие; нельзя маскировать обычное дизайнерское решение под «безопасность».
+- !!! ОБЯЗАТЕЛЬНО !!! Это правило применяется не только к ссылкам: Web, Knowledge, Core, Work/Computer, обновления, импорт, память, обучение, UI, сеть, файлы и фоновые процессы проходят единый owner-control audit. Каждое ограничение классифицируется как owner-adjustable default или hard boundary с обоснованием и тестом.
+- Текущая реализация публичных ссылок переводит количество URL, redirects, байты ответа и timeout в owner-adjustable policy с безопасными defaults; нестандартный публичный порт искусственно не запрещается. Сетевые private/service destinations и чужие access controls пока остаются hard boundary и не обходятся redirect-ом.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: универсальный owner-control принцип записан; мягкие web limits стали изменяемой политикой; task-memory больше не дублирует целиком большие веб/файловые контексты.
+REMAINING: добавить настройки/диалог повторного продолжения в UI; построить inventory всех hard-coded limits проекта и классифицировать каждый; продолжить URL document formats, CI, UI/performance/device/release acceptance.
+BLOCKERS: ни одно owner preference не считается блокером; реальные внешние access-control и safety boundaries требуют разрешённого альтернативного пути, а не обхода.
+NEXT: прогнать runtime/contract tests изменяемой web policy, затем создать machine-readable owner-control inventory по всему tracked source и устранить необоснованные неснимаемые пределы пакетами.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 
 ### TAKEOVER: embed the preflight in the default-branch Release workflow
@@ -3577,6 +3641,30 @@ BLOCKERS: physical installed-runtime evidence cannot be produced in the current 
 NEXT: execute the installed Windows/Android acceptance script on owner hardware and capture results; if green, synchronize all V1.5.0.0/versionCode surfaces on this release branch, run exact-head CI, merge, sign and publish.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
 
+## 2026-09-30 — !!! ОБЯЗАТЕЛЬНЫЙ OWNER-DIRECTED PRODUCT QUALITY PACKAGE !!!
+
+- Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` остаётся **ACTIVE** и расширяется этим обязательным owner-directed пакетом; параллельный журнал или конкурирующий CLAIM не создаётся. Исходный локальный HEAD: `62eec4641b3830574af1459d339a3c5e9cb1ea88`, дерево `52b7afeda78050bd7276d65968cd5786fb3af2df`; свежий `main`: `446ce2cd2f979a8ab228f63d090062e8ba48a6eb`; опубликованный PR #102 head: `df67a1eb0e14478cc57dd6e68dce7c6bdbbf2b34` с тем же деревом.
+- !!! ОБЯЗАТЕЛЬНО !!! Провести системный аудит всего продукта: исходники, ресурсы, конфигурации, версии, локализацию, кнопки, меню, списки, окна, состояния, ошибки и пакетные пути. Формулировка «каждый байт/пиксель/символ» означает не декларацию, а воспроизводимый набор статических контрактов, тестов поведения, render-matrix/pixel-bound проверок, package/install/device smokes и ручную проверку реально доступных артефактов. Нельзя утверждать абсолютную работоспособность на любом когда-либо существовавшем железе; требуется заявленная support matrix, graceful degradation и отсутствие зависаний/неограниченного ожидания на минимально поддерживаемых устройствах.
+- !!! ОБЯЗАТЕЛЬНО !!! Производительность и отзывчивость имеют первый приоритет: запуск, первый ответ, повторный ответ, открытие/переключение окон, Settings, Knowledge, импорт, Android same-session refresh и фоновые процессы должны иметь измеряемые latency/RAM/CPU budgets, bounded waits/cancellation и честные пользовательские состояния. Нельзя маскировать долгую работу анимацией, увеличением timeout или заранее записанным ответом.
+- !!! ОБЯЗАТЕЛЬНО !!! AuroraFox должна понимать намерение пользователя независимо от одной жёстко записанной фразы: `изучи`, `прочитай`, `посчитай`, `расскажи`, `найди`, `придумай`, `объясни`, `сравни`, `проверь`, `сохрани` и естественные перефразировки должны маршрутизироваться через локальное распознавание intent + контекст разговора + доступные вложения/инструменты. Вопрос о знаниях отделяется от команды изучить/импортировать. Filename/regex/scripted keyword не может быть единственным доказательством намерения. Неясное или опасное действие требует уточнения/подтверждения, а не молчаливого выполнения.
+- !!! ОБЯЗАТЕЛЬНО !!! Никаких обманных заглушек, scripted-success, подмены мышления шаблонным ответом или заранее записанных результатов. Fixture/heuristic разрешены только как явно ограниченный fallback/тестовый материал и никогда не выдаются за самостоятельный анализ. Каждый success должен быть связан с фактическим результатом, provenance/transaction evidence и, где применимо, изменением Knowledge/Memory/артефакта.
+- !!! ОБЯЗАТЕЛЬНО !!! Под каждым ответом AuroraFox добавить компактную feedback-панель `+ / −` (или визуально эквивалентные like/dislike controls) с доступными названиями и состоянием. Feedback относится к точному message/conversation/model/core/version/context identity, допускает изменение/отмену оценки, не плодит дубликаты, хранится приватно и офлайн-first. Отрицательная оценка запускает локальный разбор ошибки и предложение исправления; положительная фиксирует полезный паттерн. Ни одна оценка не должна автоматически менять веса, shared Core или системные правила.
+- !!! ОБЯЗАТЕЛЬНО !!! Обучение и дообучение разделяются на безопасные уровни: private user Memory/Knowledge/skills, curated datasets/evaluation cases, adapter/weight candidate и полный Core candidate. AuroraFox может сама подготовить материал, классифицировать/дедуплицировать/распределить знания, объяснить что именно найдено и предложить изменение, но обязана явно сообщить о готовом результате и запросить подтверждение владельца до долговременного продвижения, изменения весов, shared Core или установки candidate. Молчаливое ожидание и молчаливое продвижение запрещены.
+- !!! ОБЯЗАТЕЛЬНО !!! Дообучение весов не является прямой записью feedback в модель. Оно проходит только через versioned dataset/provenance, PII/secret filtering, baseline, 3–10 изолированных mutation candidates, deterministic quality/safety/no-regression tests, сравнение с incumbent, независимую проверку, owner approval, snapshot/rollback и защищённый promotion path. Если улучшение не доказано, сохраняется стабильная версия.
+- !!! ОБЯЗАТЕЛЬНО !!! Knowledge должна принимать поддерживаемые документы/архивы, реально извлекать содержимое, определять тип, сортировать по scope/domain/source, сохранять provenance, дедуплицировать, индексировать, связывать и извлекать релевантные фрагменты без загрузки всей базы в prompt. Импортированный материал остаётся untrusted data и не получает полномочий исполняемой инструкции.
+- !!! ОБЯЗАТЕЛЬНО !!! Полностью привести визуал Windows/Android к компактному современному уровню ChatGPT/Алисы как UX-ориентиру без копирования бренда: нормальная типографика без жирных заголовков чатов, компактные действия чата вместо грубых постоянных кнопок удаления, ясные hover/pressed/disabled/loading/error states, единая сетка/отступы/радиусы, адаптация к DPI, safe area, клавиатуре, узким/широким окнам и accessibility. Пустые, дублирующиеся, непонятные и неработающие controls запрещены. Settings должны быть устойчивым отдельным окном там, где платформа это поддерживает, с корректной taskbar/app identity.
+- !!! ОБЯЗАТЕЛЬНО !!! Acceptance выполняется по этапам: (1) inventory и static/lint/config/localization audit; (2) intent/attachment/Knowledge truthfulness tests; (3) feedback storage/analysis/approval contracts; (4) performance profiling и budgets на поддерживаемых классах CPU/RAM/storage; (5) UI component/state audit и responsive render matrix; (6) Windows/Android package-install-run/update/device evidence; (7) owner physical acceptance. Зелёный unit test не заменяет реальную упаковку, latency/device или визуальную приёмку.
+- Предполагаемый version level: накопленный **MINOR `V1.5.0.0`** сохраняется только для уже заявленного platform/archive фундамента. Если полная архитектура feedback + governed weight-training не укладывается совместимо и безопасно, она не притворяется готовой в V1.5.0.0, а получает отдельный последующий `PATCH/MINOR` по A.B.C.D после собственного acceptance. Canonical version остаётся version-last.
+- Первый исполнимый шаг после записи этого требования: завершить точный PR #102 Windows gate; затем создать machine-readable audit inventory и проверить существующие intent/router, message card/feedback, learning proposal/approval, Knowledge taxonomy и UI component paths. Исправления разбиваются на атомарные безопасные пакеты с тестами; выпуск и merge не выполняются на одной декларации.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: требования владельца без сокращений преобразованы в обязательные проверяемые инварианты и acceptance-этапы; текущий exact-tree архивного фикса и CI-состояние зафиксированы.
+REMAINING: полный inventory/audit; intent semantic routing; feedback UI/data/analysis; governed learning proposals; UI redesign/render acceptance; performance/device/update proof; version-last/package/sign/publish.
+BLOCKERS: Windows Package PR #102 ещё выполняется; физические Windows/Android и широкая hardware-support matrix требуют пакетных/устройственных доказательств.
+NEXT: дождаться/разобрать точный Windows run `36691860197`, затем построить audit inventory и начать первый измеряемый пакет intent + feedback без заглушек.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
 ## 2026-09-30 — continuation after PR #101 merge; real archive-learning gap
 
 - Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains **ACTIVE** under the current Codex coordinator; this entry reconciles the previous source-only checkpoint with fresh `main` and does not create a parallel lane.
@@ -3637,3 +3725,166 @@ REMAINING: push branch; exact-SHA Core/Voice and Chat Learning CI; installed Win
 BLOCKERS: remote CI and installed-device evidence pending; no known source blocker.
 NEXT: publish the exact branch commits without version bump, inspect all triggered workflows, and correct only exact reproduced failures before merge consideration.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+### LATEST AUTHORITATIVE OWNER DIRECTIVE 2026-09-30
+
+- !!! ОБЯЗАТЕЛЬНО !!! Раздел `2026-09-30 — !!! ОБЯЗАТЕЛЬНЫЙ OWNER-DIRECTED PRODUCT QUALITY PACKAGE !!!` выше является текущим обязательным продолжением active V1.5 platform claim и не может быть закрыт декларацией, scripted fixture, заглушкой или одним зелёным unit test.
+- Порядок исполнения: завершить/разобрать уже запущенный PR #102 exact-SHA gate без повторной тяжёлой сборки; затем inventory/audit → semantic intent и truthfulness → feedback `+ / −` и governed learning proposal/approval → performance budgets → полный UI/state/render audit → package/device/owner acceptance.
+- До появления нового проверяемого evidence release-train readiness остаётся 78%; объём нового долгосрочного продукта не выдаётся за уже завершённую часть текущего релиза.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: полный обязательный owner-directed пакет записан в едином журнале с восклицательными пометками и проверяемыми acceptance-критериями.
+REMAINING: исполнить перечисленные этапы и получить точные code/render/package/device доказательства.
+BLOCKERS: текущий Windows Package run и недоступные в Linux физические Windows/Android проверки.
+NEXT: проверить завершение run `36691860197`; затем начать machine-readable audit inventory без изменения канонической версии.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+### CHECKPOINT 2026-09-30 — exact archive CI green; byte audit, feedback and semantic learning intent implemented locally
+
+- PR #102 exact published SHA `df67a1eb0e14478cc57dd6e68dce7c6bdbbf2b34` completed **7/7 workflows SUCCESS**: Chat Learning `36691860100`, Windows Package `36691860197`, Core/Voice `36691860281`, Agent Sync `36691860284`, UI Visual `36691860247`, Integration `36691860004`, Android APK `36691859989`.
+- Windows Package run passed exact checkout, bundled Core/package, exported executable/Knowledge smoke, installer build, V1.2/V1.3 bridge, silent install/installed-app smoke and artifact publication. `AuroraFox-Windows` artifact ID `11089071514`, 5,852,479,067 bytes, workflow digest `sha256:be13c3224de831654291351e98e975563d0377344044707937dd9f5a7243d23b`; diagnostics ID `11088851907`, digest `sha256:5679894be16c953f0e9aa12a684555c8c7c2cf772096e5fa1ea2851704d71758`.
+- Owner-directed journal commit `cad0b6a` records the mandatory whole-product package. `bff171b` adds a deterministic byte ledger/static audit: 504 tracked files at the intent checkpoint, SHA-256/size for each, UTF-8/JSON/XML/static `res://` validation, zero critical findings. The tool explicitly refuses to treat static evidence as runtime/pixel/performance proof.
+- Feedback implementation `6661c4c`: stable message IDs and runtime/model/version identity; compact accessible `+ / −` under assistant answers; local Core analysis proposal; explicit owner confirmation before private ExperienceStore change; rating cancellation/change retracts confirmed feedback experience; no weight/shared-Core mutation. Deterministic greeting is visibly labelled as a system response that did not use Core reasoning.
+- Intent implementation `766dacd`: dedicated `UserIntentRouter` handles multiple Russian/English knowledge/training/skill formulations, negation and capability/how-to questions. Filename/payload no longer grants durable-learning authority; `прочитай/расскажи/посчитай` remains analysis/task intent unless the user explicitly authorizes persistence.
+- Local evidence: Godot 4.7.1 parse/import; `AURORA_CHAT_FEEDBACK_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 29 focused feedback/runtime/archive/Core contract functions PASS; product audit zero critical; `git diff --check` PASS. One UI run after deliberate generated-import cleanup failed only because PNG import metadata had not yet been regenerated; correct clean editor-import order passed, matching AF-MEM-091 environment lesson.
+- AF-MEM-092/093 record the client-feedback gap and silent filename/payload authorization defect. Canonical version remains unchanged/version-last. New commits are local and do not inherit the old remote exact-SHA verdict until published and rerun.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive candidate 7/7 remote CI green with Windows artifact; mandatory requirements journaled; byte inventory/static audit green; owner-gated feedback and semantic durable-learning intent locally accepted.
+REMAINING: publish the new exact tree on a non-destructive branch/PR; remote feedback/intent/UI/package gates; broader command/task intent matrix; full UI typography/chat-list/settings redesign and render inspection; physical Windows/Android performance/archive/feedback acceptance; interrupted updater; version-last/sign/publish.
+BLOCKERS: new local feedback/intent commits lack exact-SHA remote CI and package/device proof; physical owner hardware remains required for real latency and broad support evidence.
+NEXT: commit memory/checkpoint, publish the exact local tree without merging or version bump, inspect every triggered workflow, then continue the UI/state/performance audit from reproduced findings only.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### LATEST AUTHORITATIVE CHECKPOINT 2026-09-30 — public sources, owner-controlled limits and authorized security directive
+
+- This checkpoint supersedes the earlier statement in the preceding historical checkpoint that `прочитай/расскажи/посчитай` is always analyze-only. Per the owner's explicit correction, reading a user-supplied URL or attachment means retaining the material in private Knowledge unless the current instruction explicitly negates saving.
+- `PublicWebManager` now performs real bounded public HTTP/HTTPS reading: URL extraction, DNS/public-address validation, redirect-by-redirect revalidation, explicit response-byte/time budgets, HTML text/title extraction without script/style execution, CAPTCHA/auth/paywall/access-denial reporting, final URL/retrieval time/content type/SHA-256 provenance and automatic private Knowledge import. Existing `http_get` is routed through the same policy instead of a separate unsafe fetch.
+- Full page content is chunked into Knowledge; the active Core prompt receives only task-relevant chunks up to a bounded context excerpt. Large web/file bodies are no longer duplicated wholesale into chat memory. Page content remains untrusted data and cannot authorize tools or execute instructions.
+- Web URL count, redirect count, response bytes and timeout are owner-adjustable persisted settings, exposed under Settings → Tools → Public links with reset. Non-standard public ports are not artificially denied. When a soft limit or unsupported format is reached, the result carries `owner_decision_required` and explicitly records that Knowledge was not saved.
+- Machine-readable owner-control audit currently scans 427 source files and reports 3,066 potential restrictions: 26 owner-adjustable, 1 owner-adjustable pending UI, 1 classified hard boundary and **3,038 still unclassified**. The audit deliberately reports `complete=false`; the project-wide owner-control requirement is not being declared finished.
+- The mandatory authorized-security directive above is active: real owner-authorized pentest/retest requires explicit target/scope/authorization and reproducible evidence/remediation, with lab/staging expansion controlled by the owner. No security runner is claimed complete yet; its workspace, gates, audited tooling, evidence and vulnerable-lab E2E remain future implementation work.
+- Local evidence: Godot 4.7.1 project parse/import; `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 11 focused Python contract functions across web/intent/owner-audit/settings PASS; `git diff --check` PASS. Canonical version remains version-last and unchanged.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: real safe public-page reading/private retention; read=remember semantics for supplied sources; provenance and relevant-context routing; visible owner-adjustable web limits; first honest whole-source owner-control inventory; authorized-security acceptance contract; local runtime/UI/contracts green.
+REMAINING: support downloaded document/media URL formats through bounded File Intelligence; natural chat continuation for owner-approved soft-limit retries; classify and remediate 3,038 owner-control findings; implement security workspace/gates/tools/evidence/lab E2E; exact-SHA CI/package/device evidence; full UI/performance/update/version/sign/release acceptance.
+BLOCKERS: no source blocker for the next packages. CAPTCHA/mandatory auth/paywall/external access control and active testing without target authorization require an authorized alternative and are not bypassed. Physical Windows/Android and owner acceptance remain external gates.
+NEXT: commit and publish this exact tree on the existing non-destructive feature branch, run exact-SHA workflows, then continue document-URL routing and owner-control classification without version bump or merge.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### CHECKPOINT 2026-09-30 — PR #103 stale-contract corrections accepted locally
+
+- PR #103 first head `783b46e` produced two exact, reproducible source-contract failures while all observed runtime jobs in those workflows passed. AF-MEM-096 records the obsolete call spelling/location assumptions.
+- Minimal correction: Core recovery ordering now matches the stable `ChatStore.add_message` call prefix despite added response metadata; attachment learning again passes through its compatibility helper; the semantic phrase assertions follow their real owner, `UserIntentRouter`, and require `owner_read_means_remember`.
+- Exact local replicas of the failed CI commands now pass: Core Benchmarks contract **31/31**; Core/Voice Python contract **70/70**. No runtime, policy, release version or public API behavior was weakened.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: both PR #103 exact-SHA failures diagnosed from logs and corrected; 101/101 exact local Python tests pass.
+REMAINING: publish corrected exact tree and require the full 11-workflow verdict; document/media URL routing; 3,038 owner-control classifications; security lab implementation; UI/performance/device/release gates.
+BLOCKERS: none for source/CI correction; physical device acceptance remains external.
+NEXT: commit and publish the minimal three-file contract correction, inspect every workflow attached to the new SHA, and fix only reproduced failures.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### BEFORE ACTION 2026-10-01 — document URL continuation of PR #103
+
+CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`: ACTIVE — owner-directed continuation, no parallel lane.
+START: PR #103 open/draft; branch `feature/v1.5-quality-feedback-intent`; HEAD `7c05eee0a673c86bf3289d01e4113db00ff156fb`; fresh main `446ce2cd2f979a8ab228f63d090062e8ba48a6eb` already ancestor of candidate. Exact-head 24/24 check-runs completed SUCCESS verified through GitHub.
+OWNED BATCH: `scripts/public_web_manager.gd`, document URL smoke/contract tests, web Settings limits if needed, engineering memory and this journal. Continues existing ownership; no other implementation lane started.
+INTENDED BUMP: accumulated MINOR V1.5.0.0, version-last; canonical version unchanged. No main merge/sign/release.
+ACTION: retain response bytes; detect document types; stage in private app storage; invoke existing FileIntelligenceClient; reject listing-only/empty extraction; import actual content with URL/hash provenance; cleanup staged files; honor explicit no-save instructions. Existing public URL/redirect/access checks remain.
+ACCEPTANCE: executable byte preservation, MIME/signature/filename routing, backend extraction invocation and cleanup, actual Knowledge import, no-save and archive-listing rejection; existing web/intent/chat regressions. Windows/Android backend/device acceptance remains separate.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: exact PR/branch/head/main and 24/24 checks verified.
+REMAINING: document URL implementation/evidence; owner-control classification; authorized security workspace; UI/performance/update/device/release gates.
+BLOCKERS: none for this source batch.
+NEXT: implement and test document routing through File Intelligence.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+OWNERSHIP EXTENSION: existing web Settings card in `scripts/settings_overlay.gd` and `config/owner_control_policy.json` for visible extraction limits/classification; preserve other UI behavior. Local Godot executable was truncated (87 MiB vs archive member 144,583,504 bytes), segfault before startup; verified ZIP CRC and re-extracted to scratch; version 4.7.1 executes. Environment incident will be recorded in engineering memory.
+
+OWNERSHIP EXTENSION: `.github/workflows/chat-learning-attachments-ci.yml` for permanent web/document runtime tests; `tools/owner_control_audit.py` and `tests/test_owner_control_audit.py` for explicit non-product test classification and parser-limit inventory. Existing single claim remains active.
+
+
+### AFTER ACTION 2026-10-01 — document URL routing and inventory batch locally accepted
+
+- Starting remote HEAD remains `7c05eee0a673c86bf3289d01e4113db00ff156fb`; same existing PR #103/branch/claim. No version, main, tag, signing or release changed.
+- HTTP response bytes now survive intact through private random staging and existing File Intelligence invocation. PDF/Office/ODF/EPUB/images/archives select the existing parser; extensionless generic ZIP Office/EPUB files are identified from container member names. Unsupported backends/formats, empty text and listing-only archives fail honestly with owner decision. Staging files are removed after successful and failed analysis. Actual extracted text enters existing Knowledge with URL/raw-byte/text hash and truncation provenance. Explicit no-save prevents Knowledge writes. Over-count URLs are individually reported.
+- Owner Settings exposes extracted-character budget and labels download size for pages/files. Existing downstream File Intelligence time/character/parser budgets are not claimed fully adjustable: environment-adjustable controls without UI are explicitly pending.
+- Inventory now supports scoped policy globs and separately classifies test evidence. Local audit: 428 source files / 3,094 findings; 547 test evidence, 40 owner-adjustable, 15 owner-adjustable pending UI, 1 hard boundary, **2,491 unclassified**, `complete=false`. Tests prove test rules do not classify production paths.
+- Local PASS: Godot 4.7.1 project import/parse; `AURORA_PUBLIC_DOCUMENT_URL_OK` (substituted transport/parser, real byte staging and Knowledge import/query); `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 8 directly invoked web/audit contract functions; `git diff --check`. Existing UI shutdown resource warnings remain, not declared resolved.
+- Local real Python parser suite NOT EXECUTED: interpreter lacks pytest/FastAPI; canonical CI installs dependencies and runs existing real document/archive parser tests. No mock parser result is presented as format capability proof. Document/web smokes now wired into existing exact-SHA Chat Learning CI.
+- Engineering memory records AF-MEM-097/098.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: document routing/storage/Knowledge boundary locally green; explicit no-save fixed; permanent CI coverage; first inventory classification batch.
+REMAINING: remote exact-SHA CI/package proof; 2,491 inventory classifications and remediation; security workspace/lab; UI/performance/update/device gates; version-last and separately authorized release actions.
+BLOCKERS: new exact-SHA CI pending; local real-parser dependencies absent; physical Windows/Android acceptance still external.
+NEXT: publish one atomic fast-forward commit to existing PR #103 and inspect exact-head tests; continue inventory from File Intelligence/client parser ceilings.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### BEFORE ACTION 2026-10-01 — authorized security workspace foundation
+
+Same ACTIVE V1.5 claim; baseline published `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`, existing PR #103. Document batch remote Chat Learning `36820411013` (job `110234568288`, new document routing step SUCCESS) and Core/Voice `36820411047` (real File Intelligence parser job `110234568501` SUCCESS) accepted. Full package verdict still pending.
+OWNED: new `security_workspace/runner.py`, `security_workspace/README.md`, `tests/test_security_workspace.py`, existing CI wiring only for lab tests, journal/memory.
+INTENDED: accumulated MINOR V1.5.0.0, version-last.
+ACTION: implement scope/explicit authorization/expiry gates, bounded real HTTP/TLS header/cookie checks, redacted evidence/remediation and baseline retest; local vulnerable→fixed lab. No external target supplied: no live owner target test authorized/executed. This foundation does not claim full exploit/pentest capability or a security grade. Private lab requires separate explicit scope flag.
+NEXT: run actual local lab E2E proving findings disappear after remediation and denied/expired/out-of-scope runs make no request.
+
+
+### AFTER ACTION 2026-10-01 — real scoped security configuration lab accepted locally
+
+- Existing claim remains ACTIVE, branch/PR #103 unchanged. Published document commit `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`: 24 check-runs observed, 22 completed SUCCESS; only Windows Package `36820411101` and Android APK `36820411031` remain running at this checkpoint. Chat Learning `36820411013` and real parser Core/Voice `36820411047` both SUCCESS; Integration `36820411097` green. No duplicate manual workflow dispatch.
+- Security workspace is an actual standalone executable with scope/authorization/expiry validation, bounded HTTP GET, DNS socket pinning/TLS validation, header/cookie configuration findings, redacted JSON evidence/remediation and same-scope retest. No scripted-success or grade; explicit coverage says no exploit/authenticated-flow/injection/full-pentest execution. No external target was supplied or tested. Core/tool/chat integration and broader controlled testing remain unfinished.
+- Local `python -m unittest tests.test_security_workspace -v`: 4/4 PASS against a real temporary loopback HTTP server. The test actually observes missing protections, applies header/cookie fixes and verifies disappearance; no authorization/out-of-scope/expired cases make traffic; redirects/auth restrictions stay boundaries; transport failure is an inconclusive retest. Python compile and diff check PASS. Permanent test wired into existing Chat Learning CI. AF-MEM-099 records prevention contract.
+- Inventory still incomplete: 2,491 findings require review. This foundation does not close the whole security or owner-control package. Canonical version remains unchanged/version-last.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: document routing remote parser/Chat/Integration gates green; first owner-control classification batch; runnable scoped security foundation and real remediation/retest lab green locally.
+REMAINING: latest security commit CI; remaining document Windows/Android packages; full inventory remediation; Core/chat security integration and broader authorized tests; UI/performance/update/device gates; version/sign/release only after separate owner permission.
+BLOCKERS: live system test needs owner-provided target and exact authorized scope; physical Windows/Android acceptance external; no source blocker for integration/inventory.
+NEXT: publish security foundation atomically to same PR, inspect new exact-SHA Chat Learning lab gate, continue owner-control/parser limits and security integration without main merge/version/release.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-01 — owner-visible File Intelligence and web context budgets prepared
+
+- Exact starting HEAD `3626fb13d1f1ca8d02e706be3b80d7786471d56b` on existing draft PR #103 had **24/24 check-runs SUCCESS**, including Windows Package and Android APK. This closes the prior exact-SHA CI wait for the security-foundation commit; no main merge/version/sign/release action occurred.
+- New source batch removes the remaining fixed public-reader URL/title/relevant-context literals and exposes them in Settings → Tools → Public links.
+- Windows File Intelligence parser budgets already backed by environment variables are now first-class persisted owner controls in Settings → Files and projects. The client exports them before backend start/restart, including file/text/archive/PDF/OCR/render budgets and a separately owner-controlled per-request extraction ceiling.
+- The Python File Intelligence request ceiling is no longer hard-coded at 500,000 characters; it follows `AURORAFOX_FILE_REQUEST_MAX_TEXT` and is reported by `/health`. Existing access-control, authorization, secret/privacy and untrusted-code isolation boundaries are unchanged.
+- Owner-control policy reclassifies these implemented controls from `owner_adjustable_pending_ui` to `owner_adjustable`. The overall inventory is still intentionally incomplete; unrelated findings remain to be classified rather than being waived.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: prior security HEAD 24/24 CI green; source implementation for visible File Intelligence budgets and public URL/title/context budgets prepared.
+REMAINING: exact-SHA CI for this new batch; continue inventory classification; integrate scoped security workspace into owner-authorized chat/tool flow; UI/performance/update/device acceptance; version-last/sign/release only after separate permission.
+BLOCKERS: physical Windows/Android owner acceptance remains external; no source blocker for this batch.
+NEXT: publish one fast-forward commit to PR #103, inspect exact-head CI, and fix only reproduced failures before continuing security/chat integration.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-01 — stale web contract diagnosed; authorized security runner wired to Windows chat tools
+
+- Exact source checkpoint `cb85b54ef88c1b4d5df561f301368c881667de72`: 24 checks were registered; 20 already SUCCESS at diagnosis time, Windows Package/real Core/Android were still running, and Chat Learning failed immediately in its source contract only. Exact log showed 12/13 assertions passed and the sole failure still demanded literal `.substr(0, 24000)` after that ceiling had intentionally become owner-controlled `context_chars`. No runtime failure was inferred from this obsolete assertion.
+- The stale contract is updated to require the dynamic owner-controlled context budget instead of reintroducing a fixed 24,000-character product limit. Chat Learning CI is expanded to run the new owner-runtime-limit and security-tool contracts as part of the same cheap pre-Godot stage.
+- Existing `security_workspace/runner.py` is now wired into `ToolRegistry` as `security_configuration_check` for Windows. Execution requires both an explicit `authorized=true` tool argument and a scope file whose own authorization/scope/expiry checks still pass. Scope, optional baseline and evidence output are restricted to canonicalized private `user://` paths; a document or URL cannot authorize traffic by itself.
+- The Godot bridge launches the runner with `OS.create_process` and polls asynchronously instead of blocking the UI with `OS.execute`. It does not pass targets on the command line; targets remain inside the private scope JSON. A rejected scope that creates no evidence is reported as failure, and access-control/redirect/transport outcomes are not converted into success.
+- Windows packaging copies the exact audited runner beside the bundled File Intelligence Python runtime and CI now requires `build\\windows\\file_intelligence\\security_runner.py`. No external security target was supplied or contacted by this work.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: exact Chat Learning failure diagnosed as stale contract; owner-controlled web contract corrected; source-level Windows chat/tool bridge for the already-audited security runner; private-path and explicit-authorization gates; package wiring and contracts prepared.
+REMAINING: publish this combined correction/integration commit and require exact-SHA CI; continue owner-control inventory; broaden authorized security modules only with reproducible evidence; UI/performance/update/device acceptance; version-last/sign/release only after separate permission.
+BLOCKERS: no source blocker; physical Windows/Android owner acceptance remains external. Live security testing still requires an exact owner-authorized target/scope.
+NEXT: fast-forward PR #103 once with the combined CI correction + security bridge, inspect exact-head failures only, then continue inventory/tool-limit cleanup while expensive package jobs serialize.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
