@@ -14,6 +14,7 @@ $computerSource = Join-Path $root "computer"
 $computerOut = Join-Path $outDir "computer"
 $fileSource = Join-Path $root "file_intelligence"
 $fileOut = Join-Path $outDir "file_intelligence"
+$securityRunnerSource = Join-Path $root "security_workspace\runner.py"
 $modelsSource = Join-Path $root "models"
 $modelsOut = Join-Path $outDir "models"
 $coreSource = Join-Path $root "core_runtime"
@@ -230,6 +231,9 @@ foreach ($file in @("file_service.py", "project_index_service.py", "local_ocr.py
     if (-not (Test-Path $source)) { throw "File Intelligence bootstrap is missing: $file" }
     Copy-Item $source (Join-Path $fileOut $file) -Force
 }
+if (-not (Test-Path -LiteralPath $securityRunnerSource)) { throw "Authorized security runner is missing" }
+Copy-Item $securityRunnerSource (Join-Path $fileOut "security_runner.py") -Force
+
 foreach ($dir in @("python", "vendor", "ocr_runtime")) {
     $source = Join-Path $fileSource $dir
     if (-not (Test-Path -LiteralPath $source)) { throw "Portable File Intelligence component is missing: $dir" }

@@ -3871,3 +3871,20 @@ REMAINING: exact-SHA CI for this new batch; continue inventory classification; i
 BLOCKERS: physical Windows/Android owner acceptance remains external; no source blocker for this batch.
 NEXT: publish one fast-forward commit to PR #103, inspect exact-head CI, and fix only reproduced failures before continuing security/chat integration.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-01 — stale web contract diagnosed; authorized security runner wired to Windows chat tools
+
+- Exact source checkpoint `cb85b54ef88c1b4d5df561f301368c881667de72`: 24 checks were registered; 20 already SUCCESS at diagnosis time, Windows Package/real Core/Android were still running, and Chat Learning failed immediately in its source contract only. Exact log showed 12/13 assertions passed and the sole failure still demanded literal `.substr(0, 24000)` after that ceiling had intentionally become owner-controlled `context_chars`. No runtime failure was inferred from this obsolete assertion.
+- The stale contract is updated to require the dynamic owner-controlled context budget instead of reintroducing a fixed 24,000-character product limit. Chat Learning CI is expanded to run the new owner-runtime-limit and security-tool contracts as part of the same cheap pre-Godot stage.
+- Existing `security_workspace/runner.py` is now wired into `ToolRegistry` as `security_configuration_check` for Windows. Execution requires both an explicit `authorized=true` tool argument and a scope file whose own authorization/scope/expiry checks still pass. Scope, optional baseline and evidence output are restricted to canonicalized private `user://` paths; a document or URL cannot authorize traffic by itself.
+- The Godot bridge launches the runner with `OS.create_process` and polls asynchronously instead of blocking the UI with `OS.execute`. It does not pass targets on the command line; targets remain inside the private scope JSON. A rejected scope that creates no evidence is reported as failure, and access-control/redirect/transport outcomes are not converted into success.
+- Windows packaging copies the exact audited runner beside the bundled File Intelligence Python runtime and CI now requires `build\\windows\\file_intelligence\\security_runner.py`. No external security target was supplied or contacted by this work.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: exact Chat Learning failure diagnosed as stale contract; owner-controlled web contract corrected; source-level Windows chat/tool bridge for the already-audited security runner; private-path and explicit-authorization gates; package wiring and contracts prepared.
+REMAINING: publish this combined correction/integration commit and require exact-SHA CI; continue owner-control inventory; broaden authorized security modules only with reproducible evidence; UI/performance/update/device acceptance; version-last/sign/release only after separate permission.
+BLOCKERS: no source blocker; physical Windows/Android owner acceptance remains external. Live security testing still requires an exact owner-authorized target/scope.
+NEXT: fast-forward PR #103 once with the combined CI correction + security bridge, inspect exact-head failures only, then continue inventory/tool-limit cleanup while expensive package jobs serialize.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

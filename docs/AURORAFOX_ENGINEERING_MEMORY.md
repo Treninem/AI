@@ -666,3 +666,22 @@
 - **Исправление:** persisted `aurorafox/files/*` owner settings; environment export before backend start/restart; visible Files settings card; owner-controlled request text ceiling in Python health/schema; public URL/title/context controls exposed and persisted.
 - **Профилактика:** `test_owner_runtime_limits_contract.py` rejects reintroduction of the fixed 500000/4096/400/24000 ceilings and requires owner UI plus propagation markers. Inventory remains incomplete until unrelated findings are classified.
 - **Статус:** SOURCE IMPLEMENTED; exact-SHA CI pending for this new commit.
+
+
+#### AF-MEM-101 — fixed-value CI assertion outlived an owner-controlled runtime budget
+
+- **Дата/среда:** 2026-10-01; PR #103 HEAD `cb85b54ef88c1b4d5df561f301368c881667de72`; Chat Learning job `110338029520`.
+- **Симптом:** source contract failed although the changed behavior was intentional: `PublicWebManager` no longer contained literal `.substr(0, 24000)`.
+- **Корень:** an older contract asserted the implementation literal rather than the invariant. The relevant-context budget had been promoted to owner-visible `context_chars`, so preserving the old assertion would force an unwanted hidden product ceiling back into source.
+- **Исправление:** contract now asserts dynamic `.substr(0, context_chars)` plus owner-limit exposure; cheap Chat Learning preflight also executes owner-runtime-limit/security-tool contracts.
+- **Профилактика:** tests for operational limits must assert ownership, persistence and propagation, not a frozen default value. Defaults may remain documented but cannot masquerade as hard boundaries.
+- **Статус:** FIX PREPARED; exact-SHA remote CI pending.
+
+#### AF-MEM-102 — standalone security runner was not reachable from installed chat tools
+
+- **Дата/среда:** 2026-10-01; continuation of AF-MEM-099.
+- **Симптом:** the authorized configuration runner and real remediation/retest lab existed, but the normal Windows ToolRegistry could not invoke the same audited runner and the installer did not place it beside a callable Python runtime.
+- **Корень:** security foundation intentionally stopped before product integration; no private-path bridge/package contract existed.
+- **Исправление:** dedicated `security_configuration_check` tool requires separate explicit authorization, canonical private `user://` scope/baseline/output paths, launches the exact runner asynchronously with the bundled File Intelligence Python, and returns only redacted evidence. Build copies the exact runner; Windows CI requires the packaged file.
+- **Профилактика:** source contract rejects missing authorization/private-path/process/package markers. Scope content alone never authorizes execution; redirects/auth/access controls remain boundaries; failed or absent evidence cannot be called success.
+- **Статус:** SOURCE INTEGRATION PREPARED; exact-SHA parse/package/tool contracts pending.

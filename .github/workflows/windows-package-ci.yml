@@ -187,6 +187,7 @@ jobs:
             'build\windows\computer\python\python.exe',
             'build\windows\computer\vendor\fastapi',
             'build\windows\file_intelligence\install_files.ps1',
+            'build\windows\file_intelligence\security_runner.py',
             'build\windows\core_runtime\install_core.ps1',
             'build\windows\core_runtime\engine\llama-server.exe',
             'build\windows\core_runtime\engine\aurorafox-core.gguf',

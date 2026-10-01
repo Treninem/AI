@@ -1,6 +1,6 @@
 # Authorized security workspace
 
-This executable foundation checks HTTP response configuration on exact owner-authorized URLs. It sends bounded GET requests, verifies TLS certificates on HTTPS, pins the validated DNS destination, records redacted evidence and offers concrete remediation. It does not assign a security grade or claim exploit, authenticated-flow, injection or comprehensive pentest coverage. Chat/tool integration and broader controlled tests remain pending.
+This executable foundation checks HTTP response configuration on exact owner-authorized URLs. It sends bounded GET requests, verifies TLS certificates on HTTPS, pins the validated DNS destination, records redacted evidence and offers concrete remediation. It does not assign a security grade or claim exploit, authenticated-flow, injection or comprehensive pentest coverage. The Windows chat/tool registry can invoke this same runner only from an explicit owner-authorized private `user://` scope; broader controlled test modules remain pending.
 
 Create a private scope JSON outside Git containing:
 
@@ -32,3 +32,10 @@ The owner must authorize the exact scope at execution. Missing/expired authoriza
 Evidence stores target hashes, origins, status, bounded body hash, checked configuration findings and remediation. It does not store URL queries, response bodies, cookie names/values or raw exception text. Keep scope and evidence private. A missing header is a configuration finding whose applicability needs review, not proof that exploitation succeeded.
 
 The lab suite starts a real temporary loopback HTTP server. It measures missing defenses, applies actual header/cookie remediation and proves those findings disappear on retest. It also verifies authorization gates, redirect/access handling and redaction. It never contacts an external target.
+
+
+## AuroraFox chat/tool bridge
+
+The registered tool is `security_configuration_check`. It accepts only a private `user://` scope file, an optional `user://` baseline, an optional `user://` evidence output, and a separate explicit `authorized=true` signal from the current owner instruction. A scope document by itself never authorizes traffic. The installed Windows package ships the exact same `runner.py` beside the bundled File Intelligence Python runtime; the Godot client launches it as a child process and polls asynchronously so the UI thread is not blocked by a synchronous process call.
+
+If the scope is rejected before evidence exists, the tool reports failure without inventing results. Redirects, authentication/access boundaries and transport failures remain non-success outcomes. The returned report is the runner's redacted evidence JSON; no response bodies, URL queries, cookie values or raw exception strings are returned.

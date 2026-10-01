@@ -15,7 +15,8 @@ def test_user_url_read_is_also_private_knowledge_import():
     assert '"instruction_authority": false' in WEB
     assert 'public_web.process_user_message(shown)' in MAIN
     assert "_relevant_task_text" in WEB
-    assert '.substr(0, 24000)' in WEB
+    assert ".substr(0, context_chars)" in WEB
+    assert '"context_chars": context_chars' in WEB
 
 
 def test_public_reader_has_bounded_ssrf_and_redirect_controls():
