@@ -3789,3 +3789,43 @@ REMAINING: publish corrected exact tree and require the full 11-workflow verdict
 BLOCKERS: none for source/CI correction; physical device acceptance remains external.
 NEXT: commit and publish the minimal three-file contract correction, inspect every workflow attached to the new SHA, and fix only reproduced failures.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### BEFORE ACTION 2026-10-01 — document URL continuation of PR #103
+
+CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`: ACTIVE — owner-directed continuation, no parallel lane.
+START: PR #103 open/draft; branch `feature/v1.5-quality-feedback-intent`; HEAD `7c05eee0a673c86bf3289d01e4113db00ff156fb`; fresh main `446ce2cd2f979a8ab228f63d090062e8ba48a6eb` already ancestor of candidate. Exact-head 24/24 check-runs completed SUCCESS verified through GitHub.
+OWNED BATCH: `scripts/public_web_manager.gd`, document URL smoke/contract tests, web Settings limits if needed, engineering memory and this journal. Continues existing ownership; no other implementation lane started.
+INTENDED BUMP: accumulated MINOR V1.5.0.0, version-last; canonical version unchanged. No main merge/sign/release.
+ACTION: retain response bytes; detect document types; stage in private app storage; invoke existing FileIntelligenceClient; reject listing-only/empty extraction; import actual content with URL/hash provenance; cleanup staged files; honor explicit no-save instructions. Existing public URL/redirect/access checks remain.
+ACCEPTANCE: executable byte preservation, MIME/signature/filename routing, backend extraction invocation and cleanup, actual Knowledge import, no-save and archive-listing rejection; existing web/intent/chat regressions. Windows/Android backend/device acceptance remains separate.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: exact PR/branch/head/main and 24/24 checks verified.
+REMAINING: document URL implementation/evidence; owner-control classification; authorized security workspace; UI/performance/update/device/release gates.
+BLOCKERS: none for this source batch.
+NEXT: implement and test document routing through File Intelligence.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+OWNERSHIP EXTENSION: existing web Settings card in `scripts/settings_overlay.gd` and `config/owner_control_policy.json` for visible extraction limits/classification; preserve other UI behavior. Local Godot executable was truncated (87 MiB vs archive member 144,583,504 bytes), segfault before startup; verified ZIP CRC and re-extracted to scratch; version 4.7.1 executes. Environment incident will be recorded in engineering memory.
+
+OWNERSHIP EXTENSION: `.github/workflows/chat-learning-attachments-ci.yml` for permanent web/document runtime tests; `tools/owner_control_audit.py` and `tests/test_owner_control_audit.py` for explicit non-product test classification and parser-limit inventory. Existing single claim remains active.
+
+
+### AFTER ACTION 2026-10-01 — document URL routing and inventory batch locally accepted
+
+- Starting remote HEAD remains `7c05eee0a673c86bf3289d01e4113db00ff156fb`; same existing PR #103/branch/claim. No version, main, tag, signing or release changed.
+- HTTP response bytes now survive intact through private random staging and existing File Intelligence invocation. PDF/Office/ODF/EPUB/images/archives select the existing parser; extensionless generic ZIP Office/EPUB files are identified from container member names. Unsupported backends/formats, empty text and listing-only archives fail honestly with owner decision. Staging files are removed after successful and failed analysis. Actual extracted text enters existing Knowledge with URL/raw-byte/text hash and truncation provenance. Explicit no-save prevents Knowledge writes. Over-count URLs are individually reported.
+- Owner Settings exposes extracted-character budget and labels download size for pages/files. Existing downstream File Intelligence time/character/parser budgets are not claimed fully adjustable: environment-adjustable controls without UI are explicitly pending.
+- Inventory now supports scoped policy globs and separately classifies test evidence. Local audit: 428 source files / 3,094 findings; 547 test evidence, 40 owner-adjustable, 15 owner-adjustable pending UI, 1 hard boundary, **2,491 unclassified**, `complete=false`. Tests prove test rules do not classify production paths.
+- Local PASS: Godot 4.7.1 project import/parse; `AURORA_PUBLIC_DOCUMENT_URL_OK` (substituted transport/parser, real byte staging and Knowledge import/query); `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 8 directly invoked web/audit contract functions; `git diff --check`. Existing UI shutdown resource warnings remain, not declared resolved.
+- Local real Python parser suite NOT EXECUTED: interpreter lacks pytest/FastAPI; canonical CI installs dependencies and runs existing real document/archive parser tests. No mock parser result is presented as format capability proof. Document/web smokes now wired into existing exact-SHA Chat Learning CI.
+- Engineering memory records AF-MEM-097/098.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: document routing/storage/Knowledge boundary locally green; explicit no-save fixed; permanent CI coverage; first inventory classification batch.
+REMAINING: remote exact-SHA CI/package proof; 2,491 inventory classifications and remediation; security workspace/lab; UI/performance/update/device gates; version-last and separately authorized release actions.
+BLOCKERS: new exact-SHA CI pending; local real-parser dependencies absent; physical Windows/Android acceptance still external.
+NEXT: publish one atomic fast-forward commit to existing PR #103 and inspect exact-head tests; continue inventory from File Intelligence/client parser ceilings.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

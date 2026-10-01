@@ -629,3 +629,21 @@
 - **Профилактика:** source contracts assert externally relevant order/route invariants and tolerate compatible argument additions; exact failed suites are rerun locally before publishing the correction.
 - **Evidence:** PR #103 runs/jobs `36717626031/109894376434` and `36717625933/109894376571`; corrected exact suites pending.
 - **Статус:** ROOT CAUSE FIXED LOCALLY; exact-SHA rerun pending.
+
+
+#### AF-MEM-097 — binary URL responses were decoded/rejected before File Intelligence
+
+- **Environment:** continuation of PR #103 exact baseline `7c05eee0a673c86bf3289d01e4113db00ff156fb`, 2026-10-01.
+- **Symptom/root cause:** PDF/Office/image/archive URLs failed `unsupported_content_type`; HTTPRequest response bytes were unconditionally decoded as UTF-8. URL flow also ignored explicit no-save instructions despite router support.
+- **Fix:** keep PackedByteArray; select parser using signature/MIME/URL/disposition and Office/EPUB ZIP member identities; private random staging path; invoke existing FileIntelligenceClient; delete staging on successful/failed results; reject binary descriptions and archive listings as Knowledge. Honor router negation and report omitted URLs rather than silently slicing them. Raw download hash and extracted-text hash are distinct provenance fields.
+- **Prevention/evidence:** `tests/public_document_url_smoke.gd` executes staging, byte identity, cleanup, actual Knowledge import/query, no-save, generic ZIP→DOCX selection, archive listing/backend failure, CAPTCHA and owner-limit cases with explicitly substituted transport/parser responses. It proves routing/storage boundaries, not real parser/platform capability. Existing remote File Intelligence parser and Windows/Android package gates remain required. Extraction cap is visible in Settings; downstream parser ceilings remain inventory findings.
+- **Status:** LOCAL ROUTING/STORAGE ACCEPTED; exact-SHA remote parser/package/device acceptance pending.
+
+#### AF-MEM-098 — truncated cached Godot binary segfaulted before startup
+
+- **Environment:** local `.ci/godot-local/Godot_v4.7.1-stable_linux.x86_64`, 2026-10-01.
+- **Symptom:** immediate segmentation fault with empty log even before version/project parsing.
+- **Root cause/evidence:** ELF file had missing section headers and only ~87 MiB; ZIP entry declared 144,583,504 bytes. ZIP CRC test passed.
+- **Fix:** re-extract verified archive to separate scratch directory; recovered executable reports `4.7.1.stable.official.a13da4feb` and parses/runs project smokes. Do not change product source or weaken tests for this environment defect.
+- **Prevention:** validate archive CRC, extracted byte count and `--version` before parser diagnosis.
+- **Status:** RESOLVED ENVIRONMENT.

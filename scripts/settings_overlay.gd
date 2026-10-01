@@ -647,13 +647,15 @@ func _build_web_policy_card(page: VBoxContainer) -> void:
 	var limits: Dictionary = reader.owner_limits() if reader != null and reader.has_method("owner_limits") else {
 		"max_urls_per_message": int(ProjectSettings.get_setting("aurorafox/web/max_urls_per_message", 3)),
 		"max_redirects": int(ProjectSettings.get_setting("aurorafox/web/max_redirects", 5)),
+		"max_extracted_chars": int(ProjectSettings.get_setting("aurorafox/web/max_extracted_chars", 240000)),
 		"max_response_bytes": int(ProjectSettings.get_setting("aurorafox/web/max_response_bytes", 4 * 1024 * 1024)),
 		"request_timeout_seconds": float(ProjectSettings.get_setting("aurorafox/web/request_timeout_seconds", 20.0))
 	}
 	var card := _add_card(page, "Публичные ссылки", "Прочитанные по вашей команде страницы сохраняются в приватной Knowledge. Эти защитные пределы можно менять; при достижении предела Fox сообщает причину и ждёт вашего решения.")
 	var url_count := _owner_number_row(card, "Ссылок в одном сообщении", float(limits.get("max_urls_per_message", 3)), 1.0, 1.0)
 	var redirects := _owner_number_row(card, "Перенаправлений", float(limits.get("max_redirects", 5)), 0.0, 1.0)
-	var response_mb := _owner_number_row(card, "Размер одной страницы, МиБ", float(limits.get("max_response_bytes", 4 * 1024 * 1024)) / (1024.0 * 1024.0), 0.0625, 0.25)
+	var response_mb := _owner_number_row(card, "Размер страницы или файла, МиБ", float(limits.get("max_response_bytes", 4 * 1024 * 1024)) / (1024.0 * 1024.0), 0.0625, 0.25)
+	var extracted_chars := _owner_number_row(card, "Извлечённого текста, символов", float(limits.get("max_extracted_chars", 240000)), 2000.0, 1000.0)
 	var timeout := _owner_number_row(card, "Ожидание ответа, секунд", float(limits.get("request_timeout_seconds", 20.0)), 1.0, 1.0)
 	var state := Label.new()
 	state.name = "SettingsWebPolicyStatus"
@@ -673,6 +675,7 @@ func _build_web_policy_card(page: VBoxContainer) -> void:
 		var values := {
 			"max_urls_per_message": int(url_count.value),
 			"max_redirects": int(redirects.value),
+			"max_extracted_chars": int(extracted_chars.value),
 			"max_response_bytes": int(response_mb.value * 1024.0 * 1024.0),
 			"request_timeout_seconds": timeout.value
 		}
@@ -692,6 +695,7 @@ func _build_web_policy_card(page: VBoxContainer) -> void:
 	reset.pressed.connect(func():
 		url_count.value = 3
 		redirects.value = 5
+		extracted_chars.value = 240000
 		response_mb.value = 4
 		timeout.value = 20
 		apply.pressed.emit()

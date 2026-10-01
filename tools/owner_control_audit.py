@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import re
 import subprocess
@@ -43,7 +44,7 @@ def load_policy() -> dict:
 
 def classify(relative: str, text: str, policy: dict) -> tuple[str, str, str]:
     for row in policy.get("classifications", []):
-        if row.get("path") != relative:
+        if not fnmatch.fnmatchcase(relative, str(row.get("path", ""))):
             continue
         if re.search(str(row.get("pattern", "")), text):
             return (

@@ -29,3 +29,10 @@ def test_policy_explains_the_small_set_allowed_to_be_hard_boundaries():
     principle = policy["principle"].lower()
     for required in ["authorization", "access control", "cryptographic", "master-stop", "secret", "untrusted-code"]:
         assert required in principle
+
+
+def test_fixture_classification_does_not_hide_product_limits():
+    policy = MODULE.load_policy()
+    assert MODULE.classify("tests/example.gd", "var limit = 2", policy)[0] == "test_evidence"
+    assert MODULE.classify("scripts/example.gd", "var limit = 2", policy)[0] == "unclassified"
+    assert MODULE.classify("file_intelligence/file_service.py", 'MAX_FILE_BYTES = int(os.getenv("AURORAFOX_FILE_MAX_BYTES", "1024"))', policy)[0] == "owner_adjustable_pending_ui"
