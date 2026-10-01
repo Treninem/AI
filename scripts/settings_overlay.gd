@@ -524,6 +524,9 @@ func _build_files_page(page: VBoxContainer) -> void:
 	refresh_files.pressed.connect(_refresh_file_status)
 	file_buttons.add_child(refresh_files)
 
+	if _desktop_features():
+		_build_file_intelligence_limits(page)
+
 	var projects := _add_card(page, "Проекты и кодовая база", "AuroraFox получает доступ только к папкам, которые пользователь выбрал явно. Индекс хранится локально.")
 	project_select = OptionButton.new()
 	project_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -555,6 +558,98 @@ func _build_files_page(page: VBoxContainer) -> void:
 		platform_hint.add_theme_font_size_override("font_size", 12)
 		platform_hint.add_theme_color_override("font_color", MUTED)
 		projects.add_child(platform_hint)
+
+func _build_file_intelligence_limits(page: VBoxContainer) -> void:
+	var client := _file_intelligence_client()
+	var limits: Dictionary = client.owner_limits() if client != null else {
+		"max_file_bytes": 1024 * 1024 * 1024,
+		"max_text_chars": 160000,
+		"request_max_text_chars": 500000,
+		"archive_max_entries": 5000,
+		"archive_max_expanded": 512 * 1024 * 1024,
+		"archive_text_member_max": 8 * 1024 * 1024,
+		"archive_text_total_max": 32 * 1024 * 1024,
+		"ocr_max_pdf_bytes": 256 * 1024 * 1024,
+		"ocr_max_pdf_pages": 1000,
+		"ocr_max_pages": 500,
+		"ocr_max_render_pixels": 8000000
+	}
+	var card := _add_card(page, "Пределы File Intelligence", "Защитные пределы локального парсера принадлежат владельцу. После сохранения Windows-backend автоматически перезапускается с новыми значениями.")
+	var file_mb := _owner_number_row(card, "Максимальный файл, МиБ", float(limits.get("max_file_bytes", 1024 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
+	var text_chars := _owner_number_row(card, "Текст по умолчанию, символов", float(limits.get("max_text_chars", 160000)), 1.0, 1000.0)
+	var request_chars := _owner_number_row(card, "Текст одного запроса, символов", float(limits.get("request_max_text_chars", 500000)), 1.0, 1000.0)
+	var archive_entries := _owner_number_row(card, "Записей в архиве", float(limits.get("archive_max_entries", 5000)), 1.0, 100.0)
+	var archive_expanded_mb := _owner_number_row(card, "Распакованный архив, МиБ", float(limits.get("archive_max_expanded", 512 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
+	var archive_member_mb := _owner_number_row(card, "Один текстовый файл архива, МиБ", float(limits.get("archive_text_member_max", 8 * 1024 * 1024)) / 1048576.0, 0.000001, 1.0)
+	var archive_total_mb := _owner_number_row(card, "Текст из архива суммарно, МиБ", float(limits.get("archive_text_total_max", 32 * 1024 * 1024)) / 1048576.0, 0.000001, 1.0)
+	var pdf_mb := _owner_number_row(card, "PDF для OCR, МиБ", float(limits.get("ocr_max_pdf_bytes", 256 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
+	var pdf_pages := _owner_number_row(card, "Страниц PDF", float(limits.get("ocr_max_pdf_pages", 1000)), 1.0, 10.0)
+	var ocr_pages := _owner_number_row(card, "Страниц OCR", float(limits.get("ocr_max_pages", 500)), 1.0, 10.0)
+	var render_mpx := _owner_number_row(card, "Рендер OCR, мегапикселей", float(limits.get("ocr_max_render_pixels", 8000000)) / 1000000.0, 0.01, 0.5)
+	var state := Label.new()
+	state.name = "SettingsFileLimitsStatus"
+	state.text = "Изменения действуют для локального Windows File Intelligence после перезапуска backend."
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	state.add_theme_font_size_override("font_size", 12)
+	state.add_theme_color_override("font_color", MUTED)
+	card.add_child(state)
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 8)
+	card.add_child(actions)
+	var apply := Button.new()
+	apply.name = "SettingsFileLimitsApply"
+	apply.text = "Сохранить пределы"
+	apply.pressed.connect(func():
+		var current := _file_intelligence_client()
+		if current == null:
+			state.text = "File Intelligence client не подключён."
+			state.add_theme_color_override("font_color", WARNING)
+			return
+		var values := {
+			"max_file_bytes": int(file_mb.value * 1048576.0),
+			"max_text_chars": int(text_chars.value),
+			"request_max_text_chars": int(request_chars.value),
+			"archive_max_entries": int(archive_entries.value),
+			"archive_max_expanded": int(archive_expanded_mb.value * 1048576.0),
+			"archive_text_member_max": int(archive_member_mb.value * 1048576.0),
+			"archive_text_total_max": int(archive_total_mb.value * 1048576.0),
+			"ocr_max_pdf_bytes": int(pdf_mb.value * 1048576.0),
+			"ocr_max_pdf_pages": int(pdf_pages.value),
+			"ocr_max_pages": int(ocr_pages.value),
+			"ocr_max_render_pixels": int(render_mpx.value * 1000000.0)
+		}
+		current.apply_owner_limits(values, true, true)
+		state.text = "Сохранено. Локальный backend применяет новые пределы."
+		state.add_theme_color_override("font_color", GREEN)
+	)
+	actions.add_child(apply)
+	var reset := Button.new()
+	reset.name = "SettingsFileLimitsReset"
+	reset.text = "Вернуть безопасные значения"
+	reset.pressed.connect(func():
+		file_mb.value = 1024
+		text_chars.value = 160000
+		request_chars.value = 500000
+		archive_entries.value = 5000
+		archive_expanded_mb.value = 512
+		archive_member_mb.value = 8
+		archive_total_mb.value = 32
+		pdf_mb.value = 256
+		pdf_pages.value = 1000
+		ocr_pages.value = 500
+		render_mpx.value = 8
+		apply.pressed.emit()
+	)
+	actions.add_child(reset)
+
+func _file_intelligence_client() -> FileIntelligenceClient:
+	var main := get_parent()
+	if main == null:
+		return null
+	var manager = main.get("attachments")
+	if manager is AttachmentManager:
+		return manager.intelligence
+	return null
 
 func _build_autonomy_page(page: VBoxContainer) -> void:
 	var autonomy_card := _add_card(page, "Автономное развитие", "Каждый кандидат проходит обязательные ограничения и проверки. Пользовательский master stop и откат сохраняются.")
@@ -657,6 +752,9 @@ func _build_web_policy_card(page: VBoxContainer) -> void:
 	var response_mb := _owner_number_row(card, "Размер страницы или файла, МиБ", float(limits.get("max_response_bytes", 4 * 1024 * 1024)) / (1024.0 * 1024.0), 0.0625, 0.25)
 	var extracted_chars := _owner_number_row(card, "Извлечённого текста, символов", float(limits.get("max_extracted_chars", 240000)), 2000.0, 1000.0)
 	var timeout := _owner_number_row(card, "Ожидание ответа, секунд", float(limits.get("request_timeout_seconds", 20.0)), 1.0, 1.0)
+	var url_length := _owner_number_row(card, "Длина URL, символов", float(limits.get("max_url_length", 4096)), 256.0, 256.0)
+	var title_chars := _owner_number_row(card, "Заголовок страницы, символов", float(limits.get("max_title_chars", 400)), 1.0, 50.0)
+	var context_chars := _owner_number_row(card, "Контекст источника для ответа, символов", float(limits.get("context_chars", 24000)), 1.0, 1000.0)
 	var state := Label.new()
 	state.name = "SettingsWebPolicyStatus"
 	state.text = "Пределы принадлежат владельцу. CAPTCHA, обязательный вход и чужой access control не обходятся."
@@ -677,7 +775,10 @@ func _build_web_policy_card(page: VBoxContainer) -> void:
 			"max_redirects": int(redirects.value),
 			"max_extracted_chars": int(extracted_chars.value),
 			"max_response_bytes": int(response_mb.value * 1024.0 * 1024.0),
-			"request_timeout_seconds": timeout.value
+			"request_timeout_seconds": timeout.value,
+			"max_url_length": int(url_length.value),
+			"max_title_chars": int(title_chars.value),
+			"context_chars": int(context_chars.value)
 		}
 		if current != null and current.has_method("apply_owner_limits"):
 			current.call("apply_owner_limits", values, true)
@@ -698,6 +799,9 @@ func _build_web_policy_card(page: VBoxContainer) -> void:
 		extracted_chars.value = 240000
 		response_mb.value = 4
 		timeout.value = 20
+		url_length.value = 4096
+		title_chars.value = 400
+		context_chars.value = 24000
 		apply.pressed.emit()
 	)
 	actions.add_child(reset)

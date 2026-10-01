@@ -656,3 +656,13 @@
 - **Prevention:** exact origin/URL preflight, private-lab explicit opt-in, rechecked expiry, public DNS address validation and pinned socket, validated TLS, no redirects/auth bypass; bounded body/time/request budgets; redacted evidence; retest only same scope and successfully checked targets. Transport/access failure yields `retest_inconclusive`, never resolved.
 - **Evidence:** four `unittest` local HTTP lab cases PASS: actual vulnerable→fixed remediation/retest; denied/expired/out-of-scope/private target produces zero requests; redirect/access boundary; changed scope and failed retest plus body/cookie/query/error redaction. Runner not yet integrated into Core/chat; no external target executed.
 - **Status:** LOCAL CONFIGURATION-CHECK FOUNDATION ACCEPTED; broader authorized test tools/chat integration and live target evidence pending.
+
+
+#### AF-MEM-100 — parser/web operational ceilings were adjustable only outside the product UI
+
+- **Дата/среда:** 2026-10-01; PR #103 continuation after security HEAD 3626fb13d1f1ca8d02e706be3b80d7786471d56b reached 24/24 green checks.
+- **Симптом:** File Intelligence environment budgets existed, but the owner had to edit process environment values manually; public URL length/title/relevant-context ceilings remained source literals.
+- **Корень:** settings exposed only public download/extraction/time limits; FileIntelligenceClient did not persist/export parser budgets and still clamped one request at 500000 characters.
+- **Исправление:** persisted `aurorafox/files/*` owner settings; environment export before backend start/restart; visible Files settings card; owner-controlled request text ceiling in Python health/schema; public URL/title/context controls exposed and persisted.
+- **Профилактика:** `test_owner_runtime_limits_contract.py` rejects reintroduction of the fixed 500000/4096/400/24000 ceilings and requires owner UI plus propagation markers. Inventory remains incomplete until unrelated findings are classified.
+- **Статус:** SOURCE IMPLEMENTED; exact-SHA CI pending for this new commit.

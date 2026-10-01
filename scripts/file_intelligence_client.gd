@@ -5,6 +5,49 @@ const BASE_URL := "http://127.0.0.1:8767"
 const ANDROID_OCR_EXTENSIONS := ["pdf", "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"]
 const ANDROID_ANALYSIS_TIMEOUT_MS := 600000
 
+# Windows File Intelligence resource budgets are owner settings. They are
+# exported to the local backend process before startup/restart, so changing a
+# value does not require editing source or environment variables by hand.
+const OWNER_LIMIT_DEFAULTS := {
+	"max_file_bytes": 1024 * 1024 * 1024,
+	"max_text_chars": 160000,
+	"request_max_text_chars": 500000,
+	"archive_max_entries": 5000,
+	"archive_max_expanded": 512 * 1024 * 1024,
+	"archive_text_member_max": 8 * 1024 * 1024,
+	"archive_text_total_max": 32 * 1024 * 1024,
+	"ocr_max_pdf_bytes": 256 * 1024 * 1024,
+	"ocr_max_pdf_pages": 1000,
+	"ocr_max_pages": 500,
+	"ocr_max_render_pixels": 8000000
+}
+const OWNER_LIMIT_MINIMUMS := {
+	"max_file_bytes": 1024,
+	"max_text_chars": 1,
+	"request_max_text_chars": 1,
+	"archive_max_entries": 1,
+	"archive_max_expanded": 1024,
+	"archive_text_member_max": 1,
+	"archive_text_total_max": 1,
+	"ocr_max_pdf_bytes": 1024,
+	"ocr_max_pdf_pages": 1,
+	"ocr_max_pages": 1,
+	"ocr_max_render_pixels": 10000
+}
+const OWNER_LIMIT_ENV := {
+	"max_file_bytes": "AURORAFOX_FILE_MAX_BYTES",
+	"max_text_chars": "AURORAFOX_FILE_MAX_TEXT",
+	"request_max_text_chars": "AURORAFOX_FILE_REQUEST_MAX_TEXT",
+	"archive_max_entries": "AURORAFOX_ARCHIVE_MAX_ENTRIES",
+	"archive_max_expanded": "AURORAFOX_ARCHIVE_MAX_EXPANDED",
+	"archive_text_member_max": "AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX",
+	"archive_text_total_max": "AURORAFOX_ARCHIVE_TEXT_TOTAL_MAX",
+	"ocr_max_pdf_bytes": "AURORAFOX_OCR_MAX_PDF_BYTES",
+	"ocr_max_pdf_pages": "AURORAFOX_OCR_MAX_PDF_PAGES",
+	"ocr_max_pages": "AURORAFOX_OCR_MAX_PAGES",
+	"ocr_max_render_pixels": "AURORAFOX_OCR_MAX_RENDER_PIXELS"
+}
+
 var backend_pid := 0
 var runtime_root := ""
 var _active_request: HTTPRequest = null
@@ -12,8 +55,36 @@ var _active_android_job_id := ""
 var _cancel_requested := false
 
 func _ready() -> void:
+	_export_owner_limits_to_environment()
 	if OS.get_name() == "Windows":
 		_start_backend_if_installed()
+
+func owner_limits() -> Dictionary:
+	var result := {}
+	for key in OWNER_LIMIT_DEFAULTS:
+		var minimum := int(OWNER_LIMIT_MINIMUMS.get(key, 1))
+		result[key] = maxi(minimum, int(ProjectSettings.get_setting("aurorafox/files/" + str(key), OWNER_LIMIT_DEFAULTS[key])))
+	result["owner_adjustable"] = true
+	result["backend_restart_on_apply"] = OS.get_name() == "Windows"
+	return result
+
+func apply_owner_limits(overrides: Dictionary, persist := false, restart := true) -> Dictionary:
+	for key in OWNER_LIMIT_DEFAULTS:
+		if not overrides.has(key):
+			continue
+		var minimum := int(OWNER_LIMIT_MINIMUMS.get(key, 1))
+		ProjectSettings.set_setting("aurorafox/files/" + str(key), maxi(minimum, int(overrides[key])))
+	if persist:
+		ProjectSettings.save()
+	_export_owner_limits_to_environment()
+	if restart and OS.get_name() == "Windows":
+		restart_backend()
+	return owner_limits()
+
+func _export_owner_limits_to_environment() -> void:
+	var limits := owner_limits()
+	for key in OWNER_LIMIT_ENV:
+		OS.set_environment(str(OWNER_LIMIT_ENV[key]), str(int(limits.get(key, OWNER_LIMIT_DEFAULTS[key]))))
 
 func _exit_tree() -> void:
 	if _active_request != null:
@@ -98,7 +169,7 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		"path": absolute,
 		"question": question,
 		"visual": visual,
-		"max_chars": clampi(max_chars, 2000, 500000)
+		"max_chars": clampi(max_chars, 1, int(owner_limits().get("request_max_text_chars", 500000)))
 	}, 600.0, true)
 
 func cancel_active_analysis() -> Dictionary:
@@ -170,6 +241,7 @@ func restart_backend() -> void:
 	_start_backend_if_installed()
 
 func _start_backend_if_installed() -> void:
+	_export_owner_limits_to_environment()
 	var found := _find_runtime()
 	if found.is_empty():
 		return

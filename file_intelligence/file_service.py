@@ -42,6 +42,7 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 MAX_FILE_BYTES = int(os.getenv("AURORAFOX_FILE_MAX_BYTES", str(1024 * 1024 * 1024)))
 MAX_TEXT_CHARS = int(os.getenv("AURORAFOX_FILE_MAX_TEXT", "160000"))
+MAX_REQUEST_TEXT_CHARS = max(MAX_TEXT_CHARS, int(os.getenv("AURORAFOX_FILE_REQUEST_MAX_TEXT", "500000")))
 MAX_ARCHIVE_ENTRIES = int(os.getenv("AURORAFOX_ARCHIVE_MAX_ENTRIES", "5000"))
 MAX_ARCHIVE_EXPANDED = int(os.getenv("AURORAFOX_ARCHIVE_MAX_EXPANDED", str(512 * 1024 * 1024)))
 MAX_ARCHIVE_TEXT_MEMBER_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX", str(8 * 1024 * 1024)))
@@ -62,7 +63,7 @@ class AnalyzeRequest(BaseModel):
     path: str = Field(min_length=1, max_length=8192)
     question: str = Field(default="", max_length=12000)
     visual: bool = True
-    max_chars: int = Field(default=MAX_TEXT_CHARS, ge=2000, le=500000)
+    max_chars: int = Field(default=MAX_TEXT_CHARS, ge=1, le=MAX_REQUEST_TEXT_CHARS)
 
 
 class TreeRequest(BaseModel):
@@ -607,7 +608,7 @@ def health() -> dict[str, Any]:
     try: voice = requests.get(f"{VOICE_URL}/health", timeout=1.5).status_code == 200
     except Exception: pass
     ocr = local_ocr_health()
-    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
+    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
 
 
 @app.post("/analyze")

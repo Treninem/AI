@@ -15,6 +15,9 @@ def test_web_limits_are_visible_editable_persistent_and_resettable():
         "max_redirects",
         "max_response_bytes",
         "request_timeout_seconds",
+        "max_url_length",
+        "max_title_chars",
+        "context_chars",
         'current.call("apply_owner_limits", values, true)',
         "allow_greater = true",
     ]:

@@ -35,4 +35,4 @@ def test_fixture_classification_does_not_hide_product_limits():
     policy = MODULE.load_policy()
     assert MODULE.classify("tests/example.gd", "var limit = 2", policy)[0] == "test_evidence"
     assert MODULE.classify("scripts/example.gd", "var limit = 2", policy)[0] == "unclassified"
-    assert MODULE.classify("file_intelligence/file_service.py", 'MAX_FILE_BYTES = int(os.getenv("AURORAFOX_FILE_MAX_BYTES", "1024"))', policy)[0] == "owner_adjustable_pending_ui"
+    assert MODULE.classify("file_intelligence/file_service.py", 'MAX_FILE_BYTES = int(os.getenv("AURORAFOX_FILE_MAX_BYTES", "1024"))', policy)[0] == "owner_adjustable"

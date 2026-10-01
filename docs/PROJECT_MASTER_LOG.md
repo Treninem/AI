@@ -3854,3 +3854,20 @@ REMAINING: latest security commit CI; remaining document Windows/Android package
 BLOCKERS: live system test needs owner-provided target and exact authorized scope; physical Windows/Android acceptance external; no source blocker for integration/inventory.
 NEXT: publish security foundation atomically to same PR, inspect new exact-SHA Chat Learning lab gate, continue owner-control/parser limits and security integration without main merge/version/release.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-01 — owner-visible File Intelligence and web context budgets prepared
+
+- Exact starting HEAD `3626fb13d1f1ca8d02e706be3b80d7786471d56b` on existing draft PR #103 had **24/24 check-runs SUCCESS**, including Windows Package and Android APK. This closes the prior exact-SHA CI wait for the security-foundation commit; no main merge/version/sign/release action occurred.
+- New source batch removes the remaining fixed public-reader URL/title/relevant-context literals and exposes them in Settings → Tools → Public links.
+- Windows File Intelligence parser budgets already backed by environment variables are now first-class persisted owner controls in Settings → Files and projects. The client exports them before backend start/restart, including file/text/archive/PDF/OCR/render budgets and a separately owner-controlled per-request extraction ceiling.
+- The Python File Intelligence request ceiling is no longer hard-coded at 500,000 characters; it follows `AURORAFOX_FILE_REQUEST_MAX_TEXT` and is reported by `/health`. Existing access-control, authorization, secret/privacy and untrusted-code isolation boundaries are unchanged.
+- Owner-control policy reclassifies these implemented controls from `owner_adjustable_pending_ui` to `owner_adjustable`. The overall inventory is still intentionally incomplete; unrelated findings remain to be classified rather than being waived.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: prior security HEAD 24/24 CI green; source implementation for visible File Intelligence budgets and public URL/title/context budgets prepared.
+REMAINING: exact-SHA CI for this new batch; continue inventory classification; integrate scoped security workspace into owner-authorized chat/tool flow; UI/performance/update/device acceptance; version-last/sign/release only after separate permission.
+BLOCKERS: physical Windows/Android owner acceptance remains external; no source blocker for this batch.
+NEXT: publish one fast-forward commit to PR #103, inspect exact-head CI, and fix only reproduced failures before continuing security/chat integration.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

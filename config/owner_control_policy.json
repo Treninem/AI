@@ -33,16 +33,23 @@
     {
       "path": "file_intelligence/file_service.py",
       "pattern": "os.getenv\\(\"AURORAFOX_(?:FILE_MAX|ARCHIVE_MAX|ARCHIVE_TEXT|OCR_MAX)",
-      "class": "owner_adjustable_pending_ui",
-      "control": "AURORAFOX_FILE_MAX_*, AURORAFOX_ARCHIVE_*, AURORAFOX_OCR_MAX_* environment settings; restart backend",
-      "rationale": "Parser resource defaults have environment overrides; visible owner UI and live propagation still pending."
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → File Intelligence limits; persisted ProjectSettings are exported to AURORAFOX_FILE_*/ARCHIVE_*/OCR_* on backend start/restart",
+      "rationale": "Parser resource budgets are visible owner controls and are applied to the local backend without source edits."
     },
     {
       "path": "scripts/public_web_manager.gd",
       "pattern": "\\.substr\\(0, (?:24000|400)\\)|(?:url.length\\(\\) > 4096)",
-      "class": "owner_adjustable_pending_ui",
-      "control": "context/title/URL budget remains source-defined; expose advanced control",
-      "rationale": "Operational presentation/parser ceilings are not authorization boundaries and are not declared complete."
+      "class": "owner_adjustable",
+      "control": "Settings → Tools → Public links (URL/title/relevant-context budgets)",
+      "rationale": "Presentation/context ceilings are owner-visible persisted controls."
+    },
+    {
+      "path": "scripts/file_intelligence_client.gd",
+      "pattern": "OWNER_LIMIT_|owner_limits\\(|apply_owner_limits\\(|request_max_text_chars",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → File Intelligence limits",
+      "rationale": "Client persists owner values, exports backend environment settings and restarts the local Windows backend."
     }
   ]
 }
