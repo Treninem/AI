@@ -3829,3 +3829,28 @@ REMAINING: remote exact-SHA CI/package proof; 2,491 inventory classifications an
 BLOCKERS: new exact-SHA CI pending; local real-parser dependencies absent; physical Windows/Android acceptance still external.
 NEXT: publish one atomic fast-forward commit to existing PR #103 and inspect exact-head tests; continue inventory from File Intelligence/client parser ceilings.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### BEFORE ACTION 2026-10-01 — authorized security workspace foundation
+
+Same ACTIVE V1.5 claim; baseline published `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`, existing PR #103. Document batch remote Chat Learning `36820411013` (job `110234568288`, new document routing step SUCCESS) and Core/Voice `36820411047` (real File Intelligence parser job `110234568501` SUCCESS) accepted. Full package verdict still pending.
+OWNED: new `security_workspace/runner.py`, `security_workspace/README.md`, `tests/test_security_workspace.py`, existing CI wiring only for lab tests, journal/memory.
+INTENDED: accumulated MINOR V1.5.0.0, version-last.
+ACTION: implement scope/explicit authorization/expiry gates, bounded real HTTP/TLS header/cookie checks, redacted evidence/remediation and baseline retest; local vulnerable→fixed lab. No external target supplied: no live owner target test authorized/executed. This foundation does not claim full exploit/pentest capability or a security grade. Private lab requires separate explicit scope flag.
+NEXT: run actual local lab E2E proving findings disappear after remediation and denied/expired/out-of-scope runs make no request.
+
+
+### AFTER ACTION 2026-10-01 — real scoped security configuration lab accepted locally
+
+- Existing claim remains ACTIVE, branch/PR #103 unchanged. Published document commit `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`: 24 check-runs observed, 22 completed SUCCESS; only Windows Package `36820411101` and Android APK `36820411031` remain running at this checkpoint. Chat Learning `36820411013` and real parser Core/Voice `36820411047` both SUCCESS; Integration `36820411097` green. No duplicate manual workflow dispatch.
+- Security workspace is an actual standalone executable with scope/authorization/expiry validation, bounded HTTP GET, DNS socket pinning/TLS validation, header/cookie configuration findings, redacted JSON evidence/remediation and same-scope retest. No scripted-success or grade; explicit coverage says no exploit/authenticated-flow/injection/full-pentest execution. No external target was supplied or tested. Core/tool/chat integration and broader controlled testing remain unfinished.
+- Local `python -m unittest tests.test_security_workspace -v`: 4/4 PASS against a real temporary loopback HTTP server. The test actually observes missing protections, applies header/cookie fixes and verifies disappearance; no authorization/out-of-scope/expired cases make traffic; redirects/auth restrictions stay boundaries; transport failure is an inconclusive retest. Python compile and diff check PASS. Permanent test wired into existing Chat Learning CI. AF-MEM-099 records prevention contract.
+- Inventory still incomplete: 2,491 findings require review. This foundation does not close the whole security or owner-control package. Canonical version remains unchanged/version-last.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: document routing remote parser/Chat/Integration gates green; first owner-control classification batch; runnable scoped security foundation and real remediation/retest lab green locally.
+REMAINING: latest security commit CI; remaining document Windows/Android packages; full inventory remediation; Core/chat security integration and broader authorized tests; UI/performance/update/device gates; version/sign/release only after separate owner permission.
+BLOCKERS: live system test needs owner-provided target and exact authorized scope; physical Windows/Android acceptance external; no source blocker for integration/inventory.
+NEXT: publish security foundation atomically to same PR, inspect new exact-SHA Chat Learning lab gate, continue owner-control/parser limits and security integration without main merge/version/release.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

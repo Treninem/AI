@@ -3,6 +3,8 @@ name: AuroraFox Chat Learning Attachments CI
 on:
   pull_request:
     paths:
+      - 'security_workspace/**'
+      - 'tests/test_security_workspace.py'
       - 'scripts/public_web_manager.gd'
       - 'scripts/user_intent_router.gd'
       - 'tests/public_document_url_smoke.gd'
@@ -19,6 +21,8 @@ on:
   push:
     branches: [main]
     paths:
+      - 'security_workspace/**'
+      - 'tests/test_security_workspace.py'
       - 'scripts/public_web_manager.gd'
       - 'scripts/user_intent_router.gd'
       - 'tests/public_document_url_smoke.gd'
@@ -94,3 +98,6 @@ jobs:
         run: |
           timeout 120s ./godot --headless --path . --script tests/public_web_manager_smoke.gd
           timeout 120s ./godot --headless --path . --script tests/public_document_url_smoke.gd
+
+      - name: Prove authorized security lab remediation and retest
+        run: python -m unittest tests.test_security_workspace -v

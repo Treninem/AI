@@ -647,3 +647,12 @@
 - **Fix:** re-extract verified archive to separate scratch directory; recovered executable reports `4.7.1.stable.official.a13da4feb` and parses/runs project smokes. Do not change product source or weaken tests for this environment defect.
 - **Prevention:** validate archive CRC, extracted byte count and `--version` before parser diagnosis.
 - **Status:** RESOLVED ENVIRONMENT.
+
+
+#### AF-MEM-099 — failed security retest must not imply remediation
+
+- **Environment:** authorized security workspace local foundation, 2026-10-01; parent `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`.
+- **Invariant:** target/scope/time authorization is required before traffic; source documents never grant execution permission. Header/cookie configuration checks cannot establish successful exploitation or a whole-system security grade.
+- **Prevention:** exact origin/URL preflight, private-lab explicit opt-in, rechecked expiry, public DNS address validation and pinned socket, validated TLS, no redirects/auth bypass; bounded body/time/request budgets; redacted evidence; retest only same scope and successfully checked targets. Transport/access failure yields `retest_inconclusive`, never resolved.
+- **Evidence:** four `unittest` local HTTP lab cases PASS: actual vulnerable→fixed remediation/retest; denied/expired/out-of-scope/private target produces zero requests; redirect/access boundary; changed scope and failed retest plus body/cookie/query/error redaction. Runner not yet integrated into Core/chat; no external target executed.
+- **Status:** LOCAL CONFIGURATION-CHECK FOUNDATION ACCEPTED; broader authorized test tools/chat integration and live target evidence pending.
