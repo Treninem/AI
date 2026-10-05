@@ -53,3 +53,11 @@ def test_archive_listing_budgets_are_visible_and_cache_identity_covers_archive_c
     assert "max_chars // 4" not in SERVICE
     assert "v5-owner-archive-budgets" in SERVICE
     assert '"listing_truncated": listing_truncated' in SERVICE
+
+
+def test_android_directory_limit_reaches_native_traversal_without_fixed_ceiling():
+    native = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt").read_text()
+    assert "maxItems.coerceIn(1, 5000)" not in native
+    assert "clampi(max_items, 1, 5000)" not in CLIENT
+    assert "boundedDirectoryTree(root, maxItems)" in native
+    assert '"truncated" to snapshot.truncated' in native

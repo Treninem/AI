@@ -4213,3 +4213,52 @@ REMAINING: exact new-head CI, native Android budgets, remaining owner-control in
 BLOCKERS: local valid Godot/API dependencies unavailable; physical devices owner-side.
 NEXT: publish this block and provide new-head run links without waiting; prepare native Android budget propagation while CI runs, no repeated source changes.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE local preparation 2026-10-05 — Android directory owner ceiling
+
+Archive source published as 3d96ed429bd9c3150454e6c443f9b8f8e5107595. New runs launched, no wait/poll loop. Continue same integrated CLAIM, prepare locally without restarting expensive checks. Ownership: AndroidFileRuntime directory traversal only, new pure Kotlin directory helper/JUnit, FileIntelligenceClient tree branch and source contract, journal. Pass existing tree_max_items owner value; remove both native/client fixed5000 clamps; observe one extra item for truthful truncation. Preserve private-root authorization; no parser/OCR/registration architecture change. Intended BUILD accumulated V1.5.0.0, version unchanged. Kotlin/Gradle unavailable locally; real JUnit evidence must come from Android Plugin CI after publication, never counted as local PASS.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: prepare source and genuine filesystem JUnit cases; publish only after current checks are reported, no waiting.
+
+
+### LOCAL checkpoint 2026-10-05 — Android directory limit preparation during archive CI
+
+- Published/archive remote HEAD remains 3d96ed429bd9c3150454e6c443f9b8f8e5107595. Do not push prepared Android change until current checks are reported; no CI waiting loop.
+- Removed both fixed5000 tree clamps; Godot passes tree_max_items owner value into native private-root traversal. Pure Kotlin helper returns actual item budget/truncation, exact-fit complete. Added three genuine filesystem JUnit cases including5001 files. Source contracts PASS, diff check clean; Kotlin/JUnit/Gradle NOT EXECUTED locally (toolchain unavailable), mandatory Android Plugin CI after publication. AF-MEM-107 continuation records limitation.
+- Prepared on same branch as one local commit; no new lane. Android tree source ownership released to next acceptance pass; remaining Android file/parser/OCR budgets still unfinished. No version/main/sign/release changes.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive block published; Android directory owner propagation and real test source prepared locally.
+REMAINING: archive exact-SHA CI; publish Android block then exact-SHA Kotlin/JUnit/package/parse evidence; Android parser budgets, inventory and physical acceptance.
+BLOCKERS: local Kotlin/Godot/API toolchains unavailable; devices owner-side.
+NEXT: on archive CI completion report, diagnose any failures or publish prepared Android directory block; continue Android parser budget propagation without guessing new architecture.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CI diagnosis 2026-10-05 — one exact-SHA Core failure, targeted repeat
+
+Remote remains3d96ed4, local Android3383be0 unpushed. Owner reported red. Snapshot:28 success/1 failure/Windows packaging running. Failed real-core-windows run37333751554 job111843252931:20/21 benchmark scenarios PASS; only long_context empty after90068.494ms. Real offline CodeSpecialist and archive/File Intelligence passed. Actual root cause unknown; performance hard limits PASS, incompatible baseline comparison unapplied. Downloaded/read actual report/stdout/stderr artifact11355856840; AF-MEM-109 records missing runtime-error fields. Single targeted job rerun requested successfully at same SHA; no source push/CI wait loop or gate weakening.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: actual failure artifact diagnosed to long-context scenario; same-SHA one-job repeat launched.
+REMAINING: repeat result plus Windows completion; prepared Android publication/acceptance and parser/inventory/device gates.
+BLOCKERS: long-context Core failure cause unconfirmed, run37333751554; local Godot unavailable.
+NEXT: owner checks targeted repeat link; if still red, retain real Core error metadata before diagnosis. Android source remains local and does not invalidate current SHA checks.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE acceptance 2026-10-05 — publish prepared Android directory block after green archive CI
+
+- Owner reports green; verified all30/30 SUCCESS on exact3d96ed429bd9c3150454e6c443f9b8f8e5107595 including targeted Core repeat and Windows Package. AF-MEM-109 repeat result: failure not reproduced, root cause unknown. Fresh main446ce2cd, remote feature unchanged.
+- Same existing CLAIM/PR #103/branch. Publish prepared3383be0 Android directory owner propagation plus b8a9d61 durable failure lesson, reconciled current green result. Source re-reviewed, six owner runtime contracts PASS, diff check clean.
+- Three genuine Kotlin filesystem JUnit cases require new-head Android Plugin CI (locally NOT EXECUTED, no Kotlin/Gradle). Request/owner budget now honored above5000 on Android, one additional actual item proves truncation. Private-root authorization unchanged. Android text/document/archive/OCR parser budgets remain unfinished and are not claimed implemented.
+- Intended BUILD accumulated version-last V1.5.0.0; version/main/sign/release untouched. Directory source files released after publication, integrated CLAIM remains active for acceptance and parser/inventory work.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive exact-SHA30green; Android directory source/real test cases prepared and re-reviewed.
+REMAINING: new-head Kotlin/JUnit/Godot/package CI, native parser/OCR owner budgets, inventory, physical acceptance and version-last gates.
+BLOCKERS: local Kotlin/Godot unavailable; physical devices owner-side.
+NEXT: publish one coherent Android source block, provide fresh check links without waiting; next prepare per-request Android parser budget propagation.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

@@ -217,7 +217,7 @@ func tree(path: String, max_items := 2000) -> Dictionary:
 		if not path.begins_with("user://") or not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": false, "error": "Android directory tree is restricted to user://"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		var raw = plugin.call("treeLocal", ProjectSettings.globalize_path(path), clampi(max_items, 1, 5000))
+		var raw = plugin.call("treeLocal", ProjectSettings.globalize_path(path), clampi(max_items, 1, int(owner_limits().get("tree_max_items", 5000))))
 		return _parse_native(raw)
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "Directory intelligence is not available on this platform"}

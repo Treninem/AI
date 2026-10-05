@@ -66,11 +66,13 @@ class AndroidFileRuntime(
         if (!root.isDirectory) return error("Directory not found")
         val items = JSONArray()
         val rootPath = root.path + File.separator
-        root.walkTopDown().drop(1).take(maxItems.coerceIn(1, 5000)).forEach { file ->
+        val snapshot = boundedDirectoryTree(root, maxItems)
+        snapshot.files.forEach { file ->
             val relative = if (file.path.startsWith(rootPath)) file.path.removePrefix(rootPath).replace(File.separatorChar, '/') else file.name
             items.put(JSONObject(mapOf("path" to relative, "dir" to file.isDirectory, "size" to if (file.isFile) file.length() else 0L)))
         }
-        return JSONObject(mapOf("ok" to true, "root" to root.path, "items" to items)).toString()
+        return JSONObject(mapOf("ok" to true, "root" to root.path, "items" to items,
+            "truncated" to snapshot.truncated, "item_budget" to maxItems.coerceAtLeast(1))).toString()
     }
 
     private fun analyzeText(file: File): String {

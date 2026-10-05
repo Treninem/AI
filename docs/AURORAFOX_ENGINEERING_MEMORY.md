@@ -739,3 +739,24 @@
 - **Evidence:** five exact production-function regressions over genuine ZIP/tar data cover raised >40000 output, disabled listing with retained text and unsafe-path exclusion, tiny/header budgets, exact fit/content omission and each cache-setting invalidation. Six spreadsheet and four filesystem/cache regressions remain PASS; source owner contracts PASS. Godot settings/environment smoke extended; not executed locally because AF-MEM-107 runtime defect persists, full API/Godot acceptance belongs to new-head CI.
 - **Prevention:** include all extraction-changing settings in cache identity; count payload, not only parser headers, as extracted information. Always measure total emitted characters including formatting.
 - **Status:** local archive/regression unit evidence PASS; full API, Godot and physical acceptance separate.
+
+
+#### AF-MEM-107 continuation — Android tree budget propagation
+
+- Native tree and its Godot caller each imposed 5000 regardless of the persisted owner ceiling, and native response did not identify truncation. Local preparation passes the existing tree_max_items setting, uses a pure Kotlin boundedDirectoryTree helper and observes one next actual file to distinguish exact fit from overflow. Private-root authorization unchanged.
+- Three JUnit cases use actual filesystem directories, including 5001 files, exact fit/overflow, empty/minimum budgets. Kotlin/compiler/Gradle are unavailable locally; these cases are NOT EXECUTED locally and require Android Plugin CI. Source propagation contract PASS is a separate limited evidence type. Full Android parser/OCR budgets remain unfinished.
+
+
+#### AF-MEM-109 — Core long-context empty response needs actual error evidence
+
+- **Confirmed:** 3d96ed429bd9c3150454e6c443f9b8f8e5107595, run37333751554/job111843252931, Core real benchmark fails only long_context (20/21 PASS). Prompt12841 chars;90068.494ms; empty content/zero completion tokens; runtime wrapper aurora_core. Offline CodeSpecialist PASS; hard performance PASS; baseline comparison not applied because CPU/runtime identity differ (not a relative regression). File Intelligence/parser gates green.
+- **Cause:** not established. ~90-second timing is consistent with a request deadline but does not prove the underlying transport/inference cause. Core source unchanged from green8187d3a; a one-job same-SHA repeat isolates reproducibility without modifying quality gates or restarting Windows packaging.
+- **Evidence gap:** _chat_row stores output/runtime but drops result.ok/error/attempted_models/failure_scope. No stderr failure and no actual runtime error in uploaded benchmark artifact11355856840 (zip SHA256077c6db5e8b6bcb8deab148d53b546ce2836d0027587cccde3eef481a14f3653). Do not infer a parser regression or count the repeat as PASS before completed evidence.
+- **Action/prevention:** one targeted real-core-windows rerun requested; no retry loop, timeout increase, scenario reduction or policy relaxation. If reproducible, preserve bounded runtime error fields in benchmark report before product diagnosis; no speculative Core change.
+- **Status:** unresolved, exact same-SHA rerun pending.
+
+
+#### AF-MEM-109 repeat result — same-SHA Core gate succeeds
+
+- One targeted repeat on unchanged3d96ed429bd9c3150454e6c443f9b8f8e5107595 completed SUCCESS; all30 exact-SHA check-runs now SUCCESS. No product/benchmark change, timeout increase, gate relaxation or additional repeat performed.
+- Original long-context failure is NOT REPRODUCED on this repeat; root cause remains unknown, not labelled a confirmed infrastructure defect. Preserve original artifact/job and missing-error-report lesson for a future recurrence. Repeat success validates this acceptance run but does not establish why the first run failed.
