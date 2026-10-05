@@ -155,3 +155,25 @@ def test_health_claims_vision_only_with_selected_model(monkeypatch: pytest.Monke
     assert result["ollama_online"] is True
     assert result["vision_online"] is True
     assert file_service.VISION_MODEL in result["installed_models"]
+
+
+def test_spreadsheet_budget_reaches_full_service_response_and_cache(tmp_path: Path, monkeypatch) -> None:
+    from openpyxl import Workbook
+    path = tmp_path / "owner_budget.xlsx"
+    book = Workbook(); book.active.append(["one", "two", "three"]); book.active.append(["four", "five", "six"])
+    book.save(path); book.close()
+    monkeypatch.setattr(file_service, "CACHE_DIR", tmp_path / "cache")
+    file_service.CACHE_DIR.mkdir()
+    monkeypatch.setattr(file_service, "MAX_SPREADSHEET_CELLS", 5)
+    request = file_service.AnalyzeRequest(path=str(path), visual=False)
+    limited = file_service.analyze(request)
+    assert limited["truncated"] is True
+    assert limited["metadata"]["cells_read"] == 5
+    assert limited["warnings"]
+    assert "six" not in limited["content"]
+    assert file_service.analyze(request)["cached"] is True
+    monkeypatch.setattr(file_service, "MAX_SPREADSHEET_CELLS", 6)
+    complete = file_service.analyze(request)
+    assert complete["cached"] is False
+    assert complete["truncated"] is False
+    assert "six" in complete["content"]

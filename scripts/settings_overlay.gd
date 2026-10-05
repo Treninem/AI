@@ -565,6 +565,8 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		"max_file_bytes": 1024 * 1024 * 1024,
 		"max_text_chars": 160000,
 		"request_max_text_chars": 500000,
+		"spreadsheet_max_cells": 50000,
+		"xls_max_rows": 10000,
 		"archive_max_entries": 5000,
 		"archive_max_expanded": 512 * 1024 * 1024,
 		"archive_text_member_max": 8 * 1024 * 1024,
@@ -578,6 +580,8 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 	var file_mb := _owner_number_row(card, "Максимальный файл, МиБ", float(limits.get("max_file_bytes", 1024 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
 	var text_chars := _owner_number_row(card, "Текст по умолчанию, символов", float(limits.get("max_text_chars", 160000)), 1.0, 1000.0)
 	var request_chars := _owner_number_row(card, "Текст одного запроса, символов", float(limits.get("request_max_text_chars", 500000)), 1.0, 1000.0)
+	var spreadsheet_cells := _owner_number_row(card, "Ячеек XLS/XLSX на файл", float(limits.get("spreadsheet_max_cells", 50000)), 1.0, 1000.0)
+	var xls_rows := _owner_number_row(card, "Строк XLS на лист", float(limits.get("xls_max_rows", 10000)), 1.0, 1000.0)
 	var archive_entries := _owner_number_row(card, "Записей в архиве", float(limits.get("archive_max_entries", 5000)), 1.0, 100.0)
 	var archive_expanded_mb := _owner_number_row(card, "Распакованный архив, МиБ", float(limits.get("archive_max_expanded", 512 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
 	var archive_member_mb := _owner_number_row(card, "Один текстовый файл архива, МиБ", float(limits.get("archive_text_member_max", 8 * 1024 * 1024)) / 1048576.0, 0.000001, 1.0)
@@ -609,6 +613,8 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 			"max_file_bytes": int(file_mb.value * 1048576.0),
 			"max_text_chars": int(text_chars.value),
 			"request_max_text_chars": int(request_chars.value),
+			"spreadsheet_max_cells": int(spreadsheet_cells.value),
+			"xls_max_rows": int(xls_rows.value),
 			"archive_max_entries": int(archive_entries.value),
 			"archive_max_expanded": int(archive_expanded_mb.value * 1048576.0),
 			"archive_text_member_max": int(archive_member_mb.value * 1048576.0),
@@ -630,6 +636,8 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		file_mb.value = 1024
 		text_chars.value = 160000
 		request_chars.value = 500000
+		spreadsheet_cells.value = 50000
+		xls_rows.value = 10000
 		archive_entries.value = 5000
 		archive_expanded_mb.value = 512
 		archive_member_mb.value = 8

@@ -3944,3 +3944,28 @@ REMAINING: exact new-head CI and owner physical Windows/Android acceptance; inve
 BLOCKERS: device evidence requires owner device, live security targets require an explicit authorized scope.
 NEXT: publish this final lifecycle correction, inspect exact-head CI; next source batch addresses named remaining File Intelligence extraction ceilings.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — owner-controlled spreadsheet extraction budgets
+
+Existing CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`, PR #103, HEAD `3037cb39e1043bf4750584b98582078f28968535`; fresh main unchanged. No parallel lane. Owner requests direct CI links and no polling waits; existing Android/Core running and Windows queued links supplied. Ownership adds file_intelligence/file_service.py, scripts/file_intelligence_client.gd, scripts/settings_overlay.gd, spreadsheet tests/CI and owner policy. Intended build correction accumulated into version-last V1.5.0.0; canonical version unchanged. Confirmed fixed 50,000-cell XLS/XLSX limits and silently truncated 10,000 XLS row limit. Preserve defaults, expose owner settings with no hidden maximum, record actual extraction/truncation metadata/warnings, prove bounds and raised limits with real parsers. Full API dependencies are unavailable locally; do not fake FastAPI to claim full-service acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement this bounded parser/settings block and publish once; supply new-head CI links instead of waiting.
+
+
+### CHECKPOINT 2026-10-05 — spreadsheet owner budgets and honest partial extraction
+
+- Starting HEAD `3037cb39e1043bf4750584b98582078f28968535`, same draft PR #103, branch unchanged. Existing CI links supplied to owner: Windows 37270963573 queued, Android 37270963603 running, Core Benchmarks 37270963586 running. No repeated CI polling or blocking wait; those statuses are observations, not PASS.
+- Settings → Files and projects exposes XLS/XLSX cells per file (default 50,000) and XLS rows per sheet (default 10,000). Persisted client controls export AURORAFOX_FILE_SPREADSHEET_MAX_CELLS/AURORAFOX_FILE_XLS_MAX_ROWS; Python health reports actual settings. Defaults retained and owner can raise them; no new XLSX row limit.
+- Exact cell clipping prevents overshoot; metadata carries actual cells/rows/budgets/output_truncated/reasons. XLS row omission no longer silently looks complete. Full analyze response propagates partial extraction and actionable warnings. Both controls enter parser cache identity so a changed limit cannot retrieve a stale truncation.
+- TEST: six real XLS/XLSX production parser unit tests PASS (including 50,001 cells and 10,001 rows); Godot runtime ProjectSettings/environment propagation PASS; integrated Godot parse PASS; owner-runtime/inventory contracts PASS; git diff --check clean. Full-service cache/truncation regression added to File Intelligence CI, not executed locally because FastAPI/requests are unavailable. No fake API dependency stub used.
+- Inventory observed after implementation: 2447 unclassified, 129 owner_adjustable, 1 pending UI, 1 hard_boundary, 4 format_structure, 44 documentation, 582 test_evidence. New findings remain visible; inventory is INCOMPLETE. AF-MEM-106 preserves the cache/omission lesson.
+- Produced commit: this checkpoint is included atomically in the source commit; exact SHA in PR history. No merge, version bump, signing or release. Existing CLAIM stays ACTIVE for inventory and remaining acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: owner spreadsheet controls, exact clipping and explicit partial status, cache invalidation, real parser/runtime regressions.
+REMAINING: full-service/exact-head CI and physical Windows/Android tests; other owner-control inventory and product acceptance gates.
+BLOCKERS: local full API dependencies absent (real parser units executed independently); physical acceptance needs owner device.
+NEXT: publish once, supply new-head CI links for owner to inspect without waiting. Next source block: remaining File Intelligence tree/search/request/archive presentation ceilings; clarify owner choices if requirements become ambiguous.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

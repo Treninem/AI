@@ -46,7 +46,7 @@
     },
     {
       "path": "file_intelligence/file_service.py",
-      "pattern": "\\b(?:MAX_FILE_BYTES|MAX_TEXT_CHARS|MAX_REQUEST_TEXT_CHARS|MAX_ARCHIVE_ENTRIES|MAX_ARCHIVE_EXPANDED|MAX_ARCHIVE_TEXT_MEMBER_BYTES|MAX_ARCHIVE_TEXT_TOTAL_BYTES|MAX_PDF_BYTES|MAX_PDF_PAGES|MAX_OCR_PAGES|MAX_PDF_RENDER_PIXELS)\\b",
+      "pattern": "\\b(?:MAX_SPREADSHEET_CELLS|MAX_XLS_ROWS|MAX_FILE_BYTES|MAX_TEXT_CHARS|MAX_REQUEST_TEXT_CHARS|MAX_ARCHIVE_ENTRIES|MAX_ARCHIVE_EXPANDED|MAX_ARCHIVE_TEXT_MEMBER_BYTES|MAX_ARCHIVE_TEXT_TOTAL_BYTES|MAX_PDF_BYTES|MAX_PDF_PAGES|MAX_OCR_PAGES|MAX_PDF_RENDER_PIXELS)\\b",
       "class": "owner_adjustable",
       "control": "Settings → Files and projects → File Intelligence limits",
       "rationale": "Named runtime budgets and their use sites propagate the persisted owner controls; unrelated literal limits remain unclassified."

@@ -47,6 +47,8 @@ MAX_ARCHIVE_ENTRIES = int(os.getenv("AURORAFOX_ARCHIVE_MAX_ENTRIES", "5000"))
 MAX_ARCHIVE_EXPANDED = int(os.getenv("AURORAFOX_ARCHIVE_MAX_EXPANDED", str(512 * 1024 * 1024)))
 MAX_ARCHIVE_TEXT_MEMBER_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX", str(8 * 1024 * 1024)))
 MAX_ARCHIVE_TEXT_TOTAL_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_TOTAL_MAX", str(32 * 1024 * 1024)))
+MAX_SPREADSHEET_CELLS = max(1, int(os.getenv("AURORAFOX_FILE_SPREADSHEET_MAX_CELLS", "50000")))
+MAX_XLS_ROWS = max(1, int(os.getenv("AURORAFOX_FILE_XLS_MAX_ROWS", "10000")))
 MAX_TREE_ITEMS = 5000
 MAX_PDF_BYTES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_BYTES", str(256 * 1024 * 1024)))
 MAX_PDF_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_PAGES", "1000"))
@@ -113,7 +115,7 @@ def _safe_dir(path: str) -> Path:
 
 def _cache_key(path: Path, question: str, visual: bool, max_chars: int) -> str:
     st = path.stat()
-    raw = f"{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|v3-local-ocr-bounded"
+    raw = f"{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|{MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}|v4-owner-spreadsheet-budgets"
     return hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
 
 
@@ -163,34 +165,58 @@ def _text_from_docx(path: Path) -> tuple[str, dict[str, Any]]:
 
 def _text_from_xlsx(path: Path) -> tuple[str, dict[str, Any]]:
     from openpyxl import load_workbook
-    wb = load_workbook(filename=str(path), read_only=True, data_only=True); parts: list[str] = []; sheets = []; cells = 0
+    wb = load_workbook(filename=str(path), read_only=True, data_only=True)
+    parts: list[str] = []; sheets = []; cells = 0; truncated = False
     try:
         for ws in wb.worksheets:
             parts.append(f"\n### Лист: {ws.title}"); rows = 0
             for row in ws.iter_rows(values_only=True):
                 values = ["" if v is None else str(v) for v in row]
-                if any(values): parts.append("\t".join(values)); rows += 1; cells += len(values)
-                if cells >= 50000: parts.append("[Таблица обрезана: лимит 50000 ячеек]"); break
+                if not any(values): continue
+                remaining = MAX_SPREADSHEET_CELLS - cells
+                if remaining <= 0:
+                    truncated = True; break
+                kept = values[:remaining]
+                parts.append("\t".join(kept)); rows += 1; cells += len(kept)
+                if len(kept) < len(values):
+                    truncated = True; break
             sheets.append({"name": ws.title, "rows_read": rows})
-            if cells >= 50000: break
+            if truncated: break
     finally: wb.close()
-    return "\n".join(parts), {"sheets": sheets, "cells_read": cells}
+    if truncated: parts.append(f"[Таблица обрезана: предел владельца {MAX_SPREADSHEET_CELLS} ячеек]")
+    return "\n".join(parts), {"sheets": sheets, "cells_read": cells,
+                              "cell_budget": MAX_SPREADSHEET_CELLS, "output_truncated": truncated,
+                              "truncation_reasons": ["spreadsheet_cells"] if truncated else []}
 
 
 def _text_from_xls(path: Path) -> tuple[str, dict[str, Any]]:
     import xlrd
-    book = xlrd.open_workbook(str(path), on_demand=True); parts = []; sheets = []; cells = 0
+    book = xlrd.open_workbook(str(path), on_demand=True)
+    parts = []; sheets = []; cells = 0; reasons = []
     try:
         for sheet in book.sheets():
-            parts.append(f"\n### Лист: {sheet.name}")
-            for r in range(min(sheet.nrows, 10000)):
+            parts.append(f"\n### Лист: {sheet.name}"); rows_read = 0
+            for r in range(min(sheet.nrows, MAX_XLS_ROWS)):
                 values = [str(sheet.cell_value(r, c)) for c in range(sheet.ncols)]
-                if any(values): parts.append("\t".join(values)); cells += len(values)
-                if cells >= 50000: parts.append("[Таблица обрезана: лимит 50000 ячеек]"); break
-            sheets.append({"name": sheet.name, "rows": sheet.nrows, "cols": sheet.ncols})
-            if cells >= 50000: break
+                if not any(values):
+                    rows_read += 1; continue
+                remaining = MAX_SPREADSHEET_CELLS - cells
+                if remaining <= 0:
+                    if "spreadsheet_cells" not in reasons: reasons.append("spreadsheet_cells")
+                    break
+                kept = values[:remaining]
+                parts.append("\t".join(kept)); cells += len(kept); rows_read += 1
+                if len(kept) < len(values):
+                    if "spreadsheet_cells" not in reasons: reasons.append("spreadsheet_cells")
+                    break
+            if sheet.nrows > MAX_XLS_ROWS and "xls_rows" not in reasons: reasons.append("xls_rows")
+            sheets.append({"name": sheet.name, "rows": sheet.nrows, "cols": sheet.ncols, "rows_read": rows_read})
+            if "spreadsheet_cells" in reasons: break
     finally: book.release_resources()
-    return "\n".join(parts), {"sheets": sheets, "cells_read": cells}
+    if reasons: parts.append(f"[Таблица обрезана: пределы владельца {MAX_SPREADSHEET_CELLS} ячеек, {MAX_XLS_ROWS} строк XLS на лист]")
+    return "\n".join(parts), {"sheets": sheets, "cells_read": cells,
+                              "cell_budget": MAX_SPREADSHEET_CELLS, "xls_row_budget": MAX_XLS_ROWS,
+                              "output_truncated": bool(reasons), "truncation_reasons": reasons}
 
 
 def _text_from_pptx(path: Path) -> tuple[str, dict[str, Any]]:
@@ -579,6 +605,8 @@ def _analyze(path: Path, question: str, visual: bool, max_chars: int = MAX_TEXT_
             if "\x00" not in text[:4096]: kind = "text"; metadata["encoding"] = encoding
             else: text = "Бинарный файл: содержимое не преобразовано в текст."
         except Exception: text = "Бинарный файл: содержимое не преобразовано в текст."
+    if kind == "spreadsheet" and metadata.get("output_truncated", False):
+        warnings.append("Таблица извлечена частично: достигнут предел владельца. Измените пределы File Intelligence и повторите чтение.")
     return {"kind": kind, "text": text, "metadata": metadata, "warnings": warnings}
 
 
@@ -608,7 +636,7 @@ def health() -> dict[str, Any]:
     try: voice = requests.get(f"{VOICE_URL}/health", timeout=1.5).status_code == 200
     except Exception: pass
     ocr = local_ocr_health()
-    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
+    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "spreadsheet_max_cells": MAX_SPREADSHEET_CELLS, "xls_max_rows": MAX_XLS_ROWS, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
 
 
 @app.post("/analyze")

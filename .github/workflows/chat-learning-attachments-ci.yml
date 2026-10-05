@@ -4,6 +4,9 @@ on:
   pull_request:
     paths:
       - 'tests/security_owner_review_smoke.gd'
+      - 'tests/file_spreadsheet_limits_smoke.gd'
+      - 'scripts/file_intelligence_client.gd'
+      - 'scripts/settings_overlay.gd'
       - 'security_workspace/**'
       - 'tests/test_security_workspace.py'
       - 'scripts/agent_core.gd'
@@ -31,6 +34,9 @@ on:
     branches: [main]
     paths:
       - 'tests/security_owner_review_smoke.gd'
+      - 'tests/file_spreadsheet_limits_smoke.gd'
+      - 'scripts/file_intelligence_client.gd'
+      - 'scripts/settings_overlay.gd'
       - 'security_workspace/**'
       - 'tests/test_security_workspace.py'
       - 'scripts/agent_core.gd'
@@ -122,3 +128,6 @@ jobs:
 
       - name: Prove owner consent and evidence integrity gates
         run: timeout 120s ./godot --headless --path . --script tests/security_owner_review_smoke.gd
+
+      - name: Prove owner spreadsheet settings reach backend environment
+        run: timeout 120s ./godot --headless --path . --script tests/file_spreadsheet_limits_smoke.gd

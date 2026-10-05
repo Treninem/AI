@@ -24,3 +24,12 @@ def test_public_reader_context_title_and_url_budgets_are_owner_controls():
     assert "url.length() > 4096" not in WEB
     assert ".substr(0, 400)" not in WEB
     assert ".substr(0, 24000)" not in WEB
+
+
+def test_spreadsheet_budgets_are_visible_persisted_and_exported_without_old_clamps():
+    for key, env in [("spreadsheet_max_cells", "AURORAFOX_FILE_SPREADSHEET_MAX_CELLS"), ("xls_max_rows", "AURORAFOX_FILE_XLS_MAX_ROWS")]:
+        assert key in CLIENT and key in SETTINGS and env in CLIENT and env in SERVICE
+    assert "cells >= 50000" not in SERVICE
+    assert "range(min(sheet.nrows, 10000))" not in SERVICE
+    assert '"output_truncated":' in SERVICE
+    assert 'MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}' in SERVICE
