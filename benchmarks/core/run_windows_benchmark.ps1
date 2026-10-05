@@ -79,6 +79,7 @@ $serverPeak = [int64]0
 $combinedPeak = [int64]0
 $stdoutPath = Join-Path $artifactDir 'core-benchmark-godot.stdout.log'
 $stderrPath = Join-Path $artifactDir 'core-benchmark-godot.stderr.log'
+$env:AURORAFOX_BENCHMARK_CORE_LOG_PATH = Join-Path $artifactDir 'core-benchmark-engine.log'
 Remove-Item $stdoutPath,$stderrPath -Force -ErrorAction SilentlyContinue
 $stopwatch = [Diagnostics.Stopwatch]::StartNew()
 

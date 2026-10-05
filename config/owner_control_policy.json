@@ -71,6 +71,20 @@
       "class": "documentation",
       "control": "source comment only",
       "rationale": "A full comment line documents behavior and does not itself enforce a runtime limit; executable use sites remain separately scanned."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/FileAnalysisLimits.kt",
+      "pattern": "FileAnalysisLimits|number\\(|count\\(|(?:fileBytes|outputChars|spreadsheetCells|archiveEntries|expandedBytes|memberBytes|totalTextBytes|listingChars|listingPercent|pdfBytes|pdfPages|ocrPages|renderPixels|inputPixels|pendingJobs)",
+      "class": "owner_adjustable",
+      "control": "File Intelligence Settings -> immutable per-request JSON snapshot; shared visible defaults",
+      "rationale": "Numeric defaults and uses are resource controls; Int.MAX_VALUE is JVM representation, not an artificial workload ceiling."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt",
+      "pattern": "limits\\.(?:pdfBytes|pdfPages|ocrPages|outputChars|renderPixels|inputPixels)",
+      "class": "owner_adjustable",
+      "control": "FileAnalysisLimits per job from Settings",
+      "rationale": "PDF/OCR reading/output/render/input limits are measured and use owner snapshot; hashes/privacy/cancellation remain hard boundaries."
     }
   ]
 }

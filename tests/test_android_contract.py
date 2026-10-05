@@ -205,7 +205,7 @@ def main() -> None:
     require('"https://jitpack.io"' in export_plugin, "Tesseract JitPack repository is not exported")
 
     file_runtime = read("android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt")
-    require('ext == "pdf" -> analyzeOcr(file, "pdf", visual)' in file_runtime, "Android PDF route no longer delegates to local OCR runtime")
+    require('ext == "pdf" -> analyzeOcr(file, "pdf", visual, limits)' in file_runtime, "Android PDF route no longer delegates to local OCR runtime")
     require('meta.put("offline", true)' in file_runtime, "Android file/OCR result metadata must remain offline")
     require('meta.put("external_ai_required", false)' in file_runtime, "Android file/OCR path must not require external AI")
 
@@ -216,7 +216,7 @@ def main() -> None:
     require("PDFRenderer" in ocr_runtime, "Android scanned-PDF OCR renderer is missing")
     require('private const val LANGUAGES = "rus+eng"' in ocr_runtime, "Android OCR language contract drifted")
     require('"engine" to "pdfbox+tesseract4android"' in ocr_runtime, "Android PDF/OCR engine metadata drifted")
-    require("MAX_PDF_BYTES" in ocr_runtime and "MAX_PAGES" in ocr_runtime and "MAX_OCR_PAGES" in ocr_runtime, "Android PDF/OCR safety bounds are missing")
+    require("limits.pdfBytes" in ocr_runtime and "limits.pdfPages" in ocr_runtime and "limits.ocrPages" in ocr_runtime, "Android PDF/OCR safety bounds are missing")
     require("CancellationException" in ocr_runtime and "checkCancelled()" in ocr_runtime, "Android local OCR cancellation contract is missing")
 
     print(

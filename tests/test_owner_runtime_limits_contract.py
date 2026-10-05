@@ -61,3 +61,20 @@ def test_android_directory_limit_reaches_native_traversal_without_fixed_ceiling(
     assert "clampi(max_items, 1, 5000)" not in CLIENT
     assert "boundedDirectoryTree(root, maxItems)" in native
     assert '"truncated" to snapshot.truncated' in native
+
+
+def test_android_parser_settings_are_immutable_per_job_and_reads_are_bounded():
+    plugin = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt").read_text()
+    native = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt").read_text()
+    ocr = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt").read_text()
+    assert 'plugin.call("startAnalyzeLocalFileWithLimits"' in CLIENT
+    assert "runtime.analyze(path, question, visual, limits)" in plugin
+    assert "FileAnalysisLimits.from(values)" in plugin
+    assert "fileJobs.size >= limits.pendingJobs" in plugin
+    assert "readOwnerBounded" in native and ".readBytes()" not in native
+    assert "ocr.extract(file.absolutePath, limits)" in native
+    for field in ["pdfBytes", "pdfPages", "ocrPages", "outputChars", "renderPixels", "inputPixels"]:
+        assert "limits." + field in ocr
+    for key in ["analysis_timeout_seconds", "android_pending_file_jobs", "ocr_max_input_pixels"]:
+        assert key in CLIENT and key in SETTINGS
+    assert "ANDROID_ANALYSIS_TIMEOUT_MS" not in CLIENT

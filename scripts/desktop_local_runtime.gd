@@ -111,6 +111,10 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		"--alias", MODEL_ALIAS,
 		"--jinja"
 	])
+	# Opt-in CI synthetic benchmark log; normal private chat enables no file log.
+	var benchmark_log := OS.get_environment("AURORAFOX_BENCHMARK_CORE_LOG_PATH")
+	if not benchmark_log.is_empty():
+		args.append_array(PackedStringArray(["--log-file", benchmark_log]))
 	server_pid = OS.create_process(exe, args, false)
 	if server_pid <= 0:
 		starting = false

@@ -4262,3 +4262,49 @@ REMAINING: new-head Kotlin/JUnit/Godot/package CI, native parser/OCR owner budge
 BLOCKERS: local Kotlin/Godot unavailable; physical devices owner-side.
 NEXT: publish one coherent Android source block, provide fresh check links without waiting; next prepare per-request Android parser budget propagation.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE local package 2026-10-05 — Android document/archive/OCR owner controls
+
+Same integrated CLAIM, PR #103/feature branch at9ffdaa2527a23d8d66276297878c0800f2008e9c. Fresh remote main446ce2cd and feature verified unchanged. Owner asks fewer pushes/larger tested packages while CI runs. OCR platform-default ambiguity explicitly asked; owner delegates best maximum-capability choice. Use common visible owner settings/current Windows defaults (PDF256MiB/1000pages/500OCR), immutable per-request snapshots; retain bounded renders and cancellation. Ownership: Android File/OCR runtime, plugin job bridge, new budget/read helpers/tests, FileIntelligenceClient/settings and relevant contracts/policy, journal/memory. Add operational time/input-pixel controls, remove parser hidden caps, bounded XML/text reads, truthful ZIP content extraction through existing native File Intelligence. Avoid global mutable settings that race active jobs; retain legacy native methods. Intended PATCH/BUILD accumulated V1.5.0.0, no canonical version/main/sign/release change. Prepare locally, do not invalidate running9ffdaa CI. Kotlin/Godot local runtime absent; source contracts are limited evidence, JUnit/device acceptance mandatory.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement one coherent native budget package; local static/source validation plus genuine JVM regression source; publish after current checks are reported.
+
+
+### LOCAL coherent package checkpoint 2026-10-05 — Android parser/ZIP/OCR budgets while9ffdaa CI runs
+
+- Remote remains9ffdaa2527a23d8d66276297878c0800f2008e9c. No CI status polling/restart/push in this block. Same branch/PR/CLAIM, one local checkpoint, owner requests larger packages.
+- Implemented immutable per-request FileAnalysisLimits from saved Settings through exported native async API; all document work moved off synchronous Godot call. Shared owner controls for file/output/cells/archive/PDF/OCR/render/input-pixels; added analysis deadline/pending-job controls; existing Windows image input-pixel environment propagated. Deliberate common Android PDF defaults256MiB/1000/500 follow clarified owner delegation; rendered image stays bounded.
+- Office XML and text now stream with actual byte-budget detection; XML DTD/entity guard closes unsupported-feature fallback risk. ZIP now returns genuinely extracted allowed text/JSONL with no path writes, byte/entry/output bounds and partial-content provenance; binary/unsafe/header-only content cannot count as knowledge. Truncation aliases/metadata coherent and actual job limits recorded. No parser cache or global mutable job settings introduced.
+- TEST: Android contract PASS;15 runtime/E2E/inventory source contracts PASS;5 real Windows archive and4 filesystem/cache unit regressions PASS; diff check clean. Ten new genuine JVM regression cases and extended Godot owner-env smoke prepared but NOT EXECUTED locally (no Kotlin/Gradle/valid Godot); no local compilation/runtime PASS claimed. New exact-SHA CI required. AF-MEM-110 records defects, decision and evidence boundary.
+- Remain: Android native XLS/7z/rar/tar/EPUB, wider owner-control inventory, device memory/UI acceptance and final release gates. Preparing controls and safe ZIP extraction does not declare every native document format implemented. Source ownership released to acceptance continuation after local commit; no canonical bump, main merge, signing or release.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: coherent Android owner-budget/async/ZIP extraction source package with actual test fixtures and durable lessons.
+REMAINING: report current9ffdaa CI, publish package once, exact-head Kotlin/JUnit/Godot/package/runtime/device acceptance; unsupported native formats and inventory.
+BLOCKERS: local Kotlin/Godot unavailable; physical acceptance owner-side.
+NEXT: owner reports9ffdaa results; reconcile any red job, otherwise publish prepared package as one push and provide all required workflow links. Continue inventory/native format gaps while checks run.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE recurrence diagnosis 2026-10-05 — preserve actual Core error and engine log
+
+Owner reports red. Exact9ffdaa check snapshot35total:33SUCCESS, real-core-windows failure, Windows package in progress. Run37350313139 job111899302623 artifact11363275188 confirms same long_context empty/zero tokens at90034.443ms;20/21quality, hard performancePASS. Prior targeted repeat success did not establish root cause; do not repeat blindly. Fresh main446ce2cd/feature9ffdaa unchanged. Extend existing integrated ownership to benchmark failure diagnostics, runtime HTTP-field propagation and benchmark-only engine log, runner/workflow/test wiring. No functional Core inference, deadline, scenario or gate relaxation. Prepared ca9bc36 Android package remains complete locally; publish it together with diagnostics in one coherent push so new-SHA CI validates both and avoids another full build restart. Intended BUILD accumulatedV1.5.0.0, no canonical bump/sign/release/main merge.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: bounded explicit failure fields, benchmark-owned llama log, deterministic diagnostic smoke, then one combined publish and no CI wait loop.
+
+
+### PUBLISH checkpoint 2026-10-05 — Android package plus recurrent Core failure diagnostics
+
+Starting remote9ffdaa2; local preparedca9bc36 is preserved entirely. Combined publication adds only Core evidence capture: bounded actual error/HTTP/transport/attempt fields, opt-in synthetic-benchmark engine log with verified --log-file support, runner/artifact collection and deterministic diagnostic smoke. Normal inference parameters and all quality/performance deadlines/gates unchanged. Core long_context root cause still unknown; red is not waived or countedPASS.
+TEST:16 evaluator/gate source contractsPASS; earlier Android contract/15source contracts and9real Python filesystem/archive unitsPASS remain unchanged. Ten Kotlin JVM parser-budget cases and Godot budget/diagnostics smokes NOT executed locally; exact new-head AndroidPlugin/Godot/Core/package gates mandatory. Current9ffdaa AndroidPlugin/Android APK/Android Core E2E and other checks succeeded, but this does not validate ca9 new source. No blind retry or waiting loop. AF-MEM-109 recurrence records actual report and unresolved boundary; AF-MEM-110 documents native package.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: prepared Android owner budget/ZIP/async package, actual recurrence diagnosis and explicit evidence plumbing.
+REMAINING: new-head CI; fix confirmed long-context root cause using new report/engine log if it recurs; unsupported Android formats, inventory and physical/final release acceptance.
+BLOCKERS: recurrent Core long_context error unresolved; local Kotlin/Godot unavailable; physical device acceptance owner-side.
+NEXT: publish one combined source commit and provide directCore/AndroidPlugin/Windows/all-check links; inspect next failure evidence without blind repeats.
+No canonical bump, main merge, signing or release; all changed source owned files released to acceptance under existing integrated CLAIM.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

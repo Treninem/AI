@@ -131,6 +131,8 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 			"failure_scope": result.get("failure_scope", "model" if model_failure else "request"),
 			"model_failure": model_failure,
 			"retryable": result.get("retryable", false),
+			"http": result.get("http", 0),
+			"transport_result": result.get("transport_result", -1),
 			"health": _model_failure_summary(candidate)
 		})
 	var first_error := "local runtime unavailable"

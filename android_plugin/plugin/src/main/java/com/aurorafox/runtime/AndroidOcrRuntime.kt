@@ -17,13 +17,6 @@ import java.util.concurrent.CancellationException
 
 class AndroidOcrRuntime(private val context: Context) {
     companion object {
-        private const val MAX_PDF_BYTES = 128L * 1024L * 1024L
-        private const val MAX_PAGES = 200
-        private const val MAX_OCR_PAGES = 150
-        private const val MAX_OUTPUT_CHARS = 160_000
-        private const val MAX_PIXELS = 8_000_000L
-        private const val MAX_INPUT_PIXELS = 64_000_000L
-        private const val MIN_RENDER_SCALE = 0.01
         private const val LANGUAGES = "rus+eng"
         private val MODEL_SHA = mapOf(
             "eng.traineddata" to "7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2",
@@ -35,7 +28,7 @@ class AndroidOcrRuntime(private val context: Context) {
     private val dataRoot = File(context.filesDir, "ocr").apply { mkdirs() }
     private val tessdata = File(dataRoot, "tessdata").apply { mkdirs() }
 
-    fun health(): JSONObject = JSONObject().apply {
+    fun health(limits: FileAnalysisLimits = FileAnalysisLimits()): JSONObject = JSONObject().apply {
         var ready = false
         var healthError = ""
         var api: TessBaseAPI? = null
@@ -54,21 +47,21 @@ class AndroidOcrRuntime(private val context: Context) {
         put("external_ai_required", false)
         put("native_init_checked", true)
         if (healthError.isNotBlank()) put("error", healthError.take(500))
-        put("max_pdf_bytes", MAX_PDF_BYTES)
-        put("max_pages", MAX_PAGES)
-        put("max_ocr_pages", MAX_OCR_PAGES)
-        put("max_output_chars", MAX_OUTPUT_CHARS)
-        put("max_pixels", MAX_PIXELS)
-        put("max_input_pixels", MAX_INPUT_PIXELS)
+        put("max_pdf_bytes", limits.pdfBytes)
+        put("max_pages", limits.pdfPages)
+        put("max_ocr_pages", limits.ocrPages)
+        put("max_output_chars", limits.outputChars)
+        put("max_pixels", limits.renderPixels)
+        put("max_input_pixels", limits.inputPixels)
     }
 
-    fun extract(path: String): String {
+    fun extract(path: String, limits: FileAnalysisLimits = FileAnalysisLimits()): String {
         val file = try { File(path).canonicalFile } catch (_: Throwable) { return error("Invalid file path") }
         if (!file.isFile) return error("File not found")
         return try {
             when (file.extension.lowercase()) {
-                "pdf" -> extractPdf(file)
-                "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff" -> extractImage(file)
+                "pdf" -> extractPdf(file, limits)
+                "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff" -> extractImage(file, limits)
                 else -> error("Local OCR supports PDF and image files only")
             }
         } catch (_: CancellationException) {
@@ -115,9 +108,9 @@ class AndroidOcrRuntime(private val context: Context) {
         if (Thread.currentThread().isInterrupted) throw CancellationException("Local OCR cancelled")
     }
 
-    private fun recognize(bitmap: Bitmap, sharedApi: TessBaseAPI? = null): String {
+    private fun recognize(bitmap: Bitmap, limits: FileAnalysisLimits, sharedApi: TessBaseAPI? = null): String {
         checkCancelled()
-        val prepared = limitBitmap(bitmap)
+        val prepared = limitBitmap(bitmap, limits)
         var ownedApi: TessBaseAPI? = null
         return try {
             val activeApi = sharedApi ?: newInitializedApi().also { ownedApi = it }
@@ -132,14 +125,14 @@ class AndroidOcrRuntime(private val context: Context) {
         }
     }
 
-    private fun extractImage(file: File): String {
+    private fun extractImage(file: File, limits: FileAnalysisLimits): String {
         checkCancelled()
-        val bitmap = decodeBoundedBitmap(file) ?: return error("Image cannot be decoded")
+        val bitmap = decodeBoundedBitmap(file, limits) ?: return error("Image cannot be decoded")
         return try {
-            val raw = recognize(bitmap)
+            val raw = recognize(bitmap, limits)
             checkCancelled()
-            val truncated = raw.length > MAX_OUTPUT_CHARS
-            val text = raw.take(MAX_OUTPUT_CHARS)
+            val truncated = raw.length > limits.outputChars
+            val text = raw.take(limits.outputChars)
             payload(
                 text,
                 mapOf(
@@ -155,17 +148,17 @@ class AndroidOcrRuntime(private val context: Context) {
         } finally { bitmap.recycle() }
     }
 
-    private fun extractPdf(file: File): String {
+    private fun extractPdf(file: File, limits: FileAnalysisLimits): String {
         checkCancelled()
-        if (file.length() > MAX_PDF_BYTES) return error("PDF is larger than the 128 MB Android OCR limit")
+        if (file.length() > limits.pdfBytes) return error("PDF exceeds owner byte limit ${limits.pdfBytes}")
         PDFBoxResourceLoader.init(context.applicationContext)
         PDDocument.load(file, MemoryUsageSetting.setupTempFileOnly()).use { document ->
-            if (document.numberOfPages > MAX_PAGES) return error("PDF has ${document.numberOfPages} pages; Android OCR limit is $MAX_PAGES")
+            if (document.numberOfPages > limits.pdfPages) return error("PDF has ${document.numberOfPages} pages; Android OCR limit is ${limits.pdfPages}")
             val renderer = PDFRenderer(document)
-            val out = StringBuilder(minOf(MAX_OUTPUT_CHARS, 32_768))
+            val out = StringBuilder(minOf(limits.outputChars, 32_768))
             val pageSources = JSONArray()
             val warnings = JSONArray()
-            val ocrHealth = health()
+            val ocrHealth = health(limits)
             var ocrReady = ocrHealth.optBoolean("available", false)
             var sharedApi: TessBaseAPI? = null
             if (ocrReady) {
@@ -191,7 +184,7 @@ class AndroidOcrRuntime(private val context: Context) {
             try {
                 for (index in 0 until document.numberOfPages) {
                     checkCancelled()
-                    if (out.length >= MAX_OUTPUT_CHARS) {
+                    if (out.length >= limits.outputChars) {
                         outputTruncated = true
                         break
                     }
@@ -203,33 +196,33 @@ class AndroidOcrRuntime(private val context: Context) {
                     checkCancelled()
                     if (usable(layer)) {
                         textPages++
-                        val complete = appendPage(out, pageNo, layer)
+                        val complete = appendPage(out, pageNo, layer, limits)
                         pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "text_layer", "chars" to layer.length)))
                         if (!complete) { outputTruncated = true; break }
                         continue
                     }
                     if (!ocrReady) {
                         if (layer.isBlank()) emptyPages++
-                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer, limits) else true
                         pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_unavailable", "chars" to layer.length)))
                         if (!complete) { outputTruncated = true; break }
                         continue
                     }
-                    if (ocrPages >= MAX_OCR_PAGES) {
+                    if (ocrPages >= limits.ocrPages) {
                         ocrLimitReached = true
                         if (layer.isBlank()) emptyPages++
-                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer, limits) else true
                         pageSources.put(JSONObject(mapOf("page" to pageNo, "source" to "ocr_limit", "chars" to layer.length)))
                         if (!complete) { outputTruncated = true; break }
                         continue
                     }
                     ocrPages++
                     try {
-                        val bitmap = renderBoundedPdfPage(document, renderer, index)
-                        val recognized = try { recognize(bitmap, sharedApi) } finally { bitmap.recycle() }
+                        val bitmap = renderBoundedPdfPage(document, renderer, index, limits)
+                        val recognized = try { recognize(bitmap, limits, sharedApi) } finally { bitmap.recycle() }
                         val chosen = if (recognized.isNotBlank()) recognized else layer
                         if (chosen.isBlank()) emptyPages++
-                        val complete = if (chosen.isNotBlank()) appendPage(out, pageNo, chosen) else true
+                        val complete = if (chosen.isNotBlank()) appendPage(out, pageNo, chosen, limits) else true
                         pageSources.put(JSONObject(mapOf(
                             "page" to pageNo,
                             "source" to if (recognized.isNotBlank()) "ocr" else if (layer.isNotBlank()) "text_layer_sparse" else "empty",
@@ -240,7 +233,7 @@ class AndroidOcrRuntime(private val context: Context) {
                         if (t is CancellationException) throw t
                         ocrFailedPages++
                         if (layer.isBlank()) emptyPages++
-                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer) else true
+                        val complete = if (layer.isNotBlank()) appendPage(out, pageNo, layer, limits) else true
                         pageSources.put(JSONObject(mapOf(
                             "page" to pageNo,
                             "source" to "ocr_error",
@@ -254,8 +247,8 @@ class AndroidOcrRuntime(private val context: Context) {
             } finally {
                 sharedApi?.recycle()
             }
-            if (outputTruncated) warnings.put("Local OCR output truncated at $MAX_OUTPUT_CHARS characters")
-            if (ocrLimitReached) warnings.put("OCR page limit reached at $MAX_OCR_PAGES pages")
+            if (outputTruncated) warnings.put("Local OCR output truncated at ${limits.outputChars} characters")
+            if (ocrLimitReached) warnings.put("OCR page limit reached at ${limits.ocrPages} pages")
             return payload(
                 out.toString(),
                 mapOf(
@@ -269,15 +262,15 @@ class AndroidOcrRuntime(private val context: Context) {
                     "ocr_available" to ocrReady,
                     "ocr" to ocrHealth,
                     "page_sources" to pageSources,
-                    "output_limit_chars" to MAX_OUTPUT_CHARS,
-                    "output_truncated" to outputTruncated,
+                    "output_limit_chars" to limits.outputChars,
+                    "output_truncated" to (outputTruncated || ocrLimitReached || ocrFailedPages > 0),
                     "streaming_pages" to true,
                     "pdf_buffering" to "temp_file",
                     "ocr_engine_reused" to (ocrReady && sharedApi != null),
                     "cancellation_supported" to true,
                 ),
                 warnings,
-                outputTruncated,
+                outputTruncated || ocrLimitReached || ocrFailedPages > 0,
             )
         }
     }
@@ -287,29 +280,19 @@ class AndroidOcrRuntime(private val context: Context) {
         return compact.length >= 12 && compact.count { it.isLetterOrDigit() } >= 4
     }
 
-    private fun appendPage(out: StringBuilder, page: Int, text: String): Boolean {
-        val prefix = if (out.isNotEmpty()) "\n\n" else ""
-        val block = "$prefix### Страница $page\n$text"
-        val remaining = MAX_OUTPUT_CHARS - out.length
-        if (remaining <= 0) return false
-        if (block.length <= remaining) {
-            out.append(block)
-            return true
-        }
-        out.append(block, 0, remaining)
-        return false
-    }
+    private fun appendPage(out: StringBuilder, page: Int, text: String, limits: FileAnalysisLimits): Boolean =
+        appendOwnerPage(out, page, text, limits.outputChars)
 
-    private fun decodeBoundedBitmap(file: File): Bitmap? {
+    private fun decodeBoundedBitmap(file: File, limits: FileAnalysisLimits): Bitmap? {
         val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.absolutePath, bounds)
         val width = bounds.outWidth
         val height = bounds.outHeight
         if (width <= 0 || height <= 0) return null
         val inputPixels = width.toLong() * height.toLong()
-        require(inputPixels <= MAX_INPUT_PIXELS) { "Image exceeds local OCR input limit of $MAX_INPUT_PIXELS pixels" }
+        require(inputPixels <= limits.inputPixels) { "Image exceeds local OCR input limit of ${limits.inputPixels} pixels" }
         var sample = 1
-        while ((width / sample).toLong().coerceAtLeast(1L) * (height / sample).toLong().coerceAtLeast(1L) > MAX_PIXELS) {
+        while ((width / sample).toLong().coerceAtLeast(1L) * (height / sample).toLong().coerceAtLeast(1L) > limits.renderPixels) {
             sample *= 2
         }
         val options = BitmapFactory.Options().apply {
@@ -319,32 +302,18 @@ class AndroidOcrRuntime(private val context: Context) {
         return BitmapFactory.decodeFile(file.absolutePath, options)
     }
 
-    private fun renderBoundedPdfPage(document: PDDocument, renderer: PDFRenderer, index: Int): Bitmap {
+    private fun renderBoundedPdfPage(document: PDDocument, renderer: PDFRenderer, index: Int, limits: FileAnalysisLimits): Bitmap {
         val box = document.getPage(index).cropBox
         val width = box.width.toDouble()
         val height = box.height.toDouble()
-        require(width.isFinite() && height.isFinite() && width > 0.0 && height > 0.0) {
-            "PDF page has invalid dimensions for local OCR"
-        }
-        val defaultScale = 180.0 / 72.0
-        val projected = width * height * defaultScale * defaultScale
-        val scale = if (projected > MAX_PIXELS.toDouble()) {
-            defaultScale * kotlin.math.sqrt(MAX_PIXELS.toDouble() / projected)
-        } else defaultScale
-        require(scale.isFinite() && scale >= MIN_RENDER_SCALE) {
-            "PDF page dimensions exceed safe local OCR render limit"
-        }
-        val boundedPixels = width * height * scale * scale
-        require(boundedPixels.isFinite() && boundedPixels <= MAX_PIXELS.toDouble() * 1.01) {
-            "PDF page render budget could not be bounded safely"
-        }
+        val scale = ownerPdfRenderScale(width, height, limits.renderPixels)
         return renderer.renderImage(index, scale.toFloat())
     }
 
-    private fun limitBitmap(bitmap: Bitmap): Bitmap {
+    private fun limitBitmap(bitmap: Bitmap, limits: FileAnalysisLimits): Bitmap {
         val pixels = bitmap.width.toLong() * bitmap.height.toLong()
-        if (pixels <= MAX_PIXELS) return bitmap
-        val scale = kotlin.math.sqrt(MAX_PIXELS.toDouble() / pixels.toDouble())
+        if (pixels <= limits.renderPixels) return bitmap
+        val scale = kotlin.math.sqrt(limits.renderPixels.toDouble() / pixels.toDouble())
         return Bitmap.createScaledBitmap(bitmap, (bitmap.width * scale).toInt().coerceAtLeast(1), (bitmap.height * scale).toInt().coerceAtLeast(1), true)
     }
 

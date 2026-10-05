@@ -579,9 +579,12 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		"ocr_max_pdf_bytes": 256 * 1024 * 1024,
 		"ocr_max_pdf_pages": 1000,
 		"ocr_max_pages": 500,
+		"analysis_timeout_seconds": 600,
+		"android_pending_file_jobs": 8,
+		"ocr_max_input_pixels": 64000000,
 		"ocr_max_render_pixels": 8000000
 	}
-	var card := _add_card(page, "Пределы File Intelligence", "Защитные пределы локального парсера принадлежат владельцу. После сохранения Windows-backend автоматически перезапускается с новыми значениями.")
+	var card := _add_card(page, "Пределы File Intelligence", "Защитные пределы локального парсера принадлежат владельцу. Новые задания Android получают сохранённые пределы; Windows-backend автоматически перезапускается.")
 	var file_mb := _owner_number_row(card, "Максимальный файл, МиБ", float(limits.get("max_file_bytes", 1024 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
 	var text_chars := _owner_number_row(card, "Текст по умолчанию, символов", float(limits.get("max_text_chars", 160000)), 1.0, 1000.0)
 	var request_chars := _owner_number_row(card, "Текст одного запроса, символов", float(limits.get("request_max_text_chars", 500000)), 1.0, 1000.0)
@@ -601,10 +604,13 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 	var pdf_mb := _owner_number_row(card, "PDF для OCR, МиБ", float(limits.get("ocr_max_pdf_bytes", 256 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
 	var pdf_pages := _owner_number_row(card, "Страниц PDF", float(limits.get("ocr_max_pdf_pages", 1000)), 1.0, 10.0)
 	var ocr_pages := _owner_number_row(card, "Страниц OCR", float(limits.get("ocr_max_pages", 500)), 1.0, 10.0)
+	var analysis_timeout := _owner_number_row(card, "Время одного анализа, секунд", float(limits.get("analysis_timeout_seconds", 600)), 1.0, 30.0)
+	var pending_jobs := _owner_number_row(card, "Ожидающих заданий Android", float(limits.get("android_pending_file_jobs", 8)), 1.0, 1.0)
+	var input_mpx := _owner_number_row(card, "Исходное изображение OCR, мегапикселей", float(limits.get("ocr_max_input_pixels", 64000000)) / 1000000.0, 0.000001, 1.0)
 	var render_mpx := _owner_number_row(card, "Рендер OCR, мегапикселей", float(limits.get("ocr_max_render_pixels", 8000000)) / 1000000.0, 0.01, 0.5)
 	var state := Label.new()
 	state.name = "SettingsFileLimitsStatus"
-	state.text = "Изменения действуют для локального Windows File Intelligence после перезапуска backend."
+	state.text = "Новые задания используют сохранённые пределы. Windows применяет пределы парсера после перезапуска backend."
 	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	state.add_theme_font_size_override("font_size", 12)
 	state.add_theme_color_override("font_color", MUTED)
@@ -639,6 +645,9 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 			"ocr_max_pdf_bytes": int(pdf_mb.value * 1048576.0),
 			"ocr_max_pdf_pages": int(pdf_pages.value),
 			"ocr_max_pages": int(ocr_pages.value),
+			"analysis_timeout_seconds": int(analysis_timeout.value),
+			"android_pending_file_jobs": int(pending_jobs.value),
+			"ocr_max_input_pixels": int(input_mpx.value * 1000000.0),
 			"ocr_max_render_pixels": int(render_mpx.value * 1000000.0)
 		}
 		current.apply_owner_limits(values, true, true)
@@ -667,6 +676,9 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		pdf_mb.value = 256
 		pdf_pages.value = 1000
 		ocr_pages.value = 500
+		analysis_timeout.value = 600
+		pending_jobs.value = 8
+		input_mpx.value = 64
 		render_mpx.value = 8
 		apply.pressed.emit()
 	)

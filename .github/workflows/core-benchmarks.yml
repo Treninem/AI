@@ -153,6 +153,8 @@ jobs:
       - name: Run bounded refactor public API regression smoke
         shell: pwsh
         run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/core_benchmark_diagnostics_smoke.gd
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/code_specialist_refactor_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'CodeSpecialist public API regression failed' }
 
@@ -282,6 +284,7 @@ jobs:
             artifacts/core-benchmark-report.json
             artifacts/core-benchmark-godot.stdout.log
             artifacts/core-benchmark-godot.stderr.log
+            artifacts/core-benchmark-engine.log
           if-no-files-found: warn
           retention-days: 30
 

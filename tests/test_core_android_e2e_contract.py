@@ -49,9 +49,10 @@ def test_android_file_intelligence_uses_callable_exported_plugin_methods() -> No
     client = FILE_CLIENT.read_text(encoding="utf-8")
     # Godot Android release singleton reflection can hide @UsedByGodot methods
     # even though Object.call() correctly dispatches them.
-    assert 'plugin.call("startAnalyzeLocalFile"' in client
+    assert 'plugin.call("startAnalyzeLocalFileWithLimits"' in client
     assert 'plugin.call("pollAnalyzeLocalFile"' in client
-    assert 'plugin.call("analyzeLocalFile"' in client
+    assert 'JSON.stringify(limits)' in client
+    assert 'plugin.call("analyzeLocalFile"' not in client
     assert 'plugin.call("getCapabilitiesJson")' in client
     assert 'plugin.has_method("startAnalyzeLocalFile")' not in client
     assert 'plugin.has_method("analyzeLocalFile")' not in client

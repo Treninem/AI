@@ -358,3 +358,19 @@ def test_code_specialist_has_real_offline_inference_gate() -> None:
     assert "AURORAFOX_SPECIALIST_TEAM_CODE_SPECIALIST_SMOKE_FAILED" in smoke
     assert "guard_expected=%s" in smoke
     assert "operations_ok=%s" in smoke
+
+
+def test_failed_chat_records_bounded_diagnostics_and_opt_in_engine_log():
+    harness = (BENCH / "core_benchmark.gd").read_text()
+    formatter = (BENCH / "failure_diagnostics.gd").read_text()
+    wrapper = (ROOT / "scripts/aurora_core_runtime.gd").read_text()
+    desktop = (ROOT / "scripts/desktop_local_runtime.gd").read_text()
+    runner = (BENCH / "run_windows_benchmark.ps1").read_text()
+    workflow = (ROOT / ".github/workflows/core-benchmarks.yml").read_text()
+    assert 'failure_diagnostics.gd").describe(result)' in harness
+    for key in ['"error"', '"failure_scope"', '"transport_result"', '"http"']:
+        assert key in formatter
+    assert 'result.get("transport_result", -1)' in wrapper
+    assert "AURORAFOX_BENCHMARK_CORE_LOG_PATH" in desktop and "--log-file" in desktop
+    assert "core-benchmark-engine.log" in runner and "core-benchmark-engine.log" in workflow
+    assert "core_benchmark_diagnostics_smoke.gd" in workflow

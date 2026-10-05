@@ -3,7 +3,6 @@ extends Node
 
 const BASE_URL := "http://127.0.0.1:8767"
 const ANDROID_OCR_EXTENSIONS := ["pdf", "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"]
-const ANDROID_ANALYSIS_TIMEOUT_MS := 600000
 
 # Windows File Intelligence resource budgets are owner settings. They are
 # exported to the local backend process before startup/restart, so changing a
@@ -26,6 +25,9 @@ const OWNER_LIMIT_DEFAULTS := {
 	"ocr_max_pdf_bytes": 256 * 1024 * 1024,
 	"ocr_max_pdf_pages": 1000,
 	"ocr_max_pages": 500,
+	"analysis_timeout_seconds": 600,
+	"android_pending_file_jobs": 8,
+	"ocr_max_input_pixels": 64000000,
 	"ocr_max_render_pixels": 8000000
 }
 const OWNER_LIMIT_MINIMUMS := {
@@ -46,6 +48,9 @@ const OWNER_LIMIT_MINIMUMS := {
 	"ocr_max_pdf_bytes": 1024,
 	"ocr_max_pdf_pages": 1,
 	"ocr_max_pages": 1,
+	"analysis_timeout_seconds": 1,
+	"android_pending_file_jobs": 1,
+	"ocr_max_input_pixels": 1,
 	"ocr_max_render_pixels": 10000
 }
 const OWNER_LIMIT_ENV := {
@@ -66,6 +71,7 @@ const OWNER_LIMIT_ENV := {
 	"ocr_max_pdf_bytes": "AURORAFOX_OCR_MAX_PDF_BYTES",
 	"ocr_max_pdf_pages": "AURORAFOX_OCR_MAX_PDF_PAGES",
 	"ocr_max_pages": "AURORAFOX_OCR_MAX_PAGES",
+	"ocr_max_input_pixels": "AURORAFOX_OCR_MAX_INPUT_PIXELS",
 	"ocr_max_render_pixels": "AURORAFOX_OCR_MAX_RENDER_PIXELS"
 }
 
@@ -177,14 +183,13 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		# Do not use Object.has_method() here. In a release Android APK it may
 		# hide a callable @UsedByGodot plugin method and incorrectly turn local
 		# OCR into an "unsupported" external-AI error.
+		var limits := owner_limits()
+		var bounded_chars := clampi(max_chars, 1, int(limits.get("request_max_text_chars", 500000)))
+		limits["_request_max_chars"] = bounded_chars
+		var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual, limits)
 		if extension in ANDROID_OCR_EXTENSIONS:
-			var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual)
-			return _decorate_android_result(_validate_android_ocr_result(async_result), path, private_path, max_chars)
-		var raw = plugin.call("analyzeLocalFile", private_path, question, visual)
-		var parsed = JSON.parse_string(str(raw))
-		if parsed is Dictionary:
-			return _decorate_android_result(parsed, path, private_path, max_chars)
-		return {"ok": false, "error": "Invalid Android File Intelligence response"}
+			async_result = _validate_android_ocr_result(async_result)
+		return _decorate_android_result(async_result, path, private_path, bounded_chars)
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "Rich file analysis is not available on this platform", "platform": OS.get_name()}
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
@@ -193,7 +198,7 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		"question": question,
 		"visual": visual,
 		"max_chars": clampi(max_chars, 1, int(owner_limits().get("request_max_text_chars", 500000)))
-	}, 600.0, true)
+	}, float(owner_limits().get("analysis_timeout_seconds", 600)), true)
 
 func cancel_active_analysis() -> Dictionary:
 	_cancel_requested = true
@@ -320,11 +325,19 @@ func _android_private_copy(path: String) -> String:
 	var user_root := ProjectSettings.globalize_path("user://")
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("user://") or path.begins_with("res://") else path
 	if absolute.begins_with(user_root):
-		return absolute
+		var private_file := FileAccess.open(absolute, FileAccess.READ)
+		if private_file == null:
+			return ""
+		var within_limit := private_file.get_length() <= int(owner_limits().get("max_file_bytes", 1024 * 1024 * 1024))
+		private_file.close()
+		return absolute if within_limit else ""
 	var src := FileAccess.open(path, FileAccess.READ)
 	if src == null and absolute != path:
 		src = FileAccess.open(absolute, FileAccess.READ)
 	if src == null:
+		return ""
+	if src.get_length() > int(owner_limits().get("max_file_bytes", 1024 * 1024 * 1024)):
+		src.close()
 		return ""
 	var target_dir := "user://file_inputs"
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target_dir))
@@ -337,7 +350,18 @@ func _android_private_copy(path: String) -> String:
 	var total := src.get_length()
 	while src.get_position() < total:
 		var remaining := total - src.get_position()
-		dst.store_buffer(src.get_buffer(mini(1024 * 1024, remaining)))
+		var chunk := src.get_buffer(mini(1024 * 1024, remaining))
+		if chunk.is_empty():
+			src.close()
+			dst.close()
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(target))
+			return ""
+		dst.store_buffer(chunk)
+		if dst.get_error() != OK:
+			src.close()
+			dst.close()
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(target))
+			return ""
 	src.close()
 	dst.close()
 	return ProjectSettings.globalize_path(target)
@@ -359,8 +383,13 @@ func _decorate_android_result(parsed: Dictionary, original_path: String, private
 	parsed["path"] = original_path
 	parsed["private_copy"] = private_path
 	if str(parsed.get("content", "")).length() > max_chars:
-		parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars) + "\n[Обрезано AuroraFox]"
+		parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars)
+		if parsed.has("text"):
+			parsed["text"] = parsed["content"]
 		parsed["truncated"] = true
+		var metadata: Dictionary = parsed.get("metadata", {})
+		metadata["output_truncated"] = true
+		parsed["metadata"] = metadata
 	return parsed
 
 func _validate_android_ocr_result(result: Dictionary) -> Dictionary:
@@ -369,8 +398,8 @@ func _validate_android_ocr_result(result: Dictionary) -> Dictionary:
 		result["error"] = "Android OCR returned empty content"
 	return result
 
-func _analyze_android_job(plugin: Object, private_path: String, question: String, visual: bool) -> Dictionary:
-	var start_raw = plugin.call("startAnalyzeLocalFile", private_path, question, visual)
+func _analyze_android_job(plugin: Object, private_path: String, question: String, visual: bool, limits: Dictionary) -> Dictionary:
+	var start_raw = plugin.call("startAnalyzeLocalFileWithLimits", private_path, question, visual, JSON.stringify(limits))
 	var start = JSON.parse_string(str(start_raw))
 	if not start is Dictionary or not bool(start.get("ok", false)):
 		return start if start is Dictionary else {"ok": false, "error": "Invalid Android analysis job response"}
@@ -380,7 +409,8 @@ func _analyze_android_job(plugin: Object, private_path: String, question: String
 	_active_android_job_id = job_id
 	var started_ms := Time.get_ticks_msec()
 	var cancel_sent := false
-	while Time.get_ticks_msec() - started_ms <= ANDROID_ANALYSIS_TIMEOUT_MS:
+	var timeout_ms := int(limits.get("analysis_timeout_seconds", 600)) * 1000
+	while Time.get_ticks_msec() - started_ms <= timeout_ms:
 		if _cancel_requested and not cancel_sent:
 			plugin.call("cancelAnalyzeLocalFile", job_id)
 			cancel_sent = true

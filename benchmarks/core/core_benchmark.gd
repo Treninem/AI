@@ -512,6 +512,7 @@ func _chat_row(id: String, call: Dictionary, passed: bool, details: Dictionary) 
 		"completion_tokens": perf.get("completion_tokens", 0),
 		"throughput_equivalent_tps": perf.get("throughput_equivalent_tps", 0.0),
 		"throughput_source": perf.get("throughput_source", ""),
+		"diagnostic": preload("res://benchmarks/core/failure_diagnostics.gd").describe(result),
 		"details": details
 	}
 	return row
