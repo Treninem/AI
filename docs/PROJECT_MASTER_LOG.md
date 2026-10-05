@@ -4130,3 +4130,23 @@ CURRENT_BASE_STATUS:
 - DELTA REQUIRED: unify community learning with the V1.6 cognitive event model; add operational lesson kinds and evidence/applicability schema; implement automatic abstraction/privacy scrub from eligible private outcomes; add contradiction/corroboration scoring; retrieval of accepted shared lessons into normal reasoning; tests proving user A's private data never leaks while a generalized verified lesson can improve user B's result.
 
 COLLECTIVE_LEARNING_STATUS: ACTIVE / PERMANENT COGNITIVE CORE PRINCIPLE.
+
+
+### OWNER DEPLOYMENT DECISION 2026-10-05 — accounts implemented but disabled until multi-user launch
+
+- Owner decision: AuroraFox remains **single-user in normal product use for now** because only the owner is using the application. Public account/guest onboarding is deferred operationally, not discarded architecturally.
+- Engineering rule: continue designing/implementing the account, guest, role/capability, privacy-isolation and collective-learning foundations correctly so they do not require a future Core rewrite, but keep the public multi-user experience **disabled by default** until the owner explicitly enables a multi-user launch.
+- Do not make V1.5.0.0 release readiness depend on public registration/login/guest UX unless a current release contract already requires it. Existing backend account primitives may remain in source and tests, but public-product activation is a later gate.
+- Normal current runtime should preserve the owner's existing single-user workflow with no forced registration, no guest quota prompt and no account-selection friction for the owner.
+- Future activation must be feature-gated/config-gated from one authoritative deployment/product flag rather than by commenting code out or maintaining a divergent account branch. The same tested code path should be switchable on later.
+- When multi-user mode is disabled:
+  - public registration, guest creation and public onboarding UI are not exposed to ordinary users;
+  - account/guest capability surfaces stay hidden;
+  - owner local/private operation continues normally;
+  - existing account schema/migrations remain backward-compatible and testable;
+  - no private data is repartitioned or migrated prematurely merely to simulate multiple users.
+- Before enabling multi-user mode later, require the previously defined gates: official AuroraFox email delivery, verification-code UX, durable guest daily quota, server-derived owner/user/guest capabilities, client account switching, export/delete lifecycle and full cross-principal Cognitive Core isolation tests.
+- This is an **activation/deployment decision**, not permission to weaken account/privacy tests. Hidden future functionality must remain production-quality before it is eventually enabled.
+- Collective shared learning design remains part of V1.6 foundation, but while only the owner uses AuroraFox there is effectively one contributing private principal; the architecture must still preserve the same private -> shared_candidate -> shared_core contract so future users can be added without data-model surgery.
+
+MULTI_USER_ACTIVATION_STATUS: DEFERRED / IMPLEMENTABLE BUT DISABLED BY DEFAULT.
