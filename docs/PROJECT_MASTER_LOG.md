@@ -4038,3 +4038,57 @@ CURRENT_BASE_STATUS:
 - DELTA REQUIRED: user-facing six-digit/short verification-code flow (current production path is token/link-oriented); durable owner-configurable daily guest quota/usage ledger; full Windows/Android account/guest UI acceptance; export/delete lifecycle; cross-principal isolation coverage for all future Cognitive Core stores/caches/jobs; production official-mail deployment verification; optional stronger one-human-one-account factor only if owner explicitly requires it.
 
 ACCOUNT_ARCHITECTURE_STATUS: ACTIVE / PERMANENT MULTI-USER PRIVACY FOUNDATION.
+
+
+### OWNER ACCESS POLICY 2026-10-05 — owner-only settings and capability isolation
+
+- Owner requirement: guests and ordinary registered users must NOT see or control AuroraFox owner/developer settings. This is a server-enforced capability model, not merely UI hiding. The owner's personal account retains privileged controls; guest/user clients receive only capabilities explicitly granted to their principal.
+- Required account classes:
+  - `guest`: isolated temporary principal, limited daily usage, no privileged/system configuration.
+  - `user`: verified normal account with persistent private data, devices, sync and normal product controls.
+  - `owner`: the single primary AuroraFox owner account with system/evolution/developer authority.
+  Future delegated admin/support roles may be added later, but must use explicit server-side capabilities rather than inheriting owner authority.
+- Owner identity must NOT be inferred from a client-provided email string, display name, device id, local flag or modified UI. Persist an immutable server-side role/capability binding to the verified account principal. The client receives only signed/verified capabilities from the authenticated session.
+- Owner bootstrap/provisioning must be explicit and one-time/recoverable: bind the owner role to the intended verified owner account through deployment/bootstrap authority, record an auditable server-side owner principal id, and reject attempts by normal registration/account APIs to self-assign or transfer `owner`.
+- Authorization rule: every privileged backend action checks the authenticated principal's server-derived capability at the API/service boundary. Hidden buttons alone are never a security control. Direct HTTP/API calls from a modified client must receive 403 for missing owner capability.
+- Settings UI must be capability-driven. Unsupported/forbidden owner pages and controls are not rendered for guest/user principals; do not show disabled empty placeholders that reveal internal administration surfaces unnecessarily.
+- Normal guest/user controls should remain useful: general appearance/runtime status, voice, their own files/projects, personal Memory/Knowledge controls, their own device/session management, Work/Computer permission for their own device where supported, and stable client update preferences.
+- OWNER-ONLY by default:
+  - Autonomous development / self-improvement master controls.
+  - Evolution Engine controls, mutation tournaments, Candidate/Stable promotion, dev/editor auto-apply and rollback authority beyond ordinary client recovery.
+  - Core/model registry administration, model replacement/training controls and global routing policy.
+  - Global/Core Knowledge Pack import, mutation, promotion, dedup/rebuild controls. Ordinary users may manage only their own private Knowledge namespace.
+  - Global Memory/learning policy, cross-user/shared-learning opt-in policy, training/evaluation datasets and community-learning administration.
+  - File Intelligence **global/owner resource limits** and Web/public-link operational ceilings. Ordinary users may use the features within owner-defined limits but cannot raise system ceilings.
+  - Security Workspace administrative scope definitions, live-security runner configuration, global trust/sandbox policy and master security boundaries. Ordinary users may only use explicitly exposed safe user-level tools on their own authorized data/device.
+  - API integration-key administration, bootstrap/admin keys, server/service endpoints, internal scopes and system integrations. User OAuth/session/device controls remain user-visible.
+  - Release/signing/update channel administration, candidate/dev channels, signing/trust roots, rollback snapshots and package promotion. Normal users may check/install allowed stable releases according to product policy.
+  - Global sync/server configuration, storage/database maintenance, backup/restore of server-wide state, migration tools, diagnostics capable of reading multiple principals, raw system logs and internal audit data.
+  - Owner-control-policy limits, hard-boundary configuration, feature flags capable of affecting other users, and any future Cognitive Core setting whose change alters system-wide behavior or another principal's data.
+- USER-SCOPED by default:
+  - personal profile/display settings;
+  - their own conversations/history;
+  - their own personal Memory, personal Knowledge, experience and preferences;
+  - their own files/projects and local indexes;
+  - their own devices/sessions and logout;
+  - personal voice/UI/accessibility settings;
+  - Work/Computer permissions on their own device;
+  - stable update notification/download preferences when safe;
+  - export/delete of their own data.
+- GUEST-SCOPED by default: the minimum safe subset needed to evaluate/use AuroraFox under the daily quota. Guest must not receive durable cross-device sync or privileged personalization beyond the isolated guest principal unless explicitly retained/migrated.
+- Separation invariant: owner/system Knowledge and system-level learned strategies must be stored separately from each user's private cognitive state. Owner access to system administration does not imply ordinary user data should be surfaced in normal owner chat/context; administrative access to another user's data, if ever needed for support/legal operations, must be a separate explicit audited workflow and never automatic.
+- Client account switch rule: switching from owner -> user/guest must immediately rebuild Settings from the new capability set and clear privileged page instances, cached capability responses, owner-only dialogs and pending privileged actions. A stale owner UI must never remain callable after token/account change.
+- Background task rule: privileged jobs capture both principal id and required capability at enqueue time and revalidate both before execution/commit. Revoking owner/admin capability cancels or blocks queued privileged work.
+- Testing/release gates:
+  - guest/user cannot render or invoke owner-only settings;
+  - owner can render/invoke them;
+  - modified client/direct API call by guest/user returns 403;
+  - switching owner -> user removes privileged UI and context without restart;
+  - identical local setting keys cannot let a normal user override global owner settings;
+  - sync/import must not copy owner role/capabilities between principals;
+  - guest->account migration never grants owner privileges;
+  - password reset/device migration/session refresh preserve the same server-side account role and cannot escalate it.
+- Current source assessment: account/guest identity and API-key scopes exist, but a dedicated personal-account owner role/capability layer is not yet present. Therefore owner-only Settings gating must be implemented as part of the account/Cognitive Core foundation before multi-user public release, reusing existing auth principals rather than introducing a parallel identity system.
+- Version/release planning: do not expand V1.5.0.0 scope merely to expose public multi-user accounts unless already accepted by its release criteria. This owner-role/capability foundation belongs with the planned account/Cognitive Core work so it is implemented once before V1.6 private Memory/Knowledge/experience expands.
+
+OWNER_ACCESS_POLICY_STATUS: ACTIVE / PERMANENT SECURITY AND UX INVARIANT.
