@@ -40,6 +40,8 @@ class AndroidFileRuntime(
                 ext in setOf("wav", "mp3", "ogg", "flac", "m4a", "aac", "opus") -> analyzeAudio(file)
                 ext in setOf("mp4", "mkv", "webm", "mov", "avi", "m4v") -> analyzeVideo(file, visual)
                 ext == "zip" -> analyzeZip(file, limits)
+                ext == "epub" -> readEpubText(file, limits).let { payload("ebook", it.text, it.metadata, it.warnings, it.truncated) }
+                ext in setOf("tar", "tgz") || file.name.endsWith(".tar.gz", true) -> readTarText(file, limits, textExt).let { payload("archive", it.text, it.metadata, it.warnings, it.truncated) }
                 ext == "xls" -> payload("spreadsheet", "Старый бинарный XLS требует отдельного локального XLS backend.", warnings = listOf("Android native parser поддерживает XLSX; XLS пока не разобран."))
                 ext in setOf("7z", "rar") -> payload("archive", "Архив $ext принят.", warnings = listOf("Для этого формата на Android пока не подключён безопасный native распаковщик."))
                 else -> analyzeUnknown(file, limits)

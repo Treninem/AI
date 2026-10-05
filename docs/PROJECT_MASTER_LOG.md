@@ -4308,3 +4308,23 @@ BLOCKERS: recurrent Core long_context error unresolved; local Kotlin/Godot unava
 NEXT: publish one combined source commit and provide directCore/AndroidPlugin/Windows/all-check links; inspect next failure evidence without blind repeats.
 No canonical bump, main merge, signing or release; all changed source owned files released to acceptance under existing integrated CLAIM.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — native EPUB/tar and reviewed inventory
+
+Verified all35/35SUCCESS on exact9e72afafd7a11167e8ea1fca794e51172f4f9a0d after owner green report. Includes actual Android Plugin/JUnit and Core benchmark acceptance; AF-MEM-109 remains an intermittent cause-unknown lesson, not invented root cause. Fresh main446ce2cd/feature9e72 unchanged. Same PR/branch/CLAIM. Ownership: new native EPUB/tar readers and JVM fixtures, shared archive helpers, AndroidFileRuntime routing, owner policy/contracts and journal/memory. Use existing JAXP/commons-compress dependencies; no POI or new parser dependency/architecture silently added for XLS/7z/rar. Bound every member/entry/output by existing immutable owner snapshot; validate OPF spine/internal paths, never fetch EPUB references or extract archive paths to filesystem. Inventory baseline2537unclassified; classify only reviewed per-job budgets, pure structural widths and fixture/gate diagnostics, preserve unknown limits. Intended PATCH accumulatedV1.5.0.0, canonical version unchanged.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement real EPUB and tar/tar.gz, genuine JVM fixtures, targeted inventory evidence, then one tested source publication with new-head CI links; no wait loop.
+
+
+### SOURCE COMPLETE continuation 2026-10-05 — native EPUB/tar and reviewed inventory
+
+- Starting/published parent:9e72afafd7a11167e8ea1fca794e51172f4f9a0d, all35 exact-SHA check-runs SUCCESS; PR103 remains open, unmerged, same feature/v1.5-quality-feedback-intent branch. No version/sign/release/main change.
+- ACTION/FILES: AndroidFileRuntime routes EPUB and tar/tgz/tar.gz through new EpubTextReader/TarTextReader; shared ArchiveTextReader UTF8/CP1251/path helpers; six real NativeDocumentFormatsTest JVM fixtures. Owner limits captured per request remain unchanged. EPUB title/author/spine order and actual XHTML payload are extracted offline; tar/gzip actual text retained, no filesystem extraction. Internal/external references, traversal/link/sparse guards and bounded decompression preserve untrusted-data boundaries.
+- Reviewed config/owner_control_policy.json and audit regression: exact native budget use sites are owner_adjustable, signed64 saturation is format_structure, native JUnit assertions are test_evidence. Arbitrary runtime literal LIMIT17 still unclassified. Fresh pre-policy source inventory2570 unclassified→2515 after55 reviewed findings; starting source baseline2537→2515 reflects33 new findings plus55 classified, not a claimed complete inventory.
+- TEST: six owner-audit functions PASS locally; Android source/version/export contract PASS; git diff --check PASS. Six new JVM cases and previous ten ZIP/limit cases MUST execute in Android Plugin CI; local Kotlin/Gradle and usable Godot unavailable, not PASS. One atomic publication queues all normal PR workflows; no CI wait/retry loop.
+- RESULT: source package complete and ready for CI, not yet runtime-accepted on new SHA. Engineering memory AF-MEM111 records root-reference and tar metadata/decompression boundaries; AF-MEM110 accepted-source reconciliation recorded. Existing Core intermittent long-context cause remains unknown; starting9e72 green does not establish cause.
+- BLOCKERS/REMAINING: new-SHA CI, installed-device/release gates, native XLS/7z/rar decisions and2515 owner inventory findings; no source-blocking ambiguity in this existing-dependency package. Sparse tar and DTD-dependent/malformed EPUB return explicit unsupported/error conditions.
+- NEXT: publish this package in PR103, owner monitors direct check links; diagnose only actual failing new-SHA job. After green, continue next reviewed owner-control cluster and already-authorized security workspace acceptance without repeating implemented blocks. Source file ownership released; CI follow-up remains this same lane.
+- Intended bump PATCH, accumulated V1.5.0.0 version-last. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%. No readiness increase from source-only work.

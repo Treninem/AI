@@ -46,3 +46,14 @@ def test_reviewed_named_budgets_do_not_hide_remaining_literal_limits():
     assert MODULE.classify("scripts/public_web_manager.gd", 'if bytes.slice(0, 5) == signature:', policy)[0] == "format_structure"
     assert MODULE.classify("scripts/example.gd", '# LIMIT describes a control', policy)[0] == "documentation"
     assert MODULE.classify("scripts/example.gd", 'var LIMIT = 123 # explanatory comment', policy)[0] == "unclassified"
+
+
+def test_native_reader_budgets_are_reviewed_without_hiding_arbitrary_literals():
+    policy = MODULE.load_policy()
+    base = "android_plugin/plugin/src/main/java/com/aurorafox/runtime/"
+    for reader in ["ArchiveTextReader.kt", "EpubTextReader.kt", "TarTextReader.kt"]:
+        assert MODULE.classify(base+reader, "val cap = limits.memberBytes", policy)[0] == "owner_adjustable"
+        assert MODULE.classify(base+reader, "val x = Long.MAX_VALUE", policy)[0] == "format_structure"
+        assert MODULE.classify(base+reader, "val LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify("android_plugin/plugin/src/test/java/Fixture.kt", "val limit = 2", policy)[0] == "test_evidence"
+    assert MODULE.classify(base+"Unreviewed.kt", "val limit = 2", policy)[0] == "unclassified"

@@ -3,6 +3,69 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/ArchiveTextReader.kt",
+      "pattern": "Long\\.MAX_VALUE",
+      "class": "format_structure",
+      "control": "JVM signed 64-bit arithmetic; saturate instead of wrap",
+      "rationale": "Integer representation safety, not a resource ceiling; resource budgets remain separate owner values."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/ArchiveTextReader.kt",
+      "pattern": "\\blimits(?:\\.|:)|owner .*budget|\\breadOwnerBounded\\(|\\b(?:listingBudget|streamBudget)\\b",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → immutable FileAnalysisLimits per job",
+      "rationale": "Reviewed uses of persisted entry, byte, listing and output controls; does not classify unrelated product literals."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/EpubTextReader.kt",
+      "pattern": "Long\\.MAX_VALUE",
+      "class": "format_structure",
+      "control": "JVM signed 64-bit arithmetic; saturate instead of wrap",
+      "rationale": "Integer representation safety, not a resource ceiling; resource budgets remain separate owner values."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/EpubTextReader.kt",
+      "pattern": "\\blimits(?:\\.|:)|owner .*budget|\\breadOwnerBounded\\(|\\b(?:listingBudget|streamBudget)\\b",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → immutable FileAnalysisLimits per job",
+      "rationale": "Reviewed uses of persisted entry, byte, listing and output controls; does not classify unrelated product literals."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/TarTextReader.kt",
+      "pattern": "Long\\.MAX_VALUE",
+      "class": "format_structure",
+      "control": "JVM signed 64-bit arithmetic; saturate instead of wrap",
+      "rationale": "Integer representation safety, not a resource ceiling; resource budgets remain separate owner values."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/TarTextReader.kt",
+      "pattern": "\\blimits(?:\\.|:)|owner .*budget|\\breadOwnerBounded\\(|\\b(?:listingBudget|streamBudget)\\b",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → immutable FileAnalysisLimits per job",
+      "rationale": "Reviewed uses of persisted entry, byte, listing and output controls; does not classify unrelated product literals."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/FileOutputBudget.kt",
+      "pattern": "\\bbudget\\b|\\bpixelBudget\\b",
+      "class": "owner_adjustable",
+      "control": "FileAnalysisLimits outputChars/renderPixels",
+      "rationale": "Caller passes owner snapshot for page payload/output and render geometry."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/FileTreeBudget.kt",
+      "pattern": "\\bbudget\\b",
+      "class": "owner_adjustable",
+      "control": "Owner tree item ceiling propagated as requestedItems",
+      "rationale": "Per-request item budget; one extra item distinguishes exact fit from overflow."
+    },
+    {
+      "path": "android_plugin/plugin/src/test/*",
+      "pattern": ".*",
+      "class": "test_evidence",
+      "control": "JUnit fixtures and assertions; no runtime owner setting",
+      "rationale": "Native test data and acceptance conditions do not constrain product operation."
+    },
+    {
       "path": "scripts/public_web_manager.gd",
       "pattern": "DEFAULT_MAX_|DEFAULT_REQUEST_TIMEOUT_SECONDS|max_urls_per_message|max_redirects|max_response_bytes|request_timeout_seconds|max_extracted_chars|MAX_EXTRACTED_CHARS|DEFAULT_CONTEXT_CHARS|max_url_length|max_title_chars|context_chars",
       "class": "owner_adjustable",
