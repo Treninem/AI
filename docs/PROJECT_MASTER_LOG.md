@@ -3929,3 +3929,18 @@ REMAINING: exact-head CI on this correction, full inventory, physical package/UI
 BLOCKERS: current gate-contract failure fixed locally awaiting publication; live external security tests need owner scope; physical device evidence remains owner-side.
 NEXT: publish one correction commit on PR #103 and verify exact-head CI, including real-core-windows enabled by green contract.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-05 — global master stop and real child lifecycle
+
+- Produced correction/inventory commit `a74025b4ba781db01f4aa55602840c65a5bb216f`. Exact HEAD at follow-up: 26 SUCCESS, real-core-windows running; Windows/Android workflows pending behind the previous candidate. Stale Core gate is now SUCCESS.
+- Same security ownership continues. Review of ordinary chat caller shows Work execution_guard is optional: security must also poll `ComputerClient.master_enabled_from(self)` even with no optional guard. Added independent global master-stop gate and reusable asynchronous child wait. Both cancellation routes return stopped, kill the actual child and never accept partial evidence.
+- Removed output_path from advertised tool schema because a required-looking custom output field conflicts with fresh reserved evidence storage. Legacy nonempty output_path requests still fail safely.
+- Local runtime test now starts real Linux /bin/sleep child processes, stops one via fake settings manager's global master stop and another via execution guard, and independently probes OS liveness with /bin/kill -0. No external network target contacted. Security contracts and Godot owner-review/lifecycle smoke PASS. These child lifecycle tests supplement, rather than replace, physical Windows acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: global stop checked without a Work guard; actual child cancellation evidence; valid tool catalog schema.
+REMAINING: exact new-head CI and owner physical Windows/Android acceptance; inventory and remaining product gates.
+BLOCKERS: device evidence requires owner device, live security targets require an explicit authorized scope.
+NEXT: publish this final lifecycle correction, inspect exact-head CI; next source batch addresses named remaining File Intelligence extraction ceilings.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

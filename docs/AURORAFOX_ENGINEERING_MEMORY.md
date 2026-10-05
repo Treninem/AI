@@ -704,3 +704,11 @@
 - **Root cause:** source assertion demanded `tools.call_tool(tool_name, args)` while production now correctly passes a third `execution_guard` to keep master stop active during asynchronous security execution. This is an assertion migration, not evidence that tool argument repair stopped working.
 - **Fix/prevention:** require guarded call and retain the ordering assertion that structural repair precedes execution. Search all contracts for the old call spelling when changing the tool ABI. Never restore the unguarded call merely to satisfy CI.
 - **Status:** local source contract PASS; exact new-head CI pending.
+
+
+#### AF-MEM-105 — optional Work guard cannot be the only global master-stop check
+
+- **Confirmed:** ordinary main chat invokes AgentCore without the optional Work guard. Guard propagation alone therefore protects Work cancellation but is insufficient to assert global master-stop coverage for all entry points.
+- **Fix:** independently query ComputerClient.master_enabled_from(self) before child launch and throughout asynchronous waiting, before treating completion as evidence. Keep optional guard as an additional denial authority. Remove custom output_path from catalog rather than induce model attempts to use a forbidden output path.
+- **Runtime evidence:** Linux headless smoke creates actual child processes and independently verifies they no longer exist after global master stop or execution guard denial. After Godot OS.kill, calling OS.is_process_running on the reaped PID emits an engine error; use external /bin/kill -0 solely in the regression to verify actual OS liveness cleanly.
+- **Status:** local lifecycle/owner-review smoke and source contracts PASS; physical Windows behavior remains a device gate.

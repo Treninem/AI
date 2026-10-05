@@ -23,7 +23,7 @@ func _ready() -> void:
 	register_tool("analyze_file", "Глубоко разобрать локальный файл: PDF, DOCX, XLS/XLSX, PPTX, ODT/ODS, изображение, аудио, видео, архив или исходный код", {"path":"string","question":"string","visual":"bool"}, Callable(self, "_analyze_file"))
 	register_tool("file_tree", "Построить дерево локальной папки проекта или user:// с размерами файлов", {"path":"string","max_items":"int"}, Callable(self, "_file_tree"))
 	register_tool("search_file_cache", "Найти ранее разобранные файлы и фрагменты по локальному индексу File Intelligence", {"query":"string","limit":"int"}, Callable(self, "_search_file_cache"))
-	register_tool("security_configuration_check", "Запустить только явно авторизованную владельцем проверку HTTP/TLS-конфигурации по приватному scope JSON. Не обходит вход, CAPTCHA, редиректы или ограничения доступа.", {"scope_path":"string","baseline_path":"string","output_path":"string","authorized":"bool"}, Callable(self, "_security_configuration_check"))
+	register_tool("security_configuration_check", "Запустить только явно авторизованную владельцем проверку HTTP/TLS-конфигурации по приватному scope JSON. Не обходит вход, CAPTCHA, редиректы или ограничения доступа.", {"scope_path":"string","baseline_path":"string","authorized":"bool"}, Callable(self, "_security_configuration_check"))
 	register_tool("git_status", "Проверить git status", {}, Callable(self, "_git_status"))
 	register_tool("git_diff", "Посмотреть git diff", {}, Callable(self, "_git_diff"))
 	register_tool("system_info", "Получить сведения о системе и Godot", {}, Callable(self, "_system_info"))
@@ -262,16 +262,8 @@ func _security_configuration_check(args: Dictionary, execution_guard: Callable =
 	var pid := OS.create_process(str(runtime.get("python", "")), argv, false)
 	if pid <= 0:
 		return {"ok": false, "error": "security_runner_start_failed", "message": "Не удалось запустить локальный security runner."}
-	_security_child_pid = pid
-	# Do not block the Godot UI thread while the bounded runner works. Network
-	# budgets live in the owner-reviewed scope and are enforced inside runner.py.
-	while OS.is_process_running(pid):
-		if not _security_execution_allowed(execution_guard):
-			OS.kill(pid)
-			_security_child_pid = -1
-			return {"ok": false, "error": "security_execution_stopped"}
-		await get_tree().create_timer(0.10).timeout
-	_security_child_pid = -1
+	if not await _security_wait_child(pid, execution_guard):
+		return {"ok": false, "error": "security_execution_stopped"}
 	if not FileAccess.file_exists(output_abs):
 		return {"ok": false, "error": "security_runner_rejected_scope", "message": "Проверка не началась или scope был отклонён до создания evidence."}
 	var report_file := FileAccess.open(output_abs, FileAccess.READ)
@@ -297,7 +289,20 @@ func _exit_tree() -> void:
 	if _security_child_pid > 0 and OS.is_process_running(_security_child_pid):
 		OS.kill(_security_child_pid)
 
+func _security_wait_child(pid: int, guard: Callable) -> bool:
+	_security_child_pid = pid
+	while OS.is_process_running(pid):
+		if not _security_execution_allowed(guard):
+			OS.kill(pid)
+			_security_child_pid = -1
+			return false
+		await get_tree().create_timer(0.10).timeout
+	_security_child_pid = -1
+	return _security_execution_allowed(guard)
+
 func _security_execution_allowed(guard: Callable) -> bool:
+	if not ComputerClient.master_enabled_from(self):
+		return false
 	if not guard.is_valid():
 		return true
 	var decision = guard.call("before_tool", {"tool": "security_configuration_check", "running": true})

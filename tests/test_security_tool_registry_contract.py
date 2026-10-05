@@ -31,6 +31,8 @@ def test_windows_package_contains_the_same_authorized_runner():
     assert 'Copy-Item $securityRunnerSource (Join-Path $fileOut "security_runner.py") -Force' in BUILD
     assert "build\\windows\\file_intelligence\\security_runner.py" in WINDOWS_CI
     assert 'register_tool("security_configuration_check"' in TOOLS
+    catalog = TOOLS.split('register_tool("security_configuration_check"', 1)[1].split("\n", 1)[0]
+    assert "output_path" not in catalog
 
 
 def test_model_flag_cannot_grant_owner_consent_or_overwrite_private_files():
@@ -46,3 +48,9 @@ def test_model_flag_cannot_grant_owner_consent_or_overwrite_private_files():
     assert 'return bool(await security_review_decided)' in main
     agent = (ROOT / "scripts/agent_core.gd").read_text(encoding="utf-8")
     assert 'tools.call_tool(tool_name, args, execution_guard)' in agent
+
+
+def test_global_master_stop_applies_without_an_optional_work_guard():
+    body = TOOLS.split("func _security_execution_allowed", 1)[1].split("func _security_validate_evidence", 1)[0]
+    assert "ComputerClient.master_enabled_from(self)" in body
+    assert body.index("ComputerClient.master_enabled_from(self)") < body.index("if not guard.is_valid()")

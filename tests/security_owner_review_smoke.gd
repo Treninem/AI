@@ -1,5 +1,11 @@
 extends SceneTree
 
+class StopSettings:
+	extends Node
+	var master_enabled := false
+	func get_settings() -> Dictionary:
+		return {"master_enabled": master_enabled}
+
 var registry: ToolRegistry
 var scope_path := "user://security-review-regression.json"
 var scope_text := '{"urls":["https://example.invalid/"],"authorization_reference":"owner lab"}'
@@ -43,7 +49,28 @@ func _run() -> void:
 	assert(not registry._security_validate_evidence(report, scope_text).all_checked, "Failed request reported checked")
 	assert(not registry._security_execution_allowed(func(_stage, _details): return {"allowed": false}))
 	assert(registry._security_execution_allowed(func(_stage, _details): return true))
+	var settings := StopSettings.new()
+	settings.name = "AutonomySettings"
+	root.add_child(settings)
+	assert(not registry._security_execution_allowed(Callable()), "Global master stop bypassed without Work guard")
+	settings.master_enabled = true
+	if OS.get_name() == "Linux":
+		var pid := OS.create_process("/bin/sleep", PackedStringArray(["30"]), false)
+		assert(pid > 0)
+		settings.master_enabled = false
+		assert(not await registry._security_wait_child(pid, Callable()))
+		await _assert_child_gone(pid)
+		settings.master_enabled = true
+		pid = OS.create_process("/bin/sleep", PackedStringArray(["30"]), false)
+		assert(not await registry._security_wait_child(pid, func(_stage, _details): return false))
+		await _assert_child_gone(pid)
+	settings.queue_free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(scope_path))
 	registry.queue_free()
 	print("AURORA_SECURITY_OWNER_REVIEW_OK denied=true changed_scope=true reserved_storage=true no_overwrite=true evidence=true cancellation=true")
 	quit(0)
+
+func _assert_child_gone(pid: int) -> void:
+	await create_timer(0.05).timeout
+	var output: Array = []
+	assert(OS.execute("/bin/kill", PackedStringArray(["-0", str(pid)]), output, true, false) != 0, "Stopped child still running")
