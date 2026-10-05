@@ -4150,3 +4150,43 @@ COLLECTIVE_LEARNING_STATUS: ACTIVE / PERMANENT COGNITIVE CORE PRINCIPLE.
 - Collective shared learning design remains part of V1.6 foundation, but while only the owner uses AuroraFox there is effectively one contributing private principal; the architecture must still preserve the same private -> shared_candidate -> shared_core contract so future users can be added without data-model surgery.
 
 MULTI_USER_ACTIVATION_STATUS: DEFERRED / IMPLEMENTABLE BUT DISABLED BY DEFAULT.
+
+
+### ACTIVE continuation 2026-10-05 — local preparation while c67507e CI runs
+
+Same CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`; local/remote checkpoint c67507e, no parallel branch/lane. Fresh main fetched. Owner requests productive work while CI runs, no waits. Prepare Windows File Intelligence tree/search owner ceilings and truthful truncation locally; do not push and restart current CI. Ownership: file_intelligence/file_service.py, scripts/file_intelligence_client.gd, scripts/settings_overlay.gd, relevant tests, owner policy and journal/memory. Preserve defaults (tree 5000, search 100, excerpt 1200), expose persisted controls, test real filesystem/cache; Android native owner budgets remain an explicitly unfinished separate block rather than falsely claimed controlled. Intended build fix accumulated version-last V1.5.0.0, no canonical bump.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: prepare/test one local commit; publish only after current CI has been reported or an actual CI correction is necessary.
+
+
+### LOCAL CHECKPOINT 2026-10-05 — productive preparation without restarting current CI
+
+- Remote PR #103 stays at c67507e48d185c0c4be3fec579b7ad5307d2bafe. No CI polling or push performed in this block. Existing run links remain valid; owner will report completion.
+- Prepared Windows tree_max_items/search_max_results/search_excerpt_chars controls with defaults 5000/100/1200 unchanged, visible Settings and backend environment/health propagation. Client uses owner ceilings; omitted Pydantic request defaults honor lower owner ceilings.
+- Tree exact-fit no longer falsely says truncated; real extra item proves overflow. Search retains early stopping and reports limit_reached / more_results=unknown rather than claiming it proved omitted matches. Actual excerpt omission is separately reported. Nonobject/corrupt cache records are skipped. Android native budgets and archive/request/time limits remain visibly unfinished.
+- TEST: four real filesystem/cache production-function unit tests PASS, including 5001 tree items and 101 search matches; owner runtime/inventory contracts PASS; diff check clean. Full-service environment/default-schema regression and Godot setting propagation extensions are ready for next CI.
+- BLOCKED_LOCAL_ENGINE: /tmp verified Godot is gone; ZIP CRC validation fails with BadZipFile and cached executable is truncated. No invalid runtime executed. New Godot parse/runtime tests are NOT EXECUTED and not marked PASS; AF-MEM-107 records exact file sizes/hash and avoids repeated repair attempts. Local API dependencies still absent, no fake facade used.
+- This block is saved as one local commit on the existing branch, NOT pushed to avoid restarting c67507e checks. The new commit ID is available from local git history. Existing CLAIM remains ACTIVE for acceptance/inventory. Version/main/sign/release unchanged.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: local listing/search owner controls and truthful result metadata; real unit evidence; durable local source checkpoint.
+REMAINING: publish this prepared commit after current CI completion is reported; exact new-SHA Godot/full API/package checks; Android owner controls and inventory, physical acceptance.
+BLOCKERS: local valid Godot runtime unavailable; full API dependencies absent; device acceptance owner-side.
+NEXT: owner supplies c67507e CI results. If green, publish prepared local block and provide fresh run links; if red, diagnose exact failed job before combining an actual fix.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE acceptance continuation 2026-10-05 — reconcile owner decisions and publish prepared listing/search block
+
+- Same CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`, existing branch/PR #103. Fresh remote HEAD `996c45bffd84883ac7d795c5f0fe9545765e1047` verified **30/30 SUCCESS** once, no polling wait.
+- Remote delta since c67507e consists only of 181 appended journal lines in six owner-decision commits. Read and retain integrated Core/no-repeat roadmap, cognitive vision, account privacy, owner capability, shared-learning boundaries and deferred multi-user activation. No source implementation to redo; no account activation or V1.6/V1.7 scope expansion.
+- Prepared local `d8b4871` rebased to `43bf1c9` over current remote. The one append-only journal conflict was reconciled as complete remote text followed by the complete local appendix; assertion confirms remote prefix preserved verbatim, and all other files exactly match the original local block. No parallel branch/lane created.
+- Acceptance ownership remains listing/search backend/client/settings, tests/CI, policy and journal/memory. Intended build fix accumulated into version-last V1.5.0.0; version/main/sign/release unchanged. Four real filesystem/cache tests and owner-runtime/inventory contracts re-executed PASS after rebase. Local Godot remains NOT EXECUTED due AF-MEM-107; full API/environment/default-schema and Godot tests are mandatory on the new exact-SHA CI, no waiver.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: remote decisions reconciled without loss; green starting CI; local source block revalidated.
+REMAINING: new-head exact-SHA API/Godot/package gates, Android native owner budgets, archive/request/time inventory, physical acceptance.
+BLOCKERS: local valid Godot/API dependencies unavailable; device acceptance owner-side.
+NEXT: publish one source commit over 996c45b, return direct new-head run links without waiting; next source block is archive listing allocation and remaining owner controls.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

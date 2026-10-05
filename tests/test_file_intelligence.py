@@ -177,3 +177,14 @@ def test_spreadsheet_budget_reaches_full_service_response_and_cache(tmp_path: Pa
     assert complete["cached"] is False
     assert complete["truncated"] is False
     assert "six" in complete["content"]
+
+
+def test_listing_owner_env_also_bounds_omitted_request_defaults(tmp_path: Path):
+    import json
+    import os
+    import subprocess
+    env = dict(os.environ, AURORAFOX_USER_DIR=str(tmp_path), AURORAFOX_FILE_TREE_MAX_ITEMS="2",
+               AURORAFOX_FILE_SEARCH_MAX_RESULTS="3", AURORAFOX_FILE_SEARCH_EXCERPT_CHARS="10")
+    code = "import json,file_service as f; print(json.dumps([f.TreeRequest(path='.').max_items,f.CacheSearchRequest(query='x').limit,f.MAX_CACHE_EXCERPT_CHARS]))"
+    output = subprocess.check_output([sys.executable, "-c", code], cwd=ROOT / "file_intelligence", env=env, text=True)
+    assert json.loads(output) == [2, 3, 10]

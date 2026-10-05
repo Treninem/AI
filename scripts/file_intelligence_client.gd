@@ -14,6 +14,9 @@ const OWNER_LIMIT_DEFAULTS := {
 	"request_max_text_chars": 500000,
 	"spreadsheet_max_cells": 50000,
 	"xls_max_rows": 10000,
+	"tree_max_items": 5000,
+	"search_max_results": 100,
+	"search_excerpt_chars": 1200,
 	"archive_max_entries": 5000,
 	"archive_max_expanded": 512 * 1024 * 1024,
 	"archive_text_member_max": 8 * 1024 * 1024,
@@ -29,6 +32,9 @@ const OWNER_LIMIT_MINIMUMS := {
 	"request_max_text_chars": 1,
 	"spreadsheet_max_cells": 1,
 	"xls_max_rows": 1,
+	"tree_max_items": 1,
+	"search_max_results": 1,
+	"search_excerpt_chars": 1,
 	"archive_max_entries": 1,
 	"archive_max_expanded": 1024,
 	"archive_text_member_max": 1,
@@ -44,6 +50,9 @@ const OWNER_LIMIT_ENV := {
 	"request_max_text_chars": "AURORAFOX_FILE_REQUEST_MAX_TEXT",
 	"spreadsheet_max_cells": "AURORAFOX_FILE_SPREADSHEET_MAX_CELLS",
 	"xls_max_rows": "AURORAFOX_FILE_XLS_MAX_ROWS",
+	"tree_max_items": "AURORAFOX_FILE_TREE_MAX_ITEMS",
+	"search_max_results": "AURORAFOX_FILE_SEARCH_MAX_RESULTS",
+	"search_excerpt_chars": "AURORAFOX_FILE_SEARCH_EXCERPT_CHARS",
 	"archive_max_entries": "AURORAFOX_ARCHIVE_MAX_ENTRIES",
 	"archive_max_expanded": "AURORAFOX_ARCHIVE_MAX_EXPANDED",
 	"archive_text_member_max": "AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX",
@@ -205,12 +214,12 @@ func tree(path: String, max_items := 2000) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "Directory intelligence is not available on this platform"}
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
-	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, 5000)}, 60.0)
+	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, int(owner_limits().get("tree_max_items", 5000)))}, 60.0)
 
 func search_cache(query: String, limit := 20) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return {"ok": false, "results": [], "error": "Cache search is currently Windows-only"}
-	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, 100)}, 30.0)
+	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, int(owner_limits().get("search_max_results", 100)))}, 30.0)
 
 func clear_cache() -> Dictionary:
 	if OS.get_name() == "Android":

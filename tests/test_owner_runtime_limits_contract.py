@@ -33,3 +33,15 @@ def test_spreadsheet_budgets_are_visible_persisted_and_exported_without_old_clam
     assert "range(min(sheet.nrows, 10000))" not in SERVICE
     assert '"output_truncated":' in SERVICE
     assert 'MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}' in SERVICE
+
+
+def test_listing_search_limits_are_owned_on_windows_and_defaults_honor_lower_limits():
+    for key, env in [("tree_max_items", "AURORAFOX_FILE_TREE_MAX_ITEMS"), ("search_max_results", "AURORAFOX_FILE_SEARCH_MAX_RESULTS"), ("search_excerpt_chars", "AURORAFOX_FILE_SEARCH_EXCERPT_CHARS")]:
+        assert key in CLIENT and key in SETTINGS and env in CLIENT and env in SERVICE
+    assert 'default=min(2000, MAX_TREE_ITEMS)' in SERVICE
+    assert 'default=min(20, MAX_CACHE_SEARCH_RESULTS)' in SERVICE
+    assert '"excerpt_truncated": len(content) > MAX_CACHE_EXCERPT_CHARS' in SERVICE
+    assert '"more_results": "unknown" if limit_reached else "none"' in SERVICE
+    windows_tree = CLIENT.split('func tree(', 1)[1].split('func search_cache', 1)[0].split('if OS.get_name() != "Windows"', 1)[1]
+    assert 'clampi(max_items, 1, 5000)' not in windows_tree
+    assert 'int(owner_limits().get("tree_max_items", 5000))' in windows_tree

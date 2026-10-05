@@ -49,7 +49,9 @@ MAX_ARCHIVE_TEXT_MEMBER_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX
 MAX_ARCHIVE_TEXT_TOTAL_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_TOTAL_MAX", str(32 * 1024 * 1024)))
 MAX_SPREADSHEET_CELLS = max(1, int(os.getenv("AURORAFOX_FILE_SPREADSHEET_MAX_CELLS", "50000")))
 MAX_XLS_ROWS = max(1, int(os.getenv("AURORAFOX_FILE_XLS_MAX_ROWS", "10000")))
-MAX_TREE_ITEMS = 5000
+MAX_TREE_ITEMS = max(1, int(os.getenv("AURORAFOX_FILE_TREE_MAX_ITEMS", "5000")))
+MAX_CACHE_SEARCH_RESULTS = max(1, int(os.getenv("AURORAFOX_FILE_SEARCH_MAX_RESULTS", "100")))
+MAX_CACHE_EXCERPT_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_SEARCH_EXCERPT_CHARS", "1200")))
 MAX_PDF_BYTES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_BYTES", str(256 * 1024 * 1024)))
 MAX_PDF_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_PAGES", "1000"))
 MAX_OCR_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PAGES", "500"))
@@ -70,12 +72,12 @@ class AnalyzeRequest(BaseModel):
 
 class TreeRequest(BaseModel):
     path: str = Field(min_length=1, max_length=8192)
-    max_items: int = Field(default=2000, ge=1, le=MAX_TREE_ITEMS)
+    max_items: int = Field(default=min(2000, MAX_TREE_ITEMS), ge=1, le=MAX_TREE_ITEMS)
 
 
 class CacheSearchRequest(BaseModel):
     query: str = Field(min_length=1, max_length=1000)
-    limit: int = Field(default=20, ge=1, le=100)
+    limit: int = Field(default=min(20, MAX_CACHE_SEARCH_RESULTS), ge=1, le=MAX_CACHE_SEARCH_RESULTS)
 
 
 TEXT_EXT = {
@@ -636,7 +638,7 @@ def health() -> dict[str, Any]:
     try: voice = requests.get(f"{VOICE_URL}/health", timeout=1.5).status_code == 200
     except Exception: pass
     ocr = local_ocr_health()
-    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "spreadsheet_max_cells": MAX_SPREADSHEET_CELLS, "xls_max_rows": MAX_XLS_ROWS, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
+    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "spreadsheet_max_cells": MAX_SPREADSHEET_CELLS, "xls_max_rows": MAX_XLS_ROWS, "tree_max_items": MAX_TREE_ITEMS, "search_max_results": MAX_CACHE_SEARCH_RESULTS, "search_excerpt_chars": MAX_CACHE_EXCERPT_CHARS, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
 
 
 @app.post("/analyze")
@@ -656,12 +658,16 @@ def analyze(req: AnalyzeRequest) -> dict[str, Any]:
 
 @app.post("/tree")
 def tree(req: TreeRequest) -> dict[str, Any]:
-    root = _safe_dir(req.path); items: list[dict[str, Any]] = []
+    root = _safe_dir(req.path); items: list[dict[str, Any]] = []; truncated = False
     for p in root.rglob("*"):
-        if len(items) >= req.max_items: break
-        try: items.append({"path": p.relative_to(root).as_posix(), "dir": p.is_dir(), "size": p.stat().st_size if p.is_file() else 0})
+        try:
+            item = {"path": p.relative_to(root).as_posix(), "dir": p.is_dir(), "size": p.stat().st_size if p.is_file() else 0}
         except OSError: continue
-    return {"ok": True, "root": str(root), "items": items, "truncated": len(items) >= req.max_items}
+        if len(items) >= req.max_items:
+            truncated = True; break
+        items.append(item)
+    return {"ok": True, "root": str(root), "items": items, "truncated": truncated,
+            "item_budget": req.max_items}
 
 
 @app.post("/cache/search")
@@ -670,10 +676,19 @@ def cache_search(req: CacheSearchRequest) -> dict[str, Any]:
     for p in sorted(CACHE_DIR.glob("*.json"), key=lambda x: x.stat().st_mtime, reverse=True):
         try: data = json.loads(p.read_text(encoding="utf-8"))
         except Exception: continue
-        hay = (str(data.get("name", "")) + "\n" + str(data.get("content", ""))).casefold()
-        if q in hay: results.append({"name": data.get("name", ""), "path": data.get("path", ""), "kind": data.get("kind", ""), "excerpt": str(data.get("content", ""))[:1200]})
+        if not isinstance(data, dict): continue
+        content = str(data.get("content", ""))
+        hay = (str(data.get("name", "")) + "\n" + content).casefold()
+        if q not in hay: continue
+        results.append({"name": data.get("name", ""), "path": data.get("path", ""), "kind": data.get("kind", ""),
+                        "excerpt": content[:MAX_CACHE_EXCERPT_CHARS], "excerpt_truncated": len(content) > MAX_CACHE_EXCERPT_CHARS})
         if len(results) >= req.limit: break
-    return {"ok": True, "results": results}
+    # Preserve early termination: do not scan the remaining cache just to infer
+    # whether more matches exist. Reaching a budget is not proof of omission.
+    limit_reached = len(results) >= req.limit
+    return {"ok": True, "results": results, "limit_reached": limit_reached,
+            "more_results": "unknown" if limit_reached else "none",
+            "result_budget": req.limit, "excerpt_budget": MAX_CACHE_EXCERPT_CHARS}
 
 
 @app.post("/cache/clear")

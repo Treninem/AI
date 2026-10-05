@@ -567,6 +567,9 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		"request_max_text_chars": 500000,
 		"spreadsheet_max_cells": 50000,
 		"xls_max_rows": 10000,
+		"tree_max_items": 5000,
+		"search_max_results": 100,
+		"search_excerpt_chars": 1200,
 		"archive_max_entries": 5000,
 		"archive_max_expanded": 512 * 1024 * 1024,
 		"archive_text_member_max": 8 * 1024 * 1024,
@@ -582,6 +585,9 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 	var request_chars := _owner_number_row(card, "Текст одного запроса, символов", float(limits.get("request_max_text_chars", 500000)), 1.0, 1000.0)
 	var spreadsheet_cells := _owner_number_row(card, "Ячеек XLS/XLSX на файл", float(limits.get("spreadsheet_max_cells", 50000)), 1.0, 1000.0)
 	var xls_rows := _owner_number_row(card, "Строк XLS на лист", float(limits.get("xls_max_rows", 10000)), 1.0, 1000.0)
+	var tree_items := _owner_number_row(card, "Элементов дерева файлов", float(limits.get("tree_max_items", 5000)), 1.0, 100.0)
+	var search_results := _owner_number_row(card, "Результатов поиска в кеше", float(limits.get("search_max_results", 100)), 1.0, 10.0)
+	var search_excerpt := _owner_number_row(card, "Символов фрагмента поиска", float(limits.get("search_excerpt_chars", 1200)), 1.0, 100.0)
 	var archive_entries := _owner_number_row(card, "Записей в архиве", float(limits.get("archive_max_entries", 5000)), 1.0, 100.0)
 	var archive_expanded_mb := _owner_number_row(card, "Распакованный архив, МиБ", float(limits.get("archive_max_expanded", 512 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
 	var archive_member_mb := _owner_number_row(card, "Один текстовый файл архива, МиБ", float(limits.get("archive_text_member_max", 8 * 1024 * 1024)) / 1048576.0, 0.000001, 1.0)
@@ -615,6 +621,9 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 			"request_max_text_chars": int(request_chars.value),
 			"spreadsheet_max_cells": int(spreadsheet_cells.value),
 			"xls_max_rows": int(xls_rows.value),
+			"tree_max_items": int(tree_items.value),
+			"search_max_results": int(search_results.value),
+			"search_excerpt_chars": int(search_excerpt.value),
 			"archive_max_entries": int(archive_entries.value),
 			"archive_max_expanded": int(archive_expanded_mb.value * 1048576.0),
 			"archive_text_member_max": int(archive_member_mb.value * 1048576.0),
@@ -638,6 +647,9 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		request_chars.value = 500000
 		spreadsheet_cells.value = 50000
 		xls_rows.value = 10000
+		tree_items.value = 5000
+		search_results.value = 100
+		search_excerpt.value = 1200
 		archive_entries.value = 5000
 		archive_expanded_mb.value = 512
 		archive_member_mb.value = 8
