@@ -3969,3 +3969,15 @@ REMAINING: full-service/exact-head CI and physical Windows/Android tests; other 
 BLOCKERS: local full API dependencies absent (real parser units executed independently); physical acceptance needs owner device.
 NEXT: publish once, supply new-head CI links for owner to inspect without waiting. Next source block: remaining File Intelligence tree/search/request/archive presentation ceilings; clarify owner choices if requirements become ambiguous.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### OWNER ARCHITECTURE DECISION 2026-10-05 — one integrated system; no repeated foundation work
+
+- Owner decision: AuroraFox remains **one integrated system**. Memory, Knowledge, learning, semantic intent, model routing, Work/Computer, security, trust, sandbox/rollback and Evolution are cooperating layers of the same Core/system lifecycle, not separately developed products that later need to be glued together.
+- Permanent planning rule: **do not implement the same architectural foundation twice**. Before starting any release block, inspect the current code, active PRs and this master journal; identify shared data models, event flows, settings, persistence, sync, trust/evidence and CI foundations; implement each shared foundation once at the earliest logical layer and reuse it everywhere.
+- Release grouping rule: when several planned capabilities depend on the same foundation, combine them into one coherent architectural update rather than shipping sequential versions that each rewrite the same Core/Memory/DB/API/UI/CI paths. Split only where separation materially reduces risk or where the later layer requires proven behavior from the earlier one.
+- Post-V1.5 direction: first use V1.5.0.x only for real stabilization fixes. Then prefer two coherent global blocks rather than many overlapping feature releases: **V1.6.0.0 integrated adaptive core** (Memory + Knowledge + learning from outcomes/feedback + semantic intent + multi-model routing + shared distributed event history/sync foundation), followed by **V1.7.0.0 integrated autonomous evolution** (Work/Computer execution + dynamic trust + sandbox/dry-run + rollback + security evidence + candidate/test/accept Evolution cycle) on top of the proven V1.6 foundation.
+- This grouping is a roadmap constraint, not permission to lower acceptance gates. Each block must preserve exact-SHA CI, physical Windows/Android acceptance where relevant, rollback, owner control and A.B.C.D version semantics.
+- If a future requirement is ambiguous or has multiple materially different architectures, do not silently choose one; present the strong alternatives and consequences before implementation.
+
+DECISION_STATUS: ACTIVE / PERMANENT ROADMAP RULE.
