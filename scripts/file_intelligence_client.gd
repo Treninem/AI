@@ -17,6 +17,8 @@ const OWNER_LIMIT_DEFAULTS := {
 	"tree_max_items": 5000,
 	"search_max_results": 100,
 	"search_excerpt_chars": 1200,
+	"archive_listing_max_chars": 40000,
+	"archive_listing_percent": 25,
 	"archive_max_entries": 5000,
 	"archive_max_expanded": 512 * 1024 * 1024,
 	"archive_text_member_max": 8 * 1024 * 1024,
@@ -35,6 +37,8 @@ const OWNER_LIMIT_MINIMUMS := {
 	"tree_max_items": 1,
 	"search_max_results": 1,
 	"search_excerpt_chars": 1,
+	"archive_listing_max_chars": 0,
+	"archive_listing_percent": 0,
 	"archive_max_entries": 1,
 	"archive_max_expanded": 1024,
 	"archive_text_member_max": 1,
@@ -53,6 +57,8 @@ const OWNER_LIMIT_ENV := {
 	"tree_max_items": "AURORAFOX_FILE_TREE_MAX_ITEMS",
 	"search_max_results": "AURORAFOX_FILE_SEARCH_MAX_RESULTS",
 	"search_excerpt_chars": "AURORAFOX_FILE_SEARCH_EXCERPT_CHARS",
+	"archive_listing_max_chars": "AURORAFOX_ARCHIVE_LISTING_MAX_CHARS",
+	"archive_listing_percent": "AURORAFOX_ARCHIVE_LISTING_PERCENT",
 	"archive_max_entries": "AURORAFOX_ARCHIVE_MAX_ENTRIES",
 	"archive_max_expanded": "AURORAFOX_ARCHIVE_MAX_EXPANDED",
 	"archive_text_member_max": "AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX",
@@ -79,6 +85,8 @@ func owner_limits() -> Dictionary:
 	for key in OWNER_LIMIT_DEFAULTS:
 		var minimum := int(OWNER_LIMIT_MINIMUMS.get(key, 1))
 		result[key] = maxi(minimum, int(ProjectSettings.get_setting("aurorafox/files/" + str(key), OWNER_LIMIT_DEFAULTS[key])))
+	# A percentage cannot allocate more than the entire request budget.
+	result["archive_listing_percent"] = mini(100, int(result["archive_listing_percent"]))
 	result["owner_adjustable"] = true
 	result["backend_restart_on_apply"] = OS.get_name() == "Windows"
 	return result

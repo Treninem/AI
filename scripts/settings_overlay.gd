@@ -570,6 +570,8 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		"tree_max_items": 5000,
 		"search_max_results": 100,
 		"search_excerpt_chars": 1200,
+		"archive_listing_max_chars": 40000,
+		"archive_listing_percent": 25,
 		"archive_max_entries": 5000,
 		"archive_max_expanded": 512 * 1024 * 1024,
 		"archive_text_member_max": 8 * 1024 * 1024,
@@ -588,6 +590,10 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 	var tree_items := _owner_number_row(card, "Элементов дерева файлов", float(limits.get("tree_max_items", 5000)), 1.0, 100.0)
 	var search_results := _owner_number_row(card, "Результатов поиска в кеше", float(limits.get("search_max_results", 100)), 1.0, 10.0)
 	var search_excerpt := _owner_number_row(card, "Символов фрагмента поиска", float(limits.get("search_excerpt_chars", 1200)), 1.0, 100.0)
+	var archive_listing_chars := _owner_number_row(card, "Список файлов архива, символов (0 — скрыть)", float(limits.get("archive_listing_max_chars", 40000)), 0.0, 1000.0)
+	var archive_listing_percent := _owner_number_row(card, "Доля текстового бюджета для списка архива, %", float(limits.get("archive_listing_percent", 25)), 0.0, 1.0)
+	archive_listing_percent.max_value = 100.0
+	archive_listing_percent.allow_greater = false
 	var archive_entries := _owner_number_row(card, "Записей в архиве", float(limits.get("archive_max_entries", 5000)), 1.0, 100.0)
 	var archive_expanded_mb := _owner_number_row(card, "Распакованный архив, МиБ", float(limits.get("archive_max_expanded", 512 * 1024 * 1024)) / 1048576.0, 0.001, 1.0)
 	var archive_member_mb := _owner_number_row(card, "Один текстовый файл архива, МиБ", float(limits.get("archive_text_member_max", 8 * 1024 * 1024)) / 1048576.0, 0.000001, 1.0)
@@ -624,6 +630,8 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 			"tree_max_items": int(tree_items.value),
 			"search_max_results": int(search_results.value),
 			"search_excerpt_chars": int(search_excerpt.value),
+			"archive_listing_max_chars": int(archive_listing_chars.value),
+			"archive_listing_percent": int(archive_listing_percent.value),
 			"archive_max_entries": int(archive_entries.value),
 			"archive_max_expanded": int(archive_expanded_mb.value * 1048576.0),
 			"archive_text_member_max": int(archive_member_mb.value * 1048576.0),
@@ -650,6 +658,8 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 		tree_items.value = 5000
 		search_results.value = 100
 		search_excerpt.value = 1200
+		archive_listing_chars.value = 40000
+		archive_listing_percent.value = 25
 		archive_entries.value = 5000
 		archive_expanded_mb.value = 512
 		archive_member_mb.value = 8

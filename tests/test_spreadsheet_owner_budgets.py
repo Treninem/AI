@@ -20,7 +20,10 @@ def parser_namespace():
     names = {'_text_from_xlsx', '_text_from_xls', '_cache_key'}
     module = ast.Module(body=[n for n in source.body if isinstance(n, ast.FunctionDef) and n.name in names], type_ignores=[])
     namespace = {'Path': Path, 'Any': Any, 'hashlib': hashlib,
-                 'MAX_SPREADSHEET_CELLS': 50000, 'MAX_XLS_ROWS': 10000}
+                 'MAX_SPREADSHEET_CELLS': 50000, 'MAX_XLS_ROWS': 10000,
+                 'MAX_ARCHIVE_ENTRIES': 5000, 'MAX_ARCHIVE_EXPANDED': 512*1024*1024,
+                 'MAX_ARCHIVE_TEXT_MEMBER_BYTES': 8*1024*1024, 'MAX_ARCHIVE_TEXT_TOTAL_BYTES': 32*1024*1024,
+                 'MAX_ARCHIVE_LISTING_CHARS': 40000, 'ARCHIVE_LISTING_PERCENT': 25}
     exec(compile(module, 'file_intelligence/file_service.py', 'exec'), namespace)
     return namespace
 

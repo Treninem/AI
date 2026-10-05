@@ -45,3 +45,11 @@ def test_listing_search_limits_are_owned_on_windows_and_defaults_honor_lower_lim
     windows_tree = CLIENT.split('func tree(', 1)[1].split('func search_cache', 1)[0].split('if OS.get_name() != "Windows"', 1)[1]
     assert 'clampi(max_items, 1, 5000)' not in windows_tree
     assert 'int(owner_limits().get("tree_max_items", 5000))' in windows_tree
+
+
+def test_archive_listing_budgets_are_visible_and_cache_identity_covers_archive_controls():
+    for key, env in [("archive_listing_max_chars", "AURORAFOX_ARCHIVE_LISTING_MAX_CHARS"), ("archive_listing_percent", "AURORAFOX_ARCHIVE_LISTING_PERCENT")]:
+        assert key in CLIENT and key in SETTINGS and env in CLIENT and env in SERVICE
+    assert "max_chars // 4" not in SERVICE
+    assert "v5-owner-archive-budgets" in SERVICE
+    assert '"listing_truncated": listing_truncated' in SERVICE

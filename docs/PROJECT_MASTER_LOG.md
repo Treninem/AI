@@ -4190,3 +4190,26 @@ REMAINING: new-head exact-SHA API/Godot/package gates, Android native owner budg
 BLOCKERS: local valid Godot/API dependencies unavailable; device acceptance owner-side.
 NEXT: publish one source commit over 996c45b, return direct new-head run links without waiting; next source block is archive listing allocation and remaining owner controls.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — archive listing owner budgets
+
+Same CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`, same PR #103/branch. Fresh main 446ce2cd and feature 8187d3a fetched; no remote delta. All 30/30 checks on exact 8187d3a SUCCESS, confirmed by GitHub. Reconcile historical UI/voice ownership under the existing integrated continuation; only file limits settings and File Intelligence CI tests touched, no unrelated UI/voice changes. Ownership: file service/client/settings, owner policy, archive tests/smoke/CI, journal/memory. Expose listing character cap and fraction preserving 40000/25% defaults, bound headers by total request budget, include archive settings in cache identity, use real ZIP/tar regressions. Intended BUILD fix accumulated into version-last V1.5.0.0; no version/main/sign/release changes.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement and test archive allocation; publish coherent block, return new-head CI links without waiting.
+
+
+### SOURCE checkpoint 2026-10-05 — archive owner allocation and exact output budgets
+
+- Starting exact 8187d3a: 30/30 CI SUCCESS. Same PR #103 and branch, no duplicate lane.
+- Added Settings/ProjectSettings/backend env/health controls archive_listing_max_chars=40000 and archive_listing_percent=25. Owner can raise cap, select 0–100% share, or hide list with zero. Defaults retained. Listing headers never exceed max_chars; extracted-file count requires actual content beyond header. Explicit listing_truncated/content_truncated/output_truncated metadata and warning; all archive budgets invalidate parser cache.
+- TEST: 5 real ZIP/tar production-function regressions PASS; 6 real XLS/XLSX and 4 filesystem/cache regressions PASS; runtime-owner/inventory contracts PASS; git diff check clean. New Godot settings/environment smoke and full API/parser CI required, NOT locally executed (AF-MEM-107). AF-MEM-108 records reusable defects/prevention.
+- Files in archive allocation block released after publication; existing integrated CLAIM continues Android/inventory/device acceptance. Commit identity is the enclosing source commit in Git history. No canonical bump, merge, signing or release.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive owner controls, bounded headers, truthful partial content and cache invalidation; real local regressions.
+REMAINING: exact new-head CI, native Android budgets, remaining owner-control inventory, physical acceptance and final version-last release gates.
+BLOCKERS: local valid Godot/API dependencies unavailable; physical devices owner-side.
+NEXT: publish this block and provide new-head run links without waiting; prepare native Android budget propagation while CI runs, no repeated source changes.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

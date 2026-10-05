@@ -47,6 +47,8 @@ MAX_ARCHIVE_ENTRIES = int(os.getenv("AURORAFOX_ARCHIVE_MAX_ENTRIES", "5000"))
 MAX_ARCHIVE_EXPANDED = int(os.getenv("AURORAFOX_ARCHIVE_MAX_EXPANDED", str(512 * 1024 * 1024)))
 MAX_ARCHIVE_TEXT_MEMBER_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX", str(8 * 1024 * 1024)))
 MAX_ARCHIVE_TEXT_TOTAL_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_TOTAL_MAX", str(32 * 1024 * 1024)))
+MAX_ARCHIVE_LISTING_CHARS = max(0, int(os.getenv("AURORAFOX_ARCHIVE_LISTING_MAX_CHARS", "40000")))
+ARCHIVE_LISTING_PERCENT = min(100, max(0, int(os.getenv("AURORAFOX_ARCHIVE_LISTING_PERCENT", "25"))))
 MAX_SPREADSHEET_CELLS = max(1, int(os.getenv("AURORAFOX_FILE_SPREADSHEET_MAX_CELLS", "50000")))
 MAX_XLS_ROWS = max(1, int(os.getenv("AURORAFOX_FILE_XLS_MAX_ROWS", "10000")))
 MAX_TREE_ITEMS = max(1, int(os.getenv("AURORAFOX_FILE_TREE_MAX_ITEMS", "5000")))
@@ -117,7 +119,7 @@ def _safe_dir(path: str) -> Path:
 
 def _cache_key(path: Path, question: str, visual: bool, max_chars: int) -> str:
     st = path.stat()
-    raw = f"{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|{MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}|v4-owner-spreadsheet-budgets"
+    raw = f"{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|{MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}|{MAX_ARCHIVE_ENTRIES}|{MAX_ARCHIVE_EXPANDED}|{MAX_ARCHIVE_TEXT_MEMBER_BYTES}|{MAX_ARCHIVE_TEXT_TOTAL_BYTES}|{MAX_ARCHIVE_LISTING_CHARS}|{ARCHIVE_LISTING_PERCENT}|v5-owner-archive-budgets"
     return hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
 
 
@@ -489,15 +491,19 @@ def _archive_listing(path: Path, max_chars: int = MAX_TEXT_CHARS) -> tuple[str, 
     extraction_blocked = total > MAX_ARCHIVE_EXPANDED
     if extraction_blocked: warnings.append(f"Заявленный распакованный размер превышает лимит {MAX_ARCHIVE_EXPANDED} байт; автоматическое чтение содержимого запрещено.")
     text_lines = [f"{('[DIR] ' if e['dir'] else '')}{e['path']} ({e['size']} B){' [UNSAFE]' if e['unsafe'] else ''}" for e in entries]
-    listing, listing_truncated = _clip_archive_text("\n".join(text_lines), min(max(0, max_chars // 4), 40000))
-    parts = ["### Состав архива\n" + listing] if listing else []
+    listing_budget = min(max(0, max_chars) * ARCHIVE_LISTING_PERCENT // 100, MAX_ARCHIVE_LISTING_CHARS)
+    listing, listing_truncated = _clip_archive_text("\n".join(text_lines), listing_budget)
+    listing_block, header_truncated = _clip_archive_text("### Состав архива\n" + listing, max(0, max_chars)) if listing else ("", False)
+    listing_truncated = listing_truncated or header_truncated
+    parts = [listing_block] if listing_block else []
     output_chars = sum(len(part) for part in parts)
+    content_truncated = False
     extracted_entries = 0
     extracted_bytes = 0
     encodings: set[str] = set()
 
     def append_text(name: str, declared_size: int, read_member: Any) -> None:
-        nonlocal extracted_entries, extracted_bytes, output_chars
+        nonlocal extracted_entries, extracted_bytes, output_chars, content_truncated
         normalized, unsafe = _archive_member_path(name)
         if unsafe or Path(normalized).suffix.lower() not in TEXT_EXT:
             return
@@ -520,13 +526,17 @@ def _archive_listing(path: Path, max_chars: int = MAX_TEXT_CHARS) -> tuple[str, 
         if "\x00" in clean_text or readable / max(1, len(clean_text)) < 0.85:
             warnings.append(f"Файл {normalized} пропущен: содержимое не похоже на безопасный текст.")
             return
-        block = f"### Извлечённый файл: {normalized}\n{clean_text}"
+        header = f"### Извлечённый файл: {normalized}\n"
+        block = header + clean_text
         separator_chars = 2 if parts else 0
         remaining_chars = max_chars - output_chars - separator_chars
-        if remaining_chars <= 0:
+        if remaining_chars <= len(header):
+            content_truncated = True
             return
         if len(block) > remaining_chars:
-            block, _ = _clip_archive_text(block, remaining_chars)
+            clipped, _ = _clip_archive_text(clean_text, remaining_chars - len(header))
+            block = header + clipped
+            content_truncated = True
         if not block:
             return
         parts.append(block)
@@ -568,11 +578,17 @@ def _archive_listing(path: Path, max_chars: int = MAX_TEXT_CHARS) -> tuple[str, 
 
     if extracted_bytes >= MAX_ARCHIVE_TEXT_TOTAL_BYTES:
         warnings.append(f"Извлечение текста остановлено на общем лимите {MAX_ARCHIVE_TEXT_TOTAL_BYTES} байт.")
+    if content_truncated:
+        warnings.append("Текст архива извлечён частично по лимиту вывода владельца; увеличьте текстовый бюджет и повторите чтение.")
     if listing_truncated:
         warnings.append("Список файлов архива обрезан по лимиту вывода.")
     text = "\n\n".join(parts)
     metadata = {
         "entries": len(entries),
+        "listing_budget": listing_budget,
+        "listing_truncated": listing_truncated,
+        "content_truncated": content_truncated,
+        "output_truncated": listing_truncated or content_truncated,
         "expanded_bytes": total,
         "unsafe_entries": unsafe_count,
         "text_entries_extracted": extracted_entries,
@@ -638,7 +654,7 @@ def health() -> dict[str, Any]:
     try: voice = requests.get(f"{VOICE_URL}/health", timeout=1.5).status_code == 200
     except Exception: pass
     ocr = local_ocr_health()
-    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "spreadsheet_max_cells": MAX_SPREADSHEET_CELLS, "xls_max_rows": MAX_XLS_ROWS, "tree_max_items": MAX_TREE_ITEMS, "search_max_results": MAX_CACHE_SEARCH_RESULTS, "search_excerpt_chars": MAX_CACHE_EXCERPT_CHARS, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
+    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "spreadsheet_max_cells": MAX_SPREADSHEET_CELLS, "xls_max_rows": MAX_XLS_ROWS, "tree_max_items": MAX_TREE_ITEMS, "search_max_results": MAX_CACHE_SEARCH_RESULTS, "search_excerpt_chars": MAX_CACHE_EXCERPT_CHARS, "archive_listing_max_chars": MAX_ARCHIVE_LISTING_CHARS, "archive_listing_percent": ARCHIVE_LISTING_PERCENT, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
 
 
 @app.post("/analyze")
