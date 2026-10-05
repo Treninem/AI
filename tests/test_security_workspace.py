@@ -1,5 +1,10 @@
 """Real loopback lab: configuration findings, remediation and retest."""
 import json
+import hashlib
+import subprocess
+import sys
+import tempfile
+from pathlib import Path
 import threading
 import unittest
 from datetime import datetime, timedelta, timezone
@@ -34,6 +39,21 @@ class Handler(BaseHTTPRequestHandler):
 
 
 class SecurityWorkspaceTests(unittest.TestCase):
+    def test_cli_binds_evidence_to_exact_reviewed_file_bytes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            scope_path = Path(directory) / "scope.json"
+            output = Path(directory) / "evidence.json"
+            scope_bytes = (json.dumps(self.scope, ensure_ascii=False, indent=2) + "\n").encode()
+            scope_path.write_bytes(scope_bytes)
+            command = [sys.executable, "-m", "security_workspace.runner", "--scope", str(scope_path),
+                       "--authorize", "--output", str(output)]
+            completed = subprocess.run(command, capture_output=True, timeout=15)
+            self.assertEqual(completed.returncode, 0, completed.stderr.decode())
+            evidence = json.loads(output.read_text())
+            self.assertEqual(evidence["scope_file_sha256"], hashlib.sha256(scope_bytes).hexdigest())
+            self.assertEqual(len(evidence["results"]), len(self.scope["urls"]))
+            self.assertGreater(Handler.requests_seen, 0)
+
     def setUp(self):
         Handler.fixed = False
         Handler.requests_seen = 0

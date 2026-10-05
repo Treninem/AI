@@ -215,10 +215,12 @@ def main() -> int:
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
     try:
-        report = run(json.loads(args.scope.read_text(encoding="utf-8")), authorized=args.authorize,
+        scope_bytes = args.scope.read_bytes()
+        report = run(json.loads(scope_bytes.decode("utf-8")), authorized=args.authorize,
                      baseline=json.loads(args.baseline.read_text(encoding="utf-8")) if args.baseline else None)
     except (ScopeError, ValueError) as exc:
         parser.error(str(exc))
+    report["scope_file_sha256"] = hashlib.sha256(scope_bytes).hexdigest()
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")
     temporary.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

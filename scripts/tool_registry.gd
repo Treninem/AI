@@ -8,6 +8,9 @@ const COMPUTER_ACTION_TIMEOUT := 32.0
 const COMPUTER_SCREEN_TIMEOUT := 20.0
 const COMPUTER_WINDOWS_TIMEOUT := 16.0
 
+var security_owner_review: Callable
+var _security_review_busy := false
+var _security_child_pid := -1
 var tools: Dictionary = {}
 var computer_base_url := "http://127.0.0.1:8766"
 var files_base_url := "http://127.0.0.1:8767"
@@ -44,15 +47,21 @@ func describe_tools() -> Array:
 		out.append({"name": name, "description": t.description, "schema": t.schema})
 	return out
 
-func call_tool(name: String, args: Dictionary = {}) -> Variant:
+func call_tool(name: String, args: Dictionary = {}, execution_guard: Callable = Callable()) -> Variant:
 	if not tools.has(name):
 		return {"ok": false, "error": "Unknown tool: " + name}
 	tool_called.emit(name, args)
+	if name == "security_configuration_check":
+		return await _security_configuration_check(args, execution_guard)
 	return await tools[name].callable.call(args)
 
 func _path_allowed(path: String, writing := false) -> bool:
 	if path.begins_with("user://"):
-		return true
+		var absolute := ProjectSettings.globalize_path(path).simplify_path()
+		var reserved := ProjectSettings.globalize_path("user://security/runs").simplify_path()
+		if writing and (absolute == reserved or absolute.begins_with(reserved + "/")):
+			return false
+		return not _security_user_path(path, false).is_empty()
 	if path.begins_with("res://"):
 		return not writing or path.begins_with("res://workspace/") or path.begins_with("res://generated/")
 	return false
@@ -197,7 +206,7 @@ func _search_file_cache(args: Dictionary) -> Dictionary:
 		"limit": clampi(int(args.get("limit", 20)), 1, 100)
 	}, 30.0)
 
-func _security_configuration_check(args: Dictionary) -> Dictionary:
+func _security_configuration_check(args: Dictionary, execution_guard: Callable = Callable()) -> Dictionary:
 	# Authorization is deliberately independent from the scope file: imported
 	# content cannot authorize traffic by merely containing an allow flag.
 	if not bool(args.get("authorized", false)):
@@ -214,18 +223,29 @@ func _security_configuration_check(args: Dictionary) -> Dictionary:
 		baseline_abs = _security_user_path(baseline_user, true)
 		if baseline_abs.is_empty():
 			return {"ok": false, "error": "baseline_path_denied", "message": "Baseline должен быть существующим приватным файлом user://."}
-	var output_user := str(args.get("output_path", "")).strip_edges()
-	if output_user.is_empty():
-		output_user = "user://security/evidence-%d.json" % Time.get_ticks_usec()
-	var output_abs := _security_user_path(output_user, false)
-	if output_abs.is_empty():
-		return {"ok": false, "error": "output_path_denied", "message": "Evidence разрешено сохранять только в user://."}
-	DirAccess.make_dir_recursive_absolute(output_abs.get_base_dir())
-	if FileAccess.file_exists(output_abs):
-		DirAccess.remove_absolute(output_abs)
+	# Tool arguments only request review. They never represent trusted consent.
+	if not str(args.get("output_path", "")).is_empty():
+		return {"ok": false, "error": "output_path_denied", "message": "Evidence получает новый приватный путь автоматически; существующие файлы не перезаписываются."}
 	var runtime := _security_runtime_paths()
 	if not bool(runtime.get("ok", false)):
 		return runtime
+	var reviewed := await _security_review_scope(scope_abs, baseline_abs)
+	if not bool(reviewed.get("ok", false)):
+		return reviewed
+	var run_user := "user://security/runs/" + Crypto.new().generate_random_bytes(16).hex_encode()
+	var run_abs := _security_user_path(run_user, false)
+	if DirAccess.dir_exists_absolute(run_abs) or DirAccess.make_dir_recursive_absolute(run_abs) != OK:
+		return {"ok": false, "error": "security_storage_unavailable"}
+	# Freeze exactly the bytes shown to the owner, rather than reopen mutable inputs.
+	scope_abs = run_abs.path_join("scope.json")
+	if not _security_write_snapshot(scope_abs, str(reviewed.scope_text)):
+		return {"ok": false, "error": "security_snapshot_failed"}
+	if not baseline_abs.is_empty():
+		baseline_abs = run_abs.path_join("baseline.json")
+		if not _security_write_snapshot(baseline_abs, str(reviewed.baseline_text)):
+			return {"ok": false, "error": "security_snapshot_failed"}
+	var output_user := run_user.path_join("evidence.json")
+	var output_abs := run_abs.path_join("evidence.json")
 	var argv := PackedStringArray([
 		str(runtime.get("runner", "")),
 		"--scope", scope_abs,
@@ -235,13 +255,21 @@ func _security_configuration_check(args: Dictionary) -> Dictionary:
 	if not baseline_abs.is_empty():
 		argv.append("--baseline")
 		argv.append(baseline_abs)
+	if not _security_execution_allowed(execution_guard):
+		return {"ok": false, "error": "security_execution_stopped"}
 	var pid := OS.create_process(str(runtime.get("python", "")), argv, false)
 	if pid <= 0:
 		return {"ok": false, "error": "security_runner_start_failed", "message": "Не удалось запустить локальный security runner."}
+	_security_child_pid = pid
 	# Do not block the Godot UI thread while the bounded runner works. Network
 	# budgets live in the owner-reviewed scope and are enforced inside runner.py.
 	while OS.is_process_running(pid):
+		if not _security_execution_allowed(execution_guard):
+			OS.kill(pid)
+			_security_child_pid = -1
+			return {"ok": false, "error": "security_execution_stopped"}
 		await get_tree().create_timer(0.10).timeout
+	_security_child_pid = -1
 	if not FileAccess.file_exists(output_abs):
 		return {"ok": false, "error": "security_runner_rejected_scope", "message": "Проверка не началась или scope был отклонён до создания evidence."}
 	var report_file := FileAccess.open(output_abs, FileAccess.READ)
@@ -252,17 +280,70 @@ func _security_configuration_check(args: Dictionary) -> Dictionary:
 	if not parsed is Dictionary:
 		return {"ok": false, "error": "security_evidence_invalid", "message": "Security runner вернул некорректный evidence JSON."}
 	var report: Dictionary = parsed
-	var all_checked := true
-	for item in report.get("results", []):
-		if str(item.get("outcome", "")) != "checked":
-			all_checked = false
-			break
+	var validation := _security_validate_evidence(report, str(reviewed.scope_text))
+	if not bool(validation.get("ok", false)):
+		return validation
+	var all_checked := bool(validation.get("all_checked", false))
 	return {
 		"ok": all_checked,
 		"evidence_path": output_user,
 		"report": report,
 		"message": "Проверка завершена." if all_checked else "Проверка завершена с границей доступа, сетевой ошибкой или другим непроверенным исходом."
 	}
+
+func _exit_tree() -> void:
+	if _security_child_pid > 0 and OS.is_process_running(_security_child_pid):
+		OS.kill(_security_child_pid)
+
+func _security_execution_allowed(guard: Callable) -> bool:
+	if not guard.is_valid():
+		return true
+	var decision = guard.call("before_tool", {"tool": "security_configuration_check", "running": true})
+	if decision is bool:
+		return decision
+	return bool(decision.get("allowed", true)) if decision is Dictionary else true
+
+func _security_validate_evidence(report: Dictionary, scope_text: String) -> Dictionary:
+	var scope = JSON.parse_string(scope_text)
+	var results = report.get("results", null)
+	var urls = scope.get("urls", []) if scope is Dictionary else []
+	if report.get("schema", "") != "aurorafox.security-evidence.v1" or report.get("scope_file_sha256", "") != scope_text.sha256_text() or not results is Array or results.is_empty() or results.size() != urls.size():
+		return {"ok": false, "error": "security_evidence_invalid"}
+	var all_checked := true
+	for index in range(results.size()):
+		var item = results[index]
+		if not item is Dictionary or item.get("target_sha256", "") != JSON.stringify(str(urls[index])).sha256_text() or not item.has("outcome"):
+			return {"ok": false, "error": "security_evidence_invalid"}
+		if str(item.outcome) != "checked":
+			all_checked = false
+	return {"ok": true, "all_checked": all_checked}
+
+func _security_review_scope(scope_abs: String, baseline_abs: String) -> Dictionary:
+	if _security_review_busy or not security_owner_review.is_valid():
+		return {"ok": false, "error": "owner_review_unavailable"}
+	var scope_text := FileAccess.get_file_as_string(scope_abs)
+	var scope = JSON.parse_string(scope_text)
+	if not scope is Dictionary:
+		return {"ok": false, "error": "invalid_scope_json"}
+	var baseline_text := "" if baseline_abs.is_empty() else FileAccess.get_file_as_string(baseline_abs)
+	_security_review_busy = true
+	var approved: bool = bool(await security_owner_review.call(scope_text, baseline_text.sha256_text() if not baseline_abs.is_empty() else ""))
+	_security_review_busy = false
+	if not approved:
+		return {"ok": false, "error": "owner_authorization_declined"}
+	if FileAccess.get_file_as_string(scope_abs) != scope_text or (not baseline_abs.is_empty() and FileAccess.get_file_as_string(baseline_abs) != baseline_text):
+		return {"ok": false, "error": "reviewed_inputs_changed"}
+	return {"ok": true, "scope_text": scope_text, "baseline_text": baseline_text}
+
+func _security_write_snapshot(path: String, content: String) -> bool:
+	if FileAccess.file_exists(path):
+		return false
+	var file := FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		return false
+	file.store_string(content)
+	file.close()
+	return FileAccess.get_file_as_string(path) == content
 
 func _security_user_path(value: String, require_existing: bool) -> String:
 	if not value.begins_with("user://"):
@@ -271,6 +352,13 @@ func _security_user_path(value: String, require_existing: bool) -> String:
 	var absolute := ProjectSettings.globalize_path(value).simplify_path()
 	if absolute != root and not absolute.begins_with(root + "/"):
 		return ""
+	# Reject symlink/reparse traversal into another private file or outside root.
+	var cursor := root
+	for part in absolute.trim_prefix(root).trim_prefix("/").split("/", false):
+		var parent := DirAccess.open(cursor)
+		if parent != null and parent.is_link(part):
+			return ""
+		cursor = cursor.path_join(part)
 	if require_existing and not FileAccess.file_exists(absolute):
 		return ""
 	return absolute

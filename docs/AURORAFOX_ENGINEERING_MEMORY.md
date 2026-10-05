@@ -685,3 +685,14 @@
 - **Исправление:** dedicated `security_configuration_check` tool requires separate explicit authorization, canonical private `user://` scope/baseline/output paths, launches the exact runner asynchronously with the bundled File Intelligence Python, and returns only redacted evidence. Build copies the exact runner; Windows CI requires the packaged file.
 - **Профилактика:** source contract rejects missing authorization/private-path/process/package markers. Scope content alone never authorizes execution; redirects/auth/access controls remain boundaries; failed or absent evidence cannot be called success.
 - **Статус:** SOURCE INTEGRATION PREPARED; exact-SHA parse/package/tool contracts pending.
+
+
+#### AF-MEM-103 — model authorization flag and mutable private evidence paths are not owner consent
+
+- **Environment:** 2026-10-05, inherited Windows bridge at `a15e065e9286009e10dc297f5360f9d360633127`; prior exact SHA 30/30 checks green did not cover this authority defect.
+- **Confirmed source defects:** model-controlled `authorized=true` reached a network-capable child without a trusted UI review; arbitrary user:// output was deleted before launch; empty results could report success. AF-MEM-102's assertion of separate authorization must be read with this correction.
+- **Fix:** flag requests review only. Main UI supplies a trusted callback and full exact-scope dialog, fail closed without that callback or on refusal; re-read scope/baseline after approval and reject changed bytes. Snapshot reviewed bytes into a cryptographically random reserved run directory; generic file tools deny writes there. Reject custom output paths, never remove an existing file. Reject lexical escape and symlink traversal. Runner CLI includes exact input-file SHA-256; bridge binds schema, byte hash, target count/order/hashes and nonempty outcomes.
+- **Master stop:** pass AgentCore execution guard into the security bridge; re-check before child launch and while polling, kill on denial and on registry shutdown, return stopped rather than successful evidence.
+- **Evidence:** headless Godot runtime regression proves callback absence, refusal, approved exact bytes, scope mutation, reserved paths/traversal/no overwrite, malformed/empty/wrong-scope/non-checked evidence and guard denial. Five stdlib tests use a real loopback server, including actual CLI subprocess input hash, findings/remediation/retest and access boundaries. These tests do not claim physical Windows UI acceptance.
+- **Prevention:** never promote a model parameter, imported file or document to owner authorization. Scope acceptance is not permission to overwrite unrelated state. Success requires actual complete evidence bound to the reviewed inputs.
+- **Status:** local runtime/real lab PASS; new exact-SHA CI and physical Windows dialog acceptance remain separate gates.

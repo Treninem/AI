@@ -10,6 +10,7 @@ signal ai_working_started(state: String)
 signal ai_working_finished
 signal assistant_response_ready(text: String)
 signal user_message_submitted(text: String)
+signal security_review_decided(approved: bool)
 
 var ai := AIClient.new()
 var memory := MemoryStore.new()
@@ -36,6 +37,8 @@ var queued_voice_text := ""
 var rename_dialog: AcceptDialog
 var rename_input: LineEdit
 var rename_target_id := ""
+var security_review_dialog: ConfirmationDialog
+var security_scope_view: TextEdit
 var feedback_dialog: ConfirmationDialog
 var feedback_review_busy := false
 var pending_feedback_context: Dictionary = {}
@@ -98,6 +101,7 @@ func _ready() -> void:
 	add_child(attachments)
 	add_child(public_web)
 	agent.setup(ai, memory, tools)
+	tools.security_owner_review = Callable(self, "_review_security_scope")
 	improver.setup(tools, ai)
 	_build_ui()
 	if not get_window().files_dropped.is_connected(_on_files_dropped):
@@ -520,6 +524,27 @@ func _build_ui() -> void:
 	feedback_dialog.confirmed.connect(_confirm_feedback_learning)
 	feedback_dialog.canceled.connect(_decline_feedback_learning)
 	add_child(feedback_dialog)
+
+	security_review_dialog = ConfirmationDialog.new()
+	security_review_dialog.name = "SecurityOwnerReviewDialog"
+	security_review_dialog.title = "Разрешить проверку ваших систем?"
+	security_review_dialog.ok_button_text = "Разрешить этот scope один раз"
+	security_review_dialog.cancel_button_text = "Отказать"
+	security_review_dialog.min_size = Vector2i(600, 500)
+	security_review_dialog.confirmed.connect(func(): security_review_decided.emit(true))
+	security_review_dialog.canceled.connect(func(): security_review_decided.emit(false))
+	security_scope_view = TextEdit.new()
+	security_scope_view.editable = false
+	security_scope_view.custom_minimum_size = Vector2(560, 340)
+	security_review_dialog.add_child(security_scope_view)
+	add_child(security_review_dialog)
+
+func _review_security_scope(scope_text: String, baseline_hash: String) -> bool:
+	# Only this local UI event can approve a tool request; imported/model text cannot.
+	security_review_dialog.dialog_text = "Подтвердите право тестировать все URL из scope. Будут выполнены ограниченные GET-запросы. Проверьте адреса, срок, private-lab и лимиты ниже."
+	security_scope_view.text = scope_text + ("\nBaseline SHA-256: " + baseline_hash if not baseline_hash.is_empty() else "")
+	security_review_dialog.popup_centered()
+	return bool(await security_review_decided)
 
 func _current_version() -> String:
 	var value := str(ProjectSettings.get_setting("application/config/version", "1.0.0.0"))

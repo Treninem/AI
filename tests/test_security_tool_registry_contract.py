@@ -31,3 +31,18 @@ def test_windows_package_contains_the_same_authorized_runner():
     assert 'Copy-Item $securityRunnerSource (Join-Path $fileOut "security_runner.py") -Force' in BUILD
     assert "build\\windows\\file_intelligence\\security_runner.py" in WINDOWS_CI
     assert 'register_tool("security_configuration_check"' in TOOLS
+
+
+def test_model_flag_cannot_grant_owner_consent_or_overwrite_private_files():
+    assert "await _security_review_scope(scope_abs, baseline_abs)" in TOOLS
+    assert "security_owner_review.call(scope_text" in TOOLS
+    assert "reviewed_inputs_changed" in TOOLS
+    assert "DirAccess.remove_absolute(output_abs)" not in TOOLS
+    assert 'user://security/runs/' in TOOLS
+    assert 'scope_file_sha256' in TOOLS
+    assert 'OS.kill(pid)' in TOOLS
+    main = (ROOT / "scripts/main.gd").read_text(encoding="utf-8")
+    assert 'security_review_dialog.confirmed.connect' in main
+    assert 'return bool(await security_review_decided)' in main
+    agent = (ROOT / "scripts/agent_core.gd").read_text(encoding="utf-8")
+    assert 'tools.call_tool(tool_name, args, execution_guard)' in agent

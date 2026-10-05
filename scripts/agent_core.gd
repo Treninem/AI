@@ -191,7 +191,7 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 			guard_reason = _execution_guard_reason(execution_guard, "before_tool", {"step": step + 1, "tool": tool_name, "args": _safe_args(args)}, args)
 			if not guard_reason.is_empty():
 				return EXECUTION_CONTROL_PREFIX + guard_reason
-			var tool_result = await tools.call_tool(tool_name, args)
+			var tool_result = await tools.call_tool(tool_name, args, execution_guard)
 			guard_reason = _execution_guard_reason(execution_guard, "after_tool", {"step": step + 1, "tool": tool_name, "result": _guard_result(tool_result)})
 			if not guard_reason.is_empty():
 				return EXECUTION_CONTROL_PREFIX + guard_reason

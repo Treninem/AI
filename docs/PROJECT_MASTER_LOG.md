@@ -3888,3 +3888,28 @@ REMAINING: publish this combined correction/integration commit and require exact
 BLOCKERS: no source blocker; physical Windows/Android owner acceptance remains external. Live security testing still requires an exact owner-authorized target/scope.
 NEXT: fast-forward PR #103 once with the combined CI correction + security bridge, inspect exact-head failures only, then continue inventory/tool-limit cleanup while expensive package jobs serialize.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — security bridge owner consent and evidence integrity
+
+Continuing existing CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`; no parallel lane. Fresh main remains `446ce2c`; branch HEAD `a15e065e9286009e10dc297f5360f9d360633127`, draft PR #103 open, exact HEAD 30/30 check-runs SUCCESS. Prior owner budgets and Windows bridge are already integrated. Ownership: scripts/tool_registry.gd, scripts/main.gd, security bridge tests and Chat Learning CI, journal/memory. Intended build fixes accumulated into version-last V1.5.0.0; no version/release/sign/main merge. Confirmed source defects: model-supplied authorization boolean is not owner consent; output path deletes an existing private file; empty evidence can report success. Implement trusted UI consent bound to reviewed scope bytes, fresh reserved evidence paths, runtime regression tests.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement and test those boundaries, publish on same PR, require exact-SHA CI.
+
+
+### CHECKPOINT 2026-10-05 — trusted security scope review and fresh bound evidence
+
+- Starting HEAD `a15e065e9286009e10dc297f5360f9d360633127`, existing draft PR #103, 30/30 checks SUCCESS. Existing document ingestion, owner limit UI and Windows runner bridge were retained; no duplicate implementation.
+- Security bridge now requires local UI confirmation showing the complete scope and baseline hash. Model flag only requests that review. Missing review UI, owner refusal and changed reviewed input fail closed. Reviewed bytes are frozen in new random private runs; generic file tools cannot write the reserved directory and symlink traversal is rejected. Custom evidence output is rejected; no existing private file is deleted.
+- Runner CLI emits raw scope-file hash; bridge rejects empty/malformed evidence, byte-hash mismatch, missing/wrong target hashes and result-count mismatch. Access/transport failures remain non-success. AgentCore forwards execution guard, polled before/through child execution; denial/shutdown kills the runner.
+- Local TEST: verified Godot 4.7.1 ZIP extraction; integrated parse; headless security-owner regression PASS; source security/chat/web/runtime-limit contracts PASS; five real loopback/CLI security lab tests PASS. Added regression to Chat Learning CI and reconciled duplicate/asymmetric workflow paths.
+- AF-MEM-103 corrects AF-MEM-102's overclaim that a model flag was sufficient separate authorization. Physical Windows confirmation and child execution still require device evidence; no live external targets were contacted.
+- Produced commit: this checkpoint is included atomically in the source commit; exact SHA available from PR history. Version unchanged, no merge/release/sign. Existing CLAIM remains ACTIVE for inventory and remaining acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: trusted UI scope review, immutable reviewed snapshots, fresh evidence paths, input-bound nonempty evidence, propagated execution guards and runtime regressions.
+REMAINING: new exact-SHA CI; owner-control inventory; Windows/Android physical acceptance; broader authorized security modules, performance/update/release gates.
+BLOCKERS: physical device gate is owner-side; external live testing requires exact authorized scope.
+NEXT: publish on PR #103; inspect exact-head CI and continue reviewed inventory classification.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
