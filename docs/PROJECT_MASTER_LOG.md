@@ -3913,3 +3913,19 @@ REMAINING: new exact-SHA CI; owner-control inventory; Windows/Android physical a
 BLOCKERS: physical device gate is owner-side; external live testing requires exact authorized scope.
 NEXT: publish on PR #103; inspect exact-head CI and continue reviewed inventory classification.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-05 — exact-head stale Core contract fixed; reviewed inventory classification
+
+- Produced security commit `4da2043fded0939c8e274b2f626d8850fb68ff75`: Chat Learning with real security lab and new Godot owner-review smoke SUCCESS. At follow-up: 26 SUCCESS, one Core job SKIPPED because `gate-contract` failed, Windows/Android packages still running. No skipped/pending gate is counted as PASS.
+- Exact failing job `111635245148`: 30/31 tests passed; Core specialist source contract searched the old two-argument `tools.call_tool` literal after production correctly began passing `execution_guard`. Fix contract to require the guard and preserve argument-repair-before-tool ordering. Ownership continuation includes tests/test_core_specialist_team_runtime_contract.py; no authority rollback.
+- Continue same inventory claim, now also owning config/owner_control_policy.json and tests/test_owner_control_audit.py. Explicit named File Intelligence owner budgets classified at use sites; owner-reviewed security scope budgets classified; stale public URL/title/context policy reconciled. Exact magic-byte lengths are format_structure, full comment lines documentation; unrelated executable literal limits remain unclassified and regression proves they are not hidden.
+- Counts after reviewed policy: **2446 unclassified**, 118 owner_adjustable, 1 owner_adjustable_pending_ui, 1 hard_boundary, 4 format_structure, 45 documentation, 563 test_evidence. Before this reviewed batch: 2555 unclassified. Added tests account for changed fixture counts; inventory remains INCOMPLETE.
+- Prevent concurrent security children in the shared registry; no parallel run can replace the active child/master-stop handle. Local Core specialist, inventory and security contracts PASS; owner-review Godot regression PASS. AF-MEM-104 records the precise CI correction.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: security source commit published; Chat Learning SUCCESS; exact stale Core contract reproduced/fixed; reviewed inventory batch, no blanket runtime waiver.
+REMAINING: exact-head CI on this correction, full inventory, physical package/UI and release gates.
+BLOCKERS: current gate-contract failure fixed locally awaiting publication; live external security tests need owner scope; physical device evidence remains owner-side.
+NEXT: publish one correction commit on PR #103 and verify exact-head CI, including real-core-windows enabled by green contract.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%

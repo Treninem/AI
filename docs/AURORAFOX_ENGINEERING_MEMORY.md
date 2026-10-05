@@ -696,3 +696,11 @@
 - **Evidence:** headless Godot runtime regression proves callback absence, refusal, approved exact bytes, scope mutation, reserved paths/traversal/no overwrite, malformed/empty/wrong-scope/non-checked evidence and guard denial. Five stdlib tests use a real loopback server, including actual CLI subprocess input hash, findings/remediation/retest and access boundaries. These tests do not claim physical Windows UI acceptance.
 - **Prevention:** never promote a model parameter, imported file or document to owner authorization. Scope acceptance is not permission to overwrite unrelated state. Success requires actual complete evidence bound to the reviewed inputs.
 - **Status:** local runtime/real lab PASS; new exact-SHA CI and physical Windows dialog acceptance remain separate gates.
+
+
+#### AF-MEM-104 — passing a cancellation guard invalidated an exact two-argument source assertion
+
+- **Environment/evidence:** `4da2043`, Core gate-contract job `111635245148`: 1 failed / 30 passed; failure at test_core_specialist_team_runtime_contract.py:89, ValueError substring not found.
+- **Root cause:** source assertion demanded `tools.call_tool(tool_name, args)` while production now correctly passes a third `execution_guard` to keep master stop active during asynchronous security execution. This is an assertion migration, not evidence that tool argument repair stopped working.
+- **Fix/prevention:** require guarded call and retain the ordering assertion that structural repair precedes execution. Search all contracts for the old call spelling when changing the tool ABI. Never restore the unguarded call merely to satisfy CI.
+- **Status:** local source contract PASS; exact new-head CI pending.

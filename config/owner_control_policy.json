@@ -4,7 +4,7 @@
   "classifications": [
     {
       "path": "scripts/public_web_manager.gd",
-      "pattern": "DEFAULT_MAX_|DEFAULT_REQUEST_TIMEOUT_SECONDS|max_urls_per_message|max_redirects|max_response_bytes|request_timeout_seconds|max_extracted_chars|MAX_EXTRACTED_CHARS",
+      "pattern": "DEFAULT_MAX_|DEFAULT_REQUEST_TIMEOUT_SECONDS|max_urls_per_message|max_redirects|max_response_bytes|request_timeout_seconds|max_extracted_chars|MAX_EXTRACTED_CHARS|DEFAULT_CONTEXT_CHARS|max_url_length|max_title_chars|context_chars",
       "class": "owner_adjustable",
       "control": "apply_owner_limits + aurorafox/web/* ProjectSettings",
       "rationale": "Device protection defaults; the owner can change and persist them."
@@ -38,18 +38,39 @@
       "rationale": "Parser resource budgets are visible owner controls and are applied to the local backend without source edits."
     },
     {
-      "path": "scripts/public_web_manager.gd",
-      "pattern": "\\.substr\\(0, (?:24000|400)\\)|(?:url.length\\(\\) > 4096)",
-      "class": "owner_adjustable",
-      "control": "Settings → Tools → Public links (URL/title/relevant-context budgets)",
-      "rationale": "Presentation/context ceilings are owner-visible persisted controls."
-    },
-    {
       "path": "scripts/file_intelligence_client.gd",
       "pattern": "OWNER_LIMIT_|owner_limits\\(|apply_owner_limits\\(|request_max_text_chars",
       "class": "owner_adjustable",
       "control": "Settings → Files and projects → File Intelligence limits",
       "rationale": "Client persists owner values, exports backend environment settings and restarts the local Windows backend."
+    },
+    {
+      "path": "file_intelligence/file_service.py",
+      "pattern": "\\b(?:MAX_FILE_BYTES|MAX_TEXT_CHARS|MAX_REQUEST_TEXT_CHARS|MAX_ARCHIVE_ENTRIES|MAX_ARCHIVE_EXPANDED|MAX_ARCHIVE_TEXT_MEMBER_BYTES|MAX_ARCHIVE_TEXT_TOTAL_BYTES|MAX_PDF_BYTES|MAX_PDF_PAGES|MAX_OCR_PAGES|MAX_PDF_RENDER_PIXELS)\\b",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → File Intelligence limits",
+      "rationale": "Named runtime budgets and their use sites propagate the persisted owner controls; unrelated literal limits remain unclassified."
+    },
+    {
+      "path": "security_workspace/runner.py",
+      "pattern": "\\b(?:max_requests|max_bytes|max_response_bytes|timeout_seconds|timeout|limit|deadline|body_truncated)\\b|Owner (?:operational|response time) budget",
+      "class": "owner_adjustable",
+      "control": "Exact owner-reviewed scope JSON: max_requests, timeout_seconds, max_response_bytes",
+      "rationale": "Reviewed scope supplies these request/read budgets; values have no hidden maximum and nonpositive invalid values are rejected."
+    },
+    {
+      "path": "scripts/public_web_manager.gd",
+      "pattern": "bytes\\.slice\\(0, (?:3|4|5|8)\\)",
+      "class": "format_structure",
+      "control": "file signature contract",
+      "rationale": "Exact PDF/PNG/JPEG/ZIP magic byte lengths identify the format; these are not content extraction or owner resource ceilings."
+    },
+    {
+      "path": "*",
+      "pattern": "^\\s*(?:#|//)",
+      "class": "documentation",
+      "control": "source comment only",
+      "rationale": "A full comment line documents behavior and does not itself enforce a runtime limit; executable use sites remain separately scanned."
     }
   ]
 }

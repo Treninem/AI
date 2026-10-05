@@ -207,6 +207,8 @@ func _search_file_cache(args: Dictionary) -> Dictionary:
 	}, 30.0)
 
 func _security_configuration_check(args: Dictionary, execution_guard: Callable = Callable()) -> Dictionary:
+	if _security_child_pid > 0:
+		return {"ok": false, "error": "security_run_busy"}
 	# Authorization is deliberately independent from the scope file: imported
 	# content cannot authorize traffic by merely containing an allow flag.
 	if not bool(args.get("authorized", false)):

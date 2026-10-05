@@ -36,3 +36,13 @@ def test_fixture_classification_does_not_hide_product_limits():
     assert MODULE.classify("tests/example.gd", "var limit = 2", policy)[0] == "test_evidence"
     assert MODULE.classify("scripts/example.gd", "var limit = 2", policy)[0] == "unclassified"
     assert MODULE.classify("file_intelligence/file_service.py", 'MAX_FILE_BYTES = int(os.getenv("AURORAFOX_FILE_MAX_BYTES", "1024"))', policy)[0] == "owner_adjustable"
+
+
+def test_reviewed_named_budgets_do_not_hide_remaining_literal_limits():
+    policy = MODULE.load_policy()
+    assert MODULE.classify("file_intelligence/file_service.py", "if size > MAX_FILE_BYTES:", policy)[0] == "owner_adjustable"
+    assert MODULE.classify("file_intelligence/file_service.py", "for r in range(min(sheet.nrows, 10000)):", policy)[0] == "unclassified"
+    assert MODULE.classify("security_workspace/runner.py", 'timeout = float(scope.get("timeout_seconds", 10))', policy)[0] == "owner_adjustable"
+    assert MODULE.classify("scripts/public_web_manager.gd", 'if bytes.slice(0, 5) == signature:', policy)[0] == "format_structure"
+    assert MODULE.classify("scripts/example.gd", '# LIMIT describes a control', policy)[0] == "documentation"
+    assert MODULE.classify("scripts/example.gd", 'var LIMIT = 123 # explanatory comment', policy)[0] == "unclassified"
