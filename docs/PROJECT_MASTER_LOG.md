@@ -4092,3 +4092,41 @@ ACCOUNT_ARCHITECTURE_STATUS: ACTIVE / PERMANENT MULTI-USER PRIVACY FOUNDATION.
 - Version/release planning: do not expand V1.5.0.0 scope merely to expose public multi-user accounts unless already accepted by its release criteria. This owner-role/capability foundation belongs with the planned account/Cognitive Core work so it is implemented once before V1.6 private Memory/Knowledge/experience expands.
 
 OWNER_ACCESS_POLICY_STATUS: ACTIVE / PERMANENT SECURITY AND UX INVARIANT.
+
+
+### OWNER COLLECTIVE LEARNING VISION 2026-10-05 — shared experience without cross-user memory leakage
+
+- Owner requirement: AuroraFox must learn from the aggregate experience of all users so a verified mistake/solution discovered while helping user A can improve future behavior for user B. This is part of the unified Cognitive Core, not a separate social-learning product.
+- Permanent separation model:
+  1. **Private user state** — raw conversations, personal Memory, private Knowledge, files/projects, preferences, personal world-model/relationship state, device/work history. Strictly principal-scoped and never readable by another user.
+  2. **Shared AuroraFox experience** — de-identified, generalized, evidence-bearing lessons derived from successful/failed work across users.
+  3. **Core/system knowledge** — curated product knowledge, stable strategies, verified facts, models/policies and promoted improvements used by all principals.
+- Required learning flow:
+  `private event -> outcome/evidence -> abstraction -> privacy scrub -> dedupe/corroboration -> quality/trust gate -> shared-experience candidate -> validation -> accepted shared lesson -> retrieval by future tasks`.
+- Shared lessons must describe transferable structure, not another person's private story. Examples: error signature, failure preconditions, causal explanation, successful remediation, rejected workaround, tool/workflow strategy, confidence, evidence type, affected versions/platforms and known counterexamples.
+- Example invariant: if user A encounters a specific Windows/Android/API/File/Work failure and AuroraFox verifies that fix X resolves it without regressions, the resulting generalized lesson can later cause Fox to try/check X earlier for user B. User B must not receive A's name, conversation, file contents, project identity, email, device identifiers or unrelated private context.
+- Privacy boundary: raw personal conversations/files/memory do not become shared knowledge merely because they were useful. Before any cross-user promotion, remove/forbid direct identifiers, secrets, account/session ids, unique document fragments, private URLs, personal names/contact data and other source-specific context unless the source was explicitly public/non-personal.
+- Current source already contains a privacy-oriented community-learning pattern with prohibited personal fields, sanitization, deduplication/quarantine and a rule that personal account chat does not implicitly enter shared learning. Reuse and generalize that architecture; do not create a second parallel learning pipeline.
+- The existing community contract is currently narrow (`dialogue_pattern`, `moderation_feedback`, `topic_trend`). V1.6 Cognitive Core should evolve the common event/learning substrate to support transferable operational lessons such as `error_pattern`, `verified_fix`, `failed_strategy`, `workflow_strategy`, `tool_reliability`, `knowledge_correction` and `capability_lesson`, while preserving the same privacy/provenance gates.
+- Poisoning resistance is mandatory. A single user's claim must not automatically overwrite shared truth or behavior. Shared candidates carry provenance class, evidence strength, confidence, source diversity, affected environment/version and contradiction state.
+- Promotion policy should be evidence-sensitive:
+  - deterministic/test-backed outcomes may be promoted from one source when the system independently verifies the result;
+  - subjective/general behavioral lessons should prefer repeated independent evidence;
+  - conflicting lessons remain separate/conditional until resolved;
+  - low-confidence, unverifiable, unsafe or privacy-risk material is quarantined/rejected rather than learned globally.
+- Shared learning must preserve counterexamples and scope. "Fix X worked" is not a universal rule unless environment/conditions support it. Store applicability conditions so the Cognitive Core can reason "this worked on version/platform/config A" instead of blindly applying it everywhere.
+- The shared experience store must be retrieval-oriented, not injected wholesale into every prompt. The Cognitive Core retrieves only relevant lessons for the current goal/context, with confidence and evidence metadata.
+- Global shared experience is read-only to normal user authority. Users influence it only through their normal interactions/feedback/outcomes and any explicit learning-sharing policy; they cannot directly edit/promote global lessons or system knowledge. Promotion/curation controls are owner/system-authority only.
+- Personalization and collective learning must coexist: a user-specific preference may override a generic strategy for that user without rewriting the shared global lesson. Shared knowledge answers "what generally works"; private experience answers "what works for this person/context".
+- Feedback loop: when a shared lesson is applied, AuroraFox records the new outcome. Successful reuse increases confidence within the matching scope; failed reuse creates a counterexample/correction candidate. Thus collective experience becomes self-correcting rather than append-only.
+- Versioning/provenance: every shared lesson should record creation/update time, schema version, source class, validation state and applicability/version range where relevant. When software/model behavior changes, stale lessons can be downgraded/revalidated rather than silently trusted forever.
+- Multi-user security invariant: cross-user learning is allowed only through the shared abstraction/promotion boundary. Direct cross-principal reads of private Memory/Knowledge/experience remain forbidden even for the purpose of "learning".
+- Owner/system administration may inspect aggregate learning quality and quarantined candidates through a separate audited owner surface; normal owner chat must not automatically surface another user's raw private data.
+- Cognitive Core integration: the common event model designed for V1.6 must classify each event/lesson as `private_principal`, `shared_candidate`, or `shared_core` at creation/promotion time so the brain never needs to repartition mixed memories later.
+- Long-term goal: AuroraFox should accumulate a growing body of collective practical wisdom across its user base, so every verified success/failure can make the same unified Fox better for future users without turning private user memories into a shared pool.
+
+CURRENT_BASE_STATUS:
+- DONE in source foundation: private account/guest isolation; personal chat excluded from implicit shared learning; separate community-learning store; PII/secret rejection; deduplication; quarantine/accept/reject states; provenance-style metadata; owner-gated acknowledgement path.
+- DELTA REQUIRED: unify community learning with the V1.6 cognitive event model; add operational lesson kinds and evidence/applicability schema; implement automatic abstraction/privacy scrub from eligible private outcomes; add contradiction/corroboration scoring; retrieval of accepted shared lessons into normal reasoning; tests proving user A's private data never leaks while a generalized verified lesson can improve user B's result.
+
+COLLECTIVE_LEARNING_STATUS: ACTIVE / PERMANENT COGNITIVE CORE PRINCIPLE.
