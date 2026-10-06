@@ -57,3 +57,20 @@ def test_native_reader_budgets_are_reviewed_without_hiding_arbitrary_literals():
         assert MODULE.classify(base+reader, "val LIMIT = 17", policy)[0] == "unclassified"
     assert MODULE.classify("android_plugin/plugin/src/test/java/Fixture.kt", "val limit = 2", policy)[0] == "test_evidence"
     assert MODULE.classify(base+"Unreviewed.kt", "val limit = 2", policy)[0] == "unclassified"
+
+
+def test_native_limit_propagation_preserves_security_and_unknown_literals():
+    policy = MODULE.load_policy()
+    base = "android_plugin/plugin/src/main/java/com/aurorafox/runtime/"
+    for name in ["AndroidFileRuntime.kt", "AndroidOcrRuntime.kt", "GodotAndroidPlugin.kt"]:
+        assert MODULE.classify(base+name, "analyze(file, limits)", policy)[0] == "owner_adjustable"
+        assert MODULE.classify(base+name, "val LIMIT = 17", policy)[0] == "unclassified"
+        assert MODULE.classify(base+name, "val timeout = 99", policy)[0] == "unclassified"
+    assert MODULE.classify(base+"AndroidFileRuntime.kt", "files.tree(path, maxItems)", policy)[0] == "owner_adjustable"
+    assert MODULE.classify(base+"FileAnalysisLimits.kt", "val x = Int.MAX_VALUE", policy)[0] == "format_structure"
+    assert MODULE.classify(base+"FileAnalysisLimits.kt", "require(limit >= 0)", policy)[0] == "owner_adjustable"
+    assert MODULE.classify(base+"Example.kt", "/** budget documentation */", policy)[0] == "documentation"
+    assert MODULE.classify(base+"Example.kt", "/** comment */ val LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify("scripts/public_web_manager.gd", "private_network_denied", policy)[0] == "hard_boundary"
+    assert MODULE.classify("evolution_engine/tests/fixture.gd", "var limit = 2", policy)[0] == "test_evidence"
+    assert MODULE.classify("evolution_engine/core/runtime.gd", "var limit = 2", policy)[0] == "unclassified"

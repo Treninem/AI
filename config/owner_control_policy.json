@@ -3,6 +3,76 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/FileAnalysisLimits.kt",
+      "pattern": "Int\\.MAX_VALUE",
+      "class": "format_structure",
+      "control": "JVM signed 32-bit count representation",
+      "rationale": "Saturation prevents integer wrap; the owner setting remains the source of the count."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt",
+      "pattern": "private fun slideIndex.*Int\\.MAX_VALUE",
+      "class": "format_structure",
+      "control": "Missing slide index sorting sentinel",
+      "rationale": "Places nonnumeric slide names last; does not cap slide count or document size."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt",
+      "pattern": "\\blimits\\b|\\blimitsJson\\b",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → immutable FileAnalysisLimits snapshot per queued job",
+      "rationale": "Reviewed parser and native bridge uses pass the owner snapshot without introducing fixed ceilings; unrelated runtime literals remain unclassified."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidOcrRuntime.kt",
+      "pattern": "\\blimits\\b|\\blimitsJson\\b",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → immutable FileAnalysisLimits snapshot per queued job",
+      "rationale": "Reviewed parser and native bridge uses pass the owner snapshot without introducing fixed ceilings; unrelated runtime literals remain unclassified."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt",
+      "pattern": "\\blimits\\b|\\blimitsJson\\b",
+      "class": "owner_adjustable",
+      "control": "Settings → Files and projects → immutable FileAnalysisLimits snapshot per queued job",
+      "rationale": "Reviewed parser and native bridge uses pass the owner snapshot without introducing fixed ceilings; unrelated runtime literals remain unclassified."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt",
+      "pattern": "\\bmaxItems\\b",
+      "class": "owner_adjustable",
+      "control": "Files/project tree_max_items forwarded through treeLocal and boundedDirectoryTree",
+      "rationale": "Native directory request preserves the supplied owner item budget and reports real overflow."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt",
+      "pattern": "\\bmaxItems\\b",
+      "class": "owner_adjustable",
+      "control": "Files/project tree_max_items forwarded through treeLocal and boundedDirectoryTree",
+      "rationale": "Native directory request preserves the supplied owner item budget and reports real overflow."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/FileAnalysisLimits.kt",
+      "pattern": "\\blimit\\b|\\bminOf\\(left, buffer\\.size",
+      "class": "owner_adjustable",
+      "control": "readOwnerBounded limit supplied from owner member/file/total byte settings",
+      "rationale": "Streaming helper enforces the caller budget, nonnegative validation and one-byte overflow probe; buffer size only changes chunking."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/*.kt",
+      "pattern": "^\\s*/\\*\\*.*\\*/\\s*$",
+      "class": "documentation",
+      "control": "Complete single-line Kotlin documentation comment",
+      "rationale": "Full comment only, no executable enforcement; inline executable code after a comment is excluded."
+    },
+    {
+      "path": "evolution_engine/tests/*",
+      "pattern": ".*",
+      "class": "test_evidence",
+      "control": "Evolution acceptance fixtures/assertions",
+      "rationale": "These files contain tests, including tournament/allowlist safety assertions, not runtime owner limits. Never weaken tests to alter product restrictions."
+    },
+    {
       "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/ArchiveTextReader.kt",
       "pattern": "Long\\.MAX_VALUE",
       "class": "format_structure",

@@ -4357,3 +4357,34 @@ TARGETED_RERUN_EXCEPTION:
 `uncertain fix + very slow full CI + very fast isolated test/job -> targeted rerun -> then final full exact-SHA CI`
 
 CI_EXECUTION_POLICY_STATUS: ACTIVE / PERMANENT DEVELOPMENT EFFICIENCY RULE.
+
+
+### ACTIVE CI recovery 2026-10-06 — same-SHA pre-run cancellations
+
+- CLAIM: same PR103 coordinator owns CI evidence and journal/memory reconciliation only; no production source/workflow edits. Fresh main446ce2cd2f979a8ab228f63d090062e8ba48a6eb; candidate6711e060dd6372e9a963924669f11fa001f57510, open/unmerged. Version bump NONE (evidence-only).
+- ACTION: diagnosed35 checks:17 SUCCESS,14 CANCELLED,3 SKIPPED,1 FAILURE. Integration run37367789382/job111962483321 only fails because CONTRACT_RESULT=success and GODOT_RESULT=abandoned. Dependent godot-cross-subsystem job111957060092 has empty runner/steps; Windows package job111958918532 also empty runner/steps. Logs for these and cancelled Chat Learning return BlobNotFound; no executed test error shown. Cancellation cause is unknown, not labelled a proven GitHub outage or source defect.
+- TEST/DONE: Android Plugin run37367789338/job111957059538 compiled readers and executed :plugin:testDebugUnitTest; BUILD SUCCESSFUL. Android APK37367789000 SUCCESS. New six EPUB/tar JVM cases have now executed within the successful unit-test gate, superseding prior local NOT_EXECUTED. Physical-device gates remain separate.
+- RESULT: requested exactly one rerun-failed-jobs for each of12 affected workflow runs; all12 API requests accepted. Same candidate SHA, preserve17 successful checks. Runs37367789289,37367789382,37367789005,37367789083,37367789081,37367789295,37367789044,37367789064,37367789100,37367789001,37367788989,37367788982. Failed-job rerun includes cancelled and downstream checks; no new commit/full successful-workflow restart/poll loop.
+- FILES/COMMIT: source unchanged, candidate remains6711e06. Journal/memory evidence appended locally for the next coherent source publication; do not create a docs-only new SHA that invalidates these in-flight checks. PR body records durable public recovery evidence immediately.
+- BLOCKERS/REMAINING: same-SHA retry completion, original cancellation root unknown, installed-device/release acceptance and remaining source roadmap. No test waiver, cancellation or pending rerun is PASS.
+- NEXT: owner monitors https://github.com/Treninem/AI/pull/103/checks and reports completion; inspect actual failing executed job if any, never blindly repeat again. This CI recovery CLAIM remains ACTIVE until outcomes are reconciled.
+- PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%.
+
+
+### ACTIVE 2026-10-06 — reviewed native owner-control propagation inventory
+
+- CLAIM: same PR103 coordinator owns config/owner_control_policy.json, tests/test_owner_control_audit.py and shared journal/memory only; no production/parser/other-lane edits. Source parentbc527487011f80cbc84fc882d007e330baba538b and main446ce2cd2f979a8ab228f63d090062e8ba48a6eb freshly verified; both candidate6711e06 and new documentation-policy HEADbc52748 have35/35 SUCCESS. Prior CI recovery CLAIM DONE; cancellation cause remains unknown.
+- Goal: classify proven immutable owner-limit propagation in AndroidFileRuntime/AndroidOcrRuntime/GodotAndroidPlugin/readOwnerBounded plus genuine Evolution test fixtures; preserve unrelated literals, hard security boundaries and outstanding limitations. Baseline2515 unclassified. Format integer sentinels and full comments get distinct classification.
+- Intended bump NONE (inventory/evidence only); canonical version unchanged, targetV1.5.0.0 version-last. Follow owner's new batch CI cadence; one coherent publication, no polling or intermediate failed-job rerun for a code repair.
+
+
+### SOURCE COMPLETE 2026-10-06 — native owner inventory and CI evidence consolidation
+
+- Parentbc527487011f80cbc84fc882d007e330baba538b:35/35 exact-SHA checks SUCCESS. Previous6711e06 recovery also35/35 SUCCESS; no code change was needed for abandoned prerequisites. Main446ce2cd unchanged; PR103 open/unmerged, same branch. Previous recovery CLAIM DONE and owned evidence consolidated here.
+- ACTION/FILES: config/owner_control_policy.json reviews Android parser/OCR/native bridge owner-snapshot use sites, readOwnerBounded caller budgets, tree item propagation, JVM integer/sorting sentinels, full single-line Kotlin documentation, and Evolution test fixtures. No production reader/runtime/workflow edits, dependency additions, version change, merge, signing or release.
+- RESULT:112 existing previously-unclassified findings reviewed;2515→2403 unclassified. Owner_adjustable214→303, format_structure8→10, documentation46→49;18 Evolution test findings classified. Ten new assertion findings are test_evidence through existing tests/* policy. Final test_evidence675. Inventory remains incomplete; no blanket production-path classification.
+- TEST: seven actual owner-audit regressions PASS locally, including real repository completeness/count scan and deliberate unrelated LIMIT17/timeout99/security/private-network/comment-inline counterexamples. Existing Android source/version/export contractPASS; git diff --checkPASS. Both starting green candidates provide genuine Android/JVM/package/runtime evidence; next policy/test candidate requires new-head CI, not yet PASS.
+- COMMIT: this coherent publication includes previous locally retained CI-recovery journal/memory evidence, the112 classifications and new audit regression. One normal full PR check batch; owner monitors links, no polling or extra full rerun if green.
+- BLOCKERS/REMAINING: new-head checks,2403 inventory findings, XLS/7z/rar native backend architecture/dependency choice, security-workspace remaining authorized coverage and physical-device/release acceptance. No implementation choice for new native dependencies was silently made.
+- NEXT: collect new-SHA results; after green proceed to next reviewed inventory cluster or owner-selected native backend package. For XLS/7z/rar, present concrete offline backend/library costs and agree substantial architecture choices before editing them. Source/evidence ownership released; same coordinator follows CI.
+- Intended bump NONE (inventory/evidence only); accumulatedV1.5.0.0 version-last. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%.
