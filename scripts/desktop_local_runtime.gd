@@ -54,8 +54,9 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	if not bool(ready.get("ok", false)): return ready
 	var terse_request := _is_explicit_terse_request(messages)
 	var structured_request := _is_strict_structured_request(messages)
-	var default_max_tokens := TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS
-	var max_tokens := clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)
+	var max_tokens := _generation_budget(options, terse_request)
+	if max_tokens == -2:
+		return {"ok": false, "error": "Invalid Core token budget: expected integer -1..2147483647", "model_failure": false, "retryable": false, "failure_scope": "request_budget"}
 	var request_timeout := maxf(0.0, float(options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)))
 	var wait_limits := CoreWaitPolicy.limits()
 	var stall_timeout := float(wait_limits.stall_timeout_seconds)
@@ -197,6 +198,7 @@ func runtime_info() -> Dictionary:
 		"default_chat_timeout_seconds": DEFAULT_CHAT_TIMEOUT_SECONDS,
 		"request_wait_policy": "confirmed_progress",
 		"owner_wait_limits": CoreWaitPolicy.limits(),
+		"owner_generation_tokens": {"chat": OwnerResourcePolicy.value("chat_max_tokens"), "terse": OwnerResourcePolicy.value("terse_max_tokens")},
 		"context_size": DEFAULT_CONTEXT_SIZE,
 		"parallel_slots": DEFAULT_PARALLEL_SLOTS,
 		"threads": DEFAULT_THREADS,
@@ -348,3 +350,13 @@ func _request_progress_json(payload: Dictionary, stall_seconds: float, total_sec
 	if not failure.is_empty():
 		return {"ok": false, "runtime": "aurora_core_desktop", "http": response_code, "error": failure, "failure_scope": scope, "model_failure": false, "retryable": scope == "request", "cancelled": scope == "cancelled", "prompt_tokens_processed": stream.processed, "generated_bytes": stream.generated_bytes}
 	return {"ok": true, "http": response_code, "data": stream.result(), "progress": {"prompt_tokens_processed": stream.processed, "generated_bytes": stream.generated_bytes, "received_bytes": stream.received_bytes}}
+
+func _generation_budget(options: Dictionary, terse_request: bool) -> int:
+	var default_max_tokens := OwnerResourcePolicy.value("terse_max_tokens" if terse_request else "chat_max_tokens")
+	var candidate = options.get("max_tokens", default_max_tokens)
+	if not (candidate is int or candidate is float): return -2
+	var number := float(candidate)
+	if not is_finite(number) or number != floor(number) or number < -1 or number > 2147483647.0: return -2
+	var requested_tokens := int(candidate)
+	# llama.cpp -1 disables the token ceiling, not the real model context capacity.
+	return -1 if requested_tokens <= 0 else requested_tokens

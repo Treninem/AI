@@ -103,7 +103,9 @@ def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> 
     assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0" in runtime
     assert '"max_tokens": max_tokens' in runtime
     assert 'options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)' in runtime
-    assert 'clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)' in runtime
+    assert 'var max_tokens := _generation_budget(options, terse_request)' in runtime
+    assert 'OwnerResourcePolicy.value("terse_max_tokens" if terse_request else "chat_max_tokens")' in runtime
+    assert 'return -1 if requested_tokens <= 0 else requested_tokens' in runtime
     assert 'payload["reasoning_effort"] = "none"' in runtime
     assert "_is_strict_structured_request(messages)" in runtime
     assert 'prompt.contains("return strict json only")' in runtime

@@ -62,6 +62,9 @@ def main():
     smoke = subprocess.run([args.godot, '--headless', '--path', str(root), '--script', 'tests/core_progress_stream_smoke.gd'], timeout=15)
     if smoke.returncode:
         raise SystemExit(smoke.returncode)
+    owner_smoke = subprocess.run([args.godot, '--headless', '--path', str(root), '--script', 'tests/owner_resource_limits_smoke.gd'], timeout=30)
+    if owner_smoke.returncode:
+        raise SystemExit(owner_smoke.returncode)
     server = ThreadingHTTPServer(('127.0.0.1', 0), Handler)
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()

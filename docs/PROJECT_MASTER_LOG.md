@@ -6060,3 +6060,56 @@ PROGRESS_COMPLETE:82%
 PROGRESS_REMAINING:18%
 DONE:191 classifications and9 regressions; prior actual progress waiting/package acceptance green.
 REMAINING: incomplete inventory and current release acceptance.
+
+
+### ACTIVE 2026-10-06 — large owner resource controls implementation
+
+Owner explicitly requests maximum correct implementation while current2da6e63CI runs; prepare one coherent source block, do not publish each small group or cancel current evidence. Fresh branch2da6e63/main446ce2cd; same coordinator owns existing AgentCore/MemoryStore/Desktop runtime resource-control integration and Settings card, new private persisted OwnerResourcePolicy, regression fixtures and relevant CI invocation plus policy/journal/memory. Historical memory/UI claims reconciled within existing PR103 coordinator ownership; no other active contemporary lane/source edits observed.
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION:4 existing chat/memory/Knowledge/owner operational controls, no future cognitive rewrite
+ADR_REFS: ADR0003 request budgets retained; ADR0001/0002 checked, future scopes deferred
+STARTING_HEAD:2da6e63b9643e2c4511cd5e37a58385d0b2f6125
+INTENDED_BUMP: PATCH accumulatedV1.5.0.0 version-last, canonical unchanged
+OWNED_PATHS: scripts/agent_core.gd; scripts/memory_store.gd; scripts/desktop_local_runtime.gd; scripts/settings_overlay.gd; new OwnerResourcePolicy helper; actual runtime tests; relevant CI step; config/owner_control_policy.json; journal/memory
+DEPENDENCIES: existing local chat/memory/vectorizer/storage and Settings; private ConfigFile persisted controls; no new libraries
+NON_BLOCKERS: native format dependency choices and later cognition/media/accounts/home remain outside this block
+ACCEPTANCE_GATES: defaults preserved, larger/zero-disabled controls reach actual consumers; honest clipping markers where practical; retention/dedupe/UTF8/persistence/invalid numeric regressions; unchanged safety/score/hash/model context contracts; actual Godot and full new-SHA relevant CI, device acceptance separate
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: source claim before edits, existing inventory baseline/current CI separate.
+REMAINING: implement/test comprehensive current Agent text/Core generation/Memory resource controls.
+BLOCKERS:none for authorized existing-path owner settings implementation.
+NEXT: implement common persisted owner policy and actual use sites/defaults/UI/tests, then one publication after completed block.
+
+
+### SOURCE_PREPARED / NOT_PUBLISHED — broad owner resource controls
+
+ACTION: implemented26 private persisted owner controls for Windows generation tokens, feedback/task traces, direct/agent history, attachment excerpts/metadata/counts, tool result chars/items, Memory/legacy Knowledge retention, dedupe, indexing batch/text and semantic token/features. General Settings card is collapsed initially; Android hides Windows generation fields. Original defaults retained;0disables each operational ceiling except index_batch requires1 to advance. Core uses actual llama.cpp-1 unlimited generation convention; signed32 token representation is validated, not an8192 artificial clamp. Existing context capacity/threads/native Android generation/safety/score/hash/schema boundaries unchanged.
+FILES: new scripts/owner_resource_policy.gd and tests/owner_resource_limits_smoke.gd; AgentCore, MemoryStore, DesktopLocalRuntime, local semantic vectorizer, Settings; bounded Core fixture runner/workflow paths; two existing contracts updated to assert owner propagation rather than fixed literals; reviewed policy/journal/memory. Same ACTIVE claim explicitly includes vectorizer resource limits/cache signature and existing recovery/specialist contract assertions; no parallel claim.
+COMMIT: preparing one local checkpoint on2da6e63; no new remote candidate while current Windows package runs.
+TEST:47 zero-argument Python recovery/specialist/Core evaluator/owner runtime/audit cases PASS, Python fixture compilation and diff checks PASS. Genuine Godot runtime smoke prepared for persistence/partial saves/invalid/fractional/NAN values, UTF8 clips, zero/full contexts and attachments, results, token budgets, retention/dedupe/live invalidation/index batch. No usable local Godot: new smoke is UNVERIFIED, not local PASS. Bounded30s child invocation added before actual Core benchmark.
+RESULT: actual use sites changed, not only classification. Changing index text/token/feature settings invalidates stale vectors/queued work and rebuilds from retained full records; versioned budget signature is persisted and checked at restart. Legacy vectors lacking new signature are regenerated, original memory/Knowledge records preserved. Dedupe window changes rebuild exact indexes. Owner lowering retention can still trim prior records on next add (existing algorithm), prominently warned; saving itself does not delete records. No feedback promotion, tool authority, secret redaction, model failure, Master Stop or security boundary bypass.
+INVENTORY: fresh prepared source2221unclassified vs2237published baseline; this count includes new code, so it is not a16-error fix claim. All26 defaults have visible owner fields and actual consumers; full remaining audit is unfinished.
+CI_SNAPSHOT: existing2da6e63 has34/35SUCCESS, package-windows job112309969206/run37475534197 still pending at one required pre-publication inspection; no failures. No poll loop/rerun/new SHA to interrupt this package evidence.
+BLOCKERS: new Godot/source acceptance pending; current Windows package unfinished; remaining owner inventory/current release acceptance. Native backend architecture choices and physical-device release gates remain separately open.
+NEXT: preserve local coherent checkpoint; after owner reports current package completion, inspect actual results once, finish any source-review issues and publish whole block once with all new-head tests queued together. No version bump/main merge/sign/release/tag.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:26 actual owner controls and comprehensive runtime fixtures prepared;47 available Python checks green.
+REMAINING: actual new-SHA Godot/Core/package/UI validation and remaining product acceptance.
+
+
+### ACCEPTED foundation / PUBLICATION continuation 2026-10-06
+
+Owner reports all green; exact2da6e63b9643e2c4511cd5e37a58385d0b2f6125 independently confirms35/35 completedSUCCESS, no pending/failed/skipped checks. Windows37475534197/job112309969206 completedSUCCESS; Core37475534428 and Android37475534214 alsoSUCCESS. Prior inventory claim DONE; Core/runtime/device boundaries remain as recorded. Fresh remote feature2da6e63/PR103OPEN unmerged, main446ce2cd; local2962acc is the prepared26-control source checkpoint, not a remote release.
+ACTION: publish prepared whole owner resource block plus this acceptance checkpoint atomically on accepted2da6e63. No duplicate implementation, intermediate rerun, branch/lane change, version bump, main merge, signing or release.
+TEST:47 local Python recovery/specialist/evaluator/owner/audit cases PASS; Python fixture compilation and diff checkPASS. New Godot26-control consumer/persistence/dedupe/vector regression remainsCI_PENDING, not localPASS. Entire normal new-SHA PR suite triggered together after publication, owner monitors links without polling.
+COMMIT: atomic GitHub publication follows2da6e63 with verified local/remote tree equality and expected-head lease; source checkpoint2962acc superseded by published SHA recorded in PR/commit history.
+RESULT: foundation35/35green; source26owner controls ready for new-SHA acceptance. File ownership remains same coordinator through CI; no readiness increase from pending source.
+BLOCKERS: new source Godot/Core/package/UI acceptance; remaining2221inventory and release/device/update/backend/security gates.
+NEXT: provide exact commit and all/Core/Windows/Android links; gather any failures and repair them as one coherent batch, then final full suite.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:35/35foundation acceptance verified;26control package prepared.
+REMAINING:new source runtime/package acceptance and unfinished release scope.

@@ -3,6 +3,41 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "scripts/local_semantic_vectorizer.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|count)",
+      "class": "owner_adjustable",
+      "control": "Settings -> General -> semantic vector token/feature budgets",
+      "rationale": "Owner supplies index budgets; vector dimensions/hash identities and numeric similarity bounds remain structural and are not classified by this rule."
+    },
+    {
+      "path": "scripts/agent_core.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count|limits|save|DEFAULTS|LABELS|revision)",
+      "class": "owner_adjustable",
+      "control": "Settings -> General -> Resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed actual owner policy consumption; scores/hash widths/safety guards and unrelated literal limits remain separately classified."
+    },
+    {
+      "path": "scripts/memory_store.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count|limits|save|DEFAULTS|LABELS|revision)",
+      "class": "owner_adjustable",
+      "control": "Settings -> General -> Resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed actual owner policy consumption; scores/hash widths/safety guards and unrelated literal limits remain separately classified."
+    },
+    {
+      "path": "scripts/desktop_local_runtime.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count|limits|save|DEFAULTS|LABELS|revision)",
+      "class": "owner_adjustable",
+      "control": "Settings -> General -> Resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed actual owner policy consumption; scores/hash widths/safety guards and unrelated literal limits remain separately classified."
+    },
+    {
+      "path": "scripts/settings_overlay.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count|limits|save|DEFAULTS|LABELS|revision)",
+      "class": "owner_adjustable",
+      "control": "Settings -> General -> Resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed actual owner policy consumption; scores/hash widths/safety guards and unrelated literal limits remain separately classified."
+    },
+    {
       "path": "scripts/core_progress_stream.gd",
       "pattern": "pending\\.slice\\(0, scan \\+ 1 - delimiter\\)|pending\\.slice\\(scan \\+ 1\\)",
       "class": "format_structure",

@@ -41,7 +41,7 @@ func analyze_user_feedback(prompt: String, answer: String, score: int) -> Dictio
 		},
 		{
 			"role": "user",
-			"content": "Оценка: %s\nЗапрос:\n%s\n\nОтвет:\n%s" % ["положительная" if score > 0 else "отрицательная", prompt.substr(0, 12000), answer.substr(0, 20000)]
+			"content": "Оценка: %s\nЗапрос:\n%s\n\nОтвет:\n%s" % ["положительная" if score > 0 else "отрицательная", OwnerResourcePolicy.clip(prompt, "feedback_prompt_chars"), OwnerResourcePolicy.clip(answer, "feedback_answer_chars")]
 		}
 	]
 	var response := await ai.chat(messages, 0.0)
@@ -53,9 +53,9 @@ func analyze_user_feedback(prompt: String, answer: String, score: int) -> Dictio
 	var parsed = JSON.parse_string(cleaned)
 	if not parsed is Dictionary:
 		return {"ok": false, "error": "feedback review returned invalid JSON"}
-	var summary := str(parsed.get("summary", "")).strip_edges().substr(0, 1200)
-	var observed := str(parsed.get("observed", "")).strip_edges().substr(0, 2400)
-	var proposed_lesson := str(parsed.get("proposed_lesson", "")).strip_edges().substr(0, 2400)
+	var summary := OwnerResourcePolicy.clip(str(parsed.get("summary", "")).strip_edges(), "feedback_summary_chars")
+	var observed := OwnerResourcePolicy.clip(str(parsed.get("observed", "")).strip_edges(), "feedback_observed_chars")
+	var proposed_lesson := OwnerResourcePolicy.clip(str(parsed.get("proposed_lesson", "")).strip_edges(), "feedback_lesson_chars")
 	if summary.is_empty() or proposed_lesson.is_empty():
 		return {"ok": false, "error": "feedback review is incomplete"}
 	return {
@@ -80,7 +80,7 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 	# Web/file contexts can be large and already have their own indexed stores.
 	# Keep only a bounded task trace here instead of duplicating whole sources in
 	# conversational memory and slowing every later retrieval.
-	memory.remember("user_task", task.substr(0, 12000), "chat", 0.72, 0.98)
+	memory.remember("user_task", OwnerResourcePolicy.clip(task, "task_trace_chars"), "chat", 0.72, 0.98)
 	# Ordinary conversation must not pay the latency of the autonomous agent
 	# pipeline (planning + answer + verification) when no tool/action is needed.
 	# It still uses the same local AuroraFox Core, private chat context and
@@ -275,7 +275,7 @@ func _run_direct_conversation(task: String, conversation_context: Array, executi
 	var retrieved_context: Array = await memory.retrieve(task, 2, true, true)
 	var memory_lines: Array[String] = []
 	for item in retrieved_context:
-		memory_lines.append(str(item).substr(0, 240))
+		memory_lines.append(OwnerResourcePolicy.clip(str(item), "direct_memory_chars"))
 	var messages: Array = [{
 		"role": "system",
 		"content": "[AURORA_DIRECT_CHAT] Ты AuroraFox. Ответь кратко и по существу на языке пользователя. Не выдумывай факты или выполненные действия. Память: %s" % " | ".join(memory_lines)
@@ -300,7 +300,7 @@ func _append_direct_conversation_context(messages: Array, conversation_context: 
 	var source: Array = conversation_context
 	if source.is_empty():
 		source = _active_chat_context()
-	var start := maxi(0, source.size() - 4)
+	var start := source.size() - OwnerResourcePolicy.count(source.size(), "direct_history_items")
 	for i in range(start, source.size()):
 		var item = source[i]
 		if not item is Dictionary:
@@ -308,7 +308,7 @@ func _append_direct_conversation_context(messages: Array, conversation_context: 
 		var role := str(item.get("role", ""))
 		if role not in ["user", "assistant"]:
 			continue
-		var content := str(item.get("content", "")).strip_edges().substr(0, 800)
+		var content := OwnerResourcePolicy.clip(str(item.get("content", "")).strip_edges(), "direct_history_chars")
 		if not content.is_empty():
 			messages.append({"role": role, "content": content})
 
@@ -424,7 +424,7 @@ func _append_conversation_context(messages: Array, conversation_context: Array) 
 	var source: Array = conversation_context
 	if source.is_empty(): source = _active_chat_context()
 	if source.is_empty(): return
-	var start := maxi(0, source.size() - 24)
+	var start := source.size() - OwnerResourcePolicy.count(source.size(), "agent_history_items")
 	for i in range(start, source.size()):
 		var item = source[i]
 		if not item is Dictionary: continue
@@ -432,23 +432,23 @@ func _append_conversation_context(messages: Array, conversation_context: Array) 
 		if role not in ["user", "assistant"]: continue
 		var parts: Array[String] = []
 		var content := str(item.get("content", "")).strip_edges()
-		if not content.is_empty(): parts.append(content.substr(0, 16000))
+		if not content.is_empty(): parts.append(OwnerResourcePolicy.clip(content, "agent_history_chars"))
 		var attachments: Array = item.get("attachments", [])
-		var attachment_count := mini(attachments.size(), 6)
+		var attachment_count := OwnerResourcePolicy.count(attachments.size(), "attachment_items")
 		for a_index in range(attachment_count):
 			var attachment = attachments[a_index]
 			if not attachment is Dictionary: continue
 			var name := str(attachment.get("name", "file"))
 			var kind := str(attachment.get("kind", "unknown"))
-			var excerpt := str(attachment.get("excerpt", "")).strip_edges().substr(0, 6000)
+			var excerpt := OwnerResourcePolicy.clip(str(attachment.get("excerpt", "")).strip_edges(), "attachment_excerpt_chars")
 			var meta: Dictionary = attachment.get("metadata", {})
 			var attachment_text := "[Вложение из этой реплики: %s; тип: %s" % [name, kind]
-			if not meta.is_empty(): attachment_text += "; метаданные: " + JSON.stringify(meta).substr(0, 1800)
+			if not meta.is_empty(): attachment_text += "; метаданные: " + OwnerResourcePolicy.clip(JSON.stringify(meta), "attachment_metadata_chars")
 			attachment_text += "]"
 			if not excerpt.is_empty(): attachment_text += "\n" + excerpt
 			parts.append(attachment_text)
 		if parts.is_empty(): continue
-		messages.append({"role": role, "content": "\n\n".join(parts).substr(0, 24000)})
+		messages.append({"role": role, "content": OwnerResourcePolicy.clip("\n\n".join(parts), "context_message_chars")})
 
 func _active_chat_context() -> Array:
 	var main := get_parent()
@@ -541,9 +541,10 @@ func _compact_result(value: Variant) -> Variant:
 		var copy: Dictionary = value.duplicate(true)
 		for key in copy.keys():
 			var text := str(copy[key])
-			if text.length() > 5000: copy[key] = text.substr(0, 5000) + "…"
+			var clipped := OwnerResourcePolicy.clip(text, "tool_result_chars")
+			if clipped.length() < text.length(): copy[key] = clipped + "…"
 		return copy
 	if value is Array:
 		var arr: Array = value
-		return arr.slice(0, mini(arr.size(), 25))
-	return str(value).substr(0, 5000)
+		return arr.slice(0, OwnerResourcePolicy.count(arr.size(), "tool_result_items"))
+	return OwnerResourcePolicy.clip(str(value), "tool_result_chars")

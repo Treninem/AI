@@ -432,6 +432,7 @@ func _add_card(parent: VBoxContainer, title_text: String, subtitle_text := "") -
 	return box
 
 func _build_general_page(page: VBoxContainer) -> void:
+	_build_owner_resource_limits(page)
 	var core := _add_card(page, "AuroraFox Core", "Собственный локальный Core является основным интеллектом приложения. Отдельная внешняя модель для обычной работы не требуется.")
 	core_status = Label.new()
 	core_status.name = "SettingsCoreStatus"
@@ -1196,3 +1197,35 @@ func _build_core_wait_limits(page: VBoxContainer) -> void:
 			state.text = "Клиент Core не подключён."
 	)
 	card.add_child(cancel)
+
+
+func _build_owner_resource_limits(page: VBoxContainer) -> void:
+	var card := _add_card(page, "Ресурсы чата, агента и памяти", "Ноль отключает предел. Пакет индексации — минимум одна запись. Большие значения увеличивают расход памяти и контекста модели. Уменьшение лимита записей может удалить старые записи при следующем добавлении; уже удалённое не восстанавливается. Настройки применяются к последующим операциям.")
+	var details := VBoxContainer.new()
+	details.visible = false
+	var toggle := Button.new()
+	toggle.text = "Показать ресурсные пределы"
+	toggle.pressed.connect(func():
+		details.visible = not details.visible
+		toggle.text = "Скрыть ресурсные пределы" if details.visible else "Показать ресурсные пределы"
+	)
+	card.add_child(toggle)
+	card.add_child(details)
+	var values := OwnerResourcePolicy.limits()
+	var fields := {}
+	for key in OwnerResourcePolicy.DEFAULTS:
+		if key in ["chat_max_tokens", "terse_max_tokens"] and not _desktop_features(): continue
+		fields[key] = _owner_number_row(details, str(OwnerResourcePolicy.LABELS[key]), float(values[key]), 1 if key == "index_batch" else 0, 1)
+	var state := Label.new()
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	details.add_child(state)
+	var apply := Button.new()
+	apply.name = "SettingsOwnerResourceApply"
+	apply.text = "Сохранить ресурсные пределы"
+	apply.pressed.connect(func():
+		var selected := {}
+		for key in fields: selected[key] = fields[key].value
+		var err := OwnerResourcePolicy.save(selected)
+		state.text = "Сохранено для последующих операций." if err == OK else "Не удалось сохранить: %s" % error_string(err)
+	)
+	details.add_child(apply)

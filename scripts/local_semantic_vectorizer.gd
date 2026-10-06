@@ -8,23 +8,28 @@ const MAX_FEATURES := 4096
 
 func embed(text: String) -> Array:
 	var tokens := _tokens(text)
+	var token_budget := OwnerResourcePolicy.count(tokens.size(), "vector_tokens")
+	var feature_budget := OwnerResourcePolicy.value("vector_features")
 	var vector: Array = []
 	vector.resize(DIMENSIONS)
 	vector.fill(0.0)
 	if tokens.is_empty():
 		return vector
 	var features := 0
-	for i in range(mini(tokens.size(), MAX_TOKENS)):
+	for i in range(token_budget):
 		var token := str(tokens[i])
 		_add_feature(vector, "w:" + token, 1.0)
 		features += 1
+		if feature_budget > 0 and features >= feature_budget: break
 		var stem := _stem(token)
 		if stem != token and stem.length() >= 3:
 			_add_feature(vector, "s:" + stem, 0.82)
 			features += 1
-		if i + 1 < tokens.size():
+			if feature_budget > 0 and features >= feature_budget: break
+		if i + 1 < token_budget:
 			_add_feature(vector, "b:" + token + "_" + str(tokens[i + 1]), 0.62)
 			features += 1
+			if feature_budget > 0 and features >= feature_budget: break
 		# Character n-grams make retrieval robust to Russian/English inflection,
 		# typos and closely related word forms without any external model.
 		if token.length() >= 4:
@@ -33,11 +38,11 @@ func embed(text: String) -> Array:
 				for start in range(maxi(0, padded.length() - n + 1)):
 					_add_feature(vector, "c%d:%s" % [n, padded.substr(start, n)], 0.20 if n == 3 else 0.14)
 					features += 1
-					if features >= MAX_FEATURES:
+					if feature_budget > 0 and features >= feature_budget:
 						break
-				if features >= MAX_FEATURES:
+				if feature_budget > 0 and features >= feature_budget:
 					break
-		if features >= MAX_FEATURES:
+		if feature_budget > 0 and features >= feature_budget:
 			break
 	return _normalize(vector)
 
@@ -125,3 +130,6 @@ func _stem(token: String) -> String:
 			if result.ends_with(suffix) and result.length() - str(suffix).length() >= 4:
 				return result.left(result.length() - str(suffix).length())
 	return result
+
+static func policy_signature() -> String:
+	return "owner-v1:%s:%s:%s" % [OwnerResourcePolicy.value("index_text_chars"), OwnerResourcePolicy.value("vector_tokens"), OwnerResourcePolicy.value("vector_features")]
