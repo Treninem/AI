@@ -3,6 +3,62 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "scripts/core_progress_stream.gd",
+      "pattern": "pending\\.slice\\(0, scan \\+ 1 - delimiter\\)|pending\\.slice\\(scan \\+ 1\\)",
+      "class": "format_structure",
+      "control": "SSE frame delimiters and undecoded byte remainder",
+      "rationale": "Frame byte offsets preserve UTF8 across transport chunks; owner response byte budget is separate."
+    },
+    {
+      "path": "scripts/core_progress_stream.gd",
+      "pattern": "^\\s*(?:func configure\\(now: int, stall_seconds: float, total_seconds: float, budget: int\\) -> void:|stall_ms = int\\(maxf\\(0\\.0, stall_seconds\\) \\* 1000\\.0\\)|total_ms = int\\(maxf\\(0\\.0, total_seconds\\) \\* 1000\\.0\\)|byte_budget = budget|func timeout_reason\\(now: int\\) -> String:|error = \"Core response exceeds owner byte budget\")\\s*$",
+      "class": "owner_adjustable",
+      "control": "Windows CoreWaitPolicy immutable per-request stall/total/response byte snapshot",
+      "rationale": "Accepted real progress decoder consumes captured owner budgets; zero disables operational limits, not integrity/cancel boundaries."
+    },
+    {
+      "path": "scripts/core_wait_policy.gd",
+      "pattern": "^\\s*static func limits\\(path: String = PATH\\) -> Dictionary:\\s*$",
+      "class": "owner_adjustable",
+      "control": "Settings Core wait controls persisted to private user ConfigFile",
+      "rationale": "Owner policy load returns validated defaults/overrides; representation and unknown new numeric constraints remain separately reviewable."
+    },
+    {
+      "path": "scripts/desktop_local_runtime.gd",
+      "pattern": "^\\s*(?:var request_timeout := maxf\\(0\\.0, float\\(options\\.get\\(\"timeout_seconds\", DEFAULT_CHAT_TIMEOUT_SECONDS\\)\\)\\)|var wait_limits := CoreWaitPolicy\\.limits\\(\\)|if options\\.has\\(\"timeout_seconds\"\\): stall_timeout = request_timeout|\"owner_wait_limits\": CoreWaitPolicy\\.limits\\(\\),|var timeout_reason := stream\\.timeout_reason\\(Time\\.get_ticks_msec\\(\\)\\)|if not timeout_reason\\.is_empty\\(\\):|failure = \"Core request deadline: %s\" % timeout_reason|scope = timeout_reason|scope = \"response_budget\" if failure\\.contains\\(\"byte budget\"\\) else \"protocol\")\\s*$",
+      "class": "owner_adjustable",
+      "control": "CoreWaitPolicy Settings and explicit per-request timeout override",
+      "rationale": "Reviewed waiting/error propagation consumes the owner snapshot; generation token clamps, startup/health deadlines and arbitrary limits stay unclassified."
+    },
+    {
+      "path": "scripts/settings_overlay.gd",
+      "pattern": "\\blimits(?:\\.get\\(|\\.(?:stall_timeout_seconds|total_timeout_seconds|response_max_bytes))|^\\s*var limits(?:: Dictionary)?\\s*[:=]|^\\s*\"(?:max_urls_per_message|max_redirects|max_extracted_chars|max_response_bytes|request_timeout_seconds|max_url_length|max_title_chars|max_file_bytes|max_text_chars)\":",
+      "class": "owner_adjustable",
+      "control": "Existing web/File Intelligence/Core waiting Settings fields and apply actions",
+      "rationale": "Reviewed UI default/value/apply sites display the associated owner controls; geometry, generic slider ranges and unrelated literal caps remain unknown."
+    },
+    {
+      "path": "scripts/settings_overlay.gd",
+      "pattern": "^\\s*field\\.max_value = 4096\\.0\\s*$",
+      "class": "format_structure",
+      "control": "SpinBox displayed range with allow_greater=true on the next line",
+      "rationale": "The display range is not a runtime maximum: greater typed owner values are accepted. Regression checks this paired source property; arbitrary field maxima are not classified."
+    },
+    {
+      "path": "scripts/file_intelligence_client.gd",
+      "pattern": "^\\s*\"max_file_bytes\": (?:1024 \\* 1024 \\* 1024|\"AURORAFOX_FILE_MAX_BYTES\"),|^\\s*\"max_text_chars\": (?:160000|\"AURORAFOX_FILE_MAX_TEXT\"),|^\\s*ProjectSettings\\.set_setting\\(\"aurorafox/files/\" \\+ str\\(key\\), maxi\\(minimum, int\\(overrides\\[key\\]\\)\\)\\)",
+      "class": "owner_adjustable",
+      "control": "File Intelligence owner defaults/environment export and override application",
+      "rationale": "Reviewed defaults and settings assignment; hardcoded minimum dictionary values and unrelated HTTP deadlines remain unclassified, not approved by this rule."
+    },
+    {
+      "path": "scripts/file_intelligence_client.gd",
+      "pattern": "^\\s*(?:limits\\[\"_request_max_chars\"\\] = bounded_chars|var async_result: Dictionary = await _analyze_android_job\\(plugin, private_path, question, visual, limits\\)|func _analyze_android_job\\(plugin: Object, private_path: String, question: String, visual: bool, limits: Dictionary\\) -> Dictionary:|var start_raw = plugin.call\\(\"startAnalyzeLocalFileWithLimits\", private_path, question, visual, JSON.stringify\\(limits\\)\\)|var timeout_ms := int\\(limits.get\\(\"analysis_timeout_seconds\", 600\\)\\) \\* 1000|while Time.get_ticks_msec\\(\\) - started_ms <= timeout_ms:)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Immutable native analysis owner snapshot and selected output/time budget",
+      "rationale": "Actual per-job snapshot is forwarded to native queue and its caller deadline; standalone HTTP timeout defaults/retries remain unknown."
+    },
+    {
       "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/FileAnalysisLimits.kt",
       "pattern": "Int\\.MAX_VALUE",
       "class": "format_structure",
@@ -218,6 +274,13 @@
       "class": "owner_adjustable",
       "control": "FileAnalysisLimits per job from Settings",
       "rationale": "PDF/OCR reading/output/render/input limits are measured and use owner snapshot; hashes/privacy/cancellation remain hard boundaries."
+    },
+    {
+      "path": "benchmarks/core/*",
+      "pattern": ".*",
+      "class": "test_evidence",
+      "control": "Offline Core acceptance scenarios, probe app, report evaluator and bounded CI harness",
+      "rationale": "Reviewed Core benchmark findings are test inputs, diagnostics, metrics and acceptance watchdogs, never normal product limits; gates must not be weakened to change owner controls."
     }
   ]
 }

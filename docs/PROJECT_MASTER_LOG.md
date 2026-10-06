@@ -6024,3 +6024,39 @@ PROGRESS_COMPLETE:82%
 PROGRESS_REMAINING:18%
 DONE: coherent source repair and bounded real-runtime regression fixtures prepared.
 REMAINING: exact-SHA runtime/package acceptance and remaining current release gates.
+
+
+### ACCEPTED / ACTIVE continuation 2026-10-06 — Core green and owner inventory review
+
+DONE: exact ee2b4bde8c19e2f6556a5cb515eecbba0b59b485 has35/35 completed SUCCESS. Core run37457233998/job112247764131 executes AURORA_CORE_PROGRESS_STREAM_OK and AURORA_CORE_PROGRESS_HTTP_OK plus actual bundled quality/performance gate SUCCESS. Windows37457233951, Android37457234223, Integration37457233995, Core/Voice37457233989, UI37457234029 all green. No rerun required; no poll loop. Previous Core source claim DONE / runtime files released; installed-device acceptance remains separate.
+CLAIM: same coordinator/PR103/branch now owns config/owner_control_policy.json, tests/test_owner_control_audit.py and journal/memory only. Review existing Settings/File Intelligence owner use sites and accepted new Core budgets/frame structure; retain arbitrary literals and unresolved real runtime caps. Starting measured inventory2428unclassified (2403 before Core source added25), not stale2403. No new parser/dependency/security module or production runtime edits.
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 — owner-controlled operational limits and existing stable foundation acceptance
+ADR_REFS: ADR0003 accepted Core budgets; ADR0001/0002 boundaries checked, no future scope activation
+STARTING_HEAD: ee2b4bde8c19e2f6556a5cb515eecbba0b59b485
+INTENDED_BUMP: NONE (reviewed inventory/evidence only; accumulated version-last unchanged)
+OWNED_PATHS: config/owner_control_policy.json; tests/test_owner_control_audit.py; docs/PROJECT_MASTER_LOG.md; docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES: existing Settings persistence and per-job owner snapshots; newly accepted Core stall/total/bytes controls
+NON_BLOCKERS: future cognition/media/accounts/home remain deferred; no architecture choice silently introduced
+ACCEPTANCE_GATES: audit verifies known controls/structure while arbitrary literals and executable inline comments remain unclassified; hard privacy boundary unchanged; full relevant new-SHA normal PR checks
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+REMAINING: owner inventory2428, unfinished native backends/security/device/update/release acceptance.
+BLOCKERS: no inventory source blocker; production format dependency choice remains separately open.
+NEXT: reviewed narrow inventory classifications and regression checks, one combined publication with green Core acceptance evidence; owner monitors new-head links.
+
+
+### SOURCE_COMPLETE / CI_PENDING — owner inventory Settings/Core/benchmark cluster
+
+ACTION: classify191 reviewed existing findings,2428→2237unclassified.77 owner setting/default/snapshot/UI use sites;3 SSE byte-frame/SpinBox representation findings;111 Core benchmark evidence findings. Review includes benchmarks/core acceptance/evaluator/probe/harness paths only as test_evidence; test watchdogs are not product limits and cannot be relaxed to make owner controls pass. Existing full-line comment category retained. No production source edits.
+FILES: config/owner_control_policy.json, tests/test_owner_control_audit.py, shared journal/memory.
+COMMIT: combined next publication on accepted ee2b4bde8c19e2f6556a5cb515eecbba0b59b485 using expected-head lease.
+TEST:9 audit regressions PASS, including arbitrary LIMIT17/timeout99, Core64..8192token clamp, File Intelligence minimum dictionary values, generic HTTP deadlines and generic slider maxima staying unclassified. Real audit output owner_adjustable380, format_structure13, documentation50, test_evidence815, pendingUI1, hardboundary1, unclassified2237. Diff check PASS.
+RESULT: inventory still incomplete. The snapshot propagation/defaults and visible owner fields are distinguished from actual unresolved restrictions. Core previous exact-SHA35/35green acceptance is recorded in this same block, not a new source fix or readiness increase.
+BLOCKERS: inventory2237 and known unresolved owner minima/token/startup/request controls; remaining current release backend/security/device/update/release gates. Native XLS/7z/rar choice remains open; future media/cognition/account/home scope not activated.
+NEXT: publish one combined inventory/evidence package, owner checks all new-head CI links without polling; continue substantive unresolved controls review after outcomes. Claim source files released to CI follow-up; same coordinator remains responsible. No version bump/main merge/sign/release/tag.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:191 classifications and9 regressions; prior actual progress waiting/package acceptance green.
+REMAINING: incomplete inventory and current release acceptance.

@@ -74,3 +74,28 @@ def test_native_limit_propagation_preserves_security_and_unknown_literals():
     assert MODULE.classify("scripts/public_web_manager.gd", "private_network_denied", policy)[0] == "hard_boundary"
     assert MODULE.classify("evolution_engine/tests/fixture.gd", "var limit = 2", policy)[0] == "test_evidence"
     assert MODULE.classify("evolution_engine/core/runtime.gd", "var limit = 2", policy)[0] == "unclassified"
+
+
+def test_core_wait_and_frame_structure_do_not_hide_other_desktop_caps():
+    policy = MODULE.load_policy()
+    assert MODULE.classify("scripts/core_progress_stream.gd", "pending = pending.slice(scan + 1)", policy)[0] == "format_structure"
+    assert MODULE.classify("scripts/core_progress_stream.gd", "byte_budget = budget", policy)[0] == "owner_adjustable"
+    assert MODULE.classify("scripts/desktop_local_runtime.gd", "var wait_limits := CoreWaitPolicy.limits()", policy)[0] == "owner_adjustable"
+    assert MODULE.classify("scripts/desktop_local_runtime.gd", 'var max_tokens := clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)', policy)[0] == "unclassified"
+    for path in ["scripts/core_progress_stream.gd", "scripts/core_wait_policy.gd", "scripts/desktop_local_runtime.gd", "scripts/settings_overlay.gd", "scripts/file_intelligence_client.gd"]:
+        assert MODULE.classify(path, "var LIMIT = 17", policy)[0] == "unclassified"
+        assert MODULE.classify(path, "var timeout = 99", policy)[0] == "unclassified"
+
+
+def test_owner_ui_review_leaves_minima_geometry_and_generic_deadlines_unknown():
+    policy = MODULE.load_policy()
+    assert MODULE.classify("scripts/file_intelligence_client.gd", '"max_file_bytes": 1024,', policy)[0] == "unclassified"
+    assert MODULE.classify("scripts/file_intelligence_client.gd", '"max_text_chars": 1,', policy)[0] == "unclassified"
+    assert MODULE.classify("scripts/file_intelligence_client.gd", 'var timeout_ms := int(limits.get("analysis_timeout_seconds", 600)) * 1000', policy)[0] == "owner_adjustable"
+    assert MODULE.classify("scripts/file_intelligence_client.gd", 'req.timeout = timeout', policy)[0] == "unclassified"
+    assert MODULE.classify("scripts/settings_overlay.gd", 'slider.max_value = maximum', policy)[0] == "unclassified"
+    assert MODULE.classify("scripts/settings_overlay.gd", 'field.max_value = 99', policy)[0] == "unclassified"
+    ui = (ROOT / "scripts/settings_overlay.gd").read_text()
+    assert "field.max_value = 4096.0\n\tfield.allow_greater = true" in ui
+    assert MODULE.classify("benchmarks/core/core_benchmark.gd", 'req.timeout = 3.0', policy)[0] == "test_evidence"
+    assert MODULE.classify("scripts/core_benchmark.gd", 'req.timeout = 3.0', policy)[0] == "unclassified"
