@@ -6808,3 +6808,47 @@ PROGRESS_COMPLETE:90%
 PROGRESS_REMAINING:10%
 BLOCKERS: canonical production Knowledge archive unavailable; owner production signing/license/compatibility review; remote read-back and real conditional S3 API E2E pending. These are future V1.6 distribution blockers only.
 NEXT: obtain owner approval for scoped temporary signed read-only links for uploaded files, download and compare full/part hashes without recording URLs; owner supplies exact canonical RUWiki archive via protected artifact handoff, then verify/sign/upload/read-back; final live capacity inventory and immutable API acceptance. No credentials/private URLs logged or committed. No background work implied after handoff.
+
+
+## 2026-10-06 — Real S3 read-back completed after explicit owner approval
+
+CLAIM_ID: v1.6-s3-distribution-foundation-reg-ru-followup
+STATUS: HANDOFF_READY / INCOMPLETE;95% complete,5% remaining; all available 24 uploaded files passed real read-back; canonical full Knowledge and production/API gates remain external.
+STARTING_HEAD:4a84f0b5e1fd1cf5befc5ce37cf344118c8fe5c0
+FINAL_HEAD:Git identity of this journal-only evidence commit. SOURCE_HEAD_TESTED unchanged4b0c52d22d15d73521f80017d330eea77e96d0a5.
+AUTHORIZATION: owner replied 'подтверждаю' to specific request for temporary signed download links <=1hour for uploaded files and SHA-256 verification. REG.RU form selected Hours,1; every generated URL expiry checked <=3605 seconds at read time (5sec clock tolerance), actual UI duration1hour. URLs used only in browser to download; never written to Git, user output, journal or screenshots; no permanent key generated, public bucket enabled, permission rule changed or credential rotated. Previously auto-review-blocked signed URL gate now authorized and completed.
+S3_REAL_ACCESS:YES. REAL_OBJECTS_UPLOADED:unchanged24 nonzero payload/metadata files listed above;37 total objects including13 zero-byte namespace markers, confirmed console count. No overwrite/deletion/upload in this continuation.
+DONE: genuine inbound downloads through REG.RU per-object temporary signed URLs; actual binary bytes materialized into workspace; all24 files exact byte size and SHA-256 equal source records. Core10 independently verified parts concatenated in order for full streaming digest:1282439264 bytes, SHA256d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5 PASS. Seed129788 bytes/1046records/SHA256619a08de91ccdd4841637aa3dea84d90d78a5fd0e9223db05a039fb90d52d0cd PASS. All3 OCR datasets, TTS weights, source receipts, schema and pending Knowledge metadata PASS. Downloaded fixture Ed25519 manifest verified against locally pinned fixture public key, downloaded public key hash equal original, downloaded payload exact SHA/bytes PASS. Fixture-only trust is not a production trust anchor.
+TRANSFER_RECOVERY: one core part002 download timed out and succeeded on one retry; part003 download path did not materialize after sync window and succeeded on one re-download. Successful parts retained and reused; no whole-Core retry, no integrity mismatch, no upload repetition or unsigned activation. Browser-generated error-page protocol inspection was rejected by browser URL policy; did not inspect it or bypass policy, returned to approved HTTPS REG.RU panel.
+S3_CAPACITY:console now reports37 objects,1.35GB/10GB (display rounding/binary units); earlier0MB was delayed telemetry. Exact sum of24 retrieved/verified file byte sizes1446550257; folder markers0. Conservative decimal10GB accounting total10000000000,used1446550257,free8553449743,percentage14.46550257%; this is verified-object-byte accounting, not claim of exact S3 API inventory. UI uses displayed units; do not mistake1.35GiB-style rounding for missing bytes. Retention remains dry-run, allactivecandidate/protected, no prune.
+REMOTE_VERIFICATION_RESULTS (every row actual downloaded bytes SHA256; allPASS):
+- core/source-import.json | bytes=2540 | remote_sha256=2eb6480a0bafb5f447bce6eb19287da7a938760333260dbf443a92dc9488b490 | PASS
+- core/aurorafox-core.gguf.part-009 | bytes=74479712 | remote_sha256=1056d0e4b0007941900d61805cba8da43d14e7479ea1a64148598deaa2d8f098 | PASS
+- core/aurorafox-core.gguf.part-008 | bytes=134217728 | remote_sha256=5a973b5429c2a02afe51c40b786b760c0e849fa6824b8ccd2302f18e4870dbf3 | PASS
+- core/aurorafox-core.gguf.part-007 | bytes=134217728 | remote_sha256=95fd979e4c9a00630d20b858880d87f19f6f4ed5134a42ac546cf3a9842f611f | PASS
+- core/aurorafox-core.gguf.part-006 | bytes=134217728 | remote_sha256=8fbb348f0555c8397dc597ba031d09898da543b7d4c71c5f8350cfff24e541a0 | PASS
+- core/aurorafox-core.gguf.part-005 | bytes=134217728 | remote_sha256=2ce17e13d4ee1616e69788f0e7470c62de9ad027ce2af34775c5a7c50215bb6b | PASS
+- core/aurorafox-core.gguf.part-004 | bytes=134217728 | remote_sha256=409d8ee240997caa8d7d9dfb64d943e0e74de31c1d9ae0b6a8be71f4176ef686 | PASS
+- core/aurorafox-core.gguf.part-003 | bytes=134217728 | remote_sha256=0593699b419f4dfd7f1c2ce70c70c0a0a6f6de00e42dbe8cdbd57c626c3824de | PASS
+- core/aurorafox-core.gguf.part-002 | bytes=134217728 | remote_sha256=1196cc6d19d9649ebbcfe310c5585dd341be9bb8308e45ced9086b223431e9f4 | PASS
+- core/aurorafox-core.gguf.part-001 | bytes=134217728 | remote_sha256=bff2ce9d55276e7917522b02f6c338af7788fe06b86cfe2467422b61a305e527 | PASS
+- core/aurorafox-core.gguf.part-000 | bytes=134217728 | remote_sha256=941337ea09a37b1a500e0e15dbfa48b3d7251ec95a8dfdf1e0427ea4a0c68245 | PASS
+- seed/source-import.json | bytes=556 | remote_sha256=3aa2fc3f1a200f1e98717bb968f7490f75263680d91dc516a9fe8306b9afa120 | PASS
+- seed/aurorafox_v7_seed.jsonl | bytes=129788 | remote_sha256=619a08de91ccdd4841637aa3dea84d90d78a5fd0e9223db05a039fb90d52d0cd | PASS
+- vision/source-import.json | bytes=818 | remote_sha256=1f82c0631258bcb7c730b1a15baab1f536156a93eede9768584775027a223672 | PASS
+- vision/rus.traineddata | bytes=3861738 | remote_sha256=e16e5e036cce1d9ec2b00063cf8b54472625b9e14d893a169e2b0dedeb4df225 | PASS
+- vision/osd.traineddata | bytes=10562727 | remote_sha256=9cf5d576fcc47564f11265841e5ca839001e7e6f38ff7f7aacf46d15a96b00ff | PASS
+- vision/eng.traineddata | bytes=4113088 | remote_sha256=7d4322bd2a7749724879683fc3912cb542f19906c83bcc1a52132556427170b2 | PASS
+- tts/source-import.json | bytes=506 | remote_sha256=9ce5be78aa37ddcb4c2c533e812da04f79904ae4215733d82d5218155fb557a5 | PASS
+- tts/aurorafox-silero.pt | bytes=145420684 | remote_sha256=50081637b602126ee06cb3bc8a744d25651d2da149ee8864b9a379bfdd934437 | PASS
+- metadata/knowledge.production.pending.json | bytes=1686 | remote_sha256=8870f254f0cf3322ae3bf69d706105b6fed82bd8b024377f0c352505ed3c0bd8 | PASS
+- metadata/manifest.schema.json | bytes=8823 | remote_sha256=c8c1d76617a00b6345cab3a558ebe0e3190b29b0a85cf24309eac24a0aed7e7a | PASS
+- fixture/fixture-public-key.pem | bytes=113 | remote_sha256=37146f3a7272223464675c0b04de9632397011a4167f82fc2ec28df3619abcaf | PASS
+- fixture/fixture.manifest.json | bytes=1998 | remote_sha256=7efb6b47d7a8174be9935cf4d225a8b7d4b12ba6d1312155046d6926b20e995e | PASS
+- fixture/fixture.bin | bytes=5928 | remote_sha256=378366095c5605d2b7f32c3ee07f1641f41ac144fbddc356dd67065b06f39766 | PASS
+TESTS:24/24 real REG.RU object read-back SHA/size PASS; Core full reconstruction digest PASS; fixture signed payload E2E PASS. Earlier focused50-test local suite and completed Windows/Linux CI37514648163 unchangedSUCCESS. No source edits or redundant reruns.
+V1.5_FILES_CHANGED:NONE; main/PR103 untouched; journal-only isolated lane update. Source-import receipts remain immutable historical candidate receipts with original readback_pending at import time; this newer journal entry is read-back completion evidence, not a production READY manifest. Source import candidates must not be activated as future V1.6 distribution without approved owner production signature, provenance/license and compatibility/resource metadata.
+PROGRESS_COMPLETE:95%
+PROGRESS_REMAINING:5%
+BLOCKERS:exact AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst429588529bytes / SHA256bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614 unavailable; owner-controlled production signing/license/compatibility; real REG.RU conditional PUT/412/range API acceptance and inventory still need protected API access. No permanent credentials requested/created and no raw private Experience uploaded.
+NEXT:owner supplies canonical production Knowledge archive via protected file handoff; validate fullarchive/chunks, production sign, immutable upload and actual read-back. Complete protected API conditional semantics and futureV1.6 packaging gates. User approval for one-hour object read-back already granted; do not ask again for equivalent scope. No background work implied after handoff.
