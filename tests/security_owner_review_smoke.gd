@@ -47,11 +47,16 @@ func _run() -> void:
 	report.scope_file_sha256 = scope_text.sha256_text()
 	report.results[0].outcome = "transport_failure"
 	assert(not registry._security_validate_evidence(report, scope_text).all_checked, "Failed request reported checked")
-	assert(not registry._security_execution_allowed(func(_stage, _details): return {"allowed": false}))
-	assert(registry._security_execution_allowed(func(_stage, _details): return true))
+	assert(not registry._security_execution_allowed(Callable()), "Missing master settings granted authorization")
 	var settings := StopSettings.new()
 	settings.name = "AutonomySettings"
 	root.add_child(settings)
+	settings.master_enabled = true
+	assert(not registry._security_execution_allowed(func(_stage, _details): return {}), "Malformed guard granted authorization")
+	assert(not registry._security_execution_allowed(func(_stage, _details): return {"allowed": "yes"}), "Invalid guard type granted authorization")
+	assert(not registry._security_execution_allowed(func(_stage, _details): return {"allowed": false}))
+	assert(registry._security_execution_allowed(func(_stage, _details): return true))
+	settings.master_enabled = false
 	assert(not registry._security_execution_allowed(Callable()), "Global master stop bypassed without Work guard")
 	settings.master_enabled = true
 	if OS.get_name() == "Linux":

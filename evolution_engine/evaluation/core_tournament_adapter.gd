@@ -3,9 +3,6 @@ extends RefCounted
 
 const MIN_MUTATIONS := 3
 const MAX_MUTATIONS := 10
-const MAX_GENERATION_ATTEMPTS := 24
-const MAX_PENDING_WINNERS := 5
-const PENDING_TTL_SECONDS := 86400
 const STRATEGIES := [
 	"minimal regression-first hardening",
 	"edge-case and recovery robustness",
@@ -25,8 +22,11 @@ var _pipeline_lock_epoch := 0
 var _active_pipeline_lock_token := 0
 var _pipeline_lock_acquired_at := 0
 
-func bind(value) -> void:
+var _authorization_guard := Callable()
+
+func bind(value, authorization_guard: Callable = Callable()) -> void:
 	pipeline = value
+	_authorization_guard = authorization_guard
 
 func contract_status() -> Dictionary:
 	if pipeline == null:
@@ -139,6 +139,7 @@ func _release_pipeline_lock(lock_token: int) -> Dictionary:
 func _lock_token_current(lock_token: int) -> bool:
 	return (
 		_owns_pipeline_lock
+		and (not _authorization_guard.is_valid() or bool(_authorization_guard.call()))
 		and lock_token > 0
 		and lock_token == _active_pipeline_lock_token
 	)
@@ -192,8 +193,11 @@ func _run_locked(goal: String, requested_target: String, requested_count: int, l
 	var seen_hashes: Dictionary = {}
 	var generation_errors: Array = []
 	var attempt := 0
+	var attempt_cap := OwnerResourcePolicy.value("evolution_generation_attempts")
 
-	while (population.size() < requested_count or finalists.size() < MIN_MUTATIONS) and population.size() < MAX_MUTATIONS and attempt < MAX_GENERATION_ATTEMPTS:
+	while (population.size() < requested_count or finalists.size() < MIN_MUTATIONS) and population.size() < MAX_MUTATIONS and (attempt_cap == 0 or attempt < attempt_cap):
+		if not _lock_token_current(lock_token):
+			return _lock_superseded("before_proposal", lock_token)
 		var strategy := str(STRATEGIES[attempt % STRATEGIES.size()])
 		var mutation_goal := "%s\nMutation %d strategy: %s. Produce a materially distinct candidate from other strategies while preserving all public contracts." % [
 			clean_goal,
@@ -484,12 +488,14 @@ func _compact_error(stage: String, value: Variant) -> Dictionary:
 
 func _trim_pending() -> void:
 	var now := int(Time.get_unix_time_from_system())
+	var ttl := OwnerResourcePolicy.value("evolution_pending_ttl_seconds")
 	for key in _pending_winners.keys():
 		var row: Dictionary = _pending_winners[key]
 		var created := int(row.get("created_unix", 0))
-		if created <= 0 or now - created > PENDING_TTL_SECONDS:
+		if created <= 0 or (ttl > 0 and now - created > ttl):
 			_pending_winners.erase(key)
-	while _pending_winners.size() > MAX_PENDING_WINNERS:
+	var cap := OwnerResourcePolicy.value("evolution_pending_items")
+	while cap > 0 and _pending_winners.size() > cap:
 		var oldest_key := ""
 		var oldest_time := 9223372036854775807
 		for key in _pending_winners.keys():

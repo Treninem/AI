@@ -7,8 +7,6 @@ signal core_candidate_rejected(result: Dictionary)
 
 const CANDIDATE_ROOT := "user://core_candidates"
 const STATE_PATH := "user://core_candidates/state.json"
-const MAX_SOURCE_BYTES := 1024 * 1024
-const MAX_HISTORY := 30
 const MIN_REVIEW_IMPROVEMENT := 1.0
 const MIN_TOURNAMENT_CANDIDATES := 3
 const MAX_TOURNAMENT_CANDIDATES := 10
@@ -277,7 +275,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 		"manifest_path": stored.get("manifest_path", ""),
 		"base_sha256": baseline_sha,
 		"candidate_sha256": winner_sha,
-		"reason": str(proposal.get("reason", "")).substr(0, 2000),
+		"reason": OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "candidate_reason_chars"),
 		"verified": true,
 		"benchmark_verified": true,
 		"review_improved": true,
@@ -303,7 +301,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 		if bool(result.get("applied_to_dev_checkout", false)):
 			result["promotion"] = "verified_dev_checkout_candidate_then_signed_update"
 			if tools.tools.has("index_project"):
-				result["reindex"] = _compact(await tools.call_tool("index_project", {"path":"res://", "max_files":30000, "force":false}))
+				result["reindex"] = _compact(await tools.call_tool("index_project", {"path":"res://", "max_files":OwnerResourcePolicy.value("coordinator_index_files"), "force":false}))
 
 	_last_candidate_unix = Time.get_unix_time_from_system()
 	_history.append(_history_entry(result))
@@ -355,7 +353,7 @@ func _validate_candidate(target: String, original: String, proposal: Dictionary)
 	var content := str(proposal.get("content", ""))
 	if content.strip_edges().is_empty():
 		return {"ok": false, "stage": "validation", "error": "candidate source is empty"}
-	if content.to_utf8_buffer().size() > MAX_SOURCE_BYTES:
+	if OwnerResourcePolicy.value("candidate_source_bytes") > 0 and content.to_utf8_buffer().size() > OwnerResourcePolicy.value("candidate_source_bytes"):
 		return {"ok": false, "stage": "validation", "error": "candidate source exceeds size limit"}
 	if content == original:
 		return {"ok": false, "stage": "validation", "error": "candidate does not change the source"}
@@ -387,7 +385,7 @@ func _verify_in_workspace(goal: String, target: String, content: String) -> Dict
 			return {"ok": false, "stage": "workspace", "error": "required verification tool missing", "tool": required}
 	var created = await tools.call_tool("workspace_create", {"task":"AuroraFox core candidate benchmark: " + goal, "runtime":"local"})
 	if not _ok(created): return _failed("workspace_create", created)
-	var imported = await tools.call_tool("workspace_import_project", {"project_path":"res://", "target":"project", "max_files":30000, "max_bytes":2147483648})
+	var imported = await tools.call_tool("workspace_import_project", {"project_path":"res://", "target":"project", "max_files":OwnerResourcePolicy.value("candidate_project_files"), "max_bytes":OwnerResourcePolicy.value("candidate_project_bytes")})
 	if not _ok(imported): return _failed("workspace_import_project", imported)
 
 	var benchmark_commands := benchmark.commands_for_target(target)
@@ -454,8 +452,8 @@ func _comparative_review(goal: String, target: String, original: String, candida
 	var evidence := {
 		"source_contract": verification.get("source_contract", {}),
 		"benchmark": verification.get("benchmark", {}),
-		"requested_reason": str(proposal.get("reason", "")).substr(0, 2000),
-		"requested_verification": str(proposal.get("verification", "")).substr(0, 1500)
+		"requested_reason": OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "candidate_reason_chars"),
+		"requested_verification": OwnerResourcePolicy.clip(str(proposal.get("verification", "")), "candidate_verification_chars")
 	}
 	var prompt := """
 Ты локальный независимый reviewer AuroraFox. Сравни неизменный incumbent и уже прошедшую source/safety/test/benchmark hard-gates мутацию.
@@ -474,7 +472,7 @@ func _comparative_review(goal: String, target: String, original: String, candida
 %s
 --- MUTATION ---
 %s
-""" % [goal, target, JSON.stringify(_compact(evidence)), original.substr(0, 120000), candidate.substr(0, 120000)]
+""" % [goal, target, JSON.stringify(_compact(evidence)), OwnerResourcePolicy.clip(original, "candidate_review_source_chars"), OwnerResourcePolicy.clip(candidate, "candidate_review_source_chars")]
 	var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)
 	if not bool(response.get("ok", false)):
 		return {"ok": false, "stage": "comparative_review", "error": str(response.get("error", "comparative review failed"))}
@@ -557,8 +555,8 @@ func _store_candidate(goal: String, target: String, original: String, proposal: 
 		"target": target,
 		"base_sha256": _sha256_text(original),
 		"candidate_sha256": candidate_sha,
-		"reason": str(proposal.get("reason", "")).substr(0, 4000),
-		"requested_verification": str(proposal.get("verification", "")).substr(0, 3000),
+		"reason": OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "candidate_saved_reason_chars"),
+		"requested_verification": OwnerResourcePolicy.clip(str(proposal.get("verification", "")), "candidate_saved_verification_chars"),
 		"verified": true,
 		"benchmark_verified": bool(verification.get("benchmark", {}).get("ok", false)) if verification.get("benchmark", {}) is Dictionary else false,
 		"tournament_verified": bool(verification.get("tournament", {}).get("second_clean_pass", false)) if verification.get("tournament", {}) is Dictionary else false,
@@ -604,7 +602,7 @@ func _read_res_source(target: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {"ok": false, "error": "cannot read core source", "path": target}
-	if file.get_length() > MAX_SOURCE_BYTES:
+	if OwnerResourcePolicy.value("candidate_source_bytes") > 0 and file.get_length() > OwnerResourcePolicy.value("candidate_source_bytes"):
 		file.close()
 		return {"ok": false, "error": "core source exceeds size limit", "path": target}
 	var content := file.get_as_text()
@@ -648,7 +646,7 @@ func _finish_rejected(result: Dictionary) -> Dictionary:
 func _history_entry(result: Dictionary) -> Dictionary:
 	return {
 		"ok": bool(result.get("ok", false)),
-		"goal": str(result.get("goal", "")).substr(0, 1000),
+		"goal": OwnerResourcePolicy.clip(str(result.get("goal", "")), "candidate_history_text_chars"),
 		"target": str(result.get("target", "")),
 		"candidate_id": str(result.get("candidate_id", "")),
 		"candidate_sha256": str(result.get("candidate_sha256", "")),
@@ -660,13 +658,14 @@ func _history_entry(result: Dictionary) -> Dictionary:
 		"promotion": str(result.get("promotion", "")),
 		"applied_to_dev_checkout": bool(result.get("applied_to_dev_checkout", false)),
 		"stage": str(result.get("stage", "")),
-		"error": str(result.get("error", "")).substr(0, 1000),
+		"error": OwnerResourcePolicy.clip(str(result.get("error", "")), "candidate_history_text_chars"),
 		"time": Time.get_datetime_string_from_system(true)
 	}
 
 func _trim_history() -> void:
-	if _history.size() > MAX_HISTORY:
-		_history = _history.slice(_history.size() - MAX_HISTORY, _history.size())
+	var cap := OwnerResourcePolicy.value("candidate_history_items")
+	if cap > 0 and _history.size() > cap:
+		_history = _history.slice(_history.size() - cap, _history.size())
 
 func _load_state() -> void:
 	var file := FileAccess.open(STATE_PATH, FileAccess.READ)
@@ -723,7 +722,7 @@ func _compact(value: Variant) -> Variant:
 		return out
 	if value is Array:
 		var out_array: Array = []
-		for item in value.slice(0, mini(value.size(), 24)):
+		for item in value.slice(0, OwnerResourcePolicy.count(value.size(), "candidate_evidence_items")):
 			out_array.append(_compact(item))
 		return out_array
 	return value

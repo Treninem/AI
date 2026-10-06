@@ -62,3 +62,23 @@ def test_removed_file_disappears_from_index(tmp_path: Path) -> None:
     assert result["removed_files"] == 1
     found = indexer.search_symbols(indexer.SymbolRequest(root=str(project), query="obsolete_function", limit=20))
     assert found["results"] == []
+
+
+def test_owner_file_budget_reports_partial_and_preserves_unvisited(tmp_path: Path) -> None:
+    _set_db(tmp_path)
+    project = tmp_path / "project"
+    project.mkdir()
+    for name in ("a.py", "b.py", "c.py"):
+        (project / name).write_text("def retained(): pass", encoding="utf-8")
+    complete = indexer.index_project(indexer.IndexRequest(root=str(project), max_files=0))
+    assert complete["total_files"] == 3 and not complete["partial"]
+    limited = indexer.index_project(indexer.IndexRequest(root=str(project), max_files=1))
+    assert limited["partial"] and limited["limit_reached"]
+    assert limited["total_files"] == 3 and limited["removed_files"] == 0
+    exact = indexer.index_project(indexer.IndexRequest(root=str(project), max_files=3))
+    assert not exact["partial"] and not exact["limit_reached"]
+    assert indexer.IndexRequest(root=str(project), max_files=100001).max_files == 100001
+    import pytest
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        indexer.IndexRequest(root=str(project), max_files=-1)

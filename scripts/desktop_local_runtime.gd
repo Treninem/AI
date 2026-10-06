@@ -262,9 +262,9 @@ func _request_json(path: String, method: HTTPClient.Method, payload: Dictionary,
 	if code >= 200 and code < 300:
 		if not parsed is Dictionary:
 			var detail := "empty response" if raw.strip_edges().is_empty() else "invalid JSON response"
-			return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": "Core Engine returned %s" % detail, "raw": raw.substr(0, 3000), "failure_scope": "request", "model_failure": false, "retryable": true}
+			return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": "Core Engine returned %s" % detail, "raw": OwnerResourcePolicy.clip(raw, "core_http_error_chars"), "failure_scope": "request", "model_failure": false, "retryable": true}
 		return {"ok": true, "http": code, "data": parsed, "raw": raw}
-	return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": raw.substr(0, 3000)}
+	return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": OwnerResourcePolicy.clip(raw, "core_http_error_chars")}
 
 func _candidate_roots() -> Array[String]:
 	return [

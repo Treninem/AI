@@ -9,11 +9,6 @@ const DOCUMENT_EXTENSIONS := ["pdf", "docx", "xlsx", "xls", "pptx", "odt", "ods"
 const AUDIO_EXTENSIONS := ["wav", "mp3", "ogg", "flac", "m4a", "aac", "opus"]
 const VIDEO_EXTENSIONS := ["mp4", "mkv", "webm", "mov", "avi", "m4v"]
 const ARCHIVE_EXTENSIONS := ["zip", "7z", "rar", "tar", "gz", "tgz", "bz2", "tbz2", "xz", "txz"]
-const MAX_TEXT_BYTES := 2 * 1024 * 1024
-const MAX_SKILL_JSON_BYTES := 8 * 1024 * 1024
-const MAX_IMPORTED_SKILLS := 2000
-const MAX_SKILL_STEPS := 64
-const MAX_SKILL_TOOLS := 32
 
 var intelligence := FileIntelligenceClient.new()
 var intent_router := UserIntentRouter.new()
@@ -39,7 +34,8 @@ func describe(path: String) -> Dictionary:
 		"warnings": [],
 		"analyzed": false
 	}
-	if ext in TEXT_EXTENSIONS and size <= MAX_TEXT_BYTES:
+	var text_cap := OwnerResourcePolicy.value("attachment_text_bytes")
+	if ext in TEXT_EXTENSIONS and (text_cap == 0 or size <= text_cap):
 		result["content"] = file.get_as_text()
 		result["analyzed"] = true
 	elif ext in TEXT_EXTENSIONS:
@@ -280,8 +276,10 @@ func _import_skill_file(path: String, item: Dictionary) -> Dictionary:
 	var ext := path.get_extension().to_lower()
 	var accepted := 0
 	var rejected := 0
+	var json_cap := OwnerResourcePolicy.value("skill_json_bytes")
+	var item_cap := OwnerResourcePolicy.value("skill_import_items")
 	if ext == "json":
-		if int(item.get("size", 0)) > MAX_SKILL_JSON_BYTES:
+		if json_cap > 0 and int(item.get("size", 0)) > json_cap:
 			return {"ok": false, "type": "skill", "error": "JSON skill-pack слишком велик; используй JSONL для потокового импорта"}
 		var file := FileAccess.open(path, FileAccess.READ)
 		if file == null:
@@ -290,7 +288,7 @@ func _import_skill_file(path: String, item: Dictionary) -> Dictionary:
 		file.close()
 		var records := _skill_records_from_json(parsed)
 		for record in records:
-			if accepted >= MAX_IMPORTED_SKILLS:
+			if item_cap > 0 and accepted >= item_cap:
 				break
 			var skill := _sanitize_imported_skill(record)
 			if skill.is_empty():
@@ -302,7 +300,7 @@ func _import_skill_file(path: String, item: Dictionary) -> Dictionary:
 		var file := FileAccess.open(path, FileAccess.READ)
 		if file == null:
 			return {"ok": false, "type": "skill", "error": "Не удалось прочитать skill JSONL"}
-		while not file.eof_reached() and accepted < MAX_IMPORTED_SKILLS:
+		while not file.eof_reached() and (item_cap == 0 or accepted < item_cap):
 			var line := file.get_line().strip_edges()
 			if line.is_empty():
 				continue
@@ -350,34 +348,36 @@ func _sanitize_imported_skill(value: Variant) -> Dictionary:
 	if not value is Dictionary:
 		return {}
 	var source: Dictionary = value
-	var name := str(source.get("name", source.get("title", "Импортированный навык"))).strip_edges().substr(0, 120)
-	var summary := str(source.get("summary", source.get("description", ""))).strip_edges().substr(0, 4000)
-	var goal_pattern := str(source.get("goal_pattern", source.get("goal", source.get("trigger", "")))).strip_edges().substr(0, 600)
+	var name := OwnerResourcePolicy.clip(str(source.get("name", source.get("title", "Импортированный навык"))).strip_edges(), "skill_name_chars")
+	var summary := OwnerResourcePolicy.clip(str(source.get("summary", source.get("description", ""))).strip_edges(), "skill_summary_chars")
+	var goal_pattern := OwnerResourcePolicy.clip(str(source.get("goal_pattern", source.get("goal", source.get("trigger", "")))).strip_edges(), "skill_goal_chars")
 	if goal_pattern.is_empty():
-		goal_pattern = (name + " " + summary).strip_edges().substr(0, 600)
+		goal_pattern = OwnerResourcePolicy.clip((name + " " + summary).strip_edges(), "skill_goal_chars")
 	if goal_pattern.is_empty():
 		return {}
+	var step_cap := OwnerResourcePolicy.value("skill_step_items")
+	var tool_cap := OwnerResourcePolicy.value("skill_tool_items")
 	var clean_steps: Array = []
 	var steps = source.get("steps", [])
 	if steps is Array:
 		for step in steps:
-			if clean_steps.size() >= MAX_SKILL_STEPS:
+			if step_cap > 0 and clean_steps.size() >= step_cap:
 				break
 			var text := ""
 			if step is Dictionary:
 				text = str(step.get("instruction", step.get("description", step.get("action", ""))))
 			else:
 				text = str(step)
-			text = text.strip_edges().substr(0, 1200)
+			text = OwnerResourcePolicy.clip(text.strip_edges(), "skill_step_chars")
 			if not text.is_empty():
 				clean_steps.append(text)
 	var clean_tools: Array = []
 	var tools = source.get("tools", [])
 	if tools is Array:
 		for tool in tools:
-			if clean_tools.size() >= MAX_SKILL_TOOLS:
+			if tool_cap > 0 and clean_tools.size() >= tool_cap:
 				break
-			var tool_name := str(tool).strip_edges().substr(0, 80)
+			var tool_name := str(tool).strip_edges()
 			if not tool_name.is_empty() and not clean_tools.has(tool_name):
 				clean_tools.append(tool_name)
 	return {

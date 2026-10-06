@@ -6,11 +6,7 @@ signal knowledge_promoted(report: Dictionary)
 const STATE_PATH := "user://agent/learning_curator.json"
 const STATE_BACKUP_PATH := "user://agent/learning_curator.json.bak"
 const STATE_TEMP_PATH := "user://agent/learning_curator.json.tmp"
-const MAX_SEEN := 5000
-const MAX_CLAIMS := 5000
-const MAX_GAP_QUESTIONS := 500
-const MAX_AUDIT_EVENTS := 2000
-const MAX_TEXT_CHARS := 5000
+const UNTRUSTED_DATA_PREFIX := "[UNTRUSTED_EXTERNAL_RESEARCH_DATA]\n"
 const MIN_PROMOTION_SCORE := 0.48
 const SINGLE_SOURCE_PROMOTION_SCORE := 0.78
 const MIN_CORROBORATING_FAMILIES := 2
@@ -400,12 +396,12 @@ func _max_age_for_evidence(evidence: Dictionary, metadata: Variant) -> int:
 
 func _knowledge_text(item: Dictionary) -> String:
 	var source := str(item.get("source", "unknown"))
-	var title := _clean(str(item.get("title", "")), 500)
-	var summary := _clean(str(item.get("summary", "")), 3600)
-	var url := _canonical_url(str(item.get("url", ""))).substr(0, 1000)
+	var title := _clean(str(item.get("title", "")), OwnerResourcePolicy.value("learning_title_chars"))
+	var summary := _clean(str(item.get("summary", "")), OwnerResourcePolicy.value("learning_summary_chars"))
+	var url := OwnerResourcePolicy.clip(_canonical_url(str(item.get("url", ""))), "learning_url_chars")
 	if title.is_empty() and summary.is_empty():
 		return ""
-	return ("[UNTRUSTED_EXTERNAL_RESEARCH_DATA]\nИсточник: %s\nЗаголовок: %s\nURL: %s\nДанные: %s" % [source, title, url, summary]).substr(0, MAX_TEXT_CHARS)
+	return UNTRUSTED_DATA_PREFIX + OwnerResourcePolicy.clip("Источник: %s\nЗаголовок: %s\nURL: %s\nДанные: %s" % [source, title, url, summary], "learning_context_data_chars")
 
 func _fingerprint(item: Dictionary) -> String:
 	var canonical_url := _canonical_url(str(item.get("url", "")))
@@ -689,8 +685,9 @@ func _invalidate_promoted_claim(claim_key: String, reason: String) -> bool:
 		"invalidated_unix": int(Time.get_unix_time_from_system()),
 		"reason": reason
 	})
-	if history.size() > 50:
-		history = history.slice(history.size() - 50, history.size())
+	var history_cap := OwnerResourcePolicy.value("learning_promotion_history_items")
+	if history_cap > 0 and history.size() > history_cap:
+		history = history.slice(history.size() - history_cap, history.size())
 	ledger["promotion_history"] = history
 	ledger["promoted_source"] = ""
 	ledger["promoted_fingerprint"] = ""
@@ -819,7 +816,7 @@ func _resolve_gap(claim_key: String) -> void:
 
 func open_questions(limit := 20) -> Array:
 	var out: Array = []
-	var bounded := maxi(1, int(limit))
+	var bounded := maxi(0, int(limit))
 	for entry in _gap_questions:
 		if entry is Dictionary and str(entry.get("status", "open")) == "open":
 			out.append(entry.duplicate(true))
@@ -830,11 +827,11 @@ func open_questions(limit := 20) -> Array:
 			return pa > pb
 		return int(a.get("updated_unix", 0)) < int(b.get("updated_unix", 0))
 	)
-	return out.slice(0, mini(bounded, out.size()))
+	return out if bounded == 0 else out.slice(0, mini(bounded, out.size()))
 
 func next_question() -> Dictionary:
 	var now := int(Time.get_unix_time_from_system())
-	for question in open_questions(MAX_GAP_QUESTIONS):
+	for question in open_questions(0):
 		if question is Dictionary and int(question.get("next_retry_unix", 0)) <= now:
 			return question
 	return {}
@@ -853,7 +850,7 @@ func mark_question_attempt(gap_id: String, outcome := "attempted") -> Dictionary
 		var exponent := mini(8, maxi(0, attempts - 1))
 		var delay := mini(GAP_MAX_RETRY_SECONDS, GAP_BASE_RETRY_SECONDS * int(pow(2.0, float(exponent))))
 		updated["attempts"] = attempts
-		updated["last_outcome"] = str(outcome).substr(0, 120)
+		updated["last_outcome"] = OwnerResourcePolicy.clip(str(outcome), "learning_outcome_chars")
 		updated["last_attempt_unix"] = now
 		updated["next_retry_unix"] = now + delay
 		updated["updated_unix"] = now
@@ -914,7 +911,8 @@ func _valid_external_url(url: String) -> bool:
 	return lower.begins_with("https://") or lower.begins_with("http://")
 
 func _clean(text: String, limit: int) -> String:
-	return " ".join(text.split(" ", false)).strip_edges().substr(0, limit)
+	var normalized := " ".join(text.split(" ", false)).strip_edges()
+	return normalized if limit == 0 else normalized.substr(0, limit)
 
 func status() -> Dictionary:
 	return {
@@ -923,7 +921,7 @@ func status() -> Dictionary:
 		"seen": _seen.size(),
 		"seen_content": _seen_content.size(),
 		"claim_evidence": _claim_evidence.size(),
-		"open_gap_questions": open_questions(MAX_GAP_QUESTIONS).size(),
+		"open_gap_questions": open_questions(0).size(),
 		"audit_events": _audit_events.size(),
 		"minimum_promotion_score": MIN_PROMOTION_SCORE,
 		"single_source_promotion_score": SINGLE_SOURCE_PROMOTION_SCORE,
@@ -932,10 +930,11 @@ func status() -> Dictionary:
 	}
 
 func _trim_seen() -> void:
-	if _seen.size() <= MAX_SEEN:
+	var cap := OwnerResourcePolicy.value("learning_seen_items")
+	if cap == 0 or _seen.size() <= cap:
 		return
 	var keys: Array = _seen.keys()
-	var remove_count := _seen.size() - MAX_SEEN
+	var remove_count := _seen.size() - cap
 	for i in range(remove_count):
 		var fingerprint := str(keys[i])
 		var entry: Dictionary = _seen.get(fingerprint, {})
@@ -945,7 +944,8 @@ func _trim_seen() -> void:
 			_seen_content.erase(content_sha)
 
 func _trim_claim_evidence() -> void:
-	if _claim_evidence.size() <= MAX_CLAIMS:
+	var cap := OwnerResourcePolicy.value("learning_claim_items")
+	if cap == 0 or _claim_evidence.size() <= cap:
 		return
 	var rows: Array = []
 	for key in _claim_evidence.keys():
@@ -956,12 +956,13 @@ func _trim_claim_evidence() -> void:
 			return not bool(a.get("promoted", false))
 		return int(a.get("updated", 0)) < int(b.get("updated", 0))
 	)
-	var remove_count := _claim_evidence.size() - MAX_CLAIMS
+	var remove_count := _claim_evidence.size() - cap
 	for i in range(remove_count):
 		_claim_evidence.erase(str((rows[i] as Dictionary).get("key", "")))
 
 func _trim_gap_questions() -> void:
-	if _gap_questions.size() <= MAX_GAP_QUESTIONS:
+	var cap := OwnerResourcePolicy.value("learning_gap_items")
+	if cap == 0 or _gap_questions.size() <= cap:
 		return
 	var resolved: Array = []
 	var open: Array = []
@@ -983,11 +984,12 @@ func _trim_gap_questions() -> void:
 	var combined: Array = []
 	combined.append_array(open)
 	combined.append_array(resolved)
-	_gap_questions = combined.slice(0, mini(MAX_GAP_QUESTIONS, combined.size()))
+	_gap_questions = combined.slice(0, mini(cap, combined.size()))
 
 func _trim_audit_events() -> void:
-	if _audit_events.size() > MAX_AUDIT_EVENTS:
-		_audit_events = _audit_events.slice(_audit_events.size() - MAX_AUDIT_EVENTS, _audit_events.size())
+	var cap := OwnerResourcePolicy.value("learning_audit_items")
+	if cap > 0 and _audit_events.size() > cap:
+		_audit_events = _audit_events.slice(_audit_events.size() - cap, _audit_events.size())
 
 func _read_state(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):

@@ -3,7 +3,6 @@ extends Node
 
 const DEFAULT_MODEL_PATH := "user://models/aurorafox-main.gguf"
 const LOCAL_MODEL_DIR := "user://models"
-const MAX_LOCAL_FALLBACK_MODELS := 4
 const MODEL_MIN_RETRY_SECONDS := 20.0
 const MODEL_MAX_RETRY_SECONDS := 300.0
 const OLLAMA_TIMEOUT_SECONDS := 12.0
@@ -106,9 +105,10 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 	var failures: Array = []
 	var skipped: Array = []
 	var attempted := 0
+	var fallback_cap := OwnerResourcePolicy.value("core_fallback_items")
 	for candidate_value in candidates:
 		var candidate := str(candidate_value)
-		if attempted >= MAX_LOCAL_FALLBACK_MODELS:
+		if fallback_cap > 0 and attempted >= fallback_cap:
 			break
 		if _model_circuit_open(candidate):
 			skipped.append(_model_failure_summary(candidate))
@@ -136,7 +136,7 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 		failures.append({
 			"model_path": candidate,
 			"runtime": result.get("runtime", "aurora_core"),
-			"error": error.substr(0, 600),
+			"error": OwnerResourcePolicy.clip(error, "core_error_chars"),
 			"failure_scope": result.get("failure_scope", "model" if model_failure else "request"),
 			"model_failure": model_failure,
 			"retryable": result.get("retryable", false),
@@ -241,7 +241,7 @@ func _record_model_failure(path: String, message: String) -> void:
 		"retry_after_unix": Time.get_unix_time_from_system() + delay,
 		"size": int(identity.get("size", -1)),
 		"modified": int(identity.get("modified", -1)),
-		"last_error": message.substr(0, 600),
+		"last_error": OwnerResourcePolicy.clip(message, "core_error_chars"),
 		"last_failure_at": Time.get_datetime_string_from_system(true)
 	}
 

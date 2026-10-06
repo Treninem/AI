@@ -2,7 +2,6 @@ class_name ChatStore
 extends Node
 
 const SAVE_PATH := "user://aurorafox_chats.json"
-const ATTACHMENT_EXCERPT_CHARS := 6000
 
 var chats: Array = []
 var active_chat_id := ""
@@ -59,7 +58,7 @@ func add_message(role: String, content: String, attachments: Array = [], metadat
 	chat["updated_at"] = Time.get_datetime_string_from_system()
 	if role == "user" and messages.size() == 1:
 		var clean := content.strip_edges().replace("\n", " ")
-		chat["title"] = clean.substr(0, 38) if clean.length() > 0 else "Новый чат"
+		chat["title"] = OwnerResourcePolicy.clip(clean, "chat_auto_title_chars") if clean.length() > 0 else "Новый чат"
 	# Paint the newly appended message in the same frame. Persist on the next
 	# idle turn so long Android histories cannot block live presentation.
 	queue_save()
@@ -132,7 +131,7 @@ func _compact_attachments(items: Array) -> Array:
 			"truncated": bool(item.get("truncated", false)),
 			"cached": bool(item.get("cached", false)),
 			"analyzed": bool(item.get("analyzed", false)),
-			"excerpt": str(item.get("content", "")).substr(0, ATTACHMENT_EXCERPT_CHARS)
+			"excerpt": OwnerResourcePolicy.clip(str(item.get("content", "")), "chat_attachment_chars")
 		}
 		if item.has("private_copy"): compact["private_copy"] = str(item.get("private_copy", ""))
 		out.append(compact)
@@ -141,7 +140,7 @@ func _compact_attachments(items: Array) -> Array:
 func rename_chat(id: String, title: String) -> void:
 	var chat := get_chat(id)
 	if chat.is_empty(): return
-	chat["title"] = title.strip_edges().substr(0, 60)
+	chat["title"] = OwnerResourcePolicy.clip(title.strip_edges(), "chat_title_chars")
 	save_all()
 
 func delete_chat(id: String) -> void:

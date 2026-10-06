@@ -5,6 +5,7 @@ Full service/Pydantic acceptance belongs to the separate CI integration suite.
 """
 import ast
 import json
+import math
 import tempfile
 import unittest
 from pathlib import Path
@@ -18,11 +19,11 @@ def production_functions(cache):
     tree = ast.parse((ROOT / 'file_intelligence/file_service.py').read_text())
     nodes = []
     for node in tree.body:
-        if isinstance(node, ast.FunctionDef) and node.name in {'_safe_dir', 'tree', 'cache_search'}:
+        if isinstance(node, ast.FunctionDef) and node.name in {'_safe_dir', 'tree', 'cache_search', '_truncate', '_pdf_render_scale'}:
             node.decorator_list = []
             nodes.append(node)
     future = ast.ImportFrom(module='__future__', names=[ast.alias(name='annotations')], level=0)
-    namespace = {'Path': Path, 'Any': Any, 'json': json, 'CACHE_DIR': cache, 'MAX_CACHE_EXCERPT_CHARS': 1200}
+    namespace = {'Path': Path, 'Any': Any, 'json': json, 'math': math, 'CACHE_DIR': cache, 'MAX_CACHE_EXCERPT_CHARS': 1200}
     exec(compile(ast.fix_missing_locations(ast.Module(body=[future] + nodes, type_ignores=[])), 'file_intelligence/file_service.py', 'exec'), namespace)
     return namespace
 
@@ -71,6 +72,27 @@ class ListingOwnerBudgets(unittest.TestCase):
         result = self.runtime['cache_search'](SimpleNamespace(query='match', limit=20))
         self.assertEqual(len(result['results']), 1)
         self.assertFalse(result['limit_reached'])
+
+    def test_text_truncation_marker_fits_actual_owner_budget(self):
+        clip = self.runtime['_truncate']
+        for budget in [0, 1, 40, 100, 200]:
+            text, partial = clip('Я' * 200, budget)
+            self.assertLessEqual(len(text), budget)
+            self.assertEqual(partial, budget < 200)
+        self.assertIn('[Обрезано AuroraFox:', clip('Я' * 200, 100)[0])
+        self.assertEqual(clip('Я' * 200, 200), ('Я' * 200, False))
+
+    def test_pdf_scale_bounds_actual_integer_allocation_without_fixed_floor(self):
+        scale_for = self.runtime['_pdf_render_scale']
+        for width, height in [(612., 792.), (1e9, 1e9), (1e100, 1.), (1., 1e100)]:
+            for budget in [1, 3, 8000000]:
+                scale = scale_for(width, height, budget)
+                self.assertGreater(scale, 0)
+                self.assertLessEqual(math.ceil(width * scale) * math.ceil(height * scale), budget)
+        self.assertLess(scale_for(1e9, 1e9, 8000000), .01)
+        self.assertEqual(scale_for(612., 792., 8000000), 2.)
+        for width, height, budget in [(float('inf'), 1., 1), (float('nan'), 1., 1), (0., 1., 1), (1., 1., 0)]:
+            with self.assertRaises(ValueError): scale_for(width, height, budget)
 
 
 if __name__ == '__main__': unittest.main()

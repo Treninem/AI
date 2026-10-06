@@ -103,13 +103,13 @@ func status() -> Dictionary:
 
 func _apply() -> void:
 	_bind_existing()
-	var master := bool(settings.get("master_enabled", true))
+	var master := bool(settings.get("master_enabled", false))
 	if coordinator != null:
-		coordinator.autonomous_enabled = master and bool(settings.get("autonomous_cycles", true))
-		coordinator.autonomous_hot_improvements = master and bool(settings.get("hot_improvements", true))
+		coordinator.autonomous_enabled = master and bool(settings.get("autonomous_cycles", false))
+		coordinator.autonomous_hot_improvements = master and bool(settings.get("hot_improvements", false))
 		# Research collection remains part of autonomous cycles only when both the
 		# master and learning preference permit it.
-		coordinator.autonomous_research_enabled = master and bool(settings.get("autonomous_learning", true))
+		coordinator.autonomous_research_enabled = master and bool(settings.get("autonomous_learning", false))
 		var timer = coordinator.get("_timer")
 		if timer is Timer:
 			if coordinator.autonomous_enabled:
@@ -118,10 +118,10 @@ func _apply() -> void:
 			else:
 				timer.stop()
 	if core_pipeline != null:
-		core_pipeline.autonomous_core_candidates = master and bool(settings.get("core_candidates", true))
-		core_pipeline.auto_apply_dev_checkout = master and bool(settings.get("auto_apply_dev_checkout", true))
+		core_pipeline.autonomous_core_candidates = master and bool(settings.get("core_candidates", false))
+		core_pipeline.auto_apply_dev_checkout = master and bool(settings.get("auto_apply_dev_checkout", false))
 	if learning_curator != null:
-		learning_curator.enabled = master and bool(settings.get("autonomous_learning", true))
+		learning_curator.enabled = master and bool(settings.get("autonomous_learning", false))
 
 func _save_apply_emit() -> void:
 	_save()

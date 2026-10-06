@@ -8,6 +8,21 @@ const ANDROID_OCR_EXTENSIONS := ["pdf", "png", "jpg", "jpeg", "webp", "bmp", "ti
 # exported to the local backend process before startup/restart, so changing a
 # value does not require editing source or environment variables by hand.
 const OWNER_LIMIT_DEFAULTS := {
+	"path_max_chars": 8192,
+	"question_max_chars": 12000,
+	"query_max_chars": 1000,
+	"cache_max_bytes": 536870912,
+	"epub_max_chapters": 2000,
+	"archive_text_entry_max": 4194304,
+	"archive_text_entries": 24,
+	"vision_timeout_seconds": 180,
+	"stt_timeout_seconds": 300,
+	"video_timeout_seconds": 240,
+	"video_max_frames": 8,
+	"video_frame_interval_seconds": 30,
+	"video_frame_max_width": 1280,
+	"vision_image_max_width": 2048,
+
 	"max_file_bytes": 1024 * 1024 * 1024,
 	"max_text_chars": 160000,
 	"request_max_text_chars": 500000,
@@ -31,7 +46,22 @@ const OWNER_LIMIT_DEFAULTS := {
 	"ocr_max_render_pixels": 8000000
 }
 const OWNER_LIMIT_MINIMUMS := {
-	"max_file_bytes": 1024,
+	"path_max_chars": 1,
+	"question_max_chars": 1,
+	"query_max_chars": 1,
+	"cache_max_bytes": 1,
+	"epub_max_chapters": 1,
+	"archive_text_entry_max": 1,
+	"archive_text_entries": 1,
+	"vision_timeout_seconds": 1,
+	"stt_timeout_seconds": 1,
+	"video_timeout_seconds": 1,
+	"video_max_frames": 1,
+	"video_frame_interval_seconds": 1,
+	"video_frame_max_width": 1,
+	"vision_image_max_width": 1,
+
+	"max_file_bytes": 1,
 	"max_text_chars": 1,
 	"request_max_text_chars": 1,
 	"spreadsheet_max_cells": 1,
@@ -42,18 +72,33 @@ const OWNER_LIMIT_MINIMUMS := {
 	"archive_listing_max_chars": 0,
 	"archive_listing_percent": 0,
 	"archive_max_entries": 1,
-	"archive_max_expanded": 1024,
+	"archive_max_expanded": 1,
 	"archive_text_member_max": 1,
 	"archive_text_total_max": 1,
-	"ocr_max_pdf_bytes": 1024,
+	"ocr_max_pdf_bytes": 1,
 	"ocr_max_pdf_pages": 1,
 	"ocr_max_pages": 1,
 	"analysis_timeout_seconds": 1,
 	"android_pending_file_jobs": 1,
 	"ocr_max_input_pixels": 1,
-	"ocr_max_render_pixels": 10000
+	"ocr_max_render_pixels": 1
 }
 const OWNER_LIMIT_ENV := {
+	"path_max_chars": "AURORAFOX_FILE_PATH_MAX_CHARS",
+	"question_max_chars": "AURORAFOX_FILE_QUESTION_MAX_CHARS",
+	"query_max_chars": "AURORAFOX_FILE_QUERY_MAX_CHARS",
+	"cache_max_bytes": "AURORAFOX_FILE_CACHE_MAX_BYTES",
+	"epub_max_chapters": "AURORAFOX_EPUB_MAX_CHAPTERS",
+	"archive_text_entry_max": "AURORAFOX_ARCHIVE_TEXT_ENTRY_MAX",
+	"archive_text_entries": "AURORAFOX_ARCHIVE_TEXT_ENTRIES",
+	"vision_timeout_seconds": "AURORAFOX_FILE_VISION_TIMEOUT_SECONDS",
+	"stt_timeout_seconds": "AURORAFOX_FILE_STT_TIMEOUT_SECONDS",
+	"video_timeout_seconds": "AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS",
+	"video_max_frames": "AURORAFOX_FILE_VIDEO_MAX_FRAMES",
+	"video_frame_interval_seconds": "AURORAFOX_FILE_VIDEO_FRAME_INTERVAL_SECONDS",
+	"video_frame_max_width": "AURORAFOX_FILE_VIDEO_FRAME_MAX_WIDTH",
+	"vision_image_max_width": "AURORAFOX_FILE_VISION_IMAGE_MAX_WIDTH",
+
 	"max_file_bytes": "AURORAFOX_FILE_MAX_BYTES",
 	"max_text_chars": "AURORAFOX_FILE_MAX_TEXT",
 	"request_max_text_chars": "AURORAFOX_FILE_REQUEST_MAX_TEXT",
@@ -75,6 +120,10 @@ const OWNER_LIMIT_ENV := {
 	"ocr_max_render_pixels": "AURORAFOX_OCR_MAX_RENDER_PIXELS"
 }
 
+var owner_limits_path := OwnerLimitPersistence.PATH
+var _owner_limits_loaded := false
+var _owner_persistence_error := ""
+
 var backend_pid := 0
 var runtime_root := ""
 var _active_request: HTTPRequest = null
@@ -87,28 +136,55 @@ func _ready() -> void:
 		_start_backend_if_installed()
 
 func owner_limits() -> Dictionary:
+	_load_owner_limits()
 	var result := {}
 	for key in OWNER_LIMIT_DEFAULTS:
 		var minimum := int(OWNER_LIMIT_MINIMUMS.get(key, 1))
 		result[key] = maxi(minimum, int(ProjectSettings.get_setting("aurorafox/files/" + str(key), OWNER_LIMIT_DEFAULTS[key])))
 	# A percentage cannot allocate more than the entire request budget.
 	result["archive_listing_percent"] = mini(100, int(result["archive_listing_percent"]))
+	if not _owner_persistence_error.is_empty(): result["persistence_error"] = _owner_persistence_error
 	result["owner_adjustable"] = true
 	result["backend_restart_on_apply"] = OS.get_name() == "Windows"
 	return result
 
-func apply_owner_limits(overrides: Dictionary, persist := false, restart := true) -> Dictionary:
+func _load_owner_limits() -> void:
+	if _owner_limits_loaded: return
+	_owner_limits_loaded = true
+	var loaded := OwnerLimitPersistence.load_group("files", owner_limits_path)
+	if not loaded.ok:
+		_owner_persistence_error = str(loaded.error)
+		return
 	for key in OWNER_LIMIT_DEFAULTS:
-		if not overrides.has(key):
-			continue
-		var minimum := int(OWNER_LIMIT_MINIMUMS.get(key, 1))
-		ProjectSettings.set_setting("aurorafox/files/" + str(key), maxi(minimum, int(overrides[key])))
+		if not loaded.values.has(key): continue
+		var candidate = loaded.values[key]
+		if _valid_owner_value(key, candidate):
+			ProjectSettings.set_setting("aurorafox/files/" + str(key), int(candidate))
+		else:
+			_owner_persistence_error = "Invalid saved File Intelligence limit: " + str(key)
+
+func _valid_owner_value(key: String, value: Variant) -> bool:
+	return OwnerLimitPersistence.valid_number(value, float(OWNER_LIMIT_MINIMUMS.get(key, 1))) and (key != "archive_listing_percent" or float(value) <= 100.0)
+
+func apply_owner_limits(overrides: Dictionary, persist := false, restart := true) -> Dictionary:
+	for key in overrides:
+		if not OWNER_LIMIT_DEFAULTS.has(key): return {"ok": false, "error": "Unknown owner limit: " + str(key)}
+	var current := owner_limits()
+	var next_limits: Dictionary = {}
+	for key in OWNER_LIMIT_DEFAULTS:
+		var candidate = overrides.get(key, current[key])
+		if not _valid_owner_value(key, candidate): return {"ok": false, "error": "Invalid File Intelligence limit: " + str(key)}
+		next_limits[key] = int(candidate)
 	if persist:
-		ProjectSettings.save()
+		var saved := OwnerLimitPersistence.save_group("files", next_limits, owner_limits_path)
+		if saved != OK: return {"ok": false, "error": "File Intelligence limits were not saved: " + error_string(saved)}
+	for key in next_limits: ProjectSettings.set_setting("aurorafox/files/" + str(key), next_limits[key])
+	_owner_persistence_error = ""
 	_export_owner_limits_to_environment()
-	if restart and OS.get_name() == "Windows":
-		restart_backend()
-	return owner_limits()
+	if restart and OS.get_name() == "Windows": restart_backend()
+	var result := owner_limits()
+	result["ok"] = true
+	return result
 
 func _export_owner_limits_to_environment() -> void:
 	var limits := owner_limits()

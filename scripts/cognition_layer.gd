@@ -31,11 +31,20 @@ func verify_answer(task: String, answer: String, trajectory: Array) -> Dictionar
 Задача: %s
 Черновой ответ: %s
 Краткий журнал инструментов: %s
-""" % [task, answer, JSON.stringify(trajectory).substr(0, 30000)]
+""" % [task, answer, OwnerResourcePolicy.clip(JSON.stringify(trajectory), "verification_trace_chars")]
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.05)
 	if not result.get("ok", false):
-		return {"ok": true, "confidence": 0.5, "issues": ["self-check unavailable"], "final_answer": answer, "should_retry": false}
-	return _parse_json(str(result.get("content", "")), {"ok": true, "confidence": 0.5, "final_answer": answer, "should_retry": false})
+		return {"ok": false, "confidence": 0.0, "issues": ["self-check unavailable"], "final_answer": answer, "should_retry": false}
+	var failed := {"ok": false, "confidence": 0.0, "issues": ["self-check returned invalid JSON/contract"], "final_answer": answer, "should_retry": false}
+	var checked := _parse_json(str(result.get("content", "")), {})
+	var confidence_value = checked.get("confidence")
+	if not checked.get("ok") is bool or not (confidence_value is int or confidence_value is float):
+		return failed
+	if not is_finite(float(confidence_value)) or float(confidence_value) < 0.0 or float(confidence_value) > 1.0:
+		return failed
+	if not checked.get("final_answer") is String or not checked.get("issues") is Array:
+		return failed
+	return checked
 
 func extract_skill(task: String, final_answer: String, trajectory: Array, confidence: float) -> Dictionary:
 	if trajectory.is_empty():
@@ -50,7 +59,7 @@ func extract_skill(task: String, final_answer: String, trajectory: Array, confid
 Финальный результат: %s
 Журнал действий: %s
 Оценка уверенности: %.2f
-""" % [task, final_answer, JSON.stringify(trajectory).substr(0, 30000), confidence]
+""" % [task, final_answer, OwnerResourcePolicy.clip(JSON.stringify(trajectory), "verification_trace_chars"), confidence]
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.1)
 	if not result.get("ok", false):
 		return {}
@@ -60,5 +69,6 @@ func _parse_json(text: String, fallback: Dictionary) -> Dictionary:
 	var cleaned := text.strip_edges()
 	if cleaned.begins_with("```"):
 		cleaned = cleaned.replace("```json", "").replace("```", "").strip_edges()
-	var parsed = JSON.parse_string(cleaned)
-	return parsed if parsed is Dictionary else fallback
+	var parser := JSON.new()
+	if parser.parse(cleaned) != OK: return fallback
+	return parser.data if parser.data is Dictionary else fallback

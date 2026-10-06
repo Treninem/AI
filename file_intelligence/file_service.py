@@ -5,6 +5,7 @@ import hashlib
 import io
 import json
 import logging
+import math
 import os
 import subprocess
 import tarfile
@@ -40,6 +41,18 @@ LOG_DIR = USER_ROOT / "logs"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+PATH_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_PATH_MAX_CHARS", "8192")))
+QUESTION_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_QUESTION_MAX_CHARS", "12000")))
+QUERY_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_QUERY_MAX_CHARS", "1000")))
+CACHE_MAX_BYTES = max(1, int(os.getenv("AURORAFOX_FILE_CACHE_MAX_BYTES", "536870912")))
+VISION_TIMEOUT_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_VISION_TIMEOUT_SECONDS", "180")))
+STT_TIMEOUT_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_STT_TIMEOUT_SECONDS", "300")))
+VIDEO_TIMEOUT_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS", "240")))
+VIDEO_MAX_FRAMES = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_MAX_FRAMES", "8")))
+VIDEO_FRAME_INTERVAL_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_FRAME_INTERVAL_SECONDS", "30")))
+VIDEO_FRAME_MAX_WIDTH = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_FRAME_MAX_WIDTH", "1280")))
+VISION_IMAGE_MAX_WIDTH = max(1, int(os.getenv("AURORAFOX_FILE_VISION_IMAGE_MAX_WIDTH", "2048")))
+
 MAX_FILE_BYTES = int(os.getenv("AURORAFOX_FILE_MAX_BYTES", str(1024 * 1024 * 1024)))
 MAX_TEXT_CHARS = int(os.getenv("AURORAFOX_FILE_MAX_TEXT", "160000"))
 MAX_REQUEST_TEXT_CHARS = max(MAX_TEXT_CHARS, int(os.getenv("AURORAFOX_FILE_REQUEST_MAX_TEXT", "500000")))
@@ -58,7 +71,6 @@ MAX_PDF_BYTES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_BYTES", str(256 * 1024 * 10
 MAX_PDF_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_PAGES", "1000"))
 MAX_OCR_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PAGES", "500"))
 MAX_PDF_RENDER_PIXELS = int(os.getenv("AURORAFOX_OCR_MAX_RENDER_PIXELS", str(8_000_000)))
-MIN_PDF_RENDER_SCALE = 0.01
 
 logging.basicConfig(filename=LOG_DIR / "aurora_files.log", level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", encoding="utf-8")
 log = logging.getLogger("aurora_files")
@@ -66,19 +78,19 @@ app = FastAPI(title="AuroraFox File Intelligence", version="1.2.0")
 
 
 class AnalyzeRequest(BaseModel):
-    path: str = Field(min_length=1, max_length=8192)
-    question: str = Field(default="", max_length=12000)
+    path: str = Field(min_length=1, max_length=PATH_MAX_CHARS)
+    question: str = Field(default="", max_length=QUESTION_MAX_CHARS)
     visual: bool = True
     max_chars: int = Field(default=MAX_TEXT_CHARS, ge=1, le=MAX_REQUEST_TEXT_CHARS)
 
 
 class TreeRequest(BaseModel):
-    path: str = Field(min_length=1, max_length=8192)
+    path: str = Field(min_length=1, max_length=PATH_MAX_CHARS)
     max_items: int = Field(default=min(2000, MAX_TREE_ITEMS), ge=1, le=MAX_TREE_ITEMS)
 
 
 class CacheSearchRequest(BaseModel):
-    query: str = Field(min_length=1, max_length=1000)
+    query: str = Field(min_length=1, max_length=QUERY_MAX_CHARS)
     limit: int = Field(default=min(20, MAX_CACHE_SEARCH_RESULTS), ge=1, le=MAX_CACHE_SEARCH_RESULTS)
 
 
@@ -119,7 +131,9 @@ def _safe_dir(path: str) -> Path:
 
 def _cache_key(path: Path, question: str, visual: bool, max_chars: int) -> str:
     st = path.stat()
-    raw = f"{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|{MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}|{MAX_ARCHIVE_ENTRIES}|{MAX_ARCHIVE_EXPANDED}|{MAX_ARCHIVE_TEXT_MEMBER_BYTES}|{MAX_ARCHIVE_TEXT_TOTAL_BYTES}|{MAX_ARCHIVE_LISTING_CHARS}|{ARCHIVE_LISTING_PERCENT}|v5-owner-archive-budgets"
+    from extended_formats import MAX_EPUB_CHAPTERS, MAX_EMBEDDED_TEXT_BYTES, MAX_ARCHIVE_TEXT_ENTRIES
+    extraction_policy = (MAX_PDF_BYTES, MAX_PDF_PAGES, MAX_OCR_PAGES, MAX_PDF_RENDER_PIXELS, MAX_EPUB_CHAPTERS, MAX_EMBEDDED_TEXT_BYTES, MAX_ARCHIVE_TEXT_ENTRIES, VIDEO_MAX_FRAMES, VIDEO_FRAME_INTERVAL_SECONDS, VIDEO_FRAME_MAX_WIDTH, VISION_IMAGE_MAX_WIDTH)
+    raw = f"{extraction_policy}|{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|{MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}|{MAX_ARCHIVE_ENTRIES}|{MAX_ARCHIVE_EXPANDED}|{MAX_ARCHIVE_TEXT_MEMBER_BYTES}|{MAX_ARCHIVE_TEXT_TOTAL_BYTES}|{MAX_ARCHIVE_LISTING_CHARS}|{ARCHIVE_LISTING_PERCENT}|v5-owner-archive-budgets"
     return hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
 
 
@@ -135,7 +149,7 @@ def _cache_get(key: str) -> dict[str, Any] | None:
 def _cache_put(key: str, payload: dict[str, Any]) -> None:
     target = CACHE_DIR / f"{key}.json"
     target.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
-    _trim_cache(512 * 1024 * 1024)
+    _trim_cache(CACHE_MAX_BYTES)
 
 
 def _trim_cache(limit: int) -> None:
@@ -147,7 +161,9 @@ def _trim_cache(limit: int) -> None:
 
 def _truncate(text: str, limit: int) -> tuple[str, bool]:
     if len(text) <= limit: return text, False
-    return text[:limit] + "\n\n[Обрезано AuroraFox: достигнут лимит контекста]", True
+    marker = "\n\n[Обрезано AuroraFox: достигнут лимит контекста]"
+    if limit <= len(marker): return text[:max(0, limit)], True
+    return text[:limit - len(marker)] + marker, True
 
 
 def _read_text(path: Path) -> tuple[str, str]:
@@ -248,23 +264,28 @@ def _usable_pdf_text(text: str) -> bool:
     return len(compact) >= 12 and sum(1 for ch in compact if ch.isalnum()) >= 4
 
 
+def _pdf_render_scale(width: float, height: float, pixel_budget: int) -> float:
+    if not (math.isfinite(width) and math.isfinite(height) and width > 0 and height > 0 and pixel_budget >= 1):
+        raise ValueError("PDF page has invalid dimensions or local OCR pixel budget")
+    # PDFium allocates ceil(width * scale) by ceil(height * scale), not the
+    # continuous page area. Bound that allocation before invoking native code.
+    scale = min(2.0, math.sqrt(pixel_budget) / math.sqrt(width) / math.sqrt(height))
+    while scale > 0:
+        pixels_w, pixels_h = math.ceil(width * scale), math.ceil(height * scale)
+        if pixels_w < 1 or pixels_h < 1:
+            break
+        if pixels_w * pixels_h <= pixel_budget:
+            return scale
+        scale *= 0.5
+    raise ValueError("PDF page render scale is not representable within local OCR pixel budget")
+
+
 def _render_pdf_page(pdf: Any, index: int):
     page = pdf[index]
     try:
         width, height = page.get_size()
         width = float(width); height = float(height)
-        if not (width > 0.0 and height > 0.0):
-            raise ValueError("PDF page has invalid dimensions for local OCR")
-        default_scale = 2.0
-        projected = width * height * default_scale * default_scale
-        scale = default_scale
-        if projected > MAX_PDF_RENDER_PIXELS:
-            scale *= (MAX_PDF_RENDER_PIXELS / projected) ** 0.5
-        if not (scale >= MIN_PDF_RENDER_SCALE):
-            raise ValueError("PDF page dimensions exceed safe local OCR render limit")
-        bounded_pixels = width * height * scale * scale
-        if not (bounded_pixels <= MAX_PDF_RENDER_PIXELS * 1.01):
-            raise ValueError("PDF page render budget could not be bounded safely")
+        scale = _pdf_render_scale(width, height, MAX_PDF_RENDER_PIXELS)
         bitmap = page.render(scale=scale)
         try: return bitmap.to_pil().copy()
         finally: bitmap.close()
@@ -370,7 +391,7 @@ def _pdf_extract(path: Path, visual: bool, question: str, max_chars: int = MAX_T
 
 def _vision_bytes(data: bytes, prompt: str) -> str:
     payload = {"model": VISION_MODEL, "stream": False, "messages": [{"role": "user", "content": prompt, "images": [base64.b64encode(data).decode("ascii")]}], "options": {"temperature": 0.1}}
-    r = requests.post(f"{OLLAMA_URL}/api/chat", json=payload, timeout=180)
+    r = requests.post(f"{OLLAMA_URL}/api/chat", json=payload, timeout=VISION_TIMEOUT_SECONDS)
     if r.status_code != 200: raise RuntimeError(f"Ollama HTTP {r.status_code}: {r.text[:500]}")
     return str(r.json().get("message", {}).get("content", "")).strip()
 
@@ -390,7 +411,7 @@ def _image_analyze(path: Path, question: str, visual: bool) -> tuple[str, dict[s
                     converted = frame.convert("RGB")
                     frame.close()
                     frame = converted
-                frame.thumbnail((2048, 2048)); buf = io.BytesIO(); frame.save(buf, format="PNG")
+                frame.thumbnail((VISION_IMAGE_MAX_WIDTH, VISION_IMAGE_MAX_WIDTH)); buf = io.BytesIO(); frame.save(buf, format="PNG")
                 prompt = question.strip() or "Опиши важные визуальные элементы изображения. Видимый текст уже извлечён локальным OCR. Ответь по-русски."
                 try:
                     visual_text = _vision_bytes(buf.getvalue(), prompt)
@@ -405,7 +426,7 @@ def _image_analyze(path: Path, question: str, visual: bool) -> tuple[str, dict[s
 def _voice_transcribe(path: Path) -> tuple[str, dict[str, Any], list[str]]:
     warnings: list[str] = []
     try:
-        r = requests.post(f"{VOICE_URL}/stt_path", json={"path": str(path)}, timeout=300)
+        r = requests.post(f"{VOICE_URL}/stt_path", json={"path": str(path)}, timeout=STT_TIMEOUT_SECONDS)
         if r.status_code == 200:
             data = r.json()
             if data.get("ok"): return str(data.get("text", "")), {"engine": "AuroraVoice"}, warnings
@@ -419,17 +440,17 @@ def _video_analyze(path: Path, question: str, visual: bool) -> tuple[str, dict[s
     warnings: list[str] = []; ffmpeg = imageio_ffmpeg.get_ffmpeg_exe(); parts: list[str] = []; frame_results: list[str] = []
     with tempfile.TemporaryDirectory(prefix="aurorafox-video-") as tmp:
         root = Path(tmp); audio = root / "aurorafox_voice_input.wav"
-        proc = subprocess.run([ffmpeg, "-y", "-i", str(path), "-vn", "-ac", "1", "-ar", "16000", str(audio)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=240, shell=False)
+        proc = subprocess.run([ffmpeg, "-y", "-i", str(path), "-vn", "-ac", "1", "-ar", "16000", str(audio)], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=VIDEO_TIMEOUT_SECONDS, shell=False)
         if proc.returncode == 0 and audio.is_file() and audio.stat().st_size > 44:
             transcript, _, w = _voice_transcribe(audio); warnings.extend(w)
             if transcript: parts.append("### Расшифровка аудио\n" + transcript)
         else: warnings.append("Не удалось извлечь аудиодорожку из видео.")
         if visual:
             pattern = str(root / "frame-%02d.jpg")
-            proc = subprocess.run([ffmpeg, "-y", "-i", str(path), "-vf", "fps=1/30,scale='min(1280,iw)':-2", "-frames:v", "8", pattern], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=240, shell=False)
+            proc = subprocess.run([ffmpeg, "-y", "-i", str(path), "-vf", f"fps=1/{VIDEO_FRAME_INTERVAL_SECONDS},scale='min({VIDEO_FRAME_MAX_WIDTH},iw)':-2", "-frames:v", str(VIDEO_MAX_FRAMES), pattern], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=VIDEO_TIMEOUT_SECONDS, shell=False)
             if proc.returncode == 0:
                 prompt = question.strip() or "Опиши, что происходит на этом кадре видео, и прочитай важный видимый текст. Ответь по-русски."
-                for frame in sorted(root.glob("frame-*.jpg"))[:8]:
+                for frame in sorted(root.glob("frame-*.jpg"))[:VIDEO_MAX_FRAMES]:
                     try:
                         result = _vision_bytes(frame.read_bytes(), prompt)
                         if result: frame_results.append(f"{frame.stem}: {result}")

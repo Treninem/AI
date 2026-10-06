@@ -184,27 +184,30 @@ func _analyze_file(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))
 	if not _path_allowed(path, false):
 		return {"ok": false, "error": "File Intelligence path denied. Use res:// or user://."}
-	return await _http_json(files_base_url + "/analyze", HTTPClient.METHOD_POST, {
-		"path": ProjectSettings.globalize_path(path),
-		"question": str(args.get("question", "")),
-		"visual": bool(args.get("visual", true)),
-		"max_chars": 200000
-	}, 620.0)
+	var client := _file_client()
+	if client == null: return {"ok": false, "error": "File Intelligence client is unavailable"}
+	return await client.analyze_file(path, str(args.get("question", "")), bool(args.get("visual", true)), int(args.get("max_chars", 200000)))
 
 func _file_tree(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "res://"))
 	if not _path_allowed(path, false):
 		return {"ok": false, "error": "File tree path denied. Use res:// or user://."}
-	return await _http_json(files_base_url + "/tree", HTTPClient.METHOD_POST, {
-		"path": ProjectSettings.globalize_path(path),
-		"max_items": clampi(int(args.get("max_items", 2000)), 1, 5000)
-	}, 90.0)
+	var client := _file_client()
+	if client == null: return {"ok": false, "error": "File Intelligence client is unavailable"}
+	return await client.tree(path, int(args.get("max_items", 2000)))
 
 func _search_file_cache(args: Dictionary) -> Dictionary:
-	return await _http_json(files_base_url + "/cache/search", HTTPClient.METHOD_POST, {
-		"query": str(args.get("query", "")),
-		"limit": clampi(int(args.get("limit", 20)), 1, 100)
-	}, 30.0)
+	var client := _file_client()
+	if client == null: return {"ok": false, "error": "File Intelligence client is unavailable"}
+	return await client.search_cache(str(args.get("query", "")), int(args.get("limit", 20)))
+
+func _file_client() -> FileIntelligenceClient:
+	# Reuse the product client: spawning another one would own a second backend
+	# and could cancel a healthy process when the temporary node is freed.
+	var main := get_parent()
+	if main == null: return null
+	var manager = main.get("attachments")
+	return manager.intelligence if manager is AttachmentManager else null
 
 func _security_configuration_check(args: Dictionary, execution_guard: Callable = Callable()) -> Dictionary:
 	if _security_child_pid > 0:
@@ -308,7 +311,7 @@ func _security_execution_allowed(guard: Callable) -> bool:
 	var decision = guard.call("before_tool", {"tool": "security_configuration_check", "running": true})
 	if decision is bool:
 		return decision
-	return bool(decision.get("allowed", true)) if decision is Dictionary else true
+	return decision.get("allowed", false) is bool and decision.get("allowed", false) if decision is Dictionary else false
 
 func _security_validate_evidence(report: Dictionary, scope_text: String) -> Dictionary:
 	var scope = JSON.parse_string(scope_text)

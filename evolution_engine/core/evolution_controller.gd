@@ -63,7 +63,7 @@ func bind_foundation(
 	execution_guard.bind(coordinator)
 	managed_mode.bind(coordinator)
 	tournament.bind(improver)
-	core_tournament.bind(core_pipeline)
+	core_tournament.bind(core_pipeline, Callable(self, "_core_execution_allowed"))
 	experience.bind(memory)
 	context.bind(memory, knowledge)
 	return foundation.inspect()
@@ -482,3 +482,6 @@ func _gate(require_proposal: bool, require_experiment: bool, require_activation 
 	if require_proposal and not policy.can_propose():
 		return {"ok": false, "stage": "permission", "error": "Level 1 is required for proposals"}
 	return {"ok": true}
+
+func _core_execution_allowed() -> bool:
+	return bool(_gate(true, true).get("ok", false))

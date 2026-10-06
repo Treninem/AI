@@ -87,8 +87,8 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 	# relevant local memory; action-oriented requests continue through all gates.
 	if _is_direct_conversation(task):
 		return await _run_direct_conversation(task, conversation_context, execution_guard)
-	var useful_skills := experience.relevant_skills(task, 5)
-	var recent_failures := experience.recent_failures(5)
+	var useful_skills := experience.relevant_skills(task, OwnerResourcePolicy.count(experience.skills.size(), "agent_skill_items"))
+	var recent_failures := experience.recent_failures(OwnerResourcePolicy.count(experience.failures.size(), "agent_failure_items"))
 	var specialist_context: Dictionary = {}
 	var specialist_plan: Dictionary = {}
 	if enable_specialist_team and _needs_specialists(task):
@@ -122,7 +122,7 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 
 	# Retrieve only the memories/knowledge relevant to the current task. This
 	# avoids pushing the entire long-term store into every model request.
-	var retrieved_context: Array = await memory.retrieve(task, 10, true, true)
+	var retrieved_context: Array = await memory.retrieve(task, OwnerResourcePolicy.count(memory.memory.size() + memory.knowledge.size(), "agent_retrieval_items"), true, true)
 	guard_reason = _execution_guard_reason(execution_guard, "after_retrieval", {})
 	if not guard_reason.is_empty():
 		return EXECUTION_CONTROL_PREFIX + guard_reason
@@ -169,7 +169,11 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 			experience.record_failure(task, "Direct no-tool answer was empty or attempted an unavailable tool")
 			return "Не удалось сформировать прямой локальный ответ без инструментов."
 	else:
-		for step in range(max_steps):
+		var step_cap := _step_budget()
+		if step_cap < 0: return "Некорректный предел шагов агента"
+		var step := -1
+		while step_cap == 0 or step + 1 < step_cap:
+			step += 1
 			guard_reason = _execution_guard_reason(execution_guard, "before_model", {"step": step + 1})
 			if not guard_reason.is_empty():
 				return EXECUTION_CONTROL_PREFIX + guard_reason
@@ -195,11 +199,13 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 			guard_reason = _execution_guard_reason(execution_guard, "after_tool", {"step": step + 1, "tool": tool_name, "result": _guard_result(tool_result)})
 			if not guard_reason.is_empty():
 				return EXECUTION_CONTROL_PREFIX + guard_reason
-			var trace_item := {"step":step + 1,"tool":tool_name,"args":_safe_args(args),"result":_compact_result(tool_result)}
+			var context_result = _compact_result(tool_result)
+			var context_partial := JSON.stringify(context_result) != JSON.stringify(tool_result)
+			var trace_item := {"step":step + 1,"tool":tool_name,"args":_safe_args(args),"result":context_result,"result_context_partial":context_partial}
 			trajectory.append(trace_item)
 			experience.checkpoint(task, step + 1, tool_name, _safe_args(args), tool_result)
 			messages.append({"role":"assistant", "content": text})
-			messages.append({"role":"user", "content": "TOOL_RESULT %s: %s" % [tool_name, JSON.stringify(tool_result)]})
+			messages.append({"role":"user", "content": "[UNTRUSTED_TOOL_RESULT_DATA]\nTOOL_RESULT %s (result_context_partial=%s): %s" % [tool_name, str(context_partial), JSON.stringify(context_result)]})
 			memory.remember("tool", JSON.stringify(trace_item), tool_name, 0.62, 0.92)
 
 	if draft_answer.is_empty():
@@ -260,7 +266,7 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 		guard_reason = _execution_guard_reason(execution_guard, "before_reflection", {})
 		if not guard_reason.is_empty():
 			return EXECUTION_CONTROL_PREFIX + guard_reason
-		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(20))
+		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(OwnerResourcePolicy.count(experience.failures.size(), "reflection_failure_items")))
 		guard_reason = _execution_guard_reason(execution_guard, "after_reflection", {})
 		if not guard_reason.is_empty():
 			return EXECUTION_CONTROL_PREFIX + guard_reason
@@ -272,7 +278,7 @@ func _run_direct_conversation(task: String, conversation_context: Array, executi
 	var guard_reason := _execution_guard_reason(execution_guard, "before_direct_chat", {})
 	if not guard_reason.is_empty():
 		return EXECUTION_CONTROL_PREFIX + guard_reason
-	var retrieved_context: Array = await memory.retrieve(task, 2, true, true)
+	var retrieved_context: Array = await memory.retrieve(task, OwnerResourcePolicy.count(memory.memory.size() + memory.knowledge.size(), "chat_retrieval_items"), true, true)
 	var memory_lines: Array[String] = []
 	for item in retrieved_context:
 		memory_lines.append(OwnerResourcePolicy.clip(str(item), "direct_memory_chars"))
@@ -538,13 +544,19 @@ func _safe_args(args: Dictionary) -> Dictionary:
 
 func _compact_result(value: Variant) -> Variant:
 	if value is Dictionary:
-		var copy: Dictionary = value.duplicate(true)
-		for key in copy.keys():
-			var text := str(copy[key])
-			var clipped := OwnerResourcePolicy.clip(text, "tool_result_chars")
-			if clipped.length() < text.length(): copy[key] = clipped + "…"
+		var copy: Dictionary = {}
+		for key in value: copy[key] = _compact_result(value[key])
 		return copy
 	if value is Array:
 		var arr: Array = value
-		return arr.slice(0, OwnerResourcePolicy.count(arr.size(), "tool_result_items"))
-	return OwnerResourcePolicy.clip(str(value), "tool_result_chars")
+		var copy: Array = []
+		for item in arr.slice(0, OwnerResourcePolicy.count(arr.size(), "tool_result_items")):
+			copy.append(_compact_result(item))
+		return copy
+	if value is String: return OwnerResourcePolicy.clip(value, "tool_result_chars")
+	# Status, numeric evidence and null retain their actual types even at tiny text budgets.
+	return value
+
+func _step_budget() -> int:
+	# Existing explicit per-instance budgets (benchmarks/Work) retain precedence.
+	return OwnerResourcePolicy.value("agent_max_steps") if max_steps == 18 else max_steps

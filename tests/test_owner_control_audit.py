@@ -90,7 +90,7 @@ def test_core_wait_and_frame_structure_do_not_hide_other_desktop_caps():
 def test_owner_ui_review_leaves_minima_geometry_and_generic_deadlines_unknown():
     policy = MODULE.load_policy()
     assert MODULE.classify("scripts/file_intelligence_client.gd", '"max_file_bytes": 1024,', policy)[0] == "unclassified"
-    assert MODULE.classify("scripts/file_intelligence_client.gd", '"max_text_chars": 1,', policy)[0] == "unclassified"
+    assert MODULE.classify("scripts/file_intelligence_client.gd", '"max_text_chars": 1,', policy)[0] == "owner_adjustable"
     assert MODULE.classify("scripts/file_intelligence_client.gd", 'var timeout_ms := int(limits.get("analysis_timeout_seconds", 600)) * 1000', policy)[0] == "owner_adjustable"
     assert MODULE.classify("scripts/file_intelligence_client.gd", 'req.timeout = timeout', policy)[0] == "unclassified"
     assert MODULE.classify("scripts/settings_overlay.gd", 'slider.max_value = maximum', policy)[0] == "unclassified"
@@ -99,3 +99,9 @@ def test_owner_ui_review_leaves_minima_geometry_and_generic_deadlines_unknown():
     assert "field.max_value = 4096.0\n\tfield.allow_greater = true" in ui
     assert MODULE.classify("benchmarks/core/core_benchmark.gd", 'req.timeout = 3.0', policy)[0] == "test_evidence"
     assert MODULE.classify("scripts/core_benchmark.gd", 'req.timeout = 3.0', policy)[0] == "unclassified"
+
+
+def test_automatic_web_redirects_are_security_boundary_before_owner_count_rule():
+    policy = MODULE.load_policy()
+    assert MODULE.classify("scripts/public_web_manager.gd", "request.max_redirects = 0", policy)[0] == "hard_boundary"
+    assert MODULE.classify("scripts/public_web_manager.gd", "for redirect_index in range(max_redirects + 1):", policy)[0] == "owner_adjustable"

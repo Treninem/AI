@@ -78,3 +78,85 @@ def test_android_parser_settings_are_immutable_per_job_and_reads_are_bounded():
     for key in ["analysis_timeout_seconds", "android_pending_file_jobs", "ocr_max_input_pixels"]:
         assert key in CLIENT and key in SETTINGS
     assert "ANDROID_ANALYSIS_TIMEOUT_MS" not in CLIENT
+
+
+def test_resource_policy_consumer_keys_are_persistable_and_owner_visible():
+    import re
+    policy = (ROOT / "scripts/owner_resource_policy.gd").read_text()
+    defaults, labels = policy.split("const DEFAULTS := {", 1)[1].split("const LABELS := {", 1)
+    default_keys = re.findall(r'^\s*"([a-z0-9_]+)":', defaults, re.M)
+    label_keys = re.findall(r'^\s*"([a-z0-9_]+)":', labels.split("static var", 1)[0], re.M)
+    assert len(default_keys) == len(set(default_keys))
+    assert set(default_keys) == set(label_keys)
+    for folder in ["scripts", "agent", "work", "voice", "evolution_engine"]:
+        for path in (ROOT / folder).rglob("*.gd"):
+            for line in path.read_text().splitlines():
+                if line.lstrip().startswith("#"):
+                    continue
+                keys = re.findall(r'OwnerResourcePolicy\.value\("([a-z0-9_]+)"\)', line)
+                keys += re.findall(r'OwnerResourcePolicy\.(?:clip|count)\(.*?, "([a-z0-9_]+)"\)', line)
+                for key in keys:
+                    assert key in default_keys, (path.relative_to(ROOT), key)
+
+
+def test_native_extractor_cannot_save_acceptance_placeholders_as_knowledge():
+    native = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt").read_text()
+    assert 'ext == "xls" -> unsupportedFormat(ext)' in native
+    assert 'ext in setOf("7z", "rar") -> unsupportedFormat(ext)' in native
+    assert '"error_code" to "unsupported_format"' in native
+    assert '"Аудиофайл принят."' not in native
+    assert '"Архив $ext принят."' not in native
+    audio = native.split("private fun analyzeAudio", 1)[1].split("private fun analyzeVideo", 1)[0]
+    assert 'if (text.isBlank()) return error(' in audio
+    assert 'return error(obj.optString("error"' in audio
+    assert 'text.take(limits.outputChars)' in audio
+    assert '"gif_frame_scope", "first_frame"' in native
+
+
+def test_owner_limits_persist_in_private_storage_and_failed_saves_do_not_apply():
+    persistence = (ROOT / "scripts/owner_limit_persistence.gd").read_text()
+    assert 'PATH := "user://owner_operation_limits.cfg"' in persistence
+    assert 'file.load(path)' in persistence and 'file.save(temporary)' in persistence
+    assert 'DirAccess.rename_absolute' in persistence
+    assert 'ProjectSettings.save()' not in CLIENT and 'ProjectSettings.save()' not in WEB
+    file_apply = CLIENT.split("func apply_owner_limits", 1)[1].split("func _export_owner_limits_to_environment", 1)[0]
+    web_apply = WEB.split("func apply_owner_limits", 1)[1].split("func owner_limits", 1)[0]
+    assert file_apply.index('if saved != OK: return') < file_apply.index('ProjectSettings.set_setting(')
+    assert web_apply.index('if saved != OK: return') < web_apply.index('set(key, next_limits[key])')
+    assert '"files", next_limits, owner_limits_path' in file_apply
+    assert '"web", next_limits, owner_limits_path' in web_apply
+    assert 'if not bool(result.get("ok", false))' in SETTINGS
+
+
+def test_windows_file_suboperation_limits_reach_private_settings_ui_and_consumers():
+    formats = (ROOT / 'file_intelligence/extended_formats.py').read_text()
+    keys = {
+        'path_max_chars': 'AURORAFOX_FILE_PATH_MAX_CHARS',
+        'question_max_chars': 'AURORAFOX_FILE_QUESTION_MAX_CHARS',
+        'query_max_chars': 'AURORAFOX_FILE_QUERY_MAX_CHARS',
+        'cache_max_bytes': 'AURORAFOX_FILE_CACHE_MAX_BYTES',
+        'epub_max_chapters': 'AURORAFOX_EPUB_MAX_CHAPTERS',
+        'archive_text_entry_max': 'AURORAFOX_ARCHIVE_TEXT_ENTRY_MAX',
+        'archive_text_entries': 'AURORAFOX_ARCHIVE_TEXT_ENTRIES',
+        'vision_timeout_seconds': 'AURORAFOX_FILE_VISION_TIMEOUT_SECONDS',
+        'stt_timeout_seconds': 'AURORAFOX_FILE_STT_TIMEOUT_SECONDS',
+        'video_timeout_seconds': 'AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS',
+        'video_max_frames': 'AURORAFOX_FILE_VIDEO_MAX_FRAMES',
+        'video_frame_interval_seconds': 'AURORAFOX_FILE_VIDEO_FRAME_INTERVAL_SECONDS',
+        'video_frame_max_width': 'AURORAFOX_FILE_VIDEO_FRAME_MAX_WIDTH',
+        'vision_image_max_width': 'AURORAFOX_FILE_VISION_IMAGE_MAX_WIDTH',
+    }
+    for key, env in keys.items():
+        assert key in CLIENT and key in SETTINGS and env in CLIENT
+        assert env in SERVICE or env in formats
+    for token in ['max_length=PATH_MAX_CHARS', 'max_length=QUESTION_MAX_CHARS', 'max_length=QUERY_MAX_CHARS', '_trim_cache(CACHE_MAX_BYTES)', 'timeout=VISION_TIMEOUT_SECONDS', 'timeout=STT_TIMEOUT_SECONDS', 'timeout=VIDEO_TIMEOUT_SECONDS', '[:VIDEO_MAX_FRAMES]', 'VISION_IMAGE_MAX_WIDTH']:
+        assert token in SERVICE
+
+
+def test_agent_file_tools_reuse_platform_client_and_owner_limits():
+    registry = (ROOT / 'scripts/tool_registry.gd').read_text()
+    file_tools = registry.split('func _analyze_file', 1)[1].split('func _security_configuration_check', 1)[0]
+    for token in ['await client.analyze_file(', 'await client.tree(', 'await client.search_cache(', 'manager.intelligence', '_path_allowed(path, false)']:
+        assert token in file_tools
+    assert 'clampi(' not in file_tools and '_http_json(' not in file_tools
+    assert 'FileIntelligenceClient.new()' not in file_tools

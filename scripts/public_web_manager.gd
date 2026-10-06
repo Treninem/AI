@@ -45,49 +45,61 @@ var max_url_length := DEFAULT_MAX_URL_LENGTH
 var max_title_chars := DEFAULT_MAX_TITLE_CHARS
 var context_chars := DEFAULT_CONTEXT_CHARS
 
+const OWNER_LIMIT_DEFAULTS := {
+	"max_extracted_chars": MAX_EXTRACTED_CHARS,
+	"max_urls_per_message": DEFAULT_MAX_URLS_PER_MESSAGE,
+	"max_redirects": DEFAULT_MAX_REDIRECTS,
+	"max_response_bytes": DEFAULT_MAX_RESPONSE_BYTES,
+	"request_timeout_seconds": DEFAULT_REQUEST_TIMEOUT_SECONDS,
+	"max_url_length": DEFAULT_MAX_URL_LENGTH,
+	"max_title_chars": DEFAULT_MAX_TITLE_CHARS,
+	"context_chars": DEFAULT_CONTEXT_CHARS,
+}
+var owner_limits_path := OwnerLimitPersistence.PATH
+var _owner_limits_loaded := false
+var _owner_persistence_error := ""
+
 func _ready() -> void:
-	# These are protective defaults, not hidden product restrictions. The owner
-	# can change them persistently or for one retry. Hard access-control/network
-	# boundaries are reported separately and are never mislabeled as a soft cap.
-	max_extracted_chars = maxi(2000, int(ProjectSettings.get_setting("aurorafox/web/max_extracted_chars", MAX_EXTRACTED_CHARS)))
-	max_urls_per_message = maxi(1, int(ProjectSettings.get_setting("aurorafox/web/max_urls_per_message", DEFAULT_MAX_URLS_PER_MESSAGE)))
-	max_redirects = maxi(0, int(ProjectSettings.get_setting("aurorafox/web/max_redirects", DEFAULT_MAX_REDIRECTS)))
-	max_response_bytes = maxi(64 * 1024, int(ProjectSettings.get_setting("aurorafox/web/max_response_bytes", DEFAULT_MAX_RESPONSE_BYTES)))
-	request_timeout_seconds = maxf(1.0, float(ProjectSettings.get_setting("aurorafox/web/request_timeout_seconds", DEFAULT_REQUEST_TIMEOUT_SECONDS)))
-	max_url_length = maxi(256, int(ProjectSettings.get_setting("aurorafox/web/max_url_length", DEFAULT_MAX_URL_LENGTH)))
-	max_title_chars = maxi(1, int(ProjectSettings.get_setting("aurorafox/web/max_title_chars", DEFAULT_MAX_TITLE_CHARS)))
-	context_chars = maxi(1, int(ProjectSettings.get_setting("aurorafox/web/context_chars", DEFAULT_CONTEXT_CHARS)))
+	_load_owner_limits()
+
+func _valid_owner_value(key: String, value: Variant) -> bool:
+	var minimum := 0.0 if key in ["max_redirects", "request_timeout_seconds"] else 1.0
+	return OwnerLimitPersistence.valid_number(value, minimum, key != "request_timeout_seconds")
+
+func _load_owner_limits() -> void:
+	if _owner_limits_loaded: return
+	_owner_limits_loaded = true
+	var loaded := OwnerLimitPersistence.load_group("web", owner_limits_path)
+	if not loaded.ok: _owner_persistence_error = str(loaded.error)
+	for key in OWNER_LIMIT_DEFAULTS:
+		var candidate = loaded.values.get(key, ProjectSettings.get_setting("aurorafox/web/" + str(key), get(key)))
+		if _valid_owner_value(key, candidate):
+			set(key, float(candidate) if key == "request_timeout_seconds" else int(candidate))
+		else:
+			_owner_persistence_error = "Invalid saved web limit: " + str(key)
 
 func apply_owner_limits(overrides: Dictionary, persist := false) -> Dictionary:
-	if overrides.has("max_extracted_chars"):
-		max_extracted_chars = maxi(2000, int(overrides.get("max_extracted_chars", max_extracted_chars)))
-	if overrides.has("max_urls_per_message"):
-		max_urls_per_message = maxi(1, int(overrides.get("max_urls_per_message", max_urls_per_message)))
-	if overrides.has("max_redirects"):
-		max_redirects = maxi(0, int(overrides.get("max_redirects", max_redirects)))
-	if overrides.has("max_response_bytes"):
-		max_response_bytes = maxi(64 * 1024, int(overrides.get("max_response_bytes", max_response_bytes)))
-	if overrides.has("request_timeout_seconds"):
-		request_timeout_seconds = maxf(1.0, float(overrides.get("request_timeout_seconds", request_timeout_seconds)))
-	if overrides.has("max_url_length"):
-		max_url_length = maxi(256, int(overrides.get("max_url_length", max_url_length)))
-	if overrides.has("max_title_chars"):
-		max_title_chars = maxi(1, int(overrides.get("max_title_chars", max_title_chars)))
-	if overrides.has("context_chars"):
-		context_chars = maxi(1, int(overrides.get("context_chars", context_chars)))
+	for key in overrides:
+		if not OWNER_LIMIT_DEFAULTS.has(key): return {"ok": false, "error": "Unknown owner limit: " + str(key)}
+	_load_owner_limits()
+	var next_limits: Dictionary = {}
+	for key in OWNER_LIMIT_DEFAULTS:
+		var candidate = overrides.get(key, get(key))
+		if not _valid_owner_value(key, candidate): return {"ok": false, "error": "Invalid web limit: " + str(key)}
+		next_limits[key] = float(candidate) if key == "request_timeout_seconds" else int(candidate)
 	if persist:
-		ProjectSettings.set_setting("aurorafox/web/max_extracted_chars", max_extracted_chars)
-		ProjectSettings.set_setting("aurorafox/web/max_urls_per_message", max_urls_per_message)
-		ProjectSettings.set_setting("aurorafox/web/max_redirects", max_redirects)
-		ProjectSettings.set_setting("aurorafox/web/max_response_bytes", max_response_bytes)
-		ProjectSettings.set_setting("aurorafox/web/request_timeout_seconds", request_timeout_seconds)
-		ProjectSettings.set_setting("aurorafox/web/max_url_length", max_url_length)
-		ProjectSettings.set_setting("aurorafox/web/max_title_chars", max_title_chars)
-		ProjectSettings.set_setting("aurorafox/web/context_chars", context_chars)
-		ProjectSettings.save()
-	return owner_limits()
+		var saved := OwnerLimitPersistence.save_group("web", next_limits, owner_limits_path)
+		if saved != OK: return {"ok": false, "error": "Web limits were not saved: " + error_string(saved)}
+	for key in next_limits:
+		set(key, next_limits[key])
+		if persist: ProjectSettings.set_setting("aurorafox/web/" + str(key), next_limits[key])
+	_owner_persistence_error = ""
+	var result := owner_limits()
+	result["ok"] = true
+	return result
 
 func owner_limits() -> Dictionary:
+	_load_owner_limits()
 	return {
 		"max_extracted_chars": max_extracted_chars,
 		"max_urls_per_message": max_urls_per_message,
@@ -97,7 +109,8 @@ func owner_limits() -> Dictionary:
 		"max_url_length": max_url_length,
 		"max_title_chars": max_title_chars,
 		"context_chars": context_chars,
-		"owner_adjustable": true
+		"owner_adjustable": true,
+		"persistence_error": _owner_persistence_error
 	}
 
 func process_user_message(instruction: String) -> Dictionary:

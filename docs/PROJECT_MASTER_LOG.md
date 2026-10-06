@@ -6688,3 +6688,115 @@ When S3 is later activated in product runtime, the deployment environment suppli
 Any temporary credential exposed in a chat must be revoked/rotated after the authorized setup/smoke use. The replacement permanent credential should be placed directly into the protected secret location, not sent through another chat.
 
 S3_CROSS_WORK_ACCESS_STATUS: JOURNAL_DISCOVERY + SHARED_SECRET_ENV / NO_CHAT_SECRET_PROPAGATION.
+
+
+### ACCEPTED / ACTIVE 2026-10-06 — owner controls continuation and preserved S3 handoff
+
+Sourceb12d13fa6d95b3459bd1f86093c3f30f9320f7ba acceptance:41reported check-runs,38SUCCESS and3conditional Knowledge Performance jobsSKIPPED, no executed failure/pending. New owner runtime smoke and actual Core acceptance green. Skipped optional/manual jobs are NOT claimedPASS. Fresh branch3bb31194e13101fe0cac99a539dfc300c327696d adds only575master-log lines for owner server/S3 decisions. Integrated by fast-forward; S3 paths remainPARALLEL_NON_BLOCKING, no raw credentials accessed/copied, no V1.5 dependency or readiness bump. Fresh docs-head31SUCCESS,4running runtime jobs and3conditionalSKIPPED at one inspection; no poll/retry.
+Same coordinator closes26-control source claim as ACCEPTED for executed CI (physical release boundary remains separate) and owns next local coherent existing resource-control package, preserving shared S3 journal.
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing local code/agent/experience owner limits; no future Experience-schema rewrite
+ADR_REFS:ADR0001/0002/0003 scope boundaries retained
+STARTING_HEAD:3bb31194e13101fe0cac99a539dfc300c327696d
+INTENDED_BUMP:PATCH accumulated version-last, no canonical change
+OWNED_PATHS:scripts/owner_resource_policy.gd; scripts/code_specialist.gd; scripts/experience_store.gd; scripts/agent_core.gd; owner resource runtime tests; policy/journal/memory
+DEPENDENCIES:accepted private resource Settings controls, existing CodeSpecialist/ExperienceStore and execution guards
+NON_BLOCKERS:S3 preparation/distribution and future cognition/media/accounts remain isolated/nonblocking
+ACCEPTANCE_GATES:preserved defaults;0unbounded semantics and explicit per-instance agent override; safe full-source Python public-definition preservation; real context/retention/UTF8/persistence/guard runtime regression; unchanged quality/security gates
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:accepted previous source, fresh S3 docs preserved.
+REMAINING:local broad code/experience/agent-budget fixes and remaining audit/release acceptance.
+BLOCKERS:none for local existing-path changes; new docs-headCI still in progress.
+NEXT:prepare all related remaining controls locally, no per-small-block publication or CI polling.
+
+ACTIVE CLAIM EXTENSION — same coherent V1.5 owner-control package owns work/work_store.gd and agent/learning_curator.gd with regression tests. Existing scope/release/ADR/dependencies/version-last remain unchanged. Acceptance: retention zero unlimited; defaults preserved; secret redaction and learning promotion quality unchanged; full action identity preserved; no automatic unsafe retries.
+
+ACTIVE CLAIM EXTENSION — same V1.5 existing-path package owns scripts/chat_store.gd, scripts/cognition_layer.gd and scripts/dream_cycle.gd. Acceptance: owner context/retention defaults, complete verification failure reporting (never successful verification when unavailable/malformed), no promotion authority changes.
+
+ACTIVE CLAIM EXTENSION — existing V1.5 attachment/skill ingestion owns scripts/attachment_manager.gd and tests/test_chat_learning_attachment_contract.py: owner text/JSON/item/step/tool/field budgets with zero unlimited; imported skill confidence remains capped and imports do not authorize tool execution.
+
+ACTIVE CLAIM EXTENSION — owns scripts/knowledge_document_importer.gd, scripts/large_json_knowledge_importer.gd and scripts/json_stream_reader.gd under existing V1.5 import controls. Acceptance: preserved defaults, owner zero unlimited depth/scalar/record/aggregation/EPUB/text budgets, per-parse immutable snapshots, accurate truncation, format integrity retained. Physical stack/memory limits remain runtime constraints, not promised infinite hardware.
+
+LOCAL CHECKPOINT / same active package — no publication/full CI yet
+ACTION: prepared existing-path owner controls for agent/code/experience/Work/learning/chat/reflection/attachment/skill/JSON/document ingestion; full public definition and action identity preservation; honest verification failure.
+FILES: existing claimed production paths plus owner policy, regression fixture, exact audit policy, journal/memory.
+COMMIT: none for this package; parent3bb31194e13101fe0cac99a539dfc300c327696d preserved.
+TEST:56 available Python contracts PASS; diff check PASS; new real Godot scenarios NOT EXECUTED locally, mandatory in final CI.
+RESULT:72 persisted owner controls total (46new over accepted26);1625 unclassified inventory findings at this source snapshot. Exact reviewed orchestration/measurement and contract classifications do not claim runtime completion.
+BLOCKERS: full remaining inventory/backend/security/release acceptance; local Godot unavailable; physical/version/release authorization boundaries remain separate. Built-in ZIPReader pre-expansion memory bound is not proven (AF-MEM-116), native XLS/7z/rar still unfinished.
+NEXT: continue same broad package, resolve remaining actual ceilings and runtime gaps, then one publication and required exact-SHA suite with owner-facing links. No repeated CI waiting/polling.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+
+ACTIVE CLAIM EXTENSION — owns scripts/knowledge_zip_preflight.gd: parse ZIP central directory before ZIPReader opens/expands rich documents; owner directory-entry/XML byte budgets; structural ZIP bounds validated; ZIP64/multi-disk/encrypted unsupported compatibility inputs visibly require File Intelligence. No unsupported input success or external access-control bypass.
+
+ACTIVE CLAIM EXTENSION — existing Evolution retention/retry budgets owns evolution_engine/core/experiment_registry.gd, evolution_engine/evaluation/core_tournament_adapter.gd and their contract tests. Keep3–10 population, verified baseline/no-regression/single-use/freshness authority unchanged; zero operational retention/attempt limits retains cancellation lock guard.
+
+ACTIVE CLAIM EXTENSION — owns scripts/autonomy_settings_manager.gd and evolution_engine/core/evolution_controller.gd for fail-closed missing preferences and live Evolution master/permission/update guard during adjustable attempt loops. Existing standalone adapter tests retain their injected foundation; product controller always supplies live guard. Baseline foundation contract incorrectly expected master defaulttrue although HEAD defaultfalse; reconcile test with existing fail-closed defaults rather than enable autonomy.
+
+Evolution pending winner TTL is also an owner lifetime budget (default86400,0no expiry), not promotion authority: single-use, current-baseline hash, winner-integrity and fresh handoff verification remain mandatory; malformed timestamps still rejected. Existing quality/authorization criteria unchanged.
+
+ACTIVE CLAIM EXTENSION — owns scripts/aurora_core_runtime.gd, scripts/desktop_local_runtime.gd and voice/android_mic_monitor.gd for local model failover count, diagnostic text and microphone maximum segment duration. Terminal request cancel/deadline behavior, GGUF identity, optional legacy off-by-default and speech sensitivity/minimum filters unchanged.
+
+ACTIVE CLAIM EXTENSION — owns AndroidFileRuntime.kt and related File Intelligence regression contracts for truthful extraction outcomes: native unsupported XLS/7z/rar/binary and failed/empty STT must not return placeholder ok=true; GIF uses real first-frame local OCR with explicit partial-animation warning. No new native dependency silently selected; actual missing backend implementation remains open.
+
+ACTIVE CLAIM EXTENSION — owns scripts/owner_limit_persistence.gd, scripts/file_intelligence_client.gd, scripts/public_web_manager.gd, scripts/settings_overlay.gd and persistence regression fixtures. Confirmed packaged-limit settings used ProjectSettings.save and reported success without checking the result. Replace with private ConfigFile groups, save-before-apply and visible failure, preserve existing process-env/native snapshots/defaults, remove arbitrary positive byte/text/URL/render minima while retaining productive integer representation and web SSRF/access boundaries.
+
+Existing research Knowledge text budgets now owner-controlled; the35-character untrusted-data marker remains outside adjustable data budget, so even budget1 cannot remove authority separation. Default4965data+35marker preserves prior5000 total. Existing content/claim identity normalization and promotion/corroboration scores remain unchanged; full provenance remains separate from displayed URL text.
+
+Existing Agent tool-result budget now also applies to Core tool context, not only stored trace. Preserve boolean/numeric result fields, bound text/arrays recursively, report result_context_partial independently, keep untrusted-tool-data wrapper outside adjustable data budget. Execution guards still receive original actual tool result; canonical File/Knowledge provenance unchanged.
+
+ACTIVE CLAIM EXTENSION — same existing V1.5 package owns file_intelligence/file_service.py, tests/test_local_ocr.py and tests/test_file_listing_owner_budgets.py: exact output ceiling including truncation marker; finite positive PDF geometry scaled to actual integer pixel budget before rendering, no arbitrary minimum scale; preserve real parser/OCR failure and cleanup tests. No new external/native dependency selected.
+
+ACTIVE CLAIM EXTENSION — same package owns scripts/tool_registry.gd and file_intelligence/extended_formats.py: route File tools through existing platform-aware FileIntelligenceClient and actual owner ceilings; expose existing Windows request/cache/EPUB/archive/optional-vision/STT/video budgets in private persisted File settings and backend environment, preserving defaults and access-path gates. No accounts/future media engine activation, no dependency changes.
+
+ACTIVE CLAIM EXTENSION — same existing authorization package owns scripts/computer_client.gd, tests/work_computer_master_stop_smoke.gd, tests/work_computer_attempt_safety_smoke.gd, tests/work_computer_concurrency_smoke.gd, tests/work_computer_e2e_control_smoke.gd and tests/security_owner_review_smoke.gd. Source review found missing/malformed master settings defaulted to enabled and ancestry stopped after eight nodes. Require explicit boolean master authorization, search actual ancestry without arbitrary depth ceiling, fail closed on malformed supplied security guard. Existing successful-action fixtures must explicitly supply authorization; preserve unsafe retry/uncertain-state acceptance.
+
+ACTIVE CLAIM EXTENSION — same owner-control package owns scripts/core_improvement_pipeline.gd, scripts/self_improver.gd and their regressions: existing candidate source/history/context/diagnostic/project-import budgets become private owner controls with preserved defaults and zero-unlimited semantics. Tournament3–10, promotion authority, source-contract/no-regression/quality gates and isolation remain unchanged. Generation-attempt limits remain bounded until live cancellation/authorization is checked throughout those loops; no unsafe unbounded loop introduced.
+
+
+### ACTIVE CLAIM WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE
+STATUS:ACTIVE; owner explicitly requests replacement of disconnected PR103 coordinator and continuation of remaining V1.5 CRITICAL scope.
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence/Public Web/UI owner controls;15 acceptance;16 coherent CI cadence
+ADR_REFS:ADR-0003;ADR-0001/0002 reviewed, future runtime scope not activated.
+STARTING_HEAD:3bb31194e13101fe0cac99a539dfc300c327696d
+INTENDED_BUMP:D accumulated V1.5.0.0 version-last; canonical unchanged.
+OWNED_PATHS:scripts/file_intelligence_client.gd;scripts/public_web_manager.gd;scripts/settings_overlay.gd;new scripts/owner_file_web_policy.gd;tests owner persistence runtime/contract;existing chat-learning workflow regression invocation;append-only master log/engineering memory.
+DEPENDENCIES:published b12d13fa26-resource-control package and existing private ConfigFile patterns; fresh main446ce2cd is ancestor of candidate, no merge rewrite needed.
+NON_BLOCKERS:independent work/v1.6-s3-distribution-foundation remains owned separately; no S3/key/runtime integration. Future cognition/media/public accounts excluded. Native backend choice and physical/release gates remain separate visible boundaries.
+OWNERSHIP_RECONCILE:owner authorizes takeover of disconnected previous PR103 coordinator. Earlier Core repair claim accepted ee2b4bde35/35; inventory package2da6e6335/35; owner resource controls b12d13fa published and latest3bb31194checks completed38SUCCESS+3SKIPPED. Earlier diagnostic/inventory/source-pending wording superseded only by actual completed evidence, not device acceptance. Historical September claims remain historical; contemporary scoped runtime/settings ownership transferred to this claim. Other ACTIVE documentation/future lanes untouched.
+ACCEPTANCE_GATES:private restart-persistent file/web settings; partial updates; defaults preserved; malformed/unknown/nonfinite/fractional/out-of-range values rejected before side effects; failed save leaves active values/environment/backend unchanged and UI reports failure; genuine Godot ConfigFile restart/error regressions; relevant current source contracts; one full exact-SHA coherent CI batch.
+CONFIRMED_SOURCE_DEFECT:both file/web apply methods ignore ProjectSettings.save return and Settings always reports saved. Exported app should write owner config in user storage, not project resources.
+CI_BASELINE:3bb31194all41check-runs completed,38SUCCESS+3SKIPPED,0active; skipped Knowledge performance jobs are not PASS. Source controls inventory2221unclassified, no claim these are2221bugs.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:fresh GitHub state and takeover established; existing published changes retained.
+REMAINING:this coherent persistence repair plus remaining CRITICAL source/device/update/release acceptance; no SOURCE_COMPLETE/CODE_FREEZE claim yet.
+BLOCKERS:none for this source block.
+NEXT:implement/test/publish one persistence block, collect real CI failures together; proceed to remaining gates without version bump.
+
+TAKEOVER_SCOPE_RECONCILE: found actual unpublished previous Work package in /workspace/scratch/679acfb37a52/aurorafox, base3bb31194; owner explicitly requests continuation of that coherent package. Adopt all49 tracked changed paths and2 authored new helpers listed by git diff/status; prior ACTIVE extensions above define ownership/gates. Copy as isolated snapshot, preserve original workspace; supersede narrower persistence-only proposal with existing OwnerLimitPersistence. No published changes repeated. All remaining controls/ZIP/verification/native truthful states reviewed before one combined publication and full relevant CI.
+
+ACTIVE CLAIM EXTENSION — same recovered coherent V1.5 package owns agent/autonomous_coordinator.gd and existing learning curator history/outcome text with actual owner-resource regression; coordinator event retention/reports/details/project-index workloads become owner budgets, numeric/boolean evidence retained. Existing mutation3-10, quality/corroboration criteria, permissions and canonical claim grouping unchanged. Generation retry ceilings are not made unbounded without live execution authority; no advanced V1.7 capability introduced.
+
+ACTIVE CLAIM EXTENSION — same recovered CRITICAL owner-control package owns scripts/project_index_client.gd, scripts/project_index_tool_bridge.gd, scripts/trusted_project_sandbox_bridge.gd, scripts/windows_trusted_project_bridge.gd, file_intelligence/project_index_service.py and actual index/copy regressions. Propagate owner file/byte ceilings without silent downstream caps; zero means unlimited; reject negative input. Limited index traversal must report partial coverage and retain unvisited existing records. Preserve trusted-root gates, sandbox location and ignored-directory isolation. Defaults remain unchanged.
+
+
+### RECOVERED COHERENT PACKAGE — local acceptance / publication prepared
+CLAIM:WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE remains ACTIVE; ownership reconciled to all recovered49 tracked authored modifications,2 new authored helpers, coordinator and end-to-end project-index/copy propagation and relevant regression/workflow paths above. Removed unpublished alternate owner_file_web_policy helper in favor of recovered OwnerLimitPersistence; its earlier narrow OWNED_PATHS/NEXT wording is superseded by this coherent package.
+STARTING_HEAD:3bb31194e13101fe0cac99a539dfc300c327696d; fresh upstream branch unchanged immediately before publication. main446ce2cd is ancestor; PR103 base remains fix/v1.5-archive-knowledge-import df67a1eb, not silently retargeted.
+ACTION: recover disconnected source verbatim then review/correct persistence, unknown keys, malformed verification logging, coordinator metadata types/retention, owner index/copy downstream propagation, partial-index stale deletion. Existing expanded ZIP preflight, truthful native unsupported states, resource retention/import/JSON/Evolution/Core/Voice controls adopted in the same package. Two additional Core copy budgets preserve defaults; no future runtime/S3/signing/key edits and no version bump.
+TEST: coherent Python batch120PASS+1SKIPPED(local OCR runtime absent); actual official Godot4.7.1 integrated parse PASS; actual owner-resource regression PASS including ConfigFile failure/restart, normal DOCX/EPUB and ZIP bounds, JSON imports, live Evolution guards, unavailable/malformed verification, coordinator compact/event retention and both copy algorithms. Nine additional recovered Godot smokes PASS: Web, document URL, chat attachments, Work master-stop/attempt safety/e2e/concurrency, Security owner review and autonomy learning. Owner fixture exits with ObjectDB/resource cleanup warnings; not counted as release/device acceptance. Final post-adjustment owner/parse results and exact publication SHA/CI run IDs recorded at next evidence update.
+INVENTORY:1458unclassified,1218test_evidence,446owner_adjustable,251format_structure,53documentation,22hard_boundary at prepared snapshot; counts are findings, not controls/defects. Audit remains incomplete; no blanket classification, waiver or artificial zero.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:actual disconnected package recovered and local behavioral checks executed; prepared for one combined publication.
+REMAINING:remaining reviewed owner inventory/current-source gaps, native supported-backend decision/implementation, exact-SHA full CI and Windows/Android package/device/update/release gates. No completed release claim.
+BLOCKERS:local optional OCR runtime unavailable for integration scenario; native XLS/7z/rar backend architecture decision remains unresolved per prior coordinator instruction; physical acceptance/release authority boundaries unchanged. These do not hide independent remaining source work.
+NEXT:publish whole prepared package once; collect full exact-SHA CI results together, repair all reds as one batch; continue independent CRITICAL source work, preserve unresolved backend decision visibly.

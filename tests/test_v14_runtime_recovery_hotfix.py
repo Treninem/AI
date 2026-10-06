@@ -37,7 +37,8 @@ def test_foreground_chat_does_not_repeat_long_core_startup() -> None:
     assert direct.count("await ai.chat(messages)") == 1
     assert "cognition.make_plan" not in direct
     assert "verify_answer" not in direct
-    assert "memory.retrieve(task, 2" in direct
+    assert 'memory.retrieve(task, OwnerResourcePolicy.count(memory.memory.size() + memory.knowledge.size(), "chat_retrieval_items")' in direct
+    assert '"chat_retrieval_items": 2' in _text("scripts/owner_resource_policy.gd")
     assert 'OwnerResourcePolicy.count(source.size(), "direct_history_items")' in direct
     assert 'OwnerResourcePolicy.clip(str(item.get("content", "")).strip_edges(), "direct_history_chars")' in direct
 

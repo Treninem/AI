@@ -3,6 +3,741 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "scripts/public_web_manager.gd",
+      "pattern": "^\\s*request\\.max_redirects = 0\\s*$",
+      "class": "hard_boundary",
+      "control": "Manual redirect validation on every hop",
+      "rationale": "Automatic redirect following is disabled so a public URL cannot redirect into a private network; the owner redirect count belongs to the manual validated loop."
+    },
+    {
+      "path": "file_intelligence/file_service.py",
+      "pattern": "\\b(?:PATH_MAX_CHARS|QUESTION_MAX_CHARS|QUERY_MAX_CHARS|CACHE_MAX_BYTES|VISION_TIMEOUT_SECONDS|STT_TIMEOUT_SECONDS|VIDEO_TIMEOUT_SECONDS|VIDEO_MAX_FRAMES|VIDEO_FRAME_INTERVAL_SECONDS|VIDEO_FRAME_MAX_WIDTH|VISION_IMAGE_MAX_WIDTH)\\b",
+      "class": "owner_adjustable",
+      "control": "Private File settings → Windows backend environment on restart",
+      "rationale": "Reviewed named actual consumer budgets; all fields have persisted Settings controls and preserve prior defaults. Does not classify unrelated literals or parser quality rules."
+    },
+    {
+      "path": "file_intelligence/extended_formats.py",
+      "pattern": "\\b(?:MAX_ARCHIVE_ENTRIES|MAX_ARCHIVE_EXPANDED|MAX_EPUB_CHAPTERS|MAX_EMBEDDED_TEXT_BYTES|MAX_ARCHIVE_TEXT_ENTRIES)\\b",
+      "class": "owner_adjustable",
+      "control": "Private File settings → Windows backend environment on restart",
+      "rationale": "Reviewed named actual consumer budgets; all fields have persisted Settings controls and preserve prior defaults. Does not classify unrelated literals or parser quality rules."
+    },
+    {
+      "path": "scripts/owner_resource_policy.gd",
+      "pattern": "^\\s*(?:static\\ func\\ limits\\(path:\\ String\\ =\\ PATH\\)\\ \\->\\ Dictionary:|if\\ _cached\\.is_empty\\(\\):\\ _cached\\ =\\ limits\\(\\)|var\\ current\\ :=\\ limits\\(path\\)|var\\ cap\\ :=\\ value\\(key\\)|return\\ text\\ if\\ cap\\ ==\\ 0\\ or\\ text\\.length\\(\\)\\ <=\\ cap\\ else\\ text\\.substr\\(0,\\ cap\\)|var\\ cap\\ :=\\ value\\(key\\)|return\\ size\\ if\\ cap\\ ==\\ 0\\ else\\ mini\\(size,\\ cap\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private General Settings resource policy",
+      "rationale": "Exact reviewed persistence/load and clip/count helpers propagate selected values; zero preserves the complete input."
+    },
+    {
+      "path": "scripts/owner_limit_persistence.gd",
+      "pattern": "^\\s*(?:static\\ func\\ valid_number\\(value:\\ Variant,\\ minimum:\\ float,\\ integral\\ :=\\ true\\)\\ \\->\\ bool:|return\\ is_finite\\(number\\)\\ and\\ number\\ >=\\ minimum\\ and\\ number\\ <\\ 9223372036854775807\\.0\\ and\\ \\(not\\ integral\\ or\\ number\\ ==\\ floor\\(number\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Config numeric schema and signed 64-bit representation",
+      "rationale": "Validation rejects nonnumeric/nonfinite/fractional integer values and values outside signed integer representation, without a lower operational ceiling beyond each field schema."
+    },
+    {
+      "path": "scripts/public_web_manager.gd",
+      "pattern": "^\\s*(?:_owner_persistence_error\\ =\\ \"Invalid\\ saved\\ web\\ limit:\\ \"\\ \\+\\ str\\(key\\)|if\\ not\\ _valid_owner_value\\(key,\\ candidate\\):\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Invalid\\ web\\ limit:\\ \"\\ \\+\\ str\\(key\\)\\}|if\\ saved\\ !=\\ OK:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Web\\ limits\\ were\\ not\\ saved:\\ \"\\ \\+\\ error_string\\(saved\\)\\})\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private web limits validation and checked persistence",
+      "rationale": "Reviewed failures do not apply or announce unsaved settings."
+    },
+    {
+      "path": "scripts/file_intelligence_client.gd",
+      "pattern": "^\\s*(?:var\\ caps\\ =\\ JSON\\.parse_string\\(str\\(raw\\)\\)|if\\ not\\ caps\\ is\\ Dictionary:|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Invalid\\ Android\\ runtime\\ capabilities\"\\}|var\\ file_ready\\ :=\\ bool\\(caps\\.get\\(\"file_intelligence\",\\ false\\)\\)|var\\ ocr_ready\\ :=\\ bool\\(caps\\.get\\(\"local_ocr\",\\ false\\)\\)|\"voice_online\":\\ bool\\(caps\\.get\\(\"sherpa_stt\",\\ false\\)\\),|\"local_tts\":\\ bool\\(caps\\.get\\(\"local_tts\",\\ false\\)\\),|\"ocr\":\\ caps\\.get\\(\"local_ocr_health\",\\ \\{\\}\\),|\"cancellation_supported\":\\ bool\\(caps\\.get\\(\"file_analysis_cancel\",\\ false\\)\\),|\"capabilities\":\\ caps,)\\s*$",
+      "class": "format_structure",
+      "control": "Native capability and health response schema",
+      "rationale": "No work count ceiling: these statements read/report actual native availability."
+    },
+    {
+      "path": "scripts/file_intelligence_client.gd",
+      "pattern": "^\\s*(?:\"max_file_bytes\":\\ 1,|\"max_text_chars\":\\ 1,|result\\[\"archive_listing_percent\"\\]\\ =\\ mini\\(100,\\ int\\(result\\[\"archive_listing_percent\"\\]\\)\\)|_owner_persistence_error\\ =\\ \"Invalid\\ saved\\ File\\ Intelligence\\ limit:\\ \"\\ \\+\\ str\\(key\\)|if\\ not\\ _valid_owner_value\\(key,\\ candidate\\):\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Invalid\\ File\\ Intelligence\\ limit:\\ \"\\ \\+\\ str\\(key\\)\\}|if\\ saved\\ !=\\ OK:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"File\\ Intelligence\\ limits\\ were\\ not\\ saved:\\ \"\\ \\+\\ error_string\\(saved\\)\\})\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private File limits with productive integer minimum and 0–100 allocation ratio",
+      "rationale": "Reviewed former artificial minima are now one byte/character; percentage cannot allocate more than the request. Save errors are visible and precede active updates."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:def\\ _error\\(kind:\\ str,\\ message:\\ str,\\ \\*,\\ retryable:\\ bool\\ =\\ False,\\ \\*\\*extra:\\ Any\\)\\ \\->\\ dict\\[str,\\ Any\\]:|result:\\ dict\\[str,\\ Any\\]\\ =\\ \\{\"ok\":\\ False,\\ \"error\":\\ kind,\\ \"message\":\\ _redact\\(message\\),\\ \"retryable\":\\ retryable\\}|return\\ _error\\(\"unsupported_platform\",\\ \"Desktop\\ Computer\\ Agent\\ primitives\\ are\\ supported\\ on\\ Windows\\ only\",\\ retryable=False\\)|return\\ _error\\(\"timeout\",\\ f\"\\{kind\\}\\ operation\\ timed\\ out\",\\ retryable=kind\\ in\\ \\{\"screen\",\\ \"windows\"\\}\\)|return\\ _error\\(\"malformed_worker_response\",\\ f\"\\{kind\\}\\ worker\\ returned\\ no\\ result\",\\ retryable=kind\\ in\\ \\{\"screen\",\\ \"windows\"\\}\\)|return\\ _error\\(\"malformed_worker_response\",\\ f\"\\{kind\\}\\ worker\\ returned\\ invalid\\ data\",\\ retryable=False\\)|retry_safety\\ =\\ \"safe\"\\ if\\ _retryable\\(action_type\\)\\ else\\ \"unsafe\"|if\\ retry_safety\\ ==\\ \"unsafe\"\\ and\\ not\\ action_id:|return\\ _error\\(\"action_in_progress\",\\ \"An\\ action\\ with\\ this\\ action_id\\ is\\ already\\ executing;\\ external\\ state\\ is\\ not\\ yet\\ known\",\\ retryable=False,\\ action_id=action_id,\\ retry_safety=retry_safety,\\ uncertain_external_state=True\\)|return\\ _error\\(\"computer_busy\",\\ \"Another\\ Computer\\ action\\ is\\ executing\\.\\ This\\ action\\ was\\ not\\ started;\\ retry\\ after\\ it\\ finishes\\.\",\\ retryable=False,\\ action_id=action_id,\\ executed=False\\)|result\\[\"retryable\"\\]\\ =\\ _retryable\\(action_type\\)|result\\[\"retry_safety\"\\]\\ =\\ retry_safety|if\\ not\\ result\\.get\\(\"ok\"\\)\\ and\\ retry_safety\\ ==\\ \"unsafe\":|return\\ _error\\(\"timeout\",\\ \"Sandbox\\ process\\ timed\\ out\\ and\\ was\\ terminated\",\\ retryable=True\\)|return\\ \\{\"ok\":\\ process\\.returncode\\ ==\\ 0,\\ \"code\":\\ process\\.returncode,\\ \"output\":\\ output\\[:MAX_OUTPUT\\],\\ \"mode\":\\ \"local\",\\ \"retryable\":\\ process\\.returncode\\ !=\\ 0\\}|result\\[\"virtual_desktop\"\\]\\ =\\ _desktop_bounds\\(\\);\\ result\\[\"retryable\"\\]\\ =\\ True|result\\ =\\ _run_worker\\(\"windows\",\\ \\{\"limit\":\\ 250\\},\\ GUI_TIMEOUT_SECONDS\\);\\ result\\[\"retryable\"\\]\\ =\\ True;\\ return\\ result|return\\ _error\\(\"local_core_planning_required\",\\ \"Computer\\ service\\ does\\ not\\ plan\\ goals\\.\\ AuroraFox\\ Core\\ must\\ plan\\ and\\ call\\ primitive\\ actions\\ explicitly\\.\",\\ retryable=False,\\ goal_received=bool\\(req\\.goal\\)\\)|return\\ _error\\(\"local_core_planning_required\",\\ \"Service\\-side\\ goal\\ execution\\ is\\ disabled\\.\\ Use\\ AuroraFox\\ Core\\ \\->\\ verified\\ Computer\\ primitives\\.\",\\ retryable=False,\\ goal_received=bool\\(req\\.goal\\),\\ auto_execute_ignored=bool\\(req\\.auto_execute\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed actual execution outcome and retry-safety fields",
+      "rationale": "These exact response statements describe failure/status or unsafe retry/unknown external state. They do not set a retry count and must not be weakened to remove operational budgets."
+    },
+    {
+      "path": "scripts/computer_client.gd",
+      "pattern": "^\\s*(?:return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"master_stop\",\\ \"message\":\\ \"Master\\ stop\\ активен\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"permission_denied\",\\ \"message\":\\ \"Computer\\ control\\ is\\ disabled\\ by\\ the\\ user\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"service_unavailable\",\\ \"message\":\\ \"Computer\\ service\\ request\\ failed\\ \\(%s\\)\"\\ %\\ err,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"malformed_response\",\\ \"message\":\\ \"Computer\\ service\\ returned\\ an\\ incomplete\\ response\",\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"transport_failure\",\\ \"message\":\\ \"Computer\\ service\\ transport\\ failed\\ \\(%s\\)\"\\ %\\ result_code,\\ \"retryable\":\\ true\\}|\"retryable\":\\ response_code\\ in\\ \\[408,\\ 429,\\ 502,\\ 503,\\ 504\\],|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"empty_response\",\\ \"message\":\\ \"Computer\\ service\\ returned\\ an\\ empty\\ response\",\\ \"http\":\\ response_code,\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"malformed_response\",\\ \"message\":\\ \"Computer\\ service\\ returned\\ invalid\\ JSON\",\\ \"http\":\\ response_code,\\ \"retryable\":\\ false\\}|\"retryable\":\\ false,|\"retryable\":\\ false,|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"master_stop\",\\ \"message\":\\ \"Master\\ stop\\ активен\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"permission_denied\",\\ \"message\":\\ \"Computer\\ control\\ is\\ disabled\\ by\\ the\\ user\",\\ \"retryable\":\\ false\\}|\"retryable\":\\ false,)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed actual execution outcome and retry-safety fields",
+      "rationale": "These exact response statements describe failure/status or unsafe retry/unknown external state. They do not set a retry count and must not be weakened to remove operational budgets."
+    },
+    {
+      "path": "scripts/sandbox_manager.gd",
+      "pattern": "^\\s*(?:return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"invalid_sandbox_mode\",\\ \"message\":\\ \"Sandbox\\ mode\\ must\\ be\\ auto,\\ container,\\ or\\ local\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"container_runtime_unavailable\",\\ \"message\":\\ \"Automatic\\ execution\\ requires\\ the\\ strict\\ Docker/Podman\\ sandbox;\\ degraded\\ local\\ fallback\\ is\\ disabled\",\\ \"retryable\":\\ false,\\ \"network_isolation_enforced\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"container_runtime_unavailable\",\\ \"message\":\\ \"Strict\\ container\\ sandbox\\ requested\\ but\\ Docker/Podman\\ or\\ the\\ required\\ local\\ image\\ is\\ unavailable\",\\ \"retryable\":\\ false,\\ \"network_isolation_enforced\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"service_url_denied\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"unsupported_platform\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"master_stop\",\\ \"message\":\\ \"Master\\ stop\\ активен\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"service_unavailable\",\\ \"message\":\\ \"Computer\\ sandbox\\ request\\ failed\\ \\(%s\\)\"\\ %\\ err,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"malformed_response\",\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"transport_failure\",\\ \"message\":\\ \"Computer\\ sandbox\\ transport\\ failed\\ \\(%s\\)\"\\ %\\ result_code,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"empty_response\",\\ \"http\":\\ code,\\ \"retryable\":\\ code\\ >=\\ 500\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"malformed_response\",\\ \"http\":\\ code,\\ \"retryable\":\\ code\\ >=\\ 500\\}|return\\ \\{\"ok\":\\ false,\\ \"http\":\\ code,\\ \"error\":\\ str\\(response\\.get\\(\"error\",\\ \"http_error\"\\)\\),\\ \"message\":\\ str\\(response\\.get\\(\"detail\",\\ response\\.get\\(\"message\",\\ \"Computer\\ sandbox\\ error\"\\)\\)\\)\\.substr\\(0,\\ 2048\\),\\ \"retryable\":\\ code\\ in\\ \\[408,\\ 429,\\ 502,\\ 503,\\ 504\\]\\})\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed actual execution outcome and retry-safety fields",
+      "rationale": "These exact response statements describe failure/status or unsafe retry/unknown external state. They do not set a retry count and must not be weakened to remove operational budgets."
+    },
+    {
+      "path": "voice/android_mic_monitor.gd",
+      "pattern": "^\\s*(?:AudioServer\\.add_bus_effect\\(idx,\\ capture\\)|_noise_floor\\ =\\ lerpf\\(_noise_floor,\\ minf\\(rms,\\ 0\\.025\\),\\ 0\\.003\\)|capture\\ =\\ AudioEffectCapture\\.new\\(\\)|capture\\ =\\ effect|capture\\ =\\ null|capture\\.buffer_length\\ =\\ 2\\.0|f\\.store_16\\(int\\(clampf\\(v,\\ \\-1\\.0,\\ 1\\.0\\)\\ \\*\\ 32767\\.0\\)\\ \\&\\ 0xffff\\)|if\\ OS\\.get_name\\(\\)\\ !=\\ \"Android\"\\ or\\ mode\\ in\\ \\[\"off\",\\ \"push_to_talk\"\\]\\ or\\ capture\\ ==\\ null\\ or\\ _busy_stt:|if\\ capture\\ ==\\ null:|sensitivity\\ =\\ clampf\\(p_sensitivity,\\ 0\\.0,\\ 1\\.0\\)|var\\ a\\ :=\\ mini\\(int\\(floor\\(pos\\)\\),\\ input\\.size\\(\\)\\ \\-\\ 1\\)|var\\ available\\ :=\\ capture\\.get_frames_available\\(\\)|var\\ b\\ :=\\ mini\\(a\\ \\+\\ 1,\\ input\\.size\\(\\)\\ \\-\\ 1\\)|var\\ capture:\\ AudioEffectCapture|var\\ count\\ :=\\ maxi\\(1,\\ int\\(round\\(float\\(input\\.size\\(\\)\\)\\ \\*\\ dst_rate\\ /\\ src_rate\\)\\)\\)|var\\ dt\\ :=\\ float\\(frames\\.size\\(\\)\\)\\ /\\ maxf\\(1\\.0,\\ float\\(_source_rate\\)\\)|var\\ frames\\ :=\\ capture\\.get_buffer\\(available\\)|var\\ rms\\ :=\\ sqrt\\(energy\\ /\\ maxf\\(1\\.0,\\ float\\(frames\\.size\\(\\)\\)\\)\\)|var\\ threshold\\ :=\\ maxf\\(0\\.006,\\ _noise_floor\\ \\*\\ lerpf\\(3\\.4,\\ 1\\.8,\\ sensitivity\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/local_model_manager.gd",
+      "pattern": "^\\s*(?:\"device\":\\ android_runtime\\.capabilities\\(\\)\\ if\\ OS\\.get_name\\(\\)\\ ==\\ \"Android\"\\ else\\ \\{\"platform\":\\ OS\\.get_name\\(\\)\\}|\"min_ram_mb\":\\ 4096,|\"min_ram_mb\":\\ 6144,|current_request\\.timeout\\ =\\ 0\\.0|download_progress\\.emit\\(current_profile,\\ downloaded,\\ maxi\\(_reported_total_bytes,\\ downloaded\\)\\)|progress_timer\\.timeout\\.connect\\(_emit_progress\\)|var\\ block\\ :=\\ source\\.get_buffer\\(mini\\(1024\\ \\*\\ 1024,\\ remaining\\)\\)|var\\ caps\\ :=\\ android_runtime\\.capabilities\\(\\)|var\\ free_mb\\ :=\\ int\\(caps\\.get\\(\"free_storage_mb\",\\ 0\\)\\)|var\\ ram_mb\\ :=\\ int\\(caps\\.get\\(\"total_ram_mb\",\\ 0\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/large_json_knowledge_importer.gd",
+      "pattern": "^\\s*(?:result\\[\"max_depth\"\\]\\ =\\ int\\(parsed\\.get\\(\"max_depth\",\\ 0\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/knowledge_zip_preflight.gd",
+      "pattern": "^\\s*(?:return\\ _error\\(\"ZIP\\ directory\\ exceeds\\ owner\\ entry\\ budget\"\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/knowledge_zip_preflight.gd",
+      "pattern": "^\\s*(?:var\\ tail_start\\ :=\\ maxi\\(0,\\ size\\ \\-\\ 65535\\ \\-\\ 22\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/knowledge_document_importer.gd",
+      "pattern": "^\\s*(?:group_depth\\ =\\ maxi\\(0,\\ group_depth\\ \\-\\ 1\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/knowledge_document_importer.gd",
+      "pattern": "^\\s*(?:if\\ xml_cap\\ >\\ 0\\ and\\ declared\\ >\\ xml_cap:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Document\\ XML\\ exceeds\\ owner\\ byte\\ budget\",\\ \"path\":\\ path,\\ \"requires_extractor\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"EPUB\\ exceeds\\ owner\\ extraction\\ budget\"\\ if\\ truncated\\ else\\ \"EPUB\\ не\\ содержит\\ извлекаемого\\ XHTML/HTML\\ текста\",\\ \"path\":\\ path,\\ \"truncated\":\\ truncated\\})\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/json_stream_reader.gd",
+      "pattern": "^\\s*(?:\"max_depth\":\\ _max_depth_seen|\"max_depth\":\\ _max_depth_seen,|_buffer\\ =\\ _file\\.get_buffer\\(mini\\(BUFFER_BYTES,\\ remaining\\)\\)|_max_depth_seen\\ =\\ maxi\\(_max_depth_seen,\\ depth\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/attachment_manager.gd",
+      "pattern": "^\\s*(?:\"confidence\":\\ clampf\\(float\\(source\\.get\\(\"confidence\",\\ 0\\.55\\)\\),\\ 0\\.05,\\ 0\\.70\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/android_local_runtime.gd",
+      "pattern": "^\\s*(?:for\\ key\\ in\\ parsed\\.keys\\(\\):\\ caps\\[key\\]\\ =\\ parsed\\[key\\]|func\\ capabilities\\(\\)\\ \\->\\ Dictionary:|return\\ caps|var\\ caps\\ :=\\ \\{)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed device/audio/model/JSON/ZIP representation or owner budget enforcement",
+      "rationale": "Exact reviewed format/device capability metadata, sample interpolation/normalized ranges and chunk geometry do not cap total work. Explicit owner budget error paths reflect actual selected controls; unrelated operational ceilings remain unclassified."
+    },
+    {
+      "path": "scripts/aurora_core_runtime.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings existing Core/voice operational resource controls",
+      "rationale": "Reviewed model failover, error display or microphone segment budget. GGUF/model identity, terminal cancellation and speech confidence/filtering remain separate."
+    },
+    {
+      "path": "voice/android_mic_monitor.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings existing Core/voice operational resource controls",
+      "rationale": "Reviewed model failover, error display or microphone segment budget. GGUF/model identity, terminal cancellation and speech confidence/filtering remain separate."
+    },
+    {
+      "path": "evolution_engine/core/experiment_registry.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings Evolution operational history/attempt budgets",
+      "rationale": "Reviewed actual policy consumers. Population3–10, independent verification, single-use and freshness contracts remain required."
+    },
+    {
+      "path": "evolution_engine/evaluation/core_tournament_adapter.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings Evolution operational history/attempt budgets",
+      "rationale": "Reviewed actual policy consumers. Population3–10, independent verification, single-use and freshness contracts remain required."
+    },
+    {
+      "path": "evolution_engine/safety/evolution_policy.gd",
+      "pattern": "^\\s*(?:permission_level\\ =\\ clampi\\(value,\\ LEVEL_ANALYSIS,\\ LEVEL_VERIFIED_ACTIVATION\\))\\s*$",
+      "class": "hard_boundary",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/safety/evolution_policy.gd",
+      "pattern": "^\\s*(?:\"mutation_max\":\\ MAX_MUTATIONS|\"mutation_min\":\\ MIN_MUTATIONS,|const\\ MAX_MUTATIONS\\ :=\\ 10|const\\ MIN_MUTATIONS\\ :=\\ 3|return\\ clampi\\(value,\\ MIN_MUTATIONS,\\ MAX_MUTATIONS\\)|return\\ value\\ >=\\ MIN_MUTATIONS\\ and\\ value\\ <=\\ MAX_MUTATIONS)\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/learning/learning_signal.gd",
+      "pattern": "^\\s*(?:\"minimal\\ regression\\-first\\ hardening\",|lines\\.append\\(\"Prior\\ Evolution\\ history\\ contains\\ rollback\\ events;\\ prefer\\ minimal\\ regression\\-first\\ changes\\.\"\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/learning/experience_bridge.gd",
+      "pattern": "^\\s*(?:\"sha256\":\\ str\\(row\\.get\\(\"sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 64\\),|\"sha256\":\\ str\\(winner\\.get\\(\"sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 64\\),|\"winner_sha256\":\\ str\\(decision\\.get\\(\"winner_sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 64\\),|const\\ MAX_CANDIDATES\\ :=\\ 10|if\\ out\\.size\\(\\)\\ >=\\ MAX_CANDIDATES:)\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/learning/community_language_curator.gd",
+      "pattern": "^\\s*(?:const\\ MIN_DIALOGUE_CONFIDENCE\\ :=\\ 0\\.65|const\\ MIN_DIALOGUE_DIVERSITY\\ :=\\ 3|const\\ MIN_DIALOGUE_QUALITY\\ :=\\ 0\\.72|const\\ MIN_MODERATION_DIVERSITY\\ :=\\ 2|const\\ MIN_MODERATION_QUALITY\\ :=\\ 0\\.62|const\\ MIN_TOPIC_DIVERSITY\\ :=\\ 4|if\\ diversity\\ <\\ MIN_DIALOGUE_DIVERSITY:|if\\ diversity\\ <\\ MIN_MODERATION_DIVERSITY\\ and\\ not\\ bool\\(labels\\.get\\(\"human_confirmed\",\\ false\\)\\):|if\\ diversity\\ <\\ MIN_TOPIC_DIVERSITY:|if\\ quality\\ <\\ MIN_DIALOGUE_QUALITY\\ or\\ confidence\\ <\\ MIN_DIALOGUE_CONFIDENCE:|if\\ quality\\ <\\ MIN_MODERATION_QUALITY:|var\\ confidence\\ :=\\ clampf\\(float\\(event\\.get\\(\"confidence\",\\ 0\\.0\\)\\),\\ 0\\.0,\\ 1\\.0\\)|var\\ diversity\\ :=\\ maxi\\(0,\\ int\\(event\\.get\\(\"diversity_bucket\",\\ 0\\)\\)\\)|var\\ observations\\ :=\\ maxi\\(1,\\ int\\(event\\.get\\(\"observations\",\\ 1\\)\\)\\)|var\\ quality\\ :=\\ clampf\\(float\\(event\\.get\\(\"quality\",\\ 0\\.0\\)\\),\\ 0\\.0,\\ 1\\.0\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/learning/candidate_ledger.gd",
+      "pattern": "^\\s*(?:\"sha256\":\\ str\\(row\\.get\\(\"sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 64\\),|const\\ MAX_CANDIDATES\\ :=\\ 10|if\\ out\\.size\\(\\)\\ >=\\ MAX_CANDIDATES:)\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/integration/user_control_surface.gd",
+      "pattern": "^\\s*(?:_population_input\\.max_value\\ =\\ MAX_MUTATIONS|_population_input\\.min_value\\ =\\ MIN_MUTATIONS|const\\ MAX_MUTATIONS\\ :=\\ 10|const\\ MIN_MUTATIONS\\ :=\\ 3|if\\ requested_count\\ <\\ MIN_MUTATIONS\\ or\\ requested_count\\ >\\ MAX_MUTATIONS:|mini\\(360,\\ maxi\\(260,\\ int\\(viewport_size\\.y\\)\\ \\-\\ 32\\)\\)|mini\\(620,\\ maxi\\(300,\\ int\\(viewport_size\\.x\\)\\ \\-\\ 32\\)\\),|mini\\(760,\\ maxi\\(320,\\ int\\(viewport_size\\.x\\)\\ \\-\\ 32\\)\\),|mini\\(760,\\ maxi\\(420,\\ int\\(viewport_size\\.y\\)\\ \\-\\ 32\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/evaluation/tournament_adapter.gd",
+      "pattern": "^\\s*(?:const\\ MAX_CAPTURED_CANDIDATES\\ :=\\ 10|func\\ captured_candidates\\(\\)\\ \\->\\ Array:|if\\ _captured_candidates\\.size\\(\\)\\ >=\\ MAX_CAPTURED_CANDIDATES:|result\\[\"captured_candidate_count\"\\]\\ =\\ _captured_candidates\\.size\\(\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/evaluation/metrics_adapter.gd",
+      "pattern": "^\\s*(?:\"minimum_delta\":\\ float\\(final_review\\.get\\(\"minimum_delta\",\\ 0\\.0\\)\\)|total\\ \\+=\\ maxf\\(0\\.0,\\ float\\(row\\.get\\(\"elapsed_ms\",\\ 0\\.0\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/evaluation/evidence_gate.gd",
+      "pattern": "^\\s*(?:const\\ MAX_MUTATIONS\\ :=\\ 10|const\\ MIN_MUTATIONS\\ :=\\ 3|if\\ population\\ <\\ MIN_MUTATIONS\\ or\\ population\\ >\\ MAX_MUTATIONS:|if\\ verified\\ <\\ MIN_MUTATIONS\\ or\\ verified\\ >\\ population:)\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/evaluation/decision_record.gd",
+      "pattern": "^\\s*(?:return\\ str\\(result\\.get\\(\"candidate_sha256\",\\ result\\.get\\(\"sha256\",\\ \"\"\\)\\)\\)\\.substr\\(0,\\ 64\\)|return\\ str\\(winner\\.get\\(\"sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 64\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/evaluation/core_tournament_adapter.gd",
+      "pattern": "^\\s*(?:\"minimal\\ regression\\-first\\ hardening\",|\"minimum_delta\":\\ float\\(row\\.get\\(\"minimum_delta\",\\ 0\\.0\\)\\),|\"sha256\":\\ str\\(candidate\\.get\\(\"sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 64\\),|baseline_sha\\.substr\\(0,\\ 10\\),|const\\ MAX_MUTATIONS\\ :=\\ 10|const\\ MIN_MUTATIONS\\ :=\\ 3|if\\ finalists\\.size\\(\\)\\ <\\ MIN_MUTATIONS:|if\\ population\\.size\\(\\)\\ <\\ MIN_MUTATIONS:|if\\ requested_count\\ <\\ MIN_MUTATIONS\\ or\\ requested_count\\ >\\ MAX_MUTATIONS:|str\\(winner\\.get\\(\"sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 10\\),|var\\ preflight\\ :=\\ _preflight\\(MIN_MUTATIONS\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "evolution_engine/core/experiment_registry.gd",
+      "pattern": "^\\s*(?:\"sha256\":\\ str\\(result\\.get\\(\"sha256\",\\ result\\.get\\(\"candidate_sha256\",\\ \"\"\\)\\)\\)\\.substr\\(0,\\ 64\\),|\"winner_sha256\":\\ str\\(decision\\.get\\(\"winner_sha256\",\\ \"\"\\)\\)\\.substr\\(0,\\ 64\\))\\s*$",
+      "class": "format_structure",
+      "control": "Accepted Evolution tournament 3–10/schema/hash/quality/permission contract",
+      "rationale": "Reviewed exact existing contract statements; mutation population, normalized quality, hash width and authorization are distinct from operational retention/context/generation-attempt ceilings, which remain separately reviewable."
+    },
+    {
+      "path": "scripts/json_stream_reader.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings persisted Knowledge/JSON budgets",
+      "rationale": "Reviewed extraction/parsing/aggregation policy snapshots; positive budgets retain defaults, zero disables operational limits while JSON/document validity remains required."
+    },
+    {
+      "path": "scripts/large_json_knowledge_importer.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings persisted Knowledge/JSON budgets",
+      "rationale": "Reviewed extraction/parsing/aggregation policy snapshots; positive budgets retain defaults, zero disables operational limits while JSON/document validity remains required."
+    },
+    {
+      "path": "scripts/knowledge_document_importer.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings persisted Knowledge/JSON budgets",
+      "rationale": "Reviewed extraction/parsing/aggregation policy snapshots; positive budgets retain defaults, zero disables operational limits while JSON/document validity remains required."
+    },
+    {
+      "path": "scripts/attachment_manager.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings private owner resource policy",
+      "rationale": "Reviewed attachment/skill ingestion budgets; zero disables operational limits. Skill confidence and tool execution authorization remain independent."
+    },
+    {
+      "path": "work/work_store.gd",
+      "pattern": "^\\s*(?:if\\ attempt_safety\\ ==\\ \"unsafe\"\\ or\\ not\\ retry_safety_present\\ or\\ retry_safety\\ ==\\ \"unsafe\":|if\\ bool\\(task\\.get\\(\"requires_user_action\",\\ false\\)\\)\\ or\\ not\\ bool\\(task\\.get\\(\"retryable\",\\ true\\)\\):|if\\ not\\ bool\\(task\\.get\\(\"retryable\",\\ true\\)\\)\\ and\\ patch\\.has\\(\"retryable\"\\)\\ and\\ bool\\(patch\\.get\\(\"retryable\",\\ false\\)\\):|if\\ not\\ retry_safety_present:|if\\ old_state\\ not\\ in\\ RETRYABLE_STATES\\ or\\ new_state\\ !=\\ STATE_QUEUED:|if\\ retry_safety\\ not\\ in\\ \\[\"safe\",\\ \"unsafe\"\\]:|if\\ task\\.is_empty\\(\\)\\ or\\ bool\\(task\\.get\\(\"requires_user_action\",\\ false\\)\\)\\ or\\ not\\ bool\\(task\\.get\\(\"retryable\",\\ true\\)\\):)\\s*$",
+      "class": "hard_boundary",
+      "control": "Master stop, external-state review and unsafe-action retry authorization",
+      "rationale": "Reviewed exact statements. State/score representation is not an operational resource ceiling; safety review cannot be disabled by resource budgets. Unknown new limits remain unclassified."
+    },
+    {
+      "path": "work/work_store.gd",
+      "pattern": "^\\s*(?:\"last_action_retry_safety\":\\ retry_safety,|\"message\":\\ \"User\\ verified\\ external\\ state;\\ retry\\ allowed\"\\ if\\ allow_retry\\ else\\ \"User\\ verified\\ external\\ state;\\ retry\\ blocked\",|\"progress\":\\ clampi\\(int\\(raw\\.get\\(\"progress\",\\ 0\\)\\),\\ 0,\\ 100\\),|\"progress\":\\ maxi\\(1,\\ int\\(task\\.get\\(\"progress\",\\ 0\\)\\)\\),|\"retryable\":\\ allow_retry,|\"retryable\":\\ retryable,|\"retryable\":\\ true,|_batch_depth\\ =\\ maxi\\(0,\\ _batch_depth\\ \\-\\ 1\\)|const\\ RETRYABLE_STATES\\ :=\\ \\[STATE_FAILED,\\ STATE_CANCELLED,\\ STATE_INTERRUPTED,\\ STATE_PARTIAL\\]|func\\ fail_task\\(project_id:\\ String,\\ task_id:\\ String,\\ error_text:\\ String,\\ retryable:\\ bool\\ =\\ true\\)\\ \\->\\ bool:|func\\ note_action\\(project_id:\\ String,\\ task_id:\\ String,\\ action_name:\\ String,\\ action_id:\\ String,\\ retry_safety:\\ String\\)\\ \\->\\ bool:|func\\ retry_task\\(project_id:\\ String,\\ task_id:\\ String\\)\\ \\->\\ bool:|last_error\\ =\\ \"Legacy\\ Work\\ attempt\\ has\\ unknown\\ side\\-effect\\ history\\.\\ Verify\\ external\\ state\\ before\\ retry\\.\"|retry_safety\\ =\\ \"unsafe\"|retryable\\ =\\ false|return\\ retry_task\\(project_id,\\ task_id\\)|task\\[\"message\"\\]\\ =\\ \"Queued\\ for\\ retry\"|value\\ =\\ clampi\\(int\\(value\\),\\ 0,\\ 100\\)|var\\ attempts\\ :=\\ maxi\\(0,\\ int\\(raw\\.get\\(\"attempts\",\\ 0\\)\\)\\)|var\\ retry_safety\\ :=\\ str\\(raw\\.get\\(\"last_action_retry_safety\",\\ \"safe\"\\)\\)|var\\ retry_safety_present\\ :=\\ raw\\.has\\(\"last_action_retry_safety\"\\)|var\\ retryable\\ :=\\ bool\\(raw\\.get\\(\"retryable\",\\ true\\)\\)|var\\ safety\\ :=\\ retry_safety\\ if\\ retry_safety\\ in\\ \\[\"safe\",\\ \"unsafe\"\\]\\ else\\ \"unsafe\")\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed state metadata, normalized scores, array/progress arithmetic and hash identity",
+      "rationale": "Reviewed exact statements. State/score representation is not an operational resource ceiling; safety review cannot be disabled by resource budgets. Unknown new limits remain unclassified."
+    },
+    {
+      "path": "work/work_manager.gd",
+      "pattern": "^\\s*(?:if\\ not\\ bool\\(task\\.get\\(\"retryable\",\\ true\\)\\)\\ or\\ not\\ store\\.retry_task\\(project_id,\\ task_id\\):|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Master\\ stop\\ активен\",\\ \"retryable\":\\ false,\\ \"state\":\\ AuroraWorkStore\\.STATE_PAUSED,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Master\\ stop\\ активен\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Автономное\\ выполнение\\ остановлено\\ после\\ потенциально\\ уже\\ выполненного\\ опасного\\ действия;\\ требуется\\ проверка\\ результата\",\\ \"retryable\":\\ false,\\ \"requires_user_action\":\\ true,\\ \"state\":\\ AuroraWorkStore\\.STATE_INTERRUPTED,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Задача\\ отменена\\ после\\ потенциально\\ уже\\ выполненного\\ опасного\\ действия;\\ требуется\\ проверка\\ результата\",\\ \"retryable\":\\ false,\\ \"requires_user_action\":\\ true,\\ \"state\":\\ AuroraWorkStore\\.STATE_CANCELLED,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Задача\\ приостановлена\"\\ if\\ reason\\ ==\\ \"paused\"\\ else\\ \"Master\\ stop\\ активен\",\\ \"retryable\":\\ false,\\ \"state\":\\ AuroraWorkStore\\.STATE_PAUSED,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Не\\ удалось\\ подтвердить\\ завершение\\ Work\\-задачи\",\\ \"retryable\":\\ false,\\ \"requires_user_action\":\\ true,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Неопределённый\\ результат\\ потенциально\\ опасного\\ действия;\\ перед\\ повтором\\ требуется\\ проверить\\ фактическое\\ состояние\",\\ \"retryable\":\\ false,\\ \"requires_user_action\":\\ true,\\ \"state\":\\ AuroraWorkStore\\.STATE_INTERRUPTED,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Перед\\ запуском\\ требуется\\ явная\\ проверка\\ пользователя\",\\ \"retryable\":\\ false,\\ \"requires_user_action\":\\ true,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Повтор\\ требует\\ явного\\ решения\\ пользователя\\ из\\-за\\ потенциально\\ уже\\ выполненного\\ опасного\\ действия\",\\ \"retryable\":\\ false,\\ \"requires_user_action\":\\ true,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ user_error,\\ \"retryable\":\\ false,\\ \"requires_user_action\":\\ true,\\ \"task_id\":\\ task_id,\\ \"state\":\\ AuroraWorkStore\\.STATE_INTERRUPTED\\})\\s*$",
+      "class": "hard_boundary",
+      "control": "Master stop, external-state review and unsafe-action retry authorization",
+      "rationale": "Reviewed exact statements. State/score representation is not an operational resource ceiling; safety review cannot be disabled by resource budgets. Unknown new limits remain unclassified."
+    },
+    {
+      "path": "work/work_manager.gd",
+      "pattern": "^\\s*(?:\"message\":\\ \"Cancelled\\ after\\ an\\ unsafe\\ side\\ effect;\\ verify\\ observed\\ state\\ before\\ retry\",|\"retryable\":\\ false,|func\\ _fail_without_execution\\(project_id:\\ String,\\ task_id:\\ String,\\ message:\\ String,\\ retryable:\\ bool\\)\\ \\->\\ Dictionary:|func\\ retry_task\\(project_id:\\ String,\\ task_id:\\ String\\)\\ \\->\\ Dictionary:|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Work\\-задача\\ не\\ найдена\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Work\\-проект\\ не\\ найден\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Выполнение\\ прервано\",\\ \"retryable\":\\ not\\ unsafe_attempt,\\ \"requires_user_action\":\\ unsafe_attempt,\\ \"state\":\\ AuroraWorkStore\\.STATE_INTERRUPTED,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Задача\\ не\\ находится\\ в\\ состоянии\\ queued\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Задача\\ отменена\",\\ \"retryable\":\\ true,\\ \"state\":\\ AuroraWorkStore\\.STATE_CANCELLED,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Не\\ удалось\\ создать\\ Work\\-задачу\",\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Не\\ удалось\\ сохранить\\ подтверждение\\ пользователя\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Недопустимый\\ переход\\ состояния\\ Work\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Подтверждение\\ допустимо\\ только\\ для\\ остановленной\\ terminal\\-задачи\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Эта\\ Work\\-задача\\ уже\\ выполняется\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Эта\\ задача\\ не\\ ожидает\\ пользовательской\\ проверки\",\\ \"retryable\":\\ bool\\(task\\.get\\(\"retryable\",\\ false\\)\\),\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Эту\\ задачу\\ нельзя\\ безопасно\\ возобновить\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Эту\\ задачу\\ нельзя\\ повторить\",\\ \"retryable\":\\ false,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ message,\\ \"retryable\":\\ retryable,\\ \"task_id\":\\ task_id\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ user_error,\\ \"retryable\":\\ true,\\ \"task_id\":\\ task_id,\\ \"state\":\\ AuroraWorkStore\\.STATE_FAILED\\}|return\\ \\{\"ok\":\\ true,\\ \"task_id\":\\ task_id,\\ \"state\":\\ state,\\ \"retryable\":\\ allow_retry,\\ \"requires_user_action\":\\ false\\}|store\\.fail_task\\(project_id,\\ task_id,\\ message,\\ retryable\\)|store\\.interrupt_task\\(project_id,\\ task_id,\\ \"A\\ potentially\\ unsafe\\ action\\ returned\\ an\\ uncertain\\ result;\\ verify\\ external\\ state\\ before\\ any\\ retry\",\\ true\\)|store\\.update_task\\(project_id,\\ task_id,\\ \\{\"retryable\":\\ false\\}\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed state metadata, normalized scores, array/progress arithmetic and hash identity",
+      "rationale": "Reviewed exact statements. State/score representation is not an operational resource ceiling; safety review cannot be disabled by resource budgets. Unknown new limits remain unclassified."
+    },
+    {
+      "path": "scripts/memory_store.gd",
+      "pattern": "^\\s*(?:\"confidence\":\\ clampf\\(confidence,\\ 0\\.0,\\ 1\\.0\\),|\"importance\":\\ clampf\\(importance,\\ 0\\.0,\\ 1\\.0\\),|item\\[\"confidence\"\\]\\ =\\ maxf\\(float\\(item\\.get\\(\"confidence\",\\ 0\\.0\\)\\),\\ clampf\\(confidence,\\ 0\\.0,\\ 1\\.0\\)\\)|item\\[\"importance\"\\]\\ =\\ maxf\\(float\\(item\\.get\\(\"importance\",\\ 0\\.0\\)\\),\\ clampf\\(importance,\\ 0\\.0,\\ 1\\.0\\)\\)|return\\ \"%s_%s\"\\ %\\ \\[collection,\\ raw\\.sha256_text\\(\\)\\.substr\\(0,\\ 24\\)\\]|score\\ \\+=\\ clampf\\(float\\(item\\.get\\(\"confidence\",\\ 0\\.5\\)\\),\\ 0\\.0,\\ 1\\.0\\)\\ \\*\\ 0\\.08|score\\ \\+=\\ clampf\\(float\\(item\\.get\\(\"importance\",\\ 0\\.5\\)\\),\\ 0\\.0,\\ 1\\.0\\)\\ \\*\\ 0\\.12|score\\ \\+=\\ minf\\(0\\.20,\\ log\\(1\\.0\\ \\+\\ float\\(item\\.get\\(\"usage_count\",\\ 0\\)\\)\\)\\ \\*\\ 0\\.04\\)|var\\ age_days\\ :=\\ maxf\\(0\\.0,\\ \\(now\\ \\-\\ float\\(item\\.get\\(\"time_unix\",\\ now\\)\\)\\)\\ /\\ 86400\\.0\\)|var\\ coverage\\ :=\\ float\\(matches\\)\\ /\\ float\\(maxi\\(1,\\ words\\.size\\(\\)\\)\\)|var\\ score\\ :=\\ coverage\\ \\*\\ 0\\.72\\ \\+\\ clampf\\(float\\(item\\.get\\(\"importance\",\\ 0\\.5\\)\\),\\ 0\\.0,\\ 1\\.0\\)\\ \\*\\ 0\\.18\\ \\+\\ clampf\\(float\\(item\\.get\\(\"confidence\",\\ 0\\.5\\)\\),\\ 0\\.0,\\ 1\\.0\\)\\ \\*\\ 0\\.10|var\\ usage\\ :=\\ minf\\(1\\.0,\\ log\\(1\\.0\\ \\+\\ float\\(item\\.get\\(\"usage_count\",\\ 0\\)\\)\\)\\ /\\ 5\\.0\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed state metadata, normalized scores, array/progress arithmetic and hash identity",
+      "rationale": "Reviewed exact statements. State/score representation is not an operational resource ceiling; safety review cannot be disabled by resource budgets. Unknown new limits remain unclassified."
+    },
+    {
+      "path": "scripts/experience_store.gd",
+      "pattern": "^\\s*(?:checkpoints\\ =\\ checkpoints\\.slice\\(checkpoints\\.size\\(\\)\\ \\-\\ cap\\)|failures\\ =\\ failures\\.slice\\(failures\\.size\\(\\)\\ \\-\\ cap\\)|if\\ cap\\ >\\ 0\\ and\\ checkpoints\\.size\\(\\)\\ >\\ cap:|if\\ cap\\ >\\ 0\\ and\\ failures\\.size\\(\\)\\ >\\ cap:)\\s*$",
+      "class": "owner_adjustable",
+      "control": "General Settings persisted retention controls",
+      "rationale": "Reviewed exact statements. State/score representation is not an operational resource ceiling; safety review cannot be disabled by resource budgets. Unknown new limits remain unclassified."
+    },
+    {
+      "path": "scripts/experience_store.gd",
+      "pattern": "^\\s*(?:\"confidence\":\\ clampf\\(float\\(skill\\.get\\(\"confidence\",\\ 0\\.6\\)\\),\\ 0\\.0,\\ 1\\.0\\),|item\\[\"confidence\"\\]\\ =\\ max\\(0\\.05,\\ float\\(item\\.get\\(\"confidence\",\\ 0\\.5\\)\\)\\ \\-\\ 0\\.08\\)|old\\[\"confidence\"\\]\\ =\\ min\\(1\\.0,\\ max\\(float\\(old\\.get\\(\"confidence\",\\ 0\\.5\\)\\),\\ normalized\\.confidence\\)\\ \\+\\ 0\\.03\\)|return\\ float\\(common\\)\\ /\\ float\\(max\\(1,\\ min\\(a\\.size\\(\\),\\ b\\.size\\(\\)\\)\\)\\)|score\\ \\+=\\ min\\(0\\.25,\\ float\\(int\\(item\\.get\\(\"success_count\",\\ 0\\)\\)\\)\\ \\*\\ 0\\.02\\)|score\\ \\-=\\ min\\(0\\.25,\\ float\\(int\\(item\\.get\\(\"failure_count\",\\ 0\\)\\)\\)\\ \\*\\ 0\\.03\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed state metadata, normalized scores, array/progress arithmetic and hash identity",
+      "rationale": "Reviewed exact statements. State/score representation is not an operational resource ceiling; safety review cannot be disabled by resource budgets. Unknown new limits remain unclassified."
+    },
+    {
+      "path": "scripts/chat_store.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed actual chat/reflection/verification context or retention budgets. Verification and promotion integrity do not depend on these values."
+    },
+    {
+      "path": "scripts/dream_cycle.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed actual chat/reflection/verification context or retention budgets. Verification and promotion integrity do not depend on these values."
+    },
+    {
+      "path": "scripts/cognition_layer.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed actual chat/reflection/verification context or retention budgets. Verification and promotion integrity do not depend on these values."
+    },
+    {
+      "path": "benchmarks/knowledge/validate_performance_report.py",
+      "pattern": "^\\s*(?:\"max_search_p95_ms\":\\ max_search_p95,|f\"informational\\ CI\\ search\\ latency\\ >=1s\\ \\(max\\ p95=\\{max_search_p95:\\.3f\\}\\ ms\\);\\ \"|if\\ max_search_p95\\ >=\\ 1000\\.0:|max_search_p95\\ =\\ 0\\.0|max_search_p95\\ =\\ max\\(max_search_p95,\\ float\\(case\\.get\\(\"p95_ms\",\\ 0\\.0\\)\\ or\\ 0\\.0\\)\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_search_scaling.py",
+      "pattern": "^\\s*(?:args\\.timeout_seconds,|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=600\\)|return\\ max\\(values\\)\\ if\\ values\\ else\\ 0\\.0)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_registry_scaling.py",
+      "pattern": "^\\s*(?:def\\ run_case\\(godot:\\ str,\\ repo:\\ Path,\\ count:\\ int,\\ source_kb:\\ int,\\ timeout:\\ int,\\ logs:\\ Path\\)\\ \\->\\ dict\\[str,\\ Any\\]:|if\\ time\\.perf_counter\\(\\)\\ \\-\\ started\\ >\\ timeout:|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=300\\)|peak_rss\\ =\\ max\\(peak_rss,\\ base\\.process_rss_bytes\\(proc\\.pid\\)\\)|result\\[\"error\"\\]\\ =\\ f\"bounded\\ execution\\ timeout\\ after\\ \\{timeout\\}s\"|results\\ =\\ \\[run_case\\(godot,\\ repo,\\ count,\\ args\\.source_kb,\\ args\\.timeout_seconds,\\ logs\\)\\ for\\ count\\ in\\ counts\\]|return_code\\ =\\ proc\\.wait\\(timeout=10\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_production_pack_acceptance.py",
+      "pattern": "^\\s*(?:def\\ warm_project\\(godot:\\ Path,\\ env:\\ dict\\[str,\\ str\\],\\ report:\\ Path,\\ timeout_seconds:\\ int\\)\\ \\->\\ dict:|except\\ subprocess\\.TimeoutExpired:|if\\ time\\.monotonic\\(\\)\\ \\-\\ started\\ >\\ args\\.timeout_seconds:|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=21600\\)|peak_rss\\ =\\ max\\(peak_rss,\\ base\\.process_rss_bytes\\(process\\.pid\\)\\)|process\\.wait\\(timeout=30\\)|timeout=max\\(30,\\ min\\(120,\\ timeout_seconds\\)\\),|warmup\\ =\\ warm_project\\(godot,\\ env,\\ report,\\ args\\.timeout_seconds\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_memory_scaling.py",
+      "pattern": "^\\s*(?:args\\.timeout_seconds,|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=600\\)|result\\[\"incremental_peak_rss_bytes\"\\]\\ =\\ max\\(0,\\ int\\(result\\.get\\(\"peak_rss_bytes\",\\ 0\\)\\)\\ \\-\\ baseline_rss\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_knowledge_benchmark_portable.py",
+      "pattern": "^\\s*(?:except\\ subprocess\\.TimeoutExpired:|if\\ time\\.perf_counter\\(\\)\\ \\-\\ started\\ >\\ timeout_seconds:|parsed\\[\"error\"\\]\\ =\\ f\"bounded\\ execution\\ timeout\\ after\\ \\{timeout_seconds\\}s\"|peak_rss\\ =\\ max\\(peak_rss,\\ base\\.process_rss_bytes\\(proc\\.pid\\)\\)|return_code\\ =\\ proc\\.wait\\(timeout=10\\)|timeout=max\\(30,\\ min\\(120,\\ timeout_seconds\\)\\),|timeout_seconds:\\ int,|warm\\ =\\ warm_isolated_windows_profile\\(godot,\\ repo,\\ user_root,\\ env,\\ timeout_seconds,\\ log_dir,\\ tag\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_knowledge_benchmark.py",
+      "pattern": "^\\s*(?:args\\.timeout_seconds,|except\\ subprocess\\.TimeoutExpired:|if\\ time\\.perf_counter\\(\\)\\ \\-\\ started\\ >\\ timeout_seconds:|major,\\ minor,\\ patch\\ =\\ value\\.get\\(\"major\",\\ \"\"\\),\\ value\\.get\\(\"minor\",\\ \"\"\\),\\ value\\.get\\(\"patch\",\\ \"\"\\)|parsed\\[\"error\"\\]\\ =\\ f\"bounded\\ execution\\ timeout\\ after\\ \\{timeout_seconds\\}s\"|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=900\\)|peak_rss\\ =\\ max\\(peak_rss,\\ process_rss_bytes\\(proc\\.pid\\)\\)|result\\ =\\ run_godot_case\\(godot,\\ repo,\\ user_root,\\ case,\\ args\\.timeout_seconds,\\ log_dir\\)|return_code\\ =\\ proc\\.wait\\(timeout=10\\)|timeout_seconds,|timeout_seconds:\\ int,|version\\ =\\ \"\\.\"\\.join\\(str\\(part\\)\\ for\\ part\\ in\\ \\(major,\\ minor,\\ patch\\)\\ if\\ str\\(part\\)\\ !=\\ \"\"\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_interrupted_removal_recovery.py",
+      "pattern": "^\\s*(?:\"error\":\\ f\"phase\\ timeout:\\ \\{exc\\}\",|args\\.timeout_seconds,|def\\ run_phase\\(godot:\\ str,\\ repo:\\ Path,\\ env:\\ dict\\[str,\\ str\\],\\ phase:\\ str,\\ timeout_seconds:\\ int\\)\\ \\->\\ dict\\[str,\\ Any\\]:|except\\ subprocess\\.TimeoutExpired\\ as\\ exc:|except\\ subprocess\\.TimeoutExpired:|if\\ time\\.perf_counter\\(\\)\\ \\-\\ removal_started\\ >\\ args\\.timeout_seconds:|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=300\\)|return_code\\ =\\ proc\\.wait\\(timeout=10\\)|seed\\ =\\ run_phase\\(godot,\\ repo,\\ env,\\ \"seed\",\\ args\\.timeout_seconds\\)|timeout=timeout_seconds,|verify\\ =\\ run_phase\\(godot,\\ repo,\\ env,\\ \"verify\",\\ args\\.timeout_seconds\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_interrupted_import_recovery.py",
+      "pattern": "^\\s*(?:args\\.timeout_seconds,|def\\ run_phase\\(godot:\\ str,\\ repo:\\ Path,\\ env:\\ dict\\[str,\\ str\\],\\ phase:\\ str,\\ timeout_seconds:\\ int\\)\\ \\->\\ dict\\[str,\\ Any\\]:|except\\ subprocess\\.TimeoutExpired\\ as\\ exc:|except\\ subprocess\\.TimeoutExpired:|if\\ time\\.perf_counter\\(\\)\\ \\-\\ import_started\\ >\\ args\\.timeout_seconds:|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=180\\)|report\\ =\\ \\{\"ok\":\\ False,\\ \"error\":\\ f\"phase\\ timeout:\\ \\{exc\\}\",\\ \"wall_ms\":\\ \\(time\\.perf_counter\\(\\)\\ \\-\\ started\\)\\ \\*\\ 1000\\.0\\}|return_code\\ =\\ proc\\.wait\\(timeout=10\\)|seed\\ =\\ run_phase\\(godot,\\ repo,\\ env,\\ \"seed\",\\ args\\.timeout_seconds\\)|timeout=timeout_seconds,|verify\\ =\\ run_phase\\(godot,\\ repo,\\ env,\\ \"verify\",\\ args\\.timeout_seconds\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/run_godot_probe.py",
+      "pattern": "^\\s*(?:args\\.timeout_seconds,|except\\ subprocess\\.TimeoutExpired:|if\\ time\\.perf_counter\\(\\)\\ \\-\\ started\\ >\\ args\\.timeout_seconds:|parser\\.add_argument\\(\"\\-\\-timeout\\-seconds\",\\ type=int,\\ default=120\\)|peak_rss\\ =\\ max\\(peak_rss,\\ base\\.process_rss_bytes\\(proc\\.pid\\)\\)|proc\\.wait\\(timeout=10\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/registry_scaling_probe.gd",
+      "pattern": "^\\s*(?:\"sources_per_sec\":\\ float\\(count\\)\\ /\\ maxf\\(0\\.001,\\ elapsed_ms\\ /\\ 1000\\.0\\),|var\\ count\\ :=\\ maxi\\(1,\\ int\\(OS\\.get_environment\\(\"AURORA_REGISTRY_SCALING_COUNT\"\\)\\)\\)|var\\ source_kb\\ :=\\ maxi\\(1,\\ int\\(OS\\.get_environment\\(\"AURORA_REGISTRY_SCALING_SOURCE_KB\"\\)\\)\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/knowledge_stress_benchmark.gd",
+      "pattern": "^\\s*(?:\"import_json\":\\ result\\ =\\ _scenario_import\\(\"json\",\\ maxi\\(9,\\ target_mb\\)\\)|\"rollback\":\\ result\\ =\\ _scenario_rollback\\(maxi\\(9,\\ target_mb\\)\\)|ok\\ =\\ ok\\ and\\ int\\(restart_status\\.get\\(\"knowledge_items\",\\ 0\\)\\)\\ ==\\ mini\\(count,\\ MemoryStoreScript\\.MAX_KNOWLEDGE\\)|return\\ units\\ /\\ maxf\\(0\\.001,\\ duration_ms\\ /\\ 1000\\.0\\)|var\\ bounded_samples\\ :=\\ clampi\\(sample_count,\\ 1,\\ 5\\)|var\\ count\\ :=\\ maxi\\(1,\\ int\\(OS\\.get_environment\\(\"AURORA_KNOWLEDGE_COUNT\"\\)\\)\\)|var\\ ga\\ :=\\ _generate_dataset\\(a,\\ \"jsonl\",\\ maxi\\(128\\ \\*\\ 1024,\\ target_mb\\ \\*\\ MB\\),\\ \"CONCURRENT_A\"\\)|var\\ gb\\ :=\\ _generate_dataset\\(b,\\ \"jsonl\",\\ maxi\\(128\\ \\*\\ 1024,\\ target_mb\\ \\*\\ MB\\),\\ \"CONCURRENT_B\"\\)|var\\ index\\ :=\\ clampi\\(int\\(ceil\\(p\\ \\*\\ float\\(copy\\.size\\(\\)\\)\\)\\)\\ \\-\\ 1,\\ 0,\\ copy\\.size\\(\\)\\ \\-\\ 1\\)|var\\ source_kb\\ :=\\ maxi\\(4,\\ int\\(OS\\.get_environment\\(\"AURORA_KNOWLEDGE_SOURCE_KB\"\\)\\)\\)|var\\ target_bytes\\ :=\\ maxi\\(64\\ \\*\\ 1024,\\ int\\(float\\(target_mb\\ \\*\\ MB\\)\\ /\\ 3\\.0\\)\\)|var\\ target_mb\\ :=\\ maxi\\(1,\\ int\\(OS\\.get_environment\\(\"AURORA_KNOWLEDGE_TARGET_MB\"\\)\\)\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/interrupted_removal_probe.gd",
+      "pattern": "^\\s*(?:var\\ target_mb\\ :=\\ maxi\\(4,\\ int\\(OS\\.get_environment\\(\"AURORA_REMOVE_INTERRUPT_TARGET_MB\"\\)\\)\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/interrupted_import_probe.gd",
+      "pattern": "^\\s*(?:var\\ target_mb:\\ int\\ =\\ maxi\\(16,\\ int\\(OS\\.get_environment\\(\"AURORA_INTERRUPT_TARGET_MB\"\\)\\)\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "benchmarks/knowledge/compare_reports.py",
+      "pattern": "^\\s*(?:compare_metric\\(\"search_p95_ms\",\\ max_search_p95\\(left\\),\\ max_search_p95\\(right\\),\\ \"lower_better\",\\ LATENCY_MAX_RATIO\\),|def\\ max_search_p95\\(row:\\ dict\\[str,\\ Any\\]\\)\\ \\->\\ float:|parts\\ =\\ \\[str\\(value\\.get\\(key,\\ \"\"\\)\\)\\ for\\ key\\ in\\ \\(\"major\",\\ \"minor\",\\ \"patch\",\\ \"status\"\\)\\]|return\\ max\\(values,\\ default=0\\.0\\))\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/work-mode-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_mode_store_smoke\\.gd|run:\\ timeout\\ 40s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_mode_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/offline_autonomy_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 12)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/work-computer-reliability.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/autonomy_state_failure_injection_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/computer_client_response_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_computer_concurrency_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_computer_e2e_uncertain_result_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_computer_master_stop_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_mode_store_smoke\\.gd|run:\\ timeout\\ 35s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_computer_attempt_safety_smoke\\.gd|run:\\ timeout\\ 40s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_computer_e2e_control_smoke\\.gd|run:\\ timeout\\ 40s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_reliability_fail_closed_smoke\\.gd|run:\\ timeout\\ 60s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/work_reliability_store_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 12|timeout\\-minutes:\\ 15|timeout\\-minutes:\\ 5)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/windows-package-ci.yml",
+      "pattern": "^\\s*(?:\\$installExit\\ =\\ Invoke\\-AuroraBoundedProcess\\ \\-FilePath\\ \\$installer\\ \\-ArgumentList\\ @\\('/SP\\-','/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',\"/DIR=`\"\\$installDir`\"\",\"/LOG=`\"\\$installLog`\"\"\\)\\ \\-Phase\\ 'current\\-install'\\ \\-TimeoutSeconds\\ 1200|\\$runExit\\ =\\ Invoke\\-AuroraBoundedProcess\\ \\-FilePath\\ \\$exe\\ \\-ArgumentList\\ @\\('\\-\\-headless','\\-\\-quit\\-after','3'\\)\\ \\-Phase\\ 'current\\-installed\\-app'\\ \\-TimeoutSeconds\\ 90|\\$uninstallExit\\ =\\ Invoke\\-AuroraBoundedProcess\\ \\-FilePath\\ \\$uninstaller\\.FullName\\ \\-ArgumentList\\ @\\('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',\"/LOG=`\"\\$uninstallLog`\"\"\\)\\ \\-Phase\\ 'current\\-uninstall'\\ \\-TimeoutSeconds\\ 180|timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 180)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/voice-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/autonomous_coordinator_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/autonomy_learning_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/chat_context_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/core_candidate_benchmark_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/core_candidate_submitter_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/desktop_ui_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/knowledge_registry_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/local_model_failover_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/local_semantic_memory_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/offline_autonomy_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/runtime_extension_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/self_improver_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/self_reliance_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/update_smoke\\.gd|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/voice_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/large_knowledge_streaming_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/monolithic_json_stream_smoke\\.gd|run:\\ timeout\\ 60s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/knowledge_transaction_rollback_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/voice-acoustic-ci.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 35)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/updater-repair-validation.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 40)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/ui-visual-ci.yml",
+      "pattern": "^\\s*(?:\\-\\-connect\\-timeout\\ 30\\ \\\\|\\-\\-max\\-time\\ 300\\ \\\\|\\-\\-retry\\ 8\\ \\\\|\\-\\-retry\\-all\\-errors\\ \\\\|\\-\\-retry\\-delay\\ 5\\ \\\\|\\-\\-retry\\-max\\-time\\ 300\\ \\\\|assert\\ any\\(item\\['requested_viewport'\\]\\ ==\\ required_size\\ for\\ item\\ in\\ data\\['captures'\\]\\),\\ required_size|assert\\ any\\(item\\['viewport'\\]\\ ==\\ \\{'width':\\ 1440,\\ 'height':\\ 900\\}\\ for\\ item\\ in\\ data\\['captures'\\]\\)|assert\\ any\\(item\\['viewport'\\]\\ ==\\ \\{'width':\\ 960,\\ 'height':\\ 640\\}\\ for\\ item\\ in\\ data\\['captures'\\]\\)|assert\\ len\\(data\\['captures'\\]\\)\\ ==\\ 25,\\ len\\(data\\['captures'\\]\\)|assert\\ len\\(data\\['captures'\\]\\)\\ ==\\ 4,\\ len\\(data\\['captures'\\]\\)|assert\\ \\{item\\['surface'\\]\\ for\\ item\\ in\\ data\\['captures'\\]\\}\\ ==\\ \\{'work',\\ 'computer'\\}|for\\ item\\ in\\ data\\['captures'\\]:|godot=\"\\$\\(find\\ \"\\$cache_dir\"\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\-print\\ \\-quit\\ \\|\\|\\ true\\)\"|godot=\"\\$\\(find\\ \"\\$cache_dir\"\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\-print\\ \\-quit\\)\"|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/desktop_ui_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/ui_owner_assets_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/ui_state_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|surfaces\\ =\\ \\{item\\['surface'\\]\\ for\\ item\\ in\\ data\\['captures'\\]\\}|timeout\\-minutes:\\ 20|xvfb\\-run\\ \\-a\\ \\-s\\ '\\-screen\\ 0\\ 1600x1000x24'\\ timeout\\ 90s\\ \\./godot\\ \\-\\-path\\ \\.\\ \\-\\-rendering\\-method\\ gl_compatibility\\ \\-\\-audio\\-driver\\ Dummy\\ \\-\\-script\\ tests/ui_real_input_smoke\\.gd|xvfb\\-run\\ \\-a\\ \\-s\\ '\\-screen\\ 0\\ 1600x1000x24'\\ timeout\\ 90s\\ \\./godot\\ \\-\\-path\\ \\.\\ \\-\\-rendering\\-method\\ gl_compatibility\\ \\-\\-audio\\-driver\\ Dummy\\ \\-\\-script\\ tests/ui_work_computer_visual_capture\\.gd|xvfb\\-run\\ \\-a\\ \\-s\\ '\\-screen\\ 0\\ 1600x1400x24'\\ timeout\\ 120s\\ \\./godot\\ \\-\\-path\\ \\.\\ \\-\\-rendering\\-method\\ gl_compatibility\\ \\-\\-audio\\-driver\\ Dummy\\ \\-\\-script\\ tests/ui_visual_capture\\.gd|xvfb\\-run\\ \\-a\\ \\-s\\ '\\-screen\\ 0\\ 1600x1400x24'\\ timeout\\ 90s\\ \\./godot\\ \\-\\-path\\ \\.\\ \\-\\-rendering\\-method\\ gl_compatibility\\ \\-\\-audio\\-driver\\ Dummy\\ \\-\\-script\\ tests/ui_state_visual_capture\\.gd)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/retire-verified-branches.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 10)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/research-quality-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/autonomy_learning_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/research_collector_privacy_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/research_evidence_lifecycle_smoke\\.gd|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/research_source_resilience_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/release.yml",
+      "pattern": "^\\s*(?:\\$exit\\ =\\ Invoke\\-AuroraBoundedProcess\\ \\-FilePath\\ \\$exe\\ \\-ArgumentList\\ @\\('\\-\\-headless','\\-\\-quit\\-after','3'\\)\\ \\-Phase\\ 'release\\-exported\\-app'\\ \\-TimeoutSeconds\\ 120|\\$runExit\\ =\\ Invoke\\-AuroraBoundedProcess\\ \\-FilePath\\ \\$exe\\ \\-ArgumentList\\ @\\('\\-\\-headless','\\-\\-quit\\-after','3'\\)\\ \\-Phase\\ 'release\\-installed\\-app'\\ \\-TimeoutSeconds\\ 120|curl\\ \\-fL\\ \\-\\-retry\\ 3\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip\"\\ \\-o\\ \"\\$RUNNER_TEMP/aurora\\-core\\-godot\\.zip\"|godot=\"\\$\\(find\\ \"\\$RUNNER_TEMP/aurora\\-core\\-godot\"\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|godot=\"\\$\\(find\\ \\.ci/godot\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot\\*'\\ \\|\\ head\\ \\-n1\\)\"|part_count=\"\\$\\(find\\ dist\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'AuroraFox_Setup_Windows\\.exe\\.part\\-\\*'\\ \\|\\ wc\\ \\-l\\)\"|test\\ \"\\$\\(find\\ dist\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'AuroraFox\\-Android\\.apk\\.chunk\\-\\*'\\ \\|\\ wc\\ \\-l\\)\"\\ \\-ge\\ 2|test\\ \"\\$\\(find\\ dist\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'AuroraFox\\-Windows\\.zip\\.chunk\\-\\*'\\ \\|\\ wc\\ \\-l\\)\"\\ \\-ge\\ 2|timeout\\ 45s\\ \"\\$godot\"\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ \"\\$script\"|timeout\\ 60s\\ \"\\$GODOT\"\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ \"\\$script\"|timeout\\ 90s\\ \"\\$GODOT\"\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\ 90s\\ \"\\$godot\"\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 120|timeout\\-minutes:\\ 180|timeout\\-minutes:\\ 20)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/release-identity-ci.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 10)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/progress.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 15)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/ollama-selection-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/ollama_model_selection_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 15)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/model-bootstrap-e2e.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 3|timeout\\-minutes:\\ 30|timeout\\-minutes:\\ 5|timeout\\-minutes:\\ 8)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/memory-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/semantic_memory_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 20)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/knowledge-performance.yml",
+      "pattern": "^\\s*(?:\\-\\-timeout\\-seconds\\ 240|\\-\\-timeout\\-seconds\\ 300|curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|python\\ benchmarks/knowledge/run_memory_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-counts\\ \"\\$memory_counts\"\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-\\$\\{\\{\\ inputs\\.profile\\ \\}\\}\\-memory\\-scaling\\.json|python\\ benchmarks/knowledge/run_registry_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-counts\\ \"\\$registry_counts\"\\ \\-\\-source\\-kb\\ 4\\ \\-\\-timeout\\-seconds\\ 300\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-\\$\\{\\{\\ inputs\\.profile\\ \\}\\}\\-registry\\-scaling\\.json|python\\ benchmarks/knowledge/run_search_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-sizes\\-mb\\ \"\\$search_sizes\"\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-\\$\\{\\{\\ inputs\\.profile\\ \\}\\}\\-search\\-scaling\\.json|run:\\ python\\ benchmarks/knowledge/run_knowledge_benchmark_portable\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-profile\\ '\\$\\{\\{\\ inputs\\.profile\\ \\}\\}'\\ \\-\\-timeout\\-seconds\\ 900\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-\\$\\{\\{\\ inputs\\.profile\\ \\}\\}\\.json|run:\\ python\\ benchmarks/knowledge/run_knowledge_benchmark_portable\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-profile\\ smoke\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-smoke\\.json|run:\\ python\\ benchmarks/knowledge/run_knowledge_benchmark_portable\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-profile\\ standard\\ \\-\\-timeout\\-seconds\\ 900\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-standard\\.json|run:\\ python\\ benchmarks/knowledge/run_knowledge_benchmark_portable\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-profile\\ stress\\ \\-\\-timeout\\-seconds\\ 900\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-stress\\.json|run:\\ python\\ benchmarks/knowledge/run_knowledge_benchmark_portable\\.py\\ \\-\\-godot\\ \\.\\\\godot\\.exe\\ \\-\\-profile\\ smoke\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/windows\\-smoke\\.json|run:\\ python\\ benchmarks/knowledge/run_memory_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-counts\\ 125,250,500\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-memory\\-scaling\\.json|run:\\ python\\ benchmarks/knowledge/run_memory_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-counts\\ 250,500,1000\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-stress\\-memory\\-scaling\\.json|run:\\ python\\ benchmarks/knowledge/run_registry_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-counts\\ 16,32,64\\ \\-\\-source\\-kb\\ 4\\ \\-\\-timeout\\-seconds\\ 300\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-registry\\-scaling\\.json|run:\\ python\\ benchmarks/knowledge/run_registry_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-counts\\ 32,64,128\\ \\-\\-source\\-kb\\ 4\\ \\-\\-timeout\\-seconds\\ 300\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-stress\\-registry\\-scaling\\.json|run:\\ python\\ benchmarks/knowledge/run_search_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-sizes\\-mb\\ 1,2,4\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-search\\-scaling\\.json|run:\\ python\\ benchmarks/knowledge/run_search_scaling\\.py\\ \\-\\-godot\\ \\./godot\\ \\-\\-sizes\\-mb\\ 4,8,16\\ \\-\\-timeout\\-seconds\\ 600\\ \\-\\-report\\ artifacts/knowledge\\-performance/linux\\-stress\\-search\\-scaling\\.json|run:\\ timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 180|timeout\\-minutes:\\ 60|timeout\\-minutes:\\ 70|timeout\\-minutes:\\ 90)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/knowledge-memory-ocr-candidate.yml",
+      "pattern": "^\\s*(?:\\-\\-timeout\\-seconds\\ 120|curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|run:\\ timeout\\ 45s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/local_ocr_knowledge_smoke\\.gd|timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 20|timeout\\-minutes:\\ 35|timeout\\-minutes:\\ 45)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/knowledge-1g-release-gate.yml",
+      "pattern": "^\\s*(?:\\-\\-connect\\-timeout\\ 30\\ \\\\|\\-\\-max\\-time\\ 300\\ \\\\|\\-\\-retry\\ 8\\ \\\\|\\-\\-retry\\-all\\-errors\\ \\\\|\\-\\-retry\\-delay\\ 5\\ \\\\|\\-\\-retry\\-max\\-time\\ 300\\ \\\\|\\-\\-timeout\\-seconds\\ 5400\\ \\\\|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 120)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/integration-gate.yml",
+      "pattern": "^\\s*(?:\\-\\-timeout\\-seconds\\ 240|\\-\\-timeout\\-seconds\\ 300|curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|if\\ timeout\\ 60s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ \"\\$smoke\";\\ then|run:\\ timeout\\ 60s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/desktop_ui_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 20|timeout\\-minutes:\\ 35)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/evolution-engine-ci.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 25)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/core-evolution-tournament.yml",
+      "pattern": "^\\s*(?:curl\\ \\-fL\\ \\-\\-retry\\ 3\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip\"\\ \\-o\\ \"\\$RUNNER_TEMP/godot\\.zip\"|godot=\"\\$\\(find\\ \"\\$RUNNER_TEMP/aurora\\-godot\"\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|timeout\\ 120s\\ '\\$\\{\\{\\ steps\\.godot\\.outputs\\.path\\ \\}\\}'\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\ 60s\\ '\\$\\{\\{\\ steps\\.godot\\.outputs\\.path\\ \\}\\}'\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/core_candidate_benchmark_smoke\\.gd|timeout\\-minutes:\\ 15)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/core-candidate-promotion.yml",
+      "pattern": "^\\s*(?:curl\\ \\-fL\\ \\-\\-retry\\ 3\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip\"\\ \\-o\\ \"\\$RUNNER_TEMP/godot\\.zip\"|godot=\"\\$\\(find\\ \"\\$RUNNER_TEMP/aurora\\-godot\"\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|timeout\\ 45s\\ \"\\$GODOT\"\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ \"\\$script\"|timeout\\ 90s\\ '\\$\\{\\{\\ steps\\.godot\\.outputs\\.path\\ \\}\\}'\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 30)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/core-benchmarks.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 90)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/core-android-e2e.yml",
+      "pattern": "^\\s*(?:GODOT=\"\\$\\(find\\ \\.ci/godot\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot\\*'\\ \\|\\ head\\ \\-n1\\)\"|curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_export_templates\\.tpz\"\\ \\-o\\ \\.ci/templates\\.tpz|curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip\"\\ \\-o\\ \\.ci/godot\\.zip|timeout\\-minutes:\\ 15|timeout\\-minutes:\\ 180)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/core-android-benchmark.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 10|timeout\\-minutes:\\ 120)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/chat-learning-attachments-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/chat_learning_attachment_smoke\\.gd|run:\\ timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/file_spreadsheet_limits_smoke\\.gd|run:\\ timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/security_owner_review_smoke\\.gd|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/public_document_url_smoke\\.gd|timeout\\ 120s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/public_web_manager_smoke\\.gd|timeout\\-minutes:\\ 20)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/api-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-L\\ \\-\\-fail\\ \\-\\-retry\\ 3\\ \\-o\\ godot\\.zip\\ https://github\\.com/godotengine/godot/releases/download/4\\.7\\.1\\-stable/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip|godot=\"\\$\\(find\\ \\.\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\*'\\ \\|\\ head\\ \\-n1\\)\"|run:\\ timeout\\ 90s\\ \\./godot\\ \\-\\-headless\\ \\-\\-editor\\ \\-\\-path\\ \\.\\ \\-\\-quit|timeout\\ 30s\\ \\./godot\\ \\-\\-headless\\ \\-\\-path\\ \\.\\ \\-\\-script\\ tests/api_gateway_smoke\\.gd)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/android-voice-supertonic-ci.yml",
+      "pattern": "^\\s*(?:curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \"\\$url\"\\ \\-o\\ \"\\$archive\"|curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \\\\|timeout\\-minutes:\\ 45)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/android-supertonic-candidate-benchmark.yml",
+      "pattern": "^\\s*(?:curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \\\\|f\"rtf=\\{row\\['mean_rtf'\\]:\\.4f\\}\\ peak=\\{row\\['max_peak'\\]:\\.4f\\}\\ clipping=\\{row\\['clipping_count'\\]\\}\"|timeout\\-minutes:\\ 60)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/android-supertonic-acceptance.yml",
+      "pattern": "^\\s*(?:curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \\\\|f\"mean_rtf=\\{row\\['mean_rtf'\\]:\\.4f\\}\\ max_rtf=\\{row\\['max_rtf'\\]:\\.4f\\}\\ \"|f\"min_similarity=\\{row\\['min_asr_similarity'\\]:\\.4f\\}\\ \"|f\"peak=\\{row\\['max_peak'\\]:\\.4f\\}\\ clipping=\\{row\\['clipping_count'\\]\\}\"|timeout\\-minutes:\\ 60)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/android-production-knowledge-acceptance.yml",
+      "pattern": "^\\s*(?:GODOT=\"\\$\\(find\\ \\.ci/godot\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot\\*'\\ \\|\\ head\\ \\-n1\\)\"|curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_export_templates\\.tpz\"\\ \\-o\\ \\.ci/templates\\.tpz|curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip\"\\ \\-o\\ \\.ci/godot\\.zip|timeout\\-minutes:\\ 180)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/android-plugin-ci.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 45)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/android-apk-artifact.yml",
+      "pattern": "^\\s*(?:GODOT=\"\\$\\(find\\ \\.ci/godot\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot\\*'\\ \\|\\ head\\ \\-n1\\ \\|\\|\\ true\\)\"|GODOT=\"\\$\\(find\\ \\.ci/godot\\ \\-maxdepth\\ 1\\ \\-type\\ f\\ \\-name\\ 'Godot\\*'\\ \\|\\ head\\ \\-n1\\)\"|curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_export_templates\\.tpz\"\\ \\-o\\ \\.ci/templates\\.tpz|curl\\ \\-\\-retry\\ 4\\ \\-\\-retry\\-all\\-errors\\ \\-fL\\ \"\\$base/Godot_v4\\.7\\.1\\-stable_linux\\.x86_64\\.zip\"\\ \\-o\\ \\.ci/godot\\.zip|timeout\\-minutes:\\ 180)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": ".github/workflows/agent-sync-ci.yml",
+      "pattern": "^\\s*(?:timeout\\-minutes:\\ 30)\\s*$",
+      "class": "test_evidence",
+      "control": "Repository-owned CI/benchmark workloads and failure deadlines; edit workflow or benchmark CLI/environment",
+      "rationale": "Reviewed exact orchestration/measurement statements, not installed-product operational caps. Runtime and newly introduced statements require separate review; acceptance gates are retained."
+    },
+    {
+      "path": "work/work_store.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed retention/display consumers. Redaction, full action identity, corroboration and promotion quality gates remain separate."
+    },
+    {
+      "path": "agent/learning_curator.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed retention/display consumers. Redaction, full action identity, corroboration and promotion quality gates remain separate."
+    },
+    {
+      "path": "scripts/experience_store.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed runtime uses of code/experience budgets; full-source preservation checks and score/privacy/authorization constraints are separate."
+    },
+    {
+      "path": "scripts/code_specialist.gd",
+      "pattern": "OwnerResourcePolicy\\.(?:value|clip|count)",
+      "class": "owner_adjustable",
+      "control": "General Settings resource controls; private owner_resources.cfg",
+      "rationale": "Reviewed runtime uses of code/experience budgets; full-source preservation checks and score/privacy/authorization constraints are separate."
+    },
+    {
       "path": "scripts/local_semantic_vectorizer.gd",
       "pattern": "OwnerResourcePolicy\\.(?:value|count)",
       "class": "owner_adjustable",
@@ -230,7 +965,7 @@
       "path": "scripts/public_web_manager.gd",
       "pattern": "DEFAULT_MAX_|DEFAULT_REQUEST_TIMEOUT_SECONDS|max_urls_per_message|max_redirects|max_response_bytes|request_timeout_seconds|max_extracted_chars|MAX_EXTRACTED_CHARS|DEFAULT_CONTEXT_CHARS|max_url_length|max_title_chars|context_chars",
       "class": "owner_adjustable",
-      "control": "apply_owner_limits + aurorafox/web/* ProjectSettings",
+      "control": "apply_owner_limits + private user://owner_operation_limits.cfg [web]; legacy/live ProjectSettings are compatibility inputs",
       "rationale": "Device protection defaults; the owner can change and persist them."
     },
     {
@@ -258,7 +993,7 @@
       "path": "file_intelligence/file_service.py",
       "pattern": "os.getenv\\(\"AURORAFOX_(?:FILE_MAX|ARCHIVE_MAX|ARCHIVE_TEXT|OCR_MAX)",
       "class": "owner_adjustable",
-      "control": "Settings → Files and projects → File Intelligence limits; persisted ProjectSettings are exported to AURORAFOX_FILE_*/ARCHIVE_*/OCR_* on backend start/restart",
+      "control": "Settings → Files and projects → File Intelligence limits; private user://owner_operation_limits.cfg values, copied to live ProjectSettings, are exported to AURORAFOX_FILE_*/ARCHIVE_*/OCR_* on backend start/restart",
       "rationale": "Parser resource budgets are visible owner controls and are applied to the local backend without source edits."
     },
     {

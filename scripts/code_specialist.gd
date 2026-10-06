@@ -103,7 +103,7 @@ Project context:
 %s
 Previous answer to repair:
 %s
-""" % [JSON.stringify(context_paths), task, _files_context(files, 50000), raw.substr(0, 30000)]
+""" % [JSON.stringify(context_paths), task, _files_context(files, OwnerResourcePolicy.value("code_repair_files_chars")), OwnerResourcePolicy.clip(raw, "code_rejected_chars")]
 	var response := await _chat_code([{"role":"user","content":repair_prompt}], 0.02)
 	if not response.get("ok", false):
 		return {"ok":false,"error":"Code Generator repair request failed: %s" % str(response.get("error", "unknown")),"raw":raw}
@@ -143,7 +143,7 @@ Language: %s
 Task / observed failure: %s
 Code, traceback, logs or diff:
 %s
-""" % [language, task, code_or_error.substr(0, 120000)]
+""" % [language, task, OwnerResourcePolicy.clip(code_or_error, "code_input_chars")]
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.05)
 	if not response.get("ok", false):
 		return response
@@ -164,7 +164,7 @@ Language metadata: %s
 Task: %s
 Code or diff:
 %s
-""" % [JSON.stringify(lang_info), task, code_or_diff.substr(0, 120000)]
+""" % [JSON.stringify(lang_info), task, OwnerResourcePolicy.clip(code_or_diff, "code_input_chars")]
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.05)
 	if not response.get("ok", false):
 		return response
@@ -183,7 +183,7 @@ Return strict JSON only:
 Language: %s
 Code:
 %s
-""" % [language, code.substr(0, 120000)]
+""" % [language, OwnerResourcePolicy.clip(code, "code_input_chars")]
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.1)
 	if not response.get("ok", false): return response
 	var parsed := _parse_json(str(response.get("content", "")))
@@ -202,7 +202,7 @@ Language: %s
 Refactoring goal: %s
 Current code:
 %s
-""" % [language, task, code.substr(0, 120000)]
+""" % [language, task, OwnerResourcePolicy.clip(code, "code_input_chars")]
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.08)
 	if not response.get("ok", false):
 		return response
@@ -214,7 +214,7 @@ Current code:
 		return {"ok":false,"error":"Refactoring Specialist returned no refactored code","raw":response.get("content", "")}
 	var missing_names := _missing_python_public_functions(code, refactored_code, language)
 	if not missing_names.is_empty():
-		var repair_prompt := prompt + "\nYour previous response removed these public functions: " + ", ".join(missing_names) + "\nReturn corrected strict JSON preserving those definitions. Previous untrusted response:\n" + str(response.get("content", "")).substr(0, 120000)
+		var repair_prompt := prompt + "\nYour previous response removed these public functions: " + ", ".join(missing_names) + "\nReturn corrected strict JSON preserving those definitions. Previous untrusted response:\n" + OwnerResourcePolicy.clip(str(response.get("content", "")), "code_input_chars")
 		var repaired := await _chat_code([{"role":"user","content":repair_prompt}], 0.0)
 		if not bool(repaired.get("ok", false)):
 			return repaired
@@ -237,14 +237,14 @@ func _missing_python_public_functions(original: String, refactored: String, lang
 	var missing: Array[String] = []
 	if language.to_lower() not in ["python", "py"]:
 		return missing
-	# A bounded structural guard for top-level Python definitions. This does not
+	# A full-source structural guard for top-level Python definitions. This does not
 	# execute imported code or claim full syntax/behavioral verification.
 	var definitions := RegEx.new()
 	definitions.compile("(?m)^(?:async[ \\t]+)?def[ \\t]+([A-Za-z_][A-Za-z0-9_]*)[ \\t]*\\(")
 	var output_names: Array[String] = []
-	for match in definitions.search_all(refactored.substr(0, 120000)):
+	for match in definitions.search_all(refactored):
 		output_names.append(match.get_string(1))
-	for match in definitions.search_all(original.substr(0, 120000)):
+	for match in definitions.search_all(original):
 		var name := match.get_string(1)
 		if not name.begins_with("_") and name not in output_names and name not in missing:
 			missing.append(name)
@@ -265,7 +265,7 @@ Language: %s
 Testing goal: %s
 Code under test:
 %s
-""" % [language, task, code.substr(0, 120000)]
+""" % [language, task, OwnerResourcePolicy.clip(code, "code_input_chars")]
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.08)
 	if not response.get("ok", false):
 		return response
@@ -304,7 +304,7 @@ Code under test:
 %s
 Previous answer to repair:
 %s
-""" % [language, task, code.substr(0, 60000), raw.substr(0, 30000)]
+""" % [language, task, OwnerResourcePolicy.clip(code, "code_repair_chars"), OwnerResourcePolicy.clip(raw, "code_rejected_chars")]
 	var response := await _chat_code([{"role":"user","content":repair_prompt}], 0.02)
 	if not response.get("ok", false):
 		return {"ok":false,"error":"Test Engineer repair request failed: %s" % str(response.get("error", "unknown")),"raw":raw}
@@ -327,7 +327,7 @@ Do not invent files outside the supplied context unless the task explicitly requ
 Task: %s
 Files:
 %s
-""" % [task, _files_context(files, 120000)]
+""" % [task, _files_context(files, OwnerResourcePolicy.value("code_consult_files_chars"))]
 	var response := await _chat_code([{"role":"user","content":prompt}], 0.08)
 	if not response.get("ok", false):
 		return response
@@ -349,23 +349,23 @@ func _chat_code(messages: Array, temperature: float) -> Dictionary:
 	# is explicit elsewhere and must never precede this path.
 	return await general_ai.chat(messages, temperature)
 
-func _files_context(files: Array, max_chars: int = 90000) -> String:
+func _files_context(files: Array, max_chars: int = -1) -> String:
+	var cap := OwnerResourcePolicy.value("code_files_chars") if max_chars < 0 else max_chars
 	var rows: Array[String] = []
-	var remaining := maxi(0, max_chars)
+	var used := 0
 	for item in files:
-		if remaining <= 0:
-			break
-		if not item is Dictionary:
-			continue
+		if not item is Dictionary: continue
 		var path := str(item.get("path", item.get("name", "unknown"))).strip_edges()
 		var content := str(item.get("content", ""))
 		var language := str(item.get("language", registry.detect_from_path(path)))
 		var header := "--- %s [%s] ---\n" % [path, language]
-		var available := maxi(0, remaining - header.length())
-		var clipped := content.substr(0, available)
-		var row := header + clipped
+		var separator := 0 if rows.is_empty() else 1
+		if cap > 0 and used + separator + header.length() > cap: break
+		var available := content.length() if cap == 0 else cap - used - separator - header.length()
+		var row := header + content.substr(0, available)
 		rows.append(row)
-		remaining -= row.length()
+		used += separator + row.length()
+		if cap > 0 and used >= cap: break
 	return "\n".join(rows)
 
 func _parse_json(text: String) -> Dictionary:

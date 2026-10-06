@@ -18,6 +18,8 @@ on:
       - 'tests/test_owner_control_audit.py'
       - 'config/owner_control_policy.json'
       - 'scripts/public_web_manager.gd'
+      - 'scripts/owner_limit_persistence.gd'
+      - 'tests/owner_resource_limits_smoke.gd'
       - 'scripts/user_intent_router.gd'
       - 'tests/public_document_url_smoke.gd'
       - 'tests/public_web_manager_smoke.gd'
@@ -48,6 +50,8 @@ on:
       - 'tests/test_owner_control_audit.py'
       - 'config/owner_control_policy.json'
       - 'scripts/public_web_manager.gd'
+      - 'scripts/owner_limit_persistence.gd'
+      - 'tests/owner_resource_limits_smoke.gd'
       - 'scripts/user_intent_router.gd'
       - 'tests/public_document_url_smoke.gd'
       - 'tests/public_web_manager_smoke.gd'
@@ -120,6 +124,7 @@ jobs:
 
       - name: Prove public page reading and document routing
         run: |
+          timeout 30s ./godot --headless --path . --script tests/owner_resource_limits_smoke.gd
           timeout 120s ./godot --headless --path . --script tests/public_web_manager_smoke.gd
           timeout 120s ./godot --headless --path . --script tests/public_document_url_smoke.gd
 

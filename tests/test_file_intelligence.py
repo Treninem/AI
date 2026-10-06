@@ -22,6 +22,27 @@ def test_text_file(tmp_path: Path) -> None:
     assert result["metadata"]["encoding"].startswith("utf-8")
 
 
+def test_partial_cache_identity_changes_with_owner_extraction_policy(tmp_path, monkeypatch):
+    path = tmp_path / 'same-source.txt'
+    path.write_text('actual canonical source', encoding='utf-8')
+    baseline = file_service._cache_key(path, '', False, 160000)
+    for field in ['MAX_PDF_RENDER_PIXELS', 'MAX_PDF_PAGES', 'VIDEO_MAX_FRAMES', 'VIDEO_FRAME_MAX_WIDTH']:
+        with monkeypatch.context() as patch:
+            patch.setattr(file_service, field, getattr(file_service, field) + 1)
+            assert file_service._cache_key(path, '', False, 160000) != baseline
+    import extended_formats
+    with monkeypatch.context() as patch:
+        patch.setattr(extended_formats, 'MAX_EPUB_CHAPTERS', extended_formats.MAX_EPUB_CHAPTERS + 1)
+        assert file_service._cache_key(path, '', False, 160000) != baseline
+
+
+def test_owner_cache_budget_prunes_actual_disk_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(file_service, 'CACHE_DIR', tmp_path)
+    monkeypatch.setattr(file_service, 'CACHE_MAX_BYTES', 1)
+    file_service._cache_put('small', {'content': 'actual cached text'})
+    assert list(tmp_path.glob('*.json')) == []
+
+
 def test_docx_xlsx_pptx(tmp_path: Path) -> None:
     from docx import Document
     from openpyxl import Workbook

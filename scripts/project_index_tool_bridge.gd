@@ -55,7 +55,7 @@ func _denied() -> Dictionary:
 func _index_project(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "res://"))
 	if not _allowed(path): return _denied()
-	return await index.index_project(path, clampi(int(args.get("max_files", 30000)), 1, 100000), bool(args.get("force", false)))
+	return await index.index_project(path, int(args.get("max_files", OwnerResourcePolicy.value("coordinator_index_files"))), bool(args.get("force", false)))
 
 func _search_project(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "res://"))

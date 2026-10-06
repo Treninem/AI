@@ -18,9 +18,10 @@ func health() -> Dictionary:
 	return await _request("/health", HTTPClient.METHOD_GET, {}, 5.0)
 
 func index_project(root: String, max_files := 30000, force := false) -> Dictionary:
+	if max_files < 0: return {"ok": false, "error": "Index file budget must be nonnegative"}
 	if OS.get_name() != "Windows": return {"ok": false, "error": "Project index is currently Windows-only"}
 	return await _request("/index", HTTPClient.METHOD_POST, {
-		"root": _globalize(root), "max_files": clampi(max_files, 1, 100000), "force": force
+		"root": _globalize(root), "max_files": max_files, "force": force
 	}, 900.0)
 
 func search(root: String, query: String, limit := 20, language := "") -> Dictionary:

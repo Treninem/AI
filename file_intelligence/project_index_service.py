@@ -86,7 +86,7 @@ SYMBOL_PATTERNS: dict[str, list[tuple[str, re.Pattern[str]]]] = {
 
 class IndexRequest(BaseModel):
     root: str = Field(min_length=1, max_length=8192)
-    max_files: int = Field(default=DEFAULT_MAX_FILES, ge=1, le=100_000)
+    max_files: int = Field(default=DEFAULT_MAX_FILES, ge=0)
     force: bool = False
 
 
@@ -183,7 +183,7 @@ def _iter_sources(root: Path, max_files: int):
                 continue
             yield path, language, st
             count += 1
-            if count >= max_files:
+            if max_files > 0 and count >= max_files:
                 return
 
 
@@ -243,12 +243,16 @@ def index_project(req: IndexRequest):
     unchanged = 0
     failed = 0
     languages: dict[str, int] = {}
+    limit_reached = False
     with _conn() as db:
         existing = {
             row["path"]: (int(row["size"]), int(row["mtime_ns"]))
             for row in db.execute("SELECT path,size,mtime_ns FROM files WHERE root = ?", (root_str,))
         }
-        for path, language, st in _iter_sources(root, req.max_files):
+        for path, language, st in _iter_sources(root, 0):
+            if req.max_files > 0 and len(seen) >= req.max_files:
+                limit_reached = True
+                break
             rel = path.relative_to(root).as_posix()
             seen.add(rel)
             languages[language] = languages.get(language, 0) + 1
@@ -268,7 +272,7 @@ def index_project(req: IndexRequest):
                 indexed += 1
             except Exception:
                 failed += 1
-        stale = [path for path in existing if path not in seen]
+        stale = [] if limit_reached else [path for path in existing if path not in seen]
         if stale:
             db.executemany("DELETE FROM files WHERE root = ? AND path = ?", [(root_str, path) for path in stale])
         _sync_fts(db, root_str)
@@ -277,7 +281,8 @@ def index_project(req: IndexRequest):
     return {
         "ok": True, "root": root_str, "total_files": total, "updated_files": indexed,
         "unchanged_files": unchanged, "removed_files": len(stale), "failed_files": failed,
-        "languages": languages, "elapsed_ms": int((time.time() - started) * 1000),
+        "languages": languages, "limit_reached": limit_reached, "partial": limit_reached or failed > 0,
+        "elapsed_ms": int((time.time() - started) * 1000),
     }
 
 

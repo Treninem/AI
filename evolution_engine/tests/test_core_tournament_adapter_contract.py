@@ -92,8 +92,10 @@ def test_core_tournament_owns_existing_pipeline_running_lock():
 
 def test_pending_core_winner_is_bounded_expiring_and_single_use():
     adapter = read("evolution_engine/evaluation/core_tournament_adapter.gd")
-    assert "const MAX_PENDING_WINNERS := 5" in adapter
-    assert "const PENDING_TTL_SECONDS := 86400" in adapter
+    assert 'OwnerResourcePolicy.value("evolution_pending_items")' in adapter
+    assert '"evolution_pending_items": 5' in read("scripts/owner_resource_policy.gd")
+    assert 'OwnerResourcePolicy.value("evolution_pending_ttl_seconds")' in adapter
+    assert '"evolution_pending_ttl_seconds": 86400' in read("scripts/owner_resource_policy.gd")
     assert "_trim_pending()" in adapter
     assert "_pending_winners.erase(tournament_id)" in adapter
     assert "Unknown or expired Core tournament winner" in adapter

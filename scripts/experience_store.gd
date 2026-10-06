@@ -79,8 +79,9 @@ func record_failure(task: String, note: String, source_feedback_id := "") -> voi
 		"source_feedback_id": source_feedback_id,
 		"active": true
 	})
-	if failures.size() > 300:
-		failures = failures.slice(failures.size() - 300)
+	var cap := OwnerResourcePolicy.value("experience_failure_items")
+	if cap > 0 and failures.size() > cap:
+		failures = failures.slice(failures.size() - cap)
 	_save_array(FAILURES_PATH, failures)
 
 func retract_feedback(source_feedback_id: String) -> bool:
@@ -117,8 +118,9 @@ func checkpoint(task: String, step_index: int, tool_name: String, args: Dictiona
 		"result_summary": _compact(result),
 		"time": Time.get_datetime_string_from_system(true)
 	})
-	if checkpoints.size() > 500:
-		checkpoints = checkpoints.slice(checkpoints.size() - 500)
+	var cap := OwnerResourcePolicy.value("experience_checkpoint_items")
+	if cap > 0 and checkpoints.size() > cap:
+		checkpoints = checkpoints.slice(checkpoints.size() - cap)
 	_save_array(CHECKPOINTS_PATH, checkpoints)
 
 func relevant_skills(task: String, limit := 5) -> Array:
@@ -188,4 +190,4 @@ func _overlap(a: Dictionary, b: Dictionary) -> float:
 
 func _compact(value: Variant) -> String:
 	var text := JSON.stringify(value)
-	return text.substr(0, 4000)
+	return OwnerResourcePolicy.clip(text, "experience_result_chars")

@@ -41,21 +41,20 @@ static func computer_control_enabled() -> bool:
 
 static func master_enabled_from(node: Node) -> bool:
 	var current: Node = node
-	for _i in range(8):
-		if current == null:
-			break
+	while current != null:
 		for node_name in ["AutonomySettings", "AutonomySettingsManager"]:
 			var manager = current.get_node_or_null(node_name)
 			if manager != null and manager.has_method("get_settings"):
 				var settings = manager.call("get_settings")
 				if settings is Dictionary:
-					return bool(settings.get("master_enabled", true))
+					return settings.get("master_enabled", false) is bool and settings.get("master_enabled", false)
+				return false
 		if current.has_method("get_settings"):
 			var own_settings = current.call("get_settings")
 			if own_settings is Dictionary and own_settings.has("master_enabled"):
-				return bool(own_settings.get("master_enabled", true))
+				return own_settings.master_enabled is bool and own_settings.master_enabled
 		current = current.get_parent()
-	return true
+	return false
 
 func runtime_is_installed() -> bool:
 	return OS.get_name() == "Windows" and not _find_runtime().is_empty()

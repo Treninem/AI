@@ -11,9 +11,9 @@ from xml.etree import ElementTree as ET
 
 MAX_ARCHIVE_ENTRIES = int(os.getenv("AURORAFOX_ARCHIVE_MAX_ENTRIES", "5000"))
 MAX_ARCHIVE_EXPANDED = int(os.getenv("AURORAFOX_ARCHIVE_MAX_EXPANDED", str(512 * 1024 * 1024)))
-MAX_EPUB_CHAPTERS = int(os.getenv("AURORAFOX_EPUB_MAX_CHAPTERS", "2000"))
-MAX_EMBEDDED_TEXT_BYTES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_ENTRY_MAX", str(4 * 1024 * 1024)))
-MAX_ARCHIVE_TEXT_ENTRIES = int(os.getenv("AURORAFOX_ARCHIVE_TEXT_ENTRIES", "24"))
+MAX_EPUB_CHAPTERS = max(1, int(os.getenv("AURORAFOX_EPUB_MAX_CHAPTERS", "2000")))
+MAX_EMBEDDED_TEXT_BYTES = max(1, int(os.getenv("AURORAFOX_ARCHIVE_TEXT_ENTRY_MAX", str(4 * 1024 * 1024))))
+MAX_ARCHIVE_TEXT_ENTRIES = max(1, int(os.getenv("AURORAFOX_ARCHIVE_TEXT_ENTRIES", "24")))
 
 TEXT_INSIDE_ARCHIVE = {
     ".txt", ".md", ".json", ".csv", ".tsv", ".xml", ".html", ".htm", ".xhtml",

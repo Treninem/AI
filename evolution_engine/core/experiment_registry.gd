@@ -1,8 +1,6 @@
 class_name AuroraEvolutionExperimentRegistry
 extends RefCounted
 
-const MAX_RECENT := 64
-const MAX_PHASE_HISTORY := 24
 
 var _sequence := 0
 var _records: Dictionary = {}
@@ -43,7 +41,8 @@ func advance(experiment_id: String, phase: String, details: Dictionary = {}) -> 
 		"unix": now,
 		"details": _compact_metadata(details)
 	})
-	while history.size() > MAX_PHASE_HISTORY:
+	var phase_cap := OwnerResourcePolicy.value("evolution_phase_items")
+	while phase_cap > 0 and history.size() > phase_cap:
 		history.pop_front()
 	record["phase_history"] = history
 	_records[experiment_id] = record
@@ -92,9 +91,9 @@ func mark_consumed(experiment_id: String, phase := "consumed") -> Dictionary:
 
 func recent(limit := 10) -> Array:
 	var out: Array = []
-	var count := clampi(limit, 1, MAX_RECENT)
+	var count := maxi(0, limit)
 	for experiment_id in _recent:
-		if out.size() >= count:
+		if count > 0 and out.size() >= count:
 			break
 		if _records.has(experiment_id):
 			out.append((_records[experiment_id] as Dictionary).duplicate(true))
@@ -126,7 +125,8 @@ func _compact_metadata(metadata: Dictionary) -> Dictionary:
 	return out
 
 func _trim() -> void:
-	while _recent.size() > MAX_RECENT:
+	var cap := OwnerResourcePolicy.value("evolution_recent_items")
+	while cap > 0 and _recent.size() > cap:
 		var old_id: String = str(_recent.pop_back())
 		_records.erase(old_id)
 

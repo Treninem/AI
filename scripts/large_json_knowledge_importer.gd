@@ -2,10 +2,10 @@ class_name LargeJsonKnowledgeImporter
 extends RefCounted
 
 const LARGE_JSON_THRESHOLD_BYTES := 8 * 1024 * 1024
-const MAX_AGGREGATE_FIELDS := 64
-const MAX_AGGREGATE_CHARS := 256 * 1024
 
 var reader := AuroraJsonStreamReader.new()
+var _field_cap := 64
+var _char_cap := 256 * 1024
 var _store: KnowledgeStore
 var _source := ""
 var _meta: Dictionary = {}
@@ -31,6 +31,8 @@ func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {})
 	var removed := store.remove_source(path)
 	if not bool(removed.get("ok", false)):
 		return removed
+	_field_cap = OwnerResourcePolicy.value("json_aggregate_fields")
+	_char_cap = OwnerResourcePolicy.value("json_aggregate_chars")
 	_store = store
 	_source = path
 	_state = store._structured_state()
@@ -63,7 +65,8 @@ func import_file(store: KnowledgeStore, path: String, metadata: Dictionary = {})
 	result["aggregated_records"] = aggregated
 	result["max_depth"] = int(parsed.get("max_depth", 0))
 	result["bytes_read"] = int(parsed.get("bytes_read", 0))
-	result["memory_model"] = "bounded_by_64_fields_256k_record_and_16m_scalar"
+	result["memory_model"] = "owner_configured_streaming_budgets"
+	result["owner_budgets"] = {"aggregate_fields": _field_cap, "aggregate_chars": _char_cap, "scalar_bytes": reader._scalar_cap, "records": reader._record_cap, "depth": reader._depth_cap}
 	return result
 
 func _on_stream_value(json_path: String, value: Variant) -> Dictionary:
@@ -79,7 +82,7 @@ func _on_stream_value(json_path: String, value: Variant) -> Dictionary:
 				return previous
 		if _pending_parent.is_empty():
 			_pending_parent = parent
-		if _pending_object.size() >= MAX_AGGREGATE_FIELDS or _pending_chars + cost > MAX_AGGREGATE_CHARS:
+		if (_field_cap > 0 and _pending_object.size() >= _field_cap) or (_char_cap > 0 and _pending_chars + cost > _char_cap):
 			var bounded := _flush_pending()
 			if not bool(bounded.get("ok", false)):
 				return bounded

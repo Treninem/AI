@@ -2,7 +2,7 @@ extends SceneTree
 
 class FakeAutonomySettings:
 	extends Node
-	var master_enabled := false
+	var master_enabled: Variant = false
 	func get_settings() -> Dictionary:
 		return {"master_enabled": master_enabled}
 
@@ -32,6 +32,10 @@ func _run() -> void:
 	var main := Node.new()
 	main.name = "FakeMain"
 	root.add_child(main)
+
+	if ComputerClient.master_enabled_from(main):
+		_fail("Missing master settings allowed execution", 10)
+		return
 
 	var settings := FakeAutonomySettings.new()
 	settings.name = "AutonomySettings"
@@ -63,6 +67,27 @@ func _run() -> void:
 	if not computer._master_enabled():
 		_fail("ComputerClient did not observe master resume", 6)
 		return
+
+	for invalid in ["true", 1, null]:
+		settings.master_enabled = invalid
+		if ComputerClient.master_enabled_from(work):
+			_fail("Invalid master authorization type allowed execution", 11)
+			return
+	settings.master_enabled = true
+	var nested := Node.new()
+	main.add_child(nested)
+	for depth in range(12):
+		var child := Node.new()
+		nested.add_child(child)
+		nested = child
+	if not ComputerClient.master_enabled_from(nested):
+		_fail("Deep valid ancestry lost explicit master authorization", 12)
+		return
+	settings.master_enabled = false
+	if ComputerClient.master_enabled_from(nested):
+		_fail("Deep ancestry bypassed master stop", 13)
+		return
+	settings.master_enabled = true
 
 	# Master resume never implicitly grants the more specific Computer control
 	# permission; the user must enable it separately through the UI contract.

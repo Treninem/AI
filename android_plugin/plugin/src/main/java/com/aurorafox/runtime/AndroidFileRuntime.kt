@@ -36,14 +36,23 @@ class AndroidFileRuntime(
                 ext == "odt" || ext == "ods" -> analyzeOpenDocument(file, ext, limits)
                 ext == "pdf" -> analyzeOcr(file, "pdf", visual, limits)
                 ext in setOf("png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff") -> analyzeOcr(file, "image", visual, limits)
-                ext == "gif" -> payload("image", "GIF принят; покадровый OCR пока не выполняется.", warnings = listOf("Для OCR сохраните нужный кадр как PNG/JPEG/WebP/BMP/TIFF."))
-                ext in setOf("wav", "mp3", "ogg", "flac", "m4a", "aac", "opus") -> analyzeAudio(file)
+                ext == "gif" -> JSONObject(analyzeOcr(file, "image", visual, limits)).apply {
+                    val warnings = optJSONArray("warnings") ?: JSONArray()
+                    warnings.put("GIF: OCR выполнен для первого кадра; анимация целиком не разобрана.")
+                    put("warnings", warnings)
+                    put("truncated", true)
+                    val metadata = optJSONObject("metadata") ?: JSONObject()
+                    metadata.put("output_truncated", true)
+                    metadata.put("gif_frame_scope", "first_frame")
+                    put("metadata", metadata)
+                }.toString()
+                ext in setOf("wav", "mp3", "ogg", "flac", "m4a", "aac", "opus") -> analyzeAudio(file, limits)
                 ext in setOf("mp4", "mkv", "webm", "mov", "avi", "m4v") -> analyzeVideo(file, visual)
                 ext == "zip" -> analyzeZip(file, limits)
                 ext == "epub" -> readEpubText(file, limits).let { payload("ebook", it.text, it.metadata, it.warnings, it.truncated) }
                 ext in setOf("tar", "tgz") || file.name.endsWith(".tar.gz", true) -> readTarText(file, limits, textExt).let { payload("archive", it.text, it.metadata, it.warnings, it.truncated) }
-                ext == "xls" -> payload("spreadsheet", "Старый бинарный XLS требует отдельного локального XLS backend.", warnings = listOf("Android native parser поддерживает XLSX; XLS пока не разобран."))
-                ext in setOf("7z", "rar") -> payload("archive", "Архив $ext принят.", warnings = listOf("Для этого формата на Android пока не подключён безопасный native распаковщик."))
+                ext == "xls" -> unsupportedFormat(ext)
+                ext in setOf("7z", "rar") -> unsupportedFormat(ext)
                 else -> analyzeUnknown(file, limits)
             }
             val obj = JSONObject(result)
@@ -184,13 +193,15 @@ class AndroidFileRuntime(
         return obj.toString()
     }
 
-    private fun analyzeAudio(file: File): String {
+    private fun analyzeAudio(file: File, limits: FileAnalysisLimits): String {
         val transcribed = voice.transcribe(file.absolutePath, "ru")
         val obj = JSONObject(transcribed)
         if (obj.optBoolean("ok", false)) {
-            return payload("audio", obj.optString("text", ""), mapOf("engine" to obj.optString("engine", "android-local-stt")))
+            val text = obj.optString("text", "")
+            if (text.isBlank()) return error("Local audio transcription returned no text")
+            return payload("audio", text.take(limits.outputChars), mapOf("engine" to obj.optString("engine", "android-local-stt")), truncated = text.length > limits.outputChars)
         }
-        return payload("audio", "Аудиофайл принят.", warnings = listOf(obj.optString("error", "Локальная расшифровка не удалась")))
+        return error(obj.optString("error", "Локальная расшифровка не удалась"))
     }
 
     private fun analyzeVideo(file: File, visual: Boolean): String {
@@ -218,7 +229,7 @@ class AndroidFileRuntime(
 
     private fun analyzeUnknown(file: File, limits: FileAnalysisLimits): String {
         val read = file.inputStream().use { readOwnerBounded(it, minOf(limits.fileBytes, limits.outputChars.toLong() * 4 + 4)) }
-        if (read.bytes.take(4096).any { it == 0.toByte() }) return payload("binary", "Бинарный файл: автоматическое преобразование в текст не выполнено.")
+        if (read.bytes.take(4096).any { it == 0.toByte() }) return unsupportedFormat(file.extension.lowercase())
         val decoded = decodeText(read.bytes)
         return payload("text", decoded.take(limits.outputChars), truncated = read.truncated || decoded.length > limits.outputChars)
     }
@@ -287,6 +298,14 @@ class AndroidFileRuntime(
         put("truncated", truncated)
         put("cached", false)
     }.toString()
+
+    private fun unsupportedFormat(extension: String): String = JSONObject(mapOf(
+        "ok" to false,
+        "error" to "Android local extractor for $extension is unavailable; provide a supported file or accessible text source",
+        "error_code" to "unsupported_format",
+        "extension" to extension,
+        "requires_extractor" to true,
+    )).toString()
 
     private fun error(message: String): String = JSONObject(mapOf("ok" to false, "error" to message)).toString()
 }
