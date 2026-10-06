@@ -19,6 +19,8 @@ const DEFAULT_UBATCH_SIZE := 32
 var server_pid := 0
 var active_model := ""
 var starting := false
+var _active_streams: Array[HTTPClient] = []
+var _stream_cancel_epoch := 0
 
 func _exit_tree() -> void:
 	# Tree teardown is the one path that must always terminate an owned process,
@@ -54,13 +56,20 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	var structured_request := _is_strict_structured_request(messages)
 	var default_max_tokens := TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS
 	var max_tokens := clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)
-	var request_timeout := clampf(float(options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)), 5.0, 600.0)
+	var request_timeout := maxf(0.0, float(options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)))
+	var wait_limits := CoreWaitPolicy.limits()
+	var stall_timeout := float(wait_limits.stall_timeout_seconds)
+	# Preserve an explicit per-request override without making it a total deadline.
+	if options.has("timeout_seconds"): stall_timeout = request_timeout
+	var total_timeout := float(wait_limits.total_timeout_seconds)
+	var response_bytes := int(wait_limits.response_max_bytes)
 	var payload := {
 		"model": MODEL_ALIAS,
 		"messages": messages,
 		"temperature": float(options.get("temperature", 0.2)),
 		"max_tokens": max_tokens,
-		"stream": false
+		"stream": true,
+		"return_progress": true
 	}
 	# Exact terse and strict structured responses do not benefit from hidden
 	# reasoning tokens that can consume the whole request deadline before any
@@ -71,7 +80,7 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 		payload["reasoning_effort"] = "none"
 	elif options.has("reasoning_effort"):
 		payload["reasoning_effort"] = str(options.get("reasoning_effort", ""))
-	var response := await _request_json("/v1/chat/completions", HTTPClient.METHOD_POST, payload, request_timeout)
+	var response := await _request_progress_json(payload, stall_timeout, total_timeout, response_bytes)
 	if not bool(response.get("ok", false)): return response
 	var data: Dictionary = response.get("data", {})
 	var choices: Array = data.get("choices", [])
@@ -155,7 +164,12 @@ func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 		"background_warmup_continues": true
 	}
 
+func cancel_active_requests() -> void:
+	_stream_cancel_epoch += 1
+	for client in _active_streams: client.close()
+
 func stop(force := false) -> void:
+	cancel_active_requests()
 	# A foreground chat can time out its short join while the background loader
 	# still legitimately owns the same llama-server startup. Generic recovery
 	# must not kill that process and reset a slow machine back to zero. Explicit
@@ -181,6 +195,8 @@ func runtime_info() -> Dictionary:
 		"default_chat_max_tokens": DEFAULT_CHAT_MAX_TOKENS,
 		"terse_chat_max_tokens": TERSE_CHAT_MAX_TOKENS,
 		"default_chat_timeout_seconds": DEFAULT_CHAT_TIMEOUT_SECONDS,
+		"request_wait_policy": "confirmed_progress",
+		"owner_wait_limits": CoreWaitPolicy.limits(),
 		"context_size": DEFAULT_CONTEXT_SIZE,
 		"parallel_slots": DEFAULT_PARALLEL_SLOTS,
 		"threads": DEFAULT_THREADS,
@@ -275,3 +291,60 @@ func _find_server_recursive(root: String, depth: int) -> String:
 				return found
 	dir.list_dir_end()
 	return ""
+
+
+func _request_progress_json(payload: Dictionary, stall_seconds: float, total_seconds: float, byte_budget: int, port: int = PORT) -> Dictionary:
+	var client := HTTPClient.new()
+	var stream := CoreProgressStream.new()
+	stream.configure(Time.get_ticks_msec(), stall_seconds, total_seconds, byte_budget)
+	var epoch := _stream_cancel_epoch
+	_active_streams.append(client)
+	var failure := ""
+	var scope := "request"
+	var response_code := 0
+	var sent := false
+	var headers_read := false
+	var err := client.connect_to_host(HOST, port)
+	if err != OK: failure = "Core connection failed: %s" % error_string(err)
+	while failure.is_empty() and not stream.done:
+		if epoch != _stream_cancel_epoch:
+			failure = "Core request cancelled"
+			scope = "cancelled"
+			break
+		var timeout_reason := stream.timeout_reason(Time.get_ticks_msec())
+		if not timeout_reason.is_empty():
+			failure = "Core request deadline: %s" % timeout_reason
+			scope = timeout_reason
+			break
+		err = client.poll()
+		if err != OK:
+			failure = "Core transport failed: %s" % error_string(err)
+			break
+		var status := client.get_status()
+		if status == HTTPClient.STATUS_CONNECTED and not sent:
+			err = client.request(HTTPClient.METHOD_POST, "/v1/chat/completions", PackedStringArray(["Content-Type: application/json", "Accept: text/event-stream"]), JSON.stringify(payload))
+			if err != OK: failure = "Core request failed: %s" % error_string(err)
+			sent = true
+		if client.has_response() and not headers_read:
+			headers_read = true
+			response_code = client.get_response_code()
+			if response_code < 200 or response_code >= 300:
+				failure = "Core HTTP error %d" % response_code
+		if status == HTTPClient.STATUS_BODY and failure.is_empty():
+			var bytes := client.read_response_body_chunk()
+			if not bytes.is_empty(): stream.feed(bytes, Time.get_ticks_msec())
+			if not stream.error.is_empty():
+				failure = stream.error
+				scope = "response_budget" if failure.contains("byte budget") else "protocol"
+		elif sent and headers_read and status in [HTTPClient.STATUS_CONNECTED, HTTPClient.STATUS_DISCONNECTED]:
+			failure = "Core stream ended before a complete response"
+		elif sent and status == HTTPClient.STATUS_DISCONNECTED:
+			failure = "Core disconnected before a complete response"
+		elif status in [HTTPClient.STATUS_CANT_RESOLVE, HTTPClient.STATUS_CANT_CONNECT, HTTPClient.STATUS_CONNECTION_ERROR, HTTPClient.STATUS_TLS_HANDSHAKE_ERROR]:
+			failure = "Core connection failed with status %d" % status
+		if failure.is_empty() and not stream.done: await get_tree().process_frame
+	client.close()
+	_active_streams.erase(client)
+	if not failure.is_empty():
+		return {"ok": false, "runtime": "aurora_core_desktop", "http": response_code, "error": failure, "failure_scope": scope, "model_failure": false, "retryable": scope == "request", "cancelled": scope == "cancelled", "prompt_tokens_processed": stream.processed, "generated_bytes": stream.generated_bytes}
+	return {"ok": true, "http": response_code, "data": stream.result(), "progress": {"prompt_tokens_processed": stream.processed, "generated_bytes": stream.generated_bytes, "received_bytes": stream.received_bytes}}

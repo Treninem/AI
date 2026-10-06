@@ -5982,3 +5982,45 @@ BLOCKERS: unchanged from current V1.5 product evidence; this documentation recon
 NEXT: all future work must start from fresh repo state, canonical roadmap, relevant ADRs and the current V1.5 claim; do not start V1.6 implementation before V1.5 release scope is accepted or owner explicitly changes sequencing.
 
 CANONICAL_ROADMAP_RECONCILIATION_STATUS: DONE / ACTIVE AUTHORITY.
+
+
+### ACTIVE 2026-10-06 — Core long-context actual timeout diagnosis
+
+- CLAIM: same PR103 coordinator owns diagnostic evidence and journal/memory reconciliation; no runtime/benchmark repair choice made yet. Fresh main446ce2cd, branch8efc513ce7f68e753eb63173758ad9f886bbdcd1 (owner final-target docs only), previous1813244 all35 SUCCESS. Current head has33 successes, Core failure and Windows package in progress at inspection; no polling.
+- Evidence: run37431321173/job112162690911/artifact11397491213, ZIP SHA256cc2afc72bb1a37f871182a13a5e654e61f49e7a2b00a2790ae94f670b640307c. Real Core20/21; onlylong_context fails at90040.087ms, diagnostic transport13/http0/request failure/retryable/model_failure=false. CodeSpecialist offlinePASS; performance hardPASS. Windows package not final yet.
+- Confirmed mechanism: llama engine task1105 still processing prompt at88.68s,2688tokens/progress0.94; receives cancel at3:48.914 engine timeline. DesktopLocalRuntime HTTPRequest has default90s; benchmark outer scenario watchdog/policy120s. Wrapper passes onlytemperature, no per-request deadline. This establishes client-deadline cancellation of healthy in-flight prompt processing, not a crashed/absent Core or empty successful model response. Hardware/prefill variation makes90s intermittently sufficient; cause of variation not established.
+- Owner decision needed for waiting policy: configurable total request deadline with default preserved and benchmark bound propagated, versus progress-aware waiting with separate stall/total/cancel budgets. Both can preserve120s benchmark acceptance and master stop; do not silently choose a new long-query waiting policy or mask the failure through repeated reruns.
+- Source/workflow/test thresholds unchanged; no new commit/rerun before policy decision. MemoryAF-MEM109 receives confirmed mechanism and reusable evidence. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%.
+
+
+### ACTIVE 2026-10-06 — owner-selected progress-aware desktop Core repair
+
+- Owner explicitly delegated the best waiting-policy choice and authorized continued completion. Selected actual engine progress with owner-adjustable stall/total/response budgets, request cancellation and unchanged120s benchmark watchdog; no heartbeat-as-progress or blind retry. Official llama.cpp server-context/server-task/README checked at7fe450e19, then reconciled to actual artifact engine build11429/commitd81235049, confirm stream return_progress, prompt_progress processed/total/cache and OpenAI deltas. SSE comments/pings must not reset stall deadline.
+- Parentfd87ccf7a60bc7ef19aaee3097ae380a96a59af6; main446ce2cd fresh. Same PR103/branch, no alternate work. Native owner inventory previous1813244 all35 green; latest foundation Core failure remains repair scope. Merge owner canonical roadmap docs without repeating source work; prior local diagnostic evidence preserved.
+- CLAIM ownership: scripts/desktop_local_runtime.gd, new CoreProgressStream helper, scripts/settings_overlay.gd Core-budget controls, tests/Core progress parser+real local HTTP stream fixture, Core CI invocation, shared journal/memory. Existing runtime recovery/specialist contracts retained. Intended BUILD fix accumulatedV1.5.0.0 version-last; no version/main/release/sign change. Entire coherent repair then one final full PR suite, no intermediate GitHub reruns or polling.
+
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 — stable Core/direct chat, cancellation, owner-adjustable operational limits; 15/16 — unchanged performance and exact-SHA acceptance
+ADR_REFS: ADR-0003-progress-aware-core-requests (owner-delegated choice); ADR-0001/0002 checked, no media/cognition scope activation
+STARTING_HEAD: fd87ccf7a60bc7ef19aaee3097ae380a96a59af6
+INTENDED_BUMP: D (version-last accumulated release)
+OWNED_PATHS: desktop runtime, new CoreProgressStream, Settings owner budgets, real loopback/Godot fixtures, Core workflow test invocation, ADR0003/roadmap references, journal/memory
+DEPENDENCIES: existing bundled llama.cpp progress protocol verified at observed artifact engine build11429/commitd81235049; existing local Core, cancellation, owner Settings
+NON_BLOCKERS: V1.6/V1.7 cognition, media providers, public accounts, Smart Home remain deferred/parallel per canonical roadmap
+ACCEPTANCE_GATES: real fragmented UTF8/SSE and local HTTP delayed-progress/stall/duplicate/total/cancel/error/truncation/budget tests; existing runtime-recovery contracts; actual offline Core21/21 and hard120s benchmark gate; full new-SHA Windows/Android/Integration/Core/Voice/UI checks; physical-device acceptance remains required for release
+
+
+### SOURCE_COMPLETE / CI_PENDING — coherent desktop Core progress repair
+
+ACTION: implement actual prompt/token progress waiting, immutable owner stall/total/byte budgets, persisted Windows controls, explicit request cancellation without engine kill, and terminal request failure propagation without model/legacy fallback. Update Core path triggers and bounded regression invocation, accepted ADR0003 and roadmap references.
+FILES: scripts/desktop_local_runtime.gd; scripts/aurora_core_runtime.gd; scripts/core_progress_stream.gd; scripts/core_wait_policy.gd; scripts/settings_overlay.gd; tests/core_progress_stream_smoke.gd; tests/core_progress_http_smoke.gd; tests/run_core_progress_http_fixture.py; .github/workflows/core-benchmarks.yml; ADR0003; canonical roadmap; journal/memory. These extend the same active owned repair; no new parallel claim.
+COMMIT: next atomic publication on fd87ccf7a60bc7ef19aaee3097ae380a96a59af6, expected-head lease; exact SHA recorded by GitHub commit/PR.
+TEST: 31 zero-argument Python recovery/specialist/benchmark regression cases PASS; Python fixture compilation, genuine chunked localhost producer/fragmented UTF8 self-check and diff checks PASS. No usable local Godot: production SSE/HTTP/persistence/terminal failover regressions are UNVERIFIED until CI, never local PASS. Runner guards pure smoke15s and HTTP smoke30s; existing actual Core120s scenario/performance gates unchanged.
+RESULT: source implemented; no full new-SHA acceptance claimed. Stall90s/total0/response4MiB defaults, all operational budgets owner-adjustable/zero-disable. Actual deployed engine evidence is build11429/commitd81235049. Settings cancel closes current desktop sockets; healthy process remains owned/running.
+BLOCKERS: new-SHA actual Godot/Core/package/UI acceptance pending; physical-device release acceptance remains open; native XLS/7z/rar backend choice and remaining owner inventory remain unfinished.
+NEXT: publish entire repair once, queue all normal PR checks together, give owner exact-SHA links without polling. Batch any actual failures before final suite. No version/merge/release/sign/tag.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: coherent source repair and bounded real-runtime regression fixtures prepared.
+REMAINING: exact-SHA runtime/package acceptance and remaining current release gates.

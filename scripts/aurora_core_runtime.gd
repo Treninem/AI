@@ -64,6 +64,9 @@ func chat(messages: Array, temperature := 0.2) -> Dictionary:
 	if bool(local.get("ok", false)):
 		return local
 
+	if not bool(local.get("model_failure", true)) and not bool(local.get("retryable", true)):
+		return local
+
 	if allow_ollama_fallback and OS.get_name() != "Android" and not _ollama_circuit_open():
 		var legacy := await _chat_ollama(messages, temperature)
 		if bool(legacy.get("ok", false)):
@@ -122,6 +125,12 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 			return result
 		var error := str(result.get("error", "local model failed"))
 		var model_failure := bool(result.get("model_failure", true))
+		# Cancellation/deadline/protocol budgets apply to this request, not a model.
+		# Preserve the result and do not start a second model after a terminal failure.
+		if not model_failure and not bool(result.get("retryable", true)):
+			result["attempted_models"] = failures
+			result["skipped_quarantined_models"] = skipped
+			return result
 		if model_failure:
 			_record_model_failure(candidate, error)
 		failures.append({

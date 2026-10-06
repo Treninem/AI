@@ -526,6 +526,7 @@ func _build_files_page(page: VBoxContainer) -> void:
 
 	if _desktop_features():
 		_build_file_intelligence_limits(page)
+		_build_core_wait_limits(page)
 
 	var projects := _add_card(page, "Проекты и кодовая база", "AuroraFox получает доступ только к папкам, которые пользователь выбрал явно. Индекс хранится локально.")
 	project_select = OptionButton.new()
@@ -1162,3 +1163,36 @@ func _check_updates() -> void:
 		update_status.text = "Проверяю подписанный stable-релиз…"
 		update_status.add_theme_color_override("font_color", MUTED)
 	await updater.call("check_for_updates", true)
+
+
+func _build_core_wait_limits(page: VBoxContainer) -> void:
+	var card := _add_card(page, "Ожидание локального Core (Windows)", "Прогресс обработки текста и новые токены продлевают ожидание. Пинг не считается прогрессом. Ноль отключает соответствующий предел; отмена остаётся доступна.")
+	var limits := CoreWaitPolicy.limits()
+	var stall := _owner_number_row(card, "Без прогресса, секунд", float(limits.stall_timeout_seconds), 0, 1)
+	var total := _owner_number_row(card, "Всего на запрос, секунд (0 — без предела)", float(limits.total_timeout_seconds), 0, 1)
+	var bytes := _owner_number_row(card, "Объём потокового ответа, МиБ (0 — без предела)", float(limits.response_max_bytes) / 1048576.0, 0, 1)
+	var state := Label.new()
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.add_child(state)
+	var apply := Button.new()
+	apply.name = "SettingsCoreWaitApply"
+	apply.text = "Сохранить пределы Core"
+	apply.pressed.connect(func():
+		var err := CoreWaitPolicy.save({"stall_timeout_seconds": stall.value, "total_timeout_seconds": total.value, "response_max_bytes": int(bytes.value * 1048576.0)})
+		state.text = "Сохранено. Пределы применяются к новым запросам." if err == OK else "Не удалось сохранить: %s" % error_string(err)
+	)
+	card.add_child(apply)
+
+	var cancel := Button.new()
+	cancel.name = "SettingsCoreRequestCancel"
+	cancel.text = "Отменить текущие запросы Core"
+	cancel.pressed.connect(func():
+		var main := get_parent()
+		var ai = main.get("ai") if main != null else null
+		if ai is AIClient:
+			ai.core_runtime.desktop_runtime.cancel_active_requests()
+			state.text = "Отмена отправлена. Core остаётся запущенным."
+		else:
+			state.text = "Клиент Core не подключён."
+	)
+	card.add_child(cancel)

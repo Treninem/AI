@@ -14,6 +14,10 @@ on:
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
       - 'scripts/desktop_local_runtime.gd'
+      - 'scripts/core_progress_stream.gd'
+      - 'scripts/core_wait_policy.gd'
+      - 'tests/core_progress*_smoke.gd'
+      - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
       - 'scripts/bundled_core_model.gd'
       - 'scripts/agent_core.gd'
@@ -37,6 +41,10 @@ on:
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
       - 'scripts/desktop_local_runtime.gd'
+      - 'scripts/core_progress_stream.gd'
+      - 'scripts/core_wait_policy.gd'
+      - 'tests/core_progress*_smoke.gd'
+      - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
       - 'scripts/bundled_core_model.gd'
       - 'scripts/agent_core.gd'
@@ -149,6 +157,12 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Core benchmark GDScript parse gate failed' }
           & '${{ steps.godot.outputs.path }}' --headless --path . --check-only --script benchmarks/core/code_specialist_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'SpecialistTeam/CodeSpecialist smoke GDScript parse gate failed' }
+
+      - name: Verify real progress stream, budgets, cancellation and persistence
+        shell: pwsh
+        run: |
+          python tests/run_core_progress_http_fixture.py --godot '${{ steps.godot.outputs.path }}'
+          if ($LASTEXITCODE -ne 0) { throw 'Core real HTTP progress/cancellation regression failed' }
 
       - name: Run bounded refactor public API regression smoke
         shell: pwsh

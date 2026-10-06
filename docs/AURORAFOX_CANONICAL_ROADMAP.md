@@ -721,6 +721,9 @@ The next product development step remains whatever the fresh V1.5 master-log cla
   - resource/toolchain recovery;
   - capability matrix.
 
+- `docs/adr/ADR-0003-progress-aware-core-requests.md`
+  - V1.5 desktop Core progress-aware request/stall/total/cancellation policy; existing quality/performance gates unchanged.
+
 - `docs/PRODUCT_CAPABILITY_SCENARIOS.md`
   - user-facing before/after scenarios; explanatory, not a replacement for acceptance evidence.
 
