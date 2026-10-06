@@ -259,7 +259,7 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		# Do not use Object.has_method() here. In a release Android APK it may
 		# hide a callable @UsedByGodot plugin method and incorrectly turn local
 		# OCR into an "unsupported" external-AI error.
-		var limits := owner_limits()
+		var limits := _native_budget_snapshot(owner_limits())
 		var bounded_chars := clampi(max_chars, 1, int(limits.get("request_max_text_chars", 500000)))
 		limits["_request_max_chars"] = bounded_chars
 		var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual, limits)
@@ -562,3 +562,9 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 				_start_backend_if_installed()
 			await get_tree().create_timer(0.9).timeout
 	return {"ok": false, "error": last_error if not last_error.is_empty() else "File Intelligence unavailable"}
+
+func _native_budget_snapshot(values: Dictionary) -> Dictionary:
+	var snapshot := values.duplicate(true)
+	for key in ["android_xls_file_bytes", "android_xls_directory_entries", "android_xls_directory_depth", "android_xls_shared_strings", "android_xls_sheets"]:
+		snapshot[key] = OwnerResourcePolicy.value(key)
+	return snapshot

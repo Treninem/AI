@@ -13,16 +13,19 @@ spec.loader.exec_module(module)
 
 def dex(defined=True):
     descriptors = sorted(module.REQUIRED_CLASSES)
-    data = bytearray(112 + 8 + 8 + (64 if defined else 0))
+    count = len(descriptors)
+    types_offset = 112 + count*4
+    classes_offset = types_offset + count*4
+    data = bytearray(classes_offset + (count*32 if defined else 0))
     data[:8] = b"dex\n035\0"
-    struct.pack_into("<II", data, 56, 2, 112)
-    struct.pack_into("<II", data, 64, 2, 120)
-    struct.pack_into("<II", data, 96, 2 if defined else 0, 128)
+    struct.pack_into("<II", data, 56, count, 112)
+    struct.pack_into("<II", data, 64, count, types_offset)
+    struct.pack_into("<II", data, 96, count if defined else 0, classes_offset)
     for index, descriptor in enumerate(descriptors):
         struct.pack_into("<I", data, 112 + index * 4, len(data))
-        struct.pack_into("<I", data, 120 + index * 4, index)
+        struct.pack_into("<I", data, types_offset + index * 4, index)
         if defined:
-            struct.pack_into("<I", data, 128 + index * 32, index)
+            struct.pack_into("<I", data, classes_offset + index * 32, index)
         data.extend(bytes([len(descriptor)]) + descriptor.encode() + b"\0")
     return bytes(data)
 

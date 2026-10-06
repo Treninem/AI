@@ -1,5 +1,6 @@
 extends Node
 
+const NativeFileFixtures = preload("res://benchmarks/core/native_file_fixtures.gd")
 const REPORT_PATH := "user://core-benchmark-android-e2e.json"
 const EXPECTED_SHA := "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5"
 const EXPECTED_BYTES := 1282439264
@@ -169,6 +170,7 @@ func _run() -> void:
 	var file_client := FileIntelligenceClient.new()
 	add_child(file_client)
 	await get_tree().process_frame
+	await _exercise_native_file_fixtures(file_client, report)
 	var ocr_started := Time.get_ticks_usec()
 	var ocr: Dictionary = await file_client.analyze_file(str(fixture.get("path", "")), "", true) if bool(fixture.get("ok", false)) else {"ok": false, "error": fixture.get("error", "OCR fixture creation failed")}
 	var ocr_text := str(ocr.get("content", ""))
@@ -436,3 +438,28 @@ func _write_report(report: Dictionary) -> void:
 		return
 	file.store_string(JSON.stringify(report, "  "))
 	file.close()
+
+func _exercise_native_file_fixtures(file_client: FileIntelligenceClient, report: Dictionary) -> void:
+	for fixture in NativeFileFixtures.ITEMS:
+		var path := "user://native-file-e2e." + str(fixture["extension"])
+		var bytes := Marshalls.base64_to_raw(str(fixture["base64"]))
+		var output := FileAccess.open(path, FileAccess.WRITE)
+		if output == null:
+			_append(report, str(fixture["id"]), false, {"error": "Native fixture write failed"})
+			continue
+		output.store_buffer(bytes)
+		output.close()
+		var identity_ok := FileAccess.get_sha256(path) == str(fixture["sha256"])
+		var started := Time.get_ticks_usec()
+		var result: Dictionary = await file_client.analyze_file(path, "", false, 160000) if identity_ok else {"ok": false, "error": "Native fixture integrity mismatch"}
+		var metadata: Dictionary = result.get("metadata", {}) if result.get("metadata", {}) is Dictionary else {}
+		var content := str(result.get("content", ""))
+		var passed: bool = identity_ok and bool(result.get("ok", false)) and str(result.get("kind", "")) == str(fixture["kind"]) and content.contains(str(fixture["marker"])) and not bool(result.get("truncated", true)) and str(metadata.get("content_authority", "")) == "data_only" and not bool(metadata.get("external_ai_required", true))
+		_append(report, str(fixture["id"]), passed, {
+			"elapsed_ms": float(Time.get_ticks_usec()-started)/1000.0,
+			"fixture_sha256": fixture["sha256"], "content_sha256": content.sha256_text(),
+			"kind": result.get("kind", ""), "truncated": result.get("truncated", true),
+			"content_authority": metadata.get("content_authority", ""),
+			"error": str(result.get("error", "")).substr(0, 500)
+		})
+		DirAccess.remove_absolute(ProjectSettings.globalize_path(path))

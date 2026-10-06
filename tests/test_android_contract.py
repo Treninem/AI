@@ -199,10 +199,10 @@ def main() -> None:
         "Tesseract dependency is not exported into the final Godot APK",
     )
     require(
-        "return PackedStringArray([_pdfbox_dependency, _tesseract_dependency, _compress_dependency, _zstd_dependency])" in export_plugin,
+        "return PackedStringArray([_pdfbox_dependency, _tesseract_dependency, _compress_dependency, _zstd_dependency, _xz_dependency, _rar_dependency, _xls_dependency])" in export_plugin,
         "Godot Android export must expose every runtime Maven dependency",
     )
-    for coordinate in ["org.apache.commons:commons-compress:1.27.1", "com.github.luben:zstd-jni:1.5.7-3@aar"]:
+    for coordinate in ["org.apache.commons:commons-compress:1.27.1", "com.github.luben:zstd-jni:1.5.7-3@aar", "org.tukaani:xz:1.10", "com.github.junrar:junrar:8.0.0", "org.apache.poi:poi:5.5.1"]:
         require(coordinate in export_plugin and coordinate in gradle, "Android compile/export dependency mismatch: " + coordinate)
     require('testImplementation("com.github.luben:zstd-jni:1.5.7-3")' in gradle, "Zstd JVM tests must use JVM JNI artifact separately")
     require('"https://jitpack.io"' in export_plugin, "Tesseract JitPack repository is not exported")

@@ -101,8 +101,9 @@ def test_resource_policy_consumer_keys_are_persistable_and_owner_visible():
 
 def test_native_extractor_cannot_save_acceptance_placeholders_as_knowledge():
     native = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt").read_text()
-    assert 'ext == "xls" -> unsupportedFormat(ext)' in native
-    assert 'ext in setOf("7z", "rar") -> unsupportedFormat(ext)' in native
+    assert "readXlsText(file, limits)" in native
+    assert "readRarText(file, limits, textExt)" in native
+    assert "readSevenZText(file, limits, textExt)" in native
     assert '"error_code" to "unsupported_format"' in native
     assert '"Аудиофайл принят."' not in native
     assert '"Архив $ext принят."' not in native

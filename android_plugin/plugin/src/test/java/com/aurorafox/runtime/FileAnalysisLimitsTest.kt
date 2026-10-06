@@ -146,4 +146,15 @@ class FileAnalysisLimitsTest {
             assertTrue(result.truncated); assertTrue(result.metadata["listing_truncated"] as Boolean)
         } finally { file.delete() }
     }
+    @Test fun nativeXlsOwnerSnapshotIsImmutableAndRepresentable() {
+        val values = mutableMapOf("android_xls_shared_strings" to 100001L, "android_xls_directory_depth" to 512L, "xls_max_rows" to 60000L)
+        val first = FileAnalysisLimits.from(values); values["android_xls_shared_strings"] = 2
+        assertEquals(100001,first.xlsSharedStrings); assertEquals(512,first.xlsDirectoryDepth); assertEquals(60000,first.xlsRows)
+        assertEquals(2,FileAnalysisLimits.from(values).xlsSharedStrings)
+        for (invalid in listOf(0L,-1L,Int.MAX_VALUE.toLong()+1)) {
+            try { FileAnalysisLimits.from(mapOf("android_xls_shared_strings" to invalid)); fail("Invalid native representation accepted") }
+            catch (_: IllegalArgumentException) { }
+        }
+    }
+
 }

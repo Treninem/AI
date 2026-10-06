@@ -121,7 +121,8 @@ required = {
     'basic_reasoning', 'russian_dialog', 'multi_turn_context',
     'core_knowledge_retrieval', 'installed_knowledge_pack',
     'installed_voice_tts', 'installed_voice_stt',
-    'installed_ocr_bilingual', 'compatibility_switch_isolation'
+    'installed_ocr_bilingual', 'compatibility_switch_isolation',
+    'installed_native_xls', 'installed_native_7z', 'installed_native_rar'
 }
 rows = {row.get('id'): row for row in data.get('scenarios', []) if isinstance(row, dict)}
 failures = []

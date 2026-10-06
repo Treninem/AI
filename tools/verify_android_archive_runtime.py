@@ -5,6 +5,11 @@ import struct
 import zipfile
 
 REQUIRED_CLASSES = {
+    "Lcom/github/junrar/Archive;",
+    "Lorg/apache/poi/poifs/filesystem/POIFSFileSystem;",
+    "Lorg/apache/poi/hssf/record/SSTRecord;",
+    "Lorg/tukaani/xz/LZMA2InputStream;",
+    "Lorg/apache/commons/compress/archivers/sevenz/SevenZFile;",
     "Lcom/github/luben/zstd/ZstdInputStream;",
     "Lorg/apache/commons/compress/archivers/tar/TarArchiveInputStream;",
 }

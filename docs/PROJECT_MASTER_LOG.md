@@ -6891,3 +6891,42 @@ NEXT:publish this coherent seven-path source/test/journal package; fresh exact-S
 
 
 PUBLICATION_EVIDENCE: present-source native budget repair published as c2394da5e5f8d3e8da51bf3e3f9a73127a35af1f (seven authored paths), parentc9cc3b3; branch CAS accepted. Exact-c239 CI initial snapshot33checks:8SUCCESS,17IN_PROGRESS,8QUEUED,0FAILURE; no full-CI acceptance asserted. Android plugin run37541676461, Android APK run37541676432, native Windows run37541676501, current Core/File run37541676341. Predecessorbf96 remains42SUCCESS/3SKIPPED/1IN_PROGRESS Windows package112521168861. New source has19freshJVM/21Python localPASS; absent historical native38 results remain ineligible. This documentation checkpoint records produced SHA, does not change source or declare code freeze. NEXT:missing native XLS/7z/RAR snapshot recovery or independently tested fresh implementation; collect current CI reds together; remaining CRITICAL owner inventory, release gates and version-last.
+
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-NATIVE-FRESH-IMPLEMENTATION
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence / existing native formats, bounded extraction and package acceptance
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003; no future runtime
+STARTING_HEAD:57d66899ff473d3e7dc9d1ee9ba009c1a43cfb6a
+INTENDED_BUMP:C plusD fixes accumulated, version-last
+OWNED_PATHS:android_plugin/plugin/src/main/java/com/aurorafox/runtime/{SevenZTextReader,RarHeaderPreflight,RarTextReader,OleDirectoryPreflight,XlsTextReader,AndroidFileRuntime,FileAnalysisLimits}.kt; respective JVM tests and native_archive fixtures/license assets; android_plugin/plugin/build.gradle.kts; addons/AuroraFoxRuntime/export_plugin.gd; scripts/{owner_resource_policy,file_intelligence_client,settings_overlay}.gd; tests/owner_resource_limits_smoke.gd and Android/owner contracts; tools/verify_android_archive_runtime.py and test; master/memory append-only
+DEPENDENCIES:accepted current native budget repair c2394da; pinned existing CommonsCompress1.27.1; XZ1.10/junrar8.0.0/POIcore5.5.1 choices already recorded in c9 handoff, separately verified current API before use. Fresh main446ce2cd remains ancestor.
+NON_BLOCKERS:independent S3/V1.6 lane, deferred cognition/media/accounts; no signing/version changes
+OWNERSHIP_RECONCILE:take over native reader paths from recovery coordinator and integrate current57d documentation. Source loss is a snapshot-recovery obstacle, not a blocker for independently implementing the remaining release scope. Previous stop at missing files was premature; no owner confirmation required to continue authorized V1.5 source work.
+ACCEPTANCE_GATES:real pinned-library format fixtures; pre-allocation header/dictionary/OLE/SST guards; immutable per-job owner budgets, actual partial states, cancellation and unsafe-path isolation; no extraction/process/formula execution; dependency compile/export/DEX parity; one coherent publication/full exact-SHA CI/package/native-device evidence.
+LATEST_C239_CI:42checks completed,34SUCCESS/3SKIPPED/5CANCELLED,0FAILURE. Android plugin37541676461/APK37541676432 and actual Core Windows/Android SUCCESS. Cancelled coverage remains unaccepted; documentation checkpoint advanced HEAD, cause not inferred without workflow evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:fresh native implementation and real regression package; preserve absent prior-source results as historical only; collect all CI reds together.
+
+ACTIVE CLAIM EXTENSION — fresh native implementation owns benchmarks/core/android_godot_benchmark.gd, benchmarks/core/run_android_godot_e2e.sh, new benchmarks/core/native_file_fixtures.gd (preloaded so the APK includes the probe) and tests/test_core_android_e2e_contract.py. Add installed offline APK native XLS/7z/RAR cases through the actual FileIntelligenceClient/plugin, require payload markers/data-only metadata and zero false truncation. Existing Core/OCR/Voice/performance thresholds unchanged; tiny format fixtures never claim production1GiB Knowledge acceptance.
+
+
+### FRESH NATIVE FORMAT PACKAGE — local acceptance / full publication prepared
+CLAIM:WORK-2026-10-07-V15-NATIVE-FRESH-IMPLEMENTATION ACTIVE, starting57d66899ff473d3e7dc9d1ee9ba009c1a43cfb6a. Fresh independent source, not recovered absent native snapshot.
+ACTION:actual bounded native BIFF8 XLS,7z and RAR4/RAR5 readers replace placeholders; raw metadata/decoder/OLE/SST guards, no disk extraction or formulas/macros, private positive XLS settings and immutable job snapshot, matching pinned compile/export/DEX dependencies, notices/fixture provenance. Existing installed Android E2E now requires three real format scenarios through FileIntelligenceClient; tiny hashed fixtures do not count as production Knowledge.
+TEST:39 genuine JVM assertions PASS at final source snapshot;37Python owner/archive/package/Android-E2E contracts PASS; canonical Android contract PASS V1.4.1.1/code100007,arm64-v8a+x86_64; official Godot4.7.1 integrated parse PASS, Android benchmark check-only PASS, owner positive settings/private restart/immutable snapshot smoke PASS; git diff --check PASS. Godot20ObjectDB/8resource cleanup diagnostics and library no-provider/deprecation warnings retained. No new actual Android Gradle/APK/emulator result yet; full coherent exact-SHA CI follows publication.
+BASELINE_CI:current published57d6689 has42SUCCESS/3SKIPPED/1IN_PROGRESS Windows package112542915676(run37541817222),0FAILURE. Cancelled5c239 jobs are not PASS; accepted42green results belong to57d, not this unpublished native source.
+INVENTORY:1376unclassified/1290test_evidence/482owner_adjustable/343format_structure/59documentation/22hard_boundary; complete:false. Do not interpret findings as1376bugs or declare zero audit.
+MEMORY:AF-MEM-125 records actual pre-allocation pitfalls, exact versions/fixture evidence, malformed retained runtime workaround and mandatory actual installed-format gate.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:fresh native source and prevention tests implemented and locally verified in one coherent package; snapshot loss no longer blocks implementation.
+REMAINING:new exact-SHA native Android/plugin/APK/offline installed-format acceptance; remaining scoped owner inventory and package/device/performance/Knowledge/update/release gates. Raw cached BIFF8/date-style limitations and library structural limits remain explicit.
+BLOCKERS:none for independent source continuation/publication; actual platform/release evidence pending and local OCR integration/runtime not installed.
+NEXT:publish whole native package once; collect full CI reds together while independently reviewing remaining current-source CRITICAL operational findings. Preserve pending predecessor evidence; no immediate tiny documentation HEAD update cancelling expensive jobs; record produced SHA with next coherent block. Version unchanged under version-last.

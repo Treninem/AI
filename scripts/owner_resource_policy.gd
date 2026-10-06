@@ -3,6 +3,11 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"android_xls_file_bytes": 33554432,
+	"android_xls_directory_entries": 4096,
+	"android_xls_directory_depth": 64,
+	"android_xls_shared_strings": 50000,
+	"android_xls_sheets": 256,
 	"voice_log_bytes": 5242880,
 	"voice_log_chars": 1200,
 	"knowledge_folder_files": 750,
@@ -140,6 +145,11 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"android_xls_file_bytes": "Android XLS: байт входного файла и потока",
+	"android_xls_directory_entries": "Android XLS: записей OLE-каталога",
+	"android_xls_directory_depth": "Android XLS: глубина OLE-каталога",
+	"android_xls_shared_strings": "Android XLS: уникальных строк SST",
+	"android_xls_sheets": "Android XLS: листов и метаданных листов",
 	"voice_log_bytes": "Голос: байтов журнала до ротации (0 = без лимита)",
 	"voice_log_chars": "Голос: символов диагностического сообщения",
 	"knowledge_folder_files": "Knowledge: файлов из папки (0 = без лимита)",
@@ -292,12 +302,16 @@ static func value(key: String) -> int:
 	if _cached.is_empty(): _cached = limits()
 	return int(_cached.get(key, DEFAULTS.get(key, 0)))
 
+static func minimum(key: String) -> int:
+	return 1 if key in ["index_batch", "android_xls_file_bytes", "android_xls_directory_entries", "android_xls_directory_depth", "android_xls_shared_strings", "android_xls_sheets"] else 0
+
 static func _valid(key: String, candidate: Variant) -> bool:
 	if not (candidate is int or candidate is float): return false
 	var number := float(candidate)
 	if key in ["chat_max_tokens", "terse_max_tokens"] and number > 2147483647.0: return false
+	if key in ["android_xls_directory_entries", "android_xls_directory_depth", "android_xls_shared_strings", "android_xls_sheets"] and number > 2147483647.0: return false
 	# Representation only; no artificial maximum. A batch must make progress.
-	return is_finite(number) and number >= (1 if key == "index_batch" else 0) and number < 9223372036854775807.0 and number == floor(number)
+	return is_finite(number) and number >= minimum(key) and number < 9223372036854775807.0 and number == floor(number)
 
 static func save(values: Dictionary, path: String = PATH) -> Error:
 	var current := limits(path)

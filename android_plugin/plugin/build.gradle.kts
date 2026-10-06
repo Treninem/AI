@@ -51,6 +51,10 @@ android {
     namespace = pluginPackageName
     compileSdk = 35
     ndkVersion = "28.1.13356709"
+    packaging { resources {
+        merges += setOf("META-INF/LICENSE", "META-INF/LICENSE.txt", "META-INF/NOTICE", "META-INF/NOTICE.txt", "META-INF/DEPENDENCIES")
+        excludes += setOf("META-INF/module-info.class", "META-INF/versions/**/module-info.class")
+    } }
     buildFeatures { buildConfig = true }
     defaultConfig {
         minSdk = 26
@@ -76,6 +80,9 @@ dependencies {
     implementation("com.tom-roush:pdfbox-android:$pdfBoxAndroidVersion")
     implementation("cz.adaptech.tesseract4android:tesseract4android:$tesseractAndroidVersion")
     implementation("org.apache.commons:commons-compress:1.27.1")
+    implementation("org.tukaani:xz:1.10")
+    implementation("com.github.junrar:junrar:8.0.0")
+    implementation("org.apache.poi:poi:5.5.1")
     implementation("com.github.luben:zstd-jni:1.5.7-3@aar")
     testImplementation("com.github.luben:zstd-jni:1.5.7-3")
     if (sherpaAar.exists()) compileOnly(files(sherpaAar))

@@ -51,13 +51,17 @@ class AndroidFileRuntime(
                 ext == "zip" -> analyzeZip(file, limits)
                 ext == "epub" -> readEpubText(file, limits).let { payload("ebook", it.text, it.metadata, it.warnings, it.truncated) }
                 ext in setOf("tar", "tgz") || file.name.endsWith(".tar.gz", true) -> readTarText(file, limits, textExt).let { payload("archive", it.text, it.metadata, it.warnings, it.truncated) }
-                ext == "xls" -> unsupportedFormat(ext)
-                ext in setOf("7z", "rar") -> unsupportedFormat(ext)
+                ext == "xls" -> readXlsText(file, limits).let { payload("spreadsheet", it.text, it.metadata, it.warnings, it.truncated) }
+                ext == "7z" -> readSevenZText(file, limits, textExt).let { payload("archive", it.text, it.metadata, it.warnings, it.truncated) }
+                ext == "rar" -> readRarText(file, limits, textExt).let { payload("archive", it.text, it.metadata, it.warnings, it.truncated) }
                 else -> analyzeUnknown(file, limits)
             }
             val obj = JSONObject(result)
             val meta = obj.optJSONObject("metadata") ?: JSONObject()
             meta.put("owner_limits", JSONObject(mapOf(
+                "android_xls_file_bytes" to limits.xlsFileBytes, "android_xls_directory_entries" to limits.xlsDirectoryEntries,
+                "android_xls_directory_depth" to limits.xlsDirectoryDepth, "android_xls_shared_strings" to limits.xlsSharedStrings,
+                "android_xls_sheets" to limits.xlsSheets, "xls_max_rows" to limits.xlsRows,
                 "max_file_bytes" to limits.fileBytes, "output_chars" to limits.outputChars,
                 "spreadsheet_max_cells" to limits.spreadsheetCells, "archive_max_entries" to limits.archiveEntries,
                 "archive_max_expanded" to limits.expandedBytes, "archive_text_member_max" to limits.memberBytes,

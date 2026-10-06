@@ -21,12 +21,23 @@ data class FileAnalysisLimits(
     val renderPixels: Long = 8000000,
     val inputPixels: Long = 64000000,
     val pendingJobs: Int = 8,
+    val xlsFileBytes: Long = 32L*1024*1024,
+    val xlsDirectoryEntries: Int = 4096,
+    val xlsDirectoryDepth: Int = 64,
+    val xlsSharedStrings: Int = 50000,
+    val xlsSheets: Int = 256,
+    val xlsRows: Int = 10000,
 ) {
     companion object {
         fun from(values: Map<String, Long>): FileAnalysisLimits {
             fun number(key: String, default: Long, minimum: Long = 1) = (values[key] ?: default).coerceAtLeast(minimum)
             // Int ceilings reflect JVM string/collection representation, not resource policy.
             fun count(key: String, default: Int, minimum: Int = 1) = number(key, default.toLong(), minimum.toLong()).coerceAtMost(Int.MAX_VALUE.toLong()).toInt()
+            fun nativeCount(key: String, default: Int): Int {
+                val value = values[key] ?: default.toLong()
+                require(value in 1..Int.MAX_VALUE.toLong()) { "Native XLS budget exceeds positive Int representation: $key" }
+                return value.toInt()
+            }
             val requestCeiling = count("request_max_text_chars", 500000)
             val output = count("_request_max_chars", count("max_text_chars", 160000)).coerceAtMost(requestCeiling)
             return FileAnalysisLimits(
@@ -38,6 +49,11 @@ data class FileAnalysisLimits(
                 pdfPages = count("ocr_max_pdf_pages", 1000), ocrPages = count("ocr_max_pages", 500),
                 renderPixels = number("ocr_max_render_pixels", 8000000), inputPixels = number("ocr_max_input_pixels", 64000000),
                 pendingJobs = count("android_pending_file_jobs", 8),
+                xlsFileBytes = number("android_xls_file_bytes", 32L*1024*1024),
+                xlsDirectoryEntries = nativeCount("android_xls_directory_entries", 4096),
+                xlsDirectoryDepth = nativeCount("android_xls_directory_depth", 64),
+                xlsSharedStrings = nativeCount("android_xls_shared_strings", 50000),
+                xlsSheets = nativeCount("android_xls_sheets", 256), xlsRows = count("xls_max_rows", 10000),
             )
         }
     }

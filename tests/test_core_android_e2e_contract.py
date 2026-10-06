@@ -86,3 +86,22 @@ def test_android_godot_e2e_workflow_runs_offline_phase_in_one_shell() -> None:
     assert "knowledge_pack_contract" in runner
     assert "resumed_skipped_shards" in runner
     assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in runner
+
+
+def test_native_file_gates_use_actual_installed_client_and_hashed_fixtures():
+    import base64, hashlib, json
+    script = SCRIPT.read_text()
+    runner = RUNNER.read_text()
+    fixture_source = (ROOT / 'benchmarks/core/native_file_fixtures.gd').read_text()
+    fixtures = json.loads(fixture_source.split('const ITEMS := ', 1)[1])
+    assert 'await _exercise_native_file_fixtures(file_client, report)' in script
+    assert 'await file_client.analyze_file(path, "", false, 160000)' in script
+    assert 'FileAccess.get_sha256(path)' in script
+    assert 'content.contains(str(fixture["marker"]))' in script
+    assert 'content_authority' in script and 'data_only' in script
+    assert {row['id'] for row in fixtures} == {'installed_native_xls', 'installed_native_7z', 'installed_native_rar'}
+    for row in fixtures:
+        assert row['id'] in runner
+        raw = base64.b64decode(row['base64'], validate=True)
+        assert hashlib.sha256(raw).hexdigest() == row['sha256']
+        assert len(raw) > 32

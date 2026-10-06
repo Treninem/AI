@@ -547,5 +547,25 @@ func _run() -> void:
 	agent.free()
 	desktop.free()
 	store.free()
+	for native_key in ["android_xls_file_bytes", "android_xls_directory_entries", "android_xls_directory_depth", "android_xls_shared_strings", "android_xls_sheets"]:
+		var invalid_native := {}
+		invalid_native[native_key] = 0
+		assert(OwnerResourcePolicy.save(invalid_native, path) == ERR_INVALID_PARAMETER)
+		invalid_native[native_key] = 1
+		assert(OwnerResourcePolicy.save(invalid_native, path) == OK)
+		assert(OwnerResourcePolicy.limits(path)[native_key] == 1)
+	var previous_native_strings := OwnerResourcePolicy.value("android_xls_shared_strings")
+	OwnerResourcePolicy._cached["android_xls_shared_strings"] = 100001
+	var native_client := FileIntelligenceClient.new()
+	var original_fields := {"xls_max_rows": 60000}
+	var native_snapshot := native_client._native_budget_snapshot(original_fields)
+	assert(not original_fields.has("android_xls_shared_strings"))
+	assert(native_snapshot["xls_max_rows"] == 60000)
+	assert(native_snapshot["android_xls_shared_strings"] == 100001)
+	OwnerResourcePolicy._cached["android_xls_shared_strings"] = 100002
+	assert(native_snapshot["android_xls_shared_strings"] == 100001)
+	OwnerResourcePolicy._cached["android_xls_shared_strings"] = previous_native_strings
+	native_client.free()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	print("AURORA_OWNER_RESOURCE_LIMITS_OK")
 	quit(0)
