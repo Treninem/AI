@@ -6284,3 +6284,263 @@ The assistant/coordinator must remind the owner before any paid storage expansio
 No current purchase or upgrade action is required.
 
 S3_EXISTING_CAPACITY_STATUS: AVAILABLE_10_GB / USE_FIRST / NO_PURCHASE_NOW.
+
+
+### ### S3 DISTRIBUTION IMPLEMENTATION CHECKLIST 2026-10-06 — instructions for future chats
+
+Purpose: give future Chat / Work / Codex sessions an exact, safe checklist for turning the already-available **10 GB S3/object storage** into AuroraFox model/Knowledge/capability distribution without leaking credentials or turning the server into the required AI brain.
+
+#### Security rule — credentials
+
+- **Never write S3 credentials, access keys, secret keys, temporary tokens, bucket private URLs or signed URLs into Git, `docs/PROJECT_MASTER_LOG.md`, source files, CI logs or chat-visible diagnostics.**
+- The temporary credential previously provided by the owner is **not recorded here** and must be revoked/rotated after any authorized setup use.
+- Permanent credentials must be stored only as deployment secrets / root-only environment configuration on the deployment host or secret store.
+- Future chats must ask for/resolve credentials through the owner-controlled deployment environment, not by committing them.
+
+Expected secret names (names only, never values):
+- `AURORAFOX_S3_ENDPOINT`
+- `AURORAFOX_S3_REGION`
+- `AURORAFOX_S3_BUCKET`
+- `AURORAFOX_S3_ACCESS_KEY_ID`
+- `AURORAFOX_S3_SECRET_ACCESS_KEY`
+- optional provider-specific session/token field if required.
+
+#### When implementation is allowed to start
+
+S3 distribution work is **PARALLEL_NON_BLOCKING** and must not delay V1.5.0.0.
+
+Start actual integration only when one of the following is true:
+1. signed Model/Knowledge Distribution Service work is the active accepted roadmap claim; or
+2. a beta/public installer genuinely needs remote Core/Knowledge/capability packages.
+
+Before touching implementation:
+- read `docs/AURORAFOX_CANONICAL_ROADMAP.md`;
+- read ADR-0001 and ADR-0002;
+- read this checklist and latest server-distribution owner decision;
+- create an ACTIVE claim with `SCOPE_CLASS: PARALLEL_NON_BLOCKING` unless owner explicitly promotes it;
+- do not change Core inference architecture to server-mandatory.
+
+#### Required logical bucket layout
+
+Use one bucket or equivalent namespace with versioned prefixes. Recommended logical structure:
+
+```text
+aurorafox/
+  bootstrap/
+    manifests/
+  models/
+    core/
+      lite/
+      full/
+  knowledge/
+    seed/
+    standard/
+    full/
+    domain/
+  capabilities/
+    vision/
+    image/
+    video/
+    stt/
+    tts/
+    embeddings/
+  experience/
+    shared/
+  releases/
+    windows/
+    android/
+  metadata/
+    checksums/
+    signatures/
+```
+
+Exact provider path syntax may differ, but versioned/immutable object semantics are required.
+
+#### Artifact rules
+
+Every downloadable artifact must have:
+- immutable version/id;
+- exact byte size;
+- SHA-256;
+- content type;
+- compatibility metadata;
+- minimum/maximum supported AuroraFox version where applicable;
+- resource profile (RAM/VRAM/disk/OS/arch);
+- signature or signed parent manifest;
+- provenance/source/license when applicable;
+- rollback/previous-known-good relationship.
+
+Do not overwrite an object in place under the same version/hash identity.
+
+If content changes, publish a new immutable version.
+
+#### Bootstrap manifest
+
+The API/control plane should publish a signed bootstrap manifest, not serve large files directly.
+
+The manifest must let a fresh client determine:
+- compatible Core profile;
+- compatible Knowledge profile;
+- optional capability packs;
+- required disk space;
+- download URLs/object identifiers;
+- part/chunk metadata where used;
+- hashes/signatures;
+- dependencies;
+- whether an artifact is required or optional;
+- fallback/rollback version.
+
+The manifest is small and may be served through the API.
+The large immutable payloads live in S3.
+
+#### First-user installation rule
+
+A new installation must not become an empty shell.
+
+Accepted bootstrapping patterns:
+- bundled Lite Core + Seed Knowledge; then progressive upgrade from S3; or
+- installer downloads and fully verifies the minimum usable local baseline before first normal launch.
+
+A full offline installer must remain possible.
+
+No normal chat should require S3 availability after required local assets are installed.
+
+#### Resumable download requirements
+
+For large Core/Knowledge/capability packages:
+- use bounded chunks/parts;
+- preserve completed chunks after network loss;
+- support restart/resume;
+- verify each part where hashes are available;
+- verify complete artifact before activation;
+- do not activate partial downloads;
+- download to staging, then atomically switch;
+- retain previous known-good artifact until new health/compatibility checks pass.
+
+Do not use one total timeout that discards hours of valid download progress.
+
+#### Initial artifact to test first
+
+Current repository evidence already pins:
+- production Knowledge artifact: `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`;
+- compressed bytes: **429,588,529**;
+- SHA-256: `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`;
+- unpacked genuine content: **1,924,345,221 bytes**.
+
+This Knowledge artifact is the preferred first real distribution object because its size/hash/license/provenance contract already exists.
+
+Do not upload it merely for demonstration if the active claim is still only documentation; upload only when authorized S3 implementation starts.
+
+#### Access model
+
+Default:
+- bucket/private objects;
+- client never receives long-lived S3 credentials;
+- API issues bounded download authorization or provider-safe download URL mechanism where supported;
+- public immutable objects may be considered only for artifacts intentionally public and after owner decision.
+
+Never embed permanent S3 secret keys in Windows/Android binaries.
+
+#### API server role
+
+API VPS remains control plane:
+- authentication;
+- entitlement/capability decision;
+- bootstrap manifest;
+- version routing;
+- signed metadata;
+- optional short-lived download authorization;
+- sync/account services.
+
+API VPS must not become the long-term storage origin for multi-GB model libraries.
+
+#### Storage retention / capacity
+
+Existing capacity: **10 GB**.
+
+Rules:
+- use existing 10 GB before buying more;
+- keep practical rollout + rollback headroom;
+- review expansion at about **70–75% sustained occupancy**;
+- retain currently supported stable artifacts plus required rollback artifacts;
+- remove superseded non-required artifacts only under explicit retention policy;
+- never delete the only known-good rollback artifact merely to save space.
+
+Before requesting more paid capacity, future chat must report:
+- used/free S3 capacity;
+- retained artifact inventory;
+- next expected package sizes;
+- minimum safe headroom;
+- what can be pruned;
+- recommended next capacity/tier.
+
+#### CDN
+
+CDN is not required now.
+
+Add only when measured:
+- geographical download latency;
+- egress/load cost;
+- repeated large public downloads;
+- origin bottleneck
+
+justify it.
+
+CDN must cache immutable artifacts by version/hash and must not bypass signature/hash verification.
+
+#### Database relation
+
+S3 stores immutable/heavy artifacts.
+SQLite/PostgreSQL stores metadata/state.
+
+Do not move account/sync transactional state into S3.
+
+Do not migrate SQLite merely because S3 distribution is added.
+
+#### Capability/media packages
+
+Future Vision/Image/Video providers use the same artifact contract:
+- provider id/version;
+- model hash;
+- capabilities;
+- hardware requirements;
+- license;
+- size;
+- signature;
+- benchmark/acceptance status.
+
+A missing media provider must degrade only that capability, never normal Core/chat.
+
+#### Acceptance gates for S3 distribution implementation
+
+Before calling the distribution path ready:
+1. secret scan confirms no credential committed;
+2. exact artifact hash/size verification PASS;
+3. signed manifest verification PASS;
+4. interrupted-download resume PASS;
+5. corrupted-part/full-artifact rejection PASS;
+6. insufficient-disk preflight PASS;
+7. rollback to previous known-good PASS;
+8. offline-after-install chat/Core PASS;
+9. Windows bootstrap path PASS;
+10. Android supported profile bootstrap path PASS where in that release scope;
+11. no permanent S3 key is present in shipped client;
+12. API server remains usable if S3 is temporarily unavailable, except for requested downloads.
+
+#### Future-chat decision rule
+
+If a future chat sees this section and S3 implementation is not yet the accepted active claim:
+- **do not buy anything;**
+- **do not upload secrets;**
+- **do not turn S3 into a V1.5 blocker;**
+- keep it as planned infrastructure.
+
+If implementation becomes active:
+- first inspect the current 10 GB bucket/provider configuration;
+- verify endpoint/bucket/region and current usage;
+- configure secrets outside Git;
+- implement signed manifest + one real artifact end-to-end;
+- prove resumable verified download;
+- only then expand to Core/capability packages.
+
+S3_DISTRIBUTION_CHECKLIST_STATUS: CANONICAL INSTRUCTION / NO SECRET VALUES / NO PURCHASE NOW.
