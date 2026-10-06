@@ -6620,3 +6620,71 @@ A Work session starting this lane must create its own ACTIVE claim before implem
 If credentials/provider details cannot be securely resolved, Work may still finish all repository-side tooling/tests/mock-provider work and leave real upload as `EXTERNAL_SETUP_PENDING` rather than weakening security.
 
 S3_PREPARATION_NOW_STATUS: AUTHORIZED / PARALLEL / NON_BLOCKING / V1.5_UNCHANGED.
+
+
+### ### S3 CROSS-WORK ACCESS RULE 2026-10-06
+
+Purpose: ensure the main AuroraFox Work and any parallel S3 Work discover and use the same S3 infrastructure safely without copying secrets between chats.
+
+#### Discovery
+
+Every future Work/Chat/Codex session must learn that S3 exists by reading:
+- `AGENTS.md`;
+- `docs/AURORAFOX_CANONICAL_ROADMAP.md`;
+- `docs/PROJECT_MASTER_LOG.md`, especially the S3 distribution decisions/checklist.
+
+No chat-memory secret is required for discovery.
+
+#### Credentials are NOT transferred through chats
+
+A secret shared in one conversation is not treated as a cross-session credential store and must not be copied into another prompt, journal entry, repository file or CI log.
+
+Future sessions must access S3 only through configured secret/environment names:
+
+- `AURORAFOX_S3_ENDPOINT`
+- `AURORAFOX_S3_REGION`
+- `AURORAFOX_S3_BUCKET`
+- `AURORAFOX_S3_ACCESS_KEY_ID`
+- `AURORAFOX_S3_SECRET_ACCESS_KEY`
+
+#### Shared secret locations
+
+Use the narrowest location required by the component:
+
+1. **Production/control-plane server**: root-only deployment secret file, recommended `/etc/aurorafox/s3.env` with mode `0600`, loaded only by the service/tool that needs S3.
+2. **GitHub Actions** (only if CI must perform real S3 integration): encrypted repository/environment secrets with the same variable names. Workflows reference the names; secret values must never be echoed.
+3. **Developer/Work temporary real-S3 smoke**: ephemeral process environment supplied by the authorized runtime/secret store. Never commit a `.env` containing values.
+
+Do not create multiple independent long-lived keys merely to give separate chats access unless the provider's least-privilege policy intentionally uses separate scoped credentials.
+
+#### Main Work behavior
+
+The main project Work does not need raw S3 credentials for ordinary V1.5 development.
+
+It must:
+- read the S3 plan;
+- preserve the distribution interfaces prepared by the S3 lane;
+- treat S3 as PARALLEL_NON_BLOCKING until its roadmap milestone;
+- use mocks/fixtures when real access is unnecessary.
+
+When real S3 access is required and the expected environment variables are absent, report `S3_EXTERNAL_SETUP_PENDING`; do not ask to commit/paste the permanent key into the repository.
+
+#### Integration handoff
+
+The S3 Work publishes only:
+- code;
+- schemas;
+- tests;
+- object inventory without credentials;
+- artifact IDs/hashes/sizes;
+- exact commit SHA and acceptance evidence.
+
+The main Work integrates/rebases/cherry-picks/reconciles that repository work under the normal journal ownership rules. It does not need the S3 secret to consume the code.
+
+When S3 is later activated in product runtime, the deployment environment supplies the credentials at runtime.
+
+#### Rotation
+
+Any temporary credential exposed in a chat must be revoked/rotated after the authorized setup/smoke use. The replacement permanent credential should be placed directly into the protected secret location, not sent through another chat.
+
+S3_CROSS_WORK_ACCESS_STATUS: JOURNAL_DISCOVERY + SHARED_SECRET_ENV / NO_CHAT_SECRET_PROPAGATION.
