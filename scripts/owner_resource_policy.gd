@@ -3,6 +3,13 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"voice_log_bytes": 5242880,
+	"voice_log_chars": 1200,
+	"knowledge_folder_files": 750,
+	"knowledge_failure_items": 4,
+	"improvement_ui_detail_chars": 2500,
+	"improvement_ui_detail_items": 30,
+	"improvement_ui_history_items": 100,
 	"coordinator_event_items": 500,
 	"coordinator_report_items": 20,
 	"coordinator_detail_chars": 5000,
@@ -133,6 +140,13 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"voice_log_bytes": "Голос: байтов журнала до ротации (0 = без лимита)",
+	"voice_log_chars": "Голос: символов диагностического сообщения",
+	"knowledge_folder_files": "Knowledge: файлов из папки (0 = без лимита)",
+	"knowledge_failure_items": "Knowledge: ошибок в итоге импорта (0 = все)",
+	"improvement_ui_detail_chars": "Улучшения: символов отображаемых деталей",
+	"improvement_ui_detail_items": "Улучшения: элементов отображаемых деталей",
+	"improvement_ui_history_items": "Улучшения: записей истории",
 	"candidate_project_files": "Core: файлов в копии проекта (0 = без лимита)",
 	"candidate_project_bytes": "Core: байтов в копии проекта (0 = без лимита)",
 	"coordinator_event_items": "Автономия: сохраняемых событий",

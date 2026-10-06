@@ -85,3 +85,13 @@ def test_workflow_is_manual_only_and_never_packages_corpus() -> None:
     assert "AllowUnsignedRelease" in source
     assert "android-production-knowledge-acceptance" in source
     assert "AuroraFox-Knowledge-RU" not in source
+
+
+def test_android_archive_runtime_dependencies_reach_godot_apk() -> None:
+    gradle = (ROOT / "android_plugin/plugin/build.gradle.kts").read_text(encoding="utf-8")
+    export = (ROOT / "addons/AuroraFoxRuntime/export_plugin.gd").read_text(encoding="utf-8")
+    assert 'implementation("com.github.luben:zstd-jni:1.5.7-3@aar")' in gradle
+    assert 'testImplementation("com.github.luben:zstd-jni:1.5.7-3")' in gradle
+    for coordinate in ("org.apache.commons:commons-compress:1.27.1", "com.github.luben:zstd-jni:1.5.7-3@aar"):
+        assert coordinate in export
+    assert "_compress_dependency, _zstd_dependency" in export

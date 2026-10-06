@@ -223,35 +223,57 @@ func _on_files_selected(paths: PackedStringArray) -> void:
 	await _import_paths(selected)
 
 func _on_folder_selected(path: String) -> void:
-	if import_busy:
-		return
+	if import_busy: return
+	_set_import_busy(true)
+	progress_label.text = "Сканирую выбранную папку…"
 	var paths: Array = []
-	_collect_supported(path, paths, MAX_FOLDER_FILES)
+	var coverage := await _collect_supported(path, paths, OwnerResourcePolicy.value("knowledge_folder_files"))
+	_set_import_busy(false)
+	if bool(coverage.cancelled):
+		progress_label.text = "Сканирование остановлено пользователем; импорт не запущен."
+		return
 	if paths.is_empty():
-		progress_label.text = "В выбранной папке не найдено поддерживаемых файлов."
+		progress_label.text = "Не найдено доступных поддерживаемых файлов. Ошибок обхода: %d" % coverage.errors.size()
 		return
 	await _import_paths(paths)
+	if bool(coverage.limit_reached): progress_label.text += " • Обход неполный: достигнут предел файлов из папки; измените его в настройках."
+	if not coverage.errors.is_empty(): progress_label.text += " • Непрочитанных папок: %d" % coverage.errors.size()
+	if int(coverage.skipped_links) > 0: progress_label.text += " • Пропущено ссылок: %d" % coverage.skipped_links
 
-func _collect_supported(path: String, out: Array, limit: int) -> void:
-	if out.size() >= limit:
-		return
+func _collect_supported(path: String, out: Array, limit: int, state: Dictionary = {}) -> Dictionary:
+	if state.is_empty(): state = {"limit_reached": false, "cancelled": false, "errors": [], "skipped_links": 0, "visited": 0}
+	if bool(state.limit_reached) or bool(state.cancelled): return state
+	if limit < 0:
+		state.errors.append("Invalid negative folder budget")
+		return state
 	var dir := DirAccess.open(path)
 	if dir == null:
-		return
+		state.errors.append(path)
+		return state
 	dir.list_dir_begin()
-	while out.size() < limit:
-		var name := dir.get_next()
-		if name.is_empty():
+	while true:
+		if import_cancel_requested:
+			state.cancelled = true
 			break
-		if name in [".", ".."] or name.begins_with("."):
-			continue
+		var name := dir.get_next()
+		if name.is_empty(): break
+		if name in [".", ".."] or name.begins_with("."): continue
+		state.visited = int(state.visited) + 1
 		var is_directory := dir.current_is_dir()
 		var full := path.path_join(name)
-		if is_directory:
-			_collect_supported(full, out, limit)
+		if dir.is_link(full):
+			state.skipped_links = int(state.skipped_links) + 1
+		elif is_directory:
+			await _collect_supported(full, out, limit, state)
 		elif _is_supported(full):
+			if limit > 0 and out.size() >= limit:
+				state.limit_reached = true
+				break
 			out.append(full)
+		if bool(state.limit_reached) or bool(state.cancelled): break
+		if int(state.visited) % 128 == 0 and is_inside_tree(): await get_tree().process_frame
 	dir.list_dir_end()
+	return state
 
 func _is_supported(path: String) -> bool:
 	var ai := _main_ai()
@@ -288,7 +310,7 @@ func _import_paths(paths: Array) -> void:
 	_set_import_busy(false)
 	var failure_text := ""
 	if not failures.is_empty():
-		var visible_failures := failures.slice(0, mini(4, failures.size()))
+		var visible_failures := failures.slice(0, OwnerResourcePolicy.count(failures.size(), "knowledge_failure_items"))
 		failure_text = " • Ошибки: " + " | ".join(visible_failures)
 		if failures.size() > visible_failures.size():
 			failure_text += " • ещё %d" % (failures.size() - visible_failures.size())

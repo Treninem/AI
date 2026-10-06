@@ -332,6 +332,20 @@ func _exercise_chat(main: Control) -> bool:
 	if store.active_chat_id.is_empty() or store.active_chat_id == before:
 		_fail("New chat action did not create/activate a chat", 61)
 		return false
+	var previous_title_cap := OwnerResourcePolicy.value("chat_title_chars")
+	OwnerResourcePolicy._cached.chat_title_chars = 160
+	await main.call("_open_rename_chat", store.active_chat_id, "Д".repeat(100))
+	var rename_field = main.get("rename_input")
+	if rename_field.max_length != 160 or rename_field.text.length() != 100:
+		_fail("Live rename field ignored raised owner title budget", 101)
+		return false
+	OwnerResourcePolicy._cached.chat_title_chars = 0
+	await main.call("_open_rename_chat", store.active_chat_id, "Д".repeat(180))
+	if rename_field.max_length != 0 or rename_field.text.length() != 180:
+		_fail("Live rename field did not honor unlimited owner title budget", 102)
+		return false
+	OwnerResourcePolicy._cached.chat_title_chars = previous_title_cap
+	main.get("rename_dialog").hide()
 	store.add_message("user", "Проверка ровной пользовательской карточки")
 	store.add_message("assistant", "Проверка ответа AuroraFox без временной картинки рядом с сообщением.")
 	store.rename_chat(store.active_chat_id, "Очень длинное название чата для проверки безопасного поведения заголовка AuroraFox без наложений")

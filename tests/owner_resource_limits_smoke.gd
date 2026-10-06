@@ -20,6 +20,43 @@ class LoopFixtureAI extends AIClient:
 		calls += 1
 		return response
 
+class TextOnlyCore extends AgentCore:
+	func run_task(_task: String, _context: Array = [], _guard: Callable = Callable()) -> String:
+		return "Готово: действие выполнено."
+
+class UnobservedComputerUI extends "res://scripts/computer_overlay.gd":
+	var fixture_core: AgentCore
+	func _ready() -> void:
+		pass
+	func _agent_core() -> AgentCore:
+		return fixture_core
+	func _computer_primitives_ready() -> bool:
+		return true
+	func _sync_computer_permission() -> void:
+		pass
+
+class RoutingFileClient extends FileIntelligenceClient:
+	var captured_chars := 0
+	var captured_items := 0
+	func owner_limits() -> Dictionary:
+		return {"max_text_chars": 300000, "tree_max_items": 9000}
+	func analyze_file(_path: String, _question := "", _visual := true, max_chars := 160000) -> Dictionary:
+		captured_chars = max_chars
+		return {"ok": true}
+	func tree(_path: String, max_items := 2000) -> Dictionary:
+		captured_items = max_items
+		return {"ok": true}
+
+class IsolatedKnowledgeUI extends KnowledgeBaseOverlay:
+	func _ready() -> void:
+		pass
+	func _is_supported(path: String) -> bool:
+		return path.get_extension() == "txt"
+
+class IsolatedImprovementUI extends SelfImprovementOverlay:
+	func _save_history() -> void:
+		pass
+
 class IsolatedCoordinator extends AuroraAutonomousCoordinator:
 	func _save_state() -> void:
 		pass
@@ -79,8 +116,87 @@ func _run() -> void:
 		for filename in ["a.txt", "b.txt"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(target_dir.path_join(filename)))
 		DirAccess.remove_absolute(ProjectSettings.globalize_path(target_dir))
 		bridge.free()
+	var knowledge_ui := IsolatedKnowledgeUI.new()
+	root.add_child(knowledge_ui)
+	var selected_files: Array = []
+	var coverage := await knowledge_ui._collect_supported(source_dir, selected_files, 0)
+	assert(selected_files.size() == 2 and not coverage.limit_reached and coverage.errors.is_empty())
+	selected_files.clear()
+	coverage = await knowledge_ui._collect_supported(source_dir, selected_files, 1)
+	assert(selected_files.size() == 1 and coverage.limit_reached)
+	selected_files.clear()
+	coverage = await knowledge_ui._collect_supported(source_dir, selected_files, 2)
+	assert(selected_files.size() == 2 and not coverage.limit_reached)
+	selected_files.clear()
+	knowledge_ui.import_cancel_requested = true
+	coverage = await knowledge_ui._collect_supported(source_dir, selected_files, 0)
+	assert(selected_files.is_empty() and coverage.cancelled)
+	knowledge_ui.import_cancel_requested = false
+	for i in range(130):
+		var scan_file := FileAccess.open(source_dir.path_join("scan_%d.txt" % i), FileAccess.WRITE)
+		scan_file.store_string("fixture")
+		scan_file.close()
+	selected_files.clear()
+	knowledge_ui.call_deferred("set", "import_cancel_requested", true)
+	coverage = await knowledge_ui._collect_supported(source_dir, selected_files, 0)
+	assert(coverage.cancelled and selected_files.size() < 132)
+	for i in range(130): DirAccess.remove_absolute(ProjectSettings.globalize_path(source_dir.path_join("scan_%d.txt" % i)))
+	knowledge_ui.free()
+	var improvement_ui := IsolatedImprovementUI.new()
+	OwnerResourcePolicy._cached.improvement_ui_detail_chars = 2
+	OwnerResourcePolicy._cached.improvement_ui_detail_items = 1
+	OwnerResourcePolicy._cached.improvement_ui_history_items = 2
+	assert(improvement_ui._compact({"content": "complete", "ok": false}).content == "co")
+	assert(improvement_ui._compact([1, 2]) == [1])
+	for i in range(3): improvement_ui._add_history("fixture", false, {"id": i})
+	assert(improvement_ui.history.size() == 2 and improvement_ui.history[0].details.id == 2)
+	OwnerResourcePolicy._cached.improvement_ui_detail_chars = 0
+	OwnerResourcePolicy._cached.improvement_ui_detail_items = 0
+	OwnerResourcePolicy._cached.improvement_ui_history_items = 0
+	assert(improvement_ui._compact({"content": "complete"}).content == "complete")
+	assert(improvement_ui._compact([1, 2]) == [1, 2])
+	improvement_ui._add_history("fixture", false, {})
+	assert(improvement_ui.history.size() == 3)
+	improvement_ui.free()
 	for filename in ["a.txt", "b.txt"]: DirAccess.remove_absolute(ProjectSettings.globalize_path(source_dir.path_join(filename)))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(source_dir))
+	var voice_logger = load("res://voice/voice_logger.gd").new()
+	voice_logger.log_path = "user://owner_voice_logger_fixture.log"
+	OwnerResourcePolicy._cached.voice_log_bytes = 0
+	OwnerResourcePolicy._cached.voice_log_chars = 0
+	voice_logger.write("fixture", "visible complete message")
+	voice_logger.write("fixture", "token=fixture-sensitive-value")
+	var diagnostic := FileAccess.get_file_as_string(voice_logger.log_path)
+	assert(diagnostic.contains("visible complete message") and not diagnostic.contains("fixture-sensitive-value"))
+	OwnerResourcePolicy._cached.voice_log_bytes = 1
+	voice_logger._rotate_if_needed()
+	assert(FileAccess.file_exists(voice_logger.log_path + ".1"))
+	assert(not FileAccess.file_exists(voice_logger.log_path))
+	voice_logger.free()
+	for suffix in ["", ".1"]: DirAccess.remove_absolute(ProjectSettings.globalize_path("user://owner_voice_logger_fixture.log" + suffix))
+	var native_tools := AndroidFileToolBridge.new()
+	native_tools.client.free()
+	var text_core := TextOnlyCore.new()
+	for component in [text_core.experience, text_core.cognition, text_core.dream_cycle, text_core.team]: text_core.add_child(component)
+	var unobserved := UnobservedComputerUI.new()
+	unobserved.add_child(unobserved.computer)
+	unobserved.fixture_core = text_core
+	unobserved.enabled = true
+	var text_result := await unobserved.execute_goal("fixture action")
+	assert(not text_result.ok and not text_result.verified)
+	assert(text_result.status == "UNVERIFIED" and text_result.error == "action_outcome_unverified")
+	assert(text_result.response == "Готово: действие выполнено.")
+	unobserved.free()
+	text_core.free()
+
+	var routing_client := RoutingFileClient.new()
+	native_tools.client = routing_client
+	assert((await native_tools._analyze_file({"path": "user://fixture.txt"})).ok)
+	assert(routing_client.captured_chars == 300000)
+	assert((await native_tools._file_tree({"path": "user://", "max_items": 8000})).ok)
+	assert(routing_client.captured_items == 8000)
+	routing_client.free()
+	native_tools.free()
 	var long_text := "Привет 🌍".repeat(3000)
 	assert(OwnerResourcePolicy.clip(long_text, "task_trace_chars").length() == 12000)
 	OwnerResourcePolicy._cached.task_trace_chars = 0

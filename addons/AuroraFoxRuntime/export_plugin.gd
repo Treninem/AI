@@ -17,6 +17,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	var _sherpa_name := "sherpa-onnx-1.13.4.aar"
 	var _pdfbox_dependency := "com.tom-roush:pdfbox-android:2.0.27.0"
 	var _tesseract_dependency := "cz.adaptech.tesseract4android:tesseract4android:4.9.0"
+	var _compress_dependency := "org.apache.commons:commons-compress:1.27.1"
+	var _zstd_dependency := "com.github.luben:zstd-jni:1.5.7-3@aar"
 	var _jitpack_repo := "https://jitpack.io"
 
 	func _supports_platform(platform) -> bool:
@@ -32,8 +34,8 @@ class AndroidExportPlugin extends EditorExportPlugin:
 
 	func _get_android_dependencies(_platform, _debug) -> PackedStringArray:
 		# Local AAR dependencies are not embedded automatically in the final
-		# Godot APK. Export the PDF parser and local Tesseract runtime explicitly.
-		return PackedStringArray([_pdfbox_dependency, _tesseract_dependency])
+		# Godot APK. Export PDF/OCR, TAR and the Android Zstd JNI runtime explicitly.
+		return PackedStringArray([_pdfbox_dependency, _tesseract_dependency, _compress_dependency, _zstd_dependency])
 
 	func _get_android_dependencies_maven_repos(_platform, _debug) -> PackedStringArray:
 		# Google and Maven Central are included by Godot; Tesseract4Android 4.9.0

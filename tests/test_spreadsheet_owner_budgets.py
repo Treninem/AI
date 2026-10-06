@@ -1,7 +1,7 @@
 """Execute production parser functions with real XLS/XLSX files.
 
-AST isolation avoids importing the API/server dependencies for this parser unit
-suite. It does not mock parsers or claim full-service acceptance; the separate
+AST isolation executes production parser bodies; real service defaults supply
+cache identity policy fields. It does not mock parsers or claim full-service acceptance; the separate
 file-intelligence CI suite imports and exercises the real file_service module.
 """
 import ast
@@ -24,6 +24,13 @@ def parser_namespace():
                  'MAX_ARCHIVE_ENTRIES': 5000, 'MAX_ARCHIVE_EXPANDED': 512*1024*1024,
                  'MAX_ARCHIVE_TEXT_MEMBER_BYTES': 8*1024*1024, 'MAX_ARCHIVE_TEXT_TOTAL_BYTES': 32*1024*1024,
                  'MAX_ARCHIVE_LISTING_CHARS': 40000, 'ARCHIVE_LISTING_PERCENT': 25}
+    # Keep the extraction policy identical to the real service, without copying defaults.
+    import sys
+    sys.path.insert(0, str(ROOT / 'file_intelligence'))
+    import file_service
+    for name in ('MAX_PDF_BYTES', 'MAX_PDF_PAGES', 'MAX_OCR_PAGES', 'MAX_PDF_RENDER_PIXELS',
+                 'VIDEO_MAX_FRAMES', 'VIDEO_FRAME_INTERVAL_SECONDS', 'VIDEO_FRAME_MAX_WIDTH', 'VISION_IMAGE_MAX_WIDTH'):
+        namespace[name] = getattr(file_service, name)
     exec(compile(module, 'file_intelligence/file_service.py', 'exec'), namespace)
     return namespace
 

@@ -3,6 +3,237 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "scripts/agent_core.gd",
+      "pattern": "^\\s*(?:return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"non_dictionary_tool_result\",\\ \"retryable\":\\ false\\}|\"retryable\":\\ bool\\(source\\.get\\(\"retryable\",\\ false\\)\\),)\\s*$",
+      "class": "format_structure",
+      "control": "Actual capability and retry-safety response schema",
+      "rationale": "Reviewed availability/status/transport safety flags and dictionary fields; retryable is not a retry count or permission to repeat side effects."
+    },
+    {
+      "path": "scripts/ai_client.gd",
+      "pattern": "^\\s*(?:var\\ caps\\ :=\\ core_runtime\\.android_runtime\\.capabilities\\(\\)|\"ok\":\\ not\\ bundled\\.is_empty\\(\\)\\ and\\ bool\\(caps\\.get\\(\"llama_cpp\",\\ false\\)\\),|\"capabilities\":\\ caps)\\s*$",
+      "class": "format_structure",
+      "control": "Actual capability and retry-safety response schema",
+      "rationale": "Reviewed availability/status/transport safety flags and dictionary fields; retryable is not a retry count or permission to repeat side effects."
+    },
+    {
+      "path": "scripts/aurora_core_runtime.gd",
+      "pattern": "^\\s*(?:if\\ not\\ bool\\(local\\.get\\(\"model_failure\",\\ true\\)\\)\\ and\\ not\\ bool\\(local\\.get\\(\"retryable\",\\ true\\)\\):|if\\ not\\ model_failure\\ and\\ not\\ bool\\(result\\.get\\(\"retryable\",\\ true\\)\\):|\"retryable\":\\ result\\.get\\(\"retryable\",\\ false\\),|var\\ caps\\ :=\\ android_runtime\\.capabilities\\(\\)|if\\ not\\ bool\\(caps\\.get\\(\"llama_cpp\",\\ false\\)\\):\\ return\\ \\{\"ok\":\\ false,\\ \"runtime\":\\ \"aurora_core\",\\ \"error\":\\ \"Встроенный\\ inference\\ runtime\\ не\\ включен\",\\ \"capabilities\":\\ caps,\\ \"model_path\":\\ candidate_path\\}|\"android\":\\ android_runtime\\.capabilities\\(\\),)\\s*$",
+      "class": "format_structure",
+      "control": "Actual capability and retry-safety response schema",
+      "rationale": "Reviewed availability/status/transport safety flags and dictionary fields; retryable is not a retry count or permission to repeat side effects."
+    },
+    {
+      "path": "scripts/computer_client.gd",
+      "pattern": "^\\s*(?:func\\ capabilities\\(\\)\\ \\->\\ Dictionary:|var\\ result\\ :=\\ await\\ _json_request\\(\"/capabilities\",\\ HTTPClient\\.METHOD_GET,\\ \\{\\},\\ 4\\.0,\\ false,\\ false\\))\\s*$",
+      "class": "format_structure",
+      "control": "Actual capability and retry-safety response schema",
+      "rationale": "Reviewed availability/status/transport safety flags and dictionary fields; retryable is not a retry count or permission to repeat side effects."
+    },
+    {
+      "path": "scripts/computer_overlay.gd",
+      "pattern": "^\\s*(?:maxi\\(360,\\ mini\\(590,\\ int\\(viewport\\.x\\ \\-\\ 40\\.0\\)\\)\\),|maxi\\(420,\\ mini\\(470,\\ int\\(viewport\\.y\\ \\-\\ 40\\.0\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/computer_overlay_compat.gd",
+      "pattern": "^\\s*(?:return\\ Vector2i\\(maxi\\(1,\\ int\\(fallback\\.x\\)\\),\\ maxi\\(1,\\ int\\(fallback\\.y\\)\\)\\)|var\\ available_width\\ :=\\ maxi\\(1,\\ viewport\\.x\\ \\-\\ 24\\)|var\\ available_height\\ :=\\ maxi\\(1,\\ viewport\\.y\\ \\-\\ 24\\)|mini\\(590,\\ available_width\\),|mini\\(470,\\ available_height\\)|maxi\\(0,\\ \\(viewport\\.x\\ \\-\\ popup\\.size\\.x\\)\\ /\\ 2\\),|maxi\\(0,\\ \\(viewport\\.y\\ \\-\\ popup\\.size\\.y\\)\\ /\\ 2\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/desktop_local_runtime.gd",
+      "pattern": "^\\s*(?:return\\ \\{\"ok\":\\ false,\\ \"runtime\":\\ \"aurora_core_desktop\",\\ \"error\":\\ \"AuroraFox\\ Core\\ вернул\\ ответ\\ без\\ choices\",\\ \"raw\":\\ data,\\ \"failure_scope\":\\ \"request\",\\ \"model_failure\":\\ false,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"runtime\":\\ \"aurora_core_desktop\",\\ \"error\":\\ \"AuroraFox\\ Core\\ вернул\\ некорректное\\ сообщение\",\\ \"raw\":\\ data,\\ \"failure_scope\":\\ \"request\",\\ \"model_failure\":\\ false,\\ \"retryable\":\\ true\\}|\"retryable\":\\ true,|return\\ \\{\"ok\":\\ false,\\ \"runtime\":\\ \"aurora_core_desktop\",\\ \"error\":\\ \"Core\\ Engine\\ request:\\ %s\"\\ %\\ error_string\\(err\\),\\ \"failure_scope\":\\ \"request\",\\ \"model_failure\":\\ false,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"runtime\":\\ \"aurora_core_desktop\",\\ \"http\":\\ code,\\ \"transport_result\":\\ transport_result,\\ \"error\":\\ \"Core\\ Engine\\ request\\ failed:\\ transport\\ result\\ %d\"\\ %\\ transport_result,\\ \"failure_scope\":\\ \"request\",\\ \"model_failure\":\\ false,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"runtime\":\\ \"aurora_core_desktop\",\\ \"http\":\\ response_code,\\ \"error\":\\ failure,\\ \"failure_scope\":\\ scope,\\ \"model_failure\":\\ false,\\ \"retryable\":\\ scope\\ ==\\ \"request\",\\ \"cancelled\":\\ scope\\ ==\\ \"cancelled\",\\ \"prompt_tokens_processed\":\\ stream\\.processed,\\ \"generated_bytes\":\\ stream\\.generated_bytes\\})\\s*$",
+      "class": "format_structure",
+      "control": "Actual capability and retry-safety response schema",
+      "rationale": "Reviewed availability/status/transport safety flags and dictionary fields; retryable is not a retry count or permission to repeat side effects."
+    },
+    {
+      "path": "scripts/desktop_visual_theme.gd",
+      "pattern": "^\\s*(?:const\\ MIN_WINDOW\\ :=\\ Vector2i\\(960,\\ 640\\)|button\\.custom_minimum_size\\.x\\ =\\ maxf\\(button\\.custom_minimum_size\\.x,\\ _button_label_width\\(button\\)\\)|button\\.custom_minimum_size\\.y\\ =\\ maxf\\(button\\.custom_minimum_size\\.y,\\ 40\\.0\\)|var\\ max_width\\ :=\\ maxi\\(360,\\ int\\(viewport\\.x\\ \\-\\ 40\\.0\\)\\)|var\\ max_height\\ :=\\ maxi\\(420,\\ int\\(viewport\\.y\\ \\-\\ 40\\.0\\)\\)|popup\\.size\\ =\\ Vector2i\\(mini\\(current\\.x,\\ max_width\\),\\ mini\\(current\\.y,\\ max_height\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/knowledge_base_overlay.gd",
+      "pattern": "^\\s*(?:maxi\\(360,\\ mini\\(900,\\ int\\(viewport\\.x\\ \\-\\ gap\\)\\)\\),|maxi\\(520,\\ mini\\(760,\\ int\\(viewport\\.y\\ \\-\\ gap\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/main.gd",
+      "pattern": "^\\s*(?:rename_dialog\\.min_size\\ =\\ Vector2i\\(360,\\ 190\\)|feedback_dialog\\.min_size\\ =\\ Vector2i\\(420,\\ 260\\)|security_review_dialog\\.min_size\\ =\\ Vector2i\\(600,\\ 500\\)|rename_dialog\\.size\\ =\\ Vector2i\\(clampi\\(int\\(viewport\\.x\\ \\-\\ 40\\.0\\),\\ 360,\\ 480\\),\\ 190\\)|content\\.custom_minimum_size\\.x\\ =\\ maxf\\(176\\.0,\\ width\\ \\-\\ 44\\.0\\)|center\\.custom_minimum_size\\.y\\ =\\ maxf\\(300\\.0,\\ get_viewport_rect\\(\\)\\.size\\.y\\ \\*\\ 0\\.48\\)|available\\ =\\ maxf\\(220\\.0,\\ available\\ \\-\\ 18\\.0\\)|return\\ minf\\(760\\.0,\\ maxf\\(220\\.0,\\ available\\ \\*\\ 0\\.72\\)\\)|content\\.custom_minimum_size\\.x\\ =\\ maxf\\(176\\.0,\\ bubble_width\\ \\-\\ 44\\.0\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/main_compat.gd",
+      "pattern": "^\\s*(?:var\\ target_width\\ :=\\ minf\\(max_portrait_width,\\ source_size\\.y\\ \\*\\ viewport_ratio\\)|region\\.position\\.x\\ =\\ maxf\\(0\\.0,\\ source_size\\.x\\ \\-\\ target_width\\)|region\\.position\\.y\\ =\\ maxf\\(0\\.0,\\ source_size\\.y\\ \\-\\ target_height\\)|region\\.size\\.y\\ =\\ minf\\(source_size\\.y,\\ target_height\\)|region\\.position\\.x\\ =\\ maxf\\(0\\.0,\\ source_size\\.x\\ \\-\\ target_width\\)|region\\.size\\.x\\ =\\ minf\\(source_size\\.x,\\ target_width\\)|center\\.custom_minimum_size\\.y\\ =\\ maxf\\(280\\.0,\\ get_viewport_rect\\(\\)\\.size\\.y\\ \\*\\ 0\\.46\\)|subtitle\\.custom_minimum_size\\.x\\ =\\ minf\\(560\\.0,\\ maxf\\(280\\.0,\\ get_viewport_rect\\(\\)\\.size\\.x\\ \\*\\ 0\\.58\\)\\)|available\\ =\\ maxf\\(240\\.0,\\ available\\ \\-\\ 10\\.0\\)|return\\ maxf\\(240\\.0,\\ available\\ \\*\\ 0\\.90\\)|return\\ minf\\(780\\.0,\\ maxf\\(320\\.0,\\ available\\ \\*\\ 0\\.72\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/mobile_ui_adapter.gd",
+      "pattern": "^\\s*(?:_base_composer_bottom\\ =\\ maxi\\(10,\\ composer_margin\\.get_theme_constant\\(\"margin_bottom\"\\)\\)|var\\ left\\ :=\\ maxf\\(0\\.0,\\ float\\(safe\\.position\\.x\\)\\ /\\ scale\\)|var\\ top\\ :=\\ maxf\\(0\\.0,\\ float\\(safe\\.position\\.y\\)\\ /\\ scale\\)|var\\ right\\ :=\\ maxf\\(0\\.0,\\ float\\(screen\\.x\\ \\-\\ safe\\.end\\.x\\)\\ /\\ scale\\)|var\\ bottom\\ :=\\ maxf\\(0\\.0,\\ float\\(screen\\.y\\ \\-\\ safe\\.end\\.y\\)\\ /\\ scale\\)|return\\ maxf\\(0\\.001,\\ minf\\(float\\(window_px\\.x\\)\\ /\\ float\\(base\\.x\\),\\ float\\(window_px\\.y\\)\\ /\\ float\\(base\\.y\\)\\)\\)|child\\.custom_minimum_size\\.y\\ =\\ maxf\\(child\\.custom_minimum_size\\.y,\\ 44\\.0\\)|child\\.custom_minimum_size\\.y\\ =\\ maxf\\(child\\.custom_minimum_size\\.y,\\ 46\\.0\\)|child\\.custom_minimum_size\\.y\\ =\\ maxf\\(child\\.custom_minimum_size\\.y,\\ 66\\.0\\)|var\\ max_width\\ :=\\ maxi\\(320,\\ int\\(viewport_size\\.x\\ \\-\\ 20\\.0\\)\\)|var\\ max_height\\ :=\\ maxi\\(420,\\ int\\(viewport_size\\.y\\ \\-\\ 28\\.0\\)\\)|popup\\.size\\ =\\ Vector2i\\(mini\\(current\\.x,\\ max_width\\),\\ mini\\(current\\.y,\\ max_height\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/self_improvement_overlay.gd",
+      "pattern": "^\\s*(?:maxi\\(360,\\ mini\\(860,\\ int\\(viewport\\.x\\ \\-\\ gap\\)\\)\\),|maxi\\(520,\\ mini\\(800,\\ int\\(viewport\\.y\\ \\-\\ gap\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "scripts/settings_overlay.gd",
+      "pattern": "^\\s*(?:maxi\\(320,\\ int\\(viewport\\.x\\ \\-\\ 16\\.0\\)\\),|maxi\\(500,\\ int\\(viewport\\.y\\ \\-\\ 20\\.0\\)\\)|maxi\\(720,\\ mini\\(1040,\\ int\\(viewport\\.x\\ \\-\\ 48\\.0\\)\\)\\),|maxi\\(560,\\ mini\\(820,\\ int\\(viewport\\.y\\ \\-\\ 48\\.0\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "voice/avatar_view.gd",
+      "pattern": "^\\s*(?:amplitude\\ =\\ lerpf\\(amplitude,\\ clampf\\(value,\\ 0\\.0,\\ 1\\.0\\),\\ 0\\.55\\)|blink\\ =\\ maxf\\(0\\.0,\\ blink\\ \\-\\ delta\\ \\*\\ 8\\.0\\)|amplitude\\ =\\ lerpf\\(amplitude,\\ 0\\.0,\\ minf\\(1\\.0,\\ delta\\ \\*\\ 5\\.5\\)\\)|var\\ scale_factor\\ :=\\ minf\\(size\\.x\\ /\\ DESIGN_SIZE\\.x,\\ size\\.y\\ /\\ DESIGN_SIZE\\.y\\)|_draw_ellipse_shape\\(center\\ \\+\\ Vector2\\(ex,\\ \\-8\\)\\ \\+\\ look,\\ Vector2\\(7,\\ maxf\\(1\\.0,\\ eye_h\\ \\-\\ 2\\.0\\)\\),\\ green\\)|var\\ mouth_open\\ :=\\ clampf\\(amplitude\\ \\*\\ 14\\.0,\\ 1\\.0,\\ 13\\.0\\))\\s*$",
+      "class": "format_structure",
+      "control": "Normalized acoustic/animation intensity",
+      "rationale": "Reviewed signal/animation geometry and emotion-domain arithmetic; no work retention or generation count ceiling."
+    },
+    {
+      "path": "voice/emotion_controller.gd",
+      "pattern": "^\\s*(?:current_intensity\\ =\\ clampf\\(intensity,\\ 0\\.0,\\ 1\\.0\\))\\s*$",
+      "class": "format_structure",
+      "control": "Normalized acoustic/animation intensity",
+      "rationale": "Reviewed signal/animation geometry and emotion-domain arithmetic; no work retention or generation count ceiling."
+    },
+    {
+      "path": "voice/python/emotion_parser.py",
+      "pattern": "^\\s*(?:intensity\\ =\\ min\\(0\\.92,\\ 0\\.54\\ \\+\\ 0\\.12\\ \\*\\ hits\\))\\s*$",
+      "class": "format_structure",
+      "control": "Normalized acoustic/animation intensity",
+      "rationale": "Reviewed signal/animation geometry and emotion-domain arithmetic; no work retention or generation count ceiling."
+    },
+    {
+      "path": "voice/tools/acoustic_benchmark.py",
+      "pattern": "^\\s*(?:current\\.append\\(min\\(current\\[\\-1\\]\\ \\+\\ 1,\\ previous\\[j\\]\\ \\+\\ 1,\\ previous\\[j\\ \\-\\ 1\\]\\ \\+\\ \\(ca\\ !=\\ cb\\)\\)\\)|return\\ 1\\.0\\ \\-\\ distance\\ /\\ max\\(len\\(a\\),\\ len\\(b\\),\\ 1\\)|return\\ max\\(|peak\\ =\\ float\\(np\\.max\\(np\\.abs\\(x\\)\\)\\)\\ if\\ x\\.size\\ else\\ 0\\.0|rms_db\\ =\\ 20\\.0\\ \\*\\ math\\.log10\\(max\\(rms,\\ 1e\\-9\\)\\)|edge_n\\ =\\ max\\(1,\\ min\\(x\\.size\\ //\\ 8,\\ int\\(sr\\ \\*\\ 0\\.01\\)\\)\\)\\ if\\ x\\.size\\ else\\ 1|edge_peak\\ =\\ float\\(max\\(np\\.max\\(np\\.abs\\(x\\[:edge_n\\]\\)\\),\\ np\\.max\\(np\\.abs\\(x\\[\\-edge_n:\\]\\)\\)\\)\\)\\ if\\ x\\.size\\ else\\ 0\\.0|power\\ =\\ max\\(0\\.0,\\ min\\(1\\.0,\\ intensity\\ \\*\\ float\\(CONFIG\\.get\\(\"emotionality\",\\ 0\\.55\\)\\)\\)\\)|\"min_utmos\":\\ float\\(np\\.min\\(scores\\)\\),|real_time_factor\\ =\\ total_wall_sec\\ /\\ max\\(duration,\\ 1e\\-6\\)|best_speaker,\\ best_mos\\ =\\ max\\(valid_sweep\\.items\\(\\),\\ key=lambda\\ item:\\ item\\[1\\]\\)|\"real_time_factor_max\":\\ float\\(np\\.max\\(realtime_factors\\)\\),)\\s*$",
+      "class": "test_evidence",
+      "control": "Standalone acoustic acceptance measurement",
+      "rationale": "Reviewed CLI benchmark metrics, workload and acoustic hard gates; no runtime entrypoint imports these benchmark drivers."
+    },
+    {
+      "path": "voice/tools/android_supertonic_acceptance_benchmark.py",
+      "pattern": "^\\s*(?:max_rss_mib,|max_progress\\ =\\ 0\\.0|nonlocal\\ callback_calls,\\ max_progress|max_progress\\ =\\ max\\(max_progress,\\ float\\(progress\\)\\)|\"cancel_max_progress\":\\ max_progress,|\"min_asr_similarity\":\\ min\\(float\\(row\\[\"asr_similarity\"\\]\\)\\ for\\ row\\ in\\ rows\\),|\"max_rtf\":\\ max\\(float\\(row\\[\"rtf\"\\]\\)\\ for\\ row\\ in\\ rows\\),|\"max_peak\":\\ max\\(float\\(row\\[\"peak\"\\]\\)\\ for\\ row\\ in\\ rows\\),|\"peak_rss_mib\":\\ max_rss_mib\\(\\),)\\s*$",
+      "class": "test_evidence",
+      "control": "Standalone acoustic acceptance measurement",
+      "rationale": "Reviewed CLI benchmark metrics, workload and acoustic hard gates; no runtime entrypoint imports these benchmark drivers."
+    },
+    {
+      "path": "voice/tools/android_supertonic_candidate_benchmark.py",
+      "pattern": "^\\s*(?:parser\\.add_argument\\(\"\\-\\-threads\",\\ type=int,\\ default=max\\(1,\\ min\\(4,\\ \\(os\\.cpu_count\\(\\)\\ or\\ 2\\)\\ \\-\\ 1\\)\\)\\)|def\\ max_rss_mib\\(\\)\\ \\->\\ float:|max_num_sentences=2,|peak\\ =\\ float\\(np\\.max\\(abs_samples\\)\\)|max_peak\\ =\\ max\\(float\\(row\\[\"peak\"\\]\\)\\ for\\ row\\ in\\ speaker_rows\\)|\"max_peak\":\\ max_peak,|\"hard_audio_gate\":\\ clipping_total\\ ==\\ 0\\ and\\ max_peak\\ <=\\ 1\\.0,|\"peak_rss_mib\":\\ max_rss_mib\\(\\),)\\s*$",
+      "class": "test_evidence",
+      "control": "Standalone acoustic acceptance measurement",
+      "rationale": "Reviewed CLI benchmark metrics, workload and acoustic hard gates; no runtime entrypoint imports these benchmark drivers."
+    },
+    {
+      "path": "work/work_overlay.gd",
+      "pattern": "^\\s*(?:maxi\\(720,\\ mini\\(1180,\\ int\\(viewport\\.x\\ \\-\\ 48\\.0\\)\\)\\),|maxi\\(560,\\ mini\\(780,\\ int\\(viewport\\.y\\ \\-\\ 48\\.0\\)\\)\\)|progress_bar\\.min_value\\ =\\ 0|progress_bar\\.max_value\\ =\\ 100)\\s*$",
+      "class": "format_structure",
+      "control": "Adaptive UI geometry and normalized progress",
+      "rationale": "Reviewed pixels, safe-area coordinates, widget placement and0–100 display range; no file/workload/text retention cap."
+    },
+    {
+      "path": "agent/learning_curator.gd",
+      "pattern": "^\\s*(?:score\\ =\\ 0\\.68\\ \\+\\ minf\\(0\\.14,\\ log\\(1\\.0\\ \\+\\ float\\(metadata\\.get\\(\"stars\",\\ 0\\)\\)\\)\\ /\\ 60\\.0\\)|score\\ =\\ 0\\.34\\ \\+\\ minf\\(0\\.10,\\ log\\(1\\.0\\ \\+\\ maxf\\(0\\.0,\\ votes\\)\\)\\ /\\ 40\\.0\\)\\ \\+\\ minf\\(0\\.08,\\ log\\(1\\.0\\ \\+\\ maxf\\(0\\.0,\\ comments\\)\\)\\ /\\ 35\\.0\\)|return\\ clampf\\(score,\\ 0\\.0,\\ 0\\.95\\)|evidence_score\\ =\\ minf\\(evidence_score,\\ 0\\.52\\)|return\\ \\{\"tier\":\\ tier,\\ \"score\":\\ clampf\\(evidence_score,\\ 0\\.0,\\ 0\\.95\\)\\})\\s*$",
+      "class": "format_structure",
+      "control": "Normalized evidence scoring arithmetic",
+      "rationale": "Reviewed bounded confidence/reputation mathematics, not workload retention or resource ceilings; promotion authority is preserved."
+    },
+    {
+      "path": "agent/learning_curator.gd",
+      "pattern": "^\\s*(?:history\\ =\\ history\\.slice\\(history\\.size\\(\\)\\ \\-\\ history_cap,\\ history\\.size\\(\\)\\)|func\\ open_questions\\(limit\\ :=\\ 20\\)\\ \\->\\ Array:|var\\ bounded\\ :=\\ maxi\\(0,\\ int\\(limit\\)\\)|return\\ out\\ if\\ bounded\\ ==\\ 0\\ else\\ out\\.slice\\(0,\\ mini\\(bounded,\\ out\\.size\\(\\)\\)\\)|func\\ _clean\\(text:\\ String,\\ limit:\\ int\\)\\ \\->\\ String:|return\\ normalized\\ if\\ limit\\ ==\\ 0\\ else\\ normalized\\.substr\\(0,\\ limit\\)|if\\ cap\\ ==\\ 0\\ or\\ _seen\\.size\\(\\)\\ <=\\ cap:|var\\ remove_count\\ :=\\ _seen\\.size\\(\\)\\ \\-\\ cap|if\\ cap\\ ==\\ 0\\ or\\ _claim_evidence\\.size\\(\\)\\ <=\\ cap:|var\\ remove_count\\ :=\\ _claim_evidence\\.size\\(\\)\\ \\-\\ cap|if\\ cap\\ ==\\ 0\\ or\\ _gap_questions\\.size\\(\\)\\ <=\\ cap:|_gap_questions\\ =\\ combined\\.slice\\(0,\\ mini\\(cap,\\ combined\\.size\\(\\)\\)\\)|if\\ cap\\ >\\ 0\\ and\\ _audit_events\\.size\\(\\)\\ >\\ cap:|_audit_events\\ =\\ _audit_events\\.slice\\(_audit_events\\.size\\(\\)\\ \\-\\ cap,\\ _audit_events\\.size\\(\\)\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private Learning retention policies and explicit query/text arguments",
+      "rationale": "Reviewed cap variables come from persisted Learning resource keys; query zero returns all; helpers propagate actual caller budgets without fixed ceilings."
+    },
+    {
+      "path": "agent/autonomous_coordinator.gd",
+      "pattern": "^\\s*(?:var\\ cap\\ :=\\ OwnerResourcePolicy\\.value\\(\"coordinator_event_items\"\\)|if\\ cap\\ >\\ 0\\ and\\ _events\\.size\\(\\)\\ >\\ cap:|_events\\ =\\ _events\\.slice\\(_events\\.size\\(\\)\\ \\-\\ cap,\\ _events\\.size\\(\\)\\)|for\\ item\\ in\\ value\\.slice\\(0,\\ OwnerResourcePolicy\\.count\\(value\\.size\\(\\),\\ \"coordinator_detail_items\"\\)\\):)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private coordinator event/detail budgets",
+      "rationale": "Exact tested consumers; zero retains all, boolean/numeric evidence remains typed."
+    },
+    {
+      "path": "scripts/trusted_project_sandbox_bridge.gd",
+      "pattern": "^\\s*(?:var\\ max_files\\ :=\\ int\\(args\\.get\\(\"max_files\",\\ MAX_COPY_FILES\\)\\)|var\\ max_bytes\\ :=\\ int\\(args\\.get\\(\"max_bytes\",\\ MAX_COPY_BYTES\\)\\)|if\\ max_files\\ <\\ 0\\ or\\ max_bytes\\ <\\ 0:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Project\\ copy\\ budgets\\ must\\ be\\ nonnegative\"\\}|if\\ \\(max_files\\ >\\ 0\\ and\\ int\\(state\\.files\\)\\ \\+\\ 1\\ >\\ max_files\\)\\ or\\ \\(max_bytes\\ >\\ 0\\ and\\ int\\(state\\.bytes\\)\\ \\+\\ size\\ >\\ max_bytes\\):)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Explicit trusted-copy file/byte budgets",
+      "rationale": "Owner-selected ceilings propagate unchanged; zero unbounded, negative rejected; trusted-source and sandbox checks remain."
+    },
+    {
+      "path": "scripts/windows_trusted_project_bridge.gd",
+      "pattern": "^\\s*(?:var\\ max_files\\ :=\\ int\\(args\\.get\\(\"max_files\",\\ MAX_COPY_FILES\\)\\)|var\\ max_bytes\\ :=\\ int\\(args\\.get\\(\"max_bytes\",\\ MAX_COPY_BYTES\\)\\)|if\\ max_files\\ <\\ 0\\ or\\ max_bytes\\ <\\ 0:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Project\\ copy\\ budgets\\ must\\ be\\ nonnegative\"\\}|if\\ \\(max_files\\ >\\ 0\\ and\\ int\\(state\\.files\\)\\ \\+\\ 1\\ >\\ max_files\\)\\ or\\ \\(max_bytes\\ >\\ 0\\ and\\ int\\(state\\.bytes\\)\\ \\+\\ size\\ >\\ max_bytes\\):)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Explicit trusted-copy file/byte budgets",
+      "rationale": "Owner-selected ceilings propagate unchanged; zero unbounded, negative rejected; trusted-source and sandbox checks remain."
+    },
+    {
+      "path": "scripts/project_index_client.gd",
+      "pattern": "^\\s*(?:func\\ index_project\\(root:\\ String,\\ max_files\\ :=\\ 30000,\\ force\\ :=\\ false\\)\\ \\->\\ Dictionary:|if\\ max_files\\ <\\ 0:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Index\\ file\\ budget\\ must\\ be\\ nonnegative\"\\}|\"root\":\\ _globalize\\(root\\),\\ \"max_files\":\\ max_files,\\ \"force\":\\ force)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private coordinator or explicit project-index budget",
+      "rationale": "Verified exact consumer propagation; no100000 silent ceiling, zero reaches service, negative input fails."
+    },
+    {
+      "path": "scripts/project_index_tool_bridge.gd",
+      "pattern": "^\\s*(?:return\\ await\\ index\\.index_project\\(path,\\ int\\(args\\.get\\(\"max_files\",\\ OwnerResourcePolicy\\.value\\(\"coordinator_index_files\"\\)\\)\\),\\ bool\\(args\\.get\\(\"force\",\\ false\\)\\)\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private coordinator or explicit project-index budget",
+      "rationale": "Verified exact consumer propagation; no100000 silent ceiling, zero reaches service, negative input fails."
+    },
+    {
+      "path": ".github/workflows/android-plugin-ci.yml",
+      "pattern": "^\\s*(?:\\-\\ name:\\ Test\\ interrupted\\ native\\ download\\ cleanup\\ and\\ retry\\ budget)\\s*$",
+      "class": "documentation",
+      "control": "Workflow step descriptions",
+      "rationale": "Reviewed display-only job labels; executable limits remain separately classified."
+    },
+    {
+      "path": ".github/workflows/core-android-benchmark.yml",
+      "pattern": "^\\s*(?:\\-\\ name:\\ Record\\ Android\\ packaging\\ capacity)\\s*$",
+      "class": "documentation",
+      "control": "Workflow step descriptions",
+      "rationale": "Reviewed display-only job labels; executable limits remain separately classified."
+    },
+    {
+      "path": ".github/workflows/core-benchmarks.yml",
+      "pattern": "^\\s*(?:\\-\\ name:\\ Verify\\ real\\ progress\\ stream,\\ budgets,\\ cancellation\\ and\\ persistence)\\s*$",
+      "class": "documentation",
+      "control": "Workflow step descriptions",
+      "rationale": "Reviewed display-only job labels; executable limits remain separately classified."
+    },
+    {
+      "path": ".github/workflows/integration-gate.yml",
+      "pattern": "^\\s*(?:\\-\\ name:\\ API\\ early\\ request\\ body\\ limit\\ contract|\\-\\ name:\\ API\\ public\\ authentication\\ rate\\ limit\\ contract)\\s*$",
+      "class": "documentation",
+      "control": "Workflow step descriptions",
+      "rationale": "Reviewed display-only job labels; executable limits remain separately classified."
+    },
+    {
+      "path": ".github/workflows/work-computer-reliability.yml",
+      "pattern": "^\\s*(?:\\-\\ name:\\ Work\\ whole\\-attempt\\ destructive\\ retry\\ smoke)\\s*$",
+      "class": "documentation",
+      "control": "Workflow step descriptions",
+      "rationale": "Reviewed display-only job labels; executable limits remain separately classified."
+    },
+    {
       "path": "scripts/public_web_manager.gd",
       "pattern": "^\\s*request\\.max_redirects = 0\\s*$",
       "class": "hard_boundary",

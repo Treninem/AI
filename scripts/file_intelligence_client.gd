@@ -294,6 +294,7 @@ func cancel_active_analysis() -> Dictionary:
 	return {"ok": true, "cancel_requested": false, "reason": "unsupported_platform"}
 
 func tree(path: String, max_items := 2000) -> Dictionary:
+	if max_items < 1: return {"ok": false, "error": "Directory item budget must be positive"}
 	if OS.get_name() == "Android":
 		if not path.begins_with("user://") or not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": false, "error": "Android directory tree is restricted to user://"}

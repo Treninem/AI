@@ -22,6 +22,13 @@ def runtime():
                      MAX_ARCHIVE_TEXT_MEMBER_BYTES=8*1024*1024, MAX_ARCHIVE_TEXT_TOTAL_BYTES=32*1024*1024,
                      MAX_ARCHIVE_LISTING_CHARS=40000, ARCHIVE_LISTING_PERCENT=25,
                      MAX_SPREADSHEET_CELLS=50000, MAX_XLS_ROWS=10000)
+    # Keep the extraction policy identical to the real service, without copying defaults.
+    import sys
+    sys.path.insert(0, str(ROOT / 'file_intelligence'))
+    import file_service
+    for name in ('MAX_PDF_BYTES', 'MAX_PDF_PAGES', 'MAX_OCR_PAGES', 'MAX_PDF_RENDER_PIXELS',
+                 'VIDEO_MAX_FRAMES', 'VIDEO_FRAME_INTERVAL_SECONDS', 'VIDEO_FRAME_MAX_WIDTH', 'VISION_IMAGE_MAX_WIDTH'):
+        namespace[name] = getattr(file_service, name)
     exec(compile(ast.Module(body=[text_extensions]+nodes, type_ignores=[]), 'file_intelligence/file_service.py', 'exec'), namespace)
     return namespace
 

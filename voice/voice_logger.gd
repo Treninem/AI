@@ -4,6 +4,7 @@ extends Node
 const LOG_DIR := "user://logs"
 const LOG_PATH := "user://logs/aurora_voice.log"
 const MAX_BYTES := 5 * 1024 * 1024
+var log_path := LOG_PATH
 
 func _ready() -> void:
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(LOG_DIR))
@@ -20,10 +21,10 @@ func _exit_tree() -> void:
 
 func write(kind: String, message: String) -> void:
 	# Do not log raw recognized speech, microphone buffers, TTS text or credentials.
-	var clean := _redact(message).replace("\r", " ").replace("\n", " ").substr(0, 1200)
-	var f := FileAccess.open(LOG_PATH, FileAccess.READ_WRITE)
+	var clean := OwnerResourcePolicy.clip(_redact(message).replace("\r", " ").replace("\n", " "), "voice_log_chars")
+	var f := FileAccess.open(log_path, FileAccess.READ_WRITE)
 	if f == null:
-		f = FileAccess.open(LOG_PATH, FileAccess.WRITE)
+		f = FileAccess.open(log_path, FileAccess.WRITE)
 	if f == null: return
 	f.seek_end()
 	f.store_line("%s [%s] %s" % [Time.get_datetime_string_from_system(true), kind, clean])
@@ -44,12 +45,14 @@ func _on_backend_event(event: Dictionary) -> void:
 		write(kind.to_upper(), str(event.get("message", event.get("error", ""))))
 
 func _rotate_if_needed() -> void:
-	var f := FileAccess.open(LOG_PATH, FileAccess.READ)
-	if f == null or f.get_length() <= MAX_BYTES: return
+	var cap := OwnerResourcePolicy.value("voice_log_bytes")
+	if cap == 0: return
+	var f := FileAccess.open(log_path, FileAccess.READ)
+	if f == null or f.get_length() <= cap: return
 	f.close()
-	var old := ProjectSettings.globalize_path(LOG_PATH + ".1")
-	if FileAccess.file_exists(LOG_PATH + ".1"): DirAccess.remove_absolute(old)
-	DirAccess.rename_absolute(ProjectSettings.globalize_path(LOG_PATH), old)
+	var old := ProjectSettings.globalize_path(log_path + ".1")
+	if FileAccess.file_exists(log_path + ".1"): DirAccess.remove_absolute(old)
+	DirAccess.rename_absolute(ProjectSettings.globalize_path(log_path), old)
 
 func _redact(text: String) -> String:
 	var lower := text.to_lower()

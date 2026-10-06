@@ -504,7 +504,7 @@ func _build_ui() -> void:
 	rename_input = LineEdit.new()
 	rename_input.name = "RenameChatInput"
 	rename_input.custom_minimum_size.y = 44
-	rename_input.max_length = 60
+	rename_input.max_length = OwnerResourcePolicy.value("chat_title_chars")
 	rename_input.placeholder_text = "Название чата"
 	_apply_input_style(rename_input)
 	rename_input.text_submitted.connect(func(_text): rename_dialog.get_ok_button().emit_signal("pressed"))
@@ -630,6 +630,7 @@ func _open_rename_chat(id: String, current_title: String) -> void:
 	if request_busy:
 		return
 	rename_target_id = id
+	rename_input.max_length = OwnerResourcePolicy.value("chat_title_chars")
 	rename_input.text = current_title
 	var viewport := get_viewport_rect().size
 	rename_dialog.size = Vector2i(clampi(int(viewport.x - 40.0), 360, 480), 190)

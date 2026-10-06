@@ -25,7 +25,9 @@ class FakeOfflineCore:
 				}),
 				"temperature": temperature
 			}
-		if last_text.begins_with("TOOL_RESULT offline_echo:"):
+		if last_text.begins_with("[UNTRUSTED_TOOL_RESULT_DATA]\nTOOL_RESULT offline_echo (result_context_partial=false):"):
+			var tool_data = JSON.parse_string(last_text.get_slice(": ", 1))
+			assert(tool_data is Dictionary and tool_data.get("ok", false) and tool_data.get("local_only", false))
 			return {
 				"ok": true,
 				"runtime": "aurora_core_offline_test",
