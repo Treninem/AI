@@ -6925,3 +6925,28 @@ DONE: owner key adoption explicit; prior authenticated S3 and raw package checks
 REMAINING:signed immutable publication and pinned trust/compatibility verification.
 BLOCKERS:none for adopted signer; future installed V1.6 device integration remains separate.
 NEXT:sign existing actual runtime/Core/Knowledge manifests with adopted key; publish via conditional API, verify exact remote signatures/chunks and complete journal evidence.
+
+
+## 2026-10-06 — Adopted V1.6 signer: real immutable signed publication completed
+
+CLAIM_ID:v1.6-s3-distribution-foundation-reg-ru-signing
+STATUS:DONE / HANDOFF_READY (distribution preparation only)
+STARTING_HEAD:48d9b3bcaa0ff66f374d3f17f3d2dce789fd9eff
+FINAL_HEAD:commit containing this append and independently pinned public PEM.
+OWNER_AUTHORIZATION:explicit adoption recorded in preceding ACTIVE entry; signer blocker RESOLVED. Historical blocked attempt remains historical, not retroactively successful.
+KEY_ID:aurorafox-v16-distribution-20261006
+PUBLIC_PEM_SHA256:653afae362d0d3de62884266db5a431149a8ff58b6b20615141978cfab7a80c3
+TRUST_PIN:distribution/trust/aurorafox-v16-distribution-20261006.pem; private key retained in owner-private backup outside Git/S3. No further key generated.
+DONE:actual Windows x86_64 llama.cpp b11146 runtime ZIP (19083555bytes;SHA256020aa800b5e98e5c4788b633e765495db3b82fa40e943fb7d6e6405c72c021af), Core Qwen3-1.7B GGUF (1282439264bytes;SHA256d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5), canonical full RU Knowledge (429588529bytes;SHA256bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614) have adopted Ed25519 signatures. All are channel=candidate, minimum AuroraFox1.6.0.0; READY means verified distribution bytes, not certified installed product.
+S3_REAL_ACCESS:YES;authenticated SigV4 endpoint s3.regru.cloud,regiondefault,existing private bucket aurorafox-distribution-treninem. Existing owner S3 credentials only; no rotation/public ACL/quota purchase.
+REAL_OBJECTS_UPLOADED:8new immutable objects:3identity reservations,3signed manifests,2canonical payloads(runtime/Core). Existing canonical Knowledge reused after exact remote verification. Prior44objects preserved; final52objects=35nonzero+17markers.
+TESTS:publisher verified local full hash before write; conditional IfNoneMatch=* identity/payload/manifest writes; actual remote 2runtime+77Core+103Knowledge chunk ranges and aggregate full SHA256 PASS; all3canonical signed manifest byte readbacks and Ed25519 verification PASS. Existing real API conditional200/412,range206/416 evidence remains PASS.
+COMPATIBILITY:Windows x86_64,V1.6,8GiBRAM,20GiBfree disk planner PASS; runtime precedes dependent Core; reserved_disk7223354312bytes. V1.5,AndroidARM64,1GiBRAM rejected required_profile_incompatible; low disk rejected insufficient_disk. Real S3 runtime cancellation retained verified16MiB chunk and resumed to exact full hash PASS. RAM floors are candidate policy, not measured device certification.
+SOURCE_ACCEPTANCE:unchanged tested source4b0c52d22d15d73521f80017d330eea77e96d0a5;50/50local PASS;Windows/LinuxCI37514648163SUCCESS,documented Windows2POSIXskips. No redundant CI claimed for docs/public PEM only.
+S3_CAPACITY:total10000000000bytes;used3196779739;free6803220261;used31.96779739%;live paginated current-object inventory. Noncurrent versions/incomplete multipart billing not included.
+V1.5_FILES_CHANGED:NONE;main,PR103,runtime/version/release trust roots untouched. No merge/release/tag/version bump.
+PROGRESS_COMPLETE:100% of isolated distribution preparation
+PROGRESS_REMAINING:0% of this claim
+BLOCKERS:none within this claim.
+HANDOFF_BOUNDARIES:installed Windows V1.6 integration/activation/offline chat and device resource benchmarks remain future runtime-owner acceptance; Android requires its own engine package. Optional OCR/TTS licensing and other optional models are not certified by these three manifests. Never use this preparation checkpoint as V1.6 release approval.
+NEXT:future V1.6 runtime owner adopts independently pinned public key and executes installed-device acceptance; preserve V1.5 isolation.

@@ -854,3 +854,9 @@
 - Root cause: conflated authorization to perform signatures and to read an existing S3 owner key with authorization to establish a new production distribution trust authority.
 - Prevention: before generating a production signing key, require an existing approved signer or an explicit owner decision adopting a new separate distribution key and custody; preserve V1.5 trust roots. A generic 'do it' or S3 credential approval does not override a stated no-key-creation constraint. Locally signed data is not trusted/released until that authority is approved.
 - Separate resolved API boundary: owner explicitly authorized reading the existing owner S3 key after review rejection. Authenticated SigV4 conditional write200/412 and range206/416 plus inventory succeeded with no key rotation/ACL change. Use only the approved bucket, suppress credential values, remove temporary credential copies.
+
+
+### AF-MEM-118 — Explicit existing-key adoption closes signer blocker (2026-10-06)
+- Owner explicitly adopted existing separate V1.6 Ed25519 key aurorafox-v16-distribution-20261006 and requested journal correction; AF-MEM-117 historical failure remains valid, current signer blocker is RESOLVED for this one key.
+- Independent public PEM pinned in distribution/trust; private custody outside Git/S3. Conditional signed publication and full remote chunk/SHA/signature readback PASS for genuine Windows runtime, Core and full Knowledge.
+- Separate distribution authenticity from installed product compatibility: candidate manifests and static planner PASS do not certify physical V1.6 devices or authorize V1.5 trust-root changes. Real cancellation/resume PASS; future runtime/device and optional-license boundaries explicitly handed off.
