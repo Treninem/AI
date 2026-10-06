@@ -31,5 +31,10 @@ def test_wrong_template_is_rejected_without_modification(tmp_path):
 
 def test_export_configures_installed_template_before_gradle_and_verifies_storage():
     source = (ROOT / "build/build_android.ps1").read_text()
-    assert source.index('--install-android-build-template') < source.index('tools/configure_android_export.py') < source.index('--export-release "Android"')
+    assert '--install-android-build-template --export-release "Android"' in source
+    plugin = (ROOT / "addons/AuroraFoxRuntime/export_plugin.gd").read_text()
+    assert 'func _export_begin(' in plugin
+    assert 'res://tools/android_core_assets.gradle' in plugin
+    assert 'res://android/build/build.gradle' in plugin
+    assert policy.MARKER in plugin
     assert '$archiveVerifier $apkPath --require-stored-core' in source

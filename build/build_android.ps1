@@ -199,13 +199,8 @@ try {
         if (Test-Path -LiteralPath $apkPath) {
             Remove-Item -LiteralPath $apkPath -Force
         }
-        & $Godot --headless --path $root --install-android-build-template
-        if ($LASTEXITCODE -ne 0) { throw "Android build template installation failed" }
-        $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
-        if (-not $python) { throw "Python is required for Android export configuration" }
-        & $python.Source (Join-Path $root "tools/configure_android_export.py") (Join-Path $root "android/build")
-        if ($LASTEXITCODE -ne 0) { throw "Android bundled Core asset configuration failed" }
-        & $Godot --headless --path $root --export-release "Android" $apkPath
+        # Export plugin configures GGUF storage after Godot installs the template.
+        & $Godot --headless --path $root --install-android-build-template --export-release "Android" $apkPath
         if ($LASTEXITCODE -ne 0) { throw "Android export failed" }
         if (-not (Test-Path -LiteralPath $apkPath)) { throw "Android APK was not produced" }
 

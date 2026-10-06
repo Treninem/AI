@@ -90,10 +90,11 @@ func get_active() -> Dictionary:
 	if active_workspace_id.is_empty() or not workspaces.has(active_workspace_id): return {}
 	return workspaces[active_workspace_id]
 
-func list_workspaces(limit := 30) -> Array:
+func list_workspaces(limit := -1) -> Array:
 	var values: Array = workspaces.values()
 	values.reverse()
-	return values.slice(0, mini(values.size(), limit))
+	var budget := OwnerResourcePolicy.value("sandbox_workspace_items") if limit < 0 else limit
+	return values if budget == 0 else values.slice(0, mini(values.size(), budget))
 
 func write_file(relative_path: String, content: String, area := "work") -> Dictionary:
 	var ws := get_active()
@@ -105,6 +106,7 @@ func write_file(relative_path: String, content: String, area := "work") -> Dicti
 		result = await _http_json(WINDOWS_SERVICE + "/sandbox/write", HTTPClient.METHOD_POST, {"path": "%s/%s/%s" % [ws.id, area, safe], "content": content})
 	else:
 		var path := "%s/%s/%s" % [ws.root, area, safe]
+		if _path_has_link(path): return {"ok": false, "error": "Workspace links are not writable"}
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
 		var f := FileAccess.open(path, FileAccess.WRITE)
 		if f == null: return {"ok": false, "error": "Cannot write file"}
@@ -113,33 +115,48 @@ func write_file(relative_path: String, content: String, area := "work") -> Dicti
 	if result.get("ok", false): _record("write", {"path": "%s/%s" % [area, safe], "bytes": content.to_utf8_buffer().size()})
 	return result
 
-func read_file(relative_path: String, area := "work", max_chars := 300000) -> Dictionary:
+func read_file(relative_path: String, area := "work", max_chars := -1) -> Dictionary:
+	max_chars = OwnerResourcePolicy.value("sandbox_read_chars") if max_chars == -1 else max_chars
+	if max_chars < 0: return {"ok": false, "error": "Read character budget must be nonnegative"}
+	var max_bytes := OwnerResourcePolicy.value("sandbox_read_bytes")
 	var ws := get_active()
 	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
 	var safe := _safe_relative(relative_path)
 	if safe.is_empty() or area not in ["input", "work", "output", "logs"]: return {"ok": false, "error": "Invalid workspace path"}
 	if OS.get_name() == "Windows":
-		var result := await _http_json(WINDOWS_SERVICE + "/sandbox/read?path=" + ("%s/%s/%s" % [ws.id, area, safe]).uri_encode(), HTTPClient.METHOD_GET)
-		if result.has("text"): result["content"] = str(result.get("text", "")).substr(0, max_chars)
+		var result := await _http_json(WINDOWS_SERVICE + "/sandbox/read?path=" + ("%s/%s/%s" % [ws.id, area, safe]).uri_encode() + "&max_bytes=%d" % max_bytes, HTTPClient.METHOD_GET)
+		if result.has("text"):
+			var text := str(result.get("text", ""))
+			result["content"] = text if max_chars == 0 else text.substr(0, max_chars)
+			result["truncated"] = max_chars > 0 and text.length() > max_chars
+			result.erase("text")
 		return result
 	var path := "%s/%s/%s" % [ws.root, area, safe]
+	if _path_has_link(path): return {"ok": false, "error": "Workspace links are not readable"}
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null: return {"ok": false, "error": "Cannot read file"}
-	return {"ok": true, "path": path, "content": f.get_as_text().substr(0, max_chars)}
+	if max_bytes > 0 and f.get_length() > max_bytes:
+		return {"ok": false, "error": "File exceeds owner byte budget", "limit_reached": true}
+	var data := f.get_buffer(max_bytes + 1 if max_bytes > 0 else f.get_length())
+	if max_bytes > 0 and data.size() > max_bytes:
+		return {"ok": false, "error": "File grew beyond owner byte budget", "limit_reached": true}
+	var text := data.get_string_from_utf8()
+	return {"ok": true, "path": path, "content": text if max_chars == 0 else text.substr(0, max_chars), "truncated": max_chars > 0 and text.length() > max_chars}
 
-func tree(area := "work", max_items := 1000) -> Dictionary:
+func tree(area := "work", max_items := -1) -> Dictionary:
+	max_items = OwnerResourcePolicy.value("sandbox_tree_items") if max_items == -1 else max_items
+	if max_items < 0: return {"ok": false, "error": "Tree budget must be nonnegative"}
 	var ws := get_active()
 	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
 	if area not in ["input", "work", "output", "logs", "snapshots"]: return {"ok": false, "error": "Invalid workspace area"}
 	if OS.get_name() == "Windows":
-		var result := await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/tree?workspace=%s&area=%s" % [str(ws.id).uri_encode(), area.uri_encode()], HTTPClient.METHOD_GET)
-		var items: Array = result.get("items", [])
-		if items.size() > max_items: result["items"] = items.slice(0, max_items)
+		var result := await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/tree?workspace=%s&area=%s&max_items=%d" % [str(ws.id).uri_encode(), area.uri_encode(), max_items], HTTPClient.METHOD_GET)
 		return result
 	var root := "%s/%s" % [ws.root, area]
 	var items: Array = []
-	_walk(root, "", items, max_items)
-	return {"ok": true, "root": root, "items": items}
+	var coverage := {"truncated": false, "failed": 0, "unsafe": 0}
+	_walk(root, "", items, max_items, coverage)
+	return {"ok": true, "root": root, "items": items, "truncated": coverage.truncated, "failed_paths": coverage.failed, "unsafe_paths_skipped": coverage.unsafe, "partial": coverage.truncated or coverage.failed > 0 or coverage.unsafe > 0}
 
 func snapshot(label := "checkpoint") -> Dictionary:
 	var ws := get_active()
@@ -171,8 +188,26 @@ func rollback(snapshot_ref: String) -> Dictionary:
 		var snapshot_path := "%s/snapshots/%s" % [ws.root, safe_snapshot]
 		if not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(snapshot_path)): return {"ok": false, "error": "Snapshot not found"}
 		var work_abs := ProjectSettings.globalize_path(ws.root + "/work")
-		_remove_children(work_abs)
-		result = _copy_tree(snapshot_path, ws.root + "/work")
+		if _path_has_link(snapshot_path) or _path_has_link(work_abs): return {"ok": false, "error": "Workspace links cannot be rolled back"}
+		var staged := _global_path(ws.root).path_join("rollback_stage_%d" % Time.get_ticks_usec())
+		var backup := staged + "_backup"
+		result = _copy_tree(snapshot_path, staged)
+		if not result.get("ok", false):
+			_remove_children(staged)
+			DirAccess.remove_absolute(staged)
+			return result # Current work remains untouched on any staging failure.
+		var move_error := DirAccess.rename_absolute(work_abs, backup)
+		if move_error != OK:
+			_remove_children(staged)
+			DirAccess.remove_absolute(staged)
+			return {"ok": false, "error": "Cannot preserve current workspace", "code": move_error}
+		move_error = DirAccess.rename_absolute(staged, work_abs)
+		if move_error != OK:
+			var restore_error := DirAccess.rename_absolute(backup, work_abs)
+			return {"ok": false, "error": "Cannot apply staged rollback", "code": move_error, "restore_code": restore_error, "recovery_backup": backup}
+		_remove_children(backup)
+		DirAccess.remove_absolute(backup)
+		result = {"ok": true, "snapshot": snapshot_ref}
 	if result.get("ok", false): _record("rollback", {"snapshot": snapshot_ref})
 	return result
 
@@ -248,7 +283,8 @@ func _record(kind: String, details: Dictionary) -> void:
 	var item: Dictionary = workspaces[active_workspace_id]
 	var events: Array = item.get("events", [])
 	events.append({"time": Time.get_datetime_string_from_system(true), "kind": kind, "details": details})
-	if events.size() > 300: events = events.slice(events.size() - 300)
+	var event_budget := OwnerResourcePolicy.value("sandbox_event_items")
+	if event_budget > 0 and events.size() > event_budget: events = events.slice(events.size() - event_budget)
 	item["events"] = events
 	item["last_event"] = kind
 	workspaces[active_workspace_id] = item
@@ -261,25 +297,50 @@ func _safe_relative(path: String) -> String:
 	if p.is_empty() or p.contains("../") or p == ".." or p.contains(":"): return ""
 	return p
 
-func _walk(root: String, rel: String, out: Array, max_items: int) -> void:
-	if out.size() >= max_items: return
+func _path_has_link(path: String) -> bool:
+	var absolute := _global_path(path).simplify_path()
+	var root := _global_path(ROOT_PATH).simplify_path()
+	if absolute != root and not absolute.begins_with(root + "/"): return true
+	var current := root
+	var root_parent := DirAccess.open(root.get_base_dir())
+	if root_parent != null and root_parent.is_link(root.get_file()): return true
+	for part in absolute.trim_prefix(root).trim_prefix("/").split("/", false):
+		var parent := DirAccess.open(current)
+		if parent == null: return false # Missing destinations may be created by write/copy.
+		if parent.is_link(part): return true
+		current = current.path_join(part)
+	return false
+
+func _walk(root: String, rel: String, out: Array, max_items: int, coverage: Dictionary = {}) -> void:
 	var path := root if rel.is_empty() else root + "/" + rel
+	if _path_has_link(path):
+		coverage["unsafe"] = int(coverage.get("unsafe", 0)) + 1
+		return
 	var dir := DirAccess.open(path)
-	if dir == null: return
+	if dir == null:
+		coverage["failed"] = int(coverage.get("failed", 0)) + 1
+		return
 	dir.list_dir_begin()
 	var name := dir.get_next()
-	while name != "" and out.size() < max_items:
+	while name != "":
 		if name not in [".", ".."]:
-			var child_rel := name if rel.is_empty() else rel + "/" + name
-			var is_dir := dir.current_is_dir()
-			out.append({"path": child_rel, "dir": is_dir})
-			if is_dir: _walk(root, child_rel, out, max_items)
+			if dir.is_link(name):
+				coverage["unsafe"] = int(coverage.get("unsafe", 0)) + 1
+			elif max_items > 0 and out.size() >= max_items:
+				coverage["truncated"] = true
+				break
+			else:
+				var child_rel := name if rel.is_empty() else rel + "/" + name
+				var is_dir := dir.current_is_dir()
+				out.append({"path": child_rel, "dir": is_dir})
+				if is_dir: _walk(root, child_rel, out, max_items, coverage)
 		name = dir.get_next()
 	dir.list_dir_end()
 
 func _copy_tree(source: String, dest: String) -> Dictionary:
 	var src_abs := _global_path(source)
 	var dst_abs := _global_path(dest)
+	if _path_has_link(src_abs) or _path_has_link(dst_abs): return {"ok": false, "error": "Workspace links are not copied"}
 	DirAccess.make_dir_recursive_absolute(dst_abs)
 	var dir := DirAccess.open(src_abs)
 	if dir == null: return {"ok": false, "error": "Cannot open source tree"}
@@ -287,6 +348,7 @@ func _copy_tree(source: String, dest: String) -> Dictionary:
 	var name := dir.get_next()
 	while name != "":
 		if name not in [".", ".."]:
+			if dir.is_link(name): return {"ok": false, "error": "Workspace links are not copied"}
 			var s := src_abs.path_join(name)
 			var d := dst_abs.path_join(name)
 			if dir.current_is_dir():
@@ -300,6 +362,7 @@ func _copy_tree(source: String, dest: String) -> Dictionary:
 	return {"ok": true}
 
 func _remove_children(abs_path: String) -> void:
+	if _path_has_link(abs_path): return
 	var dir := DirAccess.open(abs_path)
 	if dir == null: return
 	dir.list_dir_begin()
@@ -307,7 +370,7 @@ func _remove_children(abs_path: String) -> void:
 	while name != "":
 		if name not in [".", ".."]:
 			var full := abs_path.path_join(name)
-			if dir.current_is_dir():
+			if dir.current_is_dir() and not dir.is_link(name):
 				_remove_children(full)
 				DirAccess.remove_absolute(full)
 			else:
@@ -340,6 +403,9 @@ func _redact_command(command: Array) -> Array:
 	return out
 
 func _write_json(path: String, value: Variant) -> void:
+	if _path_has_link(path):
+		push_error("Workspace links are not writable")
+		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(path.get_base_dir()))
 	var f := FileAccess.open(path, FileAccess.WRITE)
 	if f != null: f.store_string(JSON.stringify(value, "  "))
@@ -348,6 +414,7 @@ func _save_index() -> void:
 	_write_json(INDEX_PATH, {"active": active_workspace_id, "workspaces": workspaces})
 
 func _load_index() -> void:
+	if _path_has_link(INDEX_PATH): return
 	var f := FileAccess.open(INDEX_PATH, FileAccess.READ)
 	if f == null: return
 	var parsed = JSON.parse_string(f.get_as_text())

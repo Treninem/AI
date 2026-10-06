@@ -137,6 +137,12 @@ jobs:
           echo "GODOT=$GODOT" >> "$GITHUB_ENV"
           "$GODOT" --version
 
+      - name: Prove Android Core asset export hook
+        shell: bash
+        run: |
+          timeout 90s "$GODOT" --headless --editor --path . --quit
+          timeout 30s "$GODOT" --headless --editor --path . --script tests/android_asset_export_hook_smoke.gd
+
       - name: Resolve canonical AuroraFox version
         id: version
         shell: bash

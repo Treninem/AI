@@ -489,20 +489,39 @@ def _container_profile(command: list[str]) -> tuple[str, list[str]]:
     return image, command
 
 
-def _tree(root: Path, max_items: int = 2000) -> list[dict[str, Any]]:
+def _tree(root: Path, max_items: int = 2000, coverage: dict | None = None) -> list[dict[str, Any]]:
+    if max_items < 0:
+        raise HTTPException(400, "Tree budget must be nonnegative")
     items: list[dict[str, Any]] = []
+    coverage = coverage if coverage is not None else {}
+    coverage.update(truncated=False, failed_paths=0, unsafe_paths_skipped=0)
     if not root.exists():
         return items
-    for path in root.rglob("*"):
-        if len(items) >= max_items:
-            break
-        try:
-            resolved = path.resolve(strict=False)
-            if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
+    def failed(_error):
+        coverage["failed_paths"] += 1
+    for current, dirs, files in os.walk(root, followlinks=False, onerror=failed):
+        base = Path(current)
+        retained = []
+        for name in dirs:
+            path = base / name
+            if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
+                coverage["unsafe_paths_skipped"] += 1
                 continue
-            items.append({"path": path.relative_to(root).as_posix(), "dir": path.is_dir(), "size": path.stat().st_size if path.is_file() else 0})
-        except OSError:
-            continue
+            retained.append(name)
+        dirs[:] = retained
+        for name in retained + files:
+            path = base / name
+            try:
+                if path.is_symlink() or not path.resolve(strict=True).is_relative_to(root):
+                    coverage["unsafe_paths_skipped"] += 1
+                    continue
+                if max_items > 0 and len(items) >= max_items:
+                    coverage["truncated"] = True
+                    return items
+                st = path.stat()
+                items.append({"path": path.relative_to(root).as_posix(), "dir": path.is_dir(), "size": st.st_size if path.is_file() else 0})
+            except OSError:
+                coverage["failed_paths"] += 1
     return items
 
 
@@ -633,10 +652,12 @@ def workspace_create(req: WorkspaceCreateRequest, x_aurorafox_computer_token: st
 
 
 @app.get("/sandbox/workspace/tree")
-def workspace_tree(workspace: str, area: str = "work", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def workspace_tree(workspace: str, area: str = "work", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None), max_items: int = 2000) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(workspace)
     if area not in {"input", "work", "output", "logs", "snapshots"}: raise HTTPException(status_code=400, detail="Invalid workspace area")
-    return {"ok": True, "workspace": wid, "area": area, "items": _tree(_safe_sandbox_path(f"{wid}/{area}"))}
+    coverage = {}
+    items = _tree(_safe_sandbox_path(f"{wid}/{area}"), max_items, coverage)
+    return {"ok": True, "workspace": wid, "area": area, "items": items, **coverage, "partial": any(coverage.values())}
 
 
 @app.post("/sandbox/workspace/snapshot")
@@ -674,11 +695,15 @@ def sandbox_list(path: str = ".", x_aurorafox_computer_token: str | None = Heade
 
 
 @app.get("/sandbox/read")
-def sandbox_read(path: str, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def sandbox_read(path: str, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None), max_bytes: int = MAX_READ_BYTES) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); p = _safe_sandbox_path(path, must_exist=True)
     if not p.is_file(): raise HTTPException(status_code=404, detail="File not found")
-    data = p.read_bytes()
-    if len(data) > MAX_READ_BYTES: raise HTTPException(status_code=413, detail="File too large")
+    if max_bytes < 0: raise HTTPException(400, "Read byte budget must be nonnegative")
+    if max_bytes > 0 and p.stat().st_size > max_bytes:
+        raise HTTPException(413, "File exceeds owner byte budget")
+    with os.fdopen(os.open(p, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), "rb") as source:
+        data = source.read(max_bytes + 1) if max_bytes > 0 else source.read()
+    if max_bytes > 0 and len(data) > max_bytes: raise HTTPException(413, "File grew beyond owner byte budget")
     try: return {"ok": True, "text": data.decode("utf-8")}
     except UnicodeDecodeError: return {"ok": True, "base64": base64.b64encode(data).decode("ascii")}
 

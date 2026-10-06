@@ -3,13 +3,7 @@ from pathlib import Path
 import argparse
 
 MARKER = "apply from: 'aurorafox_assets.gradle'"
-ASSET_POLICY = """// AuroraFox: quantized Core is already dense; store it directly in the APK.
-android {
-    androidResources {
-        noCompress += ['gguf']
-    }
-}
-"""
+ASSET_POLICY = Path(__file__).with_name("android_core_assets.gradle").read_text(encoding="utf-8")
 
 
 def configure(template: Path) -> None:

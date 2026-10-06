@@ -24,6 +24,34 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	var _xls_dependency := "org.apache.poi:poi:5.5.1"
 	var _jitpack_repo := "https://jitpack.io"
 
+	func _export_begin(features: PackedStringArray, _debug: bool, _path: String, _flags: int) -> void:
+		if not features.has("Android"): return
+		# Coupled CLI installation precedes this hook. Configure the final app,
+		# not only the plugin AAR, before AGP compresses the bundled Core.
+		var build_path := "res://android/build/build.gradle"
+		var source := FileAccess.get_file_as_string(build_path)
+		if not source.contains("com.android.application"):
+			push_error("AuroraFox: installed Android application template is missing")
+			return
+		var policy := FileAccess.get_file_as_string("res://tools/android_core_assets.gradle")
+		if policy.is_empty():
+			push_error("AuroraFox: Android Core asset policy is missing")
+			return
+		var policy_file := FileAccess.open("res://android/build/aurorafox_assets.gradle", FileAccess.WRITE)
+		if policy_file == null:
+			push_error("AuroraFox: cannot write Android Core asset policy")
+			return
+		policy_file.store_string(policy)
+		policy_file.close()
+		var marker := "apply from: 'aurorafox_assets.gradle'"
+		if not source.contains(marker):
+			var build_file := FileAccess.open(build_path, FileAccess.WRITE)
+			if build_file == null:
+				push_error("AuroraFox: cannot configure Android application assets")
+				return
+			build_file.store_string(source + "\n" + marker + "\n")
+			build_file.close()
+
 	func _supports_platform(platform) -> bool:
 		return platform is EditorExportPlatformAndroid
 

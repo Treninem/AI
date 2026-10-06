@@ -61,6 +61,12 @@ class IsolatedCoordinator extends AuroraAutonomousCoordinator:
 	func _save_state() -> void:
 		pass
 
+class IsolatedSandbox extends SandboxManager:
+	func _save_index() -> void:
+		pass
+	func _write_json(_path: String, _value: Variant) -> void:
+		pass
+
 func _initialize() -> void:
 	call_deferred("_run")
 
@@ -587,5 +593,97 @@ func _run() -> void:
 	OwnerResourcePolicy._cached = index_original
 	OwnerResourcePolicy.revision += 1
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	if OS.get_name() != "Windows":
+		var sandbox_policy := OwnerResourcePolicy._cached.duplicate()
+		for sandbox_key in ["sandbox_read_bytes", "sandbox_read_chars", "sandbox_tree_items", "sandbox_workspace_items", "sandbox_event_items"]:
+			var sandbox_setting := {}
+			sandbox_setting[sandbox_key] = 0
+			assert(OwnerResourcePolicy.save(sandbox_setting, path) == OK)
+			assert(OwnerResourcePolicy.limits(path)[sandbox_key] == 0)
+			sandbox_setting[sandbox_key] = 10001
+			assert(OwnerResourcePolicy.save(sandbox_setting, path) == OK)
+			assert(OwnerResourcePolicy.limits(path)[sandbox_key] == 10001)
+		DirAccess.remove_absolute(_absolute(path))
+		var sandbox := IsolatedSandbox.new()
+		var sandbox_root := "user://sandboxes/owner_fixture_%d" % Time.get_ticks_usec()
+		DirAccess.make_dir_recursive_absolute(_absolute(sandbox_root + "/work"))
+		sandbox.active_workspace_id = "fixture"
+		sandbox.workspaces["fixture"] = {"id": "fixture", "root": sandbox_root, "events": []}
+		for i in range(3):
+			var file := FileAccess.open(sandbox_root + "/work/%d.txt" % i, FileAccess.WRITE)
+			file.store_string("sample-content")
+			file.close()
+		OwnerResourcePolicy._cached.sandbox_tree_items = 2
+		var sandbox_tree: Dictionary = await sandbox.tree()
+		assert(sandbox_tree.items.size() == 2 and sandbox_tree.truncated)
+		var exact_tree: Dictionary = await sandbox.tree("work", 3)
+		assert(exact_tree.items.size() == 3 and not exact_tree.truncated)
+		OwnerResourcePolicy._cached.sandbox_tree_items = 0
+		var all_tree: Dictionary = await sandbox.tree()
+		assert(all_tree.items.size() == 3 and not all_tree.partial)
+		OwnerResourcePolicy._cached.sandbox_read_chars = 2
+		var clipped_read: Dictionary = await sandbox.read_file("0.txt")
+		assert(clipped_read.content == "sa" and clipped_read.truncated)
+		OwnerResourcePolicy._cached.sandbox_read_chars = 0
+		var full_read: Dictionary = await sandbox.read_file("0.txt")
+		assert(full_read.content == "sample-content" and not full_read.truncated)
+		OwnerResourcePolicy._cached.sandbox_read_bytes = 2
+		var denied_read: Dictionary = await sandbox.read_file("0.txt")
+		assert(not denied_read.ok and denied_read.limit_reached)
+		OwnerResourcePolicy._cached.sandbox_read_bytes = 0
+		var unlimited_read: Dictionary = await sandbox.read_file("0.txt")
+		assert(unlimited_read.ok and unlimited_read.content == "sample-content")
+		OwnerResourcePolicy._cached.sandbox_event_items = 2
+		for i in range(3): sandbox._record("fixture", {"id": i})
+		assert(sandbox.get_active().events.size() == 2 and sandbox.get_active().events[0].details.id == 1)
+		OwnerResourcePolicy._cached.sandbox_event_items = 0
+		sandbox._record("fixture", {"id": 3})
+		assert(sandbox.get_active().events.size() == 3)
+		OwnerResourcePolicy._cached.sandbox_workspace_items = 0
+		assert(sandbox.list_workspaces().size() == 1)
+		var checkpoint: Dictionary = await sandbox.snapshot()
+		assert(checkpoint.ok)
+		var rewritten: Dictionary = await sandbox.write_file("0.txt", "changed")
+		assert(rewritten.ok)
+		var rolled_back: Dictionary = await sandbox.rollback(str(checkpoint.snapshot))
+		assert(rolled_back.ok)
+		var restored_read: Dictionary = await sandbox.read_file("0.txt")
+		assert(restored_read.content == "sample-content")
+		if OS.get_name() == "Linux":
+			var external_root := "user://sandbox_private_fixture_%d" % Time.get_ticks_usec()
+			DirAccess.make_dir_recursive_absolute(_absolute(external_root))
+			var private_file := FileAccess.open(external_root + "/secret", FileAccess.WRITE)
+			private_file.store_string("PRIVATE_OUTSIDE")
+			private_file.close()
+			var command_output: Array = []
+			assert(OS.execute("ln", PackedStringArray(["-s", _absolute(external_root), _absolute(sandbox_root + "/work/link")]), command_output) == 0)
+			var linked_tree: Dictionary = await sandbox.tree()
+			assert(linked_tree.unsafe_paths_skipped == 1 and linked_tree.partial and linked_tree.items.size() == 3)
+			var linked_read: Dictionary = await sandbox.read_file("link/secret")
+			assert(not linked_read.ok)
+			var linked_write: Dictionary = await sandbox.write_file("link/secret", "overwrite")
+			assert(not linked_write.ok)
+			# A hostile snapshot must fail before removing any current work.
+			var hostile_snapshot := sandbox_root + "/snapshots/hostile"
+			DirAccess.make_dir_recursive_absolute(_absolute(hostile_snapshot))
+			assert(OS.execute("ln", PackedStringArray(["-s", _absolute(external_root), _absolute(hostile_snapshot + "/link")]), command_output) == 0)
+			var denied_rollback: Dictionary = await sandbox.rollback("hostile")
+			assert(not denied_rollback.ok)
+			var retained_read: Dictionary = await sandbox.read_file("0.txt")
+			assert(retained_read.content == "sample-content")
+			sandbox._remove_children(_absolute(sandbox_root))
+			assert(FileAccess.get_file_as_string(external_root + "/secret") == "PRIVATE_OUTSIDE")
+			DirAccess.remove_absolute(_absolute(external_root + "/secret"))
+			DirAccess.remove_absolute(_absolute(external_root))
+		else:
+			sandbox._remove_children(_absolute(sandbox_root))
+		DirAccess.remove_absolute(_absolute(sandbox_root))
+		sandbox.android_runtime.free()
+		sandbox.free()
+		OwnerResourcePolicy._cached = sandbox_policy
+		OwnerResourcePolicy.revision += 1
 	print("AURORA_OWNER_RESOURCE_LIMITS_OK")
 	quit(0)
+
+func _absolute(path: String) -> String:
+	return ProjectSettings.globalize_path(path)

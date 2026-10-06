@@ -3,6 +3,12 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"sandbox_read_bytes": 5000000,
+	"sandbox_read_chars": 300000,
+	"sandbox_tree_items": 1000,
+	"sandbox_workspace_items": 30,
+	"sandbox_event_items": 300,
+
 	"project_index_source_bytes": 4194304,
 	"project_index_file_symbols": 500,
 	"project_index_search_results": 100,
@@ -154,6 +160,12 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"sandbox_read_bytes": "Песочница: байтов чтения (0 = без лимита)",
+	"sandbox_read_chars": "Песочница: символов чтения (0 = все)",
+	"sandbox_tree_items": "Песочница: элементов дерева (0 = все)",
+	"sandbox_workspace_items": "Песочница: рабочих сред в списке (0 = все)",
+	"sandbox_event_items": "Песочница: событий истории (0 = все)",
+
 	"project_index_source_bytes": "Индекс проекта: байт одного исходника",
 	"project_index_file_symbols": "Индекс проекта: символов на файл",
 	"project_index_search_results": "Индекс проекта: предел результатов поиска",

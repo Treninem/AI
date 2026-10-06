@@ -6972,3 +6972,46 @@ REMAINING:next exact-SHA full CI/package/native installed-format acceptance, rem
 BLOCKERS:none prevents authorized independent source development. Current568APK and contract gates fail as documented; fixes require next coherent exact-SHA execution. Physical/production-signing boundaries are not waived.
 NEXT:publish coherent package, collect full new-SHA CI reds together while continuing remaining in-scope audit/source work.
 OWNERSHIP:index block stays CI_PENDING under this claim; coordinator continues remaining unclaimedV1.5CRITICAL paths.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Work/Computer sandbox baseline, owner controls, truthful bounded file processing
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 invariants unchanged
+STARTING_HEAD:0a7cd1bd10d352f864d0e99cdf297510d38df105
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:scripts/{sandbox_manager,sandbox_tool_bridge,owner_resource_policy}.gd;computer/computer_service.py;tests/owner_resource_limits_smoke.gd;tests/*sandbox* relevant regressions;config/owner_control_policy.json exact reviewed classifications;master/memory append-only
+DEPENDENCIES:reconcile sandbox paths with recovery coordinator; no competing current runtime owner. Fresh main446ce2cd2f979a8ab228f63d090062e8ba48a6eb fetched, already ancestor. Index/package0a7cd1b published tree44df1e3e1e4cf97f284eb306866ffcfff55537ab; its exact-SHA CI pending. Native568 prior CI37SUCCESS/4SKIPPED/2FAILURE/1IN_PROGRESS at snapshot; failures addressed in0a7.
+NON_BLOCKERS:parallel S3/V1.6; future public accounts/cognition; this block does not alter process-execution authorization, isolation, retry/master-stop or signing boundaries
+ACCEPTANCE_GATES:real local workspace files demonstrate raised/zero read/tree/history limits, exact-fit versus actual overflow; service/client/tool parity; byte read bounded before allocation on Windows service; symlink traversal/copy/removal protection; real filesystem regressions and Godot integration; coherent exact-SHA full CI
+CONFIRMED_DEFECTS:SandboxManager silently clips read300000/tree1000/events300, read0 empties content/tree0 hides all and no truncation metadata. Windows tree service silently caps2000 with no request propagation; sandbox_read reads entire bytes before5MB check. Local recursive copy/remove/tree follow directory links. Preserve all existing defaults and hard authorization/isolation invariants while fixing operational coverage.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:one coherent sandbox source/test/privacy/owner package while new package CI runs.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER owns .github/workflows/work-computer-reliability.yml to execute new authenticated filesystem bounds/privacy regressions on Linux and Windows. Local rollback additionally stages before rename and restores backup if application fails; current work must remain untouched on a failed or linked snapshot. Existing auth errors401(missing channel token)/400(path escape) retained; new test expectations aligned to actual existing contracts rather than changing service boundaries.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER owns build/build_android.ps1;addons/AuroraFoxRuntime/export_plugin.gd;tools/configure_android_export.py;tools/android_core_assets.gradle;tests/test_android_export_assets.py for exact0a7 APK112555558672 early contract rejection. Official Godot4.7.1 main.cpp applies installation only when an export preset exists; standalone --quit would exit without installing. Restore required coupled install/export and configure GGUF policy inside existing EditorExportPlugin._export_begin, after EditorNode installs template and before Gradle export. Existing tests/test_android_contract.py remains unchanged; do not weaken it. Shared policy file keeps Python idempotence regressions aligned.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER additionally owns tests/android_asset_export_hook_smoke.gd and .github/workflows/android-apk-artifact.yml for actual Godot export-hook execution before heavy APK build. Real local Godot EditorExportPlugin invocation has passed idempotent template/policy writes and restores fixture files; this is not a full Android export result.
+
+### SOURCE_IMPLEMENTED / CI_PENDING — sandbox coverage, safe local rollback and real export hook
+CLAIM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER
+STARTING_HEAD:0a7cd1bd10d352f864d0e99cdf297510d38df105
+ACTION:five private sandbox read byte/character/tree/workspace/event owner defaults propagate through client/tool/Windows service. Zero means unlimited; real extra item proves tree overflow and local/remote clipping is visible. Windows service denies oversized stat before open, probes actual read growth with budget+1. Local links excluded from tree and read/write/copy/index/recursive cleanup. Local rollback stages before swapping work/backup and restores backup if application fails, exposing restoration status/recovery path rather than falsely claiming success.
+OBSERVED_CI_FIX:0a7 APK112555558672 failed original coupled-install contract. Official Godot4.7.1 source proves standalone install flag has no effect without an export preset. Restore coupled --install-android-build-template --export-release; existing AndroidExportPlugin._export_begin configures installed application template using shared GGUF-only policy before Gradle. Original test_android_contract unchanged and passing; actual APK ZIP_STORED verifier remains required. Added real Godot editor-hook regression to APK CI, new authenticated service filesystem regressions to Linux/Windows Computer CI.
+TESTS:124PythonPASS+3subtests with real authenticated filesystem read5000001bytes/tree2001files, privacy, existing Computer authorization/idempotency/crash/concurrency/network contracts, SQLite owner coverage, ZIP storage and Android/version/package contracts;1Starlette/AnyIO deprecation warning. Actual official Godot4.7.1 owner smoke PASS (save/reload raised/zero sandbox settings, exact tree/extra, read byte/character, event retention, staged rollback, hostile links preserving current/external files); existing20ObjectDB/8resource exit diagnostics retained. Actual EditorExportPlugin hook assertions PASS with idempotent source/policy writes/restoration, editor fixture209ObjectDB/Canvas/RID exit diagnostics retained; not APK/device acceptance. Canonical Android contract V1.4.1.1/code100007 PASS. diff--check PASS.
+EXACT_0A7_CI:43checks snapshot35SUCCESS+3SKIPPED+1FAILURE+4IN_PROGRESS. FailedAPK112555558672 fixed locally as above; real-normal-path Android112555714999/native probe112555603588/plugin112555558172 and late contract112558255878 pending, not PASS. No waiting/blanket CI-success claim.
+INVENTORY:1343unclassified/1337test_evidence/574owner_adjustable/343format_structure/61documentation/22hard_boundary;complete:false.93exact reviewed index/sandbox owner lines classified with full-line anchored patterns; untouched execution/transport/metadata limits remain open. New code/test findings keep count dynamic, not a readiness proxy.
+PRODUCED_COMMIT:actual CAS SHA will be recorded in next coherent block.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:source/test/journal sandbox and observed export repair package complete locally; previously published native568 and index0a7 are durable.
+REMAINING:next-SHA full CI/native installed APK/package acceptance; remaining current CRITICAL source owner controls/inventory and canonical physical/update/release gates.
+BLOCKERS:none stops independent authorized source work. Existing0a7APK contract failure requires next exact-SHA verification; physical/production-release identity gates remain open and unwaived.
+NEXT:publish coherent package, continue remaining current operational limits while collecting full next-SHA CI reds together; preserve version-last and independent S3 lane.
+OWNERSHIP:this claim stays CI_PENDING; source paths released for coordinator takeover after publication, no duplicate independent native/index work.
