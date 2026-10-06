@@ -6245,3 +6245,42 @@ DONE: owner no-buy-now decision, local-first bootstrap/distribution architecture
 REMAINING: implementation intentionally deferred until the relevant roadmap/release milestone.
 BLOCKERS: none; no paid infrastructure required now.
 NEXT: continue current V1.5 critical path. Revisit distribution infrastructure only when the signed bootstrap/package-distribution capability or real public/load evidence reaches one of the triggers above.
+
+
+### OWNER INFRASTRUCTURE ADDENDUM 2026-10-06 — existing S3 10 GB available
+
+Owner reports an already-available **10 GB S3/object-storage allocation**.
+
+This changes the future distribution plan as follows:
+
+- **No S3 purchase is required now.**
+- The existing 10 GB S3 allocation is the preferred first storage target for signed AuroraFox distribution artifacts when the Model/Knowledge Distribution Service is implemented.
+- The current API VPS remains the control plane; heavy immutable artifacts should be placed in S3 rather than on the API VPS filesystem.
+- Normal Core inference remains local/self-primary.
+
+Current repository evidence for sizing:
+- `knowledge_pack/production_pack.json` pins the production Knowledge artifact at **429,588,529 bytes compressed**;
+- its genuine unpacked content is **1,924,345,221 bytes** across 60 shards;
+- therefore the existing 10 GB S3 allocation is already sufficient for early distribution experiments and multiple small/medium signed artifacts, subject to the actual Core/capability package sizes available at implementation time.
+
+Operational storage rule:
+- do not plan to consume the full 10 GB;
+- preserve practical headroom for side-by-side old/new packages, staged rollout and rollback;
+- treat roughly **70–75% sustained occupancy** as the review point rather than waiting for 100% full;
+- before adding capacity, first prune superseded unneeded artifacts according to retention policy while preserving all rollback/release-required versions.
+
+Revised object-storage purchase trigger:
+1. first use the existing 10 GB S3 allocation;
+2. measure real artifact sizes + expected beta/public download needs;
+3. request additional paid storage only when accepted package retention plus rollout/rollback headroom cannot fit safely, or traffic/egress characteristics require a different tier.
+
+The assistant/coordinator must remind the owner before any paid storage expansion and provide:
+- current used/free S3 capacity;
+- exact retained package set;
+- expected next release/package sizes;
+- minimum required headroom;
+- recommended next capacity/tier.
+
+No current purchase or upgrade action is required.
+
+S3_EXISTING_CAPACITY_STATUS: AVAILABLE_10_GB / USE_FIRST / NO_PURCHASE_NOW.
