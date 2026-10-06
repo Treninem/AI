@@ -5713,3 +5713,90 @@ Visuals:
 - safety-sensitive voice commands still require the same confirmation/trust policy as text commands.
 
 FINAL_UI_UX_CONTRACT_STATUS: ACTIVE / CANONICAL / RELEASE-GATING FOR IN-SCOPE SURFACES.
+
+
+### OWNER ROADMAP RULE 2026-10-06 — multimodal capabilities must not delay V1.6 or V1.7
+
+Owner decision: image/video creation is important and must enter AuroraFox early enough to participate in learning, but **must not expand V1.6.0.0 or V1.7.0.0 into indefinite releases**.
+
+Architecture authority: `docs/adr/ADR-0001-nonblocking-multimodal-capabilities.md`.
+
+#### Permanent sequencing rule
+
+- V1.5.0.0 keeps its current stabilization/release scope. Heavy image/video generation is **not** added as a new V1.5 blocker.
+- V1.6.0.0 adds only the **small shared multimodal foundation** required so Cognitive Core will never need reconstruction later:
+  - `MediaIntent`;
+  - `ArtifactSpec`;
+  - capability/provider discovery;
+  - provider/model/resource profile;
+  - `MediaJob`;
+  - `MediaOutcome`;
+  - Cognitive Event / provenance / Experience compatibility;
+  - deterministic mock-provider contract tests.
+- V1.6.0.0 does **not** wait for a production diffusion/video model. Missing generator provider means that capability is unavailable, not that Cognitive Core is incomplete.
+- V1.6.1.0 connects Experience & Learning to media outcomes so Fox can learn provider/model/workflow choice, visual quality, user preferences and successful repair strategies.
+- Concrete image-generation/editing providers may become available as soon as they pass their own signed capability acceptance. They are not allowed to hold the V1.6.1 core-learning release hostage.
+- V1.6.2.0 connects non-private media lessons and cross-device artifact/job metadata to Shared/Distributed Cognition where appropriate. Raw private media/prompts remain private.
+- V1.7.0.0 proceeds on the accepted cognitive/experience foundation and adds autonomous capability selection, benchmarking, dynamic trust, evaluation and self-improving media workflows.
+- Full video generation/editing is **not a V1.7.0.0 blocker** unless owner explicitly promotes it into that exact release scope.
+- Concrete image/video runtimes are signed owner-controlled **capability providers/assets**, not separate Fox products and not separate AI identities.
+
+#### Capability abstraction
+
+Cognitive Core reasons in stable capabilities, not product/model names:
+
+`vision.analyze`
+`image.generate`
+`image.edit`
+`image.image_to_image`
+`image.inpaint`
+`image.outpaint`
+`image.upscale`
+`image.background_remove`
+`video.generate`
+`video.image_to_video`
+`video.edit`
+`video.compose`
+`video.render`
+`audio.analyze`
+`audio.edit`
+
+A specific model/runtime is only a provider implementing one or more capabilities.
+
+This permits a provider to be replaced without redesigning Cognitive Core.
+
+#### Self-learning boundary
+
+AuroraFox is not expected to invent an image/video generation algorithm from nothing.
+
+AuroraFox **is** expected to learn how to use available media capabilities better:
+- which installed provider/model is strongest for a goal;
+- which parameters/resource profile work;
+- when to use direct generation vs image-to-image/inpainting;
+- how many candidates are worth generating;
+- how to visually evaluate and repair output;
+- user-specific style/composition preferences;
+- which media workflows repeatedly succeed/fail;
+- how a new provider compares to accepted providers.
+
+New provider lifecycle:
+
+`discover -> signature/compatibility verification -> sandbox benchmark -> capability profile -> limited use -> outcome learning -> trusted routing`.
+
+#### Non-delay development rule
+
+Media work runs as a **parallel lane on shared contracts**, not as a new prerequisite chain in front of cognition/autonomy.
+
+Critical path stays:
+
+`V1.5 stable product -> V1.6 Cognitive Foundation/Experience/Distributed Cognition -> V1.7 Autonomous Fox`.
+
+A media lane may merge when green if:
+- it uses already accepted contracts;
+- it has its own tests/resource gates;
+- it does not weaken Core/Windows/Android release gates;
+- unfinished provider work remains feature-gated/unavailable rather than partially wired into the stable path.
+
+No release waits for "all future media models". Only capabilities explicitly named in that exact release scope can block it.
+
+ROADMAP_MULTIMODAL_NON_DELAY_STATUS: ACTIVE / PERMANENT OWNER RULE.
