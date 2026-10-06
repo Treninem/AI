@@ -5904,3 +5904,15 @@ It provides concrete before/after scenarios for:
 The scenario catalog is the non-engineering explanation of "what this gives the user" and complements, but does not replace, automated acceptance evidence.
 
 CAPABILITY_CATALOG_GAP_CLOSURE_STATUS: ACTIVE / CANONICAL.
+
+
+### CLAIM `CHAT-2026-10-06-CANONICAL-ROADMAP-RECONCILE`
+
+- Статус: **ACTIVE — DOCUMENTATION/COORDINATION RECONCILIATION**.
+- Started from HEAD: `ec38e9d23a87f2e6c39aa2be2613c2ff314f04a9`; fresh `main`: `446ce2cd2f979a8ab228f63d090062e8ba48a6eb`.
+- Режим: Chat / coordinator.
+- Цель: свести конечное ТЗ, ADR-0001/0002, staged V1.6/V1.7, multimodal parallel lane, release acceptance и journal workflow в один канонический roadmap без противоречий; исторические записи журнала сохранить как историю, но исключить их из authority для будущего scope.
+- Файлы: новый `docs/AURORAFOX_CANONICAL_ROADMAP.md`, `AGENTS.md`, `docs/PROJECT_MASTER_LOG.md`; implementation/runtime files не трогаются.
+- Intended bump: **NONE** (coordination/documentation only).
+- Не меняет текущий V1.5.0.0 product scope, readiness percentage, version, signing, merge/release authority.
+- NEXT: создать канонический roadmap и precedence rules, подключить его к обязательному agent startup protocol, затем закрыть claim с exact commit/evidence.
