@@ -14,6 +14,7 @@ REQUIRED = [
     'core_knowledge_retrieval', 'installed_knowledge_pack',
     'installed_voice_tts', 'installed_voice_stt',
     'installed_ocr_bilingual', 'compatibility_switch_isolation',
+    'installed_native_xls', 'installed_native_7z', 'installed_native_rar',
 ]
 ADB = '''#!/usr/bin/env python3
 import json, os, pathlib, sys
@@ -109,6 +110,15 @@ class AndroidE2ERunnerTests(unittest.TestCase):
         self.assertTrue(any(call[:3] == ['install', '--no-incremental', '-r'] for call in calls))
         self.assertIn(['root'], calls)
         self.assertFalse(any('run-as' in call for call in calls))
+
+    def test_each_missing_native_format_is_rejected(self):
+        for name in ('installed_native_xls', 'installed_native_7z', 'installed_native_rar'):
+            with self.subTest(name=name):
+                report = completed_report()
+                report['scenarios'] = [row for row in report['scenarios'] if row['id'] != name]
+                result, _, _ = self.run_runner([report])
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn('missing_scenarios', result.stderr)
 
     def test_rejects_wrong_expected_source_after_collecting_valid_runtime_report(self):
         result, saved, _ = self.run_runner(

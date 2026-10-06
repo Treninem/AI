@@ -6930,3 +6930,45 @@ DONE:fresh native source and prevention tests implemented and locally verified i
 REMAINING:new exact-SHA native Android/plugin/APK/offline installed-format acceptance; remaining scoped owner inventory and package/device/performance/Knowledge/update/release gates. Raw cached BIFF8/date-style limitations and library structural limits remain explicit.
 BLOCKERS:none for independent source continuation/publication; actual platform/release evidence pending and local OCR integration/runtime not installed.
 NEXT:publish whole native package once; collect full CI reds together while independently reviewing remaining current-source CRITICAL operational findings. Preserve pending predecessor evidence; no immediate tiny documentation HEAD update cancelling expensive jobs; record produced SHA with next coherent block. Version unchanged under version-last.
+
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Code/Project Index, owner resource controls and truthful coverage
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 protected boundaries unchanged
+STARTING_HEAD:5683bfe0f58c80fdc013114649f514257ec9e48d
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:file_intelligence/project_index_service.py;scripts/{project_index_client,project_index_tool_bridge,owner_resource_policy}.gd;tests/test_project_index.py;tests/owner_resource_limits_smoke.gd;exact owner/source contract tests;master/memory append-only;benchmarks/core/run_android_godot_e2e.sh mode restoration only
+DEPENDENCIES:published current native36-path package5683bfe, independent source review while its CI runs. Reconcile Project Index paths with recovery coordinator; no other current runtime owner found.
+NON_BLOCKERS:independent S3/V1.6 and future cognition/accounts unchanged; new native Android acceptance remains separately pending and does not establish this index block acceptance
+ACCEPTANCE_GATES:real SQLite index retains unvisited records when byte/count coverage limited; exact fit differs from actual overflow; bounded file reading probes actual growth; per-file symbol/search/query/output budgets honor raised/zero limits; file symlinks cannot read outside approved root; client/tool downstream parity and private owner settings; real regressions and full coherent CI batch
+CONFIRMED_SOURCE_DEFECT:MAX_SOURCE_BYTES4MiB filter silently skips files; stale deletion treats skipped files as absent. _symbols stops at500; search client/API cap100/200, source-candidate SQL LIMIT1000 silently hides later matches. _iter_sources follows file symlinks via stat/read, risking reads outside selected project root.
+PUBLICATION_EVIDENCE:prior native package5683bfe0f58c80fdc013114649f514257ec9e48d tree1919bf2f5aa580f1ac4eb5d8fe91bf3cbfb8d592 published via branch CAS. Initial local native39JVM/37Python and Godot results recorded above. No new exact-native CI acceptance yet. Existing executable shell runner was accidentally tree-mode100644 instead of100755; local source bytes match, restore executable bit with next coherent publication, no independent tiny HEAD cancellation.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement coherent index/coverage controls and real bounds/privacy regressions; collect native CI failures together rather than repeatedly poll or weaken gates.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER additionally owns tests/test_android_e2e_runner.py for observed native568 exact-CI failure112551383944: positive simulated-adb report omitted newly required native XLS/7z/RAR scenarios; align complete fixture and add independent rejection for each absent format. Production runner gate stays required. 568 other check outcomes collected together, no device success presumed.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER additionally owns build/build_android.ps1;tools/configure_android_export.py;tests/test_android_export_assets.py;tools/verify_android_archive_runtime.py;tests/test_android_archive_runtime.py for observed exact568 APK112551383360 failure compressStandardReleaseAssets/Java heap space. Godot4.7.1 template app Gradle heap4536m and no gguf noCompress; pinned bundled Core1282439264bytes. Configure only gguf stored assets before export, keep model/hash/signing/version/runtime behavior and verify actual APK storage; no blanket no-compression or build success claim without full CI.
+
+### SOURCE_IMPLEMENTED / CI_PENDING — index coverage and observed Android gate repair
+CLAIM:WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER
+STARTING_HEAD:5683bfe0f58c80fdc013114649f514257ec9e48d
+ACTION:coherent Project Index coverage/private-owner controls, observed native Android runner fixture correction and Core asset compression repair; executable runner mode restored100755. Per-file SQLite policy/truncation metadata preserves prior derived rows, incomplete traversal never deletes unvisited files, unsafe cached symlink paths purge, actual byte-growth probe prevents oversize reads. Eight private owner limits reach index/client/tool/search/query/excerpts/symbols, zero unlimited; exact-fit/extra-match distinct. Streamed Unicode symbol matching removes1000false-positive candidate cap; search retains terms after20; excerpt markers share output budget.
+TESTS:87PythonPASS+3subtests covering real SQLite source>4MiB,601symbols/partial policy changes, read growth, symlink privacy,130matches,1001false positives, Unicode casefold, migration/query/excerpt bounds, runner missing-format rejection, actual ZIP_STORED metadata and package/version contracts. Actual official Godot4.7.1 owner smoke AURORA_OWNER_RESOURCE_LIMITS_OK with settings save/reload, raised/zero and client limit helper; existing20ObjectDB/8resource cleanup diagnostics retained. Actual pinned Godot4.7.1 application-template configuration idempotence PASS; local full Android export NOT_EXECUTED.
+EXACT_568_CI:44checks at collected snapshot37SUCCESS+4SKIPPED+2FAILURE+1IN_PROGRESS; one-gib import still running, not final acceptance. Confirmed native Android plugin112551383252 actual testDebugUnitTest/installGodotPlugin BUILD SUCCESSFUL9m34s. Confirmed contract112551383944 missing_scenarios fixture error repaired without weakening installed format requirements. APK112551383360 failed compressStandardReleaseAssets Java heap space; narrowly configured gguf noCompress before export, actual model storage verification required. Device/physical/update/release gates remain open.
+INVENTORY:prepared source1409unclassified/1323test_evidence/481owner_adjustable/343format_structure/61documentation/22hard_boundary;complete:false. New code adds findings; this is not a regression count or a claim of1409bugs. Remaining records require scoped review, not blanket classifications.
+PRODUCED_COMMIT:record actual CAS publication SHA in next coherent block, never infer SHA from local tests.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:implemented/tested index owner coverage and actual observed CI corrections locally; prior native source568 published and its plugin Gradle acceptance green.
+REMAINING:next exact-SHA full CI/package/native installed-format acceptance, remaining current CRITICAL owner inventory and release/device/update gates; version unchanged.
+BLOCKERS:none prevents authorized independent source development. Current568APK and contract gates fail as documented; fixes require next coherent exact-SHA execution. Physical/production-signing boundaries are not waived.
+NEXT:publish coherent package, collect full new-SHA CI reds together while continuing remaining in-scope audit/source work.
+OWNERSHIP:index block stays CI_PENDING under this claim; coordinator continues remaining unclaimedV1.5CRITICAL paths.

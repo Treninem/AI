@@ -54,9 +54,15 @@ def dex_classes(data: bytes) -> set[str]:
     return result
 
 
-def verify_apk(path: str) -> None:
+def verify_apk(path: str, require_stored_core: bool = False) -> None:
     with zipfile.ZipFile(path) as apk:
         names = set(apk.namelist())
+        if require_stored_core:
+            model = "assets/models/aurorafox-core.gguf"
+            if model not in names or apk.getinfo(model).file_size == 0:
+                raise ValueError("Missing bundled Core model asset")
+            if apk.getinfo(model).compress_type != zipfile.ZIP_STORED:
+                raise ValueError("Bundled Core model must be stored without asset compression")
         for abi in REQUIRED_ABIS:
             native = f"lib/{abi}/libzstd-jni-1.5.7-3.so"
             if native not in names or apk.getinfo(native).file_size == 0:
@@ -73,5 +79,7 @@ def verify_apk(path: str) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("apk")
-    verify_apk(parser.parse_args().apk)
+    parser.add_argument("--require-stored-core", action="store_true")
+    args = parser.parse_args()
+    verify_apk(args.apk, args.require_stored_core)
     print("Android archive runtime packaging: PASS")

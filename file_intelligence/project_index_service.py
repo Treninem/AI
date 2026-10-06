@@ -87,20 +87,26 @@ SYMBOL_PATTERNS: dict[str, list[tuple[str, re.Pattern[str]]]] = {
 class IndexRequest(BaseModel):
     root: str = Field(min_length=1, max_length=8192)
     max_files: int = Field(default=DEFAULT_MAX_FILES, ge=0)
+    max_source_bytes: int = Field(default=MAX_SOURCE_BYTES, ge=0)
+    max_symbols: int = Field(default=500, ge=0)
     force: bool = False
 
 
 class SearchRequest(BaseModel):
     root: str = Field(default="", max_length=8192)
-    query: str = Field(min_length=1, max_length=2000)
-    limit: int = Field(default=20, ge=1, le=100)
+    query: str = Field(min_length=1)
+    max_query_chars: int = Field(default=2000, ge=0)
+    excerpt_chars: int = Field(default=1800, ge=0)
+    result_symbols: int = Field(default=80, ge=0)
+    limit: int = Field(default=20, ge=0, le=9223372036854775806)
     language: str = Field(default="", max_length=100)
 
 
 class SymbolRequest(BaseModel):
     root: str = Field(default="", max_length=8192)
-    query: str = Field(min_length=1, max_length=500)
-    limit: int = Field(default=50, ge=1, le=200)
+    query: str = Field(min_length=1)
+    max_query_chars: int = Field(default=500, ge=0)
+    limit: int = Field(default=50, ge=0)
 
 
 def _conn() -> sqlite3.Connection:
@@ -123,6 +129,17 @@ def _conn() -> sqlite3.Connection:
         )
     except sqlite3.OperationalError:
         pass
+    columns = {row[1] for row in db.execute("PRAGMA table_info(files)")}
+    if not {"policy", "symbols_truncated"}.issubset(columns):
+        # Recheck under SQLite's writer lock so concurrent first requests cannot
+        # race an additive migration, including across separate processes.
+        db.execute("BEGIN IMMEDIATE")
+        columns = {row[1] for row in db.execute("PRAGMA table_info(files)")}
+        if "policy" not in columns:
+            db.execute("ALTER TABLE files ADD COLUMN policy TEXT NOT NULL DEFAULT ''")
+        if "symbols_truncated" not in columns:
+            db.execute("ALTER TABLE files ADD COLUMN symbols_truncated INTEGER NOT NULL DEFAULT 0")
+        db.commit()
     return db
 
 
@@ -136,8 +153,14 @@ def _root(value: str) -> Path:
     return root
 
 
-def _decode(path: Path) -> str:
-    raw = path.read_bytes()
+def _decode(path: Path, max_bytes: int = 0, root: Path | None = None) -> str:
+    if path.is_symlink() or (root is not None and not path.resolve(strict=True).is_relative_to(root)):
+        raise ValueError("Source path leaves approved project root")
+    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    with os.fdopen(os.open(path, flags), "rb") as source:
+        raw = source.read(max_bytes + 1) if max_bytes > 0 else source.read()
+    if max_bytes > 0 and len(raw) > max_bytes:
+        raise ValueError("Source grew beyond owner byte budget")
     for enc in ("utf-8-sig", "utf-8", "cp1251", "utf-16", "latin-1"):
         try:
             return raw.decode(enc)
@@ -146,7 +169,7 @@ def _decode(path: Path) -> str:
     return raw.decode("utf-8", errors="replace")
 
 
-def _symbols(language: str, content: str) -> list[dict[str, Any]]:
+def _symbols(language: str, content: str, max_symbols: int = 500) -> list[dict[str, Any]]:
     patterns = SYMBOL_PATTERNS.get(language, [])
     result: list[dict[str, Any]] = []
     seen: set[tuple[str, str]] = set()
@@ -159,27 +182,42 @@ def _symbols(language: str, content: str) -> list[dict[str, Any]]:
             seen.add(key)
             line = content.count("\n", 0, match.start()) + 1
             result.append({"kind": kind, "name": name, "line": line})
-            if len(result) >= 500:
+            if max_symbols > 0 and len(result) >= max_symbols:
                 return result
     return result
 
 
-def _iter_sources(root: Path, max_files: int):
+def _iter_sources(root: Path, max_files: int, coverage: dict | None = None):
+    coverage = coverage if coverage is not None else {"failed": 0, "unsafe": set()}
     count = 0
-    for current, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if d not in IGNORED_DIRS and not d.startswith(".__")]
+    def failed(_error):
+        coverage["failed"] += 1
+    for current, dirs, files in os.walk(root, onerror=failed, followlinks=False):
         base = Path(current)
+        retained = []
+        for name in dirs:
+            path = base / name
+            if name in IGNORED_DIRS or name.startswith(".__"):
+                continue
+            if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
+                coverage["unsafe"].add(path.relative_to(root).as_posix()+"/")
+                continue
+            retained.append(name)
+        dirs[:] = retained
         for name in files:
-            ext = Path(name).suffix.lower()
-            language = CODE_EXTENSIONS.get(ext)
+            language = CODE_EXTENSIONS.get(Path(name).suffix.lower())
             if not language:
                 continue
             path = base / name
             try:
+                if path.is_symlink() or not path.resolve(strict=True).is_relative_to(root):
+                    coverage["unsafe"].add(path.relative_to(root).as_posix())
+                    continue
                 st = path.stat()
+                if not path.is_file():
+                    continue
             except OSError:
-                continue
-            if st.st_size > MAX_SOURCE_BYTES:
+                coverage["failed"] += 1
                 continue
             yield path, language, st
             count += 1
@@ -209,10 +247,14 @@ def _sync_fts(db: sqlite3.Connection, root: str) -> None:
 def _search_terms(query: str) -> str:
     tokens = re.findall(r"[\w.$:+/#-]+", query, flags=re.UNICODE)
     safe = [t.replace('"', '""') for t in tokens if t.strip()]
-    return " OR ".join(f'"{t}"' for t in safe[:20])
+    return " OR ".join(f'"{t}"' for t in safe)
 
 
 def _excerpt(content: str, query: str, size: int = 1800) -> str:
+    if size == 0:
+        return content
+    if len(content) <= size:
+        return content
     lower = content.casefold()
     positions = [lower.find(token.casefold()) for token in re.findall(r"[\w.$:+/#-]+", query) if token]
     positions = [p for p in positions if p >= 0]
@@ -221,7 +263,9 @@ def _excerpt(content: str, query: str, size: int = 1800) -> str:
     end = min(len(content), start + size)
     prefix = "…" if start > 0 else ""
     suffix = "…" if end < len(content) else ""
-    return prefix + content[start:end] + suffix
+    # Ellipsis markers share the owner's output budget. Tiny budgets remain valid.
+    available = max(0, size - len(prefix) - len(suffix))
+    return (prefix + content[start:start + available] + suffix)[:size]
 
 
 @app.get("/health")
@@ -244,35 +288,52 @@ def index_project(req: IndexRequest):
     failed = 0
     languages: dict[str, int] = {}
     limit_reached = False
+    oversized = 0
+    symbol_partial_files = 0
+    coverage = {"failed": 0, "unsafe": set()}
+    policy = f"v2-owner-index:{req.max_source_bytes}:{req.max_symbols}"
     with _conn() as db:
         existing = {
-            row["path"]: (int(row["size"]), int(row["mtime_ns"]))
-            for row in db.execute("SELECT path,size,mtime_ns FROM files WHERE root = ?", (root_str,))
+            row["path"]: (int(row["size"]), int(row["mtime_ns"]), row["policy"], bool(row["symbols_truncated"]))
+            for row in db.execute("SELECT path,size,mtime_ns,policy,symbols_truncated FROM files WHERE root = ?", (root_str,))
         }
-        for path, language, st in _iter_sources(root, 0):
+        for path, language, st in _iter_sources(root, 0, coverage):
             if req.max_files > 0 and len(seen) >= req.max_files:
                 limit_reached = True
                 break
             rel = path.relative_to(root).as_posix()
             seen.add(rel)
+            if req.max_source_bytes > 0 and st.st_size > req.max_source_bytes:
+                oversized += 1
+                continue
             languages[language] = languages.get(language, 0) + 1
             old = existing.get(rel)
-            if not req.force and old == (st.st_size, st.st_mtime_ns):
+            if not req.force and old is not None and old[:3] == (st.st_size, st.st_mtime_ns, policy):
                 unchanged += 1
+                symbol_partial_files += int(old[3])
                 continue
             try:
-                content = _decode(path)
-                symbols = _symbols(language, content)
+                content = _decode(path, req.max_source_bytes, root)
+                symbols = _symbols(language, content, req.max_symbols+1 if req.max_symbols else 0)
+                symbols_truncated = req.max_symbols > 0 and len(symbols) > req.max_symbols
+                if symbols_truncated:
+                    symbols = symbols[:req.max_symbols]
+                    symbol_partial_files += 1
                 db.execute(
-                    "INSERT INTO files(root,path,language,size,mtime_ns,content,symbols,indexed_at) VALUES(?,?,?,?,?,?,?,?) "
+                    "INSERT INTO files(root,path,language,size,mtime_ns,content,symbols,indexed_at,policy,symbols_truncated) VALUES(?,?,?,?,?,?,?,?,?,?) "
                     "ON CONFLICT(root,path) DO UPDATE SET language=excluded.language,size=excluded.size,"
-                    "mtime_ns=excluded.mtime_ns,content=excluded.content,symbols=excluded.symbols,indexed_at=excluded.indexed_at",
-                    (root_str, rel, language, st.st_size, st.st_mtime_ns, content, json.dumps(symbols, ensure_ascii=False), int(time.time())),
+                    "mtime_ns=excluded.mtime_ns,content=excluded.content,symbols=excluded.symbols,indexed_at=excluded.indexed_at,policy=excluded.policy,symbols_truncated=excluded.symbols_truncated",
+                    (root_str, rel, language, st.st_size, st.st_mtime_ns, content, json.dumps(symbols, ensure_ascii=False), int(time.time()), policy, int(symbols_truncated)),
                 )
                 indexed += 1
             except Exception:
                 failed += 1
-        stale = [] if limit_reached else [path for path in existing if path not in seen]
+        failed += coverage["failed"]
+        # Never delete unseen rows when traversal/byte coverage was incomplete.
+        # Explicitly unsafe paths are separately purged, not retained as trusted.
+        incomplete = limit_reached or oversized > 0 or failed > 0
+        unsafe = {path for path in existing if any(path == value or (value.endswith("/") and path.startswith(value)) for value in coverage["unsafe"])}
+        stale = sorted(unsafe | (set() if incomplete else {path for path in existing if path not in seen}))
         if stale:
             db.executemany("DELETE FROM files WHERE root = ? AND path = ?", [(root_str, path) for path in stale])
         _sync_fts(db, root_str)
@@ -281,86 +342,96 @@ def index_project(req: IndexRequest):
     return {
         "ok": True, "root": root_str, "total_files": total, "updated_files": indexed,
         "unchanged_files": unchanged, "removed_files": len(stale), "failed_files": failed,
-        "languages": languages, "limit_reached": limit_reached, "partial": limit_reached or failed > 0,
+        "languages": languages, "limit_reached": limit_reached, "partial": limit_reached or oversized > 0 or failed > 0 or symbol_partial_files > 0 or bool(coverage["unsafe"]),
+        "oversized_files": oversized, "unsafe_paths_skipped": len(coverage["unsafe"]),
+        "symbol_partial_files": symbol_partial_files, "max_source_bytes": req.max_source_bytes, "max_symbols": req.max_symbols,
         "elapsed_ms": int((time.time() - started) * 1000),
     }
 
 
+def _check_query(query: str, limit: int) -> None:
+    if limit > 0 and len(query) > limit:
+        raise HTTPException(413, "Query exceeds owner character budget")
+
+
 @app.post("/search")
 def search_project(req: SearchRequest):
+    _check_query(req.query, req.max_query_chars)
     root = str(Path(req.root).expanduser().resolve()) if req.root else ""
+    fetch_limit = req.limit+1 if req.limit > 0 else -1
     with _conn() as db:
-        rows: list[sqlite3.Row]
         terms = _search_terms(req.query)
+        rows = []
         if terms and _fts_available(db):
-            sql = "SELECT root,path,language,content,symbols,bm25(files_fts) AS score FROM files_fts WHERE files_fts MATCH ?"
+            sql = "SELECT files_fts.root,files_fts.path,files_fts.language,files_fts.content,files_fts.symbols,files.symbols_truncated,bm25(files_fts) AS score FROM files_fts JOIN files ON files.root=files_fts.root AND files.path=files_fts.path WHERE files_fts MATCH ?"
             params: list[Any] = [terms]
             if root:
-                sql += " AND root = ?"
-                params.append(root)
+                sql += " AND files_fts.root = ?"; params.append(root)
             if req.language:
-                sql += " AND language = ?"
-                params.append(req.language)
-            sql += " ORDER BY score LIMIT ?"
-            params.append(req.limit)
+                sql += " AND files_fts.language = ?"; params.append(req.language)
+            sql += " ORDER BY score LIMIT ?"; params.append(fetch_limit)
             try:
                 rows = db.execute(sql, params).fetchall()
             except sqlite3.OperationalError:
                 rows = []
-        else:
-            rows = []
         if not rows:
             like = f"%{req.query}%"
-            sql = "SELECT root,path,language,content,symbols,0.0 AS score FROM files WHERE (content LIKE ? OR path LIKE ? OR symbols LIKE ?)"
+            sql = "SELECT root,path,language,content,symbols,symbols_truncated,0.0 AS score FROM files WHERE (content LIKE ? OR path LIKE ? OR symbols LIKE ?)"
             params = [like, like, like]
             if root:
-                sql += " AND root = ?"
-                params.append(root)
+                sql += " AND root = ?"; params.append(root)
             if req.language:
-                sql += " AND language = ?"
-                params.append(req.language)
-            sql += " LIMIT ?"
-            params.append(req.limit)
+                sql += " AND language = ?"; params.append(req.language)
+            sql += " LIMIT ?"; params.append(fetch_limit)
             rows = db.execute(sql, params).fetchall()
+    more = req.limit > 0 and len(rows) > req.limit
+    if more:
+        rows = rows[:req.limit]
     results = []
     for row in rows:
         try:
             symbols = json.loads(row["symbols"])
         except Exception:
             symbols = []
+        clipped_symbols = req.result_symbols > 0 and len(symbols) > req.result_symbols
+        excerpt = _excerpt(row["content"], req.query, req.excerpt_chars)
         results.append({
             "root": row["root"], "path": row["path"], "language": row["language"],
-            "score": float(row["score"] or 0.0), "symbols": symbols[:80],
-            "excerpt": _excerpt(row["content"], req.query),
+            "score": float(row["score"] or 0.0), "symbols": symbols[:req.result_symbols] if req.result_symbols else symbols,
+            "symbols_truncated": bool(row["symbols_truncated"]) or clipped_symbols,
+            "excerpt": excerpt, "excerpt_truncated": excerpt != row["content"],
         })
-    return {"ok": True, "query": req.query, "results": results}
+    return {"ok": True, "query": req.query, "results": results, "limit_reached": more, "more_results": more}
 
 
 @app.post("/symbols")
 def search_symbols(req: SymbolRequest):
+    _check_query(req.query, req.max_query_chars)
     root = str(Path(req.root).expanduser().resolve()) if req.root else ""
     q = req.query.casefold()
-    with _conn() as db:
-        sql = "SELECT root,path,language,symbols FROM files WHERE symbols LIKE ?"
-        params: list[Any] = [f"%{req.query}%"]
-        if root:
-            sql += " AND root = ?"
-            params.append(root)
-        sql += " LIMIT 1000"
-        rows = db.execute(sql, params).fetchall()
     results = []
-    for row in rows:
-        try:
-            symbols = json.loads(row["symbols"])
-        except Exception:
-            continue
-        for symbol in symbols:
-            name = str(symbol.get("name", ""))
-            if q in name.casefold():
-                results.append({"root": row["root"], "path": row["path"], "language": row["language"], **symbol})
-                if len(results) >= req.limit:
-                    return {"ok": True, "query": req.query, "results": results}
-    return {"ok": True, "query": req.query, "results": results}
+    index_partial = False
+    with _conn() as db:
+        # SQLite LIKE only folds ASCII. Filter names in Python so Unicode
+        # identifiers and clipped-index coverage cannot disappear from candidates.
+        sql = "SELECT root,path,language,symbols,symbols_truncated FROM files"
+        params: list[Any] = []
+        if root:
+            sql += " WHERE root = ?"; params.append(root)
+        # Stream all candidate rows: a cap on candidates can hide the first
+        # actual matching symbol after many JSON metadata false positives.
+        for row in db.execute(sql, params):
+            index_partial = index_partial or bool(row["symbols_truncated"])
+            try:
+                symbols = json.loads(row["symbols"])
+            except Exception:
+                continue
+            for symbol in symbols:
+                if q in str(symbol.get("name", "")).casefold():
+                    if req.limit > 0 and len(results) >= req.limit:
+                        return {"ok": True, "query": req.query, "results": results, "limit_reached": True, "index_partial": index_partial}
+                    results.append({"root": row["root"], "path": row["path"], "language": row["language"], **symbol})
+    return {"ok": True, "query": req.query, "results": results, "limit_reached": False, "index_partial": index_partial}
 
 
 @app.get("/status")

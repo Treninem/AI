@@ -63,3 +63,22 @@ def test_missing_native_abi():
 def test_truncated_dex_rejected():
     with pytest.raises(ValueError, match="truncated"):
         module.dex_classes(b"dex\n035\0")
+
+
+@pytest.mark.parametrize("compression", [zipfile.ZIP_STORED, zipfile.ZIP_DEFLATED])
+def test_real_apk_core_storage_gate(tmp_path, compression):
+    path = tmp_path / "core.apk"
+    apk(path)
+    with zipfile.ZipFile(path, "a") as output:
+        output.writestr("assets/models/aurorafox-core.gguf", b"GGUF real zip fixture", compress_type=compression)
+    if compression == zipfile.ZIP_STORED:
+        module.verify_apk(path, require_stored_core=True)
+    else:
+        with pytest.raises(ValueError, match="without asset compression"):
+            module.verify_apk(path, require_stored_core=True)
+
+def test_missing_core_asset_is_rejected(tmp_path):
+    path = tmp_path / "missing-core.apk"
+    apk(path)
+    with pytest.raises(ValueError, match="Missing bundled Core"):
+        module.verify_apk(path, require_stored_core=True)

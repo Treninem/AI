@@ -567,5 +567,25 @@ func _run() -> void:
 	OwnerResourcePolicy._cached["android_xls_shared_strings"] = previous_native_strings
 	native_client.free()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var index_original := OwnerResourcePolicy._cached.duplicate()
+	var index_client := ProjectIndexClient.new()
+	for index_key in ["project_index_source_bytes", "project_index_file_symbols", "project_index_search_results", "project_index_symbol_results", "project_index_query_chars", "project_index_symbol_query_chars", "project_index_excerpt_chars", "project_index_result_symbols"]:
+		var index_values := {}
+		index_values[index_key] = 0
+		assert(OwnerResourcePolicy.save(index_values, path) == OK)
+		assert(OwnerResourcePolicy.limits(path)[index_key] == 0)
+		index_values[index_key] = 10001
+		assert(OwnerResourcePolicy.save(index_values, path) == OK)
+		assert(OwnerResourcePolicy.limits(path)[index_key] == 10001)
+	OwnerResourcePolicy._cached.project_index_search_results = 1000
+	assert(index_client._result_limit(1500, "project_index_search_results") == 1000)
+	assert(index_client._result_limit(0, "project_index_search_results") == 1000)
+	OwnerResourcePolicy._cached.project_index_search_results = 0
+	assert(index_client._result_limit(1500, "project_index_search_results") == 1500)
+	assert(index_client._result_limit(0, "project_index_search_results") == 0)
+	index_client.free()
+	OwnerResourcePolicy._cached = index_original
+	OwnerResourcePolicy.revision += 1
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	print("AURORA_OWNER_RESOURCE_LIMITS_OK")
 	quit(0)

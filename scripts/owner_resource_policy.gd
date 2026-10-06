@@ -3,6 +3,15 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"project_index_source_bytes": 4194304,
+	"project_index_file_symbols": 500,
+	"project_index_search_results": 100,
+	"project_index_symbol_results": 200,
+	"project_index_query_chars": 2000,
+	"project_index_symbol_query_chars": 500,
+	"project_index_excerpt_chars": 1800,
+	"project_index_result_symbols": 80,
+
 	"android_xls_file_bytes": 33554432,
 	"android_xls_directory_entries": 4096,
 	"android_xls_directory_depth": 64,
@@ -145,6 +154,15 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"project_index_source_bytes": "Индекс проекта: байт одного исходника",
+	"project_index_file_symbols": "Индекс проекта: символов на файл",
+	"project_index_search_results": "Индекс проекта: предел результатов поиска",
+	"project_index_symbol_results": "Индекс проекта: предел результатов поиска символов",
+	"project_index_query_chars": "Индекс проекта: символов запроса",
+	"project_index_symbol_query_chars": "Индекс проекта: символов запроса символов",
+	"project_index_excerpt_chars": "Индекс проекта: символов отрывка",
+	"project_index_result_symbols": "Индекс проекта: символов в результате",
+
 	"android_xls_file_bytes": "Android XLS: байт входного файла и потока",
 	"android_xls_directory_entries": "Android XLS: записей OLE-каталога",
 	"android_xls_directory_depth": "Android XLS: глубина OLE-каталога",

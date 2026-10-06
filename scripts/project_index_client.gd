@@ -21,22 +21,30 @@ func index_project(root: String, max_files := 30000, force := false) -> Dictiona
 	if max_files < 0: return {"ok": false, "error": "Index file budget must be nonnegative"}
 	if OS.get_name() != "Windows": return {"ok": false, "error": "Project index is currently Windows-only"}
 	return await _request("/index", HTTPClient.METHOD_POST, {
-		"root": _globalize(root), "max_files": max_files, "force": force
+		"root": _globalize(root), "max_files": max_files, "force": force,
+		"max_source_bytes": OwnerResourcePolicy.value("project_index_source_bytes"),
+		"max_symbols": OwnerResourcePolicy.value("project_index_file_symbols")
 	}, 900.0)
 
 func search(root: String, query: String, limit := 20, language := "") -> Dictionary:
+	if limit < 0: return {"ok": false, "error": "Search limit must be nonnegative"}
 	if OS.get_name() != "Windows": return {"ok": false, "results": [], "error": "Project index is currently Windows-only"}
 	return await _request("/search", HTTPClient.METHOD_POST, {
 		"root": _globalize(root) if not root.is_empty() else "",
 		"query": query,
-		"limit": clampi(limit, 1, 100),
+		"limit": _result_limit(limit, "project_index_search_results"),
+		"max_query_chars": OwnerResourcePolicy.value("project_index_query_chars"),
+		"excerpt_chars": OwnerResourcePolicy.value("project_index_excerpt_chars"),
+		"result_symbols": OwnerResourcePolicy.value("project_index_result_symbols"),
 		"language": language
 	}, 60.0)
 
 func search_symbols(root: String, query: String, limit := 50) -> Dictionary:
+	if limit < 0: return {"ok": false, "error": "Symbol limit must be nonnegative"}
 	if OS.get_name() != "Windows": return {"ok": false, "results": [], "error": "Project index is currently Windows-only"}
 	return await _request("/symbols", HTTPClient.METHOD_POST, {
-		"root": _globalize(root) if not root.is_empty() else "", "query": query, "limit": clampi(limit, 1, 200)
+		"root": _globalize(root) if not root.is_empty() else "", "query": query, "limit": _result_limit(limit, "project_index_symbol_results"),
+		"max_query_chars": OwnerResourcePolicy.value("project_index_symbol_query_chars")
 	}, 60.0)
 
 func status(root := "") -> Dictionary:
@@ -97,3 +105,8 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 			if backend_pid <= 0: _start_backend()
 			await get_tree().create_timer(0.8).timeout
 	return {"ok": false, "error": last_error}
+
+func _result_limit(requested: int, policy_key: String) -> int:
+	var owner_limit := OwnerResourcePolicy.value(policy_key)
+	if owner_limit == 0: return requested
+	return owner_limit if requested == 0 else mini(requested, owner_limit)
