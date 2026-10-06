@@ -5039,3 +5039,677 @@ These twenty contracts become part of the end-state Definition of Done. Near-ter
 The final target specification is therefore measurable: a release cannot pass by subjective claims such as "fast enough", "works offline", "syncs", "learns", "accessible", "sandboxed" or "supports old data" without the corresponding evidence above.
 
 FINAL_TARGET_SPEC_AMENDMENT_STATUS: ACTIVE / CANONICAL / RELEASE-GATING WHEN THE AFFECTED CAPABILITY IS IN SCOPE.
+
+
+### OWNER FINAL UI/UX CONTRACT 2026-10-06 — complete interaction states, rendering and acceptance
+
+This is the canonical UI/UX amendment for the end-state interface specification. It closes the forty identified UI gaps and is release-gating whenever the affected surface is in scope. Current source structure (dark AuroraFox palette, Windows sidebar/header, separate Settings window, Work/Computer/Knowledge/Voice/Update surfaces) is retained where compatible. Deferred future concepts do not become implementation work without owner activation.
+
+#### 1. Verified color/contrast contract
+
+Canonical dark palette remains:
+- background `#080B12`;
+- primary surface `#0E111A`;
+- secondary surface `#131722`;
+- primary text `#F3F6FF`;
+- secondary text `#8D98AD`;
+- violet `#A98AFF`;
+- cyan `#45D8FF`;
+- success `#64FF9D`;
+- danger `#FF6D82`;
+- warning `#FFBD75`.
+
+WCAG relative-luminance checks for canonical text pairs:
+- `#F3F6FF / #080B12` = 18.22:1 PASS AA/AAA;
+- `#8D98AD / #080B12` = 6.77:1 PASS AA/AAA normal text;
+- `#8D98AD / #131722` = 6.16:1 PASS AA/AAA normal text;
+- `#FFBD75 / #0E111A` = 11.48:1 PASS;
+- `#45D8FF / #0E111A` = 11.24:1 PASS;
+- `#A98AFF / #131722` = 6.62:1 PASS normal text;
+- `#64FF9D / #0E111A` = 14.66:1 PASS;
+- `#FF6D82 / #0E111A` = 6.97:1 PASS normal text.
+
+Every new theme token/pair used for normal text must pass >=4.5:1; large text >=3:1. Focus indicators and non-text UI components target >=3:1 against adjacent surfaces. Add a deterministic theme-contrast test to CI; screenshots at 100% and 200% font scaling remain separate visual evidence.
+
+#### 2. Unified loading language
+
+AuroraFox uses three loading patterns only:
+
+- **Chat response:** immediately after send, create the assistant response slot. For <150 ms no spinner is flashed. From 150 ms show a subtle three-dot/pulse indicator with text `Fox думает…`. At 800 ms, if a meaningful phase is known, replace the generic text with a phase such as `Ищу в памяти`, `Читаю файл`, `Планирую`. Composer Send becomes Stop while the request is active.
+- **Long/background task (Work/Computer/import/update):** activity card with explicit phase/progress/checkpoints, not a generic spinner.
+- **Data/list panel (Settings/Knowledge/Diagnostics):** if loading exceeds 150 ms show skeleton rows/cards preserving final geometry. If loading exceeds 1 s show a textual status beneath the skeleton. Skeleton disappears atomically when real data arrives.
+
+No screen is allowed to remain blank while known asynchronous work is in progress.
+
+#### 3. Long-answer behavior
+
+- A message has no arbitrary fixed-height truncation.
+- Conversation rendering is virtualized/lazy outside the visible viewport.
+- During streaming, follow-bottom autoscroll remains active only while the viewport is within 120 px of the bottom.
+- As soon as the user scrolls upward beyond that threshold, auto-follow stops and a floating `↓ К новым сообщениям` button appears with an unread-stream indicator.
+- Clicking it returns to live follow mode.
+- Extremely long code/table/evidence blocks may be visually collapsed, but prose is not silently discarded. Collapse control reads `Показать полностью`.
+- Text selection/copy works for any subsection; each code/table block also has its own Copy action.
+- Reopening a long conversation initially materializes only the visible window plus bounded look-ahead/look-behind, then fills additional content on scroll.
+
+#### 4. Streaming-text contract
+
+Chat responses stream incrementally by default when the Core/runtime supports it.
+
+- Plain paragraphs, headings, lists and inline emphasis render progressively.
+- Incomplete fenced code/table structures remain in a stable lightweight preview until their closing delimiter/row structure is complete; then they atomically upgrade to rich rendering to avoid layout thrash.
+- No raw executable HTML is rendered.
+- User scroll-up disables auto-follow as above.
+- Composer remains editable during streaming.
+- If the user submits another message while an answer is streaming, it appears as **queued** beneath the active response. The user may cancel that queued message. It is sent only after the current response finishes or is stopped; AuroraFox does not silently interleave two responses in one conversation.
+- Work result artifacts do not stream as unstable final files. Work streams progress/activity; the final artifact becomes visible after a durable checkpoint/write. A textual preview may stream separately and is labeled Preview.
+
+#### 5. Required empty states
+
+Every list/panel has an intentional empty state with one primary action:
+
+- Chat history: `Здесь пока нет чатов` + `Начать разговор`.
+- Chat search no match: `Ничего не найдено` + `Очистить поиск`; original scroll position is restored when search is cleared.
+- Knowledge: `База знаний пока пуста` + `Добавить файлы`.
+- Work projects: `Проектов пока нет` + `Создать проект`.
+- Work history: `Завершённых задач пока нет`.
+- Memory: `Fox пока не сохранила личные воспоминания` + short privacy explanation; do not invent sample memories.
+- Diagnostics when all healthy: summary `Все основные компоненты работают нормально`, while detailed cards remain available.
+- Sync conflicts none: `Конфликтов нет`.
+
+An empty state is never represented by unexplained blank space.
+
+#### 6. Motion specification
+
+Default motion:
+- button hover/focus color transition: 100 ms ease-out;
+- small card expand/collapse: 160 ms ease-out;
+- sidebar open/close: 180 ms ease-out;
+- toast enter: 160 ms ease-out; exit 120 ms ease-in;
+- dialog/popover fade + small scale: 140 ms ease-out;
+- new message fade/translate <=120 ms; never delay text availability;
+- drag/drop target fade: 100 ms;
+- progress indicators use linear/continuous motion only when actual work is indeterminate.
+
+Reduced-motion mode follows OS preference automatically and can be forced in Settings. It removes translation/scale/parallax/pulsing and uses immediate state changes or <=80 ms opacity-only transitions. Functional progress indicators remain, but not decorative looping animation.
+
+Windows and Android use the same semantic timing; Android may use platform-native easing where necessary but must stay within +/-30 ms of the contract.
+
+#### 7. Computer Agent live work area
+
+`Показать экран действий` opens the **Computer Session** surface.
+
+Windows layout:
+- large live screen preview of the controlled display/window;
+- right-side action timeline;
+- top status `Fox управляет компьютером`;
+- controls: Pause, Stop, Take control, Hide preview;
+- current permission/scope always visible.
+
+The session preview uses live bounded screenshots/frames, not hidden remote video recording. A rolling bounded set of recent evidence thumbnails may be retained with the task audit; continuous video recording is OFF by default and requires a separate explicit feature/permission.
+
+If the user physically moves the mouse or types while pointer/keyboard automation is active, AuroraFox pauses automation immediately and displays `Управление передано вам`. The user can then `Продолжить Fox`.
+
+Minimizing/hiding the preview does not by itself stop an authorized task. Master Stop and permission revocation do.
+
+#### 8. Offline/network UX
+
+Core health and network state are separate.
+
+- Local Core may remain `● Готов` while network chip shows `Офлайн`.
+- Network chip is subtle in header/status popover; a persistent banner appears only when the user starts/has an operation that needs network.
+- Web/search/public-link actions unavailable offline remain visible when useful but disabled with `Требуется интернет`.
+- Local chat, Memory, installed Knowledge and local files continue without degraded-network warnings.
+- Slow network shows `Соединение нестабильно` only after measurable retries/stalls, not because one request was merely slow.
+- Knowledge cloud/sync state, when multi-device sync is activated, shows `Локальные данные доступны • синхронизация приостановлена`.
+- Updater uses its resumable offline state.
+- Simultaneous `Lite + Offline` is represented by two independent status chips, never one ambiguous error.
+
+#### 9. Composer sizing/paste rules
+
+- Minimum height: 48 px/dp-equivalent.
+- Windows grows to 8 text lines or 240 px, whichever comes first.
+- Android grows to 6 lines or 180 dp.
+- Beyond max height, composer uses internal vertical scrolling and remains anchored above the keyboard.
+- No tiny character counter is shown during normal use.
+- At 20,000 pasted characters show a non-blocking size hint.
+- Paste >50,000 characters is converted into a `Вставленный текст` text attachment by default rather than making the editor enormous; user can undo this conversion immediately.
+- Any true Core/context processing ceiling is reported explicitly; text is never silently truncated.
+- Android software keyboard Enter inserts a newline; Send button sends. With a physical keyboard, Ctrl+Enter sends by default. Windows default remains Enter=Send, Shift+Enter=newline, configurable.
+
+#### 10. Search states
+
+Chat search is local-first and does not interrupt an active generation.
+- Empty query = normal history.
+- No history = history empty state, not "no search results".
+- Non-empty/no matches = explicit no-match state.
+- While indexing/searching >150 ms, show a compact spinner in the search field and retain previous results dimmed rather than blanking the list.
+- Clearing search restores previous history scroll/selection.
+- Search never steals focus from an active composer unless the user explicitly invoked Ctrl+K/search.
+
+#### 11. Voice onboarding and permissions
+
+First mic press:
+1. if runtime not prepared, explain local voice module and offer `Подготовить`;
+2. request OS microphone permission only when needed;
+3. after grant, perform a short input-level check;
+4. show `Микрофон готов`.
+
+Permission denied:
+- show exact state `Доступ к микрофону запрещён системой`;
+- action `Открыть настройки разрешений`;
+- text chat remains normal.
+
+Mic busy/unavailable:
+- `Микрофон используется другим приложением` where detectable;
+- Retry action.
+
+No mandatory calibration wizard. Optional `Проверить микрофон` shows a live level meter and recorded-playback test.
+
+Wake-word failure never produces a fake success; Diagnostics exposes wake-word/listening state.
+
+#### 12. Multiple/large attachments
+
+Attachment bar:
+- up to 3 chips shown directly;
+- additional items collapse into `+N файлов`;
+- expanded attachment tray wraps to max two rows then becomes internally scrollable.
+- Every chip shows type icon, filename and size.
+- Images show a thumbnail.
+- File ordering is the selection/drop order; reorder is optional, not required for task semantics.
+- Unsupported type is retained only if Fox can treat it as opaque file; otherwise chip shows `Формат не поддерживается` and cannot be sent as "studied".
+- Large files display size and any owner-controlled parser/storage warning before processing.
+- Multiple drag files are accepted as one batch.
+- Dragging a folder on Windows offers `Добавить как проект/папку` versus `Добавить поддерживаемые файлы как вложения` when appropriate.
+- Existing sent messages are immutable; adding a later file creates a new user turn, not retroactive mutation.
+
+#### 13. Code/diff viewer
+
+Code responses use fenced blocks with:
+- language label;
+- syntax highlighting for common repo languages (GDScript, Python, Kotlin/Java, C/C++, C#, JavaScript/TypeScript, JSON/YAML/TOML/XML/HTML/CSS, shell/PowerShell, SQL, Markdown);
+- line numbers on expanded view;
+- Copy block;
+- Open full-screen.
+
+Work/Computer source modifications use a dedicated Diff Viewer:
+- unified and split view;
+- file tree + changed-file counts;
+- added/removed line styling plus textual +/- indicators;
+- per-file accept/reject only **before** an edit is committed/applied when the workflow is proposal-based;
+- already-applied changes show Revert/Restore through snapshot/version-control semantics rather than pretending they are pending.
+- binary changes show metadata/hash/size and cannot be rendered as text.
+- very large text files use virtualized/chunked view and `Open externally`/artifact action rather than loading all lines.
+
+#### 14. Table/list rendering
+
+GFM-style Markdown tables render as semantic tables.
+- wide tables scroll horizontally inside their own container;
+- sticky header where practical;
+- Copy cell / Copy row / Copy table actions;
+- sorting is allowed only on a local presentation copy and never mutates source data;
+- >50 rows initially show first 20 + `Показать все N строк`; full view is virtualized;
+- chat and Work preview share the same renderer.
+
+Nested lists/trees render with indentation and collapsible nodes where the structure is explicit; plain bullet lists are never converted into a tree by guesswork.
+
+#### 15. Images/media in chat
+
+User images:
+- inline thumbnail with original dimensions/type available in details;
+- click/tap opens full-screen viewer;
+- pinch/wheel zoom + pan;
+- Reset zoom;
+- Copy/Save/Share where platform permits.
+
+Generated/found images:
+- display source/provenance label when external;
+- generated artifacts link to the durable local artifact.
+Charts produced by Work appear inline as preview plus artifact action.
+
+OCR review surface can show image/page beside extracted text in a split viewer on wide screens and stacked view on mobile.
+
+Android long-press opens contextual Save/Share/Copy-image actions. No hidden automatic upload occurs merely by opening the viewer.
+
+#### 16. Android gestures
+
+Avoid gesture conflicts with Android system navigation.
+
+Supported:
+- long-press chat/message/item = context menu;
+- pinch = zoom image/document preview;
+- vertical swipe = ordinary scrolling;
+- optional edge swipe from the content edge may open Chat list only when it does not conflict with system back gesture and is disabled automatically under gesture-navigation conflict.
+
+Not used:
+- destructive swipe-to-delete;
+- horizontal swipe between chats;
+- pull-to-refresh in chat;
+- double-tap actions that can accidentally trigger message changes.
+
+Delete always uses explicit menu/undo flow.
+
+#### 17. Theme policy
+
+Through V1.7, AuroraFox ships **dark theme only** plus a **High Contrast Dark** variant.
+System light/dark mode does not automatically switch AuroraFox to light.
+High Contrast Dark raises contrast/focus/border clarity but keeps the dark visual identity.
+A light theme is DEFERRED and requires a future ADR + complete token/contrast/visual acceptance; it is not implied by current specifications.
+
+#### 18. Typography scale
+
+Platform fonts:
+- Windows: Segoe UI Variable / Segoe UI fallback;
+- Android: Roboto;
+- code: platform monospace (Cascadia Mono/Consolas fallback on Windows, Roboto Mono/system monospace on Android).
+No bundled custom font is required for base UI.
+
+Scale:
+- metadata 12 px/sp, regular 15-16, message body 16, subsection 18-20, page title 22-24;
+- normal line-height 1.40-1.50x; code 1.35-1.45x;
+- regular body weight 400; controls/labels 500; headings 600-700;
+- no artificial letter spacing on body text; uppercase micro-labels may use +0.04em equivalent.
+- system font scale multiplies the semantic scale; layout must reflow at 200%.
+- Cyrillic and Latin use the same primary family; missing glyphs fall back to OS Unicode fonts.
+- URLs/long tokens use safe word-break/wrap; code preserves horizontal scrolling rather than arbitrary word breaks.
+
+#### 19. Concurrent operations / Task Center
+
+Multiple operations are represented by a single header **Task Center** chip:
+`Задачи · 3`.
+
+Click opens:
+- Chat response;
+- Work;
+- Computer;
+- Knowledge import;
+- update download;
+- background reindex/etc.
+
+Each has state, progress/phase and Pause/Stop where supported.
+Individual activity cards may remain in their originating context, but they can be collapsed.
+
+Header priority indicators:
+1. security/permission/master-stop warning;
+2. active Computer control;
+3. current foreground chat;
+4. background task count.
+
+If Master Stop is pressed with >1 autonomous task, a sheet lists affected tasks and offers `Остановить все` or select individual tasks. Download-only updater activity is not killed by autonomy Master Stop unless explicitly selected; dangerous execution is.
+
+#### 20. Undo / soft deletion
+
+For chats, Memory items, Knowledge sources and projects:
+- item disappears from active retrieval immediately;
+- show toast `Удалено • Отменить` for 30 seconds;
+- soft-deleted item remains in local Trash for 7 days by default, owner-adjustable;
+- `Удалить навсегда` bypasses Trash after a second explicit destructive confirmation;
+- restore from Trash reactivates item/index relationship transactionally.
+
+Privacy "forget" semantics are immediate for retrieval even during Undo/Trash retention. Sync uses tombstones; restoring creates a causally newer restore event.
+
+#### 21. Keyboard shortcuts
+
+Native Windows default profile:
+- Ctrl+N — new chat;
+- Ctrl+K — chat/global search;
+- Ctrl+F — search inside current chat/document;
+- Ctrl+, — Settings;
+- Ctrl+O — attach/open file;
+- Ctrl+B — toggle sidebar;
+- Ctrl+Alt+W — Work (avoids Ctrl+Shift+W browser convention);
+- Ctrl+Shift+K — Knowledge;
+- Ctrl+Shift+M — Memory & Data;
+- Ctrl+Alt+D — Diagnostics;
+- Alt+Up / Alt+Down — previous/next chat in current history order;
+- Ctrl+Shift+C — copy last complete Fox answer when focus is not in a text selection/editor;
+- Ctrl+E — edit last user message where editing is allowed;
+- Ctrl+L — focus composer in native app only;
+- F11 — fullscreen;
+- Esc — close topmost panel/dialog or clear transient mode;
+- Ctrl+Shift+. — Master Stop default.
+
+All shortcuts appear in a searchable Shortcut Settings page and are remappable except OS-reserved/protected combinations. Conflict detection warns before assignment.
+Future web client uses a separate profile to avoid browser-reserved collisions.
+
+#### 22. Drag-and-drop edge cases
+
+Drop targets exist only in Chat composer area, Work project/task file area and Knowledge import area.
+
+- Drop on Settings/sidebar/header outside a valid target: no action.
+- Multi-file: batch attachment/import.
+- Folder on Chat: offer folder/project intent on Windows; do not silently enumerate thousands of files.
+- Unsupported file: explicit unsupported-state chip.
+- Image: image attachment with thumbnail.
+- Dragged text: insert into composer at caret.
+- Dragged browser URL: insert canonical URL text into composer; Fox handles it through public-link intent after send.
+- Drag into Work uses Work project/task context, never silently adds to global Knowledge.
+- Large folder preview shows count estimate and requires explicit action before recursive processing.
+
+#### 23. Multi-turn context / branches
+
+Editing an earlier user message creates a **new branch**; the old branch is preserved, not silently deleted.
+
+At a branch point:
+`Версия 1 из 2 ◀ ▶`.
+
+The current branch is the default view. Branch menu allows:
+- view original branch;
+- view edited branch;
+- name branch;
+- delete a branch through soft-delete/Undo.
+
+Replies may show a compact `Ответ на: <snippet>` anchor when a user explicitly replied to/referenced an earlier message. Clicking scrolls to that message.
+
+Long Work/chat tasks expose a persistent `Исходная задача` anchor in the activity/task card.
+
+#### 24. System notifications
+
+Windows uses native toast/system notifications; Android uses notification channels.
+
+Channels:
+- Task completion;
+- Attention/permission required;
+- Updates;
+- Voice/background listening status where OS requires a persistent notification.
+
+Behavior:
+- notification tap deep-links to the exact chat/task/update screen;
+- if app is foreground and relevant surface visible, prefer in-app toast and suppress duplicate system notification;
+- multiple task completions group into one summary after 3+ events;
+- quiet hours are configurable; non-critical completion sounds are suppressed;
+- security/master-stop conditions respect OS notification policy and never claim to bypass Do Not Disturb.
+- notification sounds are separately configurable.
+- crash-recovery notification appears only if background restart/recovery actually occurred and user attention is useful.
+
+#### 25. Settings navigation/window behavior
+
+Windows Settings:
+- minimum size 860x640;
+- resizable;
+- left category pane minimum 210 px and independently scrollable;
+- right page independently scrollable;
+- per-page scroll position is remembered while Settings remains open;
+- reopening Settings returns to the last category used, unless a deep-link action requests a specific page;
+- default on first-ever open is `Основное`;
+- at <760 px internal width, category sidebar becomes top dropdown/mobile-style navigation.
+- Settings remains fully usable while Core is STARTING/DEGRADED/UNAVAILABLE; Core-dependent cards show their state rather than blocking the whole window.
+
+Android Settings is full-screen with category dropdown and per-page scrolling.
+
+#### 26. UI acceptance matrix
+
+**Windows required viewport/DPI scenarios:**
+- 1920x1080 @100%;
+- 1366x768 @100%;
+- 1024x768 @125%;
+- 800x600 @100%;
+- 720x600 @150%;
+- 1366x768 with OS text scaling 200%.
+
+**Android required logical layouts:**
+- 360x640 dp phone portrait;
+- 393x873 dp modern phone;
+- 640x360 landscape;
+- 600x960 dp tablet;
+- software keyboard open;
+- system font 200%;
+- gesture navigation and 3-button navigation.
+
+For each affected release:
+- zero overlap/clipped essential controls;
+- no empty buttons;
+- all primary flows reachable by keyboard on Windows;
+- NVDA smoke for chat/settings/Work primary actions;
+- TalkBack smoke for chat/settings/attachments;
+- contrast test PASS;
+- loading/empty/error/offline/degraded states screenshot-tested;
+- long response + 1000-message virtualization scenario;
+- stream scroll-lock scenario;
+- multi-task Task Center scenario;
+- drag/drop matrix Windows;
+- Android back/permission/rotation/keyboard/gesture matrix;
+- Settings page switch p95 <=150 ms Windows / <=200 ms Android after initial construction;
+- chat append UI work <=100 ms Windows / <=150 ms Android on the reference minimum tiers;
+- visual screenshots inspected, not just geometry assertions.
+
+#### 27. UI roadmap
+
+**V1.5.x — present product stabilization/UI contract**
+- main chat/sidebar/header/composer;
+- loading/streaming/long-answer behavior;
+- attachments/drag-drop;
+- Work baseline;
+- Computer permission/session visibility baseline;
+- Knowledge;
+- Voice onboarding/state;
+- Updates;
+- Settings/responsive/adaptive UI;
+- offline/Core failure/disk/resource states;
+- Task Center baseline;
+- accessibility/contrast/keyboard;
+- Diagnostics baseline;
+- existing owner Security Workspace UI only to the scope required by the active security package.
+
+**V1.6.0-1.6.2**
+- Memory/Data management;
+- cognitive provenance/context anchors;
+- Experience/learning visibility where useful;
+- sync/conflict UI;
+- branch/context/history upgrades;
+- account/principal-aware UI foundation remains hidden until activation.
+
+**V1.7**
+- full Evolution Center;
+- advanced dynamic-trust controls;
+- richer autonomous audit/timeline;
+- advanced Security/Evolution diagnostics.
+
+**Deferred until explicit owner activation**
+- public account/guest onboarding;
+- Web client;
+- Smart Home/Home UI;
+- light theme;
+- RTL language support claim.
+
+#### 28. Complete navigation/state map
+
+`First launch -> Chat`
+
+`Chat -> New Chat / History / Search / Attachments / Voice / Sources / Feedback / Activity / Task Center / Branches / Long-answer viewer`
+
+`Chat -> Work -> Projects / Files / Task / Live progress / Diff / Result / Audit`
+
+`Chat/Work -> Computer permission -> Computer Session preview / Pause / Take control / Stop`
+
+`Settings -> General / Interface & Accessibility / Voice / Memory & Data / Files & Projects / Autonomy[owner] / Tools / Updates / Diagnostics[owner]`
+
+`Tools -> Knowledge / Public Web / Computer / Work / API[owner] / Security[owner]`
+
+`Knowledge -> Import / Sources / Reindex / Remove / Trash / Progress`
+
+`Updates -> Check / Download / Offline-resume / Verify / Install / Rollback status`
+
+`Global states -> Loading / Empty / Offline / Lite / Core unavailable / Low disk / Permission required / Sync conflict / Crash recovery / Notification deep-link / Close-with-active-task`
+
+`Deferred -> Account/Guest onboarding / Home/Smart Home`.
+
+No described user-visible state may exist outside this map without an explicit UI-spec update.
+
+#### 29. Smart Home UI status
+
+All prior Home/room/socket/camera mockups are reclassified as **DEFERRED ARCHITECTURAL CONCEPT ONLY — DO NOT IMPLEMENT**.
+They exist only to ensure future capability-based device architecture is not blocked.
+Before any Smart Home UI implementation:
+- owner explicitly activates the package;
+- new ADR;
+- current device protocol/capability model;
+- privacy/safety acceptance;
+- fresh UI specification.
+Examples such as `1840 W` or `гладильная` are illustrative only and are not design contracts.
+
+#### 30. RTL policy
+
+Current supported UI languages RU/EN are **LTR only**.
+The architecture must avoid assumptions that permanently prevent mirroring, but AuroraFox does **not** claim RTL support yet.
+Arabic/Hebrew/other RTL support requires a dedicated future package with:
+- mirrored navigation/sidebar;
+- bidi text/cursor;
+- table/code exceptions;
+- gesture direction review;
+- icon directionality;
+- TalkBack/screen-reader;
+- visual acceptance.
+Until that release, do not partially mirror the UI and call it RTL-supported.
+
+#### 31. Sync-conflict UI
+
+Conflict handling follows the canonical type-specific sync protocol.
+
+- Auto-mergeable conflicts resolve silently and may create a low-priority audit entry.
+- Non-mergeable conflict produces a banner `Нужно выбрать версию` and a Task Center item.
+- Conflict viewer shows Local / Other device / Common ancestor where available, changed fields, timestamps/device labels and merge preview.
+- Actions: `Сохранить мою`, `Сохранить другую`, `Объединить` where supported, `Сохранить обе`.
+- Memory conflict never silently changes personal preference.
+- Knowledge-source conflict preserves both revisions until resolved.
+- Work/project conflicts block destructive overwrite but allow local read-only work.
+- Resolving creates a new causal resolution event.
+
+#### 32. Computer permission flow
+
+If a task first needs Computer permission, Fox asks in context:
+
+`Для этой задачи AuroraFox нужно управлять экраном, мышью и клавиатурой.`
+
+Options:
+- `Разрешить для этой задачи` (default/recommended);
+- `Разрешить до закрытия AuroraFox`;
+- `Открыть настройки`;
+- `Не разрешать`.
+
+No permanent global grant is created from a one-task consent.
+Permission can be revoked mid-task from privacy indicator/Computer Session/Settings; revocation stops new input actions immediately and task enters `PAUSED_PERMISSION_REVOKED`.
+If runtime is missing after permission grant, Fox offers `Подготовить Computer Agent` and keeps task paused; it does not fake completion.
+
+#### 33. Markdown/rich-text rendering
+
+Canonical chat renderer uses a safe GFM-compatible subset:
+- headings;
+- paragraphs;
+- emphasis/strong/strike;
+- ordered/unordered lists;
+- blockquotes;
+- links;
+- inline code;
+- fenced code;
+- tables;
+- task lists.
+
+Raw HTML/script/event attributes are not executed/rendered as privileged HTML.
+Invalid Markdown falls back to safe best-effort plain/rich text without losing literal content.
+Chat and Work preview use the same renderer.
+
+Math:
+- inline/block math rendering is a separate local-safe renderer capability;
+- until implemented, LaTeX delimiters remain readable source text rather than broken output.
+Footnotes may be supported later and are not release-critical for V1.5.
+
+#### 34. Core unavailable UX
+
+Core states:
+`STARTING / READY / DEGRADED / RECOVERING / UNAVAILABLE`.
+
+If unavailable:
+- header indicator becomes red `Core недоступен`;
+- Settings, Diagnostics, Knowledge source management, export/delete and non-AI UI remain accessible;
+- chat composer remains usable for draft text but Send shows recovery status rather than silently dropping a request;
+- automatic bounded recovery is shown as `Пробую восстановить Core…`;
+- Diagnostics provides `Восстановить Core` when a supported repair path exists;
+- if Lite fallback activates, state changes to amber `Lite` with explanation;
+- crash during conversation preserves draft/queued request and offers Retry after recovery;
+- no mandatory cloud-AI fallback.
+
+#### 35. Low-disk UX
+
+Storage states:
+- warning at <5% or <2 GiB free: amber banner `Мало свободного места`;
+- critical at <1 GiB: red/amber blocking banner for heavy storage operations.
+
+Banner actions:
+- `Посмотреть хранилище`;
+- `Очистить кэш`;
+- `Открыть папку/настройки хранения` where platform permits.
+
+Knowledge import/update staging/reindex/large Work checkpoints perform preflight and show required/available space before starting.
+Memory/source data is never auto-deleted.
+Diagnostics -> Storage shows app data, Knowledge, cache, update staging and free disk separately where measurable.
+
+#### 36. Minimize/restore/tray
+
+Windows:
+- normal minimize keeps AuroraFox running;
+- Work/import/update/download tasks continue according to their own policy;
+- Computer automation may continue only with prior task permission; tray icon shows an active-control badge/status and system privacy indicator remains visible;
+- tray menu: Open AuroraFox / Active tasks / Pause autonomous tasks / Exit;
+- restore returns to last active chat/surface and refreshes Core/network/task status;
+- task-completion badge may appear on tray until viewed.
+- exiting from tray uses active-task close flow.
+
+Android follows OS background limits and persistent notifications for long-running permitted foreground services; it does not pretend a killed background process is still running.
+
+#### 37. New-chat deduplication
+
+An empty new chat is **ephemeral and not persisted** until it contains the first sent message, committed attachment/task link or explicit title/project association.
+Therefore:
+- pressing New Chat while current ephemeral chat is empty simply focuses/resets that same ephemeral chat;
+- no database/history duplicates are created;
+- once content is committed, New Chat creates a new ephemeral chat.
+This rule eliminates the ambiguous "which empty chat to reuse" case.
+
+#### 38. Enter behavior by platform
+
+Windows native:
+- Enter = Send;
+- Shift+Enter = newline;
+- configurable alternative `Enter=newline / Ctrl+Enter=Send`.
+
+Android software keyboard:
+- Enter/newline inserts newline;
+- visible Send button submits.
+
+Android physical keyboard:
+- Ctrl+Enter = Send by default;
+- Enter = newline.
+
+Voice input inserts/commits transcript through the Voice state machine and does not synthesize keyboard Enter events.
+
+#### 39. Shortcut collision policy
+
+Native Windows shortcuts are scoped to AuroraFox window and do not claim browser/global bindings.
+Avoid known destructive/common browser collisions where a clearer alternative exists (hence Work = Ctrl+Alt+W, not Ctrl+Shift+W).
+Shortcut Settings detects duplicates inside AuroraFox.
+Future web client has a separate shortcut profile and must not override browser-reserved navigation/window shortcuts without explicit opt-in.
+OS-reserved combinations cannot be assigned.
+
+#### 40. Voice visual feedback
+
+Voice has explicit states:
+- OFF;
+- READY;
+- LISTENING;
+- RECOGNIZING;
+- SPEAKING;
+- ERROR.
+
+Visuals:
+- mic button changes label/state border, not color alone;
+- LISTENING shows a small live input-level meter/ring and text `Слушаю…`;
+- RECOGNIZING shows `Распознаю…`;
+- partial transcript appears in a temporary transcript strip above composer when supported;
+- SPEAKING shows `Fox говорит` plus `■ Остановить голос`;
+- barge-in immediately changes SPEAKING -> LISTENING and visually acknowledges `Слушаю вас`;
+- recognition failure shows `Не расслышала` with Retry, never silently sends an empty request.
+- typing while LISTENING does not erase the existing draft. Recognized text is inserted at caret in push-to-talk mode; continuous/wake mode shows transcript preview before auto-submit when confidence/policy allows.
+- safety-sensitive voice commands still require the same confirmation/trust policy as text commands.
+
+FINAL_UI_UX_CONTRACT_STATUS: ACTIVE / CANONICAL / RELEASE-GATING FOR IN-SCOPE SURFACES.
