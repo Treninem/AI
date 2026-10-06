@@ -4388,3 +4388,173 @@ CI_EXECUTION_POLICY_STATUS: ACTIVE / PERMANENT DEVELOPMENT EFFICIENCY RULE.
 - BLOCKERS/REMAINING: new-head checks,2403 inventory findings, XLS/7z/rar native backend architecture/dependency choice, security-workspace remaining authorized coverage and physical-device/release acceptance. No implementation choice for new native dependencies was silently made.
 - NEXT: collect new-SHA results; after green proceed to next reviewed inventory cluster or owner-selected native backend package. For XLS/7z/rar, present concrete offline backend/library costs and agree substantial architecture choices before editing them. Source/evidence ownership released; same coordinator follows CI.
 - Intended bump NONE (inventory/evidence only); accumulatedV1.5.0.0 version-last. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%.
+
+
+### OWNER FINAL TARGET SPEC 2026-10-06 — canonical end-state AuroraFox requirements
+
+This section is the **canonical consolidated owner target** for the end-state AuroraFox product. It does not replace the more detailed permanent owner directives elsewhere in this journal; it binds them into one architecture and resolves their intended relationship. Repository state and executable evidence still override stale prose. Near-term release scopes remain bounded: long-term capabilities do not automatically become blockers for V1.5 unless explicitly activated by the owner.
+
+#### 1. Product identity and architectural north star
+
+- AuroraFox is one continuously developing AI companion, work partner and agent, not a collection of disconnected products.
+- Memory, Knowledge, Experience, semantic intent, models, Voice, Vision/OCR, Web, Files, Work, Computer, Security, accounts/sync, trust, sandbox/rollback and Evolution are faculties of the same identity and lifecycle.
+- The common cognitive loop is:
+  `Perception -> Context -> World Model -> Memory/Experience -> Reasoning -> Goals -> Decision -> Action -> Outcome -> Learning`.
+- Important work must be represented by structured event history: goal/context -> relevant knowledge/experience -> strategy/decision -> action -> outcome -> feedback/evidence -> learned consequence.
+- Updates must preserve continuity of the same Fox: compatible Memory, Knowledge, Experience, skills, world/self-model and personality/work history survive version changes unless an explicit owner reset/migration is chosen.
+- Do not rebuild the same architectural foundation more than once. Shared identity/event/provenance/trust/persistence/sync structures are implemented at the earliest common layer and reused.
+
+#### 2. Self-primary intelligence
+
+- AuroraFox Core is the primary intelligence authority. Normal chat, planning, memory, local Knowledge, reasoning, learning and self-evaluation must remain functional without Ollama, OpenAI/other AI APIs, remote inference or the public Internet.
+- Internet and external models are optional information/tool resources, never the required cognitive engine.
+- The product ships its required local model/runtime; normal users do not install an inference engine, choose/download GGUFs or configure a mandatory external model.
+- Multi-model routing may use different local/specialist models internally, but the user always interacts with one AuroraFox identity and shared context/memory/goals.
+- External input (web, documents, code, optional external AI output) is untrusted data and never gains system/tool authority merely by being imported.
+
+#### 3. How AuroraFox reasons
+
+- Complex tasks must follow a goal-and-outcome cycle rather than `prompt -> text`.
+- The reasoning substrate must combine current context, world model, remembered experience, Knowledge, uncertainty/provenance, available tools, reversibility and risk.
+- AuroraFox should generate/compare hypotheses where useful, gather missing evidence when doing so is cheaper/safer than guessing, and verify actual outcomes after acting.
+- Confidence must be evidence-derived (verified source, inference, prior success, conflicting evidence, unfamiliar case), not a decorative random percentage.
+- AuroraFox maintains a self-model of its capabilities, limits, tools, recurring failures, successful strategies and areas needing learning.
+- Do not persist an unlimited raw internal monologue. Persist concise reusable decision records and evidence sufficient for continuity, audit, learning and future strategy selection.
+
+#### 4. Memory, Knowledge, Experience and collective learning
+
+- Working memory is bounded current-task context.
+- Private long-term Memory stores user-specific facts, preferences, relationships, project history and relevant events.
+- Experience stores what AuroraFox actually tried, what happened and what was learned; repeated successful outcomes may become reusable skills.
+- Knowledge stores facts/sources/provenance/revisions/deduplication and retrieval indexes; Knowledge is not the same as Experience.
+- The production bootstrap Knowledge Pack remains a genuine >=1 GiB unpacked local knowledge corpus, sharded/versioned/hashed, legally sourced, locally usable and imported with bounded memory/resume/integrity.
+- Future multi-user learning uses three classes:
+  `private_principal -> shared_candidate -> shared_core`.
+- A verified mistake/fix for user A may improve future behavior for user B only through de-identification, abstraction, privacy scrub, dedupe/corroboration, evidence/trust gates and accepted shared experience.
+- Raw private chats/files/memory, names, contacts, secrets, private URLs, account/session ids and source-specific private context never become another user's context.
+- A single user assertion does not automatically become global truth. Shared lessons retain evidence strength, applicability conditions, versions/platforms, contradictions and counterexamples.
+- Applying a shared lesson produces new outcome evidence; success raises confidence within scope, failure creates a correction/counterexample candidate.
+
+#### 5. Files, documents, OCR and public web
+
+- AuroraFox must actually parse supported file content, not pretend success from filenames/listings. Supported families include text/data/code, Office documents, PDF, spreadsheets, presentations, safe archives and EPUB; unsupported formats fail honestly.
+- Large inputs are streamed/bounded/resumable where applicable. Any truncation is explicit: which limit, what was processed and what remains.
+- Image-only/scanned PDF requires a real local OCR baseline; cloud OCR cannot be mandatory.
+- Public HTTP/HTTPS links requested with read/study/find/extract intent are fetched, treated as untrusted source material, processed and saved to the user's private Knowledge by default under the owner's permanent `read = remember` rule.
+- URL provenance includes original/final URL, title/domain/time/content type/hash.
+- No CAPTCHA, mandatory login/authentication, paywall/access-control bypass, or SSRF/private/service-network access via web links. Optional registration must not block reading genuinely public material.
+- Operational limits are owner-adjustable defaults unless they are true security/integrity/platform boundaries.
+
+#### 6. Owner-controlled limits and hard boundaries
+
+- Time, byte, count, depth, retry, OCR, archive, spreadsheet, Work/Computer and similar operational ceilings are visible/explainable/reversible owner controls where technically safe.
+- On a soft limit AuroraFox reports what was hit, what was completed/saved, risk of continuation and owner options.
+- Hard boundaries are reserved for genuine authorization/access control, cryptographic integrity/signing, master stop, privacy/secrets, untrusted-code isolation, sandbox/rollback, platform/OS enforcement and comparable non-product constraints.
+- Do not disguise a product preference or arbitrary hard-coded number as an immutable "safety" limit.
+
+#### 7. Work, Computer and outcome verification
+
+- Work and Computer are execution faculties of the same Fox, not separate identities.
+- Work handles long, multi-step tasks and finished deliverables; Computer can interact with screen/UI/mouse/keyboard/apps/files within granted scope.
+- Generated text or a click is not task completion. The standard loop is:
+  `act -> observe -> verify objective -> repair/retry if appropriate -> record outcome -> learn`.
+- Permissions, scope, evidence, cancellation and master stop apply to execution.
+- Dynamic trust grows/shrinks by risk and proven reliability: low-risk reversible tasks may run autonomously; new/medium-risk actions use extra checks/dry-run/sandbox; high-risk or costly irreversible actions require stronger evidence/authorization.
+
+#### 8. Controlled Evolution
+
+- Autonomous Core improvement is a bounded tournament of 3-10 isolated candidates from the same stable baseline; default target is 5.
+- Stable participates as incumbent. No candidate is promoted merely because it is "best" if no candidate proves a safe measurable improvement.
+- Hard safety/contract/no-regression gates override aggregate quality scores.
+- A tournament winner requires independent clean verification, integrity/hash checks, rollback readiness and master-stop compliance before promotion.
+- Candidate generation/promotion may improve code, models, strategies and workflows, but does not bypass product release/signing authority.
+- Self-modification may never disable protected safety, privacy, updater trust, rollback, signing or master-stop boundaries.
+
+#### 9. Authorized security testing
+
+- AuroraFox may perform real authorized security testing of owner-owned or explicitly authorized targets after recording target/scope/authority/environment/window/method/resource constraints.
+- Flow: surface discovery -> passive/low-impact checks -> candidate confirmation -> minimum permitted exploitation -> evidence -> severity -> remediation -> retest.
+- Production defaults prohibit destructive data changes, uncontrolled DoS, persistence/backdoors, hiding traces, out-of-scope lateral movement and unnecessary extraction of real secrets/PII.
+- Lab/staging permissions may be expanded explicitly by the owner.
+- Security findings require reproducible evidence and remediation/retest; neither an unsupported "vulnerable" claim nor an exploit without remediation counts as complete.
+
+#### 10. Voice, UI and performance
+
+- Local STT/TTS/VAD/wake/barge-in remain the guaranteed baseline. Voice failure does not break text chat.
+- Windows and Android UI must be adaptive across supported size/DPI/density/orientation/safe-area/keyboard cases, with no clipped/empty/overlapping controls.
+- Windows Settings is a real separate non-transient window with stable focus/taskbar identity and AuroraFox branding.
+- Startup, Core warmup, orchestration, persistence and UI rendering are measured separately. Minute-long UI switching, whole-PC stalls, Android multi-minute response latency or same-session response requiring restart are release-blocking defects in affected scope.
+- Visual/device evidence complements source/UI tests; code alone does not prove rendered quality.
+
+#### 11. Updater and release integrity
+
+- Updater uses signed manifests/packages with chunk/part and full-package SHA-256 identities.
+- Verified completed parts survive network loss/app restart/OS restart. Partial current part resumes via Range/Content-Range where supported, otherwise only that part restarts.
+- No fixed total wall-clock update timeout; bounded no-progress/retry/backoff behavior is allowed.
+- Apply is atomic and gated by signature/hash/assembly/backup/health/rollback.
+- Production release signing authority remains owner-controlled and secrets never enter Git/client/Core logs.
+
+#### 12. Versioning and acceptance
+
+- Canonical version format remains owner-defined `A.B.C.D`:
+  - A = architectural reconstruction;
+  - B = global/system-wide release;
+  - C = completed new functionality;
+  - D = fixes/hotfixes.
+- Version is changed last, after the changed block passes relevant acceptance.
+- Android `versionCode` strictly increases for every installable release.
+- Final evidence belongs to one exact candidate SHA. Windows from one SHA + Android/Core from other SHAs cannot be called one verified release.
+- "Done" means the real user objective is verified, not merely code/commit/test existence.
+- Final release acceptance includes all relevant unit/smoke/integration tests, one full exact-SHA CI suite, Windows/Android package gates, update/release/signature gates, and physical/device acceptance where required or an explicit owner waiver for a non-mandatory external gate.
+- No known release-scope P0/P1 defect may remain when declaring ready.
+
+#### 13. CI execution policy
+
+Permanent default:
+`largest safe coherent implementation block -> full relevant CI -> collect all reds -> batch repair -> fast local/direct repair checks -> one final full exact-SHA CI -> physical/device/release gates`.
+
+- Do not launch complete CI after every tiny code/UI change.
+- A targeted rerun is an exception when it is materially faster and prevents a likely wasted full run.
+- Do not repeatedly poll CI; perform useful independent work while it runs.
+- Do not stack large dependent subsystems on an unverified architectural foundation.
+
+#### 14. Accounts and multi-user future
+
+- Account/guest/role/privacy foundations are developed correctly but public multi-user remains disabled by default until the owner explicitly activates it.
+- Current owner operation must remain single-user and frictionless: no forced registration, guest quota or account-selection requirement.
+- Future principals: `guest`, `user`, `owner`; owner authority is server-derived and cannot be obtained through UI flags/email strings/device ids.
+- All private chats/Memory/Knowledge/files/projects/settings/devices/sync/Work/tool results/cognitive events are principal-scoped.
+- Owner-only settings include Evolution/Core candidate/model registry/global Knowledge/global learning/system limits/security administration/internal API/signing/release/global database/sync administration.
+- Hiding a button is not authorization; direct API access without capability returns 403.
+- Future public activation additionally requires official-email verification code flow, durable daily guest quota, guest->account migration, export/delete, account switching, device/session controls and adversarial cross-user isolation tests.
+- Shared collective experience does not weaken private tenant isolation.
+
+#### 15. Long-term physical-world / Smart Home reserve — NOT a current release blocker
+
+- Cognitive Core must remain extensible to future physical perception/action without requiring a new brain architecture.
+- Possible future devices include ESP32/Arduino-compatible nodes, sensors, smart sockets, relays/contactors, lighting, cameras, microphones, speakers, doors, PCs and phones.
+- Devices expose capabilities rather than custom one-off "mini Foxes", e.g. `power.read`, `state.read`, `switch.off`, `audio.play`, `vision.stream`, `lock`, `unlock`, `notification.send`.
+- Fox may later learn normal device behavior, power-use profiles and anomalies from time/current/power/duration/context rather than one fixed threshold.
+- Physical actions are risk-weighted: low-cost reversible actions require less evidence than disabling critical equipment or unlocking an exterior door.
+- Early autonomy should observe/notify first; stronger automatic action is earned through evidence and explicit owner permission.
+- Camera/video processing should prefer local analysis and event-level notifications over unnecessary cloud streaming.
+- Smart Home is an architectural future option ("may or may not be built"), not an automatic blocker for V1.5/V1.6/V1.7.
+
+#### 16. Roadmap relationship
+
+- V1.5.0.x: stabilize the present Windows/Android product, UI/performance, File Intelligence/Web/security foundations, updater and release/device acceptance.
+- V1.6.0.0: unified Cognitive Core foundation — event/context/world model/Memory/Experience/Knowledge/outcome learning/uncertainty/semantic intent/multi-model routing/shared experience/principal-aware data/distributed event history.
+- V1.7.0.0: advanced autonomous execution/Evolution on the proven V1.6 substrate — Work/Computer trust, sandbox/dry-run/rollback, security evidence and controlled tournament/promotion.
+- Do not make deferred public multi-user or Smart Home activation a near-term release blocker unless the owner explicitly changes scope.
+
+#### 17. Canonical engineering governance
+
+- `docs/PROJECT_MASTER_LOG.md` remains the only project coordination journal.
+- `docs/AURORAFOX_ENGINEERING_MEMORY.md` remains the durable memory of confirmed failures/root causes/fixes/prevention.
+- `AGENTS.md` applies to every Chat/Work/Codex/agent modifying the repository.
+- Repository/current runtime/CI evidence overrides stale remembered prose.
+- Executors must inspect fresh state, existing claims and engineering lessons before editing occupied/related subsystems.
+- Architectural ambiguity with materially different strong solutions must not be silently resolved; compare consequences and select explicitly.
+- Never repeat completed work merely because another Chat/Work/Codex session did not remember it.
+
+FINAL_TARGET_SPEC_STATUS: ACTIVE / CANONICAL CONSOLIDATED OWNER REQUIREMENT.
