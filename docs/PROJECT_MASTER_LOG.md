@@ -6904,3 +6904,24 @@ PROGRESS_REMAINING:2%
 REMAINING: approved owner-controlled signing authority/adoption and signed canonical publication; real V1.6 installed Windows/Android compatibility/import acceptance; optional OCR/TTS redistributable provenance.
 BLOCKERS:auto-review rejected new production-key signed publication; explicit owner decision required. Real S3 API access/semantics/inventory and engine-file availability resolved.
 NEXT: owner chooses existing protected signer or explicitly adopts preserved new separate V1.6 distribution key; then verify/sign immutable canonical manifests and upload via tested create-only provider. Keep incompatible/unknown optional packages excluded and complete future platform package acceptance before activation. No background process left running.
+
+
+## 2026-10-06 — Explicit owner adoption of separate V1.6 distribution signing key
+
+CLAIM_ID:v1.6-s3-distribution-foundation-reg-ru-signing
+STATUS:ACTIVE
+STARTING_HEAD:48d9b3bcaa0ff66f374d3f17f3d2dce789fd9eff
+ROADMAP_RELEASE:futureV1.6;SCOPE_CLASS:FUTURE/nonblocking;ROADMAP_SECTION:S3 distribution preparation;ADR_REFS:existing isolated distribution foundation decisions unchanged.
+ACCEPTANCE_GATES: owner-approved key custody; independently pinned public key; actual signed manifests and payload/chunk read-back; immutable API publication; static bootstrap compatibility/fail-closed cases; live inventory.
+OWNED_PATHS:append-only docs/PROJECT_MASTER_LOG.md,append-only docs/AURORAFOX_ENGINEERING_MEMORY.md,new distribution/trust/aurorafox-v16-distribution-20261006.pem. No V1.5 files or runtime trust-root changes; no intended public version bump.
+OWNER_AUTHORIZATION: user selected exact question 'Разрешаешь принять созданный отдельный ключ подписи V1.6 и использовать его для этих пакетов' and replied 'разрешаю, но поправь в журнале как сделаешь'. This explicitly adopts the already preserved separate key and overrides the original no-new-key constraint for this one V1.6 distribution key; no further key generation, S3 credential change or public policy is authorized.
+KEY_ID:aurorafox-v16-distribution-20261006
+PUBLIC_PEM_SHA256:653afae362d0d3de62884266db5a431149a8ff58b6b20615141978cfab7a80c3
+CUSTODY: private key already preserved in owner-private downloadable file outside Git/S3; no secret value in journal. Owner will receive that private file separately; public key only is committed/published. V1.5 application release signer remains separate.
+CORRECTION: previous automatic-review production signing blocker is now AUTHORIZED_RESOLVED for this exact key. Actual signed publication remains IN_PROGRESS until remote signature/chunk evidence is complete. Preserve historical failure/lesson; do not retroactively claim the earlier blocked attempt succeeded.
+PROGRESS_COMPLETE:98%
+PROGRESS_REMAINING:2%
+DONE: owner key adoption explicit; prior authenticated S3 and raw package checks remainPASS.
+REMAINING:signed immutable publication and pinned trust/compatibility verification.
+BLOCKERS:none for adopted signer; future installed V1.6 device integration remains separate.
+NEXT:sign existing actual runtime/Core/Knowledge manifests with adopted key; publish via conditional API, verify exact remote signatures/chunks and complete journal evidence.
