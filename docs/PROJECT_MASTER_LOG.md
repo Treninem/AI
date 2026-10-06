@@ -6852,3 +6852,28 @@ PROGRESS_COMPLETE:95%
 PROGRESS_REMAINING:5%
 BLOCKERS:exact AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst429588529bytes / SHA256bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614 unavailable; owner-controlled production signing/license/compatibility; real REG.RU conditional PUT/412/range API acceptance and inventory still need protected API access. No permanent credentials requested/created and no raw private Experience uploaded.
 NEXT:owner supplies canonical production Knowledge archive via protected file handoff; validate fullarchive/chunks, production sign, immutable upload and actual read-back. Complete protected API conditional semantics and futureV1.6 packaging gates. User approval for one-hour object read-back already granted; do not ask again for equivalent scope. No background work implied after handoff.
+
+
+## 2026-10-06 — Canonical full Knowledge located, validated and copied to real S3
+
+CLAIM_ID: v1.6-s3-distribution-foundation-reg-ru-followup
+STATUS: HANDOFF_READY / INCOMPLETE; existing authorized future V1.6 distribution scope.
+STARTING_HEAD:00e8b02f71e8a5e2d6514fef85757c526fc232e1
+FINAL_HEAD:Git identity of this journal-only evidence commit.
+SOURCE_HEAD_TESTED:4b0c52d22d15d73521f80017d330eea77e96d0a5 (unchanged).
+CORRECTION: previous archive-unavailable statement was premature. Fresh main recursive tree (not truncated) and knowledge-import branch df67a1eb0e14478cc57dd6e68dce7c6bdbbf2b34 contain only metadata/validator, no archive or LFS pointer. knowledge_pack/README.md explicitly states payload is never committed to Git. All three current GitHub releases contain no named Knowledge archive asset. Canonical saved owner archive was then located and fully materialized; no owner re-upload needed.
+AUTHORIZATION: original owner request to copy necessary files into S3 plus latest 'продолжай'; existing approval for equivalent one-hour read-only object download verification reused. No permanent key, ACL change, public access, purchase, delete or overwrite.
+S3_REAL_ACCESS:YES.
+REAL_OBJECTS_UPLOADED: one additional nonzero file, total25 payload/metadata files, plus17 zero-byte namespace markers (four new: full, aurorafox-bootstrap-ru,2026.09.01-v1,sha256). Expected42 objects; console count may be delayed.
+OBJECT_KEY:aurorafox/knowledge/full/aurorafox-bootstrap-ru/2026.09.01-v1/bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614/AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst
+ARTIFACT_BYTES:429588529
+ARTIFACT_SHA256:bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614
+DONE: canonical compressed archive matched exact source contract. Pinned main tools/knowledge_pack/validate_pack.py streamed entire archive: ok=true,60 shards,75871 records,1982822407 JSONL file bytes,1924345221 genuine content bytes,duplicate_ids=0,duplicate_content=0; Russian Wikipedia20260901/CC BY-SA4.0/attribution checks PASS. Uploaded into previously empty exact hash namespace through REG console; visible filename409.69MiB confirms completion. Downloaded object through one-hour temporary read-only URL; actual remote bytes429588529 and full SHA match exact contract PASS. URL never printed, saved or committed; discarded from browser variables after navigation. Ordinary Download button again failed to produce usable completion before browser tool timeout; successful bounded read-only verification used established approved procedure. Full archive treated only as data.
+TESTS: canonical full streaming validator PASS; source SHA/size PASS; actual remote read-back SHA/size PASS. Earlier24/24 object readbacks remain PASS, now25/25. Earlier local50-test suite and Windows/Ubuntu CI37514648163 SUCCESS unchanged; source not modified, no redundant CI.
+S3_CAPACITY: verified object byte accounting total10000000000,used1876138786,free8123861214,percentage18.76138786%. This is sum of25 uploaded verified objects; zero-byte markers add no bytes. REG display uses rounding/binary units; server API inventory still pending. All active-candidate imports protected; no retention prune.
+V1.5_FILES_CHANGED:NONE. Only canonical journal changed on isolated work/v1.6-s3-distribution-foundation; main/PR103/version/runtime untouched. Existing pending metadata/receipts remain immutable historical evidence; presence and integrity of payload do not imply production signed distribution activation.
+PROGRESS_COMPLETE:97%
+PROGRESS_REMAINING:3%
+REMAINING: owner-controlled production signing/trust plus complete compatibility/resource metadata; OCR/TTS license provenance review; real REG conditional PUT IfNoneMatch/412, ranged resume/API inventory acceptance through protected API access; absent curated shared Skills/Experience and optional provider packages must not be fabricated.
+BLOCKERS: canonical full Knowledge absence RESOLVED. Remaining production signing/access and compatibility/license boundaries are future V1.6 distribution gates only; no V1.5 blocker.
+NEXT: use owner-controlled protected production signer and protected S3 API configuration to finalize signed compatible manifests and execute real conditional/range/inventory acceptance. Do not create keys or activate imports without that authority. No background work implied after handoff.
