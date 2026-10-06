@@ -6128,3 +6128,120 @@ REMAINING:new source runtime/package acceptance and unfinished release scope.
 - DEPENDENCIES: current REG.RU API server remains accepted for its present role; local self-primary Core remains mandatory.
 - NON_BLOCKERS: S3/object storage, CDN, API server upgrade, GPU workers and public-scale infrastructure are not V1.5 release blockers.
 - ACCEPTANCE_GATES: durable owner decision recorded with explicit purchase/upgrade triggers and no current spend requirement.
+
+
+### ### OWNER SERVER/DISTRIBUTION DECISION 2026-10-06 — no purchase now; local-first package distribution later
+
+Owner decision: **do not purchase or upgrade server infrastructure now**. The current REG.RU server remains the control/API plane for the present AuroraFox scope. Future model/Knowledge delivery is planned so that a newly installed Fox becomes useful immediately without making the remote server the required brain.
+
+#### Permanent architecture rule
+
+The server must remain primarily a **control plane**, not the mandatory inference engine.
+
+Current/present responsibilities:
+- API gateway;
+- accounts/auth/guest/device state;
+- sync/realtime;
+- feedback/learning exchange;
+- candidate queue;
+- readiness/health;
+- backup/deployment metadata.
+
+Future heavy immutable artifacts are separated from the API VPS:
+- Core model weights;
+- Seed/Standard/Full Knowledge packs;
+- shared Skills/Experience packs where allowed;
+- Vision/Image/Video capability assets;
+- application/update payloads.
+
+These are delivered from **object storage (S3-compatible) and optionally CDN/cache later**, not from the API process filesystem as the long-term design.
+
+Clients:
+1. detect hardware/resource profile;
+2. request a signed bootstrap/capability manifest;
+3. select the compatible Core/Knowledge/capability profile;
+4. download in resumable chunks;
+5. verify signature + hashes;
+6. activate locally;
+7. retain a known-good rollback version;
+8. continue normal local operation offline after download.
+
+The server may publish and coordinate packages, but normal AuroraFox reasoning remains local/self-primary.
+
+#### New-user bootstrap rule
+
+A first-time user must never receive an "empty shell" Fox that has no usable intelligence until a server happens to answer.
+
+Before public distribution, one of the accepted installation profiles must guarantee an immediately usable local baseline:
+- bundled Lite/Core + Seed Knowledge, **or**
+- install-time bootstrap retrieval completed and verified before the app enters normal usable state;
+- a full offline installer must remain possible for unstable/no-network environments.
+
+After first use, larger/full models and Knowledge packs may download progressively in the background/user-approved update flow without breaking the usable local baseline.
+
+#### No-buy-now rule
+
+Do **not**:
+- upgrade the current VPS merely "for future AI";
+- buy GPU server capacity for normal Core inference;
+- buy managed PostgreSQL merely because it may be needed later;
+- buy CDN before real distribution/load need;
+- store multi-GB model/Knowledge libraries permanently on the API VPS as the scaling strategy.
+
+Current V1.5 work and V1.6 cognitive work proceed without these purchases.
+
+#### Purchase / upgrade triggers
+
+The assistant/coordinator must explicitly tell the owner **before any paid infrastructure change** when one of these evidence-based triggers is reached:
+
+1. **Object storage / S3 trigger**
+   - the signed Model/Knowledge Distribution Service is ready for real beta/public package delivery; or
+   - the first external users need downloadable Core/Knowledge/capability packs beyond what should be bundled with the installer.
+
+   At that point, recommend the minimum S3/object-storage capacity/traffic tier based on actual package sizes and expected user count.
+
+2. **API VPS upgrade trigger**
+   - measured production load no longer leaves comfortable headroom; or
+   - load/soak testing for the next public stage shows the current CPU/RAM/network configuration cannot meet the declared API/SSE/WebSocket/database SLOs with at least a reasonable safety margin.
+
+   Upgrade from evidence, not from speculative user counts.
+
+3. **PostgreSQL/managed DB trigger**
+   - SQLite WAL shows real concurrency/lock/size/maintenance limits in load tests or production; or
+   - V1.6.2 distributed cognition/public multi-user scale demonstrates that SQLite can no longer satisfy the server write/sync contract.
+
+   Re-evaluate before public-scale V1.6.2 activation; do not migrate early without evidence.
+
+4. **CDN trigger**
+   - object-storage download latency/egress or geographic distribution becomes a user-visible bottleneck/cost problem.
+
+5. **GPU/compute-worker trigger**
+   - an explicitly activated server-side media/compute capability requires remote acceleration for devices that cannot execute it locally.
+   This is optional capability infrastructure and must not become the mandatory AuroraFox brain.
+
+#### Owner notification rule
+
+When a trigger above is actually reached during future development/release work, the assistant/coordinator must stop before committing the owner to paid infrastructure and report:
+- what trigger was reached;
+- why current infrastructure is insufficient;
+- the minimum required resource/service;
+- the recommended configuration;
+- what can be deferred;
+- what breaks or is delayed if nothing is purchased yet.
+
+No purchase is required now.
+
+#### Current conclusion
+
+- Current REG.RU API/server role: **sufficient for current development and V1.5 control-plane needs**.
+- Heavy model/Knowledge distribution: **planned, not purchased yet**.
+- Preferred next infrastructure addition when genuinely needed: **S3/object storage**, while keeping model inference local.
+- API VPS sizing, database migration, CDN and GPU workers: **evidence-triggered future decisions**.
+
+CLAIM `CHAT-2026-10-06-SERVER-DISTRIBUTION-PLAN`: **DONE**.
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+DONE: owner no-buy-now decision, local-first bootstrap/distribution architecture, future S3 role and paid-infrastructure triggers recorded.
+REMAINING: implementation intentionally deferred until the relevant roadmap/release milestone.
+BLOCKERS: none; no paid infrastructure required now.
+NEXT: continue current V1.5 critical path. Revisit distribution infrastructure only when the signed bootstrap/package-distribution capability or real public/load evidence reaches one of the triggers above.
