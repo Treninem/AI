@@ -4328,3 +4328,32 @@ NEXT: implement real EPUB and tar/tar.gz, genuine JVM fixtures, targeted invento
 - BLOCKERS/REMAINING: new-SHA CI, installed-device/release gates, native XLS/7z/rar decisions and2515 owner inventory findings; no source-blocking ambiguity in this existing-dependency package. Sparse tar and DTD-dependent/malformed EPUB return explicit unsupported/error conditions.
 - NEXT: publish this package in PR103, owner monitors direct check links; diagnose only actual failing new-SHA job. After green, continue next reviewed owner-control cluster and already-authorized security workspace acceptance without repeating implemented blocks. Source file ownership released; CI follow-up remains this same lane.
 - Intended bump PATCH, accumulated V1.5.0.0 version-last. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%. No readiness increase from source-only work.
+
+
+### OWNER CI EXECUTION POLICY 2026-10-06 — batch implementation, one repair pass, one final full exact-SHA run
+
+- Owner decision: AuroraFox development should minimize redundant CI waiting and credit/time waste while preserving final verification quality.
+- Default execution pattern for a coherent development lane/block:
+  1. Implement the largest logically coherent block that can be safely developed on the current verified foundation.
+  2. Use only cheap/local/static/smoke checks during implementation when they prevent carrying obvious syntax/contract errors forward.
+  3. After the block is functionally complete, launch the full relevant CI/check set together on one candidate SHA.
+  4. Collect all red results first; diagnose and repair the known failures as one batch where practical instead of serially waiting on CI after every small fix.
+  5. During repair, run only fast local/direct tests needed to confirm each specific root cause/fix.
+  6. After all known failures are repaired, launch one full final relevant CI suite on the new exact SHA.
+  7. If that exact-SHA final suite is green, do not rerun the same complete suite again without a concrete reason.
+- Re-running only the previously failed GitHub jobs before the final full run is **not the default**. It is justified only when that targeted job/test is materially faster than the complete suite and provides an early answer that is likely to avoid a long wasted full CI run.
+- Example: if full CI takes tens of minutes but the uncertain failing job takes two minutes, run the targeted job first; if the fix is straightforward and locally verified, skip that intermediate GitHub rerun and go directly to the final full exact-SHA suite.
+- The final full suite remains mandatory because a repair for one red test can regress a previously green subsystem. Passing only the former red jobs does not prove release-candidate consistency.
+- Do not poll CI repeatedly while it is running. Prefer useful independent work or let the owner report completion/status when links are already available.
+- Do not split one coherent implementation into tiny commits/check cycles solely to obtain frequent green indicators. Verification cadence follows meaningful engineering boundaries, not individual lines/buttons.
+- Conversely, do not stack unrelated or foundation-dependent major subsystems on top of an unverified architectural foundation. A foundational block should pass its relevant acceptance gate before dependent large layers are built on it.
+- Release/version/package/device gates are still final evidence requirements and are not weakened by this optimization. "Fewer CI runs" means removing redundant runs, never skipping the final evidence needed for release.
+- This policy applies to Chat, Work, Codex and autonomous development lanes unless a subsystem-specific safety/release contract requires a stricter cadence.
+
+DEFAULT_FLOW:
+`coherent implementation block -> full relevant CI -> batch repair of all reds -> fast local/direct repair checks -> one final full exact-SHA CI -> physical/device/release gates when applicable`
+
+TARGETED_RERUN_EXCEPTION:
+`uncertain fix + very slow full CI + very fast isolated test/job -> targeted rerun -> then final full exact-SHA CI`
+
+CI_EXECUTION_POLICY_STATUS: ACTIVE / PERMANENT DEVELOPMENT EFFICIENCY RULE.
