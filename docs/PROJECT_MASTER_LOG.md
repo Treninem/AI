@@ -4558,3 +4558,484 @@ Permanent default:
 - Never repeat completed work merely because another Chat/Work/Codex session did not remember it.
 
 FINAL_TARGET_SPEC_STATUS: ACTIVE / CANONICAL CONSOLIDATED OWNER REQUIREMENT.
+
+
+### OWNER FINAL TARGET SPEC AMENDMENT 2026-10-06 — measurable acceptance, lifecycle and architecture contracts
+
+This amendment closes twenty identified gaps in the canonical end-state specification. It is normative and has the same owner-level authority as `OWNER FINAL TARGET SPEC 2026-10-06`. Numeric thresholds below are **initial acceptance SLOs on defined reference tiers**; they may be tightened as real evidence improves, but may not be silently weakened to make a release pass. Any material change requires an ADR plus owner approval.
+
+#### A. Reference hardware tiers and measurable performance SLOs
+
+Reference tiers define whether behavior is a product defect or expected degradation.
+
+**Windows minimum tier (supported):**
+- x86-64 CPU, 4 physical/performance cores / 8 threads recommended, AVX2-capable;
+- 8 GiB RAM;
+- SSD;
+- 10 GiB free storage before install/update;
+- dedicated GPU/NPU not required.
+
+**Windows recommended tier:**
+- 6+ modern cores;
+- 16 GiB+ RAM;
+- 15 GiB+ free SSD;
+- GPU/NPU acceleration optional.
+
+**Android minimum tier (supported in Lite mode):**
+- Android 10+;
+- arm64-v8a;
+- 4 GiB physical RAM;
+- 6 GiB free storage;
+- GPU/NPU not required.
+
+**Android full local-Core tier:**
+- 6 GiB+ RAM;
+- 8 GiB+ free storage;
+- arm64-v8a Android 10+.
+
+Initial p95 SLOs on the minimum supported tier, measured from at least 30 cold/warm runs where applicable:
+- shell/window visible: Windows <=2.0 s, Android <=2.5 s;
+- usable UI after cold launch: Windows <=5.0 s, Android <=7.0 s;
+- warm local-Core first token: Windows <=2500 ms, Android Lite <=4000 ms;
+- simple <=128-token local answer end-to-end: Windows <=15 s, Android Lite <=25 s;
+- Settings/navigation page switch: Windows <=150 ms, Android <=200 ms;
+- incremental append to an already-open 1000-message chat: Windows <=100 ms UI work, Android <=150 ms UI work;
+- opening/rendering a 1000-message conversation using virtualization/incremental layout: Windows <=1.0 s, Android <=1.5 s;
+- no UI-thread operation may intentionally block >100 ms without yielding/progress indication.
+
+Memory ceilings:
+- Windows minimum tier: normal steady AuroraFox RSS <=3.5 GiB; bounded transient peak <=5.0 GiB during heavy local inference/import;
+- Android 4 GiB Lite mode: steady RSS <=1.3 GiB; transient peak <=1.8 GiB;
+- Android Full mode requires >=6 GiB RAM and targets steady RSS <=2.0 GiB, transient <=2.8 GiB.
+Exceeding a ceiling is not solved by OS kill/retry; it triggers the degradation policy below.
+
+For generation throughput, record tokens/s and first-token latency separately. A release may not hide poor first-token latency behind a good average tokens/s number.
+
+#### B. Knowledge Pack profiles and rationale
+
+The existing >=1 GiB genuine unpacked Knowledge Pack remains the **Full offline corpus release invariant**, primarily to prevent a placeholder/demo corpus from being called production Knowledge. Byte size alone is not a quality metric and therefore must be paired with domain coverage and retrieval benchmarks.
+
+Install profiles:
+- `Seed`: >=128 MiB genuine curated content, mandatory low-end/offline bootstrap;
+- `Standard`: >=512 MiB genuine curated content;
+- `Full`: >=1 GiB genuine curated content and the release-acceptance corpus.
+
+Windows recommended/default installs Full when storage permits.
+Android 4 GiB devices may install Seed by default and add/remove signed shards later.
+Android Full-tier devices may install Standard/Full.
+All profiles share the same manifest/schema/provenance/hashes and differ only by selected shards.
+
+The Core must operate when only Seed is present, with reduced breadth clearly represented in capability/status. Missing optional shards are not treated as corruption.
+
+Knowledge quality acceptance additionally requires a fixed retrieval benchmark by domain; Full must not regress below the previous accepted Full pack, while Seed must satisfy the mandatory essential-domain subset.
+
+#### C. Offline Core quality contract
+
+"Works offline" means **usefully completes tasks**, not merely emits text.
+
+Maintain a versioned `Offline Capability Suite` containing at least 200 representative offline-eligible tasks across:
+- conversation/instruction following;
+- local Memory recall;
+- Knowledge retrieval;
+- summarization/extraction;
+- reasoning/math;
+- file understanding;
+- planning/tool selection;
+- code understanding/repair;
+- uncertainty/error handling;
+- Russian and English language tasks.
+
+Acceptance:
+- >=85% of benchmark tasks must complete without any external AI/network inference;
+- deterministic/objective subset >=95% pass;
+- weighted overall quality score >=80/100;
+- no mandatory category <65/100;
+- a new stable Core may not reduce overall score by >1 point or any mandatory category by >3 points unless an owner-approved ADR explicitly trades that regression for a larger measured benefit.
+"Useful completion" is judged by task-specific expected outcomes/rubrics, not non-empty output.
+
+Full and Lite Core profiles are benchmarked separately and published with their capability profile.
+A bundled Lite model/runtime is required for 4 GiB Android and as local recovery fallback. It may be less capable but must remain useful under its declared benchmark profile.
+
+#### D. Android battery and thermal behavior
+
+AuroraFox must be battery/thermal aware.
+
+Mandatory modes:
+- `Normal`: full allowed local behavior within hardware profile;
+- `Conserve`: reduced context/threads/model size, background research/Evolution paused;
+- `Critical`: heavy inference/Work paused, essential chat uses Lite path or queued continuation.
+
+Defaults:
+- battery <25% while not charging -> Conserve;
+- battery <15% while not charging -> Critical for heavy autonomous jobs;
+- Android thermal MODERATE -> reduce threads/context and avoid simultaneous heavy jobs;
+- SEVERE/CRITICAL/EMERGENCY -> pause heavy local inference until thermal state recovers.
+Owner may relax battery thresholds but cannot disable OS thermal shutdown/protection.
+
+No idle "thinking loop": when no active event/task exists, AuroraFox does not continuously run the LLM.
+Background idle target on reference phone: <=1% battery/hour attributable to AuroraFox over a 3-hour idle test, excluding OS/network anomalies.
+Long Work/Computer/reindex/Evolution jobs show estimated resource mode and pause safely when battery/thermal policy requires it.
+
+#### E. Sync protocol — architectural decision
+
+Do not use generic last-write-wins for all user state.
+
+Canonical sync foundation:
+- event-sourced append-only operation journal;
+- globally unique event id;
+- server-verified principal;
+- device id + per-device monotonic sequence;
+- Hybrid Logical Clock (HLC) timestamp for stable ordering/user-visible time;
+- **dotted version vector / version-vector context** for causality and concurrent-edit detection;
+- periodic materialized checkpoints/snapshots for bounded replay;
+- durable tombstones for deletion.
+
+The server is a durable authenticated relay/store and conflict coordinator; it does not manufacture client ownership or silently overwrite concurrent state.
+
+Type-specific merge:
+- conversation/messages/event history: append-only set/ordered reducer;
+- sets/tags: observed-remove set semantics where applicable;
+- independent scalar preferences: LWW register using HLC only when explicitly classified as safe;
+- structured mutable records/documents: three-way merge when a common ancestor exists;
+- non-mergeable concurrent edits: preserve both conflict versions and surface resolution;
+- deletes: tombstone dominates only according to causality; a concurrent edit versus delete becomes an explicit conflict, not silent loss.
+
+Offline queues retain causal context. Sync schema/protocol is versioned and migration-tested.
+
+#### F. Evolution tournament test battery and scoring
+
+Candidate competition has two stages.
+
+**Hard binary gates — every one must pass:**
+- source/parse/build;
+- protected architecture/self-reliance invariants;
+- privacy/principal isolation;
+- master stop/cancellation;
+- sandbox/security boundaries;
+- updater/signing/rollback protected paths;
+- deterministic functional regression suite for touched subsystem;
+- no unauthorized external-AI dependency;
+- bounded resource/no-crash gates;
+- candidate artifact/hash integrity.
+
+**Numerical quality benchmarks:**
+- task success/quality;
+- latency and throughput;
+- RAM/CPU where relevant;
+- retrieval accuracy;
+- tool success rate;
+- failure/retry rate;
+- subjective-quality suite only where appropriate.
+
+All candidates and Stable use the exact same dataset, fixtures, seeds/configuration and machine class. Deterministic tests use fixed seed/temperature when technically available. No candidate sees hidden expected answers through its prompt/context.
+
+Promotion threshold:
+- all hard gates PASS;
+- either weighted normalized quality improves by >=2.0 points with no mandatory metric regression beyond its tolerance, or the target metric improves >=5% with overall quality regression <=1.0 point;
+- noisy metrics require >=3 repeated runs and a confidence interval/bootstrap test showing the improvement is not explained by run variance;
+- ties/inconclusive evidence keep Stable.
+
+Weights and metric tolerances are versioned in the benchmark manifest; changing them requires ADR/owner approval and cannot happen inside the same candidate tournament being scored.
+
+#### G. Accessibility acceptance
+
+Accessibility is a release requirement, not optional polish.
+
+Target: WCAG 2.2 AA principles where applicable to native/web surfaces.
+
+Windows:
+- NVDA smoke coverage for primary chat/settings/workflows;
+- accessible names/roles/states for interactive controls;
+- complete keyboard-only navigation;
+- visible focus;
+- logical focus order;
+- no essential mouse-only action.
+
+Android:
+- TalkBack labels/roles/state;
+- logical traversal order;
+- >=48dp touch targets where practical;
+- system font scaling through at least 200% without loss of essential controls/content.
+
+All platforms:
+- normal text contrast >=4.5:1, large text >=3:1;
+- status must not rely on color alone;
+- motion/animation must respect platform reduced-motion preference when available.
+Web, when activated, additionally requires semantic HTML/ARIA and keyboard acceptance.
+
+#### H. Objective vs subjective learning
+
+Every outcome is classified:
+- `objective`: mechanically verifiable (test/build/file/hash/API state/math/device state);
+- `hybrid`: objective constraints plus user-quality preference;
+- `subjective`: style/taste/preference without a single ground-truth result.
+
+Objective learning is driven primarily by evidence.
+Subjective feedback never overrides objective failure.
+
+Private preference learning:
+- explicit textual correction has higher weight than thumbs feedback;
+- two consistent explicit/strong signals may establish a provisional private preference;
+- contradictory evidence decays/reopens that preference rather than creating a global rule.
+
+Shared subjective promotion default:
+- >=8 independent verified principals;
+- >=20 observations;
+- no single principal contributes >1 effective vote to the same normalized lesson/window;
+- >=75% weighted positive support and no strong subgroup/context contradiction;
+- otherwise remain a shared candidate or user-specific preference.
+These thresholds are owner-adjustable policy, but raw private data never crosses the privacy gate.
+
+#### I. Staged V1.6 roadmap
+
+Replace the overloaded single V1.6 block with three accepted releases on one common design:
+
+- **V1.6.0.0 — Cognitive Foundation:** canonical cognitive event schema, context manager, world/self-model skeleton, Memory/Knowledge adapters, semantic intent, model routing, provenance/uncertainty primitives.
+- **V1.6.1.0 — Experience & Learning:** outcome model, Experience/Skill store, objective/hybrid/subjective evaluators, learning from outcomes/feedback, confidence/calibration, retrieval of learned strategies.
+- **V1.6.2.0 — Shared/Distributed Cognition:** principal-aware cognitive data, private/shared_candidate/shared_core promotion, collective-learning gates, distributed event sync protocol, conflict handling and cross-device consistency.
+
+V1.7.0.0 remains advanced autonomous Work/Computer trust + Evolution built on accepted V1.6.x foundations.
+Each 1.6.x release must have independent migration/rollback/exact-SHA/device acceptance and cannot be called "partial V1.6 complete" before its own gates pass.
+
+#### J. Architecture Decision Records (ADR)
+
+Material architecture ambiguity is resolved through ADR.
+
+Location: `docs/adr/ADR-NNNN-short-title.md`.
+
+Required fields:
+- date;
+- status: PROPOSED / ACCEPTED / SUPERSEDED / REJECTED;
+- owner/decision authority;
+- context/problem;
+- constraints/invariants;
+- 2-4 strong alternatives (when genuinely available);
+- consequences/tradeoffs;
+- recommended option;
+- final owner decision;
+- affected schemas/APIs/files;
+- migration/rollback impact;
+- links to superseded ADRs and master-log claim.
+
+Final product/architecture authority is the owner. Executors may make local implementation choices without owner round-trip only when an accepted ADR/invariant already determines the architecture or when the choice has no material product/data/security consequence.
+
+Accepted ADRs are not silently edited into a different decision; a new ADR supersedes the old one.
+
+#### K. Engineering Memory indexing/search
+
+`AURORAFOX_ENGINEERING_MEMORY.md` remains durable technical memory, but every entry must use searchable metadata:
+- stable `AF-MEM-NNN` id;
+- subsystem tags;
+- platform;
+- symptom/error keywords;
+- first affected SHA/version;
+- fixed SHA/version where applicable;
+- root-cause status CONFIRMED/HYPOTHESIS;
+- status ACTIVE/RESOLVED/SUPERSEDED;
+- prevention test/gate id.
+
+Required lookup order before repeating a workaround:
+1. exact error text / signature;
+2. subsystem + platform;
+3. AF-MEM id if referenced by logs/tests;
+4. affected SHA/version;
+5. broader full-text search.
+
+A generated machine-readable index (JSON/SQLite or equivalent) may be built from the canonical Markdown; it is an index, not a competing journal. Each release performs an index validation and stale-entry review. RESOLVED entries remain preserved with prevention guidance.
+
+#### L. Local Core failure and fallback chain
+
+Core errors have an explicit degraded-service chain:
+
+1. primary local Core request;
+2. if engine is dead/crashed, one bounded local engine restart/recovery attempt;
+3. OOM/resource failure -> reduce context/batch/thread profile and/or move to bundled Lite local Core;
+4. if the task has a deterministic local tool/rule path, use it only when semantically valid;
+5. otherwise return an honest degraded-state message with preserved task/progress.
+
+No infinite retry loop and no mandatory external-AI fallback.
+
+Health states exposed to UI/diagnostics:
+`STARTING / READY / DEGRADED / RECOVERING / UNAVAILABLE`.
+
+OOM, crash, malformed output, empty completion, transport/runtime failure and deadline expiration are distinguishable error classes and retained in bounded diagnostics.
+A model producing low-quality/malformed output is not automatically marked dead; validation/repair may retry once if task policy allows, then degrades honestly.
+
+#### M. Model/data/embedding migrations
+
+Every persistent schema and embedding space is versioned.
+
+Embeddings are keyed by at least:
+`embedding_model_id + model_hash/version + dimension + normalization/schema version`.
+
+Changing embeddings never destroys source Memory/Knowledge records.
+Migration:
+- create a new index beside the old one;
+- re-embed incrementally/lazily with progress checkpoints;
+- dual-read or fallback to lexical/old index while migration is incomplete;
+- verify counts/hashes/query smoke;
+- atomically switch active index only after acceptance;
+- retain old index until rollback window expires.
+
+Experience/world/self-model schemas use explicit migration adapters and additive/event migrations where possible.
+Every migration has disk-space preflight, resumable journal, crash recovery, backup/snapshot and rollback.
+If a new app version cannot read old data directly, an explicit staged migration/repair path is required before release.
+
+#### N. Local execution threat model
+
+Imported web/files/code are data by default and receive **zero execution authority**.
+
+When execution is explicitly authorized, default sandbox is deny-by-default:
+- network: OFF unless target task grants exact destination/scope;
+- filesystem: private ephemeral workspace; explicit source mounts read-only; output writes only to explicitly granted location;
+- process spawning: only allowlisted runner/tool chain;
+- no host credentials/secrets inheritance;
+- no raw device access;
+- no arbitrary IPC to AuroraFox privileged services;
+- CPU/RAM/process/time quotas;
+- child processes bound to cancellation/master stop.
+
+Use OS isolation mechanisms available per platform (restricted process/job/container-like boundary on Windows where available; Android application sandbox/private storage on Android).
+Sandbox escape indicators or unauthorized resource access are P0: terminate task, quarantine workspace/evidence, notify owner and prevent automatic retry/promotion until reviewed.
+
+Isolation tests include filesystem escape, symlink/path traversal, environment-secret access, unauthorized network, child-process escape, cancellation and master-stop propagation.
+
+#### O. Internationalization and multilingual cognition
+
+Initial first-class languages: **Russian and English**.
+
+Requirements:
+- all UI strings externalized/localized; no essential hard-coded user-visible text in production paths;
+- UTF-8 end-to-end;
+- locale-aware date/number/plural formatting;
+- Memory/Knowledge/event records carry language/locale where known;
+- language detection occurs per source/chunk where mixed-language material is possible;
+- retrieval uses multilingual embeddings or language-aware routing and must support cross-language search tests;
+- user may request one response language while sources remain in another;
+- UI must survive long translations and 200% font scaling.
+
+Architecture must be RTL-capable; Arabic/Hebrew are not claimed supported until mirrored layout, bidi text, input, retrieval and accessibility gates are added. Adding a language is a tested capability declaration, not merely adding a translation file.
+
+#### P. Autonomous-work observability
+
+Autonomous Work/Computer cannot be a black box.
+
+Every active task exposes a live timeline with:
+- current goal;
+- current state/phase;
+- last completed meaningful action;
+- current tool/action;
+- pending next action when known;
+- risk/permission state;
+- progress when measurable;
+- pause/cancel/master-stop controls.
+
+Post-hoc audit stores:
+- timestamps;
+- normalized action/tool name;
+- target/scope;
+- result/status;
+- evidence/hash references where relevant;
+- retries/errors;
+- permission/owner confirmations;
+- final outcome.
+
+Secrets/private tokens are redacted.
+Default detailed local task log retention: 30 days, owner-adjustable; compact task outcome/history may be retained according to Memory policy.
+Normal users see only their own task audit; owner administrative cross-user diagnostics, if ever enabled, is separate/audited.
+UI may summarize low-level repetitive actions but raw bounded technical diagnostics remain available on demand.
+
+#### Q. Data deletion, export and right-to-forget behavior
+
+Deletion is first-class, not the inverse of "save".
+
+Supported operations:
+- delete one Memory/Experience item;
+- forget a topic/entity relationship;
+- delete a Knowledge source and all derived chunks/index entries;
+- delete a project and its private derived indexes/context;
+- delete conversation/history;
+- export personal data before deletion;
+- delete account when multi-user is enabled.
+
+Active retrieval must stop returning deleted content immediately after local transaction commit.
+Derived embeddings/caches are purged/rebuilt within 24 hours locally/server-side.
+Synced online devices receive tombstones; an offline device applies them on next successful sync before re-uploading stale state.
+Backups do not resurrect deleted data: restore replays the durable deletion/tombstone ledger.
+
+Default server backup retention for deleted personal data: <=30 days, after which expired backup generations are destroyed; legal/owner deployment requirements may set a shorter policy.
+For de-identified shared experience, erase source linkage when a user deletes their data. If a shared lesson cannot remain genuinely de-identified without that source, retract/re-evaluate it; generalized knowledge that contains no personal/source-identifying data does not require reconstruction of the deleted raw private record.
+
+#### R. Resource exhaustion and graceful degradation
+
+Priority order when resources are constrained:
+1. privacy/integrity and persisted user data;
+2. save/checkpoint current work;
+3. keep UI responsive and basic chat/status available;
+4. pause optional background tasks;
+5. reduce model/context/parallelism/Knowledge breadth;
+6. use Lite Core/Seed Knowledge;
+7. refuse only the part that cannot safely proceed, with an actionable explanation.
+
+Disk thresholds (defaults, owner-adjustable above safety floor):
+- <5% free or <2 GiB free: block new large Knowledge/download/import caches; cleanup expendable caches and warn;
+- <1 GiB free: pause heavy Work/update staging/reindex and preserve only essential state until space is freed.
+Never delete user source data automatically to recover space.
+
+OOM/thermal/battery handling uses checkpoint -> reduce profile -> retry once where safe -> pause/fail honestly.
+Intermediate results for resumable tasks are preserved transactionally rather than asking the user to start from zero.
+
+#### S. Minimum hardware/capability declaration
+
+Every release publishes a capability matrix for Minimum/Lite/Full tiers.
+
+No GPU/NPU is required for base supported operation. Hardware acceleration is optional and must not be the only path.
+
+On minimum Android 4 GiB:
+- Lite local Core;
+- Seed Knowledge;
+- text chat/Memory/basic files;
+- bounded OCR;
+- heavy concurrent Work/Evolution disabled or serialized by resource policy.
+
+On Android >=6 GiB:
+- Full local Core profile;
+- Standard/Full Knowledge selectable;
+- heavier OCR/Work within thermal/battery limits.
+
+On Windows 8 GiB:
+- normal local Core;
+- Full Knowledge supported if storage available;
+- heavy concurrent jobs serialized when memory pressure requires.
+
+Unsupported hardware is detected before allocating the full model and receives a precise capability/degradation explanation rather than a crash.
+
+#### T. Client/server/version support policy
+
+Release metadata and API expose:
+- `latest_stable_version`;
+- `min_supported_client_version`;
+- `min_safe_client_version`;
+- protocol/schema versions.
+
+Normal support window:
+- current stable MINOR/B-line;
+- immediately previous stable MINOR/B-line for at least 90 days after successor release, unless a critical security issue requires a shorter safety cutoff.
+
+Clients below `min_supported_client_version`:
+- local/offline data remains readable/exportable;
+- server sync/write operations that could corrupt newer schemas are blocked with a clear update/repair path;
+- no silent lossy migration.
+
+Clients below `min_safe_client_version` because of a critical security defect may be blocked from network/privileged server operations until updated, but should retain safe local export/recovery access.
+
+Deprecation is published in release/update metadata with >=30 days notice when not security-critical.
+Very old clients require an explicit tested repair bridge or staged migrations; "just install latest and hope" is not an accepted migration path.
+
+#### U. Acceptance impact
+
+These twenty contracts become part of the end-state Definition of Done. Near-term V1.5 does not have to implement every future V1.6+/multi-user feature, but any subsystem it already ships must satisfy the relevant performance/resource/error/accessibility/migration/security contracts before that subsystem is declared final.
+
+The final target specification is therefore measurable: a release cannot pass by subjective claims such as "fast enough", "works offline", "syncs", "learns", "accessible", "sandboxed" or "supports old data" without the corresponding evidence above.
+
+FINAL_TARGET_SPEC_AMENDMENT_STATUS: ACTIVE / CANONICAL / RELEASE-GATING WHEN THE AFFECTED CAPABILITY IS IN SCOPE.
