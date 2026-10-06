@@ -1,0 +1,60 @@
+{
+  "schema": "aurorafox.distribution-manifest.v1",
+  "artifact_id": "aurorafox-bootstrap-ru",
+  "artifact_type": "knowledge",
+  "version": "2026.09.01-v1",
+  "channel": "stable",
+  "provider_id": "ruwiki-pack",
+  "content_type": "application/zstd",
+  "compatibility": {
+    "min_aurorafox_version": "1.6.0.0",
+    "max_aurorafox_version": null,
+    "platform": [
+      "any"
+    ],
+    "architecture": [
+      "any"
+    ]
+  },
+  "profile": "full",
+  "required": true,
+  "optional": false,
+  "resources": {
+    "minimum_ram": 0,
+    "recommended_ram": 0,
+    "minimum_disk": 2412410936,
+    "vram_requirement": 0
+  },
+  "capabilities": [
+    "knowledge.retrieve"
+  ],
+  "dependencies": [],
+  "source": {
+    "name": "Russian Wikipedia",
+    "version": "20260901",
+    "urls": [
+      "https://dumps.wikimedia.org/ruwiki/20260901/",
+      "https://ru.wikipedia.org",
+      "https://creativecommons.org/licenses/by-sa/4.0/"
+    ]
+  },
+  "license": {
+    "identifier": "CC BY-SA 4.0",
+    "attribution": "Russian Wikipedia contributors"
+  },
+  "provenance": {
+    "record": "knowledge_pack/production_pack.json",
+    "content_bytes": 1924345221,
+    "shard_count": 60
+  },
+  "previous_known_good": null,
+  "rollback_target": null,
+  "filename": "AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst",
+  "bytes": 429588529,
+  "sha256": "bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614",
+  "part_size": 4194304,
+  "chunks": [],
+  "signature": null,
+  "status": "EXTERNAL_ARTIFACT_PENDING",
+  "object_key": "aurorafox/knowledge/full/aurorafox-bootstrap-ru/2026.09.01-v1/bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614/AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst"
+}

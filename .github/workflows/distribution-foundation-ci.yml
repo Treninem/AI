@@ -1,0 +1,29 @@
+name: Distribution Foundation
+on:
+  push:
+    branches: ['work/v1.6-s3-distribution-foundation']
+    paths: ['distribution/**', 'tools/distribution/**', 'tests/distribution/**', '.github/workflows/distribution-foundation-ci.yml']
+  pull_request:
+    paths: ['distribution/**', 'tools/distribution/**', 'tests/distribution/**', '.github/workflows/distribution-foundation-ci.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  distribution:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install isolated test dependencies
+        run: python -m pip install -r tools/distribution/requirements-test.txt
+      - name: Distribution acceptance with real local S3 HTTP protocol
+        run: python -m unittest discover -s tests/distribution -p "test_*.py" -v
+      - name: Validate pinned pending metadata without fabricating archive bytes
+        run: python tools/distribution/admin.py validate distribution/knowledge.production.pending.json

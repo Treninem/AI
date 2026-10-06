@@ -6688,3 +6688,56 @@ When S3 is later activated in product runtime, the deployment environment suppli
 Any temporary credential exposed in a chat must be revoked/rotated after the authorized setup/smoke use. The replacement permanent credential should be placed directly into the protected secret location, not sent through another chat.
 
 S3_CROSS_WORK_ACCESS_STATUS: JOURNAL_DISCOVERY + SHARED_SECRET_ENV / NO_CHAT_SECRET_PROPAGATION.
+
+
+### CLAIM `WORK-2026-10-06-S3-DISTRIBUTION-FOUNDATION`
+
+STATUS: ACTIVE
+ROADMAP_RELEASE: future V1.6 distribution foundation
+SCOPE_CLASS: PARALLEL_NON_BLOCKING
+ROADMAP_SECTION: S3 / Model & Knowledge Distribution
+ADR_REFS: ADR-0001, ADR-0002
+STARTING_HEAD: f9a9e1bab7fb295a1eeaeafbd61a2624d2b3a3b7
+MAIN_HEAD: 446ce2cd2f979a8ab228f63d090062e8ba48a6eb
+INTENDED_BUMP: NONE
+OWNED_PATHS: distribution/**; tools/distribution/**; tests/distribution/**; docs/S3_DISTRIBUTION_ARCHITECTURE.md; new isolated distribution CI only; append-only master journal and engineering lesson
+DEPENDENCIES: existing S3 10 GB; pinned production Knowledge archive metadata; owner-controlled secrets outside Git
+NON_BLOCKERS: current V1.5 Core/updater/installer/chat/Knowledge/release remain independent; no existing V1.5 production path is owned by this claim
+OWNERSHIP_RECONCILE: current owner-resource-controls lane retains its runtime/settings/policy/tests/workflows. Server/distribution documentation claim is DONE. New distribution paths do not exist in starting tree; no competing S3 implementation claim found. Shared journal additions preserve starting blob in full and are published on an isolated branch, never directly on PR103/main.
+ACCEPTANCE_GATES: strict manifest; secret scan; immutable identity/collision; exact upload/download bytes/hash; signature; interrupted/resumable/cancel transfer; corrupt part/final rejection; disk preflight; staging/atomic activation/health rollback; capacity/retention dry-run; offline local artifact reuse
+S3_REAL_ACCESS: NO / EXTERNAL_SETUP_PENDING (five required environment names unset; no values logged)
+REAL_ARTIFACT: EXTERNAL_ARTIFACT_PENDING; archive bytes unavailable in current workspace, never fabricate payload/part hashes
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: fresh remote main/candidate and isolated scope identified; pinned Knowledge contract inspected.
+REMAINING: implementation, focused acceptance, publication, real external S3 evidence.
+BLOCKERS: protected S3 configuration and actual Knowledge archive unavailable; repository-side work proceeds.
+NEXT: implement standalone reference service and deterministic genuine byte fixtures; no runtime integration.
+
+### CHECKPOINT — WORK-2026-10-06-S3-DISTRIBUTION-FOUNDATION implementation/review
+
+STATUS: HANDOFF_READY / REPOSITORY_SOURCE_ACCEPTANCE_PREPARED; external gates remain open
+STARTING_HEAD: f9a9e1bab7fb295a1eeaeafbd61a2624d2b3a3b7
+FINAL_HEAD: commit containing this checkpoint (use Git identity; no circular self-SHA placeholder)
+BRANCH: work/v1.6-s3-distribution-foundation, parent exact starting candidate; PR103/main are not updated
+DONE:
+- Provider-neutral strict closed JSON schema, semantic chunk/identity/resource/compatibility/path validation, canonical signed Ed25519 manifest and independent trust-key verification.
+- Disk-backed local provider, admin-only boto3 S3 adapter, credential-free bounded authorization HTTP client; conditional identity/payload/manifest writes and read-back full SHA verification.
+- Restart/resume with cached part rehash, genuine HTTP ranges, corruption rejection, disk preflight, cancellation/progress, same-filesystem atomic staging, durable health transaction and previous known-good rollback/crash recovery.
+- Pure future bootstrap compatibility/dependency/baseline planner; deterministic decimal10GB capacity/retention dry-run, protected stable/rollback/release/candidate records and unknown-object retention.
+- Exact pinned production Knowledge pending metadata/source/license/60shards; no fabricated archive or hashes. Isolated admin/test dependencies and focused Windows/Linux CI workflow; technical architecture/commands documented.
+LOCAL_TESTS: 50/50 PASS on Linux/Python3.12 with real disk, loopback HTTP and boto3 protocol fixture; no skips in final suite. Standard Draft2020-12 schema crosscheck PASS; compile/metadata CLI PASS. Secret-pattern scan PASS over new source/admin files. Production V1.5 tests NOT rerun/claimed from partial source snapshot.
+CI: focused new branch workflow to run once on publication; Windows/Linux new-SHA results are PENDING, not PASS. No CI polling loop and no existing V1.5 workflow changed.
+S3_REAL_ACCESS: NO / EXTERNAL_SETUP_PENDING
+REAL_OBJECTS_UPLOADED: NONE (only deterministic local/loopback fixture objects)
+REAL_KNOWLEDGE_UPLOAD: EXTERNAL_ARTIFACT_PENDING
+S3_CAPACITY: total=owner-reported10GB (tool default10000000000bytes, provider units unverified); used=UNKNOWN; free=UNKNOWN; percentage=UNKNOWN; no real bucket inspection claimed
+V1.5_FILES_CHANGED: NONE (coordination journal/engineering reference appended only; all runtime/updater/installer/version/data/API files unchanged)
+LIMITATIONS: single conditional admin PUT supports <=5GB; larger future payloads require separate immutable dependency packages. Public API/key rotation, physical Windows/Android package activation and offline chat integration are future V1.6 gates. Capacity listing excludes noncurrent versions/incomplete multipart provider billing; inspect these separately. No delete/public ACL/purchase/release/merge/tag/version bump.
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+REMAINING: focused Windows/Linux exact-SHA CI evidence; protected real provider inspection/conditional write smoke/capacity; actual pinned archive upload/read-back/staging.
+BLOCKERS: five required protected S3 environment settings absent; actual production archive unavailable. These block real smoke only, never V1.5.
+NEXT: review focused branch CI once at owner-reported completion; batch any failures. In owner deployment environment run read-only capacity inventory, confirm endpoint/bucket/region/quota/versions, then signed fixture and actual pinned Knowledge E2E. Reconcile this isolated journal append into coordinator branch before future integration. Existing V1.5 owner-resource-controls lane remains owner of runtime paths; this claim releases implementation files for continuation, retains unfinished external acceptance explicitly.
+
+PUBLICATION_RECONCILE: fresh candidate advanced during preparation to3bb31194e13101fe0cac99a539dfc300c327696d (S3 cross-work credential handoff docs only). Preserve that full journal addition and publish isolated work as its child; original STARTING_HEAD remainsf9a9e1b. No runtime or new distribution overlap. Secrets remain process/deployment names only; recommendation /etc/aurorafox/s3.env mode0600 requires owner-controlled deployment, never another chat's credential memory. Current main unchanged446ce2cd. FINAL_HEAD is the commit containing these exact append-only records.
