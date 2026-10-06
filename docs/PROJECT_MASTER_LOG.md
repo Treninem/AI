@@ -5916,3 +5916,69 @@ CAPABILITY_CATALOG_GAP_CLOSURE_STATUS: ACTIVE / CANONICAL.
 - Intended bump: **NONE** (coordination/documentation only).
 - Не меняет текущий V1.5.0.0 product scope, readiness percentage, version, signing, merge/release authority.
 - NEXT: создать канонический roadmap и precedence rules, подключить его к обязательному agent startup protocol, затем закрыть claim с exact commit/evidence.
+
+
+### CANONICAL ROADMAP RECONCILIATION 2026-10-06
+
+- CLAIM `CHAT-2026-10-06-CANONICAL-ROADMAP-RECONCILE`: **DONE**.
+- Starting HEAD: `ec38e9d23a87f2e6c39aa2be2613c2ff314f04a9`.
+- Produced:
+  - `3efcab3d0748be8a2ea9763b4d00113d0ac1216f` — `docs/AURORAFOX_CANONICAL_ROADMAP.md`;
+  - `c6009dac14a68f7a5587dd511c9168ff97f64b85` — `AGENTS.md` startup/claim protocol updated to require canonical roadmap + relevant ADRs.
+- No implementation/runtime files changed; intended bump NONE; canonical version/readiness unchanged.
+
+#### Canonical roadmap authority
+
+From this point forward, **future release scope and sequencing are defined by `docs/AURORAFOX_CANONICAL_ROADMAP.md`**.
+
+Accepted ADRs define architecture inside their scope:
+- ADR-0001 — non-blocking multimodal capability/provider architecture;
+- ADR-0002 — staged cognition, learning boundaries and bounded autonomy.
+
+Older roadmap/proposal text in this master log remains preserved as historical evidence/rationale but is **SUPERSEDED FOR FUTURE SCOPE** wherever it conflicts with the canonical roadmap or accepted ADRs.
+
+Historical entries are not deleted or rewritten.
+
+#### Reconciled release train
+
+- **V1.5.0.0** — stable production foundation only; no Cognitive rewrite, no public multi-user activation, no production image/video generation blocker.
+- **V1.6.0.0** — bounded Cognitive Foundation/substrate only: Cognitive Event envelope, provenance/uncertainty, Context kernel, Memory/Knowledge adapters, projection-first World/Self skeletons, semantic/model/capability routing, media contracts, migration/observability. Mature Experience/shared cognition/media providers are not blockers.
+- **V1.6.1.0** — Experience & Learning: Memory/Experience boundary, outcomes/skills, objective/hybrid/subjective evaluators, confidence, private preference learning, media outcome learning hooks.
+- **V1.6.2.0** — Shared/Distributed Cognition: principal-aware cognitive data, causal sync/conflicts, private->shared_candidate->shared_core collective lessons. Public multi-user still disabled until explicit owner activation.
+- **V1.7.0.0** — Autonomy Foundation: durable tasks, plan preview, Change Ledger, checkpoints, trust evaluator, permission revalidation, pause/resume/cancel/Master Stop, observe->act->verify.
+- **V1.7.1.0** — Advanced Work/Computer: bounded replanning, expected-vs-actual verification, selective rollback, partial-failure recovery, richer trust adaptation.
+- **V1.7.2.0** — Experience-driven Evolution: recurring weakness -> candidates -> benchmark/tournament -> independent verification -> controlled promotion.
+- **Multimodal providers** — parallel non-blocking lane after accepted V1.6.0 media contracts. Image/video providers ship when independently green; they do not delay V1.6/V1.7 unless explicitly promoted to CRITICAL scope.
+- **Smart Home / physical world** — DEFERRED until explicit owner decision + new ADR.
+
+#### Permanent journal workflow
+
+Every new implementation CLAIM must now declare:
+- `ROADMAP_RELEASE`;
+- `SCOPE_CLASS: CRITICAL | PARALLEL_NON_BLOCKING | DEFERRED-EXCEPTION`;
+- `ROADMAP_SECTION`;
+- `ADR_REFS`;
+- `STARTING_HEAD`;
+- `INTENDED_BUMP`;
+- `OWNED_PATHS`;
+- `DEPENDENCIES`;
+- `NON_BLOCKERS`;
+- `ACCEPTANCE_GATES`.
+
+A new idea or future capability is **not automatically a blocker**. It becomes a release blocker only when it breaks an existing CRITICAL capability/hard invariant/declared acceptance gate, is an in-scope P0/P1, or the owner explicitly promotes it into the current release.
+
+Progress percentages are measured against the current release/lane acceptance scope, not against the entire long-term AuroraFox vision.
+
+#### Current execution state
+
+Current product train remains **V1.5.0.0**.
+This documentation reconciliation does not change the existing evidence-backed readiness.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: canonical staged roadmap created; accepted ADRs reconciled; agent startup/claim protocol now points to canonical roadmap; conflicting historical roadmap wording formally demoted to historical context.
+REMAINING: unchanged current V1.5.0.0 implementation/CI/device/release acceptance from fresh active product claim/evidence.
+BLOCKERS: unchanged from current V1.5 product evidence; this documentation reconciliation introduces none.
+NEXT: all future work must start from fresh repo state, canonical roadmap, relevant ADRs and the current V1.5 claim; do not start V1.6 implementation before V1.5 release scope is accepted or owner explicitly changes sequencing.
+
+CANONICAL_ROADMAP_RECONCILIATION_STATUS: DONE / ACTIVE AUTHORITY.
