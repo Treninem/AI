@@ -6544,3 +6544,79 @@ If implementation becomes active:
 - only then expand to Core/capability packages.
 
 S3_DISTRIBUTION_CHECKLIST_STATUS: CANONICAL INSTRUCTION / NO SECRET VALUES / NO PURCHASE NOW.
+
+
+### ### OWNER S3 PREPARATION DECISION 2026-10-06 — preparation may start now in parallel
+
+Owner explicitly authorizes **S3 preparation work to start now in parallel while V1.5.0.0 acceptance/CI continues**, provided it remains isolated and non-blocking.
+
+Classification:
+- ROADMAP_RELEASE: future V1.6 distribution foundation / current parallel preparation.
+- SCOPE_CLASS: PARALLEL_NON_BLOCKING.
+- V1.5.0.0 must not depend on this work.
+- No readiness increase for V1.5 from S3 preparation alone.
+
+#### Allowed now
+
+A separate Work/Codex lane may:
+- inspect the existing 10 GB S3 provider/bucket configuration using owner-controlled credentials;
+- create the logical immutable namespace/prefix structure;
+- prepare upload/verify/list/prune tooling;
+- prepare signed bootstrap/distribution manifest schemas and fixtures;
+- prepare provider-neutral S3 client abstraction;
+- prepare resumable/chunk metadata contracts;
+- prepare tests for hash/size/signature/corruption/resume/rollback behavior;
+- upload **copies** of already-pinned immutable artifacts for validation when credentials are securely available outside Git;
+- use the current production Knowledge artifact as the first real test object;
+- verify object metadata/hash after upload;
+- measure current used/free capacity;
+- document the exact object inventory and retention policy.
+
+#### Forbidden now
+
+The parallel S3 lane must NOT:
+- remove or move the only canonical/local copy of any artifact;
+- overwrite immutable objects in place;
+- change the current V1.5 updater/install/bootstrap to require S3;
+- make S3 availability a V1.5 runtime dependency;
+- change Core inference from local/self-primary to server-side;
+- commit credentials/secrets/signed temporary URLs;
+- change canonical V1.5 version;
+- merge/release/tag/sign merely because S3 preparation is green;
+- purchase additional storage/CDN/GPU/API capacity;
+- consume current V1.5 source-owned files if they are claimed by an active V1.5 lane without explicit reconciliation.
+
+#### Isolation rule
+
+Prefer new isolated paths for preparation, for example:
+- `distribution/` or `tools/distribution/`;
+- dedicated tests/fixtures for distribution;
+- dedicated docs/manifest schemas.
+
+If an existing updater/installer/runtime file must be changed, stop first and reconcile ownership with the active V1.5 claim. Do not make such changes merely for preparation.
+
+#### Safe first milestone
+
+The preferred first milestone is:
+
+`one immutable Knowledge artifact -> S3 -> verify exact bytes/SHA-256 -> list via provider API -> download to staging -> verify -> delete local staging copy -> current V1.5 runtime unchanged`.
+
+Current pinned test artifact:
+- `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`;
+- bytes `429588529`;
+- SHA-256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`.
+
+This proves storage/distribution mechanics without coupling them to the product.
+
+#### Work handoff rule
+
+A Work session starting this lane must create its own ACTIVE claim before implementation and explicitly state:
+- SCOPE_CLASS: PARALLEL_NON_BLOCKING;
+- OWNED_PATHS;
+- no current V1.5 runtime dependency;
+- exact S3 acceptance gates;
+- secrets resolved only from owner-controlled deployment environment.
+
+If credentials/provider details cannot be securely resolved, Work may still finish all repository-side tooling/tests/mock-provider work and leave real upload as `EXTERNAL_SETUP_PENDING` rather than weakening security.
+
+S3_PREPARATION_NOW_STATUS: AUTHORIZED / PARALLEL / NON_BLOCKING / V1.5_UNCHANGED.
