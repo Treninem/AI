@@ -6113,3 +6113,18 @@ PROGRESS_COMPLETE:82%
 PROGRESS_REMAINING:18%
 DONE:35/35foundation acceptance verified;26control package prepared.
 REMAINING:new source runtime/package acceptance and unfinished release scope.
+
+
+### CLAIM `CHAT-2026-10-06-SERVER-DISTRIBUTION-PLAN`
+
+- Статус: **ACTIVE — DOCUMENTATION/OWNER DECISION**.
+- ROADMAP_RELEASE: V1.5.0.0 / future distribution infrastructure.
+- SCOPE_CLASS: PARALLEL_NON_BLOCKING.
+- ROADMAP_SECTION: server/API infrastructure + future model/Knowledge distribution.
+- ADR_REFS: ADR-0001, ADR-0002; no new runtime architecture activated.
+- STARTING_HEAD: `b12d13fa6d95b3459bd1f86093c3f30f9320f7ba`.
+- INTENDED_BUMP: NONE.
+- OWNED_PATHS: `docs/PROJECT_MASTER_LOG.md` only.
+- DEPENDENCIES: current REG.RU API server remains accepted for its present role; local self-primary Core remains mandatory.
+- NON_BLOCKERS: S3/object storage, CDN, API server upgrade, GPU workers and public-scale infrastructure are not V1.5 release blockers.
+- ACCEPTANCE_GATES: durable owner decision recorded with explicit purchase/upgrade triggers and no current spend requirement.
