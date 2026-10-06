@@ -5800,3 +5800,107 @@ A media lane may merge when green if:
 No release waits for "all future media models". Only capabilities explicitly named in that exact release scope can block it.
 
 ROADMAP_MULTIMODAL_NON_DELAY_STATUS: ACTIVE / PERMANENT OWNER RULE.
+
+
+### OWNER CAPABILITY CATALOG GAP CLOSURE 2026-10-06 — staged cognition, learning boundaries and product scenarios
+
+The latest capability-catalog review identified several places where the catalog remained too broad or ambiguous even though many underlying concerns were already covered elsewhere by the canonical target/UI amendments.
+
+#### Already covered by existing canonical specs — do not duplicate or reopen
+
+The following are already release-gating in the current end-state specification:
+- measurable startup/first-token/UI/RAM performance SLOs;
+- Seed/Standard/Full Knowledge profiles and minimum hardware tiers;
+- battery/thermal/resource degradation;
+- data deletion/export/right-to-forget behavior;
+- sync protocol and conflict handling;
+- Evolution hard gates, scoring and promotion thresholds;
+- UI loading/skeleton/empty/offline/degraded states;
+- Computer Session visibility and user takeover;
+- Undo/Trash and UI acceptance matrix;
+- accessibility;
+- Core fallback/recovery;
+- model/embedding migration;
+- sandbox threat model;
+- internationalization baseline;
+- task observability;
+- client/version support policy;
+- non-blocking multimodal capability/provider architecture.
+
+These remain authoritative and are not superseded by the capability catalog.
+
+#### New architecture closure
+
+Accepted ADR:
+`docs/adr/ADR-0002-staged-cognition-learning-and-autonomy.md`
+
+This ADR makes the following permanent decisions:
+
+1. **V1.6.0.0 is a bounded cognitive substrate release, not the finished cognitive brain.**
+   It contains Cognitive Event envelope, provenance/uncertainty primitives, bounded Context kernel, adapters over existing Memory/Knowledge, projection-first World/Self Model skeletons, semantic/model/capability routing contracts and migration/observability identifiers.
+   Mature world graph, automatic historical Memory->Experience conversion, collective promotion and distributed cognition are not V1.6.0.0 blockers.
+
+2. **Memory and Experience have separate canonical ownership.**
+   - Memory owns facts/events/preferences/relationships/decisions/state.
+   - Experience owns evaluated strategy-performance records with goal, strategy, observed outcome, verification, applicability and confidence.
+   Memory becomes an Experience candidate only when goal + strategy/action + observable outcome + evaluation signal exist.
+
+3. **Learning admission has explicit classes and a hard veto.**
+   - `LEARN_PRIVATE`
+   - `LEARN_SHARED_CANDIDATE`
+   - `NEVER_LEARN`
+   Secrets, raw private content, untrusted embedded instructions, sandbox escapes, one-time destructive commands, security-policy bypass behavior, no-save data and ephemeral credentials never become reusable learned behavior.
+
+4. **Shared learning requires evidence and can be vetoed.**
+   Privacy scrub, eligibility, evidence quality, applicability scope, contradiction check and safety veto are mandatory. Shared-core promotion needs independent revalidation/second evidence according to lesson type. Subjective taste never becomes global truth.
+
+5. **Dynamic Trust is now testable.**
+   Every action gets impact, reversibility, scope, evidence confidence and history trust.
+   - LOW reversible actions may auto-run at confidence >=0.80 and history trust >=0.70 (or deterministic independently verified equivalent).
+   - MEDIUM actions require checkpoint/sandbox/dry-run and confidence >=0.85.
+   - HIGH actions require explicit confirmation.
+   - CRITICAL actions never become autonomous merely because historical trust increased.
+
+6. **Medium/high multi-step tasks use a visible pre-execution plan + Change Ledger.**
+   Each side effect records before/after references, verification and rollback handler. Selective rollback is supported only where technically honest. Irreversible external effects are never shown with fake Undo.
+
+7. **V1.7 is also a series, not one giant autonomy jump.**
+   - `V1.7.0.0` Autonomy Foundation: durable task state machine, action/change ledger, checkpoints, plan preview, trust evaluator, revalidation, pause/resume/cancel/master stop, observe->act->verify.
+   - `V1.7.1.0` Advanced Work/Computer: bounded replanning, expected-vs-actual verification, selective rollback, richer trust adaptation and partial-failure recovery.
+   - `V1.7.2.0` Experience-driven Evolution: recurring-weakness detection, improvement candidates, benchmark orchestration and controlled tournament/promotion integration.
+
+8. **Vision becomes a first-class Perception source.**
+   OCR and visual inference enter Cognitive Events with source, timestamp, provider/model, confidence, provenance and privacy class. Low-confidence visual inference is not treated as fact. Computer and media reasoning both use the same Perception->Context->Decision->Outcome path.
+
+9. **Resource-tier capability loss is explicit.**
+   Android 4 GiB Lite guarantees text chat, Memory, Seed Knowledge, basic parsing, bounded OCR and basic voice; heavy OCR/vision/Work/media jobs serialize or remain unavailable rather than crashing into OOM.
+
+10. **Missing toolchain/failure recovery has a standard path.**
+    Detect exact missing dependency -> use installed sandbox/container when possible -> owner-approved install workflow/instructions -> optional configured owner-controlled remote worker -> otherwise mark build/test UNVERIFIED.
+    Standard failure classes include OFFLINE, PERMISSION_DENIED, TOOLCHAIN_MISSING, FILE_LOCKED, SECURITY_SOFTWARE_BLOCKED, RESOURCE_EXHAUSTED, TOOL_UNAVAILABLE, ACTION_UNVERIFIED and EXTERNAL_STATE_UNCERTAIN.
+
+11. **Every release publishes a platform capability matrix.**
+    Windows/Android support level, minimum tier, network/provider/permission requirements and acceptance status are explicit. A capability is not marketed as supported on a platform unless its release-SHA platform acceptance passed.
+
+#### Product-facing companion
+
+Added:
+`docs/PRODUCT_CAPABILITY_SCENARIOS.md`
+
+It provides concrete before/after scenarios for:
+- offline Q&A;
+- public URL learning;
+- code repair;
+- long Work tasks;
+- Computer Agent;
+- scanned PDF/OCR;
+- voice;
+- low-resource Android;
+- future image generation;
+- future video creation;
+- sync conflict;
+- Evolution from verified recurring weakness.
+
+The scenario catalog is the non-engineering explanation of "what this gives the user" and complements, but does not replace, automated acceptance evidence.
+
+CAPABILITY_CATALOG_GAP_CLOSURE_STATUS: ACTIVE / CANONICAL.
