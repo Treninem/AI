@@ -30,7 +30,7 @@ internal fun readArchiveText(file: File, limits: FileAnalysisLimits, textExtensi
         val listingBudget = minOf(limits.listingChars.toLong(), limits.outputChars.toLong() * limits.listingPercent / 100).toInt()
         val listing = StringBuilder()
         var listingTruncated = entryOverflow
-        for (entry in entries) {
+        if (listingBudget > 0) for (entry in entries) {
             val line = "${if (entry.isDirectory) "[DIR] " else ""}${entry.name} (${entry.size} B)${if (isUnsafeArchivePath(entry.name)) " [UNSAFE]" else ""}\n"
             val left = listingBudget - listing.length
             if (line.length > left) { if (left > 0) listing.append(line, 0, left); listingTruncated = true; break }

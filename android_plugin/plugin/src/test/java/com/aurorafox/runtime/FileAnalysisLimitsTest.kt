@@ -63,6 +63,7 @@ class FileAnalysisLimitsTest {
             assertTrue(result.text.contains("Genuine knowledge")); assertFalse(result.text.contains("Forbidden"))
             assertEquals(1, result.metadata["text_entries_extracted"])
             assertEquals(2, result.metadata["unsafe_entries"])
+            assertFalse(result.truncated)
             assertFalse(file.parentFile.resolve("escape.txt").exists())
         } finally { file.delete() }
     }
@@ -72,6 +73,7 @@ class FileAnalysisLimitsTest {
         try {
             val result = readArchiveText(file, FileAnalysisLimits(outputChars=200001, listingChars=0), setOf("txt"))
             assertTrue(result.text.length > 160000); assertFalse(result.metadata["content_truncated"] as Boolean)
+            assertFalse(result.truncated)
             val tiny = readArchiveText(file, FileAnalysisLimits(outputChars=5, listingChars=0), setOf("txt"))
             assertTrue(tiny.text.isEmpty()); assertEquals(0, tiny.metadata["text_entries_extracted"])
             assertTrue(tiny.truncated)
@@ -109,9 +111,39 @@ class FileAnalysisLimitsTest {
 
     @Test fun renderGeometryHonorsOwnerPixelsAndRejectsInvalidDimensions() {
         val scale = ownerPdfRenderScale(10000.0, 10000.0, 1000000)
-        assertTrue(10000.0*10000.0*scale*scale <= 1000000.0*1.01)
+        assertRenderFits(10000.0, 10000.0, scale, 1000000)
         val raised = ownerPdfRenderScale(10000.0, 10000.0, 16000000)
         assertTrue(raised > scale)
         try { ownerPdfRenderScale(Double.NaN, 100.0, 1000000); fail("Invalid page accepted") } catch (_: IllegalArgumentException) { }
+    }
+
+    private fun assertRenderFits(width: Double, height: Double, scale: Double, budget: Long) {
+        val w = kotlin.math.ceil((width.toFloat()*scale.toFloat()).toDouble()).coerceAtLeast(1.0).toLong()
+        val h = kotlin.math.ceil((height.toFloat()*scale.toFloat()).toDouble()).coerceAtLeast(1.0).toLong()
+        assertTrue(w <= budget/h)
+    }
+
+    @Test fun skewedAndSinglePixelPagesHaveNoPolicyFloorOrRoundingOvershoot() {
+        for ((width, height) in listOf(100000000.0 to 1.0, 1.0 to 100000000.0, 99999.0 to 555.0,
+            0.001 to 0.001, Float.MAX_VALUE.toDouble() to Float.MAX_VALUE.toDouble())) {
+            for (budget in listOf(1L, 7L, 100003L, Long.MAX_VALUE)) {
+                val scale = ownerPdfRenderScale(width, height, budget)
+                assertTrue(scale > 0); assertRenderFits(width, height, scale, budget)
+            }
+        }
+        assertTrue(ownerPdfRenderScale(100000000.0, 1.0, 1) < 0.01)
+        assertEquals(2.5, ownerPdfRenderScale(100.0, 100.0, 1000000), 0.0)
+        for (invalid in listOf(Double.MAX_VALUE, Double.MIN_VALUE, Double.POSITIVE_INFINITY, -1.0, 0.0)) {
+            try { ownerPdfRenderScale(invalid, 100.0, 1000000); fail("Unrepresentable geometry accepted") }
+            catch (_: IllegalArgumentException) { }
+        }
+    }
+
+    @Test fun positiveListingOverflowStillReportsPartial() {
+        val file = archive(listOf("lesson.txt" to "Genuine knowledge"))
+        try {
+            val result = readArchiveText(file, FileAnalysisLimits(listingChars=1), setOf("txt"))
+            assertTrue(result.truncated); assertTrue(result.metadata["listing_truncated"] as Boolean)
+        } finally { file.delete() }
     }
 }

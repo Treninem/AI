@@ -11,10 +11,29 @@ internal fun appendOwnerPage(out: StringBuilder, page: Int, text: String, budget
 
 internal fun ownerPdfRenderScale(width: Double, height: Double, pixelBudget: Long): Double {
     require(width.isFinite() && height.isFinite() && width > 0 && height > 0 && pixelBudget > 0)
-    val defaultScale = 180.0 / 72.0
-    val projected = width * height * defaultScale * defaultScale
-    val scale = if (projected > pixelBudget.toDouble()) defaultScale * kotlin.math.sqrt(pixelBudget.toDouble() / projected) else defaultScale
-    require(scale.isFinite() && scale >= 0.01) { "PDF page dimensions exceed representable render scale" }
-    require(width * height * scale * scale <= pixelBudget.toDouble() * 1.01) { "PDF render exceeds owner pixel budget" }
-    return scale
+    // PDFBox receives Float page geometry and scale. Bound the rounded integer
+    // allocation, not continuous area, before calling its bitmap renderer.
+    val nativeWidth = width.toFloat()
+    val nativeHeight = height.toFloat()
+    require(nativeWidth.isFinite() && nativeHeight.isFinite() && nativeWidth > 0 && nativeHeight > 0) {
+        "PDF page dimensions exceed native representation"
+    }
+    fun fits(scale: Float): Boolean {
+        val w = kotlin.math.ceil((nativeWidth * scale).toDouble()).coerceAtLeast(1.0)
+        val h = kotlin.math.ceil((nativeHeight * scale).toDouble()).coerceAtLeast(1.0)
+        return w.isFinite() && h.isFinite() && w <= Int.MAX_VALUE && h <= Int.MAX_VALUE &&
+            w.toLong() <= pixelBudget / h.toLong()
+    }
+    // Positive Float bit patterns are monotonic. Find the greatest representable
+    // productive scale without a policy floor or an overflow-prone pixel product.
+    var low = 1
+    var high = (180f / 72f).toRawBits()
+    var best = 0
+    while (low <= high) {
+        val mid = low + (high - low) / 2
+        if (fits(Float.fromBits(mid))) { best = mid; low = mid + 1 }
+        else high = mid - 1
+    }
+    require(best > 0) { "PDF render scale exceeds native representation" }
+    return Float.fromBits(best).toDouble()
 }

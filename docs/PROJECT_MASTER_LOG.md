@@ -6853,3 +6853,38 @@ DONE:two coherent source packages published;42 exact-bf96 green checks; remainin
 REMAINING:recover/publish actual native source, remaining reviewed CRITICAL inventory and all new exact-SHA native/package/device/update/release acceptance; no freeze/version bump.
 BLOCKERS:execution service transport unavailable; optional local OCR integration runtime absent; physical-device/release gates still external and unaccepted.
 NEXT:restore execution access to the existing checkout, inspect full local diff/untracked authored files and journal extensions, generate exact manifest/hashes and publish native package once; run full coherent new-SHA CI and continue remaining CRITICAL owner/source audit. Preserve original recovered checkout and independent S3 lane. This checkpoint is documentation only and does not publish native code.
+
+
+### ACTIVE CLAIM — WORK-2026-10-06-V15-NATIVE-SNAPSHOT-RECOVERY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence / existing owner resource and truthful partial states
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003; no future-runtime activation
+STARTING_HEAD:c9cc3b328be8e26b9507d310a3a4f40658705b41
+INTENDED_BUMP:D, accumulated release version-last, canonical unchanged
+OWNED_PATHS:android_plugin/plugin/src/main/java/com/aurorafox/runtime/{FileOutputBudget,ArchiveTextReader,TarTextReader}.kt; android_plugin/plugin/src/test/java/com/aurorafox/runtime/{FileAnalysisLimitsTest,NativeDocumentFormatsTest}.kt; append-only master log and engineering memory
+DEPENDENCIES:published bf96 coherent package; fresh main446ce2cd is ancestor; actual source is c9cc3b3. Reconcile/take over these paths from WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE; no competing native edits found.
+NON_BLOCKERS:independent S3/V1.6 and deferred cognition/media/accounts unchanged
+ACCEPTANCE_GATES:real JVM tests for rounded native Float geometry including skewed pages/tiny budgets and representation errors; ZIP/tar hidden listing is not false partial while actual positive overflow remains partial; one coherent publication and new exact-SHA CI/package gates.
+RECOVERY_EVIDENCE:executor restored, but former isolated checkout and native logs/manifest absent. Search /workspace found no XlsTextReader.kt, SevenZTextReader.kt or v15-native publication/log files; original679acfb checkout at b12d13fa has no authored tracked changes. GitHub branch remains c9cc3b3, main446ce2cd; PR103 draft base df67a1eb unchanged. Native source recorded by AF-MEM-123 cannot be recovered from current files; never reconstruct and label it the same previously tested snapshot. Fresh checkout from GitHub is the evidence baseline. Earlier native38/Python96 results remain historical and do not validate new source.
+LAST_ACCEPTED_BLOCK:published bf96ae7202fd89e6441c63b1bd53d1afca737773:42SUCCESS,3SKIPPED,1IN_PROGRESS Windows package,0FAILURE on fresh GitHub check. Release acceptance incomplete.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+NEXT:reimplement and test the three confirmed present-source native budget defects; preserve absent XLS/7z/RAR implementation as explicit remaining work, not restored/accepted.
+
+
+### COHERENT PRESENT-SOURCE NATIVE BUDGET REPAIR — fresh acceptance
+CLAIM:WORK-2026-10-06-V15-NATIVE-SNAPSHOT-RECOVERY ACTIVE, starting c9cc3b328be8e26b9507d310a3a4f40658705b41. Existing recovery coordinator retains all other remaining CRITICAL paths; these three runtime paths reconciled above.
+ACTION:fix actual current native PDF budget before allocation and ZIP/tar truthful partial states. Reimplemented against GitHub current source; not recovered lost native XLS/7z/RAR work. Added real skewed/single-pixel/Float-representation/Long-budget regressions, full hidden-listing and positive-overflow checks.
+TEST:real Kotlin2.2.21 targeting JVM17 compile PASS, Java17.0.20 JUnit19PASS; Python owner/runtime/package21PASS; git diff --check PASS. Local compile tar.nextTarEntry deprecation remains visible. No Android SDK/device/runtime render acceptance claimed; exact publication CI follows.
+MEMORY:AF-MEM-124 records restored executor/absent unpublished source distinction and fresh evidence. AF-MEM-123's38native tests are historical and cannot validate this source.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:fresh GitHub checkout and current-source budget regressions fixed/tested in one batch.
+REMAINING:missing unpublished XLS/7z/RAR implementation must be recovered or independently reimplemented/tested; remaining CRITICAL owner audit and exact-SHA CI/package/device/update/release gates. Version-last unchanged.
+BLOCKERS:original unpublished native snapshot and logs unavailable after executor recovery; optional local OCR/runtime and physical-device acceptance not available here. Windows package still running at fresh baseline check; no false acceptance.
+NEXT:publish this coherent seven-path source/test/journal package; fresh exact-SHA CI, recover original native snapshot if available, otherwise take a separately declared fresh native implementation block and do not reuse absent-source test claims.

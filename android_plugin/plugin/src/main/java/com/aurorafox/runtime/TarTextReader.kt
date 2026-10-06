@@ -65,7 +65,7 @@ internal fun readTarText(file: File, limits: FileAnalysisLimits, textExtensions:
             val line = "${entry.name} (${entry.size} B)${if (bad) " [UNSAFE]" else ""}\n"
             val listLeft = listingBudget-listing.length
             listing.append(line.take(listLeft.coerceAtLeast(0)))
-            if (line.length > listLeft) truncated = true
+            if (listingBudget > 0 && line.length > listLeft) truncated = true
             if (!entry.isFile || bad || File(entry.name).extension.lowercase() !in textExtensions) continue
             val cap = minOf(limits.memberBytes, limits.totalTextBytes-bytesRead)
             if (cap <= 0) { truncated = true; break }

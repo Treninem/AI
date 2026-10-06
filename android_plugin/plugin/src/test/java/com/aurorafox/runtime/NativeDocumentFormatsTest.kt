@@ -70,6 +70,7 @@ class NativeDocumentFormatsTest {
                 val result = readTarText(file, FileAnalysisLimits(listingChars=0), setOf("txt"))
                 assertTrue(result.text.contains("Actual knowledge")); assertFalse(result.text.contains("Forbidden"))
                 assertEquals(1, result.metadata["unsafe_entries"]); assertEquals(1, result.metadata["text_entries_extracted"])
+                assertFalse(result.truncated)
                 assertFalse(file.parentFile.resolve("escape.txt").exists())
             } finally { file.delete() }
         }
@@ -79,6 +80,7 @@ class NativeDocumentFormatsTest {
         try {
             val full = readTarText(file, FileAnalysisLimits(archiveEntries=2, listingChars=0), setOf("txt"))
             assertEquals(2, full.metadata["text_entries_extracted"])
+            assertFalse(full.truncated)
             val partial = readTarText(file, FileAnalysisLimits(archiveEntries=1, listingChars=0), setOf("txt"))
             assertEquals(1, partial.metadata["text_entries_extracted"]); assertTrue(partial.truncated)
             val blocked = readTarText(file, FileAnalysisLimits(expandedBytes=1), setOf("txt"))
@@ -92,6 +94,16 @@ class NativeDocumentFormatsTest {
             assertTrue(tiny.text.isEmpty()); assertEquals(0, tiny.metadata["text_entries_extracted"])
             val capped = readTarText(file, FileAnalysisLimits(memberBytes=1, listingChars=0), setOf("txt"))
             assertEquals(0, capped.metadata["text_entries_extracted"]); assertTrue(capped.truncated)
+        } finally { file.delete() }
+    }
+
+    @Test fun tarHiddenListingPercentIsCompleteButPositiveOverflowIsPartial() {
+        val file = tar(members=listOf("lesson.txt" to "Actual knowledge"))
+        try {
+            val hidden = readTarText(file, FileAnalysisLimits(listingPercent=0), setOf("txt"))
+            assertFalse(hidden.truncated); assertTrue(hidden.text.contains("Actual knowledge"))
+            val partial = readTarText(file, FileAnalysisLimits(listingChars=1), setOf("txt"))
+            assertTrue(partial.truncated)
         } finally { file.delete() }
     }
 }
