@@ -7370,3 +7370,37 @@ DONE:publisheddd73worker actualLinux/Windows gatesaccepted; currentcapture/priva
 REMAINING:publish and exactnewCI; Windows departed-parent ownership, GUI/UIA/provider controls, remainingaudit/unfinishedcriticalsource; exactpackage/device/update/productionrelease/version-last.
 BLOCKERS:no external blocker prevents independent sourcework. Windows departed-parent actualproof is missing, notPASS; physical/production gates unwaived.
 NEXT:publish coherent8pathcapture/inventory package, continue native ownedprocess lifecycle and othercurrentcritical resource controls; collectnewCIreds beforeacceptance.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-WINDOWS-OWNED-JOB
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Windows Computer owned process lifecycle and package integrity
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:c10f47570c15e19890565ee90341ddfeee873e94
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;new computer/windows_job.py;tests/test_sandbox_resource_limits.py;build/build_windows.ps1;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator reconciles previous capture/worker Computer ownership afterpublishedc10f; currentmandatoryLinux/WindowsCIpending. Build packagepathtakeover only to include requiredownedJob helper; no signing/releasepolicy changes.
+NON_BLOCKERS:localLinux cannotexecuteWindowsAPI; genuineWindowsrunnergate remainsrequired. Jobownership is not a new sandbox/security guarantee; nativeprocessmode stilldisabledunlessexplicitoperatoroptin, containersfirst/security unchanged. No V1.6/S3; physicalreleasegates unwaived.
+ACCEPTANCE_GATES:Windows subprocesscreatedsuspended, assigned private kill-on-closeJob beforeprimarythreadresume; failure stops unstartedprocess andfailsclosed. Descendant ownership survivesparentexit; terminateJob and activeprocesscount0 beforeack. ActualWindows child/grandchild/parentdeparted/closehandle/lifecycle tests; Linux existingprocess/daemon/masterstop/privacy/capture regressions; requiredhelperpackaged and exactSHAWindowsCI. No acceptance from mocked native APIs.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement documentedWindowsJob ownership and run genuineWindowsCI after coherentlocal crossplatform gates.
+
+CLAIM_ADDENDUM:WINDOWS-OWNED-JOB includes genuine Windows sole-handle-holder abrupt termination regression: separate Python holder owns suspended child, external holder termination must removechildPID. This tests job handle lifecycle, not physicalGUI or completeOSreboot acceptance. Currentownedhelper packaged assertion remains mandatory.
+
+### Coherent Windows owned Job source checkpoint
+CLAIM:WORK-2026-10-07-V15-WINDOWS-OWNED-JOB ACTIVE/CI_PENDING; native API source prepared, NOT locally accepted.
+CHANGES:private Kernel32 Job Objects own each Windows command/CLI process before executing user code. CREATE_SUSPENDED, assign ownedJob, ResumeThread with expected suspendcount1; startupfailure stops suspendedprocess and denieslaunch. KILL_ON_JOB_CLOSE, no breakaway flags; explicitterminate+activeprocesscount0 beforeack. Parentexit cannot dropownedJob; backgrounddescendants withoutpipes failtruthfully afterownedcleanup. Job close errors preserve handleownership. Existing nativeoptin/container-first/auth/masterstop/daemoncleanup/owner capture remainprotected. Windows buildcopies windows_job.py and requiresits presence.
+TESTS:crossplatform latest76PASS/6SKIP and pinned Computer+owner+audit98PASS/6SKIP. SKIPs=localDocker,NTFSjunction,four actualWindowsJob fixtures; none countsasnativePASS. Four nativefixtures cover suspended-beforeassign/closehandle kill, assignmentfailure neverrunscommand, departedparent/DEVNULL descendant accounting+heartbeat+tasklist, separateholder abruptkill removesjobchildPID. PreviouslyPOSIX-only inheritedpipefixture now also mandatoryWindowscase; native outcomeawaitsexactCI. ActualLinuxUvicorn/Godot masterstop/transport/uncertain/bodyoverflow/shutdownPASS. Pythoncompile/diffcheckPASS; localPowerShell/package/nativeAPI execution notclaimed.
+PRIOR_PRODUCED_SHA:c10f47570c15e19890565ee90341ddfeee873e94;tree4cfd91f313873e48a9356dab6d0cedab00e41768. Actual capture/inventory packagepublishedCASandremote/localmatched. Observed37checks31SUCCESS/3SKIPPED/3IN_PROGRESS,0FAILURE. Linuxcomputer112642957031,Windowscomputer112642957211,work-godot112642957219 SUCCESS atc10f prove capture/privacy/softwareguards, not this new Job API. Pendingrelease/downstreamtotalmaygrow.
+INVENTORY:478files,1454test_evidence/1293unclassified/64documentation/670owner_adjustable/363format_structure/43hard_boundary;complete:false. No nativeAPIproof inferred from parsing or audit.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedc10f actualLinux/Windows capturegatesaccepted; currentJobsource/packaging prepared andLinuxregressionsaccepted.
+REMAINING:publish/genuineexactWindowsJob andpackageCI, GUI in-flight cancellation and UIA/action ownercontrols, provideraudit/unfinishedcriticalsource; fullrelease/package/device/update/version-last.
+BLOCKERS:local nativeWindows absent; exactWindowsCIis available and required, not a blocker to independent current source. Physical/production gates remainunwaived.
+NEXT:publish6pathJobpackage; continue currentGUI per-requestMasterStop ownership while nativeCI runs, batchactualfailures beforeacceptance.

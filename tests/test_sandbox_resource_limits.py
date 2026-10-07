@@ -449,7 +449,6 @@ def test_actual_default_capture_ceiling_and_invalid_utf8_are_truthful(tmp_path, 
     assert decoded["ok"] and decoded["output_decoding_replaced"] and decoded["output"] == "�"
 
 
-@pytest.mark.skipif(os.name == "nt", reason="POSIX inherited-pipe process-group regression; Windows departed-parent descendant proof remains unverified")
 def test_actual_departed_parent_descendant_pipe_is_stopped_not_claimed_complete(tmp_path, monkeypatch):
     module, client = service(tmp_path, monkeypatch)
     module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
@@ -492,3 +491,96 @@ def test_actual_unlimited_output_redacts_json_whitespace_and_short_bearer(tmp_pa
     assert result["ok"] and not result["partial"]
     assert all(secret not in result["output"] for secret in ["json secret words", "Bearer q", "tiny", "markedsecret", "Bearer z"])
     assert "[REDACTED]" in result["output"]
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Genuine Windows Job Object kill-on-close requires Windows")
+def test_actual_windows_job_close_stops_suspended_owned_process(tmp_path):
+    import subprocess
+    from computer.windows_job import WindowsJob
+    job = WindowsJob()
+    process = subprocess.Popen([sys.executable, "-c", "from pathlib import Path;import time;Path('job-started').write_text('yes');time.sleep(60)"],
+                               cwd=tmp_path, creationflags=subprocess.CREATE_NEW_PROCESS_GROUP | 0x4)
+    try:
+        assert not (tmp_path / "job-started").exists()
+        job.assign_and_resume(process.pid)
+        _wait_for_file(tmp_path / "job-started")
+        assert job.active_count() == 1
+        job.close()
+        process.wait(timeout=5)
+        assert process.poll() is not None
+    finally:
+        job.close()
+        if process.poll() is None:
+            process.terminate()
+            process.wait(timeout=5)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Genuine Windows suspended launch failure requires Windows")
+def test_actual_windows_ownership_failure_never_runs_command(tmp_path, monkeypatch):
+    from computer.windows_job import WindowsJob
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    job = WindowsJob()
+    def unavailable(_pid):
+        raise OSError("isolated assignment failure before thread resume")
+    monkeypatch.setattr(job, "assign_and_resume", unavailable)
+    monkeypatch.setattr(module, "_new_windows_job", lambda: job)
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "execution_id": "unowned-never-start", "command": [sys.executable, "-c", "from pathlib import Path;Path('unauthorized-start').write_text('bad')"], "timeout": 5,
+    }).json()
+    assert result["error"] == "process_ownership_failed" and not result["retryable"]
+    assert result["termination_confirmed"] and not result["uncertain_external_state"]
+    assert not (module.SANDBOX_ROOT / "unauthorized-start").exists()
+    assert module._execution_records["unowned-never-start"]["process"] is None
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Genuine Windows departed-parent Job Object accounting requires Windows")
+def test_actual_windows_background_descendant_without_pipes_is_owned(tmp_path, monkeypatch):
+    import subprocess
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    root = module.SANDBOX_ROOT
+    worker = "import sys,os,time,subprocess\nfrom pathlib import Path\nif len(sys.argv)>1:\n Path('job-child-pid').write_text(str(os.getpid()))\n while True:\n  Path('job-child-heartbeat').write_text(str(time.time_ns()))\n  time.sleep(0.02)\nelse:\n subprocess.Popen([sys.executable,'job-background.py','child'],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)\n while not Path('job-child-heartbeat').exists(): time.sleep(0.01)\n"
+    (root / "job-background.py").write_text(worker)
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "execution_id": "background-descendant", "command": [sys.executable, "job-background.py"], "timeout": 5,
+    }).json()
+    assert result["error"] == "background_descendants" and not result["retryable"]
+    assert result["termination_confirmed"] and not result["uncertain_external_state"]
+    before = (root / "job-child-heartbeat").read_text()
+    time.sleep(0.1)
+    assert (root / "job-child-heartbeat").read_text() == before
+    pid = (root / "job-child-pid").read_text()
+    listing = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/NH"], capture_output=True, text=True, timeout=5)
+    assert pid not in listing.stdout
+    assert module._execution_records["background-descendant"].get("job") is None
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Genuine Windows job handle loss after holder termination requires Windows")
+def test_actual_windows_holder_termination_kills_owned_child(tmp_path):
+    import subprocess
+    pid_file = tmp_path / "holder-child-pid"
+    child_code = "from pathlib import Path;import os,time;Path(" + repr(str(pid_file)) + ").write_text(str(os.getpid()));time.sleep(60)"
+    holder_code = "from computer.windows_job import WindowsJob;import subprocess,sys,time;job=WindowsJob();child=subprocess.Popen([sys.executable,'-c'," + repr(child_code) + "],creationflags=subprocess.CREATE_NEW_PROCESS_GROUP|4);job.assign_and_resume(child.pid);time.sleep(60)"
+    holder = subprocess.Popen([sys.executable, "-c", holder_code], cwd=ROOT)
+    child_pid = None
+    child_gone = False
+    try:
+        _wait_for_file(pid_file)
+        child_pid = pid_file.read_text()
+        holder.terminate()
+        holder.wait(timeout=5)
+        deadline = time.monotonic() + 5
+        while True:
+            listing = subprocess.run(["tasklist", "/FI", f"PID eq {child_pid}", "/NH"], capture_output=True, text=True, timeout=5)
+            if child_pid not in listing.stdout:
+                child_gone = True
+                break
+            assert time.monotonic() < deadline, "Job child survived termination of its sole handle holder"
+            time.sleep(0.02)
+    finally:
+        if holder.poll() is None:
+            holder.terminate()
+            holder.wait(timeout=5)
+        if child_pid and not child_gone:
+            subprocess.run(["taskkill", "/PID", child_pid, "/T", "/F"], capture_output=True, timeout=5)

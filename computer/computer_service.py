@@ -655,7 +655,15 @@ def _cancel_execution(execution_id: str) -> dict[str, Any]:
         record["cancelled"] = True
         process = record["process"]
         finished = record["finished"]
-    terminated = True if process is None else _terminate_process_tree(process)
+    job = record.get("job")
+    if job is not None:
+        try:
+            terminated = job.terminate()
+            if process is not None: process.wait(timeout=2)
+        except (OSError, subprocess.TimeoutExpired):
+            terminated = False
+    else:
+        terminated = True if process is None else _terminate_process_tree(process)
     for reader in record.get("capture_threads", []): reader.join(timeout=0.2)
     if any(reader.is_alive() for reader in record.get("capture_threads", [])): terminated = False
     container = record.get("container")
@@ -670,6 +678,8 @@ def _cancel_execution(execution_id: str) -> dict[str, Any]:
         if terminated and (process is None or process.poll() is not None):
             record["finished"] = True
             record["process"] = None
+            if record.get("job"):
+                _close_record_job(record)
     return {"ok": terminated, "cancelled": True, "execution_id": execution_id,
             "termination_confirmed": terminated, "already_finished": finished,
             "uncertain_external_state": not terminated, "retryable": False}
@@ -680,7 +690,7 @@ def _cancel_all_processes() -> dict[str, Any]:
     with _execution_lock:
         _execution_stopping = True
         execution_ids = [key for key, record in _execution_records.items()
-                         if not record["finished"] and (record["process"] is not None or record.get("container"))]
+                         if not record["finished"] and (record["process"] is not None or record.get("container") or record.get("job"))]
         workers = list(_gui_workers)
     workers_stopped = True
     for worker in workers:
@@ -702,6 +712,22 @@ def _cancel_all_processes() -> dict[str, Any]:
             "uncertain_external_state": not confirmed, "executions_stopped": len(results)}
 
 
+def _new_windows_job():
+    try:
+        from windows_job import WindowsJob
+    except ModuleNotFoundError as exc:
+        if exc.name != "windows_job": raise
+        from computer.windows_job import WindowsJob
+    return WindowsJob()
+
+
+def _close_record_job(record):
+    job = record.get("job")
+    if job is not None:
+        job.close()
+        record["job"] = None  # Keep ownership if CloseHandle raises.
+
+
 def _read_capture_chunk(stream) -> bytes:
     return os.read(stream.fileno(), 65536)
 
@@ -709,7 +735,7 @@ def _read_capture_chunk(stream) -> bytes:
 def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None, output_chars: int = MAX_OUTPUT, capture_bytes: int = MAX_CAPTURE_BYTES) -> dict[str, Any]:
     execution_id = execution_id or uuid.uuid4().hex
     startup: dict[str, Any] = {}
-    if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
+    if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | 0x4 # CREATE_SUSPENDED
     else: startup["start_new_session"] = True
     # Serialize registration and launch against cancellation. A pre-cancelled or
     # previously used identity is never allowed to launch an action again.
@@ -723,14 +749,42 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
         record: dict[str, Any] = {"process": None, "cancelled": False, "finished": False, "container": container, "termination_confirmed": False}
         _execution_records[execution_id] = record
         try:
+            if os.name == "nt": record["job"] = _new_windows_job()
             process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
         except FileNotFoundError as exc:
             record["finished"] = True
+            if record.get("job"): _close_record_job(record)
             raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
         except Exception:
             record["finished"] = True
+            if record.get("job"): _close_record_job(record)
             raise
         record["process"] = process
+        if record.get("job"):
+            try:
+                record["job"].assign_and_resume(process.pid)
+            except Exception:
+                # Never resume an unowned process. Cleanup is performed directly
+                # here because registration still holds the execution lock.
+                confirmed = False
+                try:
+                    record["job"].terminate()
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=2)
+                    confirmed = process.poll() is not None and record["job"].active_count() == 0
+                except Exception:
+                    pass
+                record["cancelled"] = True
+                record["termination_confirmed"] = confirmed
+                record["finished"] = confirmed
+                if confirmed:
+                    _close_record_job(record)
+                    record["process"] = None
+                    process.stdout.close()
+                    process.stderr.close()
+                return _error("process_ownership_failed", "Windows process ownership could not be installed; command was not authorized to start",
+                              execution_id=execution_id, termination_confirmed=confirmed,
+                              uncertain_external_state=not confirmed, retryable=False)
     buffers = [bytearray(), bytearray()]
     capture_lock = threading.Lock()
     captured_bytes = 0
@@ -802,6 +856,17 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
                           limit_reached=True, partial=True, output="", capture_budget_bytes=capture_bytes,
                           captured_bytes=captured_bytes, execution_id=execution_id,
                           termination_confirmed=terminated, uncertain_external_state=not terminated)
+        job = record.get("job")
+        if job is not None:
+            try:
+                background = job.active_count() > 0
+            except OSError:
+                background = True
+            if background:
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("background_descendants", "Owned descendants outlived the command", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated,
+                              uncertain_external_state=not terminated)
         decoding_replaced = False
         try:
             stdout, stderr = (buffer.decode("utf-8") for buffer in buffers)
@@ -825,9 +890,16 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
         if process.poll() is None or any(reader.is_alive() for reader in readers):
             _cancel_execution(execution_id)
         exited = process.poll() is not None and all(not reader.is_alive() for reader in readers)
+        job = record.get("job")
+        try:
+            ownership_empty = job is None or job.active_count() == 0
+        except OSError:
+            ownership_empty = False
         with _execution_lock:
-            record["finished"] = exited and (not record["cancelled"] or bool(record["termination_confirmed"]))
-            if exited: record["process"] = None
+            record["finished"] = exited and ownership_empty and (not record["cancelled"] or bool(record["termination_confirmed"]))
+            if exited and ownership_empty:
+                record["process"] = None
+                if record.get("job"): _close_record_job(record)
         # Keep failed-stop ownership for shutdown/retry instead of losing a PID.
         if exited:
             for stream in (process.stdout, process.stderr):
