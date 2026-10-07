@@ -123,3 +123,32 @@ def test_reviewed_gui_and_capture_policy_keeps_unknown_caps_and_trailing_code_vi
     for path in ["computer/computer_service.py", "scripts/computer_request_guard.gd"]:
         for unknown in ["LIMIT = 17", "timeout = 99", "capture_bytes = min(capture_bytes, 17)"]:
             assert MODULE.classify(path, unknown, policy)[0] == "unclassified"
+
+
+def test_api_owner_policy_review_does_not_classify_new_arbitrary_caps():
+    policy = MODULE.load_policy()
+    cases = [
+        ("api/request_limits.py", "if self.max_bytes > 0 and new_received > self.max_bytes:"),
+        ("api/conversation_store.py", "if self.max_messages > 0:"),
+        ("api/conversation_store.py", "(owner, conversation_id, budget if budget > 0 else -1),"),
+    ]
+    for path, statement in cases:
+        assert MODULE.classify(path, statement, policy)[0] == "owner_adjustable"
+        assert MODULE.classify(path, statement + " FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify("api/request_limits.py", "if new_received > 17:", policy)[0] == "unclassified"
+    assert MODULE.classify("api/conversation_store.py", "self.max_messages = max(20, max_messages)", policy)[0] == "unclassified"
+
+
+def test_file_transport_owner_policy_preserves_unknown_caps():
+    policy = MODULE.load_policy()
+    path = "api/file_client.py"
+    statement = "if self.max_file_bytes > 0 and len(raw) > self.max_file_bytes:"
+    assert MODULE.classify(path, statement, policy)[0] == "owner_adjustable"
+    assert MODULE.classify(path, statement + " FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify(path, "timeout=180,", policy)[0] == "unclassified"
+
+
+def test_api_text_budget_review_keeps_fixed_content_caps_visible():
+    policy = MODULE.load_policy()
+    assert MODULE.classify("api/server.py", "message: str = Field(min_length=1, max_length=MAX_API_CHAT_CHARS)", policy)[0] == "owner_adjustable"
+    assert MODULE.classify("api/server.py", "message: str = Field(min_length=1, max_length=100000)", policy)[0] == "unclassified"

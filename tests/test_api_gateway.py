@@ -203,3 +203,95 @@ def test_file_analysis_always_removes_transient_upload(tmp_path: Path, monkeypat
     with pytest.raises(RuntimeError, match="analysis failed"):
         client.analyze_base64("document.txt", encoded)
     assert list(uploads.iterdir()) == []
+
+
+@pytest.mark.parametrize("budget", [0, 9, 100])
+def test_file_owner_byte_budget_accepts_zero_exact_and_raised(tmp_path, budget):
+    client = FileIntelligenceClient(tmp_path / "uploads", max_file_bytes=budget)
+    data = b"123456789"
+    path = client.save_base64("../../document.txt", base64.b64encode(data).decode())
+    assert path.parent == client.root
+    assert path.read_bytes() == data
+    with pytest.raises(ValueError):
+        client.save_base64("bad", "not-base64!")
+
+
+@pytest.mark.parametrize("ttl,remaining", [(0, True), (1, False), (1000, True)])
+def test_file_owner_stale_upload_ttl(tmp_path, ttl, remaining):
+    import os
+    import time
+    root = tmp_path / "uploads"
+    root.mkdir()
+    stale = root / "old.txt"
+    stale.write_text("transport")
+    stamp = time.time() - 100
+    os.utime(stale, (stamp, stamp))
+    client = FileIntelligenceClient(root, upload_ttl_seconds=ttl)
+    assert stale.exists() is remaining
+    assert client.upload_ttl_seconds == ttl
+
+
+@pytest.mark.parametrize("parameter", ["max_file_bytes", "upload_ttl_seconds", "analysis_timeout_seconds"])
+def test_file_owner_invalid_budget_fails(tmp_path, parameter):
+    with pytest.raises(ValueError, match="nonnegative integer"):
+        FileIntelligenceClient(tmp_path / "uploads", **{parameter: -1})
+
+
+@pytest.mark.parametrize("deadline", [0, 1, 600])
+def test_file_owner_deadline_real_http_and_cleanup(tmp_path, monkeypatch, deadline):
+    import json
+    import requests
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    observed = []
+    failed = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+
+        def do_POST(self):
+            body = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+            source = Path(body["path"])
+            assert source.is_file()
+            observed.append(source.read_bytes())
+            self.send_response(500 if failed else 200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"ok":true}')
+
+    timeouts = []
+    original_send = requests.sessions.Session.send
+
+    def send(session, request, **kwargs):
+        timeouts.append(kwargs["timeout"])
+        return original_send(session, request, **kwargs)
+
+    monkeypatch.setattr(requests.sessions.Session, "send", send)
+    server = HTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        client = FileIntelligenceClient(tmp_path / "uploads", base_url=f"http://127.0.0.1:{server.server_port}",
+                                       max_file_bytes=0, upload_ttl_seconds=0, analysis_timeout_seconds=deadline)
+        encoded = base64.b64encode(b"actual document").decode()
+        assert client.analyze_base64("file.txt", encoded) == {"ok": True}
+        failed.append(True)
+        with pytest.raises(requests.HTTPError):
+            client.analyze_base64("file.txt", encoded)
+        assert observed == [b"actual document", b"actual document"]
+        assert timeouts == [deadline or None, deadline or None]
+        assert list(client.root.iterdir()) == []
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+
+def test_file_startup_owner_environment_and_constructor_override(tmp_path, monkeypatch):
+    for key in ("AURORAFOX_API_FILE_MAX_BYTES", "AURORAFOX_API_UPLOAD_TTL_SECONDS", "AURORAFOX_API_FILE_ANALYSIS_TIMEOUT_SECONDS"):
+        monkeypatch.setenv(key, "0")
+    inherited = FileIntelligenceClient(tmp_path / "inherited")
+    assert (inherited.max_file_bytes, inherited.upload_ttl_seconds, inherited.analysis_timeout_seconds) == (0, 0, 0)
+    explicit = FileIntelligenceClient(tmp_path / "explicit", max_file_bytes=3, upload_ttl_seconds=1, analysis_timeout_seconds=600)
+    assert (explicit.max_file_bytes, explicit.upload_ttl_seconds, explicit.analysis_timeout_seconds) == (3, 1, 600)

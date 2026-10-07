@@ -7591,3 +7591,41 @@ DONE:bounded directory source, precise inventory review, independent API policy 
 REMAINING:publication/exactCI; unclassified owner inventory, provider/unfinishedCRITICAL, copy-stage resource/race limitation, package/device/update/production/version-last.
 BLOCKERS:no current external source blocker; physical/production acceptance unwaived.
 NEXT:publish one coherent package; continue remaining critical source without waiting blindly for CI.
+
+PUBLICATION_CHECKPOINT: BOUNDED-DIRECTORIES-AND-INVENTORY published ab755d63a3df42e41d2077c4378424973270526a/treeb37e98635541941d88fabf7674c247e814554f41 on2332980 via expected-head fast-forward;13ownedpaths. Local fetch/reset reconciled without source differences. Source claim RELEASED/EXACT_CI_PENDING; release gates remain unfinished.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-API-CONVERSATION-OWNER-RETENTION
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 remaining owner resource controls and personal conversation persistence
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 unchanged
+STARTING_HEAD: ab755d63a3df42e41d2077c4378424973270526a
+INTENDED_BUMP: D accumulated version-last
+OWNED_PATHS: api/conversation_store.py; api/server.py; tests/test_api_database.py; tests/test_api_server_hardening.py; config/owner_control_policy.json; tests/test_owner_control_audit.py; docs/PROJECT_MASTER_LOG.md; docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES: Reconcile published API body policy block and existing baseline SQLite conversation store; coordinator takes over released API paths. Freshmain446ce2 unchanged; no other source edit observed. Exact new CI pending, independent resource work proceeds.
+NON_BLOCKERS: No account/auth/role/public-rate/S3/V1.6 changes; no version/sign/release. Zero explicitly allows whole-history context/materialization at owner risk; previously deleted messages cannot be recovered by increasing retention. Existing default120 retained messages/context24 preserved for compatibility.
+ACCEPTANCE_GATES: trusted server-owner retention/context budgets accept exact/raised/zero; negative policy fails visibly. Zero retention preserves full legacy migration and does not run destructive delete; context zero returns all in order, positive exact budgets remain owner/conversation isolated. Explicit constructor policy overrides environment; incoming payload/headers never select retention. Real SQLite migration/restart/isolation/deletion/context and full-server wiring regressions; existing gateway/account/persistence tests remain mandatory. Do not claim global private-data no-prune while positive conversation retention deletes older rows.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT: implement coherent server conversation retention/context owner control and actual persistence regressions.
+
+CLAIM_ADDENDUM: API-CONVERSATION-OWNER-RETENTION coherent API persistence/transport policy also owns api/file_client.py and tests/test_api_gateway.py. Existing upload byte budget silently clamps zero to1; stale transport recovery TTL clamps to60 and analysis HTTP deadline fixed180. Expose trusted startup independent byte/TTL/analysis-time budgets with existing defaults16MiB/24h/180s, exact/raised/zero and negative rejection. Zero TTL disables startup stale-upload pruning, not mandatory per-analysis finally cleanup; zero HTTP deadline maps to requests timeout=None, no worker cancellation guarantee inferred. Actual save/decode/TTL/cleanup and real local HTTP analysis fixtures remain mandatory; invalid base64, safe naming and server auth/body budgets unchanged. No production File Intelligence parser/S3 lane edit.
+
+CLAIM_ADDENDUM: same API owner-resource batch includes existing private content validators in api/server.py/tests/test_api_server_hardening.py: trusted startup chat/feedback text, knowledge text, and note/question character budgets, existing100000/200000/12000 defaults. Zero removes only max-length; required nonempty text, normalized scores, protocol IDs, account/auth/token/password rules and body/aggregate budgets unchanged. Real authenticated HTTP chat and actual Pydantic validation exact/overflow/raised/zero/negative tests mandatory; client metadata cannot set validator policy. No claim that other bridge/model/parser limits are all removed.
+
+### Coherent API history/file/content owner policy checkpoint
+CLAIM: WORK-2026-10-07-V15-API-CONVERSATION-OWNER-RETENTION ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:ab755d63a3df42e41d2077c4378424973270526a; treeb37e98635541941d88fabf7674c247e814554f41. Prior source checks observed42=35SUCCESS/3SKIP/4IN_PROGRESS,0FAILURE. CoreWindows/ComputerLinux/ComputerWindows/Work/API success; Android/native/package release evidence still not all complete, do not declare freeze.
+CHANGES: trusted API server conversation retention/context env120/24 defaults preserved; explicit positive budgets no longer clamp to20/1, zero preserves full legacy migration and prevents destructive retention SQL, zero context selects all ordered rows. Explicit constructor overrides environment, negative invalid policy fails. User/conversation isolation preserved; previously deleted data unrecoverable. Positive retention intentionally removes older conversation rows; maintenance's own no-prune does not mean whole product no-prune. Upload16MiB/recoveryTTL24h/analysis180s independent owner budgets; zero disables respective byte ceiling/startup pruning/HTTP deadline, mandatory per-analysis success/error cleanup retained. Private content validators chat100000/knowledge200000/note-question12000 owner configured; zero lifts max-length only, nonempty required text/scores/protocolID/auth/account/token/password/body guards unchanged. Model payload/headers never own startup policy.
+TESTS: pinned expanded API/storage/gateway/accounts/persistence/server/request/deployment/audit129PASS; final audit14PASS after one new text-classification case. Latest FastAPI0.142.2/Pydantic2.13.5 expanded final130PASS. Real SQLite migration/restart/isolation/exact/raised/zero and authenticated HTTP context/text checks; actual local HTTP requests success/500/deadline0/1/600 with mandatory transport cleanup. Existing account/security checks remain green. Latest optional environment initially lacked requests; collection NOT_EXECUTED then dependency2.32.5 installed and full130 executed. Audit edit initially used wrong JSON key rules and stopped before saving; corrected to classifications, narrow tests verify arbitrary caps/trailing statements stay unknown. No product gate relaxed. git diff --check PASS; new exact CI mandatory after publication.
+INVENTORY:480files;1599test_evidence/1255unclassified/65documentation/761owner_adjustable/377format_structure/59hard_boundary;complete:false. Unreviewed limits remain visible.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published bounded directory/API bytes; verified independent API history/file/content owner policy and compatible actual software tests.
+REMAINING:publication/exactCI;1255 inventory records, provider/unfinishedCRITICAL, copy-stage limitation, full same-SHA package/device/update/production/version-last.
+BLOCKERS:none for independent critical source; physical/production acceptance unwaived.
+NEXT:publish coherent API owner policy, reconcile exact CI and continue remaining providers/resource inventory.

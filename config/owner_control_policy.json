@@ -1541,6 +1541,41 @@
       "class": "format_structure",
       "control": "Finite nonnegative worker duration representation",
       "rationale": "Reject NaN/infinite/negative durations; zero remains an unlimited cancellable owner operation, not a fixed processing ceiling."
+    },
+    {
+      "path": "api/request_limits.py",
+      "pattern": "^\\s*(?:DEFAULT_MAX_BODY_BYTES\\ =\\ 24\\ \\*\\ 1024\\ \\*\\ 1024|DEFAULT_MAX_IN_FLIGHT_BODY_BYTES\\ =\\ DEFAULT_MAX_BODY_BYTES\\ \\*\\ 4|aggregate\\ =\\ _nonnegative_budget\\(environment\\.get\\(\"AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES\",\\ aggregate_default\\),\\ \"AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES\"\\)|aggregate_default\\ =\\ per_request\\ \\*\\ 4\\ if\\ per_request\\ else\\ DEFAULT_MAX_IN_FLIGHT_BODY_BYTES|aggregate_default\\ =\\ self\\.max_bytes\\ \\*\\ 4\\ if\\ self\\.max_bytes\\ else\\ DEFAULT_MAX_IN_FLIGHT_BODY_BYTES|configured_budget\\ =\\ aggregate_default\\ if\\ max_in_flight_bytes\\ is\\ None\\ else\\ max_in_flight_bytes|if\\ self\\.max_bytes\\ >\\ 0\\ and\\ content_length\\ is\\ not\\ None\\ and\\ content_length\\ >\\ self\\.max_bytes:|if\\ self\\.max_bytes\\ >\\ 0\\ and\\ new_received\\ >\\ self\\.max_bytes:|if\\ self\\.max_in_flight_bytes\\ >\\ 0\\ and\\ content_length\\ is\\ not\\ None\\ and\\ content_length\\ >\\ self\\.max_in_flight_bytes:|if\\ self\\.max_in_flight_bytes\\ >\\ 0\\ and\\ new_received\\ >\\ self\\.max_in_flight_bytes:|if\\ self\\.max_in_flight_bytes\\ >\\ 0\\ and\\ self\\._in_flight_bytes\\ \\+\\ amount\\ >\\ self\\.max_in_flight_bytes:|max_bytes:\\ int\\ =\\ DEFAULT_MAX_BODY_BYTES,|max_in_flight_bytes:\\ int\\ \\|\\ None\\ =\\ None,|per_request\\ =\\ _nonnegative_budget\\(environment\\.get\\(\"AURORAFOX_API_MAX_BODY_BYTES\",\\ DEFAULT_MAX_BODY_BYTES\\),\\ \"AURORAFOX_API_MAX_BODY_BYTES\"\\)|self\\.max_bytes\\ =\\ _nonnegative_budget\\(max_bytes,\\ \"max_bytes\"\\)|self\\.max_in_flight_bytes\\ =\\ _nonnegative_budget\\(configured_budget,\\ \"max_in_flight_bytes\"\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted API startup byte and conversation retention/context budgets",
+      "rationale": "Exact reviewed statements tested through real ASGI/FastAPI and SQLite defaults/exact/raised/zero/invalid cases. Client payload/headers cannot alter startup authority; positive conversation retention deletes older rows, zero preserves history. Unknown caps stay visible."
+    },
+    {
+      "path": "api/server.py",
+      "pattern": "^\\s*(?:MAX_API_BODY_BYTES,\\ MAX_API_IN_FLIGHT_BODY_BYTES\\ =\\ request_body_policy_from_environment\\(\\)|app\\.add_middleware\\(RequestBodyLimitMiddleware,\\ max_bytes=MAX_API_BODY_BYTES,\\ max_in_flight_bytes=MAX_API_IN_FLIGHT_BODY_BYTES\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted API startup byte and conversation retention/context budgets",
+      "rationale": "Exact reviewed statements tested through real ASGI/FastAPI and SQLite defaults/exact/raised/zero/invalid cases. Client payload/headers cannot alter startup authority; positive conversation retention deletes older rows, zero preserves history. Unknown caps stay visible."
+    },
+    {
+      "path": "api/conversation_store.py",
+      "pattern": "^\\s*(?:\\(owner,\\ conversation_id,\\ budget\\ if\\ budget\\ >\\ 0\\ else\\ \\-1\\),|\\(owner,\\ conversation_id,\\ self\\.max_messages\\),|budget\\ =\\ self\\.context_messages\\ if\\ limit\\ is\\ None\\ else\\ _nonnegative_budget\\(limit,\\ \"context\\ limit\"\\)|if\\ self\\.max_messages\\ >\\ 0:|messages\\ =\\ messages\\[\\-self\\.max_messages:\\]|os\\.getenv\\(\"AURORAFOX_API_CONVERSATION_CONTEXT_MESSAGES\",\\ \"24\"\\)\\ if\\ context_messages\\ is\\ None\\ else\\ context_messages,|os\\.getenv\\(\"AURORAFOX_API_CONVERSATION_MAX_MESSAGES\",\\ \"120\"\\)\\ if\\ max_messages\\ is\\ None\\ else\\ max_messages,)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted API startup byte and conversation retention/context budgets",
+      "rationale": "Exact reviewed statements tested through real ASGI/FastAPI and SQLite defaults/exact/raised/zero/invalid cases. Client payload/headers cannot alter startup authority; positive conversation retention deletes older rows, zero preserves history. Unknown caps stay visible."
+    },
+    {
+      "path": "api/file_client.py",
+      "pattern": "^\\s*(?:self\\.max_file_bytes\\ =\\ _nonnegative_budget\\(configured_max,\\ \"AURORAFOX_API_FILE_MAX_BYTES\"\\)|self\\.max_encoded_chars\\ =\\ 4\\ \\*\\ \\(\\(self\\.max_file_bytes\\ \\+\\ 2\\)\\ //\\ 3\\)|self\\.upload_ttl_seconds\\ =\\ _nonnegative_budget\\(configured_ttl,\\ \"AURORAFOX_API_UPLOAD_TTL_SECONDS\"\\)|configured_timeout\\ =\\ os\\.getenv\\(\"AURORAFOX_API_FILE_ANALYSIS_TIMEOUT_SECONDS\",\\ \"180\"\\)\\ if\\ analysis_timeout_seconds\\ is\\ None\\ else\\ analysis_timeout_seconds|self\\.analysis_timeout_seconds\\ =\\ _nonnegative_budget\\(configured_timeout,\\ \"AURORAFOX_API_FILE_ANALYSIS_TIMEOUT_SECONDS\"\\)|if\\ self\\.upload_ttl_seconds\\ ==\\ 0:|cutoff\\ =\\ time\\.time\\(\\)\\ \\-\\ self\\.upload_ttl_seconds|if\\ self\\.max_file_bytes\\ >\\ 0\\ and\\ len\\(content_base64\\)\\ >\\ self\\.max_encoded_chars:|if\\ self\\.max_file_bytes\\ >\\ 0\\ and\\ len\\(raw\\)\\ >\\ self\\.max_file_bytes:|timeout=self\\.analysis_timeout_seconds\\ if\\ self\\.analysis_timeout_seconds\\ >\\ 0\\ else\\ None,)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted API file transport bytes/recovery TTL/analysis HTTP deadline",
+      "rationale": "Exact statements tested through real file writes, stale mtime and actual local HTTP success/error cleanup. Zero lifts its own resource ceiling; mandatory completed-analysis transport cleanup remains. Client cannot set startup authority; parser resource policy remains independent."
+    },
+    {
+      "path": "api/server.py",
+      "pattern": "^\\s*(?:MAX_API_CHAT_CHARS\\ =\\ _owner_text_budget\\(\"AURORAFOX_API_CHAT_MAX_CHARS\",\\ 100000\\)|MAX_API_KNOWLEDGE_CHARS\\ =\\ _owner_text_budget\\(\"AURORAFOX_API_KNOWLEDGE_MAX_CHARS\",\\ 200000\\)|MAX_API_NOTE_CHARS\\ =\\ _owner_text_budget\\(\"AURORAFOX_API_NOTE_MAX_CHARS\",\\ 12000\\)|message:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=MAX_API_CHAT_CHARS\\)|message:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=MAX_API_CHAT_CHARS\\)|answer:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=MAX_API_CHAT_CHARS\\)|corrected_answer:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=MAX_API_CHAT_CHARS\\)|note:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=MAX_API_NOTE_CHARS\\)|content:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=MAX_API_KNOWLEDGE_CHARS\\)|question:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=MAX_API_NOTE_CHARS\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted server-owner content character validators",
+      "rationale": "Exact chat/feedback/knowledge/note/question statements; actual Pydantic exact/raised/zero/overflow/invalid tests and authenticated HTTP verify immutable startup authority. Empty required text, scores, account/token fields and independent request byte budgets unchanged."
     }
   ]
 }
