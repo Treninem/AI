@@ -33,6 +33,14 @@ func _run() -> void:
 		_fail("External query exceeded its hard character bound", 4)
 		return
 
+	for sensitive_query in ["password CREDENTIAL_FIXTURE local AI", "api_key=CREDENTIAL_FIXTURE Godot", "Authorization: Bearer CREDENTIAL_FIXTURE local", '{"password":"CREDENTIAL_FIXTURE"} Godot']:
+		if collector._external_query(sensitive_query).contains("CREDENTIAL_FIXTURE"):
+			_fail("Marked credential escaped external-query redaction", 20)
+			return
+	collector._record_request_error("http", "fixture", "https://example.com", 500, 0, "token=CREDENTIAL_FIXTURE")
+	if JSON.stringify(collector._request_errors).contains("CREDENTIAL_FIXTURE"):
+		_fail("Marked credential escaped research error redaction", 21)
+		return
 	var endpoint := collector._safe_endpoint("https://api.github.com/search/repositories?q=owner%40example.com")
 	if endpoint != "api.github.com":
 		_fail("Error endpoint sanitization retained path/query material", 5)

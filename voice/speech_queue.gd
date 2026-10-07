@@ -85,7 +85,7 @@ func set_ducked(value: bool) -> void:
 
 func _apply_effective_volume() -> void:
 	var effective := volume * (0.18 if ducked else 1.0)
-	player.volume_db = linear_to_db(maxf(effective, 0.001))
+	player.volume_linear = effective # Zero is mute; no artificial audible gain floor.
 
 func is_speaking() -> bool:
 	return running and player.playing
@@ -167,27 +167,31 @@ func _process(delta: float) -> void:
 		_amp_index += 1
 
 func _natural_prefix(buffer: String, out: Array) -> String:
-	if buffer.length() < MAX_SPEECH_CHUNK_CHARS:
+	var chunk_budget := OwnerResourcePolicy.value("speech_chunk_chars")
+	if chunk_budget == 0 or buffer.length() < chunk_budget:
 		return buffer
-	var window := buffer.substr(0, mini(buffer.length(), MAX_SPEECH_CHUNK_CHARS + 1))
+	var window := buffer.substr(0, mini(buffer.length(), chunk_budget + 1))
+	var natural_min := mini(OwnerResourcePolicy.value("speech_natural_min_chars"), chunk_budget)
 	var cut := -1
 	for marker in [", ", "; ", ": ", " — ", " – "]:
 		var found := window.rfind(marker)
-		if found >= MIN_NATURAL_SPLIT_CHARS:
+		if found >= natural_min:
 			# Keep punctuation/dash in the spoken chunk and leave whitespace outside it.
 			cut = maxi(cut, found + marker.length() - 1)
-	if cut < MIN_NATURAL_SPLIT_CHARS:
+	if cut < natural_min:
 		cut = window.rfind(" ")
-	if cut < MIN_NATURAL_SPLIT_CHARS:
-		cut = MAX_SPEECH_CHUNK_CHARS
+	if cut < natural_min:
+		cut = chunk_budget
 	var part := buffer.substr(0, cut).strip_edges()
 	if not part.is_empty():
-		if part[-1] not in [",", ";", ":", "—", "–", ".", "!", "?", "…"]:
+		if part[-1] not in [",", ";", ":", "—", "–", ".", "!", "?", "…"] and part.length() < chunk_budget:
 			part += ","
 		out.append(part)
 	return buffer.substr(cut).strip_edges()
 
 func _split_sentences(text: String) -> Array:
+	var chunk_budget := OwnerResourcePolicy.value("speech_chunk_chars")
+	var sentence_min := OwnerResourcePolicy.value("speech_sentence_min_chars")
 	var clean := text.strip_edges()
 	if clean.is_empty(): return []
 	var out: Array = []
@@ -198,14 +202,16 @@ func _split_sentences(text: String) -> Array:
 		if i + 2 < clean.length() and clean.substr(i, 3) == "```":
 			in_code = not in_code
 			buf += "```"
+			while chunk_budget > 0 and buf.length() >= chunk_budget:
+				buf = _natural_prefix(buf, out)
 			i += 3
 			continue
 		var c := clean[i]
 		buf += c
-		if not in_code and c in [".", "!", "?", "…"] and buf.length() >= 18:
+		if not in_code and c in [".", "!", "?", "…"] and buf.length() >= sentence_min:
 			out.append(buf.strip_edges())
 			buf = ""
-		elif not in_code and buf.length() >= MAX_SPEECH_CHUNK_CHARS:
+		while chunk_budget > 0 and buf.length() >= chunk_budget:
 			buf = _natural_prefix(buf, out)
 		i += 1
 	if not buf.strip_edges().is_empty(): out.append(buf.strip_edges())

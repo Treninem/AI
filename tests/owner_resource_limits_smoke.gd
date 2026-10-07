@@ -682,6 +682,70 @@ func _run() -> void:
 		sandbox.free()
 		OwnerResourcePolicy._cached = sandbox_policy
 		OwnerResourcePolicy.revision += 1
+	var output_policy := OwnerResourcePolicy._cached.duplicate()
+	for output_key in ["research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
+		var output_setting := {}
+		output_setting[output_key] = 0
+		assert(OwnerResourcePolicy.save(output_setting, path) == OK)
+		assert(OwnerResourcePolicy.limits(path)[output_key] == 0)
+		output_setting[output_key] = 10001
+		assert(OwnerResourcePolicy.save(output_setting, path) == OK)
+		assert(OwnerResourcePolicy.limits(path)[output_key] == 10001)
+	OwnerResourcePolicy._cached = output_policy.duplicate()
+	var research := AuroraResearchCollector.new()
+	OwnerResourcePolicy._cached.research_title_chars = 2
+	OwnerResourcePolicy._cached.research_summary_chars = 3
+	var clipped_observation := research._item("fixture", "long title", "long summary")
+	assert(clipped_observation.title == "lo" and clipped_observation.title_truncated)
+	assert(clipped_observation.summary == "lon" and clipped_observation.summary_truncated)
+	OwnerResourcePolicy._cached.research_title_chars = 0
+	OwnerResourcePolicy._cached.research_summary_chars = 0
+	var full_observation := research._item("fixture", "long title", "long summary")
+	assert(full_observation.title == "long title" and not full_observation.title_truncated)
+	assert(full_observation.summary == "long summary" and not full_observation.summary_truncated)
+	OwnerResourcePolicy._cached.research_error_items = 2
+	for i in range(3): research._record_request_error("fixture", "source", "https://example.com/private?secret=yes", 503, 0, "failure")
+	assert(research._request_errors.size() == 2 and research._request_error_count == 3)
+	assert(not JSON.stringify(research._request_errors).contains("secret"))
+	OwnerResourcePolicy._cached.research_error_items = 0
+	research._record_request_error("fixture", "source", "https://example.com/", 503, 0, "failure")
+	assert(research._request_errors.size() == 3 and research._request_error_count == 4)
+	OwnerResourcePolicy._cached.research_response_bytes = 4194304
+	var request_policy := HTTPRequest.new()
+	request_policy.body_size_limit = research._response_byte_limit()
+	assert(request_policy.body_size_limit == 4194304)
+	OwnerResourcePolicy._cached.research_response_bytes = 0
+	request_policy.body_size_limit = research._response_byte_limit()
+	assert(request_policy.body_size_limit == -1)
+	request_policy.free()
+	research.free()
+	var speech := AuroraSpeechQueue.new()
+	speech.set_volume(0.0)
+	assert(speech.player.volume_linear == 0.0)
+	speech.set_volume(1.0)
+	assert(is_equal_approx(speech.player.volume_linear, 1.0))
+	OwnerResourcePolicy._cached.speech_natural_min_chars = 96
+	OwnerResourcePolicy._cached.speech_sentence_min_chars = 18
+	var plain_speech := "x".repeat(1000)
+	for speech_budget in [1, 2, 3, 20, 220, 1500]:
+		OwnerResourcePolicy._cached.speech_chunk_chars = speech_budget
+		var chunks := speech._split_sentences(plain_speech)
+		assert("".join(chunks) == plain_speech)
+		for chunk in chunks: assert(str(chunk).length() <= speech_budget)
+		var code_speech := "```" + "z".repeat(1000) + "```"
+		var code_chunks := speech._split_sentences(code_speech)
+		assert("".join(code_chunks) == code_speech)
+		for chunk in code_chunks: assert(str(chunk).length() <= speech_budget)
+	OwnerResourcePolicy._cached.speech_chunk_chars = 0
+	assert(speech._split_sentences(plain_speech) == [plain_speech])
+	OwnerResourcePolicy._cached.speech_chunk_chars = 220
+	var natural_chunks := speech._split_sentences("a ".repeat(400))
+	for chunk in natural_chunks: assert(str(chunk).length() <= 220)
+	speech.player.free()
+	speech.free()
+	OwnerResourcePolicy._cached = output_policy
+	OwnerResourcePolicy.revision += 1
+	DirAccess.remove_absolute(_absolute(path))
 	print("AURORA_OWNER_RESOURCE_LIMITS_OK")
 	quit(0)
 

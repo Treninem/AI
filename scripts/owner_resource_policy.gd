@@ -3,6 +3,15 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"research_response_bytes": 2097152,
+	"research_log_bytes": 8388608,
+	"research_summary_chars": 1800,
+	"research_title_chars": 300,
+	"research_error_items": 16,
+	"speech_chunk_chars": 220,
+	"speech_natural_min_chars": 96,
+	"speech_sentence_min_chars": 18,
+
 	"sandbox_read_bytes": 5000000,
 	"sandbox_read_chars": 300000,
 	"sandbox_tree_items": 1000,
@@ -160,6 +169,15 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"research_response_bytes": "Research: байтов ответа (0 = без лимита)",
+	"research_log_bytes": "Research: байтов журнала до ротации (0 = без лимита)",
+	"research_summary_chars": "Research: символов резюме (0 = все)",
+	"research_title_chars": "Research: символов заголовка (0 = все)",
+	"research_error_items": "Research: ошибок в отчёте (0 = все)",
+	"speech_chunk_chars": "Голос: символов сегмента TTS (0 = без лимита)",
+	"speech_natural_min_chars": "Голос: минимум символов до естественного разделения",
+	"speech_sentence_min_chars": "Голос: минимум символов предложения",
+
 	"sandbox_read_bytes": "Песочница: байтов чтения (0 = без лимита)",
 	"sandbox_read_chars": "Песочница: символов чтения (0 = все)",
 	"sandbox_tree_items": "Песочница: элементов дерева (0 = все)",

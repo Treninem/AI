@@ -7063,3 +7063,41 @@ DONE:native568/index0a7/sandboxfb and actual-tag2c published; tested unpublished
 REMAINING:retrieve/publish actual Research/Voice package, current scoped owner inventory/unfinished source, exact-final-SHA CI/APK/native device/update/release gates, version last
 BLOCKERS:environment_offline blocks local retrieval/implementation/testing; exact2c APK/native acceptance pending; no production identity or physical gate waived
 NEXT:restore execution environment, preserve/read actual checkout and compare to fresh GitHub; publish remaining real source as one coherent batch and continue V1.5 CRITICAL acceptance.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 owner-adjustable current Research/Knowledge observation buffers and Voice speech chunk baseline
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged; no future cognition or media provider integration
+STARTING_HEAD:fb565eba2b903ffbb7e840fcc832a0f7771f92ed
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:agent/research_collector.gd;voice/speech_queue.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_research_collector_privacy_contract.py;tests/test_research_source_resilience_contract.py;tests/research_source_resilience_smoke.gd;relevant Voice/research exact contracts;config/owner_control_policy.json reviewed exact patterns;master/memory append-only
+DEPENDENCIES:reconcile paths with recovery coordinator. Sandbox/export17-path coherent fb565eba2b903ffbb7e840fcc832a0f7771f92ed tree4ea14b967de0a7be161361d91f78afad5101223e CAS published, exactCI pending; do not duplicate it. Current main ancestor remains446ce2cd.
+NON_BLOCKERS:V1.6 runtime/media/S3 excluded. External query scrub240chars/24words and personal-file/curation/privacy boundaries remain enforced; provider pagination/timeouts/backoff remain explicitly separate unresolved inventory, not made ready by this output block.
+ACCEPTANCE_GATES:private owner save/reload; raised/zero Research title/summary/response/log/error budgets with truthful clipped fields and Godot byte-cap semantics; speech owner chunk/min-natural/min-sentence controls preserve text, bound tiny/code chunks and avoid extra punctuation overrun; real Godot privacy/resilience/voice regressions plus coherentCI
+CONFIRMED_DEFECTS:fixed Research response2MiB/summary1800/log8MiB/errors16/title300 operational limits; Voice fixed220chunk/96natural split silently constrains downstream segmentation despite other owner voice settings and can add punctuation beyond cap or bypass cap for fenced code.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent owner output-control and actual bounded/unlimited regressions while published exact-SHA CI runs.
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT owns tests/research_response_owner_smoke.gd;tools/run_research_response_smoke.py;.github/workflows/research-quality-ci.yml for real loopback HTTPRequest body-byte-limit evidence (above prior2MiB default, exact/overflow, zero) and research log rotation fixture. No request to external providers or private user files is needed for this deterministic gate.
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT owns tests/research_collector_privacy_smoke.gd to prove private owner log zero/raised/threshold behavior using the existing isolated Research audit fixture; preserve all external-only/query-scrub/curation acceptance checks.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT corrects Voice mute in owned speech_queue: previous linear_to_db(max(effective,0.001)) produced audible gain even at owner volume0. Use AudioStreamPlayer.volume_linear with actual Godot assertions for0mute/1gain. Config classification additionally owns exact new native reader snapshot-budget/representation lines for reviewed existing implementations only; no native runtime edits or duplicate native acceptance claim.
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT confirmed current privacy defect with real Godot: _external_query("password CREDENTIAL_FIXTURE local AI") retained marked credential; _record_request_error(...,"token=CREDENTIAL_FIXTURE") retained it in private telemetry. Fix credential redaction before external token filtering and error clipping inside already-owned Research source; add real query/telemetry regressions. Preserve240/24 external-data minimization, path/email/URL exclusion, no personal-file scans and curator gates.
+
+### RECOVERY / coherent Research-Voice source validation
+CLAIM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT remains ACTIVE; actual files recovered intact, no source reconstruction.
+RECONCILED_HEAD:5886d8425e2bd2d782e99af5a442431516fa48f0; main446ce2cd2f979a8ab228f63d090062e8ba48a6eb. Remote Android three-file repair and both emergency journal/memory records preserved; local claim/output source integrated on that head.
+EXACT_HEAD_CI:5886 has46 completed checks:43SUCCESS,3SKIPPED,0FAILURE. Skips are standard-linux/large-linux-push/manual-large, not counted as executed. Windows package37550381758/112582032674, Android APK37550381671/112567801684, Android normal path37550381674/112568837622, Core Android37550381666/112567488741 and Windows37550381745/112566116782 allSUCCESS. This validates published native/index/sandbox/tag repairs, not unpublished Research/Voice source.
+LOCAL_REVALIDATION:85Python owner/audit/Research/index/sandbox/export/recovery/specialist/filesystem tests PASS after remote integration;20existing voice/config Python cases PASS using actual system NumPy appended to isolated test environment. Actual Godot owner/Research privacy/resilience/2097153-byte loopback and lowercase Android editor-hook markers PASS. Existing owner20ObjectDB/8resources and editor209ObjectDB/RID diagnostics retained, no clean-shutdown claim.
+TEST_ENVIRONMENT:initial expanded collection lacked NumPy, then11archive/spreadsheet cases lacked requests. These are missing test dependencies, not established source failures; never turn them into PASS without a successful rerun. Production dependencies/version files unchanged.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:restored actual source and exact remote acceptance evidence, private8controls/true mute/redaction/truthful truncation with real runtime tests.
+REMAINING:publication/new-SHA CI, remaining current owner inventory/source and physical/update/release gates, version-last.
+BLOCKERS:none stops authorized independent source work; physical/production-release acceptance remains unwaived.
+NEXT:publish real coherent Research/Voice package then proceed to remaining scoped operational controls; no V1.6/S3 expansion.

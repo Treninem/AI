@@ -88,3 +88,11 @@ def test_research_quality_workflow_runs_resilience_contract_and_smoke() -> None:
     assert "tests/test_research_source_resilience_contract.py" in workflow
     assert "tests/research_source_resilience_smoke.gd" in workflow
     assert "Run research source resilience smoke" in workflow
+
+
+def test_marked_credentials_are_redacted_before_query_and_error_clipping():
+    text = read(COLLECTOR)
+    assert 'var normalized := _redact_credentials(query)' in text
+    assert '_clean(_redact_credentials(message), 240)' in text
+    assert '_redact_credentials(body).substr(0, 500)' in text
+    assert 'Sensitive research details omitted' in text

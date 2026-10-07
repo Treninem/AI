@@ -3,6 +3,83 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/SevenZTextReader.kt",
+      "pattern": "^\\s*(?:internal\\ fun\\ readSevenZText\\(file:\\ File,\\ limits:\\ FileAnalysisLimits,\\ extensions:\\ Set<String>\\):\\ ArchiveTextResult\\ \\{|require\\(file\\.length\\(\\)\\ <=\\ limits\\.fileBytes\\)\\ \\{\\ \"7z\\ input\\ exceeds\\ owner\\ file\\-byte\\ budget\"\\ \\}|require\\(size\\ <=\\ minOf\\(limits\\.expandedBytes,\\ Int\\.MAX_VALUE\\.toLong\\(\\)\\)\\)\\ \\{\\ \"7z\\ header\\ exceeds\\ owner\\ metadata\\ budget\"\\ \\}|preflightSevenZEncodedHeader\\(next,\\ limits\\.expandedBytes\\)|val\\ memoryKiB\\ =\\ \\(limits\\.expandedBytes\\ /\\ 1024\\)\\.coerceAtMost\\(Int\\.MAX_VALUE\\.toLong\\(\\)\\)\\.toInt\\(\\)|if\\ \\(entries\\.size\\ >=\\ limits\\.archiveEntries\\)\\ \\{\\ entryOverflow\\ =\\ true;\\ break\\ \\}|val\\ blocked\\ =\\ expanded\\ >\\ limits\\.expandedBytes|if\\ \\(entryOverflow\\)\\ warnings\\.add\\(\"7z\\ entry\\ list\\ is\\ partial;\\ raise\\ owner\\ entry\\ budget\"\\)|if\\ \\(blocked\\)\\ warnings\\.add\\(\"7z\\ expanded\\-byte\\ budget\\ exceeded;\\ extraction\\ blocked\"\\)|val\\ listingBudget\\ =\\ minOf\\(limits\\.listingChars\\.toLong\\(\\),\\ limits\\.outputChars\\.toLong\\(\\)\\*limits\\.listingPercent/100\\)\\.toInt\\(\\)|val\\ cap\\ =\\ minOf\\(limits\\.memberBytes,\\ limits\\.totalTextBytes\\-bytesRead\\)|if\\ \\(cap\\ <=\\ 0\\)\\ \\{\\ contentPartial\\ =\\ true;\\ break\\ \\}|if\\ \\(entry\\.size\\ >\\ cap\\)\\ \\{\\ contentPartial\\ =\\ true;\\ warnings\\.add\\(\"7z\\ member\\ exceeds\\ owner\\ text\\-byte\\ budget\"\\);\\ continue\\ \\}|val\\ raw\\ =\\ readOwnerBounded\\(input,\\ cap\\)|val\\ left\\ =\\ limits\\.outputChars\\-out\\.length\\-header\\.length|val\\ partial\\ =\\ blocked\\ \\|\\|\\ entryOverflow\\ \\|\\|\\ listingPartial\\ \\|\\|\\ contentPartial\\ \\|\\|\\ source\\.length\\ >\\ limits\\.outputChars|if\\ \\(partial\\)\\ warnings\\.add\\(\"7z\\ extraction\\ is\\ partial;\\ increase\\ owner\\ budgets\\ and\\ repeat\\ reading\"\\)|return\\ ArchiveTextResult\\(source\\.take\\(limits\\.outputChars\\),\\ mapOf\\(\"entries\"\\ to\\ entries\\.size,|private\\ fun\\ preflightSevenZEncodedHeader\\(bytes:\\ ByteArray,\\ budget:\\ Long\\)\\ \\{|for\\ \\(i\\ in\\ 0\\ until\\ count\\)\\ require\\(number\\(\\)\\ <=\\ minOf\\(budget,\\ Int\\.MAX_VALUE\\.toLong\\(\\)\\)\\)\\ \\{|\"Decoded\\ 7z\\ header\\ exceeds\\ owner\\ metadata\\ budget\")\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed per-job owner budgets",
+      "rationale": "Exact tested native snapshot field checks, decoder/meta/member/text budget propagation and visible partial results; arbitrary future caps remain unclassified."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/XlsTextReader.kt",
+      "pattern": "^\\s*(?:internal\\ fun\\ readXlsText\\(file:\\ File,\\ limits:\\ FileAnalysisLimits\\):\\ ArchiveTextResult\\ \\{|cancelled\\(\\);\\ preflightOleDirectory\\(file,\\ limits\\)|require\\(document\\.size\\.toLong\\(\\)\\ <=\\ limits\\.xlsFileBytes\\)\\ \\{\\ \"XLS\\ workbook\\ stream\\ exceeds\\ owner\\ budget\"\\ \\}|if\\ \\(cells\\ >=\\ limits\\.spreadsheetCells\\ \\|\\|\\ \\(row\\ !in\\ rows\\ \\&\\&\\ rows\\.size\\ >=\\ limits\\.xlsRows\\)\\)\\ \\{\\ partial\\ =\\ true;\\ return\\ false\\ \\}|val\\ remaining\\ =\\ limits\\.outputChars\\-out\\.length\\-prefix\\.length|if\\ \\(inWorksheet\\)\\ \\{\\ sheet\\+\\+;\\ rows\\.clear\\(\\);\\ require\\(sheet\\ <\\ limits\\.xlsSheets\\)\\ \\{\\ \"XLS\\ sheet\\ count\\ exceeds\\ owner\\ budget\"\\ \\}\\ \\}|require\\(\\+\\+sheetMetadata\\ <=\\ limits\\.xlsSheets\\)\\ \\{\\ \"XLS\\ sheet\\ metadata\\ exceeds\\ owner\\ budget\"\\ \\}|require\\(total\\ >=\\ 0\\ \\&\\&\\ unique\\ >=\\ 0\\ \\&\\&\\ unique\\ <=\\ total\\ \\&\\&\\ unique\\ <=\\ limits\\.xlsSharedStrings\\)\\ \\{\\ \"XLS\\ shared\\ strings\\ exceed\\ owner\\ budget\"\\ \\}|if\\ \\(partial\\)\\ warnings\\.add\\(\"XLS\\ content\\ is\\ partial;\\ raise\\ owner\\ row/cell/text\\ budgets\\ and\\ repeat\\ reading\"\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed per-job owner budgets",
+      "rationale": "Exact tested native snapshot field checks, decoder/meta/member/text budget propagation and visible partial results; arbitrary future caps remain unclassified."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/RarTextReader.kt",
+      "pattern": "^\\s*(?:internal\\ fun\\ readRarText\\(file:\\ File,\\ limits:\\ FileAnalysisLimits,\\ extensions:\\ Set<String>\\):\\ ArchiveTextResult\\ \\{|checkCancelled\\(\\);\\ preflightRarHeaders\\(file,\\ limits\\)|Archive\\(manager,\\ ArchiveOptions\\.builder\\(\\)\\.maxDictionarySize\\(limits\\.expandedBytes\\)\\.unrarCallback\\(callback\\)\\.build\\(\\)\\)\\.use\\ \\{\\ archive\\ \\->|require\\(entries\\.size\\ <=\\ limits\\.archiveEntries\\)\\ \\{\\ \"RAR\\ entries\\ exceed\\ owner\\ budget\"\\ \\}|val\\ blocked\\ =\\ expanded\\ >\\ limits\\.expandedBytes|val\\ listingBudget\\ =\\ minOf\\(limits\\.listingChars\\.toLong\\(\\),\\ limits\\.outputChars\\.toLong\\(\\)\\*limits\\.listingPercent/100\\)\\.toInt\\(\\)|val\\ cap\\ =\\ minOf\\(limits\\.memberBytes,\\ limits\\.totalTextBytes\\-bytesRead\\)|if\\ \\(cap\\ <=\\ 0\\ \\|\\|\\ entry\\.fullUnpackSize\\ >\\ cap\\)\\ \\{\\ partial\\ =\\ true;\\ continue\\ \\}|override\\ fun\\ write\\(value:\\ Int\\)\\ \\{\\ checkCancelled\\(\\);\\ require\\(bytes\\.size\\(\\)\\.toLong\\(\\)\\ <\\ cap\\)\\ \\{\\ \"RAR\\ actual\\ member\\ exceeds\\ owner\\ byte\\ budget\"\\ \\};\\ bytes\\.write\\(value\\)\\ \\}|checkCancelled\\(\\);\\ require\\(count\\.toLong\\(\\)\\ <=\\ cap\\-bytes\\.size\\(\\)\\)\\ \\{\\ \"RAR\\ actual\\ member\\ exceeds\\ owner\\ byte\\ budget\"\\ \\};\\ bytes\\.write\\(buffer,offset,count\\)|val\\ left\\ =\\ limits\\.outputChars\\-out\\.length\\-header\\.length|partial\\ =\\ partial\\ \\|\\|\\ source\\.length\\ >\\ limits\\.outputChars|if\\ \\(partial\\)\\ warnings\\.add\\(\"RAR\\ extraction\\ is\\ partial/blocked;\\ increase\\ owner\\ budgets\\ and\\ repeat\\ reading\"\\)|return\\ ArchiveTextResult\\(source\\.take\\(limits\\.outputChars\\),\\ mapOf\\(\"entries\"\\ to\\ entries\\.size,)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed per-job owner budgets",
+      "rationale": "Exact tested native snapshot field checks, decoder/meta/member/text budget propagation and visible partial results; arbitrary future caps remain unclassified."
+    },
+    {
+      "path": "agent/research_collector.gd",
+      "pattern": "^\\s*(?:var\\ budget\\ :=\\ OwnerResourcePolicy\\.value\\(\"research_response_bytes\"\\)|return\\ \\-1\\ if\\ budget\\ ==\\ 0\\ else\\ budget)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed per-job owner budgets",
+      "rationale": "Exact tested native snapshot field checks, decoder/meta/member/text budget propagation and visible partial results; arbitrary future caps remain unclassified."
+    },
+    {
+      "path": "voice/speech_queue.gd",
+      "pattern": "^\\s*(?:var\\ window\\ :=\\ buffer\\.substr\\(0,\\ mini\\(buffer\\.length\\(\\),\\ chunk_budget\\ \\+\\ 1\\)\\)|var\\ natural_min\\ :=\\ mini\\(OwnerResourcePolicy\\.value\\(\"speech_natural_min_chars\"\\),\\ chunk_budget\\)|cut\\ =\\ maxi\\(cut,\\ found\\ \\+\\ marker\\.length\\(\\)\\ \\-\\ 1\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed per-job owner budgets",
+      "rationale": "Exact tested native snapshot field checks, decoder/meta/member/text budget propagation and visible partial results; arbitrary future caps remain unclassified."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/SevenZTextReader.kt",
+      "pattern": "^\\s*(?:require\\(memoryKiB\\ >\\ 0\\)\\ \\{\\ \"7z\\ metadata/decoder\\ budget\\ must\\ represent\\ at\\ least\\ one\\ KiB\"\\ \\}|if\\ \\(!entry\\.isDirectory\\)\\ expanded\\ =\\ if\\ \\(Long\\.MAX_VALUE\\-expanded\\ <\\ entry\\.size\\)\\ Long\\.MAX_VALUE\\ else\\ expanded\\+entry\\.size)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed representation, parser structure and compatibility defaults",
+      "rationale": "Exact reviewed integer saturation,20-byte BIFF cached-formula structure, normalized0..1gain/division guard and unused legacy compatibility defaults; no arbitrary operational cap exemption."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/XlsTextReader.kt",
+      "pattern": "^\\s*(?:require\\(raw\\.limit\\(\\)\\ >=\\ 20\\)\\ \\{\\ \"Truncated\\ XLS\\ cached\\ formula\"\\ \\})\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed representation, parser structure and compatibility defaults",
+      "rationale": "Exact reviewed integer saturation,20-byte BIFF cached-formula structure, normalized0..1gain/division guard and unused legacy compatibility defaults; no arbitrary operational cap exemption."
+    },
+    {
+      "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/RarTextReader.kt",
+      "pattern": "^\\s*(?:if\\ \\(!entry\\.isDirectory\\)\\ expanded\\ =\\ if\\ \\(Long\\.MAX_VALUE\\-expanded\\ <\\ entry\\.fullUnpackSize\\)\\ Long\\.MAX_VALUE\\ else\\ expanded\\+entry\\.fullUnpackSize)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed representation, parser structure and compatibility defaults",
+      "rationale": "Exact reviewed integer saturation,20-byte BIFF cached-formula structure, normalized0..1gain/division guard and unused legacy compatibility defaults; no arbitrary operational cap exemption."
+    },
+    {
+      "path": "voice/speech_queue.gd",
+      "pattern": "^\\s*(?:const\\ MAX_SPEECH_CHUNK_CHARS\\ :=\\ 220|const\\ MIN_NATURAL_SPLIT_CHARS\\ :=\\ 96|volume\\ =\\ clampf\\(value,\\ 0\\.0,\\ 1\\.0\\)|var\\ step\\ :=\\ duration\\ /\\ maxf\\(float\\(_amplitude\\.size\\(\\)\\),\\ 1\\.0\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed representation, parser structure and compatibility defaults",
+      "rationale": "Exact reviewed integer saturation,20-byte BIFF cached-formula structure, normalized0..1gain/division guard and unused legacy compatibility defaults; no arbitrary operational cap exemption."
+    },
+    {
+      "path": "agent/research_collector.gd",
+      "pattern": "^\\s*(?:const\\ MAX_SUMMARY_CHARS\\ :=\\ 1800|const\\ MAX_RESPONSE_BYTES\\ :=\\ 2\\ \\*\\ 1024\\ \\*\\ 1024|const\\ MAX_LOG_BYTES\\ :=\\ 8\\ \\*\\ 1024\\ \\*\\ 1024|const\\ MAX_SOURCE_ERRORS\\ :=\\ 16|\"retry_in_seconds\":\\ maxi\\(0,\\ int\\(state\\.get\\(\"next_retry_unix\",\\ 0\\)\\)\\ \\-\\ now\\),)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed representation, parser structure and compatibility defaults",
+      "rationale": "Exact reviewed integer saturation,20-byte BIFF cached-formula structure, normalized0..1gain/division guard and unused legacy compatibility defaults; no arbitrary operational cap exemption."
+    },
+    {
+      "path": "agent/research_collector.gd",
+      "pattern": "^\\s*(?:const\\ MAX_EXTERNAL_QUERY_CHARS\\ :=\\ 240|const\\ MAX_EXTERNAL_QUERY_WORDS\\ :=\\ 24|if\\ accepted\\.size\\(\\)\\ >=\\ MAX_EXTERNAL_QUERY_WORDS:|var\\ result\\ :=\\ \"\\ \"\\.join\\(accepted\\)\\.strip_edges\\(\\)\\.substr\\(0,\\ MAX_EXTERNAL_QUERY_CHARS\\))\\s*$",
+      "class": "hard_boundary",
+      "control": "Scrubbed external query data minimization,240characters/24words",
+      "rationale": "Existing explicitly tested external-only privacy boundary bounds automatic outbound query sharing; private resource controls must not disable credential/path/email exclusion or export entire local task text."
+    },
+    {
       "path": "scripts/sandbox_manager.gd",
       "pattern": "^\\s*(?:func\\ list_workspaces\\(limit\\ :=\\ \\-1\\)\\ \\->\\ Array:|var\\ budget\\ :=\\ OwnerResourcePolicy\\.value\\(\"sandbox_workspace_items\"\\)\\ if\\ limit\\ <\\ 0\\ else\\ limit|return\\ values\\ if\\ budget\\ ==\\ 0\\ else\\ values\\.slice\\(0,\\ mini\\(values\\.size\\(\\),\\ budget\\)\\)|func\\ read_file\\(relative_path:\\ String,\\ area\\ :=\\ \"work\",\\ max_chars\\ :=\\ \\-1\\)\\ \\->\\ Dictionary:|max_chars\\ =\\ OwnerResourcePolicy\\.value\\(\"sandbox_read_chars\"\\)\\ if\\ max_chars\\ ==\\ \\-1\\ else\\ max_chars|if\\ max_chars\\ <\\ 0:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Read\\ character\\ budget\\ must\\ be\\ nonnegative\"\\}|var\\ max_bytes\\ :=\\ OwnerResourcePolicy\\.value\\(\"sandbox_read_bytes\"\\)|var\\ result\\ :=\\ await\\ _http_json\\(WINDOWS_SERVICE\\ \\+\\ \"/sandbox/read\\?path=\"\\ \\+\\ \\(\"%s/%s/%s\"\\ %\\ \\[ws\\.id,\\ area,\\ safe\\]\\)\\.uri_encode\\(\\)\\ \\+\\ \"\\&max_bytes=%d\"\\ %\\ max_bytes,\\ HTTPClient\\.METHOD_GET\\)|result\\[\"content\"\\]\\ =\\ text\\ if\\ max_chars\\ ==\\ 0\\ else\\ text\\.substr\\(0,\\ max_chars\\)|result\\[\"truncated\"\\]\\ =\\ max_chars\\ >\\ 0\\ and\\ text\\.length\\(\\)\\ >\\ max_chars|if\\ max_bytes\\ >\\ 0\\ and\\ f\\.get_length\\(\\)\\ >\\ max_bytes:|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"File\\ exceeds\\ owner\\ byte\\ budget\",\\ \"limit_reached\":\\ true\\}|var\\ data\\ :=\\ f\\.get_buffer\\(max_bytes\\ \\+\\ 1\\ if\\ max_bytes\\ >\\ 0\\ else\\ f\\.get_length\\(\\)\\)|if\\ max_bytes\\ >\\ 0\\ and\\ data\\.size\\(\\)\\ >\\ max_bytes:|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"File\\ grew\\ beyond\\ owner\\ byte\\ budget\",\\ \"limit_reached\":\\ true\\}|return\\ \\{\"ok\":\\ true,\\ \"path\":\\ path,\\ \"content\":\\ text\\ if\\ max_chars\\ ==\\ 0\\ else\\ text\\.substr\\(0,\\ max_chars\\),\\ \"truncated\":\\ max_chars\\ >\\ 0\\ and\\ text\\.length\\(\\)\\ >\\ max_chars\\}|func\\ tree\\(area\\ :=\\ \"work\",\\ max_items\\ :=\\ \\-1\\)\\ \\->\\ Dictionary:|max_items\\ =\\ OwnerResourcePolicy\\.value\\(\"sandbox_tree_items\"\\)\\ if\\ max_items\\ ==\\ \\-1\\ else\\ max_items|if\\ max_items\\ <\\ 0:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Tree\\ budget\\ must\\ be\\ nonnegative\"\\}|var\\ result\\ :=\\ await\\ _http_json\\(WINDOWS_SERVICE\\ \\+\\ \"/sandbox/workspace/tree\\?workspace=%s\\&area=%s\\&max_items=%d\"\\ %\\ \\[str\\(ws\\.id\\)\\.uri_encode\\(\\),\\ area\\.uri_encode\\(\\),\\ max_items\\],\\ HTTPClient\\.METHOD_GET\\)|_walk\\(root,\\ \"\",\\ items,\\ max_items,\\ coverage\\)|if\\ event_budget\\ >\\ 0\\ and\\ events\\.size\\(\\)\\ >\\ event_budget:\\ events\\ =\\ events\\.slice\\(events\\.size\\(\\)\\ \\-\\ event_budget\\)|func\\ _walk\\(root:\\ String,\\ rel:\\ String,\\ out:\\ Array,\\ max_items:\\ int,\\ coverage:\\ Dictionary\\ =\\ \\{\\}\\)\\ \\->\\ void:|elif\\ max_items\\ >\\ 0\\ and\\ out\\.size\\(\\)\\ >=\\ max_items:|if\\ is_dir:\\ _walk\\(root,\\ child_rel,\\ out,\\ max_items,\\ coverage\\))\\s*$",
       "class": "owner_adjustable",

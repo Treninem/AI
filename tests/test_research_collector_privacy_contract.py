@@ -43,9 +43,10 @@ def test_external_response_memory_is_bounded_before_parsing() -> None:
     assert "const MAX_RESPONSE_BYTES := 2 * 1024 * 1024" in text
     assert "const REQUEST_TIMEOUT_SECONDS := 20.0" in text
     assert "req.timeout = REQUEST_TIMEOUT_SECONDS" in text
-    assert "req.body_size_limit = MAX_RESPONSE_BYTES" in text
+    assert "req.body_size_limit = _response_byte_limit()" in text
     assert "request_result != HTTPRequest.RESULT_SUCCESS" in text
-    assert "body.substr(0, MAX_RESPONSE_BYTES)" in text
+    assert '"text": body' in text
+    assert 'return -1 if budget == 0 else budget' in text
 
 
 def test_research_audit_log_has_bounded_rotation() -> None:
@@ -53,9 +54,10 @@ def test_research_audit_log_has_bounded_rotation() -> None:
 
     assert 'const LOG_BACKUP_PATH := "user://agent/research.jsonl.1"' in text
     assert "const MAX_LOG_BYTES := 8 * 1024 * 1024" in text
-    assert '"audit_log_limit_bytes": MAX_LOG_BYTES' in text
+    assert '"audit_log_limit_bytes": OwnerResourcePolicy.value("research_log_bytes")' in text
     assert "_rotate_log_if_needed()" in text
-    assert "if size < MAX_LOG_BYTES:" in text
+    assert "if log_budget == 0: return" in text
+    assert "if size < log_budget:" in text
     assert "DirAccess.rename_absolute(log_abs, backup_abs)" in text
 
 
@@ -66,14 +68,16 @@ def test_source_failures_are_visible_and_bounded() -> None:
     assert "const MAX_SOURCE_ERRORS := 16" in text
     assert "var _request_errors: Array = []" in text
     assert "_request_errors.clear()" in collect
-    assert "var complete_failure := items.is_empty() and not source_errors.is_empty()" in collect
-    assert "var partial := not items.is_empty() and not source_errors.is_empty()" in collect
+    assert "var complete_failure := items.is_empty() and _request_error_count > 0" in collect
+    assert "var partial := not items.is_empty() and _request_error_count > 0" in collect
     assert '"ok": not complete_failure' in collect
     assert '"partial": partial' in collect
-    assert '"source_error_count": source_errors.size()' in collect
+    assert '"source_error_count": _request_error_count' in collect
     assert 'report["error"] = "All autonomous research sources failed"' in collect
     assert "func _record_request_error" in text
-    assert "if _request_errors.size() >= MAX_SOURCE_ERRORS:" in text
+    assert "_request_error_count += 1" in text
+    assert "if error_budget > 0 and _request_errors.size() >= error_budget:" in text
+    assert '"source_errors_truncated": _request_error_count > source_errors.size()' in text
     assert '_record_request_error("json_parse"' in text
     assert '_record_request_error("request_result"' in text
     assert '_record_request_error("http"' in text

@@ -94,6 +94,28 @@ func _run() -> void:
 	if _file_size(AuroraResearchCollector.LOG_BACKUP_PATH) < AuroraResearchCollector.MAX_LOG_BYTES:
 		_fail("Rotated research audit log did not preserve the previous segment", 15)
 		return
+	var owner_defaults := OwnerResourcePolicy._cached.duplicate()
+	_cleanup()
+	var owner_log := FileAccess.open(AuroraResearchCollector.LOG_PATH, FileAccess.WRITE)
+	owner_log.store_string("x".repeat(256))
+	owner_log.close()
+	OwnerResourcePolicy._cached.research_log_bytes = 0
+	collector._rotate_log_if_needed()
+	if FileAccess.file_exists(AuroraResearchCollector.LOG_BACKUP_PATH) or _file_size(AuroraResearchCollector.LOG_PATH) != 256:
+		_fail("Owner unlimited research log rotated or lost data", 16)
+		return
+	OwnerResourcePolicy._cached.research_log_bytes = 1024
+	collector._rotate_log_if_needed()
+	if FileAccess.file_exists(AuroraResearchCollector.LOG_BACKUP_PATH):
+		_fail("Raised owner research log threshold was ignored", 17)
+		return
+	OwnerResourcePolicy._cached.research_log_bytes = 256
+	collector._rotate_log_if_needed()
+	if _file_size(AuroraResearchCollector.LOG_BACKUP_PATH) != 256:
+		_fail("Owner research log threshold did not retain old segment", 18)
+		return
+	OwnerResourcePolicy._cached = owner_defaults
+	OwnerResourcePolicy.revision += 1
 	collector.queue_free()
 	await process_frame
 	_cleanup()

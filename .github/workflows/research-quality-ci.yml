@@ -9,6 +9,8 @@ on:
       - 'tests/research_evidence_lifecycle_smoke.gd'
       - 'tests/research_collector_privacy_smoke.gd'
       - 'tests/research_source_resilience_smoke.gd'
+      - 'tests/research_response_owner_smoke.gd'
+      - 'tools/run_research_response_smoke.py'
       - 'tests/test_research_evidence_lifecycle_contract.py'
       - 'tests/test_research_collector_privacy_contract.py'
       - 'tests/test_research_source_resilience_contract.py'
@@ -23,6 +25,8 @@ on:
       - 'tests/research_evidence_lifecycle_smoke.gd'
       - 'tests/research_collector_privacy_smoke.gd'
       - 'tests/research_source_resilience_smoke.gd'
+      - 'tests/research_response_owner_smoke.gd'
+      - 'tools/run_research_response_smoke.py'
       - 'tests/test_research_evidence_lifecycle_contract.py'
       - 'tests/test_research_collector_privacy_contract.py'
       - 'tests/test_research_source_resilience_contract.py'
@@ -90,3 +94,6 @@ jobs:
         run: timeout 45s ./godot --headless --path . --script tests/research_collector_privacy_smoke.gd
       - name: Run research source resilience smoke
         run: timeout 45s ./godot --headless --path . --script tests/research_source_resilience_smoke.gd
+
+      - name: Prove owner byte budgets with actual loopback HTTPRequest
+        run: python3 tools/run_research_response_smoke.py ./godot
