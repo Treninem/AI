@@ -1394,6 +1394,20 @@
       "class": "test_evidence",
       "control": "Offline Core acceptance scenarios, probe app, report evaluator and bounded CI harness",
       "rationale": "Reviewed Core benchmark findings are test inputs, diagnostics, metrics and acceptance watchdogs, never normal product limits; gates must not be weakened to change owner controls."
+    },
+    {
+      "path": "agent/research_collector.gd",
+      "pattern": "^\\s*(?:req\\.timeout\\ =\\ remaining_timeout|var\\ failures\\ :=\\ maxi\\(0,\\ int\\(previous\\.get\\(\"failures\",\\ 0\\)\\)\\)|if\\ failure_cap\\ >\\ 0:\\ failures\\ =\\ mini\\(failure_cap,\\ failures\\)|return\\ \\-1\\.0\\ \\#\\ Exhausted;\\ zero\\ is\\ the\\ engine's\\ unlimited\\ timeout\\.|return\\ remaining_seconds\\ if\\ request_seconds\\ ==\\ 0\\.0\\ else\\ minf\\(request_seconds,\\ remaining_seconds\\)|var\\ maximum\\ :=\\ OwnerResourcePolicy\\.value\\(\"research_backoff_max_seconds\"\\)|var\\ ceiling\\ :=\\ maximum\\ if\\ maximum\\ >\\ 0\\ else\\ 9223372036854775807|delay\\ =\\ mini\\(delay,\\ ceiling\\)|var\\ exponent\\ :=\\ maxi\\(0,\\ failures\\ \\-\\ 1\\)|func\\ _clean\\(value:\\ String,\\ limit:\\ int\\)\\ \\->\\ String:|return\\ normalized\\ if\\ limit\\ ==\\ 0\\ else\\ normalized\\.substr\\(0,\\ limit\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "OwnerResourcePolicy research_request_seconds/research_collection_seconds/research_backoff_*",
+      "rationale": "Current private Research request/collection/backoff/diagnostic policy propagation; zero disables operational limits. Positive finite collection budget still caps requests."
+    },
+    {
+      "path": "agent/research_collector.gd",
+      "pattern": "^\\s*(?:_record_request_error\\(\"collection_budget\",\\ source_id,\\ url,\\ 0,\\ 0,\\ \"Autonomous\\ research\\ collection\\ budget\\ exhausted\"\\)|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"Collection\\ budget\\ exhausted\",\\ \"source\":\\ source_id\\}|\"next_retry_unix\":\\ now\\ \\+\\ mini\\(delay,\\ 9223372036854775807\\ \\-\\ now\\),)\\s*$",
+      "class": "format_structure",
+      "control": "signed64 representation/exhaustion state",
+      "rationale": "Explicit exhausted-budget error or signed64 timestamp saturation; representation/error semantics do not impose an operational ceiling."
     }
   ]
 }

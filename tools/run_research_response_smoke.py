@@ -5,6 +5,7 @@ import argparse
 import os
 import subprocess
 import threading
+import time
 
 ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD = b"x" * (2 * 1024 * 1024 + 1)
@@ -12,6 +13,8 @@ PAYLOAD = b"x" * (2 * 1024 * 1024 + 1)
 
 class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
+        if self.path == "/slow":
+            time.sleep(1.25)
         self.send_response(200)
         self.send_header("Content-Type", "text/plain; charset=utf-8")
         self.send_header("Content-Length", str(len(PAYLOAD)))

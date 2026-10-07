@@ -47,7 +47,7 @@ func collect(query: String) -> Dictionary:
 	if clean_query.is_empty():
 		clean_query = "local AI Godot LLM context optimization"
 	var external_query := _external_query(clean_query)
-	_collection_deadline_msec = Time.get_ticks_msec() + int(COLLECTION_BUDGET_SECONDS * 1000.0)
+	_start_collection_budget()
 	var items: Array = []
 
 	# Autonomous research is external-observation only. Personal/local documents
@@ -83,7 +83,7 @@ func collect(query: String) -> Dictionary:
 		"external_query_char_count": external_query.length(),
 		"network_response_limit_bytes": OwnerResourcePolicy.value("research_response_bytes"),
 		"audit_log_limit_bytes": OwnerResourcePolicy.value("research_log_bytes"),
-		"collection_budget_seconds": COLLECTION_BUDGET_SECONDS,
+		"collection_budget_seconds": OwnerResourcePolicy.value("research_collection_seconds"),
 		"source_error_count": _request_error_count,
 		"source_errors_truncated": _request_error_count > source_errors.size(),
 		"source_errors": source_errors,
@@ -206,15 +206,12 @@ func _request_text(url: String, source_id: String, mark_success := true) -> Dict
 		_record_request_error("source_backoff", source_id, url, 0, 0, "Source temporarily backed off after repeated failures")
 		return {"ok": false, "error": "Source temporarily backed off", "source": source_id}
 	var remaining_timeout := _remaining_timeout_seconds()
-	if remaining_timeout <= 0.0:
+	if remaining_timeout < 0.0:
 		_record_request_error("collection_budget", source_id, url, 0, 0, "Autonomous research collection budget exhausted")
 		return {"ok": false, "error": "Collection budget exhausted", "source": source_id}
 	var req := HTTPRequest.new()
-	# Keep the normal hard cap explicit, then reduce it to the remaining global
-	# collection budget when less time remains.
-	req.timeout = REQUEST_TIMEOUT_SECONDS
-	if remaining_timeout < REQUEST_TIMEOUT_SECONDS:
-		req.timeout = remaining_timeout
+	# Zero disables the request deadline; a finite collection budget still applies.
+	req.timeout = remaining_timeout
 	req.body_size_limit = _response_byte_limit()
 	add_child(req)
 	var headers := PackedStringArray(["User-Agent: AuroraFox-Learning/1.3", "Accept: application/json, application/atom+xml, text/xml, text/plain;q=0.9"])
@@ -234,9 +231,9 @@ func _request_text(url: String, source_id: String, mark_success := true) -> Dict
 		_record_source_failure(source_id, code, "request_result")
 		return {"ok": false, "result": request_result, "http": code, "error": "Research request did not complete successfully", "source": source_id}
 	if code < 200 or code >= 300:
-		_record_request_error("http", source_id, url, code, request_result, _redact_credentials(body).substr(0, 240))
+		_record_request_error("http", source_id, url, code, request_result, OwnerResourcePolicy.clip(_redact_credentials(body), "research_error_chars"))
 		_record_source_failure(source_id, code, "http")
-		return {"ok": false, "http": code, "error": _redact_credentials(body).substr(0, 500), "source": source_id}
+		return {"ok": false, "http": code, "error": OwnerResourcePolicy.clip(_redact_credentials(body), "research_http_error_chars"), "source": source_id}
 	if mark_success:
 		_record_source_success(source_id)
 	return {"ok": true, "text": body, "source": source_id} # Already byte-bounded by HTTPRequest.
@@ -247,12 +244,12 @@ func _record_request_error(stage: String, source_id: String, url: String, http_c
 	if error_budget > 0 and _request_errors.size() >= error_budget:
 		return
 	_request_errors.append({
-		"stage": stage.substr(0, 64),
-		"source": source_id.substr(0, 96),
+		"stage": OwnerResourcePolicy.clip(stage, "research_stage_chars"),
+		"source": source_id,
 		"endpoint": _safe_endpoint(url),
 		"http": http_code,
 		"result": result_code,
-		"error": _clean(_redact_credentials(message), 240)
+		"error": OwnerResourcePolicy.clip(_clean(_redact_credentials(message), 0), "research_error_chars")
 	})
 
 func _can_request_source(source_id: String) -> bool:
@@ -263,16 +260,18 @@ func _record_source_failure(source_id: String, http_code: int, stage: String) ->
 	if source_id.is_empty():
 		return
 	var previous: Dictionary = _source_health.get(source_id, {})
-	var failures := mini(SOURCE_BACKOFF_MAX_FAILURES, int(previous.get("failures", 0)) + 1)
-	var exponent := maxi(0, failures - 1)
-	var delay := mini(SOURCE_BACKOFF_MAX_SECONDS, SOURCE_BACKOFF_BASE_SECONDS * int(pow(2.0, exponent)))
+	var failures := maxi(0, int(previous.get("failures", 0)))
+	if failures < 9223372036854775807: failures += 1
+	var failure_cap := OwnerResourcePolicy.value("research_backoff_failure_cap")
+	if failure_cap > 0: failures = mini(failure_cap, failures)
+	var delay := _backoff_delay(failures)
 	var now := int(Time.get_unix_time_from_system())
 	_source_health[source_id] = {
 		"failures": failures,
-		"next_retry_unix": now + delay,
+		"next_retry_unix": now + mini(delay, 9223372036854775807 - now),
 		"last_failure_unix": now,
 		"last_http": http_code,
-		"last_stage": stage.substr(0, 64)
+		"last_stage": OwnerResourcePolicy.clip(stage, "research_stage_chars")
 	}
 	_save_source_health()
 
@@ -282,13 +281,33 @@ func _record_source_success(source_id: String) -> void:
 	_source_health.erase(source_id)
 	_save_source_health()
 
+func _start_collection_budget() -> void:
+	var seconds := OwnerResourcePolicy.value("research_collection_seconds")
+	_collection_deadline_msec = 0 if seconds == 0 else Time.get_ticks_msec() + seconds * 1000
+
 func _remaining_timeout_seconds() -> float:
+	var request_seconds := float(OwnerResourcePolicy.value("research_request_seconds"))
 	if _collection_deadline_msec <= 0:
-		return REQUEST_TIMEOUT_SECONDS
+		return request_seconds
 	var remaining_msec := _collection_deadline_msec - Time.get_ticks_msec()
-	if remaining_msec < 1000:
-		return 0.0
-	return minf(REQUEST_TIMEOUT_SECONDS, float(remaining_msec) / 1000.0)
+	if remaining_msec <= 0:
+		return -1.0 # Exhausted; zero is the engine's unlimited timeout.
+	var remaining_seconds := float(remaining_msec) / 1000.0
+	return remaining_seconds if request_seconds == 0.0 else minf(request_seconds, remaining_seconds)
+
+func _backoff_delay(failures: int) -> int:
+	var delay := OwnerResourcePolicy.value("research_backoff_base_seconds")
+	if delay == 0: return 0
+	var maximum := OwnerResourcePolicy.value("research_backoff_max_seconds")
+	var ceiling := maximum if maximum > 0 else 9223372036854775807
+	delay = mini(delay, ceiling)
+	var exponent := maxi(0, failures - 1)
+	# Saturation bounds work by signed integer representation, even with no owner cap.
+	while exponent > 0 and delay < ceiling:
+		if delay > ceiling / 2: return ceiling
+		delay *= 2
+		exponent -= 1
+	return delay
 
 func _external_query(query: String) -> String:
 	var normalized := _redact_credentials(query).replace("\n", " ").replace("\r", " ").replace("\t", " ")
@@ -323,7 +342,7 @@ func _safe_endpoint(url: String) -> String:
 	var query_pos := host.find("?")
 	if query_pos >= 0:
 		host = host.substr(0, query_pos)
-	return host.substr(0, 200)
+	return OwnerResourcePolicy.clip(host, "research_endpoint_chars")
 
 func _source_health_report() -> Dictionary:
 	var report: Dictionary = {}
@@ -334,7 +353,7 @@ func _source_health_report() -> Dictionary:
 			"failures": int(state.get("failures", 0)),
 			"retry_in_seconds": maxi(0, int(state.get("next_retry_unix", 0)) - now),
 			"last_http": int(state.get("last_http", 0)),
-			"last_stage": str(state.get("last_stage", "")).substr(0, 64)
+			"last_stage": OwnerResourcePolicy.clip(str(state.get("last_stage", "")), "research_stage_chars")
 		}
 	return report
 
@@ -349,7 +368,7 @@ func _load_source_health() -> void:
 	file.close()
 	if parsed is Dictionary:
 		for key in parsed.keys():
-			var source_id := str(key).substr(0, 96)
+			var source_id := str(key)
 			var value = parsed.get(key, {})
 			if not source_id.is_empty() and value is Dictionary:
 				_source_health[source_id] = (value as Dictionary).duplicate(true)

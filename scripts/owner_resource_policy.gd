@@ -3,6 +3,16 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"research_request_seconds": 20,
+	"research_collection_seconds": 45,
+	"research_backoff_base_seconds": 300,
+	"research_backoff_max_seconds": 21600,
+	"research_backoff_failure_cap": 8,
+	"research_error_chars": 240,
+	"research_http_error_chars": 500,
+	"research_stage_chars": 64,
+	"research_endpoint_chars": 200,
+
 	"research_response_bytes": 2097152,
 	"research_log_bytes": 8388608,
 	"research_summary_chars": 1800,
@@ -169,6 +179,16 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"research_request_seconds": "Research: секунд запроса (0 = без срока)",
+	"research_collection_seconds": "Research: секунд сбора (0 = без срока)",
+	"research_backoff_base_seconds": "Research: секунд начальной задержки после ошибки (0 = без задержки)",
+	"research_backoff_max_seconds": "Research: максимум секунд задержки (0 = без лимита)",
+	"research_backoff_failure_cap": "Research: предел счётчика ошибок для задержки (0 = без лимита)",
+	"research_error_chars": "Research: символов ошибки в журнале (0 = все)",
+	"research_http_error_chars": "Research: символов ошибки HTTP (0 = все)",
+	"research_stage_chars": "Research: символов этапа диагностики (0 = все)",
+	"research_endpoint_chars": "Research: символов адреса сервера (0 = все)",
+
 	"research_response_bytes": "Research: байтов ответа (0 = без лимита)",
 	"research_log_bytes": "Research: байтов журнала до ротации (0 = без лимита)",
 	"research_summary_chars": "Research: символов резюме (0 = все)",

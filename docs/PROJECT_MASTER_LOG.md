@@ -7101,3 +7101,35 @@ DONE:restored actual source and exact remote acceptance evidence, private8contro
 REMAINING:publication/new-SHA CI, remaining current owner inventory/source and physical/update/release gates, version-last.
 BLOCKERS:none stops authorized independent source work; physical/production-release acceptance remains unwaived.
 NEXT:publish real coherent Research/Voice package then proceed to remaining scoped operational controls; no V1.6/S3 expansion.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-RESEARCH-REQUEST-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current research operational request/collection/backoff/diagnostic owner controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:a388abdffdb27953fecad3074c0e0d99f0355214
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:agent/research_collector.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/research_source_resilience_smoke.gd;tests/research_response_owner_smoke.gd;tools/run_research_response_smoke.py;tests/test_research_source_resilience_contract.py;tests/test_research_collector_privacy_contract.py;config/owner_control_policy.json exact reviewed lines;master/memory append-only
+DEPENDENCIES:coordinator takes over published Research/Voice claim source paths while new-SHA CI runs. Actual14path source a388 tree9742281889d81b78f5749f92467d8901b9f5ba88 published through connector CAS; direct gitpush failed missingusername, no approval rejection. Archive/spreadsheet dependencies restored from exact repository requirements;11cases+2subtests nowPASS.
+NON_BLOCKERS:provider pagination/API result-count handling remains separate unfinished review; V1.6 runtime/S3 excluded. Query240chars/24words/token64 privacy/curator gates unchanged. Signature/physical/update gates unwaived.
+ACCEPTANCE_GATES:private save/reload of raised/zero request and collection seconds, backoff base/max/failure controls; unlimited0 never mistaken for exhausted; subsecond global remaining honored; saturating exponential delay without float overflow; source identity not clipped into collisions; diagnostic clipping only after credentialredaction. RealGodot/loopback and currentPython contracts; exactnewSHA CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement one current request-policy package and run coherent local validation.
+
+### Coherent Research request-policy source checkpoint
+CLAIM:WORK-2026-10-07-V15-RESEARCH-REQUEST-POLICY ACTIVE; source acceptance localPASS, newexactSHA CI required.
+STARTING_HEAD:a388abdffdb27953fecad3074c0e0d99f0355214
+CHANGES:nine private persisted operational controls with unchanged defaults and raised/zero semantics. Finite collection budget survives unlimited per-request timeout; exhausted uses-1 sentinel, engine0 remains unlimited, subsecond remaining time preserved. Exponential backoff saturates by signed64 representation in at most63doublings instead of floatpow;0base disables delay,0maximum removes operational ceiling and0failure-cap retains actual counts. Full source IDs survive restart without96char collision. Diagnostic clipping follows redaction and zero retains full sanitized text.
+TESTS:96PythonPASS+2subtests (owner/audit/Research/SQLite/sandbox/export/recovery/specialist/realarchive/spreadsheets),1existingStarlette/AnyIOdeprecation. Actual Godot owner private save/reload0/10001 of all9newcontrols and Research resilience PASS; genuine long-ID restart, backoff huge-count saturation, raised/zero diagnostics/redaction, timeout0/10001/subsecond helper checks. Actual loopback2097153byte default/exact/zero body gates plus request1s timeout, request0 delayed success, global300ms timeout with request0, exhausted preflight PASS. Existing owner20ObjectDB/8resources exit diagnostics retained. Diff/YAML gate remains unchanged.
+INVENTORY:{"test_evidence": 1338, "unclassified": 1251, "documentation": 62, "owner_adjustable": 634, "format_structure": 359, "hard_boundary": 26};complete:false. Fourteen exact reviewed lines classified; untouched provider pagination/result-count limits remain visible, no audit-zero shortcut.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedResearch/Voice a388; current requestpolicy implemented and actually tested.
+REMAINING:exactnewSHA CI/package, provider/request/Computer remaining controls and scoped source, physical/update/release/version-last.
+BLOCKERS:none stops independent authorized source; physical/production-release evidence unwaived.
+NEXT:publish coherent request-policy package; continue largest free current Computer/transport control block while CI runs; collect actual red outcomes together.

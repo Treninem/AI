@@ -84,7 +84,7 @@ func _run() -> void:
 		return
 
 	collector._collection_deadline_msec = Time.get_ticks_msec() - 1
-	if collector._remaining_timeout_seconds() != 0.0:
+	if collector._remaining_timeout_seconds() >= 0.0:
 		_fail("Expired global collection budget still allowed a network request", 14)
 		return
 	collector._collection_deadline_msec = Time.get_ticks_msec() + 5000
@@ -92,6 +92,48 @@ func _run() -> void:
 	if remaining <= 0.0 or remaining > 5.0 or remaining > AuroraResearchCollector.REQUEST_TIMEOUT_SECONDS:
 		_fail("Per-request timeout did not respect the remaining global budget", 15)
 		return
+
+	var owner_original := OwnerResourcePolicy._cached.duplicate()
+	OwnerResourcePolicy._cached = OwnerResourcePolicy.DEFAULTS.duplicate()
+	OwnerResourcePolicy._cached.research_request_seconds = 0
+	OwnerResourcePolicy._cached.research_collection_seconds = 0
+	collector._start_collection_budget()
+	assert(collector._remaining_timeout_seconds() == 0.0)
+	collector._collection_deadline_msec = Time.get_ticks_msec() + 300
+	assert(collector._remaining_timeout_seconds() > 0.0 and collector._remaining_timeout_seconds() <= 0.3)
+	OwnerResourcePolicy._cached.research_request_seconds = 10001
+	collector._collection_deadline_msec = 0
+	assert(collector._remaining_timeout_seconds() == 10001.0)
+	OwnerResourcePolicy._cached.research_backoff_base_seconds = 0
+	assert(collector._backoff_delay(1000000) == 0)
+	OwnerResourcePolicy._cached.research_backoff_base_seconds = 2
+	OwnerResourcePolicy._cached.research_backoff_max_seconds = 0
+	assert(collector._backoff_delay(10) == 1024)
+	assert(collector._backoff_delay(1000000) == 9223372036854775807)
+	OwnerResourcePolicy._cached.research_backoff_max_seconds = 3
+	assert(collector._backoff_delay(10) == 3)
+	OwnerResourcePolicy._cached.research_backoff_failure_cap = 0
+	var long_id := "s".repeat(96) + "first"
+	collector._source_health[long_id] = {"failures": 9}
+	collector._record_source_failure(long_id, 503, "http")
+	collector._record_source_failure("s".repeat(96) + "second", 503, "http")
+	collector._load_source_health()
+	assert(collector._source_health.has(long_id) and collector._source_health.has("s".repeat(96) + "second"))
+	assert(collector._source_health[long_id].failures == 10)
+	OwnerResourcePolicy._cached.research_error_chars = 0
+	OwnerResourcePolicy._cached.research_http_error_chars = 0
+	OwnerResourcePolicy._cached.research_stage_chars = 0
+	collector._request_errors.clear()
+	collector._record_request_error("stage".repeat(100), long_id, "https://example.com/path", 500, 0, "token=CREDENTIAL_FIXTURE " + "detail".repeat(1000))
+	var diagnostic: Dictionary = collector._request_errors[0]
+	assert(diagnostic.source == long_id and diagnostic.stage.length() == 500)
+	assert(diagnostic.error.length() > 240 and not diagnostic.error.contains("CREDENTIAL_FIXTURE"))
+	OwnerResourcePolicy._cached.research_error_chars = 2
+	collector._request_errors.clear()
+	collector._record_request_error("http", "fixture", "https://example.com", 500, 0, "token=CREDENTIAL_FIXTURE")
+	assert(str(collector._request_errors[0].error).length() == 2)
+	OwnerResourcePolicy._cached = owner_original
+	OwnerResourcePolicy.revision += 1
 
 	collector.queue_free()
 	reloaded.free()

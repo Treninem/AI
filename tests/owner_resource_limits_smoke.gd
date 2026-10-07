@@ -683,7 +683,7 @@ func _run() -> void:
 		OwnerResourcePolicy._cached = sandbox_policy
 		OwnerResourcePolicy.revision += 1
 	var output_policy := OwnerResourcePolicy._cached.duplicate()
-	for output_key in ["research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
+	for output_key in ["research_request_seconds", "research_collection_seconds", "research_backoff_base_seconds", "research_backoff_max_seconds", "research_backoff_failure_cap", "research_error_chars", "research_http_error_chars", "research_stage_chars", "research_endpoint_chars", "research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
 		var output_setting := {}
 		output_setting[output_key] = 0
 		assert(OwnerResourcePolicy.save(output_setting, path) == OK)

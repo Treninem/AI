@@ -42,7 +42,7 @@ def test_external_response_memory_is_bounded_before_parsing() -> None:
 
     assert "const MAX_RESPONSE_BYTES := 2 * 1024 * 1024" in text
     assert "const REQUEST_TIMEOUT_SECONDS := 20.0" in text
-    assert "req.timeout = REQUEST_TIMEOUT_SECONDS" in text
+    assert "req.timeout = remaining_timeout" in text
     assert "req.body_size_limit = _response_byte_limit()" in text
     assert "request_result != HTTPRequest.RESULT_SUCCESS" in text
     assert '"text": body' in text
