@@ -7272,3 +7272,39 @@ DONE:request/lifespan published923128a; current truthful output source locally v
 REMAINING:raw producer output buffering, GUI/provider controls, source audit and unfinished critical blocks; new exact CI/platform/package/device/update/release acceptance, version-last.
 BLOCKERS:no external blocker prevents remaining source; local Docker/nativeWindows need exact CI, physical/production gates unwaived.
 NEXT:publish coherent output/fixture source, then continue bounded output capture and current critical owner controls.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-WORKER-QUEUE
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Work/Computer current screenshot/UIA lifecycle and truthful recovery
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:4fa501ca5a71ccb0322ca4284bbb4096565743d9
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;tests/test_sandbox_resource_limits.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator takeover current service/tests; published output claim CI_PENDING, no other Computer source lane. Ownership/masterstop retained.
+NON_BLOCKERS:raw process capture and GUI owner inventory remain unfinished; pure worker transport tests do not constitute native desktop acceptance. No V1.6/S3; release gates unwaived.
+ACCEPTANCE_GATES:genuine spawned worker1MiB response delivered without join-before-queue deadlock; malformed/hung workers fail closed, bounded cleanup retains unconfirmed worker ownership; existing shutdown/unsafe retry/concurrency regressions; exact-SHA Windows CI. No deadline or external-state protection relaxation.
+SOURCE_FINDING:_run_worker joins child before queue.get; multiprocessing feeder can block on large screenshot/UIA response and child cannot exit until parent drains queue. Must reproduce before repair and record exact evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:reproduce actual large spawned response then fix draining under existing deadline.
+
+CLAIM_ADDENDUM:WORKER-QUEUE takes over exact4fa501c Linux112639837575 CI failure actual GUI shutdown termination_confirmed:false;62PASS/1SKIP/1FAIL, actual Docker cancellation nowPASS. Request and shutdown currently call shared multiprocessing Process.join/status concurrently; race is a source-supported hypothesis pending serialized lifecycle and real repeated regression. Include service-owned lifecycle synchronization and five genuine worker shutdown cases; no fake termination ack.
+
+### Coherent worker queue and lifecycle checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-WORKER-QUEUE ACTIVE/CI_PENDING.
+PRIOR_PRODUCED_SHA:4fa501ca5a71ccb0322ca4284bbb4096565743d9 output/fixture package publishedCAS; remote/local matched. Observed35checks24SUCCESS/3SKIPPED/6IN_PROGRESS/1QUEUED/1FAILURE. Linux112639837575 actualDocker container-start/cancel/removalPASS;62otherPASS/1SKIP/1GUIshutdownFAIL, so overall gate remains red. No all-green claim.
+REPRODUCTION:before repair genuine spawned1MiB queue response fails timeout at3seconds; no GUI APIs simulated as physical acceptance.
+CHANGES:drain worker queue before join within existing deadline; require actual worker completion, terminate/kill on timeout, unsafe actions neverauto-retry and unconfirmed termination carries uncertainty. Serialize multiprocessing worker status/join/termination between request and shutdown; failed live ownership retained. Close queue only after stopped. Five real spawned GUI-shaped worker shutdown repetitions; actual1MiB response regression.
+TESTS:latest dependencies67PASS/2SKIP; pinned combinedComputer/owner/audit89PASS/2SKIP, existing deprecations. Genuine1MiB response nowPASS, five ownedworker shutdownsPASS, malformed/timeout/unsafe retry/idempotency/masterstop/container routing regressionsPASS. Docker/nativeNTFS localSKIP remains exactCI requirement. diffcheckPASS.
+INVENTORY:1420test_evidence/1304unclassified/64documentation/652owner_adjustable/355format_structure/26hard_boundary;complete:false.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:truthful output published4fa501c, daemonDocker cancellation accepted atthatSHA; current worker queue repair locally proved.
+REMAINING:publish worker package and exactCI; owner GUI/UIA/resource inventory, process capture/provider controls and unfinishedcriticalsource; final exactpackage/device/update/release/version-last.
+BLOCKERS:none stops independent source. Physical/nativeWindows/production gates remain unwaived; do not infer entire release from daemon test.
+NEXT:publish coherent lifecycle package, continue remaining critical controls while exactCI runs; collect failures before further related publication.

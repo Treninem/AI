@@ -294,7 +294,8 @@ def _spawn_owned_gui_worker(_kind, payload, _queue):
     time.sleep(60)
 
 
-def test_actual_gui_worker_is_owned_and_stopped_before_sidecar_restart(tmp_path, monkeypatch):
+@pytest.mark.parametrize("iteration", range(5))
+def test_actual_gui_worker_is_owned_and_stopped_before_sidecar_restart(tmp_path, monkeypatch, iteration):
     import concurrent.futures
     module, client = service(tmp_path, monkeypatch)
     module.IS_WINDOWS = True
@@ -383,3 +384,19 @@ def test_actual_owner_output_reports_partial_and_redacts_before_clip(tmp_path, m
     assert "supersecret" not in result["output"]
     assert client.post("/sandbox/exec", headers=HEADERS, json={"command": [sys.executable], "output_chars": -1}).status_code == 422
     assert client.post("/sandbox/exec", json={"command": [sys.executable]}).status_code == 401
+
+
+def _spawn_large_worker_response(_kind, _payload, queue):
+    queue.put({"ok": True, "image": "x" * 1048576})
+
+
+def test_actual_large_spawned_worker_response_drains_before_join(tmp_path, monkeypatch):
+    module, _client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_large_worker_response)
+    started = time.monotonic()
+    result = module._run_worker("screen", {}, timeout=3)
+    assert result.get("ok"), result
+    assert len(result["image"]) == 1048576
+    assert time.monotonic() - started < 5
+    assert module._gui_workers == set()

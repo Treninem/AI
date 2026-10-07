@@ -65,6 +65,7 @@ _execution_lock = threading.Lock()
 _execution_records: dict[str, dict[str, Any]] = {}
 _execution_stopping = False
 _gui_workers: set[Any] = set()
+_gui_worker_lifecycle_lock = threading.RLock()
 
 
 class Action(BaseModel):
@@ -374,6 +375,13 @@ def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
         queue.put({"ok": False, "error": type(exc).__name__, "message": _redact(str(exc))})
 
 
+def _worker_alive(process: Any) -> bool:
+    # multiprocessing.Process wait/status methods share internal state and must
+    # not race the request thread against shutdown's join/terminate thread.
+    with _gui_worker_lifecycle_lock:
+        return process.is_alive()
+
+
 def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float = GUI_TIMEOUT_SECONDS) -> dict[str, Any]:
     if not IS_WINDOWS:
         return _error("unsupported_platform", "Desktop Computer Agent primitives are supported on Windows only", retryable=False)
@@ -386,24 +394,45 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
         process.start()
         _gui_workers.add(process)
     try:
-        process.join(timeout=max(0.1, timeout))
-        if process.is_alive():
-            process.terminate()
-            process.join(1.0)
-            if process.is_alive() and hasattr(process, "kill"):
-                process.kill()
+        deadline = time.monotonic() + max(0.1, timeout)
+        result = None
+        # Drain before join: the child's Queue feeder cannot flush a large
+        # screenshot/UIA payload while the parent waits for child exit.
+        while True:
+            remaining = deadline - time.monotonic()
+            try:
+                result = queue.get(timeout=max(0.0, min(0.1, remaining)))
+                break
+            except Exception:
+                if not _worker_alive(process):
+                    try:
+                        result = queue.get(timeout=0.5)
+                        break
+                    except Exception:
+                        return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
+                if remaining <= 0:
+                    break
+        # The deadline covers both response delivery and worker completion.
+        with _gui_worker_lifecycle_lock:
+            process.join(timeout=max(0.0, min(0.1, deadline - time.monotonic())))
+            if _worker_alive(process):
+                process.terminate()
                 process.join(1.0)
-            return _error("timeout", f"{kind} operation timed out", retryable=kind in {"screen", "windows"})
-        try:
-            result = queue.get(timeout=0.5)
-        except Exception:
-            return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
+                if _worker_alive(process) and hasattr(process, "kill"):
+                    process.kill()
+                    process.join(1.0)
+                confirmed = not _worker_alive(process)
+                return _error("timeout", f"{kind} operation timed out", retryable=confirmed and kind in {"screen", "windows"},
+                              termination_confirmed=confirmed, uncertain_external_state=not confirmed)
         if not isinstance(result, dict):
             return _error("malformed_worker_response", f"{kind} worker returned invalid data", retryable=False)
         return result
     finally:
+        stopped = not _worker_alive(process)
         with _execution_lock:
-            if not process.is_alive(): _gui_workers.discard(process)
+            if stopped: _gui_workers.discard(process)
+        if stopped and callable(getattr(queue, "close", None)):
+            queue.close()
 
 
 def _cached_action(action_id: str) -> dict[str, Any] | None:
@@ -652,14 +681,15 @@ def _cancel_all_processes() -> dict[str, Any]:
     workers_stopped = True
     for worker in workers:
         try:
-            if worker.is_alive(): worker.terminate()
-            worker.join(timeout=2)
-            if worker.is_alive():
-                worker.kill()
+            with _gui_worker_lifecycle_lock:
+                if worker.is_alive(): worker.terminate()
                 worker.join(timeout=2)
-            if worker.is_alive(): workers_stopped = False
-            else:
-                with _execution_lock: _gui_workers.discard(worker)
+                if worker.is_alive():
+                    worker.kill()
+                    worker.join(timeout=2)
+                if worker.is_alive(): workers_stopped = False
+                else:
+                    with _execution_lock: _gui_workers.discard(worker)
         except Exception:
             workers_stopped = False
     results = [_cancel_execution(execution_id) for execution_id in execution_ids]
