@@ -326,12 +326,20 @@ def test_failed_stop_retains_actual_process_ownership_for_retry(tmp_path, monkey
         future = pool.submit(module._run_process, [sys.executable, "-c", code], root, 60, allow_network=False, execution_id="failed-stop")
         try:
             _wait_for_file(root / "started")
-            monkeypatch.setattr(module, "_terminate_process_tree", lambda _process: False)
+            owner_job = module._execution_records["failed-stop"].get("job")
+            if owner_job is not None:
+                terminate_job = owner_job.terminate
+                monkeypatch.setattr(owner_job, "terminate", lambda: False)
+            else:
+                monkeypatch.setattr(module, "_terminate_process_tree", lambda _process: False)
             unconfirmed = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id": "failed-stop"}).json()
             assert not unconfirmed["ok"] and unconfirmed["uncertain_external_state"] and not unconfirmed["retryable"]
             with module._execution_lock:
                 assert module._execution_records["failed-stop"]["process"].poll() is None
-            monkeypatch.setattr(module, "_terminate_process_tree", terminate)
+            if owner_job is not None:
+                monkeypatch.setattr(owner_job, "terminate", terminate_job)
+            else:
+                monkeypatch.setattr(module, "_terminate_process_tree", terminate)
             confirmed = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id": "failed-stop"}).json()
             assert confirmed["termination_confirmed"]
             assert future.result(timeout=5)["error"] == "cancelled"
@@ -584,3 +592,155 @@ def test_actual_windows_holder_termination_kills_owned_child(tmp_path):
             holder.wait(timeout=5)
         if child_pid and not child_gone:
             subprocess.run(["taskkill", "/PID", child_pid, "/T", "/F"], capture_output=True, timeout=5)
+
+
+def _spawn_gui_api_hanging_worker(kind, payload, _queue):
+    root = Path(os.environ["AURORAFOX_SANDBOX_ROOT"])
+    (root / "gui-api-started").write_text(str(payload["__execution_id"]) + ":" + kind)
+    while True:
+        (root / "gui-api-heartbeat").write_text(str(time.time_ns()))
+        time.sleep(0.02)
+
+
+def _spawn_gui_api_success_worker(_kind, _payload, queue):
+    root = Path(os.environ["AURORAFOX_SANDBOX_ROOT"])
+    with (root / "gui-api-launches").open("a") as count: count.write("started\n")
+    queue.put({"ok": True, "done": True})
+
+
+@pytest.mark.parametrize("route,body", [("/action", {"type": "wait", "seconds": 0}), ("/windows", None), ("/screen", None)])
+def test_actual_gui_header_cancellation_stops_only_owned_worker(tmp_path, monkeypatch, route, body):
+    import concurrent.futures
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    module.GUI_TIMEOUT_SECONDS = module.ACTION_TIMEOUT_SECONDS = 60
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_hanging_worker)
+    root = module.SANDBOX_ROOT
+    other = "from pathlib import Path;import time;Path('other-started').write_text('yes');time.sleep(60)"
+    headers = {**HEADERS, "X-AuroraFox-Execution-ID": "owned-gui-header"}
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        remaining = pool.submit(module._run_process, [sys.executable, "-c", other], root, 60, allow_network=False, execution_id="unrelated-owned-process")
+        future = pool.submit(client.post, route, headers=headers, json={**body, "execution_id": "model-spoof"}) if body else pool.submit(client.get, route, headers=headers)
+        try:
+            _wait_for_file(root / "gui-api-started")
+            _wait_for_file(root / "other-started")
+            assert (root / "gui-api-started").read_text().startswith("owned-gui-header:")
+            assert "model-spoof" not in module._execution_records
+            stopped = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id": "owned-gui-header"}).json()
+            assert stopped["termination_confirmed"] and not stopped["uncertain_external_state"]
+            result = future.result(timeout=5).json()
+            assert result["error"] == "cancelled" and not result["retryable"]
+            before = (root / "gui-api-heartbeat").read_text()
+            time.sleep(0.1)
+            assert (root / "gui-api-heartbeat").read_text() == before
+            assert not remaining.done() and module._execution_records["unrelated-owned-process"]["process"].poll() is None
+            assert not module._execution_stopping
+        finally:
+            module._cancel_all_processes()
+            remaining.result(timeout=5)
+
+
+def test_actual_gui_precancel_reused_id_and_header_validation_never_launch(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_success_worker)
+    root = module.SANDBOX_ROOT
+    client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id": "gui-precancel"})
+    result = client.post("/action", headers={**HEADERS, "X-AuroraFox-Execution-ID": "gui-precancel"}, json={"type": "done"}).json()
+    assert result["error"] == "cancelled" and not (root / "gui-api-launches").exists()
+    headers = {**HEADERS, "X-AuroraFox-Execution-ID": "gui-one-use"}
+    assert client.post("/action", headers=headers, json={"type": "done"}).json()["ok"]
+    reused = client.post("/action", headers=headers, json={"type": "done"}).json()
+    assert reused["error"] == "execution_id_reused" and not reused["retryable"]
+    assert (root / "gui-api-launches").read_text().count("started") == 1
+    assert client.post("/action", headers={**HEADERS, "X-AuroraFox-Execution-ID": "x" * 161}, json={"type": "done"}).status_code == 422
+    assert client.post("/action", headers={**HEADERS, "X-AuroraFox-Execution-ID": "bad?identity"}, json={"type": "done"}).status_code == 422
+    assert client.post("/action", headers={"X-AuroraFox-Execution-ID": "gui-no-auth"}, json={"type": "done"}).status_code == 401
+
+
+def test_actual_unsafe_gui_cancel_before_verification_never_starts_next_phase(tmp_path, monkeypatch):
+    import concurrent.futures
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    module.GUI_TIMEOUT_SECONDS = 60
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_hanging_worker)
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = pool.submit(client.post, "/action", headers={**HEADERS, "X-AuroraFox-Execution-ID": "gui-before-phase"},
+                             json={"type": "press", "keys": ["a"], "verify": True, "action_id": "unsafe-gui-phase"})
+        try:
+            _wait_for_file(module.SANDBOX_ROOT / "gui-api-started")
+            assert (module.SANDBOX_ROOT / "gui-api-started").read_text().endswith(":screen")
+            stopped = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id": "gui-before-phase"}).json()
+            assert stopped["termination_confirmed"] and stopped["uncertain_external_state"]
+            result = future.result(timeout=5).json()
+            assert result["error"] == "cancelled" and result["uncertain_external_state"] and not result["retryable"]
+            assert (module.SANDBOX_ROOT / "gui-api-started").read_text().endswith(":screen")
+        finally:
+            module._cancel_all_processes()
+
+
+def test_actual_gui_failed_stop_retains_worker_queue_and_native_owner(tmp_path, monkeypatch):
+    import concurrent.futures
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    module.ACTION_TIMEOUT_SECONDS = 60
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_hanging_worker)
+    real_stop = module._stop_gui_worker
+    job = None
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = pool.submit(client.post, "/action", headers={**HEADERS, "X-AuroraFox-Execution-ID": "gui-failed-stop"}, json={"type": "wait"})
+        try:
+            _wait_for_file(module.SANDBOX_ROOT / "gui-api-started")
+            job = module._execution_records["gui-failed-stop"].get("job")
+            if job is not None:
+                terminate_job = job.terminate
+                monkeypatch.setattr(job, "terminate", lambda: False)
+            monkeypatch.setattr(module, "_stop_gui_worker", lambda _worker, seconds=2: False)
+            failed = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id": "gui-failed-stop"}).json()
+            assert not failed["termination_confirmed"] and failed["uncertain_external_state"]
+            result = future.result(timeout=5).json()
+            assert not result["ok"] and not result["retryable"] and result["uncertain_external_state"]
+            record = module._execution_records["gui-failed-stop"]
+            assert record["worker"].is_alive() and record["worker_queue"] is not None and not record["finished"]
+            monkeypatch.setattr(module, "_stop_gui_worker", real_stop)
+            if job is not None: monkeypatch.setattr(job, "terminate", terminate_job)
+            stopped = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id": "gui-failed-stop"}).json()
+            assert stopped["termination_confirmed"] and not stopped["uncertain_external_state"]
+            assert record["worker"] is None and record["worker_queue"] is None and record.get("job") is None
+            assert module._gui_workers == set()
+        finally:
+            monkeypatch.setattr(module, "_stop_gui_worker", real_stop)
+            if job is not None: monkeypatch.setattr(job, "terminate", terminate_job)
+            module._cancel_all_processes()
+
+
+class _ObservedLaunchGate:
+    def __init__(self, gate, entered):
+        self.gate, self.entered = gate, entered
+    def wait(self, timeout):
+        self.entered.set()
+        return self.gate.wait(timeout)
+
+
+def test_actual_bootstrap_waits_for_parent_authority_before_worker_code(tmp_path, monkeypatch):
+    import multiprocessing as mp
+    from computer.owned_gui_worker import run_owned_worker
+    monkeypatch.setenv("AURORAFOX_SANDBOX_ROOT", str(tmp_path))
+    context = mp.get_context("spawn")
+    gate, entered = context.Event(), context.Event()
+    queue = context.Queue(maxsize=1)
+    process = context.Process(target=run_owned_worker, args=(_spawn_gui_api_success_worker, "action", {}, queue, _ObservedLaunchGate(gate, entered)))
+    process.start()
+    try:
+        assert entered.wait(timeout=5), "Bootstrap never reached its authority gate"
+        assert not (tmp_path / "gui-api-launches").exists()
+        gate.set()
+        assert queue.get(timeout=5)["ok"]
+        process.join(timeout=5)
+        assert not process.is_alive()
+        assert (tmp_path / "gui-api-launches").read_text().count("started") == 1
+    finally:
+        if process.is_alive():
+            process.terminate()
+            process.join(timeout=5)
+        queue.close()

@@ -162,7 +162,8 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 	if require_autonomy:
 		headers.append("X-AuroraFox-Autonomy-Allowed: 1")
 	payload = ComputerRequestGuard.execution_payload(path, payload)
-	var body := "" if payload.is_empty() else JSON.stringify(payload)
+	headers = ComputerRequestGuard.append_execution_header(headers, payload)
+	var body := "" if method == HTTPClient.METHOD_GET or payload.is_empty() else JSON.stringify(payload)
 	var err := req.request(base_url + path, headers, method, body)
 	if err != OK:
 		req.queue_free()

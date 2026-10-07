@@ -69,9 +69,10 @@ class WindowsJob:
             self.close()
             raise error
 
-    def assign_and_resume(self, pid):
-        """Assign an already CREATE_SUSPENDED process, then resume its sole thread."""
+    def assign(self, pid):
+        """Assign a trusted bootstrap already waiting for its private launch gate."""
         with self._lock:
+            if self._handle is None: raise OSError("Owned Job handle is closed")
             process = self._api.OpenProcess(0x0101, False, pid)  # SET_QUOTA | TERMINATE
             if not process:
                 raise C.WinError(C.get_last_error())
@@ -80,6 +81,11 @@ class WindowsJob:
                     raise C.WinError(C.get_last_error())
             finally:
                 self._api.CloseHandle(process)
+
+    def assign_and_resume(self, pid):
+        """Assign an already CREATE_SUSPENDED process, then resume its sole thread."""
+        with self._lock:
+            self.assign(pid)
             snapshot = self._api.CreateToolhelp32Snapshot(0x4, 0)  # SNAPTHREAD
             if snapshot == HANDLE(-1).value or not snapshot:
                 raise C.WinError(C.get_last_error())

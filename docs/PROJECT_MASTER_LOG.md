@@ -7404,3 +7404,40 @@ DONE:publishedc10f actualLinux/Windows capturegatesaccepted; currentJobsource/pa
 REMAINING:publish/genuineexactWindowsJob andpackageCI, GUI in-flight cancellation and UIA/action ownercontrols, provideraudit/unfinishedcriticalsource; fullrelease/package/device/update/version-last.
 BLOCKERS:local nativeWindows absent; exactWindowsCIis available and required, not a blocker to independent current source. Physical/production gates remainunwaived.
 NEXT:publish6pathJobpackage; continue currentGUI per-requestMasterStop ownership while nativeCI runs, batchactualfailures beforeacceptance.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-GUI-OWNED-CANCEL
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer in-flight GUI MasterStop and owned resource lifecycle
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:2b058d5b180b0c7fa793278252177f2470ce4da9
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_request_guard.gd;scripts/computer_client.gd;scripts/tool_registry.gd;scripts/sandbox_manager.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tools/run_computer_guard_smoke.py;potential isolated GUI-shaped fixture in tools;master/memory append-only
+DEPENDENCIES:coordinator takes over justpublishedWindowsJob and existingComputer guard/worker paths, no parallel Computerlane. WindowsJob sourcemodule/build read-only unless actualnewCIrepairdemands explicitaddendum; tests existingowned. No S3/nativefutureintegration.
+NON_BLOCKERS:currentGUIoperationalowner limits/UIA/fullinventory remainunfinished. GUI-shaped worker testisnot physicaldesktop acceptance. No reversal of alreadyperformed input effects; unsafe cancellation remains uncertain/nonretryable even when workertermination isconfirmed.
+ACCEPTANCE_GATES:trusted per-requestGUI executionheader/nonce assigned beforeIO, GEThasno artificialbody; rootownership spans before/action/after verification phases. Authenticatedcancel afterMasterStop/transportfailure stops exact owned worker; precancel/reusednonce neverlaunches and subsequentphase neverstarts; otherownedjobs remainrunning. Failed workerstop retainsownership anduncertainty. Actualspawnedworker/API/Godot guards, existingunsafeidempotency/physicalplatform boundaries andexactSHAWindowsDockerCI.
+CI_REPAIR:2b058 exactWindowscomputer112646101944:80PASS/1SKIP/1FAIL. All four genuineJobAPI cases and departed-parent portablecasePASS. Old failed-stop fixture onlypatched _terminate_process_tree, but newWindows lifecycle uses ownedJob.terminate; injectfailure into actualselectedowner and verify realprocessretainedthenrealretrykillsit. Linux112646101798/work-godot112646101993 SUCCESS. Totalobserved39=31SUCCESS/3SKIP/4IN_PROGRESS/1FAILURE; nooverallgreenclaim.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherentGUI per-request cancellation plus actualowner faultinjection repair; preserve currentdeadlines/ownercontrols andunsafe effectreview.
+
+CLAIM_ADDENDUM:GUI-OWNED-CANCEL also owns computer/windows_job.py, new computer/owned_gui_worker.py, build/build_windows.ps1 and tests/computer_agent_failure_injection_test.py. ExistingJob module/build claim reconciled afterpublished2b058. GUI workers need WindowsJob ownership too: launch bootstrap waits on private parent-authority Event before touching GUI, parent assigns Job before openinggate; abruptsidecarexit must not leave typing/captureworker alive. Newhelper packaged/required. Pure fake-context malformed-response tests may use explicit fake lifecycle objects; they remain unitfault evidence, never nativeAPI acceptance. Four genuineWindowsJob cases retained.
+
+CLAIM_ADDENDUM:GUI-OWNED-CANCEL explicitly owns new tools/computer_gui_guard_fixture.py and .github/workflows/work-computer-reliability.yml for actualGodot/actualUvicorn GUI-shaped lifecycle fixture and its sourcepath-trigger. Fixturedeclares softwareworker-only behavior, never invokes native desktop and never adds a production test flag. Four nativeWindowsJob tests remain separate mandatoryWindows gates.
+
+### Coherent GUI owned cancellation source checkpoint
+CLAIM:WORK-2026-10-07-V15-GUI-OWNED-CANCEL ACTIVE/CI_PENDING.
+CHANGES:trusted per-request GUI header nonce across ComputerClient/ToolRegistry/SandboxManager, GET emptybody, root execution ownership across verification/action/UIA. Authenticated cancellation prevents later phases, stops exact worker and preserves unrelated executions. Unsafe input remains uncertain/nonretryable even with termination proof. Windows GUI bootstrap waits on private Event until owned Job assignment; helper included/required in Windows package. Failed cleanup retains worker/queue/Job. Screen UIA failure reports partial evidence. Repaired old Windows failed-stop injection against selected Job backend. Isolated actualUvicorn GUI-shaped fixture exercises Godot chain without native desktop effects; no production test flag.
+TESTS:pinned Computer+owner+audit105PASS/6SKIP; latest Computer83PASS/6SKIP. Six local skips are genuine unavailableDocker/NTFS/fourWindowsJob cases, notPASS. ActualGodot/Uvicorn owned guard PASS: processMasterStop, transport, uncertainty, shutdown, GUI MasterStop, unsafe review and GET transport cancellation. OwnerGodot trusted nonce/header/unsafe override/capture propagation PASS. Genuine spawned-worker tests cover per-route cancel, unrelated running command, precancel/reused ID, auth/header rejection, unsafe verification phase, failed-stop retention/retry and observed bootstrap gate. DiffcheckPASS.
+PRIOR_PRODUCED_SHA:2b058d5b180b0c7fa793278252177f2470ce4da9 verified fresh PR103 OPEN/DRAFT/baseunchanged. ExactWindows112646101944=80PASS/1SKIP/1FAIL; all four native Job API and departed-parent tests PASS, only obsolete fault injection failed and repaired here. Linux112646101798/work-godot112646101993 SUCCESS. No overallgreen or nativeGUI claim.
+INVENTORY:480files;1479test_evidence/1324unclassified/65documentation/671owner_adjustable/361format_structure/37hard_boundary;complete:false. New source/changed statements invalidate exact old classifications; no blanket audit closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:GUI lifecycle/cancellation source and localsoftware evidence; selected-owner CI fault repair.
+REMAINING:publish/exactWindows+Docker+packageCI; GUI/UIA/action owner budgets, remaining provider/inventory/unfinishedCRITICAL; exact release/package/device/update/version-last.
+BLOCKERS:no external blocker prevents independent sourcework; native Windows/physical device/production acceptance unwaived.
+NEXT:publish coherent GUI package, continue remaining operational owner controls while exactCI runs.

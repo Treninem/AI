@@ -25,7 +25,7 @@ def run(godot):
         url = f"http://127.0.0.1:{port}"
         env = dict(os.environ, AURORAFOX_COMPUTER_TOKEN=TOKEN, AURORAFOX_SANDBOX_ROOT=directory, AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX="1")
         with tempfile.TemporaryFile() as logs:
-            backend = subprocess.Popen([sys.executable, "-m", "uvicorn", "computer.computer_service:app", "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning"], cwd=ROOT, env=env, stdout=logs, stderr=logs)
+            backend = subprocess.Popen([sys.executable, "-m", "uvicorn", "tools.computer_gui_guard_fixture:app", "--host", "127.0.0.1", "--port", str(port), "--log-level", "warning"], cwd=ROOT, env=env, stdout=logs, stderr=logs)
             try:
                 deadline = time.monotonic() + 10
                 while time.monotonic() < deadline:
@@ -44,6 +44,10 @@ def run(godot):
                     try:
                         with urlopen(request, timeout=10) as response: response.read()
                     except OSError: pass
+                stop_all = Request(url + "/sandbox/cancel_all", data=b"{}", headers={"Content-Type": "application/json", "X-AuroraFox-Computer-Token": TOKEN}, method="POST")
+                try:
+                    with urlopen(stop_all, timeout=10) as response: response.read()
+                except OSError: pass
                 backend.terminate()
                 try: backend.wait(timeout=5)
                 except subprocess.TimeoutExpired:

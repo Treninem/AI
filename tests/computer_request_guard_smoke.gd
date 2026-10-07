@@ -17,6 +17,46 @@ func _start(owner: Node, url: String, token: String, execution_id: String, timeo
 	assert(request.request(url + "/sandbox/exec", headers, HTTPClient.METHOD_POST, JSON.stringify({"command": command, "timeout": 60, "execution_id": execution_id})) == OK)
 	return request
 
+func _capture_gui_guard(request: HTTPRequest, owner: Node, allowed: Callable, url: String, token: String, payload: Dictionary, state: Dictionary) -> void:
+	state.result = await ComputerRequestGuard.wait(request, owner, allowed, url, token, payload)
+	state.done = true
+
+func _gui_case(owner: MasterFixture, url: String, token: String, allowed: Callable, route: String, unsafe: bool, timeout: float) -> void:
+	owner.enabled = true
+	var raw := {"type": "press" if unsafe else "wait", "keys": ["a"], "seconds": 0, "action_id": "gui-fixture-unsafe" if unsafe else "", "execution_id": "model-supplied", "_unsafe_gui": false}
+	var payload := ComputerRequestGuard.execution_payload(route, raw)
+	assert(payload.execution_id != "model-supplied" and bool(payload._unsafe_gui) == unsafe)
+	var request := HTTPRequest.new()
+	request.timeout = timeout
+	owner.add_child(request)
+	var headers := ComputerRequestGuard.append_execution_header(PackedStringArray(["Content-Type: application/json", "X-AuroraFox-Computer-Token: " + token, "X-AuroraFox-Autonomy-Allowed: 1"]), payload)
+	var method := HTTPClient.METHOD_GET if route == "/windows" else HTTPClient.METHOD_POST
+	assert(request.request(url + route, headers, method, "" if method == HTTPClient.METHOD_GET else JSON.stringify(payload)) == OK)
+	var state := {"done": false}
+	call_deferred("_capture_gui_guard", request, owner, allowed, url, token, payload, state)
+	var root_path := OS.get_environment("AURORAFOX_GUARD_ROOT")
+	var digest := str(payload.execution_id).sha256_text()
+	var marker := root_path.path_join("gui-started-" + digest)
+	var deadline := Time.get_ticks_msec() + 5000
+	while not FileAccess.file_exists(marker) and Time.get_ticks_msec() < deadline and not state.done:
+		await create_timer(0.02).timeout
+	assert(FileAccess.file_exists(marker))
+	if timeout > 5.0: owner.enabled = false
+	deadline = Time.get_ticks_msec() + 15000
+	while not state.done and Time.get_ticks_msec() < deadline:
+		await create_timer(0.02).timeout
+	assert(state.done)
+	var result: Dictionary = state.result
+	assert(result.cancelled and result.termination_confirmed and not result.retryable)
+	assert(bool(result.uncertain_external_state) == unsafe)
+	if timeout <= 5.0: assert(result.has("transport_result"))
+	var heartbeat := root_path.path_join("gui-heartbeat-" + digest)
+	var before := FileAccess.get_file_as_string(heartbeat)
+	await create_timer(0.1).timeout
+	assert(FileAccess.get_file_as_string(heartbeat) == before)
+	request.queue_free()
+	owner.enabled = true
+
 func _run() -> void:
 	var url := OS.get_environment("AURORAFOX_GUARD_URL")
 	var token := OS.get_environment("AURORAFOX_GUARD_TOKEN")
@@ -58,6 +98,9 @@ func _run() -> void:
 	assert(overflow.cancelled and overflow.termination_confirmed and overflow.transport_result == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED)
 	bounded.queue_free()
 	OwnerResourcePolicy._cached.computer_response_bytes = 0
+	await _gui_case(owner, url, token, allowed, "/action", false, 60.0)
+	await _gui_case(owner, url, token, allowed, "/action", true, 60.0)
+	await _gui_case(owner, url, token, allowed, "/windows", false, 2.0)
 	var shutdown := _start(owner, url, token, "guard-shutdown", 60)
 	var marker := OS.get_environment("AURORAFOX_GUARD_ROOT").path_join("started-guard-shutdown")
 	var deadline := Time.get_ticks_msec() + 5000
@@ -74,5 +117,5 @@ func _run() -> void:
 	OwnerResourcePolicy.revision += 1
 	owner.queue_free()
 	await process_frame
-	print("AURORA_COMPUTER_OWNED_CANCEL_OK master_stop=PASS transport=PASS uncertain=PASS shutdown=PASS")
+	print("AURORA_COMPUTER_OWNED_CANCEL_OK master_stop=PASS transport=PASS uncertain=PASS shutdown=PASS gui_master=PASS gui_unsafe_review=PASS gui_transport=PASS")
 	quit(0)

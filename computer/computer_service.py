@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import base64
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, contextmanager
 import hashlib
 import hmac
 import json
@@ -377,6 +377,42 @@ def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
         queue.put({"ok": False, "error": type(exc).__name__, "message": _redact(str(exc))})
 
 
+@contextmanager
+def _gui_execution_scope(execution_id="", unsafe_gui=False):
+    execution_id = execution_id or uuid.uuid4().hex
+    record = None
+    error = None
+    with _execution_lock:
+        previous = _execution_records.get(execution_id)
+        if _execution_stopping:
+            error = _error("service_stopping", "Computer service is stopping; GUI execution was not started", execution_id=execution_id)
+        elif previous is not None:
+            error = _error("cancelled" if previous["cancelled"] else "execution_id_reused", "GUI execution identity is terminal or in use", execution_id=execution_id, retryable=False)
+        else:
+            record = {"process": None, "worker": None, "finished": False, "cancelled": False,
+                      "termination_confirmed": False, "unsafe_gui": unsafe_gui}
+            _execution_records[execution_id] = record
+    try:
+        yield execution_id, error
+    finally:
+        if record is not None:
+            with _execution_lock:
+                record["finished"] = record.get("worker") is None and record.get("job") is None and (not record["cancelled"] or record["termination_confirmed"])
+
+
+def _stop_gui_worker(worker, seconds=2.0):
+    with _gui_worker_lifecycle_lock:
+        try:
+            if worker.is_alive(): worker.terminate()
+            worker.join(timeout=seconds)
+            if worker.is_alive():
+                worker.kill()
+                worker.join(timeout=seconds)
+            return not worker.is_alive()
+        except Exception:
+            return False
+
+
 def _worker_alive(process: Any) -> bool:
     # multiprocessing.Process wait/status methods share internal state and must
     # not race the request thread against shutdown's join/terminate thread.
@@ -387,25 +423,73 @@ def _worker_alive(process: Any) -> bool:
 def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float = GUI_TIMEOUT_SECONDS) -> dict[str, Any]:
     if not IS_WINDOWS:
         return _error("unsupported_platform", "Desktop Computer Agent primitives are supported on Windows only", retryable=False)
+    payload = dict(payload or {})
+    execution_id = str(payload.get("__execution_id", ""))
+    if not execution_id:
+        with _gui_execution_scope() as (owned_id, error):
+            if error is not None: return error
+            return _run_worker(kind, {**payload, "__execution_id": owned_id}, timeout)
     context = mp.get_context("spawn")
     queue = context.Queue(maxsize=1)
-    process = context.Process(target=_worker_entry, args=(kind, payload or {}, queue), daemon=True)
+    launch_gate = context.Event()
+    try:
+        from owned_gui_worker import run_owned_worker
+    except ModuleNotFoundError as exc:
+        if exc.name != "owned_gui_worker": raise
+        from computer.owned_gui_worker import run_owned_worker
+    process = context.Process(target=run_owned_worker, args=(_worker_entry, kind, payload, queue, launch_gate), daemon=True)
     with _execution_lock:
         if _execution_stopping:
             return _error("service_stopping", "Computer worker was not started")
-        process.start()
+        record = _execution_records.get(execution_id)
+        if record is None or record["cancelled"] or record["finished"]:
+            return _error("cancelled", "GUI execution was cancelled before worker launch", execution_id=execution_id, retryable=False)
+        if record.get("job") is not None:
+            return _error("ownership_uncertain", "Previous GUI phase still has unconfirmed ownership", retryable=False, uncertain_external_state=True)
+        if os.name == "nt": record["job"] = _new_windows_job()
+        try:
+            process.start()
+        except Exception:
+            _close_record_job(record)
+            raise
+        record["worker"] = process
+        record["worker_queue"] = queue
         _gui_workers.add(process)
+        try:
+            if record.get("job") is not None: record["job"].assign(process.pid)
+            launch_gate.set()
+        except Exception:
+            confirmed = _stop_gui_worker(process)
+            if record.get("job") is not None:
+                try: confirmed = record["job"].terminate() and confirmed
+                except OSError: confirmed = False
+            record["cancelled"] = True
+            record["termination_confirmed"] = confirmed
+            if confirmed:
+                record["worker"] = None
+                record["worker_queue"] = None
+                _gui_workers.discard(process)
+                _close_record_job(record)
+                if callable(getattr(queue, "close", None)): queue.close()
+            return _error("process_ownership_failed", "GUI worker ownership could not be installed; launch gate remained closed",
+                          execution_id=execution_id, termination_confirmed=confirmed, uncertain_external_state=not confirmed, retryable=False)
     try:
         deadline = time.monotonic() + max(0.1, timeout)
         result = None
         # Drain before join: the child's Queue feeder cannot flush a large
         # screenshot/UIA payload while the parent waits for child exit.
         while True:
+            if record["cancelled"]:
+                confirmed = _stop_gui_worker(process)
+                return _error("cancelled", "GUI execution was cancelled", retryable=False,
+                              execution_id=execution_id, termination_confirmed=confirmed,
+                              uncertain_external_state=not confirmed or bool(record.get("unsafe_gui")))
             remaining = deadline - time.monotonic()
             try:
                 result = queue.get(timeout=max(0.0, min(0.1, remaining)))
                 break
             except Exception:
+                if record["cancelled"]: continue
                 if not _worker_alive(process):
                     try:
                         result = queue.get(timeout=0.5)
@@ -426,13 +510,33 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
                 confirmed = not _worker_alive(process)
                 return _error("timeout", f"{kind} operation timed out", retryable=confirmed and kind in {"screen", "windows"},
                               termination_confirmed=confirmed, uncertain_external_state=not confirmed)
+        if record["cancelled"]:
+            return _error("cancelled", "GUI execution was cancelled", execution_id=execution_id, retryable=False,
+                          termination_confirmed=True, uncertain_external_state=bool(record.get("unsafe_gui")))
+        if record.get("job") is not None:
+            try: ownership_empty = record["job"].active_count() == 0
+            except OSError: ownership_empty = False
+            if not ownership_empty:
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("background_descendants", "GUI worker left unconfirmed descendants", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated, uncertain_external_state=not terminated or bool(record.get("unsafe_gui")))
         if not isinstance(result, dict):
             return _error("malformed_worker_response", f"{kind} worker returned invalid data", retryable=False)
         return result
     finally:
         stopped = not _worker_alive(process)
         with _execution_lock:
-            if stopped: _gui_workers.discard(process)
+            if stopped:
+                _gui_workers.discard(process)
+                if record.get("worker") is process:
+                    record["worker"] = None
+                    record["worker_queue"] = None
+                try:
+                    if record.get("job") is not None and record["job"].active_count() == 0:
+                        _close_record_job(record)
+                except OSError:
+                    pass # Preserve the Job handle for confirmed cleanup/retry.
+                if record["cancelled"] and record.get("job") is None: record["termination_confirmed"] = True
         if stopped and callable(getattr(queue, "close", None)):
             queue.close()
 
@@ -483,8 +587,15 @@ def _release_action_claim(action_id: str) -> None:
         _action_inflight.discard(action_id)
 
 
-def _execute_action(req: Action) -> dict[str, Any]:
+def _execute_action(req: Action, execution_id: str = "") -> dict[str, Any]:
+    with _gui_execution_scope(execution_id, unsafe_gui=not _retryable(req.type.strip().lower())) as (owned_id, error):
+        if error is not None: return error
+        return _execute_action_owned(req, owned_id)
+
+
+def _execute_action_owned(req: Action, execution_id: str) -> dict[str, Any]:
     action = _validate_action(req)
+    action["__execution_id"] = execution_id
     action_id = str(action.get("action_id", "")).strip()
     action_type = str(action["type"])
     retry_safety = "safe" if _retryable(action_type) else "unsafe"
@@ -504,17 +615,17 @@ def _execute_action(req: Action) -> dict[str, Any]:
     try:
         before_hash = ""
         if bool(action.get("verify", False)):
-            before = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+            before = _run_worker("screen", {"__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
             if before.get("ok"):
                 before_hash = str(before.get("sha256", ""))
         result = _run_worker("action", action, ACTION_TIMEOUT_SECONDS)
         result["action_id"] = action_id
-        result["retryable"] = _retryable(action_type)
+        result["retryable"] = _retryable(action_type) and result.get("error") not in {"cancelled", "execution_id_reused", "service_stopping"} and not result.get("uncertain_external_state", False)
         result["retry_safety"] = retry_safety
         if not result.get("ok") and retry_safety == "unsafe":
             result["uncertain_external_state"] = True
         if result.get("ok") and bool(action.get("verify", False)):
-            after = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+            after = _run_worker("screen", {"__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
             if after.get("ok"):
                 after_hash = str(after.get("sha256", ""))
                 result["verified"] = bool(before_hash and after_hash and before_hash != after_hash)
@@ -522,6 +633,12 @@ def _execute_action(req: Action) -> dict[str, Any]:
             else:
                 result["verified"] = False
                 result["verification"] = "verification_unavailable"
+        record = _execution_records[execution_id]
+        if record["cancelled"]:
+            result = _error("cancelled", "GUI request was cancelled; prior effects are not reversed", retryable=False,
+                            action_id=action_id, retry_safety=retry_safety, execution_id=execution_id,
+                            termination_confirmed=bool(record["termination_confirmed"]),
+                            uncertain_external_state=retry_safety == "unsafe" or not bool(record["termination_confirmed"]))
         _store_action_result(action_id, result)
         return result
     finally:
@@ -655,6 +772,8 @@ def _cancel_execution(execution_id: str) -> dict[str, Any]:
         record["cancelled"] = True
         process = record["process"]
         finished = record["finished"]
+    worker = record.get("worker")
+    worker_stopped = True if worker is None else _stop_gui_worker(worker)
     job = record.get("job")
     if job is not None:
         try:
@@ -664,6 +783,7 @@ def _cancel_execution(execution_id: str) -> dict[str, Any]:
             terminated = False
     else:
         terminated = True if process is None else _terminate_process_tree(process)
+    terminated = terminated and worker_stopped
     for reader in record.get("capture_threads", []): reader.join(timeout=0.2)
     if any(reader.is_alive() for reader in record.get("capture_threads", [])): terminated = False
     container = record.get("container")
@@ -678,11 +798,16 @@ def _cancel_execution(execution_id: str) -> dict[str, Any]:
         if terminated and (process is None or process.poll() is not None):
             record["finished"] = True
             record["process"] = None
+            record["worker"] = None
+            if worker is not None: _gui_workers.discard(worker)
+            owned_queue = record.get("worker_queue")
+            record["worker_queue"] = None
+            if owned_queue is not None and callable(getattr(owned_queue, "close", None)): owned_queue.close()
             if record.get("job"):
                 _close_record_job(record)
     return {"ok": terminated, "cancelled": True, "execution_id": execution_id,
             "termination_confirmed": terminated, "already_finished": finished,
-            "uncertain_external_state": not terminated, "retryable": False}
+            "uncertain_external_state": not terminated or bool(record.get("unsafe_gui")), "retryable": False}
 
 
 def _cancel_all_processes() -> dict[str, Any]:
@@ -690,22 +815,12 @@ def _cancel_all_processes() -> dict[str, Any]:
     with _execution_lock:
         _execution_stopping = True
         execution_ids = [key for key, record in _execution_records.items()
-                         if not record["finished"] and (record["process"] is not None or record.get("container") or record.get("job"))]
+                         if not record["finished"] and (record["process"] is not None or record.get("container") or record.get("job") or record.get("worker"))]
         workers = list(_gui_workers)
-    workers_stopped = True
-    for worker in workers:
-        try:
-            with _gui_worker_lifecycle_lock:
-                if worker.is_alive(): worker.terminate()
-                worker.join(timeout=2)
-                if worker.is_alive():
-                    worker.kill()
-                    worker.join(timeout=2)
-                if worker.is_alive(): workers_stopped = False
-                else:
-                    with _execution_lock: _gui_workers.discard(worker)
-        except Exception:
-            workers_stopped = False
+    workers_stopped = all([_stop_gui_worker(worker) for worker in workers])
+    stopped_workers = [worker for worker in workers if not _worker_alive(worker)]
+    with _execution_lock:
+        for worker in stopped_workers: _gui_workers.discard(worker)
     results = [_cancel_execution(execution_id) for execution_id in execution_ids]
     confirmed = workers_stopped and all(result["termination_confirmed"] for result in results)
     return {"ok": confirmed, "termination_confirmed": confirmed,
@@ -940,25 +1055,42 @@ def capabilities(x_aurorafox_computer_token: str | None = Header(default=None)) 
 
 
 @app.get("/screen")
-def screen(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def screen(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    result = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
-    if result.get("ok"):
-        windows_result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS)
-        result["uia"] = windows_result.get("items", []) if windows_result.get("ok") else []
-        result["virtual_desktop"] = _desktop_bounds(); result["retryable"] = True
-    return result
+    with _gui_execution_scope(x_aurorafox_execution_id) as (execution_id, error):
+        if error is not None: return error
+        result = _run_worker("screen", {"__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+        if result.get("ok"):
+            windows_result = _run_worker("windows", {"limit": 250, "__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+            if _execution_records[execution_id]["cancelled"]:
+                return _error("cancelled", "Screen request was cancelled", retryable=False, execution_id=execution_id,
+                              termination_confirmed=bool(_execution_records[execution_id]["termination_confirmed"]))
+            result["uia"] = windows_result.get("items", []) if windows_result.get("ok") else []
+            result["uia_ok"] = bool(windows_result.get("ok"))
+            result["uia_partial"] = not result["uia_ok"] or bool(windows_result.get("partial"))
+            if not result["uia_ok"]: result["uia_error"] = windows_result.get("error", "uia_unverified")
+            result["partial"] = bool(result.get("partial")) or result["uia_partial"]
+            result["virtual_desktop"] = _desktop_bounds(); result["retryable"] = True
+        return result
 
 
 @app.get("/windows")
-def windows(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def windows(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+            x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS); result["retryable"] = True; return result
+    with _gui_execution_scope(x_aurorafox_execution_id) as (execution_id, error):
+        if error is not None: return error
+        result = _run_worker("windows", {"limit": 250, "__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+        result["retryable"] = result.get("error") not in {"cancelled", "execution_id_reused", "service_stopping"} and not result.get("uncertain_external_state", False)
+        return result
 
 
 @app.post("/action")
-def action(req: Action, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); return _execute_action(req)
+def action(req: Action, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    return _execute_action(req, x_aurorafox_execution_id)
 
 
 @app.post("/plan")

@@ -23,11 +23,22 @@ static func configure_request(request: HTTPRequest, requested: float, default_ke
 
 static func execution_payload(path: String, payload: Dictionary) -> Dictionary:
 	var captured := payload.duplicate(true)
-	if path.ends_with("/sandbox/exec") or path.ends_with("/sandbox/container_exec"):
+	var route := path.get_slice("?", 0)
+	var process := route.ends_with("/sandbox/exec") or route.ends_with("/sandbox/container_exec")
+	var gui := route.ends_with("/action") or route.ends_with("/screen") or route.ends_with("/windows")
+	if process:
 		captured["output_chars"] = OwnerResourcePolicy.value("computer_output_chars")
 		captured["capture_bytes"] = OwnerResourcePolicy.value("computer_capture_bytes")
+	if process or gui:
 		# Caller/model input cannot select a previous execution identity.
 		captured["execution_id"] = "%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), Crypto.new().generate_random_bytes(16).hex_encode()]
+		captured["_unsafe_gui"] = route.ends_with("/action") and str(captured.get("type", "")).strip_edges().to_lower() not in ["move", "wait", "done"]
+	return captured
+
+static func append_execution_header(headers: PackedStringArray, payload: Dictionary) -> PackedStringArray:
+	var captured := headers.duplicate()
+	if payload.has("execution_id"):
+		captured.append("X-AuroraFox-Execution-ID: " + str(payload.execution_id))
 	return captured
 
 static func wait(request: HTTPRequest, owner: Node, allowed: Callable, service_url: String, token: String, payload: Dictionary) -> Dictionary:
@@ -40,20 +51,20 @@ static func wait(request: HTTPRequest, owner: Node, allowed: Callable, service_u
 		if not bool(allowed.call()):
 			request.cancel_request()
 			var cancellation := await _cancel_execution(owner, service_url, token, str(payload.get("execution_id", "")))
-			return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation, "retryable": false}
+			return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation or bool(payload.get("_unsafe_gui", false)), "retryable": false}
 		await owner.get_tree().create_timer(0.05).timeout
 	if not bool(allowed.call()):
 		var cancellation := await _cancel_execution(owner, service_url, token, str(payload.get("execution_id", "")))
-		return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation, "retryable": false}
+		return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation or bool(payload.get("_unsafe_gui", false)), "retryable": false}
 	var completed: Array = state.completed
 	if not completed.is_empty() and int(completed[0]) != HTTPRequest.RESULT_SUCCESS and payload.has("execution_id"):
 		var cancellation := await _cancel_execution(owner, service_url, token, str(payload.execution_id))
-		return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation, "retryable": false, "transport_result": int(completed[0])}
+		return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation or bool(payload.get("_unsafe_gui", false)), "retryable": false, "transport_result": int(completed[0])}
 	return {"cancelled": false, "completed": completed}
 
 static func _cancel_execution(owner: Node, service_url: String, token: String, execution_id: String) -> bool:
 	if execution_id.is_empty():
-		return false # Non-process actions cannot promise reversal of an external effect.
+		return false # No identity means no proven owned stop; no stop reverses an effect.
 	var cancel := HTTPRequest.new()
 	cancel.timeout = 10.0 # Bounded stop acknowledgement; never a product execution deadline.
 	owner.add_child(cancel)

@@ -210,7 +210,7 @@ if ($portableBuilt) {
 # Computer Agent bootstrap.
 if (Test-Path $computerOut) { Remove-Item $computerOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $computerOut | Out-Null
-foreach ($file in @("computer_service.py", "windows_job.py", "requirements.txt", "install_computer.ps1")) {
+foreach ($file in @("computer_service.py", "windows_job.py", "owned_gui_worker.py", "requirements.txt", "install_computer.ps1")) {
     $source = Join-Path $computerSource $file
     if (Test-Path $source) { Copy-Item $source (Join-Path $computerOut $file) -Force }
 }
@@ -281,6 +281,7 @@ if (-not (Test-Path (Join-Path $voiceOut "requirements_xtts.txt"))) { throw "XTT
 if (-not (Test-Path (Join-Path $voiceOut "prepare_ffmpeg.ps1"))) { throw "XTTS shared FFmpeg bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "windows_job.py"))) { throw "Windows Computer ownership helper was not packaged" }
+if (-not (Test-Path (Join-Path $computerOut "owned_gui_worker.py"))) { throw "Computer GUI ownership bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "python\python.exe"))) { throw "Portable Computer Agent Python was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "vendor\fastapi"))) { throw "Portable Computer Agent dependencies were not packaged" }
