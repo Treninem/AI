@@ -10,7 +10,7 @@ func setup(ai_client: AIClient) -> void:
 func make_plan(task: String, skills: Array, failures: Array) -> Dictionary:
 	var prompt := """
 Ты модуль планирования AuroraFox. Составь короткий практический план выполнения задачи.
-Не раскрывай скрытые рассуждения. Верни ТОЛЬКО JSON:
+Не раскрывай скрытые рассуждения. Верни только строгий JSON:
 {"objective":"...","steps":["..."],"risks":["..."],"success_checks":["..."],"needs_tools":true}
 Учитывай прошлые навыки и ошибки. План должен быть проверяемым и обратимым, где это возможно.
 Задача: %s
