@@ -7,6 +7,14 @@ class PlanningAI extends AIClient:
 		captured = messages
 		return {"ok": true, "content": response}
 
+class PayloadProbe extends DesktopLocalRuntime:
+	var captured_payload: Dictionary = {}
+	func ensure_server(_model_absolute_path: String) -> Dictionary:
+		return {"ok": true}
+	func _request_progress_json(payload: Dictionary, _stall_seconds: float, _total_seconds: float, _byte_budget: int, _port: int = 8766) -> Dictionary:
+		captured_payload = payload.duplicate(true)
+		return {"ok": true, "data": {"choices": [{"message": {"content": "{}"}}]}}
+
 func _init() -> void:
 	call_deferred("_run")
 
@@ -39,6 +47,21 @@ func _run() -> void:
 	var prose := await planner.make_plan("probe", [], [])
 	assert(prose.steps.is_empty())
 	assert(planner.last_plan_diagnostic.status == "invalid_json_or_plan_contract")
+	var probe_path := ProjectSettings.globalize_path("user://core_payload_probe.gguf")
+	var probe_file := FileAccess.open(probe_path, FileAccess.WRITE)
+	assert(probe_file != null)
+	probe_file.store_string("fixture")
+	probe_file.close()
+	var payload_probe := PayloadProbe.new()
+	var structured := await payload_probe.chat(probe_path, model.captured, {})
+	assert(structured.ok)
+	assert(payload_probe.captured_payload.get("response_format", {}) == {"type": "json_object"})
+	assert(payload_probe.captured_payload.get("reasoning_effort", "") == "none")
+	var ordinary := await payload_probe.chat(probe_path, [{"role": "user", "content": "Explain planning in prose"}], {})
+	assert(ordinary.ok)
+	assert(not payload_probe.captured_payload.has("response_format"))
+	DirAccess.remove_absolute(probe_path)
+	payload_probe.free()
 	model.core_runtime.android_runtime.free()
 	model.core_runtime.desktop_runtime.free()
 	model.core_runtime.free()

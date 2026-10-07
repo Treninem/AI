@@ -81,6 +81,10 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 		payload["reasoning_effort"] = "none"
 	elif options.has("reasoning_effort"):
 		payload["reasoning_effort"] = str(options.get("reasoning_effort", ""))
+	# Bundled llama.cpp supports grammar-backed JSON objects on this local
+	# endpoint. Apply it only when the caller explicitly asks for strict JSON.
+	if structured_request:
+		payload["response_format"] = {"type": "json_object"}
 	var response := await _request_progress_json(payload, stall_timeout, total_timeout, response_bytes)
 	if not bool(response.get("ok", false)): return response
 	var data: Dictionary = response.get("data", {})

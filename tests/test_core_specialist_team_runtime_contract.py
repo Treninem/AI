@@ -26,6 +26,14 @@ def test_planning_keeps_strict_contract_after_bounded_json_object_recovery() -> 
     for marker in ("fill {kettle}", "wrong_shape.steps.is_empty()", "prose.steps.is_empty()"):
         assert marker in smoke
 
+
+def test_bundled_desktop_core_requests_json_grammar_only_for_strict_prompts() -> None:
+    runtime = DESKTOP_RUNTIME.read_text(encoding="utf-8")
+    smoke = PLANNING_SMOKE.read_text(encoding="utf-8")
+    assert 'if structured_request:\n\t\tpayload["response_format"] = {"type": "json_object"}' in runtime
+    assert 'payload_probe.captured_payload.get("response_format", {}) == {"type": "json_object"}' in smoke
+    assert 'not payload_probe.captured_payload.has("response_format")' in smoke
+
 EXPECTED_OPERATIONS = (
     "analyze_request",
     "generate_code",

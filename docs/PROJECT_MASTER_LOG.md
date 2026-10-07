@@ -7981,3 +7981,27 @@ DONE:Core JSON-object recovery, strict negative fixtures and broader local Godot
 REMAINING:publish Core commit and obtain exact native 21/21 and relevant package/Voice gates; finish source/device/release acceptance.
 BLOCKERS:old-SHA real Core planning failure; new-SHA runtime verdict pending.
 NEXT:commit/push the four-file Core package by expected-head fast-forward, then inspect only new-SHA required check outcomes and benchmark artifact.
+
+PLANNER_NATIVE_RESULT: Core repair commit cab2c71b8247ae88e4feb6befce17e5e0249f85b published by expected-head fast-forward; local/web HEAD matched after push. Exact real Windows Core run37662749554 still fails only simple_planning (20/21). Transport succeeded, content511 chars, JSON brace present, no fence, no syntactically valid JSON dictionary recovered, zero plan steps/checks. Therefore wrapper recovery alone is insufficient and the previous hypothesis is rejected; no 21/21 claim. Android and Voice gates remain separately tracked.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-CONSTRAINED-JSON
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL same demonstrated planning quality blocker.
+STARTING_HEAD:cab2c71b8247ae88e4feb6befce17e5e0249f85b.
+OWNED_PATHS:scripts/desktop_local_runtime.gd;tests/core_benchmark_diagnostics_smoke.gd;tests/test_core_specialist_team_runtime_contract.py;this master log.
+INTENDED_BUMP:D accumulated version-last; canonical unchanged.
+EVIDENCE: pinned bundled llama.cpp server build11429 commitd81235049 documents `response_format` `{"type":"json_object"}` for streaming `/v1/chat/completions`. Current strict structured path only disables hidden thinking via reasoning_effort:none and does not request JSON syntax. The new native response has braces but fails actual JSON parse. Constrained output is an engine-supported local request contract, not external AI or a parser guess; real model acceptance still must be proven.
+ACCEPTANCE_GATES: add JSON output format only for explicit strict-structured requests, preserve ordinary/terse prose and user token/cancel/wait budgets. Capture production payload through a genuine Godot runtime fixture, then require unchanged21/21 real Windows Core benchmark and all relevant exact-head CI. Reject unsupported/invalid engine responses rather than mark a fabricated plan complete.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement the narrow local llama.cpp JSON-format request and run actual Godot payload regression before one exact native benchmark.
+
+CONSTRAINED_JSON_LOCAL_CHECKPOINT: DesktopLocalRuntime adds `response_format={"type":"json_object"}` only for `_is_strict_structured_request` while retaining reasoning_effort:none, stream/progress, owner generation/wait/response budgets and ordinary prose behavior. This uses pinned local llama.cpp documented streaming chat-completion syntax; it is not a remote service. Genuine Godot4.7.1 Windows payload fixture calls production `chat` with a local dummy model path and overridden transport: strict planner prompt sends JSON format and reasoning none, ordinary prose sends no format. It exits0 with AURORA_CORE_BENCHMARK_DIAGNOSTICS_OK. Relevant Python Core/standalone contracts24PASS; diff check clean. This fixture proves payload routing, not real model quality. Run unchanged21/21 benchmark on the next exact SHA; if it still fails, retain blocker and inspect its diagnostic artifact rather than claim success.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:engine-supported local JSON request implemented and actual production-payload routing verified on owner PC.
+REMAINING:publish/reconcile exact new-SHA native Core benchmark and wider CI; remaining source/device/release acceptance.
+BLOCKERS:prior cab2c71 real Windows Core20/21; next native outcome pending.
+NEXT:publish this narrow contract by expected-head fast-forward and inspect the exact real Core run, with no change to the21/21 criterion.
