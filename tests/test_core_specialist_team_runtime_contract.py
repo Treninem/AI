@@ -12,6 +12,19 @@ AI_CLIENT = ROOT / "scripts" / "ai_client.gd"
 MAIN = ROOT / "scripts" / "main.gd"
 SMOKE_RUNNER = ROOT / "benchmarks" / "core" / "run_windows_code_specialist_smoke.ps1"
 WORKFLOW = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
+COGNITION = ROOT / "scripts" / "cognition_layer.gd"
+PLANNING_SMOKE = ROOT / "tests" / "core_benchmark_diagnostics_smoke.gd"
+
+
+def test_planning_keeps_strict_contract_after_bounded_json_object_recovery() -> None:
+    cognition = COGNITION.read_text(encoding="utf-8")
+    smoke = PLANNING_SMOKE.read_text(encoding="utf-8")
+    assert "func _extract_first_json_object(text: String)" in cognition
+    assert "if parser.parse(candidate) == OK and parser.data is Dictionary: return candidate" in cognition
+    assert 'last_plan_diagnostic["status"] = "invalid_step_contract"' in cognition
+    assert 'last_plan_diagnostic["status"] = "invalid_json_or_plan_contract"' in cognition
+    for marker in ("fill {kettle}", "wrong_shape.steps.is_empty()", "prose.steps.is_empty()"):
+        assert marker in smoke
 
 EXPECTED_OPERATIONS = (
     "analyze_request",

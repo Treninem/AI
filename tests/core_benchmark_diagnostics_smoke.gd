@@ -2,9 +2,10 @@ extends SceneTree
 
 class PlanningAI extends AIClient:
 	var captured: Array = []
+	var response := '{"objective":"probe","steps":["check"],"success_checks":["verified"]}'
 	func chat(messages: Array, _temperature: float = 0.2) -> Dictionary:
 		captured = messages
-		return {"ok": true, "content": '{"objective":"probe","steps":["check"],"success_checks":["verified"]}'}
+		return {"ok": true, "content": response}
 
 func _init() -> void:
 	call_deferred("_run")
@@ -26,6 +27,18 @@ func _run() -> void:
 	assert(plan.steps == ["check"])
 	assert(desktop._is_strict_structured_request(model.captured))
 	assert(not desktop._is_strict_structured_request([{"role": "user", "content": "Explain how planning works in ordinary prose"}]))
+	model.response = 'План ниже:\n```json\n{"objective":"tea {safe}","steps":["fill {kettle}","boil water"],"success_checks":["off"]}\n```\nГотово.'
+	var wrapped := await planner.make_plan("probe", [], [])
+	assert(wrapped.steps == ["fill {kettle}", "boil water"])
+	assert(planner.last_plan_diagnostic.status == "valid_plan")
+	model.response = 'План: {"objective":"probe","steps":[1],"success_checks":["verified"]}'
+	var wrong_shape := await planner.make_plan("probe", [], [])
+	assert(wrong_shape.steps.is_empty())
+	assert(planner.last_plan_diagnostic.status == "invalid_step_contract")
+	model.response = "План словами без JSON."
+	var prose := await planner.make_plan("probe", [], [])
+	assert(prose.steps.is_empty())
+	assert(planner.last_plan_diagnostic.status == "invalid_json_or_plan_contract")
 	model.core_runtime.android_runtime.free()
 	model.core_runtime.desktop_runtime.free()
 	model.core_runtime.free()

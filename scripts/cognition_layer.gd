@@ -19,7 +19,7 @@ func make_plan(task: String, skills: Array, failures: Array) -> Dictionary:
 """ % [task, JSON.stringify(skills), JSON.stringify(failures)]
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.1)
 	var content := str(result.get("content", ""))
-	last_plan_diagnostic = {"transport_ok": bool(result.get("ok", false)), "content_chars": content.length(), "content_sha256": content.sha256_text()}
+	last_plan_diagnostic = {"transport_ok": bool(result.get("ok", false)), "content_chars": content.length(), "content_sha256": content.sha256_text(), "json_brace_present": content.contains("{"), "fence_present": content.contains("```")}
 	var failed := {"objective": task, "steps": [], "risks": [], "success_checks": [], "needs_tools": true}
 	if not result.get("ok", false):
 		last_plan_diagnostic["status"] = "transport_failed"
@@ -86,8 +86,44 @@ func extract_skill(task: String, final_answer: String, trajectory: Array, confid
 
 func _parse_json(text: String, fallback: Dictionary) -> Dictionary:
 	var cleaned := text.strip_edges()
-	if cleaned.begins_with("```"):
-		cleaned = cleaned.replace("```json", "").replace("```", "").strip_edges()
 	var parser := JSON.new()
-	if parser.parse(cleaned) != OK: return fallback
-	return parser.data if parser.data is Dictionary else fallback
+	if parser.parse(cleaned) == OK and parser.data is Dictionary: return parser.data
+	if cleaned.begins_with("```"):
+		var first_newline := cleaned.find("\n")
+		var closing_fence := cleaned.rfind("```")
+		if first_newline >= 0 and closing_fence > first_newline:
+			if parser.parse(cleaned.substr(first_newline + 1, closing_fence - first_newline - 1).strip_edges()) == OK and parser.data is Dictionary:
+				return parser.data
+	var extracted := _extract_first_json_object(cleaned)
+	if extracted.is_empty(): return fallback
+	return parser.data if parser.parse(extracted) == OK and parser.data is Dictionary else fallback
+
+func _extract_first_json_object(text: String) -> String:
+	var start := text.find("{")
+	while start >= 0:
+		var depth := 0
+		var in_string := false
+		var escaped := false
+		for i in range(start, text.length()):
+			var ch := text.substr(i, 1)
+			if in_string:
+				if escaped:
+					escaped = false
+				elif ch == "\\":
+					escaped = true
+				elif ch == "\"":
+					in_string = false
+				continue
+			if ch == "\"":
+				in_string = true
+			elif ch == "{":
+				depth += 1
+			elif ch == "}":
+				depth -= 1
+				if depth == 0:
+					var candidate := text.substr(start, i - start + 1)
+					var parser := JSON.new()
+					if parser.parse(candidate) == OK and parser.data is Dictionary: return candidate
+					break
+		start = text.find("{", start + 1)
+	return ""

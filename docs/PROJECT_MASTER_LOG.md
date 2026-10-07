@@ -7946,3 +7946,38 @@ DONE: coherent Voice DSP owner controls and local 63-test package prepared; prev
 REMAINING: publish exact Voice package and obtain relevant native CI; diagnose/repair Windows Core planning contract; finish remaining source inventory and final same-SHA package/device/update/release gates.
 BLOCKERS: Windows Core simple_planning real benchmark failure at run37658688995; Voice HTTP/Godot/acoustic native evidence pending.
 NEXT: publish one Voice package after source review, then inspect real planner response-shape/parse path as a separate coherent Core repair and rerun unchanged 21/21 gate.
+
+VOICE_DSP_PUBLICATION: commit9d2aed54db8439ffa372c68391c0448f2e6be221 published to PR103 by exact expected-head fast-forward from c95dcb3; local and origin feature HEAD verified equal. Source paths released; exact native CI pending. No canonical version change.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-JSON-RECOVERY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL current Core quality blocker.
+STARTING_HEAD:9d2aed54db8439ffa372c68391c0448f2e6be221; origin feature synchronized before editing.
+OWNED_PATHS:scripts/cognition_layer.gd;tests/core_benchmark_diagnostics_smoke.gd;tests/test_core_specialist_team_runtime_contract.py;this master log.
+INTENDED_BUMP:D accumulated version-last, canonical unchanged.
+EVIDENCE: exact old-source Windows Core run37658688995 on c95dcb3 passes20/21; simple_planning returned transport_ok=true,485 visible characters and invalid_json_or_plan_contract. Earlier empty content after 768 tokens was changed by strict structured routing, so this is a distinct parse/format failure. Existing CodeSpecialist has bounded balanced-first-object recovery for fenced/surrounded JSON; CognitionLayer only strips fences when at the very start. Actual model response bytes are deliberately not retained in benchmark artifact, so wrapper cause is a hypothesis, not asserted as fact.
+ACCEPTANCE_GATES:recover only a syntactically valid JSON object from a bounded model response, then retain exact objective/steps and nonempty-step contract. Never invent a plan or accept prose as success. Add genuine Godot fixtures for fenced/prefaced/nested braces and malformed/invalid content; run relevant contracts and unchanged real21/21 Windows Core gate on exact published SHA. Do not alter model, timeout, scenario or threshold.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement bounded JSON-object recovery and parser diagnostics, then validate locally and through exact native Core workflow.
+
+PLANNER_LOCAL_CHECKPOINT: CognitionLayer now accepts a full JSON dictionary, a fenced dictionary or the first syntactically valid balanced dictionary surrounded by model text. The scan respects quoted braces/escapes and retains objective/nonempty string-step validation; malformed/prose/incorrect-shape responses still fail with empty steps. Diagnostics add only brace/fence presence flags, not raw model output. The owner-approved strict-JSON prompt, local-only runtime, token/timeout budget and 21/21 benchmark criterion are unchanged.
+LOCAL_TESTS: official Godot4.7.1 Windows headless import exited0; genuine core_benchmark_diagnostics_smoke exited0 with AURORA_CORE_BENCHMARK_DIAGNOSTICS_OK and covered wrapped/nested braces, wrong-shape and prose failures. Genuine owner_resource_limits_smoke exited0 with AURORA_OWNER_RESOURCE_LIMITS_OK (existing20 ObjectDB/8 resource exit diagnostics retained). 23 relevant Core/standalone Python contracts PASS; diff check clean. No real model result for this new parser yet.
+PRIOR_CI: published Voice commit9d2aed5 at last check38SUCCESS/7IN_PROGRESS/3conditionalSKIPPED, no red. Its native suite is still running; defer another publication until heavy jobs finish to avoid cancelling valid evidence. No skipped job counted PASS.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:bounded parser repair and real local Godot/contract fixtures prepared; Voice published exact head remains synchronized.
+REMAINING:finish Voice native CI, publish Core repair, rerun unchanged real21/21 Windows benchmark and relevant exact-head CI; remaining source/release/device gates.
+BLOCKERS:old-head Windows Core20/21 simple_planning; new parser runtime verdict pending.
+NEXT:when Voice CI completes, publish this coherent Core repair with CAS fast-forward, inspect exact Windows Core benchmark artifact and repair only a demonstrated remaining cause.
+
+PUBLICATION_DECISION: published Voice SHA9d2aed5 has38SUCCESS/6IN_PROGRESS/3conditionalSKIPPED/1FAILURE at latest observation. The failure is the required real-core-windows planner scenario on the old parser. Since this SHA cannot be the final release candidate, waiting for six long jobs before publishing the prepared Core repair would delay the next decisive 21/21 gate without changing old-SHA acceptance. Publish the Core repair now; unfinished old-SHA checks remain diagnostic only and are never counted for new-SHA acceptance. CI coverage and same-SHA final matrix are unchanged.
+ADDITIONAL_LOCAL_TESTS: official Godot4.7.1 Windows offline_autonomy_smoke, chat_context_smoke and voice_smoke all exited0 with their success markers. Each retained pre-existing ObjectDB/resource exit diagnostics; no clean-leak proof is claimed. Full owner-resource and Core diagnostic smokes also exited0. Relevant Python Core contracts23PASS.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Core JSON-object recovery, strict negative fixtures and broader local Godot smoke verified; Voice published and local/web HEAD synchronized before Core publication.
+REMAINING:publish Core commit and obtain exact native 21/21 and relevant package/Voice gates; finish source/device/release acceptance.
+BLOCKERS:old-SHA real Core planning failure; new-SHA runtime verdict pending.
+NEXT:commit/push the four-file Core package by expected-head fast-forward, then inspect only new-SHA required check outcomes and benchmark artifact.
