@@ -8971,3 +8971,11 @@ DONE:confirmed and locally repaired queue capacity truthfulness,37 targeted test
 REMAINING:publish/sync source package, exact API/owner CI, remaining747 inventory candidates and final device/package/update/version gates.
 BLOCKERS:none for publication; initial restricted-loopback run superseded by authorized genuine PASS.
 NEXT:verify exact remote head, commit/push queue source, regression, journal and memory; confirm local/origin/web identity and exact API/owner CI.
+
+CORE_CANDIDATE_QUEUE_ACCEPTANCE: commit c1c63e2aede5f2af755b760632aca3176816551e published by expected-head fast-forward; local/origin/web exact and clean. Exact API CI run37700989936 SUCCESS across python-api, godot-api and windows-api; exact Chat Learning Attachment run37700989919 SUCCESS includes owner audit. This accepts the focused source repair and persisted201-entry regression without waiving external API page200, Core candidate verification or security scopes. Local targeted37PASS and authorized-loopback API breadth52PASS; the restricted WinError10013 attempt remains separately recorded as non-verdict. api/core_candidate_queue.py and tests/test_core_candidate_queue.py are released from CODEX-2026-10-08-V15-CORE-CANDIDATE-QUEUE-CAPACITY claim. Journal-only publication will have its own SHA; do not substitute this source-SHA evidence for final release/device/package/update/version-last gates.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:queue capacity fix and genuine regression accepted on exact c1c63e2 API/owner CI; local/web source parity confirmed.
+REMAINING:747 owner findings and final physical/device/package/update/version gates; journal-only commit exact CI as scheduled.
+BLOCKERS:none in queue source scope.
+NEXT:publish this evidence addendum, verify remote identity; then continue another coherent owner-cap source repair or audit batch against fresh journal/CI.
