@@ -8716,3 +8716,30 @@ PROGRESS_REMAINING:18%
 DONE:Core pre-model fixture correction verified by exact native Windows benchmark; Computer Service 44-line review documented with 36 narrow classifications and eight deliberately unresolved findings.
 REMAINING:publish this inventory-only package; check its exact-SHA CI and remaining Android gates; continue real owner-limit source repairs across 963 inventory findings. V1.5 release gates and version bump are still open.
 NEXT:commit/push audited policy and tests against exact remote d90eecc; inspect native CI and then claim a coherent source repair for the residual fixed Computer limits.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-COMPUTER-PARENT-WATCHDOG
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Work/Computer lifecycle and Master Stop reliability.
+ROADMAP_SECTION:4 Work/Computer production-safe lifecycle/recovery, cancellation and security boundaries.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:2947eb107b36420c8176c3326d68121d495ed447; fetched fresh main and feature, exact local/remote match, latest journal and active claims checked.
+OWNED_PATHS:computer/computer_service.py;tests/test_computer_parent_watchdog.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:Computer audit inventory package2947eb1 published. Existing old Computer source claims reconciled by latest branch; current exact2947eb1 Windows/Android CI pending. No version/release/UI paths touched.
+NON_BLOCKERS:post-release344-point owner-PC pass remains separate.
+INTENDED_BUMP:D fix, canonical version last.
+ACCEPTANCE_GATES:watchdog must stop only for confirmed absent parent, exact PID match, distinguish transient probe error/timeout from death, preserve safe cleanup on confirmed death; targeted deterministic tests, existing Computer contracts and native Windows CI. Keep owner-control audit truthful and fixed probe timing visible or narrowly justify it.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:extract testable parent probe, repair watchdog decision, run targeted plus Computer regressions; publish only after current exact-SHA long gates finish or provide decisive failure evidence.
+
+PARENT_WATCHDOG_CHECKPOINT: confirmed source defect: Windows `tasklist` PID substring could match unrelated process and its two-second timeout/any exception triggered service exit and cancellation even with living parent. Replaced with exact Windows process handle + nonblocking signaled-state check and explicit pointer-size ctypes signatures/handle close; transient errors are unknown and retried. POSIX distinguishes absent/permission/unknown. Confirmed death still invokes existing owned-process cleanup and exit. This is a lifecycle fix, not a Master Stop relaxation.
+LOCAL_TESTS: new four-case watchdog module including actual native Windows handle PASS; prior combined owner-control module and first three watchdog tests27PASS. First wide Computer run used blocked external pytest temp and was invalid (26PASS/20 setup errors); workspace-basetemp wide rerun stalled after its initial 28 cases and was interrupted without a pass verdict. Focused existing Computer cases are being rerun separately. Owner audit after source repair:962 unclassified, seven in Computer Service; tasklist fixed-timeout finding removed rather than waived. `git diff --check` PASS.
+CI_PREVIOUS_SHA: exact2947eb1 PR103 Windows real Core, native acceptance, Computer contracts and Android plugin PASS; Android APK and real Core emulator still pending. New source SHA requires fresh CI after publication.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:exact PID/liveness repair and deterministic/native local watchdog verification; AF-170 engineering lesson recorded.
+REMAINING:finish full Computer regression rerun, publish exact source package, run new native Windows/Android/package gates; six Computer inventory findings plus capability/container representation remain unresolved and broader audit has962 unclassified.
+BLOCKERS:none for source implementation; Android APK/emulator evidence on previous SHA still pending.
+NEXT:review final test result and diff, commit/push by expected-head fast-forward, then inspect new exact-SHA CI without claiming release readiness prematurely.

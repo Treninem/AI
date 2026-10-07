@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import ctypes
 from contextlib import asynccontextmanager, contextmanager
 import hashlib
 import hmac
@@ -1227,18 +1228,51 @@ def _run_owned_process(req: SandboxExecRequest, command: list[str], cwd: Path, c
     return _run_process(command, cwd, req.timeout, allow_network=req.allow_network)
 
 
+def _parent_alive(pid: int, *, windows_api: Any = None, platform: str | None = None) -> bool | None:
+    """Return None when the probe cannot distinguish a live parent from failure."""
+    if (platform or os.name) == "nt":
+        api = windows_api if windows_api is not None else ctypes.windll.kernel32
+        if windows_api is None:
+            api.OpenProcess.argtypes = (ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32)
+            api.OpenProcess.restype = ctypes.c_void_p
+            api.WaitForSingleObject.argtypes = (ctypes.c_void_p, ctypes.c_uint32)
+            api.WaitForSingleObject.restype = ctypes.c_uint32
+            api.CloseHandle.argtypes = (ctypes.c_void_p,)
+            api.CloseHandle.restype = ctypes.c_int
+        # A process handle checks the exact PID; tasklist text can contain another PID.
+        handle = api.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
+        if not handle:
+            error = api.GetLastError()
+            return False if error == 87 else None  # ERROR_INVALID_PARAMETER
+        try:
+            state = api.WaitForSingleObject(handle, 0)
+            if state == 0:  # WAIT_OBJECT_0
+                return False
+            if state == 0x102:  # WAIT_TIMEOUT
+                return True
+            return None
+        finally:
+            api.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return None
+
+
 def _parent_watchdog() -> None:
     if PARENT_PID <= 0: return
     while True:
         time.sleep(2.0)
         try:
-            if os.name == "nt":
-                result = subprocess.run(["tasklist", "/FI", f"PID eq {PARENT_PID}", "/NH"], capture_output=True, text=True, timeout=2)
-                alive = str(PARENT_PID) in result.stdout
-            else:
-                os.kill(PARENT_PID, 0); alive = True
-        except Exception: alive = False
-        if not alive:
+            alive = _parent_alive(PARENT_PID)
+        except Exception:
+            alive = None
+        if alive is False:
             _cancel_all_processes()
             os._exit(0)
 
