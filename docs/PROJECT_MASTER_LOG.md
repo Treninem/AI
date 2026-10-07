@@ -7044,3 +7044,22 @@ DONE:durable native/index/sandbox packages; actual observed tag fix prepared fro
 REMAINING:recover/read and publish actual Research/Voice source; remaining scoped owner inventory/current unfinished CRITICAL blocks; exact-SHA APK/native installed-format/package/physical/update/release gates, version last
 BLOCKERS:execution service unavailable for actual source retrieval/testing; currentfb APK/normal-path storage gate failures require exact new-SHA acceptance. GitHub writes remain available. Physical/production signing gates remain open.
 NEXT:read fresh branch and actual recovery checkout once command execution works; preserve existing work, compare against remote tag fix, run one coherent full batch and publish real source; continue remaining current-scope controls. Do not claim background work or missing source recovery.
+
+
+### EXTERNAL_BLOCKER / durable exact-SHA execution handoff
+CLAIM:WORK-2026-10-07-V15-ANDROID-TAG-TRANSPORT
+PRODUCED_SOURCE_COMMIT:2c7338dc4d1f1ffb0002c0dadf0dc2fd32d5e8bd
+PRODUCED_TREE:b8978b8a749da9845afb4920964dfec23c476203
+PARENT:fb565eba2b903ffbb7e840fcc832a0f7771f92ed
+PUBLISHED_RESULT:five-path source+tests+journal/memory checkpoint CAS succeeded. Lowercase Android-tag fix independently based on actual published source; exact-new-SHA CI pending, local case-fix tests NOT_EXECUTED.
+CONFIRMED_EXTERNAL_BLOCKER:both original patch/test call and independent pwd in /tmp returned CreateProcess error: failed to query exec-server capabilities; environment registry request failed (409 Conflict, environment_offline): Environment is not connected. This is an unavailable execution environment, not a sandbox approval rejection or test failure. GitHub connector remains functional.
+WHY_DOCUMENTATION_CHECKPOINT:record actual produced source SHA and newly returned exact outage error for recovery, despite normally avoiding immediate docs-only successor heads during expensive CI. No source changes, version bump or release claim in this final emergency evidence checkpoint.
+RECOVERY:read fresh main/PR103/branch HEAD; inspect actual /workspace/scratch/29cc88377b5e/v15-recovery and its unpublished Research/Voice files/147-test logs before reapplying anything. Local queued case patch may not have executed; reconcile with published2c. Actual local existence/retention remains UNCONFIRMED while environment is offline. Do not reconstruct missing code and reuse old local test results as if exact new source passed.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:native568/index0a7/sandboxfb and actual-tag2c published; tested unpublished Research/Voice evidence and exact recovery ownership preserved above
+REMAINING:retrieve/publish actual Research/Voice package, current scoped owner inventory/unfinished source, exact-final-SHA CI/APK/native device/update/release gates, version last
+BLOCKERS:environment_offline blocks local retrieval/implementation/testing; exact2c APK/native acceptance pending; no production identity or physical gate waived
+NEXT:restore execution environment, preserve/read actual checkout and compare to fresh GitHub; publish remaining real source as one coherent batch and continue V1.5 CRITICAL acceptance.
