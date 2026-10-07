@@ -8836,3 +8836,38 @@ DONE:identical-SHA Android plugin retry green and AF-171 memory recorded; Projec
 REMAINING:publish/sync inventory package, final exact-SHA Android normal path/Knowledge/Windows installer/update/version-last evidence,934 owner inventory candidates.
 BLOCKERS:none for Android Plugin after green attempt2; long release gates still pending.
 NEXT:commit/push the Project Index audit by exact expected-head fast-forward, verify local/web parity and its new CI run.
+
+PROJECT_INDEX_PUBLICATION_AND_NEXT_BATCH: commit8708eba484e1da8319a3798f43c37f57d45ef205 published; local/origin/web exact and worktree clean. Exact Chat Learning Attachment run37697262705 SUCCESS includes owner audit26PASS; other short CI green, Android device/plugin/APK jobs still in progress on this SHA. User requested a substantially larger next audit batch, preferably ≥100 findings where safe; preserve actual fixed-cap candidates and do not edit occupied production source paths merely to reduce the count.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Project Index audit published/synchronized and exact owner-audit CI green.
+REMAINING:large owner inventory review, Android and final package/update/version gates.
+BLOCKERS:none for read-only source review.
+NEXT:claim one coherent five-file Work/Code/Memory inventory package with ≥100 residual lines, classify exact inspected statements only, run adversarial/full audit tests and publish once.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-WORK-CODE-MEMORY-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-control inventory for Work/Code/Memory paths, audit-only.
+ROADMAP_SECTION:4 Work/Computer baseline, Code/project work, Memory/Knowledge baseline and security boundaries.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:8708eba484e1da8319a3798f43c37f57d45ef205; fresh main/feature fetched, latest journal checked, local/origin/web exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source review: `scripts/windows_trusted_project_bridge.gd`, `scripts/trusted_project_sandbox_bridge.gd`, `scripts/memory_store.gd`, `scripts/tool_registry.gd`, `scripts/self_improver.gd`, `scripts/core_improvement_pipeline.gd`. Do not edit source held by prior performance/Evolution claims.
+DEPENDENCIES:exact8708eba Android CI still running; no release/version/source changes in this package. Reconcile any newer remote HEAD before publishing.
+NON_BLOCKERS:post-release344-point owner-PC pass and V1.6 future cognition work remain separate.
+INTENDED_BUMP:none for inventory metadata; distinct source fixes claim D separately.
+ACCEPTANCE_GATES:review all remaining findings in six listed files (141 at baseline), inspect source context and existing owner tests, classify only exact proven owner-sourced/structure/security lines, keep fixed operational ceilings unresolved; adversarial appended-cap/path tests, whole-audit count and existing owner audit suite; one publication and exact CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:enumerate all residual lines in five files with context, group only by verified semantics, then test and publish one combined metadata package.
+
+BULK_WORK_CODE_MEMORY_AUDIT_CHECKPOINT: reviewed141 previously unclassified lines in six read-only production paths (Windows trusted bridge19, trusted sandbox bridge17, MemoryStore32, ToolRegistry22, SelfImprover21, Core improvement pipeline30). Narrow path-anchored and full-line anchored patterns classify117: owner/caller budgets59, structural/accepted algorithm representation57, Computer cancellation uncertainty boundary1. Twenty-four remain unclassified: Windows trusted bridge8 (text-read clamp, diff window, HTTP deadline/diagnostic), sandbox trusted bridge6 (text-read clamp, diff window), MemoryStore4 (legacy fixed memory/knowledge constants and two ambiguous standalone `limit` arguments), ToolRegistry4 (generic HTTP default/diagnostic and reachable OS.execute output100000), SelfImprover2 (fixed generation attempts), Core improvement pipeline0. These are not waived; separate source behavior/owner-policy repairs must address actual fixed ceilings. Full owner audit unclassified934→817; audit complete:false. No production source or accepted 3–10 tournament invariant changed.
+LOCAL_TESTS: `tests/test_owner_control_audit.py`27/27 PASS including six-path representatives, hard Computer uncertainty line, appended fixed-cap and unrelated-path adversaries plus explicit unresolved cap negatives; `git diff --check` PASS. Existing Project Index/Computer/Memory runtime suites retain exact CI gates; this metadata package does not alter their runtime code.
+CI_PRIOR_SHA: exact8708eba Chat Learning owner audit, Android plugin, real Core Android emulator and other completed checks PASS; Android APK and real Android normal-path pending. Exact long package/device/Knowledge gates must be interpreted by SHA and never replaced with prior verdicts.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 findings reviewed as one coherent package,117 justified classifications locally verified; 24 possible real caps preserved for source follow-up.
+REMAINING:publish/sync this audit package; exact new-SHA CI;817 residual inventory findings, including 24 within this six-file review; release package/device/update/version-last gates.
+BLOCKERS:none for audit package; long Android jobs pending on previous SHA.
+NEXT:check exact remote head, commit/push one bulk audit package, verify local/web equality and owner-audit CI, then claim a source repair for the highest-impact preserved caps.

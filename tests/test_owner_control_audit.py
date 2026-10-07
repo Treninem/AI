@@ -282,6 +282,42 @@ def test_project_index_backend_review_keeps_path_and_sqlite_caps_visible():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_bulk_work_code_memory_review_keeps_fixed_caps_visible():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('scripts/windows_trusted_project_bridge.gd', 'const MAX_COPY_FILES := 30000', 'owner_adjustable'),
+        ('scripts/windows_trusted_project_bridge.gd', 'out.store_buffer(file.get_buffer(mini(1024 * 1024, size - file.get_position())))', 'format_structure'),
+        ('scripts/trusted_project_sandbox_bridge.gd', '_copy_directory_limited(source, target, state, max_files, max_bytes)', 'owner_adjustable'),
+        ('scripts/trusted_project_sandbox_bridge.gd', 'ctx.update(file.get_buffer(mini(1024 * 1024, file.get_length() - file.get_position())))', 'format_structure'),
+        ('scripts/memory_store.gd', 'if limit == -1:', 'owner_adjustable'),
+        ('scripts/memory_store.gd', 'if out.size() >= limit:', 'owner_adjustable'),
+        ('scripts/memory_store.gd', 'if str(parsed.get("resource_policy", "legacy-unversioned-budget")) != _vector_policy_signature: return', 'format_structure'),
+        ('scripts/tool_registry.gd', 'if not ComputerRequestGuard.configure_request(req, timeout, "tool_computer_default_http_seconds"):', 'owner_adjustable'),
+        ('scripts/tool_registry.gd', 'await get_tree().create_timer(0.10).timeout', 'format_structure'),
+        ('scripts/self_improver.gd', 'const MIN_MUTATIONS := 3', 'format_structure'),
+        ('scripts/self_improver.gd', 'return arr.slice(0, OwnerResourcePolicy.count(arr.size(), "hot_evidence_items"))', 'owner_adjustable'),
+        ('scripts/core_improvement_pipeline.gd', 'var desired_count := clampi(tournament_candidate_count, MIN_TOURNAMENT_CANDIDATES, MAX_TOURNAMENT_CANDIDATES)', 'format_structure'),
+        ('scripts/core_improvement_pipeline.gd', 'var max_attempts := desired_count * OwnerResourcePolicy.value("candidate_proposal_attempt_multiplier")', 'owner_adjustable'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    hard_line = next(line.strip() for line in (ROOT / 'scripts/tool_registry.gd').read_text(encoding='utf-8').splitlines()
+                     if 'guarded.termination_confirmed' in line and 'uncertain_external_state' in line)
+    assert MODULE.classify('scripts/tool_registry.gd', hard_line, policy)[0] == 'hard_boundary'
+    assert MODULE.classify('scripts/tool_registry.gd', hard_line + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+    for path, statement in [
+        ('scripts/windows_trusted_project_bridge.gd', 'var max_chars := clampi(int(args.get("max_chars", 300000)), 1000, 1000000)'),
+        ('scripts/windows_trusted_project_bridge.gd', 'req.timeout = 5.0'),
+        ('scripts/trusted_project_sandbox_bridge.gd', 'var max_chars := clampi(int(args.get("max_chars", 300000)), 1000, 1000000)'),
+        ('scripts/memory_store.gd', 'const MAX_MEMORY := 5000'),
+        ('scripts/tool_registry.gd', 'return {"ok": code == 0, "code": code, "output": "\\n".join(output).substr(0, 100000)}'),
+        ('scripts/self_improver.gd', 'const MAX_GENERATION_ATTEMPTS := 24'),
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"
