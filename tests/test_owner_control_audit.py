@@ -318,6 +318,34 @@ def test_bulk_work_code_memory_review_keeps_fixed_caps_visible():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_learning_evolution_bulk_review_preserves_real_caps():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('agent/learning_collector.py', 'def collect_local(limit: int = 80) -> list[dict]:', 'owner_adjustable'),
+        ('agent/learning_collector.py', 'for entry in root.findall("atom:entry", ns)[:limit]:', 'owner_adjustable'),
+        ('agent/learning_collector.py', 'parser.add_argument("--source-limit", type=int, default=8)', 'owner_adjustable'),
+        ('api/community_learning.py', 'changed = max(0, int(cursor.rowcount))', 'format_structure'),
+        ('api/community_learning.py', 'overflow = max(0, terminal - self.max_terminal_events)', 'format_structure'),
+        ('evolution_engine/core/experiment_registry.gd', 'func recent(limit := 10) -> Array:', 'owner_adjustable'),
+        ('evolution_engine/core/experiment_registry.gd', 'while cap > 0 and _recent.size() > cap:', 'owner_adjustable'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('agent/learning_collector.py', 'MAX_HTTP_BYTES = 2 * 1024 * 1024'),
+        ('agent/learning_collector.py', 'items.extend(collect_internet(args.query, max(1, min(args.source_limit, 20))))'),
+        ('agent/learning_curator.gd', 'const MIN_PROMOTION_SCORE := 0.48'),
+        ('api/community_learning.py', 'bounded_limit = max(1, min(int(limit), 200))'),
+        ('api/community_learning.py', 'self.max_terminal_events = max(1000, int(max_terminal_events))'),
+        ('evolution_engine/core/experiment_registry.gd', '"goal": goal.substr(0, 2000),'),
+        ('evolution_engine/learning/experience_bridge.gd', '"goal": goal.substr(0, 2000),'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"

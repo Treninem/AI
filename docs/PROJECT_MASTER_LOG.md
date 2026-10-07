@@ -8871,3 +8871,36 @@ DONE:141 findings reviewed as one coherent package,117 justified classifications
 REMAINING:publish/sync this audit package; exact new-SHA CI;817 residual inventory findings, including 24 within this six-file review; release package/device/update/version-last gates.
 BLOCKERS:none for audit package; long Android jobs pending on previous SHA.
 NEXT:check exact remote head, commit/push one bulk audit package, verify local/web equality and owner-audit CI, then claim a source repair for the highest-impact preserved caps.
+
+BULK_WORK_CODE_MEMORY_PUBLICATION: commit13596d138efacba351166868ad5b49662d4d1742 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37698741689 SUCCESS includes owner audit27PASS. Long release gates remain tracked by exact SHA; no source or gate weakening.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 reviewed,117 narrowly classified,24 actual candidates retained; published and exact owner CI green.
+REMAINING:817 residual owner findings plus device/package/update/version-last acceptance.
+BLOCKERS:none for next read-only audit.
+NEXT:review coherent Learning/Evolution residual batch and classify only source-proven owner routing or non-cap structure.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-LEARNING-EVOLUTION-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing learning/Evolution owner-control inventory, audit-only.
+ROADMAP_SECTION:4 stable existing learning, Memory/Knowledge and bounded Evolution/security baseline; no V1.6 expansion.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:13596d138efacba351166868ad5b49662d4d1742; fresh main/feature fetched, journal/memory/roadmap and claims checked, local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: agent/learning_collector.py;agent/learning_curator.gd;api/community_learning.py;evolution_engine/core/experiment_registry.gd;evolution_engine/learning/experience_bridge.gd.
+DEPENDENCIES:long exact-SHA device/package release gates continue; source owned by other claims remains untouched.
+NON_BLOCKERS:future V1.6 cognition and post-release344-point owner-PC field check.
+INTENDED_BUMP:none for audit metadata; separate source fix claim D if actual fixed caps are repaired.
+ACCEPTANCE_GATES:review all122 residual findings across five paths in context; classify only exact caller/owner routed or structural lines, preserve real schema, retention, evidence and time caps; adversarial appended-cap/path tests and whole audit; exact CI after one publication.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect provenance of candidate limits, add narrowly anchored classifications/tests, keep unresolved fixed caps visible, publish/sync once.
+
+LEARNING_EVOLUTION_BULK_AUDIT_CHECKPOINT: reviewed all122 previously unclassified lines across five read-only source files: Learning collector35, Community Learning30, Evolution registry17, Learning curator16, Evolution experience bridge24. Exact full-line and path-anchored rules classify32 (29 caller/owner parameter forwarding and retention; three nonnegative Community status-accounting statements). Ninety remain unclassified: collector9 (including fixed HTTP bytes, excerpts, git history and source-limit20 clamp), community27 (request schema/pull/lease/retention/SQLite caps), registry14 (record text truncations), curator16 (promotion/evidence/retry thresholds), experience bridge24 (stored record truncations). No false claim that these are resolved; source repairs require separately claimed behavior and genuine tests. Full audit817→785 unclassified, complete:false; test-evidence count changed with new adversarial fixtures. `tests/test_owner_control_audit.py`28/28 PASS with representative exact classifications, appended fixed-cap and unrelated-path adversaries, and explicit fixed-cap negatives; JSON parse and diff check PASS. No production source or CI gate change.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:122 findings inspected in one coherent package;32 justified classifications and local audit28PASS.
+REMAINING:publish/sync package and exact CI;785 residual inventory findings including90 in this review; source repairs and final device/package/update/version gates.
+BLOCKERS:none for audit publication.
+NEXT:verify remote expected head, commit/push metadata package, check local/origin/web identity and exact owner-audit CI; then prioritize genuine caps for source repair.
