@@ -3,6 +3,7 @@
 Only the test launcher imports this module. Production has no fixture switch.
 """
 import hashlib
+import json
 import os
 from pathlib import Path
 import time
@@ -14,6 +15,7 @@ def gui_shaped_worker(kind, payload, _queue):
     identity = str(payload["__execution_id"])
     digest = hashlib.sha256(identity.encode()).hexdigest()
     root = Path(os.environ["AURORAFOX_SANDBOX_ROOT"])
+    (root / ("gui-policy-" + digest)).write_text(json.dumps(payload.get("__gui_limits", {})))
     (root / ("gui-started-" + digest)).write_text(kind)
     while True:
         (root / ("gui-heartbeat-" + digest)).write_text(str(time.time_ns()))

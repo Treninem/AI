@@ -29,6 +29,10 @@ static func execution_payload(path: String, payload: Dictionary) -> Dictionary:
 	if process:
 		captured["output_chars"] = OwnerResourcePolicy.value("computer_output_chars")
 		captured["capture_bytes"] = OwnerResourcePolicy.value("computer_capture_bytes")
+	if gui:
+		captured["_gui_limits"] = {}
+		for key in ["uia_items", "uia_windows", "uia_controls", "uia_name_chars", "uia_type_chars", "uia_id_chars", "worker_seconds"]:
+			captured["_gui_limits"][key] = OwnerResourcePolicy.value("computer_" + key)
 	if process or gui:
 		# Caller/model input cannot select a previous execution identity.
 		captured["execution_id"] = "%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), Crypto.new().generate_random_bytes(16).hex_encode()]
@@ -39,6 +43,8 @@ static func append_execution_header(headers: PackedStringArray, payload: Diction
 	var captured := headers.duplicate()
 	if payload.has("execution_id"):
 		captured.append("X-AuroraFox-Execution-ID: " + str(payload.execution_id))
+	if payload.has("_gui_limits"):
+		captured.append("X-AuroraFox-GUI-Limits: " + JSON.stringify(payload["_gui_limits"]))
 	return captured
 
 static func wait(request: HTTPRequest, owner: Node, allowed: Callable, service_url: String, token: String, payload: Dictionary) -> Dictionary:

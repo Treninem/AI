@@ -710,6 +710,13 @@ func _run() -> void:
 	var read_payload := ComputerRequestGuard.execution_payload("/screen?limit=10001", {"execution_id": "model-id", "_unsafe_gui": true})
 	assert(read_payload.execution_id != "model-id" and not read_payload._unsafe_gui)
 	assert(not read_payload.has("capture_bytes"))
+	for budget in [1, 1001, 0]:
+		OwnerResourcePolicy._cached.computer_uia_items = budget
+		OwnerResourcePolicy._cached.computer_worker_seconds = budget
+		var policy_payload := ComputerRequestGuard.execution_payload("/windows", {"_gui_limits": {"uia_items": 7}})
+		assert(policy_payload._gui_limits.uia_items == budget and policy_payload._gui_limits.worker_seconds == budget)
+		var policy_headers := ComputerRequestGuard.append_execution_header(PackedStringArray(), policy_payload)
+		assert(policy_headers.has("X-AuroraFox-GUI-Limits: " + JSON.stringify(policy_payload._gui_limits)))
 	var timeout_request := HTTPRequest.new()
 	assert(ComputerRequestGuard.execution_timeout(10001) == 300)
 	assert(ComputerRequestGuard.execution_timeout(0) == 300)

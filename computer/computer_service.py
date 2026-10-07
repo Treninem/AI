@@ -6,6 +6,7 @@ import hashlib
 import hmac
 import json
 import multiprocessing as mp
+import math
 import os
 import re
 import shutil
@@ -67,6 +68,26 @@ _execution_records: dict[str, dict[str, Any]] = {}
 _execution_stopping = False
 _gui_workers: set[Any] = set()
 _gui_worker_lifecycle_lock = threading.RLock()
+
+
+class GuiResourceLimits(BaseModel):
+    uia_items: int = Field(default=250, ge=0)
+    uia_windows: int = Field(default=30, ge=0)
+    uia_controls: int = Field(default=40, ge=0)
+    uia_name_chars: int = Field(default=512, ge=0)
+    uia_type_chars: int = Field(default=64, ge=0)
+    uia_id_chars: int = Field(default=256, ge=0)
+    worker_seconds: int = Field(default=8, ge=0, le=9223372036854775807)
+
+
+def _gui_limits(header):
+    if not header: return GuiResourceLimits().model_dump()
+    try:
+        data = json.loads(header)
+        if not isinstance(data, dict): raise ValueError("object required")
+        return GuiResourceLimits.model_validate(data).model_dump()
+    except (ValueError, TypeError):
+        raise HTTPException(422, "Invalid GUI resource policy")
 
 
 class Action(BaseModel):
@@ -300,6 +321,53 @@ def _validate_action(req: Action) -> dict[str, Any]:
     return action
 
 
+def _collect_uia(desktop, limits):
+    items = []
+    reasons = set()
+    failed = 0
+
+    def bounded(values, key):
+        cap = limits[key]
+        for index, value in enumerate(values):
+            if cap and index >= cap:
+                reasons.add(key)
+                break
+            yield value
+
+    def append(element, kind):
+        if limits["uia_items"] and len(items) >= limits["uia_items"]:
+            reasons.add("uia_items")
+            return False
+        rect = element.rectangle()
+        info = element.element_info
+        record = {"kind": kind, "rect": [rect.left, rect.top, rect.right, rect.bottom]}
+        fields = [("name", element.window_text() or getattr(info, "name", ""), "uia_name_chars"),
+                  ("control_type", getattr(info, "control_type", "Window" if kind == "window" else ""), "uia_type_chars")]
+        if kind == "control": fields.append(("automation_id", getattr(info, "automation_id", ""), "uia_id_chars"))
+        for key, value, budget in fields:
+            text = _redact(str(value), 0)
+            cap = limits[budget]
+            if cap and len(text) > cap:
+                reasons.add(budget)
+                record.setdefault("truncated_fields", []).append(key)
+                text = text[:cap]
+            record[key] = text
+        items.append(record)
+        return True
+
+    for window in bounded(desktop.windows(), "uia_windows"):
+        try:
+            if not append(window, "window"): break
+            for control in bounded(window.descendants(), "uia_controls"):
+                try:
+                    if not append(control, "control"): break
+                except Exception: failed += 1
+        except Exception: failed += 1
+        if "uia_items" in reasons: break
+    return {"ok": True, "items": items, "partial": bool(reasons or failed),
+            "limit_reached": bool(reasons), "limit_reasons": sorted(reasons), "failed_elements": failed}
+
+
 def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
     try:
         if kind == "screen":
@@ -316,25 +384,7 @@ def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
         if kind == "windows":
             from pywinauto import Desktop
 
-            limit = max(1, min(int(payload.get("limit", 250)), 500))
-            items: list[dict[str, Any]] = []
-            for window in Desktop(backend="uia").windows()[:30]:
-                if len(items) >= limit:
-                    break
-                try:
-                    rect = window.rectangle()
-                    items.append({"kind": "window", "name": str(window.window_text())[:512], "control_type": str(getattr(window.element_info, "control_type", "Window"))[:64], "rect": [rect.left, rect.top, rect.right, rect.bottom]})
-                    for control in window.descendants()[:40]:
-                        if len(items) >= limit:
-                            break
-                        try:
-                            cr = control.rectangle()
-                            items.append({"kind": "control", "name": str(control.window_text() or getattr(control.element_info, "name", ""))[:512], "control_type": str(getattr(control.element_info, "control_type", ""))[:64], "automation_id": str(getattr(control.element_info, "automation_id", ""))[:256], "rect": [cr.left, cr.top, cr.right, cr.bottom]})
-                        except Exception:
-                            continue
-                except Exception:
-                    continue
-            queue.put({"ok": True, "items": items})
+            queue.put(_collect_uia(Desktop(backend="uia"), payload.get("__gui_limits", GuiResourceLimits().model_dump())))
             return
         if kind == "action":
             import pyautogui
@@ -423,6 +473,8 @@ def _worker_alive(process: Any) -> bool:
 def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float = GUI_TIMEOUT_SECONDS) -> dict[str, Any]:
     if not IS_WINDOWS:
         return _error("unsupported_platform", "Desktop Computer Agent primitives are supported on Windows only", retryable=False)
+    if not math.isfinite(timeout) or timeout < 0:
+        return _error("invalid_worker_timeout", "Worker deadline must be finite and nonnegative", retryable=False)
     payload = dict(payload or {})
     execution_id = str(payload.get("__execution_id", ""))
     if not execution_id:
@@ -474,7 +526,7 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
             return _error("process_ownership_failed", "GUI worker ownership could not be installed; launch gate remained closed",
                           execution_id=execution_id, termination_confirmed=confirmed, uncertain_external_state=not confirmed, retryable=False)
     try:
-        deadline = time.monotonic() + max(0.1, timeout)
+        deadline = None if timeout == 0 else time.monotonic() + timeout
         result = None
         # Drain before join: the child's Queue feeder cannot flush a large
         # screenshot/UIA payload while the parent waits for child exit.
@@ -484,7 +536,7 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
                 return _error("cancelled", "GUI execution was cancelled", retryable=False,
                               execution_id=execution_id, termination_confirmed=confirmed,
                               uncertain_external_state=not confirmed or bool(record.get("unsafe_gui")))
-            remaining = deadline - time.monotonic()
+            remaining = 0.1 if deadline is None else deadline - time.monotonic()
             try:
                 result = queue.get(timeout=max(0.0, min(0.1, remaining)))
                 break
@@ -496,11 +548,16 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
                         break
                     except Exception:
                         return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
-                if remaining <= 0:
+                if deadline is not None and remaining <= 0:
                     break
-        # The deadline covers both response delivery and worker completion.
+        # Never hold lifecycle ownership while waiting indefinitely: cancellation
+        # must be able to terminate/join the same worker between bounded polls.
+        while True:
+            with _gui_worker_lifecycle_lock:
+                process.join(timeout=0.1 if deadline is None else max(0.0, min(0.1, deadline - time.monotonic())))
+                alive = _worker_alive(process)
+            if not alive or record["cancelled"] or (deadline is not None and time.monotonic() >= deadline): break
         with _gui_worker_lifecycle_lock:
-            process.join(timeout=max(0.0, min(0.1, deadline - time.monotonic())))
             if _worker_alive(process):
                 process.terminate()
                 process.join(1.0)
@@ -508,6 +565,10 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
                     process.kill()
                     process.join(1.0)
                 confirmed = not _worker_alive(process)
+                if record["cancelled"]:
+                    return _error("cancelled", "GUI execution was cancelled while waiting for worker completion", retryable=False,
+                                  execution_id=execution_id, termination_confirmed=bool(record["termination_confirmed"]),
+                                  uncertain_external_state=not bool(record["termination_confirmed"]) or bool(record.get("unsafe_gui")))
                 return _error("timeout", f"{kind} operation timed out", retryable=confirmed and kind in {"screen", "windows"},
                               termination_confirmed=confirmed, uncertain_external_state=not confirmed)
         if record["cancelled"]:
@@ -1056,19 +1117,23 @@ def capabilities(x_aurorafox_computer_token: str | None = Header(default=None)) 
 
 @app.get("/screen")
 def screen(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")) -> dict[str, Any]:
+           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$"),
+            x_aurorafox_gui_limits: str = Header(default="")) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    limits = _gui_limits(x_aurorafox_gui_limits)
     with _gui_execution_scope(x_aurorafox_execution_id) as (execution_id, error):
         if error is not None: return error
-        result = _run_worker("screen", {"__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+        result = _run_worker("screen", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
         if result.get("ok"):
-            windows_result = _run_worker("windows", {"limit": 250, "__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+            windows_result = _run_worker("windows", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
             if _execution_records[execution_id]["cancelled"]:
                 return _error("cancelled", "Screen request was cancelled", retryable=False, execution_id=execution_id,
                               termination_confirmed=bool(_execution_records[execution_id]["termination_confirmed"]))
             result["uia"] = windows_result.get("items", []) if windows_result.get("ok") else []
             result["uia_ok"] = bool(windows_result.get("ok"))
             result["uia_partial"] = not result["uia_ok"] or bool(windows_result.get("partial"))
+            result["uia_limit_reasons"] = windows_result.get("limit_reasons", [])
+            result["uia_failed_elements"] = windows_result.get("failed_elements", 0)
             if not result["uia_ok"]: result["uia_error"] = windows_result.get("error", "uia_unverified")
             result["partial"] = bool(result.get("partial")) or result["uia_partial"]
             result["virtual_desktop"] = _desktop_bounds(); result["retryable"] = True
@@ -1077,11 +1142,13 @@ def screen(x_aurorafox_computer_token: str | None = Header(default=None), x_auro
 
 @app.get("/windows")
 def windows(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-            x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")) -> dict[str, Any]:
+            x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$"),
+            x_aurorafox_gui_limits: str = Header(default="")) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    limits = _gui_limits(x_aurorafox_gui_limits)
     with _gui_execution_scope(x_aurorafox_execution_id) as (execution_id, error):
         if error is not None: return error
-        result = _run_worker("windows", {"limit": 250, "__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+        result = _run_worker("windows", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
         result["retryable"] = result.get("error") not in {"cancelled", "execution_id_reused", "service_stopping"} and not result.get("uncertain_external_state", False)
         return result
 

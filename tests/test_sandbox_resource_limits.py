@@ -744,3 +744,72 @@ def test_actual_bootstrap_waits_for_parent_authority_before_worker_code(tmp_path
             process.terminate()
             process.join(timeout=5)
         queue.close()
+
+
+def _uia_fixture(windows=2, controls=2, *, broken=False):
+    from types import SimpleNamespace
+    class Element:
+        element_info = SimpleNamespace(name="fallback", control_type="Button", automation_id="identifier")
+        def window_text(self): return "NameLong"
+        def rectangle(self):
+            if broken: raise RuntimeError("unavailable element")
+            return SimpleNamespace(left=0, top=0, right=1, bottom=1)
+        def descendants(self): return [Element() for _ in range(controls)]
+    return SimpleNamespace(windows=lambda: [Element() for _ in range(windows)])
+
+
+@pytest.mark.parametrize("key,cap", [("uia_items", 2), ("uia_windows", 1), ("uia_controls", 1), ("uia_name_chars", 3), ("uia_type_chars", 3), ("uia_id_chars", 3)])
+def test_uia_owner_caps_report_real_overflow_and_zero_restores_coverage(tmp_path, monkeypatch, key, cap):
+    module, _ = service(tmp_path, monkeypatch)
+    unlimited = {k: 0 for k in module.GuiResourceLimits.model_fields}
+    limited = module._collect_uia(_uia_fixture(), {**unlimited, key: cap})
+    assert limited["ok"] and limited["partial"] and limited["limit_reached"]
+    assert key in limited["limit_reasons"]
+    complete = module._collect_uia(_uia_fixture(), unlimited)
+    assert len(complete["items"]) == 6 and not complete["partial"] and not complete["limit_reached"]
+    assert complete["items"][-1]["automation_id"] == "identifier"
+
+
+def test_uia_exact_fit_and_failed_elements_are_distinct_from_overflow(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    limits = module.GuiResourceLimits(uia_items=6, uia_windows=2, uia_controls=2, uia_name_chars=8, uia_type_chars=6, uia_id_chars=10).model_dump()
+    complete = module._collect_uia(_uia_fixture(), limits)
+    assert len(complete["items"]) == 6 and not complete["partial"]
+    failed = module._collect_uia(_uia_fixture(broken=True), limits)
+    assert failed["ok"] and failed["partial"] and failed["failed_elements"] == 2
+    assert not failed["items"] and not failed["limit_reached"]
+
+
+@pytest.mark.parametrize("bad", ['[]', '{"worker_seconds":-1}', '{"uia_items":-1}', 'invalid', '{"worker_seconds":1e100}'])
+def test_gui_resource_header_rejects_bad_policy_before_worker_start(tmp_path, monkeypatch, bad):
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_success_worker)
+    result = client.get("/windows", headers={**HEADERS, "X-AuroraFox-GUI-Limits": bad})
+    assert result.status_code == 422 and not (module.SANDBOX_ROOT / "gui-api-launches").exists()
+
+
+def _spawn_gui_result_then_hanging_worker(_kind, _payload, queue):
+    root = Path(os.environ["AURORAFOX_SANDBOX_ROOT"])
+    queue.put({"ok": True, "items": []})
+    (root / "gui-api-started").write_text("response queued")
+    while True: time.sleep(0.02)
+
+
+def test_zero_gui_deadline_keeps_waiting_after_response_and_remains_cancellable(tmp_path, monkeypatch):
+    import concurrent.futures
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_result_then_hanging_worker)
+    headers = {**HEADERS, "X-AuroraFox-Execution-ID": "zero-gui-budget", "X-AuroraFox-GUI-Limits": '{"worker_seconds":0}'}
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = pool.submit(client.get, "/windows", headers=headers)
+        try:
+            _wait_for_file(module.SANDBOX_ROOT / "gui-api-started")
+            time.sleep(0.3)
+            assert not future.done(), "zero deadline became an implicit post-response timeout"
+            stopped = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token": TOKEN}, json={"execution_id":"zero-gui-budget"}).json()
+            assert stopped["termination_confirmed"]
+            result = future.result(timeout=5).json()
+            assert result["error"] == "cancelled" and not result["retryable"]
+        finally: module._cancel_all_processes()

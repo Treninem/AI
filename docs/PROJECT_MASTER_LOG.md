@@ -7441,3 +7441,35 @@ DONE:GUI lifecycle/cancellation source and localsoftware evidence; selected-owne
 REMAINING:publish/exactWindows+Docker+packageCI; GUI/UIA/action owner budgets, remaining provider/inventory/unfinishedCRITICAL; exact release/package/device/update/version-last.
 BLOCKERS:no external blocker prevents independent sourcework; native Windows/physical device/production acceptance unwaived.
 NEXT:publish coherent GUI package, continue remaining operational owner controls while exactCI runs.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-GUI-RESOURCE-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining Computer/UIA operational owner controls and truthful coverage
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:87040cae01b65333898f55341b848368cd3e76fb
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/owner_resource_policy.gd;scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tools/computer_gui_guard_fixture.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:reconciles completed localGUI cancellation source into published87040cae/tree2459a5e4b03b5a22f608da58113e26253e2582d2. Native exactCI pending; no duplicate Computer ownership.
+NON_BLOCKERS:sourceinventory/physicalGUI/release gates unfinished, no V1.6/S3/sourcefreeze/version changes. UIA library enumeration may itself materialize platform data; owner result limits are not a claim to bound library internal allocation.
+ACCEPTANCE_GATES:private owner snapshot overwrites model policy and propagates GET via header; nonnegative finite budgets, zero disables operational ceiling. UIA exact-fit vs actual overflow and shortened fields/errors explicit; no silently complete empty extraction. Worker unlimited deadline remains cancellable and owned. Real Godot/API/spawn and existing cancellation/privacy regressions, nativeWindowsCI required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement coherent UIA enumeration/string/worker deadline owner policy and its acceptance cases.
+
+### Coherent UIA owner policy source checkpoint
+CLAIM:WORK-2026-10-07-V15-GUI-RESOURCE-POLICY ACTIVE/CI_PENDING.
+CHANGES:seven private owner settings expose UIA items250/windows30/controls40/name512/type64/ID256 and screen/UIA worker8seconds defaults. Trusted captured policy overrides model policy; GET propagates via authenticated header. Zero removes operational ceiling. Exactfit is complete; actual extra elements/string clipping/failures report partial with reasons/counts. Full-value redaction precedes field clipping. Combinedscreen preserves UIA evidence. Worker completion joins now use bounded unlocked-between-poll intervals; unlimited waits remain cancellable after queue delivery and cancellation wins timeout classification. Existing action budgets are not silently declared complete.
+TESTS:pinned Computer+owner+audit118PASS/6SKIP; latestComputer96PASS/6SKIP. Six local skips remainDocker/NTFS/fourWindowsJob, notPASS. UIA traversal fixtures are unit coverage, not nativeGUI evidence. Genuine result-then-hang spawn proves zero still waits and authenticatedcancel stops it. ActualGodot/Uvicorn PASS including modelpolicy override and zero worker/raised1001items GET header reception, MasterStop, transport and unsafe uncertainty. OwnerGodotPASS (existing exit diagnostics20ObjectDB/8resources recorded, not ignored as nativeacceptance). DiffcheckPASS. Initial zero cancellation regression failed timeout-vs-cancel classification; repaired, finalbatch passed.
+PRIOR_PRODUCED_SHA:87040cae01b65333898f55341b848368cd3e76fb;tree2459a5e4b03b5a22f608da58113e26253e2582d2. Observed44checks=33SUCCESS/3SKIP/8IN_PROGRESS,0FAILURE. LinuxComputer112659405454/WindowsComputer112659405428/work-godot112659405568 SUCCESS prove publishedGUI lifecycle and selected-owner faultrepair; package/device/import/Core pending are notPASS.
+INVENTORY:480files;1500test_evidence/1342unclassified/65documentation/671owner_adjustable/360format_structure/37hard_boundary;complete:false. Changedsource/newfindings retained, no blanketclosure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedGUI lifecycle exactComputer gatesaccepted; UIA operational limits/source/localsoftwarecoverage accepted.
+REMAINING:publish/exactCI; action limits, provider/resourceinventory/unfinishedcritical; package/device/update/production/version-last.
+BLOCKERS:no external blocker to independent source; native/physicalproduction acceptance unwaived.
+NEXT:publish coherent9pathUIA policy, continue action controls and remaining audited operational limits.
