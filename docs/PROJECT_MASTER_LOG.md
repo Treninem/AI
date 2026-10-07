@@ -8126,3 +8126,42 @@ DONE: production owner health/PDF controls and 25+6+34 local behavior/contract c
 REMAINING: publish fixture repair, exact native Linux File Intelligence and wider CI;1014 owner inventory, device/update/version-last acceptance.
 BLOCKERS: exact2c36b25 File Intelligence CI failure run37680867860 from test fixture; repaired locally, new-SHA verdict pending.
 NEXT:commit/push narrow fixture repair by expected-head fast-forward, then inspect exact CI result before next source package.
+
+
+### OWNER DECISION — V1.5.0.0 REAL OWNER-PC END-TO-END ACCEPTANCE — 2026-10-07
+
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL release acceptance.
+OWNER_REQUIREMENT: Before V1.5.0.0 may be declared ready or released, AuroraFox must be tested as an actually installed application on the owner's real Windows PC, not only through CI, source-level tests, mocks, exported-package smoke, or isolated runtime fixtures.
+
+ACCEPTANCE_METHOD:
+- Use a locally operating coding/computer-control agent (Codex on the owner's PC when that capability is available) as a real user of the installed AuroraFox build.
+- Build/package the exact release candidate, install it through the normal installer, launch the installed application, and interact with the visible UI rather than only calling internal test hooks.
+- Record the exact candidate SHA/package identity and preserve logs/evidence for every failure found.
+- A failure found during this pass is a release blocker until repaired and the affected scenario is rerun on the repaired exact candidate.
+
+MANDATORY OWNER-PC SCENARIOS:
+1. Clean/normal installation and first launch.
+2. Normal local chat with the bundled Core; several consecutive requests; long response; cancel/stop; retry after a failure.
+3. Close and reopen AuroraFox; verify that normal retained Memory/Knowledge and settings survive as intended.
+4. Settings window: open independently, switch focus between it and the main window, taskbar presence, close/reopen, resize/narrow/wide/DPI-visible behavior, and no minute-scale UI stalls.
+5. File use through the visible product UI: supported text/document/PDF/spreadsheet/archive/image-OCR cases; large/partial/unsupported cases must report their state truthfully instead of pretending full success.
+6. Public-link reading through the normal UI; verify successful public reading/remember behavior and honest handling of login/CAPTCHA/paywall/network failure boundaries.
+7. Voice through the installed product where owner hardware permits: start/stop, recognition, speech output, interruption/barge-in, and continued text-chat usability after Voice failure or disable.
+8. Work/Computer baseline through the installed product for supported safe actions: visible action, cancellation/Master Stop, and observable result verification; never count an unverified external action as completed.
+9. Offline test: disconnect network after the installed application is known-good; verify the supported local chat/Core path remains usable and online-only functions fail honestly.
+10. Network restoration: reconnect and verify recovery without requiring a destructive reinstall/reset.
+11. Updater end-to-end on the real PC: detect an eligible signed test/release update, begin download, interrupt network, restore network and verify continuation without discarding valid completed chunks; restart AuroraFox/PC at an appropriate test point and verify supported resume behavior.
+12. Update integrity/apply path: verify signature/hash/integrity rejection for invalid material using a safe test fixture, successful atomic apply for a valid candidate, post-update health check, and rollback/recovery behavior when the new version is deliberately made unhealthy in a controlled test.
+13. Restart after update and verify the installed version, launch, settings/data preservation expected by the migration contract, Core chat and basic file flow.
+14. Inspect user-visible errors and logs from the above run; secrets/tokens/password-like values must not be exposed.
+15. Final ordinary-user pass: open AuroraFox, chat, use Settings, open a supported file, close/reopen, and confirm there is no known blocker that requires developer-only workarounds.
+
+PASS RULE:
+- Automated CI remains mandatory; this physical owner-PC pass is additional evidence, not a replacement.
+- Do not call V1.5.0.0 released/100% ready while any mandatory owner-PC scenario is unexecuted, failed, or only simulated when real execution is technically available.
+- If a scenario is impossible because required physical hardware/capability is genuinely unavailable, mark it NOT_EXECUTED with the exact reason; do not silently count it as PASS. Release requires an explicit owner decision for any such exception.
+- The final release candidate must still satisfy the canonical exact-SHA package/device/update gates and version-last rule after all repairs.
+
+DONE: owner requirement recorded in the master coordination journal.
+REMAINING: execute this real installed-app acceptance on the final V1.5.0.0 candidate after the current source/CI blockers and package gates are cleared.
