@@ -424,6 +424,40 @@ def test_api_bulk_review_classifies_exact_forwarding_without_hiding_real_caps():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_local_input_bulk_review_preserves_real_agent_file_voice_limits():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('agent/autonomous_coordinator.gd', 'report["events"] = _events.slice(maxi(0, _events.size() - OwnerResourcePolicy.count(_events.size(), "coordinator_report_items")), _events.size())', 'owner_adjustable'),
+        ('agent/autonomous_coordinator.gd', 'return clampi(size, SelfImprover.MIN_MUTATIONS, SelfImprover.MAX_MUTATIONS)', 'format_structure'),
+        ('agent/goals.gd', 'var accuracy := clampf(float(metrics.get("accuracy", 0.0)), 0.0, 1.0)', 'format_structure'),
+        ('agent/learning_collector.py', 'with urllib.request.urlopen(request, timeout=timeout) as response:', 'owner_adjustable'),
+        ('file_intelligence/extended_formats.py', 'remaining = max(0, max_chars)', 'owner_adjustable'),
+        ('file_intelligence/extended_formats.py', 'expanded += max(0, int(info.file_size))', 'format_structure'),
+        ('file_intelligence/local_ocr.py', '"max_input_pixels": OCR_MAX_INPUT_PIXELS,', 'owner_adjustable'),
+        ('file_intelligence/setup_wizard.gd', 'progress.max_value = 100', 'format_structure'),
+        ('voice/voice_bridge.gd', 'req.timeout = timeout', 'owner_adjustable'),
+        ('voice/voice_logger.gd', 'var cap := OwnerResourcePolicy.value("voice_log_bytes")', 'owner_adjustable'),
+        ('voice/voice_manager.gd', 'var sample := int(clampf(tone * env * gain, -1.0, 1.0) * 32767.0)', 'format_structure'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + ' FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('agent/learning_collector.py', 'MAX_HTTP_BYTES = 2 * 1024 * 1024'),
+        ('agent/learning_curator.gd', 'const MIN_PROMOTION_SCORE := 0.48'),
+        ('agent/research_collector.gd', 'const MAX_ITEMS_PER_SOURCE := 5'),
+        ('file_intelligence/extended_formats.py', 'def analyze_epub(path: Path, max_chars: int = 160000) -> tuple[str, dict[str, Any], list[str]]:'),
+        ('file_intelligence/project_index_service.py', 'root: str = Field(min_length=1, max_length=8192)'),
+        ('voice/android_mic_monitor.gd', 'const MIN_SPEECH_SEC := 0.24'),
+        ('voice/voice_bridge.gd', 'func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 30.0) -> Dictionary:'),
+        ('voice/voice_logger.gd', 'const MAX_BYTES := 5 * 1024 * 1024'),
+        ('voice/voice_manager.gd', '"speed": clampf(speech_speed, 0.82, 1.20),'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_evolution_learning_bulk_review_keeps_real_evidence_caps_visible():
     policy = MODULE.load_policy()
     reviewed = [

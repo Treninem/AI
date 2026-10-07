@@ -9115,3 +9115,33 @@ DONE:141 API findings reviewed and published;39 confirmed exact classifications;
 REMAINING:628 owner-control inventory findings, source repairs and final exact-SHA Windows/Android/Knowledge/package/update/version acceptance.
 BLOCKERS:none for completed audit metadata; external release gates pending.
 NEXT:verify evidence-only journal publication, then claim a connected source-level owner-cap repair or next ≥100 finding review after fresh main/journal/CI sync.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-LOCAL-INPUT-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing local agent, File Intelligence and Voice owner-control inventory; audit-only.
+ROADMAP_SECTION:4 self-primary offline agent, supported file understanding and local voice baseline with owner-adjustable operational limits.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no multimodal/agent architecture change.
+STARTING_HEAD:16e9345187aace0925dd1ca89832548825e79c58; fresh main/feature fetched, main ancestor confirmed, clean local/origin exact, latest journal/roadmap/memory/ADRs and claims checked. Exact owner audit, API and Core CI green; long platform gates pending with no red at claim start.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: agent/, file_intelligence/, voice/ current audit findings.
+CLAIM_RECONCILIATION:prior API audit closed and released policy/tests/journal. Existing source ownership elsewhere remains untouched; no production files are edited under this audit claim.
+DEPENDENCIES:preserve local self-primary processing, agent safety, file/archive parser limits, voice privacy and actual CPU/memory/deadline controls as visible findings.
+NON_BLOCKERS:V1.6 cognition and deferred public/multitenant capabilities.
+INTENDED_BUMP:none for audit metadata; confirmed source repairs need independent D claim and full tests.
+ACCEPTANCE_GATES:review all109 current residual agent/file_intelligence/voice lines with code context; classify only exact owner-controlled, non-cap structural or documentation statements; retain real/ambiguous limits; adversarial path/appended-cap tests, full owner audit, exact CI and local/origin/web SHA.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:API141-finding package complete with39 exact classifications and exact owner CI success.
+REMAINING:review109 local-input findings, publish verified audit;628 global residuals and release gates.
+BLOCKERS:none for read-only audit.
+NEXT:enumerate all109 lines and inspect contexts before policy edits.
+LOCAL_INPUT_BULK_AUDIT_CHECKPOINT:all109 previously unclassified agent/, file_intelligence/ and voice/ findings reviewed with source context. Fifty-four exact path/full-line classifications: owner/caller budgets17, normalized score/progress/sample/metadata and diagnostic structure37. Fifty-five actual or ambiguous limits retained, including agent HTTP2MiB and fixed source counts/deadlines, learning corroboration/evidence/retry thresholds, EPUB/RAR default160000 and archive controls, Project Index path8192 and SQLite30s, voice minimum speech, barge-in, TTS speed, setup timers, client request30s and legacy voice log5MiB. No production source, voice behavior, agent safety, archive parser or OCR limits changed. Global unclassified628→574; local-input109→55, complete:false. Added exact category/path/appended-cap adversarial and unresolved tests; full owner audit34PASS, policy JSON parse and diff check PASS. No new engineering-memory defect was found; source repairs need a separate D claim.
+SOURCE_COMPLETE:YES for audit-only package.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:109 connected local-input findings inspected;54 exact classifications;55 retained; owner audit34PASS.
+REMAINING:publish/sync and exact owner CI;574 global inventory residuals and final release gates.
+BLOCKERS:none for audit metadata scope.
+NEXT:commit/push policy/tests/journal, verify exact SHA and owner-audit CI, release occupied metadata paths.
