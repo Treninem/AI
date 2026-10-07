@@ -8793,3 +8793,46 @@ DONE:API persistence audit25/25 local tests,17 exact classifications and three v
 REMAINING:publish/synchronize package, evaluate exact new-SHA CI, release/device/update/version-last gates and945 residual inventory findings.
 BLOCKERS:none for publication.
 NEXT:commit/push exact audited policy/tests/journal, verify remote identity and monitor CI evidence per SHA.
+
+API_PERSISTENCE_PUBLICATION_AND_CI: commit bc4a709479c2d41e7c9ac9d48296c8e3b117f836 published; local/origin/web exact match and clean. Exact Chat Learning Attachment job37694498954 SUCCESS includes owner-control audit. Exact native Windows Computer/acceptance/smoke and real Core Windows PASS; Android APK PASS. Android Plugin run37694499001 attempt1 FAILED in AAR build because Gradle could not resolve unchanged org.tukaani:xz1.10, junrar8.0.0 and poi5.5.1 from configured repositories; predecessor SHA4979ba0 Android Plugin passed with identical Android source/workflow. Cause currently unconfirmed transient external Maven/JitPack resolution, not a product regression assertion. Failed job rerun attempt2 on same bc4a709 in progress without source/dependency changes. Real one-GiB import, Windows package and Android emulator/normal path are still pending; do not count old SHA evidence as same-SHA acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:API persistence metadata package published and audit CI green; Android plugin failure isolated to external dependency resolution and exact-SHA rerun started.
+REMAINING:observe rerun outcome, long exact-SHA release gates, three API fixed minima and broader945 audit candidates.
+BLOCKERS:Android Plugin attempt1 red on bc4a709, attempt2 pending; root cause unconfirmed.
+NEXT:inspect Android rerun verdict; if repeat red, diagnose repository/artifact availability without weakening dependencies or tests. Review Project Index backend residual lines independently.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PROJECT-INDEX-BACKEND-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Code/Project Index owner budget and truthful result metadata, inventory-only review.
+ROADMAP_SECTION:4 Code/project work, owner-adjustable operational limits where allowed.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:bc4a709479c2d41e7c9ac9d48296c8e3b117f836; fresh main/feature fetched, exact local/remote match and journal checked.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md for confirmed identical-SHA CI recovery. `file_intelligence/project_index_service.py` is read-only in this package.
+DEPENDENCIES:prior Project Index source claims published/released; current bc4a709 Android Plugin retry and long device/package/Knowledge gates in progress. No source or workflow changes here.
+NON_BLOCKERS:post-release344-point owner-PC pass; no future Cognitive scope.
+INTENDED_BUMP:none for inventory metadata; D only if a separate claimed source repair follows.
+ACCEPTANCE_GATES:review all15 Project Index backend residual lines in context, classify only exact owner-sourced/result/technical structure with adversarial tests; keep independent SQLite lock deadline and any fixed functional cap unclassified; preserve existing Project Index CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect the15 exact lines and existing owner index tests, update only narrow audit policy/tests, run local suite and publish after current long-gate verdict if possible.
+
+PROJECT_INDEX_BACKEND_AUDIT_CHECKPOINT: inspected all15 residual lines. Exact anchored audit rules classify three excerpt-window calculations that consume the caller's owner `size`, and eight query/SQLite-integer/FTS-probe/coverage representation statements. Root path max_length8192 in three request shapes and SQLite connect timeout30 remain unclassified as real candidate operational limits. Adversarial appended-cap and unrelated-path tests preserve detection. Full audit now934 unclassified from945; inventory complete false. `tests/test_owner_control_audit.py`26/26 PASS; diff check PASS; backend source unchanged.
+ANDROID_RETRY:exact bc4a709 Android Plugin attempt1 failed Maven resolution of three unchanged pinned dependencies; attempt2 passed setup and is currently in AAR build. Previous4979ba0 AAR succeeded on identical Android source/workflow. Do not label an unconfirmed external outage as fixed before exact retry result. Exact bc4a709 Android APK, Windows Core, Computer, native acceptance and Windows smoke passed; one-GiB import, emulator/normal-path and Windows installer still running.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Project Index 15-line audit review, 11 classifications with adversarial tests; local audit26PASS.
+REMAINING:publish this inventory package after Android retry verdict, evaluate all long gates by exact SHA, fix true Project Index path/SQLite limits in a distinct source claim if required; owner inventory934 unresolved.
+BLOCKERS:Android Plugin exact bc4a709 attempt1 red, attempt2 in progress with root cause unconfirmed.
+NEXT:wait for AAR rerun verdict, inspect any second failure log; then commit/push reviewed audit by exact expected-head and verify local/web parity.
+
+ANDROID_IDENTICAL_SHA_RECOVERY: exact bc4a709 Android Plugin run37694499001 attempt2 completed SUCCESS, including AAR build and exported library verification. Attempt1 Maven resolution failure remains recorded as a red attempt; identical source/workflow/dependencies and successful same-SHA retry establish a transient resolution event, not a confirmed root cause. AF-171 records the reusable retry/diagnostic rule without relaxing pins or tests. Exact bc4a709 Android APK, real Core Android emulator, real Core Windows, Computer Linux/Windows, native Windows acceptance and owner audit CI PASS; real one-GiB import, Android normal path and Windows installer remain in progress.
+PROJECT_INDEX_AUDIT_PUBLICATION_READY:11 of15 residual backend lines classified exactly; four actual root-path-length/SQLite-wait candidates visible, audit934 unclassified, local owner-audit26PASS. Publish metadata-only package after exact remote-head check, then label future CI with its new SHA.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:identical-SHA Android plugin retry green and AF-171 memory recorded; Project Index inventory package locally verified.
+REMAINING:publish/sync inventory package, final exact-SHA Android normal path/Knowledge/Windows installer/update/version-last evidence,934 owner inventory candidates.
+BLOCKERS:none for Android Plugin after green attempt2; long release gates still pending.
+NEXT:commit/push the Project Index audit by exact expected-head fast-forward, verify local/web parity and its new CI run.

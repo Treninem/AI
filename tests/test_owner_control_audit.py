@@ -260,6 +260,28 @@ def test_api_persistence_review_keeps_real_scheduling_floor_visible():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_project_index_backend_review_keeps_path_and_sqlite_caps_visible():
+    policy = MODULE.load_policy()
+    path = 'file_intelligence/project_index_service.py'
+    for statement, category in [
+        ('start = max(0, pos - size // 3)', 'owner_adjustable'),
+        ('end = min(len(content), start + size)', 'owner_adjustable'),
+        ('available = max(0, size - len(prefix) - len(suffix))', 'owner_adjustable'),
+        ('limit: int = Field(default=20, ge=0, le=9223372036854775806)', 'format_structure'),
+        ('db.execute("SELECT rowid FROM files_fts LIMIT 1").fetchall()', 'format_structure'),
+        ('limit_reached = True', 'format_structure'),
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    for statement in [
+        'root: str = Field(min_length=1, max_length=8192)',
+        'root: str = Field(default="", max_length=8192)',
+        'db = sqlite3.connect(DB_PATH, timeout=30)',
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"
