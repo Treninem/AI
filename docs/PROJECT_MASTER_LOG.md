@@ -8036,3 +8036,29 @@ CODE_FREEZE_SHA:none
 PROGRESS_COMPLETE:82%
 PROGRESS_REMAINING:18%
 NEXT:verify local payload and publish by expected-head fast-forward, then inspect unchanged native Windows Core gate.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-CORE-LESSON-AND-INVENTORY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Core and owner-controlled operational limits.
+ROADMAP_SECTION:4 Core/Chat, security/privacy, exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:d79726ce96d09d5e5c577832226aa30fd7b0f114; origin feature synchronized; fresh origin/main fetched.
+OWNED_PATHS:docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md;one narrowly selected unclaimed inventory source plus tests/policy after review.
+DEPENDENCIES:exact Windows Core benchmark 37667509560 succeeded 21/21; Core/Voice CI succeeded. Four additional exact-SHA workflows still pending/in progress. Existing stale claims in section14 are respected; avoid their occupied production paths.
+NON_BLOCKERS:V1.6/V1.7 work remains deferred; no new release critical scope.
+INTENDED_BUMP:D accumulated version-last.
+ACCEPTANCE_GATES:record confirmed Core root cause with prevention; select real unclassified owner limit from unclaimed source, use production behavior tests and adversarial audit; preserve exact quality/package/device/release gates and same-SHA policy. No blanket inventory waiver.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:reconcile Core lesson, inspect unclaimed owner inventory, execute coherent next batch.
+
+CORE_ACCEPTANCE_CHECKPOINT: production fix d79726ce96d09d5e5c577832226aa30fd7b0f114 passed exact Windows Core benchmark run37667509560, 21/21 required quality scenarios, planning seven steps, performance gate PASS. Exact Core/Voice CI run37667509412 PASS. Real 1GiB streaming Knowledge import/restart run37667509691 PASS; real Android Core E2E run37667509425 PASS; Android Core benchmark and APK artifact PASS. At review, 22 of 23 exact-SHA workflows SUCCESS, Windows Package run37667509617 remains IN_PROGRESS at Inno installer compression after exported package/Core/exe/Knowledge route smokes PASS. Do not count installer, installed-app, historical V1.2/V1.3 bridge or final package assets as accepted until the job succeeds. No product source changes since d79726c; this checkpoint is documentation-only.
+INVENTORY_CHECKPOINT: current audit scans484source files,4261findings:1717test_evidence,1190unclassified,68documentation,819owner_adjustable,408format_structure,59hard_boundary. Completion false. Highest residual paths include api/server.py51, computer/computer_service.py50, file_intelligence/file_service.py45, scripts/tool_registry.gd36; these counts are review candidates rather than confirmed defects. Preserve existing active file claims and review exact operational caps with production tests in coherent groups, not broad regex waivers. ToolRegistry has an actually reachable OS.execute output postclip100000 and several caller defaults; its unused _http_json240 path should not be converted into owner policy blindly. Source inventory and physical device checks remain release work.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: Core planning root cause repaired at d79726c, exact real Windows Core21/21 and performance, Android Core E2E/benchmark, Knowledge1GiB, Core/Voice and 22 of23 workflows passed; reusable AF-165 lesson recorded.
+REMAINING: Windows installer/installed-app/historical bridge gate; reviewed owner-limit inventory and actual device/update/release acceptance; final version-last and same-SHA post-bump verification.
+BLOCKERS: no current red gate on d79726c; Windows package run37667509617 still IN_PROGRESS and cannot count PASS.
+NEXT: inspect Windows package outcome, then select a bounded unclaimed owner-limit source package with behavior tests; avoid silent audit waivers and preserve exact gate policy.
