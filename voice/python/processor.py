@@ -374,13 +374,12 @@ class AuroraVoiceProcessor:
         return wave_out.detach().cpu().numpy().astype(np.float32, copy=False)
 
     def _stft_sizes(self, sample_count: int) -> tuple[int, int]:
-        requested = int(self.config.get("stft_n_fft", 1024))
-        n_fft = max(256, min(2048, requested))
-        if sample_count > 0:
-            while n_fft > 256 and n_fft > sample_count:
-                n_fft //= 2
+        n_fft = int(self.config.get("stft_n_fft", 1024))
+        if n_fft < 2 or n_fft & (n_fft - 1):
+            raise ValueError("stft_n_fft must be a power of two >= 2")
         hop = int(self.config.get("stft_hop_length", n_fft // 4))
-        hop = max(64, min(n_fft // 2, hop))
+        if hop < 1 or hop > n_fft // 2:
+            raise ValueError("stft_hop_length must be between 1 and half the FFT size")
         return n_fft, hop
 
     @staticmethod

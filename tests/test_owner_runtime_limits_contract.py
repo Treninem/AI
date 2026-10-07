@@ -99,6 +99,22 @@ def test_resource_policy_consumer_keys_are_persistable_and_owner_visible():
                     assert key in default_keys, (path.relative_to(ROOT), key)
 
 
+def test_voice_dsp_owner_controls_reach_the_backend_without_silent_fft_clamps():
+    policy = (ROOT / "scripts/owner_resource_policy.gd").read_text()
+    bridge = (ROOT / "voice/voice_bridge.gd").read_text()
+    backend = (ROOT / "voice/python/aurora_voice_server.py").read_text()
+    processor = (ROOT / "voice/python/processor.py").read_text()
+    for name in ("voice_stft_n_fft", "voice_stft_hop_length"):
+        assert name in policy
+    for suffix in ("STFT_N_FFT", "STFT_HOP_LENGTH"):
+        assert suffix in bridge
+    assert 'processor_config["stft_n_fft"] = VOICE_LIMITS.stft_n_fft' in backend
+    assert 'processor_config["stft_hop_length"] = VOICE_LIMITS.stft_hop_length' in backend
+    assert 'CONFIG["processor"] = processor_config' in backend
+    assert 'min(2048, requested)' not in processor
+    assert 'max(64, min(n_fft // 2, hop))' not in processor
+
+
 def test_native_extractor_cannot_save_acceptance_placeholders_as_knowledge():
     native = (ROOT / "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidFileRuntime.kt").read_text()
     assert "readXlsText(file, limits)" in native

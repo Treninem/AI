@@ -55,7 +55,11 @@ PORT = int(os.getenv("AURORAFOX_VOICE_PORT", "8765"))
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 app = FastAPI(title="AuroraFox Voice", version="1.1.0")
-processor = AuroraVoiceProcessor(CONFIG.get("processor", {}))
+processor_config = dict(CONFIG.get("processor", {}))
+processor_config["stft_n_fft"] = VOICE_LIMITS.stft_n_fft
+processor_config["stft_hop_length"] = VOICE_LIMITS.stft_hop_length
+CONFIG["processor"] = processor_config  # Cache identity follows the effective DSP profile.
+processor = AuroraVoiceProcessor(processor_config)
 router = EngineRouter(CONFIG, DEVICE)
 _stt_pipe = None
 

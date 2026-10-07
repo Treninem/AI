@@ -102,6 +102,11 @@ func _run() -> void:
 	assert(OwnerResourcePolicy.save({"task_trace_chars": NAN}, path) == ERR_INVALID_PARAMETER)
 	assert(OwnerResourcePolicy.save({"unknown": 1}, path) == ERR_INVALID_PARAMETER)
 	assert(OwnerResourcePolicy.save({"chat_max_tokens": 2147483648}, path) == ERR_INVALID_PARAMETER)
+	assert(OwnerResourcePolicy.save({"voice_stft_n_fft": 4096, "voice_stft_hop_length": 1024}, path) == OK)
+	assert(OwnerResourcePolicy.limits(path).voice_stft_n_fft == 4096)
+	assert(OwnerResourcePolicy.save({"voice_stft_n_fft": 3}, path) == ERR_INVALID_PARAMETER)
+	assert(OwnerResourcePolicy.save({"voice_stft_n_fft": 0}, path) == ERR_INVALID_PARAMETER)
+	assert(OwnerResourcePolicy.save({"voice_stft_hop_length": 2049}, path) == ERR_INVALID_PARAMETER)
 	assert(OwnerResourcePolicy.save({"task_trace_chars": 10}, "user://missing_resource_fixture_dir/value.cfg") != OK)
 	var input_client := ComputerClient.new()
 	var input_keys := ["sandbox_command_items", "sandbox_cwd_chars", "sandbox_write_path_chars", "workspace_task_chars"]
@@ -288,6 +293,11 @@ func _run() -> void:
 		for key in ["voice_tts_input_chars", "voice_cache_bytes", "voice_mic_queue_chunks", "voice_path_chars"]: OwnerResourcePolicy._cached[key] = cap
 		voice_bridge._export_owner_resource_limits()
 		for suffix in ["TTS_INPUT_CHARS", "CACHE_BYTES", "MIC_QUEUE_CHUNKS", "PATH_CHARS"]: assert(OS.get_environment("AURORAFOX_VOICE_" + suffix) == str(cap))
+	OwnerResourcePolicy._cached.voice_stft_n_fft = 4096
+	OwnerResourcePolicy._cached.voice_stft_hop_length = 1024
+	voice_bridge._export_owner_resource_limits()
+	assert(OS.get_environment("AURORAFOX_VOICE_STFT_N_FFT") == "4096")
+	assert(OS.get_environment("AURORAFOX_VOICE_STFT_HOP_LENGTH") == "1024")
 	voice_bridge.android_runtime.free()
 	voice_bridge.free()
 	var knowledge_limits := KnowledgeStore.new()

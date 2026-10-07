@@ -176,6 +176,8 @@ const DEFAULTS := {
 	"voice_cache_bytes": 536870912,
 	"voice_mic_queue_chunks": 128,
 	"voice_path_chars": 4096,
+	"voice_stft_n_fft": 1024,
+	"voice_stft_hop_length": 256,
 
 	"work_error_chars": 2048,
 	"work_summary_chars": 4096,
@@ -397,6 +399,8 @@ const LABELS := {
 	"voice_cache_bytes": "Windows Voice: байтов кеша (после перезапуска)",
 	"voice_mic_queue_chunks": "Windows Voice: блоков очереди микрофона (после перезапуска)",
 	"voice_path_chars": "Windows Voice: символов пути (после перезапуска)",
+	"voice_stft_n_fft": "Windows Voice DSP: размер FFT (после перезапуска)",
+	"voice_stft_hop_length": "Windows Voice DSP: шаг FFT (после перезапуска)",
 
 	"work_error_chars": "Work: символов ошибки",
 	"work_summary_chars": "Work: символов итога",
@@ -461,6 +465,8 @@ static func value(key: String) -> int:
 	return int(_cached.get(key, DEFAULTS.get(key, 0)))
 
 static func minimum(key: String) -> int:
+	if key == "voice_stft_n_fft": return 2
+	if key == "voice_stft_hop_length": return 1
 	return 1 if key in ["index_batch", "android_xls_file_bytes", "android_xls_directory_entries", "android_xls_directory_depth", "android_xls_shared_strings", "android_xls_sheets"] else 0
 
 static func _valid(key: String, candidate: Variant) -> bool:
@@ -468,6 +474,9 @@ static func _valid(key: String, candidate: Variant) -> bool:
 	var number := float(candidate)
 	if key in ["chat_max_tokens", "terse_max_tokens"] and number > 2147483647.0: return false
 	if key in ["android_xls_directory_entries", "android_xls_directory_depth", "android_xls_shared_strings", "android_xls_sheets"] and number > 2147483647.0: return false
+	if key == "voice_stft_n_fft" and number >= 2.0 and number == floor(number):
+		var fft := int(number)
+		return (fft & (fft - 1)) == 0
 	# Representation only; no artificial maximum. A batch must make progress.
 	return is_finite(number) and number >= minimum(key) and number < 9223372036854775807.0 and number == floor(number)
 
@@ -476,6 +485,8 @@ static func save(values: Dictionary, path: String = PATH) -> Error:
 	for key in values:
 		if not DEFAULTS.has(key) or not _valid(key, values[key]): return ERR_INVALID_PARAMETER
 		current[key] = int(values[key])
+	if int(current["voice_stft_hop_length"]) > int(current["voice_stft_n_fft"]) / 2:
+		return ERR_INVALID_PARAMETER
 	var file := ConfigFile.new()
 	for key in current: file.set_value("resources", key, current[key])
 	var err := file.save(path)

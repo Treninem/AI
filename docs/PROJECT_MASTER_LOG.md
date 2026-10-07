@@ -7922,3 +7922,27 @@ ACCEPTANCE_GATES:contract follows proposal/review into guarded helper and proves
 NEXT:repair stale contract to retain intended self-primary assertion through guard helper; validate batch and publish.
 
 CANDIDATE_SELFPRIMARY_VALIDATION:actual71PythonPASS across standalone/candidate/specialist-runtime/evolution/owner/audit; genuineGodot guard+tournamentPASS. Stale direct-call string assertion now follows guarded helper into production ai.chat with mandatory before/after guards; still forbids compatibilitypath, preserves3..10/default5/no-autoapply. Same stale failure observed50b472 Voice/cross/standalonejobs, sharedcause repaired; not claimed nativeCorequalityPASS.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-VOICE-DSP-CONTROLS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-control inventory; no release/version change.
+STARTING_HEAD:c95dcb3d2c2231a9b1a7cae7a4d1c6697a1dfa3c (same as origin/feature/v1.5-quality-feedback-intent after fetch).
+OWNED_PATHS:voice/python/processor.py;voice/python/aurora_voice_server.py;voice/python/voice_resource_policy.py;voice/voice_bridge.gd;scripts/owner_resource_policy.gd;tests/test_voice_text.py;tests/test_voice_resource_limits.py;tests/test_voice_configs.py;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;this master log.
+INTENDED_BUMP:D accumulated V1.5 version-last; canonical version unchanged.
+DEPENDENCIES:earlier Voice resource source published at1174183 and paths released. Current PR103 exact head c95dcb3 has33SUCCESS/2conditionalSKIPPED after rerunning eight runner-acquisition failures; real Windows/Android Core benchmark workflows were separately dispatched on the same SHA (runs37658688995/37658685826), pending. No product/test failure is inferred from unstarted jobs.
+ACCEPTANCE_GATES:preserve neutral DSP defaults and native voice fallback; expose FFT/hop controls through private owner Settings and trusted Voice startup; validate transform structure instead of silently clamping requested values; test exact/invalid/short-audio behavior and existing Voice/owner contracts. Native acoustic and full release gates remain required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement the coherent DSP controls and run targeted local tests before publishing one package.
+
+VOICE_DSP_LOCAL_CHECKPOINT: owner-private restart-persistent FFT size and hop settings preserve 1024/256 defaults. Trusted Voice startup validates power-of-two FFT >=2 and hop in [1,FFT/2]; invalid/zero values fail closed. Processor uses exact accepted values and returns short audio without silently shrinking the owner request. Effective processor settings enter the WAV cache identity, preventing stale audio after a DSP change. Existing native voice fallback and prosody_dsp=false default remain intact.
+LOCAL_TESTS: 63 Voice text/config/resource, owner runtime-contract and adversarial audit tests PASS with Python3.12, NumPy2.3.5 and CI-pinned FastAPI/Pydantic/pytest versions; Python compile and diff check PASS. Three existing FastAPI TestClient HTTP cases hang in this Windows sandbox before assertions and are NOT_EXECUTED locally; exact GitHub Voice CI must execute them. Godot parse/runtime and acoustic/device quality are NOT_EXECUTED locally and remain mandatory.
+CORE_EVIDENCE: separately dispatched exact-source Android Core benchmark run37658685826 SUCCESS. Windows Core benchmark run37658688995 on same old source c95dcb3 FAILED: 20/21 quality scenarios, only simple_planning fails. Transport succeeded, 485 response characters, invalid_json_or_plan_contract, zero parsed steps/checks, 10093.91ms. This is an actual Core quality blocker unrelated to Voice DSP, not a runner acquisition failure; no blind rerun or criterion change. Artifact aurorafox-core-benchmark-c95dcb3d2c2231a9b1a7cae7a4d1c6697a1dfa3c downloaded for follow-up.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: coherent Voice DSP owner controls and local 63-test package prepared; previous runner-acquisition jobs recovered to33SUCCESS/2conditionalSKIPPED; Android Core real gate green.
+REMAINING: publish exact Voice package and obtain relevant native CI; diagnose/repair Windows Core planning contract; finish remaining source inventory and final same-SHA package/device/update/release gates.
+BLOCKERS: Windows Core simple_planning real benchmark failure at run37658688995; Voice HTTP/Godot/acoustic native evidence pending.
+NEXT: publish one Voice package after source review, then inspect real planner response-shape/parse path as a separate coherent Core repair and rerun unchanged 21/21 gate.

@@ -37,8 +37,8 @@ def test_quality_processor_settings_are_safe_and_preserve_native_timbre_by_defau
     assert 1.0 < float(processor["speed_max"]) <= 1.30
     assert 0.85 <= float(processor["pitch_min"]) < 1.0
     assert 1.0 < float(processor["pitch_max"]) <= 1.20
-    assert 256 <= int(processor["stft_n_fft"]) <= 2048
-    assert 64 <= int(processor["stft_hop_length"]) < int(processor["stft_n_fft"])
+    assert int(processor["stft_n_fft"]) == 1024
+    assert int(processor["stft_hop_length"]) == 256
     assert -30.0 <= float(processor["target_rms_dbfs"]) <= -12.0
     assert -18.0 <= float(processor["min_gain_db"]) <= 0.0
     assert 0.0 <= float(processor["max_gain_db"]) <= 12.0

@@ -126,7 +126,7 @@ func _configure_runtime_environment(runtime_root: String) -> void:
 		OS.set_environment("COQUI_TOS_AGREED", "1")
 
 func _export_owner_resource_limits() -> void:
-	for suffix in ["TTS_INPUT_CHARS", "CACHE_BYTES", "MIC_QUEUE_CHUNKS", "PATH_CHARS"]:
+	for suffix in ["TTS_INPUT_CHARS", "CACHE_BYTES", "MIC_QUEUE_CHUNKS", "PATH_CHARS", "STFT_N_FFT", "STFT_HOP_LENGTH"]:
 		OS.set_environment("AURORAFOX_VOICE_" + suffix, str(OwnerResourcePolicy.value("voice_" + suffix.to_lower())))
 
 func _configure_model_cache(runtime_root: String) -> void:
