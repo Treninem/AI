@@ -9145,3 +9145,10 @@ DONE:109 connected local-input findings inspected;54 exact classifications;55 re
 REMAINING:publish/sync and exact owner CI;574 global inventory residuals and final release gates.
 BLOCKERS:none for audit metadata scope.
 NEXT:commit/push policy/tests/journal, verify exact SHA and owner-audit CI, release occupied metadata paths.
+LOCAL_INPUT_BULK_PUBLICATION_AND_CI:commit f12fb7f1cd645910968b41fff35e67f85c8458d2 published; local/origin/web exact and clean. Exact Chat Learning Attachments run37705126546 SUCCESS; its contract step included tests/test_owner_control_audit.py and reported69PASS overall. Exact API run37705126614 SUCCESS; other short checks green at last observation, with Core/Voice and long platform/Knowledge/package/Integration runs still active or pending and no red observed. The audit-only claim CODEX-2026-10-08-V15-LOCAL-INPUT-BULK-AUDIT is DONE and releases config/owner_control_policy.json, tests/test_owner_control_audit.py and this journal. No production source changed. Review109, classified54, retained55, global residual574; release readiness unchanged.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:109 local-input findings reviewed and synchronized; local owner audit34PASS; exact CI69PASS at f12fb7f.
+REMAINING:574 inventory findings, confirmed source-limit repairs, final exact-SHA Windows/Android/Knowledge/package/update/version gates.
+BLOCKERS:none for completed audit metadata; release platform gates pending.
+NEXT:verify evidence-only journal publication at its own SHA; then prioritize a retained operational cap with source-level regression tests or another ≥100 finding group after fresh sync.
