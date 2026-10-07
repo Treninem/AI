@@ -4,15 +4,21 @@ import importlib
 import sys
 from pathlib import Path
 
+import pytest
+from fastapi import Request
 from fastapi.testclient import TestClient
 
 from api.account_mailer import AccountMailError
 
 
-def _load_server(monkeypatch, root: Path, *, dev_tokens: bool = False, max_body: int = 24 * 1024 * 1024):
+def _load_server(monkeypatch, root: Path, *, dev_tokens: bool = False, max_body: int = 24 * 1024 * 1024, max_in_flight=None):
     monkeypatch.setenv("AURORAFOX_USER_DIR", str(root))
     monkeypatch.setenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "1" if dev_tokens else "0")
     monkeypatch.setenv("AURORAFOX_API_MAX_BODY_BYTES", str(max_body))
+    if max_in_flight is None:
+        monkeypatch.delenv("AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES", raising=False)
+    else:
+        monkeypatch.setenv("AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES", str(max_in_flight))
     monkeypatch.setenv("AURORAFOX_API_RPM", "10000")
     monkeypatch.setenv("AURORAFOX_SMTP_HOST", "smtp.example.test")
     monkeypatch.setenv("AURORAFOX_SMTP_PORT", "587")
@@ -208,3 +214,27 @@ def test_ready_fails_closed_when_storage_status_raises_without_leaking_error(tmp
     assert response.json()["detail"]["storage"] == {"ok": False, "hard_pressure": False}
     assert "/secret/volume" not in response.text
     assert "inspection failed" not in response.text
+
+
+@pytest.mark.parametrize("request_budget,aggregate,status", [(0, 0, 200), (0, 64, 413), (64, 0, 413), (256, 256, 200)])
+def test_real_server_uses_independent_startup_body_policy(tmp_path, monkeypatch, request_budget, aggregate, status):
+    server = _load_server(monkeypatch, tmp_path, max_body=request_budget, max_in_flight=aggregate)
+
+    @server.app.post("/test/owner-body-policy")
+    async def body_probe(request: Request):
+        return {"bytes": len(await request.body())}
+
+    client = TestClient(server.app)
+    response = client.post("/test/owner-body-policy", content=b"x" * 128,
+                           headers={"X-AuroraFox-API-Max-Body-Bytes": "0"})
+    assert response.status_code == status, response.text
+    if status == 200:
+        assert response.json() == {"bytes": 128}
+    assert server.MAX_API_BODY_BYTES == request_budget
+    assert server.MAX_API_IN_FLIGHT_BODY_BYTES == aggregate
+
+
+@pytest.mark.parametrize("request_budget,aggregate", [(-1, 64), (64, -1)])
+def test_real_server_rejects_invalid_startup_budget(tmp_path, monkeypatch, request_budget, aggregate):
+    with pytest.raises(ValueError, match="nonnegative integer"):
+        _load_server(monkeypatch, tmp_path, max_body=request_budget, max_in_flight=aggregate)

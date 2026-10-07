@@ -7554,3 +7554,40 @@ LEVEL_3_FULL_RELEASE:before accepting/finalizing V1.5.0.0, run one complete exac
 RATIONALE:the larger suite reflects added Windows/Android/Core/Voice/API/Work/Computer/Evolution/Memory/UI/Knowledge/release and integration coverage. The objective is to keep that protection while avoiding repeated long Windows/Android/full-matrix runs for minor edits.
 BATCHING_RULE:prefer coherent implementation batches -> targeted verification during development -> expanded block verification -> one final full exact-SHA suite before release acceptance. Avoid blind reruns and repeated full-matrix polling unless evidence indicates a cross-cutting regression or a release gate explicitly requires it.
 STATUS:OWNER_DECISION/ACTIVE
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-BOUNDED-DIRECTORIES-AND-INVENTORY
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 sandbox bounded filesystem processing and remaining owner-control inventory
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 unchanged
+STARTING_HEAD: 737cd0e39864d66326ae4e6fbe2bdefa257e2cd2
+INTENDED_BUMP: D accumulated version-last
+OWNED_PATHS: computer/computer_service.py; scripts/computer_request_guard.gd; tests/test_sandbox_resource_limits.py; tests/owner_resource_limits_smoke.gd; config/owner_control_policy.json; tests/test_owner_control_audit.py; docs/PROJECT_MASTER_LOG.md; docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES: Coordinator reconciles published Computer/GUI/UIA/action claims and takes over those existing paths; no parallel source edits. CORE-HTTP-EVIDENCE exact Windows112665524343, Linux/WindowsComputer112665453090/112665452699, Work112665452995 SUCCESS at737cd0e. Executor recovered and checkout exactly synchronized; prior external environment blocker RESOLVED, root cause unknown. Previous Core assertion did not reproduce; no causal fix claimed. Observed46 checks with WindowsPackage pending and no red; skips remain non-PASS.
+NON_BLOCKERS: No V1.6/S3, signing/release/version changes. Existing filesystem security and reparse rejection stay mandatory; streaming directory enumeration is not a new race-proof filesystem guarantee. Source inventory and physical/release gates remain unfinished.
+ACCEPTANCE_GATES: Directory owner limits enforced while enumerating, not after allocating full directory arrays. Iterators close on quota/error/early exit; exact fit, actual overflow, zero and unsafe entries remain distinct. Legacy list uses trusted existing sandbox_tree_items snapshot and reports incomplete coverage honestly. Narrow exact full-statement classifications cover only reviewed tested owner propagation/technical boundaries; arbitrary runtime limits remain unknown. Real directories and fault/lazy iterator regressions, existing Windows junction and mandatoryDocker tests, Godot trusted policy and exact new CI.
+SOURCE_COMPLETE: NO
+CODE_FREEZE_SHA: none
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: Build one coherent bounded-directory/resource inventory package; collect new defects and run its relevant checks together.
+
+CLAIM_ADDENDUM: BOUNDED-DIRECTORIES-AND-INVENTORY rebased onto owner documentation233298050efeac8bb286a30a32db8b2b2d6684c1; only concurrent change is tiered CI policy, integrated append-only. Keep targeted checks during implementation, expanded relevant checks for this complete block, full exact-SHA matrix once at release acceptance; no blind reruns or weakening/hidden skips. Original737cd0e now46completed=43SUCCESS/3SKIP including WindowsPackage; old Core failure remains historically unexplained.
+CLAIM_ADDENDUM: same coherent remaining-resource package also owns api/request_limits.py, api/server.py, tests/test_api_request_limits.py, tests/test_api_server_hardening.py. Coordinator reconciles original baseline API body/memory guard only; hidden/public account/role/auth lane and its hard boundaries untouched. Current middleware silently forces max_bytes>=1 and aggregate>=per-request, preventing explicit server-owner zero/smaller aggregate policy. Trusted startup configuration must expose independent request and aggregate budgets (defaults preserved); zero removes only its own operational ceiling, negative invalid configuration fails visibly, payload/headers never set authority. Existing auth, public-auth rate/security boundaries, capacity accounting/release and response-start failure behavior stay intact. Acceptance includes real ASGI chunks/concurrency/cancel/error and full authenticated server boundary regressions, default/raised/zero/independent aggregate and invalid startup policy.
+
+CLAIM_ADDENDUM: same API resource block owns tests/test_deployment_contract.py to verify trusted environment policy delegation and both middleware budgets after extraction; existing pre-parser/auth/mail security contract remains mandatory.
+
+### Coherent bounded-directory and independent API budget source checkpoint
+CLAIM: WORK-2026-10-07-V15-BOUNDED-DIRECTORIES-AND-INVENTORY ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE: 233298050efeac8bb286a30a32db8b2b2d6684c1; main446ce2cd2f979a8ab228f63d090062e8ba48a6eb fetched unchanged. Owner tiered-CI decision integrated append-only. Prior737cd0e exact46completed=43SUCCESS/3SKIP; no gate attribution to unpublished source.
+CHANGES: streaming scandir traversal closes iterators on early exit/errors and stops at actual extra entry; snapshot preflight/tree/list avoid full-directory arrays. Trusted legacy list header takes existing owner sandbox_tree_items snapshot, direct legacy zero preserved. Partial/failed/unsafe/truncated result evidence remains explicit. Copy-stage concurrent growth/shutil.copytree allocation remains unresolved; no race-proof filesystem claim. Narrow84 full statements account for94 audit records without suppressing unknown caps. API trusted startup request/aggregate budgets independent, zero disables only its own operational ceiling; negative/invalid policy fails visibly. Permanently oversized aggregate body413 differs from temporary concurrent contention503; reservations release on success/failure/cancellation, post-response errors propagate. Client headers/payload never own configuration; auth/public rate/account/mail boundaries unchanged.
+TESTS: expanded pinned API/server/deployment/sandbox/audit133PASS/6SKIP; after two added post-response-start cases API/server/deployment52PASS. Earlier completeComputer/owner/audit136PASS/6SKIP; latestComputer113PASS/6SKIP and optimized traversal9PASS/1SKIP. ActualGodot owner and Godot/Uvicorn guardPASS, existing20ObjectDB/8resource exit diagnostics retained. Real Core HTTP fixturePASS after executor recovery; prior Windows failure cause UNKNOWN. Six local platform/Docker skips notPASS. New test authoring errors (pytest reserved parameter name and missing synchronization before parser exception) corrected without changing product acceptance. git diff --check PASS. New exact CI pending publication, native physical input/device/release acceptance unwaived.
+INVENTORY:480files;1558test_evidence/1284unclassified/65documentation/726owner_adjustable/377format_structure/59hard_boundary;complete:false. New API findings remain visible; incomplete audit prevents source closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:bounded directory source, precise inventory review, independent API policy and real regression checks.
+REMAINING:publication/exactCI; unclassified owner inventory, provider/unfinishedCRITICAL, copy-stage resource/race limitation, package/device/update/production/version-last.
+BLOCKERS:no current external source blocker; physical/production acceptance unwaived.
+NEXT:publish one coherent package; continue remaining critical source without waiting blindly for CI.

@@ -3,6 +3,8 @@ from __future__ import annotations
 import asyncio
 import json
 
+import pytest
+
 from api.request_limits import RequestBodyLimitMiddleware
 
 
@@ -224,3 +226,125 @@ def test_websocket_scope_is_not_body_limited():
     middleware = RequestBodyLimitMiddleware(app, max_bytes=1)
     asyncio.run(middleware(_scope(scope_type="websocket"), receive, send))
     assert called is True
+
+
+@pytest.mark.parametrize("request_budget,aggregate,body,status", [
+    (0, 0, b"x" * 100, 204),
+    (0, 4, b"1234", 204),
+    (0, 4, b"12345", 413),
+    (4, 0, b"1234", 204),
+    (4, 0, b"12345", 413),
+    (8, 4, b"12345", 413),
+    (100, 100, b"x" * 100, 204),
+])
+@pytest.mark.parametrize("declared", [False, True])
+def test_independent_owner_budgets_enforce_actual_body(request_budget, aggregate, body, status, declared):
+    sent = []
+    observed = []
+    chunks = iter([
+        {"type": "http.request", "body": body[:2], "more_body": True},
+        {"type": "http.request", "body": body[2:], "more_body": False},
+    ])
+
+    async def receive():
+        return next(chunks)
+
+    async def send(message):
+        sent.append(message)
+
+    async def app(scope, receive, send):
+        while True:
+            message = await receive()
+            observed.append(message["body"])
+            if not message["more_body"]:
+                break
+        await send({"type": "http.response.start", "status": 204, "headers": []})
+        await send({"type": "http.response.body", "body": b""})
+
+    headers = [(b"x-aurorafox-api-max-body-bytes", b"0")]
+    if declared:
+        headers.append((b"content-length", str(len(body)).encode()))
+    middleware = RequestBodyLimitMiddleware(app, max_bytes=request_budget, max_in_flight_bytes=aggregate)
+    asyncio.run(middleware(_scope(headers), receive, send))
+    assert sent[0]["status"] == status
+    assert middleware._in_flight_bytes == 0
+    if status == 204:
+        assert b"".join(observed) == body
+    else:
+        assert not any(key == b"retry-after" for key, _ in sent[0]["headers"])
+
+
+def test_trusted_environment_defaults_and_independent_zero_policy():
+    from api.request_limits import request_body_policy_from_environment, DEFAULT_MAX_BODY_BYTES, DEFAULT_MAX_IN_FLIGHT_BODY_BYTES
+    policy = request_body_policy_from_environment
+    assert policy({}) == (DEFAULT_MAX_BODY_BYTES, DEFAULT_MAX_IN_FLIGHT_BODY_BYTES)
+    assert policy({"AURORAFOX_API_MAX_BODY_BYTES": "0"}) == (0, DEFAULT_MAX_IN_FLIGHT_BODY_BYTES)
+    assert policy({"AURORAFOX_API_MAX_BODY_BYTES": "9"}) == (9, 36)
+    assert policy({"AURORAFOX_API_MAX_BODY_BYTES": "9", "AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES": "4"}) == (9, 4)
+    assert policy({"AURORAFOX_API_MAX_BODY_BYTES": "0", "AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES": "0"}) == (0, 0)
+
+
+@pytest.mark.parametrize("value", [-1, True, 1.5, float("inf"), "invalid"])
+def test_invalid_owner_budgets_fail_visibly(value):
+    from api.request_limits import request_body_policy_from_environment
+    for key in ("AURORAFOX_API_MAX_BODY_BYTES", "AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES"):
+        with pytest.raises(ValueError, match=key):
+            request_body_policy_from_environment({key: value})
+    with pytest.raises(ValueError, match="max_bytes"):
+        RequestBodyLimitMiddleware(None, max_bytes=value)
+    with pytest.raises(ValueError, match="max_in_flight_bytes"):
+        RequestBodyLimitMiddleware(None, max_in_flight_bytes=value)
+
+
+@pytest.mark.parametrize("cancel", [False, True])
+def test_reserved_capacity_released_on_downstream_failure_or_cancellation(cancel):
+    async def scenario():
+        entered = asyncio.Event()
+        hold = asyncio.Event()
+
+        async def app(scope, receive, send):
+            entered.set()
+            await hold.wait()
+            raise RuntimeError("downstream parser failure")
+
+        async def receive():
+            return {"type": "http.request", "body": b"1234", "more_body": False}
+
+        async def send(message):
+            raise AssertionError("must propagate failure without replacing response")
+
+        middleware = RequestBodyLimitMiddleware(app, max_bytes=0, max_in_flight_bytes=4)
+        task = asyncio.create_task(middleware(_scope([(b"content-length", b"4")]), receive, send))
+        await entered.wait()
+        assert middleware._in_flight_bytes == 4
+        if cancel:
+            task.cancel()
+        else:
+            hold.set()
+        with pytest.raises(asyncio.CancelledError if cancel else RuntimeError):
+            await task
+        assert middleware._in_flight_bytes == 0
+    asyncio.run(scenario())
+
+
+@pytest.mark.parametrize("request_budget,aggregate,error_name", [(4, 0, "RequestBodyTooLarge"), (0, 4, "RequestBodyAggregateTooLarge")])
+def test_limit_failure_after_response_start_propagates_without_second_response(request_budget, aggregate, error_name):
+    import api.request_limits as limits
+    sent = []
+
+    async def receive():
+        return {"type": "http.request", "body": b"12345", "more_body": False}
+
+    async def send(message):
+        sent.append(message)
+
+    async def app(scope, receive, send):
+        await send({"type": "http.response.start", "status": 200, "headers": []})
+        await receive()
+
+    middleware = RequestBodyLimitMiddleware(app, max_bytes=request_budget, max_in_flight_bytes=aggregate)
+    with pytest.raises(getattr(limits, error_name)):
+        asyncio.run(middleware(_scope(), receive, send))
+    assert len(sent) == 1
+    assert sent[0]["status"] == 200
+    assert middleware._in_flight_bytes == 0

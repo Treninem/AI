@@ -225,38 +225,61 @@ def _safe_workspace_id(value: str) -> str:
     return cleaned
 
 
+def _walk_directory_entries(root: Path, failed):
+    """Depth-first streaming enumeration; at most one open iterator per depth."""
+    frames = []
+    try:
+        try: frames.append(os.scandir(root))
+        except OSError as exc:
+            failed(exc)
+            return
+        while frames:
+            try:
+                entry = next(frames[-1])
+            except StopIteration:
+                frames.pop().close()
+                continue
+            except OSError as exc:
+                frames.pop().close()
+                failed(exc)
+                continue
+            yield entry
+            try:
+                if entry.is_dir(follow_symlinks=False) and not entry.is_symlink():
+                    attrs = getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0)
+                    if not attrs & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                        frames.append(os.scandir(entry.path))
+            except OSError as exc:
+                failed(exc)
+    finally:
+        for iterator in reversed(frames): iterator.close()
+
+
 def _snapshot_tree_stats(root: Path, max_entries: int = MAX_SNAPSHOT_ENTRIES, max_bytes: int = MAX_SNAPSHOT_BYTES) -> dict[str, int]:
     if not root.exists() or not root.is_dir():
         raise HTTPException(status_code=404, detail="Snapshot source directory not found")
     entries = 0
     total_bytes = 0
-    stack = [root]
-    while stack:
-        current = stack.pop()
-        try:
-            with os.scandir(current) as iterator:
-                children = list(iterator)
-        except OSError as exc:
-            raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot tree: {type(exc).__name__}") from exc
-        for entry in children:
+    def failed(exc):
+        raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot tree: {type(exc).__name__}") from exc
+    iterator = _walk_directory_entries(root, failed)
+    try:
+        for entry in iterator:
             entries += 1
             if max_entries > 0 and entries > max_entries:
                 raise HTTPException(status_code=413, detail="Snapshot contains too many filesystem entries")
-            if entry.is_symlink() or bool(getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
-                raise HTTPException(status_code=400, detail="Symlinks and reparse entries are not allowed in workspace snapshots")
             try:
-                if entry.is_dir(follow_symlinks=False):
-                    stack.append(Path(entry.path))
-                elif entry.is_file(follow_symlinks=False):
-                    total_bytes += int(entry.stat(follow_symlinks=False).st_size)
+                info = entry.stat(follow_symlinks=False)
+                if entry.is_symlink() or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                    raise HTTPException(status_code=400, detail="Symlinks and reparse entries are not allowed in workspace snapshots")
+                if entry.is_file(follow_symlinks=False):
+                    total_bytes += int(info.st_size)
                     if max_bytes > 0 and total_bytes > max_bytes:
                         raise HTTPException(status_code=413, detail="Snapshot exceeds the configured byte limit")
-                else:
+                elif not entry.is_dir(follow_symlinks=False):
                     raise HTTPException(status_code=400, detail="Special filesystem entries are not allowed in workspace snapshots")
-            except HTTPException:
-                raise
-            except OSError as exc:
-                raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot entry: {type(exc).__name__}") from exc
+            except OSError as exc: failed(exc)
+    finally: iterator.close()
     return {"entries": entries, "bytes": total_bytes}
 
 
@@ -766,33 +789,23 @@ def _tree(root: Path, max_items: int = 2000, coverage: dict | None = None) -> li
     items: list[dict[str, Any]] = []
     coverage = coverage if coverage is not None else {}
     coverage.update(truncated=False, failed_paths=0, unsafe_paths_skipped=0)
-    if not root.exists():
-        return items
-    def failed(_error):
-        coverage["failed_paths"] += 1
-    for current, dirs, files in os.walk(root, followlinks=False, onerror=failed):
-        base = Path(current)
-        retained = []
-        for name in dirs:
-            path = base / name
-            if path.is_symlink() or (hasattr(path, "is_junction") and path.is_junction()):
-                coverage["unsafe_paths_skipped"] += 1
-                continue
-            retained.append(name)
-        dirs[:] = retained
-        for name in retained + files:
-            path = base / name
+    if not root.exists(): return items
+    def failed(_error): coverage["failed_paths"] += 1
+    iterator = _walk_directory_entries(root, failed)
+    try:
+        for entry in iterator:
+            path = Path(entry.path)
             try:
-                if path.is_symlink() or not path.resolve(strict=True).is_relative_to(root):
+                info = entry.stat(follow_symlinks=False)
+                if entry.is_symlink() or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT) or not path.resolve(strict=True).is_relative_to(root):
                     coverage["unsafe_paths_skipped"] += 1
                     continue
                 if max_items > 0 and len(items) >= max_items:
                     coverage["truncated"] = True
-                    return items
-                st = path.stat()
-                items.append({"path": path.relative_to(root).as_posix(), "dir": path.is_dir(), "size": st.st_size if path.is_file() else 0})
-            except OSError:
-                coverage["failed_paths"] += 1
+                    break
+                items.append({"path": path.relative_to(root).as_posix(), "dir": entry.is_dir(follow_symlinks=False), "size": info.st_size if entry.is_file(follow_symlinks=False) else 0})
+            except OSError: coverage["failed_paths"] += 1
+    finally: iterator.close()
     return items
 
 
@@ -1242,16 +1255,32 @@ def workspace_rollback(req: WorkspaceRollbackRequest, x_aurorafox_computer_token
 
 
 @app.get("/sandbox/list")
-def sandbox_list(path: str = ".", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); p = _safe_sandbox_path(path)
-    if not p.exists(): return {"ok": True, "items": []}
-    if not p.is_dir(): raise HTTPException(status_code=400, detail="Not a directory")
+def sandbox_list(path: str = ".", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+                 max_items: int = 0, x_aurorafox_sandbox_items: int | None = Header(default=None, ge=0)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    budget = max_items if x_aurorafox_sandbox_items is None else x_aurorafox_sandbox_items
+    if budget < 0: raise HTTPException(400, "List item budget must be nonnegative")
+    p = _safe_sandbox_path(path)
     items = []
-    for child in p.iterdir():
-        resolved = child.resolve(strict=False)
-        if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents: continue
-        items.append({"name": child.name, "dir": child.is_dir(), "size": child.stat().st_size if child.is_file() else 0})
-    return {"ok": True, "items": items}
+    result = {"ok": True, "items": items, "partial": False, "truncated": False, "limit_reached": False, "failed_paths": 0, "unsafe_paths_skipped": 0}
+    if not p.exists(): return result
+    if not p.is_dir(): raise HTTPException(status_code=400, detail="Not a directory")
+    with os.scandir(p) as iterator:
+        for entry in iterator:
+            try:
+                child = Path(entry.path)
+                resolved = child.resolve(strict=True)
+                if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
+                    result["unsafe_paths_skipped"] += 1
+                    continue
+                if budget > 0 and len(items) >= budget:
+                    result["truncated"] = result["limit_reached"] = True
+                    break
+                info = entry.stat()
+                items.append({"name": entry.name, "dir": entry.is_dir(), "size": info.st_size if entry.is_file() else 0})
+            except OSError: result["failed_paths"] += 1
+    result["partial"] = bool(result["truncated"] or result["failed_paths"] or result["unsafe_paths_skipped"])
+    return result
 
 
 @app.get("/sandbox/read")

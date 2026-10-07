@@ -28,7 +28,7 @@ from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
 from api.persistence_maintenance import PersistenceMaintenance
 from api.public_auth_limits import PublicAuthRateLimitMiddleware
-from api.request_limits import DEFAULT_MAX_BODY_BYTES, RequestBodyLimitMiddleware
+from api.request_limits import DEFAULT_MAX_BODY_BYTES, RequestBodyLimitMiddleware, request_body_policy_from_environment
 from api.runtime_bridge import AuroraRuntimeBridge
 from api.sync_store import SyncStore
 
@@ -39,10 +39,7 @@ API_ROOT = USER_ROOT / "api"
 API_ROOT.mkdir(parents=True, exist_ok=True)
 LOGGER = logging.getLogger("aurorafox.api")
 DEV_ACCOUNT_TOKENS = os.getenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "0") == "1"
-try:
-    MAX_API_BODY_BYTES = max(1, int(os.getenv("AURORAFOX_API_MAX_BODY_BYTES", str(DEFAULT_MAX_BODY_BYTES))))
-except ValueError:
-    MAX_API_BODY_BYTES = DEFAULT_MAX_BODY_BYTES
+MAX_API_BODY_BYTES, MAX_API_IN_FLIGHT_BODY_BYTES = request_body_policy_from_environment()
 try:
     PUBLIC_AUTH_RPM = max(1, int(os.getenv("AURORAFOX_PUBLIC_AUTH_RPM", "20")))
 except ValueError:
@@ -85,7 +82,7 @@ app = FastAPI(
     version=_canonical_version(),
     description="External gateway to AuroraFox AgentCore, personal sync, tools, files and local models.",
 )
-app.add_middleware(RequestBodyLimitMiddleware, max_bytes=MAX_API_BODY_BYTES)
+app.add_middleware(RequestBodyLimitMiddleware, max_bytes=MAX_API_BODY_BYTES, max_in_flight_bytes=MAX_API_IN_FLIGHT_BODY_BYTES)
 app.add_middleware(PublicAuthRateLimitMiddleware, limit=PUBLIC_AUTH_RPM, window_seconds=60.0)
 app.include_router(create_account_web_router(accounts))
 

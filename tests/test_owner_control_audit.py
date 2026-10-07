@@ -105,3 +105,21 @@ def test_automatic_web_redirects_are_security_boundary_before_owner_count_rule()
     policy = MODULE.load_policy()
     assert MODULE.classify("scripts/public_web_manager.gd", "request.max_redirects = 0", policy)[0] == "hard_boundary"
     assert MODULE.classify("scripts/public_web_manager.gd", "for redirect_index in range(max_redirects + 1):", policy)[0] == "owner_adjustable"
+
+
+def test_reviewed_gui_and_capture_policy_keeps_unknown_caps_and_trailing_code_visible():
+    policy = MODULE.load_policy()
+    positive = [
+        ("computer/computer_service.py", 'if cap and len(text) > cap:', "owner_adjustable"),
+        ("computer/computer_service.py", 'while max_results > 0 and len(_action_cache) > max_results:', "owner_adjustable"),
+        ("computer/computer_service.py", 'room = len(chunk) if capture_bytes == 0 else max(0, capture_bytes - captured_bytes)', "owner_adjustable"),
+        ("computer/computer_service.py", 'worker.join(timeout=seconds)', "hard_boundary"),
+        ("scripts/computer_request_guard.gd", 'captured["_sandbox_items"] = OwnerResourcePolicy.value("sandbox_tree_items")', "owner_adjustable"),
+    ]
+    for path, line, kind in positive:
+        assert MODULE.classify(path, line, policy)[0] == kind
+        assert MODULE.classify(path, line + '; FIXED_LIMIT = 17', policy)[0] == "unclassified"
+        assert MODULE.classify("other/" + path, line, policy)[0] == "unclassified"
+    for path in ["computer/computer_service.py", "scripts/computer_request_guard.gd"]:
+        for unknown in ["LIMIT = 17", "timeout = 99", "capture_bytes = min(capture_bytes, 17)"]:
+            assert MODULE.classify(path, unknown, policy)[0] == "unclassified"

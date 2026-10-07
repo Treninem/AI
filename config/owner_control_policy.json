@@ -1478,6 +1478,69 @@
       "class": "format_structure",
       "control": "Single terminal worker response and bounded polling representation",
       "rationale": "Queue capacity1 represents one terminal response. Poll and feeder waits coordinate delivery/termination without redefining total owner execution deadlines; GUI operation deadline and raw buffering remain separately visible."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:\"captured_bytes\":\\ captured_bytes,\\ \"capture_budget_bytes\":\\ capture_bytes,|MAX_CAPTURE_BYTES\\ =\\ 8\\ \\*\\ 1024\\ \\*\\ 1024|MAX_KEYS\\ =\\ 12|MAX_TEXT_CHARS\\ =\\ 20_000|_store_action_result\\(action_id,\\ result,\\ limits\\[\"action_results\"\\]\\)|action\\ =\\ _validate_action\\(req,\\ limits\\)|action\\[\"__gui_limits\"\\]\\ =\\ limits|after\\ =\\ _run_worker\\(\"screen\",\\ \\{\"__execution_id\":\\ execution_id,\\ \"__gui_limits\":\\ limits\\},\\ limits\\[\"worker_seconds\"\\]\\)|before\\ =\\ _run_worker\\(\"screen\",\\ \\{\"__execution_id\":\\ execution_id,\\ \"__gui_limits\":\\ limits\\},\\ limits\\[\"worker_seconds\"\\]\\)|cap\\ =\\ limits\\[budget\\]|cap\\ =\\ limits\\[key\\]|capture_bytes:\\ int\\ =\\ Field\\(default=MAX_CAPTURE_BYTES,\\ ge=0\\)|captured_bytes\\ \\+=\\ len\\(retained\\)|captured_bytes\\ =\\ 0|captured_bytes=captured_bytes,\\ execution_id=execution_id,|claim,\\ cached\\ =\\ _claim_action\\(action_id,\\ limits\\[\"action_identities\"\\]\\)|deadline\\ =\\ None\\ if\\ timeout\\ ==\\ 0\\ else\\ time\\.monotonic\\(\\)\\ \\+\\ timeout|def\\ _claim_action\\(action_id:\\ str,\\ max_identities:\\ int\\ =\\ 0\\)\\ \\->\\ tuple\\[str,\\ dict\\[str,\\ Any\\]\\ \\|\\ None\\]:|def\\ _collect_uia\\(desktop,\\ limits\\):|def\\ _execute_action\\(req:\\ Action,\\ execution_id:\\ str\\ =\\ \"\",\\ limits=None\\)\\ \\->\\ dict\\[str,\\ Any\\]:|def\\ _execute_action_owned\\(req:\\ Action,\\ execution_id:\\ str,\\ limits=None\\)\\ \\->\\ dict\\[str,\\ Any\\]:|def\\ _run_process\\(command:\\ list\\[str\\],\\ cwd:\\ Path,\\ timeout:\\ int,\\ \\*,\\ allow_network:\\ bool,\\ execution_id:\\ str\\ =\\ \"\",\\ container:\\ tuple\\[str,\\ str\\]\\ \\|\\ None\\ =\\ None,\\ output_chars:\\ int\\ =\\ MAX_OUTPUT,\\ capture_bytes:\\ int\\ =\\ MAX_CAPTURE_BYTES\\)\\ \\->\\ dict\\[str,\\ Any\\]:|def\\ _store_action_result\\(action_id:\\ str,\\ result:\\ dict\\[str,\\ Any\\],\\ max_results:\\ int\\ =\\ ACTION_CACHE_LIMIT\\)\\ \\->\\ None:|def\\ _validate_action\\(req:\\ Action,\\ limits=None\\)\\ \\->\\ dict\\[str,\\ Any\\]:|if\\ cap\\ and\\ index\\ >=\\ cap:|if\\ cap\\ and\\ len\\(text\\)\\ >\\ cap:|if\\ limits\\[\"uia_items\"\\]\\ and\\ len\\(items\\)\\ >=\\ limits\\[\"uia_items\"\\]:|if\\ limits\\[key\\]\\ and\\ size\\ >\\ limits\\[key\\]:|if\\ max_identities\\ >\\ 0\\ and\\ len\\(_action_consumed\\ \\|\\ _action_inflight\\)\\ >=\\ max_identities:|if\\ req\\.execution_id\\ or\\ container\\ or\\ req\\.output_chars\\ !=\\ MAX_OUTPUT\\ or\\ req\\.capture_bytes\\ !=\\ MAX_CAPTURE_BYTES:|limit_reached=True,\\ partial=True,\\ output=\"\",\\ capture_budget_bytes=capture_bytes,|limits\\ =\\ _gui_limits\\(x_aurorafox_gui_limits\\)|limits\\ =\\ limits\\ if\\ limits\\ is\\ not\\ None\\ else\\ GuiResourceLimits\\(\\)\\.model_dump\\(\\)|nonlocal\\ captured_bytes|raise\\ HTTPException\\(413,\\ detail=\\{\"error\":\\ \"action_resource_budget\",\\ \"budget\":\\ key,\\ \"limit\":\\ limits\\[key\\],\\ \"requested\":\\ size,\\ \"executed\":\\ False\\}\\)|reasons\\.add\\(budget\\)|result\\ =\\ _run_worker\\(\"action\",\\ action,\\ limits\\[\"action_worker_seconds\"\\]\\)|result\\ =\\ _run_worker\\(\"screen\",\\ \\{\"__execution_id\":\\ execution_id,\\ \"__gui_limits\":\\ limits\\},\\ limits\\[\"worker_seconds\"\\]\\)|result\\ =\\ _run_worker\\(\"windows\",\\ \\{\"__execution_id\":\\ execution_id,\\ \"__gui_limits\":\\ limits\\},\\ limits\\[\"worker_seconds\"\\]\\)|return\\ _execute_action_owned\\(req,\\ owned_id,\\ limits\\)|return\\ _run_process\\(command,\\ cwd,\\ req\\.timeout,\\ allow_network=req\\.allow_network,\\ execution_id=req\\.execution_id,\\ container=container,\\ output_chars=req\\.output_chars,\\ capture_bytes=req\\.capture_bytes\\)|room\\ =\\ len\\(chunk\\)\\ if\\ capture_bytes\\ ==\\ 0\\ else\\ max\\(0,\\ capture_bytes\\ \\-\\ captured_bytes\\)|text\\ =\\ text\\[:cap\\]|while\\ max_results\\ >\\ 0\\ and\\ len\\(_action_cache\\)\\ >\\ max_results:|windows_result\\ =\\ _run_worker\\(\"windows\",\\ \\{\"__execution_id\":\\ execution_id,\\ \"__gui_limits\":\\ limits\\},\\ limits\\[\"worker_seconds\"\\]\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted GUI/action/retention/raw-capture resource snapshot",
+      "rationale": "Exact tested private policy propagation/accounting; zero removes operational ceilings, identity capacity refuses new actions instead of forgetting replay protection. Unrelated schema/error/cgroup caps remain visible."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:action_id:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=160\\)|x_aurorafox_execution_id:\\ str\\ =\\ Header\\(default=\"\",\\ max_length=160,\\ pattern=r\"\\^\\[A\\-Za\\-z0\\-9_:\\.\\-\\]\\*\\$\"\\),)\\s*$",
+      "class": "format_structure",
+      "control": "Generated execution/action identity representation",
+      "rationale": "Exact trusted nonce/action-ID syntax and representation, not a processing-item ceiling; malformed IDs are rejected rather than clipped."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:\"uncertain_external_state\":\\ not\\ terminated\\ or\\ bool\\(record\\.get\\(\"unsafe_gui\"\\)\\),\\ \"retryable\":\\ False\\}|for\\ reader\\ in\\ readers:\\ reader\\.join\\(timeout=0\\.2\\)|for\\ reader\\ in\\ record\\.get\\(\"capture_threads\",\\ \\[\\]\\):\\ reader\\.join\\(timeout=0\\.2\\)|if\\ process\\ is\\ not\\ None:\\ process\\.wait\\(timeout=2\\)|return\\ \"terminal\",\\ _error\\(\"action_result_evicted\",\\ \"This\\ action\\ identity\\ was\\ consumed;\\ its\\ detailed\\ result\\ is\\ unavailable\",\\ retryable=False,|return\\ _error\\(\"background_descendants\",\\ \"GUI\\ worker\\ left\\ unconfirmed\\ descendants\",\\ retryable=False,|return\\ _error\\(\"background_descendants\",\\ \"Owned\\ descendants\\ outlived\\ the\\ command\",\\ retryable=False,|return\\ _error\\(\"cancelled\",\\ \"GUI\\ execution\\ was\\ cancelled\\ before\\ worker\\ launch\",\\ execution_id=execution_id,\\ retryable=False\\)|return\\ _error\\(\"cancelled\",\\ \"GUI\\ execution\\ was\\ cancelled\\ while\\ waiting\\ for\\ worker\\ completion\",\\ retryable=False,|return\\ _error\\(\"cancelled\",\\ \"GUI\\ execution\\ was\\ cancelled\",\\ execution_id=execution_id,\\ retryable=False,|return\\ _error\\(\"cancelled\",\\ \"GUI\\ execution\\ was\\ cancelled\",\\ retryable=False,|return\\ _error\\(\"cancelled\",\\ \"Screen\\ request\\ was\\ cancelled\",\\ retryable=False,\\ execution_id=execution_id,|return\\ _error\\(\"output_capture_failed\",\\ \"Owned\\ output\\ capture\\ failed\",\\ retryable=False,|return\\ _error\\(\"output_capture_incomplete\",\\ \"Owned\\ output\\ pipe\\ did\\ not\\ close\",\\ retryable=False,|return\\ _error\\(\"ownership_uncertain\",\\ \"Previous\\ GUI\\ phase\\ still\\ has\\ unconfirmed\\ ownership\",\\ retryable=False,\\ uncertain_external_state=True\\)|worker\\.join\\(timeout=seconds\\))\\s*$",
+      "class": "hard_boundary",
+      "control": "Owned stop acknowledgement and non-replay/uncertainty",
+      "rationale": "Exact cleanup waits and fail-closed ownership outcomes never extend or replace owner operation deadlines; genuine cancellation/fault/Job tests preserve unconfirmed ownership."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:process\\.join\\(timeout=0\\.1\\ if\\ deadline\\ is\\ None\\ else\\ max\\(0\\.0,\\ min\\(0\\.1,\\ deadline\\ \\-\\ time\\.monotonic\\(\\)\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Bounded lifecycle polling",
+      "rationale": "100ms join poll releases ownership between polls; total owner deadline or cancellable zero still decides completion."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:@app\\.get\\(\"/capabilities\"\\)|capture_failed\\ =\\ threading\\.Event\\(\\)|capture_failed\\.set\\(\\)|capture_lock\\ =\\ threading\\.Lock\\(\\)|def\\ capabilities\\(x_aurorafox_computer_token:\\ str\\ \\|\\ None\\ =\\ Header\\(default=None\\)\\)\\ \\->\\ dict\\[str,\\ Any\\]:|if\\ capture_failed\\.is_set\\(\\):|record\\[\"capture_threads\"\\]\\ =\\ readers|with\\ capture_lock:)\\s*$",
+      "class": "format_structure",
+      "control": "Concurrent capture lifecycle or capability interface structure",
+      "rationale": "Exact concurrency bookkeeping/interface declarations do not impose a data count or execution-duration ceiling."
+    },
+    {
+      "path": "scripts/computer_request_guard.gd",
+      "pattern": "^\\s*(?:captured\\.append\\(\"X\\-AuroraFox\\-GUI\\-Limits:\\ \"\\ \\+\\ JSON\\.stringify\\(payload\\[\"_gui_limits\"\\]\\)\\)|captured\\.append\\(\"X\\-AuroraFox\\-Sandbox\\-Items:\\ \"\\ \\+\\ str\\(payload\\[\"_sandbox_items\"\\]\\)\\)|captured\\[\"_gui_limits\"\\]\\ =\\ \\{\\}|captured\\[\"_gui_limits\"\\]\\[key\\]\\ =\\ OwnerResourcePolicy\\.value\\(\"computer_\"\\ \\+\\ key\\)|captured\\[\"_sandbox_items\"\\]\\ =\\ OwnerResourcePolicy\\.value\\(\"sandbox_tree_items\"\\)|captured\\[\"capture_bytes\"\\]\\ =\\ OwnerResourcePolicy\\.value\\(\"computer_capture_bytes\"\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Immutable private Computer/Sandbox policy header",
+      "rationale": "Model policy overwritten before HTTP; actual Godot/header/API raised/default/zero cases preserve trusted owner policy."
+    },
+    {
+      "path": "scripts/computer_request_guard.gd",
+      "pattern": "^\\s*(?:captured\\[\"_unsafe_gui\"\\]\\ =\\ route\\.ends_with\\(\"/action\"\\)\\ and\\ str\\(captured\\.get\\(\"type\",\\ \"\"\\)\\)\\.strip_edges\\(\\)\\.to_lower\\(\\)\\ not\\ in\\ \\[\"move\",\\ \"wait\",\\ \"done\"\\]|return\\ \\{\"cancelled\":\\ true,\\ \"termination_confirmed\":\\ cancellation,\\ \"uncertain_external_state\":\\ not\\ cancellation\\ or\\ bool\\(payload\\.get\\(\"_unsafe_gui\",\\ false\\)\\),\\ \"retryable\":\\ false,\\ \"transport_result\":\\ int\\(completed\\[0\\]\\)\\}|return\\ \\{\"cancelled\":\\ true,\\ \"termination_confirmed\":\\ cancellation,\\ \"uncertain_external_state\":\\ not\\ cancellation\\ or\\ bool\\(payload\\.get\\(\"_unsafe_gui\",\\ false\\)\\),\\ \"retryable\":\\ false\\})\\s*$",
+      "class": "hard_boundary",
+      "control": "Unsafe effects remain uncertain after cancellation",
+      "rationale": "Exact risk/retry representation never says stopping a worker reverses prior input effects."
+    },
+    {
+      "path": "scripts/computer_request_guard.gd",
+      "pattern": "^\\s*(?:captured\\.append\\(\"X\\-AuroraFox\\-Execution\\-ID:\\ \"\\ \\+\\ str\\(payload\\.execution_id\\)\\)|var\\ captured\\ :=\\ headers\\.duplicate\\(\\))\\s*$",
+      "class": "format_structure",
+      "control": "Execution identity/header transport",
+      "rationale": "Generated identity and header copy are protocol representation, not an operational resource ceiling."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*return\\ _error\\(\"invalid_worker_timeout\",\\ \"Worker\\ deadline\\ must\\ be\\ finite\\ and\\ nonnegative\",\\ retryable=False\\)\\s*$",
+      "class": "format_structure",
+      "control": "Finite nonnegative worker duration representation",
+      "rationale": "Reject NaN/infinite/negative durations; zero remains an unlimited cancellable owner operation, not a fixed processing ceiling."
     }
   ]
 }

@@ -26,6 +26,8 @@ static func execution_payload(path: String, payload: Dictionary) -> Dictionary:
 	var route := path.get_slice("?", 0)
 	var process := route.ends_with("/sandbox/exec") or route.ends_with("/sandbox/container_exec")
 	var gui := route.ends_with("/action") or route.ends_with("/screen") or route.ends_with("/windows")
+	if route.ends_with("/sandbox/list"):
+		captured["_sandbox_items"] = OwnerResourcePolicy.value("sandbox_tree_items")
 	if process:
 		captured["output_chars"] = OwnerResourcePolicy.value("computer_output_chars")
 		captured["capture_bytes"] = OwnerResourcePolicy.value("computer_capture_bytes")
@@ -43,6 +45,8 @@ static func append_execution_header(headers: PackedStringArray, payload: Diction
 	var captured := headers.duplicate()
 	if payload.has("execution_id"):
 		captured.append("X-AuroraFox-Execution-ID: " + str(payload.execution_id))
+	if payload.has("_sandbox_items"):
+		captured.append("X-AuroraFox-Sandbox-Items: " + str(payload["_sandbox_items"]))
 	if payload.has("_gui_limits"):
 		captured.append("X-AuroraFox-GUI-Limits: " + JSON.stringify(payload["_gui_limits"]))
 	return captured

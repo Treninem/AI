@@ -910,3 +910,67 @@ def test_unexpected_action_exception_consumes_identity_before_retry(tmp_path, mo
     monkeypatch.setattr(module, "_run_worker", lambda *_args: pytest.fail("replayed after unexpected exception"))
     result = module._execute_action(request)
     assert result["error"] == "action_result_evicted" and not result["retryable"] and result["uncertain_external_state"]
+
+
+@pytest.mark.parametrize("operation", ["tree", "snapshot"])
+def test_directory_quota_stops_real_scandir_before_materializing_remainder(tmp_path, monkeypatch, operation):
+    module, _ = service(tmp_path, monkeypatch)
+    root = module.SANDBOX_ROOT
+    for index in range(20): (root / f"file-{index}").write_text("x")
+    actual = module.os.scandir
+    scanners = []
+    class Scanner:
+        def __init__(self, path): self.inner = actual(path); self.read = 0; self.closed = False; scanners.append(self)
+        def __iter__(self): return self
+        def __next__(self):
+            self.read += 1
+            if self.read > 4: pytest.fail("enumerated beyond the actual quota overflow entry")
+            return next(self.inner)
+        def close(self): self.closed = True; self.inner.close()
+        def __enter__(self): return self
+        def __exit__(self, *_args): self.close()
+    monkeypatch.setattr(module.os, "scandir", Scanner)
+    if operation == "tree":
+        coverage = {}
+        assert len(module._tree(root, 3, coverage)) == 3 and coverage["truncated"]
+    else:
+        with pytest.raises(module.HTTPException) as caught: module._snapshot_tree_stats(root, 3, 0)
+        assert caught.value.status_code == 413
+    assert scanners and all(scanner.closed for scanner in scanners)
+    assert sum(scanner.read for scanner in scanners) == 4
+
+
+def test_nested_streaming_tree_closes_all_live_directory_iterators_on_quota(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    root = module.SANDBOX_ROOT
+    (root / "nested" / "deep").mkdir(parents=True)
+    for index in range(10): (root / "nested" / "deep" / str(index)).write_text("x")
+    actual = module.os.scandir
+    scanners = []
+    class Scanner:
+        def __init__(self, path): self.inner=actual(path); self.closed=False; scanners.append(self)
+        def __iter__(self): return self
+        def __next__(self): return next(self.inner)
+        def close(self): self.closed=True; self.inner.close()
+    monkeypatch.setattr(module.os, "scandir", Scanner)
+    coverage={}
+    assert len(module._tree(root, 2, coverage)) == 2 and coverage["truncated"]
+    assert len(scanners) == 3 and all(scanner.closed for scanner in scanners)
+
+
+def test_real_legacy_directory_listing_trusted_budget_exact_fit_zero_and_failures(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    root = module.SANDBOX_ROOT
+    for index in range(4): (root / str(index)).write_text("x")
+    for budget in [4, 0]:
+        complete=client.get(f"/sandbox/list?max_items={budget}", headers=HEADERS).json()
+        assert len(complete["items"])==4 and not complete["partial"] and not complete["limit_reached"]
+    limited=client.get("/sandbox/list?max_items=0", headers={**HEADERS,"X-AuroraFox-Sandbox-Items":"3"}).json()
+    assert len(limited["items"])==3 and limited["partial"] and limited["truncated"] and limited["limit_reached"]
+    assert client.get("/sandbox/list?max_items=-1", headers=HEADERS).status_code==400
+    assert client.get("/sandbox/list", headers={**HEADERS,"X-AuroraFox-Sandbox-Items":"-1"}).status_code==422
+    assert client.get("/sandbox/list").status_code==401
+    if os.name != "nt":
+        (root / "broken").symlink_to(root / "missing")
+        failed=client.get("/sandbox/list", headers=HEADERS).json()
+        assert failed["partial"] and failed["failed_paths"]==1 and not failed["limit_reached"]

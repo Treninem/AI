@@ -73,7 +73,10 @@ def test_server_has_pre_parser_body_limit_and_secure_account_mail_boundary():
     account_web = read("api/account_web.py")
     public_auth_limits = read("api/public_auth_limits.py")
     assert "RequestBodyLimitMiddleware" in server
-    assert 'AURORAFOX_API_MAX_BODY_BYTES' in server
+    assert 'request_body_policy_from_environment()' in server
+    assert 'AURORAFOX_API_MAX_BODY_BYTES' in limits
+    assert 'AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES' in limits
+    assert 'max_in_flight_bytes=MAX_API_IN_FLIGHT_BODY_BYTES' in server
     assert 'status": 413' in limits
     assert 'content-length' in limits
     assert 'received > self.max_bytes' in limits

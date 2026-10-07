@@ -722,6 +722,12 @@ func _run() -> void:
 			OwnerResourcePolicy._cached["computer_" + key] = budget
 			var captured_action := ComputerRequestGuard.execution_payload("/action", {"_gui_limits": {key: 7}})
 			assert(captured_action._gui_limits[key] == budget)
+	for budget in [3, 10001, 0]:
+		OwnerResourcePolicy._cached.sandbox_tree_items = budget
+		var captured_list := ComputerRequestGuard.execution_payload("/sandbox/list?max_items=0", {"_sandbox_items": 1})
+		assert(captured_list._sandbox_items == budget)
+		var captured_headers := ComputerRequestGuard.append_execution_header(PackedStringArray(), captured_list)
+		assert(captured_headers.has("X-AuroraFox-Sandbox-Items: " + str(budget)))
 	var timeout_request := HTTPRequest.new()
 	assert(ComputerRequestGuard.execution_timeout(10001) == 300)
 	assert(ComputerRequestGuard.execution_timeout(0) == 300)
