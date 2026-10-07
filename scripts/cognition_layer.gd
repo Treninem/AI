@@ -3,6 +3,7 @@ extends Node
 
 var ai: AIClient
 var last_plan_diagnostic: Dictionary = {}
+var capture_synthetic_plan_response := false
 
 func setup(ai_client: AIClient) -> void:
 	ai = ai_client
@@ -20,6 +21,8 @@ func make_plan(task: String, skills: Array, failures: Array) -> Dictionary:
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.1)
 	var content := str(result.get("content", ""))
 	last_plan_diagnostic = {"transport_ok": bool(result.get("ok", false)), "content_chars": content.length(), "content_sha256": content.sha256_text(), "json_brace_present": content.contains("{"), "fence_present": content.contains("```")}
+	if capture_synthetic_plan_response:
+		last_plan_diagnostic["synthetic_response_excerpt"] = content.substr(0, 1024)
 	var failed := {"objective": task, "steps": [], "risks": [], "success_checks": [], "needs_tools": true}
 	if not result.get("ok", false):
 		last_plan_diagnostic["status"] = "transport_failed"

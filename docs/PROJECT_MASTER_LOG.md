@@ -8005,3 +8005,19 @@ DONE:engine-supported local JSON request implemented and actual production-paylo
 REMAINING:publish/reconcile exact new-SHA native Core benchmark and wider CI; remaining source/device/release acceptance.
 BLOCKERS:prior cab2c71 real Windows Core20/21; next native outcome pending.
 NEXT:publish this narrow contract by expected-head fast-forward and inspect the exact real Core run, with no change to the21/21 criterion.
+
+CONSTRAINED_JSON_NATIVE_RESULT: exact ed5c73e74c7bb8d4c07fea05ec477f15e9af3aab Windows Core run37664243520 failed unchanged 21/21 gate at simple_planning only (20/21). Engine transport succeeded; content494 characters, braces present, no fence, zero parsed plan steps. All other scenarios and performance gate passed; exact same-SHA Core/Voice CI run37664243122 succeeded. Constrained JSON request alone is insufficient; cause remains unknown because artifact retains only a hash. No quality acceptance claimed.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-SYNTHETIC-DIAGNOSTIC
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL real Core planning quality diagnosis.
+STARTING_HEAD:ed5c73e74c7bb8d4c07fea05ec477f15e9af3aab; local/web synchronized.
+OWNED_PATHS:scripts/cognition_layer.gd;benchmarks/core/core_benchmark.gd;tests/core_benchmark_diagnostics_smoke.gd;this master log.
+INTENDED_BUMP:D version-last; canonical unchanged.
+EVIDENCE:two distinct parser/engine request repairs have failed the unchanged real 21/21 gate, while transport and 20 other scenarios pass. Need actual synthetic answer to identify syntax or schema failure.
+ACCEPTANCE_GATES:benchmark alone opts into at most1024 visible characters of the fixed tea-planning response; ordinary runtime diagnostics retain hash only. No private user prompt/content, quality thresholds, model/runtime, or scenario semantics changed. Verify negative and positive Godot fixtures; publish exact SHA and inspect Windows benchmark artifact.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:run local diagnostics, publish this narrow evidence package, use exact native artifact to identify and repair real cause.

@@ -280,6 +280,9 @@ func _run() -> void:
 	var cognition := CognitionLayer.new()
 	root.add_child(cognition)
 	cognition.setup(client)
+	# This fixed benchmark prompt contains no private user data. Capture its
+	# bounded model reply only in the benchmark artifact for failure diagnosis.
+	cognition.capture_synthetic_plan_response = true
 	var plan_call := await _plan_with_watchdog(cognition, "Prepare a cup of tea safely using a kettle. Give a short practical plan.")
 	if await _handle_plan_timeout("simple_planning", plan_call, client): return
 	var plan: Dictionary = plan_call.plan

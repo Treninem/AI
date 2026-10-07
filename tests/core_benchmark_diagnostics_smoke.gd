@@ -33,6 +33,12 @@ func _run() -> void:
 	var plan := await planner.make_plan("probe", [], [])
 	var desktop := DesktopLocalRuntime.new()
 	assert(plan.steps == ["check"])
+	assert(not planner.last_plan_diagnostic.has("synthetic_response_excerpt"))
+	planner.capture_synthetic_plan_response = true
+	model.response = "x".repeat(1200)
+	await planner.make_plan("probe", [], [])
+	assert(planner.last_plan_diagnostic.synthetic_response_excerpt == "x".repeat(1024))
+	planner.capture_synthetic_plan_response = false
 	assert(desktop._is_strict_structured_request(model.captured))
 	assert(not desktop._is_strict_structured_request([{"role": "user", "content": "Explain how planning works in ordinary prose"}]))
 	model.response = 'План ниже:\n```json\n{"objective":"tea {safe}","steps":["fill {kettle}","boil water"],"success_checks":["off"]}\n```\nГотово.'
