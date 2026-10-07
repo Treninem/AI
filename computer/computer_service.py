@@ -285,15 +285,92 @@ def _snapshot_tree_stats(root: Path, max_entries: int = MAX_SNAPSHOT_ENTRIES, ma
 
 def _copy_snapshot_tree(source: Path, target: Path, max_entries: int = MAX_SNAPSHOT_ENTRIES, max_bytes: int = MAX_SNAPSHOT_BYTES) -> dict[str, int]:
     _snapshot_tree_stats(source, max_entries, max_bytes)
+    source_root = source.resolve(strict=True)
+    created = False
+    iterator = None
+    directory_metadata = []
+    entries = 0
+    total_bytes = 0
+
+    def failed(exc):
+        raise HTTPException(status_code=500, detail=f"Cannot copy snapshot tree: {type(exc).__name__}") from exc
+
     try:
-        # Never follow a link introduced after preflight. The post-copy validation
-        # below then rejects and removes any raced-in link rather than persisting it.
-        shutil.copytree(source, target, symlinks=True)
-        return _snapshot_tree_stats(target, max_entries, max_bytes)
+        try:
+            target.mkdir(mode=0o700, parents=False, exist_ok=False)
+        except FileExistsError as exc:
+            raise HTTPException(status_code=409, detail="Snapshot destination already exists") from exc
+        created = True
+        directory_metadata.append((target, source_root.stat()))
+        iterator = _walk_directory_entries(source_root, failed)
+        for entry in iterator:
+            entries += 1
+            if max_entries > 0 and entries > max_entries:
+                raise HTTPException(status_code=413, detail="Snapshot contains too many filesystem entries during copy")
+            path = Path(entry.path)
+            info = path.stat(follow_symlinks=False)
+            if stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                raise HTTPException(status_code=400, detail="Symlinks and reparse entries are not allowed in workspace snapshots")
+            try:
+                path.resolve(strict=True).relative_to(source_root)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="Snapshot source escapes its original root") from exc
+            destination = target / path.relative_to(source_root)
+            if stat.S_ISDIR(info.st_mode):
+                destination.mkdir(mode=0o700, exist_ok=False)
+                directory_metadata.append((destination, info))
+                continue
+            if not stat.S_ISREG(info.st_mode):
+                raise HTTPException(status_code=400, detail="Special filesystem entries are not allowed in workspace snapshots")
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0) | getattr(os, "O_NONBLOCK", 0)
+            with os.fdopen(os.open(path, flags), "rb") as reader:
+                opened = os.fstat(reader.fileno())
+                if not stat.S_ISREG(opened.st_mode) or not os.path.samestat(info, opened):
+                    raise HTTPException(status_code=400, detail="Snapshot source identity changed before copy")
+                if max_bytes > 0 and total_bytes + opened.st_size > max_bytes:
+                    raise HTTPException(status_code=413, detail="Snapshot exceeds the configured byte limit during copy")
+                with destination.open("xb") as writer:
+                    while True:
+                        read_bytes = 65536 if max_bytes == 0 else min(65536, max_bytes - total_bytes + 1)
+                        chunk = reader.read(read_bytes)
+                        if not chunk:
+                            break
+                        if max_bytes > 0 and total_bytes + len(chunk) > max_bytes:
+                            raise HTTPException(status_code=413, detail="Snapshot exceeds the configured byte limit during copy")
+                        writer.write(chunk)
+                        total_bytes += len(chunk)
+            os.chmod(destination, stat.S_IMODE(opened.st_mode))
+            os.utime(destination, ns=(opened.st_atime_ns, opened.st_mtime_ns), follow_symlinks=False)
+        stats = _snapshot_tree_stats(target, max_entries, max_bytes)
+        for directory, info in reversed(directory_metadata):
+            os.chmod(directory, stat.S_IMODE(info.st_mode))
+            os.utime(directory, ns=(info.st_atime_ns, info.st_mtime_ns), follow_symlinks=False)
+        return stats
     except Exception:
-        if target.exists():
-            shutil.rmtree(target, ignore_errors=True)
+        if created and target.exists():
+            try:
+                # Restored read-only metadata must not strand an owned partial
+                # snapshot. Never repair a link/reparse target during cleanup.
+                for directory, _ in directory_metadata:
+                    info = directory.stat(follow_symlinks=False)
+                    if stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                        raise OSError("Snapshot cleanup directory identity is unsafe")
+                    os.chmod(directory, 0o700)
+
+                def remove_readonly(function, path, exc_info):
+                    info = os.stat(path, follow_symlinks=False)
+                    if stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                        raise exc_info[1]
+                    os.chmod(path, 0o700)
+                    function(path)
+
+                shutil.rmtree(target, onerror=remove_readonly)
+            except OSError as cleanup_error:
+                raise HTTPException(status_code=500, detail="Snapshot copy failed and partial destination cleanup failed") from cleanup_error
         raise
+    finally:
+        if iterator is not None:
+            iterator.close()
 
 
 def _desktop_bounds() -> dict[str, int]:

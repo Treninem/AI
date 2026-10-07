@@ -974,3 +974,216 @@ def test_real_legacy_directory_listing_trusted_budget_exact_fit_zero_and_failure
         (root / "broken").symlink_to(root / "missing")
         failed=client.get("/sandbox/list", headers=HEADERS).json()
         assert failed["partial"] and failed["failed_paths"]==1 and not failed["limit_reached"]
+
+
+@pytest.mark.parametrize('growth', ['bytes', 'entries'])
+def test_snapshot_growth_after_preflight_is_bounded_and_cleaned(tmp_path, monkeypatch, growth):
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / 'one').write_bytes(b'x')
+    target = tmp_path / 'target'
+    original_stats = module._snapshot_tree_stats
+    called = []
+
+    def stats(root, *args):
+        result = original_stats(root, *args)
+        if root == source and not called:
+            called.append(True)
+            if growth == 'bytes':
+                (source / 'one').write_bytes(b'x' * 100000)
+            else:
+                for index in range(4):
+                    (source / f'new{index}').write_bytes(b'x')
+        return result
+
+    monkeypatch.setattr(module, '_snapshot_tree_stats', stats)
+    with pytest.raises(module.HTTPException) as exc:
+        module._copy_snapshot_tree(source, target, max_entries=2, max_bytes=8)
+    assert exc.value.status_code == 413
+    assert not target.exists()
+    assert source.is_dir()
+    assert (source / 'one').read_bytes() == (b'x' * 100000 if growth == 'bytes' else b'x')
+
+
+def test_snapshot_preexisting_target_never_removed(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    target = tmp_path / 'existing'
+    target.mkdir()
+    (target / 'preserved').write_bytes(b'owner data')
+    with pytest.raises(module.HTTPException) as exc:
+        module._copy_snapshot_tree(source, target)
+    assert exc.value.status_code == 409
+    assert (target / 'preserved').read_bytes() == b'owner data'
+
+
+def test_snapshot_reads_only_remaining_byte_budget_plus_one_on_live_growth(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    data = source / 'one'
+    data.write_bytes(b'x')
+    target = tmp_path / 'target'
+    original_fstat = os.fstat
+    original_fdopen = os.fdopen
+    reads = []
+    changed = []
+
+    def fstat(fd):
+        info = original_fstat(fd)
+        if not changed and os.path.samestat(info, data.stat()):
+            changed.append(True)
+            data.write_bytes(b'x' * 100000)
+        return info
+
+    class Reader:
+        def __init__(self, reader): self.reader = reader
+        def __enter__(self): return self
+        def __exit__(self, *args): self.reader.close()
+        def fileno(self): return self.reader.fileno()
+        def read(self, count):
+            assert count <= 9
+            raw = self.reader.read(count)
+            reads.append(len(raw))
+            return raw
+
+    monkeypatch.setattr(module.os, 'fstat', fstat)
+    monkeypatch.setattr(module.os, 'fdopen', lambda *a, **k: Reader(original_fdopen(*a, **k)))
+    with pytest.raises(module.HTTPException) as exc:
+        module._copy_snapshot_tree(source, target, max_bytes=8)
+    assert exc.value.status_code == 413
+    assert sum(reads) == 9
+    assert not target.exists()
+
+
+def test_snapshot_copy_failure_removes_readonly_partial_and_preserves_source(tmp_path, monkeypatch):
+    import stat
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    data = source / 'readonly'
+    data.write_bytes(b'owner bytes')
+    data.chmod(stat.S_IREAD)
+    target = tmp_path / 'target'
+    original_utime = module.os.utime
+
+    def utime(path, *args, **kwargs):
+        if Path(path) == target / 'readonly':
+            raise OSError('controlled metadata failure after file copy')
+        return original_utime(path, *args, **kwargs)
+
+    monkeypatch.setattr(module.os, 'utime', utime)
+    try:
+        with pytest.raises(OSError, match='controlled metadata failure'):
+            module._copy_snapshot_tree(source, target, max_bytes=0)
+        assert not target.exists()
+        assert data.read_bytes() == b'owner bytes'
+    finally:
+        data.chmod(stat.S_IREAD | stat.S_IWRITE)
+
+
+def test_snapshot_changed_opened_file_identity_rejected_before_copy(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    data = source / 'one'
+    data.write_bytes(b'original')
+    replacement = tmp_path / 'replacement'
+    replacement.write_bytes(b'different source')
+    target = tmp_path / 'target'
+    original_open = os.open
+    changed = []
+
+    def open_file(path, flags, *args, **kwargs):
+        if Path(path) == data and not changed:
+            changed.append(True)
+            data.rename(source / 'preserved')
+            replacement.rename(data)
+        return original_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(module.os, 'open', open_file)
+    with pytest.raises(module.HTTPException) as exc:
+        module._copy_snapshot_tree(source, target, max_entries=0, max_bytes=0)
+    assert exc.value.status_code == 400
+    assert 'identity changed' in exc.value.detail
+    assert not target.exists()
+    assert (source / 'preserved').read_bytes() == b'original'
+    assert data.read_bytes() == b'different source'
+
+
+def test_snapshot_exact_copy_preserves_nested_content_and_executable_metadata(tmp_path, monkeypatch):
+    import stat
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    folder = source / 'nested'
+    folder.mkdir(parents=True)
+    data = folder / 'run.sh'
+    content = b'#!/bin/sh\nexit 0\n'
+    data.write_bytes(content)
+    data.chmod(0o755)
+    before = data.stat()
+    for number, budget in enumerate([len(content), len(content) + 100, 0]):
+        target = tmp_path / f'target{number}'
+        assert module._copy_snapshot_tree(source, target, max_entries=2, max_bytes=budget) == {'entries': 2, 'bytes': len(content)}
+        copied = target / 'nested/run.sh'
+        assert copied.read_bytes() == content
+        assert copied.stat().st_mtime_ns == before.st_mtime_ns
+        if os.name != 'nt':
+            assert stat.S_IMODE(copied.stat().st_mode) == 0o755
+            import subprocess
+            assert subprocess.run([str(copied)], timeout=2).returncode == 0
+
+
+def test_snapshot_cleanup_failure_is_reported_instead_of_silently_ignored(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    (source / 'one').write_bytes(b'x')
+    target = tmp_path / 'target'
+    original_stats = module._snapshot_tree_stats
+
+    def stats(root, *args):
+        result = original_stats(root, *args)
+        if root == source:
+            (source / 'one').write_bytes(b'growth')
+        return result
+
+    def failed_cleanup(*args, **kwargs):
+        raise OSError('controlled destination cleanup failure')
+
+    monkeypatch.setattr(module, '_snapshot_tree_stats', stats)
+    monkeypatch.setattr(module.shutil, 'rmtree', failed_cleanup)
+    with pytest.raises(module.HTTPException) as exc:
+        module._copy_snapshot_tree(source, target, max_bytes=1)
+    assert exc.value.status_code == 500
+    assert 'partial destination cleanup failed' in exc.value.detail
+    assert target.exists()
+    assert (source / 'one').read_bytes() == b'growth'
+
+
+@pytest.mark.skipif(not hasattr(os, 'mkfifo'), reason='FIFO replacement fixture requires POSIX filesystem')
+def test_snapshot_regular_file_replaced_by_fifo_cannot_block_open(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    data = source / 'one'
+    data.write_bytes(b'original')
+    target = tmp_path / 'target'
+    original_open = os.open
+    changed = []
+
+    def open_file(path, flags, *args, **kwargs):
+        if Path(path) == data and not changed:
+            assert flags & os.O_NONBLOCK
+            changed.append(True)
+            data.unlink()
+            os.mkfifo(data)
+        return original_open(path, flags, *args, **kwargs)
+
+    monkeypatch.setattr(module.os, 'open', open_file)
+    with pytest.raises(module.HTTPException) as exc:
+        module._copy_snapshot_tree(source, target, max_entries=0, max_bytes=0)
+    assert exc.value.status_code == 400
+    assert not target.exists()

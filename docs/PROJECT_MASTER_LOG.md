@@ -7701,3 +7701,41 @@ DONE:published3large directory/API/provider packages; four File zero controls an
 REMAINING:publication/exactCI;1252inventory/unfinishedCRITICAL, provider pagination/copy-stage limitations, fullsameSHA package/device/update/production/version-last.
 BLOCKERS:no external source blocker; actual OCRruntime/physical/production acceptance unwaived.
 NEXT:publish coherent File/CI package; continue largest remaining owner/incomplete critical block, investigate exactCI failure if observed.
+
+PUBLICATION_CHECKPOINT: FILES-CACHE-PROVIDER-ZERO published317d0151e0679dfc95bc29ed50c14ef911588381/tree987b42704a835531e38f8fcbfb511fc8283694d8 onc219921 expected-head fast-forward;10paths. Source RELEASED/EXACT_CI_PENDING. Required new provider CI selection corrected but exact execution pending; nativeOCR skipped notPASS.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-SNAPSHOT-COPY-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining snapshot/rollback owner resources during materialization
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:317d0151e0679dfc95bc29ed50c14ef911588381
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;tests/test_sandbox_resource_limits.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over published bounded-directory Computer source; no parallel edit observed. Preflight/postflight streaming accepted previously; copytree still fully materializes uncapped growth between them. Freshmain446ce2 unchanged; priorFile exactCI pending.
+NON_BLOCKERS:No promise of fully race-proof parent filesystem traversal or identical-time transactional source view. Existing symlink/reparse/special rejection and sandbox authority remain mandatory. No V1.6/S3/GUI/action/sign/version changes.
+ACCEPTANCE_GATES:stream source entries and file chunks during actual copy; independently enforce entry/actual-byte owner caps before excessive materialization, zero/exact/raised supported. Capture regular-file stat and verify opened file identity before reading; no preexisting target deletion; created target cleanup on overflow/error. Actual growth after preflight, large-file read cap+1 accounting, entry growth, reparse/fault, executable metadata, rollback-preserved work and currentnativeWindows mandatory tests. Final target snapshot stats still validate successful materialization.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:bounded snapshot copy implementation with genuine growth/fault/ownership fixtures and relevant coherentComputer batch.
+
+CLAIM_ADDENDUM: SNAPSHOT-COPY-BUDGET owns .github/workflows/voice-ci.yml and .github/workflows/release.yml for confirmed exact317 File gate environment defect: new actual ffmpeg fixture imports production imageio-ffmpeg==0.6.0, absent from both explicit test dependency lists. Add matching dependency without skipping fixture or changing acceptance. Exact317:46completed/41SUCCESS/3SKIP/2FAILURE; File job112736667994 missing module; Core Windows job112736730703/run37604527306 quality20/21, only simple_planning failed (steps0/checks0), performancePASS, HTTPprogressPASS. Core cause not confirmed; artifact11473964567 sha256badd4e98d27fbb277565f5f7180d833e4826fa87838c1b1e4a014cf27a4b2d94 downloaded for diagnosis. API Linux job112736668509 actual177PASS includes provider fixture. Snapshot expanded local148PASS/6SKIP; nativeWindows/Docker skips remain unaccepted locally.
+
+CLAIM_ADDENDUM: SNAPSHOT-COPY-BUDGET additionally takes over scripts/cognition_layer.gd, benchmarks/core/core_benchmark.gd and tests/owner_resource_limits_smoke.gd solely for existing mandatory Core simple_planning failure diagnosis. Exact317 report proves empty plan but omits transport/parser/schema evidence; cause remains UNKNOWN. Add content hash/length and explicit failure category/types without logging private model content, leave benchmark success criteria unchanged. Actual fixture validates unavailable/malformed/wrong-shaped/valid plans, no fabricated steps or acceptance bypass. Reconcile published coordinator cognition paths; no other active lane edits observed.
+
+### Snapshot materialization and existing exact-CI repair checkpoint
+CLAIM:WORK-2026-10-07-V15-SNAPSHOT-COPY-BUDGET ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:317d0151e0679dfc95bc29ed50c14ef911588381/tree987b42704a835531e38f8fcbfb511fc8283694d8.
+CHANGES:stream actual snapshot entries/chunks and enforce independent owner caps during copy; verify opened regular-file identity, reject replacement/FIFO, preserve executable/time metadata. Existing destination409 remains untouched; only newly created partial snapshots cleaned, failed cleanup explicitly500. Narrow6exact audited owner statements, no blanket classification. Matching production imageio-ffmpeg0.6.0 added to explicit ordinary/release test dependency lists. Core empty plan diagnosis adds private content hash/length and transport/schema category; wrong-shaped/empty plan rejected, quality criteria unchanged; actual cause still UNKNOWN.
+TESTS:Computer expanded148PASS/6SKIP (nativeWindows junction/job and Docker unavailable locally, notPASS); actual preflight growth/entry growth/read cap+1/collision/identity replacement/FIFO/executable/readonly/cleanup-failure fixtures included. File CI identical selection66PASS/2subtestsPASS. Actual Godot4.7.1 owner smokePASS with plan failure/valid fixtures, existing20ObjectDB/8resource exit diagnostics unchanged. Previous transient test session completion lost after idle, not accepted; persisted rerun result used.
+EXACT_PRIOR_CI:31746complete41SUCCESS/3SKIP/2FAILURE. API Linux177PASS proves new provider fixture executed; Computer Linux/Windows successful. File failure confirmed missing test dependency, repaired locally; Core Windows quality20/21 simple_planning empty, performancePASS, HTTPprogressPASS, artifact11473964567 sha256badd4e98d27fbb277565f5f7180d833e4826fa87838c1b1e4a014cf27a4b2d94. No rerun represented as source fix or qualityPASS.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:snapshot bounded materialization and actual fault regressions; dependency repair; safe Core diagnostic prepared.
+REMAINING:exact newCI/nativeWindows and actual Core cause; remaining inventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; physical/production evidence unwaived.
+NEXT:publish coherent snapshot/requiredCI diagnosis package; continue remaining source while reconciling new exact gates.

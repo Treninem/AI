@@ -1597,6 +1597,13 @@
       "class": "owner_adjustable",
       "control": "Windows File Intelligence cache and provider operation budgets",
       "rationale": "Exact reviewed startup constants/cache zero bypass; genuine full module import/cache files/HTTP/ffmpeg and Godot persisted env snapshot cover zero/exact/raised/invalid. Zero timeout maps None; internal allocation/listing zero semantics unchanged."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:if\\ max_bytes\\ >\\ 0\\ and\\ total_bytes\\ \\+\\ len\\(chunk\\)\\ >\\ max_bytes:|if\\ max_bytes\\ >\\ 0\\ and\\ total_bytes\\ \\+\\ opened\\.st_size\\ >\\ max_bytes:|raise\\ HTTPException\\(status_code=413,\\ detail=\"Snapshot\\ exceeds\\ the\\ configured\\ byte\\ limit\\ during\\ copy\"\\)|read_bytes\\ =\\ 65536\\ if\\ max_bytes\\ ==\\ 0\\ else\\ min\\(65536,\\ max_bytes\\ \\-\\ total_bytes\\ \\+\\ 1\\)|stats\\ =\\ _snapshot_tree_stats\\(target,\\ max_entries,\\ max_bytes\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted owner snapshot entry/actual-byte budgets",
+      "rationale": "Reviewed bounded materialization statements; chunk65536 is read granularity, total bytes are independently owner controlled with zero unlimited. Actual growth and cap+1 regressions; unknown trailing source stays unclassified."
     }
   ]
 }

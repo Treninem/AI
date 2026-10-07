@@ -541,6 +541,17 @@ func _run() -> void:
 		assert(not invalid.ok and invalid.confidence == 0.0 and invalid.final_answer == "unverified")
 	fixture_ai.response = {"ok": true, "content": '{"ok":true,"confidence":0.9,"final_answer":"verified","issues":[]}'}
 	assert((await cognition.verify_answer("fixture", "unverified", [])).final_answer == "verified")
+	fixture_ai.response = {"ok": false}
+	assert((await cognition.make_plan("fixture", [], [])).steps.is_empty())
+	assert(cognition.last_plan_diagnostic.status == "transport_failed")
+	for content in ["bad json", "{}", '{"objective":"fixture","steps":"unsafe shape"}', '{"objective":"fixture","steps":[4]}', '{"objective":"fixture","steps":[]}']:
+		fixture_ai.response = {"ok": true, "content": content}
+		assert((await cognition.make_plan("fixture", [], [])).steps.is_empty())
+		assert(cognition.last_plan_diagnostic.status != "valid_plan")
+		assert(cognition.last_plan_diagnostic.content_sha256 == content.sha256_text())
+	fixture_ai.response = {"ok": true, "content": '{"objective":"fixture","steps":["prepare","verify"]}'}
+	assert((await cognition.make_plan("fixture", [], [])).steps.size() == 2)
+	assert(cognition.last_plan_diagnostic.status == "valid_plan")
 	cognition.free()
 	fixture_ai.calls = 0
 	fixture_ai.response = {"ok": true, "content": '{"tool":"fixture","args":{}}'}

@@ -289,6 +289,7 @@ func _run() -> void:
 		"elapsed_ms": plan_call.elapsed_ms,
 		"step_count": plan_steps.size(),
 		"success_check_count": plan_checks.size(),
+		"plan_diagnostic": cognition.last_plan_diagnostic.duplicate(true),
 		"needs_tools": plan.get("needs_tools", false)
 	}, "aurora_core_desktop" if OS.get_name() == "Windows" else "")
 

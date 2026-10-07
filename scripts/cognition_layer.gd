@@ -2,6 +2,7 @@ class_name CognitionLayer
 extends Node
 
 var ai: AIClient
+var last_plan_diagnostic: Dictionary = {}
 
 func setup(ai_client: AIClient) -> void:
 	ai = ai_client
@@ -17,9 +18,27 @@ func make_plan(task: String, skills: Array, failures: Array) -> Dictionary:
 Недавние ошибки: %s
 """ % [task, JSON.stringify(skills), JSON.stringify(failures)]
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.1)
+	var content := str(result.get("content", ""))
+	last_plan_diagnostic = {"transport_ok": bool(result.get("ok", false)), "content_chars": content.length(), "content_sha256": content.sha256_text()}
+	var failed := {"objective": task, "steps": [], "risks": [], "success_checks": [], "needs_tools": true}
 	if not result.get("ok", false):
-		return {"objective": task, "steps": [], "risks": [], "success_checks": [], "needs_tools": true}
-	return _parse_json(str(result.get("content", "")), {"objective": task, "steps": []})
+		last_plan_diagnostic["status"] = "transport_failed"
+		return failed
+	var plan := _parse_json(content, {})
+	last_plan_diagnostic["objective_type"] = typeof(plan.get("objective"))
+	last_plan_diagnostic["steps_type"] = typeof(plan.get("steps"))
+	if not plan.get("objective") is String or not plan.get("steps") is Array:
+		last_plan_diagnostic["status"] = "invalid_json_or_plan_contract"
+		return failed
+	for step in plan.steps:
+		if not step is String or str(step).strip_edges().is_empty():
+			last_plan_diagnostic["status"] = "invalid_step_contract"
+			return failed
+	if str(plan.objective).strip_edges().is_empty() or plan.steps.is_empty():
+		last_plan_diagnostic["status"] = "empty_plan"
+		return failed
+	last_plan_diagnostic["status"] = "valid_plan"
+	return plan
 
 func verify_answer(task: String, answer: String, trajectory: Array) -> Dictionary:
 	var prompt := """
