@@ -3,6 +3,9 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"sandbox_write_bytes": 2000000,
+	"sandbox_snapshot_entries": 5000,
+	"sandbox_snapshot_bytes": 536870912,
 	"research_request_seconds": 20,
 	"research_collection_seconds": 45,
 	"research_backoff_base_seconds": 300,
@@ -179,6 +182,9 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"sandbox_write_bytes": "Windows: байтов записи в песочницу (0 = все)",
+	"sandbox_snapshot_entries": "Windows: записей снимка песочницы (0 = все)",
+	"sandbox_snapshot_bytes": "Windows: байтов снимка песочницы (0 = все)",
 	"research_request_seconds": "Research: секунд запроса (0 = без срока)",
 	"research_collection_seconds": "Research: секунд сбора (0 = без срока)",
 	"research_backoff_base_seconds": "Research: секунд начальной задержки после ошибки (0 = без задержки)",

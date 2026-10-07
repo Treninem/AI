@@ -7133,3 +7133,36 @@ DONE:publishedResearch/Voice a388; current requestpolicy implemented and actuall
 REMAINING:exactnewSHA CI/package, provider/request/Computer remaining controls and scoped source, physical/update/release/version-last.
 BLOCKERS:none stops independent authorized source; physical/production-release evidence unwaived.
 NEXT:publish coherent request-policy package; continue largest free current Computer/transport control block while CI runs; collect actual red outcomes together.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-WRITE-SNAPSHOT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer owner resource controls and snapshot/rollback safety
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:3e0fba1eeb75027f08f4dc3e6d11688f329ac12c
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/tool_registry.gd;scripts/owner_resource_policy.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;config/owner_control_policy.json exact-reviewed lines;master/memory append-only
+DEPENDENCIES:coordinator takes over published sandbox source paths; no concurrent source lane edits evidenced in freshmain/PR. Researchrequest package3e0fba1 published, source tested96Python+2subtests and actualGodot/HTTP, exactCI pending.
+NON_BLOCKERS:execution/GUI deadline cancellation and provider pagination remain separately unfinished; no unsafe deadline relaxation in this block. V1.6 runtime/S3 unchanged. Action idempotency, authentication, masterstop and strictcontainer boundary retained.
+ACCEPTANCE_GATES:Windows writebytes and snapshotentries/bytes capturedfromprivateownerpolicy,0unlimited/raised/exact/overflow/rejectednegative; failure before replacement preserves workspace; links/junctions rejected at snapshotpre/postflight; authenticated real filesystem servicecalls and ownerpersist tests, currentComputer safety suite plus exactnewSHA CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent Windows write/snapshot budget propagation and genuine filesystem regressions.
+
+### Coherent Windows write/snapshot owner source checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-WRITE-SNAPSHOT ACTIVE; implementation/local acceptancePASS; exactnextSHA CI needed.
+CHANGES:three Windows private controls defaultwrite2000000bytes/snapshot5000entries/536870912bytes. Captured in both ComputerClient/ToolRegistry write paths and SandboxManager write/snapshot/rollback. Sidecar authenticated models accept raised/0 budgets with nonnegativevalidation; snapshot preflight/post-copy checks use same immutable request. Overflow before apply retains current work. Symlinks and Windows reparse/junction entries forbidden even when budgets0. Existing local/Android write behavior unchanged; no execution/GUI timeout relaxation.
+TESTS:71PythonPASS,1explicitLinuxSKIP for real NTFS-junction fixture;1existingStarlette/AnyIOdeprecation. Actual authenticated filesystem cases:UTF8write2000002bytes(defaultreject/exact/0success/lowcap preserves existing),5001-entry snapshot(defaultreject/exact/0success),byte exact/overflow/0snapshot and rollback with failedrollback retainingmodifiedcurrentfile,unauthenticatedrequests401,negativebudgets422,linkboundary400. ExistingComputer concurrency/idempotency/failure/safety contractsPASS. ActualGodotowner save/reload0/10001 for3newfields and genuine production ComputerClient/ToolRegistry write-payload capture0/default/raisedPASS; transport replaced only at fixture boundary, no Windows native action claimed. Existing owner20ObjectDB/8resources shutdowndiagnostics retained.
+REPAIR_EVIDENCE:initial old snapshot regression dynamically monkeypatched MAX_SNAPSHOT_BYTES; static new Pydantic defaults incorrectly captured oldvalue. default_factory restores legacy runtime default behavior while explicit captured request remains authoritative. Existing symlink error text retained and expanded to reparse. First new Godot fixture insertion had wrong classindentation, corrected; actual rerunPASS required, no parseerror waived.
+INVENTORY:{"test_evidence": 1365, "unclassified": 1249, "documentation": 62, "owner_adjustable": 652, "format_structure": 359, "hard_boundary": 26};complete:false. Only reviewed write/snapshot budget lines classified. Other Computer execution/GUI/output/metadata ceilings remain unresolved.
+CURRENT_PRIOR_CI:3e0fba1 observation37checks=31SUCCESS/3SKIPPED/3IN_PROGRESS,0FAILURE; full eventual total can grow as downstreamjobsappear. Pending is not accepted.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Research/Voice a388 and request3e0f source published; current Windows write/snapshot actual local gatesPASS.
+REMAINING:publish/check this source, full owneraudit/currentunfinishedblocks and exactrelease/package/device/update/version-last gates.
+BLOCKERS:none prevents source work; real Windows junction acceptance awaits Windows runner, physical/production identity gates remain unwaived.
+NEXT:publish coherent package, continue remaining current controls and collect actual CI failures as a batch.

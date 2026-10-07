@@ -451,7 +451,7 @@ func _sandbox_exec(args: Dictionary) -> Dictionary:
 	return local_result
 
 func _sandbox_write(args: Dictionary) -> Dictionary:
-	return await _computer_json("/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", ""))}, 12.0)
+	return await _computer_json("/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", "")), "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")}, 12.0)
 
 func _sandbox_read(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))

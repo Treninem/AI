@@ -103,7 +103,7 @@ func write_file(relative_path: String, content: String, area := "work") -> Dicti
 	if safe.is_empty() or area not in ["input", "work", "output", "logs"]: return {"ok": false, "error": "Invalid workspace path"}
 	var result: Dictionary
 	if OS.get_name() == "Windows":
-		result = await _http_json(WINDOWS_SERVICE + "/sandbox/write", HTTPClient.METHOD_POST, {"path": "%s/%s/%s" % [ws.id, area, safe], "content": content})
+		result = await _http_json(WINDOWS_SERVICE + "/sandbox/write", HTTPClient.METHOD_POST, {"path": "%s/%s/%s" % [ws.id, area, safe], "content": content, "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")})
 	else:
 		var path := "%s/%s/%s" % [ws.root, area, safe]
 		if _path_has_link(path): return {"ok": false, "error": "Workspace links are not writable"}
@@ -163,7 +163,7 @@ func snapshot(label := "checkpoint") -> Dictionary:
 	if ws.is_empty(): return {"ok": false, "error": "No active workspace"}
 	var result: Dictionary
 	if OS.get_name() == "Windows":
-		result = await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/snapshot", HTTPClient.METHOD_POST, {"workspace": ws.id, "label": label})
+		result = await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/snapshot", HTTPClient.METHOD_POST, {"workspace": ws.id, "label": label, "max_entries": OwnerResourcePolicy.value("sandbox_snapshot_entries"), "max_bytes": OwnerResourcePolicy.value("sandbox_snapshot_bytes")})
 	else:
 		var snapshot_id := "%d_checkpoint" % int(Time.get_unix_time_from_system())
 		var snapshot_dir := "%s/snapshots/%s" % [ws.root, snapshot_id]
@@ -181,7 +181,7 @@ func rollback(snapshot_ref: String) -> Dictionary:
 	if snapshot_ref.is_empty(): return {"ok": false, "error": "Missing snapshot"}
 	var result: Dictionary
 	if OS.get_name() == "Windows":
-		result = await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/rollback", HTTPClient.METHOD_POST, {"workspace": ws.id, "snapshot": snapshot_ref})
+		result = await _http_json(WINDOWS_SERVICE + "/sandbox/workspace/rollback", HTTPClient.METHOD_POST, {"workspace": ws.id, "snapshot": snapshot_ref, "max_entries": OwnerResourcePolicy.value("sandbox_snapshot_entries"), "max_bytes": OwnerResourcePolicy.value("sandbox_snapshot_bytes")})
 	else:
 		var safe_snapshot := _safe_relative(snapshot_ref)
 		if safe_snapshot.is_empty(): return {"ok": false, "error": "Invalid snapshot"}

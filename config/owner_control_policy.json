@@ -1408,6 +1408,20 @@
       "class": "format_structure",
       "control": "signed64 representation/exhaustion state",
       "rationale": "Explicit exhausted-budget error or signed64 timestamp saturation; representation/error semantics do not impose an operational ceiling."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:MAX_WRITE_BYTES\\ =\\ 2_000_000|MAX_SNAPSHOT_ENTRIES\\ =\\ int\\(os\\.getenv\\(\"AURORAFOX_SNAPSHOT_MAX_ENTRIES\",\\ \"5000\"\\)\\)|MAX_SNAPSHOT_BYTES\\ =\\ int\\(os\\.getenv\\(\"AURORAFOX_SNAPSHOT_MAX_BYTES\",\\ str\\(512\\ \\*\\ 1024\\ \\*\\ 1024\\)\\)\\)|max_bytes:\\ int\\ =\\ Field\\(default=MAX_WRITE_BYTES,\\ ge=0\\)|max_entries:\\ int\\ =\\ Field\\(default_factory=lambda:\\ MAX_SNAPSHOT_ENTRIES,\\ ge=0\\)|max_bytes:\\ int\\ =\\ Field\\(default_factory=lambda:\\ MAX_SNAPSHOT_BYTES,\\ ge=0\\)|max_entries:\\ int\\ =\\ Field\\(default_factory=lambda:\\ MAX_SNAPSHOT_ENTRIES,\\ ge=0\\)|max_bytes:\\ int\\ =\\ Field\\(default_factory=lambda:\\ MAX_SNAPSHOT_BYTES,\\ ge=0\\)|def\\ _snapshot_tree_stats\\(root:\\ Path,\\ max_entries:\\ int\\ =\\ MAX_SNAPSHOT_ENTRIES,\\ max_bytes:\\ int\\ =\\ MAX_SNAPSHOT_BYTES\\)\\ \\->\\ dict\\[str,\\ int\\]:|if\\ max_entries\\ >\\ 0\\ and\\ entries\\ >\\ max_entries:|if\\ max_bytes\\ >\\ 0\\ and\\ total_bytes\\ >\\ max_bytes:|def\\ _copy_snapshot_tree\\(source:\\ Path,\\ target:\\ Path,\\ max_entries:\\ int\\ =\\ MAX_SNAPSHOT_ENTRIES,\\ max_bytes:\\ int\\ =\\ MAX_SNAPSHOT_BYTES\\)\\ \\->\\ dict\\[str,\\ int\\]:|_snapshot_tree_stats\\(source,\\ max_entries,\\ max_bytes\\)|return\\ _snapshot_tree_stats\\(target,\\ max_entries,\\ max_bytes\\)|if\\ req\\.max_bytes\\ >\\ 0\\ and\\ len\\(encoded\\)\\ >\\ req\\.max_bytes:\\ raise\\ HTTPException\\(status_code=413,\\ detail=\"Write\\ payload\\ too\\ large\"\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "authenticated per-request sandbox_write_bytes/sandbox_snapshot_entries/sandbox_snapshot_bytes",
+      "rationale": "Private owner write/snapshot budgets propagated without fixed caps; defaults retained, raised/zero allowed. Authentication, link rejection and atomic rollback remain mandatory."
+    },
+    {
+      "path": "scripts/sandbox_manager.gd",
+      "pattern": "^\\s*(?:result\\ =\\ await\\ _http_json\\(WINDOWS_SERVICE\\ \\+\\ \"/sandbox/write\",\\ HTTPClient\\.METHOD_POST,\\ \\{\"path\":\\ \"%s/%s/%s\"\\ %\\ \\[ws\\.id,\\ area,\\ safe\\],\\ \"content\":\\ content,\\ \"max_bytes\":\\ OwnerResourcePolicy\\.value\\(\"sandbox_write_bytes\"\\)\\}\\)|result\\ =\\ await\\ _http_json\\(WINDOWS_SERVICE\\ \\+\\ \"/sandbox/workspace/snapshot\",\\ HTTPClient\\.METHOD_POST,\\ \\{\"workspace\":\\ ws\\.id,\\ \"label\":\\ label,\\ \"max_entries\":\\ OwnerResourcePolicy\\.value\\(\"sandbox_snapshot_entries\"\\),\\ \"max_bytes\":\\ OwnerResourcePolicy\\.value\\(\"sandbox_snapshot_bytes\"\\)\\}\\)|result\\ =\\ await\\ _http_json\\(WINDOWS_SERVICE\\ \\+\\ \"/sandbox/workspace/rollback\",\\ HTTPClient\\.METHOD_POST,\\ \\{\"workspace\":\\ ws\\.id,\\ \"snapshot\":\\ snapshot_ref,\\ \"max_entries\":\\ OwnerResourcePolicy\\.value\\(\"sandbox_snapshot_entries\"\\),\\ \"max_bytes\":\\ OwnerResourcePolicy\\.value\\(\"sandbox_snapshot_bytes\"\\)\\}\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "OwnerResourcePolicy sandbox_write_bytes/sandbox_snapshot_entries/sandbox_snapshot_bytes",
+      "rationale": "Current Windows private owner budget capture before authenticated workspace write/snapshot/rollback request. Other transport/execution fixed limits remain unclassified."
     }
   ]
 }

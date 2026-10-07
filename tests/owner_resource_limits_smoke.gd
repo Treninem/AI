@@ -1,5 +1,17 @@
 extends SceneTree
 
+class ComputerWritePayloadProbe extends ComputerClient:
+	var captured := {}
+	func _json_request(path: String, _method: HTTPClient.Method, payload: Dictionary = {}, _timeout_seconds: float = 8.0, _require_autonomy: bool = true, _require_computer_permission: bool = false) -> Dictionary:
+		captured = payload.duplicate(true)
+		return {"ok": true, "path": path}
+
+class ToolWritePayloadProbe extends ToolRegistry:
+	var captured := {}
+	func _computer_json(path: String, _method: HTTPClient.Method, payload: Dictionary = {}, _timeout: float = 12.0) -> Dictionary:
+		captured = payload.duplicate(true)
+		return {"ok": true, "path": path}
+
 # Keep genuine production memory algorithms; isolate filesystem/deferred IO only.
 class IsolatedMemory extends MemoryStore:
 	func _schedule_persistence(_memory_changed: bool, _knowledge_changed: bool) -> void:
@@ -682,8 +694,20 @@ func _run() -> void:
 		sandbox.free()
 		OwnerResourcePolicy._cached = sandbox_policy
 		OwnerResourcePolicy.revision += 1
+	var write_policy := OwnerResourcePolicy._cached.duplicate()
+	var write_client := ComputerWritePayloadProbe.new()
+	var write_tools := ToolWritePayloadProbe.new()
+	for budget in [0, 2000000, 3000000]:
+		OwnerResourcePolicy._cached.sandbox_write_bytes = budget
+		var client_result: Dictionary = await write_client.sandbox_write("fixture", "payload")
+		assert(client_result.ok and write_client.captured.max_bytes == budget and write_client.captured.content == "payload")
+		var tool_result: Dictionary = await write_tools._sandbox_write({"path": "fixture", "content": "payload"})
+		assert(tool_result.ok and write_tools.captured.max_bytes == budget and write_tools.captured.content == "payload")
+	write_client.free()
+	write_tools.free()
+	OwnerResourcePolicy._cached = write_policy
 	var output_policy := OwnerResourcePolicy._cached.duplicate()
-	for output_key in ["research_request_seconds", "research_collection_seconds", "research_backoff_base_seconds", "research_backoff_max_seconds", "research_backoff_failure_cap", "research_error_chars", "research_http_error_chars", "research_stage_chars", "research_endpoint_chars", "research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
+	for output_key in ["sandbox_write_bytes", "sandbox_snapshot_entries", "sandbox_snapshot_bytes", "research_request_seconds", "research_collection_seconds", "research_backoff_base_seconds", "research_backoff_max_seconds", "research_backoff_failure_cap", "research_error_chars", "research_http_error_chars", "research_stage_chars", "research_endpoint_chars", "research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
 		var output_setting := {}
 		output_setting[output_key] = 0
 		assert(OwnerResourcePolicy.save(output_setting, path) == OK)

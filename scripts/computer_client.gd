@@ -267,7 +267,7 @@ func sandbox_container_exec(command: Array[String], cwd: String = ".", timeout: 
 	}, float(bounded_timeout + 5), true, false)
 
 func sandbox_write(path: String, content: String) -> Dictionary:
-	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content}, DEFAULT_TIMEOUT, true, false)
+	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content, "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")}, DEFAULT_TIMEOUT, true, false)
 
 func _master_enabled() -> bool:
 	return master_enabled_from(self)
