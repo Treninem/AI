@@ -696,6 +696,11 @@ func _run() -> void:
 		OwnerResourcePolicy.revision += 1
 	var transport_policy := OwnerResourcePolicy._cached.duplicate()
 	OwnerResourcePolicy._cached = OwnerResourcePolicy.DEFAULTS.duplicate()
+	for budget in [120000, 120001, 0]:
+		OwnerResourcePolicy._cached.computer_output_chars = budget
+		var captured_output := ComputerRequestGuard.execution_payload("/sandbox/exec", {"output_chars": 1})
+		assert(captured_output.output_chars == budget)
+	assert(not ComputerRequestGuard.execution_payload("/sandbox/write", {}).has("output_chars"))
 	var timeout_request := HTTPRequest.new()
 	assert(ComputerRequestGuard.execution_timeout(10001) == 300)
 	assert(ComputerRequestGuard.execution_timeout(0) == 300)
@@ -733,7 +738,7 @@ func _run() -> void:
 	write_tools.free()
 	OwnerResourcePolicy._cached = write_policy
 	var output_policy := OwnerResourcePolicy._cached.duplicate()
-	for output_key in ["sandbox_exec_max_seconds", "computer_http_max_seconds", "computer_default_http_seconds", "tool_computer_default_http_seconds", "sandbox_default_http_seconds", "computer_response_bytes", "computer_http_error_chars", "sandbox_write_bytes", "sandbox_snapshot_entries", "sandbox_snapshot_bytes", "research_request_seconds", "research_collection_seconds", "research_backoff_base_seconds", "research_backoff_max_seconds", "research_backoff_failure_cap", "research_error_chars", "research_http_error_chars", "research_stage_chars", "research_endpoint_chars", "research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
+	for output_key in ["computer_output_chars", "sandbox_exec_max_seconds", "computer_http_max_seconds", "computer_default_http_seconds", "tool_computer_default_http_seconds", "sandbox_default_http_seconds", "computer_response_bytes", "computer_http_error_chars", "sandbox_write_bytes", "sandbox_snapshot_entries", "sandbox_snapshot_bytes", "research_request_seconds", "research_collection_seconds", "research_backoff_base_seconds", "research_backoff_max_seconds", "research_backoff_failure_cap", "research_error_chars", "research_http_error_chars", "research_stage_chars", "research_endpoint_chars", "research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
 		var output_setting := {}
 		output_setting[output_key] = 0
 		assert(OwnerResourcePolicy.save(output_setting, path) == OK)

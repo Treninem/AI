@@ -93,6 +93,7 @@ class SandboxExecRequest(BaseModel):
     cwd: str = Field(default=".", max_length=1024)
     timeout: int = Field(default=60, ge=0, le=9223372036854775807)
     allow_network: bool = False
+    output_chars: int = Field(default=MAX_OUTPUT, ge=0)
 
 
 class SandboxCancelRequest(BaseModel):
@@ -154,7 +155,7 @@ def _error(kind: str, message: str, *, retryable: bool = False, **extra: Any) ->
     return result
 
 
-def _redact(value: str) -> str:
+def _redact(value: str, max_chars: int = MAX_OUTPUT) -> str:
     text = str(value)
     text = re.sub(
         r"(?i)(password|passwd|token|api[_-]?key|authorization|cookie|private[_-]?key)\s*[:=]\s*[^\s,;]+",
@@ -164,7 +165,7 @@ def _redact(value: str) -> str:
     text = re.sub(r"(?i)bearer\s+[A-Za-z0-9._~+/-]{8,}", "Bearer [REDACTED]", text)
     if SERVICE_TOKEN:
         text = text.replace(SERVICE_TOKEN, "[REDACTED]")
-    return text[:MAX_OUTPUT]
+    return text if max_chars == 0 else text[:max_chars]
 
 
 def _safe_sandbox_path(relative: str, *, must_exist: bool = False) -> Path:
@@ -667,7 +668,7 @@ def _cancel_all_processes() -> dict[str, Any]:
             "uncertain_external_state": not confirmed, "executions_stopped": len(results)}
 
 
-def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None) -> dict[str, Any]:
+def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None, output_chars: int = MAX_OUTPUT) -> dict[str, Any]:
     execution_id = execution_id or uuid.uuid4().hex
     startup: dict[str, Any] = {}
     if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -712,8 +713,12 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
             return _error("cancelled", "Sandbox execution was cancelled", execution_id=execution_id,
                           termination_confirmed=bool(record.get("termination_confirmed", False)),
                           uncertain_external_state=not bool(record.get("termination_confirmed", False)), retryable=False)
-        output = _redact((stdout or "") + (stderr or ""))
-        return {"ok": process.returncode == 0, "code": process.returncode, "output": output[:MAX_OUTPUT],
+        output = _redact((stdout or "") + (stderr or ""), max_chars=0)
+        truncated = output_chars > 0 and len(output) > output_chars
+        return {"ok": process.returncode == 0, "code": process.returncode,
+                "output": output[:output_chars] if output_chars > 0 else output,
+                "output_chars_total": len(output), "output_budget_chars": output_chars,
+                "partial": truncated, "truncated": truncated, "limit_reached": truncated,
                 "mode": "local", "retryable": False, "execution_id": execution_id}
     finally:
         if process.poll() is None:
@@ -729,8 +734,8 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
 
 
 def _run_owned_process(req: SandboxExecRequest, command: list[str], cwd: Path, container: tuple[str, str] | None = None) -> dict[str, Any]:
-    if req.execution_id or container:
-        return _run_process(command, cwd, req.timeout, allow_network=req.allow_network, execution_id=req.execution_id, container=container)
+    if req.execution_id or container or req.output_chars != MAX_OUTPUT:
+        return _run_process(command, cwd, req.timeout, allow_network=req.allow_network, execution_id=req.execution_id, container=container, output_chars=req.output_chars)
     return _run_process(command, cwd, req.timeout, allow_network=req.allow_network)
 
 

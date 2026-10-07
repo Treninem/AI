@@ -24,6 +24,7 @@ static func configure_request(request: HTTPRequest, requested: float, default_ke
 static func execution_payload(path: String, payload: Dictionary) -> Dictionary:
 	var captured := payload.duplicate(true)
 	if path.ends_with("/sandbox/exec") or path.ends_with("/sandbox/container_exec"):
+		captured["output_chars"] = OwnerResourcePolicy.value("computer_output_chars")
 		# Caller/model input cannot select a previous execution identity.
 		captured["execution_id"] = "%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), Crypto.new().generate_random_bytes(16).hex_encode()]
 	return captured

@@ -7238,3 +7238,37 @@ DONE:request-owner source and actual dependency compatibility repair locally ver
 REMAINING:publish coherent source; remaining GUI/output/provider owner controls and unfinished critical source; exact CI/package/device/update/release gates, version-last.
 BLOCKERS:no external blocker prevents independent source work. Local Docker/nativeWindows acceptance pending exact CI; physical/production gates unwaived.
 NEXT:publish package atop25e via compare-and-swap, continue critical source and collect CI outcomes as coherent batches.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-OUTPUT-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer truthful output and owner controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:923128a962b43709212f83fdfbe3a5953826e3d7
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/owner_resource_policy.gd;scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;tests/computer_agent_reliability_test.py;tests/owner_resource_limits_smoke.gd;master/memory append-only
+DEPENDENCIES:coordinator takeover of published request-owner paths; no concurrent Computer owner. Previous cancellation/masterstop/transport guards retained. Prior request claim CI_PENDING.
+NON_BLOCKERS:process raw output buffering and GUI/provider controls are separately unfinished; this block does not claim bounded producer memory. No V1.6/S3 integration; physical/production release gates unwaived.
+ACCEPTANCE_GATES:private owner output character budget120000 preserves default, raised and0 retain requested output. Trusted guard overrides model budget. Redaction occurs before clipping; actual stdout+stderr overflow carries explicit partial/truncated/limit_reached and complete length, never silently complete. Authentication/cancellation/container-first unchanged. Genuine command tests plus owner persistence and exact-SHA CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement truthful output budget without claiming solved raw capture memory.
+
+CLAIM_ADDENDUM:OUTPUT-OWNER owns existing test_sandbox_resource_limits.py actual Docker fixture repair observed923128a Linuxjob112638948050: fixture pulls image into Docker but product engine preference is Podman first. Set explicit Docker fixture engine (product preference unchanged), report early HTTP response rather than hiding startup failure as marker timeout. Actual daemon gate retained; Windows computer-contract112638948108 and work-godot112638948086 already SUCCESS at923128a.
+
+### Coherent truthful output and Docker fixture checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-OUTPUT-OWNER ACTIVE/CI_PENDING.
+PRIOR_PRODUCED_SHA:923128a962b43709212f83fdfbe3a5953826e3d7;tree acd66c207f52642525645070801956d7f7b85469. Request/lifespan package published through CAS and local tree matched remote. Observed39checks=25SUCCESS/3SKIPPED/10IN_PROGRESS/1FAILURE; eventual downstream total can grow. Windows Computer112638948108 and work-godot112638948086 SUCCESS prove those exact gates; Linux112638948050 failed actual Docker readiness (58PASS/1SKIP/1FAIL), not old import problem.
+CHANGES:private computer_output_chars120000, raised/0 semantics, trusted request policy overrides model value. Full secret redaction precedes returned output clipping. Explicit partial/truncated/limit_reached, sanitized total length and budget retained; process exit code remains truthful. Raw communicate buffering remains separately unfinished, not advertised bounded memory. Docker fixture explicitly selects Docker, matching image preparation; product Podman/Docker preference unchanged. Early completed HTTP response is surfaced in fixture diagnostics instead of an opaque marker timeout; no skip or gate relaxation.
+TESTS:latest FastAPI Computer batch62PASS/2SKIP; pinned combined owner/audit/Computer batch84PASS/2SKIP. Actual Godot owner persistence/trusted payload0/raised/defaultPASS; actual latest-Uvicorn Godot owned cancellation/masterstop/transport/bodyoverflow/uncertain/shutdownPASS. Actual command120001chars plus credential-bearing stderr tested default/raised/0/tiny output budgets and negative/auth rejection. Linux Docker repair still requires exact new-SHA daemon execution; local runtime absent. Existing warnings/Godot20ObjectDB8resources retained. diffcheckPASS.
+INVENTORY:1419test_evidence/1301unclassified/64documentation/652owner_adjustable/356format_structure/26hard_boundary;complete:false.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:request/lifespan published923128a; current truthful output source locally verified.
+REMAINING:raw producer output buffering, GUI/provider controls, source audit and unfinished critical blocks; new exact CI/platform/package/device/update/release acceptance, version-last.
+BLOCKERS:no external blocker prevents remaining source; local Docker/nativeWindows need exact CI, physical/production gates unwaived.
+NEXT:publish coherent output/fixture source, then continue bounded output capture and current critical owner controls.

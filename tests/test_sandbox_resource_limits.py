@@ -259,6 +259,7 @@ def test_actual_daemon_container_cancel_removes_owned_container(tmp_path, monkey
     import subprocess
     import shutil
     assert shutil.which("docker"), "Docker fixture was required but runtime is absent"
+    monkeypatch.setenv("AURORAFOX_CONTAINER_ENGINE", "docker")
     module, client = service(tmp_path, monkeypatch)
     root = module.SANDBOX_ROOT
     (root / "owned.py").write_text("from pathlib import Path\nimport time\nPath('container-started').write_text('yes')\nwhile True:\n Path('container-heartbeat').write_text(str(time.time_ns()))\n time.sleep(0.02)\n")
@@ -266,7 +267,14 @@ def test_actual_daemon_container_cancel_removes_owned_container(tmp_path, monkey
     with concurrent.futures.ThreadPoolExecutor() as pool:
         future = pool.submit(client.post, "/sandbox/container_exec", headers=HEADERS, json=payload)
         try:
-            _wait_for_file(root / "container-started", timeout=20)
+            deadline = time.monotonic() + 20
+            while not (root / "container-started").exists():
+                if future.done():
+                    response = future.result()
+                    pytest.fail(f"Docker fixture exited before readiness: HTTP {response.status_code}: {response.text}")
+                if time.monotonic() >= deadline:
+                    pytest.fail("Docker fixture did not produce its readiness marker within 20 seconds")
+                time.sleep(0.01)
             with module._execution_lock:
                 engine, name = module._execution_records[payload["execution_id"]]["container"]
             running = subprocess.run([engine, "inspect", "--format", "{{.State.Running}}", name], capture_output=True, text=True, timeout=5)
@@ -357,3 +365,21 @@ def test_actual_app_lifespan_shutdown_terminates_owned_process(tmp_path, monkeyp
             assert module._execution_records["lifespan-owned"]["process"] is None
         finally:
             module._cancel_all_processes()
+
+
+@pytest.mark.parametrize("budget", [120000, 120001, 0, 3])
+def test_actual_owner_output_reports_partial_and_redacts_before_clip(tmp_path, monkeypatch, budget):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "command": [sys.executable, "-c", "import sys;sys.stdout.write('x'*120001);sys.stderr.write(' password=supersecret')"],
+        "timeout": 5, "output_chars": budget,
+    }).json()
+    assert result["ok"] and result["code"] == 0
+    expected = "x" * 120001 + " password=[REDACTED]"
+    assert result["output"] == (expected[:budget] if budget else expected)
+    assert result["output_chars_total"] == len(expected)
+    assert result["partial"] == result["truncated"] == result["limit_reached"] == (budget > 0 and len(expected) > budget)
+    assert "supersecret" not in result["output"]
+    assert client.post("/sandbox/exec", headers=HEADERS, json={"command": [sys.executable], "output_chars": -1}).status_code == 422
+    assert client.post("/sandbox/exec", json={"command": [sys.executable]}).status_code == 401
