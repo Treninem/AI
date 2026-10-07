@@ -90,6 +90,7 @@ func _start_backend_if_installed() -> void:
 		return
 	runtime_root = str(found.get("root", ""))
 	OS.set_environment("AURORAFOX_SANDBOX_ROOT", ProjectSettings.globalize_path("user://sandboxes"))
+	_export_owner_input_limits()
 	OS.set_environment("AURORAFOX_COMPUTER_TOKEN", _service_token)
 	OS.set_environment("AURORAFOX_PARENT_PID", str(OS.get_process_id()))
 	var executable := str(found.get("pythonw", ""))
@@ -111,6 +112,10 @@ func _start_backend_if_installed() -> void:
 			OS.set_environment("PYTHONPATH", previous_pythonpath)
 		else:
 			OS.unset_environment("PYTHONPATH")
+
+func _export_owner_input_limits() -> void:
+	for key in ["sandbox_command_items", "sandbox_cwd_chars", "sandbox_write_path_chars", "workspace_task_chars"]:
+		OS.set_environment("AURORAFOX_" + key.to_upper(), str(OwnerResourcePolicy.value(key)))
 
 func _clear_bootstrap_environment() -> void:
 	OS.unset_environment("AURORAFOX_COMPUTER_TOKEN")

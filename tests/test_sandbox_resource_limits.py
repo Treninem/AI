@@ -1210,3 +1210,53 @@ def test_snapshot_timestamp_when_platform_lacks_nofollow(tmp_path, monkeypatch):
     assert module._copy_snapshot_tree(source, target, max_entries=1, max_bytes=0)['bytes'] == len(b'actual metadata')
     assert (target / 'data').stat().st_mtime_ns == expected
     assert seen == [target / 'data', target]
+
+@pytest.mark.parametrize('limit', [2, 20, 0])
+def test_owner_input_limits_actual_authenticated_requests(tmp_path, monkeypatch, limit):
+    for suffix in ['SANDBOX_COMMAND_ITEMS', 'SANDBOX_CWD_CHARS', 'SANDBOX_WRITE_PATH_CHARS', 'WORKSPACE_TASK_CHARS']:
+        monkeypatch.setenv('AURORAFOX_' + suffix, str(limit))
+    module, client = service(tmp_path, monkeypatch)
+    size = limit if limit else 70
+    command = ['python'] + ['x'] * (size - 1)
+    parsed = module.SandboxExecRequest(command=command, cwd='.' * size)
+    assert parsed.command == command and parsed.cwd == '.' * size
+    if limit:
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            module.SandboxExecRequest(command=command + ['extra'])
+        with pytest.raises(ValidationError):
+            module.SandboxExecRequest(command=['python'], cwd='x' * (limit + 1))
+    task = 'Ж' * size
+    response = client.post('/sandbox/workspace/create', headers=HEADERS, json={'task': task})
+    assert response.status_code == 200 and response.json()['workspace']['task'] == task
+    if limit:
+        assert client.post('/sandbox/workspace/create', headers=HEADERS, json={'task': task + 'x'}).status_code == 422
+    path = 'x' * size
+    written = client.post('/sandbox/write', headers=HEADERS, json={'path': path, 'content': 'full'})
+    assert written.status_code == 200 and (module.SANDBOX_ROOT / path).read_text() == 'full'
+    if limit:
+        assert client.post('/sandbox/write', headers=HEADERS, json={'path': path + 'x', 'content': 'full'}).status_code == 422
+    assert client.post('/sandbox/write', json={'path': path, 'content': 'denied'}).status_code == 401
+    assert client.post('/sandbox/write', headers=HEADERS, json={'path': '', 'content': 'denied'}).status_code == 422
+    assert client.post('/sandbox/exec', headers=HEADERS, json={'command': []}).status_code == 422
+    assert client.post('/sandbox/exec', headers=HEADERS, json={'command': command}).status_code == 403
+
+
+def test_unlimited_inputs_keep_containment_and_complete_long_identity(tmp_path, monkeypatch):
+    for suffix in ['SANDBOX_COMMAND_ITEMS', 'SANDBOX_CWD_CHARS', 'SANDBOX_WRITE_PATH_CHARS', 'WORKSPACE_TASK_CHARS']:
+        monkeypatch.setenv('AURORAFOX_' + suffix, '0')
+    module, client = service(tmp_path, monkeypatch)
+    path = 'nested/' * 200 + 'file'
+    assert module.SandboxWriteRequest(path=path, content='x').path == path
+    assert module.SandboxExecRequest(command=['python'] * 100, cwd=path).cwd == path
+    task = 'Ж' * 5000
+    result = client.post('/sandbox/workspace/create', headers=HEADERS, json={'task': task})
+    assert result.json()['workspace']['task'] == task
+    assert client.post('/sandbox/write', headers=HEADERS, json={'path': '../escape', 'content': 'denied'}).status_code == 400
+
+
+@pytest.mark.parametrize('invalid', ['-1', '1.5', '', 'NaN', '１'])
+def test_invalid_startup_input_policy_fails_closed(tmp_path, monkeypatch, invalid):
+    monkeypatch.setenv('AURORAFOX_SANDBOX_COMMAND_ITEMS', invalid)
+    with pytest.raises(ValueError, match='Invalid nonnegative owner input limit'):
+        service(tmp_path, monkeypatch)

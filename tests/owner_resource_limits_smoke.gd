@@ -103,6 +103,20 @@ func _run() -> void:
 	assert(OwnerResourcePolicy.save({"unknown": 1}, path) == ERR_INVALID_PARAMETER)
 	assert(OwnerResourcePolicy.save({"chat_max_tokens": 2147483648}, path) == ERR_INVALID_PARAMETER)
 	assert(OwnerResourcePolicy.save({"task_trace_chars": 10}, "user://missing_resource_fixture_dir/value.cfg") != OK)
+	var input_client := ComputerClient.new()
+	var input_keys := ["sandbox_command_items", "sandbox_cwd_chars", "sandbox_write_path_chars", "workspace_task_chars"]
+	var previous_input_environment := {}
+	for key in input_keys:
+		var name: String = "AURORAFOX_" + key.to_upper()
+		previous_input_environment[name] = {"present": OS.has_environment(name), "value": OS.get_environment(name)}
+	for budget in [2, 5000, 0]:
+		for key in input_keys: OwnerResourcePolicy._cached[key] = budget
+		input_client._export_owner_input_limits()
+		for key in input_keys: assert(OS.get_environment("AURORAFOX_" + key.to_upper()) == str(budget))
+	for name in previous_input_environment:
+		if previous_input_environment[name].present: OS.set_environment(name, previous_input_environment[name].value)
+		else: OS.unset_environment(name)
+	input_client.free()
 	var coordinator := IsolatedCoordinator.new()
 	OwnerResourcePolicy._cached.coordinator_detail_chars = 2
 	OwnerResourcePolicy._cached.coordinator_detail_items = 1

@@ -7888,3 +7888,20 @@ ACCEPTANCE_GATES:actual production planning prompt recognized by production stri
 NEXT:align planner strict JSON request with existing structured inference contract, execute relevant coherent tests, publish and inspect native result.
 
 STRUCTURED_PLANNING_VALIDATION:production make_plan prompt now uses existing strict-JSON marker, so bundled desktop request selects existing reasoning_effort:none without changing ordinary prose or token policy. Genuine captured-production-prompt Godot fixturePASS; planner parses actualfixtureJSON, detector recognizes realprompt and rejects plainprose. No invented plan and no native success inferred; Windows emptycontent cause remains hypothesis pending exact CI. Relevant specialist-runtime/candidate Python18PASS.
+
+PUBLICATION_CHECKPOINT:STRUCTURED-PLANNING-RUNTIME published50b472ab085542dc5d0ce73c0f9e20afa03e702a/treeba839fec2d9bb2445961d10582b6aadd2d398d4f on92287e6 CAS fast-forward.4ownedpaths, GodotcapturedpromptPASS/Python18PASS; source RELEASED/exactWindowsCI pending, no freeze.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-SANDBOX-INPUT-CONTROLS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Work/Computer baseline owner-adjustable operational limits
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:50b472ab085542dc5d0ce73c0f9e20afa03e702a
+INTENDED_BUMP:D version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/owner_resource_policy.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:explicit coordinator takeover published Computer owner paths. Existing Pydantic command64/cwd1024/writepath1024/task4000 are fixed operational input limits. Private persisted startup settings export required, restart labels explicit.
+NON_BLOCKERS:execution identities/auth/workspace containment/GUI permissions/cancellation/idempotency unchanged; no future runtime/S3/version. Filesystem and command platform constraints continue to return honest errors; owner0 does not waive OS/path containment restrictions.
+ACCEPTANCE_GATES:independent exact/raised/0 production request controls with invalidnegativefailclosed; nonemptycommand/path retained; private Godotstartup env export; actual authenticated service fixtures verify accepted complete payloads and auth/traversal stilldeny; existing native ComputerCI mandatory.
+NEXT:implement independent startup input policy and actual service tests as coherent batch.
+
+SANDBOX_INPUT_VALIDATION:trusted startup independent command64/cwd1024/writepath1024/task4000 controls exported from private owner settings; labels require Computerrestart. Zero maps PydanticmaxNone, no clipping; invalidnegative/fraction/NaN/empty/nonASCIIinteger startupfailclosed. ActualHTTP exact2/20/unlimitedrequests preserve task/path, acceptedwritefilesystembytes, overbudget422, missingauth401, traversal400, emptycommand/path422 and disableddegradedexec403. Long1404charpath identity validated without falsely claiming nativeOSpath acceptance. RelevantComputer/owner/audit120PASS6SKIP nativefixtures, GodotownerPASS with existing20ObjectDB/8resourceexitdiagnostics. Initial fixture type inference parseerror corrected with explicitString then actual rerun; not countedinitially. No freeze, newsource unpublished.

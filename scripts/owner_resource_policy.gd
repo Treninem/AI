@@ -3,6 +3,10 @@ extends RefCounted
 
 const PATH := "user://owner_resources.cfg"
 const DEFAULTS := {
+	"sandbox_command_items": 64,
+	"sandbox_cwd_chars": 1024,
+	"sandbox_write_path_chars": 1024,
+	"workspace_task_chars": 4000,
 	"sandbox_exec_max_seconds": 300,
 	"computer_http_max_seconds": 320,
 	"computer_default_http_seconds": 8,
@@ -220,6 +224,10 @@ const DEFAULTS := {
 	"tool_result_items": 25,
 }
 const LABELS := {
+	"sandbox_command_items": "Песочница: аргументов команды (0 = все; перезапуск Computer)",
+	"sandbox_cwd_chars": "Песочница: символов cwd (0 = все; перезапуск Computer)",
+	"sandbox_write_path_chars": "Песочница: символов пути записи (0 = все; перезапуск Computer)",
+	"workspace_task_chars": "Workspace: символов задачи (0 = все; перезапуск Computer)",
 	"sandbox_exec_max_seconds": "Windows: потолок секунд команды (0 = без потолка)",
 	"computer_http_max_seconds": "Computer: потолок секунд HTTP (0 = без потолка)",
 	"computer_default_http_seconds": "ComputerClient: секунд HTTP по умолчанию (0 = только общий потолок)",

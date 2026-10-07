@@ -1660,6 +1660,41 @@
       "class": "documentation",
       "control": "Reviewed Voice startup budgets or audio representation",
       "rationale": "Module purpose docstring, no executable ceiling."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^command:\\ list\\[str\\]\\ =\\ Field\\(min_length=1,\\ max_length=COMMAND_ITEMS\\)$",
+      "class": "owner_adjustable",
+      "control": "Private restart-bound sandbox input controls; command/cwd/writepath/task independently zero or positive",
+      "rationale": "Authenticated exact/raised/unlimited request fixtures preserve full payload and mandatory nonempty inputs/auth/containment; invalid startup integer fails closed. OS filesystem constraints remain explicit errors."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^cwd:\\ str\\ =\\ Field\\(default=\"\\.\",\\ max_length=CWD_CHARS\\)$",
+      "class": "owner_adjustable",
+      "control": "Private restart-bound sandbox input controls; command/cwd/writepath/task independently zero or positive",
+      "rationale": "Authenticated exact/raised/unlimited request fixtures preserve full payload and mandatory nonempty inputs/auth/containment; invalid startup integer fails closed. OS filesystem constraints remain explicit errors."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^path:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=WRITE_PATH_CHARS\\)$",
+      "class": "owner_adjustable",
+      "control": "Private restart-bound sandbox input controls; command/cwd/writepath/task independently zero or positive",
+      "rationale": "Authenticated exact/raised/unlimited request fixtures preserve full payload and mandatory nonempty inputs/auth/containment; invalid startup integer fails closed. OS filesystem constraints remain explicit errors."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^task:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=TASK_CHARS\\)$",
+      "class": "owner_adjustable",
+      "control": "Private restart-bound sandbox input controls; command/cwd/writepath/task independently zero or positive",
+      "rationale": "Authenticated exact/raised/unlimited request fixtures preserve full payload and mandatory nonempty inputs/auth/containment; invalid startup integer fails closed. OS filesystem constraints remain explicit errors."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^raise\\ ValueError\\(f\"Invalid\\ nonnegative\\ owner\\ input\\ limit:\\ \\{name\\}\"\\)$",
+      "class": "owner_adjustable",
+      "control": "Private restart-bound sandbox input controls; command/cwd/writepath/task independently zero or positive",
+      "rationale": "Authenticated exact/raised/unlimited request fixtures preserve full payload and mandatory nonempty inputs/auth/containment; invalid startup integer fails closed. OS filesystem constraints remain explicit errors."
     }
   ]
 }

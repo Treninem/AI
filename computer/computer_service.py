@@ -23,6 +23,20 @@ from typing import Any
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
+def _owner_input_limit(name: str, default: int) -> int | None:
+    """Trusted startup policy; zero removes only the request input ceiling."""
+    raw = os.getenv(name, str(default))
+    if not raw.isascii() or not raw.isdecimal():
+        raise ValueError(f"Invalid nonnegative owner input limit: {name}")
+    value = int(raw)
+    return value or None
+
+
+COMMAND_ITEMS = _owner_input_limit("AURORAFOX_SANDBOX_COMMAND_ITEMS", 64)
+CWD_CHARS = _owner_input_limit("AURORAFOX_SANDBOX_CWD_CHARS", 1024)
+WRITE_PATH_CHARS = _owner_input_limit("AURORAFOX_SANDBOX_WRITE_PATH_CHARS", 1024)
+TASK_CHARS = _owner_input_limit("AURORAFOX_WORKSPACE_TASK_CHARS", 4000)
+
 HOST = os.getenv("AURORAFOX_COMPUTER_HOST", "127.0.0.1")
 PORT = int(os.getenv("AURORAFOX_COMPUTER_PORT", "8766"))
 SERVICE_TOKEN = os.getenv("AURORAFOX_COMPUTER_TOKEN", "").strip()
@@ -121,8 +135,8 @@ class GoalRequest(BaseModel):
 
 class SandboxExecRequest(BaseModel):
     execution_id: str = Field(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")
-    command: list[str] = Field(min_length=1, max_length=64)
-    cwd: str = Field(default=".", max_length=1024)
+    command: list[str] = Field(min_length=1, max_length=COMMAND_ITEMS)
+    cwd: str = Field(default=".", max_length=CWD_CHARS)
     timeout: int = Field(default=60, ge=0, le=9223372036854775807)
     allow_network: bool = False
     output_chars: int = Field(default=MAX_OUTPUT, ge=0)
@@ -135,13 +149,13 @@ class SandboxCancelRequest(BaseModel):
 
 class SandboxWriteRequest(BaseModel):
     max_bytes: int = Field(default=MAX_WRITE_BYTES, ge=0)
-    path: str = Field(min_length=1, max_length=1024)
+    path: str = Field(min_length=1, max_length=WRITE_PATH_CHARS)
     content: str
 
 
 class WorkspaceCreateRequest(BaseModel):
     id: str = Field(default="", max_length=96)
-    task: str = Field(default="", max_length=4000)
+    task: str = Field(default="", max_length=TASK_CHARS)
 
 
 class WorkspaceSnapshotRequest(BaseModel):
