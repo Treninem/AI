@@ -8904,3 +8904,36 @@ DONE:122 findings inspected in one coherent package;32 justified classifications
 REMAINING:publish/sync package and exact CI;785 residual inventory findings including90 in this review; source repairs and final device/package/update/version gates.
 BLOCKERS:none for audit publication.
 NEXT:verify remote expected head, commit/push metadata package, check local/origin/web identity and exact owner-audit CI; then prioritize genuine caps for source repair.
+
+LEARNING_EVOLUTION_PUBLICATION: commit8ed2f0f339aca406e1229caf56da2f13faabbf1d published; local/origin/web exact and clean. Exact Chat Learning Attachment run37699440581 SUCCESS includes owner audit28PASS. Android plugin, Windows Core and package/device gates remained in progress at last check; no old-SHA verdict substituted. Full inventory785 residual.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:122 reviewed,32 narrowly classified,90 actual candidates retained; published and exact owner CI green.
+REMAINING:785 owner findings, source repairs and final same-SHA release/device/update/version gates.
+BLOCKERS:none for next read-only API review.
+NEXT:review API identity/sync/backup/learning/Core queue/client/settings residuals as one coherent package.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-PERSONAL-DATA-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing API account, personal sync, backups, learning and Core queue owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable API, privacy, persistence and local-Core control-plane baseline.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:8ed2f0f339aca406e1229caf56da2f13faabbf1d; fresh main/feature fetched; journal, roadmap, engineering memory, ADRs and active claims reviewed; local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: api/account_store.py;api/agent_bridge.gd;api/backup_service.py;api/core_candidate_queue.py;api/learning_store.py;api/local_core_client.py;api/server.py;api/settings_overlay.gd;api/sync_store.py.
+DEPENDENCIES:long exact-SHA release CI still running; no production source or workflow edits in this inventory package.
+NON_BLOCKERS:future V1.6 cognition, public-scale API redesign and post-release344-point owner-PC field review.
+INTENDED_BUMP:none for metadata; separately claimed source fixes D if needed.
+ACCEPTANCE_GATES:review all112 residual lines in nine files against source/callers, classify only exact non-cap structure or proven owner-sourced routing; preserve fixed API payload/page/retention/time/diagnostic caps; adversarial appended-cap/path tests, full audit and existing CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect source/caller context, add narrowly anchored rules and adversarial fixtures, retain genuine fixed ceilings for source repair.
+
+API_PERSONAL_DATA_BULK_AUDIT_CHECKPOINT: reviewed112 previously unclassified lines across nine read-only files: AccountStore11, AgentBridge8, BackupService14, CoreCandidateQueue15, LearningStore14, LocalCoreClient8, API server11, SettingsOverlay15, SyncStore16. Thirty-eight exact full-line/path rules classify nine owner/caller-sourced accounting statements and29 structure/status/domain/unique-hash-lookup statements. Five account token lookups use LIMIT1 on token/access hashes backed by SQLite UNIQUE constraints; the latest-token query is not classified. Seventy-four remain unclassified: account5 (token TTL floors/latest lookup), bridge4 (client cap, answer excerpt, confidence formula), backup2 (SQLite wait/CLI positive floor), candidate queue15 (source, list and retention caps), learning store9 (retention floor, pending page/SQL), local Core client8 (timeouts, backoff and reply count), API server10 (request/page/optional provider timing), settings overlay12 (visible rows, text/error and request timeout, port minimum), sync store9 (entity bytes/page ceilings). Real fixed caps are retained for behavior-level source repair; `CoreCandidateQueue.list()` 200-row clamp may prevent raised max_items from being effective and needs a separate reproduction and source claim. Full audit785→747 unclassified, complete:false; test-evidence count changed with new fixture. `tests/test_owner_control_audit.py`29/29 PASS with per-subsystem representative exact rules, appended-cap/unrelated-path adversaries and nine explicit unresolved caps; JSON parse and `git diff --check` PASS. No production source, accepted trust boundary or CI gate changed.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:112 API/personal-data findings inspected as one package;38 justified classifications,74 real/ambiguous candidates retained; local audit29PASS.
+REMAINING:publish/synchronize package, exact new-SHA CI;747 residual inventory findings, source repairs, physical/device/package/update/version-last release gates.
+BLOCKERS:none for audit publication.
+NEXT:check exact remote head, commit/push the audited metadata package, verify local/origin/web identity and exact owner CI; reproduce highest-impact genuine queue/page caps in a separately claimed source repair.

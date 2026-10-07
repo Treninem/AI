@@ -346,6 +346,38 @@ def test_learning_evolution_bulk_review_preserves_real_caps():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_api_personal_data_bulk_review_keeps_operational_caps_visible():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('api/account_store.py', 'self.account_token_cooldown = max(0, int(account_token_cooldown))', 'owner_adjustable'),
+        ('api/account_store.py', '"WHERE s.access_hash=? LIMIT 1",', 'format_structure'),
+        ('api/agent_bridge.gd', 'clampf(float(payload.get("confidence", 0.80)), 0.0, 1.0),', 'format_structure'),
+        ('api/backup_service.py', 'backup_max_bytes=self.max_source_bytes,', 'owner_adjustable'),
+        ('api/backup_service.py', '"hard_pressure": bool(capacity.get("hard_pressure", False)),', 'format_structure'),
+        ('api/learning_store.py', 'overflow = max(0, total - self.max_events)', 'format_structure'),
+        ('api/sync_store.py', 'safe_cursor = max(0, int(cursor))', 'format_structure'),
+        ('api/server.py', 'content_base64: str = Field(min_length=1)', 'format_structure'),
+        ('api/settings_overlay.gd', 'port_box.max_value = 65535', 'format_structure'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('api/account_store.py', 'self.access_ttl = max(60, int(access_ttl))'),
+        ('api/agent_bridge.gd', '@export_range(1, 128, 1) var max_clients := 32'),
+        ('api/backup_service.py', 'source_db = sqlite3.connect(source_uri, uri=True, timeout=30)'),
+        ('api/core_candidate_queue.py', 'MAX_SOURCE_BYTES = 1024 * 1024'),
+        ('api/learning_store.py', 'self.max_events = max(1000, max_events)'),
+        ('api/local_core_client.py', 'self.timeout = max(5.0, timeout)'),
+        ('api/server.py', 'limit: int = Query(default=200, ge=1, le=500),'),
+        ('api/settings_overlay.gd', 'const MAX_VISIBLE_MEMORY_ROWS := 30'),
+        ('api/sync_store.py', 'safe_limit = min(500, max(1, int(limit)))'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"
