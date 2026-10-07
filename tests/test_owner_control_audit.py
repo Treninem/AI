@@ -170,6 +170,43 @@ def test_file_cache_zero_review_does_not_hide_fixed_provider_timeouts():
     assert MODULE.classify("file_intelligence/file_service.py", "requests.post(url, timeout=180)", policy)[0] == "unclassified"
 
 
+def test_file_service_budget_propagation_keeps_independent_timeouts_visible():
+    policy = MODULE.load_policy()
+    path = "file_intelligence/file_service.py"
+    reviewed = "if len(items) >= req.max_items:"
+    assert MODULE.classify(path, reviewed, policy)[0] == "owner_adjustable"
+    assert MODULE.classify(path, reviewed + "  # FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify(path, 'r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=1.5)', policy)[0] == "unclassified"
+    assert MODULE.classify(path, "scale = min(2.0, math.sqrt(pixel_budget) / math.sqrt(width) / math.sqrt(height))", policy)[0] == "unclassified"
+
+
+def test_api_body_accounting_review_does_not_hide_new_byte_caps():
+    policy = MODULE.load_policy()
+    path = "api/request_limits.py"
+    reviewed = "additional = max(0, new_received - reserved)"
+    assert MODULE.classify(path, reviewed, policy)[0] == "format_structure"
+    assert MODULE.classify(path, reviewed + "; FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify(path, "if new_received > 17:", policy)[0] == "unclassified"
+
+
+def test_public_auth_abuse_guards_are_narrow_security_boundaries():
+    policy = MODULE.load_policy()
+    path = "api/public_auth_limits.py"
+    reviewed = "if queue is None and len(self._hits) >= self.max_buckets:"
+    assert MODULE.classify(path, reviewed, policy)[0] == "hard_boundary"
+    assert MODULE.classify(path, reviewed + "  # FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify(path, "self.max_buckets = 17", policy)[0] == "unclassified"
+
+
+def test_api_identity_fields_do_not_hide_content_and_pagination_caps():
+    policy = MODULE.load_policy()
+    path = "api/server.py"
+    assert MODULE.classify(path, "password: str = Field(min_length=10, max_length=1024)", policy)[0] == "hard_boundary"
+    assert MODULE.classify(path, "conversation_id: str | None = Field(default=None, max_length=256)", policy)[0] == "format_structure"
+    assert MODULE.classify(path, "items: list[dict[str, Any]] = Field(default_factory=list, max_length=200)", policy)[0] == "unclassified"
+    assert MODULE.classify(path, "password: str = Field(min_length=10, max_length=17)", policy)[0] == "unclassified"
+
+
 def test_voice_and_knowledge_review_keeps_new_caps_and_trailing_code_unknown():
     policy = MODULE.load_policy()
     for path, statement in [

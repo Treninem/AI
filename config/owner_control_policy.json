@@ -3,6 +3,146 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "api/server.py",
+      "pattern": "^\\s*(?:PUBLIC_AUTH_RPM\\ =\\ max\\(1,\\ int\\(os\\.getenv\\(\"AURORAFOX_PUBLIC_AUTH_RPM\",\\ \"20\"\\)\\)\\)|app\\.add_middleware\\(PublicAuthRateLimitMiddleware,\\ limit=PUBLIC_AUTH_RPM,\\ window_seconds=60\\.0\\)|def\\ __init__\\(self,\\ limit:\\ int\\ =\\ 60,\\ window:\\ float\\ =\\ 60\\.0\\):|self\\.limit\\ =\\ max\\(1,\\ limit\\)|self\\.window\\ =\\ max\\(1\\.0,\\ window\\)|if\\ len\\(q\\)\\ >=\\ self\\.limit:|raise\\ HTTPException\\(429,\\ \"AuroraFox\\ API\\ rate\\ limit\\ exceeded\"\\)|email:\\ str\\ =\\ Field\\(min_length=3,\\ max_length=320\\)|password:\\ str\\ =\\ Field\\(min_length=10,\\ max_length=1024\\)|token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\)|email:\\ str\\ =\\ Field\\(min_length=3,\\ max_length=320\\)|password:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=1024\\)|refresh_token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\)|email:\\ str\\ =\\ Field\\(min_length=3,\\ max_length=320\\)|token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\)|new_password:\\ str\\ =\\ Field\\(min_length=10,\\ max_length=1024\\)|guest_token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\))\\s*$",
+      "class": "hard_boundary",
+      "control": "Public authentication and rate-control input boundary",
+      "rationale": "Exact public-authentication rate, credential and reset-token validation statements. These protect external access and credential handling; untrusted client input cannot enlarge them."
+    },
+    {
+      "path": "api/server.py",
+      "pattern": "^\\s*(?:conversation_id:\\ str\\ \\|\\ None\\ =\\ Field\\(default=None,\\ max_length=256\\)|conversation_id:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=256\\)|source:\\ str\\ =\\ Field\\(default=\"api\",\\ max_length=64\\)|user_id:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=256\\)|source:\\ str\\ =\\ Field\\(default=\"api\",\\ max_length=64\\)|kind:\\ str\\ =\\ Field\\(default=\"external_knowledge\",\\ max_length=128\\)|filename:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=255\\)|name:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=128\\)|source:\\ str\\ =\\ Field\\(default=\"aurorafox\\-client\",\\ min_length=1,\\ max_length=128\\)|promotion_ref:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=512\\)|promotion_run:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=512\\)|error:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=4000\\)|name:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=128\\)|display_name:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=128\\)|device_name:\\ str\\ =\\ Field\\(default=\"AuroraFox\\ device\",\\ max_length=128\\)|platform:\\ str\\ =\\ Field\\(default=\"unknown\",\\ max_length=64\\)|device_id:\\ str\\ \\|\\ None\\ =\\ Field\\(default=None,\\ max_length=64\\)|device_name:\\ str\\ =\\ Field\\(default=\"Guest\\ device\",\\ max_length=128\\)|platform:\\ str\\ =\\ Field\\(default=\"unknown\",\\ max_length=64\\)|\"email_delivery\":\\ \"sent\"\\ if\\ delivered\\ else\\ \\(\"developer_token\"\\ if\\ DEV_ACCOUNT_TOKENS\\ else\\ \"retry_required\"\\),|@app\\.get\\(\"/v1/capabilities\"\\)|def\\ capabilities\\(record:\\ dict\\[str,\\ Any\\]\\ =\\ Depends\\(_auth\\)\\)\\ \\->\\ dict\\[str,\\ Any\\]:|\"object\":\\ \"aurorafox\\.capabilities\",)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed identity and metadata representation",
+      "rationale": "Exact conversation/file/tool/account/device/candidate metadata field shapes or capability/retry status labels. They define identity/serialization shape, not the amount of owner work processed. New content ceilings remain unclassified."
+    },
+    {
+      "path": "api/public_auth_limits.py",
+      "pattern": "^\\s*(?:The\\ deployment\\ currently\\ runs\\ one\\ Uvicorn\\ process,\\ so\\ an\\ in\\-memory\\ limiter\\ is|clients\\ cannot\\ spoof\\ their\\ rate\\-limit\\ identity\\ with\\ that\\ header\\.|must\\ not\\ be\\ able\\ to\\ grow\\ the\\ process\\ dictionary\\ without\\ limit;\\ when\\ the\\ cap\\ is|A\\ second\\ process\\-wide\\ budget\\ protects\\ the\\ small\\ 1\\-vCPU\\ server\\ from\\ distributed|therefore\\ evade\\ a\\ per\\-client\\ limiter\\.\\ It\\ is\\ intentionally\\ shared\\ by\\ all\\ public)\\s*$",
+      "class": "documentation",
+      "control": "Reviewed public authentication guard explanation",
+      "rationale": "Exact docstring explains abuse protection and memory-bound identity buckets; it does not set a runtime limit."
+    },
+    {
+      "path": "api/public_auth_limits.py",
+      "pattern": "^\\s*(?:limit:\\ int\\ =\\ 20,|max_buckets:\\ int\\ =\\ DEFAULT_MAX_BUCKETS,|self\\.limit\\ =\\ max\\(1,\\ int\\(limit\\)\\)|self\\.window_seconds\\ =\\ max\\(1\\.0,\\ float\\(window_seconds\\)\\)|self\\.max_buckets\\ =\\ max\\(1,\\ int\\(max_buckets\\)\\)|self\\.global_limit\\ =\\ max\\(self\\.limit,\\ int\\(global_limit\\)\\)|if\\ queue\\ is\\ None\\ and\\ len\\(self\\._hits\\)\\ >=\\ self\\.max_buckets:|if\\ queue\\ is\\ None\\ and\\ len\\(self\\._hits\\)\\ >=\\ self\\.max_buckets:|if\\ len\\(queue\\)\\ >=\\ self\\.limit:|\\{\"detail\":\\ \"AuroraFox\\ public\\ authentication\\ rate\\ limit\\ exceeded\"\\},)\\s*$",
+      "class": "hard_boundary",
+      "control": "Public authentication abuse and identity-storage guard",
+      "rationale": "Exact per-client/global auth rate and identity-bucket checks protect external access and password-hashing capacity. Values are deployment-trusted; untrusted callers cannot enlarge them."
+    },
+    {
+      "path": "api/public_auth_limits.py",
+      "pattern": "^\\s*(?:\\(b\"retry\\-after\",\\ str\\(max\\(1,\\ int\\(self\\.window_seconds\\)\\)\\)\\.encode\\(\"ascii\"\\)\\),)\\s*$",
+      "class": "format_structure",
+      "control": "HTTP Retry-After protocol formatting",
+      "rationale": "Exact nonnegative Retry-After seconds field derives from the authentication window and is not an independent work/resource ceiling."
+    },
+    {
+      "path": "api/request_limits.py",
+      "pattern": "^\\s*(?:A\\ second\\ bounded\\ budget\\ covers\\ all\\ HTTP\\ request\\ bodies\\ concurrently\\ being|once\\.\\ Declared\\ lengths\\ reserve\\ capacity\\ before\\ downstream\\ parsing;\\ chunked\\ or|understated\\ bodies\\ reserve\\ additional\\ capacity\\ as\\ bytes\\ arrive\\.\\ Capacity\\ is|per\\-request\\ and\\ aggregate\\ budgets\\ are\\ independent\\.\\ A\\ body\\ which\\ cannot\\ fit|the\\ aggregate\\ budget\\ is\\ permanently\\ rejected413;\\ concurrent\\ contention\\ is503\\.|Invalid\\ budgets\\ fail\\ visibly\\ rather\\ than\\ being\\ silently\\ clamped\\.)\\s*$",
+      "class": "documentation",
+      "control": "Reviewed request-body budget commentary",
+      "rationale": "Exact prose describes existing trusted per-request and aggregate owner ceilings; no executable limit is set by these lines."
+    },
+    {
+      "path": "api/request_limits.py",
+      "pattern": "^\\s*(?:\"detail\":\\ \"AuroraFox\\ API\\ request\\ body\\ capacity\\ temporarily\\ exhausted\",|\"retry_after\":\\ 1,|return\\ max\\(0,\\ length\\)|amount\\ =\\ max\\(0,\\ int\\(amount\\)\\)|amount\\ =\\ max\\(0,\\ int\\(amount\\)\\)|self\\._in_flight_bytes\\ =\\ max\\(0,\\ self\\._in_flight_bytes\\ \\-\\ amount\\)|retry_after:\\ int\\ \\|\\ None\\ =\\ None,|if\\ retry_after\\ is\\ not\\ None:|headers\\.append\\(\\(b\"retry\\-after\",\\ str\\(max\\(1,\\ int\\(retry_after\\)\\)\\)\\.encode\\(\"ascii\"\\)\\)\\)|await\\ self\\._json_response\\(send,\\ status=413,\\ detail=\"AuroraFox\\ API\\ request\\ body\\ exceeds\\ aggregate\\ byte\\ budget\"\\)|additional\\ =\\ max\\(0,\\ new_received\\ \\-\\ reserved\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed HTTP framing and nonnegative arithmetic",
+      "rationale": "Exact error metadata, Retry-After response formatting and nonnegative byte-accounting arithmetic. Actual request/body ceilings are separately owner sourced and tested; no independent operational cap is introduced here."
+    },
+    {
+      "path": "file_intelligence/file_service.py",
+      "pattern": "^\\s*(?:def\\ _cache_key\\(path:\\ Path,\\ question:\\ str,\\ visual:\\ bool,\\ max_chars:\\ int\\)\\ \\->\\ str:|from\\ extended_formats\\ import\\ MAX_EPUB_CHAPTERS,\\ MAX_EMBEDDED_TEXT_BYTES,\\ MAX_ARCHIVE_TEXT_ENTRIES|def\\ _trim_cache\\(limit:\\ int\\)\\ \\->\\ None:|while\\ files\\ and\\ total\\ >\\ limit:|def\\ _truncate\\(text:\\ str,\\ limit:\\ int\\)\\ \\->\\ tuple\\[str,\\ bool\\]:|if\\ len\\(text\\)\\ <=\\ limit:\\ return\\ text,\\ False|if\\ limit\\ <=\\ len\\(marker\\):\\ return\\ text\\[:max\\(0,\\ limit\\)\\],\\ True|return\\ text\\[:limit\\ \\-\\ len\\(marker\\)\\]\\ \\+\\ marker,\\ True|raise\\ ValueError\\(\"PDF\\ page\\ has\\ invalid\\ dimensions\\ or\\ local\\ OCR\\ pixel\\ budget\"\\)|raise\\ ValueError\\(\"PDF\\ page\\ render\\ scale\\ is\\ not\\ representable\\ within\\ local\\ OCR\\ pixel\\ budget\"\\)|def\\ _append_pdf_page\\(out:\\ io\\.StringIO,\\ page_no:\\ int,\\ text:\\ str,\\ limit:\\ int\\)\\ \\->\\ bool:|remaining\\ =\\ max\\(0,\\ limit\\ \\-\\ out\\.tell\\(\\)\\)|output_limit\\ =\\ max\\(1,\\ int\\(max_chars\\)\\)|page_sources\\.append\\(\\{\"page\":\\ page_no,\\ \"source\":\\ \"text_layer\",\\ \"chars\":\\ len\\(layer_text\\),\\ \"stored_chars\":\\ min\\(len\\(layer_text\\),\\ max\\(0,\\ output_limit\\ \\-\\ out\\.tell\\(\\)\\ \\+\\ min\\(len\\(layer_text\\),\\ output_limit\\)\\)\\)\\}\\)|def\\ _clip_archive_text\\(text:\\ str,\\ limit:\\ int\\)\\ \\->\\ tuple\\[str,\\ bool\\]:|if\\ len\\(text\\)\\ <=\\ limit:|if\\ limit\\ <=\\ 0:|if\\ limit\\ <=\\ len\\(marker\\):|return\\ text\\[:limit\\],\\ True|return\\ text\\[:\\ limit\\ \\-\\ len\\(marker\\)\\]\\ \\+\\ marker,\\ True|if\\ not\\ is_dir:\\ total\\ \\+=\\ max\\(0,\\ int\\(size\\)\\)|listing_block,\\ header_truncated\\ =\\ _clip_archive_text\\(\"\\#\\#\\#\\ Состав\\ архива\\\\n\"\\ \\+\\ listing,\\ max\\(0,\\ max_chars\\)\\)\\ if\\ listing\\ else\\ \\(\"\",\\ False\\)|data\\ =\\ read_member\\(limit\\ \\+\\ 1\\)|if\\ len\\(data\\)\\ >\\ limit:|remaining_chars\\ =\\ max_chars\\ \\-\\ output_chars\\ \\-\\ separator_chars|def\\ read_zip\\(limit:\\ int,\\ item:\\ zipfile\\.ZipInfo\\ =\\ info\\)\\ \\->\\ bytes:|return\\ stream\\.read\\(limit\\)|def\\ read_tar\\(limit:\\ int,\\ item:\\ tarfile\\.TarInfo\\ =\\ info\\)\\ \\->\\ bytes:|return\\ stream\\.read\\(limit\\)|elif\\ ext\\ ==\\ \"\\.epub\":\\ kind\\ =\\ \"ebook\";\\ text,\\ extra,\\ warnings\\ =\\ analyze_epub\\(path,\\ max_chars=max_chars\\);\\ metadata\\.update\\(extra\\)|elif\\ ext\\ ==\\ \"\\.rar\":\\ kind\\ =\\ \"archive\";\\ text,\\ extra,\\ warnings\\ =\\ analyze_rar\\(path,\\ max_chars=max_chars\\);\\ metadata\\.update\\(extra\\)|elif\\ ext\\ ==\\ \"\\.pdf\":\\ kind\\ =\\ \"pdf\";\\ text,\\ extra,\\ warnings\\ =\\ _pdf_extract\\(path,\\ visual,\\ question,\\ max_chars=max_chars\\);\\ metadata\\.update\\(extra\\)|elif\\ ext\\ in\\ ARCHIVE_EXT\\ or\\ zipfile\\.is_zipfile\\(path\\)\\ or\\ tarfile\\.is_tarfile\\(path\\):\\ kind\\ =\\ \"archive\";\\ text,\\ extra,\\ warnings\\ =\\ _archive_listing\\(path,\\ max_chars=max_chars\\);\\ metadata\\.update\\(extra\\)|path\\ =\\ _safe_file\\(req\\.path\\);\\ key\\ =\\ _cache_key\\(path,\\ req\\.question,\\ req\\.visual,\\ req\\.max_chars\\);\\ cached\\ =\\ _cache_get\\(key\\)|result\\ =\\ _analyze\\(path,\\ req\\.question,\\ req\\.visual,\\ req\\.max_chars\\);\\ text,\\ outer_truncated\\ =\\ _truncate\\(str\\(result\\.get\\(\"text\",\\ \"\"\\)\\),\\ req\\.max_chars\\)|if\\ len\\(items\\)\\ >=\\ req\\.max_items:|\"item_budget\":\\ req\\.max_items\\}|if\\ len\\(results\\)\\ >=\\ req\\.limit:\\ break|limit_reached\\ =\\ len\\(results\\)\\ >=\\ req\\.limit|return\\ \\{\"ok\":\\ True,\\ \"results\":\\ results,\\ \"limit_reached\":\\ limit_reached,|\"more_results\":\\ \"unknown\"\\ if\\ limit_reached\\ else\\ \"none\",)\\s*$",
+      "class": "owner_adjustable",
+      "control": "File service owner/request budgets",
+      "rationale": "Exact reviewed cache, analysis, archive and result-budget propagation. Request max_chars/max_items/search limit are validated against trusted owner ceilings; cache and extractor values originate in owner startup policy. Numeric zero/one here is a bounded read probe or no-divide helper, not a new independent ceiling."
+    },
+    {
+      "path": "file_intelligence/file_service.py",
+      "pattern": "^\\s*(?:if\\ \"\\\\x00\"\\ in\\ clean_text\\ or\\ readable\\ /\\ max\\(1,\\ len\\(clean_text\\)\\)\\ <\\ 0\\.85:)\\s*$",
+      "class": "format_structure",
+      "control": "Text extraction validity heuristic",
+      "rationale": "Exact reviewed printable-text ratio guard; this decides whether binary data can be represented as text and does not cap owner output size."
+    },
+    {
+      "path": "agent/self_audit.py",
+      "pattern": "^\\s*(?:\"Canonical\\ VMajor\\.Minor\\.Patch\\.Build\\ version\\ state\",|\\{\"agent/version_manager\\.py\":\\ \\[\"major\",\\ \"minor\",\\ \"patch\",\\ \"build\",\\ \"android_version_code\"\\]\\},)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "agent/version_manager.py",
+      "pattern": "^\\s*(?:\"minor\":\\ version\\.minor,|group\\.add_argument\\(\"\\-\\-bump\",\\ choices=\\[\"major\",\\ \"minor\",\\ \"patch\",\\ \"build\"\\]\\)|if\\ kind\\ ==\\ \"minor\":|minor:\\ int|parser\\ =\\ argparse\\.ArgumentParser\\(description=\"AuroraFox\\ VMajor\\.Minor\\.Patch\\.Build\\ version\\ manager\"\\)|raise\\ ValueError\\(\"Version\\ must\\ use\\ V<Major>\\.<Minor>\\.<Patch>\\.<Build>\"\\)|return\\ AuroraVersion\\(self\\.major,\\ self\\.minor\\ \\+\\ 1,\\ 0,\\ 0\\)|return\\ AuroraVersion\\(self\\.major,\\ self\\.minor,\\ self\\.patch\\ \\+\\ 1,\\ self\\.build\\ \\+\\ 1\\)|return\\ AuroraVersion\\(self\\.major,\\ self\\.minor,\\ self\\.patch,\\ self\\.build\\ \\+\\ 1\\)|return\\ f\"\\{self\\.major\\}\\.\\{self\\.minor\\}\\.\\{self\\.patch\\}\\.\\{self\\.build\\}\")\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "api/server.py",
+      "pattern": "^\\s*(?:\"object\":\\ \"aurorafox\\.capabilities\",|@app\\.get\\(\"/v1/capabilities\"\\)|def\\ capabilities\\(record:\\ dict\\[str,\\ Any\\]\\ =\\ Depends\\(_auth\\)\\)\\ \\->\\ dict\\[str,\\ Any\\]:)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "build/set_version.ps1",
+      "pattern": "^\\s*(?:\\$cmp\\ =\\ Compare\\-VersionParts\\ @\\(\\$major,\\$minor,\\$patch,\\$build\\)\\ @\\(\\$currentMajor,\\$currentMinor,\\$currentPatch,\\$currentBuild\\)|\\$minor\\ =\\ \\$currentMinor|\\$minor\\ =\\ \\[int\\]\\$Matches\\[2\\]|\\$numeric\\ =\\ \"\\$major\\.\\$minor\\.\\$patch\\.\\$build\"|\\$state\\.minor\\ =\\ \\$minor|'major'\\ \\{\\ \\$major\\+\\+;\\ \\$minor\\ =\\ 0;\\ \\$patch\\ =\\ 0;\\ \\$build\\ =\\ 0\\ \\}|'minor'\\ \\{\\ \\$minor\\+\\+;\\ \\$patch\\ =\\ 0;\\ \\$build\\ =\\ 0\\ \\}|\\[ValidateSet\\('major','minor','patch','build'\\)\\]\\[string\\]\\$Bump\\ =\\ '',|throw\\ 'Specify\\ either\\ \\-Version\\ V<Major>\\.<Minor>\\.<Patch>\\.<Build>\\ or\\ \\-Bump\\ major\\|minor\\|patch\\|build\\.')\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:error\\ =\\ _error\\(\"cancelled\"\\ if\\ previous\\[\"cancelled\"\\]\\ else\\ \"execution_id_reused\",\\ \"GUI\\ execution\\ identity\\ is\\ terminal\\ or\\ in\\ use\",\\ execution_id=execution_id,\\ retryable=False\\)|execution_id=execution_id,\\ termination_confirmed=confirmed,\\ uncertain_external_state=not\\ confirmed,\\ retryable=False\\)|result\\ =\\ _error\\(\"cancelled\",\\ \"GUI\\ request\\ was\\ cancelled;\\ prior\\ effects\\ are\\ not\\ reversed\",\\ retryable=False,|result\\[\"retryable\"\\]\\ =\\ _retryable\\(action_type\\)\\ and\\ result\\.get\\(\"error\"\\)\\ not\\ in\\ \\{\"cancelled\",\\ \"execution_id_reused\",\\ \"service_stopping\"\\}\\ and\\ not\\ result\\.get\\(\"uncertain_external_state\",\\ False\\)|result\\[\"retryable\"\\]\\ =\\ result\\.get\\(\"error\"\\)\\ not\\ in\\ \\{\"cancelled\",\\ \"execution_id_reused\",\\ \"service_stopping\"\\}\\ and\\ not\\ result\\.get\\(\"uncertain_external_state\",\\ False\\)|uncertain_external_state=not\\ confirmed,\\ retryable=False\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "computer/owned_gui_worker.py",
+      "pattern": "^\\s*(?:queue\\.put\\(\\{\"ok\":\\ False,\\ \"error\":\\ \"launch_authorization_timeout\",\\ \"retryable\":\\ False\\}\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "scripts/computer_client.gd",
+      "pattern": "^\\s*(?:if\\ bounded_timeout\\ <\\ 0:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"invalid_timeout\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"invalid_timeout\",\\ \"retryable\":\\ false\\})\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "scripts/core_candidate_submitter.gd",
+      "pattern": "^\\s*(?:\"retryable\":\\ retryable,|if\\ retryable:|var\\ retryable\\ :=\\ bool\\(result\\.get\\(\"pending\",\\ true\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "scripts/sandbox_manager.gd",
+      "pattern": "^\\s*(?:func\\ capabilities\\(\\)\\ \\->\\ Dictionary:|if\\ bounded_timeout\\ <\\ 0:\\ return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"invalid_timeout\",\\ \"retryable\":\\ false\\}|if\\ requested_mode\\ ==\\ \"auto\"\\ and\\ not\\ bool\\(capabilities\\(\\)\\.get\\(\"container_runtime\",\\ false\\)\\):|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"invalid_timeout\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"http\":\\ code,\\ \"error\":\\ str\\(response\\.get\\(\"error\",\\ \"http_error\"\\)\\),\\ \"message\":\\ OwnerResourcePolicy\\.clip\\(str\\(response\\.get\\(\"detail\",\\ response\\.get\\(\"message\",\\ \"Computer\\ sandbox\\ error\"\\)\\)\\),\\ \"computer_http_error_chars\"\\),\\ \"retryable\":\\ code\\ in\\ \\[408,\\ 429,\\ 502,\\ 503,\\ 504\\]\\}|return\\ \\{\"ok\":\\ true,\\ \"active\":\\ get_active\\(\\),\\ \"count\":\\ workspaces\\.size\\(\\),\\ \"capabilities\":\\ capabilities\\(\\)\\}|return\\ \\{\"ok\":\\ true,\\ \"workspace\":\\ item,\\ \"capabilities\":\\ capabilities\\(\\)\\}|var\\ android_caps\\ :=\\ android_runtime\\.capabilities\\(\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "scripts/tool_registry.gd",
+      "pattern": "^\\s*(?:return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"container_runtime_unavailable\",\\ \"message\":\\ \"Automatic/strict\\ sandbox\\ execution\\ requires\\ Docker/Podman\\ and\\ a\\ preinstalled\\ local\\ image;\\ degraded\\ local\\ fallback\\ is\\ disabled\",\\ \"retryable\":\\ false,\\ \"network_isolation_enforced\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"empty_response\",\\ \"http\":\\ code,\\ \"retryable\":\\ code\\ >=\\ 500\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"invalid_sandbox_mode\",\\ \"message\":\\ \"sandbox_exec\\ mode\\ must\\ be\\ auto,\\ container,\\ or\\ local\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"invalid_timeout\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"local_core_planning_required\",\\ \"message\":\\ \"Computer\\ goals\\ must\\ be\\ planned\\ by\\ local\\ AuroraFox\\ Core\\ and\\ executed\\ as\\ explicit\\ computer_action\\ primitives\\.\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"local_core_planning_required\",\\ \"message\":\\ \"Computer\\ planning\\ belongs\\ to\\ local\\ AuroraFox\\ Core\\.\\ Use\\ computer_windows/computer_screenshot,\\ decide\\ locally,\\ then\\ call\\ computer_action\\.\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"malformed_response\",\\ \"http\":\\ code,\\ \"retryable\":\\ code\\ >=\\ 500\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"malformed_response\",\\ \"message\":\\ \"Computer\\ service\\ returned\\ an\\ incomplete\\ response\",\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"master_stop\",\\ \"message\":\\ \"Master\\ stop\\ активен\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"permission_denied\",\\ \"message\":\\ \"Computer\\ control\\ is\\ disabled\\ by\\ the\\ user\",\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"service_unavailable\",\\ \"message\":\\ \"Computer\\ service\\ request\\ failed\\ \\(%s\\)\"\\ %\\ err,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"transport_failure\",\\ \"message\":\\ \"Computer\\ service\\ transport\\ failed\\ \\(%s\"\\ %\\ result_code,\\ \"retryable\":\\ true\\}|return\\ \\{\"ok\":\\ false,\\ \"error\":\\ \"unsupported_platform\",\\ \"message\":\\ \"Desktop\\ Computer\\ Agent\\ is\\ not\\ supported\\ on\\ %s\"\\ %\\ OS\\.get_name\\(\\),\\ \"retryable\":\\ false\\}|return\\ \\{\"ok\":\\ false,\\ \"http\":\\ code,\\ \"error\":\\ str\\(response\\.get\\(\"error\",\\ \"http_error\"\\)\\),\\ \"message\":\\ OwnerResourcePolicy\\.clip\\(str\\(response\\.get\\(\"detail\",\\ response\\.get\\(\"message\",\\ \"Computer\\ service\\ error\"\\)\\)\\),\\ \"computer_http_error_chars\"\\),\\ \"retryable\":\\ code\\ in\\ \\[408,\\ 429,\\ 502,\\ 503,\\ 504\\]\\})\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
+      "path": "voice/voice_bridge.gd",
+      "pattern": "^\\s*(?:backend_ready\\.emit\\(\\{\"runtime\":\"android\\-native\",\\ \"capabilities\":android_runtime\\.capabilities\\(\\)\\}\\)|return\\ \\{\"ok\":\\ android_runtime\\.is_available\\(\\),\\ \"runtime\":\\ \"android\\-native\",\\ \"capabilities\":\\ android_runtime\\.capabilities\\(\\)\\})\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed non-limit state and version labels",
+      "rationale": "Exact reviewed version-minor, retryable-status and capability-name statements; these do not set a resource ceiling. New or modified caps remain unclassified."
+    },
+    {
       "path": "android_plugin/plugin/src/main/java/com/aurorafox/runtime/SevenZTextReader.kt",
       "pattern": "^\\s*(?:internal\\ fun\\ readSevenZText\\(file:\\ File,\\ limits:\\ FileAnalysisLimits,\\ extensions:\\ Set<String>\\):\\ ArchiveTextResult\\ \\{|require\\(file\\.length\\(\\)\\ <=\\ limits\\.fileBytes\\)\\ \\{\\ \"7z\\ input\\ exceeds\\ owner\\ file\\-byte\\ budget\"\\ \\}|require\\(size\\ <=\\ minOf\\(limits\\.expandedBytes,\\ Int\\.MAX_VALUE\\.toLong\\(\\)\\)\\)\\ \\{\\ \"7z\\ header\\ exceeds\\ owner\\ metadata\\ budget\"\\ \\}|preflightSevenZEncodedHeader\\(next,\\ limits\\.expandedBytes\\)|val\\ memoryKiB\\ =\\ \\(limits\\.expandedBytes\\ /\\ 1024\\)\\.coerceAtMost\\(Int\\.MAX_VALUE\\.toLong\\(\\)\\)\\.toInt\\(\\)|if\\ \\(entries\\.size\\ >=\\ limits\\.archiveEntries\\)\\ \\{\\ entryOverflow\\ =\\ true;\\ break\\ \\}|val\\ blocked\\ =\\ expanded\\ >\\ limits\\.expandedBytes|if\\ \\(entryOverflow\\)\\ warnings\\.add\\(\"7z\\ entry\\ list\\ is\\ partial;\\ raise\\ owner\\ entry\\ budget\"\\)|if\\ \\(blocked\\)\\ warnings\\.add\\(\"7z\\ expanded\\-byte\\ budget\\ exceeded;\\ extraction\\ blocked\"\\)|val\\ listingBudget\\ =\\ minOf\\(limits\\.listingChars\\.toLong\\(\\),\\ limits\\.outputChars\\.toLong\\(\\)\\*limits\\.listingPercent/100\\)\\.toInt\\(\\)|val\\ cap\\ =\\ minOf\\(limits\\.memberBytes,\\ limits\\.totalTextBytes\\-bytesRead\\)|if\\ \\(cap\\ <=\\ 0\\)\\ \\{\\ contentPartial\\ =\\ true;\\ break\\ \\}|if\\ \\(entry\\.size\\ >\\ cap\\)\\ \\{\\ contentPartial\\ =\\ true;\\ warnings\\.add\\(\"7z\\ member\\ exceeds\\ owner\\ text\\-byte\\ budget\"\\);\\ continue\\ \\}|val\\ raw\\ =\\ readOwnerBounded\\(input,\\ cap\\)|val\\ left\\ =\\ limits\\.outputChars\\-out\\.length\\-header\\.length|val\\ partial\\ =\\ blocked\\ \\|\\|\\ entryOverflow\\ \\|\\|\\ listingPartial\\ \\|\\|\\ contentPartial\\ \\|\\|\\ source\\.length\\ >\\ limits\\.outputChars|if\\ \\(partial\\)\\ warnings\\.add\\(\"7z\\ extraction\\ is\\ partial;\\ increase\\ owner\\ budgets\\ and\\ repeat\\ reading\"\\)|return\\ ArchiveTextResult\\(source\\.take\\(limits\\.outputChars\\),\\ mapOf\\(\"entries\"\\ to\\ entries\\.size,|private\\ fun\\ preflightSevenZEncodedHeader\\(bytes:\\ ByteArray,\\ budget:\\ Long\\)\\ \\{|for\\ \\(i\\ in\\ 0\\ until\\ count\\)\\ require\\(number\\(\\)\\ <=\\ minOf\\(budget,\\ Int\\.MAX_VALUE\\.toLong\\(\\)\\)\\)\\ \\{|\"Decoded\\ 7z\\ header\\ exceeds\\ owner\\ metadata\\ budget\")\\s*$",
       "class": "owner_adjustable",

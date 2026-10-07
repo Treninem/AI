@@ -8062,3 +8062,29 @@ DONE: Core planning root cause repaired at d79726c, exact real Windows Core21/21
 REMAINING: Windows installer/installed-app/historical bridge gate; reviewed owner-limit inventory and actual device/update/release acceptance; final version-last and same-SHA post-bump verification.
 BLOCKERS: no current red gate on d79726c; Windows package run37667509617 still IN_PROGRESS and cannot count PASS.
 NEXT: inspect Windows package outcome, then select a bounded unclaimed owner-limit source package with behavior tests; avoid silent audit waivers and preserve exact gate policy.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-OWNER-INVENTORY-FULL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-controlled operational limits and privacy/security exceptions.
+ROADMAP_SECTION:4 File Intelligence, Work/Computer, Core/Chat, security/privacy, exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:501ced8cdd999a737c340018b660f121ca968d32; local and origin feature matched; fresh origin/main fetched; mandatory journal/roadmap/memory/ADRs read.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;tools/owner_control_audit.py if necessary;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md. Production source paths will require separate explicit claim after exact review and old-claim reconciliation.
+DEPENDENCIES:Windows package CI on d79726c remains IN_PROGRESS, not accepted. Fresh audit on501ced8 finds1190unclassified across144files and1101unique source lines.
+NON_BLOCKERS:future V1.6/1.7 work, public multi-user activation and advanced Evolution remain deferred, but this does not permit false classification of active V1.5 limits.
+INTENDED_BUMP:D for any actual behavior repair; inventory-only metadata has no version bump.
+ACCEPTANCE_GATES:review every residual finding as code behavior, classify only exact statements with rationale and adversarial unknown-line checks, preserve security hard boundaries and owner-zero semantics. Any operational cap requiring runtime change remains unclassified until genuine behavior tests. Audit complete only if no unclassified remains by real review; package/device/release gates stay mandatory.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:group all1190 by production semantics and process exact-file batches; start with auth/format/test false positives while preserving reachable operational caps for source fixes.
+
+OWNER_INVENTORY_REVIEW_CHECKPOINT: exact source-line review on501ced8 covered all current hits in file_intelligence/file_service.py, api/request_limits.py, api/public_auth_limits.py and api/server.py plus status/version/capability-name false matches in eleven source files. Exact anchored policy patterns with rationale classify173 prior residual findings; new test evidence lines increase test count. Current audit:484source files, 4271findings, unclassified1017, complete:false. File service retains three open genuine/uncertain operational caps: PDF render scale2.0 and two local health timeout1.5. API server retains candidate base642MiB, sync/page result caps and optional Ollama health0.75 for source review; none is silently waived. Public-auth rate/identity buckets are narrowly hard security boundaries; identity and retry metadata are structural. API body accounting uses owner sourced byte ceilings; exact arithmetic/docs are not independent resource caps. Exact modified-line patterns leave appended FIXED_LIMIT/new literal caps unclassified.
+LOCAL_TESTS:21 owner-control audit tests PASS including new adversarial unknown-line cases; regenerated audit says complete:false, unclassified1017; git diff --check PASS. No production runtime behavior changed in this package. Windows Package run37667509617 on earlier source SHA d79726c remains IN_PROGRESS at portable ZIP/setup/hash after exported/installed-app and historical bridge steps completed, not yet overall PASS. This package's new SHA requires its own exact CI; earlier SHA cannot count as final release evidence.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:173 exact reviewed audit findings classified across five semantic groups; 21 adversarial tests green; Core21/21 and Android/Knowledge prior source evidence preserved.
+REMAINING:1017 inventory findings, source fixes for actual operational caps, exact-SHA CI/package/device/update/release gates and version-last.
+BLOCKERS:no new red gate; Windows package old-SHA run pending, owner inventory incomplete by explicit audit.
+NEXT:publish this reviewed policy/test package by expected-head fast-forward; continue largest remaining reachable operational limits in separate tested source batches, then rerun audit until honest complete.
