@@ -28,6 +28,7 @@ SERVICE_TOKEN = os.getenv("AURORAFOX_COMPUTER_TOKEN", "").strip()
 PARENT_PID = int(os.getenv("AURORAFOX_PARENT_PID", "0") or "0")
 SANDBOX_ROOT = Path(os.getenv("AURORAFOX_SANDBOX_ROOT", str(Path.cwd() / "sandbox"))).resolve()
 MAX_OUTPUT = 120_000
+MAX_CAPTURE_BYTES = 8 * 1024 * 1024
 MAX_WRITE_BYTES = 2_000_000
 MAX_READ_BYTES = 5_000_000
 MAX_TEXT_CHARS = 20_000
@@ -95,6 +96,7 @@ class SandboxExecRequest(BaseModel):
     timeout: int = Field(default=60, ge=0, le=9223372036854775807)
     allow_network: bool = False
     output_chars: int = Field(default=MAX_OUTPUT, ge=0)
+    capture_bytes: int = Field(default=MAX_CAPTURE_BYTES, ge=0)
 
 
 class SandboxCancelRequest(BaseModel):
@@ -159,11 +161,11 @@ def _error(kind: str, message: str, *, retryable: bool = False, **extra: Any) ->
 def _redact(value: str, max_chars: int = MAX_OUTPUT) -> str:
     text = str(value)
     text = re.sub(
-        r"(?i)(password|passwd|token|api[_-]?key|authorization|cookie|private[_-]?key)\s*[:=]\s*[^\s,;]+",
+        '(?i)\\b(password|passwd|secret|token|api[_ -]?key|authorization|cookie|private[_ -]?key)["\']?\\s*(?:[:=]\\s*|\\s+)(?:Bearer\\s+)?(?:"[^"\\r\\n]*"|\'[^\'\\r\\n]*\'|[^\\s,;"\']+)',
         r"\1=[REDACTED]",
         text,
     )
-    text = re.sub(r"(?i)bearer\s+[A-Za-z0-9._~+/-]{8,}", "Bearer [REDACTED]", text)
+    text = re.sub(r"(?i)\bbearer\s+[^\s,;]+", "Bearer [REDACTED]", text)
     if SERVICE_TOKEN:
         text = text.replace(SERVICE_TOKEN, "[REDACTED]")
     return text if max_chars == 0 else text[:max_chars]
@@ -624,7 +626,7 @@ def _sanitized_environment(cwd: Path, allow_network: bool) -> dict[str, str]:
 
 
 def _terminate_process_tree(process: subprocess.Popen) -> bool:
-    if process.poll() is not None:
+    if os.name == "nt" and process.poll() is not None:
         return True
     if os.name == "nt":
         try:
@@ -654,6 +656,8 @@ def _cancel_execution(execution_id: str) -> dict[str, Any]:
         process = record["process"]
         finished = record["finished"]
     terminated = True if process is None else _terminate_process_tree(process)
+    for reader in record.get("capture_threads", []): reader.join(timeout=0.2)
+    if any(reader.is_alive() for reader in record.get("capture_threads", [])): terminated = False
     container = record.get("container")
     if container and not finished:
         try:
@@ -698,7 +702,11 @@ def _cancel_all_processes() -> dict[str, Any]:
             "uncertain_external_state": not confirmed, "executions_stopped": len(results)}
 
 
-def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None, output_chars: int = MAX_OUTPUT) -> dict[str, Any]:
+def _read_capture_chunk(stream) -> bytes:
+    return os.read(stream.fileno(), 65536)
+
+
+def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None, output_chars: int = MAX_OUTPUT, capture_bytes: int = MAX_CAPTURE_BYTES) -> dict[str, Any]:
     execution_id = execution_id or uuid.uuid4().hex
     startup: dict[str, Any] = {}
     if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
@@ -715,7 +723,7 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
         record: dict[str, Any] = {"process": None, "cancelled": False, "finished": False, "container": container, "termination_confirmed": False}
         _execution_records[execution_id] = record
         try:
-            process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
+            process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
         except FileNotFoundError as exc:
             record["finished"] = True
             raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
@@ -723,22 +731,83 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
             record["finished"] = True
             raise
         record["process"] = process
+    buffers = [bytearray(), bytearray()]
+    capture_lock = threading.Lock()
+    captured_bytes = 0
+    overflow = threading.Event()
+    capture_failed = threading.Event()
+
+    def drain(stream, index):
+        nonlocal captured_bytes
+        try:
+            while True:
+                chunk = _read_capture_chunk(stream)
+                if not chunk: break
+                with capture_lock:
+                    room = len(chunk) if capture_bytes == 0 else max(0, capture_bytes - captured_bytes)
+                    retained = chunk[:room]
+                    buffers[index].extend(retained)
+                    captured_bytes += len(retained)
+                    if len(retained) < len(chunk): overflow.set()
+        except (OSError, ValueError):
+            capture_failed.set()
+
+    readers = [threading.Thread(target=drain, args=(stream, index), daemon=True)
+               for index, stream in enumerate((process.stdout, process.stderr))]
+    with _execution_lock:
+        record["capture_threads"] = readers
+        for reader in readers: reader.start()
     try:
         deadline = None if timeout == 0 else time.monotonic() + float(timeout)
         while True:
-            # Short platform waits avoid overflowing poll/thread timeout integers
-            # when the owner selects a large deadline; zero has no total deadline.
-            remaining = None if deadline is None else deadline - time.monotonic()
-            wait = 0.2 if remaining is None else max(0.0, min(0.2, remaining))
-            try:
-                stdout, stderr = process.communicate(timeout=wait)
+            if capture_failed.is_set():
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("output_capture_failed", "Owned output capture failed", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated,
+                              uncertain_external_state=not terminated)
+            if overflow.is_set():
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("output_budget", "Sandbox raw output exceeded owner byte budget", retryable=False,
+                              limit_reached=True, partial=True, output="", capture_budget_bytes=capture_bytes,
+                              captured_bytes=captured_bytes, execution_id=execution_id,
+                              termination_confirmed=terminated, uncertain_external_state=not terminated)
+            if process.poll() is not None and all(not reader.is_alive() for reader in readers):
                 break
-            except subprocess.TimeoutExpired:
-                if deadline is not None and time.monotonic() >= deadline:
+            if deadline is not None and time.monotonic() >= deadline:
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("timeout", "Sandbox process timed out", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated,
+                              uncertain_external_state=not terminated)
+            if process.poll() is not None:
+                # A descendant may still hold inherited pipes. Never wait forever
+                # or claim complete capture/termination when ownership is uncertain.
+                for reader in readers: reader.join(timeout=0.2)
+                if any(reader.is_alive() for reader in readers):
                     terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
-                    return _error("timeout", "Sandbox process timed out", retryable=False,
+                    return _error("output_capture_incomplete", "Owned output pipe did not close", retryable=False,
                                   execution_id=execution_id, termination_confirmed=terminated,
                                   uncertain_external_state=not terminated)
+            else:
+                time.sleep(0.02)
+        if capture_failed.is_set():
+            terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+            return _error("output_capture_failed", "Owned output capture failed", retryable=False,
+                          execution_id=execution_id, termination_confirmed=terminated,
+                          uncertain_external_state=not terminated)
+        # Recheck after EOF: a reader can set overflow between the loop's first
+        # event check and the final process/reader completion observation.
+        if overflow.is_set():
+            terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+            return _error("output_budget", "Sandbox raw output exceeded owner byte budget", retryable=False,
+                          limit_reached=True, partial=True, output="", capture_budget_bytes=capture_bytes,
+                          captured_bytes=captured_bytes, execution_id=execution_id,
+                          termination_confirmed=terminated, uncertain_external_state=not terminated)
+        decoding_replaced = False
+        try:
+            stdout, stderr = (buffer.decode("utf-8") for buffer in buffers)
+        except UnicodeDecodeError:
+            decoding_replaced = True
+            stdout, stderr = (buffer.decode("utf-8", errors="replace") for buffer in buffers)
         if record["cancelled"]:
             return _error("cancelled", "Sandbox execution was cancelled", execution_id=execution_id,
                           termination_confirmed=bool(record.get("termination_confirmed", False)),
@@ -748,12 +817,14 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
         return {"ok": process.returncode == 0, "code": process.returncode,
                 "output": output[:output_chars] if output_chars > 0 else output,
                 "output_chars_total": len(output), "output_budget_chars": output_chars,
+                "captured_bytes": captured_bytes, "capture_budget_bytes": capture_bytes,
+                "output_encoding": "utf-8", "output_decoding_replaced": decoding_replaced,
                 "partial": truncated, "truncated": truncated, "limit_reached": truncated,
                 "mode": "local", "retryable": False, "execution_id": execution_id}
     finally:
-        if process.poll() is None:
+        if process.poll() is None or any(reader.is_alive() for reader in readers):
             _cancel_execution(execution_id)
-        exited = process.poll() is not None
+        exited = process.poll() is not None and all(not reader.is_alive() for reader in readers)
         with _execution_lock:
             record["finished"] = exited and (not record["cancelled"] or bool(record["termination_confirmed"]))
             if exited: record["process"] = None
@@ -764,8 +835,8 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
 
 
 def _run_owned_process(req: SandboxExecRequest, command: list[str], cwd: Path, container: tuple[str, str] | None = None) -> dict[str, Any]:
-    if req.execution_id or container or req.output_chars != MAX_OUTPUT:
-        return _run_process(command, cwd, req.timeout, allow_network=req.allow_network, execution_id=req.execution_id, container=container, output_chars=req.output_chars)
+    if req.execution_id or container or req.output_chars != MAX_OUTPUT or req.capture_bytes != MAX_CAPTURE_BYTES:
+        return _run_process(command, cwd, req.timeout, allow_network=req.allow_network, execution_id=req.execution_id, container=container, output_chars=req.output_chars, capture_bytes=req.capture_bytes)
     return _run_process(command, cwd, req.timeout, allow_network=req.allow_network)
 
 

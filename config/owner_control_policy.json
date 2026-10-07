@@ -1422,6 +1422,62 @@
       "class": "owner_adjustable",
       "control": "OwnerResourcePolicy sandbox_write_bytes/sandbox_snapshot_entries/sandbox_snapshot_bytes",
       "rationale": "Current Windows private owner budget capture before authenticated workspace write/snapshot/rollback request. Other transport/execution fixed limits remain unclassified."
+    },
+    {
+      "path": "scripts/computer_request_guard.gd",
+      "pattern": "^\\s*(?:var\\ maximum\\ :=\\ OwnerResourcePolicy\\.value\\(\"sandbox_exec_max_seconds\"\\)|if\\ maximum\\ ==\\ 0:\\ return\\ requested|return\\ maximum\\ if\\ requested\\ ==\\ 0\\ else\\ mini\\(requested,\\ maximum\\)|var\\ maximum\\ :=\\ float\\(OwnerResourcePolicy\\.value\\(\"computer_http_max_seconds\"\\)\\)|if\\ maximum\\ >\\ 0\\.0:|seconds\\ =\\ maximum\\ if\\ seconds\\ ==\\ 0\\.0\\ else\\ minf\\(seconds,\\ maximum\\)|request\\.timeout\\ =\\ seconds|var\\ captured\\ :=\\ payload\\.duplicate\\(true\\)|captured\\[\"output_chars\"\\]\\ =\\ OwnerResourcePolicy\\.value\\(\"computer_output_chars\"\\)|return\\ captured)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private captured sandbox_exec_max_seconds/computer_http_max_seconds/computer_output_chars policy",
+      "rationale": "Exact raised/zero/default policy and trusted capture passed actual owner/Godot/service gates; finite owner ceiling is independently respected."
+    },
+    {
+      "path": "scripts/computer_request_guard.gd",
+      "pattern": "^\\s*(?:captured\\[\"execution_id\"\\]\\ =\\ \"%d:%d:%s\"\\ %\\ \\[OS\\.get_process_id\\(\\),\\ Time\\.get_ticks_usec\\(\\),\\ Crypto\\.new\\(\\)\\.generate_random_bytes\\(16\\)\\.hex_encode\\(\\)\\])\\s*$",
+      "class": "format_structure",
+      "control": "Trusted nonce identity representation",
+      "rationale": "Internally generated process/tick/128-bit random identity prevents model reuse. Identity construction is not an operational resource ceiling."
+    },
+    {
+      "path": "scripts/computer_request_guard.gd",
+      "pattern": "^\\s*(?:return\\ \\{\"cancelled\":\\ true,\\ \"termination_confirmed\":\\ cancellation,\\ \"uncertain_external_state\":\\ not\\ cancellation,\\ \"retryable\":\\ false\\}|return\\ \\{\"cancelled\":\\ true,\\ \"termination_confirmed\":\\ cancellation,\\ \"uncertain_external_state\":\\ not\\ cancellation,\\ \"retryable\":\\ false\\}|return\\ \\{\"cancelled\":\\ true,\\ \"termination_confirmed\":\\ cancellation,\\ \"uncertain_external_state\":\\ not\\ cancellation,\\ \"retryable\":\\ false,\\ \"transport_result\":\\ int\\(completed\\[0\\]\\)\\}|cancel\\.timeout\\ =\\ 10\\.0\\ \\#\\ Bounded\\ stop\\ acknowledgement;\\ never\\ a\\ product\\ execution\\ deadline\\.)\\s*$",
+      "class": "hard_boundary",
+      "control": "Master stop, authenticated owned cancellation, bounded acknowledgement and unsafe retry",
+      "rationale": "Exact cancellation/uncertainty guard statements; stop acknowledgement remains bounded independently of owner execution deadline. Never disables privacy or authorizes unsafe retries."
+    },
+    {
+      "path": "scripts/computer_request_guard.gd",
+      "pattern": "^\\s*(?:await\\ owner\\.get_tree\\(\\)\\.create_timer\\(0\\.05\\)\\.timeout)\\s*$",
+      "class": "format_structure",
+      "control": "Master-stop revalidation polling cadence",
+      "rationale": "50ms scheduling cadence rechecks authority while actual owner HTTP deadline remains independent; not a total product request cap."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:timeout:\\ int\\ =\\ Field\\(default=60,\\ ge=0,\\ le=9223372036854775807\\)|output_chars:\\ int\\ =\\ Field\\(default=MAX_OUTPUT,\\ ge=0\\)|raise\\ HTTPException\\(status_code=413,\\ detail=\"Snapshot\\ exceeds\\ the\\ configured\\ byte\\ limit\"\\)|def\\ _run_process\\(command:\\ list\\[str\\],\\ cwd:\\ Path,\\ timeout:\\ int,\\ \\*,\\ allow_network:\\ bool,\\ execution_id:\\ str\\ =\\ \"\",\\ container:\\ tuple\\[str,\\ str\\]\\ \\|\\ None\\ =\\ None,\\ output_chars:\\ int\\ =\\ MAX_OUTPUT\\)\\ \\->\\ dict\\[str,\\ Any\\]:|deadline\\ =\\ None\\ if\\ timeout\\ ==\\ 0\\ else\\ time\\.monotonic\\(\\)\\ \\+\\ float\\(timeout\\)|output\\ =\\ _redact\\(\\(stdout\\ or\\ \"\"\\)\\ \\+\\ \\(stderr\\ or\\ \"\"\\),\\ max_chars=0\\)|\"partial\":\\ truncated,\\ \"truncated\":\\ truncated,\\ \"limit_reached\":\\ truncated,|\"mode\":\\ \"local\",\\ \"retryable\":\\ False,\\ \"execution_id\":\\ execution_id\\}|if\\ req\\.execution_id\\ or\\ container\\ or\\ req\\.output_chars\\ !=\\ MAX_OUTPUT:|return\\ _run_process\\(command,\\ cwd,\\ req\\.timeout,\\ allow_network=req\\.allow_network,\\ execution_id=req\\.execution_id,\\ container=container,\\ output_chars=req\\.output_chars\\)|return\\ _run_process\\(command,\\ cwd,\\ req\\.timeout,\\ allow_network=req\\.allow_network\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Authenticated execution/output/snapshot policy and truthful partial result",
+      "rationale": "Exact request fields and result propagation tested default/raised/zero; raw communicate buffering and GUI caps remain unclassified."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:execution_id:\\ str\\ =\\ Field\\(default=\"\",\\ max_length=160,\\ pattern=r\"\\^\\[A\\-Za\\-z0\\-9_:\\.\\-\\]\\*\\$\"\\)|execution_id:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=160,\\ pattern=r\"\\^\\[A\\-Za\\-z0\\-9_:\\.\\-\\]\\+\\$\"\\))\\s*$",
+      "class": "format_structure",
+      "control": "Trusted execution identifier syntax and representation",
+      "rationale": "Internally generated trusted identity is under160characters; malformed identities are rejected rather than silently clipped. This does not impose an operational processing count."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:subprocess\\.run\\(\\[\"taskkill\",\\ \"/PID\",\\ str\\(process\\.pid\\),\\ \"/T\",\\ \"/F\"\\],\\ capture_output=True,\\ check=False,\\ timeout=3\\)|except\\ \\(OSError,\\ subprocess\\.TimeoutExpired\\):|process\\.wait\\(timeout=2\\)|except\\ subprocess\\.TimeoutExpired:|removed\\ =\\ subprocess\\.run\\(\\[container\\[0\\],\\ \"rm\",\\ \"\\-\\-force\",\\ container\\[1\\]\\],\\ capture_output=True,\\ check=False,\\ timeout=3\\)|except\\ \\(OSError,\\ subprocess\\.TimeoutExpired\\):|\"uncertain_external_state\":\\ not\\ terminated,\\ \"retryable\":\\ False\\}|worker\\.join\\(timeout=2\\)|worker\\.join\\(timeout=2\\)|return\\ _error\\(\"timeout\",\\ \"Sandbox\\ process\\ timed\\ out\",\\ retryable=False,|uncertain_external_state=not\\ bool\\(record\\.get\\(\"termination_confirmed\",\\ False\\)\\),\\ retryable=False\\))\\s*$",
+      "class": "hard_boundary",
+      "control": "Owned process/daemon termination, bounded stop acknowledgement and uncertain external state",
+      "rationale": "Exact stop waits bound safety acknowledgement, not owner task duration. Actual process and Docker tests preserve uncertainty when cleanup cannot be proven."
+    },
+    {
+      "path": "computer/computer_service.py",
+      "pattern": "^\\s*(?:queue\\ =\\ context\\.Queue\\(maxsize=1\\)|result\\ =\\ queue\\.get\\(timeout=max\\(0\\.0,\\ min\\(0\\.1,\\ remaining\\)\\)\\)|result\\ =\\ queue\\.get\\(timeout=0\\.5\\)|process\\.join\\(timeout=max\\(0\\.0,\\ min\\(0\\.1,\\ deadline\\ \\-\\ time\\.monotonic\\(\\)\\)\\)\\)|wait\\ =\\ 0\\.2\\ if\\ remaining\\ is\\ None\\ else\\ max\\(0\\.0,\\ min\\(0\\.2,\\ remaining\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Single terminal worker response and bounded polling representation",
+      "rationale": "Queue capacity1 represents one terminal response. Poll and feeder waits coordinate delivery/termination without redefining total owner execution deadlines; GUI operation deadline and raw buffering remain separately visible."
     }
   ]
 }

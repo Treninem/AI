@@ -7308,3 +7308,65 @@ DONE:truthful output published4fa501c, daemonDocker cancellation accepted atthat
 REMAINING:publish worker package and exactCI; owner GUI/UIA/resource inventory, process capture/provider controls and unfinishedcriticalsource; final exactpackage/device/update/release/version-last.
 BLOCKERS:none stops independent source. Physical/nativeWindows/production gates remain unwaived; do not infer entire release from daemon test.
 NEXT:publish coherent lifecycle package, continue remaining critical controls while exactCI runs; collect failures before further related publication.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-INVENTORY-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current owner resource inventory and release source acceptance
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:dd73b222876634128a1e934370c36e4b196d609e
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:published Computer cancellation/request/output/worker paths read-only evidence; previous claims CI_PENDING, policy take-over reconciled from coordinator write/snapshot/cancel claims. No runtime source modifications.
+NON_BLOCKERS:unknown GUI/rawcapture/provider/resource lines remain visible. No V1.6/S3; production/native acceptance unwaived.
+ACCEPTANCE_GATES:exact reviewed statements only; owner propagation versus termination safety versus integer/identity/poll representation; never broad file exemption or test-zero laundering. Existing audit contract tests and source diffcheck; document unknowns and exact CI evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:review exact newly proved current Computer statements, preserve remaining unknown operational limits.
+
+### Exact Computer inventory review checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-INVENTORY-REVIEW source reviewed, unpublished with next coherent source package.
+REVIEW:45exact statements across trusted request capture, tested owner deadline/output/snapshot propagation, bounded cancellation acknowledgement/uncertainty and identity/poll/one-terminal-response representation.46findings matched because exact statements can repeat. No blanket filename exclusion; raw capture/GUI/provider and unknown limits remain visible.
+TESTS:10audit contractPASS,diffcheckPASS. Inventory1420test_evidence/1258unclassified/64documentation/673owner_adjustable/364format_structure/42hard_boundary;complete:false.
+PRIOR_PRODUCED_SHA:dd73b222876634128a1e934370c36e4b196d609e;worker queue publication matched remote. Observed34checks24SUCCESS/3SKIPPED/7IN_PROGRESS,0FAILURE. Linuxcomputer112640722198 and work-godot112640722247 SUCCESS; Windows112640722063 pending. Pending is not accepted.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:include exact inventory review with bounded producer-output owner source; full critical acceptance remains unfinished.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-CAPTURE-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer bounded command output resource lifecycle
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:dd73b222876634128a1e934370c36e4b196d609e
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_request_guard.gd;scripts/owner_resource_policy.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;master/memory append-only
+DEPENDENCIES:explicitcoordinator takeover worker/output/request source afterdd73publication; exact inventory claim owns configpolicy and will publish in same coherent batch. No parallelComputer lane.
+NON_BLOCKERS:GUI/provider controls and full inventory remainunfinished. No V1.6/S3/nativeacceptance claims, release gates unwaived.
+ACCEPTANCE_GATES:private owner combined raw-output byte ceiling with explicit raised/0 semantics; default bounded memory8MiB closes prior unbounded communicate source. Drain stdout/stderr concurrently and stop owned producer on budgetoverflow, truthful output_budget error/termination ack, no partial credential leakage or unsafe automatic retry. Existing ownedchild/grandchild/daemon/masterstop/deadline/huge0/cancellation preserved; actualfinite/infiniteproducer/exactbytes/UTF8/ownerpersist tests; exactSHAWindowsDockerCI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:replace unbounded communicate buffering with owner-bounded concurrent capture and truthful overflow cancellation.
+
+CLAIM_ADDENDUM:CAPTURE-BUDGET includes existing Computer _redact JSON/whitespace/short-Bearer privacy repair within owned service: previous assignment-only pattern could leak quoted JSON marked credentials when owner output0/raised. Full genuine command regression retains mandatory redaction independently of both resource budgets. No separate privacy authority expansion.
+
+### Coherent bounded raw capture, privacy and inventory checkpoint
+CLAIMS:CAPTURE-BUDGET and INVENTORY-REVIEW remain ACTIVE/CI_PENDING for publication; no sourcefreeze.
+CHANGES:replace unbounded communicate buffers with concurrently drained binary pipes and shared owner capture_bytes(default8MiB,new resource ceiling); trusted guard captures private policy, model cannot override.0 intentionally removes ceiling; raised/exactfit accepted. Overflow stops owned producer, returns output_budget/partial/limit_reached with empty output and truthful ack; failed reads stop producer and neverfake success. Register/start readers under lock, recheck EOF races; decoding replacement visible. POSIX departed-parent inheritedpipe kills ownedgroup evenafter parentexit. Windows departed-parent tree remains unverified/uncertain ratherthan falsely complete. Credential redaction now handles full quotedJSON/whitespace/shortBearer beforeclipping. Include prior45exact inventory review, no broad exclusions.
+TESTS:final latest batch76PASS/2SKIP, pinned Computer+owner+audit98PASS/2SKIP. Actual infinite producer stops within5sec with capture128bytes, stdout/stderr UTF8exact4097/4098/0accepted4096overflow, default8MiB+1blocked, invalidUTF8truthful. Real readfailure stops genuine60secprocess; actualPOSIXparent-exits-childheartbeat stops; realJSON/shortBearer secrets excluded under0 budgets. Genuine Godot ownerpersist/trustedpayload and actual latestUvicorn cancellation/masterstop/transport/bodyoverflow/uncertain/shutdownPASS. Existing deprecation and owner20ObjectDB8resources diagnostics retained. Local Docker/NTFS2SKIP mandatoryexactCI; POSIX-only departed-parent fixture explicitlySKIPs onWindows, no Windows proof inferred.
+PRIOR_CI:dd73b222876634128a1e934370c36e4b196d609e observed37checks31SUCCESS/3SKIPPED/3IN_PROGRESS,0FAILURE. Actual Linuxcomputer112640722198,Windowscomputer112640722063,work-godot112640722247 SUCCESS; those gates accepted for thatexactSHA, pending release/downstream remain unaccepted. Priorrequest/output/worker source paths reconciled under currentcaptureclaim; historicalCIred evidence retained.
+INVENTORY:1443test_evidence/1287unclassified/64documentation/670owner_adjustable/363format_structure/41hard_boundary;complete:false. New rawcapture source adds findings and changed exactstatements legitimately invalidate oldmatches; no zero audit claim.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publisheddd73worker actualLinux/Windows gatesaccepted; currentcapture/privacy/inventory locallyverified.
+REMAINING:publish and exactnewCI; Windows departed-parent ownership, GUI/UIA/provider controls, remainingaudit/unfinishedcriticalsource; exactpackage/device/update/productionrelease/version-last.
+BLOCKERS:no external blocker prevents independent sourcework. Windows departed-parent actualproof is missing, notPASS; physical/production gates unwaived.
+NEXT:publish coherent8pathcapture/inventory package, continue native ownedprocess lifecycle and othercurrentcritical resource controls; collectnewCIreds beforeacceptance.

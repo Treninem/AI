@@ -11,6 +11,7 @@ const DEFAULTS := {
 	"computer_response_bytes": 0,
 	"computer_http_error_chars": 2048,
 	"computer_output_chars": 120000,
+	"computer_capture_bytes": 8388608,
 
 	"sandbox_write_bytes": 2000000,
 	"sandbox_snapshot_entries": 5000,
@@ -197,6 +198,7 @@ const LABELS := {
 	"tool_computer_default_http_seconds": "Computer tools: секунд HTTP по умолчанию (0 = только общий потолок)",
 	"sandbox_default_http_seconds": "Песочница Windows: секунд HTTP по умолчанию (0 = только общий потолок)",
 	"computer_response_bytes": "Computer: байтов ответа HTTP (0 = все)",
+	"computer_capture_bytes": "Computer: байтов stdout и stderr команды (0 = все)",
 	"computer_output_chars": "Computer: символов вывода команды (0 = все)",
 	"computer_http_error_chars": "Computer: символов ошибки HTTP (0 = все)",
 

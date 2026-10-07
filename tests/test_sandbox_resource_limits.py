@@ -400,3 +400,95 @@ def test_actual_large_spawned_worker_response_drains_before_join(tmp_path, monke
     assert len(result["image"]) == 1048576
     assert time.monotonic() - started < 5
     assert module._gui_workers == set()
+
+
+@pytest.mark.parametrize("budget", [4097, 4098, 0, 4096])
+def test_actual_combined_raw_capture_budget_and_unicode_bytes(tmp_path, monkeypatch, budget):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "command": [sys.executable, "-c", "import sys;sys.stdout.buffer.write(('Ж'*2048).encode());sys.stderr.buffer.write(b'x')"],
+        "timeout": 5, "capture_bytes": budget, "output_chars": 0,
+    }).json()
+    if budget and budget < 4097:
+        assert not result["ok"] and result["error"] == "output_budget" and result["output"] == ""
+        assert result["termination_confirmed"] and not result["uncertain_external_state"]
+        assert result["captured_bytes"] == budget
+    else:
+        assert result["ok"] and result["output"] == "Ж" * 2048 + "x"
+        assert result["captured_bytes"] == 4097 and not result["output_decoding_replaced"]
+    assert client.post("/sandbox/exec", headers=HEADERS, json={"command": [sys.executable], "capture_bytes": -1}).status_code == 422
+
+
+def test_actual_infinite_output_producer_stops_at_owner_budget(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    started = time.monotonic()
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "execution_id": "infinite-output", "command": [sys.executable, "-c", "import os\nwhile True: os.write(1,b'password=supersecret '*1000);os.write(2,b'x'*1000)"],
+        "timeout": 0, "capture_bytes": 128, "output_chars": 0,
+    }).json()
+    assert time.monotonic() - started < 5
+    assert result["error"] == "output_budget" and result["captured_bytes"] <= 128
+    assert result["output"] == "" and "supersecret" not in str(result)
+    assert result["termination_confirmed"] and not result["uncertain_external_state"] and not result["retryable"]
+    assert module._execution_records["infinite-output"]["process"] is None
+    assert all(not thread.is_alive() for thread in module._execution_records["infinite-output"]["capture_threads"])
+
+
+def test_actual_default_capture_ceiling_and_invalid_utf8_are_truthful(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "command": [sys.executable, "-c", "import os;os.write(1,b'x'*(8388608+1))"], "timeout": 5,
+    }).json()
+    assert result["error"] == "output_budget" and result["capture_budget_bytes"] == 8388608
+    decoded = client.post("/sandbox/exec", headers=HEADERS, json={
+        "command": [sys.executable, "-c", "import os;os.write(1,bytes([255]))"], "timeout": 5,
+    }).json()
+    assert decoded["ok"] and decoded["output_decoding_replaced"] and decoded["output"] == "�"
+
+
+@pytest.mark.skipif(os.name == "nt", reason="POSIX inherited-pipe process-group regression; Windows departed-parent descendant proof remains unverified")
+def test_actual_departed_parent_descendant_pipe_is_stopped_not_claimed_complete(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    root = module.SANDBOX_ROOT
+    worker = "import sys,time,subprocess\nfrom pathlib import Path\nif len(sys.argv)>1:\n while True:\n  Path('pipe-heartbeat').write_text(str(time.time_ns()))\n  time.sleep(0.02)\nelse:\n subprocess.Popen([sys.executable,'pipe.py','child'])\n"
+    (root / "pipe.py").write_text(worker)
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "execution_id": "departed-parent", "command": [sys.executable, "pipe.py"], "timeout": 0,
+    }).json()
+    assert result["error"] == "output_capture_incomplete" and not result["retryable"]
+    assert result["termination_confirmed"] and not result["uncertain_external_state"]
+    before = (root / "pipe-heartbeat").read_text()
+    time.sleep(0.1)
+    assert (root / "pipe-heartbeat").read_text() == before
+    assert all(not thread.is_alive() for thread in module._execution_records["departed-parent"]["capture_threads"])
+
+
+def test_actual_capture_read_failure_cancels_producer_without_fake_success(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    def unavailable(_stream):
+        raise OSError("isolated capture read failure")
+    monkeypatch.setattr(module, "_read_capture_chunk", unavailable)
+    started = time.monotonic()
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "command": [sys.executable, "-c", "import time;time.sleep(60)"], "timeout": 0,
+    }).json()
+    assert time.monotonic() - started < 5
+    assert not result["ok"] and result["error"] == "output_capture_failed"
+    assert result["termination_confirmed"] and not result["uncertain_external_state"] and not result["retryable"]
+
+
+def test_actual_unlimited_output_redacts_json_whitespace_and_short_bearer(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    code = "import json;print(json.dumps({'token':'json secret words','authorization':'Bearer q','private_key':'tiny'}));print('password markedsecret; Bearer z')"
+    result = client.post("/sandbox/exec", headers=HEADERS, json={
+        "command": [sys.executable, "-c", code], "timeout": 5, "capture_bytes": 0, "output_chars": 0,
+    }).json()
+    assert result["ok"] and not result["partial"]
+    assert all(secret not in result["output"] for secret in ["json secret words", "Bearer q", "tiny", "markedsecret", "Bearer z"])
+    assert "[REDACTED]" in result["output"]
