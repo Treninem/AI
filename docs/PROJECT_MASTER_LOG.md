@@ -9108,3 +9108,10 @@ DONE:141 API findings reviewed;39 narrow exact classifications;102 retained; loc
 REMAINING:publish/sync audit package and exact CI;628 global unresolved findings and release package/device/update/version gates.
 BLOCKERS:none in audit metadata scope.
 NEXT:validate policy and diff, publish one metadata commit, verify local/origin/web SHA and exact owner-audit CI; pursue retained source caps separately.
+API_BULK_AUDIT_PUBLICATION_AND_CI:commit14316518fd5aa0caca5619ca1118e4fa4c7e6c9e published with local/origin/web exact and clean. Exact Chat Learning Attachments run37704507592 SUCCESS; its Python contract step included tests/test_owner_control_audit.py and reports68PASS overall. Exact API run37704507634 and Core/Voice run37704507660 SUCCESS; other short checks green at last check, with long Windows/Android/Knowledge/package and Integration runs active/pending, no red observed. Audit source review complete:141 inspected,39 exact classifications,102 retained; global residual628. The audit-only claim CODEX-2026-10-08-V15-API-BULK-OWNER-AUDIT is DONE and releases config/owner_control_policy.json, tests/test_owner_control_audit.py and this journal; no runtime source edited.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 API findings reviewed and published;39 confirmed exact classifications; local33PASS and exact CI68PASS; branch synchronized at1431651.
+REMAINING:628 owner-control inventory findings, source repairs and final exact-SHA Windows/Android/Knowledge/package/update/version acceptance.
+BLOCKERS:none for completed audit metadata; external release gates pending.
+NEXT:verify evidence-only journal publication, then claim a connected source-level owner-cap repair or next ≥100 finding review after fresh main/journal/CI sync.
