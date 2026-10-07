@@ -180,3 +180,20 @@ def test_agent_file_tools_reuse_platform_client_and_owner_limits():
         assert token in file_tools
     assert 'clampi(' not in file_tools and '_http_json(' not in file_tools
     assert 'FileIntelligenceClient.new()' not in file_tools
+
+
+def test_file_client_suboperation_deadlines_are_owner_persisted_and_routed():
+    for key, default in [
+        ('client_health_timeout_seconds', 4),
+        ('client_tree_timeout_seconds', 60),
+        ('client_cache_timeout_seconds', 30),
+    ]:
+        assert f'"{key}": {default}' in CLIENT
+        assert f'"{key}": 0' in CLIENT
+        assert key in SETTINGS
+    assert '_request("/health", HTTPClient.METHOD_GET, {}, _client_timeout("client_health_timeout_seconds"))' in CLIENT
+    assert '_client_timeout("client_tree_timeout_seconds"))' in CLIENT
+    assert CLIENT.count('_client_timeout("client_cache_timeout_seconds"))') == 2
+    assert 'req.timeout = timeout' in CLIENT
+    assert 'return float(owner_limits()[key])' in CLIENT
+    assert '_new_http_request(timeout)' in CLIENT

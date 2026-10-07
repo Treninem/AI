@@ -1,5 +1,13 @@
 extends SceneTree
 
+class FileClientRouteProbe extends FileIntelligenceClient:
+	var captured_path := ""
+	var captured_timeout := -1.0
+	func _request(path: String, _method: HTTPClient.Method, _payload: Dictionary, timeout: float, _track_analysis := false) -> Dictionary:
+		captured_path = path
+		captured_timeout = timeout
+		return {"ok": true}
+
 class ComputerWritePayloadProbe extends ComputerClient:
 	var captured := {}
 	func _json_request(path: String, _method: HTTPClient.Method, payload: Dictionary = {}, _timeout_seconds: float = 8.0, _require_autonomy: bool = true, _require_computer_permission: bool = false) -> Dictionary:
@@ -394,20 +402,49 @@ func _run() -> void:
 	var file_policy := FileIntelligenceClient.new()
 	file_policy.owner_limits_path = operation_path
 	var original_file_limits := file_policy.owner_limits()
+	assert(file_policy.apply_owner_limits({"client_health_timeout_seconds": 4, "client_tree_timeout_seconds": 60, "client_cache_timeout_seconds": 30}, false, false).ok)
+	for key in ["client_health_timeout_seconds", "client_tree_timeout_seconds", "client_cache_timeout_seconds"]:
+		assert(file_policy._client_timeout(key) == float(file_policy.OWNER_LIMIT_DEFAULTS[key]))
+	var default_http := file_policy._new_http_request(file_policy._client_timeout("client_health_timeout_seconds"))
+	assert(default_http.timeout == 4.0)
+	default_http.free()
 	assert(file_policy.apply_owner_limits({"max_file_bytes": 1, "ocr_max_render_pixels": 1, "max_text_chars": 50001}, true, false).ok)
 	var reloaded_file_policy := FileIntelligenceClient.new()
 	reloaded_file_policy.owner_limits_path = operation_path
 	assert(reloaded_file_policy.owner_limits().max_file_bytes == 1 and reloaded_file_policy.owner_limits().max_text_chars == 50001)
-	var zero_file_controls := {"cache_max_bytes": 0, "vision_timeout_seconds": 0, "stt_timeout_seconds": 0, "video_timeout_seconds": 0, "ollama_health_timeout_ms": 0, "voice_health_timeout_ms": 0, "ocr_max_render_scale_percent": 0}
+	assert(file_policy.apply_owner_limits({"client_health_timeout_seconds": 9, "client_tree_timeout_seconds": 91, "client_cache_timeout_seconds": 45}, true, false).ok)
+	for key in ["client_health_timeout_seconds", "client_tree_timeout_seconds", "client_cache_timeout_seconds"]:
+		assert(file_policy._client_timeout(key) == float(reloaded_file_policy.owner_limits()[key]))
+	var exact_http := file_policy._new_http_request(file_policy._client_timeout("client_tree_timeout_seconds"))
+	assert(exact_http.timeout == 91.0)
+	exact_http.free()
+	if OS.get_name() == "Windows":
+		var route_probe := FileClientRouteProbe.new()
+		route_probe.owner_limits_path = operation_path
+		await route_probe.health()
+		assert(route_probe.captured_path == "/health" and route_probe.captured_timeout == 9.0)
+		await route_probe.tree("user://", 1)
+		assert(route_probe.captured_path == "/tree" and route_probe.captured_timeout == 91.0)
+		await route_probe.search_cache("fixture", 1)
+		assert(route_probe.captured_path == "/cache/search" and route_probe.captured_timeout == 45.0)
+		await route_probe.clear_cache()
+		assert(route_probe.captured_path == "/cache/clear" and route_probe.captured_timeout == 45.0)
+		route_probe.free()
+	var zero_file_controls := {"cache_max_bytes": 0, "vision_timeout_seconds": 0, "stt_timeout_seconds": 0, "video_timeout_seconds": 0, "ollama_health_timeout_ms": 0, "voice_health_timeout_ms": 0, "ocr_max_render_scale_percent": 0, "client_health_timeout_seconds": 0, "client_tree_timeout_seconds": 0, "client_cache_timeout_seconds": 0}
 	assert(file_policy.apply_owner_limits(zero_file_controls, true, false).ok)
 	var zero_reloaded := FileIntelligenceClient.new()
 	zero_reloaded.owner_limits_path = operation_path
 	for key in zero_file_controls:
 		assert(zero_reloaded.owner_limits()[key] == 0)
-		assert(OS.get_environment(file_policy.OWNER_LIMIT_ENV[key]) == "0")
+		if file_policy.OWNER_LIMIT_ENV.has(key): assert(OS.get_environment(file_policy.OWNER_LIMIT_ENV[key]) == "0")
+	var unlimited_http := file_policy._new_http_request(file_policy._client_timeout("client_cache_timeout_seconds"))
+	assert(unlimited_http.timeout == 0.0)
+	unlimited_http.free()
 	assert(not file_policy.apply_owner_limits({"cache_max_bytes": -1}, false, false).ok)
 	assert(not file_policy.apply_owner_limits({"ocr_max_render_scale_percent": -1}, false, false).ok)
 	assert(not file_policy.apply_owner_limits({"ollama_health_timeout_ms": 1.5}, false, false).ok)
+	assert(not file_policy.apply_owner_limits({"client_cache_timeout_seconds": -1}, false, false).ok)
+	assert(not file_policy.apply_owner_limits({"client_tree_timeout_seconds": 1.5}, false, false).ok)
 	zero_reloaded.free()
 	var web_policy := PublicWebManager.new()
 	web_policy.owner_limits_path = operation_path

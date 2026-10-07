@@ -43,6 +43,9 @@ const OWNER_LIMIT_DEFAULTS := {
 	"ocr_max_pdf_pages": 1000,
 	"ocr_max_pages": 500,
 	"analysis_timeout_seconds": 600,
+	"client_health_timeout_seconds": 4,
+	"client_tree_timeout_seconds": 60,
+	"client_cache_timeout_seconds": 30,
 	"android_pending_file_jobs": 8,
 	"ocr_max_input_pixels": 64000000,
 	"ocr_max_render_pixels": 8000000,
@@ -84,6 +87,9 @@ const OWNER_LIMIT_MINIMUMS := {
 	"ocr_max_pdf_pages": 1,
 	"ocr_max_pages": 1,
 	"analysis_timeout_seconds": 1,
+	"client_health_timeout_seconds": 0,
+	"client_tree_timeout_seconds": 0,
+	"client_cache_timeout_seconds": 0,
 	"android_pending_file_jobs": 1,
 	"ocr_max_input_pixels": 1,
 	"ocr_max_render_pixels": 1,
@@ -250,7 +256,7 @@ func health() -> Dictionary:
 		}
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "File Intelligence is not available on this platform", "platform": OS.get_name()}
-	var status := await _request("/health", HTTPClient.METHOD_GET, {}, 4.0)
+	var status := await _request("/health", HTTPClient.METHOD_GET, {}, _client_timeout("client_health_timeout_seconds"))
 	if bool(status.get("ok", false)):
 		status["cancellation_supported"] = true
 	return status
@@ -313,12 +319,12 @@ func tree(path: String, max_items := 2000) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "Directory intelligence is not available on this platform"}
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
-	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, int(owner_limits().get("tree_max_items", 5000)))}, 60.0)
+	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, int(owner_limits().get("tree_max_items", 5000)))}, _client_timeout("client_tree_timeout_seconds"))
 
 func search_cache(query: String, limit := 20) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return {"ok": false, "results": [], "error": "Cache search is currently Windows-only"}
-	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, int(owner_limits().get("search_max_results", 100)))}, 30.0)
+	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, int(owner_limits().get("search_max_results", 100)))}, _client_timeout("client_cache_timeout_seconds"))
 
 func clear_cache() -> Dictionary:
 	if OS.get_name() == "Android":
@@ -330,7 +336,7 @@ func clear_cache() -> Dictionary:
 		return _parse_native(plugin.call("clearFileCache"))
 	if OS.get_name() != "Windows":
 		return {"ok": true, "removed": 0}
-	return await _request("/cache/clear", HTTPClient.METHOD_POST, {}, 30.0)
+	return await _request("/cache/clear", HTTPClient.METHOD_POST, {}, _client_timeout("client_cache_timeout_seconds"))
 
 func runtime_is_installed() -> bool:
 	if OS.get_name() == "Android":
@@ -516,14 +522,21 @@ func _analyze_android_job(plugin: Object, private_path: String, question: String
 	_active_android_job_id = ""
 	return {"ok": false, "cancelled": true, "error": "Android file analysis timed out"}
 
-func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0, track_analysis := false) -> Dictionary:
+func _client_timeout(key: String) -> float:
+	return float(owner_limits()[key])
+
+func _new_http_request(timeout: float) -> HTTPRequest:
+	var req := HTTPRequest.new()
+	req.timeout = timeout
+	add_child(req)
+	return req
+
+func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout: float, track_analysis := false) -> Dictionary:
 	var last_error := ""
 	for attempt in range(2):
 		if track_analysis and _cancel_requested:
 			return {"ok": false, "cancelled": true, "error": "File analysis cancelled"}
-		var req := HTTPRequest.new()
-		req.timeout = timeout
-		add_child(req)
+		var req := _new_http_request(timeout)
 		var headers := PackedStringArray(["Content-Type: application/json"])
 		var body := "" if payload.is_empty() else JSON.stringify(payload)
 		var err := req.request(BASE_URL + path, headers, method, body)

@@ -8165,3 +8165,31 @@ PASS RULE:
 
 DONE: owner requirement recorded in the master coordination journal.
 REMAINING: execute this real installed-app acceptance on the final V1.5.0.0 candidate after the current source/CI blockers and package gates are cleared.
+
+FILE_HEALTH_FIXTURE_PUBLICATION: commit9fd2f40bdf92a833bcf2227be54ce3973d1235bf published to PR103; local/remote HEAD equal and worktree clean. Exact Core/Voice run37681729476 SUCCESS across File Intelligence, Godot Core, Windows integration and Python Voice; API, Integration, Core Benchmark and other completed exact-SHA checks also green at latest observation. Windows Package, Android E2E/Benchmark/APK/Plugin and Knowledge 1GiB remain pending/in progress, never counted PASS. Prior File claim source paths released.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-FILE-CLIENT-DEADLINES
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing File Intelligence owner-controlled operational limits.
+ROADMAP_SECTION:4 File Intelligence, UI/performance, security/privacy.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:9fd2f40bdf92a833bcf2227be54ce3973d1235bf; local/origin synchronized; fresh main fetched and journal, roadmap, memory, ADRs checked.
+OWNED_PATHS:scripts/file_intelligence_client.gd;scripts/settings_overlay.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:take over published File client/settings claim above; no concurrent local source edits. Preserve File backend limits independently.
+NON_BLOCKERS:optional Ollama/online capabilities remain optional; no V1.6 scope expansion.
+INTENDED_BUMP:D accumulated version-last.
+ACCEPTANCE_GATES:owner-persisted visible health/tree/cache HTTP client deadlines preserve4/60/30 defaults, apply exact positive values, zero disables HTTPRequest deadline without changing cancellation or backend analysis deadline. Genuine Godot behavior fixture checks public route propagation and HTTPRequest.timeout, persistence/invalid values; owner audit classifies only exact reviewed statements with adversarial unknowns; relevant exact native CI/package gates retained.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement three client deadlines, behavior fixtures and exact audit review, then publish one coherent package.
+
+FILE_CLIENT_DEADLINE_LOCAL_CHECKPOINT: Windows File client health/tree/cache HTTPRequest deadlines are now private persisted owner settings with unchanged defaults4/60/30seconds; Settings exposes them and0 disables only that client deadline. Public health/tree/search/clear routes pass their independent value to the actual HTTPRequest property. Analysis deadline, cancellation and backend limits remain separate. Exact File client audit review classifies12 formerly unclassified lines as tested owner policy or call/read/cadence structure, leaving filename120 and HTTP error-detail4000 truncations visible. Current audit unclassified1002, complete:false.
+LOCAL_TESTS: official Godot4.7.1 Windows owner-resource smoke twice exited0 with AURORA_OWNER_RESOURCE_LIMITS_OK and route/default/exact/zero/persistence/invalid checks; existing20 ObjectDB/8 resource exit diagnostics unchanged. Official headless editor import exited0. Owner runtime/audit Python modules36PASS with PYTHONUTF8=1; first cp1252 local attempt produced8 source-file decode errors, not product assertions and not counted. Diff check PASS. Prior exact published9fd2f40 Core/Voice run37681729476 SUCCESS; Core Benchmark, API, Integration, Android Plugin and other completed jobs green; Android APK/E2E, Knowledge1GiB and Windows Package still not complete at last observation. None of this is new-SHA native acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:three client-side File operation deadlines made owner-controlled end to end; genuine local route and HTTPRequest property fixtures, persistence/zero/invalid,36 Python audit/contract tests.
+REMAINING:publish package and inspect exact native CI;1002 owner audit findings plus device/update/package/version-last gates.
+BLOCKERS:none in local package; release native/device evidence pending.
+NEXT:commit/push one File client package by exact expected-head fast-forward, verify local/remote parity, inspect new-SHA CI; then take next coherent source inventory batch.

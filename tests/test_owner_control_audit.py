@@ -92,7 +92,7 @@ def test_owner_ui_review_leaves_minima_geometry_and_generic_deadlines_unknown():
     assert MODULE.classify("scripts/file_intelligence_client.gd", '"max_file_bytes": 1024,', policy)[0] == "unclassified"
     assert MODULE.classify("scripts/file_intelligence_client.gd", '"max_text_chars": 1,', policy)[0] == "owner_adjustable"
     assert MODULE.classify("scripts/file_intelligence_client.gd", 'var timeout_ms := int(limits.get("analysis_timeout_seconds", 600)) * 1000', policy)[0] == "owner_adjustable"
-    assert MODULE.classify("scripts/file_intelligence_client.gd", 'req.timeout = timeout', policy)[0] == "unclassified"
+    assert MODULE.classify("scripts/file_intelligence_client.gd", 'req.timeout = timeout', policy)[0] == "owner_adjustable"
     assert MODULE.classify("scripts/settings_overlay.gd", 'slider.max_value = maximum', policy)[0] == "unclassified"
     assert MODULE.classify("scripts/settings_overlay.gd", 'field.max_value = 99', policy)[0] == "unclassified"
     ui = (ROOT / "scripts/settings_overlay.gd").read_text()
@@ -180,6 +180,22 @@ def test_file_service_budget_propagation_and_health_controls_keep_unknown_caps_v
     assert MODULE.classify(path, "scale = pixel_scale if scale_percent == 0 else min(scale_percent / 100.0, pixel_scale)", policy)[0] == "owner_adjustable"
     assert MODULE.classify(path, 'r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=1.5)', policy)[0] == "unclassified"
     assert MODULE.classify(path, "scale = min(2.0, math.sqrt(pixel_budget) / math.sqrt(width) / math.sqrt(height))", policy)[0] == "unclassified"
+
+
+def test_file_client_deadline_review_keeps_diagnostic_and_filename_caps_visible():
+    policy = MODULE.load_policy()
+    path = "scripts/file_intelligence_client.gd"
+    for statement, category in [
+        ('req.timeout = timeout', 'owner_adjustable'),
+        ('var chunk := src.get_buffer(mini(1024 * 1024, remaining))', 'format_structure'),
+        ('await get_tree().create_timer(0.05).timeout', 'format_structure'),
+        ('parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars)', 'owner_adjustable'),
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+    assert MODULE.classify(path, 'return out.substr(0, 120)', policy)[0] == 'unclassified'
+    assert MODULE.classify(path, 'return {"ok": false, "http": code, "error": raw.substr(0, 4000)}', policy)[0] == 'unclassified'
+    assert MODULE.classify(path, 'req.timeout = 4.0', policy)[0] == 'unclassified'
 
 
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
