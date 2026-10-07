@@ -8021,3 +8021,18 @@ CODE_FREEZE_SHA:none
 PROGRESS_COMPLETE:82%
 PROGRESS_REMAINING:18%
 NEXT:run local diagnostics, publish this narrow evidence package, use exact native artifact to identify and repair real cause.
+
+PLANNER_SYNTHETIC_NATIVE_RESULT: exact 327da9db256fcda34f133f741a718a42cb9e7a6f Windows Core run37665766523 again failed20/21 only simple_planning. Its fixed synthetic tea task safely captured 518 visible characters: a correct JSON objective and eight steps, then truncated mid-key at "risks". Root cause in production routing: _is_explicit_terse_request matches the broad Russian marker "только с" inside "Верни только строгий JSON", so strict structured planner requests receive owner terse_max_tokens instead of chat_max_tokens; the JSON response truncates before closure. This is directly supported by the native artifact and source. No threshold reduction or fallback-plan invention.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-TOKEN-CLASSIFICATION
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL demonstrated Core planning quality failure.
+STARTING_HEAD:327da9db256fcda34f133f741a718a42cb9e7a6f; local/web synchronized.
+OWNED_PATHS:scripts/desktop_local_runtime.gd;tests/core_benchmark_diagnostics_smoke.gd;this master log.
+INTENDED_BUMP:D version-last; canonical unchanged.
+ACCEPTANCE_GATES:strict JSON request uses owner chat_max_tokens while ordinary explicit terse request keeps owner terse_max_tokens; preserve JSON grammar, local engine, wait/cancel/response budgets. Genuine Godot payload fixture asserts production max_tokens and classification. Unchanged exact-SHA real Windows Core benchmark must pass21/21; wider CI must pass.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:verify local payload and publish by expected-head fast-forward, then inspect unchanged native Windows Core gate.

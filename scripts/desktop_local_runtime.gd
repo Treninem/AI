@@ -52,8 +52,10 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	if not FileAccess.file_exists(absolute_model): return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core отсутствует или повреждён. Восстановите установку AuroraFox.", "model_path": model_path}
 	var ready := await ensure_server(absolute_model)
 	if not bool(ready.get("ok", false)): return ready
-	var terse_request := _is_explicit_terse_request(messages)
 	var structured_request := _is_strict_structured_request(messages)
+	# A strict JSON plan may say "только строгий JSON"; the broad terse
+	# marker "только с" must not give it the short reply token budget.
+	var terse_request := not structured_request and _is_explicit_terse_request(messages)
 	var max_tokens := _generation_budget(options, terse_request)
 	if max_tokens == -2:
 		return {"ok": false, "error": "Invalid Core token budget: expected integer -1..2147483647", "model_failure": false, "retryable": false, "failure_scope": "request_budget"}
