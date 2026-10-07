@@ -7775,3 +7775,37 @@ DONE:memory default/context owner controls and genuine Godot regressions; confir
 REMAINING:newexactWindows/Core and inventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
 BLOCKERS:none for independent source; physical/production unwaived.
 NEXT:publish coherent Memory/Windows repair; continue remaining owner inventory and use actual Core diagnostic report to resolve its failure.
+
+PUBLICATION_CHECKPOINT: MEMORY-CONTEXT-DEFAULTS publishedea254f8af09dbd7e33573fda32f99375f576e094/treee18739ede845c8bc7c21719fc1169ce0e16828c8 on8658a32 expected-head fast-forward;9ownedpaths. Source RELEASED/EXACT_CI_PENDING; native timestamp repair needs actualWindows.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-KNOWLEDGE-RESOURCE-DEFAULTS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 reliable current Knowledge import/retrieval owner resources
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:ea254f8af09dbd7e33573fda32f99375f576e094
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:scripts/knowledge_store.gd;scripts/ai_client.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_knowledge_store_batch_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over published Knowledge/AIClient resource paths; current Memory source published, exactCI pending; freshmain446ce2 unchanged. Current pack importer/transaction integrity unchanged.
+NON_BLOCKERS:No new Knowledge profile/schema/V1.6/S3. Owner0 disables own chunk/batch/result ceiling, does not relax imported-data authority/provenance/dedupe. Explicit per-call search0 remains empty. Unlimited batching may use full physical memory by owner choice; default bounded production behavior preserved.
+ACCEPTANCE_GATES:private visible/persisted chunk1800/stream batch131072/structured flush2048/search6 defaults; capture per operation; positive exact/raised and zero preserve all input without infinite chunk loop, retrieval sorts all requested hits, explicitcaller precedence. Actual JSONL import/retrieval and structured batching/snapshot, existing streaming/rollback/dedupe fixtures and relevant Python contracts. No false source completion or pack acceptance.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement remaining Knowledge chunk/batch/default result ownership and genuine resource fixtures.
+
+### Knowledge resources coherent checkpoint
+CLAIM:WORK-2026-10-07-V15-KNOWLEDGE-RESOURCE-DEFAULTS ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:ea254f8af09dbd7e33573fda32f99375f576e094/treee18739ede845c8bc7c21719fc1169ce0e16828c8.
+CHANGES:private visible/persistable Knowledge chunk1800/stream batch131072/write batch2048/search6 controls. Positive/default behavior retained; owner0 bypasses its own split/intermediate flush/result ceiling, final flush mandatory. Structured operation captures chunk/write values once. Default search unlimited preserves all sorted matches without intermediate topK loss; explicit caller0 remains empty. AIClient default propagates. Removed3unused constants and reconciled existing batching contract with private default2048. Exact reviewed Knowledge statement inventory classified without blanket future exemption.
+TESTS:Godot owner smokePASS real3000Unicode chunk2/1800/4000/0, actual20JSONL hits2/15/unlimited/explicit3/0, real structured flush2/15/0 and immutable captured policy, actual stream batches1/32/0 and late search. Initial newline-equality assertion failed on intentional strip/EOF normalization; corrected semantic fixture then actually executedPASS. Streaming420record/900line smokePASS; genuine9MiB malformed replacement transaction rolled_backPASS preserves old knowledge/removes partial. Python relevant32PASS; diffcheckPASS. Existing owner smoke20ObjectDB/8resource exit diagnostics unchanged.
+PRIOR_CI:8658CoreWindows112838645833SUCCESS (prior317planning failure cause UNKNOWN, no diagnostic fix claim). ea254f8ComputerWindows112840901226SUCCESS proves actual timestamp repair. ea254f8atlastobservation37checks32SUCCESS/3SKIP/2IN_PROGRESS/0FAILURE; pending not accepted.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Knowledge resource defaults with actual preservation/import/retrieval/rollback regressions; actual Windows repair confirmed.
+REMAINING:publication/exactCI; remaining ownerinventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; actual device/production evidence unwaived.
+NEXT:publish coherent Knowledge package, then largest remaining Voice/owner source inventory with exactCI reconciliation.

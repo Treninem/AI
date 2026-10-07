@@ -1611,6 +1611,20 @@
       "class": "owner_adjustable",
       "control": "Private memory_recent_items/memory_retrieval_items defaults; explicit caller overrides",
       "rationale": "Exact public method defaults use -1 sentinel to resolve trusted owner count; default0 resolves full collection, explicit caller0 remains empty. Actual lexical/merged/recent regressions preserve counts and Agent independent recent context."
+    },
+    {
+      "path": "scripts/knowledge_store.gd",
+      "pattern": "^\\s*(?:for\\ i\\ in\\ range\\(maxi\\(headers\\.size\\(\\),\\ values\\.size\\(\\)\\)\\):|if\\ _has_any\\(probe,\\ \\[\"skill\",\\ \"навык\",\\ \"tool\",\\ \"инструмент\",\\ \"capability\",\\ \"умение\"\\]\\):\\ return\\ \"skill\"|var\\ threshold\\ :=\\ maxi\\(1,\\ int\\(ceil\\(float\\(value\\.size\\(\\)\\)\\ /\\ 2\\.0\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed Knowledge resource defaults and record structure",
+      "rationale": "Exact input-column completeness, record kind taxonomy and majority-of-records structure detection; these do not cap input/output or suppress records."
+    },
+    {
+      "path": "scripts/knowledge_store.gd",
+      "pattern": "^\\s*(?:func\\ search\\(query:\\ String,\\ limit:\\ int\\ =\\ \\-1\\)\\ \\->\\ Array:|if\\ limit\\ ==\\ \\-1:|limit\\ =\\ OwnerResourcePolicy\\.value\\(\"knowledge_search_items\"\\)|if\\ limit\\ ==\\ 0:\\ limit\\ =\\ \\-1|if\\ normalized_query\\.is_empty\\(\\)\\ or\\ limit\\ ==\\ 0\\ or\\ limit\\ <\\ \\-1\\ or\\ not\\ FileAccess\\.file_exists\\(DB_PATH\\):|if\\ limit\\ >\\ 0\\ and\\ scored\\.size\\(\\)\\ >=\\ SEARCH_BUFFER_LIMIT:|_scored_trim\\(scored,\\ maxi\\(limit\\ \\*\\ 4,\\ 32\\)\\)|_scored_trim\\(scored,\\ limit\\)|func\\ context_for\\(query:\\ String,\\ limit:\\ int\\ =\\ \\-1\\)\\ \\->\\ String:|for\\ item\\ in\\ search\\(query,\\ limit\\):|func\\ _scored_trim\\(scored:\\ Array,\\ limit:\\ int\\)\\ \\->\\ void:|if\\ limit\\ >=\\ 0\\ and\\ scored\\.size\\(\\)\\ >\\ limit:|scored\\.resize\\(limit\\))\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed Knowledge resource defaults and record structure",
+      "rationale": "Exact tested private owner/default or explicit caller search count propagation; -1 is default/unlimited sentinel, caller0 remains empty; periodic top-K sorting buffer does not reduce the requested final result count. Unknown appended code stays unclassified."
     }
   ]
 }

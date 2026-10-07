@@ -3,13 +3,10 @@ extends RefCounted
 
 const DB_PATH := "user://knowledge/knowledge.jsonl"
 const STRUCTURED_PATH := "user://knowledge/structured.jsonl"
-const MAX_CHUNK_CHARS := 1800
 const LARGE_TEXT_THRESHOLD_BYTES := 8 * 1024 * 1024
-const STREAM_BATCH_CHARS := 128 * 1024
 # Large structured imports used to close/reopen both JSONL indexes every 128
 # records. At gigabyte scale that creates millions of avoidable filesystem
 # operations. A 2048-record batch remains bounded while amortizing persistence.
-const STRUCTURED_WRITE_BATCH := 2048
 const SEARCH_BUFFER_LIMIT := 256
 var document_importer := KnowledgeDocumentImporter.new()
 var _source_presence_cache: Dictionary = {}
@@ -105,9 +102,10 @@ func import_large_text_file(path: String, metadata: Dictionary = {}) -> Dictiona
 	var routed := _empty_routes()
 	var written := 0
 	var batch := ""
+	var batch_cap := OwnerResourcePolicy.value("knowledge_stream_batch_chars")
 	while not file.eof_reached():
 		var line := file.get_line()
-		if batch.length() + line.length() + 1 > STREAM_BATCH_CHARS and not batch.is_empty():
+		if batch_cap > 0 and batch.length() + line.length() + 1 > batch_cap and not batch.is_empty():
 			var imported := import_text(batch, path, meta)
 			if not bool(imported.get("ok", false)):
 				file.close()
@@ -221,6 +219,8 @@ func _import_structured_records(source: String, records: Array, format: String, 
 func _structured_state() -> Dictionary:
 	return {
 		"routed": _empty_routes(),
+		"write_cap": OwnerResourcePolicy.value("knowledge_write_batch_items"),
+		"chunk_cap": OwnerResourcePolicy.value("knowledge_chunk_chars"),
 		"seen": {},
 		"normalized_seen": {},
 		"structured_written": 0,
@@ -269,7 +269,7 @@ func _import_structured_value(source: String, record_path: String, value: Varian
 	state["structured_pending"] = structured_pending
 	var normalized_pending: Array = state.get("normalized_pending", [])
 	var normalized_seen: Dictionary = state.get("normalized_seen", {})
-	for chunk in _chunk(text):
+	for chunk in _chunk(text, int(state.chunk_cap)):
 		var normalized_row := _knowledge_item(source, chunk, kind, meta.duplicate(true))
 		var normalized_id := str(normalized_row.get("id", ""))
 		if not normalized_id.is_empty() and normalized_seen.has(normalized_id):
@@ -279,7 +279,8 @@ func _import_structured_value(source: String, record_path: String, value: Varian
 		normalized_pending.append(normalized_row)
 	state["normalized_seen"] = normalized_seen
 	state["normalized_pending"] = normalized_pending
-	if structured_pending.size() >= STRUCTURED_WRITE_BATCH or normalized_pending.size() >= STRUCTURED_WRITE_BATCH:
+	var write_cap := int(state.write_cap)
+	if write_cap > 0 and (structured_pending.size() >= write_cap or normalized_pending.size() >= write_cap):
 		return _flush_structured_state(state, source, record_path)
 	return {"ok": true}
 
@@ -334,9 +335,12 @@ func remove_source(source: String) -> Dictionary:
 	_forget_source(source)
 	return {"ok": true, "source": source, "removed": db.get("removed", 0), "structured_removed": structured.get("removed", 0), "streaming": true, "filter_skipped": false}
 
-func search(query: String, limit := 6) -> Array:
+func search(query: String, limit: int = -1) -> Array:
+	if limit == -1:
+		limit = OwnerResourcePolicy.value("knowledge_search_items")
+		if limit == 0: limit = -1
 	var normalized_query := query.to_lower().strip_edges()
-	if normalized_query.is_empty() or limit <= 0 or not FileAccess.file_exists(DB_PATH):
+	if normalized_query.is_empty() or limit == 0 or limit < -1 or not FileAccess.file_exists(DB_PATH):
 		return []
 	var terms := normalized_query.split(" ", false)
 	var file := FileAccess.open(DB_PATH, FileAccess.READ)
@@ -364,7 +368,7 @@ func search(query: String, limit := 6) -> Array:
 			if kind.contains(term): score += 1
 		if score > 0:
 			scored.append({"score": score, "item": item})
-			if scored.size() >= SEARCH_BUFFER_LIMIT:
+			if limit > 0 and scored.size() >= SEARCH_BUFFER_LIMIT:
 				_scored_trim(scored, maxi(limit * 4, 32))
 	file.close()
 	_scored_trim(scored, limit)
@@ -377,7 +381,7 @@ func search(query: String, limit := 6) -> Array:
 func all_items() -> Array:
 	return _read_jsonl(DB_PATH)
 
-func context_for(query: String, limit := 6) -> String:
+func context_for(query: String, limit: int = -1) -> String:
 	var parts: Array[String] = []
 	for item in search(query, limit):
 		parts.append("Тип: %s\nИсточник: %s\n%s" % [
@@ -465,7 +469,8 @@ func _has_any(text: String, needles: Array) -> bool:
 			return true
 	return false
 
-func _chunk(text: String) -> Array[String]:
+func _chunk(text: String, chunk_cap: int = -1) -> Array[String]:
+	if chunk_cap == -1: chunk_cap = OwnerResourcePolicy.value("knowledge_chunk_chars")
 	var chunks: Array[String] = []
 	var paragraphs := text.replace("\r\n", "\n").split("\n\n", false)
 	var current := ""
@@ -473,12 +478,12 @@ func _chunk(text: String) -> Array[String]:
 		var p := str(paragraph).strip_edges()
 		if p.is_empty():
 			continue
-		if current.length() + p.length() + 2 > MAX_CHUNK_CHARS and not current.is_empty():
+		if chunk_cap > 0 and current.length() + p.length() + 2 > chunk_cap and not current.is_empty():
 			chunks.append(current)
 			current = ""
-		while p.length() > MAX_CHUNK_CHARS:
-			chunks.append(p.substr(0, MAX_CHUNK_CHARS))
-			p = p.substr(MAX_CHUNK_CHARS)
+		while chunk_cap > 0 and p.length() > chunk_cap:
+			chunks.append(p.substr(0, chunk_cap))
+			p = p.substr(chunk_cap)
 		current = p if current.is_empty() else current + "\n\n" + p
 	if not current.is_empty():
 		chunks.append(current)
@@ -638,7 +643,7 @@ func _replace_file(temp: String, target: String) -> bool:
 
 func _scored_trim(scored: Array, limit: int) -> void:
 	scored.sort_custom(func(a: Dictionary, b: Dictionary): return int(a.get("score", 0)) > int(b.get("score", 0)))
-	if scored.size() > limit:
+	if limit >= 0 and scored.size() > limit:
 		scored.resize(limit)
 
 func _file_size(path: String) -> int:

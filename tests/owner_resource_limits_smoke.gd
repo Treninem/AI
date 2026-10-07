@@ -21,6 +21,12 @@ class IsolatedMemory extends MemoryStore:
 	func _save_vector_index() -> void:
 		pass
 
+class ObservedKnowledge extends KnowledgeStore:
+	var imported_batches: Array[String] = []
+	func import_text(text: String, source := "manual", metadata: Dictionary = {}) -> Dictionary:
+		imported_batches.append(text)
+		return super.import_text(text, source, metadata)
+
 class IsolatedExperience extends ExperienceStore:
 	func _save_array(_path: String, _data: Array) -> void:
 		pass
@@ -263,6 +269,45 @@ func _run() -> void:
 	assert(desktop._generation_budget({"max_tokens": 1.5}, false) == -2)
 	OwnerResourcePolicy._cached.chat_max_tokens = 0
 	assert(desktop._generation_budget({}, false) == -1)
+	var knowledge_limits := KnowledgeStore.new()
+	var knowledge_source := "owner_resource_knowledge_budget_fixture"
+	assert(knowledge_limits.remove_source(knowledge_source).ok)
+	var knowledge_text := "knowledgebudget " + "А".repeat(3000)
+	for chunk_cap in [2, 1800, 4000, 0]:
+		OwnerResourcePolicy._cached.knowledge_chunk_chars = chunk_cap
+		var pieces := knowledge_limits._chunk(knowledge_text)
+		assert("".join(pieces) == knowledge_text)
+		if chunk_cap > 0:
+			for piece in pieces: assert(piece.length() <= chunk_cap)
+		else: assert(pieces.size() == 1)
+	OwnerResourcePolicy._cached.knowledge_chunk_chars = 0
+	for i in range(20): assert(knowledge_limits.import_text("knowledgebudget marker-%d" % i, knowledge_source).ok)
+	for result_cap in [2, 15, 0]:
+		OwnerResourcePolicy._cached.knowledge_search_items = result_cap
+		assert(knowledge_limits.search("knowledgebudget").size() == (20 if result_cap == 0 else int(result_cap)))
+		assert(knowledge_limits.search("knowledgebudget", 3).size() == 3)
+		assert(knowledge_limits.search("knowledgebudget", 0).is_empty())
+	for write_cap in [2, 15, 0]:
+		OwnerResourcePolicy._cached.knowledge_write_batch_items = write_cap
+		var import_state := knowledge_limits._structured_state()
+		OwnerResourcePolicy._cached.knowledge_write_batch_items = 1
+		for i in range(3): assert(knowledge_limits._import_structured_value(knowledge_source, str(i), {"fact":"budgetrecord-%d-%d" % [write_cap, i]}, "json", {}, import_state).ok)
+		assert(import_state.structured_pending.size() == (1 if write_cap == 2 else 3))
+		assert(knowledge_limits._flush_structured_state(import_state, knowledge_source).ok)
+	assert(knowledge_limits.remove_source(knowledge_source).ok)
+	var stream_path := "user://owner_knowledge_stream_budget_fixture.txt"
+	var stream_file := FileAccess.open(stream_path, FileAccess.WRITE)
+	stream_file.store_string("batchmarker-one\nbatchmarker-two\nbatchmarker-three\n")
+	stream_file.close()
+	for batch_cap in [1, 32, 0]:
+		OwnerResourcePolicy._cached.knowledge_stream_batch_chars = batch_cap
+		var observed := ObservedKnowledge.new()
+		assert(observed.import_large_text_file(stream_path).ok)
+		assert("".join(observed.imported_batches).strip_edges() == "batchmarker-one\nbatchmarker-two\nbatchmarker-three")
+		assert(observed.imported_batches.size() == (1 if batch_cap == 0 else (3 if batch_cap == 1 else 2)))
+		assert(observed.search("batchmarker-three", 10).any(func(hit): return hit.source == stream_path))
+		assert(observed.remove_source(stream_path).ok)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(stream_path))
 	var context_store := IsolatedMemory.new()
 	for i in range(20):
 		context_store.memory.append({"id": "context-%d" % i, "content": "ownercontext marker-%d" % i, "importance": 0.5, "confidence": 0.5})

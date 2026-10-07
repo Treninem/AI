@@ -162,6 +162,10 @@ const DEFAULTS := {
 	"agent_recent_items": 8,
 	"memory_recent_items": 12,
 	"memory_retrieval_items": 8,
+	"knowledge_chunk_chars": 1800,
+	"knowledge_stream_batch_chars": 131072,
+	"knowledge_write_batch_items": 2048,
+	"knowledge_search_items": 6,
 
 	"work_error_chars": 2048,
 	"work_summary_chars": 4096,
@@ -369,6 +373,10 @@ const LABELS := {
 	"agent_recent_items": "Агент: недавних записей памяти",
 	"memory_recent_items": "Память: недавних записей по умолчанию",
 	"memory_retrieval_items": "Память: результатов поиска по умолчанию",
+	"knowledge_chunk_chars": "Знания: символов в разделе",
+	"knowledge_stream_batch_chars": "Знания: символов в пакете импорта",
+	"knowledge_write_batch_items": "Знания: записей в пакете сохранения",
+	"knowledge_search_items": "Знания: результатов поиска по умолчанию",
 
 	"work_error_chars": "Work: символов ошибки",
 	"work_summary_chars": "Work: символов итога",
