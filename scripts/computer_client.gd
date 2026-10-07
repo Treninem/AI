@@ -144,7 +144,7 @@ func _candidate_roots() -> Array[String]:
 		ProjectSettings.globalize_path("res://computer")
 	]
 
-func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout_seconds: float = DEFAULT_TIMEOUT, require_autonomy: bool = true, require_computer_permission: bool = false) -> Dictionary:
+func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout_seconds: float = -1.0, require_autonomy: bool = true, require_computer_permission: bool = false) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return _unsupported()
 	if require_autonomy and not _master_enabled():
@@ -152,7 +152,9 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 	if require_computer_permission and not computer_control_enabled():
 		return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
 	var req := HTTPRequest.new()
-	req.timeout = clampf(timeout_seconds, 1.0, 320.0)
+	if not ComputerRequestGuard.configure_request(req, timeout_seconds, "computer_default_http_seconds"):
+		req.free()
+		return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	add_child(req)
 	var headers := PackedStringArray(["Content-Type: application/json"])
 	if not _service_token.is_empty():
@@ -169,7 +171,7 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 	var guarded: Dictionary = await ComputerRequestGuard.wait(req, self, allowed, base_url, _service_token, payload)
 	if guarded.cancelled:
 		req.queue_free()
-		return {"ok": false, "error": "cancelled", "retryable": false, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
+		return {"ok": false, "error": "response_budget" if int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED else ("transport_failure" if guarded.has("transport_result") else "cancelled"), "retryable": false, "limit_reached": int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
 	var completed: Array = guarded.completed
 	req.queue_free()
 	if completed.size() < 4:
@@ -197,7 +199,7 @@ func _decode_response(result_code: int, response_code: int, raw: PackedByteArray
 		return {
 			"ok": false,
 			"error": error_code,
-			"message": detail.substr(0, 2048),
+			"message": OwnerResourcePolicy.clip(detail, "computer_http_error_chars"),
 			"http": response_code,
 			"retryable": response_code in [408, 429, 502, 503, 504],
 		}
@@ -261,25 +263,27 @@ func action(data: Dictionary) -> Dictionary:
 	return await _json_request("/action", HTTPClient.METHOD_POST, payload, ACTION_TIMEOUT, true, true)
 
 func sandbox_exec(command: Array[String], cwd: String = ".", timeout: int = 60, allow_network: bool = false) -> Dictionary:
-	var bounded_timeout := clampi(timeout, 1, MAX_SANDBOX_TIMEOUT)
+	var bounded_timeout := ComputerRequestGuard.execution_timeout(timeout)
+	if bounded_timeout < 0: return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	return await _json_request("/sandbox/exec", HTTPClient.METHOD_POST, {
 		"command": command,
 		"cwd": cwd,
 		"timeout": bounded_timeout,
 		"allow_network": allow_network,
-	}, float(bounded_timeout + 5), true, false)
+	}, ComputerRequestGuard.execution_http_timeout(bounded_timeout), true, false)
 
 func sandbox_container_exec(command: Array[String], cwd: String = ".", timeout: int = 60, allow_network: bool = false) -> Dictionary:
-	var bounded_timeout := clampi(timeout, 1, MAX_SANDBOX_TIMEOUT)
+	var bounded_timeout := ComputerRequestGuard.execution_timeout(timeout)
+	if bounded_timeout < 0: return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	return await _json_request("/sandbox/container_exec", HTTPClient.METHOD_POST, {
 		"command": command,
 		"cwd": cwd,
 		"timeout": bounded_timeout,
 		"allow_network": allow_network,
-	}, float(bounded_timeout + 5), true, false)
+	}, ComputerRequestGuard.execution_http_timeout(bounded_timeout), true, false)
 
 func sandbox_write(path: String, content: String) -> Dictionary:
-	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content, "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")}, DEFAULT_TIMEOUT, true, false)
+	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content, "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")}, -1.0, true, false)
 
 func _master_enabled() -> bool:
 	return master_enabled_from(self)

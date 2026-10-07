@@ -283,7 +283,10 @@ func _record_source_success(source_id: String) -> void:
 
 func _start_collection_budget() -> void:
 	var seconds := OwnerResourcePolicy.value("research_collection_seconds")
-	_collection_deadline_msec = 0 if seconds == 0 else Time.get_ticks_msec() + seconds * 1000
+	var now := Time.get_ticks_msec()
+	if seconds == 0: _collection_deadline_msec = 0
+	elif seconds > (9223372036854775807 - now) / 1000: _collection_deadline_msec = 9223372036854775807
+	else: _collection_deadline_msec = now + seconds * 1000
 
 func _remaining_timeout_seconds() -> float:
 	var request_seconds := float(OwnerResourcePolicy.value("research_request_seconds"))

@@ -132,6 +132,9 @@ func _run() -> void:
 	collector._request_errors.clear()
 	collector._record_request_error("http", "fixture", "https://example.com", 500, 0, "token=CREDENTIAL_FIXTURE")
 	assert(str(collector._request_errors[0].error).length() == 2)
+	OwnerResourcePolicy._cached.research_collection_seconds = 1000000000000000000
+	collector._start_collection_budget()
+	assert(collector._collection_deadline_msec == 9223372036854775807)
 	OwnerResourcePolicy._cached = owner_original
 	OwnerResourcePolicy.revision += 1
 

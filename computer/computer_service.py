@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+from contextlib import asynccontextmanager
 import hashlib
 import hmac
 import json
@@ -47,7 +48,15 @@ ACTION_CACHE_LIMIT = 512
 
 SANDBOX_ROOT.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.1.0")
+@asynccontextmanager
+async def _lifespan(_app):
+    try:
+        yield
+    finally:
+        _cancel_all_processes()
+
+
+app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.1.0", lifespan=_lifespan)
 _action_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _action_inflight: set[str] = set()
 _action_cache_lock = threading.Lock()
@@ -82,7 +91,7 @@ class SandboxExecRequest(BaseModel):
     execution_id: str = Field(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")
     command: list[str] = Field(min_length=1, max_length=64)
     cwd: str = Field(default=".", max_length=1024)
-    timeout: int = Field(default=60, ge=1, le=300)
+    timeout: int = Field(default=60, ge=0, le=9223372036854775807)
     allow_network: bool = False
 
 
@@ -658,9 +667,6 @@ def _cancel_all_processes() -> dict[str, Any]:
             "uncertain_external_state": not confirmed, "executions_stopped": len(results)}
 
 
-app.add_event_handler("shutdown", _cancel_all_processes)
-
-
 def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None) -> dict[str, Any]:
     execution_id = execution_id or uuid.uuid4().hex
     startup: dict[str, Any] = {}
@@ -687,13 +693,21 @@ def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: 
             raise
         record["process"] = process
     try:
-        try:
-            stdout, stderr = process.communicate(timeout=timeout)
-        except subprocess.TimeoutExpired:
-            terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
-            return _error("timeout", "Sandbox process timed out", retryable=False,
-                          execution_id=execution_id, termination_confirmed=terminated,
-                          uncertain_external_state=not terminated)
+        deadline = None if timeout == 0 else time.monotonic() + float(timeout)
+        while True:
+            # Short platform waits avoid overflowing poll/thread timeout integers
+            # when the owner selects a large deadline; zero has no total deadline.
+            remaining = None if deadline is None else deadline - time.monotonic()
+            wait = 0.2 if remaining is None else max(0.0, min(0.2, remaining))
+            try:
+                stdout, stderr = process.communicate(timeout=wait)
+                break
+            except subprocess.TimeoutExpired:
+                if deadline is not None and time.monotonic() >= deadline:
+                    terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                    return _error("timeout", "Sandbox process timed out", retryable=False,
+                                  execution_id=execution_id, termination_confirmed=terminated,
+                                  uncertain_external_state=not terminated)
         if record["cancelled"]:
             return _error("cancelled", "Sandbox execution was cancelled", execution_id=execution_id,
                           termination_confirmed=bool(record.get("termination_confirmed", False)),

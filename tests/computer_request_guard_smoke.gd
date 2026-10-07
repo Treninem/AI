@@ -21,6 +21,8 @@ func _run() -> void:
 	var url := OS.get_environment("AURORAFOX_GUARD_URL")
 	var token := OS.get_environment("AURORAFOX_GUARD_TOKEN")
 	assert(url.begins_with("http://127.0.0.1:"))
+	var policy_original := OwnerResourcePolicy._cached.duplicate()
+	OwnerResourcePolicy._cached = OwnerResourcePolicy.DEFAULTS.duplicate()
 	var owner := MasterFixture.new()
 	root.add_child(owner)
 	var allowed := func() -> bool: return ComputerClient.master_enabled_from(owner)
@@ -45,6 +47,17 @@ func _run() -> void:
 	assert(await ComputerRequestGuard._cancel_execution(owner, url, token, "guard-uncertain"))
 	uncertain.queue_free()
 	owner.enabled = true
+	var bounded := HTTPRequest.new()
+	owner.add_child(bounded)
+	OwnerResourcePolicy._cached.computer_response_bytes = 16
+	assert(ComputerRequestGuard.configure_request(bounded, 5.0, "computer_default_http_seconds"))
+	var headers := PackedStringArray(["Content-Type: application/json", "X-AuroraFox-Computer-Token: " + token, "X-AuroraFox-Autonomy-Allowed: 1"])
+	var quick_payload := {"command": [OS.get_environment("AURORAFOX_GUARD_PYTHON"), "-c", "print('x'*3000)"], "timeout": 0, "execution_id": "guard-body"}
+	assert(bounded.request(url + "/sandbox/exec", headers, HTTPClient.METHOD_POST, JSON.stringify(quick_payload)) == OK)
+	var overflow: Dictionary = await ComputerRequestGuard.wait(bounded, owner, allowed, url, token, quick_payload)
+	assert(overflow.cancelled and overflow.termination_confirmed and overflow.transport_result == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED)
+	bounded.queue_free()
+	OwnerResourcePolicy._cached.computer_response_bytes = 0
 	var shutdown := _start(owner, url, token, "guard-shutdown", 60)
 	var marker := OS.get_environment("AURORAFOX_GUARD_ROOT").path_join("started-guard-shutdown")
 	var deadline := Time.get_ticks_msec() + 5000
@@ -57,6 +70,8 @@ func _run() -> void:
 	assert(stopped_body is Dictionary and stopped_body.error == "cancelled")
 	shutdown.queue_free()
 	assert(not ComputerRequestGuard.stop_service_sync("https://example.com", token))
+	OwnerResourcePolicy._cached = policy_original
+	OwnerResourcePolicy.revision += 1
 	owner.queue_free()
 	await process_frame
 	print("AURORA_COMPUTER_OWNED_CANCEL_OK master_stop=PASS transport=PASS uncertain=PASS shutdown=PASS")

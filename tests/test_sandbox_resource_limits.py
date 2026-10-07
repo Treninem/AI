@@ -184,14 +184,9 @@ def test_actual_owned_process_and_descendant_cancel_after_master_stop(tmp_path, 
     module, client = service(tmp_path, monkeypatch)
     module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
     root = module.SANDBOX_ROOT
-    (root / "owned.py").write_text(
-        "import os,sys,time,json,subprocess\nfrom pathlib import Path\n"
-        "child=subprocess.Popen([sys.executable,'-c',\"import time;time.sleep(60)\"])\n"
-        "Path('owned-pids').write_text(json.dumps([os.getpid(),child.pid]))\n"
-        "while True:\n Path('heartbeat').write_text(str(time.time_ns()))\n time.sleep(0.02)\n"
-    )
+    (root / "owned.py").write_text('import os,sys,time,json,subprocess\nfrom pathlib import Path\ndef metadata():\n    data = {"pid": os.getpid(), "proc_pid": os.getpid()}\n    if os.name != "nt":\n        raw = Path("/proc/self/stat").read_text()\n        data["proc_pid"] = int(raw.split()[0])\n        data["birth"] = raw.split(")", 1)[1].split()[19]\n    return data\nif len(sys.argv) > 1:\n    Path("child-heartbeat").write_text(str(time.time_ns()))\n    Path("child-info").write_text(json.dumps(metadata()))\n    while True:\n        Path("child-heartbeat").write_text(str(time.time_ns()))\n        time.sleep(0.02)\nchild = subprocess.Popen([sys.executable, "owned.py", "child"])\nwhile not Path("child-info").exists(): time.sleep(0.01)\nPath("heartbeat").write_text(str(time.time_ns()))\nPath("owned-pids").write_text(json.dumps([metadata(), json.loads(Path("child-info").read_text())]))\nwhile True:\n    Path("heartbeat").write_text(str(time.time_ns()))\n    time.sleep(0.02)\n')
     with concurrent.futures.ThreadPoolExecutor() as pool:
-        future = pool.submit(client.post, "/sandbox/exec", headers=HEADERS, json={"command": [sys.executable, "owned.py"], "timeout": 60, "execution_id": "owned-master-stop"})
+        future = pool.submit(client.post, "/sandbox/exec", headers=HEADERS, json={"command": [sys.executable, "owned.py"], "timeout": 0, "execution_id": "owned-master-stop"})
         try:
             _wait_for_file(root / "owned-pids")
             pids = json.loads((root / "owned-pids").read_text())
@@ -202,15 +197,20 @@ def test_actual_owned_process_and_descendant_cancel_after_master_stop(tmp_path, 
             assert not result["ok"] and result["error"] == "cancelled" and not result["retryable"]
             _wait_for_file(root / "heartbeat")
             heartbeat = (root / "heartbeat").read_bytes()
+            child_heartbeat = (root / "child-heartbeat").read_bytes()
             time.sleep(0.1)
             assert (root / "heartbeat").read_bytes() == heartbeat
-            for pid in pids:
+            assert (root / "child-heartbeat").read_bytes() == child_heartbeat
+            for metadata in pids:
+                pid = metadata["pid"]
                 if os.name == "nt":
                     listing = subprocess.run(["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"], capture_output=True, text=True, timeout=3)
                     assert f'"{pid}"' not in listing.stdout
                 else:
-                    proc = Path(f"/proc/{pid}/stat")
-                    assert not proc.exists() or proc.read_text().split(")", 1)[1].split()[0] == "Z"
+                    proc = Path(f"/proc/{metadata['proc_pid']}/stat")
+                    if proc.exists():
+                        fields = proc.read_text().split(")", 1)[1].split()
+                        assert fields[19] != metadata["birth"] or fields[0] == "Z", f"Owned PID {pid} still live: state={fields[0]} pgrp={fields[2]}"
         finally:
             module._cancel_execution("owned-master-stop")
 
@@ -329,3 +329,31 @@ def test_failed_stop_retains_actual_process_ownership_for_retry(tmp_path, monkey
         finally:
             monkeypatch.setattr(module, "_terminate_process_tree", terminate)
             module._cancel_execution("failed-stop")
+
+
+@pytest.mark.parametrize("timeout", [0, 10001, 1000000000000000000])
+def test_actual_process_accepts_owner_zero_raised_and_huge_deadline(tmp_path, monkeypatch, timeout):
+    module, client = service(tmp_path, monkeypatch)
+    module.ALLOW_DEGRADED_LOCAL_SANDBOX = True
+    response = client.post("/sandbox/exec", headers=HEADERS, json={"command": [sys.executable, "-c", "print('owner deadline verified')"], "timeout": timeout, "execution_id": "owner-deadline"})
+    assert response.status_code == 200
+    assert response.json()["ok"] and "owner deadline verified" in response.json()["output"]
+    assert client.post("/sandbox/exec", headers=HEADERS, json={"command": [sys.executable], "timeout": -1}).status_code == 422
+
+
+def test_actual_app_lifespan_shutdown_terminates_owned_process(tmp_path, monkeypatch):
+    import concurrent.futures
+    module, _client = service(tmp_path, monkeypatch)
+    root = module.SANDBOX_ROOT
+    code = "from pathlib import Path;import time;Path('lifespan-started').write_text('yes');time.sleep(60)"
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = None
+        try:
+            with TestClient(module.app):
+                future = pool.submit(module._run_process, [sys.executable, "-c", code], root, 0, allow_network=False, execution_id="lifespan-owned")
+                _wait_for_file(root / "lifespan-started")
+            result = future.result(timeout=5)
+            assert result["error"] == "cancelled" and module._execution_stopping
+            assert module._execution_records["lifespan-owned"]["process"] is None
+        finally:
+            module._cancel_all_processes()

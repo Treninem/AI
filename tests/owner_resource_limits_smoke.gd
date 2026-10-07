@@ -694,6 +694,32 @@ func _run() -> void:
 		sandbox.free()
 		OwnerResourcePolicy._cached = sandbox_policy
 		OwnerResourcePolicy.revision += 1
+	var transport_policy := OwnerResourcePolicy._cached.duplicate()
+	OwnerResourcePolicy._cached = OwnerResourcePolicy.DEFAULTS.duplicate()
+	var timeout_request := HTTPRequest.new()
+	assert(ComputerRequestGuard.execution_timeout(10001) == 300)
+	assert(ComputerRequestGuard.execution_timeout(0) == 300)
+	assert(ComputerRequestGuard.execution_timeout(-1) == -1)
+	OwnerResourcePolicy._cached.sandbox_exec_max_seconds = 0
+	assert(ComputerRequestGuard.execution_timeout(10001) == 10001)
+	assert(ComputerRequestGuard.execution_timeout(0) == 0)
+	assert(ComputerRequestGuard.execution_http_timeout(0) == 0.0)
+	assert(ComputerRequestGuard.execution_http_timeout(10001) == 10006.0)
+	assert(ComputerRequestGuard.configure_request(timeout_request, 10001.0, "computer_default_http_seconds"))
+	assert(timeout_request.timeout == 320.0 and timeout_request.body_size_limit == -1)
+	OwnerResourcePolicy._cached.computer_http_max_seconds = 0
+	assert(ComputerRequestGuard.configure_request(timeout_request, 10001.0, "computer_default_http_seconds"))
+	assert(timeout_request.timeout == 10001.0)
+	OwnerResourcePolicy._cached.computer_default_http_seconds = 0
+	assert(ComputerRequestGuard.configure_request(timeout_request, -1.0, "computer_default_http_seconds"))
+	assert(timeout_request.timeout == 0.0)
+	OwnerResourcePolicy._cached.computer_response_bytes = 10001
+	assert(ComputerRequestGuard.configure_request(timeout_request, 1.0, "computer_default_http_seconds"))
+	assert(timeout_request.body_size_limit == 10001)
+	assert(not ComputerRequestGuard.configure_request(timeout_request, NAN, "computer_default_http_seconds"))
+	assert(not ComputerRequestGuard.configure_request(timeout_request, -2.0, "computer_default_http_seconds"))
+	timeout_request.free()
+	OwnerResourcePolicy._cached = transport_policy
 	var write_policy := OwnerResourcePolicy._cached.duplicate()
 	var write_client := ComputerWritePayloadProbe.new()
 	var write_tools := ToolWritePayloadProbe.new()
@@ -707,7 +733,7 @@ func _run() -> void:
 	write_tools.free()
 	OwnerResourcePolicy._cached = write_policy
 	var output_policy := OwnerResourcePolicy._cached.duplicate()
-	for output_key in ["sandbox_write_bytes", "sandbox_snapshot_entries", "sandbox_snapshot_bytes", "research_request_seconds", "research_collection_seconds", "research_backoff_base_seconds", "research_backoff_max_seconds", "research_backoff_failure_cap", "research_error_chars", "research_http_error_chars", "research_stage_chars", "research_endpoint_chars", "research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
+	for output_key in ["sandbox_exec_max_seconds", "computer_http_max_seconds", "computer_default_http_seconds", "tool_computer_default_http_seconds", "sandbox_default_http_seconds", "computer_response_bytes", "computer_http_error_chars", "sandbox_write_bytes", "sandbox_snapshot_entries", "sandbox_snapshot_bytes", "research_request_seconds", "research_collection_seconds", "research_backoff_base_seconds", "research_backoff_max_seconds", "research_backoff_failure_cap", "research_error_chars", "research_http_error_chars", "research_stage_chars", "research_endpoint_chars", "research_response_bytes", "research_log_bytes", "research_summary_chars", "research_title_chars", "research_error_items", "speech_chunk_chars", "speech_natural_min_chars", "speech_sentence_min_chars"]:
 		var output_setting := {}
 		output_setting[output_key] = 0
 		assert(OwnerResourcePolicy.save(output_setting, path) == OK)

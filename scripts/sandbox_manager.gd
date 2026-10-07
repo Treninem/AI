@@ -247,18 +247,19 @@ func _execute_windows(command: Array, cwd: String, timeout: int, mode: String) -
 		var safe_cwd := _safe_relative(cwd)
 		if safe_cwd.is_empty(): return {"ok": false, "error": "Invalid cwd"}
 		rel_cwd += "/" + safe_cwd
-	var bounded_timeout := clampi(timeout, 1, MAX_WINDOWS_EXEC_TIMEOUT)
+	var bounded_timeout := ComputerRequestGuard.execution_timeout(timeout)
+	if bounded_timeout < 0: return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	var payload := {"command": command, "cwd": rel_cwd, "timeout": bounded_timeout, "allow_network": false}
 	if requested_mode in ["auto", "container"]:
 		if requested_mode == "auto" and not bool(capabilities().get("container_runtime", false)):
 			return {"ok": false, "error": "container_runtime_unavailable", "message": "Automatic execution requires the strict Docker/Podman sandbox; degraded local fallback is disabled", "retryable": false, "network_isolation_enforced": false}
-		var container_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
+		var container_result := await _http_json(WINDOWS_SERVICE + "/sandbox/container_exec", HTTPClient.METHOD_POST, payload, ComputerRequestGuard.execution_http_timeout(bounded_timeout))
 		if int(container_result.get("http", 0)) == 404:
 			return {"ok": false, "error": "container_runtime_unavailable", "message": "Strict container sandbox requested but Docker/Podman or the required local image is unavailable", "retryable": false, "network_isolation_enforced": false}
 		return container_result
 	# "local" is an explicit degraded operator mode. The sidecar independently
 	# rejects this endpoint unless AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX=1.
-	var local_result := await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, float(bounded_timeout + 5))
+	var local_result := await _http_json(WINDOWS_SERVICE + "/sandbox/exec", HTTPClient.METHOD_POST, payload, ComputerRequestGuard.execution_http_timeout(bounded_timeout))
 	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
 		local_result["degraded_isolation"] = true
 		local_result["isolation_note"] = "Explicit local mode lacks strict filesystem/network isolation. Prefer mode=container."
@@ -422,7 +423,7 @@ func _load_index() -> void:
 		active_workspace_id = str(parsed.get("active", ""))
 		workspaces = parsed.get("workspaces", {})
 
-func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout := 180.0) -> Dictionary:
+func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout := -1.0) -> Dictionary:
 	if not url.begins_with(WINDOWS_SERVICE):
 		return {"ok": false, "error": "service_url_denied", "retryable": false}
 	if OS.get_name() != "Windows":
@@ -430,7 +431,9 @@ func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}
 	if not ComputerClient.master_enabled_from(self):
 		return {"ok": false, "error": "master_stop", "message": "Master stop активен", "retryable": false}
 	var req := HTTPRequest.new()
-	req.timeout = clampf(timeout, 1.0, MAX_WINDOWS_HTTP_TIMEOUT)
+	if not ComputerRequestGuard.configure_request(req, timeout, "sandbox_default_http_seconds"):
+		req.free()
+		return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	add_child(req)
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -447,7 +450,7 @@ func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}
 	var guarded: Dictionary = await ComputerRequestGuard.wait(req, self, allowed, WINDOWS_SERVICE, ComputerClient.shared_service_token(), payload)
 	if guarded.cancelled:
 		req.queue_free()
-		return {"ok": false, "error": "cancelled", "retryable": false, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
+		return {"ok": false, "error": "response_budget" if int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED else ("transport_failure" if guarded.has("transport_result") else "cancelled"), "retryable": false, "limit_reached": int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
 	var completed: Array = guarded.completed
 	req.queue_free()
 	if completed.size() < 4:
@@ -465,5 +468,5 @@ func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}
 		return {"ok": false, "error": "malformed_response", "http": code, "retryable": code >= 500}
 	var response: Dictionary = parsed
 	if code < 200 or code >= 300:
-		return {"ok": false, "http": code, "error": str(response.get("error", "http_error")), "message": str(response.get("detail", response.get("message", "Computer sandbox error"))).substr(0, 2048), "retryable": code in [408, 429, 502, 503, 504]}
+		return {"ok": false, "http": code, "error": str(response.get("error", "http_error")), "message": OwnerResourcePolicy.clip(str(response.get("detail", response.get("message", "Computer sandbox error"))), "computer_http_error_chars"), "retryable": code in [408, 429, 502, 503, 504]}
 	return response

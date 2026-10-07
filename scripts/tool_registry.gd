@@ -88,13 +88,15 @@ func _http_json(url: String, method: HTTPClient.Method, payload: Dictionary = {}
 		return parsed
 	return {"ok": false, "error": "Invalid JSON response"}
 
-func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout := 12.0) -> Dictionary:
+func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout := -1.0) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "unsupported_platform", "message": "Desktop Computer Agent is not supported on %s" % OS.get_name(), "retryable": false}
 	if not ComputerClient.master_enabled_from(self):
 		return {"ok": false, "error": "master_stop", "message": "Master stop активен", "retryable": false}
 	var req := HTTPRequest.new()
-	req.timeout = clampf(timeout, 1.0, COMPUTER_TIMEOUT_MAX)
+	if not ComputerRequestGuard.configure_request(req, timeout, "tool_computer_default_http_seconds"):
+		req.free()
+		return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	add_child(req)
 	var headers := PackedStringArray([
 		"Content-Type: application/json",
@@ -111,7 +113,7 @@ func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary
 	var guarded: Dictionary = await ComputerRequestGuard.wait(req, self, allowed, computer_base_url, ComputerClient.shared_service_token(), payload)
 	if guarded.cancelled:
 		req.queue_free()
-		return {"ok": false, "error": "cancelled", "retryable": false, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
+		return {"ok": false, "error": "response_budget" if int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED else ("transport_failure" if guarded.has("transport_result") else "cancelled"), "retryable": false, "limit_reached": int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
 	var completed: Array = guarded.completed
 	req.queue_free()
 	if completed.size() < 4:
@@ -129,7 +131,7 @@ func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary
 		return {"ok": false, "error": "malformed_response", "http": code, "retryable": code >= 500}
 	var response: Dictionary = parsed
 	if code < 200 or code >= 300:
-		return {"ok": false, "http": code, "error": str(response.get("error", "http_error")), "message": str(response.get("detail", response.get("message", "Computer service error"))).substr(0, 2048), "retryable": code in [408, 429, 502, 503, 504]}
+		return {"ok": false, "http": code, "error": str(response.get("error", "http_error")), "message": OwnerResourcePolicy.clip(str(response.get("detail", response.get("message", "Computer service error"))), "computer_http_error_chars"), "retryable": code in [408, 429, 502, 503, 504]}
 	return response
 
 func _computer_permission() -> Dictionary:
@@ -438,31 +440,32 @@ func _computer_screenshot(_args: Dictionary) -> Dictionary:
 	return await _computer_json("/screen", HTTPClient.METHOD_GET, {}, COMPUTER_SCREEN_TIMEOUT)
 
 func _sandbox_exec(args: Dictionary) -> Dictionary:
-	var timeout := clampi(int(args.get("timeout", 60)), 1, 300)
+	var timeout := ComputerRequestGuard.execution_timeout(int(args.get("timeout", 60)))
+	if timeout < 0: return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	var mode := str(args.get("mode", "auto")).strip_edges().to_lower()
 	if mode not in ["auto", "container", "local"]:
 		return {"ok": false, "error": "invalid_sandbox_mode", "message": "sandbox_exec mode must be auto, container, or local", "retryable": false}
 	var payload := {"command": args.get("command", []), "cwd": str(args.get("cwd", ".")), "timeout": timeout, "allow_network": false}
 	if mode in ["auto", "container"]:
-		var container_result := await _computer_json("/sandbox/container_exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
+		var container_result := await _computer_json("/sandbox/container_exec", HTTPClient.METHOD_POST, payload, ComputerRequestGuard.execution_http_timeout(timeout))
 		if int(container_result.get("http", 0)) == 404:
 			return {"ok": false, "error": "container_runtime_unavailable", "message": "Automatic/strict sandbox execution requires Docker/Podman and a preinstalled local image; degraded local fallback is disabled", "retryable": false, "network_isolation_enforced": false}
 		return container_result
 	# Explicit local mode is intentionally degraded and still fails closed at the
 	# sidecar unless AURORAFOX_ALLOW_DEGRADED_LOCAL_SANDBOX=1 was set by an operator.
-	var local_result := await _computer_json("/sandbox/exec", HTTPClient.METHOD_POST, payload, float(timeout + 5))
+	var local_result := await _computer_json("/sandbox/exec", HTTPClient.METHOD_POST, payload, ComputerRequestGuard.execution_http_timeout(timeout))
 	if local_result.get("ok", false) and not bool(local_result.get("network_isolation_enforced", false)):
 		local_result["degraded_isolation"] = true
 		local_result["isolation_note"] = "Explicit local mode lacks strict filesystem/network isolation. Prefer mode=container."
 	return local_result
 
 func _sandbox_write(args: Dictionary) -> Dictionary:
-	return await _computer_json("/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", "")), "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")}, 12.0)
+	return await _computer_json("/sandbox/write", HTTPClient.METHOD_POST, {"path": str(args.get("path", "")), "content": str(args.get("content", "")), "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")}, -1.0)
 
 func _sandbox_read(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))
 	var encoded := path.uri_encode()
-	return await _computer_json("/sandbox/read?path=" + encoded, HTTPClient.METHOD_GET, {}, 12.0)
+	return await _computer_json("/sandbox/read?path=" + encoded, HTTPClient.METHOD_GET, {}, -1.0)
 
 func _screen_snapshot(_args: Dictionary) -> Dictionary:
 	var permission := _computer_permission()

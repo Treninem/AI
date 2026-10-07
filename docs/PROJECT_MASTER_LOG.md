@@ -7201,3 +7201,40 @@ DONE:published a388/3e0f/d251; ownedcancellationlocalactualbehaviorverified asab
 REMAINING:publish/checkthisbatch, currentownercontrols/audit/unfinishedCRITICALsource, finalexactSHA/package/physical/update/releasegates; versionlast.
 BLOCKERS:localDocker/nativeWindows unavailable foractualplatformacceptance; no blocker stopsremainingindependent authorizedsourcework.
 NEXT:publish coherentcancelpackage and continuecurrentexecution/transportownercontrols onlyafter safe cancellation source/testbaseline; collect actualnewCIredstogether.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer operational execution/HTTP/error owner controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:25e161ed0526543fb9394bfe40bcf56a2044e5ad
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/tool_registry.gd;scripts/computer_request_guard.gd;scripts/owner_resource_policy.gd;agent/research_collector.gd onlydeadline-representation saturation;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tests/research_source_resilience_smoke.gd;tests/computer_agent_reliability_test.py;tests/computer_agent_routing_contract_test.py;config/owner_control_policy.json exactreview;master/memory append-only
+DEPENDENCIES:coordinator takes over justpublishedownedcancel11path25e161e tree4d615c7878dfddf7f18acf98351241f98d1a358f. Actual76Python+GodotHTTP localbaseline; newmandatoryDocker/WindowsCIpending. No independent parallelComputerlane edits.
+NON_BLOCKERS:GUI/UIA counts/actions/output buffering/providerpagination remain separatelyunfinished. No V1.6/S3/runtimeintegration. Stopack,authentication/masterstop/safecontainer/idempotency boundaries unchanged. Productionidentity/physical/update gates unwaived.
+ACCEPTANCE_GATES:private default-preserving ownerexec/HTTP ceilings(default300/320), per-clientdefault8/12/180, optionalComputerresponsebytes(default0previousunbounded), errorchars2048; raised/0 semantics withfiniteownerceilings respected. Actual0/hugeprocessdeadline completes/cancels without platformwait-overflow; actualHTTPbodyoverflow terminatesownedrequest and neverreturnsfakepartialsuccess. Real ownerpersist/payload/guard/service regressions and exactnewSHA CI. Researchmillisecondsaturation protectsrepresentabledeadline whenownerraisessecondstohuge64bitvalues.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:currentrequestownerpolicy implementation and coherentactualbehavior tests; no timeoutrelaxation withoutretainedcancelguard.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER also owns tools/run_computer_guard_smoke.py for the existing actualsidecar fixture cleanup of the new guard-body executionID; priorcoordinatorcancelclaim owns thatsamefile and is explicitlyreconciled. No scope expansion.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER takes over current25e exactCI failure37572929879/jobs112635387849(Linux)/112635387800(Windows): installedunpinnedFastAPI removes app.add_event_handler;39tests each failatserviceimport. Correct shutdown integration through publiclifespan API insidealready-owned Computer source, retain all cancellation/actualDocker/Windows gates. No blindrerun/dependency-pin workaround.
+
+### Coherent Computer request-owner and actual CI compatibility checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER ACTIVE/CI_PENDING; version unchanged.
+CHANGES:seven private owner controls preserve execution/HTTP ceilings300/320 and client defaults8/12/180, response bytes0(previous unbounded), diagnostics2048. Raised and zero budgets propagate through all three Computer clients; finite common ceiling still caps requested unlimited. Negative budgets fail closed. Backend deadline0 is unlimited yet owned-cancellable; bounded polling avoids platform wait overflow for huge deadlines. Research milliseconds saturate at signed64 representation. Response overflow requests owned cancellation and reports response_budget/uncertainty instead of partial success.
+CI_REPAIR:25e161ed0526543fb9394bfe40bcf56a2044e5ad observed40checks=31SUCCESS/3SKIPPED/4IN_PROGRESS/2FAILURE. Workflow37572929879 Linux112635387849 and Windows112635387800 failed importing FastAPI0.142.2 because add_event_handler was removed. Replaced old registration with public asynccontextmanager lifespan; genuine context-managed shutdown kills owned live process. No dependency downgrade or acceptance relaxation.
+TESTS:actual CI dependency versions FastAPI0.142.2/Pydantic2.13.5 latest-environment Computer batch58PASS/2SKIP; pinned FastAPI0.116.1/Pydantic2.11.7 batch including owner/audit80PASS/2SKIP. Both actual Uvicorn/Godot guard fixtures PASS. Actual owner save/reload, response overflow, raised/zero/huge deadline and Research saturation fixtures PASS. SKIPs remain real NTFS junction and local Docker absence; mandatory exact-SHA platform CI remains required. Existing deprecation warnings and Godot shutdown diagnostics retained.
+FIXTURE_CORRECTION:local os.getpid=5 while mounted /proc/self/stat PID7088, NSpid7088/5. Child/grandchild test now records visible proc PID and birth identity, checks actual stopped heartbeat plus absent/reused/zombie identity; it no longer mistakes an unrelated ancestor-namespace PID for a live child. Windows continues genuine tasklist verification. No product cancellation success inferred from test-only namespace correction.
+INVENTORY:477files;1411test_evidence/1296unclassified/64documentation/652owner_adjustable/356format_structure/26hard_boundary;complete:false. Unknown source remains visible, no blanket reclassification.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:request-owner source and actual dependency compatibility repair locally verified; prior published25e remains CI-red until new exact SHA proves repair.
+REMAINING:publish coherent source; remaining GUI/output/provider owner controls and unfinished critical source; exact CI/package/device/update/release gates, version-last.
+BLOCKERS:no external blocker prevents independent source work. Local Docker/nativeWindows acceptance pending exact CI; physical/production gates unwaived.
+NEXT:publish package atop25e via compare-and-swap, continue critical source and collect CI outcomes as coherent batches.

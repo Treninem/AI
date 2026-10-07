@@ -12,7 +12,7 @@ from urllib.request import Request, urlopen
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = "computer-guard-isolated-fixture-token"
-IDS = ("guard-master", "guard-transport", "guard-uncertain", "guard-shutdown")
+IDS = ("guard-master", "guard-transport", "guard-uncertain", "guard-shutdown", "guard-body")
 
 
 def run(godot):

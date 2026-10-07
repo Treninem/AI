@@ -1,6 +1,26 @@
 class_name ComputerRequestGuard
 extends RefCounted
 
+static func execution_timeout(requested: int) -> int:
+	if requested < 0: return -1
+	var maximum := OwnerResourcePolicy.value("sandbox_exec_max_seconds")
+	if maximum == 0: return requested
+	return maximum if requested == 0 else mini(requested, maximum)
+
+static func execution_http_timeout(seconds: int) -> float:
+	return 0.0 if seconds == 0 else float(seconds) + 5.0
+
+static func configure_request(request: HTTPRequest, requested: float, default_key: String) -> bool:
+	if not is_finite(requested) or requested < -1.0: return false
+	var seconds := float(OwnerResourcePolicy.value(default_key)) if requested == -1.0 else requested
+	var maximum := float(OwnerResourcePolicy.value("computer_http_max_seconds"))
+	if maximum > 0.0:
+		seconds = maximum if seconds == 0.0 else minf(seconds, maximum)
+	request.timeout = seconds
+	var bytes := OwnerResourcePolicy.value("computer_response_bytes")
+	request.body_size_limit = -1 if bytes == 0 else bytes
+	return true
+
 static func execution_payload(path: String, payload: Dictionary) -> Dictionary:
 	var captured := payload.duplicate(true)
 	if path.ends_with("/sandbox/exec") or path.ends_with("/sandbox/container_exec"):
