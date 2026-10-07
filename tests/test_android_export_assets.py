@@ -34,6 +34,8 @@ def test_export_configures_installed_template_before_gradle_and_verifies_storage
     assert '--install-android-build-template --export-release "Android"' in source
     plugin = (ROOT / "addons/AuroraFoxRuntime/export_plugin.gd").read_text()
     assert 'func _export_begin(' in plugin
+    assert 'features.has("android")' in plugin
+    assert 'features.has("Android")' not in plugin
     assert 'res://tools/android_core_assets.gradle' in plugin
     assert 'res://android/build/build.gradle' in plugin
     assert policy.MARKER in plugin

@@ -25,7 +25,7 @@ class AndroidExportPlugin extends EditorExportPlugin:
 	var _jitpack_repo := "https://jitpack.io"
 
 	func _export_begin(features: PackedStringArray, _debug: bool, _path: String, _flags: int) -> void:
-		if not features.has("Android"): return
+		if not features.has("android"): return
 		# Coupled CLI installation precedes this hook. Configure the final app,
 		# not only the plugin AAR, before AGP compresses the bundled Core.
 		var build_path := "res://android/build/build.gradle"

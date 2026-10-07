@@ -7015,3 +7015,32 @@ REMAINING:next-SHA full CI/native installed APK/package acceptance; remaining cu
 BLOCKERS:none stops independent authorized source work. Existing0a7APK contract failure requires next exact-SHA verification; physical/production-release identity gates remain open and unwaived.
 NEXT:publish coherent package, continue remaining current operational limits while collecting full next-SHA CI reds together; preserve version-last and independent S3 lane.
 OWNERSHIP:this claim stays CI_PENDING; source paths released for coordinator takeover after publication, no duplicate independent native/index work.
+
+
+### ACTIVE CLAIM / REMOTE SOURCE CHECKPOINT — WORK-2026-10-07-V15-ANDROID-TAG-TRANSPORT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence installed native-format APK/package gates and owner-control source handoff
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:fb565eba2b903ffbb7e840fcc832a0f7771f92ed
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:addons/AuroraFoxRuntime/export_plugin.gd;tests/android_asset_export_hook_smoke.gd;tests/test_android_export_assets.py;master/memory append-only
+DEPENDENCIES:take over exact observed Android tag defect from sandbox/export claim and unpublished WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT. Use actual published fb source cached from its successful GitHub tree, not an invented lost snapshot.
+NON_BLOCKERS:V1.6 runtime/S3/future cognition unchanged; physical and production signing gates unwaived
+ACCEPTANCE_GATES:actual lowercase android feature tag configures final app before Gradle; non-Android fixture leaves template untouched; unchanged original Android contract/ZIP_STORED verifier and exact-new-SHA full APK/native installed-format CI
+OBSERVED:fb APK112558683161 and normal-path112558907343 exported APK but verifier rejected compressed Core. Official pinned Godot4.7.1 platform/android/export/export_plugin.cpp get_platform_features lines4476-4479 emits mobile/android lowercase. Previous hook and synthetic fixture incorrectly used uppercase Android. Correct three published files remotely; no weakening of the APK storage or native-format gates. This exact remote repair has NOT_EXECUTED local tests; new-SHA CI must accept it.
+EXTERNAL_EXECUTION_BLOCKER:local command service stopped returning results. Initial read/patch/test operation stayed pending for multiple minutes; independent login=false pwd in /tmp also did not return. No rejection/approval or GitHub authorization problem was observed. Filesystem retention/existence is UNCONFIRMED, not claimed lost. GitHub connector remains usable.
+UNPUBLISHED_SOURCE_RESERVATION:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT startingfb owns agent/research_collector.gd;voice/speech_queue.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/{research_collector_privacy_smoke,research_source_resilience_smoke,research_response_owner_smoke}.gd;tests/test_research_collector_privacy_contract.py;tests/test_research_source_resilience_contract.py;tools/run_research_response_smoke.py;.github/workflows/research-quality-ci.yml;config/owner_control_policy.json;master/memory append-only. Do not repeat this local package blindly: inspect /workspace/scratch/29cc88377b5e/v15-recovery after execution recovers and reconcile fresh GitHub HEAD first.
+UNPUBLISHED_IMPLEMENTATION:eight private Research response/log/title/summary/error and speech chunk/natural/sentence settings, raised/zero semantics, honest title/summary/error clipping; actual HTTPRequest body0 mapped to engine-1. Speech tiny/code chunks preserve content within budget and avoid extra punctuation overflow; volume0 becomes actual mute. Marked credentials now scrub before external-query filtering/error clipping, preserving240chars/24words/path-email-URL exclusion and curator gates. Exact native owner-budget/format classifications were prepared without editing native runtime.
+LOCAL_EVIDENCE_FOR_UNPUBLISHED_PACKAGE:147PythonPASS+3subtests,1Starlette/AnyIO deprecation; real Godot owner smoke PASS; actual loopback HTTPRequest2097153bytes rejected by2MiB, accepted by2097153/zero with complete matching text/hash; actual research privacy/log0/raised/threshold and source resilience PASS; voice smoke PASS. Real marked-credential probe originally true for outbound query/error, after fix both false. Workflow YAML parse/diff--check PASS. These results do NOT validate fb or the new remote tag-repair SHA.
+LOCAL_DIAGNOSTICS:owner smoke20ObjectDB/8resources and voice instantiation19ObjectDB/6resources retained; editor-hook fixture209ObjectDB/Canvas/RID exit diagnostics retained. No assertion failures claimed from those diagnostics and no device success inferred.
+PREPARED_INVENTORY:1269unclassified/1336test_evidence/623owner_adjustable/356format_structure/62documentation/26hard_boundary;complete:false. Counts from unpublished local source only, not current GitHub source; do not reuse as final audit acceptance.
+PUBLISHED_SOURCE:fb565eba2b903ffbb7e840fcc832a0f7771f92ed tree4ea14b967de0a7be161361d91f78afad5101223e; earlier native568 and index0a7 already published. New remote tag-repair commit must be read back from CAS and recorded as actual SHA; no inferred code freeze.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:durable native/index/sandbox packages; actual observed tag fix prepared from published source; unpublished Research/Voice local evidence preserved honestly
+REMAINING:recover/read and publish actual Research/Voice source; remaining scoped owner inventory/current unfinished CRITICAL blocks; exact-SHA APK/native installed-format/package/physical/update/release gates, version last
+BLOCKERS:execution service unavailable for actual source retrieval/testing; currentfb APK/normal-path storage gate failures require exact new-SHA acceptance. GitHub writes remain available. Physical/production signing gates remain open.
+NEXT:read fresh branch and actual recovery checkout once command execution works; preserve existing work, compare against remote tag fix, run one coherent full batch and publish real source; continue remaining current-scope controls. Do not claim background work or missing source recovery.
