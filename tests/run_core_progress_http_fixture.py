@@ -23,6 +23,9 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         data = json.loads(self.rfile.read(int(self.headers['Content-Length'])))
         kind = data['fixture']
+        self.fixture_started = time.monotonic()
+        self.fixture_events = []
+        terminal_error = ""
         self.send_response(503 if kind == 'http_error' else 200)
         self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
         self.send_header('Transfer-Encoding', 'chunked')
@@ -46,12 +49,19 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(event({'choices': [{'delta': {}, 'finish_reason': 'stop'}]}))
                 self.send(b'data: [DONE]\n\n')
             self.wfile.write(b'0\r\n\r\n'); self.wfile.flush()
-        except (BrokenPipeError, ConnectionResetError, OSError):
-            pass  # Real client deadline/cancel closes the connection.
+        except (BrokenPipeError, ConnectionResetError, OSError) as exc:
+            terminal_error = type(exc).__name__  # Real client deadline/cancel closes the connection.
+        finally:
+            print('AURORA_CORE_HTTP_SERVER_TRACE ' + json.dumps({
+                'fixture': kind, 'events': self.fixture_events,
+                'elapsed_seconds': round(time.monotonic() - self.fixture_started, 6),
+                'terminal_error': terminal_error,
+            }), flush=True)
 
     def send(self, value: bytes):
         self.wfile.write(f'{len(value):x}\r\n'.encode() + value + b'\r\n')
         self.wfile.flush()
+        self.fixture_events.append({'elapsed_seconds': round(time.monotonic() - self.fixture_started, 6), 'bytes': len(value)})
 
 
 def main():

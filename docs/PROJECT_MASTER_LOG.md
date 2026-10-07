@@ -7507,3 +7507,38 @@ DONE:publishedUIA exactComputer/Workgatesaccepted; actionowner/idempotency sourc
 REMAINING:publish/exactCI; remainingresourceinventory/provider/unfinishedcriticalblocks, durableacceptance, package/device/update/production/version-last.
 BLOCKERS:no external blocker to independentcriticalsource; physical/productiongatesunwaived.
 NEXT:publishcoherentactionpackage, reconcileclassifiedowner-propagation/technicalboundaries andremainingactualoperationalcaps.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-CORE-HTTP-EVIDENCE
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Core exact-SHA progress/cancellation release gate diagnosis
+ADR_REFS:ADR-0003;ADR-0001/0002 unchanged
+STARTING_HEAD:fb52c1b554247e273dc3a949a93462d97301230e
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:tests/core_progress_http_smoke.gd;tests/run_core_progress_http_fixture.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator explicitly takes over existing Core HTTP regression fixtures from previously published progress-aware Core work for failure evidence only. Production Core source/quality metrics/benchmark thresholds untouched. PreviousComputer/action scope published and exactComputer/Work gates accepted; no parallel Computer source edit.
+NON_BLOCKERS:local executor transport unavailable; GitHub read/write and exactCI remain available. Native/physical/release gates unwaived. No V1.6/S3 or owner timeout/gate relaxation; no blind rerun.
+ACCEPTANCE_GATES:same SSE/UTF8/stall/total/cap/cancel/fallback boolean conditions and same250ms/180ms/30s budgets. Failed check emits actual fixture result and exits1 immediately; successful run still exits0 only after all checks. Server traces actual fixture event delivery/cancel errors without exposing secrets or changing producer timing. Local runtime NOT_EXECUTED while externalexecutor blocked; exact WindowsCI mandatory, cause remainsUNKNOWN until captured evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:publish coherent diagnostic/fail-fast fixture plus exactsource/CI/outage checkpoint; inspect new actual WindowsCore evidence rather than relax a gate.
+
+### Published source and external execution/CI diagnosis checkpoint
+CLAIM:WORK-2026-10-07-V15-CORE-HTTP-EVIDENCE ACTIVE/EXACT_CI_PENDING; local execution EXTERNAL_BLOCKED. ACTION-RESOURCE-POLICY source published/accepted by exactComputer/Work gates, remaining release gate failures unwaived. No additional local production edit is pending publication at the observed source checkpoint.
+PRODUCED_SOURCE_SHA:87040cae01b65333898f55341b848368cd3e76fb GUI ownership/bootstrap; b560c05dd51a3f9f2ffcf987ef055ee4c877abac UIA owner policy; fb52c1b554247e273dc3a949a93462d97301230e action owner policy/non-replay.
+SOURCE_TREE:c342120950d3d84ff453aa942ebdde0c146c5c8c atfb52c1b5. Freshmain446ce2cd2f979a8ab228f63d090062e8ba48a6eb; PR103OPEN/DRAFT/basefix-v1.5-archive-knowledge-import unchanged. GitHub truth; no merge/sign/tag/release/versionbump. Localfetch reachedfb52; later reset command could not start, so localHEAD resynchronization remainsunverified afteroutage.
+EXACT_TESTS_AT_FB52:WindowsComputer112662761983 SUCCESS actual114PASS/1SKIP; LinuxComputer112662761949 SUCCESS actual110PASS/5SKIP (mandatoryDocker executed), work-godot112662762032 SUCCESS. Localprioraction pinned131PASS/6SKIP/latest109PASS/6SKIP/Godotowner+actualUvicorn guardsPASS belong to publishedfb52 action source, NOT the newdiagnosticfixture.
+CURRENT_CI_AT_FB52:observed41checks32SUCCESS/3SKIP/5IN_PROGRESS/1FAILURE; totalsmaygrow. real-core-windows run37581742651/job112663566849 FAILED primaryassert tests/core_progress_http_smoke.gd:20 afterfirstprogressrequest; downstreamwatchdog30s timedout and connectionWinError10053. Benchmark itself notexecuted afterfixturefailure; no enginequality verdict. Pendingcontract-and-parse112664199124/AndroidAPK112663671597/CoreAndroid112663020199/WindowsPackage112662876866/AndroidPlugin112662762865 notPASS.
+DIAGNOSTIC_PACKAGE:twoexistingCorefixture files plusappendonlyjournal/memory. All10 acceptance booleanconditions and existing250msstall/180msbudgets/60msproducer/15s+30swatchdogs unchanged, reviewed programmatically beforetreecreation. Failedcondition nowprintscontrolledresponse+quits1/returns; servercapturesactualeventtiming/bytes/terminalerror. Source-string preservation checkPASS; localGodot/Pythoncompile/runtime NOT_EXECUTED becauseexecutor unavailable. ExactnewCI required; no failurewaived or runtimecauseinvented.
+EXTERNAL_BLOCKER:local exec-server transport disconnect/recovery timeout25s; boundedreadonlypwd attempts stall. GitHub read/write/CI remainavailable and were used for independentfailure diagnosis andcoherentfixture evidence publication. Environmentfailure doesnotprove workspace deletion; do not repeat published source or constructsourcefromchat.
+INVENTORY:lastactualfb52sourceaudit480files/1364unclassified/complete:false; diagnosticfixture source not re-audited locally.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:threecoherentGUI/UIA/action packagespublished; allthree exactComputer/Workgatesaccepted; actualnewCorefailureisolated tofirstHTTPsuccessassert anddiagnosticrepairprepared withoutgate relaxation.
+REMAINING:newfixture exactCI/evidence-basedCore repair, remainingownerinventory/provider/unfinishedV1.5CRITICAL, fullsameSHApackage/device/update/productionrelease/version-last.
+BLOCKERS:executorunavailable blocks nextlocalcompile/runtime/sourceaudit acceptance; failedCoreWindows112663566849 blocks currentfullCorequality/releasegate, causeUNKNOWN.
+NEXT:restoreexecutor, gitfetch freshmain/PR103/featureHEAD thenreset isolatedcheckouttoactualpublishedHEAD; reconcileallACTIVEclaims withoutrepeating publishedblocks. Inspect new exactWindowsCore diagnosticresponse+servertrace, batch genuinefix withremainingcriticalcontrols, run relevantcoherentgates. Do not blindlyincrease timeouts/retry, startV1.6/S3, declarefreeze or changeversion.
