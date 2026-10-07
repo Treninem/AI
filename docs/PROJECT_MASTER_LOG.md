@@ -8979,3 +8979,61 @@ DONE:queue capacity fix and genuine regression accepted on exact c1c63e2 API/own
 REMAINING:747 owner findings and final physical/device/package/update/version gates; journal-only commit exact CI as scheduled.
 BLOCKERS:none in queue source scope.
 NEXT:publish this evidence addendum, verify remote identity; then continue another coherent owner-cap source repair or audit batch against fresh journal/CI.
+
+QUEUE_EVIDENCE_PUBLICATION: journal commit fb1d5944d619a00cf69da9d2dcd6e079e5df602b published; local/origin/web exact and clean. Exact fb1d594 API CI run37701239133 SUCCESS across Python, Godot and Windows jobs; Chat Learning Attachment run37701239168 SUCCESS. Remaining Android emulator/plugin and other long release jobs were in progress at subsequent check with no red; do not count as final release acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:accepted queue fix and exact current-SHA API/owner gates, synchronized journal.
+REMAINING:747 residual owner findings and package/device/update/version-last gates.
+BLOCKERS:none for next read-only audit.
+NEXT:review116 related Evolution/Learning residual lines; classify only proven owner routing, accepted tournament invariant or non-cap structure, retain real evidence/text/time caps.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-EVOLUTION-LEARNING-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Evolution/learning inventory and truthful owner-control reporting; audit-only.
+ROADMAP_SECTION:4 stable current Evolution, research evidence/privacy and bounded tournament baseline; no V1.6 expansion.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; 3–10 candidate competition remains mandatory.
+STARTING_HEAD:fb1d5944d619a00cf69da9d2dcd6e079e5df602b; fresh main/feature fetched, full journal/roadmap/memory and ADRs reviewed, active claims checked, local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: agent/learning_curator.gd;evolution_engine/core/experiment_registry.gd;evolution_engine/evaluation/core_tournament_adapter.gd;evolution_engine/integration/community_learning_bridge.gd;evolution_engine/learning/candidate_ledger.gd;evolution_engine/learning/community_language_curator.gd;evolution_engine/learning/context_bridge.gd;evolution_engine/learning/experience_bridge.gd;evolution_engine/learning/learning_signal.gd.
+DEPENDENCIES:older research/Evolution production source claims remain untouched; long exact-SHA release jobs continue.
+NON_BLOCKERS:future V1.6 cognition and post-release344-point field scenario.
+INTENDED_BUMP:none for inventory metadata; any source repair separately claimed as D.
+ACCEPTANCE_GATES:review all116 residual lines in nine paths in context; classify exact owner-sourced retention, structural elapsed-time/connection or accepted 3–10 tournament only; preserve fixed evidence quality/age, batch/time, context/text/diagnostic caps; adversarial appended-cap/path negatives, full audit and exact owner CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect relevant source/owner-policy/test context, add only safe exact classifications and record the large real-cap remainder without falsely declaring inventory complete.
+
+EVOLUTION_LEARNING_BULK_AUDIT_CHECKPOINT: reviewed all116 prior residual lines across nine read-only production paths (ExperienceBridge24, LearningCurator16, ExperimentRegistry14, TournamentAdapter14, CommunityLanguageCurator11, ContextBridge11, LearningSignal10, CandidateLedger9, CommunityLearningBridge7). Eight exact rules classify accepted 3–10 tournament condition and lock-time telemetry3, owner pending retention1, timer signal connection1 and existing evidence/promotion status-report fields3. Remaining108 stay unclassified: experience24, registry14, curator13, community language11, context11, tournament10, learning signal10, candidate ledger9, community bridge6. These mostly encode actual fixed record truncation, evidence-age/quality, context, retry, HTTP and batch caps; no claim of completion or source repair. Full inventory747→739 unclassified; complete:false. `tests/test_owner_control_audit.py`30/30 PASS with appended-cap/unrelated-path adversaries and unresolved examples from all nine paths; JSON parse/diff check PASS. No production source or tournament behavior change.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:116 Evolution/Learning findings inspected;8 narrow classifications,108 actual/ambiguous constraints retained; local audit30PASS.
+REMAINING:publish/sync combined audit package after next independent desktop review;739 residual owner findings, source repairs and final release gates.
+BLOCKERS:none for read-only source review.
+NEXT:review102 additional free Desktop/Core runtime residual lines, combine exact policy/tests into one publication and verify its exact CI.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-DESKTOP-RUNTIME-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing desktop Core, Computer, Knowledge, Work and settings owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable self-primary Core, Work/Computer, Knowledge and existing owner settings.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:fb1d5944d619a00cf69da9d2dcd6e079e5df602b; fresh main/feature fetched, full journal/roadmap/memory and ADRs checked, local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: scripts/knowledge_base_overlay.gd;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/agent_core.gd;scripts/aurora_core_runtime.gd;scripts/desktop_local_runtime.gd;scripts/settings_overlay.gd;scripts/runtime_extension_manager.gd;scripts/self_improvement_overlay.gd;scripts/ai_client.gd.
+DEPENDENCIES:separate UI/Computer/Core production source claims remain untouched; current exact-SHA long gates continue.
+NON_BLOCKERS:future cognition and post-release344-point owner-PC field check.
+INTENDED_BUMP:none for inventory; actual source fixes require distinct D claim.
+ACCEPTANCE_GATES:review all102 residual lines in ten paths; classify only exact owner-sourced routing, accepted numeric representation and non-cap structure; keep fixed source, timeout, text, extension, Core retry and UI caps visible; adversarial full-line/path tests, full audit, one combined publication and exact CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:enumerate all102 source lines with call context, add narrow classifications/tests, retain genuine fixed ceilings and publish combined two-block audit.
+
+DESKTOP_RUNTIME_BULK_AUDIT_CHECKPOINT: reviewed all102 prior residual lines across ten read-only production paths: KnowledgeOverlay13, ComputerClient12, SandboxManager12, AgentCore11, AuroraCoreRuntime11, DesktopLocalRuntime10, SettingsOverlay10, RuntimeExtensionManager9, SelfImprovementOverlay8, AIClient6. Sixty-four exact full-line/path classifications: owner/caller sourced33, representation/status/accepted 3–10 tournament29, irreversible-action and uncertain Computer termination security boundaries2. Thirty-eight remain unclassified: runtime extension8 (source/description/diagnostic caps), Core runtime7 (retry/backoff/optional provider deadlines), SandboxManager6 (legacy constants/output/Android), AgentCore5 (step/retry limits), desktop local4 (startup/health waits), settings4 (standalone timeout and UI minima/maxima), AIClient1 (optional health timeout), ComputerClient1 (unused legacy constant), KnowledgeOverlay1 (unused legacy constant), SelfImprovementOverlay1 (reason excerpt). Existing owner UI adversarial test rejected an initial classification of generic slider.max_value=maximum; removed that and related generic min/max lines rather than weakening the test. Full owner inventory739→675 unclassified, complete:false. Combined two-block review on this turn:218 findings inspected,72 narrowly classified,146 retained for actual/ambiguous caps. `tests/test_owner_control_audit.py`31/31 PASS, JSON parse and diff check PASS. No production source, owner UI geometry limit, accepted tournament or CI gate changed.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:218 findings inspected in two connected Evolution/Desktop packages;72 justified exact classifications and31 local audit tests PASS.
+REMAINING:publish/sync combined metadata package and exact owner CI;675 residual inventory findings, source repairs and final device/package/update/version-last gates.
+BLOCKERS:none for audit publication.
+NEXT:verify remote expected head, commit/push one combined policy/tests/journal package, check local/origin/web identity and exact audit CI; then prioritize genuine source caps rather than counting reviewed lines as fixed.

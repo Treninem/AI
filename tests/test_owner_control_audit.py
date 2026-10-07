@@ -378,6 +378,72 @@ def test_api_personal_data_bulk_review_keeps_operational_caps_visible():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_evolution_learning_bulk_review_keeps_real_evidence_caps_visible():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('evolution_engine/evaluation/core_tournament_adapter.gd', 'held_seconds = maxi(0, int(Time.get_unix_time_from_system()) - _pipeline_lock_acquired_at)', 'format_structure'),
+        ('evolution_engine/evaluation/core_tournament_adapter.gd', 'while cap > 0 and _pending_winners.size() > cap:', 'owner_adjustable'),
+        ('evolution_engine/integration/community_learning_bridge.gd', '_timer.timeout.connect(_on_timer)', 'format_structure'),
+        ('agent/learning_curator.gd', '"minimum_promotion_score": MIN_PROMOTION_SCORE,', 'format_structure'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('agent/learning_curator.gd', 'const MIN_PROMOTION_SCORE := 0.48'),
+        ('evolution_engine/core/experiment_registry.gd', '"goal": goal.substr(0, 2000),'),
+        ('evolution_engine/evaluation/core_tournament_adapter.gd', '"generation_errors": generation_errors.slice(0, mini(generation_errors.size(), 20)),'),
+        ('evolution_engine/integration/community_learning_bridge.gd', '_timer.wait_time = clampf(interval_seconds, 30.0, 3600.0)'),
+        ('evolution_engine/learning/candidate_ledger.gd', 'failure_error = str(failure.get("error", "")).substr(0, 800)'),
+        ('evolution_engine/learning/community_language_curator.gd', '"features": _compact_strings(event.get("features", []), 16, 80),'),
+        ('evolution_engine/learning/context_bridge.gd', 'var safe_memory_limit := clampi(memory_limit, 1, MAX_CONTEXT_ITEMS)'),
+        ('evolution_engine/learning/experience_bridge.gd', '"goal": goal.substr(0, 2000),'),
+        ('evolution_engine/learning/learning_signal.gd', 'const MAX_MEMORY_ROWS := 12'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
+def test_desktop_runtime_bulk_review_keeps_fixed_operational_caps_visible():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('scripts/agent_core.gd', '"confidence": clampf(float(parsed.get("confidence", 0.0)), 0.0, 1.0),', 'format_structure'),
+        ('scripts/ai_client.gd', 'func search_knowledge(query: String, limit: int = -1) -> Array:', 'owner_adjustable'),
+        ('scripts/aurora_core_runtime.gd', '"retry_after_unix": _ollama_retry_after_unix', 'format_structure'),
+        ('scripts/computer_client.gd', 'var bounded_timeout := ComputerRequestGuard.execution_timeout(timeout)', 'owner_adjustable'),
+        ('scripts/desktop_local_runtime.gd', '"max_tokens": max_tokens,', 'owner_adjustable'),
+        ('scripts/knowledge_base_overlay.gd', 'if limit > 0 and out.size() >= limit:', 'owner_adjustable'),
+        ('scripts/runtime_extension_manager.gd', 'return clean.substr(0, 32) + "_" + sha.substr(0, 12)', 'format_structure'),
+        ('scripts/sandbox_manager.gd', 'var bounded_timeout := ComputerRequestGuard.execution_timeout(timeout)', 'owner_adjustable'),
+        ('scripts/self_improvement_overlay.gd', 'history.resize(cap)', 'owner_adjustable'),
+        ('scripts/settings_overlay.gd', 'archive_listing_percent.max_value = 100.0', 'format_structure'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    hard_line = next(line.strip() for line in (ROOT / 'scripts/agent_core.gd').read_text(encoding='utf-8').splitlines()
+                     if 'Не удаляй данные, не обходи аутентификацию/CAPTCHA' in line)
+    assert MODULE.classify('scripts/agent_core.gd', hard_line, policy)[0] == 'hard_boundary'
+    assert MODULE.classify('scripts/agent_core.gd', hard_line + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+    unresolved = [
+        ('scripts/agent_core.gd', 'var max_steps := 18'),
+        ('scripts/ai_client.gd', 'request_node.timeout = 3.0'),
+        ('scripts/aurora_core_runtime.gd', 'request_node.timeout = OLLAMA_TIMEOUT_SECONDS'),
+        ('scripts/computer_client.gd', 'const MAX_SANDBOX_TIMEOUT := 300'),
+        ('scripts/desktop_local_runtime.gd', 'req.timeout = timeout'),
+        ('scripts/knowledge_base_overlay.gd', 'const MAX_FOLDER_FILES := 750'),
+        ('scripts/runtime_extension_manager.gd', 'const MAX_SOURCE_BYTES := 512 * 1024'),
+        ('scripts/sandbox_manager.gd', 'const MAX_WINDOWS_EXEC_TIMEOUT := 300'),
+        ('scripts/self_improvement_overlay.gd', 'str(candidate.get("reason", "")).substr(0, 700)'),
+        ('scripts/settings_overlay.gd', 'timeout.value = 20'),
+        ('scripts/settings_overlay.gd', 'slider.max_value = maximum'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"
