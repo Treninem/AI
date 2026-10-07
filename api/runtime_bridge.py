@@ -8,13 +8,19 @@ from pathlib import Path
 from typing import Any
 
 from api.local_core_client import AuroraKnowledgeFallback, AuroraLocalCoreClient
+from api.provider_resource_policy import nonnegative_seconds, socket_timeout
+from api.request_limits import _nonnegative_budget
 
 
 class AuroraRuntimeBridge:
-    def __init__(self, host: str = "127.0.0.1", port: int = 8770, timeout: float = 180.0):
+    def __init__(self, host: str = "127.0.0.1", port: int = 8770, timeout: float | None = None,
+                 connect_timeout: float | None = None, max_response_bytes: int | None = None):
         self.host = host
         self.port = port
-        self.timeout = timeout
+        self.timeout = nonnegative_seconds(os.getenv("AURORAFOX_API_BRIDGE_READ_SECONDS", "180") if timeout is None else timeout, "AURORAFOX_API_BRIDGE_READ_SECONDS")
+        connect_default = min(self.timeout, 8.0) if self.timeout > 0 else 8.0
+        self.connect_timeout = nonnegative_seconds(os.getenv("AURORAFOX_API_BRIDGE_CONNECT_SECONDS", str(connect_default)) if connect_timeout is None else connect_timeout, "AURORAFOX_API_BRIDGE_CONNECT_SECONDS")
+        self.max_response_bytes = _nonnegative_budget(os.getenv("AURORAFOX_API_BRIDGE_RESPONSE_BYTES", str(8 * 1024 * 1024)) if max_response_bytes is None else max_response_bytes, "AURORAFOX_API_BRIDGE_RESPONSE_BYTES")
         user_root = Path(os.getenv("AURORAFOX_USER_DIR", str(Path.home() / ".aurorafox"))).resolve()
         self.local_core = AuroraLocalCoreClient(user_root)
         self.local_knowledge = AuroraKnowledgeFallback(user_root)
@@ -23,17 +29,22 @@ class AuroraRuntimeBridge:
         request_id = uuid.uuid4().hex
         body = {"request_id": request_id, "op": op, "payload": payload or {}}
         raw = (json.dumps(body, ensure_ascii=False) + "\n").encode("utf-8")
-        with socket.create_connection((self.host, self.port), timeout=min(self.timeout, 8.0)) as sock:
-            sock.settimeout(self.timeout)
+        with socket.create_connection((self.host, self.port), timeout=socket_timeout(self.connect_timeout)) as sock:
+            sock.settimeout(socket_timeout(self.timeout))
             sock.sendall(raw)
             buffer = bytearray()
-            while len(buffer) < 8 * 1024 * 1024:
-                chunk = sock.recv(65536)
+            while True:
+                read_bytes = 65536 if self.max_response_bytes == 0 else min(65536, self.max_response_bytes + 1 - len(buffer))
+                chunk = sock.recv(read_bytes)
                 if not chunk:
                     break
                 buffer.extend(chunk)
-                if b"\n" in buffer:
-                    line = bytes(buffer).split(b"\n", 1)[0]
+                newline = buffer.find(b"\n")
+                frame_bytes = newline + 1 if newline >= 0 else len(buffer)
+                if self.max_response_bytes > 0 and frame_bytes > self.max_response_bytes:
+                    raise RuntimeError("AuroraFox bridge response exceeds owner byte budget")
+                if newline >= 0:
+                    line = bytes(buffer[:newline])
                     data = json.loads(line.decode("utf-8"))
                     if not isinstance(data, dict):
                         raise RuntimeError("Invalid AuroraFox bridge response")

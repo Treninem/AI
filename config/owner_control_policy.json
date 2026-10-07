@@ -1576,6 +1576,20 @@
       "class": "owner_adjustable",
       "control": "Trusted server-owner content character validators",
       "rationale": "Exact chat/feedback/knowledge/note/question statements; actual Pydantic exact/raised/zero/overflow/invalid tests and authenticated HTTP verify immutable startup authority. Empty required text, scores, account/token fields and independent request byte budgets unchanged."
+    },
+    {
+      "path": "api/runtime_bridge.py",
+      "pattern": "^\\s*(?:connect_default\\ =\\ min\\(self\\.timeout,\\ 8\\.0\\)\\ if\\ self\\.timeout\\ >\\ 0\\ else\\ 8\\.0|if\\ self\\.max_response_bytes\\ >\\ 0\\ and\\ frame_bytes\\ >\\ self\\.max_response_bytes:|read_bytes\\ =\\ 65536\\ if\\ self\\.max_response_bytes\\ ==\\ 0\\ else\\ min\\(65536,\\ self\\.max_response_bytes\\ \\+\\ 1\\ \\-\\ len\\(buffer\\)\\)|self\\.connect_timeout\\ =\\ nonnegative_seconds\\(os\\.getenv\\(\"AURORAFOX_API_BRIDGE_CONNECT_SECONDS\",\\ str\\(connect_default\\)\\)\\ if\\ connect_timeout\\ is\\ None\\ else\\ connect_timeout,\\ \"AURORAFOX_API_BRIDGE_CONNECT_SECONDS\"\\)|self\\.max_response_bytes\\ =\\ _nonnegative_budget\\(os\\.getenv\\(\"AURORAFOX_API_BRIDGE_RESPONSE_BYTES\",\\ str\\(8\\ \\*\\ 1024\\ \\*\\ 1024\\)\\)\\ if\\ max_response_bytes\\ is\\ None\\ else\\ max_response_bytes,\\ \"AURORAFOX_API_BRIDGE_RESPONSE_BYTES\"\\)|self\\.timeout\\ =\\ nonnegative_seconds\\(os\\.getenv\\(\"AURORAFOX_API_BRIDGE_READ_SECONDS\",\\ \"180\"\\)\\ if\\ timeout\\ is\\ None\\ else\\ timeout,\\ \"AURORAFOX_API_BRIDGE_READ_SECONDS\"\\)|sock\\.settimeout\\(socket_timeout\\(self\\.timeout\\)\\)|with\\ socket\\.create_connection\\(\\(self\\.host,\\ self\\.port\\),\\ timeout=socket_timeout\\(self\\.connect_timeout\\)\\)\\ as\\ sock:)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted API provider connect/read/frame/discovery/chat policy",
+      "rationale": "Exact reviewed statements; genuine TCP/HTTP owner zero/exact/raised cases, cap+1 receive accounting and request identity rejection. Frame budget counts UTF8 wire bytes including terminal newline. Unconfigured discovery retains caller default; configured trusted owner policy overrides old internal discovery deadline. No model/header authority or fallback weakening."
+    },
+    {
+      "path": "api/ollama_client.py",
+      "pattern": "^\\s*(?:configured_discovery\\ =\\ os\\.getenv\\(\"AURORAFOX_API_OLLAMA_DISCOVERY_SECONDS\"\\)\\ if\\ discovery_timeout\\ is\\ None\\ else\\ discovery_timeout|response\\ =\\ requests\\.get\\(f\"\\{self\\.base_url\\}/api/tags\",\\ timeout=socket_timeout\\(seconds\\)\\)|seconds\\ =\\ self\\.discovery_timeout\\ if\\ self\\.discovery_timeout\\ is\\ not\\ None\\ else\\ nonnegative_seconds\\(timeout,\\ \"discovery\\ timeout\"\\)|self\\.chat_timeout\\ =\\ nonnegative_seconds\\(os\\.getenv\\(\"AURORAFOX_API_OLLAMA_CHAT_SECONDS\",\\ \"180\"\\)\\ if\\ chat_timeout\\ is\\ None\\ else\\ chat_timeout,\\ \"AURORAFOX_API_OLLAMA_CHAT_SECONDS\"\\)|self\\.discovery_timeout\\ =\\ None\\ if\\ configured_discovery\\ is\\ None\\ else\\ nonnegative_seconds\\(configured_discovery,\\ \"AURORAFOX_API_OLLAMA_DISCOVERY_SECONDS\"\\)|timeout=socket_timeout\\(self\\.chat_timeout\\),)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Trusted API provider connect/read/frame/discovery/chat policy",
+      "rationale": "Exact reviewed statements; genuine TCP/HTTP owner zero/exact/raised cases, cap+1 receive accounting and request identity rejection. Frame budget counts UTF8 wire bytes including terminal newline. Unconfigured discovery retains caller default; configured trusted owner policy overrides old internal discovery deadline. No model/header authority or fallback weakening."
     }
   ]
 }

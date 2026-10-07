@@ -7,6 +7,7 @@ from typing import Any
 import requests
 
 from api.local_core_client import AuroraKnowledgeFallback, AuroraLocalCoreClient
+from api.provider_resource_policy import nonnegative_seconds, socket_timeout
 
 
 CHAT_PRIORITY = [
@@ -59,15 +60,20 @@ class OllamaClient:
     dead compatibility endpoint cannot stall health/status or every chat call.
     """
 
-    def __init__(self, base_url: str = "http://127.0.0.1:11434", preferred_model: str = "qwen3:8b"):
+    def __init__(self, base_url: str = "http://127.0.0.1:11434", preferred_model: str = "qwen3:8b",
+                 discovery_timeout: float | None = None, chat_timeout: float | None = None):
         self.base_url = base_url.rstrip("/")
         self.preferred_model = preferred_model
+        configured_discovery = os.getenv("AURORAFOX_API_OLLAMA_DISCOVERY_SECONDS") if discovery_timeout is None else discovery_timeout
+        self.discovery_timeout = None if configured_discovery is None else nonnegative_seconds(configured_discovery, "AURORAFOX_API_OLLAMA_DISCOVERY_SECONDS")
+        self.chat_timeout = nonnegative_seconds(os.getenv("AURORAFOX_API_OLLAMA_CHAT_SECONDS", "180") if chat_timeout is None else chat_timeout, "AURORAFOX_API_OLLAMA_CHAT_SECONDS")
         user_root = Path(os.getenv("AURORAFOX_USER_DIR", str(Path.home() / ".aurorafox"))).resolve()
         self.local_core = AuroraLocalCoreClient(user_root)
         self.local_knowledge = AuroraKnowledgeFallback(user_root)
 
     def models(self, timeout: float = 0.9) -> list[str]:
-        response = requests.get(f"{self.base_url}/api/tags", timeout=max(0.2, float(timeout)))
+        seconds = self.discovery_timeout if self.discovery_timeout is not None else nonnegative_seconds(timeout, "discovery timeout")
+        response = requests.get(f"{self.base_url}/api/tags", timeout=socket_timeout(seconds))
         response.raise_for_status()
         payload = response.json()
         out: list[str] = []
@@ -93,7 +99,7 @@ class OllamaClient:
                     "stream": False,
                     "options": {"temperature": temperature},
                 },
-                timeout=180,
+                timeout=socket_timeout(self.chat_timeout),
             )
             response.raise_for_status()
             payload = response.json()

@@ -7629,3 +7629,38 @@ DONE:published bounded directory/API bytes; verified independent API history/fil
 REMAINING:publication/exactCI;1255 inventory records, provider/unfinishedCRITICAL, copy-stage limitation, full same-SHA package/device/update/production/version-last.
 BLOCKERS:none for independent critical source; physical/production acceptance unwaived.
 NEXT:publish coherent API owner policy, reconcile exact CI and continue remaining providers/resource inventory.
+
+PUBLICATION_CHECKPOINT: API-CONVERSATION-OWNER-RETENTION published fc8bd86c75b3d2da4567bd50cd39af9b4f2f5823/treec4779ceafb961065ea675a119dd6efc8f73ad33f onab755d6 via expected-head fast-forward;10paths. Source paths RELEASED/EXACT_CI_PENDING; freshfetch synchronized unchangedmain446ce2. No release acceptance inferred.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-API-PROVIDER-RESOURCE-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining private provider runtime transport resource controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:fc8bd86c75b3d2da4567bd50cd39af9b4f2f5823
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:api/runtime_bridge.py;api/ollama_client.py;api/provider_resource_policy.py;tests/test_api_provider_resource_limits.py;tests/test_api_runtime_resilience.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over published baseline API provider transports; self-primary localCore/localKnowledge fallback stays mandatory. PriorAPI budgets published and local130latestPASS; newCI pending. No concurrent source change observed.
+NON_BLOCKERS:No provider pagination/full library-allocation guarantee; no V1.6/S3/publicauth/sign/version/package changes. Explicit unbounded read may wait until remote closure; no new synchronous thread-cancellation guarantee.
+ACCEPTANCE_GATES:trusted bridge connect/read/response and Ollama discovery/chat budgets support default/exact/raised/zero, reject negative/nonfinite configuration; local HTTP/TCP prove actual deadline propagation and bounded cap+1 bytes before parsing. Bridge valid UTF8 JSON/request identity remains mandatory; overflow must not silently parse an oversized final chunk or claim closed-without-response. Existing offline self-primary fallback/model-selection tests remain green.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent provider budget/error implementation plus actual transport/identity/fallback tests.
+
+### Coherent API provider transport policy checkpoint
+CLAIM:WORK-2026-10-07-V15-API-PROVIDER-RESOURCE-POLICY ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:fc8bd86c75b3d2da4567bd50cd39af9b4f2f5823/treec4779ceafb961065ea675a119dd6efc8f73ad33f.
+CHANGES:bridge trusted connect/read/response budgets preserve8s/180s/8MiB defaults, zero removes only respective ceiling, finite nonnegative validation mandatory. Read only remaining frame budget+1 bytes; reject overflow before UTF8 JSON parsing. Frame byte budget includes terminal newline; exact fit succeeds, overlong frame explicit error instead of falsely closed-without-response. RequestID matching preserved. Ollama trusted discovery/chat deadlines preserve existing unconfigured caller0.9/health0.75 and180s chat; configured policy overrides legacy internal discovery deadline, zero maps None. LocalCore/localKnowledge fallback and model preference unchanged. Explicit constructor overrides environment; no client payload authority.
+TESTS:pinned expanded10API/provider/storage/security/audit files148PASS; final narrow-audit15PASS after one additional classification case. Latest FastAPI0.142.2/Pydantic2.13.5 full149PASS. Genuine TCP UTF8 exact/raised/zero/overflow cap+1 accounting and wrongID rejection; actual local HTTP tags/chat0/0.5/10/600deadlinepropagation and unchangedfallback regressions. Finite negative/NaN/infinite/bool/non-numeric validation rejected. New provider module and actual fixtures included as owned newfiles, generatedGodotUID/importfiles excluded. git diff --check PASS. No newnative/device proof inferred from localsoftware.
+PRIOR_CI:atfc8bd86 observed40checks32SUCCESS/3SKIP/5IN_PROGRESS/0FAILURE; AndroidAPK112731831992/CoreAndroid112731470673/WindowsPackage smoke112730505915/CoreWindows112730371571/AndroidPlugin112730310777 pending, notPASS. New provider exactCI pending publication.
+INVENTORY:482files;1619test_evidence/1252unclassified/65documentation/771owner_adjustable/377format_structure/59hard_boundary;complete:false. Provider unknown statements remain visible.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published directory/API-byte and history/file/content packages; provider transport ownership and actual TCP/HTTP/compatibility checks complete locally.
+REMAINING:publication/exactCI;1252remaininginventory/unfinishedCRITICAL, provider pagination/copy-stage limitations, fullsameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; required physical/production acceptance remains unwaived.
+NEXT:publish coherent provider package; resume largest remaining owner/resource inventory and reconcile exact gate failures if any.

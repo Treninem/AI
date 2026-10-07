@@ -152,3 +152,11 @@ def test_api_text_budget_review_keeps_fixed_content_caps_visible():
     policy = MODULE.load_policy()
     assert MODULE.classify("api/server.py", "message: str = Field(min_length=1, max_length=MAX_API_CHAT_CHARS)", policy)[0] == "owner_adjustable"
     assert MODULE.classify("api/server.py", "message: str = Field(min_length=1, max_length=100000)", policy)[0] == "unclassified"
+
+
+def test_provider_owner_review_preserves_arbitrary_response_caps():
+    policy = MODULE.load_policy()
+    statement = "if self.max_response_bytes > 0 and frame_bytes > self.max_response_bytes:"
+    assert MODULE.classify("api/runtime_bridge.py", statement, policy)[0] == "owner_adjustable"
+    assert MODULE.classify("api/runtime_bridge.py", statement + " FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify("api/runtime_bridge.py", "while len(buffer) < 8 * 1024 * 1024:", policy)[0] == "unclassified"
