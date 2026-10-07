@@ -9037,3 +9037,11 @@ DONE:218 findings inspected in two connected Evolution/Desktop packages;72 justi
 REMAINING:publish/sync combined metadata package and exact owner CI;675 residual inventory findings, source repairs and final device/package/update/version-last gates.
 BLOCKERS:none for audit publication.
 NEXT:verify remote expected head, commit/push one combined policy/tests/journal package, check local/origin/web identity and exact audit CI; then prioritize genuine source caps rather than counting reviewed lines as fixed.
+
+EVOLUTION_DESKTOP_BULK_PUBLICATION_AND_CI: commit ef47525e6c4bc40f59a0ff7a8d99f96c0e651558 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37702279906 SUCCESS includes owner-control audit31PASS. At last check other short/long exact-SHA checks were IN_PROGRESS with no red; package/device/update/version-last acceptance is not inferred. This package changes audit policy/tests/journal only, not runtime source. Combined review218 inspected,72 classified,146 still visible, global residual675. Subsequent evidence-only journal commit must be checked by its own SHA.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:combined218 finding review published/synchronized; exact owner-audit CI and31 local tests green.
+REMAINING:675 owner inventory candidates, genuine source repairs and final exact-SHA Windows/Android/package/update/version gates.
+BLOCKERS:none in audit metadata scope.
+NEXT:publish this exact-CI journal record, verify local/web identity, then claim source-level repair for a high-impact confirmed cap or another coherent ≥100 finding batch.
