@@ -52,6 +52,10 @@ _action_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _action_inflight: set[str] = set()
 _action_cache_lock = threading.Lock()
 _action_execution_lock = threading.Lock()
+_execution_lock = threading.Lock()
+_execution_records: dict[str, dict[str, Any]] = {}
+_execution_stopping = False
+_gui_workers: set[Any] = set()
 
 
 class Action(BaseModel):
@@ -75,10 +79,15 @@ class GoalRequest(BaseModel):
 
 
 class SandboxExecRequest(BaseModel):
+    execution_id: str = Field(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")
     command: list[str] = Field(min_length=1, max_length=64)
     cwd: str = Field(default=".", max_length=1024)
     timeout: int = Field(default=60, ge=1, le=300)
     allow_network: bool = False
+
+
+class SandboxCancelRequest(BaseModel):
+    execution_id: str = Field(min_length=1, max_length=160, pattern=r"^[A-Za-z0-9_:.-]+$")
 
 
 class SandboxWriteRequest(BaseModel):
@@ -122,6 +131,8 @@ def _authorize(token: str | None, autonomy: str | None, *, require_autonomy: boo
     _auth(token)
     if require_autonomy:
         _autonomy_allowed(autonomy)
+        if _execution_stopping:
+            raise HTTPException(status_code=503, detail="Computer sidecar is stopping")
 
 
 def _retryable(action_type: str) -> bool:
@@ -359,22 +370,30 @@ def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float
     context = mp.get_context("spawn")
     queue = context.Queue(maxsize=1)
     process = context.Process(target=_worker_entry, args=(kind, payload or {}, queue), daemon=True)
-    process.start()
-    process.join(timeout=max(0.1, timeout))
-    if process.is_alive():
-        process.terminate()
-        process.join(1.0)
-        if process.is_alive() and hasattr(process, "kill"):
-            process.kill()
-            process.join(1.0)
-        return _error("timeout", f"{kind} operation timed out", retryable=kind in {"screen", "windows"})
+    with _execution_lock:
+        if _execution_stopping:
+            return _error("service_stopping", "Computer worker was not started")
+        process.start()
+        _gui_workers.add(process)
     try:
-        result = queue.get(timeout=0.5)
-    except Exception:
-        return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
-    if not isinstance(result, dict):
-        return _error("malformed_worker_response", f"{kind} worker returned invalid data", retryable=False)
-    return result
+        process.join(timeout=max(0.1, timeout))
+        if process.is_alive():
+            process.terminate()
+            process.join(1.0)
+            if process.is_alive() and hasattr(process, "kill"):
+                process.kill()
+                process.join(1.0)
+            return _error("timeout", f"{kind} operation timed out", retryable=kind in {"screen", "windows"})
+        try:
+            result = queue.get(timeout=0.5)
+        except Exception:
+            return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
+        if not isinstance(result, dict):
+            return _error("malformed_worker_response", f"{kind} worker returned invalid data", retryable=False)
+        return result
+    finally:
+        with _execution_lock:
+            if not process.is_alive(): _gui_workers.discard(process)
 
 
 def _cached_action(action_id: str) -> dict[str, Any] | None:
@@ -565,26 +584,140 @@ def _sanitized_environment(cwd: Path, allow_network: bool) -> dict[str, str]:
     return env
 
 
-def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool) -> dict[str, Any]:
+def _terminate_process_tree(process: subprocess.Popen) -> bool:
+    if process.poll() is not None:
+        return True
+    if os.name == "nt":
+        try:
+            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False, timeout=3)
+        except (OSError, subprocess.TimeoutExpired):
+            return False # Never report confirmed tree termination after taskkill failure.
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except OSError:
+            return False
+    try:
+        process.wait(timeout=2)
+    except subprocess.TimeoutExpired:
+        return False
+    return process.poll() is not None
+
+
+def _cancel_execution(execution_id: str) -> dict[str, Any]:
+    with _execution_lock:
+        # A cancellation can arrive before the execution HTTP handler. Keep the
+        # terminal identity for this service session so a late request cannot run.
+        record = _execution_records.setdefault(execution_id, {"process": None, "cancelled": False, "finished": False})
+        record["cancelled"] = True
+        process = record["process"]
+        finished = record["finished"]
+    terminated = True if process is None else _terminate_process_tree(process)
+    container = record.get("container")
+    if container and not finished:
+        try:
+            removed = subprocess.run([container[0], "rm", "--force", container[1]], capture_output=True, check=False, timeout=3)
+            terminated = terminated and removed.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            terminated = False
+    with _execution_lock:
+        record["termination_confirmed"] = terminated
+        if terminated and (process is None or process.poll() is not None):
+            record["finished"] = True
+            record["process"] = None
+    return {"ok": terminated, "cancelled": True, "execution_id": execution_id,
+            "termination_confirmed": terminated, "already_finished": finished,
+            "uncertain_external_state": not terminated, "retryable": False}
+
+
+def _cancel_all_processes() -> dict[str, Any]:
+    global _execution_stopping
+    with _execution_lock:
+        _execution_stopping = True
+        execution_ids = [key for key, record in _execution_records.items()
+                         if not record["finished"] and (record["process"] is not None or record.get("container"))]
+        workers = list(_gui_workers)
+    workers_stopped = True
+    for worker in workers:
+        try:
+            if worker.is_alive(): worker.terminate()
+            worker.join(timeout=2)
+            if worker.is_alive():
+                worker.kill()
+                worker.join(timeout=2)
+            if worker.is_alive(): workers_stopped = False
+            else:
+                with _execution_lock: _gui_workers.discard(worker)
+        except Exception:
+            workers_stopped = False
+    results = [_cancel_execution(execution_id) for execution_id in execution_ids]
+    confirmed = workers_stopped and all(result["termination_confirmed"] for result in results)
+    return {"ok": confirmed, "termination_confirmed": confirmed,
+            "uncertain_external_state": not confirmed, "executions_stopped": len(results)}
+
+
+app.add_event_handler("shutdown", _cancel_all_processes)
+
+
+def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None) -> dict[str, Any]:
+    execution_id = execution_id or uuid.uuid4().hex
     startup: dict[str, Any] = {}
     if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
     else: startup["start_new_session"] = True
+    # Serialize registration and launch against cancellation. A pre-cancelled or
+    # previously used identity is never allowed to launch an action again.
+    with _execution_lock:
+        if _execution_stopping:
+            return _error("service_stopping", "Computer sidecar is stopping; execution was not started", execution_id=execution_id)
+        previous = _execution_records.get(execution_id)
+        if previous is not None:
+            kind = "cancelled" if previous["cancelled"] else "execution_id_reused"
+            return _error(kind, "Execution identity is already terminal or in use", execution_id=execution_id)
+        record: dict[str, Any] = {"process": None, "cancelled": False, "finished": False, "container": container, "termination_confirmed": False}
+        _execution_records[execution_id] = record
+        try:
+            process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
+        except FileNotFoundError as exc:
+            record["finished"] = True
+            raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
+        except Exception:
+            record["finished"] = True
+            raise
+        record["process"] = process
     try:
-        process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
-    try:
-        stdout, stderr = process.communicate(timeout=timeout)
-    except subprocess.TimeoutExpired:
-        if os.name == "nt": subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False)
-        else:
-            try: os.killpg(process.pid, signal.SIGKILL)
-            except OSError: process.kill()
-        try: process.communicate(timeout=2)
-        except Exception: pass
-        return _error("timeout", "Sandbox process timed out and was terminated", retryable=True)
-    output = _redact((stdout or "") + (stderr or ""))
-    return {"ok": process.returncode == 0, "code": process.returncode, "output": output[:MAX_OUTPUT], "mode": "local", "retryable": process.returncode != 0}
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+            return _error("timeout", "Sandbox process timed out", retryable=False,
+                          execution_id=execution_id, termination_confirmed=terminated,
+                          uncertain_external_state=not terminated)
+        if record["cancelled"]:
+            return _error("cancelled", "Sandbox execution was cancelled", execution_id=execution_id,
+                          termination_confirmed=bool(record.get("termination_confirmed", False)),
+                          uncertain_external_state=not bool(record.get("termination_confirmed", False)), retryable=False)
+        output = _redact((stdout or "") + (stderr or ""))
+        return {"ok": process.returncode == 0, "code": process.returncode, "output": output[:MAX_OUTPUT],
+                "mode": "local", "retryable": False, "execution_id": execution_id}
+    finally:
+        if process.poll() is None:
+            _cancel_execution(execution_id)
+        exited = process.poll() is not None
+        with _execution_lock:
+            record["finished"] = exited and (not record["cancelled"] or bool(record["termination_confirmed"]))
+            if exited: record["process"] = None
+        # Keep failed-stop ownership for shutdown/retry instead of losing a PID.
+        if exited:
+            for stream in (process.stdout, process.stderr):
+                if stream is not None: stream.close()
+
+
+def _run_owned_process(req: SandboxExecRequest, command: list[str], cwd: Path, container: tuple[str, str] | None = None) -> dict[str, Any]:
+    if req.execution_id or container:
+        return _run_process(command, cwd, req.timeout, allow_network=req.allow_network, execution_id=req.execution_id, container=container)
+    return _run_process(command, cwd, req.timeout, allow_network=req.allow_network)
 
 
 def _parent_watchdog() -> None:
@@ -598,7 +731,9 @@ def _parent_watchdog() -> None:
             else:
                 os.kill(PARENT_PID, 0); alive = True
         except Exception: alive = False
-        if not alive: os._exit(0)
+        if not alive:
+            _cancel_all_processes()
+            os._exit(0)
 
 
 @app.get("/health")
@@ -722,12 +857,25 @@ def sandbox_write(req: SandboxWriteRequest, x_aurorafox_computer_token: str | No
     return {"ok": True, "path": path.relative_to(SANDBOX_ROOT).as_posix()}
 
 
+@app.post("/sandbox/cancel_all")
+def sandbox_cancel_all(x_aurorafox_computer_token: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, None, require_autonomy=False)
+    return _cancel_all_processes()
+
+
+@app.post("/sandbox/cancel")
+def sandbox_cancel(req: SandboxCancelRequest, x_aurorafox_computer_token: str | None = Header(default=None)) -> dict[str, Any]:
+    # Stopping an already-owned execution must remain possible after Master Stop.
+    _authorize(x_aurorafox_computer_token, None, require_autonomy=False)
+    return _cancel_execution(req.execution_id)
+
+
 @app.post("/sandbox/exec")
 def sandbox_exec(req: SandboxExecRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
     if not ALLOW_DEGRADED_LOCAL_SANDBOX:
         raise HTTPException(status_code=403, detail="Degraded local process sandbox is disabled by default; use container mode or explicit operator opt-in")
-    command = _validate_command(req.command); cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); result = _run_process(command, cwd, req.timeout, allow_network=req.allow_network); result["network_requested"] = bool(req.allow_network); result["network_isolation_enforced"] = False; return result
+    command = _validate_command(req.command); cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); result = _run_owned_process(req, command, cwd); result["network_requested"] = bool(req.allow_network); result["network_isolation_enforced"] = False; return result
 
 
 @app.post("/sandbox/container_exec")
@@ -735,8 +883,9 @@ def sandbox_container_exec(req: SandboxExecRequest, x_aurorafox_computer_token: 
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); command = _validate_command(req.command); engine = _container_engine()
     if not engine: raise HTTPException(status_code=404, detail="Docker/Podman not installed")
     cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); image, inner_command = _container_profile(command); network_args = [] if req.allow_network else ["--network", "none"]
-    run_command = [engine, "run", "--rm", "--pull=never", *network_args, "--read-only", "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"), "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"), "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"), "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m", "-v", f"{cwd}:/workspace:rw", "-w", "/workspace", image, *inner_command]
-    result = _run_process(run_command, cwd, req.timeout, allow_network=req.allow_network); result.update({"mode": "container", "engine": engine, "image": image, "network": "allowed" if req.allow_network else "none", "network_isolation_enforced": not req.allow_network, "image_pull_allowed": False}); return result
+    container_name = "aurorafox-" + uuid.uuid4().hex
+    run_command = [engine, "run", "--rm", "--name", container_name, "--pull=never", *network_args, "--read-only", "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"), "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"), "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"), "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m", "-v", f"{cwd}:/workspace:rw", "-w", "/workspace", image, *inner_command]
+    result = _run_owned_process(req, run_command, cwd, (engine, container_name)); result.update({"mode": "container", "engine": engine, "image": image, "network": "allowed" if req.allow_network else "none", "network_isolation_enforced": not req.allow_network, "image_pull_allowed": False}); return result
 
 
 if __name__ == "__main__":

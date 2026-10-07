@@ -7166,3 +7166,38 @@ DONE:Research/Voice a388 and request3e0f source published; current Windows write
 REMAINING:publish/check this source, full owneraudit/currentunfinishedblocks and exactrelease/package/device/update/version-last gates.
 BLOCKERS:none prevents source work; real Windows junction acceptance awaits Windows runner, physical/production identity gates remain unwaived.
 NEXT:publish coherent package, continue remaining current controls and collect actual CI failures as a batch.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-EXEC-CANCEL
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer cancellation/MasterStop lifecycle and recovery
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged; no autonomyfoundation expansion
+STARTING_HEAD:d251a2a810d329a9c5bc650d8cfc8523ba2a622d
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/tool_registry.gd;new scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;new tests/computer_request_guard_smoke.gd;new tools/run_computer_guard_smoke.py;.github/workflows/work-computer-reliability.yml;config/owner_control_policy.json exactreview;master/memory append-only
+DEPENDENCIES:coordinator takes over current Computer source paths after write/snapshot10path publicationd251tree from verifiedCAS. No parallel S3/native/research runtime changes.
+NON_BLOCKERS:execution deadlines/GUI/output controls remain separate until safe cancellation is actually accepted; existing deadlines unchanged in this block. V1.6/V1.7 newstate/planning integration excluded; physical/signing/release gates unwaived.
+ACCEPTANCE_GATES:authenticated per-execution cancellation, cancel-before-start failclosed, duplicateID never executes twice, masterstop/permissionrevalidation while awaitingrequest, transportfailure cancels owned child or reports uncertain; shutdown/parentexit stops all ownedprocessgroups. Actualchild/grandchild/heartbeat/loopback Godot tests; existingComputer/idempotency/container gates unchanged; exactnewSHA WindowsCI required.
+SOURCE_FINDING:threeComputer HTTP paths checkmasteronlybefore request then unconditionally await completion. Service _run_process has timeouttree-kill but no authenticatedcancel endpoint or shutdownregistry; _parent_watchdog usesos._exit without killing activeprocessgroups. This leaves an in-flight sandbox process outside current MasterStop/recovery contract. Sourceevidence, not physicaldevice acceptance.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement and actually verify owned-execution cancellation without relaxing any deadline or permission boundary.
+
+### Coherent owned execution cancellation source checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-EXEC-CANCEL remainsACTIVE/CI_PENDING after source publication; no physical/container localacceptance invented.
+CHANGES:threeComputer requestpaths assign trusteduniqueexecutionIDs and use sharedguard to revalidate master/Computerpermission whilewaiting and beforeacceptingcompletion. Masterstop/transportfailure cancels by authenticatedID; cancellationRPC remainsauthorized whenmasterflag0. Pre-cancelled/reusedIDs neverlaunch. Registryretainsfailed-stopPID/container ownership for retry; terminal failures neveradvertiseautomaticretry. Sidecarstop/restart requests cancel_all beforekillingbackend; failedack keepssidecarownership ratherthanstartingduplicatebackend. Stopall freezes newprocess/GUIlaunch to close late-requestrace; registeredGUIworkers arestopped; parentwatchdog/shutdown cancelsownedgroups. Nameddaemoncontainers need explicit engine rm--force; CLIkillalone is notterminationproof. Unconfirmedstop carriesuncertain_external_state.
+TESTS:76PythonPASS,2explicitlocalSKIP(NTFSjunction and actualDocker);1existingStarlette/AnyIOdeprecation. GenuinePythonchild+grandchild terminate andheartbeatstops;cancel-before-start/reusedIDneverexecute;timeout/shutdownkillownedprocess;late-after-stopneverlaunch;actualmultiprocessingGUI-shapedworker(behaviorisolated, no desktopaction) stopped;injectedfailedterminationretainsrealPIDthenretrykillsit. ActualGodot+actualuvicornsidecar loopback masterstop/transporttimeout/unavailableack/activeprocess synchronousshutdownPASS. Trustednonce ignoresmodel ID. ExistingGodotowner/masterstop/response classifiersPASS; expectedmalformedJSON fixture engineERRORdiagnostics retained, owner20ObjectDB/8resources retained. Godotparse/YAML/diffchecksPASS.
+CI_PREVENTION:work-godot runsactualsidecar fixture withpinneddependencies. LinuxComputerjob preparespython:3-slim solely asCItestfixture, pinsresolvedlocalimageID, setsAURORAFOX_REQUIRE_CONTAINER_CANCEL=1; actualdaemoncontainer testcannotSKIP there and verifiesrunningnamedcontainerthenabsenceaftercancel. Product --pull=never/network-none/read-only/no-new-privileges/container-first boundaries unchanged. LocalDocker executable isabsent, so newactualDockerCI remainsrequired andunverified.
+INVENTORY:{"test_evidence": 1393, "unclassified": 1280, "documentation": 63, "owner_adjustable": 652, "format_structure": 357, "hard_boundary": 26};complete:false. Newcancellation source remainsvisible to audit; no blanketclassification or readinessincrease.
+CURRENT_PRIOR_CI:d251observation42checks34SUCCESS/3SKIPPED/5IN_PROGRESS,0FAILURE. Pending/downstreamtotalmaygrow; nofullgreenclaim.
+LIMITATIONS:realWindowsprocess-tree/junction and actualDocker daemonacceptance require newexactSHA CI. Abrupt externalOSkill/crash/reboot is notproven by gracefulRPCshutdown; uncertainty must remainvisible, not marketed asrollback ofalreadycompletedexternalaction. Existingfixedexecution/GUI/output andproviderpaginationcontrols remainunfinished, versionunchanged.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published a388/3e0f/d251; ownedcancellationlocalactualbehaviorverified asabove.
+REMAINING:publish/checkthisbatch, currentownercontrols/audit/unfinishedCRITICALsource, finalexactSHA/package/physical/update/releasegates; versionlast.
+BLOCKERS:localDocker/nativeWindows unavailable foractualplatformacceptance; no blocker stopsremainingindependent authorizedsourcework.
+NEXT:publish coherentcancelpackage and continuecurrentexecution/transportownercontrols onlyafter safe cancellation source/testbaseline; collect actualnewCIredstogether.

@@ -24,8 +24,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	if OS.get_name() == "Windows" and backend_pid > 0:
-		OS.kill(backend_pid)
-		backend_pid = 0
+		_stop_owned_backend()
 
 static func shared_service_token() -> String:
 	if _shared_service_token.is_empty():
@@ -71,10 +70,17 @@ func installer_path() -> String:
 func restart_backend() -> void:
 	if OS.get_name() != "Windows":
 		return
-	if backend_pid > 0:
-		OS.kill(backend_pid)
-		backend_pid = 0
+	if backend_pid > 0 and not _stop_owned_backend():
+		return # Never start a second backend while owned termination is uncertain.
 	_start_backend_if_installed()
+
+func _stop_owned_backend() -> bool:
+	if not ComputerRequestGuard.stop_service_sync(base_url, _service_token):
+		push_warning("Computer owned termination is unconfirmed; retain sidecar for retry/parent watchdog")
+		return false
+	OS.kill(backend_pid)
+	backend_pid = 0
+	return true
 
 func _start_backend_if_installed() -> void:
 	if OS.get_name() != "Windows":
@@ -153,12 +159,18 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 		headers.append("X-AuroraFox-Computer-Token: " + _service_token)
 	if require_autonomy:
 		headers.append("X-AuroraFox-Autonomy-Allowed: 1")
+	payload = ComputerRequestGuard.execution_payload(path, payload)
 	var body := "" if payload.is_empty() else JSON.stringify(payload)
 	var err := req.request(base_url + path, headers, method, body)
 	if err != OK:
 		req.queue_free()
 		return {"ok": false, "error": "service_unavailable", "message": "Computer service request failed (%s)" % err, "retryable": true}
-	var completed: Array = await req.request_completed
+	var allowed := func() -> bool: return (not require_autonomy or _master_enabled()) and (not require_computer_permission or computer_control_enabled())
+	var guarded: Dictionary = await ComputerRequestGuard.wait(req, self, allowed, base_url, _service_token, payload)
+	if guarded.cancelled:
+		req.queue_free()
+		return {"ok": false, "error": "cancelled", "retryable": false, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
+	var completed: Array = guarded.completed
 	req.queue_free()
 	if completed.size() < 4:
 		return {"ok": false, "error": "malformed_response", "message": "Computer service returned an incomplete response", "retryable": true}

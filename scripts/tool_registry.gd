@@ -101,12 +101,18 @@ func _computer_json(path: String, method: HTTPClient.Method, payload: Dictionary
 		"X-AuroraFox-Computer-Token: " + ComputerClient.shared_service_token(),
 		"X-AuroraFox-Autonomy-Allowed: 1",
 	])
+	payload = ComputerRequestGuard.execution_payload(path, payload)
 	var body := "" if payload.is_empty() else JSON.stringify(payload)
 	var err := req.request(computer_base_url + path, headers, method, body)
 	if err != OK:
 		req.queue_free()
 		return {"ok": false, "error": "service_unavailable", "message": "Computer service request failed (%s)" % err, "retryable": true}
-	var completed: Array = await req.request_completed
+	var allowed := func() -> bool: return ComputerClient.master_enabled_from(self) and (path != "/action" and path != "/screen" and path != "/windows" or ComputerClient.computer_control_enabled())
+	var guarded: Dictionary = await ComputerRequestGuard.wait(req, self, allowed, computer_base_url, ComputerClient.shared_service_token(), payload)
+	if guarded.cancelled:
+		req.queue_free()
+		return {"ok": false, "error": "cancelled", "retryable": false, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
+	var completed: Array = guarded.completed
 	req.queue_free()
 	if completed.size() < 4:
 		return {"ok": false, "error": "malformed_response", "message": "Computer service returned an incomplete response", "retryable": true}

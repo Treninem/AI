@@ -1,0 +1,86 @@
+class_name ComputerRequestGuard
+extends RefCounted
+
+static func execution_payload(path: String, payload: Dictionary) -> Dictionary:
+	var captured := payload.duplicate(true)
+	if path.ends_with("/sandbox/exec") or path.ends_with("/sandbox/container_exec"):
+		# Caller/model input cannot select a previous execution identity.
+		captured["execution_id"] = "%d:%d:%s" % [OS.get_process_id(), Time.get_ticks_usec(), Crypto.new().generate_random_bytes(16).hex_encode()]
+	return captured
+
+static func wait(request: HTTPRequest, owner: Node, allowed: Callable, service_url: String, token: String, payload: Dictionary) -> Dictionary:
+	var state := {"done": false, "completed": []}
+	request.request_completed.connect(func(result: int, response_code: int, headers: PackedStringArray, body: PackedByteArray) -> void:
+		state.completed = [result, response_code, headers, body]
+		state.done = true
+	, CONNECT_ONE_SHOT)
+	while not state.done:
+		if not bool(allowed.call()):
+			request.cancel_request()
+			var cancellation := await _cancel_execution(owner, service_url, token, str(payload.get("execution_id", "")))
+			return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation, "retryable": false}
+		await owner.get_tree().create_timer(0.05).timeout
+	if not bool(allowed.call()):
+		var cancellation := await _cancel_execution(owner, service_url, token, str(payload.get("execution_id", "")))
+		return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation, "retryable": false}
+	var completed: Array = state.completed
+	if not completed.is_empty() and int(completed[0]) != HTTPRequest.RESULT_SUCCESS and payload.has("execution_id"):
+		var cancellation := await _cancel_execution(owner, service_url, token, str(payload.execution_id))
+		return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation, "retryable": false, "transport_result": int(completed[0])}
+	return {"cancelled": false, "completed": completed}
+
+static func _cancel_execution(owner: Node, service_url: String, token: String, execution_id: String) -> bool:
+	if execution_id.is_empty():
+		return false # Non-process actions cannot promise reversal of an external effect.
+	var cancel := HTTPRequest.new()
+	cancel.timeout = 10.0 # Bounded stop acknowledgement; never a product execution deadline.
+	owner.add_child(cancel)
+	var headers := PackedStringArray(["Content-Type: application/json", "X-AuroraFox-Computer-Token: " + token])
+	var error := cancel.request(service_url + "/sandbox/cancel", headers, HTTPClient.METHOD_POST, JSON.stringify({"execution_id": execution_id}))
+	if error != OK:
+		cancel.queue_free()
+		return false
+	var completed: Array = await cancel.request_completed
+	cancel.queue_free()
+	if completed.size() < 4 or int(completed[0]) != HTTPRequest.RESULT_SUCCESS or int(completed[1]) != 200:
+		return false
+	var body = JSON.parse_string((completed[3] as PackedByteArray).get_string_from_utf8())
+	return body is Dictionary and bool(body.get("ok", false)) and bool(body.get("termination_confirmed", false))
+
+static func stop_service_sync(service_url: String, token: String) -> bool:
+	# Node exit/restart cannot await SceneTree frames. Stop owned jobs before
+	# killing the sidecar, while its process/container registry still exists.
+	if not service_url.begins_with("http://") or token.is_empty(): return false
+	var authority := service_url.trim_prefix("http://").trim_suffix("/").split(":")
+	if authority.size() != 2 or authority[0] not in ["127.0.0.1", "localhost"]: return false
+	if not str(authority[1]).is_valid_int(): return false
+	var port := int(authority[1])
+	if port < 1 or port > 65535: return false
+	var client := HTTPClient.new()
+	var deadline := Time.get_ticks_msec() + 10000
+	if client.connect_to_host(str(authority[0]), port) != OK: return false
+	while client.get_status() in [HTTPClient.STATUS_RESOLVING, HTTPClient.STATUS_CONNECTING] and Time.get_ticks_msec() < deadline:
+		client.poll()
+		OS.delay_msec(5)
+	if client.get_status() != HTTPClient.STATUS_CONNECTED:
+		client.close()
+		return false
+	var headers := PackedStringArray(["Content-Type: application/json", "X-AuroraFox-Computer-Token: " + token])
+	if client.request(HTTPClient.METHOD_POST, "/sandbox/cancel_all", headers, "{}") != OK:
+		client.close()
+		return false
+	var body := PackedByteArray()
+	while Time.get_ticks_msec() < deadline:
+		client.poll()
+		if client.get_status() == HTTPClient.STATUS_BODY:
+			body.append_array(client.read_response_body_chunk())
+		elif client.get_status() == HTTPClient.STATUS_CONNECTED:
+			break
+		elif client.get_status() != HTTPClient.STATUS_REQUESTING:
+			client.close()
+			return false
+		OS.delay_msec(5)
+	var code := client.get_response_code()
+	client.close()
+	var parsed = JSON.parse_string(body.get_string_from_utf8())
+	return code == 200 and parsed is Dictionary and bool(parsed.get("ok", false)) and bool(parsed.get("termination_confirmed", false))
