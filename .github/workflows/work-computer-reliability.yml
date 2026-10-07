@@ -11,6 +11,7 @@ on:
       - 'tools/run_computer_guard_smoke.py'
       - 'tools/computer_gui_guard_fixture.py'
       - 'tests/test_sandbox_resource_limits.py'
+      - 'tests/test_computer_parent_watchdog.py'
       - 'scripts/agent_core.gd'
       - 'scripts/tool_registry.gd'
       - 'scripts/sandbox_manager.gd'
@@ -35,6 +36,7 @@ on:
       - 'tools/run_computer_guard_smoke.py'
       - 'tools/computer_gui_guard_fixture.py'
       - 'tests/test_sandbox_resource_limits.py'
+      - 'tests/test_computer_parent_watchdog.py'
       - 'scripts/agent_core.gd'
       - 'scripts/tool_registry.gd'
       - 'scripts/sandbox_manager.gd'
@@ -82,9 +84,9 @@ jobs:
           echo "AURORAFOX_REQUIRE_CONTAINER_CANCEL=1" >> "$GITHUB_ENV"
           echo "AURORA_CONTAINER_CANCEL_IMAGE=$fixture_image"
       - name: Python syntax
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
       - name: Computer reliability routing failure-injection concurrency and response contracts
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
 
   computer-contract-windows:
     runs-on: windows-latest
@@ -110,10 +112,10 @@ jobs:
         run: python -c "import pyautogui, pywinauto; from PIL import ImageGrab; print('WINDOWS_COMPUTER_RUNTIME_IMPORT_OK')"
       - name: Python syntax
         shell: pwsh
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
       - name: Computer reliability routing failure-injection concurrency and response contracts on Windows
         shell: pwsh
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
 
   work-godot:
     runs-on: ubuntu-24.04

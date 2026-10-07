@@ -8723,7 +8723,7 @@ SCOPE_CLASS:CRITICAL existing Work/Computer lifecycle and Master Stop reliabilit
 ROADMAP_SECTION:4 Work/Computer production-safe lifecycle/recovery, cancellation and security boundaries.
 ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
 STARTING_HEAD:2947eb107b36420c8176c3326d68121d495ed447; fetched fresh main and feature, exact local/remote match, latest journal and active claims checked.
-OWNED_PATHS:computer/computer_service.py;tests/test_computer_parent_watchdog.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+OWNED_PATHS:computer/computer_service.py;tests/test_computer_parent_watchdog.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;.github/workflows/work-computer-reliability.yml;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
 DEPENDENCIES:Computer audit inventory package2947eb1 published. Existing old Computer source claims reconciled by latest branch; current exact2947eb1 Windows/Android CI pending. No version/release/UI paths touched.
 NON_BLOCKERS:post-release344-point owner-PC pass remains separate.
 INTENDED_BUMP:D fix, canonical version last.
@@ -8743,3 +8743,11 @@ DONE:exact PID/liveness repair and deterministic/native local watchdog verificat
 REMAINING:finish full Computer regression rerun, publish exact source package, run new native Windows/Android/package gates; six Computer inventory findings plus capability/container representation remain unresolved and broader audit has962 unclassified.
 BLOCKERS:none for source implementation; Android APK/emulator evidence on previous SHA still pending.
 NEXT:review final test result and diff, commit/push by expected-head fast-forward, then inspect new exact-SHA CI without claiming release readiness prematurely.
+
+CI_TEST_DISCOVERY_CORRECTION: first watchdog fix published as b381f037badaf05bf15885fdd0ebc262ce577d90, exact local/origin/web equal and clean at publication. New test file was absent from explicit Computer CI pytest lists. Add it to PR/push path filters and both Linux/Windows syntax + pytest jobs in follow-up commit, preserving all existing tests and native gates. Do not count b381f03 Computer jobs alone as new-test evidence. Focused local Computer rerun stalled and was interrupted, also not PASS; mandatory full native CI remains decisive.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:watchdog source repair published; four native/fake watchdog tests locally green; CI list correction prepared.
+REMAINING:publish workflow inclusion and get exact new-SHA Linux/Windows Computer results, Android/package/device gates, residual audit/source work.
+BLOCKERS:none for workflow correction.
+NEXT:verify workflow diff and test discovery, publish by expected-head push, inspect exact Computer jobs and pursue red evidence if any.
