@@ -1043,3 +1043,13 @@ A loop checking prior buffer size can accept an oversized final recv containing 
 
 ### AF-148 — Preserve discovery responsiveness while honoring explicit owner provider policy
 Unconfigured Ollama discovery retains call-site health/default deadlines, avoiding silent latency changes. Explicit trusted startup discovery policy overrides old internal health argument; chat deadline separately owned. Map zero to requests None; validate finite nonnegative fractional seconds. Real HTTP tags/chat tests capture Session.send options while executing actual network I/O; mocked localCore/Knowledge fallback tests remain separate and mandatory. No claim that removing synchronous deadlines creates cancellation or bounds provider-internal response allocation.
+
+
+### AF-149 — Distinguish operational unlimited zero from empty-allocation zero
+File backend cache bytes0 must bypass eviction, while requests/subprocess operation deadline0 becomes None. Update private UI minimum, saved-value validation, environment export and backend together; actual Godot save/reload/env and full Python module reload prevent half-applied settings. Do not globally reinterpret numeric zero: archive listing0 hides listing, internal text allocation0 means zero characters, positive sampling intervals/dimensions provide progress/representable allocation. Outer analysis deadline remains a separate owner control. Exercise actual cache files/HTTP/ffmpeg; stubbed transcript proves no recognition quality. Reportlab missing prevented PDF fixture setup; install test dependency and actually reexecute instead of marking failed setup as product regression or PASS. Native OCR skip remains NOT_PASS.
+
+### AF-150 — Named-budget regex can falsely close an appended fixed cap
+An audit regex matching any VISION_TIMEOUT_SECONDS occurrence classified an appended FIXED_LIMIT17 as owner-adjustable. A preserved adversarial test exposed this false closure. Replace broad names with reviewed full-statement anchored alternatives (22 File statements); unknown changes/trailing executable code remain unclassified. Classification must not infer that all neighboring limits are adjustable simply because one variable is owned.
+
+### AF-151 — Explicit CI file lists do not automatically execute new regression modules
+API workflow individually lists test files and test paths. New actual TCP/HTTP provider regression was published but absent from its list. Add both push/PR filters and actual pytest command; retain all existing coverage. Prior green API job cannot prove omitted fixture execution, even when its source dependency triggered the workflow. Verify selection and require exact new CI before acceptance; local tests remain separate evidence.

@@ -160,3 +160,11 @@ def test_provider_owner_review_preserves_arbitrary_response_caps():
     assert MODULE.classify("api/runtime_bridge.py", statement, policy)[0] == "owner_adjustable"
     assert MODULE.classify("api/runtime_bridge.py", statement + " FIXED_LIMIT = 17", policy)[0] == "unclassified"
     assert MODULE.classify("api/runtime_bridge.py", "while len(buffer) < 8 * 1024 * 1024:", policy)[0] == "unclassified"
+
+
+def test_file_cache_zero_review_does_not_hide_fixed_provider_timeouts():
+    policy = MODULE.load_policy()
+    statement = 'VISION_TIMEOUT_SECONDS = _operational_budget_from_env("AURORAFOX_FILE_VISION_TIMEOUT_SECONDS", 180) or None'
+    assert MODULE.classify("file_intelligence/file_service.py", statement, policy)[0] == "owner_adjustable"
+    assert MODULE.classify("file_intelligence/file_service.py", statement + "; FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify("file_intelligence/file_service.py", "requests.post(url, timeout=180)", policy)[0] == "unclassified"

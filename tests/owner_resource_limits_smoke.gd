@@ -297,6 +297,15 @@ func _run() -> void:
 	var reloaded_file_policy := FileIntelligenceClient.new()
 	reloaded_file_policy.owner_limits_path = operation_path
 	assert(reloaded_file_policy.owner_limits().max_file_bytes == 1 and reloaded_file_policy.owner_limits().max_text_chars == 50001)
+	var zero_file_controls := {"cache_max_bytes": 0, "vision_timeout_seconds": 0, "stt_timeout_seconds": 0, "video_timeout_seconds": 0}
+	assert(file_policy.apply_owner_limits(zero_file_controls, true, false).ok)
+	var zero_reloaded := FileIntelligenceClient.new()
+	zero_reloaded.owner_limits_path = operation_path
+	for key in zero_file_controls:
+		assert(zero_reloaded.owner_limits()[key] == 0)
+		assert(OS.get_environment(file_policy.OWNER_LIMIT_ENV[key]) == "0")
+	assert(not file_policy.apply_owner_limits({"cache_max_bytes": -1}, false, false).ok)
+	zero_reloaded.free()
 	var web_policy := PublicWebManager.new()
 	web_policy.owner_limits_path = operation_path
 	var original_web_settings: Dictionary = {}

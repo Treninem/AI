@@ -7664,3 +7664,40 @@ DONE:published directory/API-byte and history/file/content packages; provider tr
 REMAINING:publication/exactCI;1252remaininginventory/unfinishedCRITICAL, provider pagination/copy-stage limitations, fullsameSHA package/device/update/production/version-last.
 BLOCKERS:none for independent source; required physical/production acceptance remains unwaived.
 NEXT:publish coherent provider package; resume largest remaining owner/resource inventory and reconcile exact gate failures if any.
+
+PUBLICATION_CHECKPOINT: API-PROVIDER-RESOURCE-POLICY published c2199219fc3bc85e2cf4dfb936066827ee2c86fc/tree7fe52f1de3238745bc68ebbec1fc8923641f09a6 onfc8bd86 via expected-head fast-forward;8ownedpaths including2newfiles. Source RELEASED/EXACT_CI_PENDING. Freshfetch local source reconciled; no version/merge/release.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-FILES-CACHE-PROVIDER-ZERO
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining File Intelligence owner operational controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:c2199219fc3bc85e2cf4dfb936066827ee2c86fc
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:file_intelligence/file_service.py;scripts/file_intelligence_client.gd;scripts/settings_overlay.gd;tests/test_file_intelligence.py;tests/test_owner_runtime_limits_contract.py;tests/owner_resource_limits_smoke.gd;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator explicitly takes over published File Intelligence owner-limit/persistence paths. Published provider block locally148pinned/149latestPASS; newexactCI pending. No parallel source edit observed.
+NON_BLOCKERS:Windows backend cache/vision/STT/ffmpeg settings only; no Android parser/job policy, V1.6/S3/sign/version. Zero is not globally reinterpreted: archive listing0 remains hide; internal text allocation0 remains zero characters; positive video sampling/render/decoder dimensions remain progress/representation constraints. Existing outer cancellable analysis budget remains separate.
+ACCEPTANCE_GATES:cache byte0 disables cache eviction, provider operation timeout0 maps None for actual requests/subprocess, exact/raised budgets preserve behavior and invalid negative startup fails. Owner settings UI/client/persistence/export support these four zero values end to end, without altering other minimums. Actual cache files/HTTP vision-STT/ffmpeg and Godot persistence checks; existing File/Archive/OCR regressions retained.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:finish four end-to-end zero controls in one File Intelligence package and verify actual backend/UI propagation.
+
+CLAIM_ADDENDUM: FILES-CACHE-PROVIDER-ZERO also owns .github/workflows/api-ci.yml for the previously published provider acceptance gap: API CI uses an explicit test list and did not include new tests/test_api_provider_resource_limits.py. Add its push/PR path filters and actual pytest invocation, preserving every existing test/platform check and tiered CI policy. Prior c219 API CI cannot be claimed as proof of this new fixture until workflow selection is corrected and exact new CI executes it. This is a required existing V1.5 gate repair, not expanded product scope.
+
+### Coherent File Intelligence zero policy and required provider CI selection checkpoint
+CLAIM:WORK-2026-10-07-V15-FILES-CACHE-PROVIDER-ZERO ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:c2199219fc3bc85e2cf4dfb936066827ee2c86fc/tree7fe52f1de3238745bc68ebbec1fc8923641f09a6.
+CHANGES:four existing Windows File settings now support trusted zero end to end: cache bytes0 bypass eviction; vision/STT/video operation seconds0 map None in requests/subprocess. Existing positive/default limits preserved, negative/noninteger startup rejected. Private persisted Godot values/env/UI minimums updated only for these four; archive listing0=hide, internal text0=zero characters and other parser/Android constraints unchanged. Outer analysis deadline remains independent. Audit formerly classified any occurrence of named File budget, allowing appended fixed cap to hide: narrowed to22 reviewed exact full statements; adversarial trailing-source test nowPASS. API CI explicit filters/pytest list lacked newly published provider fixture: all3locations now include it, preserving every existing test. Prior API CI cannot prove newfixture execution.
+TESTS:final relevant File/Archive/listing/owner/OCR/provider/fallback/audit105PASS/1SKIP/2subtestsPASS. Skip tests/test_local_ocr.py391 requires actual local OCRruntime absent from testhost, NOT_PASS. Earlier first expanded run4FAIL due missing reportlab while82PASS/1SKIP; dependency5.0.1 installed and actual PDF scenarios reexecutedPASS. Audit newtest initiallyFAIL confirmed broad classification false-closure; repaired rule rather than weaken assertion. Real cache files/fullmodule startup0/2/600/negative, actual HTTP vision/STT deadlines and actual ffmpeg audio extraction0PASS; offline transcript stub separate from extraction evidence. Godot4.7.1 owner smokePASS with private save/reload/env0/negative; existing20ObjectDB/8resource exit diagnostics unchanged. Settings script check-onlyPASS; API workflow YAML parse/testselection3occurrencesPASS; git diff --checkPASS. No Windows/UI/device/nativeOCR proof inferred.
+PRIOR_CI:atc2199219 observed39checks34SUCCESS/3SKIP/2IN_PROGRESS/0FAILURE; CoreAndroid112735828484/AndroidPlugin112732574899 pending. New source/providerfixtureselection exactCI mandatory.
+INVENTORY:482files;1626test_evidence/1252unclassified/65documentation/768owner_adjustable/377format_structure/59hard_boundary;complete:false. Source/statement changes retained, no false inventory closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published3large directory/API/provider packages; four File zero controls and real regressions, adversarial audit repair and provider CI coverage selection verified locally.
+REMAINING:publication/exactCI;1252inventory/unfinishedCRITICAL, provider pagination/copy-stage limitations, fullsameSHA package/device/update/production/version-last.
+BLOCKERS:no external source blocker; actual OCRruntime/physical/production acceptance unwaived.
+NEXT:publish coherent File/CI package; continue largest remaining owner/incomplete critical block, investigate exactCI failure if observed.

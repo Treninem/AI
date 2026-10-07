@@ -616,20 +616,20 @@ func _build_file_intelligence_limits(page: VBoxContainer) -> void:
 			"path_max_chars": "Windows: символов пути",
 			"question_max_chars": "Windows: символов вопроса к файлу",
 			"query_max_chars": "Windows: символов запроса к кешу",
-			"cache_max_bytes": "Windows: байтов кеша файлов",
+			"cache_max_bytes": "Windows: байтов кеша файлов (0 — без лимита)",
 			"epub_max_chapters": "Windows: разделов EPUB",
 			"archive_text_entry_max": "Windows EPUB/RAR: байтов текстового элемента",
 			"archive_text_entries": "Windows RAR: текстовых элементов",
-			"vision_timeout_seconds": "Windows optional vision: ожидание, секунд",
-			"stt_timeout_seconds": "Windows STT: ожидание, секунд",
-			"video_timeout_seconds": "Windows видео: ожидание ffmpeg, секунд",
+			"vision_timeout_seconds": "Windows optional vision: ожидание, секунд (0 — без таймаута)",
+			"stt_timeout_seconds": "Windows STT: ожидание, секунд (0 — без таймаута)",
+			"video_timeout_seconds": "Windows видео: ожидание ffmpeg, секунд (0 — без таймаута)",
 			"video_max_frames": "Windows видео: извлекаемых кадров",
 			"video_frame_interval_seconds": "Windows видео: интервал кадров, секунд",
 			"video_frame_max_width": "Windows видео: ширина кадра, пикселей",
 			"vision_image_max_width": "Windows optional vision: размер изображения, пикселей",
 		}
 		for key in advanced_labels:
-			advanced_fields[key] = _owner_number_row(card, advanced_labels[key], float(limits.get(key, FileIntelligenceClient.OWNER_LIMIT_DEFAULTS[key])), 1.0, 1.0)
+			advanced_fields[key] = _owner_number_row(card, advanced_labels[key], float(limits.get(key, FileIntelligenceClient.OWNER_LIMIT_DEFAULTS[key])), float(FileIntelligenceClient.OWNER_LIMIT_MINIMUMS.get(key, 1)), 1.0)
 	var state := Label.new()
 	state.name = "SettingsFileLimitsStatus"
 	state.text = "Новые задания используют сохранённые пределы. Windows применяет пределы парсера после перезапуска backend."

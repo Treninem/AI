@@ -41,13 +41,23 @@ LOG_DIR = USER_ROOT / "logs"
 CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
+def _operational_budget_from_env(name: str, default: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError:
+        raise ValueError(f"{name} must be a nonnegative integer") from None
+    if value < 0:
+        raise ValueError(f"{name} must be a nonnegative integer")
+    return value
+
+
 PATH_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_PATH_MAX_CHARS", "8192")))
 QUESTION_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_QUESTION_MAX_CHARS", "12000")))
 QUERY_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_QUERY_MAX_CHARS", "1000")))
-CACHE_MAX_BYTES = max(1, int(os.getenv("AURORAFOX_FILE_CACHE_MAX_BYTES", "536870912")))
-VISION_TIMEOUT_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_VISION_TIMEOUT_SECONDS", "180")))
-STT_TIMEOUT_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_STT_TIMEOUT_SECONDS", "300")))
-VIDEO_TIMEOUT_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS", "240")))
+CACHE_MAX_BYTES = _operational_budget_from_env("AURORAFOX_FILE_CACHE_MAX_BYTES", 536870912)
+VISION_TIMEOUT_SECONDS = _operational_budget_from_env("AURORAFOX_FILE_VISION_TIMEOUT_SECONDS", 180) or None
+STT_TIMEOUT_SECONDS = _operational_budget_from_env("AURORAFOX_FILE_STT_TIMEOUT_SECONDS", 300) or None
+VIDEO_TIMEOUT_SECONDS = _operational_budget_from_env("AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS", 240) or None
 VIDEO_MAX_FRAMES = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_MAX_FRAMES", "8")))
 VIDEO_FRAME_INTERVAL_SECONDS = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_FRAME_INTERVAL_SECONDS", "30")))
 VIDEO_FRAME_MAX_WIDTH = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_FRAME_MAX_WIDTH", "1280")))
@@ -153,6 +163,8 @@ def _cache_put(key: str, payload: dict[str, Any]) -> None:
 
 
 def _trim_cache(limit: int) -> None:
+    if limit == 0:
+        return
     files = sorted(CACHE_DIR.glob("*.json"), key=lambda p: p.stat().st_mtime)
     total = sum(p.stat().st_size for p in files)
     while files and total > limit:

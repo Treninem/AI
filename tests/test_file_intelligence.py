@@ -209,3 +209,122 @@ def test_listing_owner_env_also_bounds_omitted_request_defaults(tmp_path: Path):
     code = "import json,file_service as f; print(json.dumps([f.TreeRequest(path='.').max_items,f.CacheSearchRequest(query='x').limit,f.MAX_CACHE_EXCERPT_CHARS]))"
     output = subprocess.check_output([sys.executable, "-c", code], cwd=ROOT / "file_intelligence", env=env, text=True)
     assert json.loads(output) == [2, 3, 10]
+
+
+def test_zero_cache_budget_keeps_actual_cached_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(file_service, 'CACHE_DIR', tmp_path)
+    monkeypatch.setattr(file_service, 'CACHE_MAX_BYTES', 0)
+    file_service._cache_put('one', {'content': 'one'})
+    file_service._cache_put('two', {'content': 'two'})
+    assert len(list(tmp_path.glob('*.json'))) == 2
+    size = sum(p.stat().st_size for p in tmp_path.glob('*.json'))
+    file_service._trim_cache(size)
+    assert len(list(tmp_path.glob('*.json'))) == 2
+    file_service._trim_cache(size - 1)
+    assert len(list(tmp_path.glob('*.json'))) == 1
+
+
+@pytest.mark.parametrize('value', ['0', '1', '600'])
+def test_file_operational_startup_budget_and_negative_rejection(monkeypatch, value):
+    key = 'AURORAFOX_FILE_CACHE_MAX_BYTES'
+    monkeypatch.setenv(key, value)
+    assert file_service._operational_budget_from_env(key, 500) == int(value)
+    monkeypatch.setenv(key, '-1')
+    with pytest.raises(ValueError, match=key):
+        file_service._operational_budget_from_env(key, 500)
+    monkeypatch.setenv(key, 'invalid')
+    with pytest.raises(ValueError, match=key):
+        file_service._operational_budget_from_env(key, 500)
+
+
+@pytest.mark.parametrize('deadline', [None, 1, 600])
+def test_actual_file_provider_http_deadline(tmp_path, monkeypatch, deadline):
+    import json
+    import threading
+    import requests
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    received = []
+    timeouts = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+        def do_POST(self):
+            received.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+            self.send_response(200)
+            self.end_headers()
+            payload = {'ok': True, 'text': 'actual speech'} if self.path == '/stt_path' else {'message': {'content': 'actual vision'}}
+            self.wfile.write(json.dumps(payload).encode())
+
+    original_send = requests.sessions.Session.send
+    def send(session, request, **kwargs):
+        timeouts.append(kwargs['timeout'])
+        return original_send(session, request, **kwargs)
+    monkeypatch.setattr(requests.sessions.Session, 'send', send)
+    server = HTTPServer(('127.0.0.1', 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': 0.01}, daemon=True)
+    thread.start()
+    try:
+        url = f'http://127.0.0.1:{server.server_port}'
+        monkeypatch.setattr(file_service, 'OLLAMA_URL', url)
+        monkeypatch.setattr(file_service, 'VOICE_URL', url)
+        monkeypatch.setattr(file_service, 'VISION_TIMEOUT_SECONDS', deadline)
+        monkeypatch.setattr(file_service, 'STT_TIMEOUT_SECONDS', deadline)
+        assert file_service._vision_bytes(b'actual image', 'inspect') == 'actual vision'
+        path = tmp_path / 'sample.wav'
+        path.write_bytes(b'actual audio')
+        text, metadata, warnings = file_service._voice_transcribe(path)
+        assert text == 'actual speech' and not warnings
+        assert timeouts == [deadline, deadline]
+        assert received[1]['path'] == str(path)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+
+def test_actual_video_ffmpeg_accepts_unlimited_owner_deadline(tmp_path, monkeypatch):
+    import imageio_ffmpeg
+    import subprocess
+    executable = imageio_ffmpeg.get_ffmpeg_exe()
+    video = tmp_path / 'actual.mp4'
+    generated = subprocess.run([executable, '-y', '-f', 'lavfi', '-i', 'color=c=red:s=16x16:d=0.2',
+                                '-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.2', '-shortest',
+                                '-c:v', 'mpeg4', '-c:a', 'aac', str(video)], capture_output=True, timeout=10)
+    assert generated.returncode == 0, generated.stderr.decode(errors='replace')
+    observed = []
+    original_run = subprocess.run
+    def run(*args, **kwargs):
+        observed.append(kwargs['timeout'])
+        return original_run(*args, **kwargs)
+    monkeypatch.setattr(subprocess, 'run', run)
+    monkeypatch.setattr(file_service, 'VIDEO_TIMEOUT_SECONDS', None)
+    # Offline transcript availability is independent of extraction deadline.
+    monkeypatch.setattr(file_service, '_voice_transcribe', lambda path: ('extracted audio', {}, []))
+    text, _, warnings = file_service._video_analyze(video, '', False)
+    assert text.endswith('extracted audio')
+    assert observed == [None]
+    assert not warnings
+
+
+@pytest.mark.parametrize('value', [0, 2, 600])
+def test_full_file_service_import_uses_four_owner_operational_budgets(monkeypatch, value):
+    import importlib
+    mapping = {'CACHE_MAX_BYTES': 'AURORAFOX_FILE_CACHE_MAX_BYTES',
+               'VISION_TIMEOUT_SECONDS': 'AURORAFOX_FILE_VISION_TIMEOUT_SECONDS',
+               'STT_TIMEOUT_SECONDS': 'AURORAFOX_FILE_STT_TIMEOUT_SECONDS',
+               'VIDEO_TIMEOUT_SECONDS': 'AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS'}
+    try:
+        with monkeypatch.context() as patch:
+            for key in mapping.values():
+                patch.setenv(key, str(value))
+            importlib.reload(file_service)
+            assert file_service.CACHE_MAX_BYTES == value
+            for field in ('VISION_TIMEOUT_SECONDS', 'STT_TIMEOUT_SECONDS', 'VIDEO_TIMEOUT_SECONDS'):
+                assert getattr(file_service, field) == (value or None)
+            patch.setenv(mapping['CACHE_MAX_BYTES'], '-1')
+            with pytest.raises(ValueError, match='nonnegative integer'):
+                importlib.reload(file_service)
+    finally:
+        importlib.reload(file_service)
