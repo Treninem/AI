@@ -30,6 +30,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header('Content-Type', 'text/event-stream; charset=utf-8')
         self.send_header('Transfer-Encoding', 'chunked')
         self.end_headers()
+        print('AURORA_CORE_HTTP_SERVER_START ' + json.dumps({'fixture': kind, 'elapsed_seconds': round(time.monotonic() - self.fixture_started, 6)}), flush=True)
         try:
             if kind == 'malformed':
                 self.send(b'data: {broken}\n\n')
@@ -37,11 +38,11 @@ class Handler(BaseHTTPRequestHandler):
                 self.send(event({'choices': [{'delta': {'content': 'partial'}, 'finish_reason': None}]}))
             else:
                 for i in range(1, 9):
-                    time.sleep(0.06)
                     if kind == 'heartbeat':
                         self.send(b': ping\n\n')
                     else:
                         self.send(event({'prompt_progress': {'processed': 1 if kind == 'duplicate' else i, 'total': 8}, 'choices': []}))
+                    time.sleep(0.06)
                 # Split UTF8 within a codepoint; HTTP chunk framing must not corrupt text.
                 message = event({'choices': [{'index': 0, 'delta': {'content': 'Привет 🌍'}, 'finish_reason': None}]})
                 split = message.index('Привет'.encode()) + 1
