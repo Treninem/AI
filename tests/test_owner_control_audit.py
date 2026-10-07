@@ -235,6 +235,31 @@ def test_computer_service_exact_review_preserves_actual_fixed_caps():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_api_persistence_review_keeps_real_scheduling_floor_visible():
+    policy = MODULE.load_policy()
+    path = 'api/persistence_maintenance.py'
+    reviewed = [
+        ('self.backup_max_bytes = max(1, int(backup_max_bytes))', 'owner_adjustable'),
+        ('self.warn_database_bytes = min(configured_database_warning, backup_guard_warning)', 'owner_adjustable'),
+        ('hard_pressure = disk_free_bytes < self.min_free_bytes', 'owner_adjustable'),
+        ('retention = max(0, int(retention_seconds))', 'owner_adjustable'),
+        ('"next_in_seconds": max(1, self.maintenance_interval_seconds - max(0, elapsed)),', 'format_structure'),
+        ('parser = argparse.ArgumentParser(description="Inspect AuroraFox API persistence capacity")', 'format_structure'),
+        ('"""Capacity visibility plus conservative ephemeral-row cleanup.', 'documentation'),
+    ]
+    for statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    for statement in [
+        'def _env_int(name: str, default: int, *, minimum: int = 1) -> int:',
+        'return max(minimum, value)',
+        'minimum=60,',
+        'return max(60, value)',
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"

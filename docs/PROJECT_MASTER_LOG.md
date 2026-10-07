@@ -8751,3 +8751,45 @@ DONE:watchdog source repair published; four native/fake watchdog tests locally g
 REMAINING:publish workflow inclusion and get exact new-SHA Linux/Windows Computer results, Android/package/device gates, residual audit/source work.
 BLOCKERS:none for workflow correction.
 NEXT:verify workflow diff and test discovery, publish by expected-head push, inspect exact Computer jobs and pursue red evidence if any.
+
+PARENT_WATCHDOG_CI_CHECKPOINT: published workflow inclusion4979ba01d9e0fe41ede6e475d047692791199c4d; local/origin/web exact equal, clean. Exact4979ba0 Work/Computer Reliability run37692641070 SUCCESS: computer-contract, computer-contract-windows (including newly enumerated watchdog test), work-godot and source-boundaries all green. Native Windows acceptance, Windows smoke, API, Voice, File and other short jobs green on same SHA. Real Core Windows, Android plugin/APK and real one-GiB import remain in progress, so release readiness is unchanged. Local wide Computer regression was interrupted and is not counted; native full Linux/Windows jobs provide the valid broad test evidence.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Computer watchdog source, native regression and mandatory Linux/Windows CI verified on exact4979ba0.
+REMAINING:exact4979ba0 long Core/Android/Knowledge gates; broader owner inventory962 and version-last/release checks.
+BLOCKERS:none within watchdog lane; external long-running release gates pending.
+NEXT:close watchdog claim after last exact-SHA gates, preserve green Computer evidence, and progress a separate free API persistence audit without touching claimed MemoryStore/ToolRegistry.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-PERSISTENCE-OWNER-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing API persistence capacity visibility and owner-configurable operational thresholds; audit-only.
+ROADMAP_SECTION:4 Security/privacy and production-safe persistence baseline.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:4979ba01d9e0fe41ede6e475d047692791199c4d; fresh main/feature fetched, exact local/web match, latest journal and active paths reviewed.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. `api/persistence_maintenance.py` is read-only in this inventory package.
+DEPENDENCIES:current exact4979ba0 long gates running; avoid publishing and cancelling them until a decisive verdict. No overlap with legacy SERVER-DB owned source files or active Computer runtime claim.
+NON_BLOCKERS:post-release344-point owner-PC field pass and future API redesign.
+INTENDED_BUMP:none for inventory metadata; D only if separate claimed source repair becomes necessary.
+ACCEPTANCE_GATES:review all20 unclassified persistence lines in context; classify only exact owner/deployment-sourced or structural/security status statements, retain actual fixed clamps and operational minima as unclassified; adversarial appended-cap and unrelated-path tests; no production source change and no reduced CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:review source/test context, classify narrow lines, run audit module locally, and publish after current long-gate verdict.
+
+API_PERSISTENCE_AUDIT_CHECKPOINT: reviewed all20 unclassified `api/persistence_maintenance.py` lines against source and existing persistence tests. Exact anchored policy classifications cover seven owner/deployment-sourced backup/free-space/retention statements, eight report/validation/CLI structure statements and two docstring lines. Three true minimum/floor lines (`_env_int` default minimum1, `max(minimum,value)`, maintenance interval minimum60) remain unclassified for separate behavior review. Full audit now945 unclassified from962; inventory complete remains false. Adversarial tests confirm trailing fixed caps and unrelated paths stay unclassified. `tests/test_owner_control_audit.py`25/25 PASS, diff check PASS. No API production source edit.
+CI_CURRENT_SHA:exact4979ba0 real Core Windows PASS (run37692641134), Computer Linux/Windows PASS (run37692641070), native Windows acceptance/smoke PASS. Android plugin/APK and real one-GiB import are in progress on exact SHA. This audit package stays local until those long gates yield a decisive result, avoiding cancellation/restarts.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:17 of20 API persistence residual findings classified with exact tests; three fixed minima left visible; real Core gate green on current published SHA.
+REMAINING:publish inventory package after current long gates; resolve945 actual inventory candidates, Android/Knowledge/package/update/version-last release gates.
+BLOCKERS:none for audit source review; three long CI jobs in progress.
+NEXT:observe exact long CI results, then commit/push audit by expected-head fast-forward and inspect its exact-SHA checks.
+
+PUBLICATION_DECISION: prior Android workflow from older SHA completed successfully despite a newer push, so GitHub does not universally cancel in-flight gates here. To keep local/web synchronized and start exact new-SHA evidence promptly, publish this audited metadata-only package now by expected-head fast-forward. The old4979ba0 one-GiB import, Android APK/emulator and normal-path jobs remain running; their results will be labeled with that SHA and never substituted for final new-SHA acceptance. No source or gate weakening.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:API persistence audit25/25 local tests,17 exact classifications and three visible minima; publication prepared.
+REMAINING:publish/synchronize package, evaluate exact new-SHA CI, release/device/update/version-last gates and945 residual inventory findings.
+BLOCKERS:none for publication.
+NEXT:commit/push exact audited policy/tests/journal, verify remote identity and monitor CI evidence per SHA.
