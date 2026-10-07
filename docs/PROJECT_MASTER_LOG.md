@@ -7847,3 +7847,27 @@ BLOCKERS:none for independent source; physical/production evidence unwaived.
 NEXT:publish coherent Voice batch; continue remaining runtime owner constraints and reconcile actual exact gates.
 
 INVENTORY_CHECKPOINT:484files;1675test_evidence/1188unclassified/66documentation/819owner_adjustable/408format_structure/59hard_boundary;complete:false. Adversarial audit17PASS; source completion remainsNO.
+
+PUBLICATION_CHECKPOINT: VOICE-RESOURCE-CONTROLS published1174183d4a18ba8bb1251d7eecb6ba1725e85e83/treec86feb60f698466456d1d464ca9a7c063d5f4eee on5493294 expected-head fast-forward;14ownedpaths including2newfiles. Source RELEASED/EXACT_CI_PENDING; native/acoustic acceptance unwaived.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-CANDIDATE-CONTROL-BOUNDARIES
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing candidate self-improvement baseline MasterStop/cancellation and owner operational waits
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:1174183d4a18ba8bb1251d7eecb6ba1725e85e83
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:scripts/core_improvement_pipeline.gd;scripts/tool_registry.gd;scripts/owner_resource_policy.gd;tests/core_candidate_benchmark_smoke.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;tests/test_autonomous_evolution_contract.py;tests/test_core_candidate_promotion.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator explicitly takes over published pipeline/ToolRegistry owner paths. Source inspection confirms no repeated MasterStop/Work guard between proposal/chat/tool/verification/store/apply operations; ToolRegistry forwards caller guard only to Security. Prior Voice source published, newexactCI pending; main446ce2 unchanged; no parallel source edit observed.
+NON_BLOCKERS:Only current V1.5 candidate baseline; no V1.6 runtime/Core rewrite/S3/sign/version. Preserve required3..10distinct isolated candidates, immutable incumbent, hard gates, independent secondpass, positive review improvement, protected allowlist and no automatic packaged apply. Guard stops next work and rejects stale completion; does not promise undo of effects already started. Existing localCore inference stays available to normal chat.
+ACCEPTANCE_GATES:forward caller guard to candidate tool; strict fail-closed globalMasterStop/caller-cancel/automatic-toggle/update-priority checks before and after each awaited model/tool operation and before store/apply. No extra Work action bookkeeping when polling guard. No next model/tool call after stop or usable stale success; uncertain started effects explicit. Independent proposal-attempt multiplier default3/benchmarkseconds150 owned, zero removes only operational ceiling while perstep guards remain. Actual deterministic fake-model/tool stop propagation and owner values0/raised, existing tournament/source/benchmark contracts retained; exactnative/pack gates mandatory.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement peroperation failclosed guard and owner waits, then coherent genuine candidate control/tournament regressions.
+
+CLAIM_ADDENDUM: CANDIDATE-CONTROL-BOUNDARIES covers confirmed source reentry window: _running previously set only after awaited is_available; concurrent call could overwrite shared caller guard/tournament state. Acquire ownership before first await, release on every rejection. Deterministic test seam for supported-platform decision preserves production Windows-only behavior; no Linux/native acceptance inferred. Test overlapping availability/stop and stale-result rejection without actual mutation apply.
+
+CANDIDATE_CONTROL_VALIDATION_CHECKPOINT: unpublished WIP on1174183. Actual Godot4.7.1 core_candidate_benchmark_smoke PASS including entry overlap during awaited availability, MasterStop at availability/model/tool, no next operation, stale-success rejection, explicit started-effects uncertainty, malformed/expired required caller guards, actual ToolRegistry guard forwarding, automatic toggle/manual separation and benchmarkseconds2/300/0 forwarding. Existing immutable incumbent/3..10/hard-gate/no-promotion contracts retained. Fixture only overrides platform/dependency/state-write seams, not native verification; no Windows acceptance inferred. Initial fixture cleanup leaked detached Android/Desktop runtime children; explicitly freed them, actual rerun exit0 with no exit leak diagnostics. Relevant Python candidate/evolution/owner/audit batch49PASS. Actual unlimited proposal-loop fixture executes3model attempts and stops on MasterStop without another model call.
+EXACT_CI_RECONCILIATION:1174183 Voice python-voice/acoustic-quality SUCCESS; WindowsCore job112850414546/run37638237393 FAILED. Artifact11490973979 digest27c516baac35a56eebfbc125b1c82724b4cd693c8a9c18cd9b9f308218f75b5c confirms20/21, simple_planning only: transport_ok=true/content_chars0/invalid_json_or_plan_contract,35432.894ms,0steps/0checks; performancePASS, no scenario timeout. SpecialistTeam real offline8operationsPASS. This is an unresolved empty-content runtime response, not a passed gate or proven model/parser cause. Preserve21/21 criteria; next inspect runtime extraction/request evidence under a separate claim if source repair necessary. Other exact gates still in progress, no freeze declared.

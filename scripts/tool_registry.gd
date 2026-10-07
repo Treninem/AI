@@ -51,6 +51,8 @@ func call_tool(name: String, args: Dictionary = {}, execution_guard: Callable = 
 	if not tools.has(name):
 		return {"ok": false, "error": "Unknown tool: " + name}
 	tool_called.emit(name, args)
+	if name == "aurora_core_candidate":
+		return await tools[name].callable.call(args, execution_guard)
 	if name == "security_configuration_check":
 		return await _security_configuration_check(args, execution_guard)
 	return await tools[name].callable.call(args)

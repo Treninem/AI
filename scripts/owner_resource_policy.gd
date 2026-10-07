@@ -88,6 +88,8 @@ const DEFAULTS := {
 	"candidate_project_files": 30000,
 	"candidate_project_bytes": 2147483648,
 	"candidate_source_bytes": 1048576,
+	"candidate_proposal_attempt_multiplier": 3,
+	"candidate_benchmark_seconds": 150,
 	"candidate_history_items": 30,
 	"candidate_review_source_chars": 120000,
 	"candidate_reason_chars": 2000,
@@ -303,6 +305,8 @@ const LABELS := {
 	"learning_outcome_chars": "Обучение: символов итога попытки",
 
 	"candidate_source_bytes": "Core кандидат: байтов исходного кода",
+	"candidate_proposal_attempt_multiplier": "Core candidate: множитель попыток предложения",
+	"candidate_benchmark_seconds": "Core candidate: секунд на benchmark-команду",
 	"candidate_history_items": "Core кандидат: записей истории",
 	"candidate_review_source_chars": "Core кандидат: символов исходника для оценки",
 	"candidate_reason_chars": "Core кандидат: символов причины в проверке",
