@@ -9078,3 +9078,33 @@ CODE_FREEZE_SHA:pending commit.
 PROGRESS_COMPLETE:82%
 PROGRESS_REMAINING:18%
 NEXT:final diff/owner regression, commit and push by exact branch CAS; run exact API/Core/Integration checks, inspect inherited long platform gates and reconcile local/origin/web SHA.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-BULK-OWNER-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing API/personal data/learning/Core promotion owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable API, privacy, owner resource controls and controlled self-improvement.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture or promotion authority change.
+STARTING_HEAD:43a50459c65c50d954935f268fe3682e5becd39d; fresh main/feature fetched, main ancestor confirmed, local/origin exact, full journal/roadmap/memory and ADRs re-read. Exact API/Core/Integration SUCCESS; long Windows/Android/Knowledge runs still active with no red at claim start.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: all api/ paths in owner-control inventory.
+CLAIM_RECONCILIATION:previous candidate-source source change published and exact API/Core/Integration acceptance passed; this audit touches only policy/tests/journal and does not alter source paths held by the historical SERVER-DB lane.
+DEPENDENCIES:preserve API request-body and account rate controls, authentication/privacy boundaries, Core candidate signed promotion, and actual retention/capacity limits as visible findings.
+NON_BLOCKERS:V1.6 cognition, public-scale API redesign and post-release owner-PC field sweep.
+INTENDED_BUMP:none for audit metadata; any confirmed source repair needs a separate D claim and tests.
+ACCEPTANCE_GATES:inspect all141 current unclassified api/ lines with source context; classify only exact owner-controlled or non-cap structure, retain fixed/ambiguous caps; adversarial line/path tests, owner-control audit and exact CI; record reviewed/classified/retained counts and synchronize local/origin/web.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous candidate-source chain published as43a5045 with exact API/Core/Integration SUCCESS; audit claim opened.
+REMAINING:read all141 API findings, update exact policy/tests, run CI and remaining release gates.
+BLOCKERS:none for audit.
+NEXT:enumerate all141 API findings with code context and classify only supported lines.
+API_BULK_AUDIT_CHECKPOINT:reviewed all141 previously unclassified api/ findings across23 source files against current code. Added39 exact path/full-line classifications:14 owner/caller budget routing,22 SQL/query/pass-through/status/representation,3 source documentation. Retained102 actual or ambiguous restrictions including SMTP60s, account token bounds, community text/batch/lease/terminal caps, candidate queue default200 and +50 scan, SQLite waits, API upload/global body, local-Core/optional-provider timeouts/backoff, Knowledge target size, settings UI excerpts, sync pagination and gateway health timeout. No production source or trust boundary changed. The global owner audit unclassified count667→628; api/141→102, complete:false. Adversarial category/path/appended-cap test and unresolved examples passed as part of33 local owner-audit tests; JSON policy parsed and git diff check to follow. Source-level repair of retained caps requires separate claim and meaningful tests. Exact Chat Learning Attachments CI on publication SHA remains required.
+SOURCE_COMPLETE:YES for this audit-only package.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 API findings reviewed;39 narrow exact classifications;102 retained; local audit33PASS.
+REMAINING:publish/sync audit package and exact CI;628 global unresolved findings and release package/device/update/version gates.
+BLOCKERS:none in audit metadata scope.
+NEXT:validate policy and diff, publish one metadata commit, verify local/origin/web SHA and exact owner-audit CI; pursue retained source caps separately.

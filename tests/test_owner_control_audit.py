@@ -392,6 +392,38 @@ def test_candidate_source_budget_audit_is_exact_and_other_candidate_caps_stay_vi
     assert MODULE.classify('api/core_candidate_queue.py', 'MAX_QUEUE_ITEMS = 200', policy)[0] == 'unclassified'
 
 
+def test_api_bulk_review_classifies_exact_forwarding_without_hiding_real_caps():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('api/account_mailer.py', 'timeout = float(os.getenv("AURORAFOX_SMTP_TIMEOUT_SECONDS", "10"))', 'owner_adjustable'),
+        ('api/account_store.py', '"ORDER BY created_at DESC LIMIT 1",', 'format_structure'),
+        ('api/community_learning.py', '"ORDER BY created_at, id LIMIT ?",', 'format_structure'),
+        ('api/conversation_store.py', 'self.max_messages = _nonnegative_budget(', 'owner_adjustable'),
+        ('api/core_candidate_queue.py', 'rows = self.list(self.max_items)', 'owner_adjustable'),
+        ('api/file_client.py', 'configured_max = max_file_bytes', 'owner_adjustable'),
+        ('api/learning_store.py', '``max_events`` is a history cap, never a durability cap. If the server is', 'documentation'),
+        ('api/runtime_bridge.py', 'raise RuntimeError("AuroraFox bridge response exceeds owner byte budget")', 'format_structure'),
+        ('api/server.py', 'return sync.pull(_personal(record), cursor=cursor, limit=limit)', 'format_structure'),
+        ('api/sync_store.py', '"ORDER BY seq LIMIT ?",', 'format_structure'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + ' FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('api/account_mailer.py', 'timeout=max(1.0, min(60.0, timeout)),'),
+        ('api/community_learning.py', 'bounded_limit = max(1, min(int(limit), 200))'),
+        ('api/core_candidate_queue.py', 'rows = self.list(self.max_items + 50)'),
+        ('api/gateway_manager.gd', 'request.timeout = 2.5'),
+        ('api/knowledge_bundle.py', 'MAX_SERVER_TARGET_BYTES = 240 * 1024 * 1024'),
+        ('api/local_core_client.py', 'backoff = min(900.0, 5.0 * (2 ** min(7, failures - 1)))'),
+        ('api/server.py', 'limit: int = Query(default=50, ge=1, le=200),'),
+        ('api/sync_store.py', 'safe_limit = min(500, max(1, int(limit)))'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_evolution_learning_bulk_review_keeps_real_evidence_caps_visible():
     policy = MODULE.load_policy()
     reviewed = [
