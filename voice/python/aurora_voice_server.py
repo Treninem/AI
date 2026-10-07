@@ -27,6 +27,7 @@ from emotion_parser import detect_emotion
 from personality import AuroraPersonality
 from processor import AuroraVoiceProcessor, amplitude_envelope, prepare_for_speech
 from tts_engine import EngineRouter
+from voice_resource_policy import VoiceResourceLimits
 
 ROOT = Path(sys.executable).resolve().parent if getattr(sys, "frozen", False) else Path(__file__).resolve().parents[1]
 CONFIG_DIR = ROOT / "config"
@@ -37,6 +38,7 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 CONFIG = json.loads((CONFIG_DIR / "voice_config.json").read_text(encoding="utf-8-sig"))
+VOICE_LIMITS = VoiceResourceLimits.from_environment(CONFIG)
 EMOTIONS = json.loads((CONFIG_DIR / "emotions.json").read_text(encoding="utf-8"))
 PERSONALITY = AuroraPersonality(CONFIG_DIR / "personality.json")
 
@@ -59,7 +61,7 @@ _stt_pipe = None
 
 
 class SayRequest(BaseModel):
-    text: str = Field(min_length=1, max_length=16000)
+    text: str = Field(min_length=1, max_length=VOICE_LIMITS.tts_input_chars or None)
     emotion: str = "auto"
     intensity: float = Field(default=0.5, ge=0.0, le=1.0)
     speed: float | None = None
@@ -70,7 +72,7 @@ class SayRequest(BaseModel):
 
 
 class PathRequest(BaseModel):
-    path: str = Field(min_length=1, max_length=4096)
+    path: str = Field(min_length=1, max_length=VOICE_LIMITS.path_chars or None)
 
 
 class ModeRequest(BaseModel):
@@ -177,7 +179,9 @@ def cache_key(req: SayRequest, clean: str, engine: str) -> str:
 
 
 def trim_cache():
-    limit = int(CONFIG.get("cache_limit_mb", 512)) * 1024 * 1024
+    limit = VOICE_LIMITS.cache_bytes
+    if limit == 0:
+        return
     files = sorted(CACHE_DIR.glob("*.wav"), key=lambda p: p.stat().st_mtime)
     total = sum(p.stat().st_size for p in files)
     while files and total > limit:
@@ -275,7 +279,8 @@ class MicMonitor:
         self.device = None
         self.sensitivity = 0.5
         self.noise_suppression = True
-        self.q: queue.Queue[np.ndarray] = queue.Queue(maxsize=128)
+        self.q: queue.Queue[np.ndarray] = queue.Queue(maxsize=VOICE_LIMITS.mic_queue_chunks)
+        self.dropped_chunks = 0
         self.stream = None
         self.thread = None
         self.stop_event = threading.Event()
@@ -356,7 +361,7 @@ class MicMonitor:
         try:
             self.q.put_nowait(np.asarray(indata[:, 0], dtype=np.float32).copy())
         except queue.Full:
-            pass
+            self.dropped_chunks += 1
 
     def _soft_noise_gate(self, chunk: np.ndarray) -> np.ndarray:
         if not self.noise_suppression:
@@ -507,6 +512,9 @@ def health():
         "device": DEVICE,
         "backend": "AuroraVoice",
         "mode": mic.mode,
+        "mic_queue_chunks": mic.q.qsize(),
+        "mic_queue_limit": mic.q.maxsize,
+        "mic_dropped_chunks": mic.dropped_chunks,
         "tts": {name: eng.available() for name, eng in router.engines.items()},
         "vad": mic.vad_model is not None,
         "wake_model": mic.vosk_model is not None,

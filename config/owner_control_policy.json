@@ -1625,6 +1625,41 @@
       "class": "owner_adjustable",
       "control": "Reviewed Knowledge resource defaults and record structure",
       "rationale": "Exact tested private owner/default or explicit caller search count propagation; -1 is default/unlimited sentinel, caller0 remains empty; periodic top-K sorting buffer does not reduce the requested final result count. Unknown appended code stays unclassified."
+    },
+    {
+      "path": "voice/python/aurora_voice_server.py",
+      "pattern": "^\\s*(?:\"mic_queue_limit\":\\ mic\\.q\\.maxsize,|if\\ limit\\ ==\\ 0:|limit\\ =\\ VOICE_LIMITS\\.cache_bytes|path:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=VOICE_LIMITS\\.path_chars\\ or\\ None\\)|self\\.q:\\ queue\\.Queue\\[np\\.ndarray\\]\\ =\\ queue\\.Queue\\(maxsize=VOICE_LIMITS\\.mic_queue_chunks\\)|text:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=VOICE_LIMITS\\.tts_input_chars\\ or\\ None\\)|while\\ files\\ and\\ total\\ >\\ limit:)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed Voice startup budgets or audio representation",
+      "rationale": "Exact reviewed trusted startup/caller budget propagation; defaults and independentzero tested with real cache/queue/validator/Godot transport, continuation splitting keeps source characters. Unknown future statements stay unclassified."
+    },
+    {
+      "path": "voice/python/aurora_voice_server.py",
+      "pattern": "^\\s*(?:gain\\ =\\ np\\.clip\\(\\(magnitude\\ \\-\\ gate\\ \\*\\ 0\\.35\\)\\ /\\ max\\(gate\\ \\*\\ 1\\.7,\\ 1e\\-5\\),\\ 0\\.18,\\ 1\\.0\\)|gate\\ =\\ max\\(0\\.0025,\\ self\\.noise_floor\\ \\*\\ 1\\.35\\)|hub\\.emit\\(\"barge_in\",\\ rms=max_rms,\\ echo_similarity=similarity\\)|idx\\ =\\ np\\.linspace\\(0,\\ len\\(audio\\)\\ \\-\\ 1,\\ max\\(1,\\ int\\(len\\(audio\\)\\ \\*\\ 16000\\ /\\ sr\\)\\)\\)|if\\ duration_ms\\ >=\\ float\\(CONFIG\\[\"vad\"\\]\\[\"barge_in_min_ms\"\\]\\)\\ and\\ max_rms\\ >=\\ limit:|if\\ int\\(d\\.get\\(\"max_input_channels\",\\ 0\\)\\)\\ >\\ 0:|max_rms\\ =\\ 0\\.0|max_rms\\ =\\ max\\(max_rms,\\ raw_rms\\)|max_rms\\ =\\ raw_rms|min_silence_duration_ms=int\\(CONFIG\\[\"vad\"\\]\\[\"min_silence_ms\"\\]\\),|raw\\ =\\ self\\.q\\.get\\(timeout=0\\.2\\)|result\\.append\\(\\{\"id\":\\ i,\\ \"name\":\\ str\\(d\\.get\\(\"name\",\\ i\\)\\),\\ \"channels\":\\ int\\(d\\.get\\(\"max_input_channels\",\\ 0\\)\\)\\}\\)|return\\ min\\(1\\.0,\\ min\\(len\\(a\\),\\ len\\(b\\)\\)\\ /\\ max\\(4\\.0,\\ float\\(max\\(len\\(a\\),\\ len\\(b\\)\\)\\)\\)\\ \\+\\ 0\\.35\\)|self\\.noise_floor\\ =\\ self\\.noise_floor\\ \\*\\ 0\\.995\\ \\+\\ min\\(raw_rms,\\ 0\\.03\\)\\ \\*\\ 0\\.005)\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed Voice startup budgets or audio representation",
+      "rationale": "Exact reviewed waveform/sample normalization, gain/recency arithmetic, channel capability and short queue polling for stop responsiveness; not total input/output/resource ceilings. Remaining FFT clamping is explicitly unclassified for separate review."
+    },
+    {
+      "path": "voice/python/processor.py",
+      "pattern": "^\\s*(?:cut\\ =\\ max_chars|cut\\ =\\ min\\(max_chars,\\ preferred\\ \\+\\ 1\\)|def\\ _as_continuation\\(part:\\ str,\\ max_chars:\\ int\\)\\ \\->\\ str:|def\\ _split_long_spoken_chunk\\(text:\\ str,\\ max_chars:\\ int\\)\\ \\->\\ list\\[str\\]:|def\\ split_for_streaming\\(text:\\ str,\\ max_chars:\\ int\\ =\\ 220\\)\\ \\->\\ list\\[str\\]:|if\\ len\\(clean\\)\\ <\\ max_chars:|if\\ len\\(text\\)\\ <=\\ max_chars:|if\\ max_chars\\ <\\ 0:|if\\ max_chars\\ ==\\ 0:|if\\ max_chars\\ >=\\ 2\\ and\\ len\\(part\\)\\ >=\\ max_chars\\ and\\ part\\[\\-1\\]\\ not\\ in\\ \",;:—–\\.!\\?…\":|max_chars\\ =\\ int\\(max_chars\\)|out\\.append\\(_as_continuation\\(part,\\ max_chars\\)\\)|out\\.extend\\(_split_long_spoken_chunk\\(sentence,\\ max_chars\\)\\)|preferred\\ =\\ max\\(|preferred_floor\\ =\\ max\\(24,\\ int\\(max_chars\\ \\*\\ 0\\.45\\)\\)|while\\ len\\(remaining\\)\\ >\\ max_chars:|window\\ =\\ remaining\\[:\\ max_chars\\ \\+\\ 1\\])\\s*$",
+      "class": "owner_adjustable",
+      "control": "Reviewed Voice startup budgets or audio representation",
+      "rationale": "Exact reviewed trusted startup/caller budget propagation; defaults and independentzero tested with real cache/queue/validator/Godot transport, continuation splitting keeps source characters. Unknown future statements stay unclassified."
+    },
+    {
+      "path": "voice/python/processor.py",
+      "pattern": "^\\s*(?:gain\\ =\\ float\\(np\\.clip\\(gain,\\ min_gain,\\ max_gain\\)\\)|gain\\[over\\]\\ =\\ \\(threshold\\ \\+\\ \\(a\\[over\\]\\ \\-\\ threshold\\)\\ /\\ 5\\.0\\)\\ /\\ np\\.maximum\\(a\\[over\\],\\ 1e\\-6\\)|if\\ self\\.config\\.get\\(\"limiter\",\\ True\\):|if\\ x\\.size\\ <\\ max\\(32,\\ n_fft\\ \\*\\ 2\\):|if\\ x\\.size\\ <\\ max\\(32,\\ n_fft\\):|max_gain\\ =\\ 10\\.0\\ \\*\\*\\ \\(float\\(self\\.config\\.get\\(\"max_gain_db\",\\ 4\\.0\\)\\)\\ /\\ 20\\.0\\)|min_gain\\ =\\ 10\\.0\\ \\*\\*\\ \\(float\\(self\\.config\\.get\\(\"min_gain_db\",\\ \\-6\\.0\\)\\)\\ /\\ 20\\.0\\)|n_steps\\ =\\ 12\\.0\\ \\*\\ math\\.log2\\(max\\(factor,\\ 1e\\-6\\)\\)|peak\\ =\\ float\\(np\\.max\\(np\\.abs\\(x\\)\\)\\)\\ if\\ x\\.size\\ else\\ 0\\.0|peak\\ =\\ max\\(vals\\)\\ if\\ vals\\ else\\ 1\\.0|return\\ \\[min\\(1\\.0,\\ v\\ /\\ max\\(peak,\\ 1e\\-6\\)\\)\\ for\\ v\\ in\\ vals\\[:points\\]\\]|samples\\ =\\ min\\(x\\.size\\ //\\ 2,\\ max\\(1,\\ int\\(round\\(sr\\ \\*\\ fade_ms\\ /\\ 1000\\.0\\)\\)\\)\\)|step\\ =\\ max\\(1,\\ x\\.size\\ //\\ points\\)|target\\ =\\ max\\(1,\\ int\\(round\\(x\\.size\\ /\\ rate\\)\\)\\))\\s*$",
+      "class": "format_structure",
+      "control": "Reviewed Voice startup budgets or audio representation",
+      "rationale": "Exact reviewed waveform/sample normalization, gain/recency arithmetic, channel capability and short queue polling for stop responsiveness; not total input/output/resource ceilings. Remaining FFT clamping is explicitly unclassified for separate review."
+    },
+    {
+      "path": "voice/python/voice_resource_policy.py",
+      "pattern": "^\\s*(?:\"\"\"Trusted\\ local\\ Voice\\ startup\\ budgets;\\ zero\\ disables\\ only\\ its\\ own\\ ceiling\\.\"\"\")\\s*$",
+      "class": "documentation",
+      "control": "Reviewed Voice startup budgets or audio representation",
+      "rationale": "Module purpose docstring, no executable ceiling."
     }
   ]
 }

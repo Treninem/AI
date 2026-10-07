@@ -269,6 +269,13 @@ func _run() -> void:
 	assert(desktop._generation_budget({"max_tokens": 1.5}, false) == -2)
 	OwnerResourcePolicy._cached.chat_max_tokens = 0
 	assert(desktop._generation_budget({}, false) == -1)
+	var voice_bridge := AuroraVoiceBridge.new()
+	for cap in [2, 20000, 0]:
+		for key in ["voice_tts_input_chars", "voice_cache_bytes", "voice_mic_queue_chunks", "voice_path_chars"]: OwnerResourcePolicy._cached[key] = cap
+		voice_bridge._export_owner_resource_limits()
+		for suffix in ["TTS_INPUT_CHARS", "CACHE_BYTES", "MIC_QUEUE_CHUNKS", "PATH_CHARS"]: assert(OS.get_environment("AURORAFOX_VOICE_" + suffix) == str(cap))
+	voice_bridge.android_runtime.free()
+	voice_bridge.free()
 	var knowledge_limits := KnowledgeStore.new()
 	var knowledge_source := "owner_resource_knowledge_budget_fixture"
 	assert(knowledge_limits.remove_source(knowledge_source).ok)

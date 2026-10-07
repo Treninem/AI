@@ -166,6 +166,10 @@ const DEFAULTS := {
 	"knowledge_stream_batch_chars": 131072,
 	"knowledge_write_batch_items": 2048,
 	"knowledge_search_items": 6,
+	"voice_tts_input_chars": 16000,
+	"voice_cache_bytes": 536870912,
+	"voice_mic_queue_chunks": 128,
+	"voice_path_chars": 4096,
 
 	"work_error_chars": 2048,
 	"work_summary_chars": 4096,
@@ -377,6 +381,10 @@ const LABELS := {
 	"knowledge_stream_batch_chars": "Знания: символов в пакете импорта",
 	"knowledge_write_batch_items": "Знания: записей в пакете сохранения",
 	"knowledge_search_items": "Знания: результатов поиска по умолчанию",
+	"voice_tts_input_chars": "Windows Voice: символов TTS (после перезапуска)",
+	"voice_cache_bytes": "Windows Voice: байтов кеша (после перезапуска)",
+	"voice_mic_queue_chunks": "Windows Voice: блоков очереди микрофона (после перезапуска)",
+	"voice_path_chars": "Windows Voice: символов пути (после перезапуска)",
 
 	"work_error_chars": "Work: символов ошибки",
 	"work_summary_chars": "Work: символов итога",

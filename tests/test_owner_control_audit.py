@@ -168,3 +168,16 @@ def test_file_cache_zero_review_does_not_hide_fixed_provider_timeouts():
     assert MODULE.classify("file_intelligence/file_service.py", statement, policy)[0] == "owner_adjustable"
     assert MODULE.classify("file_intelligence/file_service.py", statement + "; FIXED_LIMIT = 17", policy)[0] == "unclassified"
     assert MODULE.classify("file_intelligence/file_service.py", "requests.post(url, timeout=180)", policy)[0] == "unclassified"
+
+
+def test_voice_and_knowledge_review_keeps_new_caps_and_trailing_code_unknown():
+    policy = MODULE.load_policy()
+    for path, statement in [
+        ('voice/python/aurora_voice_server.py', 'text: str = Field(min_length=1, max_length=VOICE_LIMITS.tts_input_chars or None)'),
+        ('voice/python/aurora_voice_server.py', 'self.q: queue.Queue[np.ndarray] = queue.Queue(maxsize=VOICE_LIMITS.mic_queue_chunks)'),
+        ('scripts/knowledge_store.gd', 'if limit > 0 and scored.size() >= SEARCH_BUFFER_LIMIT:'),
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == 'owner_adjustable'
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+    assert MODULE.classify('voice/python/aurora_voice_server.py', 'MAX_VOICE_BYTES = 17', policy)[0] == 'unclassified'
+    assert MODULE.classify('voice/python/processor.py', 'n_fft = max(256, min(2048, requested))', policy)[0] == 'unclassified'

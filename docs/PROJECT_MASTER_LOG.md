@@ -7809,3 +7809,41 @@ DONE:Knowledge resource defaults with actual preservation/import/retrieval/rollb
 REMAINING:publication/exactCI; remaining ownerinventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
 BLOCKERS:none for independent source; actual device/production evidence unwaived.
 NEXT:publish coherent Knowledge package, then largest remaining Voice/owner source inventory with exactCI reconciliation.
+
+PUBLICATION_CHECKPOINT: KNOWLEDGE-RESOURCE-DEFAULTS published5493294fa465dd01cdc58867a217a4a36ad1b037/tree625579e19c323385572f2214e74b8e90a56871bc onea254f8 expected-head fast-forward;8ownedpaths. Source RELEASED/EXACT_CI_PENDING.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-VOICE-RESOURCE-CONTROLS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing local Voice owner resource controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:5493294fa465dd01cdc58867a217a4a36ad1b037
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:voice/python/aurora_voice_server.py;voice/python/voice_resource_policy.py;voice/python/processor.py;voice/voice_bridge.gd;scripts/owner_resource_policy.gd;tests/test_voice_resource_limits.py;tests/test_voice_text.py;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;.github/workflows/voice-ci.yml;.github/workflows/release.yml;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over existing Voice bridge/server/settings paths, no other source edit observed; Knowledge source published/exactCI pending; freshmain446ce2 unchanged. No replacement acoustic models/dependency on external AI.
+NON_BLOCKERS:Startup backend policy applies on next backend launch; owner Settings labels state restart. No Android voice runtime policy rewrite. Native microphone/recognition/acoustic proof not inferred from budget tests. Speech DSP representation/quality settings retained.
+ACCEPTANCE_GATES:private visible persisted Voice TTSinput16000/cache512MiB/micqueue128 controls exported into both portable/managed backend startup. Independent zero removes max validation/eviction/queue capacity; invalid negative config fails rather than clamps. Actual cache files and queue boundary accounting, actual Pydantic/HTTP validator using production request definition, Godot env propagation, split helper explicit small/0 cap preserves progress; required existing Voice/pack/runtime gates kept. New tests in explicit CI/release selection/dependencies.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:finish trusted Voice limits and one actual relevant Voice test batch.
+
+CLAIM_ADDENDUM: VOICE-RESOURCE-CONTROLS also includes existing Voice file-path request4096 maximum in same private startup policy/UI/export/actual validator fixtures; zero removes only this text ceiling, actual filesystem/permission/path processing remains unchanged. Exact requested path identity is not truncated. Confirmed split helper dropped final source character to insert comma; repair retains character in next chunk, tests require full letters and bounded chunks.
+
+### Voice trusted startup resources and speech preservation checkpoint
+CLAIM:WORK-2026-10-07-V15-VOICE-RESOURCE-CONTROLS ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:5493294fa465dd01cdc58867a217a4a36ad1b037/tree625579e19c323385572f2214e74b8e90a56871bc.
+CHANGES:four private visible persisted restart-time Voice controls for TTSinput16000/path4096/cache512MiB/micqueue128 exported into portable/managed backend. Independent0 removes validationmax/skips eviction/Queueunbounded; invalid startup policy fails. Queue overflow visible in health dropped-chunk count. Existing streamhelper48floor removed; no final-character replacement by continuation comma. Real new regression included ordinary/release explicit CI selection and actual required dependencies; no acoustic/native acceptance replaced. Narrow exact Voice statements classified, FFT/hop clamps retained unknown.
+TESTS:expanded relevant Voice/owner/evolution/promotion/release/provider/project96PASS. Actual Pydantic request definition over FastAPI HTTP exact/raised/0 retains nonempty/intensity validation and rejects request-side override; fullpath identity, realcacheWAV/sidecar pairs, actual129audio callback queue2/129/0 with visible drops. Godot owner smokePASS private policy/env2/20000/0 allfour exports; existing20ObjectDB/8resource exit diagnostics unchanged. New detached bridge child freed explicitly, avoiding fixture-onlyextra leak. Initial NumPy collection failure repaired by installing2.2.6 and actually executing; initial long-speech assertion exposed real droppedcharacter, fixed source rather than weaken preservation. Native acoustic/mic/runtime NOT EXECUTED locally. Adversarial audit tests preserve unknown appended caps and FFT clamps; diffcheckPASS.
+PRIOR_CI:5493294atlastobservation41checks34SUCCESS/3SKIP/4IN_PROGRESS/0FAILURE; pending notPASS. ea254f8Windows timestamp confirmed prior; actual Core latest gates still exact-SHA required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Voice owner startup limits and actual budgets/preservation regressions prepared; required workflow coverage/dependencies included.
+REMAINING:publication/exactCI; FFT/hop controls and other ownerinventory/unfinishedCRITICAL; fullsameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; physical/production evidence unwaived.
+NEXT:publish coherent Voice batch; continue remaining runtime owner constraints and reconcile actual exact gates.
+
+INVENTORY_CHECKPOINT:484files;1675test_evidence/1188unclassified/66documentation/819owner_adjustable/408format_structure/59hard_boundary;complete:false. Adversarial audit17PASS; source completion remainsNO.

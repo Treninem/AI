@@ -200,8 +200,6 @@ def _as_continuation(part: str, max_chars: int) -> str:
         return clean
     if len(clean) < max_chars:
         return clean + ","
-    if len(clean) >= 2:
-        return clean[:-1].rstrip() + ","
     return clean
 
 
@@ -229,6 +227,11 @@ def _split_long_spoken_chunk(text: str, max_chars: int) -> list[str]:
             if cut < 1:
                 cut = max_chars
         part = remaining[:cut].strip()
+        # Reserve punctuation space by leaving the final source character in
+        # remaining, never by overwriting it with a continuation comma.
+        if max_chars >= 2 and len(part) >= max_chars and part[-1] not in ",;:—–.!?…":
+            cut -= 1
+            part = remaining[:cut].strip()
         if part:
             out.append(_as_continuation(part, max_chars))
         remaining = remaining[cut:].strip()
@@ -242,7 +245,11 @@ def split_for_streaming(text: str, max_chars: int = 220) -> list[str]:
     if not text:
         return []
 
-    max_chars = max(48, int(max_chars))
+    max_chars = int(max_chars)
+    if max_chars < 0:
+        raise ValueError("Speech chunk characters must be nonnegative")
+    if max_chars == 0:
+        return [text]
     sentences = [part.strip() for part in re.split(r"(?<=[.!?…])\s+", text) if part.strip()]
     out: list[str] = []
     for sentence in sentences:
