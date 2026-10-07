@@ -8116,3 +8116,13 @@ DONE: three real operational limits implemented end-to-end with owner persistenc
 REMAINING:publish this source package, inspect exact File/Voice/Windows package CI, continue1014 residual findings and physical device/update/version-last gates.
 BLOCKERS:none in this local batch; exact native release evidence pending.
 NEXT:commit/push coherent package by expected-head fast-forward and inspect relevant exact CI before next source edit.
+
+FILE_HEALTH_NATIVE_CI_DIAGNOSTIC: exact source commit2c36b25498661239c9221d018d9f0611749ce06c Core/Voice run37680867860 failed only file-intelligence job; 66 tests passed, two AST-isolated cache-key fixtures raised NameError for newly added MAX_PDF_RENDER_SCALE_PERCENT because their manually supplied production constants omitted it. Godot Core, Windows integration and Python Voice jobs succeeded. Production full file_service suite had passed locally; this is a stale fixture namespace, not evidence to remove the cache identity field. OWNED_PATHS expansion: tests/test_spreadsheet_owner_budgets.py and tests/test_archive_owner_budgets.py for exact production constant supply and cache identity regression. Fix fixture, rerun full relevant native-shaped batch; no source behavior or gate reduction.
+
+FILE_HEALTH_NATIVE_DIAGNOSTIC_REPAIR: published source2c36b25498661239c9221d018d9f0611749ce06c Core/Voice run37680867860: Godot Core, Windows integration, Python Voice success; File Intelligence failed2 AST cache-key fixture NameError with66other tests PASS. Expanded claim-owned tests/test_spreadsheet_owner_budgets.py and tests/test_archive_owner_budgets.py to dynamically supply exactly referenced uppercase production cache-key globals. Local two fixture suites11PASS. Local broad six-module Windows run66PASS/2 Windows-specific project-index failures (symlink privilege WinError1314 and newline equality); these are not counted PASS and require native Linux CI. Product File Intelligence code and release gates remain unchanged in this repair.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: production owner health/PDF controls and 25+6+34 local behavior/contract checks; stale cache-key fixtures repaired and11 local tests green.
+REMAINING: publish fixture repair, exact native Linux File Intelligence and wider CI;1014 owner inventory, device/update/version-last acceptance.
+BLOCKERS: exact2c36b25 File Intelligence CI failure run37680867860 from test fixture; repaired locally, new-SHA verdict pending.
+NEXT:commit/push narrow fixture repair by expected-head fast-forward, then inspect exact CI result before next source package.

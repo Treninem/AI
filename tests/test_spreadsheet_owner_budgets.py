@@ -28,9 +28,9 @@ def parser_namespace():
     import sys
     sys.path.insert(0, str(ROOT / 'file_intelligence'))
     import file_service
-    for name in ('MAX_PDF_BYTES', 'MAX_PDF_PAGES', 'MAX_OCR_PAGES', 'MAX_PDF_RENDER_PIXELS',
-                 'VIDEO_MAX_FRAMES', 'VIDEO_FRAME_INTERVAL_SECONDS', 'VIDEO_FRAME_MAX_WIDTH', 'VISION_IMAGE_MAX_WIDTH'):
-        namespace[name] = getattr(file_service, name)
+    for name in file_service._cache_key.__code__.co_names:
+        if name.isupper() and hasattr(file_service, name):
+            namespace[name] = getattr(file_service, name)
     exec(compile(module, 'file_intelligence/file_service.py', 'exec'), namespace)
     return namespace
 
@@ -124,6 +124,9 @@ class SpreadsheetBudgets(unittest.TestCase):
         self.assertNotEqual(key, changed)
         self.parser['MAX_SPREADSHEET_CELLS'] = 50001
         self.assertNotEqual(changed, self.parser['_cache_key'](path, '', False, 160000))
+        previous = self.parser['_cache_key'](path, '', False, 160000)
+        self.parser['MAX_PDF_RENDER_SCALE_PERCENT'] = 0
+        self.assertNotEqual(previous, self.parser['_cache_key'](path, '', False, 160000))
 
 
 if __name__ == '__main__':
