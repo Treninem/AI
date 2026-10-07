@@ -197,3 +197,22 @@ def test_file_client_suboperation_deadlines_are_owner_persisted_and_routed():
     assert 'req.timeout = timeout' in CLIENT
     assert 'return float(owner_limits()[key])' in CLIENT
     assert '_new_http_request(timeout)' in CLIENT
+
+
+def test_project_index_client_deadlines_are_owner_visible_and_route_specific():
+    policy = (ROOT / 'scripts/owner_resource_policy.gd').read_text()
+    index = (ROOT / 'scripts/project_index_client.gd').read_text()
+    for key, default in [
+        ('project_index_health_http_seconds', 5),
+        ('project_index_build_http_seconds', 900),
+        ('project_index_search_http_seconds', 60),
+        ('project_index_manage_http_seconds', 30),
+    ]:
+        assert f'"{key}": {default}' in policy
+        assert f'"{key}": "Индекс проекта:' in policy
+        assert f'_timeout("{key}")' in index
+    assert 'req.timeout = timeout' in index
+    assert 'return float(OwnerResourcePolicy.value(key))' in index
+    assert 'var req := _new_http_request(timeout)' in index
+    assert index.count('_timeout("project_index_search_http_seconds")') == 2
+    assert index.count('_timeout("project_index_manage_http_seconds")') == 2

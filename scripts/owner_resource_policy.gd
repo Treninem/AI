@@ -68,6 +68,10 @@ const DEFAULTS := {
 	"project_index_symbol_query_chars": 500,
 	"project_index_excerpt_chars": 1800,
 	"project_index_result_symbols": 80,
+	"project_index_health_http_seconds": 5,
+	"project_index_build_http_seconds": 900,
+	"project_index_search_http_seconds": 60,
+	"project_index_manage_http_seconds": 30,
 
 	"android_xls_file_bytes": 33554432,
 	"android_xls_directory_entries": 4096,
@@ -291,6 +295,10 @@ const LABELS := {
 	"project_index_symbol_query_chars": "Индекс проекта: символов запроса символов",
 	"project_index_excerpt_chars": "Индекс проекта: символов отрывка",
 	"project_index_result_symbols": "Индекс проекта: символов в результате",
+	"project_index_health_http_seconds": "Индекс проекта: ожидание статуса, секунд (0 = без таймаута)",
+	"project_index_build_http_seconds": "Индекс проекта: ожидание индексации, секунд (0 = без таймаута)",
+	"project_index_search_http_seconds": "Индекс проекта: ожидание поиска, секунд (0 = без таймаута)",
+	"project_index_manage_http_seconds": "Индекс проекта: ожидание состояния/очистки, секунд (0 = без таймаута)",
 
 	"android_xls_file_bytes": "Android XLS: байт входного файла и потока",
 	"android_xls_directory_entries": "Android XLS: записей OLE-каталога",

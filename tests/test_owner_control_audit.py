@@ -198,6 +198,20 @@ def test_file_client_deadline_review_keeps_diagnostic_and_filename_caps_visible(
     assert MODULE.classify(path, 'req.timeout = 4.0', policy)[0] == 'unclassified'
 
 
+def test_project_index_client_deadline_review_keeps_diagnostic_cap_visible():
+    policy = MODULE.load_policy()
+    path = 'scripts/project_index_client.gd'
+    for statement, category in [
+        ('req.timeout = timeout', 'owner_adjustable'),
+        ('var req := _new_http_request(timeout)', 'format_structure'),
+        ('await get_tree().create_timer(0.8).timeout', 'format_structure'),
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+    assert MODULE.classify(path, 'req.timeout = 60.0', policy)[0] == 'unclassified'
+    assert MODULE.classify(path, 'return {"ok": false, "error": raw.substr(0, 4000)}', policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"

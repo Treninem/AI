@@ -8,6 +8,14 @@ class FileClientRouteProbe extends FileIntelligenceClient:
 		captured_timeout = timeout
 		return {"ok": true}
 
+class ProjectIndexRouteProbe extends ProjectIndexClient:
+	var captured_path := ""
+	var captured_timeout := -1.0
+	func _request(path: String, _method: HTTPClient.Method, _payload: Dictionary, timeout: float) -> Dictionary:
+		captured_path = path
+		captured_timeout = timeout
+		return {"ok": true}
+
 class ComputerWritePayloadProbe extends ComputerClient:
 	var captured := {}
 	func _json_request(path: String, _method: HTTPClient.Method, payload: Dictionary = {}, _timeout_seconds: float = 8.0, _require_autonomy: bool = true, _require_computer_permission: bool = false) -> Dictionary:
@@ -747,6 +755,13 @@ func _run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var index_original := OwnerResourcePolicy._cached.duplicate()
 	var index_client := ProjectIndexClient.new()
+	var index_deadlines := {"project_index_health_http_seconds": 5, "project_index_build_http_seconds": 900, "project_index_search_http_seconds": 60, "project_index_manage_http_seconds": 30}
+	for deadline_key in index_deadlines:
+		OwnerResourcePolicy._cached[deadline_key] = index_deadlines[deadline_key]
+		assert(index_client._timeout(deadline_key) == float(index_deadlines[deadline_key]))
+	var default_index_http := index_client._new_http_request(index_client._timeout("project_index_health_http_seconds"))
+	assert(default_index_http.timeout == 5.0)
+	default_index_http.free()
 	for index_key in ["project_index_source_bytes", "project_index_file_symbols", "project_index_search_results", "project_index_symbol_results", "project_index_query_chars", "project_index_symbol_query_chars", "project_index_excerpt_chars", "project_index_result_symbols"]:
 		var index_values := {}
 		index_values[index_key] = 0
@@ -755,6 +770,39 @@ func _run() -> void:
 		index_values[index_key] = 10001
 		assert(OwnerResourcePolicy.save(index_values, path) == OK)
 		assert(OwnerResourcePolicy.limits(path)[index_key] == 10001)
+	for deadline_key in index_deadlines:
+		assert(OwnerResourcePolicy.save({deadline_key: 0}, path) == OK)
+		assert(OwnerResourcePolicy.limits(path)[deadline_key] == 0)
+		assert(OwnerResourcePolicy.save({deadline_key: 10001}, path) == OK)
+		assert(OwnerResourcePolicy.limits(path)[deadline_key] == 10001)
+	assert(OwnerResourcePolicy.save({"project_index_health_http_seconds": -1}, path) == ERR_INVALID_PARAMETER)
+	assert(OwnerResourcePolicy.save({"project_index_build_http_seconds": 1.5}, path) == ERR_INVALID_PARAMETER)
+	OwnerResourcePolicy._cached.project_index_health_http_seconds = 9
+	OwnerResourcePolicy._cached.project_index_build_http_seconds = 91
+	OwnerResourcePolicy._cached.project_index_search_http_seconds = 45
+	OwnerResourcePolicy._cached.project_index_manage_http_seconds = 31
+	var exact_index_http := index_client._new_http_request(index_client._timeout("project_index_build_http_seconds"))
+	assert(exact_index_http.timeout == 91.0)
+	exact_index_http.free()
+	if OS.get_name() == "Windows":
+		var index_probe := ProjectIndexRouteProbe.new()
+		await index_probe.health()
+		assert(index_probe.captured_path == "/health" and index_probe.captured_timeout == 9.0)
+		await index_probe.index_project("user://", 1)
+		assert(index_probe.captured_path == "/index" and index_probe.captured_timeout == 91.0)
+		await index_probe.search("", "fixture", 1)
+		assert(index_probe.captured_path == "/search" and index_probe.captured_timeout == 45.0)
+		await index_probe.search_symbols("", "fixture", 1)
+		assert(index_probe.captured_path == "/symbols" and index_probe.captured_timeout == 45.0)
+		await index_probe.status()
+		assert(index_probe.captured_path == "/status" and index_probe.captured_timeout == 31.0)
+		await index_probe.clear()
+		assert(index_probe.captured_path == "/clear" and index_probe.captured_timeout == 31.0)
+		index_probe.free()
+	OwnerResourcePolicy._cached.project_index_build_http_seconds = 0
+	var unlimited_index_http := index_client._new_http_request(index_client._timeout("project_index_build_http_seconds"))
+	assert(unlimited_index_http.timeout == 0.0)
+	unlimited_index_http.free()
 	OwnerResourcePolicy._cached.project_index_search_results = 1000
 	assert(index_client._result_limit(1500, "project_index_search_results") == 1000)
 	assert(index_client._result_limit(0, "project_index_search_results") == 1000)

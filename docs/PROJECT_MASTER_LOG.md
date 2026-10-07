@@ -8635,3 +8635,29 @@ AuroraFox должна различать:
 
 DONE: уточнено, что расширенный сценарий 1–344 является ПОСЛЕРЕЛИЗНОЙ проверкой и не изменяет старый план выпуска V1.5.0.0.
 REMAINING: продолжать разработку и выпуск V1.5.0.0 строго по прежнему каноническому плану; после выпуска выполнить 1–344 и проверять реальные обновления V1.5.0.x.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PROJECT-INDEX-CLIENT-DEADLINES
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Code/project work and owner-controlled operational limits.
+ROADMAP_SECTION:4 Code/project work, UI/performance, security/privacy and exact-SHA exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:97789f38ee8aa88690cb5e82b875069bf1dab269; local and origin feature synchronized; fresh main fetched and latest owner post-release decision checked.
+OWNED_PATHS:scripts/project_index_client.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:prior Project Index source claim was published and released; this package changes only Windows client request deadlines and policy/UI exposure. Prior File client deadline claim published at037c08e, exact current Core/Voice run37686558759 SUCCESS. Latest Windows/Android/Knowledge package gates remain pending and cannot count PASS.
+NON_BLOCKERS:owner's expanded344-point real-PC scenario is post-release per latest journal and does not change original V1.5 pre-release gates. No V1.6 scope expansion.
+INTENDED_BUMP:D accumulated version-last; canonical unchanged.
+ACCEPTANCE_GATES:owner-visible persisted independent health/index/search/status client HTTP deadlines preserve5/900/60/30 defaults, support exact positive and zero unlimited without changing backend SQLite lock or index traversal budgets; genuine Godot route and HTTPRequest property fixtures, invalid input/persistence tests, exact audited classifications with unknown-cap adversarial checks, relevant native Core/Voice and Windows package CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement one Project Index client deadline package and run genuine local Godot/Python checks before publishing after exact-head reconciliation.
+
+PROJECT_INDEX_CLIENT_LOCAL_CHECKPOINT: OwnerResourcePolicy now exposes separate Windows Project Index client HTTP deadlines5/900/60/30seconds for health/index/search/status-management. Generic Settings resource panel shows/persists all four; zero sets HTTPRequest.timeout0.0 without altering backend SQLite lock policy or file/query/result limits. Real public route probe checks health/index/search/symbols/status/clear mapping and real HTTPRequest property at defaults/raised/zero. Exact audit review classifies5 Project Index client lines with narrow anchored rationale; error detail4000 stays unclassified. Current audit999unclassified, complete:false.
+LOCAL_TESTS: official Godot4.7.1 Windows owner-resource smoke exits0 with AURORA_OWNER_RESOURCE_LIMITS_OK (pre-existing20 ObjectDB/8 resource exit diagnostics); official headless editor import exits0;38 Python owner runtime/audit tests PASS with UTF8; diff check PASS. Latest exact published97789f3 Core/Voice run37686558759 SUCCESS; its other long release runs were pending/in progress at previous observation and do not prove this new source.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:four owner client deadlines, genuine route/HTTPRequest/persistence/invalid checks and exact audit review.
+REMAINING:publish this package; new exact-SHA native CI/package,999 owner inventory findings, original release/device/update/version-last gates.
+BLOCKERS:none in local package; native exact-SHA acceptance pending.
+NEXT:commit/push coherent Project Index client package by expected-head fast-forward, verify remote parity, inspect exact CI before next source package; keep post-release344-point owner-PC pass separate per latest owner decision.
