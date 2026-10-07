@@ -9045,3 +9045,36 @@ DONE:combined218 finding review published/synchronized; exact owner-audit CI and
 REMAINING:675 owner inventory candidates, genuine source repairs and final exact-SHA Windows/Android/package/update/version gates.
 BLOCKERS:none in audit metadata scope.
 NEXT:publish this exact-CI journal record, verify local/web identity, then claim source-level repair for a high-impact confirmed cap or another coherent ≥100 finding batch.
+
+AUDIT_EVIDENCE_PUBLICATION: journal SHA864e9ea5a5c0806710ad2264ac348bc360da2760 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37702460068 SUCCESS includes owner-control audit31PASS. Other long exact-SHA platform checks in progress without red at last check; release readiness82% unchanged. Source review found a higher-impact cross-stack inconsistency: private OwnerResourcePolicy already exposes candidate_source_bytes, but CoreCandidateSubmitter still enforces fixed1MiB, API queue fixed1MiB/2MiB encoded and Pydantic schema2MiB, so a raised owner setting cannot be delivered end-to-end.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:218-finding bulk audit finalized and synchronized; candidate submission fixed-cap chain identified.
+REMAINING:repair candidate submission chain with source tests and exact CI;675 inventory findings and final release gates.
+BLOCKERS:none after narrow claim reconciliation below.
+NEXT:claim candidate-source byte repair across client/API, preserve signed-promotion/auth/body-size trust boundaries and prove default/raised/zero behavior.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-CANDIDATE-SOURCE-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-adjustable Core candidate source capacity with signed-update promotion safety.
+ROADMAP_SECTION:4 controlled self-improvement/Core promotion, owner limits, local self-primary architecture and API stability.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no authority/promotion architecture change.
+STARTING_HEAD:864e9ea5a5c0806710ad2264ac348bc360da2760; fresh main/feature fetched, main ancestor confirmed, full journal/roadmap/memory/ADRs and active claims checked, local/origin/web exact.
+CLAIM_RECONCILIATION:narrow take-over of api/core_candidate_queue.py, api/server.py and tests/test_core_candidate_queue.py from stale broad CHAT-2026-09-16-SERVER-DB path list for this confirmed owner-budget chain only. Previous queue capacity source claim released. Other SERVER-DB paths remain owned there; scripts/core_candidate_submitter.gd has no competing source claim. No parallel edit detected on fresh remote branch.
+OWNED_PATHS:scripts/core_candidate_submitter.gd;api/core_candidate_queue.py;api/server.py;tests/core_candidate_submitter_smoke.gd;tests/test_core_candidate_queue.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:trusted deployment AURORAFOX_API_MAX_BODY_BYTES still independently governs total HTTP body; server candidate-source budget is trusted startup/operator policy, never client-declared. Existing auth scopes, allowlisted targets, SHA/evidence checks, signed-update-only promotion, permission and privacy gates unchanged.
+NON_BLOCKERS:future V1.6 cognition, public-scale server redesign and post-release344-point owner-PC field scenario.
+INTENDED_BUMP:D for behavior repair; canonical version remains last after release gates.
+ACCEPTANCE_GATES:default1MiB behavior retained; raised private client limit accepts valid >1MiB source, zero removes client cap; independent trusted server startup budget accepts raised/zero with bounded raw/encoded preflight, invalid negative/fractional config fails visibly; FastAPI request schema does not introduce smaller fixed cap; request-body middleware still independently rejects oversized HTTP bodies, and auth/manifest/hash/allowlist gates stay strict. Genuine Godot submitter smoke, Python queue/API/owner tests, exact API/Core CI and diff check required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:add failing >1MiB client/server regressions, implement owner/deployment budgets and run complete relevant gates before publication.
+CLAIM_AMENDMENT:docs/AURORA_CORE_MIGRATION.md added to owned paths for the operator-facing source-budget deployment contract.
+IMPLEMENTATION_CHECKPOINT:client submitter now uses persisted OwnerResourcePolicy candidate_source_bytes, checks on-disk length before allocation and read bytes afterward; default1MiB and zero semantics retained. API queue uses separate trusted AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES default1MiB, derives Base64 preflight from decoded-byte budget, rejects invalid operator values, and leaves request-body middleware independent. Pydantic candidate request no longer reimposes fixed2MiB encoded cap. Signed-update evidence, target allowlist, SHA and auth checks untouched. Operator deployment setting documented in AURORA_CORE_MIGRATION. Pre-fix Python regression failed at missing max_source_bytes constructor; fixed focused candidate/owner suite42PASS. Selected API hardening/gateway/privacy/request-limit suite82PASS with authorized local loopback. Godot smoke added but native execution awaits exact-SHA CI. Audit unclassified675 at prior exact head; current working tree667 after exact review of 14 new owner-source statements, with unrelated queue, retry, timeout and API caps still unclassified. Prior SHA864e9ea API/Core/Integration and several other workflows SUCCESS; Windows Package, Android E2E and Knowledge 1GiB remain pending at last GitHub check. No readiness increase; 82%.
+SOURCE_COMPLETE:YES for candidate-source chain; awaiting publication and exact-SHA native gates.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:final diff/owner regression, commit and push by exact branch CAS; run exact API/Core/Integration checks, inspect inherited long platform gates and reconcile local/origin/web SHA.

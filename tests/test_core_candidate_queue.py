@@ -66,6 +66,42 @@ def test_raised_queue_capacity_counts_all_persisted_items_before_admission(tmp_p
     assert len(list(queue.queue_root.iterdir())) == 201
 
 
+def test_candidate_source_budget_default_raised_zero_and_invalid_operator_config(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    candidate = "class_name LargeCandidate\nextends RefCounted\n#" + "x" * (2 * 1024 * 1024)
+    raw = candidate.encode("utf-8")
+    manifest, _, _ = _submission("candidate_large")
+    manifest["candidate_sha256"] = _sha(candidate)
+    encoded = base64.b64encode(raw).decode("ascii")
+    assert len(encoded) > 2 * 1024 * 1024
+
+    with pytest.raises(CoreCandidateQueueError, match="size|limit|large"):
+        CoreCandidateQueue(tmp_path / "default").submit(manifest, encoded, owner="device")
+
+    raised = CoreCandidateQueue(tmp_path / "raised", max_source_bytes=len(raw))
+    assert raised.submit(manifest, encoded, owner="device")["size_bytes"] == len(raw)
+    assert (raised.queue_root / "candidate_large" / "scripts" / "memory_store.gd").read_bytes() == raw
+
+    unlimited = CoreCandidateQueue(tmp_path / "unlimited", max_source_bytes=0)
+    assert unlimited.submit(manifest, encoded, owner="device")["size_bytes"] == len(raw)
+
+    monkeypatch.setenv("AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES", str(len(raw)))
+    from_environment = CoreCandidateQueue(tmp_path / "environment")
+    assert from_environment.submit(manifest, encoded, owner="device")["size_bytes"] == len(raw)
+
+    for invalid in ["-1", "1.5", "not-an-integer"]:
+        monkeypatch.setenv("AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES", invalid)
+        with pytest.raises(ValueError, match="AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES"):
+            CoreCandidateQueue(tmp_path / "invalid")
+
+
+def test_candidate_request_schema_does_not_reimpose_two_mib_encoded_cap(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AURORAFOX_USER_DIR", str(tmp_path))
+    from api.server import CoreCandidateSubmitRequest
+
+    request = CoreCandidateSubmitRequest(manifest={}, content_base64="A" * (2 * 1024 * 1024 + 4))
+    assert len(request.content_base64) > 2 * 1024 * 1024
+
+
 def test_server_exposes_candidate_routes_only_behind_explicit_scopes() -> None:
     server = (ROOT / "api" / "server.py").read_text(encoding="utf-8")
     assert '@app.post("/v1/core-candidates")' in server

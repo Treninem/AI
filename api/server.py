@@ -171,7 +171,7 @@ class ToolRunRequest(BaseModel):
 
 class CoreCandidateSubmitRequest(BaseModel):
     manifest: dict[str, Any]
-    content_base64: str = Field(min_length=1, max_length=2 * 1024 * 1024)
+    content_base64: str = Field(min_length=1)
     source: str = Field(default="aurorafox-client", min_length=1, max_length=128)
 
 

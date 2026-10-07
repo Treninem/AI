@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import os
 import re
 import shutil
 import tempfile
@@ -12,6 +13,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from api.database import atomic_write_text
+from api.request_limits import _nonnegative_budget
 
 ALLOWED_TARGETS = {
     "scripts/cognition_layer.gd",
@@ -19,8 +21,8 @@ ALLOWED_TARGETS = {
     "scripts/memory_store.gd",
     "agent/goals.gd",
 }
-MAX_SOURCE_BYTES = 1024 * 1024
-MAX_ENCODED_BYTES = 2 * 1024 * 1024
+DEFAULT_SOURCE_BYTES = 1024 * 1024
+SOURCE_BYTES_ENV = "AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES"
 MAX_QUEUE_ITEMS = 200
 CANDIDATE_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -48,15 +50,16 @@ def _safe_target(value: Any) -> str:
     return target
 
 
-def _decode_source(content_base64: str) -> bytes:
-    if not content_base64 or len(content_base64) > MAX_ENCODED_BYTES:
+def _decode_source(content_base64: str, max_source_bytes: int = DEFAULT_SOURCE_BYTES) -> bytes:
+    max_encoded_bytes = 4 * ((max_source_bytes + 2) // 3) if max_source_bytes else 0
+    if not content_base64 or (max_encoded_bytes and len(content_base64) > max_encoded_bytes):
         raise CoreCandidateQueueError("candidate source payload is empty or too large")
     try:
         raw = base64.b64decode(content_base64, validate=True)
     except Exception as exc:
         raise CoreCandidateQueueError("candidate source is not valid base64") from exc
-    if not raw or len(raw) > MAX_SOURCE_BYTES:
-        raise CoreCandidateQueueError("candidate source is empty or exceeds the 1 MiB limit")
+    if not raw or (max_source_bytes and len(raw) > max_source_bytes):
+        raise CoreCandidateQueueError("candidate source is empty or exceeds the configured size limit")
     try:
         raw.decode("utf-8")
     except UnicodeDecodeError as exc:
@@ -64,7 +67,7 @@ def _decode_source(content_base64: str) -> bytes:
     return raw
 
 
-def validate_submission(manifest: dict[str, Any], content_base64: str) -> tuple[dict[str, Any], bytes]:
+def validate_submission(manifest: dict[str, Any], content_base64: str, max_source_bytes: int = DEFAULT_SOURCE_BYTES) -> tuple[dict[str, Any], bytes]:
     if not isinstance(manifest, dict):
         raise CoreCandidateQueueError("candidate manifest must be an object")
     candidate_id = str(manifest.get("candidate_id", "")).strip()
@@ -90,7 +93,7 @@ def validate_submission(manifest: dict[str, Any], content_base64: str) -> tuple[
         raise CoreCandidateQueueError("candidate source-contract evidence is missing or failed")
     if not isinstance(review, dict) or review.get("ok") is not True:
         raise CoreCandidateQueueError("candidate comparative-review evidence is missing or failed")
-    raw = _decode_source(content_base64)
+    raw = _decode_source(content_base64, max_source_bytes)
     actual_sha = _sha256(raw)
     if actual_sha != candidate_sha:
         raise CoreCandidateQueueError("candidate source SHA-256 does not match manifest")
@@ -103,7 +106,9 @@ def validate_submission(manifest: dict[str, Any], content_base64: str) -> tuple[
 
 
 class CoreCandidateQueue:
-    def __init__(self, root: Path, max_items: int = MAX_QUEUE_ITEMS):
+    def __init__(self, root: Path, max_items: int = MAX_QUEUE_ITEMS, max_source_bytes: int | None = None):
+        configured_source_bytes = os.getenv(SOURCE_BYTES_ENV, str(DEFAULT_SOURCE_BYTES)) if max_source_bytes is None else max_source_bytes
+        self.max_source_bytes = _nonnegative_budget(configured_source_bytes, SOURCE_BYTES_ENV)
         self.root = root.resolve()
         self.queue_root = self.root / "core_candidates"
         self.queue_root.mkdir(parents=True, exist_ok=True)
@@ -121,7 +126,7 @@ class CoreCandidateQueue:
         owner: str,
         source: str = "aurorafox-client",
     ) -> dict[str, Any]:
-        clean, raw = validate_submission(manifest, content_base64)
+        clean, raw = validate_submission(manifest, content_base64, self.max_source_bytes)
         candidate_id = clean["candidate_id"]
         target = clean["target"]
         with self._write_lock:

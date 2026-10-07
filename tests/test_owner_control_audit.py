@@ -367,7 +367,6 @@ def test_api_personal_data_bulk_review_keeps_operational_caps_visible():
         ('api/account_store.py', 'self.access_ttl = max(60, int(access_ttl))'),
         ('api/agent_bridge.gd', '@export_range(1, 128, 1) var max_clients := 32'),
         ('api/backup_service.py', 'source_db = sqlite3.connect(source_uri, uri=True, timeout=30)'),
-        ('api/core_candidate_queue.py', 'MAX_SOURCE_BYTES = 1024 * 1024'),
         ('api/learning_store.py', 'self.max_events = max(1000, max_events)'),
         ('api/local_core_client.py', 'self.timeout = max(5.0, timeout)'),
         ('api/server.py', 'limit: int = Query(default=200, ge=1, le=500),'),
@@ -376,6 +375,21 @@ def test_api_personal_data_bulk_review_keeps_operational_caps_visible():
     ]
     for path, statement in unresolved:
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
+def test_candidate_source_budget_audit_is_exact_and_other_candidate_caps_stay_visible():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('scripts/core_candidate_submitter.gd', 'var max_source_bytes := OwnerResourcePolicy.value("candidate_source_bytes")'),
+        ('scripts/core_candidate_submitter.gd', 'if max_source_bytes > 0 and source_size > max_source_bytes:'),
+        ('api/core_candidate_queue.py', 'self.max_source_bytes = _nonnegative_budget(configured_source_bytes, SOURCE_BYTES_ENV)'),
+        ('api/core_candidate_queue.py', 'if not raw or (max_source_bytes and len(raw) > max_source_bytes):'),
+    ]
+    for path, statement in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == 'owner_adjustable'
+        assert MODULE.classify(path, statement + ' FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    assert MODULE.classify('api/core_candidate_queue.py', 'MAX_QUEUE_ITEMS = 200', policy)[0] == 'unclassified'
 
 
 def test_evolution_learning_bulk_review_keeps_real_evidence_caps_visible():

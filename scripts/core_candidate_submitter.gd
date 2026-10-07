@@ -9,7 +9,6 @@ const CANDIDATE_ROOT := "user://core_candidates"
 const SUBMISSION_STATE_NAME := "submission.json"
 const API_URL_ENV := "AURORAFOX_PROMOTION_API_URL"
 const API_TOKEN_ENV := "AURORAFOX_PROMOTION_API_TOKEN"
-const MAX_SOURCE_BYTES := 1024 * 1024
 const SCAN_INTERVAL_SECONDS := 60.0
 const MAX_SCAN_CANDIDATES := 50
 const MIN_RETRY_SECONDS := 30.0
@@ -63,10 +62,19 @@ func build_submission(manifest_path: String, candidate_path: String, source := "
 	var target := str(manifest.get("target", ""))
 	if target.is_empty() or target.begins_with("/") or target.contains("..") or target.contains("\\"):
 		return {"ok": false, "error": "candidate target is invalid"}
-	var bytes := FileAccess.get_file_as_bytes(candidate_path)
+	var max_source_bytes := OwnerResourcePolicy.value("candidate_source_bytes")
+	var candidate_file := FileAccess.open(candidate_path, FileAccess.READ)
+	if candidate_file == null:
+		return {"ok": false, "error": "candidate source cannot be opened"}
+	var source_size := candidate_file.get_length()
+	if max_source_bytes > 0 and source_size > max_source_bytes:
+		candidate_file.close()
+		return {"ok": false, "error": "candidate source exceeds submission size limit"}
+	var bytes := candidate_file.get_buffer(source_size)
+	candidate_file.close()
 	if bytes.is_empty():
 		return {"ok": false, "error": "candidate source is empty"}
-	if bytes.size() > MAX_SOURCE_BYTES:
+	if max_source_bytes > 0 and bytes.size() > max_source_bytes:
 		return {"ok": false, "error": "candidate source exceeds submission size limit"}
 	var expected_sha := str(manifest.get("candidate_sha256", "")).to_lower()
 	var actual_sha := _sha256_bytes(bytes)
