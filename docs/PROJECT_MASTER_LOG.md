@@ -7905,3 +7905,20 @@ ACCEPTANCE_GATES:independent exact/raised/0 production request controls with inv
 NEXT:implement independent startup input policy and actual service tests as coherent batch.
 
 SANDBOX_INPUT_VALIDATION:trusted startup independent command64/cwd1024/writepath1024/task4000 controls exported from private owner settings; labels require Computerrestart. Zero maps PydanticmaxNone, no clipping; invalidnegative/fraction/NaN/empty/nonASCIIinteger startupfailclosed. ActualHTTP exact2/20/unlimitedrequests preserve task/path, acceptedwritefilesystembytes, overbudget422, missingauth401, traversal400, emptycommand/path422 and disableddegradedexec403. Long1404charpath identity validated without falsely claiming nativeOSpath acceptance. RelevantComputer/owner/audit120PASS6SKIP nativefixtures, GodotownerPASS with existing20ObjectDB/8resourceexitdiagnostics. Initial fixture type inference parseerror corrected with explicitString then actual rerun; not countedinitially. No freeze, newsource unpublished.
+
+PUBLICATION_CHECKPOINT:SANDBOX-INPUT-CONTROLS publishedb4850bc3efb438101f2783a372cf55220f865054/treef45c5e14905abdf3ee8bbff199a8e83d5fe93e24 on50b472a CAS fast-forward;8ownedpaths,120PythonPASS6nativeSKIP/GodotownerPASS/audit17PASS; source RELEASED/exactCI pending.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-CANDIDATE-SELFPRIMARY-CONTRACT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing Core local-only/cancellation acceptance
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:b4850bc3efb438101f2783a372cf55220f865054
+INTENDED_BUMP:D version-last
+OWNED_PATHS:tests/test_standalone_core_contract.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator explicit takeover stale candidate self-primary source contract after92287guardwrapper. Actual50b472WindowsComputerSUCCESS; Voice/cross-subsystem/standalone contract all fail same stale expectation of direct ai.chat in proposal/review. No production Voice malfunction evidenced by these failures.
+NON_BLOCKERS:preserve local-only AI, no external fallback, guard mandatory,3..10 hard gates, full native gates unchanged; no runtime source expansion/version/S3.
+ACCEPTANCE_GATES:contract follows proposal/review into guarded helper and proves helper delegates ai.chat with before/after checks, rejects compatibility escape; coherent broader standalone/candidate/runtime/owner batch plus existing genuine Godot guard fixture.
+NEXT:repair stale contract to retain intended self-primary assertion through guard helper; validate batch and publish.
+
+CANDIDATE_SELFPRIMARY_VALIDATION:actual71PythonPASS across standalone/candidate/specialist-runtime/evolution/owner/audit; genuineGodot guard+tournamentPASS. Stale direct-call string assertion now follows guarded helper into production ai.chat with mandatory before/after guards; still forbids compatibilitypath, preserves3..10/default5/no-autoapply. Same stale failure observed50b472 Voice/cross/standalonejobs, sharedcause repaired; not claimed nativeCorequalityPASS.

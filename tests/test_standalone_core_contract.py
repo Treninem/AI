@@ -71,8 +71,13 @@ def test_core_improvement_uses_normal_self_primary_ai_path() -> None:
     pipeline = read("scripts/core_improvement_pipeline.gd")
     proposal = pipeline.split("func _propose", 1)[1].split("func _validate_candidate", 1)[0]
     review = pipeline.split("func _comparative_review", 1)[1].split("func _select_tournament_winner", 1)[0]
-    assert 'await ai.chat([{"role":"user", "content":prompt}], temperature)' in proposal
-    assert 'await ai.chat([{"role":"user", "content":prompt}], 0.0)' in review
+    assert 'await _candidate_chat([{"role":"user", "content":prompt}], temperature)' in proposal
+    assert 'await _candidate_chat([{"role":"user", "content":prompt}], 0.0)' in review
+    guarded_chat = pipeline.split("func _candidate_chat", 1)[1].split("func _candidate_tool", 1)[0]
+    before = guarded_chat.index('_candidate_allowed("before_model")')
+    local = guarded_chat.index("await ai.chat(messages, temperature)")
+    after = guarded_chat.index('_candidate_allowed("after_model")')
+    assert before < local < after
     assert "chat_with_compatibility" not in pipeline
     assert "MIN_TOURNAMENT_CANDIDATES := 3" in pipeline
     assert "MAX_TOURNAMENT_CANDIDATES := 10" in pipeline

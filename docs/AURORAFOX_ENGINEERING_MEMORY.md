@@ -1091,3 +1091,6 @@ An availability await before _running allowed a second tournament to overwrite s
 
 ### AF-163 — Sandbox input policy does not waive filesystem or execution boundaries
 Fixed Pydantic command64/cwd1024/writepath1024/task4000 are operational request ceilings. Independent trusted startup integer settings and private Godotexport preserve defaults;0maxNone retains fullidentity, not silent clipping. Mandatory nonemptycommand/path, auth, containment and degradedexecution opt-in remain. Actual small-budget HTTPwrite/workspacefixtures verify full acceptedpayload; longpath schema fixture proves requestidentity only, not Windowsfilesystem path support. OSerrors are not proof of an owner ceiling. Invalidnegative/fraction/nonASCII startup policy fails closed.
+
+### AF-164 — Self-primary source contracts follow control wrappers into the real inference call
+Candidate cancellation wrapper moved ai.chat out of proposal/review. Three50b472CIjobs failed a stale direct-call string expectation even though production still uses same local-only AI. Update contract to follow proposal/review -> guarded helper -> ai.chat, assert before/after control ordering and retain compatibility prohibition. Actual71Python and genuineGodot guardsPASS; do not discard local-only requirement or labelCI failure as Voice runtime defect.
