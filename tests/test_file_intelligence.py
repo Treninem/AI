@@ -178,6 +178,49 @@ def test_health_claims_vision_only_with_selected_model(monkeypatch: pytest.Monke
     assert file_service.VISION_MODEL in result["installed_models"]
 
 
+def test_owner_health_probe_deadlines_preserve_default_and_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    observed: list[tuple[str, float | None]] = []
+
+    def fake_get(url: str, timeout: float | None):
+        observed.append((url, timeout))
+        return _FakeResponse(200, {"models": []})
+
+    monkeypatch.setattr(file_service.requests, "get", fake_get)
+    monkeypatch.setattr(file_service, "local_ocr_health", lambda: {"available": False, "languages": []})
+    for ollama_ms, voice_ms in [(1500, 1500), (25, 2500), (0, 0)]:
+        monkeypatch.setattr(file_service, "OLLAMA_HEALTH_TIMEOUT_MS", ollama_ms)
+        monkeypatch.setattr(file_service, "VOICE_HEALTH_TIMEOUT_MS", voice_ms)
+        observed.clear()
+        result = file_service.health()
+        assert result["ok"] is True
+        assert [timeout for _, timeout in observed] == [
+            None if ollama_ms == 0 else ollama_ms / 1000.0,
+            None if voice_ms == 0 else voice_ms / 1000.0,
+        ]
+        assert result["limits"]["ollama_health_timeout_ms"] == ollama_ms
+        assert result["limits"]["voice_health_timeout_ms"] == voice_ms
+
+
+def test_owner_pdf_render_scale_keeps_independent_pixel_bound(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    scale = file_service._pdf_render_scale
+    assert scale(100.0, 100.0, 1_000_000, 200) == 2.0
+    assert scale(100.0, 100.0, 1_000_000, 150) == 1.5
+    assert scale(100.0, 100.0, 1_000_000, 0) == 10.0
+    with pytest.raises(ValueError):
+        scale(100.0, 100.0, 1_000_000, -1)
+    monkeypatch.setenv("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", "0")
+    assert file_service._operational_budget_from_env("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", 200) == 0
+    monkeypatch.setenv("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", "1.5")
+    with pytest.raises(ValueError):
+        file_service._operational_budget_from_env("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", 200)
+    source = tmp_path / "owner.pdf"
+    source.write_bytes(b"pdf fixture")
+    monkeypatch.setattr(file_service, "MAX_PDF_RENDER_SCALE_PERCENT", 200)
+    old_key = file_service._cache_key(source, "", False, 1000)
+    monkeypatch.setattr(file_service, "MAX_PDF_RENDER_SCALE_PERCENT", 0)
+    assert file_service._cache_key(source, "", False, 1000) != old_key
+
+
 def test_spreadsheet_budget_reaches_full_service_response_and_cache(tmp_path: Path, monkeypatch) -> None:
     from openpyxl import Workbook
     path = tmp_path / "owner_budget.xlsx"

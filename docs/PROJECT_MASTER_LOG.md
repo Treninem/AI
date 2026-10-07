@@ -8088,3 +8088,31 @@ DONE:173 exact reviewed audit findings classified across five semantic groups; 2
 REMAINING:1017 inventory findings, source fixes for actual operational caps, exact-SHA CI/package/device/update/release gates and version-last.
 BLOCKERS:no new red gate; Windows package old-SHA run pending, owner inventory incomplete by explicit audit.
 NEXT:publish this reviewed policy/test package by expected-head fast-forward; continue largest remaining reachable operational limits in separate tested source batches, then rerun audit until honest complete.
+
+WINDOWS_PACKAGE_RESULT: exact source SHA d79726ce96d09d5e5c577832226aa30fd7b0f114 Windows Package run37667509617 SUCCESS, including process contract, packaged embedded Core integrity, exported executable/Knowledge route, Inno installer, historical V1.2/V1.3 in-place bridges, silent install/installed-app/local services and portable artifacts. This proves that older source SHA, not later audit-only heads; all new SHA gates remain separate.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-FILE-HEALTH-RENDER-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing File Intelligence owner-controlled operational limits.
+ROADMAP_SECTION:4 File Intelligence, UI/performance, security/privacy.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:7bc60d1433b6523823c702bc9d1048ecd4a75ce7; local/origin matched; fresh main/docs/ADRs read.
+OWNED_PATHS:file_intelligence/file_service.py;scripts/file_intelligence_client.gd;scripts/settings_overlay.gd;tests/test_file_intelligence.py;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:take over prior File Intelligence source claim at7677 after its published source checkpoint; current branch contains that code, no uncommitted local or parallel source changes observed. Earlier audit left exact PDF render scale2.0 and optional local Ollama/Voice health timeout1.5 unclassified. Existing pixel budget remains authoritative.
+NON_BLOCKERS:optional Ollama is compatibility only; health status does not become required Core intelligence. No future V1.6 media scope expansion.
+INTENDED_BUMP:D accumulated version-last.
+ACCEPTANCE_GATES:private owner settings preserve defaults, support zero unlimited where pixel/memory policy remains separate, validate negative/fractional startup input, propagate through trusted Windows backend startup and visible Settings; native PDF render stays within owner pixel budget. Genuine Python/FastAPI and Godot owner fixtures exercise default/exact/raised/zero and invalid; adversarial audit leaves unrelated caps unknown. Relevant exact CI and Windows package gates stay required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement the three observed operational controls as one coherent source/test package and publish after local behavior checks.
+
+FILE_HEALTH_RENDER_LOCAL_CHECKPOINT: owner-private File Intelligence settings now add Ollama/Voice health deadlines1500ms each and PDF OCR render scale200percent, persisted and exported at trusted Windows backend startup; visible Settings advanced rows retain defaults and show0 semantics. Requests receive exact per-probe timeout, with0 mapped to None. PDF scale0 removes that scale cap but remains bounded by the separate native pixel-allocation budget; cache key includes scale percent to avoid stale OCR. Health reports effective values. Negative/fractional owner values fail closed; startup rejects invalid environment integers. No external AI is made required.
+LOCAL_TESTS: actual Python File Intelligence suite25PASS and listing owner-budget suite6PASS on local PC with authorized temp access. New health/PDF fixtures2PASS under standard sandbox; owner runtime/audit contracts34PASS; official Godot4.7.1 owner-resource smoke exits0 with AURORA_OWNER_RESOURCE_LIMITS_OK (existing20 ObjectDB/8 resource exit diagnostics unchanged). Python compile and diff check PASS. Initial broad standard-sandbox runs produced WinError5 on temporary-file creation/cleanup, not source assertion failures; rerun all affected suites with local temp access, no waiver. Current owner audit unclassified1014, complete:false. Previous source SHA d79726c Windows Package run37667509617 SUCCESS; this new package has not yet run native exact-SHA CI.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: three real operational limits implemented end-to-end with owner persistence/UI/backend/cache identity and genuine local behavior fixtures.
+REMAINING:publish this source package, inspect exact File/Voice/Windows package CI, continue1014 residual findings and physical device/update/version-last gates.
+BLOCKERS:none in this local batch; exact native release evidence pending.
+NEXT:commit/push coherent package by expected-head fast-forward and inspect relevant exact CI before next source edit.

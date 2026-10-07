@@ -3,6 +3,13 @@
   "principle": "Operational limits are owner-adjustable defaults. Only authorization, external access control, cryptographic integrity, master-stop, secret/privacy protection and untrusted-code isolation may be hard boundaries.",
   "classifications": [
     {
+      "path": "file_intelligence/file_service.py",
+      "pattern": "^\\s*(?:MAX_PDF_RENDER_SCALE_PERCENT\\ =\\ _operational_budget_from_env\\(\"AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT\",\\ 200\\)|scale\\ =\\ pixel_scale\\ if\\ scale_percent\\ ==\\ 0\\ else\\ min\\(scale_percent\\ /\\ 100\\.0,\\ pixel_scale\\)|r\\ =\\ requests\\.get\\(f\"\\{OLLAMA_URL\\}/api/tags\",\\ timeout=None\\ if\\ OLLAMA_HEALTH_TIMEOUT_MS\\ ==\\ 0\\ else\\ OLLAMA_HEALTH_TIMEOUT_MS\\ /\\ 1000\\.0\\)|try:\\ voice\\ =\\ requests\\.get\\(f\"\\{VOICE_URL\\}/health\",\\ timeout=None\\ if\\ VOICE_HEALTH_TIMEOUT_MS\\ ==\\ 0\\ else\\ VOICE_HEALTH_TIMEOUT_MS\\ /\\ 1000\\.0\\)\\.status_code\\ ==\\ 200)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Windows File Intelligence owner health and PDF render policy",
+      "rationale": "Exact tested trusted startup millisecond health deadlines and PDF render scale percentage. Zero removes that specific ceiling; independent pixel budget still bounds native PDF image allocation. New unrelated caps remain unclassified."
+    },
+    {
       "path": "api/server.py",
       "pattern": "^\\s*(?:PUBLIC_AUTH_RPM\\ =\\ max\\(1,\\ int\\(os\\.getenv\\(\"AURORAFOX_PUBLIC_AUTH_RPM\",\\ \"20\"\\)\\)\\)|app\\.add_middleware\\(PublicAuthRateLimitMiddleware,\\ limit=PUBLIC_AUTH_RPM,\\ window_seconds=60\\.0\\)|def\\ __init__\\(self,\\ limit:\\ int\\ =\\ 60,\\ window:\\ float\\ =\\ 60\\.0\\):|self\\.limit\\ =\\ max\\(1,\\ limit\\)|self\\.window\\ =\\ max\\(1\\.0,\\ window\\)|if\\ len\\(q\\)\\ >=\\ self\\.limit:|raise\\ HTTPException\\(429,\\ \"AuroraFox\\ API\\ rate\\ limit\\ exceeded\"\\)|email:\\ str\\ =\\ Field\\(min_length=3,\\ max_length=320\\)|password:\\ str\\ =\\ Field\\(min_length=10,\\ max_length=1024\\)|token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\)|email:\\ str\\ =\\ Field\\(min_length=3,\\ max_length=320\\)|password:\\ str\\ =\\ Field\\(min_length=1,\\ max_length=1024\\)|refresh_token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\)|email:\\ str\\ =\\ Field\\(min_length=3,\\ max_length=320\\)|token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\)|new_password:\\ str\\ =\\ Field\\(min_length=10,\\ max_length=1024\\)|guest_token:\\ str\\ =\\ Field\\(min_length=16,\\ max_length=512\\))\\s*$",
       "class": "hard_boundary",

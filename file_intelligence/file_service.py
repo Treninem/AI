@@ -56,6 +56,8 @@ QUESTION_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_QUESTION_MAX_CHARS", "
 QUERY_MAX_CHARS = max(1, int(os.getenv("AURORAFOX_FILE_QUERY_MAX_CHARS", "1000")))
 CACHE_MAX_BYTES = _operational_budget_from_env("AURORAFOX_FILE_CACHE_MAX_BYTES", 536870912)
 VISION_TIMEOUT_SECONDS = _operational_budget_from_env("AURORAFOX_FILE_VISION_TIMEOUT_SECONDS", 180) or None
+OLLAMA_HEALTH_TIMEOUT_MS = _operational_budget_from_env("AURORAFOX_FILE_OLLAMA_HEALTH_TIMEOUT_MS", 1500)
+VOICE_HEALTH_TIMEOUT_MS = _operational_budget_from_env("AURORAFOX_FILE_VOICE_HEALTH_TIMEOUT_MS", 1500)
 STT_TIMEOUT_SECONDS = _operational_budget_from_env("AURORAFOX_FILE_STT_TIMEOUT_SECONDS", 300) or None
 VIDEO_TIMEOUT_SECONDS = _operational_budget_from_env("AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS", 240) or None
 VIDEO_MAX_FRAMES = max(1, int(os.getenv("AURORAFOX_FILE_VIDEO_MAX_FRAMES", "8")))
@@ -81,6 +83,7 @@ MAX_PDF_BYTES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_BYTES", str(256 * 1024 * 10
 MAX_PDF_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PDF_PAGES", "1000"))
 MAX_OCR_PAGES = int(os.getenv("AURORAFOX_OCR_MAX_PAGES", "500"))
 MAX_PDF_RENDER_PIXELS = int(os.getenv("AURORAFOX_OCR_MAX_RENDER_PIXELS", str(8_000_000)))
+MAX_PDF_RENDER_SCALE_PERCENT = _operational_budget_from_env("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", 200)
 
 logging.basicConfig(filename=LOG_DIR / "aurora_files.log", level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s", encoding="utf-8")
 log = logging.getLogger("aurora_files")
@@ -142,7 +145,7 @@ def _safe_dir(path: str) -> Path:
 def _cache_key(path: Path, question: str, visual: bool, max_chars: int) -> str:
     st = path.stat()
     from extended_formats import MAX_EPUB_CHAPTERS, MAX_EMBEDDED_TEXT_BYTES, MAX_ARCHIVE_TEXT_ENTRIES
-    extraction_policy = (MAX_PDF_BYTES, MAX_PDF_PAGES, MAX_OCR_PAGES, MAX_PDF_RENDER_PIXELS, MAX_EPUB_CHAPTERS, MAX_EMBEDDED_TEXT_BYTES, MAX_ARCHIVE_TEXT_ENTRIES, VIDEO_MAX_FRAMES, VIDEO_FRAME_INTERVAL_SECONDS, VIDEO_FRAME_MAX_WIDTH, VISION_IMAGE_MAX_WIDTH)
+    extraction_policy = (MAX_PDF_BYTES, MAX_PDF_PAGES, MAX_OCR_PAGES, MAX_PDF_RENDER_PIXELS, MAX_PDF_RENDER_SCALE_PERCENT, MAX_EPUB_CHAPTERS, MAX_EMBEDDED_TEXT_BYTES, MAX_ARCHIVE_TEXT_ENTRIES, VIDEO_MAX_FRAMES, VIDEO_FRAME_INTERVAL_SECONDS, VIDEO_FRAME_MAX_WIDTH, VISION_IMAGE_MAX_WIDTH)
     raw = f"{extraction_policy}|{path}|{st.st_size}|{st.st_mtime_ns}|{question}|{visual}|{max_chars}|{MAX_SPREADSHEET_CELLS}|{MAX_XLS_ROWS}|{MAX_ARCHIVE_ENTRIES}|{MAX_ARCHIVE_EXPANDED}|{MAX_ARCHIVE_TEXT_MEMBER_BYTES}|{MAX_ARCHIVE_TEXT_TOTAL_BYTES}|{MAX_ARCHIVE_LISTING_CHARS}|{ARCHIVE_LISTING_PERCENT}|v5-owner-archive-budgets"
     return hashlib.sha256(raw.encode("utf-8", errors="replace")).hexdigest()
 
@@ -276,12 +279,15 @@ def _usable_pdf_text(text: str) -> bool:
     return len(compact) >= 12 and sum(1 for ch in compact if ch.isalnum()) >= 4
 
 
-def _pdf_render_scale(width: float, height: float, pixel_budget: int) -> float:
+def _pdf_render_scale(width: float, height: float, pixel_budget: int, scale_percent: int = 200) -> float:
     if not (math.isfinite(width) and math.isfinite(height) and width > 0 and height > 0 and pixel_budget >= 1):
         raise ValueError("PDF page has invalid dimensions or local OCR pixel budget")
+    if not isinstance(scale_percent, int) or scale_percent < 0:
+        raise ValueError("PDF render scale percent must be a nonnegative integer")
     # PDFium allocates ceil(width * scale) by ceil(height * scale), not the
     # continuous page area. Bound that allocation before invoking native code.
-    scale = min(2.0, math.sqrt(pixel_budget) / math.sqrt(width) / math.sqrt(height))
+    pixel_scale = math.sqrt(pixel_budget) / math.sqrt(width) / math.sqrt(height)
+    scale = pixel_scale if scale_percent == 0 else min(scale_percent / 100.0, pixel_scale)
     while scale > 0:
         pixels_w, pixels_h = math.ceil(width * scale), math.ceil(height * scale)
         if pixels_w < 1 or pixels_h < 1:
@@ -297,7 +303,7 @@ def _render_pdf_page(pdf: Any, index: int):
     try:
         width, height = page.get_size()
         width = float(width); height = float(height)
-        scale = _pdf_render_scale(width, height, MAX_PDF_RENDER_PIXELS)
+        scale = _pdf_render_scale(width, height, MAX_PDF_RENDER_PIXELS, MAX_PDF_RENDER_SCALE_PERCENT)
         bitmap = page.render(scale=scale)
         try: return bitmap.to_pil().copy()
         finally: bitmap.close()
@@ -663,7 +669,7 @@ def _analyze(path: Path, question: str, visual: bool, max_chars: int = MAX_TEXT_
 
 def _ollama_models() -> tuple[bool, list[str]]:
     try:
-        r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=1.5)
+        r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=None if OLLAMA_HEALTH_TIMEOUT_MS == 0 else OLLAMA_HEALTH_TIMEOUT_MS / 1000.0)
         if r.status_code != 200: return False, []
         models = []
         for item in r.json().get("models", []):
@@ -684,10 +690,10 @@ def _model_installed(model: str, models: list[str]) -> bool:
 @app.get("/health")
 def health() -> dict[str, Any]:
     ollama_online, installed_models = _ollama_models(); vision = ollama_online and _model_installed(VISION_MODEL, installed_models); voice = False
-    try: voice = requests.get(f"{VOICE_URL}/health", timeout=1.5).status_code == 200
+    try: voice = requests.get(f"{VOICE_URL}/health", timeout=None if VOICE_HEALTH_TIMEOUT_MS == 0 else VOICE_HEALTH_TIMEOUT_MS / 1000.0).status_code == 200
     except Exception: pass
     ocr = local_ocr_health()
-    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "spreadsheet_max_cells": MAX_SPREADSHEET_CELLS, "xls_max_rows": MAX_XLS_ROWS, "tree_max_items": MAX_TREE_ITEMS, "search_max_results": MAX_CACHE_SEARCH_RESULTS, "search_excerpt_chars": MAX_CACHE_EXCERPT_CHARS, "archive_listing_max_chars": MAX_ARCHIVE_LISTING_CHARS, "archive_listing_percent": ARCHIVE_LISTING_PERCENT, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS}}
+    return {"ok": True, "backend": "AuroraFileIntelligence", "local_ocr": ocr, "ocr_available": bool(ocr.get("available", False)), "ocr_languages": ocr.get("languages", []), "ollama_online": ollama_online, "vision_online": vision, "vision_model": VISION_MODEL, "installed_models": installed_models, "voice_online": voice, "cache_dir": str(CACHE_DIR), "limits": {"max_file_bytes": MAX_FILE_BYTES, "max_text_chars": MAX_TEXT_CHARS, "request_max_text_chars": MAX_REQUEST_TEXT_CHARS, "spreadsheet_max_cells": MAX_SPREADSHEET_CELLS, "xls_max_rows": MAX_XLS_ROWS, "tree_max_items": MAX_TREE_ITEMS, "search_max_results": MAX_CACHE_SEARCH_RESULTS, "search_excerpt_chars": MAX_CACHE_EXCERPT_CHARS, "archive_listing_max_chars": MAX_ARCHIVE_LISTING_CHARS, "archive_listing_percent": ARCHIVE_LISTING_PERCENT, "max_archive_entries": MAX_ARCHIVE_ENTRIES, "max_archive_expanded": MAX_ARCHIVE_EXPANDED, "max_archive_text_member_bytes": MAX_ARCHIVE_TEXT_MEMBER_BYTES, "max_archive_text_total_bytes": MAX_ARCHIVE_TEXT_TOTAL_BYTES, "max_pdf_bytes": MAX_PDF_BYTES, "max_pdf_pages": MAX_PDF_PAGES, "max_ocr_pages": MAX_OCR_PAGES, "max_pdf_render_pixels": MAX_PDF_RENDER_PIXELS, "max_pdf_render_scale_percent": MAX_PDF_RENDER_SCALE_PERCENT, "ollama_health_timeout_ms": OLLAMA_HEALTH_TIMEOUT_MS, "voice_health_timeout_ms": VOICE_HEALTH_TIMEOUT_MS}}
 
 
 @app.post("/analyze")

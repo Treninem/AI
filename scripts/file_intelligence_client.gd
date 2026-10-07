@@ -16,6 +16,8 @@ const OWNER_LIMIT_DEFAULTS := {
 	"archive_text_entry_max": 4194304,
 	"archive_text_entries": 24,
 	"vision_timeout_seconds": 180,
+	"ollama_health_timeout_ms": 1500,
+	"voice_health_timeout_ms": 1500,
 	"stt_timeout_seconds": 300,
 	"video_timeout_seconds": 240,
 	"video_max_frames": 8,
@@ -43,7 +45,8 @@ const OWNER_LIMIT_DEFAULTS := {
 	"analysis_timeout_seconds": 600,
 	"android_pending_file_jobs": 8,
 	"ocr_max_input_pixels": 64000000,
-	"ocr_max_render_pixels": 8000000
+	"ocr_max_render_pixels": 8000000,
+	"ocr_max_render_scale_percent": 200
 }
 const OWNER_LIMIT_MINIMUMS := {
 	"path_max_chars": 1,
@@ -54,6 +57,8 @@ const OWNER_LIMIT_MINIMUMS := {
 	"archive_text_entry_max": 1,
 	"archive_text_entries": 1,
 	"vision_timeout_seconds": 0,
+	"ollama_health_timeout_ms": 0,
+	"voice_health_timeout_ms": 0,
 	"stt_timeout_seconds": 0,
 	"video_timeout_seconds": 0,
 	"video_max_frames": 1,
@@ -81,7 +86,8 @@ const OWNER_LIMIT_MINIMUMS := {
 	"analysis_timeout_seconds": 1,
 	"android_pending_file_jobs": 1,
 	"ocr_max_input_pixels": 1,
-	"ocr_max_render_pixels": 1
+	"ocr_max_render_pixels": 1,
+	"ocr_max_render_scale_percent": 0
 }
 const OWNER_LIMIT_ENV := {
 	"path_max_chars": "AURORAFOX_FILE_PATH_MAX_CHARS",
@@ -92,6 +98,8 @@ const OWNER_LIMIT_ENV := {
 	"archive_text_entry_max": "AURORAFOX_ARCHIVE_TEXT_ENTRY_MAX",
 	"archive_text_entries": "AURORAFOX_ARCHIVE_TEXT_ENTRIES",
 	"vision_timeout_seconds": "AURORAFOX_FILE_VISION_TIMEOUT_SECONDS",
+	"ollama_health_timeout_ms": "AURORAFOX_FILE_OLLAMA_HEALTH_TIMEOUT_MS",
+	"voice_health_timeout_ms": "AURORAFOX_FILE_VOICE_HEALTH_TIMEOUT_MS",
 	"stt_timeout_seconds": "AURORAFOX_FILE_STT_TIMEOUT_SECONDS",
 	"video_timeout_seconds": "AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS",
 	"video_max_frames": "AURORAFOX_FILE_VIDEO_MAX_FRAMES",
@@ -117,7 +125,8 @@ const OWNER_LIMIT_ENV := {
 	"ocr_max_pdf_pages": "AURORAFOX_OCR_MAX_PDF_PAGES",
 	"ocr_max_pages": "AURORAFOX_OCR_MAX_PAGES",
 	"ocr_max_input_pixels": "AURORAFOX_OCR_MAX_INPUT_PIXELS",
-	"ocr_max_render_pixels": "AURORAFOX_OCR_MAX_RENDER_PIXELS"
+	"ocr_max_render_pixels": "AURORAFOX_OCR_MAX_RENDER_PIXELS",
+	"ocr_max_render_scale_percent": "AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT"
 }
 
 var owner_limits_path := OwnerLimitPersistence.PATH

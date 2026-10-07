@@ -170,12 +170,14 @@ def test_file_cache_zero_review_does_not_hide_fixed_provider_timeouts():
     assert MODULE.classify("file_intelligence/file_service.py", "requests.post(url, timeout=180)", policy)[0] == "unclassified"
 
 
-def test_file_service_budget_propagation_keeps_independent_timeouts_visible():
+def test_file_service_budget_propagation_and_health_controls_keep_unknown_caps_visible():
     policy = MODULE.load_policy()
     path = "file_intelligence/file_service.py"
     reviewed = "if len(items) >= req.max_items:"
     assert MODULE.classify(path, reviewed, policy)[0] == "owner_adjustable"
     assert MODULE.classify(path, reviewed + "  # FIXED_LIMIT = 17", policy)[0] == "unclassified"
+    assert MODULE.classify(path, 'r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=None if OLLAMA_HEALTH_TIMEOUT_MS == 0 else OLLAMA_HEALTH_TIMEOUT_MS / 1000.0)', policy)[0] == "owner_adjustable"
+    assert MODULE.classify(path, "scale = pixel_scale if scale_percent == 0 else min(scale_percent / 100.0, pixel_scale)", policy)[0] == "owner_adjustable"
     assert MODULE.classify(path, 'r = requests.get(f"{OLLAMA_URL}/api/tags", timeout=1.5)', policy)[0] == "unclassified"
     assert MODULE.classify(path, "scale = min(2.0, math.sqrt(pixel_budget) / math.sqrt(width) / math.sqrt(height))", policy)[0] == "unclassified"
 
