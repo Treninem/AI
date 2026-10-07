@@ -469,7 +469,7 @@ func _active_chat_context() -> Array:
 	return history
 
 func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary, retrieved_context: Array, tool_catalog: Array = []) -> String:
-	var recent := memory.recent(8)
+	var recent := memory.recent(OwnerResourcePolicy.count(memory.memory.size(), "agent_recent_items"))
 	var tool_rule := "Инструменты в этой задаче недоступны. НЕ возвращай JSON tool-call и не выдумывай имена инструментов; дай конечный ответ напрямую из разрешённого контекста и релевантной локальной памяти."
 	if not tool_catalog.is_empty():
 		tool_rule = "Используй ТОЛЬКО инструменты из списка ниже. Если нужен инструмент, верни ТОЛЬКО JSON: {\"tool\":\"tool_name\",\"args\":{...}}. Перед возвратом JSON проверь, что все значения, явно названные пользователем, перенесены в args без изменения. Пустой args запрещён для инструмента с непустой schema. Если инструмент не нужен, дай конечный ответ."

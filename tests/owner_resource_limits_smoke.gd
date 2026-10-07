@@ -263,6 +263,31 @@ func _run() -> void:
 	assert(desktop._generation_budget({"max_tokens": 1.5}, false) == -2)
 	OwnerResourcePolicy._cached.chat_max_tokens = 0
 	assert(desktop._generation_budget({}, false) == -1)
+	var context_store := IsolatedMemory.new()
+	for i in range(20):
+		context_store.memory.append({"id": "context-%d" % i, "content": "ownercontext marker-%d" % i, "importance": 0.5, "confidence": 0.5})
+	for cap in [2, 15, 0]:
+		OwnerResourcePolicy._cached.memory_recent_items = cap
+		OwnerResourcePolicy._cached.memory_retrieval_items = cap
+		var expected: int = 20 if cap == 0 else int(cap)
+		assert(context_store.recent().size() == expected)
+		assert(context_store.retrieve("ownercontext").size() == expected)
+		assert(context_store.search_memory("ownercontext").size() == expected)
+		assert(context_store.recent(3).size() == 3)
+		assert(context_store.retrieve("ownercontext", 3).size() == 3)
+		assert(context_store.recent(0).is_empty() and context_store.retrieve("ownercontext", 0).is_empty())
+		OwnerResourcePolicy._cached.agent_recent_items = cap
+		agent.memory = context_store
+		var context_prompt := agent._system_prompt("fixture", [], {}, [], {}, [])
+		assert(context_prompt.contains("marker-19"))
+		assert(context_prompt.contains("marker-0") == (cap == 0))
+	context_store.knowledge = context_store.memory.duplicate(true)
+	OwnerResourcePolicy._cached.memory_retrieval_items = 2
+	assert(context_store.search_knowledge("ownercontext").size() == 2)
+	OwnerResourcePolicy._cached.memory_retrieval_items = 0
+	assert(context_store.search_knowledge("ownercontext").size() == 20)
+	assert(context_store.search_knowledge("ownercontext", 0).is_empty())
+	context_store.free()
 	var store := IsolatedMemory.new()
 	OwnerResourcePolicy._cached.memory_max_items = 0
 	OwnerResourcePolicy._cached.knowledge_max_items = 0

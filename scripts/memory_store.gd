@@ -143,14 +143,18 @@ func _schedule_persistence(memory_changed: bool, knowledge_changed: bool) -> voi
 	_persistence_flush_scheduled = true
 	call_deferred("flush_persistence")
 
-func recent(limit: int = 12) -> Array:
+func recent(limit: int = -1) -> Array:
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size(), "memory_recent_items")
 	if memory.is_empty():
 		return []
 	var start := maxi(0, memory.size() - limit)
 	return memory.slice(start)
 
-func retrieve(query: String, limit: int = 8, include_memory: bool = true, include_knowledge: bool = true) -> Array:
+func retrieve(query: String, limit: int = -1, include_memory: bool = true, include_knowledge: bool = true) -> Array:
 	_sync_owner_resources()
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size() + knowledge.size(), "memory_retrieval_items")
 	var clean := query.strip_edges()
 	if clean.is_empty() or limit <= 0:
 		return []
@@ -161,8 +165,10 @@ func retrieve(query: String, limit: int = 8, include_memory: bool = true, includ
 	_touch_results(result)
 	return result
 
-func search_knowledge(query: String, limit: int = 8) -> Array:
+func search_knowledge(query: String, limit: int = -1) -> Array:
 	_sync_owner_resources()
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size() + knowledge.size(), "memory_retrieval_items")
 	if query.strip_edges().is_empty() or limit <= 0:
 		return []
 	return _merge_results(
@@ -171,8 +177,10 @@ func search_knowledge(query: String, limit: int = 8) -> Array:
 		limit
 	)
 
-func search_memory(query: String, limit: int = 8) -> Array:
+func search_memory(query: String, limit: int = -1) -> Array:
 	_sync_owner_resources()
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size() + knowledge.size(), "memory_retrieval_items")
 	if query.strip_edges().is_empty() or limit <= 0:
 		return []
 	return _merge_results(

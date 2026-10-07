@@ -1604,6 +1604,13 @@
       "class": "owner_adjustable",
       "control": "Trusted owner snapshot entry/actual-byte budgets",
       "rationale": "Reviewed bounded materialization statements; chunk65536 is read granularity, total bytes are independently owner controlled with zero unlimited. Actual growth and cap+1 regressions; unknown trailing source stays unclassified."
+    },
+    {
+      "path": "scripts/memory_store.gd",
+      "pattern": "^\\s*(?:func\\ recent\\(limit:\\ int\\ =\\ \\-1\\)\\ \\->\\ Array:|func\\ retrieve\\(query:\\ String,\\ limit:\\ int\\ =\\ \\-1,\\ include_memory:\\ bool\\ =\\ true,\\ include_knowledge:\\ bool\\ =\\ true\\)\\ \\->\\ Array:|func\\ search_knowledge\\(query:\\ String,\\ limit:\\ int\\ =\\ \\-1\\)\\ \\->\\ Array:|func\\ search_memory\\(query:\\ String,\\ limit:\\ int\\ =\\ \\-1\\)\\ \\->\\ Array:)\\s*$",
+      "class": "owner_adjustable",
+      "control": "Private memory_recent_items/memory_retrieval_items defaults; explicit caller overrides",
+      "rationale": "Exact public method defaults use -1 sentinel to resolve trusted owner count; default0 resolves full collection, explicit caller0 remains empty. Actual lexical/merged/recent regressions preserve counts and Agent independent recent context."
     }
   ]
 }

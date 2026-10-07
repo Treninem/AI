@@ -283,6 +283,14 @@ def _snapshot_tree_stats(root: Path, max_entries: int = MAX_SNAPSHOT_ENTRIES, ma
     return {"entries": entries, "bytes": total_bytes}
 
 
+def _snapshot_timestamp(path: Path, info) -> None:
+    current = path.stat(follow_symlinks=False)
+    if stat.S_ISLNK(current.st_mode) or bool(getattr(current, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+        raise HTTPException(status_code=400, detail="Snapshot metadata destination is unsafe")
+    options = {"follow_symlinks": False} if os.utime in os.supports_follow_symlinks else {}
+    os.utime(path, ns=(info.st_atime_ns, info.st_mtime_ns), **options)
+
+
 def _copy_snapshot_tree(source: Path, target: Path, max_entries: int = MAX_SNAPSHOT_ENTRIES, max_bytes: int = MAX_SNAPSHOT_BYTES) -> dict[str, int]:
     _snapshot_tree_stats(source, max_entries, max_bytes)
     source_root = source.resolve(strict=True)
@@ -340,11 +348,11 @@ def _copy_snapshot_tree(source: Path, target: Path, max_entries: int = MAX_SNAPS
                         writer.write(chunk)
                         total_bytes += len(chunk)
             os.chmod(destination, stat.S_IMODE(opened.st_mode))
-            os.utime(destination, ns=(opened.st_atime_ns, opened.st_mtime_ns), follow_symlinks=False)
+            _snapshot_timestamp(destination, opened)
         stats = _snapshot_tree_stats(target, max_entries, max_bytes)
         for directory, info in reversed(directory_metadata):
             os.chmod(directory, stat.S_IMODE(info.st_mode))
-            os.utime(directory, ns=(info.st_atime_ns, info.st_mtime_ns), follow_symlinks=False)
+            _snapshot_timestamp(directory, info)
         return stats
     except Exception:
         if created and target.exists():

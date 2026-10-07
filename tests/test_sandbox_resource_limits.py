@@ -1187,3 +1187,26 @@ def test_snapshot_regular_file_replaced_by_fifo_cannot_block_open(tmp_path, monk
         module._copy_snapshot_tree(source, target, max_entries=0, max_bytes=0)
     assert exc.value.status_code == 400
     assert not target.exists()
+
+
+def test_snapshot_timestamp_when_platform_lacks_nofollow(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    source = tmp_path / 'source'
+    source.mkdir()
+    data = source / 'data'
+    data.write_bytes(b'actual metadata')
+    expected = data.stat().st_mtime_ns
+    original = module.os.utime
+    seen = []
+
+    def platform_utime(path, **options):
+        assert 'follow_symlinks' not in options
+        seen.append(Path(path))
+        return original(path, **options)
+
+    monkeypatch.setattr(module.os, 'utime', platform_utime)
+    monkeypatch.setattr(module.os, 'supports_follow_symlinks', set())
+    target = tmp_path / 'target'
+    assert module._copy_snapshot_tree(source, target, max_entries=1, max_bytes=0)['bytes'] == len(b'actual metadata')
+    assert (target / 'data').stat().st_mtime_ns == expected
+    assert seen == [target / 'data', target]

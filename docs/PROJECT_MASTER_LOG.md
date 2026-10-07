@@ -7739,3 +7739,39 @@ DONE:snapshot bounded materialization and actual fault regressions; dependency r
 REMAINING:exact newCI/nativeWindows and actual Core cause; remaining inventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
 BLOCKERS:none for independent source; physical/production evidence unwaived.
 NEXT:publish coherent snapshot/requiredCI diagnosis package; continue remaining source while reconciling new exact gates.
+
+PUBLICATION_CHECKPOINT: SNAPSHOT-COPY-BUDGET published8658a32aba59339511c7939674897214e648fbb7/treee4013cb8410a5741f86b25a2013cf446f7de3a63 on317d0151 expected-head fast-forward;10ownedpaths. Source RELEASED/EXACT_CI_PENDING; Core cause UNKNOWN pending diagnostic realrun. Followup audit/owner contract28PASS, Core benchmark check-onlyPASS.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-MEMORY-CONTEXT-DEFAULTS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Memory/Knowledge and owner operational context defaults
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:8658a32aba59339511c7939674897214e648fbb7
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:scripts/memory_store.gd;scripts/agent_core.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator explicitly takes over published Memory/Agent owner-control paths; freshmain446ce2 unchanged; snapshot newexactCI pending. No other source edit observed.
+NON_BLOCKERS:No Experience schema migration/V1.6/S3. Explicit per-call result counts retain precedence; explicit API result0 remains empty rather than globally redefined. Owner unlimited default resolves to eligible collection count; quality scoring/auth/provenance unchanged.
+ACCEPTANCE_GATES:replace fixed Agent recent8 and Memory default recent12/retrieval8 with independent private owner settings, preserve defaults and explicit positive/zero callers; exact/raised/unlimited actual memory results, owner persistence/visible labels, Agent context propagation, current semantic/dedupe/retention tests mandatory. Narrow statement inventory only, no false closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:finish remaining fixed Memory context defaults coherently and execute genuine Godot retrieval/context regressions.
+
+CLAIM_ADDENDUM: MEMORY-CONTEXT-DEFAULTS takes over computer/computer_service.py and tests/test_sandbox_resource_limits.py for actual8658 Windows regression job112838541302/run37634934668:122PASS/2SKIP/4FAIL, os.utime follow_symlinks=False NotImplementedError on Windows Python3.11.9. Preserve metadata and reject symlink/reparse before capability-aware timestamp operation; add genuine no-follow-unavailable fixture. No gate skip or parent-race guarantee. Snapshot source paths released by prior claim; fix included in same coherent followup package.
+
+### Memory context defaults and confirmed Windows snapshot repair checkpoint
+CLAIM:WORK-2026-10-07-V15-MEMORY-CONTEXT-DEFAULTS ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:8658a32aba59339511c7939674897214e648fbb7/treee4013cb8410a5741f86b25a2013cf446f7de3a63.
+CHANGES:independent private Memory recent12/retrieval8 and Agent recent8 controls preserve defaults; default owner0 resolves all eligible rows, explicit per-call0 remains empty and positive overrides preserved. No scoring/schema changes. Actual Windows snapshot timestamp failure repaired via runtime nofollow capability, fresh unsafe destination rejection and actual timestamp test. Narrow4exact audited method statements; no blanket closure.
+TESTS:Godot owner smokePASS actual20rows count2/15/unlimited/recent/Memory/Knowledge/search/calleroverride and Agent prompt propagation; existing20ObjectDB/8resource exit diagnostics unchanged. Local semantic memory smokePASS with network/Ollama false. Python audit/owner contracts28PASS. Snapshot82PASS/6SKIP including genuine capability-unavailable timestamp; nativeWindows/Docker local skips NOT_PASS. Initial new fixture parse failure due Variant ternary fixed by explicit type then actually executed.
+PRIOR_CI:8658 File Intelligence job112838541209SUCCESS confirms dependency repair; ComputerWindows job112838541302FAIL confirmed unsupported timestamp argument,122PASS/2SKIP/4FAIL, repaired in this batch. Other exact checks still reconciling; Core planning quality not yet accepted. No full release acceptance inferred.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:memory default/context owner controls and genuine Godot regressions; confirmed Windows timestamp repair locally verified.
+REMAINING:newexactWindows/Core and inventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; physical/production unwaived.
+NEXT:publish coherent Memory/Windows repair; continue remaining owner inventory and use actual Core diagnostic report to resolve its failure.

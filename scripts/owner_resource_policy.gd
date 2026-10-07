@@ -159,6 +159,9 @@ const DEFAULTS := {
 	"reflection_failure_items": 20,
 	"agent_retrieval_items": 10,
 	"chat_retrieval_items": 2,
+	"agent_recent_items": 8,
+	"memory_recent_items": 12,
+	"memory_retrieval_items": 8,
 
 	"work_error_chars": 2048,
 	"work_summary_chars": 4096,
@@ -363,6 +366,9 @@ const LABELS := {
 	"reflection_failure_items": "Самоанализ: ошибок в контексте",
 	"agent_retrieval_items": "Агент: найденных записей",
 	"chat_retrieval_items": "Чат: найденных записей",
+	"agent_recent_items": "Агент: недавних записей памяти",
+	"memory_recent_items": "Память: недавних записей по умолчанию",
+	"memory_retrieval_items": "Память: результатов поиска по умолчанию",
 
 	"work_error_chars": "Work: символов ошибки",
 	"work_summary_chars": "Work: символов итога",
