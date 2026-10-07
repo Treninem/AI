@@ -212,6 +212,29 @@ def test_project_index_client_deadline_review_keeps_diagnostic_cap_visible():
     assert MODULE.classify(path, 'return {"ok": false, "error": raw.substr(0, 4000)}', policy)[0] == 'unclassified'
 
 
+def test_computer_service_exact_review_preserves_actual_fixed_caps():
+    policy = MODULE.load_policy()
+    path = 'computer/computer_service.py'
+    reviewed = [
+        ('action_text_chars: int = Field(default=MAX_TEXT_CHARS, ge=0)', 'owner_adjustable'),
+        ('def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float = GUI_TIMEOUT_SECONDS) -> dict[str, Any]:', 'owner_adjustable'),
+        ('type: str = Field(min_length=1, max_length=32)', 'format_structure'),
+        ('if not math.isfinite(timeout) or timeout < 0:', 'format_structure'),
+        ('if any(reader.is_alive() for reader in record.get("capture_threads", [])): terminated = False', 'hard_boundary'),
+    ]
+    for statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    for statement in [
+        'MAX_OUTPUT = 120_000',
+        'goal: str = Field(min_length=1, max_length=8000)',
+        'max_steps: int = Field(default=20, ge=1, le=100)',
+        'result = subprocess.run(["tasklist", "/FI", f"PID eq {PARENT_PID}", "/NH"], capture_output=True, text=True, timeout=2)',
+    ]:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_api_body_accounting_review_does_not_hide_new_byte_caps():
     policy = MODULE.load_policy()
     path = "api/request_limits.py"

@@ -8690,3 +8690,29 @@ DONE:confirmed pre-model fixture scheduling cause, retained original budgets and
 REMAINING:publish narrow fixture correction; exact Windows Core benchmark and package/device/update gates;999 owner inventory findings.
 BLOCKERS:exact100979f Core Benchmarks run37687398923 failure at pre-model progress fixture; source repair local, new-SHA verdict pending.
 NEXT:commit/push fixture-only package by exact expected-head fast-forward, inspect full native Windows Core run; if still red, use its exact artifact and preserve21/21 gate.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-COMPUTER-OWNER-AUDIT-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Work/Computer owner limits and security boundaries, inventory-only review.
+ROADMAP_SECTION:4 Work/Computer baseline, security/privacy, exact-SHA exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:d90eecc767bc7648134f70af20474723acdbe469; local/origin synchronized, fresh main and latest journal checked.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md if a new confirmed lesson appears. No Computer production source edits in this audit-only package.
+DEPENDENCIES:prior Computer source claims published; exact current Windows Core run37689955558 in progress. This read-only source review can proceed locally without publishing/cancelling the decisive model benchmark. Core progress claim owns only its separate source/test paths.
+NON_BLOCKERS:post-release344-point owner-PC field pass remains separate; no future V1.6 scope.
+INTENDED_BUMP:none for inventory-only metadata; D if a later distinct source repair is claimed and tested.
+ACCEPTANCE_GATES:read each Computer unclassified hit in context, narrowly classify only confirmed owner-sourced or structural/security statements with rationale and adversarial appended fixed-cap cases; leave actual fixed operational caps unclassified for separate behavior repair. Preserve current sandbox Master Stop, isolation, retries and native CI. Audit complete remains false until all real findings resolved.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:review all44 Computer Service residual hits against code and existing owner tests, then test exact policy classifications locally; publish only after Core gate verdict is known.
+
+COMPUTER_OWNER_AUDIT_CHECKPOINT: exact d90eecc Core Benchmarks run37689955558 completed SUCCESS on native Windows, including real progress HTTP fixture, real bundled offline SpecialistTeam/CodeSpecialist, full bundled Core benchmark, quality/performance comparison and enforced Core gate. PR103 exact-d90 checks: 35 pass, four Android jobs still pending; skipped optional large variants are not gates. No claim of final release readiness while device jobs remain pending.
+REVIEW: inspected 44 unclassified Computer Service lines. Exact anchored policy entries classify 16 owner-adjustable input/worker/identity/listing statements, 19 structural/result/validation statements and one worker-termination integrity boundary. Eight remain unclassified, including fixed MAX_OUTPUT, goal length, max_steps, tasklist timeout, redaction default/output truncation, capability representation and container invocation; these remain visible for distinct source review. The first full-audit count moved 999 to 963 unclassified because 36 of 44 received justified classifications; audit completion remains false.
+LOCAL_TESTS: owner-control audit module 24/24 PASS, including positive exact Computer statements, appended fixed-limit adversaries, unrelated-path adversaries and actual remaining fixed-cap negatives; git diff --check PASS.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Core pre-model fixture correction verified by exact native Windows benchmark; Computer Service 44-line review documented with 36 narrow classifications and eight deliberately unresolved findings.
+REMAINING:publish this inventory-only package; check its exact-SHA CI and remaining Android gates; continue real owner-limit source repairs across 963 inventory findings. V1.5 release gates and version bump are still open.
+NEXT:commit/push audited policy and tests against exact remote d90eecc; inspect native CI and then claim a coherent source repair for the residual fixed Computer limits.
