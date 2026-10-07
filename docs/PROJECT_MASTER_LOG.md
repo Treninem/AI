@@ -7542,3 +7542,15 @@ DONE:threecoherentGUI/UIA/action packagespublished; allthree exactComputer/Workg
 REMAINING:newfixture exactCI/evidence-basedCore repair, remainingownerinventory/provider/unfinishedV1.5CRITICAL, fullsameSHApackage/device/update/productionrelease/version-last.
 BLOCKERS:executorunavailable blocks nextlocalcompile/runtime/sourceaudit acceptance; failedCoreWindows112663566849 blocks currentfullCorequality/releasegate, causeUNKNOWN.
 NEXT:restoreexecutor, gitfetch freshmain/PR103/featureHEAD thenreset isolatedcheckouttoactualpublishedHEAD; reconcileallACTIVEclaims withoutrepeating publishedblocks. Inspect new exactWindowsCore diagnosticresponse+servertrace, batch genuinefix withremainingcriticalcontrols, run relevantcoherentgates. Do not blindlyincrease timeouts/retry, startV1.6/S3, declarefreeze or changeversion.
+
+
+### CI execution policy — preserve coverage, reduce unnecessary full-suite reruns
+DECISION_DATE:2026-10-07
+SCOPE:V1.5.0.0 and subsequent AuroraFox development unless a stricter release gate requires otherwise.
+POLICY:Do not reduce CI/test coverage merely because the suite has grown. Select execution depth by change scope instead of running the entire matrix after every small commit.
+LEVEL_1_TARGETED:for ordinary/localized changes, run only the directly affected fast workflows/checks plus required dependency/contract guards.
+LEVEL_2_COHERENT_BLOCK:after a completed substantial block, run the expanded relevant subsystem set covering cross-component integration and regression risk.
+LEVEL_3_FULL_RELEASE:before accepting/finalizing V1.5.0.0, run one complete exact-SHA validation set across all required release workflows/checks (currently about 46 check-runs; exact count may evolve). No required release gate may be skipped, weakened, hidden, or counted as PASS when skipped/pending.
+RATIONALE:the larger suite reflects added Windows/Android/Core/Voice/API/Work/Computer/Evolution/Memory/UI/Knowledge/release and integration coverage. The objective is to keep that protection while avoiding repeated long Windows/Android/full-matrix runs for minor edits.
+BATCHING_RULE:prefer coherent implementation batches -> targeted verification during development -> expanded block verification -> one final full exact-SHA suite before release acceptance. Avoid blind reruns and repeated full-matrix polling unless evidence indicates a cross-cutting regression or a release gate explicitly requires it.
+STATUS:OWNER_DECISION/ACTIVE
