@@ -25,6 +25,7 @@ func _gui_case(owner: MasterFixture, url: String, token: String, allowed: Callab
 	owner.enabled = true
 	var raw := {"type": "press" if unsafe else "wait", "keys": ["a"], "seconds": 0, "action_id": "gui-fixture-unsafe" if unsafe else "", "execution_id": "model-supplied", "_unsafe_gui": false}
 	OwnerResourcePolicy._cached.computer_worker_seconds = 0
+	OwnerResourcePolicy._cached.computer_action_worker_seconds = 0
 	OwnerResourcePolicy._cached.computer_uia_items = 1001
 	raw["_gui_limits"] = {"worker_seconds": 1, "uia_items": 1}
 	var payload := ComputerRequestGuard.execution_payload(route, raw)
@@ -44,9 +45,9 @@ func _gui_case(owner: MasterFixture, url: String, token: String, allowed: Callab
 	while not FileAccess.file_exists(marker) and Time.get_ticks_msec() < deadline and not state.done:
 		await create_timer(0.02).timeout
 	assert(FileAccess.file_exists(marker))
-	if route == "/windows":
+	if route == "/windows" or route == "/action":
 		var actual_policy = JSON.parse_string(FileAccess.get_file_as_string(root_path.path_join("gui-policy-" + digest)))
-		assert(actual_policy is Dictionary and actual_policy.worker_seconds == 0 and actual_policy.uia_items == 1001)
+		assert(actual_policy is Dictionary and actual_policy.worker_seconds == 0 and actual_policy.uia_items == 1001 and actual_policy.action_worker_seconds == 0)
 	if timeout > 5.0: owner.enabled = false
 	deadline = Time.get_ticks_msec() + 15000
 	while not state.done and Time.get_ticks_msec() < deadline:

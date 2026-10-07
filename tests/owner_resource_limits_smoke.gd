@@ -717,6 +717,11 @@ func _run() -> void:
 		assert(policy_payload._gui_limits.uia_items == budget and policy_payload._gui_limits.worker_seconds == budget)
 		var policy_headers := ComputerRequestGuard.append_execution_header(PackedStringArray(), policy_payload)
 		assert(policy_headers.has("X-AuroraFox-GUI-Limits: " + JSON.stringify(policy_payload._gui_limits)))
+	for budget in [1, 20001, 0]:
+		for key in ["action_results", "action_identities", "action_text_chars", "action_keys", "action_clicks", "action_scroll", "action_seconds", "action_worker_seconds"]:
+			OwnerResourcePolicy._cached["computer_" + key] = budget
+			var captured_action := ComputerRequestGuard.execution_payload("/action", {"_gui_limits": {key: 7}})
+			assert(captured_action._gui_limits[key] == budget)
 	var timeout_request := HTTPRequest.new()
 	assert(ComputerRequestGuard.execution_timeout(10001) == 300)
 	assert(ComputerRequestGuard.execution_timeout(0) == 300)

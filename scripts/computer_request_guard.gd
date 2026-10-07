@@ -31,7 +31,7 @@ static func execution_payload(path: String, payload: Dictionary) -> Dictionary:
 		captured["capture_bytes"] = OwnerResourcePolicy.value("computer_capture_bytes")
 	if gui:
 		captured["_gui_limits"] = {}
-		for key in ["uia_items", "uia_windows", "uia_controls", "uia_name_chars", "uia_type_chars", "uia_id_chars", "worker_seconds"]:
+		for key in ["uia_items", "uia_windows", "uia_controls", "uia_name_chars", "uia_type_chars", "uia_id_chars", "worker_seconds", "action_results", "action_identities", "action_text_chars", "action_keys", "action_clicks", "action_scroll", "action_seconds", "action_worker_seconds"]:
 			captured["_gui_limits"][key] = OwnerResourcePolicy.value("computer_" + key)
 	if process or gui:
 		# Caller/model input cannot select a previous execution identity.

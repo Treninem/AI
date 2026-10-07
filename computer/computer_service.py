@@ -61,6 +61,7 @@ async def _lifespan(_app):
 app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.1.0", lifespan=_lifespan)
 _action_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _action_inflight: set[str] = set()
+_action_consumed: set[str] = set()
 _action_cache_lock = threading.Lock()
 _action_execution_lock = threading.Lock()
 _execution_lock = threading.Lock()
@@ -71,6 +72,14 @@ _gui_worker_lifecycle_lock = threading.RLock()
 
 
 class GuiResourceLimits(BaseModel):
+    action_results: int = Field(default=ACTION_CACHE_LIMIT, ge=0)
+    action_identities: int = Field(default=0, ge=0)
+    action_text_chars: int = Field(default=MAX_TEXT_CHARS, ge=0)
+    action_keys: int = Field(default=MAX_KEYS, ge=0)
+    action_clicks: int = Field(default=3, ge=0)
+    action_scroll: int = Field(default=100, ge=0)
+    action_seconds: int = Field(default=5, ge=0)
+    action_worker_seconds: int = Field(default=10, ge=0, le=9223372036854775807)
     uia_items: int = Field(default=250, ge=0)
     uia_windows: int = Field(default=30, ge=0)
     uia_controls: int = Field(default=40, ge=0)
@@ -96,11 +105,11 @@ class Action(BaseModel):
     x: int | None = None
     y: int | None = None
     button: str = "left"
-    clicks: int = Field(default=1, ge=1, le=3)
-    text: str = Field(default="", max_length=MAX_TEXT_CHARS)
-    keys: list[str] = Field(default_factory=list, max_length=MAX_KEYS)
-    amount: int = Field(default=0, ge=-100, le=100)
-    seconds: float = Field(default=0.2, ge=0.0, le=5.0)
+    clicks: int = Field(default=1, ge=1)
+    text: str = ""
+    keys: list[str] = Field(default_factory=list)
+    amount: int = 0
+    seconds: float = Field(default=0.2, ge=0.0, allow_inf_nan=False)
     verify: bool = False
 
 
@@ -297,8 +306,14 @@ def _validate_coordinate(x: int | None, y: int | None) -> None:
         raise HTTPException(status_code=400, detail="Coordinates are outside the virtual desktop")
 
 
-def _validate_action(req: Action) -> dict[str, Any]:
+def _validate_action(req: Action, limits=None) -> dict[str, Any]:
+    limits = limits if limits is not None else GuiResourceLimits().model_dump()
     action = req.model_dump()
+    measurements = {"action_text_chars": len(action["text"]), "action_keys": len(action["keys"]),
+                    "action_clicks": action["clicks"], "action_scroll": abs(action["amount"]), "action_seconds": action["seconds"]}
+    for key, size in measurements.items():
+        if limits[key] and size > limits[key]:
+            raise HTTPException(413, detail={"error": "action_resource_budget", "budget": key, "limit": limits[key], "requested": size, "executed": False})
     action_type = str(action["type"]).lower().strip()
     if action_type not in VALID_ACTIONS:
         raise HTTPException(status_code=400, detail=f"Unsupported action type: {action_type}")
@@ -615,17 +630,18 @@ def _cached_action(action_id: str) -> dict[str, Any] | None:
         return result
 
 
-def _store_action_result(action_id: str, result: dict[str, Any]) -> None:
+def _store_action_result(action_id: str, result: dict[str, Any], max_results: int = ACTION_CACHE_LIMIT) -> None:
     if not action_id:
         return
     with _action_cache_lock:
+        _action_consumed.add(action_id)
         _action_cache[action_id] = dict(result)
         _action_cache.move_to_end(action_id)
-        while len(_action_cache) > ACTION_CACHE_LIMIT:
+        while max_results > 0 and len(_action_cache) > max_results:
             _action_cache.popitem(last=False)
 
 
-def _claim_action(action_id: str) -> tuple[str, dict[str, Any] | None]:
+def _claim_action(action_id: str, max_identities: int = 0) -> tuple[str, dict[str, Any] | None]:
     if not action_id:
         return "owner", None
     with _action_cache_lock:
@@ -635,8 +651,14 @@ def _claim_action(action_id: str) -> tuple[str, dict[str, Any] | None]:
             result = dict(cached)
             result["deduplicated"] = True
             return "cached", result
+        if action_id in _action_consumed:
+            return "terminal", _error("action_result_evicted", "This action identity was consumed; its detailed result is unavailable", retryable=False,
+                                     action_id=action_id, executed=False, deduplicated=True, uncertain_external_state=True)
         if action_id in _action_inflight:
             return "inflight", None
+        if max_identities > 0 and len(_action_consumed | _action_inflight) >= max_identities:
+            return "terminal", _error("action_identity_capacity", "Action identity storage reached the owner's capacity; no action was started", retryable=False,
+                                     action_id=action_id, executed=False, uncertain_external_state=False, limit_reached=True)
         _action_inflight.add(action_id)
     return "owner", None
 
@@ -648,14 +670,16 @@ def _release_action_claim(action_id: str) -> None:
         _action_inflight.discard(action_id)
 
 
-def _execute_action(req: Action, execution_id: str = "") -> dict[str, Any]:
+def _execute_action(req: Action, execution_id: str = "", limits=None) -> dict[str, Any]:
     with _gui_execution_scope(execution_id, unsafe_gui=not _retryable(req.type.strip().lower())) as (owned_id, error):
         if error is not None: return error
-        return _execute_action_owned(req, owned_id)
+        return _execute_action_owned(req, owned_id, limits)
 
 
-def _execute_action_owned(req: Action, execution_id: str) -> dict[str, Any]:
-    action = _validate_action(req)
+def _execute_action_owned(req: Action, execution_id: str, limits=None) -> dict[str, Any]:
+    limits = limits if limits is not None else GuiResourceLimits().model_dump()
+    action = _validate_action(req, limits)
+    action["__gui_limits"] = limits
     action["__execution_id"] = execution_id
     action_id = str(action.get("action_id", "")).strip()
     action_type = str(action["type"])
@@ -663,8 +687,8 @@ def _execute_action_owned(req: Action, execution_id: str) -> dict[str, Any]:
     if retry_safety == "unsafe" and not action_id:
         raise HTTPException(status_code=400, detail="Unsafe Computer actions require action_id for idempotency")
 
-    claim, cached = _claim_action(action_id)
-    if claim == "cached" and cached is not None:
+    claim, cached = _claim_action(action_id, limits["action_identities"])
+    if claim in {"cached", "terminal"} and cached is not None:
         return cached
     if claim == "inflight":
         return _error("action_in_progress", "An action with this action_id is already executing; external state is not yet known", retryable=False, action_id=action_id, retry_safety=retry_safety, uncertain_external_state=True)
@@ -676,17 +700,17 @@ def _execute_action_owned(req: Action, execution_id: str) -> dict[str, Any]:
     try:
         before_hash = ""
         if bool(action.get("verify", False)):
-            before = _run_worker("screen", {"__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+            before = _run_worker("screen", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
             if before.get("ok"):
                 before_hash = str(before.get("sha256", ""))
-        result = _run_worker("action", action, ACTION_TIMEOUT_SECONDS)
+        result = _run_worker("action", action, limits["action_worker_seconds"])
         result["action_id"] = action_id
         result["retryable"] = _retryable(action_type) and result.get("error") not in {"cancelled", "execution_id_reused", "service_stopping"} and not result.get("uncertain_external_state", False)
         result["retry_safety"] = retry_safety
         if not result.get("ok") and retry_safety == "unsafe":
             result["uncertain_external_state"] = True
         if result.get("ok") and bool(action.get("verify", False)):
-            after = _run_worker("screen", {"__execution_id": execution_id}, GUI_TIMEOUT_SECONDS)
+            after = _run_worker("screen", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
             if after.get("ok"):
                 after_hash = str(after.get("sha256", ""))
                 result["verified"] = bool(before_hash and after_hash and before_hash != after_hash)
@@ -700,9 +724,12 @@ def _execute_action_owned(req: Action, execution_id: str) -> dict[str, Any]:
                             action_id=action_id, retry_safety=retry_safety, execution_id=execution_id,
                             termination_confirmed=bool(record["termination_confirmed"]),
                             uncertain_external_state=retry_safety == "unsafe" or not bool(record["termination_confirmed"]))
-        _store_action_result(action_id, result)
+        _store_action_result(action_id, result, limits["action_results"])
         return result
     finally:
+        if action_id:
+            # Unexpected exceptions cannot authorize replay of attempted input.
+            with _action_cache_lock: _action_consumed.add(action_id)
         _action_execution_lock.release()
         _release_action_claim(action_id)
 
@@ -1155,9 +1182,10 @@ def windows(x_aurorafox_computer_token: str | None = Header(default=None), x_aur
 
 @app.post("/action")
 def action(req: Action, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
-           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")) -> dict[str, Any]:
+           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$"),
+           x_aurorafox_gui_limits: str = Header(default="")) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    return _execute_action(req, x_aurorafox_execution_id)
+    return _execute_action(req, x_aurorafox_execution_id, _gui_limits(x_aurorafox_gui_limits))
 
 
 @app.post("/plan")

@@ -7473,3 +7473,37 @@ DONE:publishedGUI lifecycle exactComputer gatesaccepted; UIA operational limits/
 REMAINING:publish/exactCI; action limits, provider/resourceinventory/unfinishedcritical; package/device/update/production/version-last.
 BLOCKERS:no external blocker to independent source; native/physicalproduction acceptance unwaived.
 NEXT:publish coherent9pathUIA policy, continue action controls and remaining audited operational limits.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-ACTION-RESOURCE-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining Computer action owner controls with verified cancellation
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:b560c05dd51a3f9f2ffcf987ef055ee4c877abac
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/owner_resource_policy.gd;scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tools/computer_gui_guard_fixture.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:publishedUIA policy b560c05/tree9aa7552b7348bb29f47edb5423cefbf63545f72e reconciled; GUI owned cancellation prior87040 exactComputer green. Native UIA currentCI pending.
+NON_BLOCKERS:physicaldesktop/package/device/update/production gates unwaived; no V1.6/S3 scope. Input key syntax/button/coordinates/idempotency/failsafe remain boundaries; zero limits do not reverse effects or enable retries.
+ACCEPTANCE_GATES:private owner action text/key/click/scroll/duration/worker budgets overwrite model policy, reject exceeded input before worker effects, allow exact/raised/zero. Finite nonnegative duration and progress-making clicks>=1 mandatory. Verification reads reuse capturedUIA policy. Zero action worker deadline remains per-request cancellable with unsafe uncertainty. ActualHTTP/Godot/spawn regression; no native input evidence inferred from software fixtures.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent action owner controls and real protocol/cancellation acceptance package.
+
+CLAIM_ADDENDUM:ACTION-RESOURCE-POLICY includes action result-cache retention and consumed-ID ownership on existing owned paths. Existing512-result eviction forgets idempotency and can replay an old unsafe action; separate non-evicting consumed identities from detailed result retention. Owner may bound stored results; positive identity capacity refuses new IDs rather than deleting replay protection. IDs conservatively remain consumed after an attempted action exits unexpectedly. Acceptance: genuine worker launch count unchanged on replay after result eviction; exactcapacity rejects beforeeffects; zero preservesresults/identityallowance without bypassing consumed IDs.
+
+### Coherent action owner policy and idempotency source checkpoint
+CLAIM:WORK-2026-10-07-V15-ACTION-RESOURCE-POLICY ACTIVE/CI_PENDING.
+CHANGES:eight private owner controls: text20000/keys12/clicks3/scroll100/duration5/actionworker10/resultretention512/identitycapacity0 defaults. Trustedheader snapshot overrides model policy; exceededinput rejected413 beforeeffects withbudget/limit/requested/executed:false. Exact/raised/zero accepted. VerificationusescapturedUIA policy. Finite duration, clicks>=1, coordinate/key/button/idempotency/auth/failsafe unchanged. Unsafe unlimitedworker stillowned/cancellable/uncertain. Detailedcache eviction no longer permits unsafeIDreplay: consumedIDs retained separately; capacity deniesnewID ratherthanforgetting prioridentity, exceptions consumeattemptedID. Service-local identity ownership only; cross-restart durability notclaimed.
+TESTS:pinnedComputer+owner+audit131PASS/6SKIP; latestComputer109PASS/6SKIP. Genuine API/spawn launchcounts coverdefault rejection, exact/raised/zero fiveinputbudgets, resultevictionnonreplay andidentitycapacity; unexpected exception terminalID regression. Numeric boundaries andunsafe0worker cancellationPASS. ActualGodot/UvicornPASS including trustedactionworker0 policy receivedbyworker, MasterStop/transport/unsafe review/shutdown. OwnerGodotPASS; existingexit20ObjectDB/8resource diagnosticsremainrecorded. NativeDesktop input notclaimed; localDocker/NTFS/fournativeWindowsJobskipsnotPASS. Initialnewtest run hadmissingjson import (5testNameErrors), corrected beforefinalfullbatch; sourcegatesnotwaived.
+PRIOR_PRODUCED_SHA:b560c05dd51a3f9f2ffcf987ef055ee4c877abac;tree9aa7552b7348bb29f47edb5423cefbf63545f72e. Observed37checks30SUCCESS/3SKIP/4IN_PROGRESS,0FAILURE. LinuxComputer112660982821/WindowsComputer112660982831/work-godot112660982846 SUCCESS acceptpublishedUIA policy. RemainingCore/package/native/AndroidpendingnotPASS.
+INVENTORY:480files;1518test_evidence/1364unclassified/65documentation/671owner_adjustable/360format_structure/37hard_boundary;complete:false. Changedclassification matches/newsourcefindings retained for explicitreview, notblanketclosed.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedUIA exactComputer/Workgatesaccepted; actionowner/idempotency source andlocalsoftwaretests accepted.
+REMAINING:publish/exactCI; remainingresourceinventory/provider/unfinishedcriticalblocks, durableacceptance, package/device/update/production/version-last.
+BLOCKERS:no external blocker to independentcriticalsource; physical/productiongatesunwaived.
+NEXT:publishcoherentactionpackage, reconcileclassifiedowner-propagation/technicalboundaries andremainingactualoperationalcaps.

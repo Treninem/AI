@@ -1,5 +1,6 @@
 """Real authenticated service calls and filesystem owner-limit regressions."""
 import importlib.util
+import json
 import sys
 import time
 import os
@@ -813,3 +814,99 @@ def test_zero_gui_deadline_keeps_waiting_after_response_and_remains_cancellable(
             result = future.result(timeout=5).json()
             assert result["error"] == "cancelled" and not result["retryable"]
         finally: module._cancel_all_processes()
+
+
+@pytest.mark.parametrize("key,body,default,over", [
+    ("action_text_chars", {"type":"type", "text":"x" * 20001}, 20000, 20001),
+    ("action_keys", {"type":"hotkey", "keys":["a"] * 13}, 12, 13),
+    ("action_clicks", {"type":"click", "x":1, "y":1, "clicks":4}, 3, 4),
+    ("action_scroll", {"type":"scroll", "amount":-101}, 100, 101),
+    ("action_seconds", {"type":"wait", "seconds":6}, 5, 6),
+])
+def test_action_owner_budget_rejects_before_effect_and_allows_exact_raised_zero(tmp_path, monkeypatch, key, body, default, over):
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_success_worker)
+    monkeypatch.setattr(module, "_desktop_bounds", lambda: {"left":0,"top":0,"right":10,"bottom":10,"width":10,"height":10})
+    response = client.post("/action", headers=HEADERS, json={**body,"action_id":"denied", "_gui_limits":{key:0}})
+    assert response.status_code == 413 and response.json()["detail"]["budget"] == key
+    assert not response.json()["detail"]["executed"] and not (module.SANDBOX_ROOT / "gui-api-launches").exists()
+    for cap in [over, 0]:
+        headers = {**HEADERS,"X-AuroraFox-GUI-Limits":json.dumps({key:cap})}
+        result = client.post("/action", headers=headers, json={**body,"action_id":f"accepted-{cap}"}).json()
+        assert result["ok"], result
+    exact = dict(body)
+    if key == "action_text_chars": exact["text"] = exact["text"][:default]
+    elif key == "action_keys": exact["keys"] = exact["keys"][:default]
+    elif key == "action_clicks": exact["clicks"] = default
+    elif key == "action_scroll": exact["amount"] = -default
+    elif key == "action_seconds": exact["seconds"] = default
+    assert client.post("/action", headers=HEADERS, json={**exact,"action_id":"exact-default"}).json()["ok"]
+    assert len((module.SANDBOX_ROOT / "gui-api-launches").read_text().splitlines()) == 3
+
+
+@pytest.mark.parametrize("body", [{"type":"wait", "seconds":-1}, {"type":"wait", "seconds":"NaN"}, {"type":"wait", "seconds":"Infinity"}, {"type":"click", "clicks":0}])
+def test_unlimited_action_owner_policy_keeps_numeric_boundaries(tmp_path, monkeypatch, body):
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    headers = {**HEADERS,"X-AuroraFox-GUI-Limits":'{"action_seconds":0,"action_clicks":0}'}
+    assert client.post("/action", headers=headers, json=body).status_code == 422
+    assert not module._execution_records
+
+
+def test_unlimited_unsafe_action_worker_is_cancellable_and_keeps_effect_uncertainty(tmp_path, monkeypatch):
+    import concurrent.futures
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_hanging_worker)
+    headers = {**HEADERS,"X-AuroraFox-Execution-ID":"unsafe-unlimited","X-AuroraFox-GUI-Limits":'{"action_worker_seconds":0}'}
+    with concurrent.futures.ThreadPoolExecutor() as pool:
+        future = pool.submit(client.post, "/action", headers=headers, json={"type":"press","keys":["a"],"action_id":"unsafe-owner-zero"})
+        try:
+            _wait_for_file(module.SANDBOX_ROOT / "gui-api-started")
+            assert not future.done()
+            stopped = client.post("/sandbox/cancel", headers={"X-AuroraFox-Computer-Token":TOKEN}, json={"execution_id":"unsafe-unlimited"}).json()
+            assert stopped["termination_confirmed"] and stopped["uncertain_external_state"]
+            result = future.result(timeout=5).json()
+            assert result["error"] == "cancelled" and not result["retryable"] and result["uncertain_external_state"]
+        finally: module._cancel_all_processes()
+
+
+def test_action_result_eviction_never_replays_consumed_unsafe_identity(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_success_worker)
+    headers = {**HEADERS,"X-AuroraFox-GUI-Limits":'{"action_results":1}'}
+    for identity in ["first-unsafe", "second-unsafe"]:
+        assert client.post("/action", headers=headers, json={"type":"press","keys":["a"],"action_id":identity}).json()["ok"]
+    assert "first-unsafe" not in module._action_cache and "first-unsafe" in module._action_consumed
+    replay = client.post("/action", headers=headers, json={"type":"press","keys":["a"],"action_id":"first-unsafe"}).json()
+    assert replay["error"] == "action_result_evicted" and replay["deduplicated"] and replay["uncertain_external_state"]
+    assert not replay["retryable"] and not replay["executed"]
+    assert len((module.SANDBOX_ROOT / "gui-api-launches").read_text().splitlines()) == 2
+
+
+def test_action_identity_capacity_denies_new_work_without_forgetting_prior_ids(tmp_path, monkeypatch):
+    module, client = service(tmp_path, monkeypatch)
+    module.IS_WINDOWS = True
+    monkeypatch.setattr(module, "_worker_entry", _spawn_gui_api_success_worker)
+    body = {"type":"press","keys":["a"]}
+    headers = {**HEADERS,"X-AuroraFox-GUI-Limits":'{"action_results":0,"action_identities":1}'}
+    assert client.post("/action", headers=headers, json={**body,"action_id":"retained"}).json()["ok"]
+    denied = client.post("/action", headers=headers, json={**body,"action_id":"new"}).json()
+    assert denied["error"] == "action_identity_capacity" and not denied["executed"] and denied["limit_reached"]
+    assert client.post("/action", headers=headers, json={**body,"action_id":"retained"}).json()["deduplicated"]
+    unlimited = {**HEADERS,"X-AuroraFox-GUI-Limits":'{"action_results":0,"action_identities":0}'}
+    assert client.post("/action", headers=unlimited, json={**body,"action_id":"new"}).json()["ok"]
+    assert len(module._action_cache) == 2 and len((module.SANDBOX_ROOT / "gui-api-launches").read_text().splitlines()) == 2
+
+
+def test_unexpected_action_exception_consumes_identity_before_retry(tmp_path, monkeypatch):
+    module, _ = service(tmp_path, monkeypatch)
+    def broken_worker(*_args): raise RuntimeError("after possible input")
+    monkeypatch.setattr(module, "_run_worker", broken_worker)
+    request = module.Action(type="press", keys=["a"], action_id="unexpected-effect")
+    with pytest.raises(RuntimeError): module._execute_action(request)
+    monkeypatch.setattr(module, "_run_worker", lambda *_args: pytest.fail("replayed after unexpected exception"))
+    result = module._execute_action(request)
+    assert result["error"] == "action_result_evicted" and not result["retryable"] and result["uncertain_external_state"]
