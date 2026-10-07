@@ -8937,3 +8937,37 @@ DONE:112 API/personal-data findings inspected as one package;38 justified classi
 REMAINING:publish/synchronize package, exact new-SHA CI;747 residual inventory findings, source repairs, physical/device/package/update/version-last release gates.
 BLOCKERS:none for audit publication.
 NEXT:check exact remote head, commit/push the audited metadata package, verify local/origin/web identity and exact owner CI; reproduce highest-impact genuine queue/page caps in a separately claimed source repair.
+
+API_PERSONAL_DATA_PUBLICATION: commit64ec5ddde8978216f6f95c6ca45583c7f377c2a6 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37700049781 SUCCESS includes owner audit29PASS. Other exact-SHA long gates continue; no red at last PR check. Confirmed queue capacity defect read-only: with201 on-disk entries and configured max_items250, list(250) and status() report200, so trim sees fewer than actual and can admit over-capacity. Reproduction used a temporary .ci directory and left worktree clean.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:112 reviewed,38 classified,74 retained; published and exact owner CI green; candidate queue defect reproduced.
+REMAINING:repair queue defect with genuine tests and exact CI;747 residual owner findings and final release gates.
+BLOCKERS:old CHAT-2026-09-16-SERVER-DB claim still names api/core_candidate_queue.py; resolve narrow ownership below before edit.
+NEXT:claim/take over exact queue file and its focused test after confirming fresh main is ancestor, fix internal list count without widening HTTP route cap or weakening candidate trust gates.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-CORE-CANDIDATE-QUEUE-CAPACITY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing signed Core candidate queue capacity truthfulness and owner-adjustable retention.
+ROADMAP_SECTION:4 controlled Core candidate promotion, API stability and owner limits.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; candidate verification/trust architecture unchanged.
+STARTING_HEAD:64ec5ddde8978216f6f95c6ca45583c7f377c2a6; fresh main/feature fetched, main ancestor confirmed, journal/memory/roadmap/ADRs reviewed, local/origin/web exact.
+CLAIM_RECONCILIATION:narrow take-over of api/core_candidate_queue.py and tests/test_core_candidate_queue.py from stale broad CHAT-2026-09-16-SERVER-DB path list for this confirmed defect only. All other SERVER-DB paths remain with that lane; no parallel edits detected in fresh remote branch. Prior WORK-2026-09-16-CANDIDATE-QUEUE-AUDIT was DONE.
+OWNED_PATHS:api/core_candidate_queue.py;tests/test_core_candidate_queue.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md if confirmed lesson needed.
+DEPENDENCIES:existing explicit core.candidate scopes, signed-update promotion and same-SHA API CI preserved. Other long release gates in progress.
+NON_BLOCKERS:V1.6 cognition and post-release344-point owner-PC check.
+INTENDED_BUMP:D for behavior repair, canonical version remains last after release gates.
+ACCEPTANCE_GATES:201-entry genuine persistent queue fixture with configured max_items>200 reports full count and rejects overcapacity when no terminal entry can be evicted; default/public API route cap200 remains; existing candidate trust/concurrency tests, owner audit, Python API and exact CI pass.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:remove internal list200 clamp, add persistent 201-entry status/trim regression, run focused and API CI gates, publish/sync exact SHA.
+
+CORE_CANDIDATE_QUEUE_CAPACITY_CHECKPOINT: reproduced real persisted queue defect on base64ec5dd with201 entries and max_items250: list/status showed200. Narrow source repair removes only the internal 200 slice from `CoreCandidateQueue.list`, retaining caller positive minimum, full signed-candidate validation and public `/v1/core-candidates` request `le=200`. New persisted201-entry regression checks list/status201 and rejects a full queue with no terminal eviction candidate at max_items201. Targeted candidate+owner-audit modules37/37 PASS; local broad API gateway/privacy/server-hardening52/52 PASS with authorized loopback. First default-sandbox broad run failed at WinError10013 on a real127.0.0.1 fixture and was interrupted; it is not counted as a product failure/pass. AF-172/AF-173 record defect and environment lesson. Python compile, diff check PASS. Whole owner inventory remains747 unclassified: queue source line changed from a fixed200 clamp to a caller count with positive floor, but other candidate source/default caps remain visible. Exact new-SHA API CI still required before source acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:confirmed and locally repaired queue capacity truthfulness,37 targeted tests and52 genuine API tests PASS; no auth/signed-promotion/HTTP page boundary weakened.
+REMAINING:publish/sync source package, exact API/owner CI, remaining747 inventory candidates and final device/package/update/version gates.
+BLOCKERS:none for publication; initial restricted-loopback run superseded by authorized genuine PASS.
+NEXT:verify exact remote head, commit/push queue source, regression, journal and memory; confirm local/origin/web identity and exact API/owner CI.

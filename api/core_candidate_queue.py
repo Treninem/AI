@@ -190,7 +190,7 @@ class CoreCandidateQueue:
                 continue
             rows.append(row)
         rows.sort(key=lambda item: int(item.get("updated_at", 0)), reverse=True)
-        return rows[: max(1, min(int(limit), 200))]
+        return rows[: max(1, int(limit))]
 
     def set_state(
         self,

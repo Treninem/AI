@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import hashlib
+import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -45,6 +46,24 @@ def test_default_api_keys_cannot_submit_core_candidates(tmp_path: Path) -> None:
     assert set(DEFAULT_SCOPES).issubset(set(record["scopes"]))
     assert not allows(verified, "core.candidate.submit")
     assert not allows(verified, "core.candidate.manage")
+
+
+def test_raised_queue_capacity_counts_all_persisted_items_before_admission(tmp_path: Path) -> None:
+    queue = CoreCandidateQueue(tmp_path / "api", max_items=201)
+    for index in range(201):
+        candidate_id = f"candidate_{index:03}"
+        bundle = queue.queue_root / candidate_id
+        bundle.mkdir()
+        (bundle / "queue.json").write_text(
+            json.dumps({"candidate_id": candidate_id, "state": "queued", "updated_at": index}),
+            encoding="utf-8",
+        )
+
+    assert len(queue.list(201)) == 201
+    assert queue.status()["items"] == 201
+    with pytest.raises(CoreCandidateQueueError, match="queue is full"):
+        queue._trim_if_needed()
+    assert len(list(queue.queue_root.iterdir())) == 201
 
 
 def test_server_exposes_candidate_routes_only_behind_explicit_scopes() -> None:
