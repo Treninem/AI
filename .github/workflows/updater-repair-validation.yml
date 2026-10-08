@@ -31,10 +31,11 @@ jobs:
       - name: Restore packaged files as build/windows
         shell: pwsh
         run: |
-          $portable = Get-ChildItem dist -Filter 'AuroraFox-V*-Windows-Portable.zip' | Select-Object -First 1
-          if (-not $portable) { throw 'Windows portable artifact is missing' }
+          $version = [string]((Get-Content project\version.json -Raw | ConvertFrom-Json).numeric)
+          $portable = @(Get-ChildItem dist -Recurse -File -Filter "AuroraFox-V$version-Windows-Portable.zip")
+          if ($portable.Count -ne 1) { throw "Expected one Windows portable artifact for V$version; found $($portable.Count)" }
           Remove-Item build\windows -Recurse -Force -ErrorAction SilentlyContinue
-          Expand-Archive $portable.FullName build\windows -Force
+          Expand-Archive $portable[0].FullName build\windows -Force
           if (-not (Test-Path build\windows\AuroraFox.exe)) { throw 'Portable package does not contain AuroraFox.exe' }
           if (-not (Test-Path build\windows\update\release_public.pub)) { throw 'Signed-floor trust root is missing from Windows package' }
           $expected = (Get-Content update\release_public_fingerprint.sha256 -Raw).Split(' ',[System.StringSplitOptions]::RemoveEmptyEntries)[0].Trim().ToLowerInvariant()
@@ -65,9 +66,9 @@ jobs:
         run: |
           $state = Get-Content project\version.json -Raw | ConvertFrom-Json
           $current = [string]$state.numeric
-          $setup = Get-ChildItem dist -Filter 'AuroraFox-V*-Setup-Windows.exe' | Select-Object -First 1
-          if (-not $setup) { throw 'Current Windows setup artifact is missing' }
-          .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller $setup.FullName
+          $setup = @(Get-ChildItem dist -Recurse -File -Filter "AuroraFox-V$current-Setup-Windows.exe")
+          if ($setup.Count -ne 1) { throw "Expected one current Windows setup artifact for V$current; found $($setup.Count)" }
+          .\tests\windows_v12_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CurrentInstaller $setup[0].FullName
           .\tests\windows_v13_bridge_smoke.ps1 -Iscc 'C:\Program Files (x86)\Inno Setup 6\ISCC.exe' -CandidateVersion $current
 
   normalize-and-publish-repairs:
@@ -138,7 +139,9 @@ jobs:
           set -euo pipefail
           version='${{ steps.floor.outputs.current }}'
           floor='${{ steps.floor.outputs.floor }}'
-          source="dist/AuroraFox-V${version}-Setup-Windows.exe"
+          mapfile -d '' setups < <(find dist -type f -name "AuroraFox-V${version}-Setup-Windows.exe" -print0)
+          test "${#setups[@]}" -eq 1 || { echo "Expected one current Windows setup artifact for V${version}; found ${#setups[@]}" >&2; exit 1; }
+          source="${setups[0]}"
           test -s "$source"
           for old in 1.2 1.3; do
             stable="dist/AuroraFox-V${old}-Repair-Windows.exe"

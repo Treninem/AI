@@ -9565,3 +9565,24 @@ REMAINING:release-train merge/tag/publication decision; explicit distribution de
 BLOCKERS:no failed source/CI gate on code freeze b0341f5. Public release requires the separate Knowledge Pack distribution/asset decision and release authority; do not infer publication from a successful branch run.
 NEXT:reconcile documentation-only journal checkpoint with GitHub, then prepare a concrete final release/Knowledge artifact plan against the existing accepted archive SHA256bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614; ask owner for only the final publication/distribution decision after all reviewable details are assembled.
 CLAIM_STATUS:CODEX-2026-10-08-V15-VERSION-LAST-CANDIDATE DONE for source/version/tests. Release owned source paths freed; public publication is a separate owner decision.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-UPDATER-ARTIFACT-RESTORE
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL release/update gate repair on the unpublished candidate.
+ROADMAP_SECTION:signed updater, historical V1.2/V1.3 repair, exact-SHA release acceptance.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:12c3145e22b5197300c5f5f6a709eb15e053a0b4; fresh main fetched and full journal, roadmap, engineering memory and ADRs reviewed. PR102/103 merged; local/origin main equal and clean. Signed main Release run37807662557 succeeded, but follow-on Updater Repair Validation run37816833961 failed finding the downloaded Windows portable artifact.
+OWNED_PATHS:.github/workflows/updater-repair-validation.yml;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:retain artifact integrity, packaged trust-root fingerprint, historical in-place smokes, signed-floor publication eligibility and stable-latest isolation. Reconcile old updater claims against current integrated main; this claim owns only the failing follow-on workflow.
+NON_BLOCKERS:V1.6 cognition and unrelated feature expansion.
+INTENDED_BUMP:BUILD-level fix accumulated under unreleased V1.5.0.0; no second canonical bump.
+ACCEPTANCE_GATES:handle both flat and nested downloaded artifact layout with unique exact-version portable/setup selection; fail on missing or ambiguous files; run local representative layout checks, exact PR CI, signed main Release and actual workflow_run updater repair validation at final main SHA before publishing V1.5.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:92%
+PROGRESS_REMAINING:8%
+DONE:merged release source, genuine Knowledge Pack validated, signed main Release passed; follow-on failure isolated to root-only downloaded-artifact lookup.
+REMAINING:repair layout lookup, record AF-179, run exact CI and publish after all release gates pass.
+BLOCKERS:Updater Repair Validation run37816833961 failed at SHA12c3145e.
+NEXT:correct artifact discovery in both jobs, verify locally, publish repair and rerun actual gates.
+RED_CI_EXTENSION:PR104 release-identity run37820253742 failed 27PASS/1FAIL because `tests/test_update_backward_compat.py` pins the former root-only `source=` assignment. Add that test to OWNED_PATHS, update its source contract to require recursive unique exact-version selection, and rerun exact CI; this is a stale structural assertion, not evidence that the release gate passed.
