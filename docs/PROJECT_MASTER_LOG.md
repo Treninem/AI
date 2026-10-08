@@ -9444,3 +9444,32 @@ DONE:124 exact residual statements triaged conservatively; signed Android releas
 REMAINING:investigate a reproducible high-impact cap defect before changing source; signed Windows branch verdict, current exact-SHA CI, version/versionCode-last and final release/update acceptance.
 BLOCKERS:signed Windows branch job and version-last acceptance pending; Android full production Knowledge payload remains OWNER_WAIVED_NOT_EXECUTED.
 NEXT:publish/sync this evidence-only review, collect signed Windows verdict, then take one source-defect claim only if a real cap failure is reproducible.
+
+### ACTIVE CLAIM — WORK-2026-10-08-V15-RELEASE-PREFLIGHT-GUARD
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Updater/release signing boundaries and exact-SHA acceptance.
+ADR_REFS:ADR-0001/0002/0003; no cognition/runtime change.
+STARTING_HEAD:2d4477727b2bb3a6894532c147ceb16965742f50; fresh main446ce2cd and feature fetched. Isolated worktree equals GitHub feature SHA; prior source claims published/released.
+OWNED_PATHS:.github/workflows/release.yml;.github/workflows/release-identity-ci.yml;tests/test_release_secret_readiness_workflow.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:existing pinned signing identity, secrets-only preflight and publish-only recovery. Preserve both supported publication routes and never publish during secrets_only.
+NON_BLOCKERS:V1.6/S3; expanded owner-PC344-case acceptance remains post-release under later owner decision, superseding the earlier new pre-release requirement without waiving older gates.
+INTENDED_BUMP:D within accumulated version-last V1.5.0.0; no bump before acceptance.
+ACCEPTANCE_GATES:preflight true must exclude publish for every event/ref/recovery combination; normal tag/recovery routes preserved; existing dependency success gates retained; actual guard truth-table/adversarial regressions, focused release tests and exact CI.
+EVIDENCE:48 focused release/journal tests on starting SHA produced47PASS/1FAIL; obsolete exact substring in test_release_secret_readiness_workflow.py. This test is absent from Release Identity CI. Current publish-only recovery OR permits workflow_dispatch+publish_run_id even when secrets_only=true. No observed unintended publication; reproducible source condition defect.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:starting SHA PR checks43SUCCESS/4 intentional SKIP; signed branch run37724099449 core/Windows/Android SUCCESS, publish SKIPPED. Signed artifacts11528819129/11527876103 available, built at0cc39ca; only journal differs from current SHA. These are pre-version evidence, not final V1.5 artifacts.
+REMAINING:guard repair/CI; retained384 audit findings; production-pack delivery decision; version-last and post-bump release/update acceptance.
+BLOCKERS:secrets-only guard defect in publish recovery condition; fix owned by this claim.
+NEXT:repair guard, execute semantic truth-table and retained release checks, publish coherent batch.
+RELEASE_PREFLIGHT_GUARD_LOCAL_CHECKPOINT:publish now rejects secrets_only before either tag or recovery route. Actual guard truth table covers288 combinations, including failed/skipped build dependencies and recovery; pre-fix preflight+recovery evaluates true and post-fix false. Existing supported ordinary tag and recovery behavior retained. Regression is now selected by both Release Identity CI path filters and its pytest invocation. Focused release/update/Knowledge/journal/memory suite49PASS; both YAML files parse; diff check PASS. No app runtime/version/pack bytes changed. AF-177 records defect and prevention. Signed run37724099449 all build jobs SUCCESS at0cc39ca; current2d44777 PR checks43SUCCESS/4 intentionalSKIP. Historical owner-PC requirement at8131 is superseded by later post-release owner decision at8198; prior canonical device gates remain.
+SOURCE_COMPLETE:YES for this guard block; exact publication CI pending, not release freeze.
+CODE_FREEZE_SHA:none for whole release.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:guard repaired,288-case semantic regression,49 focusedPASS; prior signed Windows/Android success carried forward honestly.
+REMAINING:exact new-SHA release guard CI;384 retained inventory findings and pack delivery/version-last/post-bump release/update acceptance.
+BLOCKERS:none in locally tested guard; new-SHA acceptance pending.
+NEXT:publish coherent5-file batch to existing feature PR using fast-forward only, sync local/origin/web SHA, inspect exact Release Identity verdict. No merge/tag/publication in this batch.
+CLAIM:WORK-2026-10-08-V15-RELEASE-PREFLIGHT-GUARD SOURCE_RELEASED/CI_PENDING; paths released after publication, runtime unchanged.
