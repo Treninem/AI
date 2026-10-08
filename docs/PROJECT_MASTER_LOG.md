@@ -9326,3 +9326,12 @@ DONE:102 API lines inspected;21 exact classifications,81 retained; local owner a
 REMAINING:publish/sync and exact owner/API CI;443 global findings plus release platform/package gates.
 BLOCKERS:none for audit metadata.
 NEXT:commit/push metadata and journal, verify local/origin/web SHA and exact owner/API CI.
+API_RESIDUAL_PUBLICATION_AND_CI:metadata/test/journal commit `ac96e88b9359d87185d76bf831b005235be1edd6` published; local HEAD, origin tracking and GitHub web ref matched exactly with a clean tree. Exact Chat Learning Attachments run `37709825385` SUCCESS, including owner audit; API run `37709825435` SUCCESS in Python, Windows and Godot jobs. Local owner suite38PASS, policy JSON and diff check PASS. Review102, classified21, retained81; global unclassified443. No API runtime behavior changed. Claim `CODEX-2026-10-08-V15-API-RESIDUAL-REVIEW` is DONE; policy, test and journal paths released. Same-SHA Windows Package, Android and Knowledge release acceptance remains separate.
+SOURCE_COMPLETE:YES for audit scope.
+CODE_FREEZE_SHA:ac96e88b9359d87185d76bf831b005235be1edd6
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 API lines reviewed;21 exact classifications and81 retained; local38PASS, exact owner/API CI SUCCESS.
+REMAINING:443 global inventory findings; exact release platform/package/update/version gates.
+BLOCKERS:none for completed audit; long release gates pending.
+NEXT:publish evidence-only journal commit and sync; then choose a retained source constraint with a separate claim and focused regression.
