@@ -31,7 +31,8 @@ def test_existing_safety_foundation_remains_authoritative():
     assert "func rollback(" in sandbox
     assert "func activate_staged(" in extensions
     assert "func deactivate(" in extensions
-    assert '"master_enabled": true' in autonomy
+    assert '"master_enabled": false' in autonomy
+    assert 'settings.get("master_enabled", false)' in autonomy
     assert "func set_master_enabled" in autonomy
     assert "func status()" in update_guard
     assert '"paused_hot_improvements"' in update_guard
@@ -139,7 +140,8 @@ def test_controller_has_bounded_experiment_registry_metrics_and_decisions():
     assert "AuroraEvolutionCandidateLedger.new()" in controller
     assert "AuroraEvolutionMetricsAdapter.new()" in controller
     assert "AuroraEvolutionDecisionRecord.new()" in controller
-    assert "MAX_RECENT := 64" in registry
+    assert 'OwnerResourcePolicy.value("evolution_recent_items")' in registry
+    assert '"evolution_recent_items": 64' in read("scripts/owner_resource_policy.gd")
     assert "verification_ratio" in metrics
     assert '"memory": {"available": false}' in metrics
     assert "outcome" in decision

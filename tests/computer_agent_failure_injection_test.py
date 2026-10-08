@@ -38,6 +38,7 @@ class _MalformedQueue:
 
 
 class _ExitedProcess:
+    pid = -1
     def start(self):
         return None
 
@@ -57,9 +58,21 @@ class _FakeContext:
         del maxsize
         return self.queue
 
+    def Event(self):
+        class Gate:
+            def set(self): pass
+        return Gate()
+
     def Process(self, **kwargs):
         del kwargs
         return _ExitedProcess()
+
+
+class _UnitJob:
+    # Pure malformed-response fault fixtures, not native Job Object evidence.
+    def assign(self, _pid): pass
+    def active_count(self): return 0
+    def close(self): pass
 
 
 def _headers(allowed: bool = True) -> dict[str, str]:
@@ -72,6 +85,7 @@ def _headers(allowed: bool = True) -> dict[str, str]:
 def test_worker_crash_or_empty_response_fails_closed_for_unsafe_action(tmp_path: Path, monkeypatch):
     service = _load_service(tmp_path)
     monkeypatch.setattr(service, "IS_WINDOWS", True)
+    monkeypatch.setattr(service, "_new_windows_job", _UnitJob)
     monkeypatch.setattr(service.mp, "get_context", lambda _method: _FakeContext(_NoResultQueue()))
     result = service._run_worker("action", {"type": "click", "x": 1, "y": 1}, timeout=0.1)
     assert result["ok"] is False
@@ -82,6 +96,7 @@ def test_worker_crash_or_empty_response_fails_closed_for_unsafe_action(tmp_path:
 def test_malformed_worker_payload_is_rejected_not_treated_as_success(tmp_path: Path, monkeypatch):
     service = _load_service(tmp_path)
     monkeypatch.setattr(service, "IS_WINDOWS", True)
+    monkeypatch.setattr(service, "_new_windows_job", _UnitJob)
     monkeypatch.setattr(service.mp, "get_context", lambda _method: _FakeContext(_MalformedQueue()))
     result = service._run_worker("action", {"type": "click", "x": 1, "y": 1}, timeout=0.1)
     assert result["ok"] is False
@@ -92,6 +107,7 @@ def test_malformed_worker_payload_is_rejected_not_treated_as_success(tmp_path: P
 def test_screenshot_worker_failure_is_graceful_and_retryable(tmp_path: Path, monkeypatch):
     service = _load_service(tmp_path)
     monkeypatch.setattr(service, "IS_WINDOWS", True)
+    monkeypatch.setattr(service, "_new_windows_job", _UnitJob)
     monkeypatch.setattr(service.mp, "get_context", lambda _method: _FakeContext(_NoResultQueue()))
     result = service._run_worker("screen", {}, timeout=0.1)
     assert result["ok"] is False

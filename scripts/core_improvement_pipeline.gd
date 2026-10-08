@@ -7,13 +7,10 @@ signal core_candidate_rejected(result: Dictionary)
 
 const CANDIDATE_ROOT := "user://core_candidates"
 const STATE_PATH := "user://core_candidates/state.json"
-const MAX_SOURCE_BYTES := 1024 * 1024
-const MAX_HISTORY := 30
 const MIN_REVIEW_IMPROVEMENT := 1.0
 const MIN_TOURNAMENT_CANDIDATES := 3
 const MAX_TOURNAMENT_CANDIDATES := 10
 const DEFAULT_TOURNAMENT_CANDIDATES := 5
-const PROPOSAL_ATTEMPT_MULTIPLIER := 3
 const CORE_TARGETS := [
 	"scripts/cognition_layer.gd",
 	"scripts/agent_core.gd",
@@ -36,6 +33,9 @@ var tools: ToolRegistry
 var coordinator: AuroraAutonomousCoordinator
 var benchmark := CoreCandidateBenchmark.new()
 var _running := false
+var _automatic_run := false
+var _caller_guard: Callable = Callable()
+var _guard_required := false
 var _last_candidate_unix := 0.0
 var _history: Array = []
 
@@ -87,8 +87,8 @@ func _register_tools() -> void:
 			Callable(self, "_tool_status")
 		)
 
-func _tool_candidate(args: Dictionary) -> Dictionary:
-	return await run_candidate(str(args.get("goal", "")).strip_edges(), str(args.get("target", "")).strip_edges())
+func _tool_candidate(args: Dictionary, execution_guard: Callable = Callable()) -> Dictionary:
+	return await run_candidate(str(args.get("goal", "")).strip_edges(), str(args.get("target", "")).strip_edges(), execution_guard)
 
 func _tool_status(_args: Dictionary) -> Dictionary:
 	return status()
@@ -108,33 +108,40 @@ func _on_autonomous_cycle_completed(report: Dictionary) -> void:
 	call_deferred("_run_automatic_candidate", goal)
 
 func _run_automatic_candidate(goal: String) -> void:
+	if _running: return
+	_automatic_run = true
 	await run_candidate(goal)
+	_automatic_run = false
 
-func run_candidate(goal: String, requested_target := "") -> Dictionary:
+func run_candidate(goal: String, requested_target := "", execution_guard: Callable = Callable()) -> Dictionary:
 	if _running:
 		return {"ok": false, "error": "core candidate pipeline is already running"}
-	if OS.get_name() != "Windows":
+	if not _candidate_platform_supported():
 		return {"ok": false, "error": "core source verification currently runs on Windows", "platform": OS.get_name()}
 	_bind_existing()
 	if ai == null or tools == null:
 		return {"ok": false, "error": "AuroraFox core candidate dependencies are not ready"}
+	_running = true
+	_caller_guard = execution_guard
+	_guard_required = not execution_guard.is_null()
+	if not _candidate_allowed("before_availability"): return _finish_rejected(_stopped("before_availability"))
 	if not await ai.is_available():
-		return {"ok": false, "error": "local AuroraFox Core inference is not ready"}
+		return _finish_rejected({"ok": false, "error": "local AuroraFox Core inference is not ready"})
+	if not _candidate_allowed("after_availability"): return _finish_rejected(_stopped("after_availability"))
 	if _signed_update_busy():
-		return {"ok": false, "error": "signed product update has priority", "deferred": true}
+		return _finish_rejected({"ok": false, "error": "signed product update has priority", "deferred": true})
 	var clean_goal := goal.strip_edges()
 	if clean_goal.is_empty():
 		clean_goal = "Повысить устойчивость, качество рассуждений и полезность AuroraFox без регрессий"
 	var target := _select_target(clean_goal, requested_target)
 	if target.is_empty():
-		return {"ok": false, "error": "target is outside the autonomous core allowlist"}
+		return _finish_rejected({"ok": false, "error": "target is outside the autonomous core allowlist"})
 	var source_result := _read_res_source(target)
 	if not bool(source_result.get("ok", false)):
-		return source_result
+		return _finish_rejected(source_result)
 	var original := str(source_result.get("content", ""))
 	var baseline_sha := _sha256_text(original)
 	var desired_count := clampi(tournament_candidate_count, MIN_TOURNAMENT_CANDIDATES, MAX_TOURNAMENT_CANDIDATES)
-	_running = true
 	core_candidate_started.emit(clean_goal, target)
 
 	# Every mutation is generated from the exact same incumbent source. Nothing is
@@ -143,11 +150,13 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 	var reviewed_candidates: Array = []
 	var candidate_payloads := {}
 	var seen_sha := {baseline_sha: true}
-	var max_attempts := desired_count * PROPOSAL_ATTEMPT_MULTIPLIER
+	var max_attempts := desired_count * OwnerResourcePolicy.value("candidate_proposal_attempt_multiplier")
 	var attempt := 0
-	while participants.size() < desired_count and attempt < max_attempts:
+	while participants.size() < desired_count and (max_attempts == 0 or attempt < max_attempts):
+		if not _candidate_allowed("before_proposal"): return _finish_rejected(_stopped("before_proposal"))
 		var proposal_result := await _propose(clean_goal, target, original, attempt, desired_count)
 		attempt += 1
+		if not _candidate_allowed("after_proposal"): return _finish_rejected(_stopped("after_proposal"))
 		if not bool(proposal_result.get("ok", false)):
 			continue
 		var proposal: Dictionary = proposal_result.get("proposal", {})
@@ -170,6 +179,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 			"stage": "verification"
 		}
 		var verification := await _verify_in_workspace(clean_goal, target, candidate_content)
+		if not _candidate_allowed("after_verification"): return _finish_rejected(_stopped("after_verification"))
 		verification["source_contract"] = validation.get("source_contract", {})
 		if not bool(verification.get("ok", false)):
 			participant["stage"] = str(verification.get("stage", "verification"))
@@ -180,6 +190,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 		participant["hard_gates_passed"] = true
 		participant["stage"] = "comparative_review"
 		var review := await _comparative_review(clean_goal, target, original, candidate_content, verification, proposal)
+		if not _candidate_allowed("after_review"): return _finish_rejected(_stopped("after_review"))
 		participant["review"] = _compact(review)
 		participant["scored"] = true
 		participant["eligible"] = bool(review.get("ok", false)) and bool(review.get("improved", false))
@@ -236,6 +247,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 	# independently re-imports the unchanged incumbent, re-runs baseline gates,
 	# writes the winner and re-runs the same target-specific tests/benchmarks.
 	var independent_verification := await _verify_in_workspace(clean_goal, target, winner_content)
+	if not _candidate_allowed("after_independent_verification"): return _finish_rejected(_stopped("after_independent_verification"))
 	independent_verification["source_contract"] = payload.get("validation", {}).get("source_contract", {})
 	if not bool(independent_verification.get("ok", false)):
 		return _finish_rejected({
@@ -264,6 +276,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 		"second_clean_pass": true
 	}
 	var proposal: Dictionary = payload.get("proposal", {})
+	if not _candidate_allowed("before_store"): return _finish_rejected(_stopped("before_store"))
 	var stored := _store_candidate(clean_goal, target, original, proposal, verification)
 	if not bool(stored.get("ok", false)):
 		return _finish_rejected(stored)
@@ -277,7 +290,7 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 		"manifest_path": stored.get("manifest_path", ""),
 		"base_sha256": baseline_sha,
 		"candidate_sha256": winner_sha,
-		"reason": str(proposal.get("reason", "")).substr(0, 2000),
+		"reason": OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "candidate_reason_chars"),
 		"verified": true,
 		"benchmark_verified": true,
 		"review_improved": true,
@@ -293,25 +306,67 @@ func run_candidate(goal: String, requested_target := "") -> Dictionary:
 	# but only after the bounded tournament and second clean verification passed.
 	# Packaged/signed builds never rewrite their runtime in place.
 	if OS.has_feature("editor") and auto_apply_dev_checkout:
-		var applied = await tools.call_tool("project_apply_file", {
+		var applied = await _candidate_tool("project_apply_file", {
 			"project_path": "res://",
 			"relative_path": target,
 			"sandbox_path": independent_verification.get("sandbox_path", "")
 		})
+		if not _candidate_allowed("after_apply"):
+			var stopped := _stopped("after_apply")
+			stopped["effects_may_have_occurred"] = true
+			stopped["apply"] = _compact(applied)
+			return _finish_rejected(stopped)
 		result["apply"] = _compact(applied)
 		result["applied_to_dev_checkout"] = bool(applied is Dictionary and applied.get("ok", false))
 		if bool(result.get("applied_to_dev_checkout", false)):
 			result["promotion"] = "verified_dev_checkout_candidate_then_signed_update"
 			if tools.tools.has("index_project"):
-				result["reindex"] = _compact(await tools.call_tool("index_project", {"path":"res://", "max_files":30000, "force":false}))
+				result["reindex"] = _compact(await _candidate_tool("index_project", {"path":"res://", "max_files":OwnerResourcePolicy.value("coordinator_index_files"), "force":false}))
 
+	if not _candidate_allowed("before_verified_result"): return _finish_rejected(_stopped("before_verified_result"))
 	_last_candidate_unix = Time.get_unix_time_from_system()
 	_history.append(_history_entry(result))
 	_trim_history()
 	_save_state()
 	_running = false
+	_caller_guard = Callable()
+	_guard_required = false
+	_automatic_run = false
 	core_candidate_verified.emit(result)
 	return result
+
+func _candidate_platform_supported() -> bool:
+	return OS.get_name() == "Windows"
+
+func _candidate_allowed(stage: String) -> bool:
+	if not ComputerClient.master_enabled_from(self): return false
+	if _automatic_run and not autonomous_core_candidates: return false
+	if _signed_update_busy(): return false
+	if _guard_required and not _caller_guard.is_valid(): return false
+	if _caller_guard.is_valid():
+		var decision = _caller_guard.call("candidate_control", {"tool": "aurora_core_candidate", "stage": stage})
+		if decision is bool: return decision
+		return decision.get("allowed", false) is bool and decision.get("allowed", false) if decision is Dictionary else false
+	return true
+
+func _stopped(stage: String) -> Dictionary:
+	return {"ok": false, "error": "candidate_execution_stopped", "stage": stage, "promotion": "none", "verified": false}
+
+func _candidate_chat(messages: Array, temperature: float) -> Dictionary:
+	if not _candidate_allowed("before_model"): return _stopped("before_model")
+	var response := await ai.chat(messages, temperature)
+	if not _candidate_allowed("after_model"): return _stopped("after_model")
+	return response
+
+func _candidate_tool(name: String, args: Dictionary = {}) -> Variant:
+	if not _candidate_allowed("before_tool"): return _stopped("before_tool")
+	var response = await tools.call_tool(name, args)
+	if not _candidate_allowed("after_tool"):
+		var stopped := _stopped("after_tool")
+		stopped["tool"] = name
+		stopped["effects_may_have_occurred"] = true
+		return stopped
+	return response
 
 func _propose(goal: String, target: String, original: String, mutation_index: int, mutation_count: int) -> Dictionary:
 	var prompt := """
@@ -340,7 +395,7 @@ func _propose(goal: String, target: String, original: String, mutation_index: in
 --- END CURRENT SOURCE ---
 """ % [mutation_count, mutation_index + 1, goal, target, target, original]
 	var temperature := clampf(0.08 + float(mutation_index % MAX_TOURNAMENT_CANDIDATES) * 0.025, 0.08, 0.30)
-	var response := await ai.chat([{"role":"user", "content":prompt}], temperature)
+	var response := await _candidate_chat([{"role":"user", "content":prompt}], temperature)
 	if not bool(response.get("ok", false)):
 		return {"ok": false, "stage": "proposal", "error": str(response.get("error", "local proposal generation failed"))}
 	var text := str(response.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
@@ -355,7 +410,7 @@ func _validate_candidate(target: String, original: String, proposal: Dictionary)
 	var content := str(proposal.get("content", ""))
 	if content.strip_edges().is_empty():
 		return {"ok": false, "stage": "validation", "error": "candidate source is empty"}
-	if content.to_utf8_buffer().size() > MAX_SOURCE_BYTES:
+	if OwnerResourcePolicy.value("candidate_source_bytes") > 0 and content.to_utf8_buffer().size() > OwnerResourcePolicy.value("candidate_source_bytes"):
 		return {"ok": false, "stage": "validation", "error": "candidate source exceeds size limit"}
 	if content == original:
 		return {"ok": false, "stage": "validation", "error": "candidate does not change the source"}
@@ -385,9 +440,9 @@ func _verify_in_workspace(goal: String, target: String, content: String) -> Dict
 	for required in ["workspace_create", "workspace_import_project", "workspace_write", "workspace_read", "workspace_test", "workspace_exec", "project_compare_file"]:
 		if not tools.tools.has(required):
 			return {"ok": false, "stage": "workspace", "error": "required verification tool missing", "tool": required}
-	var created = await tools.call_tool("workspace_create", {"task":"AuroraFox core candidate benchmark: " + goal, "runtime":"local"})
+	var created = await _candidate_tool("workspace_create", {"task":"AuroraFox core candidate benchmark: " + goal, "runtime":"local"})
 	if not _ok(created): return _failed("workspace_create", created)
-	var imported = await tools.call_tool("workspace_import_project", {"project_path":"res://", "target":"project", "max_files":30000, "max_bytes":2147483648})
+	var imported = await _candidate_tool("workspace_import_project", {"project_path":"res://", "target":"project", "max_files":OwnerResourcePolicy.value("candidate_project_files"), "max_bytes":OwnerResourcePolicy.value("candidate_project_bytes")})
 	if not _ok(imported): return _failed("workspace_import_project", imported)
 
 	var benchmark_commands := benchmark.commands_for_target(target)
@@ -399,14 +454,14 @@ func _verify_in_workspace(goal: String, target: String, content: String) -> Dict
 		return {"ok": false, "stage": "baseline_benchmark", "error": "current source baseline is not healthy enough to judge an autonomous replacement", "baseline": _compact(baseline_summary)}
 
 	var sandbox_path := "project/" + target
-	var written = await tools.call_tool("workspace_write", {"path":sandbox_path, "content":content})
+	var written = await _candidate_tool("workspace_write", {"path":sandbox_path, "content":content})
 	if not _ok(written): return _failed("workspace_write", written)
-	var reread = await tools.call_tool("workspace_read", {"path":sandbox_path, "area":"work"})
+	var reread = await _candidate_tool("workspace_read", {"path":sandbox_path, "area":"work"})
 	if not _ok(reread): return _failed("workspace_read", reread)
 	if str(reread.get("content", "")) != content:
 		return {"ok": false, "stage": "candidate_integrity", "error": "workspace candidate differs from proposed source"}
 
-	var tested = await tools.call_tool("workspace_test", {"language":"gdscript", "cwd":"project"})
+	var tested = await _candidate_tool("workspace_test", {"language":"gdscript", "cwd":"project"})
 	if not _ok(tested): return _failed("workspace_test", tested)
 	var candidate_runs := await _run_benchmark_commands(benchmark_commands)
 	var candidate_summary := benchmark.summarize_runs(candidate_runs)
@@ -414,7 +469,7 @@ func _verify_in_workspace(goal: String, target: String, content: String) -> Dict
 	if not bool(runtime_comparison.get("ok", false)):
 		return {"ok": false, "stage": "candidate_benchmark", "error": "candidate failed target-specific no-regression benchmark", "benchmark": _compact(runtime_comparison)}
 
-	var compared = await tools.call_tool("project_compare_file", {"project_path":"res://", "relative_path":target, "sandbox_path":sandbox_path})
+	var compared = await _candidate_tool("project_compare_file", {"project_path":"res://", "relative_path":target, "sandbox_path":sandbox_path})
 	if not _ok(compared): return _failed("project_compare_file", compared)
 	if not bool(compared.get("changed", false)):
 		return {"ok": false, "stage": "project_compare_file", "error": "verified candidate is identical to current source"}
@@ -436,10 +491,10 @@ func _run_benchmark_commands(commands: Array) -> Array:
 		if not command is Array:
 			results.append({"ok": false, "error": "invalid benchmark command", "command": command})
 			continue
-		var result = await tools.call_tool("workspace_exec", {
+		var result = await _candidate_tool("workspace_exec", {
 			"command": command,
 			"cwd": "project",
-			"timeout": 150,
+			"timeout": OwnerResourcePolicy.value("candidate_benchmark_seconds"),
 			"mode": "auto"
 		})
 		if result is Dictionary:
@@ -454,8 +509,8 @@ func _comparative_review(goal: String, target: String, original: String, candida
 	var evidence := {
 		"source_contract": verification.get("source_contract", {}),
 		"benchmark": verification.get("benchmark", {}),
-		"requested_reason": str(proposal.get("reason", "")).substr(0, 2000),
-		"requested_verification": str(proposal.get("verification", "")).substr(0, 1500)
+		"requested_reason": OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "candidate_reason_chars"),
+		"requested_verification": OwnerResourcePolicy.clip(str(proposal.get("verification", "")), "candidate_verification_chars")
 	}
 	var prompt := """
 Ты локальный независимый reviewer AuroraFox. Сравни неизменный incumbent и уже прошедшую source/safety/test/benchmark hard-gates мутацию.
@@ -474,8 +529,8 @@ func _comparative_review(goal: String, target: String, original: String, candida
 %s
 --- MUTATION ---
 %s
-""" % [goal, target, JSON.stringify(_compact(evidence)), original.substr(0, 120000), candidate.substr(0, 120000)]
-	var response := await ai.chat([{"role":"user", "content":prompt}], 0.0)
+""" % [goal, target, JSON.stringify(_compact(evidence)), OwnerResourcePolicy.clip(original, "candidate_review_source_chars"), OwnerResourcePolicy.clip(candidate, "candidate_review_source_chars")]
+	var response := await _candidate_chat([{"role":"user", "content":prompt}], 0.0)
 	if not bool(response.get("ok", false)):
 		return {"ok": false, "stage": "comparative_review", "error": str(response.get("error", "comparative review failed"))}
 	var text := str(response.get("content", "")).replace("```json", "").replace("```", "").strip_edges()
@@ -557,8 +612,8 @@ func _store_candidate(goal: String, target: String, original: String, proposal: 
 		"target": target,
 		"base_sha256": _sha256_text(original),
 		"candidate_sha256": candidate_sha,
-		"reason": str(proposal.get("reason", "")).substr(0, 4000),
-		"requested_verification": str(proposal.get("verification", "")).substr(0, 3000),
+		"reason": OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "candidate_saved_reason_chars"),
+		"requested_verification": OwnerResourcePolicy.clip(str(proposal.get("verification", "")), "candidate_saved_verification_chars"),
 		"verified": true,
 		"benchmark_verified": bool(verification.get("benchmark", {}).get("ok", false)) if verification.get("benchmark", {}) is Dictionary else false,
 		"tournament_verified": bool(verification.get("tournament", {}).get("second_clean_pass", false)) if verification.get("tournament", {}) is Dictionary else false,
@@ -604,7 +659,7 @@ func _read_res_source(target: String) -> Dictionary:
 	var file := FileAccess.open(path, FileAccess.READ)
 	if file == null:
 		return {"ok": false, "error": "cannot read core source", "path": target}
-	if file.get_length() > MAX_SOURCE_BYTES:
+	if OwnerResourcePolicy.value("candidate_source_bytes") > 0 and file.get_length() > OwnerResourcePolicy.value("candidate_source_bytes"):
 		file.close()
 		return {"ok": false, "error": "core source exceeds size limit", "path": target}
 	var content := file.get_as_text()
@@ -636,6 +691,9 @@ func status() -> Dictionary:
 
 func _finish_rejected(result: Dictionary) -> Dictionary:
 	_running = false
+	_caller_guard = Callable()
+	_guard_required = false
+	_automatic_run = false
 	var row := result.duplicate(true)
 	row["ok"] = false
 	row["rejected_at"] = Time.get_datetime_string_from_system(true)
@@ -648,7 +706,7 @@ func _finish_rejected(result: Dictionary) -> Dictionary:
 func _history_entry(result: Dictionary) -> Dictionary:
 	return {
 		"ok": bool(result.get("ok", false)),
-		"goal": str(result.get("goal", "")).substr(0, 1000),
+		"goal": OwnerResourcePolicy.clip(str(result.get("goal", "")), "candidate_history_text_chars"),
 		"target": str(result.get("target", "")),
 		"candidate_id": str(result.get("candidate_id", "")),
 		"candidate_sha256": str(result.get("candidate_sha256", "")),
@@ -660,13 +718,14 @@ func _history_entry(result: Dictionary) -> Dictionary:
 		"promotion": str(result.get("promotion", "")),
 		"applied_to_dev_checkout": bool(result.get("applied_to_dev_checkout", false)),
 		"stage": str(result.get("stage", "")),
-		"error": str(result.get("error", "")).substr(0, 1000),
+		"error": OwnerResourcePolicy.clip(str(result.get("error", "")), "candidate_history_text_chars"),
 		"time": Time.get_datetime_string_from_system(true)
 	}
 
 func _trim_history() -> void:
-	if _history.size() > MAX_HISTORY:
-		_history = _history.slice(_history.size() - MAX_HISTORY, _history.size())
+	var cap := OwnerResourcePolicy.value("candidate_history_items")
+	if cap > 0 and _history.size() > cap:
+		_history = _history.slice(_history.size() - cap, _history.size())
 
 func _load_state() -> void:
 	var file := FileAccess.open(STATE_PATH, FileAccess.READ)
@@ -723,7 +782,7 @@ func _compact(value: Variant) -> Variant:
 		return out
 	if value is Array:
 		var out_array: Array = []
-		for item in value.slice(0, mini(value.size(), 24)):
+		for item in value.slice(0, OwnerResourcePolicy.count(value.size(), "candidate_evidence_items")):
 			out_array.append(_compact(item))
 		return out_array
 	return value

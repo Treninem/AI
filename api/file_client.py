@@ -11,6 +11,8 @@ from typing import Any
 
 import requests
 
+from api.request_limits import _nonnegative_budget
+
 
 DEFAULT_MAX_FILE_BYTES = 16 * 1024 * 1024
 DEFAULT_UPLOAD_TTL_SECONDS = 24 * 60 * 60
@@ -24,19 +26,22 @@ class FileIntelligenceClient:
         *,
         max_file_bytes: int | None = None,
         upload_ttl_seconds: int | None = None,
+        analysis_timeout_seconds: int | None = None,
     ):
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
         self.base_url = base_url.rstrip("/")
         configured_max = max_file_bytes
         if configured_max is None:
-            configured_max = int(os.getenv("AURORAFOX_API_FILE_MAX_BYTES", str(DEFAULT_MAX_FILE_BYTES)))
-        self.max_file_bytes = max(1, int(configured_max))
+            configured_max = os.getenv("AURORAFOX_API_FILE_MAX_BYTES", str(DEFAULT_MAX_FILE_BYTES))
+        self.max_file_bytes = _nonnegative_budget(configured_max, "AURORAFOX_API_FILE_MAX_BYTES")
         self.max_encoded_chars = 4 * ((self.max_file_bytes + 2) // 3)
         configured_ttl = upload_ttl_seconds
         if configured_ttl is None:
-            configured_ttl = int(os.getenv("AURORAFOX_API_UPLOAD_TTL_SECONDS", str(DEFAULT_UPLOAD_TTL_SECONDS)))
-        self.upload_ttl_seconds = max(60, int(configured_ttl))
+            configured_ttl = os.getenv("AURORAFOX_API_UPLOAD_TTL_SECONDS", str(DEFAULT_UPLOAD_TTL_SECONDS))
+        self.upload_ttl_seconds = _nonnegative_budget(configured_ttl, "AURORAFOX_API_UPLOAD_TTL_SECONDS")
+        configured_timeout = os.getenv("AURORAFOX_API_FILE_ANALYSIS_TIMEOUT_SECONDS", "180") if analysis_timeout_seconds is None else analysis_timeout_seconds
+        self.analysis_timeout_seconds = _nonnegative_budget(configured_timeout, "AURORAFOX_API_FILE_ANALYSIS_TIMEOUT_SECONDS")
         self._prune_stale_uploads()
 
     @staticmethod
@@ -45,6 +50,8 @@ class FileIntelligenceClient:
         return cleaned[:160] or "upload.bin"
 
     def _prune_stale_uploads(self) -> int:
+        if self.upload_ttl_seconds == 0:
+            return 0
         cutoff = time.time() - self.upload_ttl_seconds
         removed = 0
         for path in self.root.iterdir():
@@ -57,12 +64,12 @@ class FileIntelligenceClient:
         return removed
 
     def save_base64(self, filename: str, content_base64: str) -> Path:
-        if len(content_base64) > self.max_encoded_chars:
+        if self.max_file_bytes > 0 and len(content_base64) > self.max_encoded_chars:
             raise ValueError(
                 f"File payload exceeds AuroraFox API limit of {self.max_file_bytes} decoded bytes"
             )
         raw = base64.b64decode(content_base64, validate=True)
-        if len(raw) > self.max_file_bytes:
+        if self.max_file_bytes > 0 and len(raw) > self.max_file_bytes:
             raise ValueError(
                 f"Decoded file exceeds AuroraFox API limit of {self.max_file_bytes} bytes"
             )
@@ -77,7 +84,7 @@ class FileIntelligenceClient:
         response = requests.post(
             f"{self.base_url}/analyze",
             json={"path": str(path.resolve()), "question": question, "visual": visual},
-            timeout=180,
+            timeout=self.analysis_timeout_seconds if self.analysis_timeout_seconds > 0 else None,
         )
         response.raise_for_status()
         payload = response.json()

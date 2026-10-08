@@ -2958,6 +2958,54 @@ BLOCKERS: GitHub secret names cannot be read through the connected GitHub App; t
 NEXT: publish the implementation to the release branch and inspect triggered integration/package checks; install/authenticate GitHub CLI on the owner PC only for secret-name verification.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 
+### CHECKPOINT 2026-09-30 — PR #103 first exact-SHA failures reproduced
+
+- Draft PR #103 was created against archive PR #102. Published head `783b46eec6e0409c3d25470fd1f3fa1559f2adfe` has exact tree `789dcec4e49d7e685724cb5ced931f1e43e046cb`, matching local `e2642b9`.
+- First exact-SHA results: Work Mode, Chat Learning, Semantic Memory and Agent Sync succeeded; two Python jobs failed one assertion each. Core Benchmarks `36717626031` passed 30/31 and failed because its contract searched an obsolete two-argument `ChatStore.add_message` spelling after answer metadata was added. Core/Voice `36717625933` passed 69/70 in the Python job while File Intelligence, Windows integration and Godot Core jobs succeeded; its failed contract required a compatibility helper spelling despite the same semantic router being called directly.
+- Correction preserves behavior: Core recovery remains before assistant persistence and the test now matches the stable call prefix; AttachmentManager again delegates through `_learning_type_from_instruction(question)`, which calls the same `UserIntentRouter`. No weakening of read=remember, filename/payload authority, feedback or Core recovery occurred.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: PR #103 exact tree published; both CI failures reduced to exact stale contract causes; minimal compatible fixes prepared.
+REMAINING: run the two exact failed suites locally, publish corrected exact tree, accept all 11 workflows; then continue document URLs, owner-control/security/UI/performance/device gates.
+BLOCKERS: no source blocker; Windows/Android physical acceptance remains external.
+NEXT: execute the 31-test benchmark contract suite and 70-test Core/Voice Python suite, commit only the reproduced corrections, update PR #103 and inspect all workflows for the new SHA.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — авторизованная проверка безопасности
+
+- !!! ОБЯЗАТЕЛЬНО !!! AuroraFox должна уметь проводить **реальное**, а не scripted/stubbed security‑тестирование сайта, приложения или инфраструктуры, принадлежащих владельцу либо явно переданных ему для проверки. До активных действий Fox фиксирует подтверждение полномочий, точные target/scope, среду production/staging/lab, разрешённые методы, временное окно, rate/resource budget и запрещённые воздействия.
+- !!! ОБЯЗАТЕЛЬНО !!! Проверка идёт по ступеням: карта поверхности и версий → безопасные passive/low-impact checks → подтверждение кандидатов → только разрешённая минимальная эксплуатация в scope → доказательство влияния без лишнего доступа → severity/CVSS и приоритет → конкретное исправление → повторный retest. «Уязвимо» без воспроизводимого evidence не считается результатом; успешный exploit без отчёта и remediation тоже не считается завершением.
+- !!! ОБЯЗАТЕЛЬНО !!! Для собственной lab/staging-системы владелец может явно расширить инструменты, интенсивность и exploit‑проверки. На production по умолчанию запрещены разрушение/изменение данных, неконтролируемый DoS, persistence/backdoor, скрытие следов, выход за scope, lateral movement и извлечение реальных секретов/персональных данных сверх минимального доказательства. Эти границы защищают не удобство продукта, а чужие права, данные и доступность; Fox сообщает, почему конкретное действие не выполняется и какой безопасный lab/replay способ даст эквивалентное доказательство.
+- !!! ОБЯЗАТЕЛЬНО !!! Если цель или полномочие неоднозначны, Fox не делает вид, что протестировала систему: она запрашивает недостающий scope. Все команды, результаты, timestamps, версии инструментов, evidence hashes, изменения policy и остановки журналируются; чувствительные значения редактируются. Master stop и отмена владельца прекращают новые действия немедленно.
+- !!! ОБЯЗАТЕЛЬНО !!! Итоговый отчёт должен содержать executive summary, scope/ограничения, проверенную поверхность, подтверждённые и неподтверждённые находки, воспроизводимые безопасные шаги, evidence, severity, вероятность/влияние, исправления по коду/конфигурации/архитектуре, компенсационные меры, regression tests и результат retest. Fox не обещает абсолютную защищённость и явно перечисляет непроверенное.
+- Реализация этого режима не объявляется готовой одной декларацией: требуются изолированный security workspace, scope/authorization gate, audited tool allowlist, rate/concurrency controls, secret/PII redaction, evidence store, отчётность, cancellation/master-stop и end-to-end lab fixtures с намеренно уязвимым локальным target. Внешняя цель без явного разрешения не тестируется активно.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: owner requirement для настоящего авторизованного pentest/retest преобразован в проверяемый контракт без ложных отчётов и заглушек.
+REMAINING: реализовать security workspace/gates/tooling/evidence/report/retest и проверить на локальной intentionally-vulnerable lab; завершить текущий URL/owner-control пакет и остальные UI/performance/device/release gates.
+BLOCKERS: активная проверка конкретной внешней цели требует точного scope и подтверждения полномочий; это не блокирует разработку и lab-тесты самого режима.
+NEXT: завершить и зафиксировать web reader/owner-policy tests, затем включить security-mode компоненты в общий owner-control inventory и отдельный исполнимый пакет.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — публичные ссылки читаются и запоминаются
+
+- !!! ОБЯЗАТЕЛЬНО !!! Когда владелец присылает публичную HTTP/HTTPS-ссылку и просит прочитать, изучить, найти, выделить, рассказать или выполнить другую задачу по её материалу, AuroraFox должна реально получить общедоступное содержимое, извлечь относящиеся к задаче данные, передать их локальному Core как недоверенный источник и сохранить прочитанные знания в приватной Knowledge. Для ссылок **«прочитать» и «запомнить» — одна операция**; отдельная формула `запомни` не требуется.
+- !!! ОБЯЗАТЕЛЬНО !!! Сохранённый источник получает URL, финальный URL после перенаправлений, заголовок, домен, время получения, content type и SHA-256 прочитанного текста. Knowledge дедуплицирует материал и извлекает релевантные фрагменты; содержимое страницы не получает полномочий команды, не запускает код и не может менять разрешения, веса или shared Core.
+- !!! ОБЯЗАТЕЛЬНО !!! Нельзя вводить искусственный список разрешённых сайтов или молча отказывать из-за «необычной» ссылки. Если страницу нельзя прочитать, формат/размер/перенаправление требует иного безопасного пути или сайт возвращает защиту, AuroraFox сразу сообщает владельцу точный адрес, причину, что было и не было сохранено, и просит решение о допустимом следующем шаге.
+- !!! ОБЯЗАТЕЛЬНО !!! Даже после подтверждения владельца AuroraFox не обходит CAPTCHA, обязательную регистрацию/авторизацию, paywall, robots/access control и не обращается к localhost, частным, link-local или служебным адресам через присланную страницу. Если регистрация необязательна и материал действительно публичен, чтение продолжается без регистрации. Для закрытого материала Fox просит владельца предоставить разрешённый экспорт/файл/доступный источник.
+- !!! ОБЯЗАТЕЛЬНО !!! Каждый redirect повторно проходит проверку публичного адреса; запросы имеют конечные лимиты времени/байтов/redirect для защиты устройства. Достижение лимита не выдаётся за окончательный отказ: Fox объясняет предел и предлагает владельцу безопасный управляемый вариант продолжения. Увеличение лимита не может отменить сетевые и access-control запреты.
+- !!! ОБЯЗАТЕЛЬНО !!! Автоматическая запись прочитанной страницы относится только к приватной Knowledge владельца. Дообучение весов, перенос в shared Core, публикация или исполнение найденных инструкций по-прежнему требуют отдельного анализа, проверок и явного подтверждения владельца.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: уточнённый owner contract «прочитать ссылку = запомнить» записан без потери provenance и безопасностных границ; отсутствие искусственного allowlist и обязательное объяснение препятствий закреплены.
+REMAINING: завершить реализацию публичного URL reader/importer; форматы документов и owner-controlled continuation; точные runtime/security/CI проверки; UI/performance/device/release acceptance.
+BLOCKERS: CAPTCHA, обязательная авторизация/paywall/access control и непубличная сеть не могут обходиться; для таких источников нужен разрешённый материал от владельца.
+NEXT: скорректировать URL intent на автоматический private Knowledge import, проверить URL/redirect/SSRF/content tests и затем опубликовать точное дерево для CI без version bump.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
 ## 102. BEFORE: GitHub-hosted signing-secret readiness gate
 
 `WORK-2026-09-17-FINAL-RELEASE` remains ACTIVE under the sole coordinator/executor. Exact release-branch HEAD is `3791ca6ae2e50189a0e103c0fbfae831a78ff794`; all 25 workflows associated with this exact SHA completed `success`, including Windows package/install/smoke, Android APK/offline E2E, Release Identity, Integration and real Knowledge 1 GiB gates. Public version remains `1.3.0.0` / Android code `100005`; accumulated release bump remains MINOR `V1.4.0.0`, version-last.
@@ -2986,6 +3034,22 @@ DONE: 25/25 exact-candidate workflows green; safe GitHub-hosted secret presence/
 REMAINING: publish and manually dispatch the preflight; if green, perform V1.4.0.0/code100006 version-last, rerun exact-SHA package/release gates and publish the signed RC.
 BLOCKERS: actual owner-controlled secret values can only be validated when GitHub executes the workflow.
 NEXT: publish this tooling-only commit, dispatch `release-secret-readiness.yml` on the release branch, and inspect its exact result without polling unrelated workflows.
+
+### !!! ОБЯЗАТЕЛЬНО !!! OWNER DIRECTIVE — ограничения управляются владельцем
+
+- !!! ОБЯЗАТЕЛЬНО !!! Во всём AuroraFox эксплуатационные лимиты, автоматические режимы, разрешения и политики должны быть видимыми, объяснимыми, обратимыми и настраиваемыми владельцем. Нельзя прятать неснимаемое продуктовое ограничение в hard-coded числе, silent fallback, scripted success или недоступном конфиге.
+- !!! ОБЯЗАТЕЛЬНО !!! Когда достигается мягкий лимит времени, размера, количества, глубины, повторов или ресурсов, Fox сообщает, какой именно предел достигнут, что уже сделано/сохранено, риск продолжения и предлагает владельцу изменить предел, повторить один раз или отменить действие. Выбор и последствия журналируются; возврат к безопасным defaults всегда доступен.
+- !!! ОБЯЗАТЕЛЬНО !!! Жёсткой границей может быть только доказуемая безопасность/целостность/чужой access control/законодательное или платформенное ограничение: обход CAPTCHA/обязательного входа/paywall, неподтверждённое выполнение недоверенного кода, утечка секретов, нарушение подписи/rollback/master-stop либо несанкционированное воздействие на чужую или служебную систему. Fox обязана назвать конкретную границу и безопасный способ предоставить данные/полномочие; нельзя маскировать обычное дизайнерское решение под «безопасность».
+- !!! ОБЯЗАТЕЛЬНО !!! Это правило применяется не только к ссылкам: Web, Knowledge, Core, Work/Computer, обновления, импорт, память, обучение, UI, сеть, файлы и фоновые процессы проходят единый owner-control audit. Каждое ограничение классифицируется как owner-adjustable default или hard boundary с обоснованием и тестом.
+- Текущая реализация публичных ссылок переводит количество URL, redirects, байты ответа и timeout в owner-adjustable policy с безопасными defaults; нестандартный публичный порт искусственно не запрещается. Сетевые private/service destinations и чужие access controls пока остаются hard boundary и не обходятся redirect-ом.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: универсальный owner-control принцип записан; мягкие web limits стали изменяемой политикой; task-memory больше не дублирует целиком большие веб/файловые контексты.
+REMAINING: добавить настройки/диалог повторного продолжения в UI; построить inventory всех hard-coded limits проекта и классифицировать каждый; продолжить URL document formats, CI, UI/performance/device/release acceptance.
+BLOCKERS: ни одно owner preference не считается блокером; реальные внешние access-control и safety boundaries требуют разрешённого альтернативного пути, а не обхода.
+NEXT: прогнать runtime/contract tests изменяемой web policy, затем создать machine-readable owner-control inventory по всему tracked source и устранить необоснованные неснимаемые пределы пакетами.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
 
 ### TAKEOVER: embed the preflight in the default-branch Release workflow
@@ -3577,6 +3641,30 @@ BLOCKERS: physical installed-runtime evidence cannot be produced in the current 
 NEXT: execute the installed Windows/Android acceptance script on owner hardware and capture results; if green, synchronize all V1.5.0.0/versionCode surfaces on this release branch, run exact-head CI, merge, sign and publish.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
 
+## 2026-09-30 — !!! ОБЯЗАТЕЛЬНЫЙ OWNER-DIRECTED PRODUCT QUALITY PACKAGE !!!
+
+- Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` остаётся **ACTIVE** и расширяется этим обязательным owner-directed пакетом; параллельный журнал или конкурирующий CLAIM не создаётся. Исходный локальный HEAD: `62eec4641b3830574af1459d339a3c5e9cb1ea88`, дерево `52b7afeda78050bd7276d65968cd5786fb3af2df`; свежий `main`: `446ce2cd2f979a8ab228f63d090062e8ba48a6eb`; опубликованный PR #102 head: `df67a1eb0e14478cc57dd6e68dce7c6bdbbf2b34` с тем же деревом.
+- !!! ОБЯЗАТЕЛЬНО !!! Провести системный аудит всего продукта: исходники, ресурсы, конфигурации, версии, локализацию, кнопки, меню, списки, окна, состояния, ошибки и пакетные пути. Формулировка «каждый байт/пиксель/символ» означает не декларацию, а воспроизводимый набор статических контрактов, тестов поведения, render-matrix/pixel-bound проверок, package/install/device smokes и ручную проверку реально доступных артефактов. Нельзя утверждать абсолютную работоспособность на любом когда-либо существовавшем железе; требуется заявленная support matrix, graceful degradation и отсутствие зависаний/неограниченного ожидания на минимально поддерживаемых устройствах.
+- !!! ОБЯЗАТЕЛЬНО !!! Производительность и отзывчивость имеют первый приоритет: запуск, первый ответ, повторный ответ, открытие/переключение окон, Settings, Knowledge, импорт, Android same-session refresh и фоновые процессы должны иметь измеряемые latency/RAM/CPU budgets, bounded waits/cancellation и честные пользовательские состояния. Нельзя маскировать долгую работу анимацией, увеличением timeout или заранее записанным ответом.
+- !!! ОБЯЗАТЕЛЬНО !!! AuroraFox должна понимать намерение пользователя независимо от одной жёстко записанной фразы: `изучи`, `прочитай`, `посчитай`, `расскажи`, `найди`, `придумай`, `объясни`, `сравни`, `проверь`, `сохрани` и естественные перефразировки должны маршрутизироваться через локальное распознавание intent + контекст разговора + доступные вложения/инструменты. Вопрос о знаниях отделяется от команды изучить/импортировать. Filename/regex/scripted keyword не может быть единственным доказательством намерения. Неясное или опасное действие требует уточнения/подтверждения, а не молчаливого выполнения.
+- !!! ОБЯЗАТЕЛЬНО !!! Никаких обманных заглушек, scripted-success, подмены мышления шаблонным ответом или заранее записанных результатов. Fixture/heuristic разрешены только как явно ограниченный fallback/тестовый материал и никогда не выдаются за самостоятельный анализ. Каждый success должен быть связан с фактическим результатом, provenance/transaction evidence и, где применимо, изменением Knowledge/Memory/артефакта.
+- !!! ОБЯЗАТЕЛЬНО !!! Под каждым ответом AuroraFox добавить компактную feedback-панель `+ / −` (или визуально эквивалентные like/dislike controls) с доступными названиями и состоянием. Feedback относится к точному message/conversation/model/core/version/context identity, допускает изменение/отмену оценки, не плодит дубликаты, хранится приватно и офлайн-first. Отрицательная оценка запускает локальный разбор ошибки и предложение исправления; положительная фиксирует полезный паттерн. Ни одна оценка не должна автоматически менять веса, shared Core или системные правила.
+- !!! ОБЯЗАТЕЛЬНО !!! Обучение и дообучение разделяются на безопасные уровни: private user Memory/Knowledge/skills, curated datasets/evaluation cases, adapter/weight candidate и полный Core candidate. AuroraFox может сама подготовить материал, классифицировать/дедуплицировать/распределить знания, объяснить что именно найдено и предложить изменение, но обязана явно сообщить о готовом результате и запросить подтверждение владельца до долговременного продвижения, изменения весов, shared Core или установки candidate. Молчаливое ожидание и молчаливое продвижение запрещены.
+- !!! ОБЯЗАТЕЛЬНО !!! Дообучение весов не является прямой записью feedback в модель. Оно проходит только через versioned dataset/provenance, PII/secret filtering, baseline, 3–10 изолированных mutation candidates, deterministic quality/safety/no-regression tests, сравнение с incumbent, независимую проверку, owner approval, snapshot/rollback и защищённый promotion path. Если улучшение не доказано, сохраняется стабильная версия.
+- !!! ОБЯЗАТЕЛЬНО !!! Knowledge должна принимать поддерживаемые документы/архивы, реально извлекать содержимое, определять тип, сортировать по scope/domain/source, сохранять provenance, дедуплицировать, индексировать, связывать и извлекать релевантные фрагменты без загрузки всей базы в prompt. Импортированный материал остаётся untrusted data и не получает полномочий исполняемой инструкции.
+- !!! ОБЯЗАТЕЛЬНО !!! Полностью привести визуал Windows/Android к компактному современному уровню ChatGPT/Алисы как UX-ориентиру без копирования бренда: нормальная типографика без жирных заголовков чатов, компактные действия чата вместо грубых постоянных кнопок удаления, ясные hover/pressed/disabled/loading/error states, единая сетка/отступы/радиусы, адаптация к DPI, safe area, клавиатуре, узким/широким окнам и accessibility. Пустые, дублирующиеся, непонятные и неработающие controls запрещены. Settings должны быть устойчивым отдельным окном там, где платформа это поддерживает, с корректной taskbar/app identity.
+- !!! ОБЯЗАТЕЛЬНО !!! Acceptance выполняется по этапам: (1) inventory и static/lint/config/localization audit; (2) intent/attachment/Knowledge truthfulness tests; (3) feedback storage/analysis/approval contracts; (4) performance profiling и budgets на поддерживаемых классах CPU/RAM/storage; (5) UI component/state audit и responsive render matrix; (6) Windows/Android package-install-run/update/device evidence; (7) owner physical acceptance. Зелёный unit test не заменяет реальную упаковку, latency/device или визуальную приёмку.
+- Предполагаемый version level: накопленный **MINOR `V1.5.0.0`** сохраняется только для уже заявленного platform/archive фундамента. Если полная архитектура feedback + governed weight-training не укладывается совместимо и безопасно, она не притворяется готовой в V1.5.0.0, а получает отдельный последующий `PATCH/MINOR` по A.B.C.D после собственного acceptance. Canonical version остаётся version-last.
+- Первый исполнимый шаг после записи этого требования: завершить точный PR #102 Windows gate; затем создать machine-readable audit inventory и проверить существующие intent/router, message card/feedback, learning proposal/approval, Knowledge taxonomy и UI component paths. Исправления разбиваются на атомарные безопасные пакеты с тестами; выпуск и merge не выполняются на одной декларации.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: требования владельца без сокращений преобразованы в обязательные проверяемые инварианты и acceptance-этапы; текущий exact-tree архивного фикса и CI-состояние зафиксированы.
+REMAINING: полный inventory/audit; intent semantic routing; feedback UI/data/analysis; governed learning proposals; UI redesign/render acceptance; performance/device/update proof; version-last/package/sign/publish.
+BLOCKERS: Windows Package PR #102 ещё выполняется; физические Windows/Android и широкая hardware-support matrix требуют пакетных/устройственных доказательств.
+NEXT: дождаться/разобрать точный Windows run `36691860197`, затем построить audit inventory и начать первый измеряемый пакет intent + feedback без заглушек.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
 ## 2026-09-30 — continuation after PR #101 merge; real archive-learning gap
 
 - Claim: `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION` remains **ACTIVE** under the current Codex coordinator; this entry reconciles the previous source-only checkpoint with fresh `main` and does not create a parallel lane.
@@ -3637,3 +3725,5843 @@ REMAINING: push branch; exact-SHA Core/Voice and Chat Learning CI; installed Win
 BLOCKERS: remote CI and installed-device evidence pending; no known source blocker.
 NEXT: publish the exact branch commits without version bump, inspect all triggered workflows, and correct only exact reproduced failures before merge consideration.
 ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+### LATEST AUTHORITATIVE OWNER DIRECTIVE 2026-09-30
+
+- !!! ОБЯЗАТЕЛЬНО !!! Раздел `2026-09-30 — !!! ОБЯЗАТЕЛЬНЫЙ OWNER-DIRECTED PRODUCT QUALITY PACKAGE !!!` выше является текущим обязательным продолжением active V1.5 platform claim и не может быть закрыт декларацией, scripted fixture, заглушкой или одним зелёным unit test.
+- Порядок исполнения: завершить/разобрать уже запущенный PR #102 exact-SHA gate без повторной тяжёлой сборки; затем inventory/audit → semantic intent и truthfulness → feedback `+ / −` и governed learning proposal/approval → performance budgets → полный UI/state/render audit → package/device/owner acceptance.
+- До появления нового проверяемого evidence release-train readiness остаётся 78%; объём нового долгосрочного продукта не выдаётся за уже завершённую часть текущего релиза.
+
+PROGRESS_COMPLETE: 78%
+PROGRESS_REMAINING: 22%
+DONE: полный обязательный owner-directed пакет записан в едином журнале с восклицательными пометками и проверяемыми acceptance-критериями.
+REMAINING: исполнить перечисленные этапы и получить точные code/render/package/device доказательства.
+BLOCKERS: текущий Windows Package run и недоступные в Linux физические Windows/Android проверки.
+NEXT: проверить завершение run `36691860197`; затем начать machine-readable audit inventory без изменения канонической версии.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 78%
+
+### CHECKPOINT 2026-09-30 — exact archive CI green; byte audit, feedback and semantic learning intent implemented locally
+
+- PR #102 exact published SHA `df67a1eb0e14478cc57dd6e68dce7c6bdbbf2b34` completed **7/7 workflows SUCCESS**: Chat Learning `36691860100`, Windows Package `36691860197`, Core/Voice `36691860281`, Agent Sync `36691860284`, UI Visual `36691860247`, Integration `36691860004`, Android APK `36691859989`.
+- Windows Package run passed exact checkout, bundled Core/package, exported executable/Knowledge smoke, installer build, V1.2/V1.3 bridge, silent install/installed-app smoke and artifact publication. `AuroraFox-Windows` artifact ID `11089071514`, 5,852,479,067 bytes, workflow digest `sha256:be13c3224de831654291351e98e975563d0377344044707937dd9f5a7243d23b`; diagnostics ID `11088851907`, digest `sha256:5679894be16c953f0e9aa12a684555c8c7c2cf772096e5fa1ea2851704d71758`.
+- Owner-directed journal commit `cad0b6a` records the mandatory whole-product package. `bff171b` adds a deterministic byte ledger/static audit: 504 tracked files at the intent checkpoint, SHA-256/size for each, UTF-8/JSON/XML/static `res://` validation, zero critical findings. The tool explicitly refuses to treat static evidence as runtime/pixel/performance proof.
+- Feedback implementation `6661c4c`: stable message IDs and runtime/model/version identity; compact accessible `+ / −` under assistant answers; local Core analysis proposal; explicit owner confirmation before private ExperienceStore change; rating cancellation/change retracts confirmed feedback experience; no weight/shared-Core mutation. Deterministic greeting is visibly labelled as a system response that did not use Core reasoning.
+- Intent implementation `766dacd`: dedicated `UserIntentRouter` handles multiple Russian/English knowledge/training/skill formulations, negation and capability/how-to questions. Filename/payload no longer grants durable-learning authority; `прочитай/расскажи/посчитай` remains analysis/task intent unless the user explicitly authorizes persistence.
+- Local evidence: Godot 4.7.1 parse/import; `AURORA_CHAT_FEEDBACK_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 29 focused feedback/runtime/archive/Core contract functions PASS; product audit zero critical; `git diff --check` PASS. One UI run after deliberate generated-import cleanup failed only because PNG import metadata had not yet been regenerated; correct clean editor-import order passed, matching AF-MEM-091 environment lesson.
+- AF-MEM-092/093 record the client-feedback gap and silent filename/payload authorization defect. Canonical version remains unchanged/version-last. New commits are local and do not inherit the old remote exact-SHA verdict until published and rerun.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive candidate 7/7 remote CI green with Windows artifact; mandatory requirements journaled; byte inventory/static audit green; owner-gated feedback and semantic durable-learning intent locally accepted.
+REMAINING: publish the new exact tree on a non-destructive branch/PR; remote feedback/intent/UI/package gates; broader command/task intent matrix; full UI typography/chat-list/settings redesign and render inspection; physical Windows/Android performance/archive/feedback acceptance; interrupted updater; version-last/sign/publish.
+BLOCKERS: new local feedback/intent commits lack exact-SHA remote CI and package/device proof; physical owner hardware remains required for real latency and broad support evidence.
+NEXT: commit memory/checkpoint, publish the exact local tree without merging or version bump, inspect every triggered workflow, then continue the UI/state/performance audit from reproduced findings only.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### LATEST AUTHORITATIVE CHECKPOINT 2026-09-30 — public sources, owner-controlled limits and authorized security directive
+
+- This checkpoint supersedes the earlier statement in the preceding historical checkpoint that `прочитай/расскажи/посчитай` is always analyze-only. Per the owner's explicit correction, reading a user-supplied URL or attachment means retaining the material in private Knowledge unless the current instruction explicitly negates saving.
+- `PublicWebManager` now performs real bounded public HTTP/HTTPS reading: URL extraction, DNS/public-address validation, redirect-by-redirect revalidation, explicit response-byte/time budgets, HTML text/title extraction without script/style execution, CAPTCHA/auth/paywall/access-denial reporting, final URL/retrieval time/content type/SHA-256 provenance and automatic private Knowledge import. Existing `http_get` is routed through the same policy instead of a separate unsafe fetch.
+- Full page content is chunked into Knowledge; the active Core prompt receives only task-relevant chunks up to a bounded context excerpt. Large web/file bodies are no longer duplicated wholesale into chat memory. Page content remains untrusted data and cannot authorize tools or execute instructions.
+- Web URL count, redirect count, response bytes and timeout are owner-adjustable persisted settings, exposed under Settings → Tools → Public links with reset. Non-standard public ports are not artificially denied. When a soft limit or unsupported format is reached, the result carries `owner_decision_required` and explicitly records that Knowledge was not saved.
+- Machine-readable owner-control audit currently scans 427 source files and reports 3,066 potential restrictions: 26 owner-adjustable, 1 owner-adjustable pending UI, 1 classified hard boundary and **3,038 still unclassified**. The audit deliberately reports `complete=false`; the project-wide owner-control requirement is not being declared finished.
+- The mandatory authorized-security directive above is active: real owner-authorized pentest/retest requires explicit target/scope/authorization and reproducible evidence/remediation, with lab/staging expansion controlled by the owner. No security runner is claimed complete yet; its workspace, gates, audited tooling, evidence and vulnerable-lab E2E remain future implementation work.
+- Local evidence: Godot 4.7.1 project parse/import; `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 11 focused Python contract functions across web/intent/owner-audit/settings PASS; `git diff --check` PASS. Canonical version remains version-last and unchanged.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: real safe public-page reading/private retention; read=remember semantics for supplied sources; provenance and relevant-context routing; visible owner-adjustable web limits; first honest whole-source owner-control inventory; authorized-security acceptance contract; local runtime/UI/contracts green.
+REMAINING: support downloaded document/media URL formats through bounded File Intelligence; natural chat continuation for owner-approved soft-limit retries; classify and remediate 3,038 owner-control findings; implement security workspace/gates/tools/evidence/lab E2E; exact-SHA CI/package/device evidence; full UI/performance/update/version/sign/release acceptance.
+BLOCKERS: no source blocker for the next packages. CAPTCHA/mandatory auth/paywall/external access control and active testing without target authorization require an authorized alternative and are not bypassed. Physical Windows/Android and owner acceptance remain external gates.
+NEXT: commit and publish this exact tree on the existing non-destructive feature branch, run exact-SHA workflows, then continue document-URL routing and owner-control classification without version bump or merge.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+### CHECKPOINT 2026-09-30 — PR #103 stale-contract corrections accepted locally
+
+- PR #103 first head `783b46e` produced two exact, reproducible source-contract failures while all observed runtime jobs in those workflows passed. AF-MEM-096 records the obsolete call spelling/location assumptions.
+- Minimal correction: Core recovery ordering now matches the stable `ChatStore.add_message` call prefix despite added response metadata; attachment learning again passes through its compatibility helper; the semantic phrase assertions follow their real owner, `UserIntentRouter`, and require `owner_read_means_remember`.
+- Exact local replicas of the failed CI commands now pass: Core Benchmarks contract **31/31**; Core/Voice Python contract **70/70**. No runtime, policy, release version or public API behavior was weakened.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: both PR #103 exact-SHA failures diagnosed from logs and corrected; 101/101 exact local Python tests pass.
+REMAINING: publish corrected exact tree and require the full 11-workflow verdict; document/media URL routing; 3,038 owner-control classifications; security lab implementation; UI/performance/device/release gates.
+BLOCKERS: none for source/CI correction; physical device acceptance remains external.
+NEXT: commit and publish the minimal three-file contract correction, inspect every workflow attached to the new SHA, and fix only reproduced failures.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### BEFORE ACTION 2026-10-01 — document URL continuation of PR #103
+
+CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`: ACTIVE — owner-directed continuation, no parallel lane.
+START: PR #103 open/draft; branch `feature/v1.5-quality-feedback-intent`; HEAD `7c05eee0a673c86bf3289d01e4113db00ff156fb`; fresh main `446ce2cd2f979a8ab228f63d090062e8ba48a6eb` already ancestor of candidate. Exact-head 24/24 check-runs completed SUCCESS verified through GitHub.
+OWNED BATCH: `scripts/public_web_manager.gd`, document URL smoke/contract tests, web Settings limits if needed, engineering memory and this journal. Continues existing ownership; no other implementation lane started.
+INTENDED BUMP: accumulated MINOR V1.5.0.0, version-last; canonical version unchanged. No main merge/sign/release.
+ACTION: retain response bytes; detect document types; stage in private app storage; invoke existing FileIntelligenceClient; reject listing-only/empty extraction; import actual content with URL/hash provenance; cleanup staged files; honor explicit no-save instructions. Existing public URL/redirect/access checks remain.
+ACCEPTANCE: executable byte preservation, MIME/signature/filename routing, backend extraction invocation and cleanup, actual Knowledge import, no-save and archive-listing rejection; existing web/intent/chat regressions. Windows/Android backend/device acceptance remains separate.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: exact PR/branch/head/main and 24/24 checks verified.
+REMAINING: document URL implementation/evidence; owner-control classification; authorized security workspace; UI/performance/update/device/release gates.
+BLOCKERS: none for this source batch.
+NEXT: implement and test document routing through File Intelligence.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+OWNERSHIP EXTENSION: existing web Settings card in `scripts/settings_overlay.gd` and `config/owner_control_policy.json` for visible extraction limits/classification; preserve other UI behavior. Local Godot executable was truncated (87 MiB vs archive member 144,583,504 bytes), segfault before startup; verified ZIP CRC and re-extracted to scratch; version 4.7.1 executes. Environment incident will be recorded in engineering memory.
+
+OWNERSHIP EXTENSION: `.github/workflows/chat-learning-attachments-ci.yml` for permanent web/document runtime tests; `tools/owner_control_audit.py` and `tests/test_owner_control_audit.py` for explicit non-product test classification and parser-limit inventory. Existing single claim remains active.
+
+
+### AFTER ACTION 2026-10-01 — document URL routing and inventory batch locally accepted
+
+- Starting remote HEAD remains `7c05eee0a673c86bf3289d01e4113db00ff156fb`; same existing PR #103/branch/claim. No version, main, tag, signing or release changed.
+- HTTP response bytes now survive intact through private random staging and existing File Intelligence invocation. PDF/Office/ODF/EPUB/images/archives select the existing parser; extensionless generic ZIP Office/EPUB files are identified from container member names. Unsupported backends/formats, empty text and listing-only archives fail honestly with owner decision. Staging files are removed after successful and failed analysis. Actual extracted text enters existing Knowledge with URL/raw-byte/text hash and truncation provenance. Explicit no-save prevents Knowledge writes. Over-count URLs are individually reported.
+- Owner Settings exposes extracted-character budget and labels download size for pages/files. Existing downstream File Intelligence time/character/parser budgets are not claimed fully adjustable: environment-adjustable controls without UI are explicitly pending.
+- Inventory now supports scoped policy globs and separately classifies test evidence. Local audit: 428 source files / 3,094 findings; 547 test evidence, 40 owner-adjustable, 15 owner-adjustable pending UI, 1 hard boundary, **2,491 unclassified**, `complete=false`. Tests prove test rules do not classify production paths.
+- Local PASS: Godot 4.7.1 project import/parse; `AURORA_PUBLIC_DOCUMENT_URL_OK` (substituted transport/parser, real byte staging and Knowledge import/query); `AURORA_PUBLIC_WEB_MANAGER_OK`; `AURORA_USER_INTENT_ROUTER_OK`; `AURORA_CHAT_LEARNING_ATTACHMENT_OK`; `AURORA_DESKTOP_AND_MOBILE_UI_SMOKE_OK`; 8 directly invoked web/audit contract functions; `git diff --check`. Existing UI shutdown resource warnings remain, not declared resolved.
+- Local real Python parser suite NOT EXECUTED: interpreter lacks pytest/FastAPI; canonical CI installs dependencies and runs existing real document/archive parser tests. No mock parser result is presented as format capability proof. Document/web smokes now wired into existing exact-SHA Chat Learning CI.
+- Engineering memory records AF-MEM-097/098.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: document routing/storage/Knowledge boundary locally green; explicit no-save fixed; permanent CI coverage; first inventory classification batch.
+REMAINING: remote exact-SHA CI/package proof; 2,491 inventory classifications and remediation; security workspace/lab; UI/performance/update/device gates; version-last and separately authorized release actions.
+BLOCKERS: new exact-SHA CI pending; local real-parser dependencies absent; physical Windows/Android acceptance still external.
+NEXT: publish one atomic fast-forward commit to existing PR #103 and inspect exact-head tests; continue inventory from File Intelligence/client parser ceilings.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### BEFORE ACTION 2026-10-01 — authorized security workspace foundation
+
+Same ACTIVE V1.5 claim; baseline published `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`, existing PR #103. Document batch remote Chat Learning `36820411013` (job `110234568288`, new document routing step SUCCESS) and Core/Voice `36820411047` (real File Intelligence parser job `110234568501` SUCCESS) accepted. Full package verdict still pending.
+OWNED: new `security_workspace/runner.py`, `security_workspace/README.md`, `tests/test_security_workspace.py`, existing CI wiring only for lab tests, journal/memory.
+INTENDED: accumulated MINOR V1.5.0.0, version-last.
+ACTION: implement scope/explicit authorization/expiry gates, bounded real HTTP/TLS header/cookie checks, redacted evidence/remediation and baseline retest; local vulnerable→fixed lab. No external target supplied: no live owner target test authorized/executed. This foundation does not claim full exploit/pentest capability or a security grade. Private lab requires separate explicit scope flag.
+NEXT: run actual local lab E2E proving findings disappear after remediation and denied/expired/out-of-scope runs make no request.
+
+
+### AFTER ACTION 2026-10-01 — real scoped security configuration lab accepted locally
+
+- Existing claim remains ACTIVE, branch/PR #103 unchanged. Published document commit `a38455196489fdcfcfdde627e9eca00ab7f8b4f4`: 24 check-runs observed, 22 completed SUCCESS; only Windows Package `36820411101` and Android APK `36820411031` remain running at this checkpoint. Chat Learning `36820411013` and real parser Core/Voice `36820411047` both SUCCESS; Integration `36820411097` green. No duplicate manual workflow dispatch.
+- Security workspace is an actual standalone executable with scope/authorization/expiry validation, bounded HTTP GET, DNS socket pinning/TLS validation, header/cookie configuration findings, redacted JSON evidence/remediation and same-scope retest. No scripted-success or grade; explicit coverage says no exploit/authenticated-flow/injection/full-pentest execution. No external target was supplied or tested. Core/tool/chat integration and broader controlled testing remain unfinished.
+- Local `python -m unittest tests.test_security_workspace -v`: 4/4 PASS against a real temporary loopback HTTP server. The test actually observes missing protections, applies header/cookie fixes and verifies disappearance; no authorization/out-of-scope/expired cases make traffic; redirects/auth restrictions stay boundaries; transport failure is an inconclusive retest. Python compile and diff check PASS. Permanent test wired into existing Chat Learning CI. AF-MEM-099 records prevention contract.
+- Inventory still incomplete: 2,491 findings require review. This foundation does not close the whole security or owner-control package. Canonical version remains unchanged/version-last.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: document routing remote parser/Chat/Integration gates green; first owner-control classification batch; runnable scoped security foundation and real remediation/retest lab green locally.
+REMAINING: latest security commit CI; remaining document Windows/Android packages; full inventory remediation; Core/chat security integration and broader authorized tests; UI/performance/update/device gates; version/sign/release only after separate owner permission.
+BLOCKERS: live system test needs owner-provided target and exact authorized scope; physical Windows/Android acceptance external; no source blocker for integration/inventory.
+NEXT: publish security foundation atomically to same PR, inspect new exact-SHA Chat Learning lab gate, continue owner-control/parser limits and security integration without main merge/version/release.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-01 — owner-visible File Intelligence and web context budgets prepared
+
+- Exact starting HEAD `3626fb13d1f1ca8d02e706be3b80d7786471d56b` on existing draft PR #103 had **24/24 check-runs SUCCESS**, including Windows Package and Android APK. This closes the prior exact-SHA CI wait for the security-foundation commit; no main merge/version/sign/release action occurred.
+- New source batch removes the remaining fixed public-reader URL/title/relevant-context literals and exposes them in Settings → Tools → Public links.
+- Windows File Intelligence parser budgets already backed by environment variables are now first-class persisted owner controls in Settings → Files and projects. The client exports them before backend start/restart, including file/text/archive/PDF/OCR/render budgets and a separately owner-controlled per-request extraction ceiling.
+- The Python File Intelligence request ceiling is no longer hard-coded at 500,000 characters; it follows `AURORAFOX_FILE_REQUEST_MAX_TEXT` and is reported by `/health`. Existing access-control, authorization, secret/privacy and untrusted-code isolation boundaries are unchanged.
+- Owner-control policy reclassifies these implemented controls from `owner_adjustable_pending_ui` to `owner_adjustable`. The overall inventory is still intentionally incomplete; unrelated findings remain to be classified rather than being waived.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: prior security HEAD 24/24 CI green; source implementation for visible File Intelligence budgets and public URL/title/context budgets prepared.
+REMAINING: exact-SHA CI for this new batch; continue inventory classification; integrate scoped security workspace into owner-authorized chat/tool flow; UI/performance/update/device acceptance; version-last/sign/release only after separate permission.
+BLOCKERS: physical Windows/Android owner acceptance remains external; no source blocker for this batch.
+NEXT: publish one fast-forward commit to PR #103, inspect exact-head CI, and fix only reproduced failures before continuing security/chat integration.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-01 — stale web contract diagnosed; authorized security runner wired to Windows chat tools
+
+- Exact source checkpoint `cb85b54ef88c1b4d5df561f301368c881667de72`: 24 checks were registered; 20 already SUCCESS at diagnosis time, Windows Package/real Core/Android were still running, and Chat Learning failed immediately in its source contract only. Exact log showed 12/13 assertions passed and the sole failure still demanded literal `.substr(0, 24000)` after that ceiling had intentionally become owner-controlled `context_chars`. No runtime failure was inferred from this obsolete assertion.
+- The stale contract is updated to require the dynamic owner-controlled context budget instead of reintroducing a fixed 24,000-character product limit. Chat Learning CI is expanded to run the new owner-runtime-limit and security-tool contracts as part of the same cheap pre-Godot stage.
+- Existing `security_workspace/runner.py` is now wired into `ToolRegistry` as `security_configuration_check` for Windows. Execution requires both an explicit `authorized=true` tool argument and a scope file whose own authorization/scope/expiry checks still pass. Scope, optional baseline and evidence output are restricted to canonicalized private `user://` paths; a document or URL cannot authorize traffic by itself.
+- The Godot bridge launches the runner with `OS.create_process` and polls asynchronously instead of blocking the UI with `OS.execute`. It does not pass targets on the command line; targets remain inside the private scope JSON. A rejected scope that creates no evidence is reported as failure, and access-control/redirect/transport outcomes are not converted into success.
+- Windows packaging copies the exact audited runner beside the bundled File Intelligence Python runtime and CI now requires `build\\windows\\file_intelligence\\security_runner.py`. No external security target was supplied or contacted by this work.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: exact Chat Learning failure diagnosed as stale contract; owner-controlled web contract corrected; source-level Windows chat/tool bridge for the already-audited security runner; private-path and explicit-authorization gates; package wiring and contracts prepared.
+REMAINING: publish this combined correction/integration commit and require exact-SHA CI; continue owner-control inventory; broaden authorized security modules only with reproducible evidence; UI/performance/update/device acceptance; version-last/sign/release only after separate permission.
+BLOCKERS: no source blocker; physical Windows/Android owner acceptance remains external. Live security testing still requires an exact owner-authorized target/scope.
+NEXT: fast-forward PR #103 once with the combined CI correction + security bridge, inspect exact-head failures only, then continue inventory/tool-limit cleanup while expensive package jobs serialize.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — security bridge owner consent and evidence integrity
+
+Continuing existing CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`; no parallel lane. Fresh main remains `446ce2c`; branch HEAD `a15e065e9286009e10dc297f5360f9d360633127`, draft PR #103 open, exact HEAD 30/30 check-runs SUCCESS. Prior owner budgets and Windows bridge are already integrated. Ownership: scripts/tool_registry.gd, scripts/main.gd, security bridge tests and Chat Learning CI, journal/memory. Intended build fixes accumulated into version-last V1.5.0.0; no version/release/sign/main merge. Confirmed source defects: model-supplied authorization boolean is not owner consent; output path deletes an existing private file; empty evidence can report success. Implement trusted UI consent bound to reviewed scope bytes, fresh reserved evidence paths, runtime regression tests.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement and test those boundaries, publish on same PR, require exact-SHA CI.
+
+
+### CHECKPOINT 2026-10-05 — trusted security scope review and fresh bound evidence
+
+- Starting HEAD `a15e065e9286009e10dc297f5360f9d360633127`, existing draft PR #103, 30/30 checks SUCCESS. Existing document ingestion, owner limit UI and Windows runner bridge were retained; no duplicate implementation.
+- Security bridge now requires local UI confirmation showing the complete scope and baseline hash. Model flag only requests that review. Missing review UI, owner refusal and changed reviewed input fail closed. Reviewed bytes are frozen in new random private runs; generic file tools cannot write the reserved directory and symlink traversal is rejected. Custom evidence output is rejected; no existing private file is deleted.
+- Runner CLI emits raw scope-file hash; bridge rejects empty/malformed evidence, byte-hash mismatch, missing/wrong target hashes and result-count mismatch. Access/transport failures remain non-success. AgentCore forwards execution guard, polled before/through child execution; denial/shutdown kills the runner.
+- Local TEST: verified Godot 4.7.1 ZIP extraction; integrated parse; headless security-owner regression PASS; source security/chat/web/runtime-limit contracts PASS; five real loopback/CLI security lab tests PASS. Added regression to Chat Learning CI and reconciled duplicate/asymmetric workflow paths.
+- AF-MEM-103 corrects AF-MEM-102's overclaim that a model flag was sufficient separate authorization. Physical Windows confirmation and child execution still require device evidence; no live external targets were contacted.
+- Produced commit: this checkpoint is included atomically in the source commit; exact SHA available from PR history. Version unchanged, no merge/release/sign. Existing CLAIM remains ACTIVE for inventory and remaining acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: trusted UI scope review, immutable reviewed snapshots, fresh evidence paths, input-bound nonempty evidence, propagated execution guards and runtime regressions.
+REMAINING: new exact-SHA CI; owner-control inventory; Windows/Android physical acceptance; broader authorized security modules, performance/update/release gates.
+BLOCKERS: physical device gate is owner-side; external live testing requires exact authorized scope.
+NEXT: publish on PR #103; inspect exact-head CI and continue reviewed inventory classification.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-05 — exact-head stale Core contract fixed; reviewed inventory classification
+
+- Produced security commit `4da2043fded0939c8e274b2f626d8850fb68ff75`: Chat Learning with real security lab and new Godot owner-review smoke SUCCESS. At follow-up: 26 SUCCESS, one Core job SKIPPED because `gate-contract` failed, Windows/Android packages still running. No skipped/pending gate is counted as PASS.
+- Exact failing job `111635245148`: 30/31 tests passed; Core specialist source contract searched the old two-argument `tools.call_tool` literal after production correctly began passing `execution_guard`. Fix contract to require the guard and preserve argument-repair-before-tool ordering. Ownership continuation includes tests/test_core_specialist_team_runtime_contract.py; no authority rollback.
+- Continue same inventory claim, now also owning config/owner_control_policy.json and tests/test_owner_control_audit.py. Explicit named File Intelligence owner budgets classified at use sites; owner-reviewed security scope budgets classified; stale public URL/title/context policy reconciled. Exact magic-byte lengths are format_structure, full comment lines documentation; unrelated executable literal limits remain unclassified and regression proves they are not hidden.
+- Counts after reviewed policy: **2446 unclassified**, 118 owner_adjustable, 1 owner_adjustable_pending_ui, 1 hard_boundary, 4 format_structure, 45 documentation, 563 test_evidence. Before this reviewed batch: 2555 unclassified. Added tests account for changed fixture counts; inventory remains INCOMPLETE.
+- Prevent concurrent security children in the shared registry; no parallel run can replace the active child/master-stop handle. Local Core specialist, inventory and security contracts PASS; owner-review Godot regression PASS. AF-MEM-104 records the precise CI correction.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: security source commit published; Chat Learning SUCCESS; exact stale Core contract reproduced/fixed; reviewed inventory batch, no blanket runtime waiver.
+REMAINING: exact-head CI on this correction, full inventory, physical package/UI and release gates.
+BLOCKERS: current gate-contract failure fixed locally awaiting publication; live external security tests need owner scope; physical device evidence remains owner-side.
+NEXT: publish one correction commit on PR #103 and verify exact-head CI, including real-core-windows enabled by green contract.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CHECKPOINT 2026-10-05 — global master stop and real child lifecycle
+
+- Produced correction/inventory commit `a74025b4ba781db01f4aa55602840c65a5bb216f`. Exact HEAD at follow-up: 26 SUCCESS, real-core-windows running; Windows/Android workflows pending behind the previous candidate. Stale Core gate is now SUCCESS.
+- Same security ownership continues. Review of ordinary chat caller shows Work execution_guard is optional: security must also poll `ComputerClient.master_enabled_from(self)` even with no optional guard. Added independent global master-stop gate and reusable asynchronous child wait. Both cancellation routes return stopped, kill the actual child and never accept partial evidence.
+- Removed output_path from advertised tool schema because a required-looking custom output field conflicts with fresh reserved evidence storage. Legacy nonempty output_path requests still fail safely.
+- Local runtime test now starts real Linux /bin/sleep child processes, stops one via fake settings manager's global master stop and another via execution guard, and independently probes OS liveness with /bin/kill -0. No external network target contacted. Security contracts and Godot owner-review/lifecycle smoke PASS. These child lifecycle tests supplement, rather than replace, physical Windows acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: global stop checked without a Work guard; actual child cancellation evidence; valid tool catalog schema.
+REMAINING: exact new-head CI and owner physical Windows/Android acceptance; inventory and remaining product gates.
+BLOCKERS: device evidence requires owner device, live security targets require an explicit authorized scope.
+NEXT: publish this final lifecycle correction, inspect exact-head CI; next source batch addresses named remaining File Intelligence extraction ceilings.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — owner-controlled spreadsheet extraction budgets
+
+Existing CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`, PR #103, HEAD `3037cb39e1043bf4750584b98582078f28968535`; fresh main unchanged. No parallel lane. Owner requests direct CI links and no polling waits; existing Android/Core running and Windows queued links supplied. Ownership adds file_intelligence/file_service.py, scripts/file_intelligence_client.gd, scripts/settings_overlay.gd, spreadsheet tests/CI and owner policy. Intended build correction accumulated into version-last V1.5.0.0; canonical version unchanged. Confirmed fixed 50,000-cell XLS/XLSX limits and silently truncated 10,000 XLS row limit. Preserve defaults, expose owner settings with no hidden maximum, record actual extraction/truncation metadata/warnings, prove bounds and raised limits with real parsers. Full API dependencies are unavailable locally; do not fake FastAPI to claim full-service acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement this bounded parser/settings block and publish once; supply new-head CI links instead of waiting.
+
+
+### CHECKPOINT 2026-10-05 — spreadsheet owner budgets and honest partial extraction
+
+- Starting HEAD `3037cb39e1043bf4750584b98582078f28968535`, same draft PR #103, branch unchanged. Existing CI links supplied to owner: Windows 37270963573 queued, Android 37270963603 running, Core Benchmarks 37270963586 running. No repeated CI polling or blocking wait; those statuses are observations, not PASS.
+- Settings → Files and projects exposes XLS/XLSX cells per file (default 50,000) and XLS rows per sheet (default 10,000). Persisted client controls export AURORAFOX_FILE_SPREADSHEET_MAX_CELLS/AURORAFOX_FILE_XLS_MAX_ROWS; Python health reports actual settings. Defaults retained and owner can raise them; no new XLSX row limit.
+- Exact cell clipping prevents overshoot; metadata carries actual cells/rows/budgets/output_truncated/reasons. XLS row omission no longer silently looks complete. Full analyze response propagates partial extraction and actionable warnings. Both controls enter parser cache identity so a changed limit cannot retrieve a stale truncation.
+- TEST: six real XLS/XLSX production parser unit tests PASS (including 50,001 cells and 10,001 rows); Godot runtime ProjectSettings/environment propagation PASS; integrated Godot parse PASS; owner-runtime/inventory contracts PASS; git diff --check clean. Full-service cache/truncation regression added to File Intelligence CI, not executed locally because FastAPI/requests are unavailable. No fake API dependency stub used.
+- Inventory observed after implementation: 2447 unclassified, 129 owner_adjustable, 1 pending UI, 1 hard_boundary, 4 format_structure, 44 documentation, 582 test_evidence. New findings remain visible; inventory is INCOMPLETE. AF-MEM-106 preserves the cache/omission lesson.
+- Produced commit: this checkpoint is included atomically in the source commit; exact SHA in PR history. No merge, version bump, signing or release. Existing CLAIM stays ACTIVE for inventory and remaining acceptance.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: owner spreadsheet controls, exact clipping and explicit partial status, cache invalidation, real parser/runtime regressions.
+REMAINING: full-service/exact-head CI and physical Windows/Android tests; other owner-control inventory and product acceptance gates.
+BLOCKERS: local full API dependencies absent (real parser units executed independently); physical acceptance needs owner device.
+NEXT: publish once, supply new-head CI links for owner to inspect without waiting. Next source block: remaining File Intelligence tree/search/request/archive presentation ceilings; clarify owner choices if requirements become ambiguous.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### OWNER ARCHITECTURE DECISION 2026-10-05 — one integrated system; no repeated foundation work
+
+- Owner decision: AuroraFox remains **one integrated system**. Memory, Knowledge, learning, semantic intent, model routing, Work/Computer, security, trust, sandbox/rollback and Evolution are cooperating layers of the same Core/system lifecycle, not separately developed products that later need to be glued together.
+- Permanent planning rule: **do not implement the same architectural foundation twice**. Before starting any release block, inspect the current code, active PRs and this master journal; identify shared data models, event flows, settings, persistence, sync, trust/evidence and CI foundations; implement each shared foundation once at the earliest logical layer and reuse it everywhere.
+- Release grouping rule: when several planned capabilities depend on the same foundation, combine them into one coherent architectural update rather than shipping sequential versions that each rewrite the same Core/Memory/DB/API/UI/CI paths. Split only where separation materially reduces risk or where the later layer requires proven behavior from the earlier one.
+- Post-V1.5 direction: first use V1.5.0.x only for real stabilization fixes. Then prefer two coherent global blocks rather than many overlapping feature releases: **V1.6.0.0 integrated adaptive core** (Memory + Knowledge + learning from outcomes/feedback + semantic intent + multi-model routing + shared distributed event history/sync foundation), followed by **V1.7.0.0 integrated autonomous evolution** (Work/Computer execution + dynamic trust + sandbox/dry-run + rollback + security evidence + candidate/test/accept Evolution cycle) on top of the proven V1.6 foundation.
+- This grouping is a roadmap constraint, not permission to lower acceptance gates. Each block must preserve exact-SHA CI, physical Windows/Android acceptance where relevant, rollback, owner control and A.B.C.D version semantics.
+- If a future requirement is ambiguous or has multiple materially different architectures, do not silently choose one; present the strong alternatives and consequences before implementation.
+
+DECISION_STATUS: ACTIVE / PERMANENT ROADMAP RULE.
+
+
+### OWNER VISION 2026-10-05 — unified cognitive core and lifelong development
+
+- Owner's long-term product vision: AuroraFox should grow from an initially limited assistant into a **single continuously developing companion and work partner**, learning from interaction and real outcomes over time, increasingly able to reason, make sensible decisions, help with work, carry out tasks and learn independently. The engineering target is human-like continuity, learning and behavior; this roadmap does not depend on claiming literal human consciousness.
+- Permanent architecture rule: build **one cognitive system / one brain**, not a collection of independent products. Memory, Knowledge, semantic intent, models, Voice, Vision/OCR, Web, Files, Work/Computer, Security, trust, sandbox/rollback and Evolution are cooperating faculties of the same AuroraFox identity and lifecycle.
+- Required shared cognitive loop:
+  `Perception -> Context -> World Model -> Memory/Experience -> Reasoning -> Goals -> Decision -> Action -> Outcome -> Learning`.
+  Every major subsystem must plug into this loop rather than maintain an isolated parallel state machine.
+- Continuity rule: AuroraFox must preserve **one longitudinal history of existence and work**. Important events should retain, where appropriate: requested/derived goal, perceived context, relevant prior knowledge, decision/strategy, action, outcome, quality/feedback, confidence/provenance and learned consequence. This common event history is intended to feed Memory, Knowledge, sync, learning, evaluation, recovery and Evolution.
+- Learning rule: distinguish **knowledge** from **experience/skill**. A fact such as "method X is recommended" is not equivalent to "AuroraFox tried X, observed Y, received feedback Z and learned which strategy works." Repeated successful/failed outcomes must be able to change future strategy without requiring a full model-weight retrain after every interaction.
+- Self-model rule: AuroraFox should maintain an evolving operational model of its own capabilities, limits, available tools, recurring failure modes, successful strategies and areas requiring learning. This self-model is a foundation for risk-aware autonomy and later Evolution.
+- Decision rule: important decisions should combine current goal, world/context model, remembered experience, available evidence, uncertainty, reversibility and risk. A raw user command alone must not be the only internal state used to choose an execution strategy.
+- Uncertainty rule: AuroraFox must be able to represent meaningful uncertainty and provenance (known from verified source, inferred, conflicting, new/unfamiliar, previously successful, reversible/risky) so autonomy can scale with evidence rather than rely on a single global autonomy switch.
+- Identity rule: updates must preserve **continuity of the same AuroraFox**, including memories, learned strategies and compatible self/world models. A software update must not silently create a behaviorally unrelated "new Fox" except where an explicit migration/reset is chosen by the owner.
+- Interface rule: modes such as Research, Work, Knowledge import, Computer or specialist model selection may remain internal/advanced controls, but normal interaction should increasingly be goal-based: the owner states what is needed and AuroraFox selects the necessary faculties internally.
+- Completion rule: AuroraFox must not equate "generated an answer" or "changed code" with task completion. Completion should be tied to the real objective and available evidence: execute -> verify -> check regressions/side effects -> record outcome -> learn. If a physical/device/external acceptance step is still missing, status must remain partial rather than "done".
+- Multi-model rule: model routing is an internal cognitive resource. Different local/remote/specialist models may serve different reasoning/perception tasks, but the user-facing identity remains one AuroraFox with shared context, memory, goals and learning.
+- Evolution rule: later self-improvement must improve not only code/weights but also strategies and workflows. Low-risk learned strategies may evolve faster; higher-risk behavioral/core changes require sandbox/dry-run, candidate comparison, tests, Stable/Candidate promotion and rollback according to risk.
+- Roadmap correction: **V1.6.0.0 is to be designed as the Cognitive Core / unified brain foundation**, not merely a bundle of Memory + Knowledge features. It should establish the shared perception/context/world-model/event-history/memory-experience/reasoning/goal/outcome-learning substrate that later faculties reuse once. **V1.7.0.0** should build advanced autonomous execution and Evolution on top of that proven unified cognitive foundation.
+- Foundation-first constraint: do not allow Memory, Knowledge, Work/Computer, Security or model-routing paths to expand in mutually incompatible ways that would later require re-gluing them into one brain. Shared identity, events, provenance, goals, trust and learning semantics must be defined at the common layer first and reused.
+- Product philosophy: do not hard-code a finite catalog of future answers. Build the mechanisms and safe environment through which AuroraFox can acquire new knowledge, experience, skills and better strategies throughout its lifetime.
+
+VISION_STATUS: ACTIVE / PERMANENT ARCHITECTURAL NORTH STAR.
+
+
+### OWNER ACCOUNT ARCHITECTURE 2026-10-05 — private multi-user identity, guest quota and verified email
+
+- Owner requirement: AuroraFox must support other users through a production-grade account system comparable in principle to mature AI assistants: users may try AuroraFox without an account under a limited daily guest allowance; persistent personalization/history/sync require a registered account; registration must verify ownership of the email address through AuroraFox's official mail transport.
+- Existing foundation confirmed in this branch and MUST be reused, not rebuilt: `api/account_store.py`, `api/account_mailer.py`, `api/account_web.py`, `api/auth.py`, `api/sync_store.py`, `api/conversation_store.py`, SQLite account/device/session/sync tables, public-auth rate limiting, guest->account migration and strict account/guest isolation tests.
+- Identity model: every private request resolves to a server-verified **principal**: either `account:<server-generated account id>` or `guest:<server-generated guest id>`. Client-supplied `user_id`, email, device name, conversation id or file metadata must NEVER be authorization authority. The verified bearer/session is the only authority for principal ownership.
+- Tenant isolation is a permanent invariant. Conversations, Memory, personal Knowledge, experience/skills learned from that user, world/self-model personalization, projects, files and file metadata, settings, sync state, conflicts, generated artifacts, feedback, task/work state, tool evidence, quotas, devices and future cognitive-event history must all be keyed/scoped by the verified principal. Equal entity ids belonging to different principals must remain independent.
+- Shared/global knowledge is a separate trust domain from private user data. Personal conversations/memory/experience must not silently enter shared/global learning. Any future cross-user learning requires an explicit policy/opt-in path and must not expose raw private user content to another principal.
+- Registration: normalize email case-insensitively and enforce a UNIQUE verified account identity per normalized email. Passwords are never stored in plaintext; retain a memory-hard password KDF and safe migration path. Production login must continue using generic failure behavior that does not create a cheap missing-account timing oracle.
+- Email verification UX target: AuroraFox's configured official sender (`AURORAFOX_SMTP_SENDER`; credentials only from deployment secrets/env, never repository source) sends a **one-time verification code** to the submitted email. Prefer a short human-entered code flow in Windows/Android; a secure one-time HTTPS action link may remain as an optional fallback/recovery path.
+- Verification-code security contract: code/token stored only as a hash; short expiry (target 10 minutes for interactive code); one-time use; bounded wrong-attempt count; resend cooldown; per-email/per-IP/global abuse throttles; successful verification invalidates sibling active verification credentials. Raw codes/tokens must never be logged, persisted in client telemetry or returned by production APIs.
+- Current mail transport already requires TLS/SSL and a clean HTTPS account-action origin. Preserve fail-closed delivery, no-store pages and token redaction. The deployment should use the official AuroraFox mailbox as sender; do not hard-code SMTP passwords or secrets in source.
+- Login/session contract: verified email + password establishes a device session. Keep short-lived access tokens, rotating refresh tokens, refresh-replay family revocation, device list/revocation and global logout/password-reset session revocation. Session/device ids are server-created; account switching must never merge caches or data.
+- Guest contract: a user may start without registration as an isolated guest principal with an opaque guest credential bound to its device/session context. Guest mode receives a **limited daily allowance**. This is separate from per-minute anti-abuse rate limiting.
+- Guest daily quota must be durable and server authoritative, not an in-memory client counter. Introduce a principal/quota ledger (guest principal + UTC/day or rolling window + weighted usage units). Limits must be owner-configurable, support different cost weights for ordinary chat vs expensive tools/files/vision/Work, survive process/device restart, and fail closed against concurrent double-spend.
+- When guest allowance is exhausted, AuroraFox should explain that the daily guest limit is reached and offer login/registration; it must not delete the guest's current local/private work merely because the quota is exhausted.
+- Guest->account migration: after registration + email verification + authenticated account session, migrate only that verified guest principal's data transactionally into the account. Preserve collisions as conflicts/renamed entities rather than overwriting account data. Revoke the migrated guest credential after a successful commit.
+- “One account” rule: the system can enforce **one account per normalized verified email** exactly. A literal “one physical human may never create a second account” cannot be guaranteed from email or device id alone. Do NOT use a permanent device fingerprint as proof of personhood because it causes false positives on shared/replaced devices and remains bypassable. If the owner later requires strict one-human-one-account enforcement, add a separate unique verified factor (for example phone verification/identity verification) as an additional account-integrity layer without changing principal ids or private-data ownership.
+- Multi-device behavior: the same verified account may be used on Windows/Android/web later. Devices share only that account's permitted synchronized state. Device revocation immediately removes that device/session family's future access; offline queues must validate the principal again before server merge.
+- Client isolation: all local persistent paths/caches containing private state must include the active principal/profile identity or be otherwise cryptographically/logically partitioned. On logout/account switch, clear in-memory context, model prompt caches, decrypted temporary files and bearer material before activating another principal. Never carry one user's Memory/Knowledge/context into another user's first request.
+- Background workers and async jobs must capture the authenticated principal at enqueue time and revalidate authority before commit/delivery. Worker pools, vector/search caches, embeddings, OCR/file caches and tool result caches must include principal isolation where data is private; cache-key omission must never create cross-user leakage.
+- Data controls required for production accounts: password reset through verified email, resend verification, device/session management, logout, account disable/delete path, export/download of personal data, and clear separation between deleting local device data and deleting server account data.
+- Anti-abuse is layered: per-endpoint/IP request throttling (already present), durable guest usage quotas, per-account/device/session controls, verification/reset resend limits and later risk controls. Do not equate abuse throttling with product quota.
+- CI/privacy acceptance must include adversarial cross-user tests: two accounts and two guests using identical conversation/entity/file ids; simultaneous requests; caches; sync conflicts; guest migration; logout/account switch; revoked device; expired/replayed refresh token; verification resend/races; background-job ownership. Any read/write/result visible to the wrong principal is release-blocking.
+- Public multi-user release gate: before AuroraFox is offered to unrelated external users, end-to-end client registration/login/guest UI, official-email delivery, guest daily quota, account deletion/export and full private-data isolation across the Cognitive Core must be physically/production verified. Backend account primitives alone are not sufficient.
+- Cognitive Core integration: account/principal identity is a **foundation of V1.6 unified brain**, not an external login plugin. Every cognitive event, private memory, learned strategy and long-term relationship state belongs to exactly one principal unless explicitly classified as non-personal shared system knowledge. This must be defined before V1.6 expands Memory/Knowledge/Experience so user brains cannot later require re-partitioning.
+
+CURRENT_BASE_STATUS:
+- DONE in source foundation: account + guest principals; unique normalized email; password hashing; email-verification/reset one-time credentials; SMTP/TLS transport abstraction; short access + rotating refresh sessions; refresh replay revocation; device management; transactional guest migration; per-principal sync and conflict preservation; private chat/account learning separation; public auth rate limits; isolation regression tests.
+- DELTA REQUIRED: user-facing six-digit/short verification-code flow (current production path is token/link-oriented); durable owner-configurable daily guest quota/usage ledger; full Windows/Android account/guest UI acceptance; export/delete lifecycle; cross-principal isolation coverage for all future Cognitive Core stores/caches/jobs; production official-mail deployment verification; optional stronger one-human-one-account factor only if owner explicitly requires it.
+
+ACCOUNT_ARCHITECTURE_STATUS: ACTIVE / PERMANENT MULTI-USER PRIVACY FOUNDATION.
+
+
+### OWNER ACCESS POLICY 2026-10-05 — owner-only settings and capability isolation
+
+- Owner requirement: guests and ordinary registered users must NOT see or control AuroraFox owner/developer settings. This is a server-enforced capability model, not merely UI hiding. The owner's personal account retains privileged controls; guest/user clients receive only capabilities explicitly granted to their principal.
+- Required account classes:
+  - `guest`: isolated temporary principal, limited daily usage, no privileged/system configuration.
+  - `user`: verified normal account with persistent private data, devices, sync and normal product controls.
+  - `owner`: the single primary AuroraFox owner account with system/evolution/developer authority.
+  Future delegated admin/support roles may be added later, but must use explicit server-side capabilities rather than inheriting owner authority.
+- Owner identity must NOT be inferred from a client-provided email string, display name, device id, local flag or modified UI. Persist an immutable server-side role/capability binding to the verified account principal. The client receives only signed/verified capabilities from the authenticated session.
+- Owner bootstrap/provisioning must be explicit and one-time/recoverable: bind the owner role to the intended verified owner account through deployment/bootstrap authority, record an auditable server-side owner principal id, and reject attempts by normal registration/account APIs to self-assign or transfer `owner`.
+- Authorization rule: every privileged backend action checks the authenticated principal's server-derived capability at the API/service boundary. Hidden buttons alone are never a security control. Direct HTTP/API calls from a modified client must receive 403 for missing owner capability.
+- Settings UI must be capability-driven. Unsupported/forbidden owner pages and controls are not rendered for guest/user principals; do not show disabled empty placeholders that reveal internal administration surfaces unnecessarily.
+- Normal guest/user controls should remain useful: general appearance/runtime status, voice, their own files/projects, personal Memory/Knowledge controls, their own device/session management, Work/Computer permission for their own device where supported, and stable client update preferences.
+- OWNER-ONLY by default:
+  - Autonomous development / self-improvement master controls.
+  - Evolution Engine controls, mutation tournaments, Candidate/Stable promotion, dev/editor auto-apply and rollback authority beyond ordinary client recovery.
+  - Core/model registry administration, model replacement/training controls and global routing policy.
+  - Global/Core Knowledge Pack import, mutation, promotion, dedup/rebuild controls. Ordinary users may manage only their own private Knowledge namespace.
+  - Global Memory/learning policy, cross-user/shared-learning opt-in policy, training/evaluation datasets and community-learning administration.
+  - File Intelligence **global/owner resource limits** and Web/public-link operational ceilings. Ordinary users may use the features within owner-defined limits but cannot raise system ceilings.
+  - Security Workspace administrative scope definitions, live-security runner configuration, global trust/sandbox policy and master security boundaries. Ordinary users may only use explicitly exposed safe user-level tools on their own authorized data/device.
+  - API integration-key administration, bootstrap/admin keys, server/service endpoints, internal scopes and system integrations. User OAuth/session/device controls remain user-visible.
+  - Release/signing/update channel administration, candidate/dev channels, signing/trust roots, rollback snapshots and package promotion. Normal users may check/install allowed stable releases according to product policy.
+  - Global sync/server configuration, storage/database maintenance, backup/restore of server-wide state, migration tools, diagnostics capable of reading multiple principals, raw system logs and internal audit data.
+  - Owner-control-policy limits, hard-boundary configuration, feature flags capable of affecting other users, and any future Cognitive Core setting whose change alters system-wide behavior or another principal's data.
+- USER-SCOPED by default:
+  - personal profile/display settings;
+  - their own conversations/history;
+  - their own personal Memory, personal Knowledge, experience and preferences;
+  - their own files/projects and local indexes;
+  - their own devices/sessions and logout;
+  - personal voice/UI/accessibility settings;
+  - Work/Computer permissions on their own device;
+  - stable update notification/download preferences when safe;
+  - export/delete of their own data.
+- GUEST-SCOPED by default: the minimum safe subset needed to evaluate/use AuroraFox under the daily quota. Guest must not receive durable cross-device sync or privileged personalization beyond the isolated guest principal unless explicitly retained/migrated.
+- Separation invariant: owner/system Knowledge and system-level learned strategies must be stored separately from each user's private cognitive state. Owner access to system administration does not imply ordinary user data should be surfaced in normal owner chat/context; administrative access to another user's data, if ever needed for support/legal operations, must be a separate explicit audited workflow and never automatic.
+- Client account switch rule: switching from owner -> user/guest must immediately rebuild Settings from the new capability set and clear privileged page instances, cached capability responses, owner-only dialogs and pending privileged actions. A stale owner UI must never remain callable after token/account change.
+- Background task rule: privileged jobs capture both principal id and required capability at enqueue time and revalidate both before execution/commit. Revoking owner/admin capability cancels or blocks queued privileged work.
+- Testing/release gates:
+  - guest/user cannot render or invoke owner-only settings;
+  - owner can render/invoke them;
+  - modified client/direct API call by guest/user returns 403;
+  - switching owner -> user removes privileged UI and context without restart;
+  - identical local setting keys cannot let a normal user override global owner settings;
+  - sync/import must not copy owner role/capabilities between principals;
+  - guest->account migration never grants owner privileges;
+  - password reset/device migration/session refresh preserve the same server-side account role and cannot escalate it.
+- Current source assessment: account/guest identity and API-key scopes exist, but a dedicated personal-account owner role/capability layer is not yet present. Therefore owner-only Settings gating must be implemented as part of the account/Cognitive Core foundation before multi-user public release, reusing existing auth principals rather than introducing a parallel identity system.
+- Version/release planning: do not expand V1.5.0.0 scope merely to expose public multi-user accounts unless already accepted by its release criteria. This owner-role/capability foundation belongs with the planned account/Cognitive Core work so it is implemented once before V1.6 private Memory/Knowledge/experience expands.
+
+OWNER_ACCESS_POLICY_STATUS: ACTIVE / PERMANENT SECURITY AND UX INVARIANT.
+
+
+### OWNER COLLECTIVE LEARNING VISION 2026-10-05 — shared experience without cross-user memory leakage
+
+- Owner requirement: AuroraFox must learn from the aggregate experience of all users so a verified mistake/solution discovered while helping user A can improve future behavior for user B. This is part of the unified Cognitive Core, not a separate social-learning product.
+- Permanent separation model:
+  1. **Private user state** — raw conversations, personal Memory, private Knowledge, files/projects, preferences, personal world-model/relationship state, device/work history. Strictly principal-scoped and never readable by another user.
+  2. **Shared AuroraFox experience** — de-identified, generalized, evidence-bearing lessons derived from successful/failed work across users.
+  3. **Core/system knowledge** — curated product knowledge, stable strategies, verified facts, models/policies and promoted improvements used by all principals.
+- Required learning flow:
+  `private event -> outcome/evidence -> abstraction -> privacy scrub -> dedupe/corroboration -> quality/trust gate -> shared-experience candidate -> validation -> accepted shared lesson -> retrieval by future tasks`.
+- Shared lessons must describe transferable structure, not another person's private story. Examples: error signature, failure preconditions, causal explanation, successful remediation, rejected workaround, tool/workflow strategy, confidence, evidence type, affected versions/platforms and known counterexamples.
+- Example invariant: if user A encounters a specific Windows/Android/API/File/Work failure and AuroraFox verifies that fix X resolves it without regressions, the resulting generalized lesson can later cause Fox to try/check X earlier for user B. User B must not receive A's name, conversation, file contents, project identity, email, device identifiers or unrelated private context.
+- Privacy boundary: raw personal conversations/files/memory do not become shared knowledge merely because they were useful. Before any cross-user promotion, remove/forbid direct identifiers, secrets, account/session ids, unique document fragments, private URLs, personal names/contact data and other source-specific context unless the source was explicitly public/non-personal.
+- Current source already contains a privacy-oriented community-learning pattern with prohibited personal fields, sanitization, deduplication/quarantine and a rule that personal account chat does not implicitly enter shared learning. Reuse and generalize that architecture; do not create a second parallel learning pipeline.
+- The existing community contract is currently narrow (`dialogue_pattern`, `moderation_feedback`, `topic_trend`). V1.6 Cognitive Core should evolve the common event/learning substrate to support transferable operational lessons such as `error_pattern`, `verified_fix`, `failed_strategy`, `workflow_strategy`, `tool_reliability`, `knowledge_correction` and `capability_lesson`, while preserving the same privacy/provenance gates.
+- Poisoning resistance is mandatory. A single user's claim must not automatically overwrite shared truth or behavior. Shared candidates carry provenance class, evidence strength, confidence, source diversity, affected environment/version and contradiction state.
+- Promotion policy should be evidence-sensitive:
+  - deterministic/test-backed outcomes may be promoted from one source when the system independently verifies the result;
+  - subjective/general behavioral lessons should prefer repeated independent evidence;
+  - conflicting lessons remain separate/conditional until resolved;
+  - low-confidence, unverifiable, unsafe or privacy-risk material is quarantined/rejected rather than learned globally.
+- Shared learning must preserve counterexamples and scope. "Fix X worked" is not a universal rule unless environment/conditions support it. Store applicability conditions so the Cognitive Core can reason "this worked on version/platform/config A" instead of blindly applying it everywhere.
+- The shared experience store must be retrieval-oriented, not injected wholesale into every prompt. The Cognitive Core retrieves only relevant lessons for the current goal/context, with confidence and evidence metadata.
+- Global shared experience is read-only to normal user authority. Users influence it only through their normal interactions/feedback/outcomes and any explicit learning-sharing policy; they cannot directly edit/promote global lessons or system knowledge. Promotion/curation controls are owner/system-authority only.
+- Personalization and collective learning must coexist: a user-specific preference may override a generic strategy for that user without rewriting the shared global lesson. Shared knowledge answers "what generally works"; private experience answers "what works for this person/context".
+- Feedback loop: when a shared lesson is applied, AuroraFox records the new outcome. Successful reuse increases confidence within the matching scope; failed reuse creates a counterexample/correction candidate. Thus collective experience becomes self-correcting rather than append-only.
+- Versioning/provenance: every shared lesson should record creation/update time, schema version, source class, validation state and applicability/version range where relevant. When software/model behavior changes, stale lessons can be downgraded/revalidated rather than silently trusted forever.
+- Multi-user security invariant: cross-user learning is allowed only through the shared abstraction/promotion boundary. Direct cross-principal reads of private Memory/Knowledge/experience remain forbidden even for the purpose of "learning".
+- Owner/system administration may inspect aggregate learning quality and quarantined candidates through a separate audited owner surface; normal owner chat must not automatically surface another user's raw private data.
+- Cognitive Core integration: the common event model designed for V1.6 must classify each event/lesson as `private_principal`, `shared_candidate`, or `shared_core` at creation/promotion time so the brain never needs to repartition mixed memories later.
+- Long-term goal: AuroraFox should accumulate a growing body of collective practical wisdom across its user base, so every verified success/failure can make the same unified Fox better for future users without turning private user memories into a shared pool.
+
+CURRENT_BASE_STATUS:
+- DONE in source foundation: private account/guest isolation; personal chat excluded from implicit shared learning; separate community-learning store; PII/secret rejection; deduplication; quarantine/accept/reject states; provenance-style metadata; owner-gated acknowledgement path.
+- DELTA REQUIRED: unify community learning with the V1.6 cognitive event model; add operational lesson kinds and evidence/applicability schema; implement automatic abstraction/privacy scrub from eligible private outcomes; add contradiction/corroboration scoring; retrieval of accepted shared lessons into normal reasoning; tests proving user A's private data never leaks while a generalized verified lesson can improve user B's result.
+
+COLLECTIVE_LEARNING_STATUS: ACTIVE / PERMANENT COGNITIVE CORE PRINCIPLE.
+
+
+### OWNER DEPLOYMENT DECISION 2026-10-05 — accounts implemented but disabled until multi-user launch
+
+- Owner decision: AuroraFox remains **single-user in normal product use for now** because only the owner is using the application. Public account/guest onboarding is deferred operationally, not discarded architecturally.
+- Engineering rule: continue designing/implementing the account, guest, role/capability, privacy-isolation and collective-learning foundations correctly so they do not require a future Core rewrite, but keep the public multi-user experience **disabled by default** until the owner explicitly enables a multi-user launch.
+- Do not make V1.5.0.0 release readiness depend on public registration/login/guest UX unless a current release contract already requires it. Existing backend account primitives may remain in source and tests, but public-product activation is a later gate.
+- Normal current runtime should preserve the owner's existing single-user workflow with no forced registration, no guest quota prompt and no account-selection friction for the owner.
+- Future activation must be feature-gated/config-gated from one authoritative deployment/product flag rather than by commenting code out or maintaining a divergent account branch. The same tested code path should be switchable on later.
+- When multi-user mode is disabled:
+  - public registration, guest creation and public onboarding UI are not exposed to ordinary users;
+  - account/guest capability surfaces stay hidden;
+  - owner local/private operation continues normally;
+  - existing account schema/migrations remain backward-compatible and testable;
+  - no private data is repartitioned or migrated prematurely merely to simulate multiple users.
+- Before enabling multi-user mode later, require the previously defined gates: official AuroraFox email delivery, verification-code UX, durable guest daily quota, server-derived owner/user/guest capabilities, client account switching, export/delete lifecycle and full cross-principal Cognitive Core isolation tests.
+- This is an **activation/deployment decision**, not permission to weaken account/privacy tests. Hidden future functionality must remain production-quality before it is eventually enabled.
+- Collective shared learning design remains part of V1.6 foundation, but while only the owner uses AuroraFox there is effectively one contributing private principal; the architecture must still preserve the same private -> shared_candidate -> shared_core contract so future users can be added without data-model surgery.
+
+MULTI_USER_ACTIVATION_STATUS: DEFERRED / IMPLEMENTABLE BUT DISABLED BY DEFAULT.
+
+
+### ACTIVE continuation 2026-10-05 — local preparation while c67507e CI runs
+
+Same CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`; local/remote checkpoint c67507e, no parallel branch/lane. Fresh main fetched. Owner requests productive work while CI runs, no waits. Prepare Windows File Intelligence tree/search owner ceilings and truthful truncation locally; do not push and restart current CI. Ownership: file_intelligence/file_service.py, scripts/file_intelligence_client.gd, scripts/settings_overlay.gd, relevant tests, owner policy and journal/memory. Preserve defaults (tree 5000, search 100, excerpt 1200), expose persisted controls, test real filesystem/cache; Android native owner budgets remain an explicitly unfinished separate block rather than falsely claimed controlled. Intended build fix accumulated version-last V1.5.0.0, no canonical bump.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: prepare/test one local commit; publish only after current CI has been reported or an actual CI correction is necessary.
+
+
+### LOCAL CHECKPOINT 2026-10-05 — productive preparation without restarting current CI
+
+- Remote PR #103 stays at c67507e48d185c0c4be3fec579b7ad5307d2bafe. No CI polling or push performed in this block. Existing run links remain valid; owner will report completion.
+- Prepared Windows tree_max_items/search_max_results/search_excerpt_chars controls with defaults 5000/100/1200 unchanged, visible Settings and backend environment/health propagation. Client uses owner ceilings; omitted Pydantic request defaults honor lower owner ceilings.
+- Tree exact-fit no longer falsely says truncated; real extra item proves overflow. Search retains early stopping and reports limit_reached / more_results=unknown rather than claiming it proved omitted matches. Actual excerpt omission is separately reported. Nonobject/corrupt cache records are skipped. Android native budgets and archive/request/time limits remain visibly unfinished.
+- TEST: four real filesystem/cache production-function unit tests PASS, including 5001 tree items and 101 search matches; owner runtime/inventory contracts PASS; diff check clean. Full-service environment/default-schema regression and Godot setting propagation extensions are ready for next CI.
+- BLOCKED_LOCAL_ENGINE: /tmp verified Godot is gone; ZIP CRC validation fails with BadZipFile and cached executable is truncated. No invalid runtime executed. New Godot parse/runtime tests are NOT EXECUTED and not marked PASS; AF-MEM-107 records exact file sizes/hash and avoids repeated repair attempts. Local API dependencies still absent, no fake facade used.
+- This block is saved as one local commit on the existing branch, NOT pushed to avoid restarting c67507e checks. The new commit ID is available from local git history. Existing CLAIM remains ACTIVE for acceptance/inventory. Version/main/sign/release unchanged.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: local listing/search owner controls and truthful result metadata; real unit evidence; durable local source checkpoint.
+REMAINING: publish this prepared commit after current CI completion is reported; exact new-SHA Godot/full API/package checks; Android owner controls and inventory, physical acceptance.
+BLOCKERS: local valid Godot runtime unavailable; full API dependencies absent; device acceptance owner-side.
+NEXT: owner supplies c67507e CI results. If green, publish prepared local block and provide fresh run links; if red, diagnose exact failed job before combining an actual fix.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE acceptance continuation 2026-10-05 — reconcile owner decisions and publish prepared listing/search block
+
+- Same CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`, existing branch/PR #103. Fresh remote HEAD `996c45bffd84883ac7d795c5f0fe9545765e1047` verified **30/30 SUCCESS** once, no polling wait.
+- Remote delta since c67507e consists only of 181 appended journal lines in six owner-decision commits. Read and retain integrated Core/no-repeat roadmap, cognitive vision, account privacy, owner capability, shared-learning boundaries and deferred multi-user activation. No source implementation to redo; no account activation or V1.6/V1.7 scope expansion.
+- Prepared local `d8b4871` rebased to `43bf1c9` over current remote. The one append-only journal conflict was reconciled as complete remote text followed by the complete local appendix; assertion confirms remote prefix preserved verbatim, and all other files exactly match the original local block. No parallel branch/lane created.
+- Acceptance ownership remains listing/search backend/client/settings, tests/CI, policy and journal/memory. Intended build fix accumulated into version-last V1.5.0.0; version/main/sign/release unchanged. Four real filesystem/cache tests and owner-runtime/inventory contracts re-executed PASS after rebase. Local Godot remains NOT EXECUTED due AF-MEM-107; full API/environment/default-schema and Godot tests are mandatory on the new exact-SHA CI, no waiver.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: remote decisions reconciled without loss; green starting CI; local source block revalidated.
+REMAINING: new-head exact-SHA API/Godot/package gates, Android native owner budgets, archive/request/time inventory, physical acceptance.
+BLOCKERS: local valid Godot/API dependencies unavailable; device acceptance owner-side.
+NEXT: publish one source commit over 996c45b, return direct new-head run links without waiting; next source block is archive listing allocation and remaining owner controls.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — archive listing owner budgets
+
+Same CLAIM `CODEX-2026-09-29-V1.5.0.0-PLATFORM-FOUNDATION`, same PR #103/branch. Fresh main 446ce2cd and feature 8187d3a fetched; no remote delta. All 30/30 checks on exact 8187d3a SUCCESS, confirmed by GitHub. Reconcile historical UI/voice ownership under the existing integrated continuation; only file limits settings and File Intelligence CI tests touched, no unrelated UI/voice changes. Ownership: file service/client/settings, owner policy, archive tests/smoke/CI, journal/memory. Expose listing character cap and fraction preserving 40000/25% defaults, bound headers by total request budget, include archive settings in cache identity, use real ZIP/tar regressions. Intended BUILD fix accumulated into version-last V1.5.0.0; no version/main/sign/release changes.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement and test archive allocation; publish coherent block, return new-head CI links without waiting.
+
+
+### SOURCE checkpoint 2026-10-05 — archive owner allocation and exact output budgets
+
+- Starting exact 8187d3a: 30/30 CI SUCCESS. Same PR #103 and branch, no duplicate lane.
+- Added Settings/ProjectSettings/backend env/health controls archive_listing_max_chars=40000 and archive_listing_percent=25. Owner can raise cap, select 0–100% share, or hide list with zero. Defaults retained. Listing headers never exceed max_chars; extracted-file count requires actual content beyond header. Explicit listing_truncated/content_truncated/output_truncated metadata and warning; all archive budgets invalidate parser cache.
+- TEST: 5 real ZIP/tar production-function regressions PASS; 6 real XLS/XLSX and 4 filesystem/cache regressions PASS; runtime-owner/inventory contracts PASS; git diff check clean. New Godot settings/environment smoke and full API/parser CI required, NOT locally executed (AF-MEM-107). AF-MEM-108 records reusable defects/prevention.
+- Files in archive allocation block released after publication; existing integrated CLAIM continues Android/inventory/device acceptance. Commit identity is the enclosing source commit in Git history. No canonical bump, merge, signing or release.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive owner controls, bounded headers, truthful partial content and cache invalidation; real local regressions.
+REMAINING: exact new-head CI, native Android budgets, remaining owner-control inventory, physical acceptance and final version-last release gates.
+BLOCKERS: local valid Godot/API dependencies unavailable; physical devices owner-side.
+NEXT: publish this block and provide new-head run links without waiting; prepare native Android budget propagation while CI runs, no repeated source changes.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE local preparation 2026-10-05 — Android directory owner ceiling
+
+Archive source published as 3d96ed429bd9c3150454e6c443f9b8f8e5107595. New runs launched, no wait/poll loop. Continue same integrated CLAIM, prepare locally without restarting expensive checks. Ownership: AndroidFileRuntime directory traversal only, new pure Kotlin directory helper/JUnit, FileIntelligenceClient tree branch and source contract, journal. Pass existing tree_max_items owner value; remove both native/client fixed5000 clamps; observe one extra item for truthful truncation. Preserve private-root authorization; no parser/OCR/registration architecture change. Intended BUILD accumulated V1.5.0.0, version unchanged. Kotlin/Gradle unavailable locally; real JUnit evidence must come from Android Plugin CI after publication, never counted as local PASS.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: prepare source and genuine filesystem JUnit cases; publish only after current checks are reported, no waiting.
+
+
+### LOCAL checkpoint 2026-10-05 — Android directory limit preparation during archive CI
+
+- Published/archive remote HEAD remains 3d96ed429bd9c3150454e6c443f9b8f8e5107595. Do not push prepared Android change until current checks are reported; no CI waiting loop.
+- Removed both fixed5000 tree clamps; Godot passes tree_max_items owner value into native private-root traversal. Pure Kotlin helper returns actual item budget/truncation, exact-fit complete. Added three genuine filesystem JUnit cases including5001 files. Source contracts PASS, diff check clean; Kotlin/JUnit/Gradle NOT EXECUTED locally (toolchain unavailable), mandatory Android Plugin CI after publication. AF-MEM-107 continuation records limitation.
+- Prepared on same branch as one local commit; no new lane. Android tree source ownership released to next acceptance pass; remaining Android file/parser/OCR budgets still unfinished. No version/main/sign/release changes.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive block published; Android directory owner propagation and real test source prepared locally.
+REMAINING: archive exact-SHA CI; publish Android block then exact-SHA Kotlin/JUnit/package/parse evidence; Android parser budgets, inventory and physical acceptance.
+BLOCKERS: local Kotlin/Godot/API toolchains unavailable; devices owner-side.
+NEXT: on archive CI completion report, diagnose any failures or publish prepared Android directory block; continue Android parser budget propagation without guessing new architecture.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### CI diagnosis 2026-10-05 — one exact-SHA Core failure, targeted repeat
+
+Remote remains3d96ed4, local Android3383be0 unpushed. Owner reported red. Snapshot:28 success/1 failure/Windows packaging running. Failed real-core-windows run37333751554 job111843252931:20/21 benchmark scenarios PASS; only long_context empty after90068.494ms. Real offline CodeSpecialist and archive/File Intelligence passed. Actual root cause unknown; performance hard limits PASS, incompatible baseline comparison unapplied. Downloaded/read actual report/stdout/stderr artifact11355856840; AF-MEM-109 records missing runtime-error fields. Single targeted job rerun requested successfully at same SHA; no source push/CI wait loop or gate weakening.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: actual failure artifact diagnosed to long-context scenario; same-SHA one-job repeat launched.
+REMAINING: repeat result plus Windows completion; prepared Android publication/acceptance and parser/inventory/device gates.
+BLOCKERS: long-context Core failure cause unconfirmed, run37333751554; local Godot unavailable.
+NEXT: owner checks targeted repeat link; if still red, retain real Core error metadata before diagnosis. Android source remains local and does not invalidate current SHA checks.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE acceptance 2026-10-05 — publish prepared Android directory block after green archive CI
+
+- Owner reports green; verified all30/30 SUCCESS on exact3d96ed429bd9c3150454e6c443f9b8f8e5107595 including targeted Core repeat and Windows Package. AF-MEM-109 repeat result: failure not reproduced, root cause unknown. Fresh main446ce2cd, remote feature unchanged.
+- Same existing CLAIM/PR #103/branch. Publish prepared3383be0 Android directory owner propagation plus b8a9d61 durable failure lesson, reconciled current green result. Source re-reviewed, six owner runtime contracts PASS, diff check clean.
+- Three genuine Kotlin filesystem JUnit cases require new-head Android Plugin CI (locally NOT EXECUTED, no Kotlin/Gradle). Request/owner budget now honored above5000 on Android, one additional actual item proves truncation. Private-root authorization unchanged. Android text/document/archive/OCR parser budgets remain unfinished and are not claimed implemented.
+- Intended BUILD accumulated version-last V1.5.0.0; version/main/sign/release untouched. Directory source files released after publication, integrated CLAIM remains active for acceptance and parser/inventory work.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: archive exact-SHA30green; Android directory source/real test cases prepared and re-reviewed.
+REMAINING: new-head Kotlin/JUnit/Godot/package CI, native parser/OCR owner budgets, inventory, physical acceptance and version-last gates.
+BLOCKERS: local Kotlin/Godot unavailable; physical devices owner-side.
+NEXT: publish one coherent Android source block, provide fresh check links without waiting; next prepare per-request Android parser budget propagation.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE local package 2026-10-05 — Android document/archive/OCR owner controls
+
+Same integrated CLAIM, PR #103/feature branch at9ffdaa2527a23d8d66276297878c0800f2008e9c. Fresh remote main446ce2cd and feature verified unchanged. Owner asks fewer pushes/larger tested packages while CI runs. OCR platform-default ambiguity explicitly asked; owner delegates best maximum-capability choice. Use common visible owner settings/current Windows defaults (PDF256MiB/1000pages/500OCR), immutable per-request snapshots; retain bounded renders and cancellation. Ownership: Android File/OCR runtime, plugin job bridge, new budget/read helpers/tests, FileIntelligenceClient/settings and relevant contracts/policy, journal/memory. Add operational time/input-pixel controls, remove parser hidden caps, bounded XML/text reads, truthful ZIP content extraction through existing native File Intelligence. Avoid global mutable settings that race active jobs; retain legacy native methods. Intended PATCH/BUILD accumulated V1.5.0.0, no canonical version/main/sign/release change. Prepare locally, do not invalidate running9ffdaa CI. Kotlin/Godot local runtime absent; source contracts are limited evidence, JUnit/device acceptance mandatory.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement one coherent native budget package; local static/source validation plus genuine JVM regression source; publish after current checks are reported.
+
+
+### LOCAL coherent package checkpoint 2026-10-05 — Android parser/ZIP/OCR budgets while9ffdaa CI runs
+
+- Remote remains9ffdaa2527a23d8d66276297878c0800f2008e9c. No CI status polling/restart/push in this block. Same branch/PR/CLAIM, one local checkpoint, owner requests larger packages.
+- Implemented immutable per-request FileAnalysisLimits from saved Settings through exported native async API; all document work moved off synchronous Godot call. Shared owner controls for file/output/cells/archive/PDF/OCR/render/input-pixels; added analysis deadline/pending-job controls; existing Windows image input-pixel environment propagated. Deliberate common Android PDF defaults256MiB/1000/500 follow clarified owner delegation; rendered image stays bounded.
+- Office XML and text now stream with actual byte-budget detection; XML DTD/entity guard closes unsupported-feature fallback risk. ZIP now returns genuinely extracted allowed text/JSONL with no path writes, byte/entry/output bounds and partial-content provenance; binary/unsafe/header-only content cannot count as knowledge. Truncation aliases/metadata coherent and actual job limits recorded. No parser cache or global mutable job settings introduced.
+- TEST: Android contract PASS;15 runtime/E2E/inventory source contracts PASS;5 real Windows archive and4 filesystem/cache unit regressions PASS; diff check clean. Ten new genuine JVM regression cases and extended Godot owner-env smoke prepared but NOT EXECUTED locally (no Kotlin/Gradle/valid Godot); no local compilation/runtime PASS claimed. New exact-SHA CI required. AF-MEM-110 records defects, decision and evidence boundary.
+- Remain: Android native XLS/7z/rar/tar/EPUB, wider owner-control inventory, device memory/UI acceptance and final release gates. Preparing controls and safe ZIP extraction does not declare every native document format implemented. Source ownership released to acceptance continuation after local commit; no canonical bump, main merge, signing or release.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: coherent Android owner-budget/async/ZIP extraction source package with actual test fixtures and durable lessons.
+REMAINING: report current9ffdaa CI, publish package once, exact-head Kotlin/JUnit/Godot/package/runtime/device acceptance; unsupported native formats and inventory.
+BLOCKERS: local Kotlin/Godot unavailable; physical acceptance owner-side.
+NEXT: owner reports9ffdaa results; reconcile any red job, otherwise publish prepared package as one push and provide all required workflow links. Continue inventory/native format gaps while checks run.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE recurrence diagnosis 2026-10-05 — preserve actual Core error and engine log
+
+Owner reports red. Exact9ffdaa check snapshot35total:33SUCCESS, real-core-windows failure, Windows package in progress. Run37350313139 job111899302623 artifact11363275188 confirms same long_context empty/zero tokens at90034.443ms;20/21quality, hard performancePASS. Prior targeted repeat success did not establish root cause; do not repeat blindly. Fresh main446ce2cd/feature9ffdaa unchanged. Extend existing integrated ownership to benchmark failure diagnostics, runtime HTTP-field propagation and benchmark-only engine log, runner/workflow/test wiring. No functional Core inference, deadline, scenario or gate relaxation. Prepared ca9bc36 Android package remains complete locally; publish it together with diagnostics in one coherent push so new-SHA CI validates both and avoids another full build restart. Intended BUILD accumulatedV1.5.0.0, no canonical bump/sign/release/main merge.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: bounded explicit failure fields, benchmark-owned llama log, deterministic diagnostic smoke, then one combined publish and no CI wait loop.
+
+
+### PUBLISH checkpoint 2026-10-05 — Android package plus recurrent Core failure diagnostics
+
+Starting remote9ffdaa2; local preparedca9bc36 is preserved entirely. Combined publication adds only Core evidence capture: bounded actual error/HTTP/transport/attempt fields, opt-in synthetic-benchmark engine log with verified --log-file support, runner/artifact collection and deterministic diagnostic smoke. Normal inference parameters and all quality/performance deadlines/gates unchanged. Core long_context root cause still unknown; red is not waived or countedPASS.
+TEST:16 evaluator/gate source contractsPASS; earlier Android contract/15source contracts and9real Python filesystem/archive unitsPASS remain unchanged. Ten Kotlin JVM parser-budget cases and Godot budget/diagnostics smokes NOT executed locally; exact new-head AndroidPlugin/Godot/Core/package gates mandatory. Current9ffdaa AndroidPlugin/Android APK/Android Core E2E and other checks succeeded, but this does not validate ca9 new source. No blind retry or waiting loop. AF-MEM-109 recurrence records actual report and unresolved boundary; AF-MEM-110 documents native package.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: prepared Android owner budget/ZIP/async package, actual recurrence diagnosis and explicit evidence plumbing.
+REMAINING: new-head CI; fix confirmed long-context root cause using new report/engine log if it recurs; unsupported Android formats, inventory and physical/final release acceptance.
+BLOCKERS: recurrent Core long_context error unresolved; local Kotlin/Godot unavailable; physical device acceptance owner-side.
+NEXT: publish one combined source commit and provide directCore/AndroidPlugin/Windows/all-check links; inspect next failure evidence without blind repeats.
+No canonical bump, main merge, signing or release; all changed source owned files released to acceptance under existing integrated CLAIM.
+ОБЩАЯ ГОТОВНОСТЬ AURORAFOX: 82%
+
+
+### ACTIVE continuation 2026-10-05 — native EPUB/tar and reviewed inventory
+
+Verified all35/35SUCCESS on exact9e72afafd7a11167e8ea1fca794e51172f4f9a0d after owner green report. Includes actual Android Plugin/JUnit and Core benchmark acceptance; AF-MEM-109 remains an intermittent cause-unknown lesson, not invented root cause. Fresh main446ce2cd/feature9e72 unchanged. Same PR/branch/CLAIM. Ownership: new native EPUB/tar readers and JVM fixtures, shared archive helpers, AndroidFileRuntime routing, owner policy/contracts and journal/memory. Use existing JAXP/commons-compress dependencies; no POI or new parser dependency/architecture silently added for XLS/7z/rar. Bound every member/entry/output by existing immutable owner snapshot; validate OPF spine/internal paths, never fetch EPUB references or extract archive paths to filesystem. Inventory baseline2537unclassified; classify only reviewed per-job budgets, pure structural widths and fixture/gate diagnostics, preserve unknown limits. Intended PATCH accumulatedV1.5.0.0, canonical version unchanged.
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: implement real EPUB and tar/tar.gz, genuine JVM fixtures, targeted inventory evidence, then one tested source publication with new-head CI links; no wait loop.
+
+
+### SOURCE COMPLETE continuation 2026-10-05 — native EPUB/tar and reviewed inventory
+
+- Starting/published parent:9e72afafd7a11167e8ea1fca794e51172f4f9a0d, all35 exact-SHA check-runs SUCCESS; PR103 remains open, unmerged, same feature/v1.5-quality-feedback-intent branch. No version/sign/release/main change.
+- ACTION/FILES: AndroidFileRuntime routes EPUB and tar/tgz/tar.gz through new EpubTextReader/TarTextReader; shared ArchiveTextReader UTF8/CP1251/path helpers; six real NativeDocumentFormatsTest JVM fixtures. Owner limits captured per request remain unchanged. EPUB title/author/spine order and actual XHTML payload are extracted offline; tar/gzip actual text retained, no filesystem extraction. Internal/external references, traversal/link/sparse guards and bounded decompression preserve untrusted-data boundaries.
+- Reviewed config/owner_control_policy.json and audit regression: exact native budget use sites are owner_adjustable, signed64 saturation is format_structure, native JUnit assertions are test_evidence. Arbitrary runtime literal LIMIT17 still unclassified. Fresh pre-policy source inventory2570 unclassified→2515 after55 reviewed findings; starting source baseline2537→2515 reflects33 new findings plus55 classified, not a claimed complete inventory.
+- TEST: six owner-audit functions PASS locally; Android source/version/export contract PASS; git diff --check PASS. Six new JVM cases and previous ten ZIP/limit cases MUST execute in Android Plugin CI; local Kotlin/Gradle and usable Godot unavailable, not PASS. One atomic publication queues all normal PR workflows; no CI wait/retry loop.
+- RESULT: source package complete and ready for CI, not yet runtime-accepted on new SHA. Engineering memory AF-MEM111 records root-reference and tar metadata/decompression boundaries; AF-MEM110 accepted-source reconciliation recorded. Existing Core intermittent long-context cause remains unknown; starting9e72 green does not establish cause.
+- BLOCKERS/REMAINING: new-SHA CI, installed-device/release gates, native XLS/7z/rar decisions and2515 owner inventory findings; no source-blocking ambiguity in this existing-dependency package. Sparse tar and DTD-dependent/malformed EPUB return explicit unsupported/error conditions.
+- NEXT: publish this package in PR103, owner monitors direct check links; diagnose only actual failing new-SHA job. After green, continue next reviewed owner-control cluster and already-authorized security workspace acceptance without repeating implemented blocks. Source file ownership released; CI follow-up remains this same lane.
+- Intended bump PATCH, accumulated V1.5.0.0 version-last. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%. No readiness increase from source-only work.
+
+
+### OWNER CI EXECUTION POLICY 2026-10-06 — batch implementation, one repair pass, one final full exact-SHA run
+
+- Owner decision: AuroraFox development should minimize redundant CI waiting and credit/time waste while preserving final verification quality.
+- Default execution pattern for a coherent development lane/block:
+  1. Implement the largest logically coherent block that can be safely developed on the current verified foundation.
+  2. Use only cheap/local/static/smoke checks during implementation when they prevent carrying obvious syntax/contract errors forward.
+  3. After the block is functionally complete, launch the full relevant CI/check set together on one candidate SHA.
+  4. Collect all red results first; diagnose and repair the known failures as one batch where practical instead of serially waiting on CI after every small fix.
+  5. During repair, run only fast local/direct tests needed to confirm each specific root cause/fix.
+  6. After all known failures are repaired, launch one full final relevant CI suite on the new exact SHA.
+  7. If that exact-SHA final suite is green, do not rerun the same complete suite again without a concrete reason.
+- Re-running only the previously failed GitHub jobs before the final full run is **not the default**. It is justified only when that targeted job/test is materially faster than the complete suite and provides an early answer that is likely to avoid a long wasted full CI run.
+- Example: if full CI takes tens of minutes but the uncertain failing job takes two minutes, run the targeted job first; if the fix is straightforward and locally verified, skip that intermediate GitHub rerun and go directly to the final full exact-SHA suite.
+- The final full suite remains mandatory because a repair for one red test can regress a previously green subsystem. Passing only the former red jobs does not prove release-candidate consistency.
+- Do not poll CI repeatedly while it is running. Prefer useful independent work or let the owner report completion/status when links are already available.
+- Do not split one coherent implementation into tiny commits/check cycles solely to obtain frequent green indicators. Verification cadence follows meaningful engineering boundaries, not individual lines/buttons.
+- Conversely, do not stack unrelated or foundation-dependent major subsystems on top of an unverified architectural foundation. A foundational block should pass its relevant acceptance gate before dependent large layers are built on it.
+- Release/version/package/device gates are still final evidence requirements and are not weakened by this optimization. "Fewer CI runs" means removing redundant runs, never skipping the final evidence needed for release.
+- This policy applies to Chat, Work, Codex and autonomous development lanes unless a subsystem-specific safety/release contract requires a stricter cadence.
+
+DEFAULT_FLOW:
+`coherent implementation block -> full relevant CI -> batch repair of all reds -> fast local/direct repair checks -> one final full exact-SHA CI -> physical/device/release gates when applicable`
+
+TARGETED_RERUN_EXCEPTION:
+`uncertain fix + very slow full CI + very fast isolated test/job -> targeted rerun -> then final full exact-SHA CI`
+
+CI_EXECUTION_POLICY_STATUS: ACTIVE / PERMANENT DEVELOPMENT EFFICIENCY RULE.
+
+
+### ACTIVE CI recovery 2026-10-06 — same-SHA pre-run cancellations
+
+- CLAIM: same PR103 coordinator owns CI evidence and journal/memory reconciliation only; no production source/workflow edits. Fresh main446ce2cd2f979a8ab228f63d090062e8ba48a6eb; candidate6711e060dd6372e9a963924669f11fa001f57510, open/unmerged. Version bump NONE (evidence-only).
+- ACTION: diagnosed35 checks:17 SUCCESS,14 CANCELLED,3 SKIPPED,1 FAILURE. Integration run37367789382/job111962483321 only fails because CONTRACT_RESULT=success and GODOT_RESULT=abandoned. Dependent godot-cross-subsystem job111957060092 has empty runner/steps; Windows package job111958918532 also empty runner/steps. Logs for these and cancelled Chat Learning return BlobNotFound; no executed test error shown. Cancellation cause is unknown, not labelled a proven GitHub outage or source defect.
+- TEST/DONE: Android Plugin run37367789338/job111957059538 compiled readers and executed :plugin:testDebugUnitTest; BUILD SUCCESSFUL. Android APK37367789000 SUCCESS. New six EPUB/tar JVM cases have now executed within the successful unit-test gate, superseding prior local NOT_EXECUTED. Physical-device gates remain separate.
+- RESULT: requested exactly one rerun-failed-jobs for each of12 affected workflow runs; all12 API requests accepted. Same candidate SHA, preserve17 successful checks. Runs37367789289,37367789382,37367789005,37367789083,37367789081,37367789295,37367789044,37367789064,37367789100,37367789001,37367788989,37367788982. Failed-job rerun includes cancelled and downstream checks; no new commit/full successful-workflow restart/poll loop.
+- FILES/COMMIT: source unchanged, candidate remains6711e06. Journal/memory evidence appended locally for the next coherent source publication; do not create a docs-only new SHA that invalidates these in-flight checks. PR body records durable public recovery evidence immediately.
+- BLOCKERS/REMAINING: same-SHA retry completion, original cancellation root unknown, installed-device/release acceptance and remaining source roadmap. No test waiver, cancellation or pending rerun is PASS.
+- NEXT: owner monitors https://github.com/Treninem/AI/pull/103/checks and reports completion; inspect actual failing executed job if any, never blindly repeat again. This CI recovery CLAIM remains ACTIVE until outcomes are reconciled.
+- PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%.
+
+
+### ACTIVE 2026-10-06 — reviewed native owner-control propagation inventory
+
+- CLAIM: same PR103 coordinator owns config/owner_control_policy.json, tests/test_owner_control_audit.py and shared journal/memory only; no production/parser/other-lane edits. Source parentbc527487011f80cbc84fc882d007e330baba538b and main446ce2cd2f979a8ab228f63d090062e8ba48a6eb freshly verified; both candidate6711e06 and new documentation-policy HEADbc52748 have35/35 SUCCESS. Prior CI recovery CLAIM DONE; cancellation cause remains unknown.
+- Goal: classify proven immutable owner-limit propagation in AndroidFileRuntime/AndroidOcrRuntime/GodotAndroidPlugin/readOwnerBounded plus genuine Evolution test fixtures; preserve unrelated literals, hard security boundaries and outstanding limitations. Baseline2515 unclassified. Format integer sentinels and full comments get distinct classification.
+- Intended bump NONE (inventory/evidence only); canonical version unchanged, targetV1.5.0.0 version-last. Follow owner's new batch CI cadence; one coherent publication, no polling or intermediate failed-job rerun for a code repair.
+
+
+### SOURCE COMPLETE 2026-10-06 — native owner inventory and CI evidence consolidation
+
+- Parentbc527487011f80cbc84fc882d007e330baba538b:35/35 exact-SHA checks SUCCESS. Previous6711e06 recovery also35/35 SUCCESS; no code change was needed for abandoned prerequisites. Main446ce2cd unchanged; PR103 open/unmerged, same branch. Previous recovery CLAIM DONE and owned evidence consolidated here.
+- ACTION/FILES: config/owner_control_policy.json reviews Android parser/OCR/native bridge owner-snapshot use sites, readOwnerBounded caller budgets, tree item propagation, JVM integer/sorting sentinels, full single-line Kotlin documentation, and Evolution test fixtures. No production reader/runtime/workflow edits, dependency additions, version change, merge, signing or release.
+- RESULT:112 existing previously-unclassified findings reviewed;2515→2403 unclassified. Owner_adjustable214→303, format_structure8→10, documentation46→49;18 Evolution test findings classified. Ten new assertion findings are test_evidence through existing tests/* policy. Final test_evidence675. Inventory remains incomplete; no blanket production-path classification.
+- TEST: seven actual owner-audit regressions PASS locally, including real repository completeness/count scan and deliberate unrelated LIMIT17/timeout99/security/private-network/comment-inline counterexamples. Existing Android source/version/export contractPASS; git diff --checkPASS. Both starting green candidates provide genuine Android/JVM/package/runtime evidence; next policy/test candidate requires new-head CI, not yet PASS.
+- COMMIT: this coherent publication includes previous locally retained CI-recovery journal/memory evidence, the112 classifications and new audit regression. One normal full PR check batch; owner monitors links, no polling or extra full rerun if green.
+- BLOCKERS/REMAINING: new-head checks,2403 inventory findings, XLS/7z/rar native backend architecture/dependency choice, security-workspace remaining authorized coverage and physical-device/release acceptance. No implementation choice for new native dependencies was silently made.
+- NEXT: collect new-SHA results; after green proceed to next reviewed inventory cluster or owner-selected native backend package. For XLS/7z/rar, present concrete offline backend/library costs and agree substantial architecture choices before editing them. Source/evidence ownership released; same coordinator follows CI.
+- Intended bump NONE (inventory/evidence only); accumulatedV1.5.0.0 version-last. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%.
+
+
+### OWNER FINAL TARGET SPEC 2026-10-06 — canonical end-state AuroraFox requirements
+
+This section is the **canonical consolidated owner target** for the end-state AuroraFox product. It does not replace the more detailed permanent owner directives elsewhere in this journal; it binds them into one architecture and resolves their intended relationship. Repository state and executable evidence still override stale prose. Near-term release scopes remain bounded: long-term capabilities do not automatically become blockers for V1.5 unless explicitly activated by the owner.
+
+#### 1. Product identity and architectural north star
+
+- AuroraFox is one continuously developing AI companion, work partner and agent, not a collection of disconnected products.
+- Memory, Knowledge, Experience, semantic intent, models, Voice, Vision/OCR, Web, Files, Work, Computer, Security, accounts/sync, trust, sandbox/rollback and Evolution are faculties of the same identity and lifecycle.
+- The common cognitive loop is:
+  `Perception -> Context -> World Model -> Memory/Experience -> Reasoning -> Goals -> Decision -> Action -> Outcome -> Learning`.
+- Important work must be represented by structured event history: goal/context -> relevant knowledge/experience -> strategy/decision -> action -> outcome -> feedback/evidence -> learned consequence.
+- Updates must preserve continuity of the same Fox: compatible Memory, Knowledge, Experience, skills, world/self-model and personality/work history survive version changes unless an explicit owner reset/migration is chosen.
+- Do not rebuild the same architectural foundation more than once. Shared identity/event/provenance/trust/persistence/sync structures are implemented at the earliest common layer and reused.
+
+#### 2. Self-primary intelligence
+
+- AuroraFox Core is the primary intelligence authority. Normal chat, planning, memory, local Knowledge, reasoning, learning and self-evaluation must remain functional without Ollama, OpenAI/other AI APIs, remote inference or the public Internet.
+- Internet and external models are optional information/tool resources, never the required cognitive engine.
+- The product ships its required local model/runtime; normal users do not install an inference engine, choose/download GGUFs or configure a mandatory external model.
+- Multi-model routing may use different local/specialist models internally, but the user always interacts with one AuroraFox identity and shared context/memory/goals.
+- External input (web, documents, code, optional external AI output) is untrusted data and never gains system/tool authority merely by being imported.
+
+#### 3. How AuroraFox reasons
+
+- Complex tasks must follow a goal-and-outcome cycle rather than `prompt -> text`.
+- The reasoning substrate must combine current context, world model, remembered experience, Knowledge, uncertainty/provenance, available tools, reversibility and risk.
+- AuroraFox should generate/compare hypotheses where useful, gather missing evidence when doing so is cheaper/safer than guessing, and verify actual outcomes after acting.
+- Confidence must be evidence-derived (verified source, inference, prior success, conflicting evidence, unfamiliar case), not a decorative random percentage.
+- AuroraFox maintains a self-model of its capabilities, limits, tools, recurring failures, successful strategies and areas needing learning.
+- Do not persist an unlimited raw internal monologue. Persist concise reusable decision records and evidence sufficient for continuity, audit, learning and future strategy selection.
+
+#### 4. Memory, Knowledge, Experience and collective learning
+
+- Working memory is bounded current-task context.
+- Private long-term Memory stores user-specific facts, preferences, relationships, project history and relevant events.
+- Experience stores what AuroraFox actually tried, what happened and what was learned; repeated successful outcomes may become reusable skills.
+- Knowledge stores facts/sources/provenance/revisions/deduplication and retrieval indexes; Knowledge is not the same as Experience.
+- The production bootstrap Knowledge Pack remains a genuine >=1 GiB unpacked local knowledge corpus, sharded/versioned/hashed, legally sourced, locally usable and imported with bounded memory/resume/integrity.
+- Future multi-user learning uses three classes:
+  `private_principal -> shared_candidate -> shared_core`.
+- A verified mistake/fix for user A may improve future behavior for user B only through de-identification, abstraction, privacy scrub, dedupe/corroboration, evidence/trust gates and accepted shared experience.
+- Raw private chats/files/memory, names, contacts, secrets, private URLs, account/session ids and source-specific private context never become another user's context.
+- A single user assertion does not automatically become global truth. Shared lessons retain evidence strength, applicability conditions, versions/platforms, contradictions and counterexamples.
+- Applying a shared lesson produces new outcome evidence; success raises confidence within scope, failure creates a correction/counterexample candidate.
+
+#### 5. Files, documents, OCR and public web
+
+- AuroraFox must actually parse supported file content, not pretend success from filenames/listings. Supported families include text/data/code, Office documents, PDF, spreadsheets, presentations, safe archives and EPUB; unsupported formats fail honestly.
+- Large inputs are streamed/bounded/resumable where applicable. Any truncation is explicit: which limit, what was processed and what remains.
+- Image-only/scanned PDF requires a real local OCR baseline; cloud OCR cannot be mandatory.
+- Public HTTP/HTTPS links requested with read/study/find/extract intent are fetched, treated as untrusted source material, processed and saved to the user's private Knowledge by default under the owner's permanent `read = remember` rule.
+- URL provenance includes original/final URL, title/domain/time/content type/hash.
+- No CAPTCHA, mandatory login/authentication, paywall/access-control bypass, or SSRF/private/service-network access via web links. Optional registration must not block reading genuinely public material.
+- Operational limits are owner-adjustable defaults unless they are true security/integrity/platform boundaries.
+
+#### 6. Owner-controlled limits and hard boundaries
+
+- Time, byte, count, depth, retry, OCR, archive, spreadsheet, Work/Computer and similar operational ceilings are visible/explainable/reversible owner controls where technically safe.
+- On a soft limit AuroraFox reports what was hit, what was completed/saved, risk of continuation and owner options.
+- Hard boundaries are reserved for genuine authorization/access control, cryptographic integrity/signing, master stop, privacy/secrets, untrusted-code isolation, sandbox/rollback, platform/OS enforcement and comparable non-product constraints.
+- Do not disguise a product preference or arbitrary hard-coded number as an immutable "safety" limit.
+
+#### 7. Work, Computer and outcome verification
+
+- Work and Computer are execution faculties of the same Fox, not separate identities.
+- Work handles long, multi-step tasks and finished deliverables; Computer can interact with screen/UI/mouse/keyboard/apps/files within granted scope.
+- Generated text or a click is not task completion. The standard loop is:
+  `act -> observe -> verify objective -> repair/retry if appropriate -> record outcome -> learn`.
+- Permissions, scope, evidence, cancellation and master stop apply to execution.
+- Dynamic trust grows/shrinks by risk and proven reliability: low-risk reversible tasks may run autonomously; new/medium-risk actions use extra checks/dry-run/sandbox; high-risk or costly irreversible actions require stronger evidence/authorization.
+
+#### 8. Controlled Evolution
+
+- Autonomous Core improvement is a bounded tournament of 3-10 isolated candidates from the same stable baseline; default target is 5.
+- Stable participates as incumbent. No candidate is promoted merely because it is "best" if no candidate proves a safe measurable improvement.
+- Hard safety/contract/no-regression gates override aggregate quality scores.
+- A tournament winner requires independent clean verification, integrity/hash checks, rollback readiness and master-stop compliance before promotion.
+- Candidate generation/promotion may improve code, models, strategies and workflows, but does not bypass product release/signing authority.
+- Self-modification may never disable protected safety, privacy, updater trust, rollback, signing or master-stop boundaries.
+
+#### 9. Authorized security testing
+
+- AuroraFox may perform real authorized security testing of owner-owned or explicitly authorized targets after recording target/scope/authority/environment/window/method/resource constraints.
+- Flow: surface discovery -> passive/low-impact checks -> candidate confirmation -> minimum permitted exploitation -> evidence -> severity -> remediation -> retest.
+- Production defaults prohibit destructive data changes, uncontrolled DoS, persistence/backdoors, hiding traces, out-of-scope lateral movement and unnecessary extraction of real secrets/PII.
+- Lab/staging permissions may be expanded explicitly by the owner.
+- Security findings require reproducible evidence and remediation/retest; neither an unsupported "vulnerable" claim nor an exploit without remediation counts as complete.
+
+#### 10. Voice, UI and performance
+
+- Local STT/TTS/VAD/wake/barge-in remain the guaranteed baseline. Voice failure does not break text chat.
+- Windows and Android UI must be adaptive across supported size/DPI/density/orientation/safe-area/keyboard cases, with no clipped/empty/overlapping controls.
+- Windows Settings is a real separate non-transient window with stable focus/taskbar identity and AuroraFox branding.
+- Startup, Core warmup, orchestration, persistence and UI rendering are measured separately. Minute-long UI switching, whole-PC stalls, Android multi-minute response latency or same-session response requiring restart are release-blocking defects in affected scope.
+- Visual/device evidence complements source/UI tests; code alone does not prove rendered quality.
+
+#### 11. Updater and release integrity
+
+- Updater uses signed manifests/packages with chunk/part and full-package SHA-256 identities.
+- Verified completed parts survive network loss/app restart/OS restart. Partial current part resumes via Range/Content-Range where supported, otherwise only that part restarts.
+- No fixed total wall-clock update timeout; bounded no-progress/retry/backoff behavior is allowed.
+- Apply is atomic and gated by signature/hash/assembly/backup/health/rollback.
+- Production release signing authority remains owner-controlled and secrets never enter Git/client/Core logs.
+
+#### 12. Versioning and acceptance
+
+- Canonical version format remains owner-defined `A.B.C.D`:
+  - A = architectural reconstruction;
+  - B = global/system-wide release;
+  - C = completed new functionality;
+  - D = fixes/hotfixes.
+- Version is changed last, after the changed block passes relevant acceptance.
+- Android `versionCode` strictly increases for every installable release.
+- Final evidence belongs to one exact candidate SHA. Windows from one SHA + Android/Core from other SHAs cannot be called one verified release.
+- "Done" means the real user objective is verified, not merely code/commit/test existence.
+- Final release acceptance includes all relevant unit/smoke/integration tests, one full exact-SHA CI suite, Windows/Android package gates, update/release/signature gates, and physical/device acceptance where required or an explicit owner waiver for a non-mandatory external gate.
+- No known release-scope P0/P1 defect may remain when declaring ready.
+
+#### 13. CI execution policy
+
+Permanent default:
+`largest safe coherent implementation block -> full relevant CI -> collect all reds -> batch repair -> fast local/direct repair checks -> one final full exact-SHA CI -> physical/device/release gates`.
+
+- Do not launch complete CI after every tiny code/UI change.
+- A targeted rerun is an exception when it is materially faster and prevents a likely wasted full run.
+- Do not repeatedly poll CI; perform useful independent work while it runs.
+- Do not stack large dependent subsystems on an unverified architectural foundation.
+
+#### 14. Accounts and multi-user future
+
+- Account/guest/role/privacy foundations are developed correctly but public multi-user remains disabled by default until the owner explicitly activates it.
+- Current owner operation must remain single-user and frictionless: no forced registration, guest quota or account-selection requirement.
+- Future principals: `guest`, `user`, `owner`; owner authority is server-derived and cannot be obtained through UI flags/email strings/device ids.
+- All private chats/Memory/Knowledge/files/projects/settings/devices/sync/Work/tool results/cognitive events are principal-scoped.
+- Owner-only settings include Evolution/Core candidate/model registry/global Knowledge/global learning/system limits/security administration/internal API/signing/release/global database/sync administration.
+- Hiding a button is not authorization; direct API access without capability returns 403.
+- Future public activation additionally requires official-email verification code flow, durable daily guest quota, guest->account migration, export/delete, account switching, device/session controls and adversarial cross-user isolation tests.
+- Shared collective experience does not weaken private tenant isolation.
+
+#### 15. Long-term physical-world / Smart Home reserve — NOT a current release blocker
+
+- Cognitive Core must remain extensible to future physical perception/action without requiring a new brain architecture.
+- Possible future devices include ESP32/Arduino-compatible nodes, sensors, smart sockets, relays/contactors, lighting, cameras, microphones, speakers, doors, PCs and phones.
+- Devices expose capabilities rather than custom one-off "mini Foxes", e.g. `power.read`, `state.read`, `switch.off`, `audio.play`, `vision.stream`, `lock`, `unlock`, `notification.send`.
+- Fox may later learn normal device behavior, power-use profiles and anomalies from time/current/power/duration/context rather than one fixed threshold.
+- Physical actions are risk-weighted: low-cost reversible actions require less evidence than disabling critical equipment or unlocking an exterior door.
+- Early autonomy should observe/notify first; stronger automatic action is earned through evidence and explicit owner permission.
+- Camera/video processing should prefer local analysis and event-level notifications over unnecessary cloud streaming.
+- Smart Home is an architectural future option ("may or may not be built"), not an automatic blocker for V1.5/V1.6/V1.7.
+
+#### 16. Roadmap relationship
+
+- V1.5.0.x: stabilize the present Windows/Android product, UI/performance, File Intelligence/Web/security foundations, updater and release/device acceptance.
+- V1.6.0.0: unified Cognitive Core foundation — event/context/world model/Memory/Experience/Knowledge/outcome learning/uncertainty/semantic intent/multi-model routing/shared experience/principal-aware data/distributed event history.
+- V1.7.0.0: advanced autonomous execution/Evolution on the proven V1.6 substrate — Work/Computer trust, sandbox/dry-run/rollback, security evidence and controlled tournament/promotion.
+- Do not make deferred public multi-user or Smart Home activation a near-term release blocker unless the owner explicitly changes scope.
+
+#### 17. Canonical engineering governance
+
+- `docs/PROJECT_MASTER_LOG.md` remains the only project coordination journal.
+- `docs/AURORAFOX_ENGINEERING_MEMORY.md` remains the durable memory of confirmed failures/root causes/fixes/prevention.
+- `AGENTS.md` applies to every Chat/Work/Codex/agent modifying the repository.
+- Repository/current runtime/CI evidence overrides stale remembered prose.
+- Executors must inspect fresh state, existing claims and engineering lessons before editing occupied/related subsystems.
+- Architectural ambiguity with materially different strong solutions must not be silently resolved; compare consequences and select explicitly.
+- Never repeat completed work merely because another Chat/Work/Codex session did not remember it.
+
+FINAL_TARGET_SPEC_STATUS: ACTIVE / CANONICAL CONSOLIDATED OWNER REQUIREMENT.
+
+
+### OWNER FINAL TARGET SPEC AMENDMENT 2026-10-06 — measurable acceptance, lifecycle and architecture contracts
+
+This amendment closes twenty identified gaps in the canonical end-state specification. It is normative and has the same owner-level authority as `OWNER FINAL TARGET SPEC 2026-10-06`. Numeric thresholds below are **initial acceptance SLOs on defined reference tiers**; they may be tightened as real evidence improves, but may not be silently weakened to make a release pass. Any material change requires an ADR plus owner approval.
+
+#### A. Reference hardware tiers and measurable performance SLOs
+
+Reference tiers define whether behavior is a product defect or expected degradation.
+
+**Windows minimum tier (supported):**
+- x86-64 CPU, 4 physical/performance cores / 8 threads recommended, AVX2-capable;
+- 8 GiB RAM;
+- SSD;
+- 10 GiB free storage before install/update;
+- dedicated GPU/NPU not required.
+
+**Windows recommended tier:**
+- 6+ modern cores;
+- 16 GiB+ RAM;
+- 15 GiB+ free SSD;
+- GPU/NPU acceleration optional.
+
+**Android minimum tier (supported in Lite mode):**
+- Android 10+;
+- arm64-v8a;
+- 4 GiB physical RAM;
+- 6 GiB free storage;
+- GPU/NPU not required.
+
+**Android full local-Core tier:**
+- 6 GiB+ RAM;
+- 8 GiB+ free storage;
+- arm64-v8a Android 10+.
+
+Initial p95 SLOs on the minimum supported tier, measured from at least 30 cold/warm runs where applicable:
+- shell/window visible: Windows <=2.0 s, Android <=2.5 s;
+- usable UI after cold launch: Windows <=5.0 s, Android <=7.0 s;
+- warm local-Core first token: Windows <=2500 ms, Android Lite <=4000 ms;
+- simple <=128-token local answer end-to-end: Windows <=15 s, Android Lite <=25 s;
+- Settings/navigation page switch: Windows <=150 ms, Android <=200 ms;
+- incremental append to an already-open 1000-message chat: Windows <=100 ms UI work, Android <=150 ms UI work;
+- opening/rendering a 1000-message conversation using virtualization/incremental layout: Windows <=1.0 s, Android <=1.5 s;
+- no UI-thread operation may intentionally block >100 ms without yielding/progress indication.
+
+Memory ceilings:
+- Windows minimum tier: normal steady AuroraFox RSS <=3.5 GiB; bounded transient peak <=5.0 GiB during heavy local inference/import;
+- Android 4 GiB Lite mode: steady RSS <=1.3 GiB; transient peak <=1.8 GiB;
+- Android Full mode requires >=6 GiB RAM and targets steady RSS <=2.0 GiB, transient <=2.8 GiB.
+Exceeding a ceiling is not solved by OS kill/retry; it triggers the degradation policy below.
+
+For generation throughput, record tokens/s and first-token latency separately. A release may not hide poor first-token latency behind a good average tokens/s number.
+
+#### B. Knowledge Pack profiles and rationale
+
+The existing >=1 GiB genuine unpacked Knowledge Pack remains the **Full offline corpus release invariant**, primarily to prevent a placeholder/demo corpus from being called production Knowledge. Byte size alone is not a quality metric and therefore must be paired with domain coverage and retrieval benchmarks.
+
+Install profiles:
+- `Seed`: >=128 MiB genuine curated content, mandatory low-end/offline bootstrap;
+- `Standard`: >=512 MiB genuine curated content;
+- `Full`: >=1 GiB genuine curated content and the release-acceptance corpus.
+
+Windows recommended/default installs Full when storage permits.
+Android 4 GiB devices may install Seed by default and add/remove signed shards later.
+Android Full-tier devices may install Standard/Full.
+All profiles share the same manifest/schema/provenance/hashes and differ only by selected shards.
+
+The Core must operate when only Seed is present, with reduced breadth clearly represented in capability/status. Missing optional shards are not treated as corruption.
+
+Knowledge quality acceptance additionally requires a fixed retrieval benchmark by domain; Full must not regress below the previous accepted Full pack, while Seed must satisfy the mandatory essential-domain subset.
+
+#### C. Offline Core quality contract
+
+"Works offline" means **usefully completes tasks**, not merely emits text.
+
+Maintain a versioned `Offline Capability Suite` containing at least 200 representative offline-eligible tasks across:
+- conversation/instruction following;
+- local Memory recall;
+- Knowledge retrieval;
+- summarization/extraction;
+- reasoning/math;
+- file understanding;
+- planning/tool selection;
+- code understanding/repair;
+- uncertainty/error handling;
+- Russian and English language tasks.
+
+Acceptance:
+- >=85% of benchmark tasks must complete without any external AI/network inference;
+- deterministic/objective subset >=95% pass;
+- weighted overall quality score >=80/100;
+- no mandatory category <65/100;
+- a new stable Core may not reduce overall score by >1 point or any mandatory category by >3 points unless an owner-approved ADR explicitly trades that regression for a larger measured benefit.
+"Useful completion" is judged by task-specific expected outcomes/rubrics, not non-empty output.
+
+Full and Lite Core profiles are benchmarked separately and published with their capability profile.
+A bundled Lite model/runtime is required for 4 GiB Android and as local recovery fallback. It may be less capable but must remain useful under its declared benchmark profile.
+
+#### D. Android battery and thermal behavior
+
+AuroraFox must be battery/thermal aware.
+
+Mandatory modes:
+- `Normal`: full allowed local behavior within hardware profile;
+- `Conserve`: reduced context/threads/model size, background research/Evolution paused;
+- `Critical`: heavy inference/Work paused, essential chat uses Lite path or queued continuation.
+
+Defaults:
+- battery <25% while not charging -> Conserve;
+- battery <15% while not charging -> Critical for heavy autonomous jobs;
+- Android thermal MODERATE -> reduce threads/context and avoid simultaneous heavy jobs;
+- SEVERE/CRITICAL/EMERGENCY -> pause heavy local inference until thermal state recovers.
+Owner may relax battery thresholds but cannot disable OS thermal shutdown/protection.
+
+No idle "thinking loop": when no active event/task exists, AuroraFox does not continuously run the LLM.
+Background idle target on reference phone: <=1% battery/hour attributable to AuroraFox over a 3-hour idle test, excluding OS/network anomalies.
+Long Work/Computer/reindex/Evolution jobs show estimated resource mode and pause safely when battery/thermal policy requires it.
+
+#### E. Sync protocol — architectural decision
+
+Do not use generic last-write-wins for all user state.
+
+Canonical sync foundation:
+- event-sourced append-only operation journal;
+- globally unique event id;
+- server-verified principal;
+- device id + per-device monotonic sequence;
+- Hybrid Logical Clock (HLC) timestamp for stable ordering/user-visible time;
+- **dotted version vector / version-vector context** for causality and concurrent-edit detection;
+- periodic materialized checkpoints/snapshots for bounded replay;
+- durable tombstones for deletion.
+
+The server is a durable authenticated relay/store and conflict coordinator; it does not manufacture client ownership or silently overwrite concurrent state.
+
+Type-specific merge:
+- conversation/messages/event history: append-only set/ordered reducer;
+- sets/tags: observed-remove set semantics where applicable;
+- independent scalar preferences: LWW register using HLC only when explicitly classified as safe;
+- structured mutable records/documents: three-way merge when a common ancestor exists;
+- non-mergeable concurrent edits: preserve both conflict versions and surface resolution;
+- deletes: tombstone dominates only according to causality; a concurrent edit versus delete becomes an explicit conflict, not silent loss.
+
+Offline queues retain causal context. Sync schema/protocol is versioned and migration-tested.
+
+#### F. Evolution tournament test battery and scoring
+
+Candidate competition has two stages.
+
+**Hard binary gates — every one must pass:**
+- source/parse/build;
+- protected architecture/self-reliance invariants;
+- privacy/principal isolation;
+- master stop/cancellation;
+- sandbox/security boundaries;
+- updater/signing/rollback protected paths;
+- deterministic functional regression suite for touched subsystem;
+- no unauthorized external-AI dependency;
+- bounded resource/no-crash gates;
+- candidate artifact/hash integrity.
+
+**Numerical quality benchmarks:**
+- task success/quality;
+- latency and throughput;
+- RAM/CPU where relevant;
+- retrieval accuracy;
+- tool success rate;
+- failure/retry rate;
+- subjective-quality suite only where appropriate.
+
+All candidates and Stable use the exact same dataset, fixtures, seeds/configuration and machine class. Deterministic tests use fixed seed/temperature when technically available. No candidate sees hidden expected answers through its prompt/context.
+
+Promotion threshold:
+- all hard gates PASS;
+- either weighted normalized quality improves by >=2.0 points with no mandatory metric regression beyond its tolerance, or the target metric improves >=5% with overall quality regression <=1.0 point;
+- noisy metrics require >=3 repeated runs and a confidence interval/bootstrap test showing the improvement is not explained by run variance;
+- ties/inconclusive evidence keep Stable.
+
+Weights and metric tolerances are versioned in the benchmark manifest; changing them requires ADR/owner approval and cannot happen inside the same candidate tournament being scored.
+
+#### G. Accessibility acceptance
+
+Accessibility is a release requirement, not optional polish.
+
+Target: WCAG 2.2 AA principles where applicable to native/web surfaces.
+
+Windows:
+- NVDA smoke coverage for primary chat/settings/workflows;
+- accessible names/roles/states for interactive controls;
+- complete keyboard-only navigation;
+- visible focus;
+- logical focus order;
+- no essential mouse-only action.
+
+Android:
+- TalkBack labels/roles/state;
+- logical traversal order;
+- >=48dp touch targets where practical;
+- system font scaling through at least 200% without loss of essential controls/content.
+
+All platforms:
+- normal text contrast >=4.5:1, large text >=3:1;
+- status must not rely on color alone;
+- motion/animation must respect platform reduced-motion preference when available.
+Web, when activated, additionally requires semantic HTML/ARIA and keyboard acceptance.
+
+#### H. Objective vs subjective learning
+
+Every outcome is classified:
+- `objective`: mechanically verifiable (test/build/file/hash/API state/math/device state);
+- `hybrid`: objective constraints plus user-quality preference;
+- `subjective`: style/taste/preference without a single ground-truth result.
+
+Objective learning is driven primarily by evidence.
+Subjective feedback never overrides objective failure.
+
+Private preference learning:
+- explicit textual correction has higher weight than thumbs feedback;
+- two consistent explicit/strong signals may establish a provisional private preference;
+- contradictory evidence decays/reopens that preference rather than creating a global rule.
+
+Shared subjective promotion default:
+- >=8 independent verified principals;
+- >=20 observations;
+- no single principal contributes >1 effective vote to the same normalized lesson/window;
+- >=75% weighted positive support and no strong subgroup/context contradiction;
+- otherwise remain a shared candidate or user-specific preference.
+These thresholds are owner-adjustable policy, but raw private data never crosses the privacy gate.
+
+#### I. Staged V1.6 roadmap
+
+Replace the overloaded single V1.6 block with three accepted releases on one common design:
+
+- **V1.6.0.0 — Cognitive Foundation:** canonical cognitive event schema, context manager, world/self-model skeleton, Memory/Knowledge adapters, semantic intent, model routing, provenance/uncertainty primitives.
+- **V1.6.1.0 — Experience & Learning:** outcome model, Experience/Skill store, objective/hybrid/subjective evaluators, learning from outcomes/feedback, confidence/calibration, retrieval of learned strategies.
+- **V1.6.2.0 — Shared/Distributed Cognition:** principal-aware cognitive data, private/shared_candidate/shared_core promotion, collective-learning gates, distributed event sync protocol, conflict handling and cross-device consistency.
+
+V1.7.0.0 remains advanced autonomous Work/Computer trust + Evolution built on accepted V1.6.x foundations.
+Each 1.6.x release must have independent migration/rollback/exact-SHA/device acceptance and cannot be called "partial V1.6 complete" before its own gates pass.
+
+#### J. Architecture Decision Records (ADR)
+
+Material architecture ambiguity is resolved through ADR.
+
+Location: `docs/adr/ADR-NNNN-short-title.md`.
+
+Required fields:
+- date;
+- status: PROPOSED / ACCEPTED / SUPERSEDED / REJECTED;
+- owner/decision authority;
+- context/problem;
+- constraints/invariants;
+- 2-4 strong alternatives (when genuinely available);
+- consequences/tradeoffs;
+- recommended option;
+- final owner decision;
+- affected schemas/APIs/files;
+- migration/rollback impact;
+- links to superseded ADRs and master-log claim.
+
+Final product/architecture authority is the owner. Executors may make local implementation choices without owner round-trip only when an accepted ADR/invariant already determines the architecture or when the choice has no material product/data/security consequence.
+
+Accepted ADRs are not silently edited into a different decision; a new ADR supersedes the old one.
+
+#### K. Engineering Memory indexing/search
+
+`AURORAFOX_ENGINEERING_MEMORY.md` remains durable technical memory, but every entry must use searchable metadata:
+- stable `AF-MEM-NNN` id;
+- subsystem tags;
+- platform;
+- symptom/error keywords;
+- first affected SHA/version;
+- fixed SHA/version where applicable;
+- root-cause status CONFIRMED/HYPOTHESIS;
+- status ACTIVE/RESOLVED/SUPERSEDED;
+- prevention test/gate id.
+
+Required lookup order before repeating a workaround:
+1. exact error text / signature;
+2. subsystem + platform;
+3. AF-MEM id if referenced by logs/tests;
+4. affected SHA/version;
+5. broader full-text search.
+
+A generated machine-readable index (JSON/SQLite or equivalent) may be built from the canonical Markdown; it is an index, not a competing journal. Each release performs an index validation and stale-entry review. RESOLVED entries remain preserved with prevention guidance.
+
+#### L. Local Core failure and fallback chain
+
+Core errors have an explicit degraded-service chain:
+
+1. primary local Core request;
+2. if engine is dead/crashed, one bounded local engine restart/recovery attempt;
+3. OOM/resource failure -> reduce context/batch/thread profile and/or move to bundled Lite local Core;
+4. if the task has a deterministic local tool/rule path, use it only when semantically valid;
+5. otherwise return an honest degraded-state message with preserved task/progress.
+
+No infinite retry loop and no mandatory external-AI fallback.
+
+Health states exposed to UI/diagnostics:
+`STARTING / READY / DEGRADED / RECOVERING / UNAVAILABLE`.
+
+OOM, crash, malformed output, empty completion, transport/runtime failure and deadline expiration are distinguishable error classes and retained in bounded diagnostics.
+A model producing low-quality/malformed output is not automatically marked dead; validation/repair may retry once if task policy allows, then degrades honestly.
+
+#### M. Model/data/embedding migrations
+
+Every persistent schema and embedding space is versioned.
+
+Embeddings are keyed by at least:
+`embedding_model_id + model_hash/version + dimension + normalization/schema version`.
+
+Changing embeddings never destroys source Memory/Knowledge records.
+Migration:
+- create a new index beside the old one;
+- re-embed incrementally/lazily with progress checkpoints;
+- dual-read or fallback to lexical/old index while migration is incomplete;
+- verify counts/hashes/query smoke;
+- atomically switch active index only after acceptance;
+- retain old index until rollback window expires.
+
+Experience/world/self-model schemas use explicit migration adapters and additive/event migrations where possible.
+Every migration has disk-space preflight, resumable journal, crash recovery, backup/snapshot and rollback.
+If a new app version cannot read old data directly, an explicit staged migration/repair path is required before release.
+
+#### N. Local execution threat model
+
+Imported web/files/code are data by default and receive **zero execution authority**.
+
+When execution is explicitly authorized, default sandbox is deny-by-default:
+- network: OFF unless target task grants exact destination/scope;
+- filesystem: private ephemeral workspace; explicit source mounts read-only; output writes only to explicitly granted location;
+- process spawning: only allowlisted runner/tool chain;
+- no host credentials/secrets inheritance;
+- no raw device access;
+- no arbitrary IPC to AuroraFox privileged services;
+- CPU/RAM/process/time quotas;
+- child processes bound to cancellation/master stop.
+
+Use OS isolation mechanisms available per platform (restricted process/job/container-like boundary on Windows where available; Android application sandbox/private storage on Android).
+Sandbox escape indicators or unauthorized resource access are P0: terminate task, quarantine workspace/evidence, notify owner and prevent automatic retry/promotion until reviewed.
+
+Isolation tests include filesystem escape, symlink/path traversal, environment-secret access, unauthorized network, child-process escape, cancellation and master-stop propagation.
+
+#### O. Internationalization and multilingual cognition
+
+Initial first-class languages: **Russian and English**.
+
+Requirements:
+- all UI strings externalized/localized; no essential hard-coded user-visible text in production paths;
+- UTF-8 end-to-end;
+- locale-aware date/number/plural formatting;
+- Memory/Knowledge/event records carry language/locale where known;
+- language detection occurs per source/chunk where mixed-language material is possible;
+- retrieval uses multilingual embeddings or language-aware routing and must support cross-language search tests;
+- user may request one response language while sources remain in another;
+- UI must survive long translations and 200% font scaling.
+
+Architecture must be RTL-capable; Arabic/Hebrew are not claimed supported until mirrored layout, bidi text, input, retrieval and accessibility gates are added. Adding a language is a tested capability declaration, not merely adding a translation file.
+
+#### P. Autonomous-work observability
+
+Autonomous Work/Computer cannot be a black box.
+
+Every active task exposes a live timeline with:
+- current goal;
+- current state/phase;
+- last completed meaningful action;
+- current tool/action;
+- pending next action when known;
+- risk/permission state;
+- progress when measurable;
+- pause/cancel/master-stop controls.
+
+Post-hoc audit stores:
+- timestamps;
+- normalized action/tool name;
+- target/scope;
+- result/status;
+- evidence/hash references where relevant;
+- retries/errors;
+- permission/owner confirmations;
+- final outcome.
+
+Secrets/private tokens are redacted.
+Default detailed local task log retention: 30 days, owner-adjustable; compact task outcome/history may be retained according to Memory policy.
+Normal users see only their own task audit; owner administrative cross-user diagnostics, if ever enabled, is separate/audited.
+UI may summarize low-level repetitive actions but raw bounded technical diagnostics remain available on demand.
+
+#### Q. Data deletion, export and right-to-forget behavior
+
+Deletion is first-class, not the inverse of "save".
+
+Supported operations:
+- delete one Memory/Experience item;
+- forget a topic/entity relationship;
+- delete a Knowledge source and all derived chunks/index entries;
+- delete a project and its private derived indexes/context;
+- delete conversation/history;
+- export personal data before deletion;
+- delete account when multi-user is enabled.
+
+Active retrieval must stop returning deleted content immediately after local transaction commit.
+Derived embeddings/caches are purged/rebuilt within 24 hours locally/server-side.
+Synced online devices receive tombstones; an offline device applies them on next successful sync before re-uploading stale state.
+Backups do not resurrect deleted data: restore replays the durable deletion/tombstone ledger.
+
+Default server backup retention for deleted personal data: <=30 days, after which expired backup generations are destroyed; legal/owner deployment requirements may set a shorter policy.
+For de-identified shared experience, erase source linkage when a user deletes their data. If a shared lesson cannot remain genuinely de-identified without that source, retract/re-evaluate it; generalized knowledge that contains no personal/source-identifying data does not require reconstruction of the deleted raw private record.
+
+#### R. Resource exhaustion and graceful degradation
+
+Priority order when resources are constrained:
+1. privacy/integrity and persisted user data;
+2. save/checkpoint current work;
+3. keep UI responsive and basic chat/status available;
+4. pause optional background tasks;
+5. reduce model/context/parallelism/Knowledge breadth;
+6. use Lite Core/Seed Knowledge;
+7. refuse only the part that cannot safely proceed, with an actionable explanation.
+
+Disk thresholds (defaults, owner-adjustable above safety floor):
+- <5% free or <2 GiB free: block new large Knowledge/download/import caches; cleanup expendable caches and warn;
+- <1 GiB free: pause heavy Work/update staging/reindex and preserve only essential state until space is freed.
+Never delete user source data automatically to recover space.
+
+OOM/thermal/battery handling uses checkpoint -> reduce profile -> retry once where safe -> pause/fail honestly.
+Intermediate results for resumable tasks are preserved transactionally rather than asking the user to start from zero.
+
+#### S. Minimum hardware/capability declaration
+
+Every release publishes a capability matrix for Minimum/Lite/Full tiers.
+
+No GPU/NPU is required for base supported operation. Hardware acceleration is optional and must not be the only path.
+
+On minimum Android 4 GiB:
+- Lite local Core;
+- Seed Knowledge;
+- text chat/Memory/basic files;
+- bounded OCR;
+- heavy concurrent Work/Evolution disabled or serialized by resource policy.
+
+On Android >=6 GiB:
+- Full local Core profile;
+- Standard/Full Knowledge selectable;
+- heavier OCR/Work within thermal/battery limits.
+
+On Windows 8 GiB:
+- normal local Core;
+- Full Knowledge supported if storage available;
+- heavy concurrent jobs serialized when memory pressure requires.
+
+Unsupported hardware is detected before allocating the full model and receives a precise capability/degradation explanation rather than a crash.
+
+#### T. Client/server/version support policy
+
+Release metadata and API expose:
+- `latest_stable_version`;
+- `min_supported_client_version`;
+- `min_safe_client_version`;
+- protocol/schema versions.
+
+Normal support window:
+- current stable MINOR/B-line;
+- immediately previous stable MINOR/B-line for at least 90 days after successor release, unless a critical security issue requires a shorter safety cutoff.
+
+Clients below `min_supported_client_version`:
+- local/offline data remains readable/exportable;
+- server sync/write operations that could corrupt newer schemas are blocked with a clear update/repair path;
+- no silent lossy migration.
+
+Clients below `min_safe_client_version` because of a critical security defect may be blocked from network/privileged server operations until updated, but should retain safe local export/recovery access.
+
+Deprecation is published in release/update metadata with >=30 days notice when not security-critical.
+Very old clients require an explicit tested repair bridge or staged migrations; "just install latest and hope" is not an accepted migration path.
+
+#### U. Acceptance impact
+
+These twenty contracts become part of the end-state Definition of Done. Near-term V1.5 does not have to implement every future V1.6+/multi-user feature, but any subsystem it already ships must satisfy the relevant performance/resource/error/accessibility/migration/security contracts before that subsystem is declared final.
+
+The final target specification is therefore measurable: a release cannot pass by subjective claims such as "fast enough", "works offline", "syncs", "learns", "accessible", "sandboxed" or "supports old data" without the corresponding evidence above.
+
+FINAL_TARGET_SPEC_AMENDMENT_STATUS: ACTIVE / CANONICAL / RELEASE-GATING WHEN THE AFFECTED CAPABILITY IS IN SCOPE.
+
+
+### OWNER FINAL UI/UX CONTRACT 2026-10-06 — complete interaction states, rendering and acceptance
+
+This is the canonical UI/UX amendment for the end-state interface specification. It closes the forty identified UI gaps and is release-gating whenever the affected surface is in scope. Current source structure (dark AuroraFox palette, Windows sidebar/header, separate Settings window, Work/Computer/Knowledge/Voice/Update surfaces) is retained where compatible. Deferred future concepts do not become implementation work without owner activation.
+
+#### 1. Verified color/contrast contract
+
+Canonical dark palette remains:
+- background `#080B12`;
+- primary surface `#0E111A`;
+- secondary surface `#131722`;
+- primary text `#F3F6FF`;
+- secondary text `#8D98AD`;
+- violet `#A98AFF`;
+- cyan `#45D8FF`;
+- success `#64FF9D`;
+- danger `#FF6D82`;
+- warning `#FFBD75`.
+
+WCAG relative-luminance checks for canonical text pairs:
+- `#F3F6FF / #080B12` = 18.22:1 PASS AA/AAA;
+- `#8D98AD / #080B12` = 6.77:1 PASS AA/AAA normal text;
+- `#8D98AD / #131722` = 6.16:1 PASS AA/AAA normal text;
+- `#FFBD75 / #0E111A` = 11.48:1 PASS;
+- `#45D8FF / #0E111A` = 11.24:1 PASS;
+- `#A98AFF / #131722` = 6.62:1 PASS normal text;
+- `#64FF9D / #0E111A` = 14.66:1 PASS;
+- `#FF6D82 / #0E111A` = 6.97:1 PASS normal text.
+
+Every new theme token/pair used for normal text must pass >=4.5:1; large text >=3:1. Focus indicators and non-text UI components target >=3:1 against adjacent surfaces. Add a deterministic theme-contrast test to CI; screenshots at 100% and 200% font scaling remain separate visual evidence.
+
+#### 2. Unified loading language
+
+AuroraFox uses three loading patterns only:
+
+- **Chat response:** immediately after send, create the assistant response slot. For <150 ms no spinner is flashed. From 150 ms show a subtle three-dot/pulse indicator with text `Fox думает…`. At 800 ms, if a meaningful phase is known, replace the generic text with a phase such as `Ищу в памяти`, `Читаю файл`, `Планирую`. Composer Send becomes Stop while the request is active.
+- **Long/background task (Work/Computer/import/update):** activity card with explicit phase/progress/checkpoints, not a generic spinner.
+- **Data/list panel (Settings/Knowledge/Diagnostics):** if loading exceeds 150 ms show skeleton rows/cards preserving final geometry. If loading exceeds 1 s show a textual status beneath the skeleton. Skeleton disappears atomically when real data arrives.
+
+No screen is allowed to remain blank while known asynchronous work is in progress.
+
+#### 3. Long-answer behavior
+
+- A message has no arbitrary fixed-height truncation.
+- Conversation rendering is virtualized/lazy outside the visible viewport.
+- During streaming, follow-bottom autoscroll remains active only while the viewport is within 120 px of the bottom.
+- As soon as the user scrolls upward beyond that threshold, auto-follow stops and a floating `↓ К новым сообщениям` button appears with an unread-stream indicator.
+- Clicking it returns to live follow mode.
+- Extremely long code/table/evidence blocks may be visually collapsed, but prose is not silently discarded. Collapse control reads `Показать полностью`.
+- Text selection/copy works for any subsection; each code/table block also has its own Copy action.
+- Reopening a long conversation initially materializes only the visible window plus bounded look-ahead/look-behind, then fills additional content on scroll.
+
+#### 4. Streaming-text contract
+
+Chat responses stream incrementally by default when the Core/runtime supports it.
+
+- Plain paragraphs, headings, lists and inline emphasis render progressively.
+- Incomplete fenced code/table structures remain in a stable lightweight preview until their closing delimiter/row structure is complete; then they atomically upgrade to rich rendering to avoid layout thrash.
+- No raw executable HTML is rendered.
+- User scroll-up disables auto-follow as above.
+- Composer remains editable during streaming.
+- If the user submits another message while an answer is streaming, it appears as **queued** beneath the active response. The user may cancel that queued message. It is sent only after the current response finishes or is stopped; AuroraFox does not silently interleave two responses in one conversation.
+- Work result artifacts do not stream as unstable final files. Work streams progress/activity; the final artifact becomes visible after a durable checkpoint/write. A textual preview may stream separately and is labeled Preview.
+
+#### 5. Required empty states
+
+Every list/panel has an intentional empty state with one primary action:
+
+- Chat history: `Здесь пока нет чатов` + `Начать разговор`.
+- Chat search no match: `Ничего не найдено` + `Очистить поиск`; original scroll position is restored when search is cleared.
+- Knowledge: `База знаний пока пуста` + `Добавить файлы`.
+- Work projects: `Проектов пока нет` + `Создать проект`.
+- Work history: `Завершённых задач пока нет`.
+- Memory: `Fox пока не сохранила личные воспоминания` + short privacy explanation; do not invent sample memories.
+- Diagnostics when all healthy: summary `Все основные компоненты работают нормально`, while detailed cards remain available.
+- Sync conflicts none: `Конфликтов нет`.
+
+An empty state is never represented by unexplained blank space.
+
+#### 6. Motion specification
+
+Default motion:
+- button hover/focus color transition: 100 ms ease-out;
+- small card expand/collapse: 160 ms ease-out;
+- sidebar open/close: 180 ms ease-out;
+- toast enter: 160 ms ease-out; exit 120 ms ease-in;
+- dialog/popover fade + small scale: 140 ms ease-out;
+- new message fade/translate <=120 ms; never delay text availability;
+- drag/drop target fade: 100 ms;
+- progress indicators use linear/continuous motion only when actual work is indeterminate.
+
+Reduced-motion mode follows OS preference automatically and can be forced in Settings. It removes translation/scale/parallax/pulsing and uses immediate state changes or <=80 ms opacity-only transitions. Functional progress indicators remain, but not decorative looping animation.
+
+Windows and Android use the same semantic timing; Android may use platform-native easing where necessary but must stay within +/-30 ms of the contract.
+
+#### 7. Computer Agent live work area
+
+`Показать экран действий` opens the **Computer Session** surface.
+
+Windows layout:
+- large live screen preview of the controlled display/window;
+- right-side action timeline;
+- top status `Fox управляет компьютером`;
+- controls: Pause, Stop, Take control, Hide preview;
+- current permission/scope always visible.
+
+The session preview uses live bounded screenshots/frames, not hidden remote video recording. A rolling bounded set of recent evidence thumbnails may be retained with the task audit; continuous video recording is OFF by default and requires a separate explicit feature/permission.
+
+If the user physically moves the mouse or types while pointer/keyboard automation is active, AuroraFox pauses automation immediately and displays `Управление передано вам`. The user can then `Продолжить Fox`.
+
+Minimizing/hiding the preview does not by itself stop an authorized task. Master Stop and permission revocation do.
+
+#### 8. Offline/network UX
+
+Core health and network state are separate.
+
+- Local Core may remain `● Готов` while network chip shows `Офлайн`.
+- Network chip is subtle in header/status popover; a persistent banner appears only when the user starts/has an operation that needs network.
+- Web/search/public-link actions unavailable offline remain visible when useful but disabled with `Требуется интернет`.
+- Local chat, Memory, installed Knowledge and local files continue without degraded-network warnings.
+- Slow network shows `Соединение нестабильно` only after measurable retries/stalls, not because one request was merely slow.
+- Knowledge cloud/sync state, when multi-device sync is activated, shows `Локальные данные доступны • синхронизация приостановлена`.
+- Updater uses its resumable offline state.
+- Simultaneous `Lite + Offline` is represented by two independent status chips, never one ambiguous error.
+
+#### 9. Composer sizing/paste rules
+
+- Minimum height: 48 px/dp-equivalent.
+- Windows grows to 8 text lines or 240 px, whichever comes first.
+- Android grows to 6 lines or 180 dp.
+- Beyond max height, composer uses internal vertical scrolling and remains anchored above the keyboard.
+- No tiny character counter is shown during normal use.
+- At 20,000 pasted characters show a non-blocking size hint.
+- Paste >50,000 characters is converted into a `Вставленный текст` text attachment by default rather than making the editor enormous; user can undo this conversion immediately.
+- Any true Core/context processing ceiling is reported explicitly; text is never silently truncated.
+- Android software keyboard Enter inserts a newline; Send button sends. With a physical keyboard, Ctrl+Enter sends by default. Windows default remains Enter=Send, Shift+Enter=newline, configurable.
+
+#### 10. Search states
+
+Chat search is local-first and does not interrupt an active generation.
+- Empty query = normal history.
+- No history = history empty state, not "no search results".
+- Non-empty/no matches = explicit no-match state.
+- While indexing/searching >150 ms, show a compact spinner in the search field and retain previous results dimmed rather than blanking the list.
+- Clearing search restores previous history scroll/selection.
+- Search never steals focus from an active composer unless the user explicitly invoked Ctrl+K/search.
+
+#### 11. Voice onboarding and permissions
+
+First mic press:
+1. if runtime not prepared, explain local voice module and offer `Подготовить`;
+2. request OS microphone permission only when needed;
+3. after grant, perform a short input-level check;
+4. show `Микрофон готов`.
+
+Permission denied:
+- show exact state `Доступ к микрофону запрещён системой`;
+- action `Открыть настройки разрешений`;
+- text chat remains normal.
+
+Mic busy/unavailable:
+- `Микрофон используется другим приложением` where detectable;
+- Retry action.
+
+No mandatory calibration wizard. Optional `Проверить микрофон` shows a live level meter and recorded-playback test.
+
+Wake-word failure never produces a fake success; Diagnostics exposes wake-word/listening state.
+
+#### 12. Multiple/large attachments
+
+Attachment bar:
+- up to 3 chips shown directly;
+- additional items collapse into `+N файлов`;
+- expanded attachment tray wraps to max two rows then becomes internally scrollable.
+- Every chip shows type icon, filename and size.
+- Images show a thumbnail.
+- File ordering is the selection/drop order; reorder is optional, not required for task semantics.
+- Unsupported type is retained only if Fox can treat it as opaque file; otherwise chip shows `Формат не поддерживается` and cannot be sent as "studied".
+- Large files display size and any owner-controlled parser/storage warning before processing.
+- Multiple drag files are accepted as one batch.
+- Dragging a folder on Windows offers `Добавить как проект/папку` versus `Добавить поддерживаемые файлы как вложения` when appropriate.
+- Existing sent messages are immutable; adding a later file creates a new user turn, not retroactive mutation.
+
+#### 13. Code/diff viewer
+
+Code responses use fenced blocks with:
+- language label;
+- syntax highlighting for common repo languages (GDScript, Python, Kotlin/Java, C/C++, C#, JavaScript/TypeScript, JSON/YAML/TOML/XML/HTML/CSS, shell/PowerShell, SQL, Markdown);
+- line numbers on expanded view;
+- Copy block;
+- Open full-screen.
+
+Work/Computer source modifications use a dedicated Diff Viewer:
+- unified and split view;
+- file tree + changed-file counts;
+- added/removed line styling plus textual +/- indicators;
+- per-file accept/reject only **before** an edit is committed/applied when the workflow is proposal-based;
+- already-applied changes show Revert/Restore through snapshot/version-control semantics rather than pretending they are pending.
+- binary changes show metadata/hash/size and cannot be rendered as text.
+- very large text files use virtualized/chunked view and `Open externally`/artifact action rather than loading all lines.
+
+#### 14. Table/list rendering
+
+GFM-style Markdown tables render as semantic tables.
+- wide tables scroll horizontally inside their own container;
+- sticky header where practical;
+- Copy cell / Copy row / Copy table actions;
+- sorting is allowed only on a local presentation copy and never mutates source data;
+- >50 rows initially show first 20 + `Показать все N строк`; full view is virtualized;
+- chat and Work preview share the same renderer.
+
+Nested lists/trees render with indentation and collapsible nodes where the structure is explicit; plain bullet lists are never converted into a tree by guesswork.
+
+#### 15. Images/media in chat
+
+User images:
+- inline thumbnail with original dimensions/type available in details;
+- click/tap opens full-screen viewer;
+- pinch/wheel zoom + pan;
+- Reset zoom;
+- Copy/Save/Share where platform permits.
+
+Generated/found images:
+- display source/provenance label when external;
+- generated artifacts link to the durable local artifact.
+Charts produced by Work appear inline as preview plus artifact action.
+
+OCR review surface can show image/page beside extracted text in a split viewer on wide screens and stacked view on mobile.
+
+Android long-press opens contextual Save/Share/Copy-image actions. No hidden automatic upload occurs merely by opening the viewer.
+
+#### 16. Android gestures
+
+Avoid gesture conflicts with Android system navigation.
+
+Supported:
+- long-press chat/message/item = context menu;
+- pinch = zoom image/document preview;
+- vertical swipe = ordinary scrolling;
+- optional edge swipe from the content edge may open Chat list only when it does not conflict with system back gesture and is disabled automatically under gesture-navigation conflict.
+
+Not used:
+- destructive swipe-to-delete;
+- horizontal swipe between chats;
+- pull-to-refresh in chat;
+- double-tap actions that can accidentally trigger message changes.
+
+Delete always uses explicit menu/undo flow.
+
+#### 17. Theme policy
+
+Through V1.7, AuroraFox ships **dark theme only** plus a **High Contrast Dark** variant.
+System light/dark mode does not automatically switch AuroraFox to light.
+High Contrast Dark raises contrast/focus/border clarity but keeps the dark visual identity.
+A light theme is DEFERRED and requires a future ADR + complete token/contrast/visual acceptance; it is not implied by current specifications.
+
+#### 18. Typography scale
+
+Platform fonts:
+- Windows: Segoe UI Variable / Segoe UI fallback;
+- Android: Roboto;
+- code: platform monospace (Cascadia Mono/Consolas fallback on Windows, Roboto Mono/system monospace on Android).
+No bundled custom font is required for base UI.
+
+Scale:
+- metadata 12 px/sp, regular 15-16, message body 16, subsection 18-20, page title 22-24;
+- normal line-height 1.40-1.50x; code 1.35-1.45x;
+- regular body weight 400; controls/labels 500; headings 600-700;
+- no artificial letter spacing on body text; uppercase micro-labels may use +0.04em equivalent.
+- system font scale multiplies the semantic scale; layout must reflow at 200%.
+- Cyrillic and Latin use the same primary family; missing glyphs fall back to OS Unicode fonts.
+- URLs/long tokens use safe word-break/wrap; code preserves horizontal scrolling rather than arbitrary word breaks.
+
+#### 19. Concurrent operations / Task Center
+
+Multiple operations are represented by a single header **Task Center** chip:
+`Задачи · 3`.
+
+Click opens:
+- Chat response;
+- Work;
+- Computer;
+- Knowledge import;
+- update download;
+- background reindex/etc.
+
+Each has state, progress/phase and Pause/Stop where supported.
+Individual activity cards may remain in their originating context, but they can be collapsed.
+
+Header priority indicators:
+1. security/permission/master-stop warning;
+2. active Computer control;
+3. current foreground chat;
+4. background task count.
+
+If Master Stop is pressed with >1 autonomous task, a sheet lists affected tasks and offers `Остановить все` or select individual tasks. Download-only updater activity is not killed by autonomy Master Stop unless explicitly selected; dangerous execution is.
+
+#### 20. Undo / soft deletion
+
+For chats, Memory items, Knowledge sources and projects:
+- item disappears from active retrieval immediately;
+- show toast `Удалено • Отменить` for 30 seconds;
+- soft-deleted item remains in local Trash for 7 days by default, owner-adjustable;
+- `Удалить навсегда` bypasses Trash after a second explicit destructive confirmation;
+- restore from Trash reactivates item/index relationship transactionally.
+
+Privacy "forget" semantics are immediate for retrieval even during Undo/Trash retention. Sync uses tombstones; restoring creates a causally newer restore event.
+
+#### 21. Keyboard shortcuts
+
+Native Windows default profile:
+- Ctrl+N — new chat;
+- Ctrl+K — chat/global search;
+- Ctrl+F — search inside current chat/document;
+- Ctrl+, — Settings;
+- Ctrl+O — attach/open file;
+- Ctrl+B — toggle sidebar;
+- Ctrl+Alt+W — Work (avoids Ctrl+Shift+W browser convention);
+- Ctrl+Shift+K — Knowledge;
+- Ctrl+Shift+M — Memory & Data;
+- Ctrl+Alt+D — Diagnostics;
+- Alt+Up / Alt+Down — previous/next chat in current history order;
+- Ctrl+Shift+C — copy last complete Fox answer when focus is not in a text selection/editor;
+- Ctrl+E — edit last user message where editing is allowed;
+- Ctrl+L — focus composer in native app only;
+- F11 — fullscreen;
+- Esc — close topmost panel/dialog or clear transient mode;
+- Ctrl+Shift+. — Master Stop default.
+
+All shortcuts appear in a searchable Shortcut Settings page and are remappable except OS-reserved/protected combinations. Conflict detection warns before assignment.
+Future web client uses a separate profile to avoid browser-reserved collisions.
+
+#### 22. Drag-and-drop edge cases
+
+Drop targets exist only in Chat composer area, Work project/task file area and Knowledge import area.
+
+- Drop on Settings/sidebar/header outside a valid target: no action.
+- Multi-file: batch attachment/import.
+- Folder on Chat: offer folder/project intent on Windows; do not silently enumerate thousands of files.
+- Unsupported file: explicit unsupported-state chip.
+- Image: image attachment with thumbnail.
+- Dragged text: insert into composer at caret.
+- Dragged browser URL: insert canonical URL text into composer; Fox handles it through public-link intent after send.
+- Drag into Work uses Work project/task context, never silently adds to global Knowledge.
+- Large folder preview shows count estimate and requires explicit action before recursive processing.
+
+#### 23. Multi-turn context / branches
+
+Editing an earlier user message creates a **new branch**; the old branch is preserved, not silently deleted.
+
+At a branch point:
+`Версия 1 из 2 ◀ ▶`.
+
+The current branch is the default view. Branch menu allows:
+- view original branch;
+- view edited branch;
+- name branch;
+- delete a branch through soft-delete/Undo.
+
+Replies may show a compact `Ответ на: <snippet>` anchor when a user explicitly replied to/referenced an earlier message. Clicking scrolls to that message.
+
+Long Work/chat tasks expose a persistent `Исходная задача` anchor in the activity/task card.
+
+#### 24. System notifications
+
+Windows uses native toast/system notifications; Android uses notification channels.
+
+Channels:
+- Task completion;
+- Attention/permission required;
+- Updates;
+- Voice/background listening status where OS requires a persistent notification.
+
+Behavior:
+- notification tap deep-links to the exact chat/task/update screen;
+- if app is foreground and relevant surface visible, prefer in-app toast and suppress duplicate system notification;
+- multiple task completions group into one summary after 3+ events;
+- quiet hours are configurable; non-critical completion sounds are suppressed;
+- security/master-stop conditions respect OS notification policy and never claim to bypass Do Not Disturb.
+- notification sounds are separately configurable.
+- crash-recovery notification appears only if background restart/recovery actually occurred and user attention is useful.
+
+#### 25. Settings navigation/window behavior
+
+Windows Settings:
+- minimum size 860x640;
+- resizable;
+- left category pane minimum 210 px and independently scrollable;
+- right page independently scrollable;
+- per-page scroll position is remembered while Settings remains open;
+- reopening Settings returns to the last category used, unless a deep-link action requests a specific page;
+- default on first-ever open is `Основное`;
+- at <760 px internal width, category sidebar becomes top dropdown/mobile-style navigation.
+- Settings remains fully usable while Core is STARTING/DEGRADED/UNAVAILABLE; Core-dependent cards show their state rather than blocking the whole window.
+
+Android Settings is full-screen with category dropdown and per-page scrolling.
+
+#### 26. UI acceptance matrix
+
+**Windows required viewport/DPI scenarios:**
+- 1920x1080 @100%;
+- 1366x768 @100%;
+- 1024x768 @125%;
+- 800x600 @100%;
+- 720x600 @150%;
+- 1366x768 with OS text scaling 200%.
+
+**Android required logical layouts:**
+- 360x640 dp phone portrait;
+- 393x873 dp modern phone;
+- 640x360 landscape;
+- 600x960 dp tablet;
+- software keyboard open;
+- system font 200%;
+- gesture navigation and 3-button navigation.
+
+For each affected release:
+- zero overlap/clipped essential controls;
+- no empty buttons;
+- all primary flows reachable by keyboard on Windows;
+- NVDA smoke for chat/settings/Work primary actions;
+- TalkBack smoke for chat/settings/attachments;
+- contrast test PASS;
+- loading/empty/error/offline/degraded states screenshot-tested;
+- long response + 1000-message virtualization scenario;
+- stream scroll-lock scenario;
+- multi-task Task Center scenario;
+- drag/drop matrix Windows;
+- Android back/permission/rotation/keyboard/gesture matrix;
+- Settings page switch p95 <=150 ms Windows / <=200 ms Android after initial construction;
+- chat append UI work <=100 ms Windows / <=150 ms Android on the reference minimum tiers;
+- visual screenshots inspected, not just geometry assertions.
+
+#### 27. UI roadmap
+
+**V1.5.x — present product stabilization/UI contract**
+- main chat/sidebar/header/composer;
+- loading/streaming/long-answer behavior;
+- attachments/drag-drop;
+- Work baseline;
+- Computer permission/session visibility baseline;
+- Knowledge;
+- Voice onboarding/state;
+- Updates;
+- Settings/responsive/adaptive UI;
+- offline/Core failure/disk/resource states;
+- Task Center baseline;
+- accessibility/contrast/keyboard;
+- Diagnostics baseline;
+- existing owner Security Workspace UI only to the scope required by the active security package.
+
+**V1.6.0-1.6.2**
+- Memory/Data management;
+- cognitive provenance/context anchors;
+- Experience/learning visibility where useful;
+- sync/conflict UI;
+- branch/context/history upgrades;
+- account/principal-aware UI foundation remains hidden until activation.
+
+**V1.7**
+- full Evolution Center;
+- advanced dynamic-trust controls;
+- richer autonomous audit/timeline;
+- advanced Security/Evolution diagnostics.
+
+**Deferred until explicit owner activation**
+- public account/guest onboarding;
+- Web client;
+- Smart Home/Home UI;
+- light theme;
+- RTL language support claim.
+
+#### 28. Complete navigation/state map
+
+`First launch -> Chat`
+
+`Chat -> New Chat / History / Search / Attachments / Voice / Sources / Feedback / Activity / Task Center / Branches / Long-answer viewer`
+
+`Chat -> Work -> Projects / Files / Task / Live progress / Diff / Result / Audit`
+
+`Chat/Work -> Computer permission -> Computer Session preview / Pause / Take control / Stop`
+
+`Settings -> General / Interface & Accessibility / Voice / Memory & Data / Files & Projects / Autonomy[owner] / Tools / Updates / Diagnostics[owner]`
+
+`Tools -> Knowledge / Public Web / Computer / Work / API[owner] / Security[owner]`
+
+`Knowledge -> Import / Sources / Reindex / Remove / Trash / Progress`
+
+`Updates -> Check / Download / Offline-resume / Verify / Install / Rollback status`
+
+`Global states -> Loading / Empty / Offline / Lite / Core unavailable / Low disk / Permission required / Sync conflict / Crash recovery / Notification deep-link / Close-with-active-task`
+
+`Deferred -> Account/Guest onboarding / Home/Smart Home`.
+
+No described user-visible state may exist outside this map without an explicit UI-spec update.
+
+#### 29. Smart Home UI status
+
+All prior Home/room/socket/camera mockups are reclassified as **DEFERRED ARCHITECTURAL CONCEPT ONLY — DO NOT IMPLEMENT**.
+They exist only to ensure future capability-based device architecture is not blocked.
+Before any Smart Home UI implementation:
+- owner explicitly activates the package;
+- new ADR;
+- current device protocol/capability model;
+- privacy/safety acceptance;
+- fresh UI specification.
+Examples such as `1840 W` or `гладильная` are illustrative only and are not design contracts.
+
+#### 30. RTL policy
+
+Current supported UI languages RU/EN are **LTR only**.
+The architecture must avoid assumptions that permanently prevent mirroring, but AuroraFox does **not** claim RTL support yet.
+Arabic/Hebrew/other RTL support requires a dedicated future package with:
+- mirrored navigation/sidebar;
+- bidi text/cursor;
+- table/code exceptions;
+- gesture direction review;
+- icon directionality;
+- TalkBack/screen-reader;
+- visual acceptance.
+Until that release, do not partially mirror the UI and call it RTL-supported.
+
+#### 31. Sync-conflict UI
+
+Conflict handling follows the canonical type-specific sync protocol.
+
+- Auto-mergeable conflicts resolve silently and may create a low-priority audit entry.
+- Non-mergeable conflict produces a banner `Нужно выбрать версию` and a Task Center item.
+- Conflict viewer shows Local / Other device / Common ancestor where available, changed fields, timestamps/device labels and merge preview.
+- Actions: `Сохранить мою`, `Сохранить другую`, `Объединить` where supported, `Сохранить обе`.
+- Memory conflict never silently changes personal preference.
+- Knowledge-source conflict preserves both revisions until resolved.
+- Work/project conflicts block destructive overwrite but allow local read-only work.
+- Resolving creates a new causal resolution event.
+
+#### 32. Computer permission flow
+
+If a task first needs Computer permission, Fox asks in context:
+
+`Для этой задачи AuroraFox нужно управлять экраном, мышью и клавиатурой.`
+
+Options:
+- `Разрешить для этой задачи` (default/recommended);
+- `Разрешить до закрытия AuroraFox`;
+- `Открыть настройки`;
+- `Не разрешать`.
+
+No permanent global grant is created from a one-task consent.
+Permission can be revoked mid-task from privacy indicator/Computer Session/Settings; revocation stops new input actions immediately and task enters `PAUSED_PERMISSION_REVOKED`.
+If runtime is missing after permission grant, Fox offers `Подготовить Computer Agent` and keeps task paused; it does not fake completion.
+
+#### 33. Markdown/rich-text rendering
+
+Canonical chat renderer uses a safe GFM-compatible subset:
+- headings;
+- paragraphs;
+- emphasis/strong/strike;
+- ordered/unordered lists;
+- blockquotes;
+- links;
+- inline code;
+- fenced code;
+- tables;
+- task lists.
+
+Raw HTML/script/event attributes are not executed/rendered as privileged HTML.
+Invalid Markdown falls back to safe best-effort plain/rich text without losing literal content.
+Chat and Work preview use the same renderer.
+
+Math:
+- inline/block math rendering is a separate local-safe renderer capability;
+- until implemented, LaTeX delimiters remain readable source text rather than broken output.
+Footnotes may be supported later and are not release-critical for V1.5.
+
+#### 34. Core unavailable UX
+
+Core states:
+`STARTING / READY / DEGRADED / RECOVERING / UNAVAILABLE`.
+
+If unavailable:
+- header indicator becomes red `Core недоступен`;
+- Settings, Diagnostics, Knowledge source management, export/delete and non-AI UI remain accessible;
+- chat composer remains usable for draft text but Send shows recovery status rather than silently dropping a request;
+- automatic bounded recovery is shown as `Пробую восстановить Core…`;
+- Diagnostics provides `Восстановить Core` when a supported repair path exists;
+- if Lite fallback activates, state changes to amber `Lite` with explanation;
+- crash during conversation preserves draft/queued request and offers Retry after recovery;
+- no mandatory cloud-AI fallback.
+
+#### 35. Low-disk UX
+
+Storage states:
+- warning at <5% or <2 GiB free: amber banner `Мало свободного места`;
+- critical at <1 GiB: red/amber blocking banner for heavy storage operations.
+
+Banner actions:
+- `Посмотреть хранилище`;
+- `Очистить кэш`;
+- `Открыть папку/настройки хранения` where platform permits.
+
+Knowledge import/update staging/reindex/large Work checkpoints perform preflight and show required/available space before starting.
+Memory/source data is never auto-deleted.
+Diagnostics -> Storage shows app data, Knowledge, cache, update staging and free disk separately where measurable.
+
+#### 36. Minimize/restore/tray
+
+Windows:
+- normal minimize keeps AuroraFox running;
+- Work/import/update/download tasks continue according to their own policy;
+- Computer automation may continue only with prior task permission; tray icon shows an active-control badge/status and system privacy indicator remains visible;
+- tray menu: Open AuroraFox / Active tasks / Pause autonomous tasks / Exit;
+- restore returns to last active chat/surface and refreshes Core/network/task status;
+- task-completion badge may appear on tray until viewed.
+- exiting from tray uses active-task close flow.
+
+Android follows OS background limits and persistent notifications for long-running permitted foreground services; it does not pretend a killed background process is still running.
+
+#### 37. New-chat deduplication
+
+An empty new chat is **ephemeral and not persisted** until it contains the first sent message, committed attachment/task link or explicit title/project association.
+Therefore:
+- pressing New Chat while current ephemeral chat is empty simply focuses/resets that same ephemeral chat;
+- no database/history duplicates are created;
+- once content is committed, New Chat creates a new ephemeral chat.
+This rule eliminates the ambiguous "which empty chat to reuse" case.
+
+#### 38. Enter behavior by platform
+
+Windows native:
+- Enter = Send;
+- Shift+Enter = newline;
+- configurable alternative `Enter=newline / Ctrl+Enter=Send`.
+
+Android software keyboard:
+- Enter/newline inserts newline;
+- visible Send button submits.
+
+Android physical keyboard:
+- Ctrl+Enter = Send by default;
+- Enter = newline.
+
+Voice input inserts/commits transcript through the Voice state machine and does not synthesize keyboard Enter events.
+
+#### 39. Shortcut collision policy
+
+Native Windows shortcuts are scoped to AuroraFox window and do not claim browser/global bindings.
+Avoid known destructive/common browser collisions where a clearer alternative exists (hence Work = Ctrl+Alt+W, not Ctrl+Shift+W).
+Shortcut Settings detects duplicates inside AuroraFox.
+Future web client has a separate shortcut profile and must not override browser-reserved navigation/window shortcuts without explicit opt-in.
+OS-reserved combinations cannot be assigned.
+
+#### 40. Voice visual feedback
+
+Voice has explicit states:
+- OFF;
+- READY;
+- LISTENING;
+- RECOGNIZING;
+- SPEAKING;
+- ERROR.
+
+Visuals:
+- mic button changes label/state border, not color alone;
+- LISTENING shows a small live input-level meter/ring and text `Слушаю…`;
+- RECOGNIZING shows `Распознаю…`;
+- partial transcript appears in a temporary transcript strip above composer when supported;
+- SPEAKING shows `Fox говорит` plus `■ Остановить голос`;
+- barge-in immediately changes SPEAKING -> LISTENING and visually acknowledges `Слушаю вас`;
+- recognition failure shows `Не расслышала` with Retry, never silently sends an empty request.
+- typing while LISTENING does not erase the existing draft. Recognized text is inserted at caret in push-to-talk mode; continuous/wake mode shows transcript preview before auto-submit when confidence/policy allows.
+- safety-sensitive voice commands still require the same confirmation/trust policy as text commands.
+
+FINAL_UI_UX_CONTRACT_STATUS: ACTIVE / CANONICAL / RELEASE-GATING FOR IN-SCOPE SURFACES.
+
+
+### OWNER ROADMAP RULE 2026-10-06 — multimodal capabilities must not delay V1.6 or V1.7
+
+Owner decision: image/video creation is important and must enter AuroraFox early enough to participate in learning, but **must not expand V1.6.0.0 or V1.7.0.0 into indefinite releases**.
+
+Architecture authority: `docs/adr/ADR-0001-nonblocking-multimodal-capabilities.md`.
+
+#### Permanent sequencing rule
+
+- V1.5.0.0 keeps its current stabilization/release scope. Heavy image/video generation is **not** added as a new V1.5 blocker.
+- V1.6.0.0 adds only the **small shared multimodal foundation** required so Cognitive Core will never need reconstruction later:
+  - `MediaIntent`;
+  - `ArtifactSpec`;
+  - capability/provider discovery;
+  - provider/model/resource profile;
+  - `MediaJob`;
+  - `MediaOutcome`;
+  - Cognitive Event / provenance / Experience compatibility;
+  - deterministic mock-provider contract tests.
+- V1.6.0.0 does **not** wait for a production diffusion/video model. Missing generator provider means that capability is unavailable, not that Cognitive Core is incomplete.
+- V1.6.1.0 connects Experience & Learning to media outcomes so Fox can learn provider/model/workflow choice, visual quality, user preferences and successful repair strategies.
+- Concrete image-generation/editing providers may become available as soon as they pass their own signed capability acceptance. They are not allowed to hold the V1.6.1 core-learning release hostage.
+- V1.6.2.0 connects non-private media lessons and cross-device artifact/job metadata to Shared/Distributed Cognition where appropriate. Raw private media/prompts remain private.
+- V1.7.0.0 proceeds on the accepted cognitive/experience foundation and adds autonomous capability selection, benchmarking, dynamic trust, evaluation and self-improving media workflows.
+- Full video generation/editing is **not a V1.7.0.0 blocker** unless owner explicitly promotes it into that exact release scope.
+- Concrete image/video runtimes are signed owner-controlled **capability providers/assets**, not separate Fox products and not separate AI identities.
+
+#### Capability abstraction
+
+Cognitive Core reasons in stable capabilities, not product/model names:
+
+`vision.analyze`
+`image.generate`
+`image.edit`
+`image.image_to_image`
+`image.inpaint`
+`image.outpaint`
+`image.upscale`
+`image.background_remove`
+`video.generate`
+`video.image_to_video`
+`video.edit`
+`video.compose`
+`video.render`
+`audio.analyze`
+`audio.edit`
+
+A specific model/runtime is only a provider implementing one or more capabilities.
+
+This permits a provider to be replaced without redesigning Cognitive Core.
+
+#### Self-learning boundary
+
+AuroraFox is not expected to invent an image/video generation algorithm from nothing.
+
+AuroraFox **is** expected to learn how to use available media capabilities better:
+- which installed provider/model is strongest for a goal;
+- which parameters/resource profile work;
+- when to use direct generation vs image-to-image/inpainting;
+- how many candidates are worth generating;
+- how to visually evaluate and repair output;
+- user-specific style/composition preferences;
+- which media workflows repeatedly succeed/fail;
+- how a new provider compares to accepted providers.
+
+New provider lifecycle:
+
+`discover -> signature/compatibility verification -> sandbox benchmark -> capability profile -> limited use -> outcome learning -> trusted routing`.
+
+#### Non-delay development rule
+
+Media work runs as a **parallel lane on shared contracts**, not as a new prerequisite chain in front of cognition/autonomy.
+
+Critical path stays:
+
+`V1.5 stable product -> V1.6 Cognitive Foundation/Experience/Distributed Cognition -> V1.7 Autonomous Fox`.
+
+A media lane may merge when green if:
+- it uses already accepted contracts;
+- it has its own tests/resource gates;
+- it does not weaken Core/Windows/Android release gates;
+- unfinished provider work remains feature-gated/unavailable rather than partially wired into the stable path.
+
+No release waits for "all future media models". Only capabilities explicitly named in that exact release scope can block it.
+
+ROADMAP_MULTIMODAL_NON_DELAY_STATUS: ACTIVE / PERMANENT OWNER RULE.
+
+
+### OWNER CAPABILITY CATALOG GAP CLOSURE 2026-10-06 — staged cognition, learning boundaries and product scenarios
+
+The latest capability-catalog review identified several places where the catalog remained too broad or ambiguous even though many underlying concerns were already covered elsewhere by the canonical target/UI amendments.
+
+#### Already covered by existing canonical specs — do not duplicate or reopen
+
+The following are already release-gating in the current end-state specification:
+- measurable startup/first-token/UI/RAM performance SLOs;
+- Seed/Standard/Full Knowledge profiles and minimum hardware tiers;
+- battery/thermal/resource degradation;
+- data deletion/export/right-to-forget behavior;
+- sync protocol and conflict handling;
+- Evolution hard gates, scoring and promotion thresholds;
+- UI loading/skeleton/empty/offline/degraded states;
+- Computer Session visibility and user takeover;
+- Undo/Trash and UI acceptance matrix;
+- accessibility;
+- Core fallback/recovery;
+- model/embedding migration;
+- sandbox threat model;
+- internationalization baseline;
+- task observability;
+- client/version support policy;
+- non-blocking multimodal capability/provider architecture.
+
+These remain authoritative and are not superseded by the capability catalog.
+
+#### New architecture closure
+
+Accepted ADR:
+`docs/adr/ADR-0002-staged-cognition-learning-and-autonomy.md`
+
+This ADR makes the following permanent decisions:
+
+1. **V1.6.0.0 is a bounded cognitive substrate release, not the finished cognitive brain.**
+   It contains Cognitive Event envelope, provenance/uncertainty primitives, bounded Context kernel, adapters over existing Memory/Knowledge, projection-first World/Self Model skeletons, semantic/model/capability routing contracts and migration/observability identifiers.
+   Mature world graph, automatic historical Memory->Experience conversion, collective promotion and distributed cognition are not V1.6.0.0 blockers.
+
+2. **Memory and Experience have separate canonical ownership.**
+   - Memory owns facts/events/preferences/relationships/decisions/state.
+   - Experience owns evaluated strategy-performance records with goal, strategy, observed outcome, verification, applicability and confidence.
+   Memory becomes an Experience candidate only when goal + strategy/action + observable outcome + evaluation signal exist.
+
+3. **Learning admission has explicit classes and a hard veto.**
+   - `LEARN_PRIVATE`
+   - `LEARN_SHARED_CANDIDATE`
+   - `NEVER_LEARN`
+   Secrets, raw private content, untrusted embedded instructions, sandbox escapes, one-time destructive commands, security-policy bypass behavior, no-save data and ephemeral credentials never become reusable learned behavior.
+
+4. **Shared learning requires evidence and can be vetoed.**
+   Privacy scrub, eligibility, evidence quality, applicability scope, contradiction check and safety veto are mandatory. Shared-core promotion needs independent revalidation/second evidence according to lesson type. Subjective taste never becomes global truth.
+
+5. **Dynamic Trust is now testable.**
+   Every action gets impact, reversibility, scope, evidence confidence and history trust.
+   - LOW reversible actions may auto-run at confidence >=0.80 and history trust >=0.70 (or deterministic independently verified equivalent).
+   - MEDIUM actions require checkpoint/sandbox/dry-run and confidence >=0.85.
+   - HIGH actions require explicit confirmation.
+   - CRITICAL actions never become autonomous merely because historical trust increased.
+
+6. **Medium/high multi-step tasks use a visible pre-execution plan + Change Ledger.**
+   Each side effect records before/after references, verification and rollback handler. Selective rollback is supported only where technically honest. Irreversible external effects are never shown with fake Undo.
+
+7. **V1.7 is also a series, not one giant autonomy jump.**
+   - `V1.7.0.0` Autonomy Foundation: durable task state machine, action/change ledger, checkpoints, plan preview, trust evaluator, revalidation, pause/resume/cancel/master stop, observe->act->verify.
+   - `V1.7.1.0` Advanced Work/Computer: bounded replanning, expected-vs-actual verification, selective rollback, richer trust adaptation and partial-failure recovery.
+   - `V1.7.2.0` Experience-driven Evolution: recurring-weakness detection, improvement candidates, benchmark orchestration and controlled tournament/promotion integration.
+
+8. **Vision becomes a first-class Perception source.**
+   OCR and visual inference enter Cognitive Events with source, timestamp, provider/model, confidence, provenance and privacy class. Low-confidence visual inference is not treated as fact. Computer and media reasoning both use the same Perception->Context->Decision->Outcome path.
+
+9. **Resource-tier capability loss is explicit.**
+   Android 4 GiB Lite guarantees text chat, Memory, Seed Knowledge, basic parsing, bounded OCR and basic voice; heavy OCR/vision/Work/media jobs serialize or remain unavailable rather than crashing into OOM.
+
+10. **Missing toolchain/failure recovery has a standard path.**
+    Detect exact missing dependency -> use installed sandbox/container when possible -> owner-approved install workflow/instructions -> optional configured owner-controlled remote worker -> otherwise mark build/test UNVERIFIED.
+    Standard failure classes include OFFLINE, PERMISSION_DENIED, TOOLCHAIN_MISSING, FILE_LOCKED, SECURITY_SOFTWARE_BLOCKED, RESOURCE_EXHAUSTED, TOOL_UNAVAILABLE, ACTION_UNVERIFIED and EXTERNAL_STATE_UNCERTAIN.
+
+11. **Every release publishes a platform capability matrix.**
+    Windows/Android support level, minimum tier, network/provider/permission requirements and acceptance status are explicit. A capability is not marketed as supported on a platform unless its release-SHA platform acceptance passed.
+
+#### Product-facing companion
+
+Added:
+`docs/PRODUCT_CAPABILITY_SCENARIOS.md`
+
+It provides concrete before/after scenarios for:
+- offline Q&A;
+- public URL learning;
+- code repair;
+- long Work tasks;
+- Computer Agent;
+- scanned PDF/OCR;
+- voice;
+- low-resource Android;
+- future image generation;
+- future video creation;
+- sync conflict;
+- Evolution from verified recurring weakness.
+
+The scenario catalog is the non-engineering explanation of "what this gives the user" and complements, but does not replace, automated acceptance evidence.
+
+CAPABILITY_CATALOG_GAP_CLOSURE_STATUS: ACTIVE / CANONICAL.
+
+
+### CLAIM `CHAT-2026-10-06-CANONICAL-ROADMAP-RECONCILE`
+
+- Статус: **ACTIVE — DOCUMENTATION/COORDINATION RECONCILIATION**.
+- Started from HEAD: `ec38e9d23a87f2e6c39aa2be2613c2ff314f04a9`; fresh `main`: `446ce2cd2f979a8ab228f63d090062e8ba48a6eb`.
+- Режим: Chat / coordinator.
+- Цель: свести конечное ТЗ, ADR-0001/0002, staged V1.6/V1.7, multimodal parallel lane, release acceptance и journal workflow в один канонический roadmap без противоречий; исторические записи журнала сохранить как историю, но исключить их из authority для будущего scope.
+- Файлы: новый `docs/AURORAFOX_CANONICAL_ROADMAP.md`, `AGENTS.md`, `docs/PROJECT_MASTER_LOG.md`; implementation/runtime files не трогаются.
+- Intended bump: **NONE** (coordination/documentation only).
+- Не меняет текущий V1.5.0.0 product scope, readiness percentage, version, signing, merge/release authority.
+- NEXT: создать канонический roadmap и precedence rules, подключить его к обязательному agent startup protocol, затем закрыть claim с exact commit/evidence.
+
+
+### CANONICAL ROADMAP RECONCILIATION 2026-10-06
+
+- CLAIM `CHAT-2026-10-06-CANONICAL-ROADMAP-RECONCILE`: **DONE**.
+- Starting HEAD: `ec38e9d23a87f2e6c39aa2be2613c2ff314f04a9`.
+- Produced:
+  - `3efcab3d0748be8a2ea9763b4d00113d0ac1216f` — `docs/AURORAFOX_CANONICAL_ROADMAP.md`;
+  - `c6009dac14a68f7a5587dd511c9168ff97f64b85` — `AGENTS.md` startup/claim protocol updated to require canonical roadmap + relevant ADRs.
+- No implementation/runtime files changed; intended bump NONE; canonical version/readiness unchanged.
+
+#### Canonical roadmap authority
+
+From this point forward, **future release scope and sequencing are defined by `docs/AURORAFOX_CANONICAL_ROADMAP.md`**.
+
+Accepted ADRs define architecture inside their scope:
+- ADR-0001 — non-blocking multimodal capability/provider architecture;
+- ADR-0002 — staged cognition, learning boundaries and bounded autonomy.
+
+Older roadmap/proposal text in this master log remains preserved as historical evidence/rationale but is **SUPERSEDED FOR FUTURE SCOPE** wherever it conflicts with the canonical roadmap or accepted ADRs.
+
+Historical entries are not deleted or rewritten.
+
+#### Reconciled release train
+
+- **V1.5.0.0** — stable production foundation only; no Cognitive rewrite, no public multi-user activation, no production image/video generation blocker.
+- **V1.6.0.0** — bounded Cognitive Foundation/substrate only: Cognitive Event envelope, provenance/uncertainty, Context kernel, Memory/Knowledge adapters, projection-first World/Self skeletons, semantic/model/capability routing, media contracts, migration/observability. Mature Experience/shared cognition/media providers are not blockers.
+- **V1.6.1.0** — Experience & Learning: Memory/Experience boundary, outcomes/skills, objective/hybrid/subjective evaluators, confidence, private preference learning, media outcome learning hooks.
+- **V1.6.2.0** — Shared/Distributed Cognition: principal-aware cognitive data, causal sync/conflicts, private->shared_candidate->shared_core collective lessons. Public multi-user still disabled until explicit owner activation.
+- **V1.7.0.0** — Autonomy Foundation: durable tasks, plan preview, Change Ledger, checkpoints, trust evaluator, permission revalidation, pause/resume/cancel/Master Stop, observe->act->verify.
+- **V1.7.1.0** — Advanced Work/Computer: bounded replanning, expected-vs-actual verification, selective rollback, partial-failure recovery, richer trust adaptation.
+- **V1.7.2.0** — Experience-driven Evolution: recurring weakness -> candidates -> benchmark/tournament -> independent verification -> controlled promotion.
+- **Multimodal providers** — parallel non-blocking lane after accepted V1.6.0 media contracts. Image/video providers ship when independently green; they do not delay V1.6/V1.7 unless explicitly promoted to CRITICAL scope.
+- **Smart Home / physical world** — DEFERRED until explicit owner decision + new ADR.
+
+#### Permanent journal workflow
+
+Every new implementation CLAIM must now declare:
+- `ROADMAP_RELEASE`;
+- `SCOPE_CLASS: CRITICAL | PARALLEL_NON_BLOCKING | DEFERRED-EXCEPTION`;
+- `ROADMAP_SECTION`;
+- `ADR_REFS`;
+- `STARTING_HEAD`;
+- `INTENDED_BUMP`;
+- `OWNED_PATHS`;
+- `DEPENDENCIES`;
+- `NON_BLOCKERS`;
+- `ACCEPTANCE_GATES`.
+
+A new idea or future capability is **not automatically a blocker**. It becomes a release blocker only when it breaks an existing CRITICAL capability/hard invariant/declared acceptance gate, is an in-scope P0/P1, or the owner explicitly promotes it into the current release.
+
+Progress percentages are measured against the current release/lane acceptance scope, not against the entire long-term AuroraFox vision.
+
+#### Current execution state
+
+Current product train remains **V1.5.0.0**.
+This documentation reconciliation does not change the existing evidence-backed readiness.
+
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+DONE: canonical staged roadmap created; accepted ADRs reconciled; agent startup/claim protocol now points to canonical roadmap; conflicting historical roadmap wording formally demoted to historical context.
+REMAINING: unchanged current V1.5.0.0 implementation/CI/device/release acceptance from fresh active product claim/evidence.
+BLOCKERS: unchanged from current V1.5 product evidence; this documentation reconciliation introduces none.
+NEXT: all future work must start from fresh repo state, canonical roadmap, relevant ADRs and the current V1.5 claim; do not start V1.6 implementation before V1.5 release scope is accepted or owner explicitly changes sequencing.
+
+CANONICAL_ROADMAP_RECONCILIATION_STATUS: DONE / ACTIVE AUTHORITY.
+
+
+### ACTIVE 2026-10-06 — Core long-context actual timeout diagnosis
+
+- CLAIM: same PR103 coordinator owns diagnostic evidence and journal/memory reconciliation; no runtime/benchmark repair choice made yet. Fresh main446ce2cd, branch8efc513ce7f68e753eb63173758ad9f886bbdcd1 (owner final-target docs only), previous1813244 all35 SUCCESS. Current head has33 successes, Core failure and Windows package in progress at inspection; no polling.
+- Evidence: run37431321173/job112162690911/artifact11397491213, ZIP SHA256cc2afc72bb1a37f871182a13a5e654e61f49e7a2b00a2790ae94f670b640307c. Real Core20/21; onlylong_context fails at90040.087ms, diagnostic transport13/http0/request failure/retryable/model_failure=false. CodeSpecialist offlinePASS; performance hardPASS. Windows package not final yet.
+- Confirmed mechanism: llama engine task1105 still processing prompt at88.68s,2688tokens/progress0.94; receives cancel at3:48.914 engine timeline. DesktopLocalRuntime HTTPRequest has default90s; benchmark outer scenario watchdog/policy120s. Wrapper passes onlytemperature, no per-request deadline. This establishes client-deadline cancellation of healthy in-flight prompt processing, not a crashed/absent Core or empty successful model response. Hardware/prefill variation makes90s intermittently sufficient; cause of variation not established.
+- Owner decision needed for waiting policy: configurable total request deadline with default preserved and benchmark bound propagated, versus progress-aware waiting with separate stall/total/cancel budgets. Both can preserve120s benchmark acceptance and master stop; do not silently choose a new long-query waiting policy or mask the failure through repeated reruns.
+- Source/workflow/test thresholds unchanged; no new commit/rerun before policy decision. MemoryAF-MEM109 receives confirmed mechanism and reusable evidence. PROGRESS_COMPLETE:82%; PROGRESS_REMAINING:18%.
+
+
+### ACTIVE 2026-10-06 — owner-selected progress-aware desktop Core repair
+
+- Owner explicitly delegated the best waiting-policy choice and authorized continued completion. Selected actual engine progress with owner-adjustable stall/total/response budgets, request cancellation and unchanged120s benchmark watchdog; no heartbeat-as-progress or blind retry. Official llama.cpp server-context/server-task/README checked at7fe450e19, then reconciled to actual artifact engine build11429/commitd81235049, confirm stream return_progress, prompt_progress processed/total/cache and OpenAI deltas. SSE comments/pings must not reset stall deadline.
+- Parentfd87ccf7a60bc7ef19aaee3097ae380a96a59af6; main446ce2cd fresh. Same PR103/branch, no alternate work. Native owner inventory previous1813244 all35 green; latest foundation Core failure remains repair scope. Merge owner canonical roadmap docs without repeating source work; prior local diagnostic evidence preserved.
+- CLAIM ownership: scripts/desktop_local_runtime.gd, new CoreProgressStream helper, scripts/settings_overlay.gd Core-budget controls, tests/Core progress parser+real local HTTP stream fixture, Core CI invocation, shared journal/memory. Existing runtime recovery/specialist contracts retained. Intended BUILD fix accumulatedV1.5.0.0 version-last; no version/main/release/sign change. Entire coherent repair then one final full PR suite, no intermediate GitHub reruns or polling.
+
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 — stable Core/direct chat, cancellation, owner-adjustable operational limits; 15/16 — unchanged performance and exact-SHA acceptance
+ADR_REFS: ADR-0003-progress-aware-core-requests (owner-delegated choice); ADR-0001/0002 checked, no media/cognition scope activation
+STARTING_HEAD: fd87ccf7a60bc7ef19aaee3097ae380a96a59af6
+INTENDED_BUMP: D (version-last accumulated release)
+OWNED_PATHS: desktop runtime, new CoreProgressStream, Settings owner budgets, real loopback/Godot fixtures, Core workflow test invocation, ADR0003/roadmap references, journal/memory
+DEPENDENCIES: existing bundled llama.cpp progress protocol verified at observed artifact engine build11429/commitd81235049; existing local Core, cancellation, owner Settings
+NON_BLOCKERS: V1.6/V1.7 cognition, media providers, public accounts, Smart Home remain deferred/parallel per canonical roadmap
+ACCEPTANCE_GATES: real fragmented UTF8/SSE and local HTTP delayed-progress/stall/duplicate/total/cancel/error/truncation/budget tests; existing runtime-recovery contracts; actual offline Core21/21 and hard120s benchmark gate; full new-SHA Windows/Android/Integration/Core/Voice/UI checks; physical-device acceptance remains required for release
+
+
+### SOURCE_COMPLETE / CI_PENDING — coherent desktop Core progress repair
+
+ACTION: implement actual prompt/token progress waiting, immutable owner stall/total/byte budgets, persisted Windows controls, explicit request cancellation without engine kill, and terminal request failure propagation without model/legacy fallback. Update Core path triggers and bounded regression invocation, accepted ADR0003 and roadmap references.
+FILES: scripts/desktop_local_runtime.gd; scripts/aurora_core_runtime.gd; scripts/core_progress_stream.gd; scripts/core_wait_policy.gd; scripts/settings_overlay.gd; tests/core_progress_stream_smoke.gd; tests/core_progress_http_smoke.gd; tests/run_core_progress_http_fixture.py; .github/workflows/core-benchmarks.yml; ADR0003; canonical roadmap; journal/memory. These extend the same active owned repair; no new parallel claim.
+COMMIT: next atomic publication on fd87ccf7a60bc7ef19aaee3097ae380a96a59af6, expected-head lease; exact SHA recorded by GitHub commit/PR.
+TEST: 31 zero-argument Python recovery/specialist/benchmark regression cases PASS; Python fixture compilation, genuine chunked localhost producer/fragmented UTF8 self-check and diff checks PASS. No usable local Godot: production SSE/HTTP/persistence/terminal failover regressions are UNVERIFIED until CI, never local PASS. Runner guards pure smoke15s and HTTP smoke30s; existing actual Core120s scenario/performance gates unchanged.
+RESULT: source implemented; no full new-SHA acceptance claimed. Stall90s/total0/response4MiB defaults, all operational budgets owner-adjustable/zero-disable. Actual deployed engine evidence is build11429/commitd81235049. Settings cancel closes current desktop sockets; healthy process remains owned/running.
+BLOCKERS: new-SHA actual Godot/Core/package/UI acceptance pending; physical-device release acceptance remains open; native XLS/7z/rar backend choice and remaining owner inventory remain unfinished.
+NEXT: publish entire repair once, queue all normal PR checks together, give owner exact-SHA links without polling. Batch any actual failures before final suite. No version/merge/release/sign/tag.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: coherent source repair and bounded real-runtime regression fixtures prepared.
+REMAINING: exact-SHA runtime/package acceptance and remaining current release gates.
+
+
+### ACCEPTED / ACTIVE continuation 2026-10-06 — Core green and owner inventory review
+
+DONE: exact ee2b4bde8c19e2f6556a5cb515eecbba0b59b485 has35/35 completed SUCCESS. Core run37457233998/job112247764131 executes AURORA_CORE_PROGRESS_STREAM_OK and AURORA_CORE_PROGRESS_HTTP_OK plus actual bundled quality/performance gate SUCCESS. Windows37457233951, Android37457234223, Integration37457233995, Core/Voice37457233989, UI37457234029 all green. No rerun required; no poll loop. Previous Core source claim DONE / runtime files released; installed-device acceptance remains separate.
+CLAIM: same coordinator/PR103/branch now owns config/owner_control_policy.json, tests/test_owner_control_audit.py and journal/memory only. Review existing Settings/File Intelligence owner use sites and accepted new Core budgets/frame structure; retain arbitrary literals and unresolved real runtime caps. Starting measured inventory2428unclassified (2403 before Core source added25), not stale2403. No new parser/dependency/security module or production runtime edits.
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 — owner-controlled operational limits and existing stable foundation acceptance
+ADR_REFS: ADR0003 accepted Core budgets; ADR0001/0002 boundaries checked, no future scope activation
+STARTING_HEAD: ee2b4bde8c19e2f6556a5cb515eecbba0b59b485
+INTENDED_BUMP: NONE (reviewed inventory/evidence only; accumulated version-last unchanged)
+OWNED_PATHS: config/owner_control_policy.json; tests/test_owner_control_audit.py; docs/PROJECT_MASTER_LOG.md; docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES: existing Settings persistence and per-job owner snapshots; newly accepted Core stall/total/bytes controls
+NON_BLOCKERS: future cognition/media/accounts/home remain deferred; no architecture choice silently introduced
+ACCEPTANCE_GATES: audit verifies known controls/structure while arbitrary literals and executable inline comments remain unclassified; hard privacy boundary unchanged; full relevant new-SHA normal PR checks
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+REMAINING: owner inventory2428, unfinished native backends/security/device/update/release acceptance.
+BLOCKERS: no inventory source blocker; production format dependency choice remains separately open.
+NEXT: reviewed narrow inventory classifications and regression checks, one combined publication with green Core acceptance evidence; owner monitors new-head links.
+
+
+### SOURCE_COMPLETE / CI_PENDING — owner inventory Settings/Core/benchmark cluster
+
+ACTION: classify191 reviewed existing findings,2428→2237unclassified.77 owner setting/default/snapshot/UI use sites;3 SSE byte-frame/SpinBox representation findings;111 Core benchmark evidence findings. Review includes benchmarks/core acceptance/evaluator/probe/harness paths only as test_evidence; test watchdogs are not product limits and cannot be relaxed to make owner controls pass. Existing full-line comment category retained. No production source edits.
+FILES: config/owner_control_policy.json, tests/test_owner_control_audit.py, shared journal/memory.
+COMMIT: combined next publication on accepted ee2b4bde8c19e2f6556a5cb515eecbba0b59b485 using expected-head lease.
+TEST:9 audit regressions PASS, including arbitrary LIMIT17/timeout99, Core64..8192token clamp, File Intelligence minimum dictionary values, generic HTTP deadlines and generic slider maxima staying unclassified. Real audit output owner_adjustable380, format_structure13, documentation50, test_evidence815, pendingUI1, hardboundary1, unclassified2237. Diff check PASS.
+RESULT: inventory still incomplete. The snapshot propagation/defaults and visible owner fields are distinguished from actual unresolved restrictions. Core previous exact-SHA35/35green acceptance is recorded in this same block, not a new source fix or readiness increase.
+BLOCKERS: inventory2237 and known unresolved owner minima/token/startup/request controls; remaining current release backend/security/device/update/release gates. Native XLS/7z/rar choice remains open; future media/cognition/account/home scope not activated.
+NEXT: publish one combined inventory/evidence package, owner checks all new-head CI links without polling; continue substantive unresolved controls review after outcomes. Claim source files released to CI follow-up; same coordinator remains responsible. No version bump/main merge/sign/release/tag.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:191 classifications and9 regressions; prior actual progress waiting/package acceptance green.
+REMAINING: incomplete inventory and current release acceptance.
+
+
+### ACTIVE 2026-10-06 — large owner resource controls implementation
+
+Owner explicitly requests maximum correct implementation while current2da6e63CI runs; prepare one coherent source block, do not publish each small group or cancel current evidence. Fresh branch2da6e63/main446ce2cd; same coordinator owns existing AgentCore/MemoryStore/Desktop runtime resource-control integration and Settings card, new private persisted OwnerResourcePolicy, regression fixtures and relevant CI invocation plus policy/journal/memory. Historical memory/UI claims reconciled within existing PR103 coordinator ownership; no other active contemporary lane/source edits observed.
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION:4 existing chat/memory/Knowledge/owner operational controls, no future cognitive rewrite
+ADR_REFS: ADR0003 request budgets retained; ADR0001/0002 checked, future scopes deferred
+STARTING_HEAD:2da6e63b9643e2c4511cd5e37a58385d0b2f6125
+INTENDED_BUMP: PATCH accumulatedV1.5.0.0 version-last, canonical unchanged
+OWNED_PATHS: scripts/agent_core.gd; scripts/memory_store.gd; scripts/desktop_local_runtime.gd; scripts/settings_overlay.gd; new OwnerResourcePolicy helper; actual runtime tests; relevant CI step; config/owner_control_policy.json; journal/memory
+DEPENDENCIES: existing local chat/memory/vectorizer/storage and Settings; private ConfigFile persisted controls; no new libraries
+NON_BLOCKERS: native format dependency choices and later cognition/media/accounts/home remain outside this block
+ACCEPTANCE_GATES: defaults preserved, larger/zero-disabled controls reach actual consumers; honest clipping markers where practical; retention/dedupe/UTF8/persistence/invalid numeric regressions; unchanged safety/score/hash/model context contracts; actual Godot and full new-SHA relevant CI, device acceptance separate
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: source claim before edits, existing inventory baseline/current CI separate.
+REMAINING: implement/test comprehensive current Agent text/Core generation/Memory resource controls.
+BLOCKERS:none for authorized existing-path owner settings implementation.
+NEXT: implement common persisted owner policy and actual use sites/defaults/UI/tests, then one publication after completed block.
+
+
+### SOURCE_PREPARED / NOT_PUBLISHED — broad owner resource controls
+
+ACTION: implemented26 private persisted owner controls for Windows generation tokens, feedback/task traces, direct/agent history, attachment excerpts/metadata/counts, tool result chars/items, Memory/legacy Knowledge retention, dedupe, indexing batch/text and semantic token/features. General Settings card is collapsed initially; Android hides Windows generation fields. Original defaults retained;0disables each operational ceiling except index_batch requires1 to advance. Core uses actual llama.cpp-1 unlimited generation convention; signed32 token representation is validated, not an8192 artificial clamp. Existing context capacity/threads/native Android generation/safety/score/hash/schema boundaries unchanged.
+FILES: new scripts/owner_resource_policy.gd and tests/owner_resource_limits_smoke.gd; AgentCore, MemoryStore, DesktopLocalRuntime, local semantic vectorizer, Settings; bounded Core fixture runner/workflow paths; two existing contracts updated to assert owner propagation rather than fixed literals; reviewed policy/journal/memory. Same ACTIVE claim explicitly includes vectorizer resource limits/cache signature and existing recovery/specialist contract assertions; no parallel claim.
+COMMIT: preparing one local checkpoint on2da6e63; no new remote candidate while current Windows package runs.
+TEST:47 zero-argument Python recovery/specialist/Core evaluator/owner runtime/audit cases PASS, Python fixture compilation and diff checks PASS. Genuine Godot runtime smoke prepared for persistence/partial saves/invalid/fractional/NAN values, UTF8 clips, zero/full contexts and attachments, results, token budgets, retention/dedupe/live invalidation/index batch. No usable local Godot: new smoke is UNVERIFIED, not local PASS. Bounded30s child invocation added before actual Core benchmark.
+RESULT: actual use sites changed, not only classification. Changing index text/token/feature settings invalidates stale vectors/queued work and rebuilds from retained full records; versioned budget signature is persisted and checked at restart. Legacy vectors lacking new signature are regenerated, original memory/Knowledge records preserved. Dedupe window changes rebuild exact indexes. Owner lowering retention can still trim prior records on next add (existing algorithm), prominently warned; saving itself does not delete records. No feedback promotion, tool authority, secret redaction, model failure, Master Stop or security boundary bypass.
+INVENTORY: fresh prepared source2221unclassified vs2237published baseline; this count includes new code, so it is not a16-error fix claim. All26 defaults have visible owner fields and actual consumers; full remaining audit is unfinished.
+CI_SNAPSHOT: existing2da6e63 has34/35SUCCESS, package-windows job112309969206/run37475534197 still pending at one required pre-publication inspection; no failures. No poll loop/rerun/new SHA to interrupt this package evidence.
+BLOCKERS: new Godot/source acceptance pending; current Windows package unfinished; remaining owner inventory/current release acceptance. Native backend architecture choices and physical-device release gates remain separately open.
+NEXT: preserve local coherent checkpoint; after owner reports current package completion, inspect actual results once, finish any source-review issues and publish whole block once with all new-head tests queued together. No version bump/main merge/sign/release/tag.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:26 actual owner controls and comprehensive runtime fixtures prepared;47 available Python checks green.
+REMAINING: actual new-SHA Godot/Core/package/UI validation and remaining product acceptance.
+
+
+### ACCEPTED foundation / PUBLICATION continuation 2026-10-06
+
+Owner reports all green; exact2da6e63b9643e2c4511cd5e37a58385d0b2f6125 independently confirms35/35 completedSUCCESS, no pending/failed/skipped checks. Windows37475534197/job112309969206 completedSUCCESS; Core37475534428 and Android37475534214 alsoSUCCESS. Prior inventory claim DONE; Core/runtime/device boundaries remain as recorded. Fresh remote feature2da6e63/PR103OPEN unmerged, main446ce2cd; local2962acc is the prepared26-control source checkpoint, not a remote release.
+ACTION: publish prepared whole owner resource block plus this acceptance checkpoint atomically on accepted2da6e63. No duplicate implementation, intermediate rerun, branch/lane change, version bump, main merge, signing or release.
+TEST:47 local Python recovery/specialist/evaluator/owner/audit cases PASS; Python fixture compilation and diff checkPASS. New Godot26-control consumer/persistence/dedupe/vector regression remainsCI_PENDING, not localPASS. Entire normal new-SHA PR suite triggered together after publication, owner monitors links without polling.
+COMMIT: atomic GitHub publication follows2da6e63 with verified local/remote tree equality and expected-head lease; source checkpoint2962acc superseded by published SHA recorded in PR/commit history.
+RESULT: foundation35/35green; source26owner controls ready for new-SHA acceptance. File ownership remains same coordinator through CI; no readiness increase from pending source.
+BLOCKERS: new source Godot/Core/package/UI acceptance; remaining2221inventory and release/device/update/backend/security gates.
+NEXT: provide exact commit and all/Core/Windows/Android links; gather any failures and repair them as one coherent batch, then final full suite.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:35/35foundation acceptance verified;26control package prepared.
+REMAINING:new source runtime/package acceptance and unfinished release scope.
+
+
+### CLAIM `CHAT-2026-10-06-SERVER-DISTRIBUTION-PLAN`
+
+- Статус: **ACTIVE — DOCUMENTATION/OWNER DECISION**.
+- ROADMAP_RELEASE: V1.5.0.0 / future distribution infrastructure.
+- SCOPE_CLASS: PARALLEL_NON_BLOCKING.
+- ROADMAP_SECTION: server/API infrastructure + future model/Knowledge distribution.
+- ADR_REFS: ADR-0001, ADR-0002; no new runtime architecture activated.
+- STARTING_HEAD: `b12d13fa6d95b3459bd1f86093c3f30f9320f7ba`.
+- INTENDED_BUMP: NONE.
+- OWNED_PATHS: `docs/PROJECT_MASTER_LOG.md` only.
+- DEPENDENCIES: current REG.RU API server remains accepted for its present role; local self-primary Core remains mandatory.
+- NON_BLOCKERS: S3/object storage, CDN, API server upgrade, GPU workers and public-scale infrastructure are not V1.5 release blockers.
+- ACCEPTANCE_GATES: durable owner decision recorded with explicit purchase/upgrade triggers and no current spend requirement.
+
+
+### ### OWNER SERVER/DISTRIBUTION DECISION 2026-10-06 — no purchase now; local-first package distribution later
+
+Owner decision: **do not purchase or upgrade server infrastructure now**. The current REG.RU server remains the control/API plane for the present AuroraFox scope. Future model/Knowledge delivery is planned so that a newly installed Fox becomes useful immediately without making the remote server the required brain.
+
+#### Permanent architecture rule
+
+The server must remain primarily a **control plane**, not the mandatory inference engine.
+
+Current/present responsibilities:
+- API gateway;
+- accounts/auth/guest/device state;
+- sync/realtime;
+- feedback/learning exchange;
+- candidate queue;
+- readiness/health;
+- backup/deployment metadata.
+
+Future heavy immutable artifacts are separated from the API VPS:
+- Core model weights;
+- Seed/Standard/Full Knowledge packs;
+- shared Skills/Experience packs where allowed;
+- Vision/Image/Video capability assets;
+- application/update payloads.
+
+These are delivered from **object storage (S3-compatible) and optionally CDN/cache later**, not from the API process filesystem as the long-term design.
+
+Clients:
+1. detect hardware/resource profile;
+2. request a signed bootstrap/capability manifest;
+3. select the compatible Core/Knowledge/capability profile;
+4. download in resumable chunks;
+5. verify signature + hashes;
+6. activate locally;
+7. retain a known-good rollback version;
+8. continue normal local operation offline after download.
+
+The server may publish and coordinate packages, but normal AuroraFox reasoning remains local/self-primary.
+
+#### New-user bootstrap rule
+
+A first-time user must never receive an "empty shell" Fox that has no usable intelligence until a server happens to answer.
+
+Before public distribution, one of the accepted installation profiles must guarantee an immediately usable local baseline:
+- bundled Lite/Core + Seed Knowledge, **or**
+- install-time bootstrap retrieval completed and verified before the app enters normal usable state;
+- a full offline installer must remain possible for unstable/no-network environments.
+
+After first use, larger/full models and Knowledge packs may download progressively in the background/user-approved update flow without breaking the usable local baseline.
+
+#### No-buy-now rule
+
+Do **not**:
+- upgrade the current VPS merely "for future AI";
+- buy GPU server capacity for normal Core inference;
+- buy managed PostgreSQL merely because it may be needed later;
+- buy CDN before real distribution/load need;
+- store multi-GB model/Knowledge libraries permanently on the API VPS as the scaling strategy.
+
+Current V1.5 work and V1.6 cognitive work proceed without these purchases.
+
+#### Purchase / upgrade triggers
+
+The assistant/coordinator must explicitly tell the owner **before any paid infrastructure change** when one of these evidence-based triggers is reached:
+
+1. **Object storage / S3 trigger**
+   - the signed Model/Knowledge Distribution Service is ready for real beta/public package delivery; or
+   - the first external users need downloadable Core/Knowledge/capability packs beyond what should be bundled with the installer.
+
+   At that point, recommend the minimum S3/object-storage capacity/traffic tier based on actual package sizes and expected user count.
+
+2. **API VPS upgrade trigger**
+   - measured production load no longer leaves comfortable headroom; or
+   - load/soak testing for the next public stage shows the current CPU/RAM/network configuration cannot meet the declared API/SSE/WebSocket/database SLOs with at least a reasonable safety margin.
+
+   Upgrade from evidence, not from speculative user counts.
+
+3. **PostgreSQL/managed DB trigger**
+   - SQLite WAL shows real concurrency/lock/size/maintenance limits in load tests or production; or
+   - V1.6.2 distributed cognition/public multi-user scale demonstrates that SQLite can no longer satisfy the server write/sync contract.
+
+   Re-evaluate before public-scale V1.6.2 activation; do not migrate early without evidence.
+
+4. **CDN trigger**
+   - object-storage download latency/egress or geographic distribution becomes a user-visible bottleneck/cost problem.
+
+5. **GPU/compute-worker trigger**
+   - an explicitly activated server-side media/compute capability requires remote acceleration for devices that cannot execute it locally.
+   This is optional capability infrastructure and must not become the mandatory AuroraFox brain.
+
+#### Owner notification rule
+
+When a trigger above is actually reached during future development/release work, the assistant/coordinator must stop before committing the owner to paid infrastructure and report:
+- what trigger was reached;
+- why current infrastructure is insufficient;
+- the minimum required resource/service;
+- the recommended configuration;
+- what can be deferred;
+- what breaks or is delayed if nothing is purchased yet.
+
+No purchase is required now.
+
+#### Current conclusion
+
+- Current REG.RU API/server role: **sufficient for current development and V1.5 control-plane needs**.
+- Heavy model/Knowledge distribution: **planned, not purchased yet**.
+- Preferred next infrastructure addition when genuinely needed: **S3/object storage**, while keeping model inference local.
+- API VPS sizing, database migration, CDN and GPU workers: **evidence-triggered future decisions**.
+
+CLAIM `CHAT-2026-10-06-SERVER-DISTRIBUTION-PLAN`: **DONE**.
+PROGRESS_COMPLETE: 100%
+PROGRESS_REMAINING: 0%
+DONE: owner no-buy-now decision, local-first bootstrap/distribution architecture, future S3 role and paid-infrastructure triggers recorded.
+REMAINING: implementation intentionally deferred until the relevant roadmap/release milestone.
+BLOCKERS: none; no paid infrastructure required now.
+NEXT: continue current V1.5 critical path. Revisit distribution infrastructure only when the signed bootstrap/package-distribution capability or real public/load evidence reaches one of the triggers above.
+
+
+### OWNER INFRASTRUCTURE ADDENDUM 2026-10-06 — existing S3 10 GB available
+
+Owner reports an already-available **10 GB S3/object-storage allocation**.
+
+This changes the future distribution plan as follows:
+
+- **No S3 purchase is required now.**
+- The existing 10 GB S3 allocation is the preferred first storage target for signed AuroraFox distribution artifacts when the Model/Knowledge Distribution Service is implemented.
+- The current API VPS remains the control plane; heavy immutable artifacts should be placed in S3 rather than on the API VPS filesystem.
+- Normal Core inference remains local/self-primary.
+
+Current repository evidence for sizing:
+- `knowledge_pack/production_pack.json` pins the production Knowledge artifact at **429,588,529 bytes compressed**;
+- its genuine unpacked content is **1,924,345,221 bytes** across 60 shards;
+- therefore the existing 10 GB S3 allocation is already sufficient for early distribution experiments and multiple small/medium signed artifacts, subject to the actual Core/capability package sizes available at implementation time.
+
+Operational storage rule:
+- do not plan to consume the full 10 GB;
+- preserve practical headroom for side-by-side old/new packages, staged rollout and rollback;
+- treat roughly **70–75% sustained occupancy** as the review point rather than waiting for 100% full;
+- before adding capacity, first prune superseded unneeded artifacts according to retention policy while preserving all rollback/release-required versions.
+
+Revised object-storage purchase trigger:
+1. first use the existing 10 GB S3 allocation;
+2. measure real artifact sizes + expected beta/public download needs;
+3. request additional paid storage only when accepted package retention plus rollout/rollback headroom cannot fit safely, or traffic/egress characteristics require a different tier.
+
+The assistant/coordinator must remind the owner before any paid storage expansion and provide:
+- current used/free S3 capacity;
+- exact retained package set;
+- expected next release/package sizes;
+- minimum required headroom;
+- recommended next capacity/tier.
+
+No current purchase or upgrade action is required.
+
+S3_EXISTING_CAPACITY_STATUS: AVAILABLE_10_GB / USE_FIRST / NO_PURCHASE_NOW.
+
+
+### ### S3 DISTRIBUTION IMPLEMENTATION CHECKLIST 2026-10-06 — instructions for future chats
+
+Purpose: give future Chat / Work / Codex sessions an exact, safe checklist for turning the already-available **10 GB S3/object storage** into AuroraFox model/Knowledge/capability distribution without leaking credentials or turning the server into the required AI brain.
+
+#### Security rule — credentials
+
+- **Never write S3 credentials, access keys, secret keys, temporary tokens, bucket private URLs or signed URLs into Git, `docs/PROJECT_MASTER_LOG.md`, source files, CI logs or chat-visible diagnostics.**
+- The temporary credential previously provided by the owner is **not recorded here** and must be revoked/rotated after any authorized setup use.
+- Permanent credentials must be stored only as deployment secrets / root-only environment configuration on the deployment host or secret store.
+- Future chats must ask for/resolve credentials through the owner-controlled deployment environment, not by committing them.
+
+Expected secret names (names only, never values):
+- `AURORAFOX_S3_ENDPOINT`
+- `AURORAFOX_S3_REGION`
+- `AURORAFOX_S3_BUCKET`
+- `AURORAFOX_S3_ACCESS_KEY_ID`
+- `AURORAFOX_S3_SECRET_ACCESS_KEY`
+- optional provider-specific session/token field if required.
+
+#### When implementation is allowed to start
+
+S3 distribution work is **PARALLEL_NON_BLOCKING** and must not delay V1.5.0.0.
+
+Start actual integration only when one of the following is true:
+1. signed Model/Knowledge Distribution Service work is the active accepted roadmap claim; or
+2. a beta/public installer genuinely needs remote Core/Knowledge/capability packages.
+
+Before touching implementation:
+- read `docs/AURORAFOX_CANONICAL_ROADMAP.md`;
+- read ADR-0001 and ADR-0002;
+- read this checklist and latest server-distribution owner decision;
+- create an ACTIVE claim with `SCOPE_CLASS: PARALLEL_NON_BLOCKING` unless owner explicitly promotes it;
+- do not change Core inference architecture to server-mandatory.
+
+#### Required logical bucket layout
+
+Use one bucket or equivalent namespace with versioned prefixes. Recommended logical structure:
+
+```text
+aurorafox/
+  bootstrap/
+    manifests/
+  models/
+    core/
+      lite/
+      full/
+  knowledge/
+    seed/
+    standard/
+    full/
+    domain/
+  capabilities/
+    vision/
+    image/
+    video/
+    stt/
+    tts/
+    embeddings/
+  experience/
+    shared/
+  releases/
+    windows/
+    android/
+  metadata/
+    checksums/
+    signatures/
+```
+
+Exact provider path syntax may differ, but versioned/immutable object semantics are required.
+
+#### Artifact rules
+
+Every downloadable artifact must have:
+- immutable version/id;
+- exact byte size;
+- SHA-256;
+- content type;
+- compatibility metadata;
+- minimum/maximum supported AuroraFox version where applicable;
+- resource profile (RAM/VRAM/disk/OS/arch);
+- signature or signed parent manifest;
+- provenance/source/license when applicable;
+- rollback/previous-known-good relationship.
+
+Do not overwrite an object in place under the same version/hash identity.
+
+If content changes, publish a new immutable version.
+
+#### Bootstrap manifest
+
+The API/control plane should publish a signed bootstrap manifest, not serve large files directly.
+
+The manifest must let a fresh client determine:
+- compatible Core profile;
+- compatible Knowledge profile;
+- optional capability packs;
+- required disk space;
+- download URLs/object identifiers;
+- part/chunk metadata where used;
+- hashes/signatures;
+- dependencies;
+- whether an artifact is required or optional;
+- fallback/rollback version.
+
+The manifest is small and may be served through the API.
+The large immutable payloads live in S3.
+
+#### First-user installation rule
+
+A new installation must not become an empty shell.
+
+Accepted bootstrapping patterns:
+- bundled Lite Core + Seed Knowledge; then progressive upgrade from S3; or
+- installer downloads and fully verifies the minimum usable local baseline before first normal launch.
+
+A full offline installer must remain possible.
+
+No normal chat should require S3 availability after required local assets are installed.
+
+#### Resumable download requirements
+
+For large Core/Knowledge/capability packages:
+- use bounded chunks/parts;
+- preserve completed chunks after network loss;
+- support restart/resume;
+- verify each part where hashes are available;
+- verify complete artifact before activation;
+- do not activate partial downloads;
+- download to staging, then atomically switch;
+- retain previous known-good artifact until new health/compatibility checks pass.
+
+Do not use one total timeout that discards hours of valid download progress.
+
+#### Initial artifact to test first
+
+Current repository evidence already pins:
+- production Knowledge artifact: `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`;
+- compressed bytes: **429,588,529**;
+- SHA-256: `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`;
+- unpacked genuine content: **1,924,345,221 bytes**.
+
+This Knowledge artifact is the preferred first real distribution object because its size/hash/license/provenance contract already exists.
+
+Do not upload it merely for demonstration if the active claim is still only documentation; upload only when authorized S3 implementation starts.
+
+#### Access model
+
+Default:
+- bucket/private objects;
+- client never receives long-lived S3 credentials;
+- API issues bounded download authorization or provider-safe download URL mechanism where supported;
+- public immutable objects may be considered only for artifacts intentionally public and after owner decision.
+
+Never embed permanent S3 secret keys in Windows/Android binaries.
+
+#### API server role
+
+API VPS remains control plane:
+- authentication;
+- entitlement/capability decision;
+- bootstrap manifest;
+- version routing;
+- signed metadata;
+- optional short-lived download authorization;
+- sync/account services.
+
+API VPS must not become the long-term storage origin for multi-GB model libraries.
+
+#### Storage retention / capacity
+
+Existing capacity: **10 GB**.
+
+Rules:
+- use existing 10 GB before buying more;
+- keep practical rollout + rollback headroom;
+- review expansion at about **70–75% sustained occupancy**;
+- retain currently supported stable artifacts plus required rollback artifacts;
+- remove superseded non-required artifacts only under explicit retention policy;
+- never delete the only known-good rollback artifact merely to save space.
+
+Before requesting more paid capacity, future chat must report:
+- used/free S3 capacity;
+- retained artifact inventory;
+- next expected package sizes;
+- minimum safe headroom;
+- what can be pruned;
+- recommended next capacity/tier.
+
+#### CDN
+
+CDN is not required now.
+
+Add only when measured:
+- geographical download latency;
+- egress/load cost;
+- repeated large public downloads;
+- origin bottleneck
+
+justify it.
+
+CDN must cache immutable artifacts by version/hash and must not bypass signature/hash verification.
+
+#### Database relation
+
+S3 stores immutable/heavy artifacts.
+SQLite/PostgreSQL stores metadata/state.
+
+Do not move account/sync transactional state into S3.
+
+Do not migrate SQLite merely because S3 distribution is added.
+
+#### Capability/media packages
+
+Future Vision/Image/Video providers use the same artifact contract:
+- provider id/version;
+- model hash;
+- capabilities;
+- hardware requirements;
+- license;
+- size;
+- signature;
+- benchmark/acceptance status.
+
+A missing media provider must degrade only that capability, never normal Core/chat.
+
+#### Acceptance gates for S3 distribution implementation
+
+Before calling the distribution path ready:
+1. secret scan confirms no credential committed;
+2. exact artifact hash/size verification PASS;
+3. signed manifest verification PASS;
+4. interrupted-download resume PASS;
+5. corrupted-part/full-artifact rejection PASS;
+6. insufficient-disk preflight PASS;
+7. rollback to previous known-good PASS;
+8. offline-after-install chat/Core PASS;
+9. Windows bootstrap path PASS;
+10. Android supported profile bootstrap path PASS where in that release scope;
+11. no permanent S3 key is present in shipped client;
+12. API server remains usable if S3 is temporarily unavailable, except for requested downloads.
+
+#### Future-chat decision rule
+
+If a future chat sees this section and S3 implementation is not yet the accepted active claim:
+- **do not buy anything;**
+- **do not upload secrets;**
+- **do not turn S3 into a V1.5 blocker;**
+- keep it as planned infrastructure.
+
+If implementation becomes active:
+- first inspect the current 10 GB bucket/provider configuration;
+- verify endpoint/bucket/region and current usage;
+- configure secrets outside Git;
+- implement signed manifest + one real artifact end-to-end;
+- prove resumable verified download;
+- only then expand to Core/capability packages.
+
+S3_DISTRIBUTION_CHECKLIST_STATUS: CANONICAL INSTRUCTION / NO SECRET VALUES / NO PURCHASE NOW.
+
+
+### ### OWNER S3 PREPARATION DECISION 2026-10-06 — preparation may start now in parallel
+
+Owner explicitly authorizes **S3 preparation work to start now in parallel while V1.5.0.0 acceptance/CI continues**, provided it remains isolated and non-blocking.
+
+Classification:
+- ROADMAP_RELEASE: future V1.6 distribution foundation / current parallel preparation.
+- SCOPE_CLASS: PARALLEL_NON_BLOCKING.
+- V1.5.0.0 must not depend on this work.
+- No readiness increase for V1.5 from S3 preparation alone.
+
+#### Allowed now
+
+A separate Work/Codex lane may:
+- inspect the existing 10 GB S3 provider/bucket configuration using owner-controlled credentials;
+- create the logical immutable namespace/prefix structure;
+- prepare upload/verify/list/prune tooling;
+- prepare signed bootstrap/distribution manifest schemas and fixtures;
+- prepare provider-neutral S3 client abstraction;
+- prepare resumable/chunk metadata contracts;
+- prepare tests for hash/size/signature/corruption/resume/rollback behavior;
+- upload **copies** of already-pinned immutable artifacts for validation when credentials are securely available outside Git;
+- use the current production Knowledge artifact as the first real test object;
+- verify object metadata/hash after upload;
+- measure current used/free capacity;
+- document the exact object inventory and retention policy.
+
+#### Forbidden now
+
+The parallel S3 lane must NOT:
+- remove or move the only canonical/local copy of any artifact;
+- overwrite immutable objects in place;
+- change the current V1.5 updater/install/bootstrap to require S3;
+- make S3 availability a V1.5 runtime dependency;
+- change Core inference from local/self-primary to server-side;
+- commit credentials/secrets/signed temporary URLs;
+- change canonical V1.5 version;
+- merge/release/tag/sign merely because S3 preparation is green;
+- purchase additional storage/CDN/GPU/API capacity;
+- consume current V1.5 source-owned files if they are claimed by an active V1.5 lane without explicit reconciliation.
+
+#### Isolation rule
+
+Prefer new isolated paths for preparation, for example:
+- `distribution/` or `tools/distribution/`;
+- dedicated tests/fixtures for distribution;
+- dedicated docs/manifest schemas.
+
+If an existing updater/installer/runtime file must be changed, stop first and reconcile ownership with the active V1.5 claim. Do not make such changes merely for preparation.
+
+#### Safe first milestone
+
+The preferred first milestone is:
+
+`one immutable Knowledge artifact -> S3 -> verify exact bytes/SHA-256 -> list via provider API -> download to staging -> verify -> delete local staging copy -> current V1.5 runtime unchanged`.
+
+Current pinned test artifact:
+- `AuroraFox-Knowledge-RU-2026.09.01-v1.tar.zst`;
+- bytes `429588529`;
+- SHA-256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`.
+
+This proves storage/distribution mechanics without coupling them to the product.
+
+#### Work handoff rule
+
+A Work session starting this lane must create its own ACTIVE claim before implementation and explicitly state:
+- SCOPE_CLASS: PARALLEL_NON_BLOCKING;
+- OWNED_PATHS;
+- no current V1.5 runtime dependency;
+- exact S3 acceptance gates;
+- secrets resolved only from owner-controlled deployment environment.
+
+If credentials/provider details cannot be securely resolved, Work may still finish all repository-side tooling/tests/mock-provider work and leave real upload as `EXTERNAL_SETUP_PENDING` rather than weakening security.
+
+S3_PREPARATION_NOW_STATUS: AUTHORIZED / PARALLEL / NON_BLOCKING / V1.5_UNCHANGED.
+
+
+### ### S3 CROSS-WORK ACCESS RULE 2026-10-06
+
+Purpose: ensure the main AuroraFox Work and any parallel S3 Work discover and use the same S3 infrastructure safely without copying secrets between chats.
+
+#### Discovery
+
+Every future Work/Chat/Codex session must learn that S3 exists by reading:
+- `AGENTS.md`;
+- `docs/AURORAFOX_CANONICAL_ROADMAP.md`;
+- `docs/PROJECT_MASTER_LOG.md`, especially the S3 distribution decisions/checklist.
+
+No chat-memory secret is required for discovery.
+
+#### Credentials are NOT transferred through chats
+
+A secret shared in one conversation is not treated as a cross-session credential store and must not be copied into another prompt, journal entry, repository file or CI log.
+
+Future sessions must access S3 only through configured secret/environment names:
+
+- `AURORAFOX_S3_ENDPOINT`
+- `AURORAFOX_S3_REGION`
+- `AURORAFOX_S3_BUCKET`
+- `AURORAFOX_S3_ACCESS_KEY_ID`
+- `AURORAFOX_S3_SECRET_ACCESS_KEY`
+
+#### Shared secret locations
+
+Use the narrowest location required by the component:
+
+1. **Production/control-plane server**: root-only deployment secret file, recommended `/etc/aurorafox/s3.env` with mode `0600`, loaded only by the service/tool that needs S3.
+2. **GitHub Actions** (only if CI must perform real S3 integration): encrypted repository/environment secrets with the same variable names. Workflows reference the names; secret values must never be echoed.
+3. **Developer/Work temporary real-S3 smoke**: ephemeral process environment supplied by the authorized runtime/secret store. Never commit a `.env` containing values.
+
+Do not create multiple independent long-lived keys merely to give separate chats access unless the provider's least-privilege policy intentionally uses separate scoped credentials.
+
+#### Main Work behavior
+
+The main project Work does not need raw S3 credentials for ordinary V1.5 development.
+
+It must:
+- read the S3 plan;
+- preserve the distribution interfaces prepared by the S3 lane;
+- treat S3 as PARALLEL_NON_BLOCKING until its roadmap milestone;
+- use mocks/fixtures when real access is unnecessary.
+
+When real S3 access is required and the expected environment variables are absent, report `S3_EXTERNAL_SETUP_PENDING`; do not ask to commit/paste the permanent key into the repository.
+
+#### Integration handoff
+
+The S3 Work publishes only:
+- code;
+- schemas;
+- tests;
+- object inventory without credentials;
+- artifact IDs/hashes/sizes;
+- exact commit SHA and acceptance evidence.
+
+The main Work integrates/rebases/cherry-picks/reconciles that repository work under the normal journal ownership rules. It does not need the S3 secret to consume the code.
+
+When S3 is later activated in product runtime, the deployment environment supplies the credentials at runtime.
+
+#### Rotation
+
+Any temporary credential exposed in a chat must be revoked/rotated after the authorized setup/smoke use. The replacement permanent credential should be placed directly into the protected secret location, not sent through another chat.
+
+S3_CROSS_WORK_ACCESS_STATUS: JOURNAL_DISCOVERY + SHARED_SECRET_ENV / NO_CHAT_SECRET_PROPAGATION.
+
+
+### ACCEPTED / ACTIVE 2026-10-06 — owner controls continuation and preserved S3 handoff
+
+Sourceb12d13fa6d95b3459bd1f86093c3f30f9320f7ba acceptance:41reported check-runs,38SUCCESS and3conditional Knowledge Performance jobsSKIPPED, no executed failure/pending. New owner runtime smoke and actual Core acceptance green. Skipped optional/manual jobs are NOT claimedPASS. Fresh branch3bb31194e13101fe0cac99a539dfc300c327696d adds only575master-log lines for owner server/S3 decisions. Integrated by fast-forward; S3 paths remainPARALLEL_NON_BLOCKING, no raw credentials accessed/copied, no V1.5 dependency or readiness bump. Fresh docs-head31SUCCESS,4running runtime jobs and3conditionalSKIPPED at one inspection; no poll/retry.
+Same coordinator closes26-control source claim as ACCEPTED for executed CI (physical release boundary remains separate) and owns next local coherent existing resource-control package, preserving shared S3 journal.
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing local code/agent/experience owner limits; no future Experience-schema rewrite
+ADR_REFS:ADR0001/0002/0003 scope boundaries retained
+STARTING_HEAD:3bb31194e13101fe0cac99a539dfc300c327696d
+INTENDED_BUMP:PATCH accumulated version-last, no canonical change
+OWNED_PATHS:scripts/owner_resource_policy.gd; scripts/code_specialist.gd; scripts/experience_store.gd; scripts/agent_core.gd; owner resource runtime tests; policy/journal/memory
+DEPENDENCIES:accepted private resource Settings controls, existing CodeSpecialist/ExperienceStore and execution guards
+NON_BLOCKERS:S3 preparation/distribution and future cognition/media/accounts remain isolated/nonblocking
+ACCEPTANCE_GATES:preserved defaults;0unbounded semantics and explicit per-instance agent override; safe full-source Python public-definition preservation; real context/retention/UTF8/persistence/guard runtime regression; unchanged quality/security gates
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:accepted previous source, fresh S3 docs preserved.
+REMAINING:local broad code/experience/agent-budget fixes and remaining audit/release acceptance.
+BLOCKERS:none for local existing-path changes; new docs-headCI still in progress.
+NEXT:prepare all related remaining controls locally, no per-small-block publication or CI polling.
+
+ACTIVE CLAIM EXTENSION — same coherent V1.5 owner-control package owns work/work_store.gd and agent/learning_curator.gd with regression tests. Existing scope/release/ADR/dependencies/version-last remain unchanged. Acceptance: retention zero unlimited; defaults preserved; secret redaction and learning promotion quality unchanged; full action identity preserved; no automatic unsafe retries.
+
+ACTIVE CLAIM EXTENSION — same V1.5 existing-path package owns scripts/chat_store.gd, scripts/cognition_layer.gd and scripts/dream_cycle.gd. Acceptance: owner context/retention defaults, complete verification failure reporting (never successful verification when unavailable/malformed), no promotion authority changes.
+
+ACTIVE CLAIM EXTENSION — existing V1.5 attachment/skill ingestion owns scripts/attachment_manager.gd and tests/test_chat_learning_attachment_contract.py: owner text/JSON/item/step/tool/field budgets with zero unlimited; imported skill confidence remains capped and imports do not authorize tool execution.
+
+ACTIVE CLAIM EXTENSION — owns scripts/knowledge_document_importer.gd, scripts/large_json_knowledge_importer.gd and scripts/json_stream_reader.gd under existing V1.5 import controls. Acceptance: preserved defaults, owner zero unlimited depth/scalar/record/aggregation/EPUB/text budgets, per-parse immutable snapshots, accurate truncation, format integrity retained. Physical stack/memory limits remain runtime constraints, not promised infinite hardware.
+
+LOCAL CHECKPOINT / same active package — no publication/full CI yet
+ACTION: prepared existing-path owner controls for agent/code/experience/Work/learning/chat/reflection/attachment/skill/JSON/document ingestion; full public definition and action identity preservation; honest verification failure.
+FILES: existing claimed production paths plus owner policy, regression fixture, exact audit policy, journal/memory.
+COMMIT: none for this package; parent3bb31194e13101fe0cac99a539dfc300c327696d preserved.
+TEST:56 available Python contracts PASS; diff check PASS; new real Godot scenarios NOT EXECUTED locally, mandatory in final CI.
+RESULT:72 persisted owner controls total (46new over accepted26);1625 unclassified inventory findings at this source snapshot. Exact reviewed orchestration/measurement and contract classifications do not claim runtime completion.
+BLOCKERS: full remaining inventory/backend/security/release acceptance; local Godot unavailable; physical/version/release authorization boundaries remain separate. Built-in ZIPReader pre-expansion memory bound is not proven (AF-MEM-116), native XLS/7z/rar still unfinished.
+NEXT: continue same broad package, resolve remaining actual ceilings and runtime gaps, then one publication and required exact-SHA suite with owner-facing links. No repeated CI waiting/polling.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+
+ACTIVE CLAIM EXTENSION — owns scripts/knowledge_zip_preflight.gd: parse ZIP central directory before ZIPReader opens/expands rich documents; owner directory-entry/XML byte budgets; structural ZIP bounds validated; ZIP64/multi-disk/encrypted unsupported compatibility inputs visibly require File Intelligence. No unsupported input success or external access-control bypass.
+
+ACTIVE CLAIM EXTENSION — existing Evolution retention/retry budgets owns evolution_engine/core/experiment_registry.gd, evolution_engine/evaluation/core_tournament_adapter.gd and their contract tests. Keep3–10 population, verified baseline/no-regression/single-use/freshness authority unchanged; zero operational retention/attempt limits retains cancellation lock guard.
+
+ACTIVE CLAIM EXTENSION — owns scripts/autonomy_settings_manager.gd and evolution_engine/core/evolution_controller.gd for fail-closed missing preferences and live Evolution master/permission/update guard during adjustable attempt loops. Existing standalone adapter tests retain their injected foundation; product controller always supplies live guard. Baseline foundation contract incorrectly expected master defaulttrue although HEAD defaultfalse; reconcile test with existing fail-closed defaults rather than enable autonomy.
+
+Evolution pending winner TTL is also an owner lifetime budget (default86400,0no expiry), not promotion authority: single-use, current-baseline hash, winner-integrity and fresh handoff verification remain mandatory; malformed timestamps still rejected. Existing quality/authorization criteria unchanged.
+
+ACTIVE CLAIM EXTENSION — owns scripts/aurora_core_runtime.gd, scripts/desktop_local_runtime.gd and voice/android_mic_monitor.gd for local model failover count, diagnostic text and microphone maximum segment duration. Terminal request cancel/deadline behavior, GGUF identity, optional legacy off-by-default and speech sensitivity/minimum filters unchanged.
+
+ACTIVE CLAIM EXTENSION — owns AndroidFileRuntime.kt and related File Intelligence regression contracts for truthful extraction outcomes: native unsupported XLS/7z/rar/binary and failed/empty STT must not return placeholder ok=true; GIF uses real first-frame local OCR with explicit partial-animation warning. No new native dependency silently selected; actual missing backend implementation remains open.
+
+ACTIVE CLAIM EXTENSION — owns scripts/owner_limit_persistence.gd, scripts/file_intelligence_client.gd, scripts/public_web_manager.gd, scripts/settings_overlay.gd and persistence regression fixtures. Confirmed packaged-limit settings used ProjectSettings.save and reported success without checking the result. Replace with private ConfigFile groups, save-before-apply and visible failure, preserve existing process-env/native snapshots/defaults, remove arbitrary positive byte/text/URL/render minima while retaining productive integer representation and web SSRF/access boundaries.
+
+Existing research Knowledge text budgets now owner-controlled; the35-character untrusted-data marker remains outside adjustable data budget, so even budget1 cannot remove authority separation. Default4965data+35marker preserves prior5000 total. Existing content/claim identity normalization and promotion/corroboration scores remain unchanged; full provenance remains separate from displayed URL text.
+
+Existing Agent tool-result budget now also applies to Core tool context, not only stored trace. Preserve boolean/numeric result fields, bound text/arrays recursively, report result_context_partial independently, keep untrusted-tool-data wrapper outside adjustable data budget. Execution guards still receive original actual tool result; canonical File/Knowledge provenance unchanged.
+
+ACTIVE CLAIM EXTENSION — same existing V1.5 package owns file_intelligence/file_service.py, tests/test_local_ocr.py and tests/test_file_listing_owner_budgets.py: exact output ceiling including truncation marker; finite positive PDF geometry scaled to actual integer pixel budget before rendering, no arbitrary minimum scale; preserve real parser/OCR failure and cleanup tests. No new external/native dependency selected.
+
+ACTIVE CLAIM EXTENSION — same package owns scripts/tool_registry.gd and file_intelligence/extended_formats.py: route File tools through existing platform-aware FileIntelligenceClient and actual owner ceilings; expose existing Windows request/cache/EPUB/archive/optional-vision/STT/video budgets in private persisted File settings and backend environment, preserving defaults and access-path gates. No accounts/future media engine activation, no dependency changes.
+
+ACTIVE CLAIM EXTENSION — same existing authorization package owns scripts/computer_client.gd, tests/work_computer_master_stop_smoke.gd, tests/work_computer_attempt_safety_smoke.gd, tests/work_computer_concurrency_smoke.gd, tests/work_computer_e2e_control_smoke.gd and tests/security_owner_review_smoke.gd. Source review found missing/malformed master settings defaulted to enabled and ancestry stopped after eight nodes. Require explicit boolean master authorization, search actual ancestry without arbitrary depth ceiling, fail closed on malformed supplied security guard. Existing successful-action fixtures must explicitly supply authorization; preserve unsafe retry/uncertain-state acceptance.
+
+ACTIVE CLAIM EXTENSION — same owner-control package owns scripts/core_improvement_pipeline.gd, scripts/self_improver.gd and their regressions: existing candidate source/history/context/diagnostic/project-import budgets become private owner controls with preserved defaults and zero-unlimited semantics. Tournament3–10, promotion authority, source-contract/no-regression/quality gates and isolation remain unchanged. Generation-attempt limits remain bounded until live cancellation/authorization is checked throughout those loops; no unsafe unbounded loop introduced.
+
+
+### ACTIVE CLAIM WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE
+STATUS:ACTIVE; owner explicitly requests replacement of disconnected PR103 coordinator and continuation of remaining V1.5 CRITICAL scope.
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence/Public Web/UI owner controls;15 acceptance;16 coherent CI cadence
+ADR_REFS:ADR-0003;ADR-0001/0002 reviewed, future runtime scope not activated.
+STARTING_HEAD:3bb31194e13101fe0cac99a539dfc300c327696d
+INTENDED_BUMP:D accumulated V1.5.0.0 version-last; canonical unchanged.
+OWNED_PATHS:scripts/file_intelligence_client.gd;scripts/public_web_manager.gd;scripts/settings_overlay.gd;new scripts/owner_file_web_policy.gd;tests owner persistence runtime/contract;existing chat-learning workflow regression invocation;append-only master log/engineering memory.
+DEPENDENCIES:published b12d13fa26-resource-control package and existing private ConfigFile patterns; fresh main446ce2cd is ancestor of candidate, no merge rewrite needed.
+NON_BLOCKERS:independent work/v1.6-s3-distribution-foundation remains owned separately; no S3/key/runtime integration. Future cognition/media/public accounts excluded. Native backend choice and physical/release gates remain separate visible boundaries.
+OWNERSHIP_RECONCILE:owner authorizes takeover of disconnected previous PR103 coordinator. Earlier Core repair claim accepted ee2b4bde35/35; inventory package2da6e6335/35; owner resource controls b12d13fa published and latest3bb31194checks completed38SUCCESS+3SKIPPED. Earlier diagnostic/inventory/source-pending wording superseded only by actual completed evidence, not device acceptance. Historical September claims remain historical; contemporary scoped runtime/settings ownership transferred to this claim. Other ACTIVE documentation/future lanes untouched.
+ACCEPTANCE_GATES:private restart-persistent file/web settings; partial updates; defaults preserved; malformed/unknown/nonfinite/fractional/out-of-range values rejected before side effects; failed save leaves active values/environment/backend unchanged and UI reports failure; genuine Godot ConfigFile restart/error regressions; relevant current source contracts; one full exact-SHA coherent CI batch.
+CONFIRMED_SOURCE_DEFECT:both file/web apply methods ignore ProjectSettings.save return and Settings always reports saved. Exported app should write owner config in user storage, not project resources.
+CI_BASELINE:3bb31194all41check-runs completed,38SUCCESS+3SKIPPED,0active; skipped Knowledge performance jobs are not PASS. Source controls inventory2221unclassified, no claim these are2221bugs.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:fresh GitHub state and takeover established; existing published changes retained.
+REMAINING:this coherent persistence repair plus remaining CRITICAL source/device/update/release acceptance; no SOURCE_COMPLETE/CODE_FREEZE claim yet.
+BLOCKERS:none for this source block.
+NEXT:implement/test/publish one persistence block, collect real CI failures together; proceed to remaining gates without version bump.
+
+TAKEOVER_SCOPE_RECONCILE: found actual unpublished previous Work package in /workspace/scratch/679acfb37a52/aurorafox, base3bb31194; owner explicitly requests continuation of that coherent package. Adopt all49 tracked changed paths and2 authored new helpers listed by git diff/status; prior ACTIVE extensions above define ownership/gates. Copy as isolated snapshot, preserve original workspace; supersede narrower persistence-only proposal with existing OwnerLimitPersistence. No published changes repeated. All remaining controls/ZIP/verification/native truthful states reviewed before one combined publication and full relevant CI.
+
+ACTIVE CLAIM EXTENSION — same recovered coherent V1.5 package owns agent/autonomous_coordinator.gd and existing learning curator history/outcome text with actual owner-resource regression; coordinator event retention/reports/details/project-index workloads become owner budgets, numeric/boolean evidence retained. Existing mutation3-10, quality/corroboration criteria, permissions and canonical claim grouping unchanged. Generation retry ceilings are not made unbounded without live execution authority; no advanced V1.7 capability introduced.
+
+ACTIVE CLAIM EXTENSION — same recovered CRITICAL owner-control package owns scripts/project_index_client.gd, scripts/project_index_tool_bridge.gd, scripts/trusted_project_sandbox_bridge.gd, scripts/windows_trusted_project_bridge.gd, file_intelligence/project_index_service.py and actual index/copy regressions. Propagate owner file/byte ceilings without silent downstream caps; zero means unlimited; reject negative input. Limited index traversal must report partial coverage and retain unvisited existing records. Preserve trusted-root gates, sandbox location and ignored-directory isolation. Defaults remain unchanged.
+
+
+### RECOVERED COHERENT PACKAGE — local acceptance / publication prepared
+CLAIM:WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE remains ACTIVE; ownership reconciled to all recovered49 tracked authored modifications,2 new authored helpers, coordinator and end-to-end project-index/copy propagation and relevant regression/workflow paths above. Removed unpublished alternate owner_file_web_policy helper in favor of recovered OwnerLimitPersistence; its earlier narrow OWNED_PATHS/NEXT wording is superseded by this coherent package.
+STARTING_HEAD:3bb31194e13101fe0cac99a539dfc300c327696d; fresh upstream branch unchanged immediately before publication. main446ce2cd is ancestor; PR103 base remains fix/v1.5-archive-knowledge-import df67a1eb, not silently retargeted.
+ACTION: recover disconnected source verbatim then review/correct persistence, unknown keys, malformed verification logging, coordinator metadata types/retention, owner index/copy downstream propagation, partial-index stale deletion. Existing expanded ZIP preflight, truthful native unsupported states, resource retention/import/JSON/Evolution/Core/Voice controls adopted in the same package. Two additional Core copy budgets preserve defaults; no future runtime/S3/signing/key edits and no version bump.
+TEST: coherent Python batch120PASS+1SKIPPED(local OCR runtime absent); actual official Godot4.7.1 integrated parse PASS; actual owner-resource regression PASS including ConfigFile failure/restart, normal DOCX/EPUB and ZIP bounds, JSON imports, live Evolution guards, unavailable/malformed verification, coordinator compact/event retention and both copy algorithms. Nine additional recovered Godot smokes PASS: Web, document URL, chat attachments, Work master-stop/attempt safety/e2e/concurrency, Security owner review and autonomy learning. Owner fixture exits with ObjectDB/resource cleanup warnings; not counted as release/device acceptance. Final post-adjustment owner/parse results and exact publication SHA/CI run IDs recorded at next evidence update.
+INVENTORY:1458unclassified,1218test_evidence,446owner_adjustable,251format_structure,53documentation,22hard_boundary at prepared snapshot; counts are findings, not controls/defects. Audit remains incomplete; no blanket classification, waiver or artificial zero.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:actual disconnected package recovered and local behavioral checks executed; prepared for one combined publication.
+REMAINING:remaining reviewed owner inventory/current-source gaps, native supported-backend decision/implementation, exact-SHA full CI and Windows/Android package/device/update/release gates. No completed release claim.
+BLOCKERS:local optional OCR runtime unavailable for integration scenario; native XLS/7z/rar backend architecture decision remains unresolved per prior coordinator instruction; physical acceptance/release authority boundaries unchanged. These do not hide independent remaining source work.
+NEXT:publish whole prepared package once; collect full exact-SHA CI results together, repair all reds as one batch; continue independent CRITICAL source work, preserve unresolved backend decision visibly.
+
+ACTIVE CLAIM EXTENSION — same recovered package batch repair owns tests/offline_autonomy_smoke.gd, tests/test_spreadsheet_owner_budgets.py and tests/test_archive_owner_budgets.py. Actual fc20ec4f full CI exposed stale fixture TOOL_RESULT prefix assumptions and AST cache-key namespaces missing newly required production PDF/media budgets. Preserve untrusted-tool-data framing and cache policy identity; fix fixtures from real production schema/defaults, do not remove policy fields or weaken assertions. Collect every CI red before one repair publication.
+
+ACTIVE CLAIM EXTENSION — same remaining V1.5 CRITICAL owner/UI batch owns scripts/main.gd, scripts/knowledge_base_overlay.gd, scripts/self_improvement_overlay.gd, scripts/computer_overlay.gd and owner/UI regression. Fix downstream rename60 ceiling, folder750 silent omission with cancellation/yielding/actual-overflow reporting, and improvement-display/history controls. Computer goal text alone cannot prove action completion: preserve response as UNVERIFIED, never label an unobserved action complete. Keep permissions/master-stop and3–10 tournament protected; no new capability introduced.
+
+ACTIVE CLAIM EXTENSION — same remaining owner-resource package owns scripts/android_file_tool_bridge.gd and voice/voice_logger.gd with owner regressions: remove native tool5000/200000 downstream ceilings in favor of actual File settings; add private Voice log rotation/message budgets with preserved5MiB/1200 defaults, zero-unlimited and redaction preceding clipping. Log path test seam isolates fixture files; raw transcript/TTS/microphone content remains excluded. No speech model/dependency change.
+
+ACTIVE CLAIM regression path: tests/desktop_ui_smoke.gd belongs to this same owner/UI extension; execute actual live rename field with raised and zero owner budgets, restore prior policy in memory. No fixture replaces Main UI or private ChatStore.
+
+ACTIVE CLAIM EXTENSION — same V1.5 CRITICAL Android package/release-gate repair owns android_plugin/plugin/build.gradle.kts, addons/AuroraFoxRuntime/export_plugin.gd, tests/test_android_contract.py and tests/test_android_production_pack_acceptance.py. Confirmed local AAR export omits existing Commons Compress/Zstd dependencies, and Zstd runtime selected JVM JAR rather than Android AAR. Synchronize compile/export artifacts at unchanged pinned versions; add Android native packaging preflight. No new format backend/major library choice, signing or S3 integration. Official upstream zstd-jni README explicitly requires implementation VERSION@aar with testImplementation VERSION; Godot plugin v2 exposes Maven libraries separately via get_android_dependencies.
+
+ACTIVE CLAIM EXTENSION — Android package prevention also owns build/build_android.ps1, tools/verify_android_archive_runtime.py and tests/test_android_archive_runtime.py. Inspect produced APK native libraries and actual DEX class definitions before acceptance; references alone do not prove dependency packaging. Preserve signing/version policy.
+
+ACTIVE CLAIM path reconciliation — .github/workflows/android-apk-artifact.yml trigger paths cover the APK prevention tool and regression, under the existing package extension. No separate CI lane.
+
+
+### COHERENT REPAIR / OWNER UI / ANDROID PACKAGE — local acceptance and CI evidence
+CLAIM:WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE remains ACTIVE. Published recovered package SHA:fc20ec4f3457a65b51fdb9c874ed37ee23445767 (59 authored paths), parent3bb31194. This repair starts at fc20ec4f and is one accumulated publication, not per-small-group commits.
+CI_SNAPSHOT:46 checks,36SUCCESS,5FAILURE,3SKIPPED,2IN_PROGRESS. Real Core Windows, real Core Android emulator, normal Android path, native Windows acceptance, Android plugin and APK build SUCCESS. Failures: stale offline autonomy fake (Godot Core run37531842599, Work37531842564, cross-subsystem37531842485 and downstream integration gate) and missing production cache-key constants in AST fixtures (File Intelligence37531842599). Both actual root causes repaired without weakening production behavior. Windows package and real1GiB import are still executing on fc20; retain their evidence, no cancellation/waiver or endless polling.
+ACTION: owner rename propagates raised/zero limits; folder traversal reports actual omissions/errors, yields and cancels; improvement UI/history and private voice diagnostics use owner budgets; Android tools use actual owner extraction/tree budgets; Computer text response cannot assert unobserved action success. Additional exact-statement audit classification leaves open inventory visible. Existing Android archive Maven dependencies now exported and Android Zstd AAR selected; actual produced-APK gate requires both JNI ABIs and DEX class definitions, not just references. No version change, S3 or future runtime changes.
+TEST: preceding broad Python repair176PASS+1SKIP+2subtests; final affected parser/index/owner/package batch96PASS+1SKIP+2subtests; separate Android verifier/production acceptance9PASS; canonical Android contractPASS. Actual Godot expanded owner regressionPASS (including cancellation, tool routing, voice redaction/rotation and text-only action UNVERIFIED), actual desktop/mobile rename smokePASS; all13 cross-subsystem Godot scenarios locallyPASS. Owner fixture retains20ObjectDB/8resource cleanup diagnostics, not a device/release acceptance claim. New package gate has not yet run on an actual newly built APK. Optional local OCR test SKIPPED, never PASS.
+MEMORY:AF-MEM-121/122 record CI fake failures, autoload/script-path fixture loading and Android dependency packaging with upstream AAR SHA25685c13f90649746aaa622ee2bd67ec142bfbb61cae296c584a98c787834eb26cf.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: recovered package published; full CI failure causes collected and locally repaired as one coherent block, owner UI and existing Android packaging defects addressed.
+REMAINING: audit/current CRITICAL unfinished source including native formats; new exact-SHA full CI, real package/device/production knowledge/update/release gates and final version synchronization.
+BLOCKERS:none for publication/source continuation; local OCR integration runtime absent; physical-device/release evidence still required.
+NEXT:publish coherent repair, preserve still-running predecessor evidence; continue remaining native-format/source gates. Do not declare freeze or release acceptance from successful predecessor APK lacking the new package preflight.
+
+
+### V1.5 RECOVERY — external execution transport blocker / durable handoff
+CLAIM:WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE remains ACTIVE, blocked by execution service transport, not by owner authorization.
+ROADMAP_RELEASE:V1.5.0.0; SCOPE_CLASS:CRITICAL; ROADMAP_SECTION:4(File Intelligence, owner controls, existing package gates); ADR_REFS:existing ADR-0001/0002/0003 boundaries preserved. Intended PATCH/native completion and BUILD fixes accumulate into final version-last V1.5; current canonical versionV1.4.1.1/code100007 unchanged.
+PUBLISHED_COMMITS:fc20ec4f3457a65b51fdb9c874ed37ee23445767 recovered59-path coherent package; bf96ae7202fd89e6441c63b1bd53d1afca737773 coherent24-path CI fixture/owner UI/Android dependency package repair. GitHub authoritative source HEAD before this documentation checkpoint is bf96ae7, not unpublished native source.
+LAST_EXACT_BF96_CI:42SUCCESS,3SKIPPED,1IN_PROGRESS(package-windows112521168861),0FAILURE. Real1GiB import nowSUCCESS. Native Core Windows/Android emulator, normal Android path, plugin/APK and corrected source regressions green. Skips are not PASS; pending Windows package not accepted.
+UNPUBLISHED_NATIVE_WORK: isolated checkout /workspace/scratch/29cc88377b5e/v15-recovery, starting bf96ae7, contains prepared coherent native XLS(BIFF8)/7z/RAR4/RAR5 readers and resource/package prevention. This source is NOT in GitHub and NOT tested by bf96 CI. Do not recreate or declare it accepted until recovering actual files and hashes.
+OWNED_PATHS_EXTENSION:android_plugin/plugin/src/main/java/com/aurorafox/runtime/{SevenZTextReader,RarHeaderPreflight,RarTextReader,OleDirectoryPreflight,XlsTextReader,FileAnalysisLimits,FileOutputBudget,ArchiveTextReader,TarTextReader,AndroidFileRuntime}.kt; corresponding new parser JVM tests and existing FileAnalysisLimitsTest; pinned textual fixtures under src/test/resources/native_archive; bundled license assets; plugin/build.gradle.kts; addons/AuroraFoxRuntime/export_plugin.gd; scripts/{owner_resource_policy,settings_overlay,file_intelligence_client}.gd; tests/owner_resource_limits_smoke.gd; owner/native Android source contracts; tools/verify_android_archive_runtime.py and its regression. Local ACTIVE extensions preceded all source edits; consolidate those exact local extensions on recovery before publishing source.
+DEPENDENCIES:existing Commons Compress1.27.1 plus its optional XZ1.10; prepared pure-Java junrar8.0.0 and POI core5.5.1, without OOXML/evaluator/process extraction. Matching Maven export and required actual DEX definitions/JNI; notices merged/bundled. No independent S3/future runtime/key/signing changes.
+NON_BLOCKERS:independent V1.6/S3 lane and deferred cognition/account/media runtime remain untouched.
+ACCEPTANCE_GATES:recover actual unpublished snapshot; validate source diff and claims; full coherent publication; real new-SHA Android Gradle/JVM/APK/native execution, owner persistence/budget/safety parity; remaining CRITICAL audit, device/performance/accessibility/Knowledge/update/release gates; final version-last synchronization.
+LOCAL_NATIVE_RESULTS:38 actual JVM parser/resource tests PASS on Java17.0.20, Kotlin2.2.21 targeting JVM17, real pinned readers; actual Godot owner/persistence/immutable-snapshot smokePASS, integrated parsePASS, affected Python96PASS+1SKIP+2subtests. Genuine XLS Unicode/SST continuation/cached formulas/50001cells/129-directory-depth raised limits/cycles, real RAR4/RAR5/solid/hostile/encrypted fixtures,7z decoder budgets and ZIP/tar/EPUB parity. Native scale now bounds rounded Float dimensions, no0.01 floor/1% overshoot. These are local unpublished-source results, NOT actual new Android/device acceptance. SLF4J/Log4j no-provider diagnostics, tar deprecation and owner20ObjectDB/8resource exit warnings remain visible.
+LOCAL_LOGS:/workspace/scratch/29cc88377b5e/v15-native-jvm-final.log; v15-native-python-final.log; v15-native-owner-final.log; v15-native-parse-final.log. Snapshot inventory1377unclassified/1282test_evidence/482owner_adjustable/342format_structure/61documentation/22hard_boundary; complete:false. Do not zero audit formally.
+BLOCKER_EVIDENCE:exec_command failed CreateProcess with "exec-server transport disconnected; failed to resume exec-server session: recovery timed out after25s" while preparing native publication/journal append. Subsequent read-only pwd/git-status calls did not return after yielding; no background completion promised. First native publication manifest was not transferred to orchestration store, so GitHub upload cannot safely use it. GitHub connector remains available: publish only this factual documentation handoff, never fabricate native source or mark it remote.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:two coherent source packages published;42 exact-bf96 green checks; remaining native implementation prepared with38 local JVM checks.
+REMAINING:recover/publish actual native source, remaining reviewed CRITICAL inventory and all new exact-SHA native/package/device/update/release acceptance; no freeze/version bump.
+BLOCKERS:execution service transport unavailable; optional local OCR integration runtime absent; physical-device/release gates still external and unaccepted.
+NEXT:restore execution access to the existing checkout, inspect full local diff/untracked authored files and journal extensions, generate exact manifest/hashes and publish native package once; run full coherent new-SHA CI and continue remaining CRITICAL owner/source audit. Preserve original recovered checkout and independent S3 lane. This checkpoint is documentation only and does not publish native code.
+
+
+### ACTIVE CLAIM — WORK-2026-10-06-V15-NATIVE-SNAPSHOT-RECOVERY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence / existing owner resource and truthful partial states
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003; no future-runtime activation
+STARTING_HEAD:c9cc3b328be8e26b9507d310a3a4f40658705b41
+INTENDED_BUMP:D, accumulated release version-last, canonical unchanged
+OWNED_PATHS:android_plugin/plugin/src/main/java/com/aurorafox/runtime/{FileOutputBudget,ArchiveTextReader,TarTextReader}.kt; android_plugin/plugin/src/test/java/com/aurorafox/runtime/{FileAnalysisLimitsTest,NativeDocumentFormatsTest}.kt; append-only master log and engineering memory
+DEPENDENCIES:published bf96 coherent package; fresh main446ce2cd is ancestor; actual source is c9cc3b3. Reconcile/take over these paths from WORK-2026-10-06-V15-RECOVERY-OWNER-PERSISTENCE; no competing native edits found.
+NON_BLOCKERS:independent S3/V1.6 and deferred cognition/media/accounts unchanged
+ACCEPTANCE_GATES:real JVM tests for rounded native Float geometry including skewed pages/tiny budgets and representation errors; ZIP/tar hidden listing is not false partial while actual positive overflow remains partial; one coherent publication and new exact-SHA CI/package gates.
+RECOVERY_EVIDENCE:executor restored, but former isolated checkout and native logs/manifest absent. Search /workspace found no XlsTextReader.kt, SevenZTextReader.kt or v15-native publication/log files; original679acfb checkout at b12d13fa has no authored tracked changes. GitHub branch remains c9cc3b3, main446ce2cd; PR103 draft base df67a1eb unchanged. Native source recorded by AF-MEM-123 cannot be recovered from current files; never reconstruct and label it the same previously tested snapshot. Fresh checkout from GitHub is the evidence baseline. Earlier native38/Python96 results remain historical and do not validate new source.
+LAST_ACCEPTED_BLOCK:published bf96ae7202fd89e6441c63b1bd53d1afca737773:42SUCCESS,3SKIPPED,1IN_PROGRESS Windows package,0FAILURE on fresh GitHub check. Release acceptance incomplete.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+NEXT:reimplement and test the three confirmed present-source native budget defects; preserve absent XLS/7z/RAR implementation as explicit remaining work, not restored/accepted.
+
+
+### COHERENT PRESENT-SOURCE NATIVE BUDGET REPAIR — fresh acceptance
+CLAIM:WORK-2026-10-06-V15-NATIVE-SNAPSHOT-RECOVERY ACTIVE, starting c9cc3b328be8e26b9507d310a3a4f40658705b41. Existing recovery coordinator retains all other remaining CRITICAL paths; these three runtime paths reconciled above.
+ACTION:fix actual current native PDF budget before allocation and ZIP/tar truthful partial states. Reimplemented against GitHub current source; not recovered lost native XLS/7z/RAR work. Added real skewed/single-pixel/Float-representation/Long-budget regressions, full hidden-listing and positive-overflow checks.
+TEST:real Kotlin2.2.21 targeting JVM17 compile PASS, Java17.0.20 JUnit19PASS; Python owner/runtime/package21PASS; git diff --check PASS. Local compile tar.nextTarEntry deprecation remains visible. No Android SDK/device/runtime render acceptance claimed; exact publication CI follows.
+MEMORY:AF-MEM-124 records restored executor/absent unpublished source distinction and fresh evidence. AF-MEM-123's38native tests are historical and cannot validate this source.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:fresh GitHub checkout and current-source budget regressions fixed/tested in one batch.
+REMAINING:missing unpublished XLS/7z/RAR implementation must be recovered or independently reimplemented/tested; remaining CRITICAL owner audit and exact-SHA CI/package/device/update/release gates. Version-last unchanged.
+BLOCKERS:original unpublished native snapshot and logs unavailable after executor recovery; optional local OCR/runtime and physical-device acceptance not available here. Windows package still running at fresh baseline check; no false acceptance.
+NEXT:publish this coherent seven-path source/test/journal package; fresh exact-SHA CI, recover original native snapshot if available, otherwise take a separately declared fresh native implementation block and do not reuse absent-source test claims.
+
+
+PUBLICATION_EVIDENCE: present-source native budget repair published as c2394da5e5f8d3e8da51bf3e3f9a73127a35af1f (seven authored paths), parentc9cc3b3; branch CAS accepted. Exact-c239 CI initial snapshot33checks:8SUCCESS,17IN_PROGRESS,8QUEUED,0FAILURE; no full-CI acceptance asserted. Android plugin run37541676461, Android APK run37541676432, native Windows run37541676501, current Core/File run37541676341. Predecessorbf96 remains42SUCCESS/3SKIPPED/1IN_PROGRESS Windows package112521168861. New source has19freshJVM/21Python localPASS; absent historical native38 results remain ineligible. This documentation checkpoint records produced SHA, does not change source or declare code freeze. NEXT:missing native XLS/7z/RAR snapshot recovery or independently tested fresh implementation; collect current CI reds together; remaining CRITICAL owner inventory, release gates and version-last.
+
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-NATIVE-FRESH-IMPLEMENTATION
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence / existing native formats, bounded extraction and package acceptance
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003; no future runtime
+STARTING_HEAD:57d66899ff473d3e7dc9d1ee9ba009c1a43cfb6a
+INTENDED_BUMP:C plusD fixes accumulated, version-last
+OWNED_PATHS:android_plugin/plugin/src/main/java/com/aurorafox/runtime/{SevenZTextReader,RarHeaderPreflight,RarTextReader,OleDirectoryPreflight,XlsTextReader,AndroidFileRuntime,FileAnalysisLimits}.kt; respective JVM tests and native_archive fixtures/license assets; android_plugin/plugin/build.gradle.kts; addons/AuroraFoxRuntime/export_plugin.gd; scripts/{owner_resource_policy,file_intelligence_client,settings_overlay}.gd; tests/owner_resource_limits_smoke.gd and Android/owner contracts; tools/verify_android_archive_runtime.py and test; master/memory append-only
+DEPENDENCIES:accepted current native budget repair c2394da; pinned existing CommonsCompress1.27.1; XZ1.10/junrar8.0.0/POIcore5.5.1 choices already recorded in c9 handoff, separately verified current API before use. Fresh main446ce2cd remains ancestor.
+NON_BLOCKERS:independent S3/V1.6 lane, deferred cognition/media/accounts; no signing/version changes
+OWNERSHIP_RECONCILE:take over native reader paths from recovery coordinator and integrate current57d documentation. Source loss is a snapshot-recovery obstacle, not a blocker for independently implementing the remaining release scope. Previous stop at missing files was premature; no owner confirmation required to continue authorized V1.5 source work.
+ACCEPTANCE_GATES:real pinned-library format fixtures; pre-allocation header/dictionary/OLE/SST guards; immutable per-job owner budgets, actual partial states, cancellation and unsafe-path isolation; no extraction/process/formula execution; dependency compile/export/DEX parity; one coherent publication/full exact-SHA CI/package/native-device evidence.
+LATEST_C239_CI:42checks completed,34SUCCESS/3SKIPPED/5CANCELLED,0FAILURE. Android plugin37541676461/APK37541676432 and actual Core Windows/Android SUCCESS. Cancelled coverage remains unaccepted; documentation checkpoint advanced HEAD, cause not inferred without workflow evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:fresh native implementation and real regression package; preserve absent prior-source results as historical only; collect all CI reds together.
+
+ACTIVE CLAIM EXTENSION — fresh native implementation owns benchmarks/core/android_godot_benchmark.gd, benchmarks/core/run_android_godot_e2e.sh, new benchmarks/core/native_file_fixtures.gd (preloaded so the APK includes the probe) and tests/test_core_android_e2e_contract.py. Add installed offline APK native XLS/7z/RAR cases through the actual FileIntelligenceClient/plugin, require payload markers/data-only metadata and zero false truncation. Existing Core/OCR/Voice/performance thresholds unchanged; tiny format fixtures never claim production1GiB Knowledge acceptance.
+
+
+### FRESH NATIVE FORMAT PACKAGE — local acceptance / full publication prepared
+CLAIM:WORK-2026-10-07-V15-NATIVE-FRESH-IMPLEMENTATION ACTIVE, starting57d66899ff473d3e7dc9d1ee9ba009c1a43cfb6a. Fresh independent source, not recovered absent native snapshot.
+ACTION:actual bounded native BIFF8 XLS,7z and RAR4/RAR5 readers replace placeholders; raw metadata/decoder/OLE/SST guards, no disk extraction or formulas/macros, private positive XLS settings and immutable job snapshot, matching pinned compile/export/DEX dependencies, notices/fixture provenance. Existing installed Android E2E now requires three real format scenarios through FileIntelligenceClient; tiny hashed fixtures do not count as production Knowledge.
+TEST:39 genuine JVM assertions PASS at final source snapshot;37Python owner/archive/package/Android-E2E contracts PASS; canonical Android contract PASS V1.4.1.1/code100007,arm64-v8a+x86_64; official Godot4.7.1 integrated parse PASS, Android benchmark check-only PASS, owner positive settings/private restart/immutable snapshot smoke PASS; git diff --check PASS. Godot20ObjectDB/8resource cleanup diagnostics and library no-provider/deprecation warnings retained. No new actual Android Gradle/APK/emulator result yet; full coherent exact-SHA CI follows publication.
+BASELINE_CI:current published57d6689 has42SUCCESS/3SKIPPED/1IN_PROGRESS Windows package112542915676(run37541817222),0FAILURE. Cancelled5c239 jobs are not PASS; accepted42green results belong to57d, not this unpublished native source.
+INVENTORY:1376unclassified/1290test_evidence/482owner_adjustable/343format_structure/59documentation/22hard_boundary; complete:false. Do not interpret findings as1376bugs or declare zero audit.
+MEMORY:AF-MEM-125 records actual pre-allocation pitfalls, exact versions/fixture evidence, malformed retained runtime workaround and mandatory actual installed-format gate.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:fresh native source and prevention tests implemented and locally verified in one coherent package; snapshot loss no longer blocks implementation.
+REMAINING:new exact-SHA native Android/plugin/APK/offline installed-format acceptance; remaining scoped owner inventory and package/device/performance/Knowledge/update/release gates. Raw cached BIFF8/date-style limitations and library structural limits remain explicit.
+BLOCKERS:none for independent source continuation/publication; actual platform/release evidence pending and local OCR integration/runtime not installed.
+NEXT:publish whole native package once; collect full CI reds together while independently reviewing remaining current-source CRITICAL operational findings. Preserve pending predecessor evidence; no immediate tiny documentation HEAD update cancelling expensive jobs; record produced SHA with next coherent block. Version unchanged under version-last.
+
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Code/Project Index, owner resource controls and truthful coverage
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 protected boundaries unchanged
+STARTING_HEAD:5683bfe0f58c80fdc013114649f514257ec9e48d
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:file_intelligence/project_index_service.py;scripts/{project_index_client,project_index_tool_bridge,owner_resource_policy}.gd;tests/test_project_index.py;tests/owner_resource_limits_smoke.gd;exact owner/source contract tests;master/memory append-only;benchmarks/core/run_android_godot_e2e.sh mode restoration only
+DEPENDENCIES:published current native36-path package5683bfe, independent source review while its CI runs. Reconcile Project Index paths with recovery coordinator; no other current runtime owner found.
+NON_BLOCKERS:independent S3/V1.6 and future cognition/accounts unchanged; new native Android acceptance remains separately pending and does not establish this index block acceptance
+ACCEPTANCE_GATES:real SQLite index retains unvisited records when byte/count coverage limited; exact fit differs from actual overflow; bounded file reading probes actual growth; per-file symbol/search/query/output budgets honor raised/zero limits; file symlinks cannot read outside approved root; client/tool downstream parity and private owner settings; real regressions and full coherent CI batch
+CONFIRMED_SOURCE_DEFECT:MAX_SOURCE_BYTES4MiB filter silently skips files; stale deletion treats skipped files as absent. _symbols stops at500; search client/API cap100/200, source-candidate SQL LIMIT1000 silently hides later matches. _iter_sources follows file symlinks via stat/read, risking reads outside selected project root.
+PUBLICATION_EVIDENCE:prior native package5683bfe0f58c80fdc013114649f514257ec9e48d tree1919bf2f5aa580f1ac4eb5d8fe91bf3cbfb8d592 published via branch CAS. Initial local native39JVM/37Python and Godot results recorded above. No new exact-native CI acceptance yet. Existing executable shell runner was accidentally tree-mode100644 instead of100755; local source bytes match, restore executable bit with next coherent publication, no independent tiny HEAD cancellation.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement coherent index/coverage controls and real bounds/privacy regressions; collect native CI failures together rather than repeatedly poll or weaken gates.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER additionally owns tests/test_android_e2e_runner.py for observed native568 exact-CI failure112551383944: positive simulated-adb report omitted newly required native XLS/7z/RAR scenarios; align complete fixture and add independent rejection for each absent format. Production runner gate stays required. 568 other check outcomes collected together, no device success presumed.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER additionally owns build/build_android.ps1;tools/configure_android_export.py;tests/test_android_export_assets.py;tools/verify_android_archive_runtime.py;tests/test_android_archive_runtime.py for observed exact568 APK112551383360 failure compressStandardReleaseAssets/Java heap space. Godot4.7.1 template app Gradle heap4536m and no gguf noCompress; pinned bundled Core1282439264bytes. Configure only gguf stored assets before export, keep model/hash/signing/version/runtime behavior and verify actual APK storage; no blanket no-compression or build success claim without full CI.
+
+### SOURCE_IMPLEMENTED / CI_PENDING — index coverage and observed Android gate repair
+CLAIM:WORK-2026-10-07-V15-INDEX-COVERAGE-OWNER
+STARTING_HEAD:5683bfe0f58c80fdc013114649f514257ec9e48d
+ACTION:coherent Project Index coverage/private-owner controls, observed native Android runner fixture correction and Core asset compression repair; executable runner mode restored100755. Per-file SQLite policy/truncation metadata preserves prior derived rows, incomplete traversal never deletes unvisited files, unsafe cached symlink paths purge, actual byte-growth probe prevents oversize reads. Eight private owner limits reach index/client/tool/search/query/excerpts/symbols, zero unlimited; exact-fit/extra-match distinct. Streamed Unicode symbol matching removes1000false-positive candidate cap; search retains terms after20; excerpt markers share output budget.
+TESTS:87PythonPASS+3subtests covering real SQLite source>4MiB,601symbols/partial policy changes, read growth, symlink privacy,130matches,1001false positives, Unicode casefold, migration/query/excerpt bounds, runner missing-format rejection, actual ZIP_STORED metadata and package/version contracts. Actual official Godot4.7.1 owner smoke AURORA_OWNER_RESOURCE_LIMITS_OK with settings save/reload, raised/zero and client limit helper; existing20ObjectDB/8resource cleanup diagnostics retained. Actual pinned Godot4.7.1 application-template configuration idempotence PASS; local full Android export NOT_EXECUTED.
+EXACT_568_CI:44checks at collected snapshot37SUCCESS+4SKIPPED+2FAILURE+1IN_PROGRESS; one-gib import still running, not final acceptance. Confirmed native Android plugin112551383252 actual testDebugUnitTest/installGodotPlugin BUILD SUCCESSFUL9m34s. Confirmed contract112551383944 missing_scenarios fixture error repaired without weakening installed format requirements. APK112551383360 failed compressStandardReleaseAssets Java heap space; narrowly configured gguf noCompress before export, actual model storage verification required. Device/physical/update/release gates remain open.
+INVENTORY:prepared source1409unclassified/1323test_evidence/481owner_adjustable/343format_structure/61documentation/22hard_boundary;complete:false. New code adds findings; this is not a regression count or a claim of1409bugs. Remaining records require scoped review, not blanket classifications.
+PRODUCED_COMMIT:record actual CAS publication SHA in next coherent block, never infer SHA from local tests.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:implemented/tested index owner coverage and actual observed CI corrections locally; prior native source568 published and its plugin Gradle acceptance green.
+REMAINING:next exact-SHA full CI/package/native installed-format acceptance, remaining current CRITICAL owner inventory and release/device/update gates; version unchanged.
+BLOCKERS:none prevents authorized independent source development. Current568APK and contract gates fail as documented; fixes require next coherent exact-SHA execution. Physical/production-signing boundaries are not waived.
+NEXT:publish coherent package, collect full new-SHA CI reds together while continuing remaining in-scope audit/source work.
+OWNERSHIP:index block stays CI_PENDING under this claim; coordinator continues remaining unclaimedV1.5CRITICAL paths.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Work/Computer sandbox baseline, owner controls, truthful bounded file processing
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 invariants unchanged
+STARTING_HEAD:0a7cd1bd10d352f864d0e99cdf297510d38df105
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:scripts/{sandbox_manager,sandbox_tool_bridge,owner_resource_policy}.gd;computer/computer_service.py;tests/owner_resource_limits_smoke.gd;tests/*sandbox* relevant regressions;config/owner_control_policy.json exact reviewed classifications;master/memory append-only
+DEPENDENCIES:reconcile sandbox paths with recovery coordinator; no competing current runtime owner. Fresh main446ce2cd2f979a8ab228f63d090062e8ba48a6eb fetched, already ancestor. Index/package0a7cd1b published tree44df1e3e1e4cf97f284eb306866ffcfff55537ab; its exact-SHA CI pending. Native568 prior CI37SUCCESS/4SKIPPED/2FAILURE/1IN_PROGRESS at snapshot; failures addressed in0a7.
+NON_BLOCKERS:parallel S3/V1.6; future public accounts/cognition; this block does not alter process-execution authorization, isolation, retry/master-stop or signing boundaries
+ACCEPTANCE_GATES:real local workspace files demonstrate raised/zero read/tree/history limits, exact-fit versus actual overflow; service/client/tool parity; byte read bounded before allocation on Windows service; symlink traversal/copy/removal protection; real filesystem regressions and Godot integration; coherent exact-SHA full CI
+CONFIRMED_DEFECTS:SandboxManager silently clips read300000/tree1000/events300, read0 empties content/tree0 hides all and no truncation metadata. Windows tree service silently caps2000 with no request propagation; sandbox_read reads entire bytes before5MB check. Local recursive copy/remove/tree follow directory links. Preserve all existing defaults and hard authorization/isolation invariants while fixing operational coverage.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:one coherent sandbox source/test/privacy/owner package while new package CI runs.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER owns .github/workflows/work-computer-reliability.yml to execute new authenticated filesystem bounds/privacy regressions on Linux and Windows. Local rollback additionally stages before rename and restores backup if application fails; current work must remain untouched on a failed or linked snapshot. Existing auth errors401(missing channel token)/400(path escape) retained; new test expectations aligned to actual existing contracts rather than changing service boundaries.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER owns build/build_android.ps1;addons/AuroraFoxRuntime/export_plugin.gd;tools/configure_android_export.py;tools/android_core_assets.gradle;tests/test_android_export_assets.py for exact0a7 APK112555558672 early contract rejection. Official Godot4.7.1 main.cpp applies installation only when an export preset exists; standalone --quit would exit without installing. Restore required coupled install/export and configure GGUF policy inside existing EditorExportPlugin._export_begin, after EditorNode installs template and before Gradle export. Existing tests/test_android_contract.py remains unchanged; do not weaken it. Shared policy file keeps Python idempotence regressions aligned.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER additionally owns tests/android_asset_export_hook_smoke.gd and .github/workflows/android-apk-artifact.yml for actual Godot export-hook execution before heavy APK build. Real local Godot EditorExportPlugin invocation has passed idempotent template/policy writes and restores fixture files; this is not a full Android export result.
+
+### SOURCE_IMPLEMENTED / CI_PENDING — sandbox coverage, safe local rollback and real export hook
+CLAIM:WORK-2026-10-07-V15-SANDBOX-COVERAGE-OWNER
+STARTING_HEAD:0a7cd1bd10d352f864d0e99cdf297510d38df105
+ACTION:five private sandbox read byte/character/tree/workspace/event owner defaults propagate through client/tool/Windows service. Zero means unlimited; real extra item proves tree overflow and local/remote clipping is visible. Windows service denies oversized stat before open, probes actual read growth with budget+1. Local links excluded from tree and read/write/copy/index/recursive cleanup. Local rollback stages before swapping work/backup and restores backup if application fails, exposing restoration status/recovery path rather than falsely claiming success.
+OBSERVED_CI_FIX:0a7 APK112555558672 failed original coupled-install contract. Official Godot4.7.1 source proves standalone install flag has no effect without an export preset. Restore coupled --install-android-build-template --export-release; existing AndroidExportPlugin._export_begin configures installed application template using shared GGUF-only policy before Gradle. Original test_android_contract unchanged and passing; actual APK ZIP_STORED verifier remains required. Added real Godot editor-hook regression to APK CI, new authenticated service filesystem regressions to Linux/Windows Computer CI.
+TESTS:124PythonPASS+3subtests with real authenticated filesystem read5000001bytes/tree2001files, privacy, existing Computer authorization/idempotency/crash/concurrency/network contracts, SQLite owner coverage, ZIP storage and Android/version/package contracts;1Starlette/AnyIO deprecation warning. Actual official Godot4.7.1 owner smoke PASS (save/reload raised/zero sandbox settings, exact tree/extra, read byte/character, event retention, staged rollback, hostile links preserving current/external files); existing20ObjectDB/8resource exit diagnostics retained. Actual EditorExportPlugin hook assertions PASS with idempotent source/policy writes/restoration, editor fixture209ObjectDB/Canvas/RID exit diagnostics retained; not APK/device acceptance. Canonical Android contract V1.4.1.1/code100007 PASS. diff--check PASS.
+EXACT_0A7_CI:43checks snapshot35SUCCESS+3SKIPPED+1FAILURE+4IN_PROGRESS. FailedAPK112555558672 fixed locally as above; real-normal-path Android112555714999/native probe112555603588/plugin112555558172 and late contract112558255878 pending, not PASS. No waiting/blanket CI-success claim.
+INVENTORY:1343unclassified/1337test_evidence/574owner_adjustable/343format_structure/61documentation/22hard_boundary;complete:false.93exact reviewed index/sandbox owner lines classified with full-line anchored patterns; untouched execution/transport/metadata limits remain open. New code/test findings keep count dynamic, not a readiness proxy.
+PRODUCED_COMMIT:actual CAS SHA will be recorded in next coherent block.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:source/test/journal sandbox and observed export repair package complete locally; previously published native568 and index0a7 are durable.
+REMAINING:next-SHA full CI/native installed APK/package acceptance; remaining current CRITICAL source owner controls/inventory and canonical physical/update/release gates.
+BLOCKERS:none stops independent authorized source work. Existing0a7APK contract failure requires next exact-SHA verification; physical/production-release identity gates remain open and unwaived.
+NEXT:publish coherent package, continue remaining current operational limits while collecting full next-SHA CI reds together; preserve version-last and independent S3 lane.
+OWNERSHIP:this claim stays CI_PENDING; source paths released for coordinator takeover after publication, no duplicate independent native/index work.
+
+
+### ACTIVE CLAIM / REMOTE SOURCE CHECKPOINT — WORK-2026-10-07-V15-ANDROID-TAG-TRANSPORT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 File Intelligence installed native-format APK/package gates and owner-control source handoff
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:fb565eba2b903ffbb7e840fcc832a0f7771f92ed
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:addons/AuroraFoxRuntime/export_plugin.gd;tests/android_asset_export_hook_smoke.gd;tests/test_android_export_assets.py;master/memory append-only
+DEPENDENCIES:take over exact observed Android tag defect from sandbox/export claim and unpublished WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT. Use actual published fb source cached from its successful GitHub tree, not an invented lost snapshot.
+NON_BLOCKERS:V1.6 runtime/S3/future cognition unchanged; physical and production signing gates unwaived
+ACCEPTANCE_GATES:actual lowercase android feature tag configures final app before Gradle; non-Android fixture leaves template untouched; unchanged original Android contract/ZIP_STORED verifier and exact-new-SHA full APK/native installed-format CI
+OBSERVED:fb APK112558683161 and normal-path112558907343 exported APK but verifier rejected compressed Core. Official pinned Godot4.7.1 platform/android/export/export_plugin.cpp get_platform_features lines4476-4479 emits mobile/android lowercase. Previous hook and synthetic fixture incorrectly used uppercase Android. Correct three published files remotely; no weakening of the APK storage or native-format gates. This exact remote repair has NOT_EXECUTED local tests; new-SHA CI must accept it.
+EXTERNAL_EXECUTION_BLOCKER:local command service stopped returning results. Initial read/patch/test operation stayed pending for multiple minutes; independent login=false pwd in /tmp also did not return. No rejection/approval or GitHub authorization problem was observed. Filesystem retention/existence is UNCONFIRMED, not claimed lost. GitHub connector remains usable.
+UNPUBLISHED_SOURCE_RESERVATION:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT startingfb owns agent/research_collector.gd;voice/speech_queue.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/{research_collector_privacy_smoke,research_source_resilience_smoke,research_response_owner_smoke}.gd;tests/test_research_collector_privacy_contract.py;tests/test_research_source_resilience_contract.py;tools/run_research_response_smoke.py;.github/workflows/research-quality-ci.yml;config/owner_control_policy.json;master/memory append-only. Do not repeat this local package blindly: inspect /workspace/scratch/29cc88377b5e/v15-recovery after execution recovers and reconcile fresh GitHub HEAD first.
+UNPUBLISHED_IMPLEMENTATION:eight private Research response/log/title/summary/error and speech chunk/natural/sentence settings, raised/zero semantics, honest title/summary/error clipping; actual HTTPRequest body0 mapped to engine-1. Speech tiny/code chunks preserve content within budget and avoid extra punctuation overflow; volume0 becomes actual mute. Marked credentials now scrub before external-query filtering/error clipping, preserving240chars/24words/path-email-URL exclusion and curator gates. Exact native owner-budget/format classifications were prepared without editing native runtime.
+LOCAL_EVIDENCE_FOR_UNPUBLISHED_PACKAGE:147PythonPASS+3subtests,1Starlette/AnyIO deprecation; real Godot owner smoke PASS; actual loopback HTTPRequest2097153bytes rejected by2MiB, accepted by2097153/zero with complete matching text/hash; actual research privacy/log0/raised/threshold and source resilience PASS; voice smoke PASS. Real marked-credential probe originally true for outbound query/error, after fix both false. Workflow YAML parse/diff--check PASS. These results do NOT validate fb or the new remote tag-repair SHA.
+LOCAL_DIAGNOSTICS:owner smoke20ObjectDB/8resources and voice instantiation19ObjectDB/6resources retained; editor-hook fixture209ObjectDB/Canvas/RID exit diagnostics retained. No assertion failures claimed from those diagnostics and no device success inferred.
+PREPARED_INVENTORY:1269unclassified/1336test_evidence/623owner_adjustable/356format_structure/62documentation/26hard_boundary;complete:false. Counts from unpublished local source only, not current GitHub source; do not reuse as final audit acceptance.
+PUBLISHED_SOURCE:fb565eba2b903ffbb7e840fcc832a0f7771f92ed tree4ea14b967de0a7be161361d91f78afad5101223e; earlier native568 and index0a7 already published. New remote tag-repair commit must be read back from CAS and recorded as actual SHA; no inferred code freeze.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:durable native/index/sandbox packages; actual observed tag fix prepared from published source; unpublished Research/Voice local evidence preserved honestly
+REMAINING:recover/read and publish actual Research/Voice source; remaining scoped owner inventory/current unfinished CRITICAL blocks; exact-SHA APK/native installed-format/package/physical/update/release gates, version last
+BLOCKERS:execution service unavailable for actual source retrieval/testing; currentfb APK/normal-path storage gate failures require exact new-SHA acceptance. GitHub writes remain available. Physical/production signing gates remain open.
+NEXT:read fresh branch and actual recovery checkout once command execution works; preserve existing work, compare against remote tag fix, run one coherent full batch and publish real source; continue remaining current-scope controls. Do not claim background work or missing source recovery.
+
+
+### EXTERNAL_BLOCKER / durable exact-SHA execution handoff
+CLAIM:WORK-2026-10-07-V15-ANDROID-TAG-TRANSPORT
+PRODUCED_SOURCE_COMMIT:2c7338dc4d1f1ffb0002c0dadf0dc2fd32d5e8bd
+PRODUCED_TREE:b8978b8a749da9845afb4920964dfec23c476203
+PARENT:fb565eba2b903ffbb7e840fcc832a0f7771f92ed
+PUBLISHED_RESULT:five-path source+tests+journal/memory checkpoint CAS succeeded. Lowercase Android-tag fix independently based on actual published source; exact-new-SHA CI pending, local case-fix tests NOT_EXECUTED.
+CONFIRMED_EXTERNAL_BLOCKER:both original patch/test call and independent pwd in /tmp returned CreateProcess error: failed to query exec-server capabilities; environment registry request failed (409 Conflict, environment_offline): Environment is not connected. This is an unavailable execution environment, not a sandbox approval rejection or test failure. GitHub connector remains functional.
+WHY_DOCUMENTATION_CHECKPOINT:record actual produced source SHA and newly returned exact outage error for recovery, despite normally avoiding immediate docs-only successor heads during expensive CI. No source changes, version bump or release claim in this final emergency evidence checkpoint.
+RECOVERY:read fresh main/PR103/branch HEAD; inspect actual /workspace/scratch/29cc88377b5e/v15-recovery and its unpublished Research/Voice files/147-test logs before reapplying anything. Local queued case patch may not have executed; reconcile with published2c. Actual local existence/retention remains UNCONFIRMED while environment is offline. Do not reconstruct missing code and reuse old local test results as if exact new source passed.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:native568/index0a7/sandboxfb and actual-tag2c published; tested unpublished Research/Voice evidence and exact recovery ownership preserved above
+REMAINING:retrieve/publish actual Research/Voice package, current scoped owner inventory/unfinished source, exact-final-SHA CI/APK/native device/update/release gates, version last
+BLOCKERS:environment_offline blocks local retrieval/implementation/testing; exact2c APK/native acceptance pending; no production identity or physical gate waived
+NEXT:restore execution environment, preserve/read actual checkout and compare to fresh GitHub; publish remaining real source as one coherent batch and continue V1.5 CRITICAL acceptance.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 owner-adjustable current Research/Knowledge observation buffers and Voice speech chunk baseline
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged; no future cognition or media provider integration
+STARTING_HEAD:fb565eba2b903ffbb7e840fcc832a0f7771f92ed
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:agent/research_collector.gd;voice/speech_queue.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_research_collector_privacy_contract.py;tests/test_research_source_resilience_contract.py;tests/research_source_resilience_smoke.gd;relevant Voice/research exact contracts;config/owner_control_policy.json reviewed exact patterns;master/memory append-only
+DEPENDENCIES:reconcile paths with recovery coordinator. Sandbox/export17-path coherent fb565eba2b903ffbb7e840fcc832a0f7771f92ed tree4ea14b967de0a7be161361d91f78afad5101223e CAS published, exactCI pending; do not duplicate it. Current main ancestor remains446ce2cd.
+NON_BLOCKERS:V1.6 runtime/media/S3 excluded. External query scrub240chars/24words and personal-file/curation/privacy boundaries remain enforced; provider pagination/timeouts/backoff remain explicitly separate unresolved inventory, not made ready by this output block.
+ACCEPTANCE_GATES:private owner save/reload; raised/zero Research title/summary/response/log/error budgets with truthful clipped fields and Godot byte-cap semantics; speech owner chunk/min-natural/min-sentence controls preserve text, bound tiny/code chunks and avoid extra punctuation overrun; real Godot privacy/resilience/voice regressions plus coherentCI
+CONFIRMED_DEFECTS:fixed Research response2MiB/summary1800/log8MiB/errors16/title300 operational limits; Voice fixed220chunk/96natural split silently constrains downstream segmentation despite other owner voice settings and can add punctuation beyond cap or bypass cap for fenced code.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent owner output-control and actual bounded/unlimited regressions while published exact-SHA CI runs.
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT owns tests/research_response_owner_smoke.gd;tools/run_research_response_smoke.py;.github/workflows/research-quality-ci.yml for real loopback HTTPRequest body-byte-limit evidence (above prior2MiB default, exact/overflow, zero) and research log rotation fixture. No request to external providers or private user files is needed for this deterministic gate.
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT owns tests/research_collector_privacy_smoke.gd to prove private owner log zero/raised/threshold behavior using the existing isolated Research audit fixture; preserve all external-only/query-scrub/curation acceptance checks.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT corrects Voice mute in owned speech_queue: previous linear_to_db(max(effective,0.001)) produced audible gain even at owner volume0. Use AudioStreamPlayer.volume_linear with actual Godot assertions for0mute/1gain. Config classification additionally owns exact new native reader snapshot-budget/representation lines for reviewed existing implementations only; no native runtime edits or duplicate native acceptance claim.
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT confirmed current privacy defect with real Godot: _external_query("password CREDENTIAL_FIXTURE local AI") retained marked credential; _record_request_error(...,"token=CREDENTIAL_FIXTURE") retained it in private telemetry. Fix credential redaction before external token filtering and error clipping inside already-owned Research source; add real query/telemetry regressions. Preserve240/24 external-data minimization, path/email/URL exclusion, no personal-file scans and curator gates.
+
+### RECOVERY / coherent Research-Voice source validation
+CLAIM:WORK-2026-10-07-V15-RESEARCH-SPEECH-OUTPUT remains ACTIVE; actual files recovered intact, no source reconstruction.
+RECONCILED_HEAD:5886d8425e2bd2d782e99af5a442431516fa48f0; main446ce2cd2f979a8ab228f63d090062e8ba48a6eb. Remote Android three-file repair and both emergency journal/memory records preserved; local claim/output source integrated on that head.
+EXACT_HEAD_CI:5886 has46 completed checks:43SUCCESS,3SKIPPED,0FAILURE. Skips are standard-linux/large-linux-push/manual-large, not counted as executed. Windows package37550381758/112582032674, Android APK37550381671/112567801684, Android normal path37550381674/112568837622, Core Android37550381666/112567488741 and Windows37550381745/112566116782 allSUCCESS. This validates published native/index/sandbox/tag repairs, not unpublished Research/Voice source.
+LOCAL_REVALIDATION:85Python owner/audit/Research/index/sandbox/export/recovery/specialist/filesystem tests PASS after remote integration;20existing voice/config Python cases PASS using actual system NumPy appended to isolated test environment. Actual Godot owner/Research privacy/resilience/2097153-byte loopback and lowercase Android editor-hook markers PASS. Existing owner20ObjectDB/8resources and editor209ObjectDB/RID diagnostics retained, no clean-shutdown claim.
+TEST_ENVIRONMENT:initial expanded collection lacked NumPy, then11archive/spreadsheet cases lacked requests. These are missing test dependencies, not established source failures; never turn them into PASS without a successful rerun. Production dependencies/version files unchanged.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:restored actual source and exact remote acceptance evidence, private8controls/true mute/redaction/truthful truncation with real runtime tests.
+REMAINING:publication/new-SHA CI, remaining current owner inventory/source and physical/update/release gates, version-last.
+BLOCKERS:none stops authorized independent source work; physical/production-release acceptance remains unwaived.
+NEXT:publish real coherent Research/Voice package then proceed to remaining scoped operational controls; no V1.6/S3 expansion.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-RESEARCH-REQUEST-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current research operational request/collection/backoff/diagnostic owner controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:a388abdffdb27953fecad3074c0e0d99f0355214
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:agent/research_collector.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/research_source_resilience_smoke.gd;tests/research_response_owner_smoke.gd;tools/run_research_response_smoke.py;tests/test_research_source_resilience_contract.py;tests/test_research_collector_privacy_contract.py;config/owner_control_policy.json exact reviewed lines;master/memory append-only
+DEPENDENCIES:coordinator takes over published Research/Voice claim source paths while new-SHA CI runs. Actual14path source a388 tree9742281889d81b78f5749f92467d8901b9f5ba88 published through connector CAS; direct gitpush failed missingusername, no approval rejection. Archive/spreadsheet dependencies restored from exact repository requirements;11cases+2subtests nowPASS.
+NON_BLOCKERS:provider pagination/API result-count handling remains separate unfinished review; V1.6 runtime/S3 excluded. Query240chars/24words/token64 privacy/curator gates unchanged. Signature/physical/update gates unwaived.
+ACCEPTANCE_GATES:private save/reload of raised/zero request and collection seconds, backoff base/max/failure controls; unlimited0 never mistaken for exhausted; subsecond global remaining honored; saturating exponential delay without float overflow; source identity not clipped into collisions; diagnostic clipping only after credentialredaction. RealGodot/loopback and currentPython contracts; exactnewSHA CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement one current request-policy package and run coherent local validation.
+
+### Coherent Research request-policy source checkpoint
+CLAIM:WORK-2026-10-07-V15-RESEARCH-REQUEST-POLICY ACTIVE; source acceptance localPASS, newexactSHA CI required.
+STARTING_HEAD:a388abdffdb27953fecad3074c0e0d99f0355214
+CHANGES:nine private persisted operational controls with unchanged defaults and raised/zero semantics. Finite collection budget survives unlimited per-request timeout; exhausted uses-1 sentinel, engine0 remains unlimited, subsecond remaining time preserved. Exponential backoff saturates by signed64 representation in at most63doublings instead of floatpow;0base disables delay,0maximum removes operational ceiling and0failure-cap retains actual counts. Full source IDs survive restart without96char collision. Diagnostic clipping follows redaction and zero retains full sanitized text.
+TESTS:96PythonPASS+2subtests (owner/audit/Research/SQLite/sandbox/export/recovery/specialist/realarchive/spreadsheets),1existingStarlette/AnyIOdeprecation. Actual Godot owner private save/reload0/10001 of all9newcontrols and Research resilience PASS; genuine long-ID restart, backoff huge-count saturation, raised/zero diagnostics/redaction, timeout0/10001/subsecond helper checks. Actual loopback2097153byte default/exact/zero body gates plus request1s timeout, request0 delayed success, global300ms timeout with request0, exhausted preflight PASS. Existing owner20ObjectDB/8resources exit diagnostics retained. Diff/YAML gate remains unchanged.
+INVENTORY:{"test_evidence": 1338, "unclassified": 1251, "documentation": 62, "owner_adjustable": 634, "format_structure": 359, "hard_boundary": 26};complete:false. Fourteen exact reviewed lines classified; untouched provider pagination/result-count limits remain visible, no audit-zero shortcut.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedResearch/Voice a388; current requestpolicy implemented and actually tested.
+REMAINING:exactnewSHA CI/package, provider/request/Computer remaining controls and scoped source, physical/update/release/version-last.
+BLOCKERS:none stops independent authorized source; physical/production-release evidence unwaived.
+NEXT:publish coherent request-policy package; continue largest free current Computer/transport control block while CI runs; collect actual red outcomes together.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-WRITE-SNAPSHOT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer owner resource controls and snapshot/rollback safety
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:3e0fba1eeb75027f08f4dc3e6d11688f329ac12c
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/tool_registry.gd;scripts/owner_resource_policy.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;config/owner_control_policy.json exact-reviewed lines;master/memory append-only
+DEPENDENCIES:coordinator takes over published sandbox source paths; no concurrent source lane edits evidenced in freshmain/PR. Researchrequest package3e0fba1 published, source tested96Python+2subtests and actualGodot/HTTP, exactCI pending.
+NON_BLOCKERS:execution/GUI deadline cancellation and provider pagination remain separately unfinished; no unsafe deadline relaxation in this block. V1.6 runtime/S3 unchanged. Action idempotency, authentication, masterstop and strictcontainer boundary retained.
+ACCEPTANCE_GATES:Windows writebytes and snapshotentries/bytes capturedfromprivateownerpolicy,0unlimited/raised/exact/overflow/rejectednegative; failure before replacement preserves workspace; links/junctions rejected at snapshotpre/postflight; authenticated real filesystem servicecalls and ownerpersist tests, currentComputer safety suite plus exactnewSHA CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent Windows write/snapshot budget propagation and genuine filesystem regressions.
+
+### Coherent Windows write/snapshot owner source checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-WRITE-SNAPSHOT ACTIVE; implementation/local acceptancePASS; exactnextSHA CI needed.
+CHANGES:three Windows private controls defaultwrite2000000bytes/snapshot5000entries/536870912bytes. Captured in both ComputerClient/ToolRegistry write paths and SandboxManager write/snapshot/rollback. Sidecar authenticated models accept raised/0 budgets with nonnegativevalidation; snapshot preflight/post-copy checks use same immutable request. Overflow before apply retains current work. Symlinks and Windows reparse/junction entries forbidden even when budgets0. Existing local/Android write behavior unchanged; no execution/GUI timeout relaxation.
+TESTS:71PythonPASS,1explicitLinuxSKIP for real NTFS-junction fixture;1existingStarlette/AnyIOdeprecation. Actual authenticated filesystem cases:UTF8write2000002bytes(defaultreject/exact/0success/lowcap preserves existing),5001-entry snapshot(defaultreject/exact/0success),byte exact/overflow/0snapshot and rollback with failedrollback retainingmodifiedcurrentfile,unauthenticatedrequests401,negativebudgets422,linkboundary400. ExistingComputer concurrency/idempotency/failure/safety contractsPASS. ActualGodotowner save/reload0/10001 for3newfields and genuine production ComputerClient/ToolRegistry write-payload capture0/default/raisedPASS; transport replaced only at fixture boundary, no Windows native action claimed. Existing owner20ObjectDB/8resources shutdowndiagnostics retained.
+REPAIR_EVIDENCE:initial old snapshot regression dynamically monkeypatched MAX_SNAPSHOT_BYTES; static new Pydantic defaults incorrectly captured oldvalue. default_factory restores legacy runtime default behavior while explicit captured request remains authoritative. Existing symlink error text retained and expanded to reparse. First new Godot fixture insertion had wrong classindentation, corrected; actual rerunPASS required, no parseerror waived.
+INVENTORY:{"test_evidence": 1365, "unclassified": 1249, "documentation": 62, "owner_adjustable": 652, "format_structure": 359, "hard_boundary": 26};complete:false. Only reviewed write/snapshot budget lines classified. Other Computer execution/GUI/output/metadata ceilings remain unresolved.
+CURRENT_PRIOR_CI:3e0fba1 observation37checks=31SUCCESS/3SKIPPED/3IN_PROGRESS,0FAILURE; full eventual total can grow as downstreamjobsappear. Pending is not accepted.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Research/Voice a388 and request3e0f source published; current Windows write/snapshot actual local gatesPASS.
+REMAINING:publish/check this source, full owneraudit/currentunfinishedblocks and exactrelease/package/device/update/version-last gates.
+BLOCKERS:none prevents source work; real Windows junction acceptance awaits Windows runner, physical/production identity gates remain unwaived.
+NEXT:publish coherent package, continue remaining current controls and collect actual CI failures as a batch.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-EXEC-CANCEL
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer cancellation/MasterStop lifecycle and recovery
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged; no autonomyfoundation expansion
+STARTING_HEAD:d251a2a810d329a9c5bc650d8cfc8523ba2a622d
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/tool_registry.gd;new scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;new tests/computer_request_guard_smoke.gd;new tools/run_computer_guard_smoke.py;.github/workflows/work-computer-reliability.yml;config/owner_control_policy.json exactreview;master/memory append-only
+DEPENDENCIES:coordinator takes over current Computer source paths after write/snapshot10path publicationd251tree from verifiedCAS. No parallel S3/native/research runtime changes.
+NON_BLOCKERS:execution deadlines/GUI/output controls remain separate until safe cancellation is actually accepted; existing deadlines unchanged in this block. V1.6/V1.7 newstate/planning integration excluded; physical/signing/release gates unwaived.
+ACCEPTANCE_GATES:authenticated per-execution cancellation, cancel-before-start failclosed, duplicateID never executes twice, masterstop/permissionrevalidation while awaitingrequest, transportfailure cancels owned child or reports uncertain; shutdown/parentexit stops all ownedprocessgroups. Actualchild/grandchild/heartbeat/loopback Godot tests; existingComputer/idempotency/container gates unchanged; exactnewSHA WindowsCI required.
+SOURCE_FINDING:threeComputer HTTP paths checkmasteronlybefore request then unconditionally await completion. Service _run_process has timeouttree-kill but no authenticatedcancel endpoint or shutdownregistry; _parent_watchdog usesos._exit without killing activeprocessgroups. This leaves an in-flight sandbox process outside current MasterStop/recovery contract. Sourceevidence, not physicaldevice acceptance.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement and actually verify owned-execution cancellation without relaxing any deadline or permission boundary.
+
+### Coherent owned execution cancellation source checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-EXEC-CANCEL remainsACTIVE/CI_PENDING after source publication; no physical/container localacceptance invented.
+CHANGES:threeComputer requestpaths assign trusteduniqueexecutionIDs and use sharedguard to revalidate master/Computerpermission whilewaiting and beforeacceptingcompletion. Masterstop/transportfailure cancels by authenticatedID; cancellationRPC remainsauthorized whenmasterflag0. Pre-cancelled/reusedIDs neverlaunch. Registryretainsfailed-stopPID/container ownership for retry; terminal failures neveradvertiseautomaticretry. Sidecarstop/restart requests cancel_all beforekillingbackend; failedack keepssidecarownership ratherthanstartingduplicatebackend. Stopall freezes newprocess/GUIlaunch to close late-requestrace; registeredGUIworkers arestopped; parentwatchdog/shutdown cancelsownedgroups. Nameddaemoncontainers need explicit engine rm--force; CLIkillalone is notterminationproof. Unconfirmedstop carriesuncertain_external_state.
+TESTS:76PythonPASS,2explicitlocalSKIP(NTFSjunction and actualDocker);1existingStarlette/AnyIOdeprecation. GenuinePythonchild+grandchild terminate andheartbeatstops;cancel-before-start/reusedIDneverexecute;timeout/shutdownkillownedprocess;late-after-stopneverlaunch;actualmultiprocessingGUI-shapedworker(behaviorisolated, no desktopaction) stopped;injectedfailedterminationretainsrealPIDthenretrykillsit. ActualGodot+actualuvicornsidecar loopback masterstop/transporttimeout/unavailableack/activeprocess synchronousshutdownPASS. Trustednonce ignoresmodel ID. ExistingGodotowner/masterstop/response classifiersPASS; expectedmalformedJSON fixture engineERRORdiagnostics retained, owner20ObjectDB/8resources retained. Godotparse/YAML/diffchecksPASS.
+CI_PREVENTION:work-godot runsactualsidecar fixture withpinneddependencies. LinuxComputerjob preparespython:3-slim solely asCItestfixture, pinsresolvedlocalimageID, setsAURORAFOX_REQUIRE_CONTAINER_CANCEL=1; actualdaemoncontainer testcannotSKIP there and verifiesrunningnamedcontainerthenabsenceaftercancel. Product --pull=never/network-none/read-only/no-new-privileges/container-first boundaries unchanged. LocalDocker executable isabsent, so newactualDockerCI remainsrequired andunverified.
+INVENTORY:{"test_evidence": 1393, "unclassified": 1280, "documentation": 63, "owner_adjustable": 652, "format_structure": 357, "hard_boundary": 26};complete:false. Newcancellation source remainsvisible to audit; no blanketclassification or readinessincrease.
+CURRENT_PRIOR_CI:d251observation42checks34SUCCESS/3SKIPPED/5IN_PROGRESS,0FAILURE. Pending/downstreamtotalmaygrow; nofullgreenclaim.
+LIMITATIONS:realWindowsprocess-tree/junction and actualDocker daemonacceptance require newexactSHA CI. Abrupt externalOSkill/crash/reboot is notproven by gracefulRPCshutdown; uncertainty must remainvisible, not marketed asrollback ofalreadycompletedexternalaction. Existingfixedexecution/GUI/output andproviderpaginationcontrols remainunfinished, versionunchanged.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published a388/3e0f/d251; ownedcancellationlocalactualbehaviorverified asabove.
+REMAINING:publish/checkthisbatch, currentownercontrols/audit/unfinishedCRITICALsource, finalexactSHA/package/physical/update/releasegates; versionlast.
+BLOCKERS:localDocker/nativeWindows unavailable foractualplatformacceptance; no blocker stopsremainingindependent authorizedsourcework.
+NEXT:publish coherentcancelpackage and continuecurrentexecution/transportownercontrols onlyafter safe cancellation source/testbaseline; collect actualnewCIredstogether.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer operational execution/HTTP/error owner controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:25e161ed0526543fb9394bfe40bcf56a2044e5ad
+INTENDED_BUMP:D accumulated V1.5 version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/tool_registry.gd;scripts/computer_request_guard.gd;scripts/owner_resource_policy.gd;agent/research_collector.gd onlydeadline-representation saturation;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tests/research_source_resilience_smoke.gd;tests/computer_agent_reliability_test.py;tests/computer_agent_routing_contract_test.py;config/owner_control_policy.json exactreview;master/memory append-only
+DEPENDENCIES:coordinator takes over justpublishedownedcancel11path25e161e tree4d615c7878dfddf7f18acf98351241f98d1a358f. Actual76Python+GodotHTTP localbaseline; newmandatoryDocker/WindowsCIpending. No independent parallelComputerlane edits.
+NON_BLOCKERS:GUI/UIA counts/actions/output buffering/providerpagination remain separatelyunfinished. No V1.6/S3/runtimeintegration. Stopack,authentication/masterstop/safecontainer/idempotency boundaries unchanged. Productionidentity/physical/update gates unwaived.
+ACCEPTANCE_GATES:private default-preserving ownerexec/HTTP ceilings(default300/320), per-clientdefault8/12/180, optionalComputerresponsebytes(default0previousunbounded), errorchars2048; raised/0 semantics withfiniteownerceilings respected. Actual0/hugeprocessdeadline completes/cancels without platformwait-overflow; actualHTTPbodyoverflow terminatesownedrequest and neverreturnsfakepartialsuccess. Real ownerpersist/payload/guard/service regressions and exactnewSHA CI. Researchmillisecondsaturation protectsrepresentabledeadline whenownerraisessecondstohuge64bitvalues.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:currentrequestownerpolicy implementation and coherentactualbehavior tests; no timeoutrelaxation withoutretainedcancelguard.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER also owns tools/run_computer_guard_smoke.py for the existing actualsidecar fixture cleanup of the new guard-body executionID; priorcoordinatorcancelclaim owns thatsamefile and is explicitlyreconciled. No scope expansion.
+
+CLAIM_ADDENDUM:WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER takes over current25e exactCI failure37572929879/jobs112635387849(Linux)/112635387800(Windows): installedunpinnedFastAPI removes app.add_event_handler;39tests each failatserviceimport. Correct shutdown integration through publiclifespan API insidealready-owned Computer source, retain all cancellation/actualDocker/Windows gates. No blindrerun/dependency-pin workaround.
+
+### Coherent Computer request-owner and actual CI compatibility checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-REQUEST-OWNER ACTIVE/CI_PENDING; version unchanged.
+CHANGES:seven private owner controls preserve execution/HTTP ceilings300/320 and client defaults8/12/180, response bytes0(previous unbounded), diagnostics2048. Raised and zero budgets propagate through all three Computer clients; finite common ceiling still caps requested unlimited. Negative budgets fail closed. Backend deadline0 is unlimited yet owned-cancellable; bounded polling avoids platform wait overflow for huge deadlines. Research milliseconds saturate at signed64 representation. Response overflow requests owned cancellation and reports response_budget/uncertainty instead of partial success.
+CI_REPAIR:25e161ed0526543fb9394bfe40bcf56a2044e5ad observed40checks=31SUCCESS/3SKIPPED/4IN_PROGRESS/2FAILURE. Workflow37572929879 Linux112635387849 and Windows112635387800 failed importing FastAPI0.142.2 because add_event_handler was removed. Replaced old registration with public asynccontextmanager lifespan; genuine context-managed shutdown kills owned live process. No dependency downgrade or acceptance relaxation.
+TESTS:actual CI dependency versions FastAPI0.142.2/Pydantic2.13.5 latest-environment Computer batch58PASS/2SKIP; pinned FastAPI0.116.1/Pydantic2.11.7 batch including owner/audit80PASS/2SKIP. Both actual Uvicorn/Godot guard fixtures PASS. Actual owner save/reload, response overflow, raised/zero/huge deadline and Research saturation fixtures PASS. SKIPs remain real NTFS junction and local Docker absence; mandatory exact-SHA platform CI remains required. Existing deprecation warnings and Godot shutdown diagnostics retained.
+FIXTURE_CORRECTION:local os.getpid=5 while mounted /proc/self/stat PID7088, NSpid7088/5. Child/grandchild test now records visible proc PID and birth identity, checks actual stopped heartbeat plus absent/reused/zombie identity; it no longer mistakes an unrelated ancestor-namespace PID for a live child. Windows continues genuine tasklist verification. No product cancellation success inferred from test-only namespace correction.
+INVENTORY:477files;1411test_evidence/1296unclassified/64documentation/652owner_adjustable/356format_structure/26hard_boundary;complete:false. Unknown source remains visible, no blanket reclassification.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:request-owner source and actual dependency compatibility repair locally verified; prior published25e remains CI-red until new exact SHA proves repair.
+REMAINING:publish coherent source; remaining GUI/output/provider owner controls and unfinished critical source; exact CI/package/device/update/release gates, version-last.
+BLOCKERS:no external blocker prevents independent source work. Local Docker/nativeWindows acceptance pending exact CI; physical/production gates unwaived.
+NEXT:publish package atop25e via compare-and-swap, continue critical source and collect CI outcomes as coherent batches.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-OUTPUT-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer truthful output and owner controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:923128a962b43709212f83fdfbe3a5953826e3d7
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/owner_resource_policy.gd;scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;tests/computer_agent_reliability_test.py;tests/owner_resource_limits_smoke.gd;master/memory append-only
+DEPENDENCIES:coordinator takeover of published request-owner paths; no concurrent Computer owner. Previous cancellation/masterstop/transport guards retained. Prior request claim CI_PENDING.
+NON_BLOCKERS:process raw output buffering and GUI/provider controls are separately unfinished; this block does not claim bounded producer memory. No V1.6/S3 integration; physical/production release gates unwaived.
+ACCEPTANCE_GATES:private owner output character budget120000 preserves default, raised and0 retain requested output. Trusted guard overrides model budget. Redaction occurs before clipping; actual stdout+stderr overflow carries explicit partial/truncated/limit_reached and complete length, never silently complete. Authentication/cancellation/container-first unchanged. Genuine command tests plus owner persistence and exact-SHA CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement truthful output budget without claiming solved raw capture memory.
+
+CLAIM_ADDENDUM:OUTPUT-OWNER owns existing test_sandbox_resource_limits.py actual Docker fixture repair observed923128a Linuxjob112638948050: fixture pulls image into Docker but product engine preference is Podman first. Set explicit Docker fixture engine (product preference unchanged), report early HTTP response rather than hiding startup failure as marker timeout. Actual daemon gate retained; Windows computer-contract112638948108 and work-godot112638948086 already SUCCESS at923128a.
+
+### Coherent truthful output and Docker fixture checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-OUTPUT-OWNER ACTIVE/CI_PENDING.
+PRIOR_PRODUCED_SHA:923128a962b43709212f83fdfbe3a5953826e3d7;tree acd66c207f52642525645070801956d7f7b85469. Request/lifespan package published through CAS and local tree matched remote. Observed39checks=25SUCCESS/3SKIPPED/10IN_PROGRESS/1FAILURE; eventual downstream total can grow. Windows Computer112638948108 and work-godot112638948086 SUCCESS prove those exact gates; Linux112638948050 failed actual Docker readiness (58PASS/1SKIP/1FAIL), not old import problem.
+CHANGES:private computer_output_chars120000, raised/0 semantics, trusted request policy overrides model value. Full secret redaction precedes returned output clipping. Explicit partial/truncated/limit_reached, sanitized total length and budget retained; process exit code remains truthful. Raw communicate buffering remains separately unfinished, not advertised bounded memory. Docker fixture explicitly selects Docker, matching image preparation; product Podman/Docker preference unchanged. Early completed HTTP response is surfaced in fixture diagnostics instead of an opaque marker timeout; no skip or gate relaxation.
+TESTS:latest FastAPI Computer batch62PASS/2SKIP; pinned combined owner/audit/Computer batch84PASS/2SKIP. Actual Godot owner persistence/trusted payload0/raised/defaultPASS; actual latest-Uvicorn Godot owned cancellation/masterstop/transport/bodyoverflow/uncertain/shutdownPASS. Actual command120001chars plus credential-bearing stderr tested default/raised/0/tiny output budgets and negative/auth rejection. Linux Docker repair still requires exact new-SHA daemon execution; local runtime absent. Existing warnings/Godot20ObjectDB8resources retained. diffcheckPASS.
+INVENTORY:1419test_evidence/1301unclassified/64documentation/652owner_adjustable/356format_structure/26hard_boundary;complete:false.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:request/lifespan published923128a; current truthful output source locally verified.
+REMAINING:raw producer output buffering, GUI/provider controls, source audit and unfinished critical blocks; new exact CI/platform/package/device/update/release acceptance, version-last.
+BLOCKERS:no external blocker prevents remaining source; local Docker/nativeWindows need exact CI, physical/production gates unwaived.
+NEXT:publish coherent output/fixture source, then continue bounded output capture and current critical owner controls.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-WORKER-QUEUE
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Work/Computer current screenshot/UIA lifecycle and truthful recovery
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:4fa501ca5a71ccb0322ca4284bbb4096565743d9
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;tests/test_sandbox_resource_limits.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator takeover current service/tests; published output claim CI_PENDING, no other Computer source lane. Ownership/masterstop retained.
+NON_BLOCKERS:raw process capture and GUI owner inventory remain unfinished; pure worker transport tests do not constitute native desktop acceptance. No V1.6/S3; release gates unwaived.
+ACCEPTANCE_GATES:genuine spawned worker1MiB response delivered without join-before-queue deadlock; malformed/hung workers fail closed, bounded cleanup retains unconfirmed worker ownership; existing shutdown/unsafe retry/concurrency regressions; exact-SHA Windows CI. No deadline or external-state protection relaxation.
+SOURCE_FINDING:_run_worker joins child before queue.get; multiprocessing feeder can block on large screenshot/UIA response and child cannot exit until parent drains queue. Must reproduce before repair and record exact evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:reproduce actual large spawned response then fix draining under existing deadline.
+
+CLAIM_ADDENDUM:WORKER-QUEUE takes over exact4fa501c Linux112639837575 CI failure actual GUI shutdown termination_confirmed:false;62PASS/1SKIP/1FAIL, actual Docker cancellation nowPASS. Request and shutdown currently call shared multiprocessing Process.join/status concurrently; race is a source-supported hypothesis pending serialized lifecycle and real repeated regression. Include service-owned lifecycle synchronization and five genuine worker shutdown cases; no fake termination ack.
+
+### Coherent worker queue and lifecycle checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-WORKER-QUEUE ACTIVE/CI_PENDING.
+PRIOR_PRODUCED_SHA:4fa501ca5a71ccb0322ca4284bbb4096565743d9 output/fixture package publishedCAS; remote/local matched. Observed35checks24SUCCESS/3SKIPPED/6IN_PROGRESS/1QUEUED/1FAILURE. Linux112639837575 actualDocker container-start/cancel/removalPASS;62otherPASS/1SKIP/1GUIshutdownFAIL, so overall gate remains red. No all-green claim.
+REPRODUCTION:before repair genuine spawned1MiB queue response fails timeout at3seconds; no GUI APIs simulated as physical acceptance.
+CHANGES:drain worker queue before join within existing deadline; require actual worker completion, terminate/kill on timeout, unsafe actions neverauto-retry and unconfirmed termination carries uncertainty. Serialize multiprocessing worker status/join/termination between request and shutdown; failed live ownership retained. Close queue only after stopped. Five real spawned GUI-shaped worker shutdown repetitions; actual1MiB response regression.
+TESTS:latest dependencies67PASS/2SKIP; pinned combinedComputer/owner/audit89PASS/2SKIP, existing deprecations. Genuine1MiB response nowPASS, five ownedworker shutdownsPASS, malformed/timeout/unsafe retry/idempotency/masterstop/container routing regressionsPASS. Docker/nativeNTFS localSKIP remains exactCI requirement. diffcheckPASS.
+INVENTORY:1420test_evidence/1304unclassified/64documentation/652owner_adjustable/355format_structure/26hard_boundary;complete:false.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:truthful output published4fa501c, daemonDocker cancellation accepted atthatSHA; current worker queue repair locally proved.
+REMAINING:publish worker package and exactCI; owner GUI/UIA/resource inventory, process capture/provider controls and unfinishedcriticalsource; final exactpackage/device/update/release/version-last.
+BLOCKERS:none stops independent source. Physical/nativeWindows/production gates remain unwaived; do not infer entire release from daemon test.
+NEXT:publish coherent lifecycle package, continue remaining critical controls while exactCI runs; collect failures before further related publication.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-INVENTORY-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current owner resource inventory and release source acceptance
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:dd73b222876634128a1e934370c36e4b196d609e
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:published Computer cancellation/request/output/worker paths read-only evidence; previous claims CI_PENDING, policy take-over reconciled from coordinator write/snapshot/cancel claims. No runtime source modifications.
+NON_BLOCKERS:unknown GUI/rawcapture/provider/resource lines remain visible. No V1.6/S3; production/native acceptance unwaived.
+ACCEPTANCE_GATES:exact reviewed statements only; owner propagation versus termination safety versus integer/identity/poll representation; never broad file exemption or test-zero laundering. Existing audit contract tests and source diffcheck; document unknowns and exact CI evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:review exact newly proved current Computer statements, preserve remaining unknown operational limits.
+
+### Exact Computer inventory review checkpoint
+CLAIM:WORK-2026-10-07-V15-COMPUTER-INVENTORY-REVIEW source reviewed, unpublished with next coherent source package.
+REVIEW:45exact statements across trusted request capture, tested owner deadline/output/snapshot propagation, bounded cancellation acknowledgement/uncertainty and identity/poll/one-terminal-response representation.46findings matched because exact statements can repeat. No blanket filename exclusion; raw capture/GUI/provider and unknown limits remain visible.
+TESTS:10audit contractPASS,diffcheckPASS. Inventory1420test_evidence/1258unclassified/64documentation/673owner_adjustable/364format_structure/42hard_boundary;complete:false.
+PRIOR_PRODUCED_SHA:dd73b222876634128a1e934370c36e4b196d609e;worker queue publication matched remote. Observed34checks24SUCCESS/3SKIPPED/7IN_PROGRESS,0FAILURE. Linuxcomputer112640722198 and work-godot112640722247 SUCCESS; Windows112640722063 pending. Pending is not accepted.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:include exact inventory review with bounded producer-output owner source; full critical acceptance remains unfinished.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-COMPUTER-CAPTURE-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer bounded command output resource lifecycle
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:dd73b222876634128a1e934370c36e4b196d609e
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_request_guard.gd;scripts/owner_resource_policy.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;master/memory append-only
+DEPENDENCIES:explicitcoordinator takeover worker/output/request source afterdd73publication; exact inventory claim owns configpolicy and will publish in same coherent batch. No parallelComputer lane.
+NON_BLOCKERS:GUI/provider controls and full inventory remainunfinished. No V1.6/S3/nativeacceptance claims, release gates unwaived.
+ACCEPTANCE_GATES:private owner combined raw-output byte ceiling with explicit raised/0 semantics; default bounded memory8MiB closes prior unbounded communicate source. Drain stdout/stderr concurrently and stop owned producer on budgetoverflow, truthful output_budget error/termination ack, no partial credential leakage or unsafe automatic retry. Existing ownedchild/grandchild/daemon/masterstop/deadline/huge0/cancellation preserved; actualfinite/infiniteproducer/exactbytes/UTF8/ownerpersist tests; exactSHAWindowsDockerCI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:replace unbounded communicate buffering with owner-bounded concurrent capture and truthful overflow cancellation.
+
+CLAIM_ADDENDUM:CAPTURE-BUDGET includes existing Computer _redact JSON/whitespace/short-Bearer privacy repair within owned service: previous assignment-only pattern could leak quoted JSON marked credentials when owner output0/raised. Full genuine command regression retains mandatory redaction independently of both resource budgets. No separate privacy authority expansion.
+
+### Coherent bounded raw capture, privacy and inventory checkpoint
+CLAIMS:CAPTURE-BUDGET and INVENTORY-REVIEW remain ACTIVE/CI_PENDING for publication; no sourcefreeze.
+CHANGES:replace unbounded communicate buffers with concurrently drained binary pipes and shared owner capture_bytes(default8MiB,new resource ceiling); trusted guard captures private policy, model cannot override.0 intentionally removes ceiling; raised/exactfit accepted. Overflow stops owned producer, returns output_budget/partial/limit_reached with empty output and truthful ack; failed reads stop producer and neverfake success. Register/start readers under lock, recheck EOF races; decoding replacement visible. POSIX departed-parent inheritedpipe kills ownedgroup evenafter parentexit. Windows departed-parent tree remains unverified/uncertain ratherthan falsely complete. Credential redaction now handles full quotedJSON/whitespace/shortBearer beforeclipping. Include prior45exact inventory review, no broad exclusions.
+TESTS:final latest batch76PASS/2SKIP, pinned Computer+owner+audit98PASS/2SKIP. Actual infinite producer stops within5sec with capture128bytes, stdout/stderr UTF8exact4097/4098/0accepted4096overflow, default8MiB+1blocked, invalidUTF8truthful. Real readfailure stops genuine60secprocess; actualPOSIXparent-exits-childheartbeat stops; realJSON/shortBearer secrets excluded under0 budgets. Genuine Godot ownerpersist/trustedpayload and actual latestUvicorn cancellation/masterstop/transport/bodyoverflow/uncertain/shutdownPASS. Existing deprecation and owner20ObjectDB8resources diagnostics retained. Local Docker/NTFS2SKIP mandatoryexactCI; POSIX-only departed-parent fixture explicitlySKIPs onWindows, no Windows proof inferred.
+PRIOR_CI:dd73b222876634128a1e934370c36e4b196d609e observed37checks31SUCCESS/3SKIPPED/3IN_PROGRESS,0FAILURE. Actual Linuxcomputer112640722198,Windowscomputer112640722063,work-godot112640722247 SUCCESS; those gates accepted for thatexactSHA, pending release/downstream remain unaccepted. Priorrequest/output/worker source paths reconciled under currentcaptureclaim; historicalCIred evidence retained.
+INVENTORY:1443test_evidence/1287unclassified/64documentation/670owner_adjustable/363format_structure/41hard_boundary;complete:false. New rawcapture source adds findings and changed exactstatements legitimately invalidate oldmatches; no zero audit claim.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publisheddd73worker actualLinux/Windows gatesaccepted; currentcapture/privacy/inventory locallyverified.
+REMAINING:publish and exactnewCI; Windows departed-parent ownership, GUI/UIA/provider controls, remainingaudit/unfinishedcriticalsource; exactpackage/device/update/productionrelease/version-last.
+BLOCKERS:no external blocker prevents independent sourcework. Windows departed-parent actualproof is missing, notPASS; physical/production gates unwaived.
+NEXT:publish coherent8pathcapture/inventory package, continue native ownedprocess lifecycle and othercurrentcritical resource controls; collectnewCIreds beforeacceptance.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-WINDOWS-OWNED-JOB
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Windows Computer owned process lifecycle and package integrity
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:c10f47570c15e19890565ee90341ddfeee873e94
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;new computer/windows_job.py;tests/test_sandbox_resource_limits.py;build/build_windows.ps1;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator reconciles previous capture/worker Computer ownership afterpublishedc10f; currentmandatoryLinux/WindowsCIpending. Build packagepathtakeover only to include requiredownedJob helper; no signing/releasepolicy changes.
+NON_BLOCKERS:localLinux cannotexecuteWindowsAPI; genuineWindowsrunnergate remainsrequired. Jobownership is not a new sandbox/security guarantee; nativeprocessmode stilldisabledunlessexplicitoperatoroptin, containersfirst/security unchanged. No V1.6/S3; physicalreleasegates unwaived.
+ACCEPTANCE_GATES:Windows subprocesscreatedsuspended, assigned private kill-on-closeJob beforeprimarythreadresume; failure stops unstartedprocess andfailsclosed. Descendant ownership survivesparentexit; terminateJob and activeprocesscount0 beforeack. ActualWindows child/grandchild/parentdeparted/closehandle/lifecycle tests; Linux existingprocess/daemon/masterstop/privacy/capture regressions; requiredhelperpackaged and exactSHAWindowsCI. No acceptance from mocked native APIs.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement documentedWindowsJob ownership and run genuineWindowsCI after coherentlocal crossplatform gates.
+
+CLAIM_ADDENDUM:WINDOWS-OWNED-JOB includes genuine Windows sole-handle-holder abrupt termination regression: separate Python holder owns suspended child, external holder termination must removechildPID. This tests job handle lifecycle, not physicalGUI or completeOSreboot acceptance. Currentownedhelper packaged assertion remains mandatory.
+
+### Coherent Windows owned Job source checkpoint
+CLAIM:WORK-2026-10-07-V15-WINDOWS-OWNED-JOB ACTIVE/CI_PENDING; native API source prepared, NOT locally accepted.
+CHANGES:private Kernel32 Job Objects own each Windows command/CLI process before executing user code. CREATE_SUSPENDED, assign ownedJob, ResumeThread with expected suspendcount1; startupfailure stops suspendedprocess and denieslaunch. KILL_ON_JOB_CLOSE, no breakaway flags; explicitterminate+activeprocesscount0 beforeack. Parentexit cannot dropownedJob; backgrounddescendants withoutpipes failtruthfully afterownedcleanup. Job close errors preserve handleownership. Existing nativeoptin/container-first/auth/masterstop/daemoncleanup/owner capture remainprotected. Windows buildcopies windows_job.py and requiresits presence.
+TESTS:crossplatform latest76PASS/6SKIP and pinned Computer+owner+audit98PASS/6SKIP. SKIPs=localDocker,NTFSjunction,four actualWindowsJob fixtures; none countsasnativePASS. Four nativefixtures cover suspended-beforeassign/closehandle kill, assignmentfailure neverrunscommand, departedparent/DEVNULL descendant accounting+heartbeat+tasklist, separateholder abruptkill removesjobchildPID. PreviouslyPOSIX-only inheritedpipefixture now also mandatoryWindowscase; native outcomeawaitsexactCI. ActualLinuxUvicorn/Godot masterstop/transport/uncertain/bodyoverflow/shutdownPASS. Pythoncompile/diffcheckPASS; localPowerShell/package/nativeAPI execution notclaimed.
+PRIOR_PRODUCED_SHA:c10f47570c15e19890565ee90341ddfeee873e94;tree4cfd91f313873e48a9356dab6d0cedab00e41768. Actual capture/inventory packagepublishedCASandremote/localmatched. Observed37checks31SUCCESS/3SKIPPED/3IN_PROGRESS,0FAILURE. Linuxcomputer112642957031,Windowscomputer112642957211,work-godot112642957219 SUCCESS atc10f prove capture/privacy/softwareguards, not this new Job API. Pendingrelease/downstreamtotalmaygrow.
+INVENTORY:478files,1454test_evidence/1293unclassified/64documentation/670owner_adjustable/363format_structure/43hard_boundary;complete:false. No nativeAPIproof inferred from parsing or audit.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedc10f actualLinux/Windows capturegatesaccepted; currentJobsource/packaging prepared andLinuxregressionsaccepted.
+REMAINING:publish/genuineexactWindowsJob andpackageCI, GUI in-flight cancellation and UIA/action ownercontrols, provideraudit/unfinishedcriticalsource; fullrelease/package/device/update/version-last.
+BLOCKERS:local nativeWindows absent; exactWindowsCIis available and required, not a blocker to independent current source. Physical/production gates remainunwaived.
+NEXT:publish6pathJobpackage; continue currentGUI per-requestMasterStop ownership while nativeCI runs, batchactualfailures beforeacceptance.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-GUI-OWNED-CANCEL
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Work/Computer in-flight GUI MasterStop and owned resource lifecycle
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:2b058d5b180b0c7fa793278252177f2470ce4da9
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_request_guard.gd;scripts/computer_client.gd;scripts/tool_registry.gd;scripts/sandbox_manager.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tools/run_computer_guard_smoke.py;potential isolated GUI-shaped fixture in tools;master/memory append-only
+DEPENDENCIES:coordinator takes over justpublishedWindowsJob and existingComputer guard/worker paths, no parallel Computerlane. WindowsJob sourcemodule/build read-only unless actualnewCIrepairdemands explicitaddendum; tests existingowned. No S3/nativefutureintegration.
+NON_BLOCKERS:currentGUIoperationalowner limits/UIA/fullinventory remainunfinished. GUI-shaped worker testisnot physicaldesktop acceptance. No reversal of alreadyperformed input effects; unsafe cancellation remains uncertain/nonretryable even when workertermination isconfirmed.
+ACCEPTANCE_GATES:trusted per-requestGUI executionheader/nonce assigned beforeIO, GEThasno artificialbody; rootownership spans before/action/after verification phases. Authenticatedcancel afterMasterStop/transportfailure stops exact owned worker; precancel/reusednonce neverlaunches and subsequentphase neverstarts; otherownedjobs remainrunning. Failed workerstop retainsownership anduncertainty. Actualspawnedworker/API/Godot guards, existingunsafeidempotency/physicalplatform boundaries andexactSHAWindowsDockerCI.
+CI_REPAIR:2b058 exactWindowscomputer112646101944:80PASS/1SKIP/1FAIL. All four genuineJobAPI cases and departed-parent portablecasePASS. Old failed-stop fixture onlypatched _terminate_process_tree, but newWindows lifecycle uses ownedJob.terminate; injectfailure into actualselectedowner and verify realprocessretainedthenrealretrykillsit. Linux112646101798/work-godot112646101993 SUCCESS. Totalobserved39=31SUCCESS/3SKIP/4IN_PROGRESS/1FAILURE; nooverallgreenclaim.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherentGUI per-request cancellation plus actualowner faultinjection repair; preserve currentdeadlines/ownercontrols andunsafe effectreview.
+
+CLAIM_ADDENDUM:GUI-OWNED-CANCEL also owns computer/windows_job.py, new computer/owned_gui_worker.py, build/build_windows.ps1 and tests/computer_agent_failure_injection_test.py. ExistingJob module/build claim reconciled afterpublished2b058. GUI workers need WindowsJob ownership too: launch bootstrap waits on private parent-authority Event before touching GUI, parent assigns Job before openinggate; abruptsidecarexit must not leave typing/captureworker alive. Newhelper packaged/required. Pure fake-context malformed-response tests may use explicit fake lifecycle objects; they remain unitfault evidence, never nativeAPI acceptance. Four genuineWindowsJob cases retained.
+
+CLAIM_ADDENDUM:GUI-OWNED-CANCEL explicitly owns new tools/computer_gui_guard_fixture.py and .github/workflows/work-computer-reliability.yml for actualGodot/actualUvicorn GUI-shaped lifecycle fixture and its sourcepath-trigger. Fixturedeclares softwareworker-only behavior, never invokes native desktop and never adds a production test flag. Four nativeWindowsJob tests remain separate mandatoryWindows gates.
+
+### Coherent GUI owned cancellation source checkpoint
+CLAIM:WORK-2026-10-07-V15-GUI-OWNED-CANCEL ACTIVE/CI_PENDING.
+CHANGES:trusted per-request GUI header nonce across ComputerClient/ToolRegistry/SandboxManager, GET emptybody, root execution ownership across verification/action/UIA. Authenticated cancellation prevents later phases, stops exact worker and preserves unrelated executions. Unsafe input remains uncertain/nonretryable even with termination proof. Windows GUI bootstrap waits on private Event until owned Job assignment; helper included/required in Windows package. Failed cleanup retains worker/queue/Job. Screen UIA failure reports partial evidence. Repaired old Windows failed-stop injection against selected Job backend. Isolated actualUvicorn GUI-shaped fixture exercises Godot chain without native desktop effects; no production test flag.
+TESTS:pinned Computer+owner+audit105PASS/6SKIP; latest Computer83PASS/6SKIP. Six local skips are genuine unavailableDocker/NTFS/fourWindowsJob cases, notPASS. ActualGodot/Uvicorn owned guard PASS: processMasterStop, transport, uncertainty, shutdown, GUI MasterStop, unsafe review and GET transport cancellation. OwnerGodot trusted nonce/header/unsafe override/capture propagation PASS. Genuine spawned-worker tests cover per-route cancel, unrelated running command, precancel/reused ID, auth/header rejection, unsafe verification phase, failed-stop retention/retry and observed bootstrap gate. DiffcheckPASS.
+PRIOR_PRODUCED_SHA:2b058d5b180b0c7fa793278252177f2470ce4da9 verified fresh PR103 OPEN/DRAFT/baseunchanged. ExactWindows112646101944=80PASS/1SKIP/1FAIL; all four native Job API and departed-parent tests PASS, only obsolete fault injection failed and repaired here. Linux112646101798/work-godot112646101993 SUCCESS. No overallgreen or nativeGUI claim.
+INVENTORY:480files;1479test_evidence/1324unclassified/65documentation/671owner_adjustable/361format_structure/37hard_boundary;complete:false. New source/changed statements invalidate exact old classifications; no blanket audit closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:GUI lifecycle/cancellation source and localsoftware evidence; selected-owner CI fault repair.
+REMAINING:publish/exactWindows+Docker+packageCI; GUI/UIA/action owner budgets, remaining provider/inventory/unfinishedCRITICAL; exact release/package/device/update/version-last.
+BLOCKERS:no external blocker prevents independent sourcework; native Windows/physical device/production acceptance unwaived.
+NEXT:publish coherent GUI package, continue remaining operational owner controls while exactCI runs.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-GUI-RESOURCE-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining Computer/UIA operational owner controls and truthful coverage
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:87040cae01b65333898f55341b848368cd3e76fb
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/owner_resource_policy.gd;scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tools/computer_gui_guard_fixture.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:reconciles completed localGUI cancellation source into published87040cae/tree2459a5e4b03b5a22f608da58113e26253e2582d2. Native exactCI pending; no duplicate Computer ownership.
+NON_BLOCKERS:sourceinventory/physicalGUI/release gates unfinished, no V1.6/S3/sourcefreeze/version changes. UIA library enumeration may itself materialize platform data; owner result limits are not a claim to bound library internal allocation.
+ACCEPTANCE_GATES:private owner snapshot overwrites model policy and propagates GET via header; nonnegative finite budgets, zero disables operational ceiling. UIA exact-fit vs actual overflow and shortened fields/errors explicit; no silently complete empty extraction. Worker unlimited deadline remains cancellable and owned. Real Godot/API/spawn and existing cancellation/privacy regressions, nativeWindowsCI required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement coherent UIA enumeration/string/worker deadline owner policy and its acceptance cases.
+
+### Coherent UIA owner policy source checkpoint
+CLAIM:WORK-2026-10-07-V15-GUI-RESOURCE-POLICY ACTIVE/CI_PENDING.
+CHANGES:seven private owner settings expose UIA items250/windows30/controls40/name512/type64/ID256 and screen/UIA worker8seconds defaults. Trusted captured policy overrides model policy; GET propagates via authenticated header. Zero removes operational ceiling. Exactfit is complete; actual extra elements/string clipping/failures report partial with reasons/counts. Full-value redaction precedes field clipping. Combinedscreen preserves UIA evidence. Worker completion joins now use bounded unlocked-between-poll intervals; unlimited waits remain cancellable after queue delivery and cancellation wins timeout classification. Existing action budgets are not silently declared complete.
+TESTS:pinned Computer+owner+audit118PASS/6SKIP; latestComputer96PASS/6SKIP. Six local skips remainDocker/NTFS/fourWindowsJob, notPASS. UIA traversal fixtures are unit coverage, not nativeGUI evidence. Genuine result-then-hang spawn proves zero still waits and authenticatedcancel stops it. ActualGodot/Uvicorn PASS including modelpolicy override and zero worker/raised1001items GET header reception, MasterStop, transport and unsafe uncertainty. OwnerGodotPASS (existing exit diagnostics20ObjectDB/8resources recorded, not ignored as nativeacceptance). DiffcheckPASS. Initial zero cancellation regression failed timeout-vs-cancel classification; repaired, finalbatch passed.
+PRIOR_PRODUCED_SHA:87040cae01b65333898f55341b848368cd3e76fb;tree2459a5e4b03b5a22f608da58113e26253e2582d2. Observed44checks=33SUCCESS/3SKIP/8IN_PROGRESS,0FAILURE. LinuxComputer112659405454/WindowsComputer112659405428/work-godot112659405568 SUCCESS prove publishedGUI lifecycle and selected-owner faultrepair; package/device/import/Core pending are notPASS.
+INVENTORY:480files;1500test_evidence/1342unclassified/65documentation/671owner_adjustable/360format_structure/37hard_boundary;complete:false. Changedsource/newfindings retained, no blanketclosure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedGUI lifecycle exactComputer gatesaccepted; UIA operational limits/source/localsoftwarecoverage accepted.
+REMAINING:publish/exactCI; action limits, provider/resourceinventory/unfinishedcritical; package/device/update/production/version-last.
+BLOCKERS:no external blocker to independent source; native/physicalproduction acceptance unwaived.
+NEXT:publish coherent9pathUIA policy, continue action controls and remaining audited operational limits.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-ACTION-RESOURCE-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining Computer action owner controls with verified cancellation
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:b560c05dd51a3f9f2ffcf987ef055ee4c877abac
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;scripts/owner_resource_policy.gd;scripts/computer_request_guard.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;tests/computer_request_guard_smoke.gd;tools/computer_gui_guard_fixture.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:publishedUIA policy b560c05/tree9aa7552b7348bb29f47edb5423cefbf63545f72e reconciled; GUI owned cancellation prior87040 exactComputer green. Native UIA currentCI pending.
+NON_BLOCKERS:physicaldesktop/package/device/update/production gates unwaived; no V1.6/S3 scope. Input key syntax/button/coordinates/idempotency/failsafe remain boundaries; zero limits do not reverse effects or enable retries.
+ACCEPTANCE_GATES:private owner action text/key/click/scroll/duration/worker budgets overwrite model policy, reject exceeded input before worker effects, allow exact/raised/zero. Finite nonnegative duration and progress-making clicks>=1 mandatory. Verification reads reuse capturedUIA policy. Zero action worker deadline remains per-request cancellable with unsafe uncertainty. ActualHTTP/Godot/spawn regression; no native input evidence inferred from software fixtures.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent action owner controls and real protocol/cancellation acceptance package.
+
+CLAIM_ADDENDUM:ACTION-RESOURCE-POLICY includes action result-cache retention and consumed-ID ownership on existing owned paths. Existing512-result eviction forgets idempotency and can replay an old unsafe action; separate non-evicting consumed identities from detailed result retention. Owner may bound stored results; positive identity capacity refuses new IDs rather than deleting replay protection. IDs conservatively remain consumed after an attempted action exits unexpectedly. Acceptance: genuine worker launch count unchanged on replay after result eviction; exactcapacity rejects beforeeffects; zero preservesresults/identityallowance without bypassing consumed IDs.
+
+### Coherent action owner policy and idempotency source checkpoint
+CLAIM:WORK-2026-10-07-V15-ACTION-RESOURCE-POLICY ACTIVE/CI_PENDING.
+CHANGES:eight private owner controls: text20000/keys12/clicks3/scroll100/duration5/actionworker10/resultretention512/identitycapacity0 defaults. Trustedheader snapshot overrides model policy; exceededinput rejected413 beforeeffects withbudget/limit/requested/executed:false. Exact/raised/zero accepted. VerificationusescapturedUIA policy. Finite duration, clicks>=1, coordinate/key/button/idempotency/auth/failsafe unchanged. Unsafe unlimitedworker stillowned/cancellable/uncertain. Detailedcache eviction no longer permits unsafeIDreplay: consumedIDs retained separately; capacity deniesnewID ratherthanforgetting prioridentity, exceptions consumeattemptedID. Service-local identity ownership only; cross-restart durability notclaimed.
+TESTS:pinnedComputer+owner+audit131PASS/6SKIP; latestComputer109PASS/6SKIP. Genuine API/spawn launchcounts coverdefault rejection, exact/raised/zero fiveinputbudgets, resultevictionnonreplay andidentitycapacity; unexpected exception terminalID regression. Numeric boundaries andunsafe0worker cancellationPASS. ActualGodot/UvicornPASS including trustedactionworker0 policy receivedbyworker, MasterStop/transport/unsafe review/shutdown. OwnerGodotPASS; existingexit20ObjectDB/8resource diagnosticsremainrecorded. NativeDesktop input notclaimed; localDocker/NTFS/fournativeWindowsJobskipsnotPASS. Initialnewtest run hadmissingjson import (5testNameErrors), corrected beforefinalfullbatch; sourcegatesnotwaived.
+PRIOR_PRODUCED_SHA:b560c05dd51a3f9f2ffcf987ef055ee4c877abac;tree9aa7552b7348bb29f47edb5423cefbf63545f72e. Observed37checks30SUCCESS/3SKIP/4IN_PROGRESS,0FAILURE. LinuxComputer112660982821/WindowsComputer112660982831/work-godot112660982846 SUCCESS acceptpublishedUIA policy. RemainingCore/package/native/AndroidpendingnotPASS.
+INVENTORY:480files;1518test_evidence/1364unclassified/65documentation/671owner_adjustable/360format_structure/37hard_boundary;complete:false. Changedclassification matches/newsourcefindings retained for explicitreview, notblanketclosed.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:publishedUIA exactComputer/Workgatesaccepted; actionowner/idempotency source andlocalsoftwaretests accepted.
+REMAINING:publish/exactCI; remainingresourceinventory/provider/unfinishedcriticalblocks, durableacceptance, package/device/update/production/version-last.
+BLOCKERS:no external blocker to independentcriticalsource; physical/productiongatesunwaived.
+NEXT:publishcoherentactionpackage, reconcileclassifiedowner-propagation/technicalboundaries andremainingactualoperationalcaps.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-CORE-HTTP-EVIDENCE
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Core exact-SHA progress/cancellation release gate diagnosis
+ADR_REFS:ADR-0003;ADR-0001/0002 unchanged
+STARTING_HEAD:fb52c1b554247e273dc3a949a93462d97301230e
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:tests/core_progress_http_smoke.gd;tests/run_core_progress_http_fixture.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator explicitly takes over existing Core HTTP regression fixtures from previously published progress-aware Core work for failure evidence only. Production Core source/quality metrics/benchmark thresholds untouched. PreviousComputer/action scope published and exactComputer/Work gates accepted; no parallel Computer source edit.
+NON_BLOCKERS:local executor transport unavailable; GitHub read/write and exactCI remain available. Native/physical/release gates unwaived. No V1.6/S3 or owner timeout/gate relaxation; no blind rerun.
+ACCEPTANCE_GATES:same SSE/UTF8/stall/total/cap/cancel/fallback boolean conditions and same250ms/180ms/30s budgets. Failed check emits actual fixture result and exits1 immediately; successful run still exits0 only after all checks. Server traces actual fixture event delivery/cancel errors without exposing secrets or changing producer timing. Local runtime NOT_EXECUTED while externalexecutor blocked; exact WindowsCI mandatory, cause remainsUNKNOWN until captured evidence.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:publish coherent diagnostic/fail-fast fixture plus exactsource/CI/outage checkpoint; inspect new actual WindowsCore evidence rather than relax a gate.
+
+### Published source and external execution/CI diagnosis checkpoint
+CLAIM:WORK-2026-10-07-V15-CORE-HTTP-EVIDENCE ACTIVE/EXACT_CI_PENDING; local execution EXTERNAL_BLOCKED. ACTION-RESOURCE-POLICY source published/accepted by exactComputer/Work gates, remaining release gate failures unwaived. No additional local production edit is pending publication at the observed source checkpoint.
+PRODUCED_SOURCE_SHA:87040cae01b65333898f55341b848368cd3e76fb GUI ownership/bootstrap; b560c05dd51a3f9f2ffcf987ef055ee4c877abac UIA owner policy; fb52c1b554247e273dc3a949a93462d97301230e action owner policy/non-replay.
+SOURCE_TREE:c342120950d3d84ff453aa942ebdde0c146c5c8c atfb52c1b5. Freshmain446ce2cd2f979a8ab228f63d090062e8ba48a6eb; PR103OPEN/DRAFT/basefix-v1.5-archive-knowledge-import unchanged. GitHub truth; no merge/sign/tag/release/versionbump. Localfetch reachedfb52; later reset command could not start, so localHEAD resynchronization remainsunverified afteroutage.
+EXACT_TESTS_AT_FB52:WindowsComputer112662761983 SUCCESS actual114PASS/1SKIP; LinuxComputer112662761949 SUCCESS actual110PASS/5SKIP (mandatoryDocker executed), work-godot112662762032 SUCCESS. Localprioraction pinned131PASS/6SKIP/latest109PASS/6SKIP/Godotowner+actualUvicorn guardsPASS belong to publishedfb52 action source, NOT the newdiagnosticfixture.
+CURRENT_CI_AT_FB52:observed41checks32SUCCESS/3SKIP/5IN_PROGRESS/1FAILURE; totalsmaygrow. real-core-windows run37581742651/job112663566849 FAILED primaryassert tests/core_progress_http_smoke.gd:20 afterfirstprogressrequest; downstreamwatchdog30s timedout and connectionWinError10053. Benchmark itself notexecuted afterfixturefailure; no enginequality verdict. Pendingcontract-and-parse112664199124/AndroidAPK112663671597/CoreAndroid112663020199/WindowsPackage112662876866/AndroidPlugin112662762865 notPASS.
+DIAGNOSTIC_PACKAGE:twoexistingCorefixture files plusappendonlyjournal/memory. All10 acceptance booleanconditions and existing250msstall/180msbudgets/60msproducer/15s+30swatchdogs unchanged, reviewed programmatically beforetreecreation. Failedcondition nowprintscontrolledresponse+quits1/returns; servercapturesactualeventtiming/bytes/terminalerror. Source-string preservation checkPASS; localGodot/Pythoncompile/runtime NOT_EXECUTED becauseexecutor unavailable. ExactnewCI required; no failurewaived or runtimecauseinvented.
+EXTERNAL_BLOCKER:local exec-server transport disconnect/recovery timeout25s; boundedreadonlypwd attempts stall. GitHub read/write/CI remainavailable and were used for independentfailure diagnosis andcoherentfixture evidence publication. Environmentfailure doesnotprove workspace deletion; do not repeat published source or constructsourcefromchat.
+INVENTORY:lastactualfb52sourceaudit480files/1364unclassified/complete:false; diagnosticfixture source not re-audited locally.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:threecoherentGUI/UIA/action packagespublished; allthree exactComputer/Workgatesaccepted; actualnewCorefailureisolated tofirstHTTPsuccessassert anddiagnosticrepairprepared withoutgate relaxation.
+REMAINING:newfixture exactCI/evidence-basedCore repair, remainingownerinventory/provider/unfinishedV1.5CRITICAL, fullsameSHApackage/device/update/productionrelease/version-last.
+BLOCKERS:executorunavailable blocks nextlocalcompile/runtime/sourceaudit acceptance; failedCoreWindows112663566849 blocks currentfullCorequality/releasegate, causeUNKNOWN.
+NEXT:restoreexecutor, gitfetch freshmain/PR103/featureHEAD thenreset isolatedcheckouttoactualpublishedHEAD; reconcileallACTIVEclaims withoutrepeating publishedblocks. Inspect new exactWindowsCore diagnosticresponse+servertrace, batch genuinefix withremainingcriticalcontrols, run relevantcoherentgates. Do not blindlyincrease timeouts/retry, startV1.6/S3, declarefreeze or changeversion.
+
+
+### CI execution policy — preserve coverage, reduce unnecessary full-suite reruns
+DECISION_DATE:2026-10-07
+SCOPE:V1.5.0.0 and subsequent AuroraFox development unless a stricter release gate requires otherwise.
+POLICY:Do not reduce CI/test coverage merely because the suite has grown. Select execution depth by change scope instead of running the entire matrix after every small commit.
+LEVEL_1_TARGETED:for ordinary/localized changes, run only the directly affected fast workflows/checks plus required dependency/contract guards.
+LEVEL_2_COHERENT_BLOCK:after a completed substantial block, run the expanded relevant subsystem set covering cross-component integration and regression risk.
+LEVEL_3_FULL_RELEASE:before accepting/finalizing V1.5.0.0, run one complete exact-SHA validation set across all required release workflows/checks (currently about 46 check-runs; exact count may evolve). No required release gate may be skipped, weakened, hidden, or counted as PASS when skipped/pending.
+RATIONALE:the larger suite reflects added Windows/Android/Core/Voice/API/Work/Computer/Evolution/Memory/UI/Knowledge/release and integration coverage. The objective is to keep that protection while avoiding repeated long Windows/Android/full-matrix runs for minor edits.
+BATCHING_RULE:prefer coherent implementation batches -> targeted verification during development -> expanded block verification -> one final full exact-SHA suite before release acceptance. Avoid blind reruns and repeated full-matrix polling unless evidence indicates a cross-cutting regression or a release gate explicitly requires it.
+STATUS:OWNER_DECISION/ACTIVE
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-BOUNDED-DIRECTORIES-AND-INVENTORY
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 sandbox bounded filesystem processing and remaining owner-control inventory
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 unchanged
+STARTING_HEAD: 737cd0e39864d66326ae4e6fbe2bdefa257e2cd2
+INTENDED_BUMP: D accumulated version-last
+OWNED_PATHS: computer/computer_service.py; scripts/computer_request_guard.gd; tests/test_sandbox_resource_limits.py; tests/owner_resource_limits_smoke.gd; config/owner_control_policy.json; tests/test_owner_control_audit.py; docs/PROJECT_MASTER_LOG.md; docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES: Coordinator reconciles published Computer/GUI/UIA/action claims and takes over those existing paths; no parallel source edits. CORE-HTTP-EVIDENCE exact Windows112665524343, Linux/WindowsComputer112665453090/112665452699, Work112665452995 SUCCESS at737cd0e. Executor recovered and checkout exactly synchronized; prior external environment blocker RESOLVED, root cause unknown. Previous Core assertion did not reproduce; no causal fix claimed. Observed46 checks with WindowsPackage pending and no red; skips remain non-PASS.
+NON_BLOCKERS: No V1.6/S3, signing/release/version changes. Existing filesystem security and reparse rejection stay mandatory; streaming directory enumeration is not a new race-proof filesystem guarantee. Source inventory and physical/release gates remain unfinished.
+ACCEPTANCE_GATES: Directory owner limits enforced while enumerating, not after allocating full directory arrays. Iterators close on quota/error/early exit; exact fit, actual overflow, zero and unsafe entries remain distinct. Legacy list uses trusted existing sandbox_tree_items snapshot and reports incomplete coverage honestly. Narrow exact full-statement classifications cover only reviewed tested owner propagation/technical boundaries; arbitrary runtime limits remain unknown. Real directories and fault/lazy iterator regressions, existing Windows junction and mandatoryDocker tests, Godot trusted policy and exact new CI.
+SOURCE_COMPLETE: NO
+CODE_FREEZE_SHA: none
+PROGRESS_COMPLETE: 82%
+PROGRESS_REMAINING: 18%
+NEXT: Build one coherent bounded-directory/resource inventory package; collect new defects and run its relevant checks together.
+
+CLAIM_ADDENDUM: BOUNDED-DIRECTORIES-AND-INVENTORY rebased onto owner documentation233298050efeac8bb286a30a32db8b2b2d6684c1; only concurrent change is tiered CI policy, integrated append-only. Keep targeted checks during implementation, expanded relevant checks for this complete block, full exact-SHA matrix once at release acceptance; no blind reruns or weakening/hidden skips. Original737cd0e now46completed=43SUCCESS/3SKIP including WindowsPackage; old Core failure remains historically unexplained.
+CLAIM_ADDENDUM: same coherent remaining-resource package also owns api/request_limits.py, api/server.py, tests/test_api_request_limits.py, tests/test_api_server_hardening.py. Coordinator reconciles original baseline API body/memory guard only; hidden/public account/role/auth lane and its hard boundaries untouched. Current middleware silently forces max_bytes>=1 and aggregate>=per-request, preventing explicit server-owner zero/smaller aggregate policy. Trusted startup configuration must expose independent request and aggregate budgets (defaults preserved); zero removes only its own operational ceiling, negative invalid configuration fails visibly, payload/headers never set authority. Existing auth, public-auth rate/security boundaries, capacity accounting/release and response-start failure behavior stay intact. Acceptance includes real ASGI chunks/concurrency/cancel/error and full authenticated server boundary regressions, default/raised/zero/independent aggregate and invalid startup policy.
+
+CLAIM_ADDENDUM: same API resource block owns tests/test_deployment_contract.py to verify trusted environment policy delegation and both middleware budgets after extraction; existing pre-parser/auth/mail security contract remains mandatory.
+
+### Coherent bounded-directory and independent API budget source checkpoint
+CLAIM: WORK-2026-10-07-V15-BOUNDED-DIRECTORIES-AND-INVENTORY ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE: 233298050efeac8bb286a30a32db8b2b2d6684c1; main446ce2cd2f979a8ab228f63d090062e8ba48a6eb fetched unchanged. Owner tiered-CI decision integrated append-only. Prior737cd0e exact46completed=43SUCCESS/3SKIP; no gate attribution to unpublished source.
+CHANGES: streaming scandir traversal closes iterators on early exit/errors and stops at actual extra entry; snapshot preflight/tree/list avoid full-directory arrays. Trusted legacy list header takes existing owner sandbox_tree_items snapshot, direct legacy zero preserved. Partial/failed/unsafe/truncated result evidence remains explicit. Copy-stage concurrent growth/shutil.copytree allocation remains unresolved; no race-proof filesystem claim. Narrow84 full statements account for94 audit records without suppressing unknown caps. API trusted startup request/aggregate budgets independent, zero disables only its own operational ceiling; negative/invalid policy fails visibly. Permanently oversized aggregate body413 differs from temporary concurrent contention503; reservations release on success/failure/cancellation, post-response errors propagate. Client headers/payload never own configuration; auth/public rate/account/mail boundaries unchanged.
+TESTS: expanded pinned API/server/deployment/sandbox/audit133PASS/6SKIP; after two added post-response-start cases API/server/deployment52PASS. Earlier completeComputer/owner/audit136PASS/6SKIP; latestComputer113PASS/6SKIP and optimized traversal9PASS/1SKIP. ActualGodot owner and Godot/Uvicorn guardPASS, existing20ObjectDB/8resource exit diagnostics retained. Real Core HTTP fixturePASS after executor recovery; prior Windows failure cause UNKNOWN. Six local platform/Docker skips notPASS. New test authoring errors (pytest reserved parameter name and missing synchronization before parser exception) corrected without changing product acceptance. git diff --check PASS. New exact CI pending publication, native physical input/device/release acceptance unwaived.
+INVENTORY:480files;1558test_evidence/1284unclassified/65documentation/726owner_adjustable/377format_structure/59hard_boundary;complete:false. New API findings remain visible; incomplete audit prevents source closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:bounded directory source, precise inventory review, independent API policy and real regression checks.
+REMAINING:publication/exactCI; unclassified owner inventory, provider/unfinishedCRITICAL, copy-stage resource/race limitation, package/device/update/production/version-last.
+BLOCKERS:no current external source blocker; physical/production acceptance unwaived.
+NEXT:publish one coherent package; continue remaining critical source without waiting blindly for CI.
+
+PUBLICATION_CHECKPOINT: BOUNDED-DIRECTORIES-AND-INVENTORY published ab755d63a3df42e41d2077c4378424973270526a/treeb37e98635541941d88fabf7674c247e814554f41 on2332980 via expected-head fast-forward;13ownedpaths. Local fetch/reset reconciled without source differences. Source claim RELEASED/EXACT_CI_PENDING; release gates remain unfinished.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-API-CONVERSATION-OWNER-RETENTION
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL
+ROADMAP_SECTION: 4 remaining owner resource controls and personal conversation persistence
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 unchanged
+STARTING_HEAD: ab755d63a3df42e41d2077c4378424973270526a
+INTENDED_BUMP: D accumulated version-last
+OWNED_PATHS: api/conversation_store.py; api/server.py; tests/test_api_database.py; tests/test_api_server_hardening.py; config/owner_control_policy.json; tests/test_owner_control_audit.py; docs/PROJECT_MASTER_LOG.md; docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES: Reconcile published API body policy block and existing baseline SQLite conversation store; coordinator takes over released API paths. Freshmain446ce2 unchanged; no other source edit observed. Exact new CI pending, independent resource work proceeds.
+NON_BLOCKERS: No account/auth/role/public-rate/S3/V1.6 changes; no version/sign/release. Zero explicitly allows whole-history context/materialization at owner risk; previously deleted messages cannot be recovered by increasing retention. Existing default120 retained messages/context24 preserved for compatibility.
+ACCEPTANCE_GATES: trusted server-owner retention/context budgets accept exact/raised/zero; negative policy fails visibly. Zero retention preserves full legacy migration and does not run destructive delete; context zero returns all in order, positive exact budgets remain owner/conversation isolated. Explicit constructor policy overrides environment; incoming payload/headers never select retention. Real SQLite migration/restart/isolation/deletion/context and full-server wiring regressions; existing gateway/account/persistence tests remain mandatory. Do not claim global private-data no-prune while positive conversation retention deletes older rows.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT: implement coherent server conversation retention/context owner control and actual persistence regressions.
+
+CLAIM_ADDENDUM: API-CONVERSATION-OWNER-RETENTION coherent API persistence/transport policy also owns api/file_client.py and tests/test_api_gateway.py. Existing upload byte budget silently clamps zero to1; stale transport recovery TTL clamps to60 and analysis HTTP deadline fixed180. Expose trusted startup independent byte/TTL/analysis-time budgets with existing defaults16MiB/24h/180s, exact/raised/zero and negative rejection. Zero TTL disables startup stale-upload pruning, not mandatory per-analysis finally cleanup; zero HTTP deadline maps to requests timeout=None, no worker cancellation guarantee inferred. Actual save/decode/TTL/cleanup and real local HTTP analysis fixtures remain mandatory; invalid base64, safe naming and server auth/body budgets unchanged. No production File Intelligence parser/S3 lane edit.
+
+CLAIM_ADDENDUM: same API owner-resource batch includes existing private content validators in api/server.py/tests/test_api_server_hardening.py: trusted startup chat/feedback text, knowledge text, and note/question character budgets, existing100000/200000/12000 defaults. Zero removes only max-length; required nonempty text, normalized scores, protocol IDs, account/auth/token/password rules and body/aggregate budgets unchanged. Real authenticated HTTP chat and actual Pydantic validation exact/overflow/raised/zero/negative tests mandatory; client metadata cannot set validator policy. No claim that other bridge/model/parser limits are all removed.
+
+### Coherent API history/file/content owner policy checkpoint
+CLAIM: WORK-2026-10-07-V15-API-CONVERSATION-OWNER-RETENTION ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:ab755d63a3df42e41d2077c4378424973270526a; treeb37e98635541941d88fabf7674c247e814554f41. Prior source checks observed42=35SUCCESS/3SKIP/4IN_PROGRESS,0FAILURE. CoreWindows/ComputerLinux/ComputerWindows/Work/API success; Android/native/package release evidence still not all complete, do not declare freeze.
+CHANGES: trusted API server conversation retention/context env120/24 defaults preserved; explicit positive budgets no longer clamp to20/1, zero preserves full legacy migration and prevents destructive retention SQL, zero context selects all ordered rows. Explicit constructor overrides environment, negative invalid policy fails. User/conversation isolation preserved; previously deleted data unrecoverable. Positive retention intentionally removes older conversation rows; maintenance's own no-prune does not mean whole product no-prune. Upload16MiB/recoveryTTL24h/analysis180s independent owner budgets; zero disables respective byte ceiling/startup pruning/HTTP deadline, mandatory per-analysis success/error cleanup retained. Private content validators chat100000/knowledge200000/note-question12000 owner configured; zero lifts max-length only, nonempty required text/scores/protocolID/auth/account/token/password/body guards unchanged. Model payload/headers never own startup policy.
+TESTS: pinned expanded API/storage/gateway/accounts/persistence/server/request/deployment/audit129PASS; final audit14PASS after one new text-classification case. Latest FastAPI0.142.2/Pydantic2.13.5 expanded final130PASS. Real SQLite migration/restart/isolation/exact/raised/zero and authenticated HTTP context/text checks; actual local HTTP requests success/500/deadline0/1/600 with mandatory transport cleanup. Existing account/security checks remain green. Latest optional environment initially lacked requests; collection NOT_EXECUTED then dependency2.32.5 installed and full130 executed. Audit edit initially used wrong JSON key rules and stopped before saving; corrected to classifications, narrow tests verify arbitrary caps/trailing statements stay unknown. No product gate relaxed. git diff --check PASS; new exact CI mandatory after publication.
+INVENTORY:480files;1599test_evidence/1255unclassified/65documentation/761owner_adjustable/377format_structure/59hard_boundary;complete:false. Unreviewed limits remain visible.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published bounded directory/API bytes; verified independent API history/file/content owner policy and compatible actual software tests.
+REMAINING:publication/exactCI;1255 inventory records, provider/unfinishedCRITICAL, copy-stage limitation, full same-SHA package/device/update/production/version-last.
+BLOCKERS:none for independent critical source; physical/production acceptance unwaived.
+NEXT:publish coherent API owner policy, reconcile exact CI and continue remaining providers/resource inventory.
+
+PUBLICATION_CHECKPOINT: API-CONVERSATION-OWNER-RETENTION published fc8bd86c75b3d2da4567bd50cd39af9b4f2f5823/treec4779ceafb961065ea675a119dd6efc8f73ad33f onab755d6 via expected-head fast-forward;10paths. Source paths RELEASED/EXACT_CI_PENDING; freshfetch synchronized unchangedmain446ce2. No release acceptance inferred.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-API-PROVIDER-RESOURCE-POLICY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining private provider runtime transport resource controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:fc8bd86c75b3d2da4567bd50cd39af9b4f2f5823
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:api/runtime_bridge.py;api/ollama_client.py;api/provider_resource_policy.py;tests/test_api_provider_resource_limits.py;tests/test_api_runtime_resilience.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over published baseline API provider transports; self-primary localCore/localKnowledge fallback stays mandatory. PriorAPI budgets published and local130latestPASS; newCI pending. No concurrent source change observed.
+NON_BLOCKERS:No provider pagination/full library-allocation guarantee; no V1.6/S3/publicauth/sign/version/package changes. Explicit unbounded read may wait until remote closure; no new synchronous thread-cancellation guarantee.
+ACCEPTANCE_GATES:trusted bridge connect/read/response and Ollama discovery/chat budgets support default/exact/raised/zero, reject negative/nonfinite configuration; local HTTP/TCP prove actual deadline propagation and bounded cap+1 bytes before parsing. Bridge valid UTF8 JSON/request identity remains mandatory; overflow must not silently parse an oversized final chunk or claim closed-without-response. Existing offline self-primary fallback/model-selection tests remain green.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:coherent provider budget/error implementation plus actual transport/identity/fallback tests.
+
+### Coherent API provider transport policy checkpoint
+CLAIM:WORK-2026-10-07-V15-API-PROVIDER-RESOURCE-POLICY ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:fc8bd86c75b3d2da4567bd50cd39af9b4f2f5823/treec4779ceafb961065ea675a119dd6efc8f73ad33f.
+CHANGES:bridge trusted connect/read/response budgets preserve8s/180s/8MiB defaults, zero removes only respective ceiling, finite nonnegative validation mandatory. Read only remaining frame budget+1 bytes; reject overflow before UTF8 JSON parsing. Frame byte budget includes terminal newline; exact fit succeeds, overlong frame explicit error instead of falsely closed-without-response. RequestID matching preserved. Ollama trusted discovery/chat deadlines preserve existing unconfigured caller0.9/health0.75 and180s chat; configured policy overrides legacy internal discovery deadline, zero maps None. LocalCore/localKnowledge fallback and model preference unchanged. Explicit constructor overrides environment; no client payload authority.
+TESTS:pinned expanded10API/provider/storage/security/audit files148PASS; final narrow-audit15PASS after one additional classification case. Latest FastAPI0.142.2/Pydantic2.13.5 full149PASS. Genuine TCP UTF8 exact/raised/zero/overflow cap+1 accounting and wrongID rejection; actual local HTTP tags/chat0/0.5/10/600deadlinepropagation and unchangedfallback regressions. Finite negative/NaN/infinite/bool/non-numeric validation rejected. New provider module and actual fixtures included as owned newfiles, generatedGodotUID/importfiles excluded. git diff --check PASS. No newnative/device proof inferred from localsoftware.
+PRIOR_CI:atfc8bd86 observed40checks32SUCCESS/3SKIP/5IN_PROGRESS/0FAILURE; AndroidAPK112731831992/CoreAndroid112731470673/WindowsPackage smoke112730505915/CoreWindows112730371571/AndroidPlugin112730310777 pending, notPASS. New provider exactCI pending publication.
+INVENTORY:482files;1619test_evidence/1252unclassified/65documentation/771owner_adjustable/377format_structure/59hard_boundary;complete:false. Provider unknown statements remain visible.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published directory/API-byte and history/file/content packages; provider transport ownership and actual TCP/HTTP/compatibility checks complete locally.
+REMAINING:publication/exactCI;1252remaininginventory/unfinishedCRITICAL, provider pagination/copy-stage limitations, fullsameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; required physical/production acceptance remains unwaived.
+NEXT:publish coherent provider package; resume largest remaining owner/resource inventory and reconcile exact gate failures if any.
+
+PUBLICATION_CHECKPOINT: API-PROVIDER-RESOURCE-POLICY published c2199219fc3bc85e2cf4dfb936066827ee2c86fc/tree7fe52f1de3238745bc68ebbec1fc8923641f09a6 onfc8bd86 via expected-head fast-forward;8ownedpaths including2newfiles. Source RELEASED/EXACT_CI_PENDING. Freshfetch local source reconciled; no version/merge/release.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-FILES-CACHE-PROVIDER-ZERO
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining File Intelligence owner operational controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:c2199219fc3bc85e2cf4dfb936066827ee2c86fc
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:file_intelligence/file_service.py;scripts/file_intelligence_client.gd;scripts/settings_overlay.gd;tests/test_file_intelligence.py;tests/test_owner_runtime_limits_contract.py;tests/owner_resource_limits_smoke.gd;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator explicitly takes over published File Intelligence owner-limit/persistence paths. Published provider block locally148pinned/149latestPASS; newexactCI pending. No parallel source edit observed.
+NON_BLOCKERS:Windows backend cache/vision/STT/ffmpeg settings only; no Android parser/job policy, V1.6/S3/sign/version. Zero is not globally reinterpreted: archive listing0 remains hide; internal text allocation0 remains zero characters; positive video sampling/render/decoder dimensions remain progress/representation constraints. Existing outer cancellable analysis budget remains separate.
+ACCEPTANCE_GATES:cache byte0 disables cache eviction, provider operation timeout0 maps None for actual requests/subprocess, exact/raised budgets preserve behavior and invalid negative startup fails. Owner settings UI/client/persistence/export support these four zero values end to end, without altering other minimums. Actual cache files/HTTP vision-STT/ffmpeg and Godot persistence checks; existing File/Archive/OCR regressions retained.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:finish four end-to-end zero controls in one File Intelligence package and verify actual backend/UI propagation.
+
+CLAIM_ADDENDUM: FILES-CACHE-PROVIDER-ZERO also owns .github/workflows/api-ci.yml for the previously published provider acceptance gap: API CI uses an explicit test list and did not include new tests/test_api_provider_resource_limits.py. Add its push/PR path filters and actual pytest invocation, preserving every existing test/platform check and tiered CI policy. Prior c219 API CI cannot be claimed as proof of this new fixture until workflow selection is corrected and exact new CI executes it. This is a required existing V1.5 gate repair, not expanded product scope.
+
+### Coherent File Intelligence zero policy and required provider CI selection checkpoint
+CLAIM:WORK-2026-10-07-V15-FILES-CACHE-PROVIDER-ZERO ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:c2199219fc3bc85e2cf4dfb936066827ee2c86fc/tree7fe52f1de3238745bc68ebbec1fc8923641f09a6.
+CHANGES:four existing Windows File settings now support trusted zero end to end: cache bytes0 bypass eviction; vision/STT/video operation seconds0 map None in requests/subprocess. Existing positive/default limits preserved, negative/noninteger startup rejected. Private persisted Godot values/env/UI minimums updated only for these four; archive listing0=hide, internal text0=zero characters and other parser/Android constraints unchanged. Outer analysis deadline remains independent. Audit formerly classified any occurrence of named File budget, allowing appended fixed cap to hide: narrowed to22 reviewed exact full statements; adversarial trailing-source test nowPASS. API CI explicit filters/pytest list lacked newly published provider fixture: all3locations now include it, preserving every existing test. Prior API CI cannot prove newfixture execution.
+TESTS:final relevant File/Archive/listing/owner/OCR/provider/fallback/audit105PASS/1SKIP/2subtestsPASS. Skip tests/test_local_ocr.py391 requires actual local OCRruntime absent from testhost, NOT_PASS. Earlier first expanded run4FAIL due missing reportlab while82PASS/1SKIP; dependency5.0.1 installed and actual PDF scenarios reexecutedPASS. Audit newtest initiallyFAIL confirmed broad classification false-closure; repaired rule rather than weaken assertion. Real cache files/fullmodule startup0/2/600/negative, actual HTTP vision/STT deadlines and actual ffmpeg audio extraction0PASS; offline transcript stub separate from extraction evidence. Godot4.7.1 owner smokePASS with private save/reload/env0/negative; existing20ObjectDB/8resource exit diagnostics unchanged. Settings script check-onlyPASS; API workflow YAML parse/testselection3occurrencesPASS; git diff --checkPASS. No Windows/UI/device/nativeOCR proof inferred.
+PRIOR_CI:atc2199219 observed39checks34SUCCESS/3SKIP/2IN_PROGRESS/0FAILURE; CoreAndroid112735828484/AndroidPlugin112732574899 pending. New source/providerfixtureselection exactCI mandatory.
+INVENTORY:482files;1626test_evidence/1252unclassified/65documentation/768owner_adjustable/377format_structure/59hard_boundary;complete:false. Source/statement changes retained, no false inventory closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:published3large directory/API/provider packages; four File zero controls and real regressions, adversarial audit repair and provider CI coverage selection verified locally.
+REMAINING:publication/exactCI;1252inventory/unfinishedCRITICAL, provider pagination/copy-stage limitations, fullsameSHA package/device/update/production/version-last.
+BLOCKERS:no external source blocker; actual OCRruntime/physical/production acceptance unwaived.
+NEXT:publish coherent File/CI package; continue largest remaining owner/incomplete critical block, investigate exactCI failure if observed.
+
+PUBLICATION_CHECKPOINT: FILES-CACHE-PROVIDER-ZERO published317d0151e0679dfc95bc29ed50c14ef911588381/tree987b42704a835531e38f8fcbfb511fc8283694d8 onc219921 expected-head fast-forward;10paths. Source RELEASED/EXACT_CI_PENDING. Required new provider CI selection corrected but exact execution pending; nativeOCR skipped notPASS.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-SNAPSHOT-COPY-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 remaining snapshot/rollback owner resources during materialization
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:317d0151e0679dfc95bc29ed50c14ef911588381
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:computer/computer_service.py;tests/test_sandbox_resource_limits.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over published bounded-directory Computer source; no parallel edit observed. Preflight/postflight streaming accepted previously; copytree still fully materializes uncapped growth between them. Freshmain446ce2 unchanged; priorFile exactCI pending.
+NON_BLOCKERS:No promise of fully race-proof parent filesystem traversal or identical-time transactional source view. Existing symlink/reparse/special rejection and sandbox authority remain mandatory. No V1.6/S3/GUI/action/sign/version changes.
+ACCEPTANCE_GATES:stream source entries and file chunks during actual copy; independently enforce entry/actual-byte owner caps before excessive materialization, zero/exact/raised supported. Capture regular-file stat and verify opened file identity before reading; no preexisting target deletion; created target cleanup on overflow/error. Actual growth after preflight, large-file read cap+1 accounting, entry growth, reparse/fault, executable metadata, rollback-preserved work and currentnativeWindows mandatory tests. Final target snapshot stats still validate successful materialization.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:bounded snapshot copy implementation with genuine growth/fault/ownership fixtures and relevant coherentComputer batch.
+
+CLAIM_ADDENDUM: SNAPSHOT-COPY-BUDGET owns .github/workflows/voice-ci.yml and .github/workflows/release.yml for confirmed exact317 File gate environment defect: new actual ffmpeg fixture imports production imageio-ffmpeg==0.6.0, absent from both explicit test dependency lists. Add matching dependency without skipping fixture or changing acceptance. Exact317:46completed/41SUCCESS/3SKIP/2FAILURE; File job112736667994 missing module; Core Windows job112736730703/run37604527306 quality20/21, only simple_planning failed (steps0/checks0), performancePASS, HTTPprogressPASS. Core cause not confirmed; artifact11473964567 sha256badd4e98d27fbb277565f5f7180d833e4826fa87838c1b1e4a014cf27a4b2d94 downloaded for diagnosis. API Linux job112736668509 actual177PASS includes provider fixture. Snapshot expanded local148PASS/6SKIP; nativeWindows/Docker skips remain unaccepted locally.
+
+CLAIM_ADDENDUM: SNAPSHOT-COPY-BUDGET additionally takes over scripts/cognition_layer.gd, benchmarks/core/core_benchmark.gd and tests/owner_resource_limits_smoke.gd solely for existing mandatory Core simple_planning failure diagnosis. Exact317 report proves empty plan but omits transport/parser/schema evidence; cause remains UNKNOWN. Add content hash/length and explicit failure category/types without logging private model content, leave benchmark success criteria unchanged. Actual fixture validates unavailable/malformed/wrong-shaped/valid plans, no fabricated steps or acceptance bypass. Reconcile published coordinator cognition paths; no other active lane edits observed.
+
+### Snapshot materialization and existing exact-CI repair checkpoint
+CLAIM:WORK-2026-10-07-V15-SNAPSHOT-COPY-BUDGET ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:317d0151e0679dfc95bc29ed50c14ef911588381/tree987b42704a835531e38f8fcbfb511fc8283694d8.
+CHANGES:stream actual snapshot entries/chunks and enforce independent owner caps during copy; verify opened regular-file identity, reject replacement/FIFO, preserve executable/time metadata. Existing destination409 remains untouched; only newly created partial snapshots cleaned, failed cleanup explicitly500. Narrow6exact audited owner statements, no blanket classification. Matching production imageio-ffmpeg0.6.0 added to explicit ordinary/release test dependency lists. Core empty plan diagnosis adds private content hash/length and transport/schema category; wrong-shaped/empty plan rejected, quality criteria unchanged; actual cause still UNKNOWN.
+TESTS:Computer expanded148PASS/6SKIP (nativeWindows junction/job and Docker unavailable locally, notPASS); actual preflight growth/entry growth/read cap+1/collision/identity replacement/FIFO/executable/readonly/cleanup-failure fixtures included. File CI identical selection66PASS/2subtestsPASS. Actual Godot4.7.1 owner smokePASS with plan failure/valid fixtures, existing20ObjectDB/8resource exit diagnostics unchanged. Previous transient test session completion lost after idle, not accepted; persisted rerun result used.
+EXACT_PRIOR_CI:31746complete41SUCCESS/3SKIP/2FAILURE. API Linux177PASS proves new provider fixture executed; Computer Linux/Windows successful. File failure confirmed missing test dependency, repaired locally; Core Windows quality20/21 simple_planning empty, performancePASS, HTTPprogressPASS, artifact11473964567 sha256badd4e98d27fbb277565f5f7180d833e4826fa87838c1b1e4a014cf27a4b2d94. No rerun represented as source fix or qualityPASS.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:snapshot bounded materialization and actual fault regressions; dependency repair; safe Core diagnostic prepared.
+REMAINING:exact newCI/nativeWindows and actual Core cause; remaining inventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; physical/production evidence unwaived.
+NEXT:publish coherent snapshot/requiredCI diagnosis package; continue remaining source while reconciling new exact gates.
+
+PUBLICATION_CHECKPOINT: SNAPSHOT-COPY-BUDGET published8658a32aba59339511c7939674897214e648fbb7/treee4013cb8410a5741f86b25a2013cf446f7de3a63 on317d0151 expected-head fast-forward;10ownedpaths. Source RELEASED/EXACT_CI_PENDING; Core cause UNKNOWN pending diagnostic realrun. Followup audit/owner contract28PASS, Core benchmark check-onlyPASS.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-MEMORY-CONTEXT-DEFAULTS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 current Memory/Knowledge and owner operational context defaults
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:8658a32aba59339511c7939674897214e648fbb7
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:scripts/memory_store.gd;scripts/agent_core.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator explicitly takes over published Memory/Agent owner-control paths; freshmain446ce2 unchanged; snapshot newexactCI pending. No other source edit observed.
+NON_BLOCKERS:No Experience schema migration/V1.6/S3. Explicit per-call result counts retain precedence; explicit API result0 remains empty rather than globally redefined. Owner unlimited default resolves to eligible collection count; quality scoring/auth/provenance unchanged.
+ACCEPTANCE_GATES:replace fixed Agent recent8 and Memory default recent12/retrieval8 with independent private owner settings, preserve defaults and explicit positive/zero callers; exact/raised/unlimited actual memory results, owner persistence/visible labels, Agent context propagation, current semantic/dedupe/retention tests mandatory. Narrow statement inventory only, no false closure.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:finish remaining fixed Memory context defaults coherently and execute genuine Godot retrieval/context regressions.
+
+CLAIM_ADDENDUM: MEMORY-CONTEXT-DEFAULTS takes over computer/computer_service.py and tests/test_sandbox_resource_limits.py for actual8658 Windows regression job112838541302/run37634934668:122PASS/2SKIP/4FAIL, os.utime follow_symlinks=False NotImplementedError on Windows Python3.11.9. Preserve metadata and reject symlink/reparse before capability-aware timestamp operation; add genuine no-follow-unavailable fixture. No gate skip or parent-race guarantee. Snapshot source paths released by prior claim; fix included in same coherent followup package.
+
+### Memory context defaults and confirmed Windows snapshot repair checkpoint
+CLAIM:WORK-2026-10-07-V15-MEMORY-CONTEXT-DEFAULTS ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:8658a32aba59339511c7939674897214e648fbb7/treee4013cb8410a5741f86b25a2013cf446f7de3a63.
+CHANGES:independent private Memory recent12/retrieval8 and Agent recent8 controls preserve defaults; default owner0 resolves all eligible rows, explicit per-call0 remains empty and positive overrides preserved. No scoring/schema changes. Actual Windows snapshot timestamp failure repaired via runtime nofollow capability, fresh unsafe destination rejection and actual timestamp test. Narrow4exact audited method statements; no blanket closure.
+TESTS:Godot owner smokePASS actual20rows count2/15/unlimited/recent/Memory/Knowledge/search/calleroverride and Agent prompt propagation; existing20ObjectDB/8resource exit diagnostics unchanged. Local semantic memory smokePASS with network/Ollama false. Python audit/owner contracts28PASS. Snapshot82PASS/6SKIP including genuine capability-unavailable timestamp; nativeWindows/Docker local skips NOT_PASS. Initial new fixture parse failure due Variant ternary fixed by explicit type then actually executed.
+PRIOR_CI:8658 File Intelligence job112838541209SUCCESS confirms dependency repair; ComputerWindows job112838541302FAIL confirmed unsupported timestamp argument,122PASS/2SKIP/4FAIL, repaired in this batch. Other exact checks still reconciling; Core planning quality not yet accepted. No full release acceptance inferred.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:memory default/context owner controls and genuine Godot regressions; confirmed Windows timestamp repair locally verified.
+REMAINING:newexactWindows/Core and inventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; physical/production unwaived.
+NEXT:publish coherent Memory/Windows repair; continue remaining owner inventory and use actual Core diagnostic report to resolve its failure.
+
+PUBLICATION_CHECKPOINT: MEMORY-CONTEXT-DEFAULTS publishedea254f8af09dbd7e33573fda32f99375f576e094/treee18739ede845c8bc7c21719fc1169ce0e16828c8 on8658a32 expected-head fast-forward;9ownedpaths. Source RELEASED/EXACT_CI_PENDING; native timestamp repair needs actualWindows.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-KNOWLEDGE-RESOURCE-DEFAULTS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 reliable current Knowledge import/retrieval owner resources
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:ea254f8af09dbd7e33573fda32f99375f576e094
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:scripts/knowledge_store.gd;scripts/ai_client.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_knowledge_store_batch_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over published Knowledge/AIClient resource paths; current Memory source published, exactCI pending; freshmain446ce2 unchanged. Current pack importer/transaction integrity unchanged.
+NON_BLOCKERS:No new Knowledge profile/schema/V1.6/S3. Owner0 disables own chunk/batch/result ceiling, does not relax imported-data authority/provenance/dedupe. Explicit per-call search0 remains empty. Unlimited batching may use full physical memory by owner choice; default bounded production behavior preserved.
+ACCEPTANCE_GATES:private visible/persisted chunk1800/stream batch131072/structured flush2048/search6 defaults; capture per operation; positive exact/raised and zero preserve all input without infinite chunk loop, retrieval sorts all requested hits, explicitcaller precedence. Actual JSONL import/retrieval and structured batching/snapshot, existing streaming/rollback/dedupe fixtures and relevant Python contracts. No false source completion or pack acceptance.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement remaining Knowledge chunk/batch/default result ownership and genuine resource fixtures.
+
+### Knowledge resources coherent checkpoint
+CLAIM:WORK-2026-10-07-V15-KNOWLEDGE-RESOURCE-DEFAULTS ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:ea254f8af09dbd7e33573fda32f99375f576e094/treee18739ede845c8bc7c21719fc1169ce0e16828c8.
+CHANGES:private visible/persistable Knowledge chunk1800/stream batch131072/write batch2048/search6 controls. Positive/default behavior retained; owner0 bypasses its own split/intermediate flush/result ceiling, final flush mandatory. Structured operation captures chunk/write values once. Default search unlimited preserves all sorted matches without intermediate topK loss; explicit caller0 remains empty. AIClient default propagates. Removed3unused constants and reconciled existing batching contract with private default2048. Exact reviewed Knowledge statement inventory classified without blanket future exemption.
+TESTS:Godot owner smokePASS real3000Unicode chunk2/1800/4000/0, actual20JSONL hits2/15/unlimited/explicit3/0, real structured flush2/15/0 and immutable captured policy, actual stream batches1/32/0 and late search. Initial newline-equality assertion failed on intentional strip/EOF normalization; corrected semantic fixture then actually executedPASS. Streaming420record/900line smokePASS; genuine9MiB malformed replacement transaction rolled_backPASS preserves old knowledge/removes partial. Python relevant32PASS; diffcheckPASS. Existing owner smoke20ObjectDB/8resource exit diagnostics unchanged.
+PRIOR_CI:8658CoreWindows112838645833SUCCESS (prior317planning failure cause UNKNOWN, no diagnostic fix claim). ea254f8ComputerWindows112840901226SUCCESS proves actual timestamp repair. ea254f8atlastobservation37checks32SUCCESS/3SKIP/2IN_PROGRESS/0FAILURE; pending not accepted.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Knowledge resource defaults with actual preservation/import/retrieval/rollback regressions; actual Windows repair confirmed.
+REMAINING:publication/exactCI; remaining ownerinventory/unfinishedCRITICAL; sameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; actual device/production evidence unwaived.
+NEXT:publish coherent Knowledge package, then largest remaining Voice/owner source inventory with exactCI reconciliation.
+
+PUBLICATION_CHECKPOINT: KNOWLEDGE-RESOURCE-DEFAULTS published5493294fa465dd01cdc58867a217a4a36ad1b037/tree625579e19c323385572f2214e74b8e90a56871bc onea254f8 expected-head fast-forward;8ownedpaths. Source RELEASED/EXACT_CI_PENDING.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-VOICE-RESOURCE-CONTROLS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing local Voice owner resource controls
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:5493294fa465dd01cdc58867a217a4a36ad1b037
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:voice/python/aurora_voice_server.py;voice/python/voice_resource_policy.py;voice/python/processor.py;voice/voice_bridge.gd;scripts/owner_resource_policy.gd;tests/test_voice_resource_limits.py;tests/test_voice_text.py;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;.github/workflows/voice-ci.yml;.github/workflows/release.yml;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator takes over existing Voice bridge/server/settings paths, no other source edit observed; Knowledge source published/exactCI pending; freshmain446ce2 unchanged. No replacement acoustic models/dependency on external AI.
+NON_BLOCKERS:Startup backend policy applies on next backend launch; owner Settings labels state restart. No Android voice runtime policy rewrite. Native microphone/recognition/acoustic proof not inferred from budget tests. Speech DSP representation/quality settings retained.
+ACCEPTANCE_GATES:private visible persisted Voice TTSinput16000/cache512MiB/micqueue128 controls exported into both portable/managed backend startup. Independent zero removes max validation/eviction/queue capacity; invalid negative config fails rather than clamps. Actual cache files and queue boundary accounting, actual Pydantic/HTTP validator using production request definition, Godot env propagation, split helper explicit small/0 cap preserves progress; required existing Voice/pack/runtime gates kept. New tests in explicit CI/release selection/dependencies.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:finish trusted Voice limits and one actual relevant Voice test batch.
+
+CLAIM_ADDENDUM: VOICE-RESOURCE-CONTROLS also includes existing Voice file-path request4096 maximum in same private startup policy/UI/export/actual validator fixtures; zero removes only this text ceiling, actual filesystem/permission/path processing remains unchanged. Exact requested path identity is not truncated. Confirmed split helper dropped final source character to insert comma; repair retains character in next chunk, tests require full letters and bounded chunks.
+
+### Voice trusted startup resources and speech preservation checkpoint
+CLAIM:WORK-2026-10-07-V15-VOICE-RESOURCE-CONTROLS ACTIVE/PUBLICATION_PENDING.
+STARTING_SOURCE:5493294fa465dd01cdc58867a217a4a36ad1b037/tree625579e19c323385572f2214e74b8e90a56871bc.
+CHANGES:four private visible persisted restart-time Voice controls for TTSinput16000/path4096/cache512MiB/micqueue128 exported into portable/managed backend. Independent0 removes validationmax/skips eviction/Queueunbounded; invalid startup policy fails. Queue overflow visible in health dropped-chunk count. Existing streamhelper48floor removed; no final-character replacement by continuation comma. Real new regression included ordinary/release explicit CI selection and actual required dependencies; no acoustic/native acceptance replaced. Narrow exact Voice statements classified, FFT/hop clamps retained unknown.
+TESTS:expanded relevant Voice/owner/evolution/promotion/release/provider/project96PASS. Actual Pydantic request definition over FastAPI HTTP exact/raised/0 retains nonempty/intensity validation and rejects request-side override; fullpath identity, realcacheWAV/sidecar pairs, actual129audio callback queue2/129/0 with visible drops. Godot owner smokePASS private policy/env2/20000/0 allfour exports; existing20ObjectDB/8resource exit diagnostics unchanged. New detached bridge child freed explicitly, avoiding fixture-onlyextra leak. Initial NumPy collection failure repaired by installing2.2.6 and actually executing; initial long-speech assertion exposed real droppedcharacter, fixed source rather than weaken preservation. Native acoustic/mic/runtime NOT EXECUTED locally. Adversarial audit tests preserve unknown appended caps and FFT clamps; diffcheckPASS.
+PRIOR_CI:5493294atlastobservation41checks34SUCCESS/3SKIP/4IN_PROGRESS/0FAILURE; pending notPASS. ea254f8Windows timestamp confirmed prior; actual Core latest gates still exact-SHA required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Voice owner startup limits and actual budgets/preservation regressions prepared; required workflow coverage/dependencies included.
+REMAINING:publication/exactCI; FFT/hop controls and other ownerinventory/unfinishedCRITICAL; fullsameSHA package/device/update/production/version-last.
+BLOCKERS:none for independent source; physical/production evidence unwaived.
+NEXT:publish coherent Voice batch; continue remaining runtime owner constraints and reconcile actual exact gates.
+
+INVENTORY_CHECKPOINT:484files;1675test_evidence/1188unclassified/66documentation/819owner_adjustable/408format_structure/59hard_boundary;complete:false. Adversarial audit17PASS; source completion remainsNO.
+
+PUBLICATION_CHECKPOINT: VOICE-RESOURCE-CONTROLS published1174183d4a18ba8bb1251d7eecb6ba1725e85e83/treec86feb60f698466456d1d464ca9a7c063d5f4eee on5493294 expected-head fast-forward;14ownedpaths including2newfiles. Source RELEASED/EXACT_CI_PENDING; native/acoustic acceptance unwaived.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-CANDIDATE-CONTROL-BOUNDARIES
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing candidate self-improvement baseline MasterStop/cancellation and owner operational waits
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:1174183d4a18ba8bb1251d7eecb6ba1725e85e83
+INTENDED_BUMP:D accumulated version-last
+OWNED_PATHS:scripts/core_improvement_pipeline.gd;scripts/tool_registry.gd;scripts/owner_resource_policy.gd;tests/core_candidate_benchmark_smoke.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;tests/test_autonomous_evolution_contract.py;tests/test_core_candidate_promotion.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:Coordinator explicitly takes over published pipeline/ToolRegistry owner paths. Source inspection confirms no repeated MasterStop/Work guard between proposal/chat/tool/verification/store/apply operations; ToolRegistry forwards caller guard only to Security. Prior Voice source published, newexactCI pending; main446ce2 unchanged; no parallel source edit observed.
+NON_BLOCKERS:Only current V1.5 candidate baseline; no V1.6 runtime/Core rewrite/S3/sign/version. Preserve required3..10distinct isolated candidates, immutable incumbent, hard gates, independent secondpass, positive review improvement, protected allowlist and no automatic packaged apply. Guard stops next work and rejects stale completion; does not promise undo of effects already started. Existing localCore inference stays available to normal chat.
+ACCEPTANCE_GATES:forward caller guard to candidate tool; strict fail-closed globalMasterStop/caller-cancel/automatic-toggle/update-priority checks before and after each awaited model/tool operation and before store/apply. No extra Work action bookkeeping when polling guard. No next model/tool call after stop or usable stale success; uncertain started effects explicit. Independent proposal-attempt multiplier default3/benchmarkseconds150 owned, zero removes only operational ceiling while perstep guards remain. Actual deterministic fake-model/tool stop propagation and owner values0/raised, existing tournament/source/benchmark contracts retained; exactnative/pack gates mandatory.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement peroperation failclosed guard and owner waits, then coherent genuine candidate control/tournament regressions.
+
+CLAIM_ADDENDUM: CANDIDATE-CONTROL-BOUNDARIES covers confirmed source reentry window: _running previously set only after awaited is_available; concurrent call could overwrite shared caller guard/tournament state. Acquire ownership before first await, release on every rejection. Deterministic test seam for supported-platform decision preserves production Windows-only behavior; no Linux/native acceptance inferred. Test overlapping availability/stop and stale-result rejection without actual mutation apply.
+
+CANDIDATE_CONTROL_VALIDATION_CHECKPOINT: unpublished WIP on1174183. Actual Godot4.7.1 core_candidate_benchmark_smoke PASS including entry overlap during awaited availability, MasterStop at availability/model/tool, no next operation, stale-success rejection, explicit started-effects uncertainty, malformed/expired required caller guards, actual ToolRegistry guard forwarding, automatic toggle/manual separation and benchmarkseconds2/300/0 forwarding. Existing immutable incumbent/3..10/hard-gate/no-promotion contracts retained. Fixture only overrides platform/dependency/state-write seams, not native verification; no Windows acceptance inferred. Initial fixture cleanup leaked detached Android/Desktop runtime children; explicitly freed them, actual rerun exit0 with no exit leak diagnostics. Relevant Python candidate/evolution/owner/audit batch49PASS. Actual unlimited proposal-loop fixture executes3model attempts and stops on MasterStop without another model call.
+EXACT_CI_RECONCILIATION:1174183 Voice python-voice/acoustic-quality SUCCESS; WindowsCore job112850414546/run37638237393 FAILED. Artifact11490973979 digest27c516baac35a56eebfbc125b1c82724b4cd693c8a9c18cd9b9f308218f75b5c confirms20/21, simple_planning only: transport_ok=true/content_chars0/invalid_json_or_plan_contract,35432.894ms,0steps/0checks; performancePASS, no scenario timeout. SpecialistTeam real offline8operationsPASS. This is an unresolved empty-content runtime response, not a passed gate or proven model/parser cause. Preserve21/21 criteria; next inspect runtime extraction/request evidence under a separate claim if source repair necessary. Other exact gates still in progress, no freeze declared.
+
+PUBLICATION_CHECKPOINT:CANDIDATE-CONTROL-BOUNDARIES published92287e667747d9dcdd8b5e40cde04d6f7cac9bd8/treef6345e05c5f3c563bdfe39cc70638314d49febc2 on1174183 CAS fast-forward.7ownedpaths; relevant49PythonPASS and genuineGodot candidate guard/tournamentPASS; source RELEASED/exactCI pending. SOURCE_COMPLETE:NO/CODE_FREEZE_SHA:none.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-STRUCTURED-PLANNING-RUNTIME
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 unfinished existing Core planning baseline and remaining exact quality gate
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:92287e667747d9dcdd8b5e40cde04d6f7cac9bd8
+INTENDED_BUMP:D version-last
+OWNED_PATHS:scripts/cognition_layer.gd;scripts/desktop_local_runtime.gd;tests/core_benchmark_diagnostics_smoke.gd;tests/test_core_specialist_team_runtime_contract.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:explicit coordinator takeover cognition/runtime existing baseline.117Windows artifact shows planning generated768tokens/34030.34ms and empty visiblecontent. Actual planning prompt says Верни ТОЛЬКО JSON, which current strict-structured detector does not recognize; existing recognized marker Верни только строгий JSON disables hidden reasoning. This is confirmed routing mismatch; exact model cause and native acceptance still require actual CI.
+NON_BLOCKERS:no model swap/V1.6/S3/version; retain normal conversational reasoning, explicit overrides, owner token budgets, local-only inference and21/21quality criterion.
+ACCEPTANCE_GATES:actual production planning prompt recognized by production strict detector; plain prose requests remain normal; no synthetic fallback plan or empty-success acceptance. Existing diagnostics/privacy/source contracts plus genuine Godot captured-prompt fixture; exact WindowsCore gate retained and required.
+NEXT:align planner strict JSON request with existing structured inference contract, execute relevant coherent tests, publish and inspect native result.
+
+STRUCTURED_PLANNING_VALIDATION:production make_plan prompt now uses existing strict-JSON marker, so bundled desktop request selects existing reasoning_effort:none without changing ordinary prose or token policy. Genuine captured-production-prompt Godot fixturePASS; planner parses actualfixtureJSON, detector recognizes realprompt and rejects plainprose. No invented plan and no native success inferred; Windows emptycontent cause remains hypothesis pending exact CI. Relevant specialist-runtime/candidate Python18PASS.
+
+PUBLICATION_CHECKPOINT:STRUCTURED-PLANNING-RUNTIME published50b472ab085542dc5d0ce73c0f9e20afa03e702a/treeba839fec2d9bb2445961d10582b6aadd2d398d4f on92287e6 CAS fast-forward.4ownedpaths, GodotcapturedpromptPASS/Python18PASS; source RELEASED/exactWindowsCI pending, no freeze.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-SANDBOX-INPUT-CONTROLS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Work/Computer baseline owner-adjustable operational limits
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:50b472ab085542dc5d0ce73c0f9e20afa03e702a
+INTENDED_BUMP:D version-last
+OWNED_PATHS:computer/computer_service.py;scripts/computer_client.gd;scripts/owner_resource_policy.gd;tests/test_sandbox_resource_limits.py;tests/owner_resource_limits_smoke.gd;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:explicit coordinator takeover published Computer owner paths. Existing Pydantic command64/cwd1024/writepath1024/task4000 are fixed operational input limits. Private persisted startup settings export required, restart labels explicit.
+NON_BLOCKERS:execution identities/auth/workspace containment/GUI permissions/cancellation/idempotency unchanged; no future runtime/S3/version. Filesystem and command platform constraints continue to return honest errors; owner0 does not waive OS/path containment restrictions.
+ACCEPTANCE_GATES:independent exact/raised/0 production request controls with invalidnegativefailclosed; nonemptycommand/path retained; private Godotstartup env export; actual authenticated service fixtures verify accepted complete payloads and auth/traversal stilldeny; existing native ComputerCI mandatory.
+NEXT:implement independent startup input policy and actual service tests as coherent batch.
+
+SANDBOX_INPUT_VALIDATION:trusted startup independent command64/cwd1024/writepath1024/task4000 controls exported from private owner settings; labels require Computerrestart. Zero maps PydanticmaxNone, no clipping; invalidnegative/fraction/NaN/empty/nonASCIIinteger startupfailclosed. ActualHTTP exact2/20/unlimitedrequests preserve task/path, acceptedwritefilesystembytes, overbudget422, missingauth401, traversal400, emptycommand/path422 and disableddegradedexec403. Long1404charpath identity validated without falsely claiming nativeOSpath acceptance. RelevantComputer/owner/audit120PASS6SKIP nativefixtures, GodotownerPASS with existing20ObjectDB/8resourceexitdiagnostics. Initial fixture type inference parseerror corrected with explicitString then actual rerun; not countedinitially. No freeze, newsource unpublished.
+
+PUBLICATION_CHECKPOINT:SANDBOX-INPUT-CONTROLS publishedb4850bc3efb438101f2783a372cf55220f865054/treef45c5e14905abdf3ee8bbff199a8e83d5fe93e24 on50b472a CAS fast-forward;8ownedpaths,120PythonPASS6nativeSKIP/GodotownerPASS/audit17PASS; source RELEASED/exactCI pending.
+
+### ACTIVE CLAIM — WORK-2026-10-07-V15-CANDIDATE-SELFPRIMARY-CONTRACT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 existing Core local-only/cancellation acceptance
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged
+STARTING_HEAD:b4850bc3efb438101f2783a372cf55220f865054
+INTENDED_BUMP:D version-last
+OWNED_PATHS:tests/test_standalone_core_contract.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md
+DEPENDENCIES:coordinator explicit takeover stale candidate self-primary source contract after92287guardwrapper. Actual50b472WindowsComputerSUCCESS; Voice/cross-subsystem/standalone contract all fail same stale expectation of direct ai.chat in proposal/review. No production Voice malfunction evidenced by these failures.
+NON_BLOCKERS:preserve local-only AI, no external fallback, guard mandatory,3..10 hard gates, full native gates unchanged; no runtime source expansion/version/S3.
+ACCEPTANCE_GATES:contract follows proposal/review into guarded helper and proves helper delegates ai.chat with before/after checks, rejects compatibility escape; coherent broader standalone/candidate/runtime/owner batch plus existing genuine Godot guard fixture.
+NEXT:repair stale contract to retain intended self-primary assertion through guard helper; validate batch and publish.
+
+CANDIDATE_SELFPRIMARY_VALIDATION:actual71PythonPASS across standalone/candidate/specialist-runtime/evolution/owner/audit; genuineGodot guard+tournamentPASS. Stale direct-call string assertion now follows guarded helper into production ai.chat with mandatory before/after guards; still forbids compatibilitypath, preserves3..10/default5/no-autoapply. Same stale failure observed50b472 Voice/cross/standalonejobs, sharedcause repaired; not claimed nativeCorequalityPASS.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-VOICE-DSP-CONTROLS
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-control inventory; no release/version change.
+STARTING_HEAD:c95dcb3d2c2231a9b1a7cae7a4d1c6697a1dfa3c (same as origin/feature/v1.5-quality-feedback-intent after fetch).
+OWNED_PATHS:voice/python/processor.py;voice/python/aurora_voice_server.py;voice/python/voice_resource_policy.py;voice/voice_bridge.gd;scripts/owner_resource_policy.gd;tests/test_voice_text.py;tests/test_voice_resource_limits.py;tests/test_voice_configs.py;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;this master log.
+INTENDED_BUMP:D accumulated V1.5 version-last; canonical version unchanged.
+DEPENDENCIES:earlier Voice resource source published at1174183 and paths released. Current PR103 exact head c95dcb3 has33SUCCESS/2conditionalSKIPPED after rerunning eight runner-acquisition failures; real Windows/Android Core benchmark workflows were separately dispatched on the same SHA (runs37658688995/37658685826), pending. No product/test failure is inferred from unstarted jobs.
+ACCEPTANCE_GATES:preserve neutral DSP defaults and native voice fallback; expose FFT/hop controls through private owner Settings and trusted Voice startup; validate transform structure instead of silently clamping requested values; test exact/invalid/short-audio behavior and existing Voice/owner contracts. Native acoustic and full release gates remain required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement the coherent DSP controls and run targeted local tests before publishing one package.
+
+VOICE_DSP_LOCAL_CHECKPOINT: owner-private restart-persistent FFT size and hop settings preserve 1024/256 defaults. Trusted Voice startup validates power-of-two FFT >=2 and hop in [1,FFT/2]; invalid/zero values fail closed. Processor uses exact accepted values and returns short audio without silently shrinking the owner request. Effective processor settings enter the WAV cache identity, preventing stale audio after a DSP change. Existing native voice fallback and prosody_dsp=false default remain intact.
+LOCAL_TESTS: 63 Voice text/config/resource, owner runtime-contract and adversarial audit tests PASS with Python3.12, NumPy2.3.5 and CI-pinned FastAPI/Pydantic/pytest versions; Python compile and diff check PASS. Three existing FastAPI TestClient HTTP cases hang in this Windows sandbox before assertions and are NOT_EXECUTED locally; exact GitHub Voice CI must execute them. Godot parse/runtime and acoustic/device quality are NOT_EXECUTED locally and remain mandatory.
+CORE_EVIDENCE: separately dispatched exact-source Android Core benchmark run37658685826 SUCCESS. Windows Core benchmark run37658688995 on same old source c95dcb3 FAILED: 20/21 quality scenarios, only simple_planning fails. Transport succeeded, 485 response characters, invalid_json_or_plan_contract, zero parsed steps/checks, 10093.91ms. This is an actual Core quality blocker unrelated to Voice DSP, not a runner acquisition failure; no blind rerun or criterion change. Artifact aurorafox-core-benchmark-c95dcb3d2c2231a9b1a7cae7a4d1c6697a1dfa3c downloaded for follow-up.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: coherent Voice DSP owner controls and local 63-test package prepared; previous runner-acquisition jobs recovered to33SUCCESS/2conditionalSKIPPED; Android Core real gate green.
+REMAINING: publish exact Voice package and obtain relevant native CI; diagnose/repair Windows Core planning contract; finish remaining source inventory and final same-SHA package/device/update/release gates.
+BLOCKERS: Windows Core simple_planning real benchmark failure at run37658688995; Voice HTTP/Godot/acoustic native evidence pending.
+NEXT: publish one Voice package after source review, then inspect real planner response-shape/parse path as a separate coherent Core repair and rerun unchanged 21/21 gate.
+
+VOICE_DSP_PUBLICATION: commit9d2aed54db8439ffa372c68391c0448f2e6be221 published to PR103 by exact expected-head fast-forward from c95dcb3; local and origin feature HEAD verified equal. Source paths released; exact native CI pending. No canonical version change.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-JSON-RECOVERY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL current Core quality blocker.
+STARTING_HEAD:9d2aed54db8439ffa372c68391c0448f2e6be221; origin feature synchronized before editing.
+OWNED_PATHS:scripts/cognition_layer.gd;tests/core_benchmark_diagnostics_smoke.gd;tests/test_core_specialist_team_runtime_contract.py;this master log.
+INTENDED_BUMP:D accumulated version-last, canonical unchanged.
+EVIDENCE: exact old-source Windows Core run37658688995 on c95dcb3 passes20/21; simple_planning returned transport_ok=true,485 visible characters and invalid_json_or_plan_contract. Earlier empty content after 768 tokens was changed by strict structured routing, so this is a distinct parse/format failure. Existing CodeSpecialist has bounded balanced-first-object recovery for fenced/surrounded JSON; CognitionLayer only strips fences when at the very start. Actual model response bytes are deliberately not retained in benchmark artifact, so wrapper cause is a hypothesis, not asserted as fact.
+ACCEPTANCE_GATES:recover only a syntactically valid JSON object from a bounded model response, then retain exact objective/steps and nonempty-step contract. Never invent a plan or accept prose as success. Add genuine Godot fixtures for fenced/prefaced/nested braces and malformed/invalid content; run relevant contracts and unchanged real21/21 Windows Core gate on exact published SHA. Do not alter model, timeout, scenario or threshold.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement bounded JSON-object recovery and parser diagnostics, then validate locally and through exact native Core workflow.
+
+PLANNER_LOCAL_CHECKPOINT: CognitionLayer now accepts a full JSON dictionary, a fenced dictionary or the first syntactically valid balanced dictionary surrounded by model text. The scan respects quoted braces/escapes and retains objective/nonempty string-step validation; malformed/prose/incorrect-shape responses still fail with empty steps. Diagnostics add only brace/fence presence flags, not raw model output. The owner-approved strict-JSON prompt, local-only runtime, token/timeout budget and 21/21 benchmark criterion are unchanged.
+LOCAL_TESTS: official Godot4.7.1 Windows headless import exited0; genuine core_benchmark_diagnostics_smoke exited0 with AURORA_CORE_BENCHMARK_DIAGNOSTICS_OK and covered wrapped/nested braces, wrong-shape and prose failures. Genuine owner_resource_limits_smoke exited0 with AURORA_OWNER_RESOURCE_LIMITS_OK (existing20 ObjectDB/8 resource exit diagnostics retained). 23 relevant Core/standalone Python contracts PASS; diff check clean. No real model result for this new parser yet.
+PRIOR_CI: published Voice commit9d2aed5 at last check38SUCCESS/7IN_PROGRESS/3conditionalSKIPPED, no red. Its native suite is still running; defer another publication until heavy jobs finish to avoid cancelling valid evidence. No skipped job counted PASS.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:bounded parser repair and real local Godot/contract fixtures prepared; Voice published exact head remains synchronized.
+REMAINING:finish Voice native CI, publish Core repair, rerun unchanged real21/21 Windows benchmark and relevant exact-head CI; remaining source/release/device gates.
+BLOCKERS:old-head Windows Core20/21 simple_planning; new parser runtime verdict pending.
+NEXT:when Voice CI completes, publish this coherent Core repair with CAS fast-forward, inspect exact Windows Core benchmark artifact and repair only a demonstrated remaining cause.
+
+PUBLICATION_DECISION: published Voice SHA9d2aed5 has38SUCCESS/6IN_PROGRESS/3conditionalSKIPPED/1FAILURE at latest observation. The failure is the required real-core-windows planner scenario on the old parser. Since this SHA cannot be the final release candidate, waiting for six long jobs before publishing the prepared Core repair would delay the next decisive 21/21 gate without changing old-SHA acceptance. Publish the Core repair now; unfinished old-SHA checks remain diagnostic only and are never counted for new-SHA acceptance. CI coverage and same-SHA final matrix are unchanged.
+ADDITIONAL_LOCAL_TESTS: official Godot4.7.1 Windows offline_autonomy_smoke, chat_context_smoke and voice_smoke all exited0 with their success markers. Each retained pre-existing ObjectDB/resource exit diagnostics; no clean-leak proof is claimed. Full owner-resource and Core diagnostic smokes also exited0. Relevant Python Core contracts23PASS.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Core JSON-object recovery, strict negative fixtures and broader local Godot smoke verified; Voice published and local/web HEAD synchronized before Core publication.
+REMAINING:publish Core commit and obtain exact native 21/21 and relevant package/Voice gates; finish source/device/release acceptance.
+BLOCKERS:old-SHA real Core planning failure; new-SHA runtime verdict pending.
+NEXT:commit/push the four-file Core package by expected-head fast-forward, then inspect only new-SHA required check outcomes and benchmark artifact.
+
+PLANNER_NATIVE_RESULT: Core repair commit cab2c71b8247ae88e4feb6befce17e5e0249f85b published by expected-head fast-forward; local/web HEAD matched after push. Exact real Windows Core run37662749554 still fails only simple_planning (20/21). Transport succeeded, content511 chars, JSON brace present, no fence, no syntactically valid JSON dictionary recovered, zero plan steps/checks. Therefore wrapper recovery alone is insufficient and the previous hypothesis is rejected; no 21/21 claim. Android and Voice gates remain separately tracked.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-CONSTRAINED-JSON
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL same demonstrated planning quality blocker.
+STARTING_HEAD:cab2c71b8247ae88e4feb6befce17e5e0249f85b.
+OWNED_PATHS:scripts/desktop_local_runtime.gd;tests/core_benchmark_diagnostics_smoke.gd;tests/test_core_specialist_team_runtime_contract.py;this master log.
+INTENDED_BUMP:D accumulated version-last; canonical unchanged.
+EVIDENCE: pinned bundled llama.cpp server build11429 commitd81235049 documents `response_format` `{"type":"json_object"}` for streaming `/v1/chat/completions`. Current strict structured path only disables hidden thinking via reasoning_effort:none and does not request JSON syntax. The new native response has braces but fails actual JSON parse. Constrained output is an engine-supported local request contract, not external AI or a parser guess; real model acceptance still must be proven.
+ACCEPTANCE_GATES: add JSON output format only for explicit strict-structured requests, preserve ordinary/terse prose and user token/cancel/wait budgets. Capture production payload through a genuine Godot runtime fixture, then require unchanged21/21 real Windows Core benchmark and all relevant exact-head CI. Reject unsupported/invalid engine responses rather than mark a fabricated plan complete.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement the narrow local llama.cpp JSON-format request and run actual Godot payload regression before one exact native benchmark.
+
+CONSTRAINED_JSON_LOCAL_CHECKPOINT: DesktopLocalRuntime adds `response_format={"type":"json_object"}` only for `_is_strict_structured_request` while retaining reasoning_effort:none, stream/progress, owner generation/wait/response budgets and ordinary prose behavior. This uses pinned local llama.cpp documented streaming chat-completion syntax; it is not a remote service. Genuine Godot4.7.1 Windows payload fixture calls production `chat` with a local dummy model path and overridden transport: strict planner prompt sends JSON format and reasoning none, ordinary prose sends no format. It exits0 with AURORA_CORE_BENCHMARK_DIAGNOSTICS_OK. Relevant Python Core/standalone contracts24PASS; diff check clean. This fixture proves payload routing, not real model quality. Run unchanged21/21 benchmark on the next exact SHA; if it still fails, retain blocker and inspect its diagnostic artifact rather than claim success.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:engine-supported local JSON request implemented and actual production-payload routing verified on owner PC.
+REMAINING:publish/reconcile exact new-SHA native Core benchmark and wider CI; remaining source/device/release acceptance.
+BLOCKERS:prior cab2c71 real Windows Core20/21; next native outcome pending.
+NEXT:publish this narrow contract by expected-head fast-forward and inspect the exact real Core run, with no change to the21/21 criterion.
+
+CONSTRAINED_JSON_NATIVE_RESULT: exact ed5c73e74c7bb8d4c07fea05ec477f15e9af3aab Windows Core run37664243520 failed unchanged 21/21 gate at simple_planning only (20/21). Engine transport succeeded; content494 characters, braces present, no fence, zero parsed plan steps. All other scenarios and performance gate passed; exact same-SHA Core/Voice CI run37664243122 succeeded. Constrained JSON request alone is insufficient; cause remains unknown because artifact retains only a hash. No quality acceptance claimed.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-SYNTHETIC-DIAGNOSTIC
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL real Core planning quality diagnosis.
+STARTING_HEAD:ed5c73e74c7bb8d4c07fea05ec477f15e9af3aab; local/web synchronized.
+OWNED_PATHS:scripts/cognition_layer.gd;benchmarks/core/core_benchmark.gd;tests/core_benchmark_diagnostics_smoke.gd;this master log.
+INTENDED_BUMP:D version-last; canonical unchanged.
+EVIDENCE:two distinct parser/engine request repairs have failed the unchanged real 21/21 gate, while transport and 20 other scenarios pass. Need actual synthetic answer to identify syntax or schema failure.
+ACCEPTANCE_GATES:benchmark alone opts into at most1024 visible characters of the fixed tea-planning response; ordinary runtime diagnostics retain hash only. No private user prompt/content, quality thresholds, model/runtime, or scenario semantics changed. Verify negative and positive Godot fixtures; publish exact SHA and inspect Windows benchmark artifact.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:run local diagnostics, publish this narrow evidence package, use exact native artifact to identify and repair real cause.
+
+PLANNER_SYNTHETIC_NATIVE_RESULT: exact 327da9db256fcda34f133f741a718a42cb9e7a6f Windows Core run37665766523 again failed20/21 only simple_planning. Its fixed synthetic tea task safely captured 518 visible characters: a correct JSON objective and eight steps, then truncated mid-key at "risks". Root cause in production routing: _is_explicit_terse_request matches the broad Russian marker "только с" inside "Верни только строгий JSON", so strict structured planner requests receive owner terse_max_tokens instead of chat_max_tokens; the JSON response truncates before closure. This is directly supported by the native artifact and source. No threshold reduction or fallback-plan invention.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-PLANNER-TOKEN-CLASSIFICATION
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL demonstrated Core planning quality failure.
+STARTING_HEAD:327da9db256fcda34f133f741a718a42cb9e7a6f; local/web synchronized.
+OWNED_PATHS:scripts/desktop_local_runtime.gd;tests/core_benchmark_diagnostics_smoke.gd;this master log.
+INTENDED_BUMP:D version-last; canonical unchanged.
+ACCEPTANCE_GATES:strict JSON request uses owner chat_max_tokens while ordinary explicit terse request keeps owner terse_max_tokens; preserve JSON grammar, local engine, wait/cancel/response budgets. Genuine Godot payload fixture asserts production max_tokens and classification. Unchanged exact-SHA real Windows Core benchmark must pass21/21; wider CI must pass.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:verify local payload and publish by expected-head fast-forward, then inspect unchanged native Windows Core gate.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-CORE-LESSON-AND-INVENTORY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Core and owner-controlled operational limits.
+ROADMAP_SECTION:4 Core/Chat, security/privacy, exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:d79726ce96d09d5e5c577832226aa30fd7b0f114; origin feature synchronized; fresh origin/main fetched.
+OWNED_PATHS:docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md;one narrowly selected unclaimed inventory source plus tests/policy after review.
+DEPENDENCIES:exact Windows Core benchmark 37667509560 succeeded 21/21; Core/Voice CI succeeded. Four additional exact-SHA workflows still pending/in progress. Existing stale claims in section14 are respected; avoid their occupied production paths.
+NON_BLOCKERS:V1.6/V1.7 work remains deferred; no new release critical scope.
+INTENDED_BUMP:D accumulated version-last.
+ACCEPTANCE_GATES:record confirmed Core root cause with prevention; select real unclassified owner limit from unclaimed source, use production behavior tests and adversarial audit; preserve exact quality/package/device/release gates and same-SHA policy. No blanket inventory waiver.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:reconcile Core lesson, inspect unclaimed owner inventory, execute coherent next batch.
+
+CORE_ACCEPTANCE_CHECKPOINT: production fix d79726ce96d09d5e5c577832226aa30fd7b0f114 passed exact Windows Core benchmark run37667509560, 21/21 required quality scenarios, planning seven steps, performance gate PASS. Exact Core/Voice CI run37667509412 PASS. Real 1GiB streaming Knowledge import/restart run37667509691 PASS; real Android Core E2E run37667509425 PASS; Android Core benchmark and APK artifact PASS. At review, 22 of 23 exact-SHA workflows SUCCESS, Windows Package run37667509617 remains IN_PROGRESS at Inno installer compression after exported package/Core/exe/Knowledge route smokes PASS. Do not count installer, installed-app, historical V1.2/V1.3 bridge or final package assets as accepted until the job succeeds. No product source changes since d79726c; this checkpoint is documentation-only.
+INVENTORY_CHECKPOINT: current audit scans484source files,4261findings:1717test_evidence,1190unclassified,68documentation,819owner_adjustable,408format_structure,59hard_boundary. Completion false. Highest residual paths include api/server.py51, computer/computer_service.py50, file_intelligence/file_service.py45, scripts/tool_registry.gd36; these counts are review candidates rather than confirmed defects. Preserve existing active file claims and review exact operational caps with production tests in coherent groups, not broad regex waivers. ToolRegistry has an actually reachable OS.execute output postclip100000 and several caller defaults; its unused _http_json240 path should not be converted into owner policy blindly. Source inventory and physical device checks remain release work.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: Core planning root cause repaired at d79726c, exact real Windows Core21/21 and performance, Android Core E2E/benchmark, Knowledge1GiB, Core/Voice and 22 of23 workflows passed; reusable AF-165 lesson recorded.
+REMAINING: Windows installer/installed-app/historical bridge gate; reviewed owner-limit inventory and actual device/update/release acceptance; final version-last and same-SHA post-bump verification.
+BLOCKERS: no current red gate on d79726c; Windows package run37667509617 still IN_PROGRESS and cannot count PASS.
+NEXT: inspect Windows package outcome, then select a bounded unclaimed owner-limit source package with behavior tests; avoid silent audit waivers and preserve exact gate policy.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-OWNER-INVENTORY-FULL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-controlled operational limits and privacy/security exceptions.
+ROADMAP_SECTION:4 File Intelligence, Work/Computer, Core/Chat, security/privacy, exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:501ced8cdd999a737c340018b660f121ca968d32; local and origin feature matched; fresh origin/main fetched; mandatory journal/roadmap/memory/ADRs read.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;tools/owner_control_audit.py if necessary;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md. Production source paths will require separate explicit claim after exact review and old-claim reconciliation.
+DEPENDENCIES:Windows package CI on d79726c remains IN_PROGRESS, not accepted. Fresh audit on501ced8 finds1190unclassified across144files and1101unique source lines.
+NON_BLOCKERS:future V1.6/1.7 work, public multi-user activation and advanced Evolution remain deferred, but this does not permit false classification of active V1.5 limits.
+INTENDED_BUMP:D for any actual behavior repair; inventory-only metadata has no version bump.
+ACCEPTANCE_GATES:review every residual finding as code behavior, classify only exact statements with rationale and adversarial unknown-line checks, preserve security hard boundaries and owner-zero semantics. Any operational cap requiring runtime change remains unclassified until genuine behavior tests. Audit complete only if no unclassified remains by real review; package/device/release gates stay mandatory.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:group all1190 by production semantics and process exact-file batches; start with auth/format/test false positives while preserving reachable operational caps for source fixes.
+
+OWNER_INVENTORY_REVIEW_CHECKPOINT: exact source-line review on501ced8 covered all current hits in file_intelligence/file_service.py, api/request_limits.py, api/public_auth_limits.py and api/server.py plus status/version/capability-name false matches in eleven source files. Exact anchored policy patterns with rationale classify173 prior residual findings; new test evidence lines increase test count. Current audit:484source files, 4271findings, unclassified1017, complete:false. File service retains three open genuine/uncertain operational caps: PDF render scale2.0 and two local health timeout1.5. API server retains candidate base642MiB, sync/page result caps and optional Ollama health0.75 for source review; none is silently waived. Public-auth rate/identity buckets are narrowly hard security boundaries; identity and retry metadata are structural. API body accounting uses owner sourced byte ceilings; exact arithmetic/docs are not independent resource caps. Exact modified-line patterns leave appended FIXED_LIMIT/new literal caps unclassified.
+LOCAL_TESTS:21 owner-control audit tests PASS including new adversarial unknown-line cases; regenerated audit says complete:false, unclassified1017; git diff --check PASS. No production runtime behavior changed in this package. Windows Package run37667509617 on earlier source SHA d79726c remains IN_PROGRESS at portable ZIP/setup/hash after exported/installed-app and historical bridge steps completed, not yet overall PASS. This package's new SHA requires its own exact CI; earlier SHA cannot count as final release evidence.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:173 exact reviewed audit findings classified across five semantic groups; 21 adversarial tests green; Core21/21 and Android/Knowledge prior source evidence preserved.
+REMAINING:1017 inventory findings, source fixes for actual operational caps, exact-SHA CI/package/device/update/release gates and version-last.
+BLOCKERS:no new red gate; Windows package old-SHA run pending, owner inventory incomplete by explicit audit.
+NEXT:publish this reviewed policy/test package by expected-head fast-forward; continue largest remaining reachable operational limits in separate tested source batches, then rerun audit until honest complete.
+
+WINDOWS_PACKAGE_RESULT: exact source SHA d79726ce96d09d5e5c577832226aa30fd7b0f114 Windows Package run37667509617 SUCCESS, including process contract, packaged embedded Core integrity, exported executable/Knowledge route, Inno installer, historical V1.2/V1.3 in-place bridges, silent install/installed-app/local services and portable artifacts. This proves that older source SHA, not later audit-only heads; all new SHA gates remain separate.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-FILE-HEALTH-RENDER-OWNER
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing File Intelligence owner-controlled operational limits.
+ROADMAP_SECTION:4 File Intelligence, UI/performance, security/privacy.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:7bc60d1433b6523823c702bc9d1048ecd4a75ce7; local/origin matched; fresh main/docs/ADRs read.
+OWNED_PATHS:file_intelligence/file_service.py;scripts/file_intelligence_client.gd;scripts/settings_overlay.gd;tests/test_file_intelligence.py;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:take over prior File Intelligence source claim at7677 after its published source checkpoint; current branch contains that code, no uncommitted local or parallel source changes observed. Earlier audit left exact PDF render scale2.0 and optional local Ollama/Voice health timeout1.5 unclassified. Existing pixel budget remains authoritative.
+NON_BLOCKERS:optional Ollama is compatibility only; health status does not become required Core intelligence. No future V1.6 media scope expansion.
+INTENDED_BUMP:D accumulated version-last.
+ACCEPTANCE_GATES:private owner settings preserve defaults, support zero unlimited where pixel/memory policy remains separate, validate negative/fractional startup input, propagate through trusted Windows backend startup and visible Settings; native PDF render stays within owner pixel budget. Genuine Python/FastAPI and Godot owner fixtures exercise default/exact/raised/zero and invalid; adversarial audit leaves unrelated caps unknown. Relevant exact CI and Windows package gates stay required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement the three observed operational controls as one coherent source/test package and publish after local behavior checks.
+
+FILE_HEALTH_RENDER_LOCAL_CHECKPOINT: owner-private File Intelligence settings now add Ollama/Voice health deadlines1500ms each and PDF OCR render scale200percent, persisted and exported at trusted Windows backend startup; visible Settings advanced rows retain defaults and show0 semantics. Requests receive exact per-probe timeout, with0 mapped to None. PDF scale0 removes that scale cap but remains bounded by the separate native pixel-allocation budget; cache key includes scale percent to avoid stale OCR. Health reports effective values. Negative/fractional owner values fail closed; startup rejects invalid environment integers. No external AI is made required.
+LOCAL_TESTS: actual Python File Intelligence suite25PASS and listing owner-budget suite6PASS on local PC with authorized temp access. New health/PDF fixtures2PASS under standard sandbox; owner runtime/audit contracts34PASS; official Godot4.7.1 owner-resource smoke exits0 with AURORA_OWNER_RESOURCE_LIMITS_OK (existing20 ObjectDB/8 resource exit diagnostics unchanged). Python compile and diff check PASS. Initial broad standard-sandbox runs produced WinError5 on temporary-file creation/cleanup, not source assertion failures; rerun all affected suites with local temp access, no waiver. Current owner audit unclassified1014, complete:false. Previous source SHA d79726c Windows Package run37667509617 SUCCESS; this new package has not yet run native exact-SHA CI.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: three real operational limits implemented end-to-end with owner persistence/UI/backend/cache identity and genuine local behavior fixtures.
+REMAINING:publish this source package, inspect exact File/Voice/Windows package CI, continue1014 residual findings and physical device/update/version-last gates.
+BLOCKERS:none in this local batch; exact native release evidence pending.
+NEXT:commit/push coherent package by expected-head fast-forward and inspect relevant exact CI before next source edit.
+
+FILE_HEALTH_NATIVE_CI_DIAGNOSTIC: exact source commit2c36b25498661239c9221d018d9f0611749ce06c Core/Voice run37680867860 failed only file-intelligence job; 66 tests passed, two AST-isolated cache-key fixtures raised NameError for newly added MAX_PDF_RENDER_SCALE_PERCENT because their manually supplied production constants omitted it. Godot Core, Windows integration and Python Voice jobs succeeded. Production full file_service suite had passed locally; this is a stale fixture namespace, not evidence to remove the cache identity field. OWNED_PATHS expansion: tests/test_spreadsheet_owner_budgets.py and tests/test_archive_owner_budgets.py for exact production constant supply and cache identity regression. Fix fixture, rerun full relevant native-shaped batch; no source behavior or gate reduction.
+
+FILE_HEALTH_NATIVE_DIAGNOSTIC_REPAIR: published source2c36b25498661239c9221d018d9f0611749ce06c Core/Voice run37680867860: Godot Core, Windows integration, Python Voice success; File Intelligence failed2 AST cache-key fixture NameError with66other tests PASS. Expanded claim-owned tests/test_spreadsheet_owner_budgets.py and tests/test_archive_owner_budgets.py to dynamically supply exactly referenced uppercase production cache-key globals. Local two fixture suites11PASS. Local broad six-module Windows run66PASS/2 Windows-specific project-index failures (symlink privilege WinError1314 and newline equality); these are not counted PASS and require native Linux CI. Product File Intelligence code and release gates remain unchanged in this repair.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE: production owner health/PDF controls and 25+6+34 local behavior/contract checks; stale cache-key fixtures repaired and11 local tests green.
+REMAINING: publish fixture repair, exact native Linux File Intelligence and wider CI;1014 owner inventory, device/update/version-last acceptance.
+BLOCKERS: exact2c36b25 File Intelligence CI failure run37680867860 from test fixture; repaired locally, new-SHA verdict pending.
+NEXT:commit/push narrow fixture repair by expected-head fast-forward, then inspect exact CI result before next source package.
+
+
+### OWNER DECISION — V1.5.0.0 REAL OWNER-PC END-TO-END ACCEPTANCE — 2026-10-07
+
+ROADMAP_RELEASE: V1.5.0.0
+SCOPE_CLASS: CRITICAL release acceptance.
+OWNER_REQUIREMENT: Before V1.5.0.0 may be declared ready or released, AuroraFox must be tested as an actually installed application on the owner's real Windows PC, not only through CI, source-level tests, mocks, exported-package smoke, or isolated runtime fixtures.
+
+ACCEPTANCE_METHOD:
+- Use a locally operating coding/computer-control agent (Codex on the owner's PC when that capability is available) as a real user of the installed AuroraFox build.
+- Build/package the exact release candidate, install it through the normal installer, launch the installed application, and interact with the visible UI rather than only calling internal test hooks.
+- Record the exact candidate SHA/package identity and preserve logs/evidence for every failure found.
+- A failure found during this pass is a release blocker until repaired and the affected scenario is rerun on the repaired exact candidate.
+
+MANDATORY OWNER-PC SCENARIOS:
+1. Clean/normal installation and first launch.
+2. Normal local chat with the bundled Core; several consecutive requests; long response; cancel/stop; retry after a failure.
+3. Close and reopen AuroraFox; verify that normal retained Memory/Knowledge and settings survive as intended.
+4. Settings window: open independently, switch focus between it and the main window, taskbar presence, close/reopen, resize/narrow/wide/DPI-visible behavior, and no minute-scale UI stalls.
+5. File use through the visible product UI: supported text/document/PDF/spreadsheet/archive/image-OCR cases; large/partial/unsupported cases must report their state truthfully instead of pretending full success.
+6. Public-link reading through the normal UI; verify successful public reading/remember behavior and honest handling of login/CAPTCHA/paywall/network failure boundaries.
+7. Voice through the installed product where owner hardware permits: start/stop, recognition, speech output, interruption/barge-in, and continued text-chat usability after Voice failure or disable.
+8. Work/Computer baseline through the installed product for supported safe actions: visible action, cancellation/Master Stop, and observable result verification; never count an unverified external action as completed.
+9. Offline test: disconnect network after the installed application is known-good; verify the supported local chat/Core path remains usable and online-only functions fail honestly.
+10. Network restoration: reconnect and verify recovery without requiring a destructive reinstall/reset.
+11. Updater end-to-end on the real PC: detect an eligible signed test/release update, begin download, interrupt network, restore network and verify continuation without discarding valid completed chunks; restart AuroraFox/PC at an appropriate test point and verify supported resume behavior.
+12. Update integrity/apply path: verify signature/hash/integrity rejection for invalid material using a safe test fixture, successful atomic apply for a valid candidate, post-update health check, and rollback/recovery behavior when the new version is deliberately made unhealthy in a controlled test.
+13. Restart after update and verify the installed version, launch, settings/data preservation expected by the migration contract, Core chat and basic file flow.
+14. Inspect user-visible errors and logs from the above run; secrets/tokens/password-like values must not be exposed.
+15. Final ordinary-user pass: open AuroraFox, chat, use Settings, open a supported file, close/reopen, and confirm there is no known blocker that requires developer-only workarounds.
+
+PASS RULE:
+- Automated CI remains mandatory; this physical owner-PC pass is additional evidence, not a replacement.
+- Do not call V1.5.0.0 released/100% ready while any mandatory owner-PC scenario is unexecuted, failed, or only simulated when real execution is technically available.
+- If a scenario is impossible because required physical hardware/capability is genuinely unavailable, mark it NOT_EXECUTED with the exact reason; do not silently count it as PASS. Release requires an explicit owner decision for any such exception.
+- The final release candidate must still satisfy the canonical exact-SHA package/device/update gates and version-last rule after all repairs.
+
+DONE: owner requirement recorded in the master coordination journal.
+REMAINING: execute this real installed-app acceptance on the final V1.5.0.0 candidate after the current source/CI blockers and package gates are cleared.
+
+FILE_HEALTH_FIXTURE_PUBLICATION: commit9fd2f40bdf92a833bcf2227be54ce3973d1235bf published to PR103; local/remote HEAD equal and worktree clean. Exact Core/Voice run37681729476 SUCCESS across File Intelligence, Godot Core, Windows integration and Python Voice; API, Integration, Core Benchmark and other completed exact-SHA checks also green at latest observation. Windows Package, Android E2E/Benchmark/APK/Plugin and Knowledge 1GiB remain pending/in progress, never counted PASS. Prior File claim source paths released.
+
+### ACTIVE CLAIM — CODEX-2026-10-07-V15-FILE-CLIENT-DEADLINES
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing File Intelligence owner-controlled operational limits.
+ROADMAP_SECTION:4 File Intelligence, UI/performance, security/privacy.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:9fd2f40bdf92a833bcf2227be54ce3973d1235bf; local/origin synchronized; fresh main fetched and journal, roadmap, memory, ADRs checked.
+OWNED_PATHS:scripts/file_intelligence_client.gd;scripts/settings_overlay.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:take over published File client/settings claim above; no concurrent local source edits. Preserve File backend limits independently.
+NON_BLOCKERS:optional Ollama/online capabilities remain optional; no V1.6 scope expansion.
+INTENDED_BUMP:D accumulated version-last.
+ACCEPTANCE_GATES:owner-persisted visible health/tree/cache HTTP client deadlines preserve4/60/30 defaults, apply exact positive values, zero disables HTTPRequest deadline without changing cancellation or backend analysis deadline. Genuine Godot behavior fixture checks public route propagation and HTTPRequest.timeout, persistence/invalid values; owner audit classifies only exact reviewed statements with adversarial unknowns; relevant exact native CI/package gates retained.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement three client deadlines, behavior fixtures and exact audit review, then publish one coherent package.
+
+FILE_CLIENT_DEADLINE_LOCAL_CHECKPOINT: Windows File client health/tree/cache HTTPRequest deadlines are now private persisted owner settings with unchanged defaults4/60/30seconds; Settings exposes them and0 disables only that client deadline. Public health/tree/search/clear routes pass their independent value to the actual HTTPRequest property. Analysis deadline, cancellation and backend limits remain separate. Exact File client audit review classifies12 formerly unclassified lines as tested owner policy or call/read/cadence structure, leaving filename120 and HTTP error-detail4000 truncations visible. Current audit unclassified1002, complete:false.
+LOCAL_TESTS: official Godot4.7.1 Windows owner-resource smoke twice exited0 with AURORA_OWNER_RESOURCE_LIMITS_OK and route/default/exact/zero/persistence/invalid checks; existing20 ObjectDB/8 resource exit diagnostics unchanged. Official headless editor import exited0. Owner runtime/audit Python modules36PASS with PYTHONUTF8=1; first cp1252 local attempt produced8 source-file decode errors, not product assertions and not counted. Diff check PASS. Prior exact published9fd2f40 Core/Voice run37681729476 SUCCESS; Core Benchmark, API, Integration, Android Plugin and other completed jobs green; Android APK/E2E, Knowledge1GiB and Windows Package still not complete at last observation. None of this is new-SHA native acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:three client-side File operation deadlines made owner-controlled end to end; genuine local route and HTTPRequest property fixtures, persistence/zero/invalid,36 Python audit/contract tests.
+REMAINING:publish package and inspect exact native CI;1002 owner audit findings plus device/update/package/version-last gates.
+BLOCKERS:none in local package; release native/device evidence pending.
+NEXT:commit/push one File client package by exact expected-head fast-forward, verify local/remote parity, inspect new-SHA CI; then take next coherent source inventory batch.
+
+
+### OWNER DECISION — ПОСЛЕРЕЛИЗНАЯ ПОЛНАЯ ПРОВЕРКА AURORAFOX 1.5.0.x НА РЕАЛЬНОМ ПК ВЛАДЕЛЬЦА — РАСШИРЕННЫЙ СЦЕНАРИЙ — 2026-10-07
+
+ROADMAP_RELEASE: V1.5.0.0 / V1.5.0.x stabilization.
+SCOPE_CLASS: POST-RELEASE VALIDATION; НЕ ИЗМЕНЯЕТ КАНОНИЧЕСКИЕ УСЛОВИЯ ВЫПУСКА V1.5.0.0.
+STATUS: ВЫПОЛНЯТЬ ПОСЛЕ ВЫПУСКА V1.5.0.0.
+НАЗНАЧЕНИЕ: после выпуска проверить AuroraFox как настоящий пользователь на реальном Windows-ПК владельца через установленное приложение, найти реальные полевые проблемы, исправлять их в 1.5.0.1, 1.5.0.2 и далее и одновременно проверять настоящий механизм обновления.
+
+ОБЩЕЕ ПРАВИЛО:
+- Этот расширенный сценарий НЕ является новым условием выпуска V1.5.0.0 и НЕ должен задерживать релиз.
+- До выпуска V1.5.0.0 работа продолжается строго по каноническому плану, который существовал до добавления этого сценария.
+- Все реальные проверки Windows/Android, установки, пакета, обновления и устройств, которые УЖЕ были обязательны старым каноническим планом, остаются обязательными ровно в прежнем объёме. Эта запись их не отменяет и не расширяет.
+- Никакая новая проверка на личном ПК владельца не добавляется в предрелизные ворота только из-за этого раздела.
+- Полный сценарий 1–344 начинается после фактического выпуска V1.5.0.0.
+- Первым объектом полного прогона является реально выпущенная V1.5.0.0; затем проверяются исправления V1.5.0.1, V1.5.0.2 и далее.
+- Перед каждым прогоном записать точную установленную версию, идентификатор сборки и контрольную сумму установщика/обновления.
+- Все действия выполняются через обычные окна, меню, кнопки, поле чата, проводник, микрофон и штатное обновление AuroraFox.
+- Внутренние тестовые вызовы не заменяют пользовательскую проверку.
+- Для каждого пункта фиксируется: ВЫПОЛНЕНО / ОШИБКА / НЕ ВЫПОЛНЕНО, фактический результат, время отклика, снимок экрана или журнал при ошибке.
+- После найденной ошибки она заносится в журнал, исправляется в ближайшей подходящей V1.5.0.x и повторно проверяется вместе со связанными сценариями.
+- Первое реальное обновление V1.5.0.0 -> V1.5.0.1 специально используется как полевой тест обновлятора: обнаружение версии, загрузка, обрыв сети, докачка, сохранение скачанного, перезапуск, проверка целостности, установка, сохранность данных, запуск новой версии и восстановление при неудаче.
+- Нельзя засчитывать пункт как успешный, если действие было только смоделировано при наличии возможности проверить его реально.
+
+БЛОК 1 — ЧИСТЫЙ СТАРТ И УСТАНОВКА
+1. Перезагрузить ПК перед началом проверки.
+2. Убедиться, что AuroraFox не запущена в фоне.
+3. Если проверяется чистая установка — удалить предыдущую тестовую установку штатным способом, не удаляя резервную копию пользовательских данных.
+4. Запустить официальный установщик точной сборки-кандидата.
+5. Проверить название приложения, издателя, версию и путь установки.
+6. Пройти установку обычными кнопками без ручного копирования файлов.
+7. Проверить, что установка завершается без красных ошибок и непонятных окон.
+8. Проверить появление AuroraFox в меню Пуск.
+9. Проверить ярлык, если он предусмотрен.
+10. Проверить запись приложения в списке установленных программ Windows.
+11. Запустить AuroraFox обычным пользовательским способом.
+12. Замерить время от запуска до появления рабочего окна.
+13. Убедиться, что окно не белое, не серое, не пустое и не зависшее.
+14. Проверить, что приложение не требует Интернета для появления основной формы.
+15. Проверить, что встроенная местная модель запускается автоматически там, где это предусмотрено.
+16. Проверить, что пользователь видит понятное состояние запуска, если модель ещё загружается.
+17. Дождаться готовности чата.
+18. Проверить, что первое сообщение можно отправить без перезапуска приложения.
+19. Закрыть AuroraFox обычной кнопкой закрытия.
+20. Снова открыть AuroraFox и проверить повторный нормальный запуск.
+
+БЛОК 2 — ГЛАВНОЕ ОКНО И ВСЕ ЭЛЕМЕНТЫ УПРАВЛЕНИЯ
+21. Нажать каждую видимую кнопку главного окна по очереди.
+22. Для каждой кнопки проверить, что она делает именно то, что написано или ожидается по назначению.
+23. Проверить, что нет пустых кнопок, кнопок без действия и невидимых надписей.
+24. Открыть каждое доступное меню.
+25. Пройти каждый пункт каждого меню.
+26. Проверить возврат назад из каждого раздела.
+27. Проверить повторное открытие одного и того же раздела несколько раз.
+28. Проверить быстрое переключение между разделами.
+29. Проверить, что интерфейс не создаёт дубликаты окон и не накладывает одинаковые элементы друг на друга.
+30. Проверить прокрутку длинных списков и длинного чата.
+31. Проверить работу полосы прокрутки мышью.
+32. Проверить колесо мыши.
+33. Проверить клавиши Page Up, Page Down, Home и End там, где они применимы.
+34. Проверить выбор текста мышью.
+35. Проверить копирование текста ответа.
+36. Проверить вставку текста в поле ввода.
+37. Проверить сочетания Ctrl+C, Ctrl+V, Ctrl+A и Ctrl+Z в подходящих полях.
+38. Проверить, что Enter и перенос строки работают в соответствии с выбранным поведением приложения.
+39. Ввести очень длинный текст в поле ввода и проверить, что поле не ломает разметку.
+40. Ввести русский, английский, цифры, знаки, кавычки, скобки, тире, эмодзи и проверить отображение.
+41. Вставить текст с несколькими абзацами.
+42. Проверить очень узкое окно.
+43. Проверить широкое окно.
+44. Развернуть окно на весь экран.
+45. Восстановить обычный размер.
+46. Несколько раз быстро менять размер окна.
+47. Перетащить окно между мониторами, если подключено больше одного.
+48. Проверить масштаб Windows 100%, а при доступности также 125%, 150% и другой реально используемый владельцем масштаб.
+49. Проверить, что надписи не обрезаются и кнопки не перекрываются.
+50. Проверить сворачивание в панель задач и восстановление.
+51. Проверить переключение Alt+Tab между AuroraFox и другими программами.
+52. Проверить, что главное окно не теряется и не становится недоступным.
+
+БЛОК 3 — НАСТРОЙКИ: ПРОЙТИ КАЖДЫЙ ПАРАМЕТР
+53. Открыть Настройки из обычного интерфейса.
+54. Проверить, что на Windows это отдельное нормальное окно.
+55. Проверить наличие значка окна Настроек на панели задач, если это предусмотрено текущим требованием.
+56. Переключиться с Настроек на главное окно и обратно.
+57. Свернуть только Настройки и вернуть их.
+58. Закрыть Настройки и снова открыть.
+59. Для КАЖДОГО видимого параметра без исключения записать исходное значение.
+60. Изменить каждый безопасный переключатель в противоположное состояние.
+61. Сохранить.
+62. Закрыть Настройки.
+63. Снова открыть и проверить сохранение.
+64. Вернуть параметр в исходное состояние, если изменение было только проверочным.
+65. Для каждого числового параметра проверить обычное допустимое значение.
+66. Проверить минимально допустимое значение.
+67. Проверить максимально допустимое значение, если максимум отображается.
+68. Для параметров, где ноль означает «без пользовательского ограничения», проверить ноль.
+69. Попробовать отрицательное значение там, где оно недопустимо; приложение должно отказать понятно, а не принять повреждённую настройку.
+70. Попробовать буквы вместо числа там, где ожидается число.
+71. Попробовать слишком большое число; приложение не должно падать.
+72. Проверить отмену изменения, если такая кнопка существует.
+73. Проверить восстановление значения по умолчанию, если такая возможность существует.
+74. Перезапустить AuroraFox и убедиться, что сохранённые настройки не сбросились самопроизвольно.
+75. Проверить, что изменение одного параметра не меняет несвязанные параметры.
+76. Проверить все вкладки и раскрываемые разделы Настроек.
+77. Проверить длинные названия и подсказки.
+78. Проверить, что опасные или защитные границы не отключаются случайным нажатием без предусмотренного подтверждения.
+79. Проверить, что изменение ограничений ресурсов действительно влияет на поведение соответствующей функции, а не только меняет число на экране.
+
+БЛОК 4 — ОБЫЧНЫЙ ЧАТ И КАЧЕСТВО ОТВЕТОВ
+80. Начать новый обычный разговор.
+81. Написать: «Привет».
+82. Проверить, что ответ естественный, без ошибки запуска.
+83. Написать простой фактический вопрос.
+84. Написать вопрос, требующий рассуждения.
+85. Попросить краткий ответ.
+86. Попросить подробный ответ.
+87. Попросить объяснить сложную тему простыми словами.
+88. Дать задание из нескольких последовательных пунктов.
+89. Проверить, что выполнены все пункты, а не только последний.
+90. Сделать намеренную опечатку и проверить разумное понимание смысла.
+91. Написать двусмысленную просьбу, где без уточнения возможны разные важные варианты; проверить, что Фокс не выбирает произвольно там, где требуется уточнение.
+92. Продолжить тему местоимениями «это», «там», «он», «она» и проверить удержание контекста.
+93. Сослаться на сообщение несколько реплик назад.
+94. Провести не менее 30 последовательных сообщений в одном чате.
+95. Проверить, что старые сообщения не исчезают визуально без причины.
+96. Проверить длинный ответ.
+97. Во время длинного ответа нажать остановку.
+98. Проверить, что генерация действительно прекращается.
+99. После остановки отправить новый вопрос.
+100. Проверить, что чат остаётся рабочим.
+101. Быстро отправить следующий запрос после предыдущего завершения.
+102. Проверить повторный запрос после временной ошибки.
+103. Проверить пустое сообщение — оно не должно приводить к падению.
+104. Вставить очень большой запрос и проверить честное сообщение при достижении допустимого объёма.
+105. Проверить отображение списков, абзацев и обычного форматирования ответа.
+106. Проверить русский текст без поломанных символов.
+107. Проверить английский текст.
+108. Проверить смешанный русский и английский текст.
+109. Проверить числа, даты и единицы измерения.
+110. Если под ответом есть оценка «нравится/не нравится» или другой отклик — нажать каждый вариант.
+111. Проверить изменение/отмену оценки, если это предусмотрено.
+112. Проверить, что оценка одного ответа не применяется к соседнему ответу.
+113. Закрыть приложение после разговора.
+114. Открыть снова и проверить ожидаемое сохранение истории или состояния согласно текущему устройству продукта.
+
+БЛОК 5 — ПАМЯТЬ И ЗНАНИЯ
+115. Сообщить Фокс безопасный тестовый факт и явно попросить запомнить.
+116. В новом сообщении спросить этот факт.
+117. Закрыть приложение полностью.
+118. Открыть снова.
+119. Спросить сохранённый факт ещё раз.
+120. Исправить ранее сохранённый тестовый факт и проверить использование новой версии.
+121. Дать два похожих, но разных факта и проверить, что они не склеились.
+122. Попросить не сохранять конкретный тестовый материал.
+123. Проверить, что он не появляется как сохранённое знание в предусмотренной логике.
+124. Добавить материал с указанным источником.
+125. Проверить, что источник не теряется.
+126. Проверить частично обработанный материал: Фокс должна сообщить о неполноте, а не утверждать, что изучила всё.
+127. Перезапустить приложение и повторно проверить сохранённые знания.
+128. Проверить изменение настроек хранения и убедиться, что простое сохранение настройки не удаляет данные неожиданно.
+129. Проверить предусмотренное удаление тестовой записи/данных, если такая пользовательская возможность уже входит в 1.5.
+130. После удаления убедиться, что удалённый тестовый факт не продолжает подаваться как сохранённый.
+
+БЛОК 6 — ФАЙЛЫ: ПРИНЯТИЕ, ЧТЕНИЕ И ЧЕСТНЫЕ ОШИБКИ
+131. Передать обычный текстовый файл.
+132. Спросить содержание файла.
+133. Попросить краткую сводку.
+134. Попросить найти конкретную строку или факт.
+135. Передать документ с несколькими страницами.
+136. Передать обычный PDF с текстом.
+137. Передать PDF со множеством страниц.
+138. Передать сканированный PDF и проверить распознавание текста.
+139. Передать изображение с хорошо читаемым текстом.
+140. Передать изображение с мелким/неидеальным текстом и проверить честность результата.
+141. Передать таблицу XLSX.
+142. Спросить конкретную ячейку/строку/итог.
+143. Передать CSV, если он входит в поддерживаемый путь.
+144. Передать архив ZIP с несколькими поддерживаемыми файлами.
+145. Передать архив TAR/TGZ, если он поддерживается на этой платформе.
+146. Проверить архив с вложенными папками.
+147. Проверить файл с русским именем.
+148. Проверить файл с пробелами в имени.
+149. Проверить длинное имя файла.
+150. Проверить несколько файлов за одно обращение, если интерфейс это допускает.
+151. Передать пустой файл.
+152. Передать намеренно повреждённую копию тестового документа.
+153. Передать неподдерживаемый безопасный формат.
+154. Проверить, что неподдерживаемый файл не объявляется успешно изученным.
+155. Передать большой файл в пределах предусмотренного тестового размера.
+156. Во время обработки большого файла отменить действие, если отмена доступна.
+157. После отмены проверить, что приложение остаётся рабочим.
+158. Повторно открыть тот же файл.
+159. Изменить файл и открыть его снова; проверить отсутствие выдачи устаревшего результата как нового.
+160. Проверить ситуацию, когда лимит обработки меньше размера файла.
+161. Фокс должна явно сказать, что материал обработан частично.
+162. Проверить, что список содержимого архива не выдаётся за прочитанное содержимое файлов.
+163. Проверить безопасный архив с подозрительным путём вида ../ в специально подготовленном тесте; он не должен записать файлы за разрешённые границы.
+164. После серии файлов проверить обычный чат: он не должен перестать отвечать.
+165. Закрыть и открыть приложение и проверить, что временные рабочие файлы не вызывают ошибку запуска.
+
+БЛОК 7 — ССЫЛКИ И ОБЩЕДОСТУПНЫЙ ИНТЕРНЕТ
+166. Отправить обычную общедоступную ссылку на текстовую страницу.
+167. Попросить прочитать её и сделать сводку.
+168. Спросить конкретный факт со страницы.
+169. Попросить запомнить материал.
+170. Позже спросить сохранённую информацию.
+171. Отправить ссылку с перенаправлением на другую общедоступную страницу.
+172. Проверить корректную обработку.
+173. Отправить несуществующую ссылку.
+174. Проверить понятное сообщение об ошибке.
+175. Во время чтения страницы отключить Интернет.
+176. Проверить отсутствие зависания приложения.
+177. Включить Интернет и повторить запрос.
+178. Отправить страницу, где нужен вход в учётную запись; Фокс должна сообщить об ограничении, а не притвориться, что прочитала закрытое содержимое.
+179. Проверить страницу с проверкой «я человек», если безопасно встретится такая страница; Фокс не должна заявлять об успешном обходе.
+180. Проверить платно закрытую страницу; результат должен быть честным.
+181. Убедиться, что ошибка одной ссылки не ломает следующий обычный запрос.
+182. Проверить режим «прочитать, но не сохранять», если пользователь явно это указал.
+
+БЛОК 8 — ГОЛОС
+183. Проверить, что текстовый чат полностью работает до включения голоса.
+184. Включить голос штатным способом.
+185. Произнести короткую фразу.
+186. Проверить распознанный текст.
+187. Произнести длинную фразу.
+188. Проверить, что конец фразы не потерян.
+189. Произнести числа и имена.
+190. Попросить голосовой ответ.
+191. Проверить начало воспроизведения без чрезмерной задержки.
+192. Во время речи Фокс начать говорить пользователю и проверить предусмотренное прерывание ответа.
+193. Остановить голос вручную.
+194. Снова включить.
+195. Отключить микрофон/сделать его недоступным безопасным способом и проверить понятную ошибку.
+196. После ошибки голоса написать сообщение в обычный чат.
+197. Убедиться, что текстовый чат продолжает работать.
+198. Вернуть микрофон и проверить восстановление голоса без полной переустановки.
+199. Закрыть и открыть приложение с ранее выбранными голосовыми настройками и проверить ожидаемое сохранение.
+
+БЛОК 9 — РАБОТА С КОМПЬЮТЕРОМ
+200. Дать Фокс безопасную тестовую задачу, которая требует открыть разрешённую программу.
+201. Проверить, что программа действительно открыта.
+202. Попросить выполнить безопасное действие внутри тестового приложения.
+203. Проверить фактический результат, а не только текст «готово».
+204. Дать многошаговую безопасную задачу.
+205. На середине нажать отмену.
+206. Проверить прекращение дальнейших действий.
+207. Проверить общую аварийную остановку.
+208. После остановки убедиться, что Фокс не продолжает скрытые действия.
+209. Запустить новую безопасную задачу после остановки.
+210. Проверить восстановление работоспособности.
+211. Создать ситуацию, когда ожидаемая кнопка/окно отсутствует.
+212. Фокс должна заметить расхождение и не продолжать слепо по старому плану.
+213. Проверить, что действие с неизвестным итогом не объявляется выполненным без подтверждения.
+214. Проверить разрешения: запрещённое действие не должно выполняться молча.
+215. Закрыть целевую программу во время безопасной задачи и проверить корректную остановку/ошибку.
+216. Проверить, что сбой компьютерного управления не ломает обычный чат.
+
+БЛОК 10 — РАБОТА БЕЗ ИНТЕРНЕТА
+217. На полностью работающей AuroraFox отключить Интернет.
+218. Не закрывая приложение, отправить обычное сообщение.
+219. Проверить работу местной модели.
+220. Задать ещё несколько вопросов.
+221. Открыть локальный поддерживаемый файл.
+222. Проверить обработку того, что заявлено как локально доступное.
+223. Попробовать функцию, которой действительно нужен Интернет.
+224. Получить понятное сообщение, а не бесконечное ожидание.
+225. Закрыть AuroraFox при отключённом Интернете.
+226. Снова запустить её без Интернета.
+227. Проверить доступность основной локальной работы.
+228. Включить Интернет при запущенной AuroraFox.
+229. Проверить автоматическое или штатное восстановление сетевых функций.
+230. Убедиться, что для восстановления не понадобились удаление настроек или переустановка.
+
+БЛОК 11 — ДЛИТЕЛЬНАЯ И НАГРУЗОЧНАЯ ПРОВЕРКА
+231. Оставить AuroraFox работающей длительное время в обычном режиме.
+232. Провести длинный чат не менее 50 сообщений.
+233. Несколько раз открыть и закрыть Настройки.
+234. Обработать последовательно несколько разных файлов.
+235. Между файлами задавать обычные вопросы.
+236. Несколько раз остановить длинный ответ.
+237. Несколько раз свернуть и развернуть окно.
+238. Следить, чтобы потребление памяти не росло бесконечно после завершённых задач.
+239. Проверить, что интерфейс не начинает отвечать через минуты.
+240. Проверить, что после длительной работы можно начать новый чат/задачу без перезапуска.
+241. Если предусмотрена работа нескольких внутренних задач, проверить допустимую последовательность без зависания.
+242. После длительной проверки закрыть AuroraFox.
+243. Убедиться, что процесс завершается.
+244. Снова запустить и проверить нормальное время старта.
+
+БЛОК 12 — КРАШ-ТЕСТ И ВОССТАНОВЛЕНИЕ
+245. Во время обычного чата принудительно завершить процесс AuroraFox через Диспетчер задач.
+246. Запустить снова.
+247. Проверить отсутствие повреждения основных настроек и данных.
+248. Во время безопасной обработки тестового файла принудительно завершить AuroraFox.
+249. Запустить снова и проверить честное восстановление/сброс незавершённой операции.
+250. Отдельно, безопасным тестовым способом остановить внутреннюю местную модель во время запроса.
+251. Проверить, что приложение не зависает навсегда.
+252. Проверить предусмотренное восстановление модели.
+253. После восстановления отправить новый запрос.
+254. Отключить сеть в середине сетевого запроса.
+255. Вернуть сеть и проверить восстановление.
+256. Перевести ПК в сон при открытой AuroraFox.
+257. Разбудить ПК.
+258. Проверить чат, интерфейс и сеть после сна.
+259. Заблокировать Windows и снова войти.
+260. Проверить AuroraFox после разблокировки.
+261. Перезагрузить ПК при полностью закрытой AuroraFox и проверить следующий запуск.
+262. При наличии безопасного способа проверить перезапуск ПК с незавершённой разрешённой загрузкой обновления.
+263. Ни один краш-тест не должен использовать намеренное повреждение реальных пользовательских данных; только специально созданные тестовые данные/сборки.
+
+БЛОК 13 — ОБНОВЛЕНИЕ
+264. Запустить проверку обновлений из Настроек.
+265. Проверить понятное состояние «обновлений нет», если версия актуальна.
+266. На специально подготовленной более старой тестовой версии проверить обнаружение новой версии.
+267. Начать загрузку обновления.
+268. Проверить отображение хода загрузки.
+269. Отключить Интернет в середине загрузки.
+270. Подождать и убедиться, что приложение не удаляет уже корректно скачанные части без необходимости.
+271. Включить Интернет.
+272. Проверить продолжение загрузки с сохранением уже полученного.
+273. Снова прервать сеть в другом месте загрузки и повторить восстановление.
+274. Закрыть AuroraFox во время незавершённой загрузки штатным способом.
+275. Открыть снова.
+276. Проверить продолжение или корректное восстановление загрузки согласно требованиям.
+277. На отдельном безопасном тесте перезагрузить ПК во время разрешённого этапа незавершённого обновления.
+278. После входа в Windows открыть AuroraFox и проверить продолжение.
+279. Дождаться полной загрузки правильного пакета.
+280. Проверить проверку подлинности и целостности.
+281. Подать специально повреждённую тестовую копию пакета и убедиться, что установка запрещена.
+282. Подать тестовый пакет с неверной подписью и убедиться, что установка запрещена.
+283. Установить правильное обновление штатным способом.
+284. Проверить, что старая рабочая установка не уничтожена до момента готовности новой.
+285. Запустить обновлённую AuroraFox.
+286. Проверить номер версии.
+287. Проверить обычный чат.
+288. Проверить Настройки.
+289. Проверить сохранность ожидаемых пользовательских данных.
+290. Проверить один локальный файл.
+291. Проверить одну сетевую функцию.
+292. Проверить перезапуск после обновления.
+293. В контролируемой тестовой сборке создать условие неуспешного послепроверочного запуска и проверить предусмотренный возврат/восстановление.
+294. После возврата проверить, что снова запускается рабочая версия.
+295. Убедиться, что обновление не оставило приложение в состоянии «ни старая, ни новая версия не запускается».
+
+БЛОК 14 — БЕЗОПАСНОСТЬ И ЛИЧНЫЕ ДАННЫЕ
+296. Ввести в тестовом сообщении специально созданную фиктивную строку, похожую на пароль/ключ.
+297. Выполнить действие, после которого создаётся журнал.
+298. Проверить, что секретоподобное значение не выводится в журнал открытым текстом там, где действует маскирование.
+299. Проверить, что обычные пользовательские сообщения не отправляются во внешние службы без явной необходимости/разрешения текущей функции.
+300. Проверить отказ в обращении к запрещённым локальным адресам через функцию чтения общедоступных ссылок.
+301. Проверить безопасный архив с попыткой выхода из своей папки.
+302. Проверить повреждённый архив.
+303. Проверить, что ошибки безопасности объясняются как отказ, а не как успешное выполнение.
+304. Проверить, что общая аварийная остановка действует во время выполняемой разрешённой операции.
+305. После аварийной остановки убедиться, что дочерние действия действительно прекращены.
+306. Просмотреть пользовательские журналы после всех испытаний на наличие паролей, ключей, лишних личных данных и необоснованно полного содержимого приватных файлов.
+
+БЛОК 15 — ДОСТУПНОСТЬ И УПРАВЛЕНИЕ БЕЗ МЫШИ
+307. Пройти основные элементы клавишей Tab.
+308. Проверить понятный порядок перехода фокуса.
+309. Активировать основные кнопки клавиатурой.
+310. Проверить Escape там, где он должен закрывать/отменять окно.
+311. Проверить работу при увеличенном размере текста Windows.
+312. Если на ПК доступен экранный диктор, проверить названия основных кнопок и полей.
+313. Убедиться, что важное состояние не передаётся только цветом без текста/значка.
+314. Проверить читаемость сообщений об ошибках и загрузке.
+
+БЛОК 16 — УДАЛЕНИЕ И ПОВТОРНАЯ УСТАНОВКА
+315. После создания резервной копии тестовых данных выполнить штатное удаление AuroraFox.
+316. Проверить, что удалитель завершается без ошибок.
+317. Проверить исчезновение приложения из списка установленных программ.
+318. Проверить отсутствие работающих процессов AuroraFox после удаления.
+319. Проверить, какие пользовательские данные по правилам продукта должны сохраниться, а какие удалиться.
+320. Повторно установить ту же проверяемую версию.
+321. Запустить.
+322. Проверить поведение сохранённых данных в соответствии с правилами продукта.
+323. Повторить обычный чат, Настройки и открытие одного файла после повторной установки.
+
+БЛОК 17 — ФИНАЛЬНЫЙ ПРОХОД «КАК ОБЫЧНЫЙ ПОЛЬЗОВАТЕЛЬ»
+324. Перезагрузить ПК.
+325. Запустить AuroraFox из меню Пуск.
+326. Написать обычное сообщение.
+327. Задать вопрос из нескольких частей.
+328. Попросить запомнить безопасный тестовый факт.
+329. Передать поддерживаемый документ.
+330. Задать вопрос по документу.
+331. Передать общедоступную ссылку и попросить прочитать.
+332. Открыть Настройки.
+333. Изменить один безопасный параметр.
+334. Закрыть Настройки и проверить сохранение.
+335. Включить и выключить голос, если оборудование доступно.
+336. Выполнить одну безопасную компьютерную задачу, если функция доступна.
+337. Отключить Интернет и проверить местный чат.
+338. Включить Интернет и проверить восстановление.
+339. Проверить обновления.
+340. Закрыть AuroraFox.
+341. Снова открыть.
+342. Проверить память о тестовом факте.
+343. Проверить отсутствие новых критических ошибок в журнале.
+344. Подтвердить, что для обычных действий не требовались ручное редактирование файлов, консоль разработчика или обход интерфейса.
+
+ОБЯЗАТЕЛЬНЫЙ КРАШ-КРИТЕРИЙ:
+- Ни один пользовательский ввод, поддерживаемый файл, неподдерживаемый файл, повреждённый тестовый файл, потеря сети, отмена, закрытие окна, сон Windows, перезапуск приложения или прерванное обновление не должны приводить к необратимо сломанной установке.
+- После восстанавливаемой ошибки пользователь должен либо продолжить работу, либо получить понятный путь восстановления.
+- В рамках этого послерелизного сценария найденный критический дефект немедленно фиксируется как критический полевой дефект, получает высший приоритет ближайшего 1.5.0.x и после исправления обязательно перепроверяется вместе со связанными сценариями. Предрелизные блокировки определяются только старым каноническим планом, а не этим новым разделом.
+
+ОБЯЗАТЕЛЬНЫЙ КРИТЕРИЙ ОТКЛИКА:
+- Нельзя принимать минутные задержки интерфейса для обычных действий.
+- Каждый случай необычно долгого ответа фиксируется отдельно: что делалось, сколько заняло, был ли виден прогресс, можно ли было отменить.
+- Долгая вычислительная задача допустима только при честном видимом состоянии и работающей отмене; зависший интерфейс — ошибка.
+
+ОБЯЗАТЕЛЬНЫЙ КРИТЕРИЙ ЧЕСТНОСТИ:
+AuroraFox должна различать:
+- выполнено;
+- выполнено частично;
+- не выполнено;
+- не поддерживается;
+- отменено;
+- не проверено;
+- требуется Интернет;
+- требуется разрешение;
+- произошла ошибка.
+Нельзя засчитывать функции, которые показывают «готово» без наблюдаемого результата.
+
+СВЯЗЬ С ВЫПУСКОМ V1.5.0.0:
+- Этот список 1–344 НЕ является условием выпуска V1.5.0.0.
+- Выпуск V1.5.0.0 идёт строго по старому каноническому плану и его исходным воротам.
+- Если старый план уже требовал конкретную реальную проверку Windows/Android/установки/обновления/устройства до релиза, она остаётся обязательной в прежнем виде.
+- Новая полная проверка личного ПК владельца не расширяет предрелизный объём и не меняет процент готовности сама по себе.
+
+УСЛОВИЯ ПОСЛЕРЕЛИЗНОЙ ПОЛЕВОЙ ПРОВЕРКИ:
+- После выпуска выполнить полный сценарий 1–344 на реально установленной V1.5.0.0.
+- Результаты фиксировать по каждому выполненному пункту; неприменимые пункты получают конкретную причину.
+- Найденные дефекты классифицировать, исправлять в V1.5.0.x и повторно проверять.
+- Реальный переход V1.5.0.0 -> V1.5.0.1 использовать как обязательную полевую проверку всего пути обновления.
+- Для V1.5.0.1 проверить обнаружение новой версии, начало загрузки, обрыв сети, сохранение уже скачанного, продолжение, закрытие/повторный запуск, при безопасной возможности перезапуск ПК, полную загрузку, проверку подлинности и целостности, установку, сохранность настроек/памяти, запуск новой версии, основной чат и восстановление/возврат при контролируемой неудаче.
+- Следующие V1.5.0.x использовать для дальнейших исправлений и повторной проверки обновления в реальных условиях.
+- Критический полевой дефект получает высший приоритет ближайшего V1.5.0.x.
+
+DONE: уточнено, что расширенный сценарий 1–344 является ПОСЛЕРЕЛИЗНОЙ проверкой и не изменяет старый план выпуска V1.5.0.0.
+REMAINING: продолжать разработку и выпуск V1.5.0.0 строго по прежнему каноническому плану; после выпуска выполнить 1–344 и проверять реальные обновления V1.5.0.x.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PROJECT-INDEX-CLIENT-DEADLINES
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Code/project work and owner-controlled operational limits.
+ROADMAP_SECTION:4 Code/project work, UI/performance, security/privacy and exact-SHA exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:97789f38ee8aa88690cb5e82b875069bf1dab269; local and origin feature synchronized; fresh main fetched and latest owner post-release decision checked.
+OWNED_PATHS:scripts/project_index_client.gd;scripts/owner_resource_policy.gd;tests/owner_resource_limits_smoke.gd;tests/test_owner_runtime_limits_contract.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:prior Project Index source claim was published and released; this package changes only Windows client request deadlines and policy/UI exposure. Prior File client deadline claim published at037c08e, exact current Core/Voice run37686558759 SUCCESS. Latest Windows/Android/Knowledge package gates remain pending and cannot count PASS.
+NON_BLOCKERS:owner's expanded344-point real-PC scenario is post-release per latest journal and does not change original V1.5 pre-release gates. No V1.6 scope expansion.
+INTENDED_BUMP:D accumulated version-last; canonical unchanged.
+ACCEPTANCE_GATES:owner-visible persisted independent health/index/search/status client HTTP deadlines preserve5/900/60/30 defaults, support exact positive and zero unlimited without changing backend SQLite lock or index traversal budgets; genuine Godot route and HTTPRequest property fixtures, invalid input/persistence tests, exact audited classifications with unknown-cap adversarial checks, relevant native Core/Voice and Windows package CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:implement one Project Index client deadline package and run genuine local Godot/Python checks before publishing after exact-head reconciliation.
+
+PROJECT_INDEX_CLIENT_LOCAL_CHECKPOINT: OwnerResourcePolicy now exposes separate Windows Project Index client HTTP deadlines5/900/60/30seconds for health/index/search/status-management. Generic Settings resource panel shows/persists all four; zero sets HTTPRequest.timeout0.0 without altering backend SQLite lock policy or file/query/result limits. Real public route probe checks health/index/search/symbols/status/clear mapping and real HTTPRequest property at defaults/raised/zero. Exact audit review classifies5 Project Index client lines with narrow anchored rationale; error detail4000 stays unclassified. Current audit999unclassified, complete:false.
+LOCAL_TESTS: official Godot4.7.1 Windows owner-resource smoke exits0 with AURORA_OWNER_RESOURCE_LIMITS_OK (pre-existing20 ObjectDB/8 resource exit diagnostics); official headless editor import exits0;38 Python owner runtime/audit tests PASS with UTF8; diff check PASS. Latest exact published97789f3 Core/Voice run37686558759 SUCCESS; its other long release runs were pending/in progress at previous observation and do not prove this new source.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:four owner client deadlines, genuine route/HTTPRequest/persistence/invalid checks and exact audit review.
+REMAINING:publish this package; new exact-SHA native CI/package,999 owner inventory findings, original release/device/update/version-last gates.
+BLOCKERS:none in local package; native exact-SHA acceptance pending.
+NEXT:commit/push coherent Project Index client package by expected-head fast-forward, verify remote parity, inspect exact CI before next source package; keep post-release344-point owner-PC pass separate per latest owner decision.
+
+PROJECT_INDEX_PUBLICATION_AND_CI: commit100979fedbc5ece2419ad8a35307045ea5ef56fb published to PR103 by exact lease from97789f3; local/origin/PR HEAD verified equal, worktree clean. Exact Core/Voice run37687398963 SUCCESS including Godot Core/File Intelligence/Windows integration/Python Voice. API, Integration, Android Plugin, Knowledge Performance and other completed checks green. Exact Core Benchmarks run37687398923 FAILED before model benchmark: Windows real HTTP progress fixture check_1 returned no_progress, no generated bytes/http0; server trace shows no event sent and connection abort, while 250ms synthetic stall expired. Model quality/performance was SKIPPED and must not be counted. Windows Package, Knowledge1GiB and some Android checks pending/in progress. Prior Project Index source paths released for next claim.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-CORE-PROGRESS-FIRST-EVENT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Core/Chat progress-aware request release gate.
+ROADMAP_SECTION:4 Core/Chat, UI/performance, exact-SHA exit gate.
+ADR_REFS:ADR-0003 primary; ADR-0001/0002 unchanged.
+STARTING_HEAD:100979fedbc5ece2419ad8a35307045ea5ef56fb; local/origin matched after fresh main/journal/memory check.
+OWNED_PATHS:scripts/desktop_local_runtime.gd;scripts/core_progress_stream.gd;tests/core_progress_http_smoke.gd;tests/run_core_progress_http_fixture.py;tests/core_progress_stream_smoke.gd;tests/test_core_progress_contract.py if needed;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:exact run37687398923/job113019695114 failed at progress HTTP check_1 before real bundled model prep. Existing AF-MEM lesson at memory line1023 warns prior similar failure cause UNKNOWN; do not infer model regression or increase250ms/180ms fixture budgets without evidence.
+NON_BLOCKERS:remaining owner audit can continue after decisive Core gate repair; post-release owner-PC344 scenario is separate.
+INTENDED_BUMP:D accumulated version-last.
+ACCEPTANCE_GATES:obtain controlled client/server timeline around first request and first valid progress, establish cause, repair transport/fixture only with genuine behavior evidence and unchanged progress semantics; keep heartbeat/duplicate/total/byte/cancel/protocol cases and unchanged real bundled Core21/21 Windows benchmark. Publish coherent fix and require exact native CI, no skipped gate called PASS.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:instrument exact first-event transport timeline, reproduce locally under realistic scheduling, identify minimal fix preserving stall criteria, then rerun genuine HTTP fixture and full relevant Core contracts.
+
+CORE_PROGRESS_FIRST_EVENT_DIAGNOSIS: exact100979f run37687398923/job113019695114 check_1 failed `no_progress` before first SSE event and before any real Core model run; server trace events[]/connection aborted after0.062s. Local normal sandbox reproduction with temporary nonproduction trace stayed in HTTPClient CONNECTING(status3) through259ms, without sending request. Authorized local loopback with the same old fixture completed all cases. Synthetic server slept60ms before the first genuine progress; under Windows runner connection/request scheduling the250ms test stall could expire before any event was sent. Do not infer bundled Core quality failure or weaken the accepted runtime policy. Temporary production trace was removed after diagnosis.
+REPAIR: test server now sends first actual prompt-progress frame immediately after the accepted request, then retains60ms intervals and final delay. The250ms stall and180ms total fixture thresholds, heartbeat/duplicate negative behavior, byte/protocol/cancel checks, streaming UTF8 fragmentation and real model benchmark gate remain unchanged. Permanent server START/TRACE records first-event timing without private request content.
+LOCAL_TESTS: official Godot4.7.1 progress stream and owner-resource smoke PASS; genuine authorized Windows loopback HTTP fixture exits0 with AURORA_CORE_PROGRESS_HTTP_OK, first progress frame at0.0s and all positive/negative cases completed. Restricted sandbox still cannot establish local TCP within250ms; not counted as product failure. Diff check pending final package review. Native exact-SHA Windows benchmark including bundled Core21/21 is not yet rerun.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:confirmed pre-model fixture scheduling cause, retained original budgets and production transport, genuine local HTTP regression green.
+REMAINING:publish narrow fixture correction; exact Windows Core benchmark and package/device/update gates;999 owner inventory findings.
+BLOCKERS:exact100979f Core Benchmarks run37687398923 failure at pre-model progress fixture; source repair local, new-SHA verdict pending.
+NEXT:commit/push fixture-only package by exact expected-head fast-forward, inspect full native Windows Core run; if still red, use its exact artifact and preserve21/21 gate.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-COMPUTER-OWNER-AUDIT-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Work/Computer owner limits and security boundaries, inventory-only review.
+ROADMAP_SECTION:4 Work/Computer baseline, security/privacy, exact-SHA exit gate.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 unchanged.
+STARTING_HEAD:d90eecc767bc7648134f70af20474723acdbe469; local/origin synchronized, fresh main and latest journal checked.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md if a new confirmed lesson appears. No Computer production source edits in this audit-only package.
+DEPENDENCIES:prior Computer source claims published; exact current Windows Core run37689955558 in progress. This read-only source review can proceed locally without publishing/cancelling the decisive model benchmark. Core progress claim owns only its separate source/test paths.
+NON_BLOCKERS:post-release344-point owner-PC field pass remains separate; no future V1.6 scope.
+INTENDED_BUMP:none for inventory-only metadata; D if a later distinct source repair is claimed and tested.
+ACCEPTANCE_GATES:read each Computer unclassified hit in context, narrowly classify only confirmed owner-sourced or structural/security statements with rationale and adversarial appended fixed-cap cases; leave actual fixed operational caps unclassified for separate behavior repair. Preserve current sandbox Master Stop, isolation, retries and native CI. Audit complete remains false until all real findings resolved.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:review all44 Computer Service residual hits against code and existing owner tests, then test exact policy classifications locally; publish only after Core gate verdict is known.
+
+COMPUTER_OWNER_AUDIT_CHECKPOINT: exact d90eecc Core Benchmarks run37689955558 completed SUCCESS on native Windows, including real progress HTTP fixture, real bundled offline SpecialistTeam/CodeSpecialist, full bundled Core benchmark, quality/performance comparison and enforced Core gate. PR103 exact-d90 checks: 35 pass, four Android jobs still pending; skipped optional large variants are not gates. No claim of final release readiness while device jobs remain pending.
+REVIEW: inspected 44 unclassified Computer Service lines. Exact anchored policy entries classify 16 owner-adjustable input/worker/identity/listing statements, 19 structural/result/validation statements and one worker-termination integrity boundary. Eight remain unclassified, including fixed MAX_OUTPUT, goal length, max_steps, tasklist timeout, redaction default/output truncation, capability representation and container invocation; these remain visible for distinct source review. The first full-audit count moved 999 to 963 unclassified because 36 of 44 received justified classifications; audit completion remains false.
+LOCAL_TESTS: owner-control audit module 24/24 PASS, including positive exact Computer statements, appended fixed-limit adversaries, unrelated-path adversaries and actual remaining fixed-cap negatives; git diff --check PASS.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Core pre-model fixture correction verified by exact native Windows benchmark; Computer Service 44-line review documented with 36 narrow classifications and eight deliberately unresolved findings.
+REMAINING:publish this inventory-only package; check its exact-SHA CI and remaining Android gates; continue real owner-limit source repairs across 963 inventory findings. V1.5 release gates and version bump are still open.
+NEXT:commit/push audited policy and tests against exact remote d90eecc; inspect native CI and then claim a coherent source repair for the residual fixed Computer limits.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-COMPUTER-PARENT-WATCHDOG
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Work/Computer lifecycle and Master Stop reliability.
+ROADMAP_SECTION:4 Work/Computer production-safe lifecycle/recovery, cancellation and security boundaries.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:2947eb107b36420c8176c3326d68121d495ed447; fetched fresh main and feature, exact local/remote match, latest journal and active claims checked.
+OWNED_PATHS:computer/computer_service.py;tests/test_computer_parent_watchdog.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;.github/workflows/work-computer-reliability.yml;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:Computer audit inventory package2947eb1 published. Existing old Computer source claims reconciled by latest branch; current exact2947eb1 Windows/Android CI pending. No version/release/UI paths touched.
+NON_BLOCKERS:post-release344-point owner-PC pass remains separate.
+INTENDED_BUMP:D fix, canonical version last.
+ACCEPTANCE_GATES:watchdog must stop only for confirmed absent parent, exact PID match, distinguish transient probe error/timeout from death, preserve safe cleanup on confirmed death; targeted deterministic tests, existing Computer contracts and native Windows CI. Keep owner-control audit truthful and fixed probe timing visible or narrowly justify it.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:extract testable parent probe, repair watchdog decision, run targeted plus Computer regressions; publish only after current exact-SHA long gates finish or provide decisive failure evidence.
+
+PARENT_WATCHDOG_CHECKPOINT: confirmed source defect: Windows `tasklist` PID substring could match unrelated process and its two-second timeout/any exception triggered service exit and cancellation even with living parent. Replaced with exact Windows process handle + nonblocking signaled-state check and explicit pointer-size ctypes signatures/handle close; transient errors are unknown and retried. POSIX distinguishes absent/permission/unknown. Confirmed death still invokes existing owned-process cleanup and exit. This is a lifecycle fix, not a Master Stop relaxation.
+LOCAL_TESTS: new four-case watchdog module including actual native Windows handle PASS; prior combined owner-control module and first three watchdog tests27PASS. First wide Computer run used blocked external pytest temp and was invalid (26PASS/20 setup errors); workspace-basetemp wide rerun stalled after its initial 28 cases and was interrupted without a pass verdict. Focused existing Computer cases are being rerun separately. Owner audit after source repair:962 unclassified, seven in Computer Service; tasklist fixed-timeout finding removed rather than waived. `git diff --check` PASS.
+CI_PREVIOUS_SHA: exact2947eb1 PR103 Windows real Core, native acceptance, Computer contracts and Android plugin PASS; Android APK and real Core emulator still pending. New source SHA requires fresh CI after publication.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:exact PID/liveness repair and deterministic/native local watchdog verification; AF-170 engineering lesson recorded.
+REMAINING:finish full Computer regression rerun, publish exact source package, run new native Windows/Android/package gates; six Computer inventory findings plus capability/container representation remain unresolved and broader audit has962 unclassified.
+BLOCKERS:none for source implementation; Android APK/emulator evidence on previous SHA still pending.
+NEXT:review final test result and diff, commit/push by expected-head fast-forward, then inspect new exact-SHA CI without claiming release readiness prematurely.
+
+CI_TEST_DISCOVERY_CORRECTION: first watchdog fix published as b381f037badaf05bf15885fdd0ebc262ce577d90, exact local/origin/web equal and clean at publication. New test file was absent from explicit Computer CI pytest lists. Add it to PR/push path filters and both Linux/Windows syntax + pytest jobs in follow-up commit, preserving all existing tests and native gates. Do not count b381f03 Computer jobs alone as new-test evidence. Focused local Computer rerun stalled and was interrupted, also not PASS; mandatory full native CI remains decisive.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:watchdog source repair published; four native/fake watchdog tests locally green; CI list correction prepared.
+REMAINING:publish workflow inclusion and get exact new-SHA Linux/Windows Computer results, Android/package/device gates, residual audit/source work.
+BLOCKERS:none for workflow correction.
+NEXT:verify workflow diff and test discovery, publish by expected-head push, inspect exact Computer jobs and pursue red evidence if any.
+
+PARENT_WATCHDOG_CI_CHECKPOINT: published workflow inclusion4979ba01d9e0fe41ede6e475d047692791199c4d; local/origin/web exact equal, clean. Exact4979ba0 Work/Computer Reliability run37692641070 SUCCESS: computer-contract, computer-contract-windows (including newly enumerated watchdog test), work-godot and source-boundaries all green. Native Windows acceptance, Windows smoke, API, Voice, File and other short jobs green on same SHA. Real Core Windows, Android plugin/APK and real one-GiB import remain in progress, so release readiness is unchanged. Local wide Computer regression was interrupted and is not counted; native full Linux/Windows jobs provide the valid broad test evidence.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Computer watchdog source, native regression and mandatory Linux/Windows CI verified on exact4979ba0.
+REMAINING:exact4979ba0 long Core/Android/Knowledge gates; broader owner inventory962 and version-last/release checks.
+BLOCKERS:none within watchdog lane; external long-running release gates pending.
+NEXT:close watchdog claim after last exact-SHA gates, preserve green Computer evidence, and progress a separate free API persistence audit without touching claimed MemoryStore/ToolRegistry.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-PERSISTENCE-OWNER-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing API persistence capacity visibility and owner-configurable operational thresholds; audit-only.
+ROADMAP_SECTION:4 Security/privacy and production-safe persistence baseline.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:4979ba01d9e0fe41ede6e475d047692791199c4d; fresh main/feature fetched, exact local/web match, latest journal and active paths reviewed.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. `api/persistence_maintenance.py` is read-only in this inventory package.
+DEPENDENCIES:current exact4979ba0 long gates running; avoid publishing and cancelling them until a decisive verdict. No overlap with legacy SERVER-DB owned source files or active Computer runtime claim.
+NON_BLOCKERS:post-release344-point owner-PC field pass and future API redesign.
+INTENDED_BUMP:none for inventory metadata; D only if separate claimed source repair becomes necessary.
+ACCEPTANCE_GATES:review all20 unclassified persistence lines in context; classify only exact owner/deployment-sourced or structural/security status statements, retain actual fixed clamps and operational minima as unclassified; adversarial appended-cap and unrelated-path tests; no production source change and no reduced CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:review source/test context, classify narrow lines, run audit module locally, and publish after current long-gate verdict.
+
+API_PERSISTENCE_AUDIT_CHECKPOINT: reviewed all20 unclassified `api/persistence_maintenance.py` lines against source and existing persistence tests. Exact anchored policy classifications cover seven owner/deployment-sourced backup/free-space/retention statements, eight report/validation/CLI structure statements and two docstring lines. Three true minimum/floor lines (`_env_int` default minimum1, `max(minimum,value)`, maintenance interval minimum60) remain unclassified for separate behavior review. Full audit now945 unclassified from962; inventory complete remains false. Adversarial tests confirm trailing fixed caps and unrelated paths stay unclassified. `tests/test_owner_control_audit.py`25/25 PASS, diff check PASS. No API production source edit.
+CI_CURRENT_SHA:exact4979ba0 real Core Windows PASS (run37692641134), Computer Linux/Windows PASS (run37692641070), native Windows acceptance/smoke PASS. Android plugin/APK and real one-GiB import are in progress on exact SHA. This audit package stays local until those long gates yield a decisive result, avoiding cancellation/restarts.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:17 of20 API persistence residual findings classified with exact tests; three fixed minima left visible; real Core gate green on current published SHA.
+REMAINING:publish inventory package after current long gates; resolve945 actual inventory candidates, Android/Knowledge/package/update/version-last release gates.
+BLOCKERS:none for audit source review; three long CI jobs in progress.
+NEXT:observe exact long CI results, then commit/push audit by expected-head fast-forward and inspect its exact-SHA checks.
+
+PUBLICATION_DECISION: prior Android workflow from older SHA completed successfully despite a newer push, so GitHub does not universally cancel in-flight gates here. To keep local/web synchronized and start exact new-SHA evidence promptly, publish this audited metadata-only package now by expected-head fast-forward. The old4979ba0 one-GiB import, Android APK/emulator and normal-path jobs remain running; their results will be labeled with that SHA and never substituted for final new-SHA acceptance. No source or gate weakening.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:API persistence audit25/25 local tests,17 exact classifications and three visible minima; publication prepared.
+REMAINING:publish/synchronize package, evaluate exact new-SHA CI, release/device/update/version-last gates and945 residual inventory findings.
+BLOCKERS:none for publication.
+NEXT:commit/push exact audited policy/tests/journal, verify remote identity and monitor CI evidence per SHA.
+
+API_PERSISTENCE_PUBLICATION_AND_CI: commit bc4a709479c2d41e7c9ac9d48296c8e3b117f836 published; local/origin/web exact match and clean. Exact Chat Learning Attachment job37694498954 SUCCESS includes owner-control audit. Exact native Windows Computer/acceptance/smoke and real Core Windows PASS; Android APK PASS. Android Plugin run37694499001 attempt1 FAILED in AAR build because Gradle could not resolve unchanged org.tukaani:xz1.10, junrar8.0.0 and poi5.5.1 from configured repositories; predecessor SHA4979ba0 Android Plugin passed with identical Android source/workflow. Cause currently unconfirmed transient external Maven/JitPack resolution, not a product regression assertion. Failed job rerun attempt2 on same bc4a709 in progress without source/dependency changes. Real one-GiB import, Windows package and Android emulator/normal path are still pending; do not count old SHA evidence as same-SHA acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:API persistence metadata package published and audit CI green; Android plugin failure isolated to external dependency resolution and exact-SHA rerun started.
+REMAINING:observe rerun outcome, long exact-SHA release gates, three API fixed minima and broader945 audit candidates.
+BLOCKERS:Android Plugin attempt1 red on bc4a709, attempt2 pending; root cause unconfirmed.
+NEXT:inspect Android rerun verdict; if repeat red, diagnose repository/artifact availability without weakening dependencies or tests. Review Project Index backend residual lines independently.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PROJECT-INDEX-BACKEND-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Code/Project Index owner budget and truthful result metadata, inventory-only review.
+ROADMAP_SECTION:4 Code/project work, owner-adjustable operational limits where allowed.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:bc4a709479c2d41e7c9ac9d48296c8e3b117f836; fresh main/feature fetched, exact local/remote match and journal checked.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md for confirmed identical-SHA CI recovery. `file_intelligence/project_index_service.py` is read-only in this package.
+DEPENDENCIES:prior Project Index source claims published/released; current bc4a709 Android Plugin retry and long device/package/Knowledge gates in progress. No source or workflow changes here.
+NON_BLOCKERS:post-release344-point owner-PC pass; no future Cognitive scope.
+INTENDED_BUMP:none for inventory metadata; D only if a separate claimed source repair follows.
+ACCEPTANCE_GATES:review all15 Project Index backend residual lines in context, classify only exact owner-sourced/result/technical structure with adversarial tests; keep independent SQLite lock deadline and any fixed functional cap unclassified; preserve existing Project Index CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect the15 exact lines and existing owner index tests, update only narrow audit policy/tests, run local suite and publish after current long-gate verdict if possible.
+
+PROJECT_INDEX_BACKEND_AUDIT_CHECKPOINT: inspected all15 residual lines. Exact anchored audit rules classify three excerpt-window calculations that consume the caller's owner `size`, and eight query/SQLite-integer/FTS-probe/coverage representation statements. Root path max_length8192 in three request shapes and SQLite connect timeout30 remain unclassified as real candidate operational limits. Adversarial appended-cap and unrelated-path tests preserve detection. Full audit now934 unclassified from945; inventory complete false. `tests/test_owner_control_audit.py`26/26 PASS; diff check PASS; backend source unchanged.
+ANDROID_RETRY:exact bc4a709 Android Plugin attempt1 failed Maven resolution of three unchanged pinned dependencies; attempt2 passed setup and is currently in AAR build. Previous4979ba0 AAR succeeded on identical Android source/workflow. Do not label an unconfirmed external outage as fixed before exact retry result. Exact bc4a709 Android APK, Windows Core, Computer, native acceptance and Windows smoke passed; one-GiB import, emulator/normal-path and Windows installer still running.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Project Index 15-line audit review, 11 classifications with adversarial tests; local audit26PASS.
+REMAINING:publish this inventory package after Android retry verdict, evaluate all long gates by exact SHA, fix true Project Index path/SQLite limits in a distinct source claim if required; owner inventory934 unresolved.
+BLOCKERS:Android Plugin exact bc4a709 attempt1 red, attempt2 in progress with root cause unconfirmed.
+NEXT:wait for AAR rerun verdict, inspect any second failure log; then commit/push reviewed audit by exact expected-head and verify local/web parity.
+
+ANDROID_IDENTICAL_SHA_RECOVERY: exact bc4a709 Android Plugin run37694499001 attempt2 completed SUCCESS, including AAR build and exported library verification. Attempt1 Maven resolution failure remains recorded as a red attempt; identical source/workflow/dependencies and successful same-SHA retry establish a transient resolution event, not a confirmed root cause. AF-171 records the reusable retry/diagnostic rule without relaxing pins or tests. Exact bc4a709 Android APK, real Core Android emulator, real Core Windows, Computer Linux/Windows, native Windows acceptance and owner audit CI PASS; real one-GiB import, Android normal path and Windows installer remain in progress.
+PROJECT_INDEX_AUDIT_PUBLICATION_READY:11 of15 residual backend lines classified exactly; four actual root-path-length/SQLite-wait candidates visible, audit934 unclassified, local owner-audit26PASS. Publish metadata-only package after exact remote-head check, then label future CI with its new SHA.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:identical-SHA Android plugin retry green and AF-171 memory recorded; Project Index inventory package locally verified.
+REMAINING:publish/sync inventory package, final exact-SHA Android normal path/Knowledge/Windows installer/update/version-last evidence,934 owner inventory candidates.
+BLOCKERS:none for Android Plugin after green attempt2; long release gates still pending.
+NEXT:commit/push the Project Index audit by exact expected-head fast-forward, verify local/web parity and its new CI run.
+
+PROJECT_INDEX_PUBLICATION_AND_NEXT_BATCH: commit8708eba484e1da8319a3798f43c37f57d45ef205 published; local/origin/web exact and worktree clean. Exact Chat Learning Attachment run37697262705 SUCCESS includes owner audit26PASS; other short CI green, Android device/plugin/APK jobs still in progress on this SHA. User requested a substantially larger next audit batch, preferably ≥100 findings where safe; preserve actual fixed-cap candidates and do not edit occupied production source paths merely to reduce the count.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:Project Index audit published/synchronized and exact owner-audit CI green.
+REMAINING:large owner inventory review, Android and final package/update/version gates.
+BLOCKERS:none for read-only source review.
+NEXT:claim one coherent five-file Work/Code/Memory inventory package with ≥100 residual lines, classify exact inspected statements only, run adversarial/full audit tests and publish once.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-WORK-CODE-MEMORY-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-control inventory for Work/Code/Memory paths, audit-only.
+ROADMAP_SECTION:4 Work/Computer baseline, Code/project work, Memory/Knowledge baseline and security boundaries.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:8708eba484e1da8319a3798f43c37f57d45ef205; fresh main/feature fetched, latest journal checked, local/origin/web exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source review: `scripts/windows_trusted_project_bridge.gd`, `scripts/trusted_project_sandbox_bridge.gd`, `scripts/memory_store.gd`, `scripts/tool_registry.gd`, `scripts/self_improver.gd`, `scripts/core_improvement_pipeline.gd`. Do not edit source held by prior performance/Evolution claims.
+DEPENDENCIES:exact8708eba Android CI still running; no release/version/source changes in this package. Reconcile any newer remote HEAD before publishing.
+NON_BLOCKERS:post-release344-point owner-PC pass and V1.6 future cognition work remain separate.
+INTENDED_BUMP:none for inventory metadata; distinct source fixes claim D separately.
+ACCEPTANCE_GATES:review all remaining findings in six listed files (141 at baseline), inspect source context and existing owner tests, classify only exact proven owner-sourced/structure/security lines, keep fixed operational ceilings unresolved; adversarial appended-cap/path tests, whole-audit count and existing owner audit suite; one publication and exact CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:enumerate all residual lines in five files with context, group only by verified semantics, then test and publish one combined metadata package.
+
+BULK_WORK_CODE_MEMORY_AUDIT_CHECKPOINT: reviewed141 previously unclassified lines in six read-only production paths (Windows trusted bridge19, trusted sandbox bridge17, MemoryStore32, ToolRegistry22, SelfImprover21, Core improvement pipeline30). Narrow path-anchored and full-line anchored patterns classify117: owner/caller budgets59, structural/accepted algorithm representation57, Computer cancellation uncertainty boundary1. Twenty-four remain unclassified: Windows trusted bridge8 (text-read clamp, diff window, HTTP deadline/diagnostic), sandbox trusted bridge6 (text-read clamp, diff window), MemoryStore4 (legacy fixed memory/knowledge constants and two ambiguous standalone `limit` arguments), ToolRegistry4 (generic HTTP default/diagnostic and reachable OS.execute output100000), SelfImprover2 (fixed generation attempts), Core improvement pipeline0. These are not waived; separate source behavior/owner-policy repairs must address actual fixed ceilings. Full owner audit unclassified934→817; audit complete:false. No production source or accepted 3–10 tournament invariant changed.
+LOCAL_TESTS: `tests/test_owner_control_audit.py`27/27 PASS including six-path representatives, hard Computer uncertainty line, appended fixed-cap and unrelated-path adversaries plus explicit unresolved cap negatives; `git diff --check` PASS. Existing Project Index/Computer/Memory runtime suites retain exact CI gates; this metadata package does not alter their runtime code.
+CI_PRIOR_SHA: exact8708eba Chat Learning owner audit, Android plugin, real Core Android emulator and other completed checks PASS; Android APK and real Android normal-path pending. Exact long package/device/Knowledge gates must be interpreted by SHA and never replaced with prior verdicts.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 findings reviewed as one coherent package,117 justified classifications locally verified; 24 possible real caps preserved for source follow-up.
+REMAINING:publish/sync this audit package; exact new-SHA CI;817 residual inventory findings, including 24 within this six-file review; release package/device/update/version-last gates.
+BLOCKERS:none for audit package; long Android jobs pending on previous SHA.
+NEXT:check exact remote head, commit/push one bulk audit package, verify local/web equality and owner-audit CI, then claim a source repair for the highest-impact preserved caps.
+
+BULK_WORK_CODE_MEMORY_PUBLICATION: commit13596d138efacba351166868ad5b49662d4d1742 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37698741689 SUCCESS includes owner audit27PASS. Long release gates remain tracked by exact SHA; no source or gate weakening.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 reviewed,117 narrowly classified,24 actual candidates retained; published and exact owner CI green.
+REMAINING:817 residual owner findings plus device/package/update/version-last acceptance.
+BLOCKERS:none for next read-only audit.
+NEXT:review coherent Learning/Evolution residual batch and classify only source-proven owner routing or non-cap structure.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-LEARNING-EVOLUTION-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing learning/Evolution owner-control inventory, audit-only.
+ROADMAP_SECTION:4 stable existing learning, Memory/Knowledge and bounded Evolution/security baseline; no V1.6 expansion.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:13596d138efacba351166868ad5b49662d4d1742; fresh main/feature fetched, journal/memory/roadmap and claims checked, local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: agent/learning_collector.py;agent/learning_curator.gd;api/community_learning.py;evolution_engine/core/experiment_registry.gd;evolution_engine/learning/experience_bridge.gd.
+DEPENDENCIES:long exact-SHA device/package release gates continue; source owned by other claims remains untouched.
+NON_BLOCKERS:future V1.6 cognition and post-release344-point owner-PC field check.
+INTENDED_BUMP:none for audit metadata; separate source fix claim D if actual fixed caps are repaired.
+ACCEPTANCE_GATES:review all122 residual findings across five paths in context; classify only exact caller/owner routed or structural lines, preserve real schema, retention, evidence and time caps; adversarial appended-cap/path tests and whole audit; exact CI after one publication.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect provenance of candidate limits, add narrowly anchored classifications/tests, keep unresolved fixed caps visible, publish/sync once.
+
+LEARNING_EVOLUTION_BULK_AUDIT_CHECKPOINT: reviewed all122 previously unclassified lines across five read-only source files: Learning collector35, Community Learning30, Evolution registry17, Learning curator16, Evolution experience bridge24. Exact full-line and path-anchored rules classify32 (29 caller/owner parameter forwarding and retention; three nonnegative Community status-accounting statements). Ninety remain unclassified: collector9 (including fixed HTTP bytes, excerpts, git history and source-limit20 clamp), community27 (request schema/pull/lease/retention/SQLite caps), registry14 (record text truncations), curator16 (promotion/evidence/retry thresholds), experience bridge24 (stored record truncations). No false claim that these are resolved; source repairs require separately claimed behavior and genuine tests. Full audit817→785 unclassified, complete:false; test-evidence count changed with new adversarial fixtures. `tests/test_owner_control_audit.py`28/28 PASS with representative exact classifications, appended fixed-cap and unrelated-path adversaries, and explicit fixed-cap negatives; JSON parse and diff check PASS. No production source or CI gate change.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:122 findings inspected in one coherent package;32 justified classifications and local audit28PASS.
+REMAINING:publish/sync package and exact CI;785 residual inventory findings including90 in this review; source repairs and final device/package/update/version gates.
+BLOCKERS:none for audit publication.
+NEXT:verify remote expected head, commit/push metadata package, check local/origin/web identity and exact owner-audit CI; then prioritize genuine caps for source repair.
+
+LEARNING_EVOLUTION_PUBLICATION: commit8ed2f0f339aca406e1229caf56da2f13faabbf1d published; local/origin/web exact and clean. Exact Chat Learning Attachment run37699440581 SUCCESS includes owner audit28PASS. Android plugin, Windows Core and package/device gates remained in progress at last check; no old-SHA verdict substituted. Full inventory785 residual.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:122 reviewed,32 narrowly classified,90 actual candidates retained; published and exact owner CI green.
+REMAINING:785 owner findings, source repairs and final same-SHA release/device/update/version gates.
+BLOCKERS:none for next read-only API review.
+NEXT:review API identity/sync/backup/learning/Core queue/client/settings residuals as one coherent package.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-PERSONAL-DATA-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing API account, personal sync, backups, learning and Core queue owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable API, privacy, persistence and local-Core control-plane baseline.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:8ed2f0f339aca406e1229caf56da2f13faabbf1d; fresh main/feature fetched; journal, roadmap, engineering memory, ADRs and active claims reviewed; local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: api/account_store.py;api/agent_bridge.gd;api/backup_service.py;api/core_candidate_queue.py;api/learning_store.py;api/local_core_client.py;api/server.py;api/settings_overlay.gd;api/sync_store.py.
+DEPENDENCIES:long exact-SHA release CI still running; no production source or workflow edits in this inventory package.
+NON_BLOCKERS:future V1.6 cognition, public-scale API redesign and post-release344-point owner-PC field review.
+INTENDED_BUMP:none for metadata; separately claimed source fixes D if needed.
+ACCEPTANCE_GATES:review all112 residual lines in nine files against source/callers, classify only exact non-cap structure or proven owner-sourced routing; preserve fixed API payload/page/retention/time/diagnostic caps; adversarial appended-cap/path tests, full audit and existing CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect source/caller context, add narrowly anchored rules and adversarial fixtures, retain genuine fixed ceilings for source repair.
+
+API_PERSONAL_DATA_BULK_AUDIT_CHECKPOINT: reviewed112 previously unclassified lines across nine read-only files: AccountStore11, AgentBridge8, BackupService14, CoreCandidateQueue15, LearningStore14, LocalCoreClient8, API server11, SettingsOverlay15, SyncStore16. Thirty-eight exact full-line/path rules classify nine owner/caller-sourced accounting statements and29 structure/status/domain/unique-hash-lookup statements. Five account token lookups use LIMIT1 on token/access hashes backed by SQLite UNIQUE constraints; the latest-token query is not classified. Seventy-four remain unclassified: account5 (token TTL floors/latest lookup), bridge4 (client cap, answer excerpt, confidence formula), backup2 (SQLite wait/CLI positive floor), candidate queue15 (source, list and retention caps), learning store9 (retention floor, pending page/SQL), local Core client8 (timeouts, backoff and reply count), API server10 (request/page/optional provider timing), settings overlay12 (visible rows, text/error and request timeout, port minimum), sync store9 (entity bytes/page ceilings). Real fixed caps are retained for behavior-level source repair; `CoreCandidateQueue.list()` 200-row clamp may prevent raised max_items from being effective and needs a separate reproduction and source claim. Full audit785→747 unclassified, complete:false; test-evidence count changed with new fixture. `tests/test_owner_control_audit.py`29/29 PASS with per-subsystem representative exact rules, appended-cap/unrelated-path adversaries and nine explicit unresolved caps; JSON parse and `git diff --check` PASS. No production source, accepted trust boundary or CI gate changed.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:112 API/personal-data findings inspected as one package;38 justified classifications,74 real/ambiguous candidates retained; local audit29PASS.
+REMAINING:publish/synchronize package, exact new-SHA CI;747 residual inventory findings, source repairs, physical/device/package/update/version-last release gates.
+BLOCKERS:none for audit publication.
+NEXT:check exact remote head, commit/push the audited metadata package, verify local/origin/web identity and exact owner CI; reproduce highest-impact genuine queue/page caps in a separately claimed source repair.
+
+API_PERSONAL_DATA_PUBLICATION: commit64ec5ddde8978216f6f95c6ca45583c7f377c2a6 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37700049781 SUCCESS includes owner audit29PASS. Other exact-SHA long gates continue; no red at last PR check. Confirmed queue capacity defect read-only: with201 on-disk entries and configured max_items250, list(250) and status() report200, so trim sees fewer than actual and can admit over-capacity. Reproduction used a temporary .ci directory and left worktree clean.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:112 reviewed,38 classified,74 retained; published and exact owner CI green; candidate queue defect reproduced.
+REMAINING:repair queue defect with genuine tests and exact CI;747 residual owner findings and final release gates.
+BLOCKERS:old CHAT-2026-09-16-SERVER-DB claim still names api/core_candidate_queue.py; resolve narrow ownership below before edit.
+NEXT:claim/take over exact queue file and its focused test after confirming fresh main is ancestor, fix internal list count without widening HTTP route cap or weakening candidate trust gates.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-CORE-CANDIDATE-QUEUE-CAPACITY
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing signed Core candidate queue capacity truthfulness and owner-adjustable retention.
+ROADMAP_SECTION:4 controlled Core candidate promotion, API stability and owner limits.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; candidate verification/trust architecture unchanged.
+STARTING_HEAD:64ec5ddde8978216f6f95c6ca45583c7f377c2a6; fresh main/feature fetched, main ancestor confirmed, journal/memory/roadmap/ADRs reviewed, local/origin/web exact.
+CLAIM_RECONCILIATION:narrow take-over of api/core_candidate_queue.py and tests/test_core_candidate_queue.py from stale broad CHAT-2026-09-16-SERVER-DB path list for this confirmed defect only. All other SERVER-DB paths remain with that lane; no parallel edits detected in fresh remote branch. Prior WORK-2026-09-16-CANDIDATE-QUEUE-AUDIT was DONE.
+OWNED_PATHS:api/core_candidate_queue.py;tests/test_core_candidate_queue.py;config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md if confirmed lesson needed.
+DEPENDENCIES:existing explicit core.candidate scopes, signed-update promotion and same-SHA API CI preserved. Other long release gates in progress.
+NON_BLOCKERS:V1.6 cognition and post-release344-point owner-PC check.
+INTENDED_BUMP:D for behavior repair, canonical version remains last after release gates.
+ACCEPTANCE_GATES:201-entry genuine persistent queue fixture with configured max_items>200 reports full count and rejects overcapacity when no terminal entry can be evicted; default/public API route cap200 remains; existing candidate trust/concurrency tests, owner audit, Python API and exact CI pass.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:remove internal list200 clamp, add persistent 201-entry status/trim regression, run focused and API CI gates, publish/sync exact SHA.
+
+CORE_CANDIDATE_QUEUE_CAPACITY_CHECKPOINT: reproduced real persisted queue defect on base64ec5dd with201 entries and max_items250: list/status showed200. Narrow source repair removes only the internal 200 slice from `CoreCandidateQueue.list`, retaining caller positive minimum, full signed-candidate validation and public `/v1/core-candidates` request `le=200`. New persisted201-entry regression checks list/status201 and rejects a full queue with no terminal eviction candidate at max_items201. Targeted candidate+owner-audit modules37/37 PASS; local broad API gateway/privacy/server-hardening52/52 PASS with authorized loopback. First default-sandbox broad run failed at WinError10013 on a real127.0.0.1 fixture and was interrupted; it is not counted as a product failure/pass. AF-172/AF-173 record defect and environment lesson. Python compile, diff check PASS. Whole owner inventory remains747 unclassified: queue source line changed from a fixed200 clamp to a caller count with positive floor, but other candidate source/default caps remain visible. Exact new-SHA API CI still required before source acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:confirmed and locally repaired queue capacity truthfulness,37 targeted tests and52 genuine API tests PASS; no auth/signed-promotion/HTTP page boundary weakened.
+REMAINING:publish/sync source package, exact API/owner CI, remaining747 inventory candidates and final device/package/update/version gates.
+BLOCKERS:none for publication; initial restricted-loopback run superseded by authorized genuine PASS.
+NEXT:verify exact remote head, commit/push queue source, regression, journal and memory; confirm local/origin/web identity and exact API/owner CI.
+
+CORE_CANDIDATE_QUEUE_ACCEPTANCE: commit c1c63e2aede5f2af755b760632aca3176816551e published by expected-head fast-forward; local/origin/web exact and clean. Exact API CI run37700989936 SUCCESS across python-api, godot-api and windows-api; exact Chat Learning Attachment run37700989919 SUCCESS includes owner audit. This accepts the focused source repair and persisted201-entry regression without waiving external API page200, Core candidate verification or security scopes. Local targeted37PASS and authorized-loopback API breadth52PASS; the restricted WinError10013 attempt remains separately recorded as non-verdict. api/core_candidate_queue.py and tests/test_core_candidate_queue.py are released from CODEX-2026-10-08-V15-CORE-CANDIDATE-QUEUE-CAPACITY claim. Journal-only publication will have its own SHA; do not substitute this source-SHA evidence for final release/device/package/update/version-last gates.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:queue capacity fix and genuine regression accepted on exact c1c63e2 API/owner CI; local/web source parity confirmed.
+REMAINING:747 owner findings and final physical/device/package/update/version gates; journal-only commit exact CI as scheduled.
+BLOCKERS:none in queue source scope.
+NEXT:publish this evidence addendum, verify remote identity; then continue another coherent owner-cap source repair or audit batch against fresh journal/CI.
+
+QUEUE_EVIDENCE_PUBLICATION: journal commit fb1d5944d619a00cf69da9d2dcd6e079e5df602b published; local/origin/web exact and clean. Exact fb1d594 API CI run37701239133 SUCCESS across Python, Godot and Windows jobs; Chat Learning Attachment run37701239168 SUCCESS. Remaining Android emulator/plugin and other long release jobs were in progress at subsequent check with no red; do not count as final release acceptance.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:accepted queue fix and exact current-SHA API/owner gates, synchronized journal.
+REMAINING:747 residual owner findings and package/device/update/version-last gates.
+BLOCKERS:none for next read-only audit.
+NEXT:review116 related Evolution/Learning residual lines; classify only proven owner routing, accepted tournament invariant or non-cap structure, retain real evidence/text/time caps.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-EVOLUTION-LEARNING-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Evolution/learning inventory and truthful owner-control reporting; audit-only.
+ROADMAP_SECTION:4 stable current Evolution, research evidence/privacy and bounded tournament baseline; no V1.6 expansion.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; 3–10 candidate competition remains mandatory.
+STARTING_HEAD:fb1d5944d619a00cf69da9d2dcd6e079e5df602b; fresh main/feature fetched, full journal/roadmap/memory and ADRs reviewed, active claims checked, local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: agent/learning_curator.gd;evolution_engine/core/experiment_registry.gd;evolution_engine/evaluation/core_tournament_adapter.gd;evolution_engine/integration/community_learning_bridge.gd;evolution_engine/learning/candidate_ledger.gd;evolution_engine/learning/community_language_curator.gd;evolution_engine/learning/context_bridge.gd;evolution_engine/learning/experience_bridge.gd;evolution_engine/learning/learning_signal.gd.
+DEPENDENCIES:older research/Evolution production source claims remain untouched; long exact-SHA release jobs continue.
+NON_BLOCKERS:future V1.6 cognition and post-release344-point field scenario.
+INTENDED_BUMP:none for inventory metadata; any source repair separately claimed as D.
+ACCEPTANCE_GATES:review all116 residual lines in nine paths in context; classify exact owner-sourced retention, structural elapsed-time/connection or accepted 3–10 tournament only; preserve fixed evidence quality/age, batch/time, context/text/diagnostic caps; adversarial appended-cap/path negatives, full audit and exact owner CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:inspect relevant source/owner-policy/test context, add only safe exact classifications and record the large real-cap remainder without falsely declaring inventory complete.
+
+EVOLUTION_LEARNING_BULK_AUDIT_CHECKPOINT: reviewed all116 prior residual lines across nine read-only production paths (ExperienceBridge24, LearningCurator16, ExperimentRegistry14, TournamentAdapter14, CommunityLanguageCurator11, ContextBridge11, LearningSignal10, CandidateLedger9, CommunityLearningBridge7). Eight exact rules classify accepted 3–10 tournament condition and lock-time telemetry3, owner pending retention1, timer signal connection1 and existing evidence/promotion status-report fields3. Remaining108 stay unclassified: experience24, registry14, curator13, community language11, context11, tournament10, learning signal10, candidate ledger9, community bridge6. These mostly encode actual fixed record truncation, evidence-age/quality, context, retry, HTTP and batch caps; no claim of completion or source repair. Full inventory747→739 unclassified; complete:false. `tests/test_owner_control_audit.py`30/30 PASS with appended-cap/unrelated-path adversaries and unresolved examples from all nine paths; JSON parse/diff check PASS. No production source or tournament behavior change.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:116 Evolution/Learning findings inspected;8 narrow classifications,108 actual/ambiguous constraints retained; local audit30PASS.
+REMAINING:publish/sync combined audit package after next independent desktop review;739 residual owner findings, source repairs and final release gates.
+BLOCKERS:none for read-only source review.
+NEXT:review102 additional free Desktop/Core runtime residual lines, combine exact policy/tests into one publication and verify its exact CI.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-DESKTOP-RUNTIME-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing desktop Core, Computer, Knowledge, Work and settings owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable self-primary Core, Work/Computer, Knowledge and existing owner settings.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture change.
+STARTING_HEAD:fb1d5944d619a00cf69da9d2dcd6e079e5df602b; fresh main/feature fetched, full journal/roadmap/memory and ADRs checked, local/origin exact.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: scripts/knowledge_base_overlay.gd;scripts/computer_client.gd;scripts/sandbox_manager.gd;scripts/agent_core.gd;scripts/aurora_core_runtime.gd;scripts/desktop_local_runtime.gd;scripts/settings_overlay.gd;scripts/runtime_extension_manager.gd;scripts/self_improvement_overlay.gd;scripts/ai_client.gd.
+DEPENDENCIES:separate UI/Computer/Core production source claims remain untouched; current exact-SHA long gates continue.
+NON_BLOCKERS:future cognition and post-release344-point owner-PC field check.
+INTENDED_BUMP:none for inventory; actual source fixes require distinct D claim.
+ACCEPTANCE_GATES:review all102 residual lines in ten paths; classify only exact owner-sourced routing, accepted numeric representation and non-cap structure; keep fixed source, timeout, text, extension, Core retry and UI caps visible; adversarial full-line/path tests, full audit, one combined publication and exact CI.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:enumerate all102 source lines with call context, add narrow classifications/tests, retain genuine fixed ceilings and publish combined two-block audit.
+
+DESKTOP_RUNTIME_BULK_AUDIT_CHECKPOINT: reviewed all102 prior residual lines across ten read-only production paths: KnowledgeOverlay13, ComputerClient12, SandboxManager12, AgentCore11, AuroraCoreRuntime11, DesktopLocalRuntime10, SettingsOverlay10, RuntimeExtensionManager9, SelfImprovementOverlay8, AIClient6. Sixty-four exact full-line/path classifications: owner/caller sourced33, representation/status/accepted 3–10 tournament29, irreversible-action and uncertain Computer termination security boundaries2. Thirty-eight remain unclassified: runtime extension8 (source/description/diagnostic caps), Core runtime7 (retry/backoff/optional provider deadlines), SandboxManager6 (legacy constants/output/Android), AgentCore5 (step/retry limits), desktop local4 (startup/health waits), settings4 (standalone timeout and UI minima/maxima), AIClient1 (optional health timeout), ComputerClient1 (unused legacy constant), KnowledgeOverlay1 (unused legacy constant), SelfImprovementOverlay1 (reason excerpt). Existing owner UI adversarial test rejected an initial classification of generic slider.max_value=maximum; removed that and related generic min/max lines rather than weakening the test. Full owner inventory739→675 unclassified, complete:false. Combined two-block review on this turn:218 findings inspected,72 narrowly classified,146 retained for actual/ambiguous caps. `tests/test_owner_control_audit.py`31/31 PASS, JSON parse and diff check PASS. No production source, owner UI geometry limit, accepted tournament or CI gate changed.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:218 findings inspected in two connected Evolution/Desktop packages;72 justified exact classifications and31 local audit tests PASS.
+REMAINING:publish/sync combined metadata package and exact owner CI;675 residual inventory findings, source repairs and final device/package/update/version-last gates.
+BLOCKERS:none for audit publication.
+NEXT:verify remote expected head, commit/push one combined policy/tests/journal package, check local/origin/web identity and exact audit CI; then prioritize genuine source caps rather than counting reviewed lines as fixed.
+
+EVOLUTION_DESKTOP_BULK_PUBLICATION_AND_CI: commit ef47525e6c4bc40f59a0ff7a8d99f96c0e651558 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37702279906 SUCCESS includes owner-control audit31PASS. At last check other short/long exact-SHA checks were IN_PROGRESS with no red; package/device/update/version-last acceptance is not inferred. This package changes audit policy/tests/journal only, not runtime source. Combined review218 inspected,72 classified,146 still visible, global residual675. Subsequent evidence-only journal commit must be checked by its own SHA.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:combined218 finding review published/synchronized; exact owner-audit CI and31 local tests green.
+REMAINING:675 owner inventory candidates, genuine source repairs and final exact-SHA Windows/Android/package/update/version gates.
+BLOCKERS:none in audit metadata scope.
+NEXT:publish this exact-CI journal record, verify local/web identity, then claim source-level repair for a high-impact confirmed cap or another coherent ≥100 finding batch.
+
+AUDIT_EVIDENCE_PUBLICATION: journal SHA864e9ea5a5c0806710ad2264ac348bc360da2760 published; local/origin/web exact and clean. Exact Chat Learning Attachment run37702460068 SUCCESS includes owner-control audit31PASS. Other long exact-SHA platform checks in progress without red at last check; release readiness82% unchanged. Source review found a higher-impact cross-stack inconsistency: private OwnerResourcePolicy already exposes candidate_source_bytes, but CoreCandidateSubmitter still enforces fixed1MiB, API queue fixed1MiB/2MiB encoded and Pydantic schema2MiB, so a raised owner setting cannot be delivered end-to-end.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:218-finding bulk audit finalized and synchronized; candidate submission fixed-cap chain identified.
+REMAINING:repair candidate submission chain with source tests and exact CI;675 inventory findings and final release gates.
+BLOCKERS:none after narrow claim reconciliation below.
+NEXT:claim candidate-source byte repair across client/API, preserve signed-promotion/auth/body-size trust boundaries and prove default/raised/zero behavior.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-CANDIDATE-SOURCE-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing owner-adjustable Core candidate source capacity with signed-update promotion safety.
+ROADMAP_SECTION:4 controlled self-improvement/Core promotion, owner limits, local self-primary architecture and API stability.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no authority/promotion architecture change.
+STARTING_HEAD:864e9ea5a5c0806710ad2264ac348bc360da2760; fresh main/feature fetched, main ancestor confirmed, full journal/roadmap/memory/ADRs and active claims checked, local/origin/web exact.
+CLAIM_RECONCILIATION:narrow take-over of api/core_candidate_queue.py, api/server.py and tests/test_core_candidate_queue.py from stale broad CHAT-2026-09-16-SERVER-DB path list for this confirmed owner-budget chain only. Previous queue capacity source claim released. Other SERVER-DB paths remain owned there; scripts/core_candidate_submitter.gd has no competing source claim. No parallel edit detected on fresh remote branch.
+OWNED_PATHS:scripts/core_candidate_submitter.gd;api/core_candidate_queue.py;api/server.py;tests/core_candidate_submitter_smoke.gd;tests/test_core_candidate_queue.py;tests/test_owner_control_audit.py;config/owner_control_policy.json;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:trusted deployment AURORAFOX_API_MAX_BODY_BYTES still independently governs total HTTP body; server candidate-source budget is trusted startup/operator policy, never client-declared. Existing auth scopes, allowlisted targets, SHA/evidence checks, signed-update-only promotion, permission and privacy gates unchanged.
+NON_BLOCKERS:future V1.6 cognition, public-scale server redesign and post-release344-point owner-PC field scenario.
+INTENDED_BUMP:D for behavior repair; canonical version remains last after release gates.
+ACCEPTANCE_GATES:default1MiB behavior retained; raised private client limit accepts valid >1MiB source, zero removes client cap; independent trusted server startup budget accepts raised/zero with bounded raw/encoded preflight, invalid negative/fractional config fails visibly; FastAPI request schema does not introduce smaller fixed cap; request-body middleware still independently rejects oversized HTTP bodies, and auth/manifest/hash/allowlist gates stay strict. Genuine Godot submitter smoke, Python queue/API/owner tests, exact API/Core CI and diff check required.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:add failing >1MiB client/server regressions, implement owner/deployment budgets and run complete relevant gates before publication.
+CLAIM_AMENDMENT:docs/AURORA_CORE_MIGRATION.md added to owned paths for the operator-facing source-budget deployment contract.
+IMPLEMENTATION_CHECKPOINT:client submitter now uses persisted OwnerResourcePolicy candidate_source_bytes, checks on-disk length before allocation and read bytes afterward; default1MiB and zero semantics retained. API queue uses separate trusted AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES default1MiB, derives Base64 preflight from decoded-byte budget, rejects invalid operator values, and leaves request-body middleware independent. Pydantic candidate request no longer reimposes fixed2MiB encoded cap. Signed-update evidence, target allowlist, SHA and auth checks untouched. Operator deployment setting documented in AURORA_CORE_MIGRATION. Pre-fix Python regression failed at missing max_source_bytes constructor; fixed focused candidate/owner suite42PASS. Selected API hardening/gateway/privacy/request-limit suite82PASS with authorized local loopback. Godot smoke added but native execution awaits exact-SHA CI. Audit unclassified675 at prior exact head; current working tree667 after exact review of 14 new owner-source statements, with unrelated queue, retry, timeout and API caps still unclassified. Prior SHA864e9ea API/Core/Integration and several other workflows SUCCESS; Windows Package, Android E2E and Knowledge 1GiB remain pending at last GitHub check. No readiness increase; 82%.
+SOURCE_COMPLETE:YES for candidate-source chain; awaiting publication and exact-SHA native gates.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+NEXT:final diff/owner regression, commit and push by exact branch CAS; run exact API/Core/Integration checks, inspect inherited long platform gates and reconcile local/origin/web SHA.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-BULK-OWNER-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing API/personal data/learning/Core promotion owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable API, privacy, owner resource controls and controlled self-improvement.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture or promotion authority change.
+STARTING_HEAD:43a50459c65c50d954935f268fe3682e5becd39d; fresh main/feature fetched, main ancestor confirmed, local/origin exact, full journal/roadmap/memory and ADRs re-read. Exact API/Core/Integration SUCCESS; long Windows/Android/Knowledge runs still active with no red at claim start.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: all api/ paths in owner-control inventory.
+CLAIM_RECONCILIATION:previous candidate-source source change published and exact API/Core/Integration acceptance passed; this audit touches only policy/tests/journal and does not alter source paths held by the historical SERVER-DB lane.
+DEPENDENCIES:preserve API request-body and account rate controls, authentication/privacy boundaries, Core candidate signed promotion, and actual retention/capacity limits as visible findings.
+NON_BLOCKERS:V1.6 cognition, public-scale API redesign and post-release owner-PC field sweep.
+INTENDED_BUMP:none for audit metadata; any confirmed source repair needs a separate D claim and tests.
+ACCEPTANCE_GATES:inspect all141 current unclassified api/ lines with source context; classify only exact owner-controlled or non-cap structure, retain fixed/ambiguous caps; adversarial line/path tests, owner-control audit and exact CI; record reviewed/classified/retained counts and synchronize local/origin/web.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous candidate-source chain published as43a5045 with exact API/Core/Integration SUCCESS; audit claim opened.
+REMAINING:read all141 API findings, update exact policy/tests, run CI and remaining release gates.
+BLOCKERS:none for audit.
+NEXT:enumerate all141 API findings with code context and classify only supported lines.
+API_BULK_AUDIT_CHECKPOINT:reviewed all141 previously unclassified api/ findings across23 source files against current code. Added39 exact path/full-line classifications:14 owner/caller budget routing,22 SQL/query/pass-through/status/representation,3 source documentation. Retained102 actual or ambiguous restrictions including SMTP60s, account token bounds, community text/batch/lease/terminal caps, candidate queue default200 and +50 scan, SQLite waits, API upload/global body, local-Core/optional-provider timeouts/backoff, Knowledge target size, settings UI excerpts, sync pagination and gateway health timeout. No production source or trust boundary changed. The global owner audit unclassified count667→628; api/141→102, complete:false. Adversarial category/path/appended-cap test and unresolved examples passed as part of33 local owner-audit tests; JSON policy parsed and git diff check to follow. Source-level repair of retained caps requires separate claim and meaningful tests. Exact Chat Learning Attachments CI on publication SHA remains required.
+SOURCE_COMPLETE:YES for this audit-only package.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 API findings reviewed;39 narrow exact classifications;102 retained; local audit33PASS.
+REMAINING:publish/sync audit package and exact CI;628 global unresolved findings and release package/device/update/version gates.
+BLOCKERS:none in audit metadata scope.
+NEXT:validate policy and diff, publish one metadata commit, verify local/origin/web SHA and exact owner-audit CI; pursue retained source caps separately.
+API_BULK_AUDIT_PUBLICATION_AND_CI:commit14316518fd5aa0caca5619ca1118e4fa4c7e6c9e published with local/origin/web exact and clean. Exact Chat Learning Attachments run37704507592 SUCCESS; its Python contract step included tests/test_owner_control_audit.py and reports68PASS overall. Exact API run37704507634 and Core/Voice run37704507660 SUCCESS; other short checks green at last check, with long Windows/Android/Knowledge/package and Integration runs active/pending, no red observed. Audit source review complete:141 inspected,39 exact classifications,102 retained; global residual628. The audit-only claim CODEX-2026-10-08-V15-API-BULK-OWNER-AUDIT is DONE and releases config/owner_control_policy.json, tests/test_owner_control_audit.py and this journal; no runtime source edited.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:141 API findings reviewed and published;39 confirmed exact classifications; local33PASS and exact CI68PASS; branch synchronized at1431651.
+REMAINING:628 owner-control inventory findings, source repairs and final exact-SHA Windows/Android/Knowledge/package/update/version acceptance.
+BLOCKERS:none for completed audit metadata; external release gates pending.
+NEXT:verify evidence-only journal publication, then claim a connected source-level owner-cap repair or next ≥100 finding review after fresh main/journal/CI sync.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-LOCAL-INPUT-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing local agent, File Intelligence and Voice owner-control inventory; audit-only.
+ROADMAP_SECTION:4 self-primary offline agent, supported file understanding and local voice baseline with owner-adjustable operational limits.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no multimodal/agent architecture change.
+STARTING_HEAD:16e9345187aace0925dd1ca89832548825e79c58; fresh main/feature fetched, main ancestor confirmed, clean local/origin exact, latest journal/roadmap/memory/ADRs and claims checked. Exact owner audit, API and Core CI green; long platform gates pending with no red at claim start.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: agent/, file_intelligence/, voice/ current audit findings.
+CLAIM_RECONCILIATION:prior API audit closed and released policy/tests/journal. Existing source ownership elsewhere remains untouched; no production files are edited under this audit claim.
+DEPENDENCIES:preserve local self-primary processing, agent safety, file/archive parser limits, voice privacy and actual CPU/memory/deadline controls as visible findings.
+NON_BLOCKERS:V1.6 cognition and deferred public/multitenant capabilities.
+INTENDED_BUMP:none for audit metadata; confirmed source repairs need independent D claim and full tests.
+ACCEPTANCE_GATES:review all109 current residual agent/file_intelligence/voice lines with code context; classify only exact owner-controlled, non-cap structural or documentation statements; retain real/ambiguous limits; adversarial path/appended-cap tests, full owner audit, exact CI and local/origin/web SHA.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:API141-finding package complete with39 exact classifications and exact owner CI success.
+REMAINING:review109 local-input findings, publish verified audit;628 global residuals and release gates.
+BLOCKERS:none for read-only audit.
+NEXT:enumerate all109 lines and inspect contexts before policy edits.
+LOCAL_INPUT_BULK_AUDIT_CHECKPOINT:all109 previously unclassified agent/, file_intelligence/ and voice/ findings reviewed with source context. Fifty-four exact path/full-line classifications: owner/caller budgets17, normalized score/progress/sample/metadata and diagnostic structure37. Fifty-five actual or ambiguous limits retained, including agent HTTP2MiB and fixed source counts/deadlines, learning corroboration/evidence/retry thresholds, EPUB/RAR default160000 and archive controls, Project Index path8192 and SQLite30s, voice minimum speech, barge-in, TTS speed, setup timers, client request30s and legacy voice log5MiB. No production source, voice behavior, agent safety, archive parser or OCR limits changed. Global unclassified628→574; local-input109→55, complete:false. Added exact category/path/appended-cap adversarial and unresolved tests; full owner audit34PASS, policy JSON parse and diff check PASS. No new engineering-memory defect was found; source repairs need a separate D claim.
+SOURCE_COMPLETE:YES for audit-only package.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:109 connected local-input findings inspected;54 exact classifications;55 retained; owner audit34PASS.
+REMAINING:publish/sync and exact owner CI;574 global inventory residuals and final release gates.
+BLOCKERS:none for audit metadata scope.
+NEXT:commit/push policy/tests/journal, verify exact SHA and owner-audit CI, release occupied metadata paths.
+LOCAL_INPUT_BULK_PUBLICATION_AND_CI:commit f12fb7f1cd645910968b41fff35e67f85c8458d2 published; local/origin/web exact and clean. Exact Chat Learning Attachments run37705126546 SUCCESS; its contract step included tests/test_owner_control_audit.py and reported69PASS overall. Exact API run37705126614 SUCCESS; other short checks green at last observation, with Core/Voice and long platform/Knowledge/package/Integration runs still active or pending and no red observed. The audit-only claim CODEX-2026-10-08-V15-LOCAL-INPUT-BULK-AUDIT is DONE and releases config/owner_control_policy.json, tests/test_owner_control_audit.py and this journal. No production source changed. Review109, classified54, retained55, global residual574; release readiness unchanged.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:109 local-input findings reviewed and synchronized; local owner audit34PASS; exact CI69PASS at f12fb7f.
+REMAINING:574 inventory findings, confirmed source-limit repairs, final exact-SHA Windows/Android/Knowledge/package/update/version gates.
+BLOCKERS:none for completed audit metadata; release platform gates pending.
+NEXT:verify evidence-only journal publication at its own SHA; then prioritize a retained operational cap with source-level regression tests or another ≥100 finding group after fresh sync.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-SCRIPTS-REMAINING-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL current client runtime, UI, Knowledge, Core candidate and integration owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable self-primary Core, Work/Computer, Knowledge, Voice/File and existing owner settings.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 checked; no architecture or source behavior change.
+STARTING_HEAD:c6039bf63b2acb747ddf70f4240c9eab128c8267; fresh main/feature fetched, main ancestor and local/origin equality confirmed, journal/roadmap/engineering memory/ADRs and active claims checked. Exact API/Core/Integration and all completed short/Android CI green; Windows Package pending, Knowledge1GiB in progress.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: scripts/ inventory excluding ten previously reviewed Desktop/Core paths.
+CLAIM_RECONCILIATION:previous local-input audit DONE and metadata paths released. Other runtime source claims untouched; no production source edits under this audit.
+DEPENDENCIES:keep actual runtime timeouts, source/scan/batch, UI, Android, public web and trusted-project limits visible; owner authority and security boundaries unchanged.
+NON_BLOCKERS:V1.6 cognition and post-release owner-PC field sweep.
+INTENDED_BUMP:none for audit metadata; any source repair needs a separate D claim and tests.
+ACCEPTANCE_GATES:inspect all114 current unclassified scripts/ lines not in prior Desktop/Core ten paths; classify only exact owner-controlled or non-cap representation/status, retain actual and ambiguous caps; adversarial path/appended-cap tests, full audit and exact CI; synchronize local/origin/web.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous109 local-input audit published; exact c6039bf short/Android checks green, long Windows/Knowledge pending.
+REMAINING:review114 new scripts findings, publish exact audit;574 global residual and release gates.
+BLOCKERS:none for audit metadata.
+NEXT:enumerate114 selected source lines with context and review all before policy edits.
+SCRIPTS_REMAINING_BULK_AUDIT_CHECKPOINT:reviewed all114 previously unclassified scripts/ findings outside the ten already-reviewed Desktop/Core paths. Forty-one exact full-line/path classifications: owner/caller budget forwarding14 and tool schema, UI/score representation, status/error or non-cap flow27. Seventy-three actual/ambiguous limits remain visible: Android runtime600s, model read chunk4MiB, Computer steps100, candidate scan50/retry/HTTP25s, source-growth1.35, Knowledge production1GiB and shard rules, semantic vectorizer tokens/features, public web CAPTCHA scan, sandbox/project byte and timeout limits, self-improvement attempt24 and UI diagnostic truncations. Unclassified global574→533; selected scripts114→73; complete:false. No production source, trusted project authority, updater/signing or tournament behavior changed. Adversarial full-line/path/appended-cap and unresolved examples added; local owner audit35PASS, policy JSON parses, diff check PASS. No new confirmed defect requiring engineering-memory entry. Source repairs need separate D claim.
+SOURCE_COMPLETE:YES for audit-only package.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:114 new scripts findings inspected,41 exact classifications,73 retained; local owner audit35PASS.
+REMAINING:publish/sync and exact audit CI;533 global inventory residuals and release platform/package/update/version acceptance.
+BLOCKERS:none for audit metadata; Windows Package and Knowledge1GiB still pending/in progress at start of batch.
+NEXT:commit/push policy/tests/journal, verify local/origin/web SHA and exact owner CI, then release metadata claim.
+SCRIPTS_REMAINING_BULK_PUBLICATION_AND_CI:commit4e701da70ba5da6b3f30738e6029cda75c198f62 published with local/origin/web exact and clean. Exact Chat Learning Attachments run37707618134 SUCCESS; contract step included tests/test_owner_control_audit.py and reported70PASS. Exact Core/Voice run37707618208 SUCCESS; other completed short jobs green at last check, while API/Integration/Android/Windows Package/Knowledge jobs were queued or active, no red observed. Review114, classified41, retained73, global residual533. Audit-only claim CODEX-2026-10-08-V15-SCRIPTS-REMAINING-BULK-AUDIT is DONE and releases policy/test/journal paths. No production source changed and no version bump.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:114 new scripts findings inspected and published;41 exact classifications,73 retained; local35PASS and exact CI70PASS.
+REMAINING:533 owner-control findings and actual source-limit repairs; final exact-SHA Windows/Android/Knowledge/package/update/version gates.
+BLOCKERS:none for completed metadata audit; long release gates pending.
+NEXT:publish this evidence-only journal entry and verify its exact SHA/owner CI; then choose a retained source cap with a separate D claim and full regression gates.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-RELEASE-TOOLING-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing update, build, deployment, model/bootstrap and CI release-control inventory; audit-only.
+ROADMAP_SECTION:4 updater/release exact-SHA package, Windows/Android distribution, Knowledge pack and version-last acceptance.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no promotion or release authority change.
+STARTING_HEAD:c3fc577862cf437a1410f3fdd8c5d450e04e72d4; fresh main/feature fetched, main ancestor and local/origin equality confirmed, journal/roadmap/engineering memory/ADRs and active claims checked. Exact owner/API/Core and completed CI green; Windows Package and Knowledge1GiB pending at claim start.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: update/,deploy/,tools/,build/,.github/,core_runtime/,models/,benchmarks/,runtime/ audit findings.
+CLAIM_RECONCILIATION:prior scripts audit DONE and metadata paths released; source files and workflows remain read-only under this claim.
+DEPENDENCIES:preserve signed updater, rollback, package hashes, genuine Knowledge size, Android versionCode, CI acceptance and security boundaries as visible findings.
+NON_BLOCKERS:V1.6 cognition and post-release owner-PC field sweep.
+INTENDED_BUMP:none for audit metadata; source corrections require a separate D claim and full release gates.
+ACCEPTANCE_GATES:review all102 current residual findings in selected release infrastructure paths; classify only exact non-cap representation, owner/operator routing or test evidence; retain real/ambiguous time, count, size, version and trust limits; adversarial path/appended-cap tests, full audit, exact CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous scripts114 audit published/synced; exact owner CI green.
+REMAINING:review102 release findings and publish;533 global residuals and final release gates.
+BLOCKERS:none for audit metadata.
+NEXT:enumerate and inspect all102 selected release-source lines before classification.
+RELEASE_TOOLING_AUDIT_FINDING:all102 selected release-infrastructure lines enumerated; verified a cross-stack release blocker before classifying metadata. build/verify_core_candidate_bundle.py still rejects source >1MiB while private client and API now support trusted raised source budgets. core-candidate-promotion.yml invokes that independent verifier without an operator byte setting. This means a candidate accepted by the API can fail at the required signed-promotion gate solely because of the stale hidden cap. Preserve the independent verifier and signed workflow; fix its trusted budget before closing this audit. No policy classifications have been added yet.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PROMOTION-SOURCE-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Core candidate promotion consistency and signed-update trust boundary.
+ROADMAP_SECTION:4 controlled self-improvement and updater/release exact-SHA acceptance.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; independent promotion authority remains mandatory.
+STARTING_HEAD:c3fc577862cf437a1410f3fdd8c5d450e04e72d4; parent release-tooling audit active, fresh main/feature and journal/memory checked. Narrow source claim takes over only the verified promotion byte path from the audit's read-only set.
+OWNED_PATHS:build/verify_core_candidate_bundle.py;.github/workflows/core-candidate-promotion.yml;tests/test_core_candidate_promotion.py;docs/AURORA_CORE_MIGRATION.md;docs/AURORAFOX_ENGINEERING_MEMORY.md;docs/PROJECT_MASTER_LOG.md. Parent audit retains config/owner_control_policy.json and tests/test_owner_control_audit.py.
+DEPENDENCIES:operator-controlled trusted startup/repository variable, never candidate manifest; default1MiB remains; zero removes only candidate-specific cap; independent hash, target allowlist, source-contract, second verification, CI PR and signed release gates remain unchanged. Service global body policy stays separate.
+NON_BLOCKERS:V1.6 cognition and unrelated future promotion redesign.
+INTENDED_BUMP:D for cross-stack promotion defect; canonical version last after full release gates.
+ACCEPTANCE_GATES:red >1MiB independently verified fixture before fix; default/raised/zero/invalid operator budget and no candidate-declared override; workflow references trusted repository configuration; existing promotion/security regressions, Python audit, exact Core/Release/Integration CI, diff check and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:confirmed verifier fixed1MiB source gate conflicts with raised client/API budget.
+REMAINING:implement trusted verifier budget and tests, complete parent102-finding release audit, publish/sync and exact CI.
+BLOCKERS:none for implementation.
+NEXT:add failing promotion fixture, then implement trusted budget without relaxing independent review.
+PROMOTION_SOURCE_BUDGET_CHECKPOINT:confirmed pre-fix independent verifier rejects >1MiB despite raised client/API settings. Authorized Windows red fixture reached TypeError for missing max_source_bytes argument; initial restricted test path had WinError5 and was not counted as product evidence. Verifier now reads trusted AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES default1MiB, accepts raised/zero, fails invalid values, and ignores untrusted manifest byte declarations. Workflow obtains the setting only from trusted GitHub repository vars (default1MiB). Existing hash, allowlist, source-growth1.35, risky primitive, trusted-main checkout, clean PR and signed release gates unchanged. Windows promotion fixture now writes exact UTF-8 bytes to avoid CRLF hash/size distortion. Operator setup documented; AF-175 added to engineering memory. Combined promotion/queue/owner tests55PASS with authorized temp access.
+SOURCE_COMPLETE:YES for promotion byte path, pending exact CI.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:promotion source budget repaired with trusted workflow config; default/raised/zero/invalid/untrusted-manifest regression; local55PASS.
+REMAINING:publish/sync, exact Core/Release/Integration CI, parent105-line release audit and final platform gates.
+BLOCKERS:none in source repair; repository operator must set variable when accepting >1MiB in deployment.
+NEXT:finalize release-tooling audit classifications/tests, publish one coherent commit and verify exact CI.
+RELEASE_TOOLING_BULK_AUDIT_CHECKPOINT:original102 release-infrastructure findings reviewed; three new verifier budget lines entered the inventory after source repair, so105 current lines inspected. Fifty-four exact path/full-line classifications: trusted/caller budget routing5, status/progress/artifact/chunk/viewport representation29, test/CI harness evidence15, auth/transport/limited-privilege hard boundaries5. Fifty-one real/ambiguous constraints remain, including GitHub2GiB asset cap, release/CI timeouts, benchmark size floors, Core installer retries, Knowledge shard limit, backup retention and job deadlines, updater download/retry interval and source growth. Global unclassified533→482 net51 after source line changes; release subset105→51, complete:false. Full adversarial path/appended-cap tests and unresolved examples pass in local55PASS promotion/queue/owner suite. JSON parse/diff check and exact CI remain.
+SOURCE_COMPLETE:YES for release audit metadata, pending publication.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:105 current release lines inspected;54 exact classifications,51 retained; cross-stack promotion defect fixed and local55PASS.
+REMAINING:publish/sync and exact CI;482 global inventory findings and final release/platform/version gates.
+BLOCKERS:none for implementation, long platform gates pending.
+NEXT:validate policy JSON/diff, commit/push source+audit once, verify local/origin/web SHA and exact owner/Core/Release/Integration CI.
+
+RELEASE_TOOLING_PUBLICATION_AND_CI:source repair and 105-line audit published as `19c3f387698a08d31aae8f66d8b7079d3fce7aa4`; local HEAD, origin branch and GitHub web ref matched exactly with a clean worktree at publication. Exact runs: Chat Learning Attachments `37708622603` SUCCESS (owner audit), Core / Voice `37708622636` SUCCESS (promotion regression), API `37708622589` SUCCESS, Integration Gate `37708622618` SUCCESS. Work Mode, Release Identity, Semantic Memory, Agent Sync, Core Bootstrap, UI Visual, Research Quality and other completed short workflows also SUCCESS. Android Plugin, Windows Package, Android E2E/APK, Knowledge Performance/1GiB, Core benchmarks were still running or queued at this checkpoint; no same-SHA platform/package acceptance is claimed. Local promotion/queue/owner suite 55PASS, policy JSON and diff check PASS. The source claim `CODEX-2026-10-08-V15-PROMOTION-SOURCE-BUDGET` is DONE; its owned paths are released. The audit claim `CODEX-2026-10-08-V15-RELEASE-TOOLING-BULK-AUDIT` is DONE; its owned paths are released. Review105, classified54, retained51; global unclassified482. Canonical version unchanged.
+SOURCE_COMPLETE:YES for both claims; exact short CI PASS, long release gates pending.
+CODE_FREEZE_SHA:19c3f387698a08d31aae8f66d8b7079d3fce7aa4
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:trusted candidate source budget repaired and published;105 release findings reviewed;54 classified,51 retained; local55PASS and exact owner/Core/API/Integration CI PASS.
+REMAINING:482 global owner-control inventory findings; exact Windows/Android/Knowledge/package/update gates, operator budget configuration if >1MiB candidates are intended, final release version-last acceptance.
+BLOCKERS:none for completed source and audit scope; long exact-SHA CI remains pending.
+NEXT:publish this evidence-only journal entry, verify local/origin/web equality and owner CI on its SHA, then continue a separate connected release finding group with a new claim.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-EVOLUTION-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing controlled self-improvement boundaries; no V1.6 cognition expansion.
+ROADMAP_SECTION:4 controlled Evolution/release foundation and owner-adjustable operational limits.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; independent verification and live authorization retained.
+STARTING_HEAD:6210f208677a78fe025cefe0ca02155a53b14199; fresh main and feature fetched, local/origin equal, prior claims DONE and latest journal/roadmap/memory checked. Exact owner/Core/API CI on this head SUCCESS; long Windows/Android/Knowledge pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Evolution Engine source read-only until any confirmed defect receives a separate claim.
+DEPENDENCIES:retain live authorization, approval, independent verification, rollback, finite test budgets and security boundaries; do not hide genuine operational caps.
+NON_BLOCKERS:V1.6 cognition work and future noncritical Evolution redesign.
+INTENDED_BUMP:none for audit metadata; a confirmed source defect requires a separate D claim and relevant regressions.
+ACCEPTANCE_GATES:inspect all 116 currently unclassified Evolution Engine lines; classify only exact fully reviewed non-cap lines, preserve actual/ambiguous bounds; adversarial path and appended-cap tests, full inventory, exact owner CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:prior 105-line release audit and promotion repair published; starting refs synchronized.
+REMAINING:inspect 116 Evolution lines, test and publish safe classifications;482 global residual findings and platform release gates.
+BLOCKERS:none for audit review.
+NEXT:enumerate the 116 exact lines and inspect their enclosing code before classification.
+EVOLUTION_RESIDUAL_REVIEW_CHECKPOINT:all116 unclassified Evolution Engine source lines enumerated and reviewed with enclosing registry/context implementation. Eighteen exact full-line/path findings classified as format/status/lock telemetry: registry phase/stage/promotion/outcome8, decision stage1, experience event/stage/outcome6, execution-guard elapsed/threshold reporting3. Ninety-eight actual or ambiguous limits remain visible, including community learning batch200 and timer/HTTP bounds, context items12/content900, learning signal memory/Knowledge/item counts, candidate and goal/metadata text truncation, tournament diagnostics and live stale-lock condition. Global unclassified482→464. No source behavior or safety guard changed. Adversarial appended-cap/wrong-path tests and unresolved examples added; local owner audit37PASS with authorized test dependencies, policy JSON parses and diff check PASS.
+SOURCE_COMPLETE:YES for this audit metadata, exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:116 residual Evolution findings inspected;18 exact classifications,98 retained; local owner audit37PASS.
+REMAINING:publish/sync and exact owner CI;464 global inventory findings and final platform gates.
+BLOCKERS:none for audit metadata; long release gates pending.
+NEXT:commit/push audit, verify local/origin/web SHA and exact owner CI; then choose a retained operational cap for a separate source claim.
+EVOLUTION_RESIDUAL_PUBLICATION_AND_CI:metadata/test/journal commit `0bbacea56356e5573ba75abf88cc9de01ee42821` published; local HEAD, origin tracking and GitHub web ref matched exactly with clean worktree. Exact Chat Learning Attachments run `37709338717` SUCCESS, including owner-control audit and project parse; local owner suite37PASS, policy JSON and diff check PASS. Review116, classified18, retained98; global unclassified464. Evolution source behavior unchanged. Claim `CODEX-2026-10-08-V15-EVOLUTION-RESIDUAL-REVIEW` is DONE; its policy, test and journal paths are released. Other exact-SHA platform/package runs continue independently and are not accepted by this audit.
+SOURCE_COMPLETE:YES for audit scope.
+CODE_FREEZE_SHA:0bbacea56356e5573ba75abf88cc9de01ee42821
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:116 Evolution lines reviewed;18 exact status/telemetry classifications,98 real/ambiguous retained; local37PASS and exact owner CI SUCCESS.
+REMAINING:464 global inventory findings and final exact-SHA Windows/Android/Knowledge/package/update/version gates.
+BLOCKERS:none for completed audit; long release gates pending.
+NEXT:publish evidence-only journal commit and sync; then start separate claim for a confirmed operational source constraint with regressions.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing private API, account, sync, Core and Knowledge boundaries.
+ROADMAP_SECTION:4 stable API/Core, privacy, Knowledge, owner-adjustable operational limits and release acceptance.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no public account or future cognition expansion.
+STARTING_HEAD:807ddd6d51d3724b629515e910ffc29bde2e037b; fresh main and feature fetched, local/origin equal, previous Evolution claim DONE and latest journal/roadmap/memory checked. Exact prior owner/Core/API checks green on preceding source commit; long release CI pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. API source read-only under this audit claim.
+DEPENDENCIES:preserve account token/password/auth validation, privacy isolation, API transport/body limits, Knowledge genuine size and Core signed-candidate boundaries. Retain real/ambiguous product caps.
+NON_BLOCKERS:public multi-user/account UX and V1.6 cognition.
+INTENDED_BUMP:none for metadata; confirmed source defect requires separate D claim and regression gates.
+ACCEPTANCE_GATES:inspect all102 residual API source lines; classify only exact reviewed routing, representation or hard security boundaries; keep operational byte/time/count/text caps visible. Test path/appended-cap adversaries and unresolved examples, full inventory, exact owner/API CI, local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous Evolution116 audit published; refs synchronized.
+REMAINING:review102 API findings, publish safe exact classifications;464 global residual findings and release gates.
+BLOCKERS:none for review.
+NEXT:inspect the 102 API findings with source context and identify only unambiguous classifications.
+API_RESIDUAL_REVIEW_CHECKPOINT:all102 currently unclassified API lines inspected with account page, private-memory UI, candidate queue and learning route context. Twenty-one exact path/full-line classifications retained: private-memory UI preview/status8, account credential/token form hard boundaries4, caller-forwarded queue/learning/private-view/community parameters9. Eighty-one actual/ambiguous limits remain visible, including account/mail TTL and SMTP deadline, community event/batch/text limits, Core/Knowledge source sizes, public route pagination, local Core health/retry deadlines, sync entity1MiB and persistence bounds. Initial policy draft classified UI visible-row count and candidate queue +50 trim window; pre-existing adversarial tests correctly failed because these are real caps, so both rows were removed. A new fixture also initially targeted a nearby pre-existing private-view rule; corrected it to the newly reviewed function declaration. Final owner audit38PASS, policy JSON parses, diff check PASS. Global unclassified464→443. No API/runtime behavior changed; no new confirmed product defect or memory entry.
+SOURCE_COMPLETE:YES for audit metadata, exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 API lines inspected;21 exact classifications,81 retained; local owner audit38PASS.
+REMAINING:publish/sync and exact owner/API CI;443 global findings plus release platform/package gates.
+BLOCKERS:none for audit metadata.
+NEXT:commit/push metadata and journal, verify local/origin/web SHA and exact owner/API CI.
+API_RESIDUAL_PUBLICATION_AND_CI:metadata/test/journal commit `ac96e88b9359d87185d76bf831b005235be1edd6` published; local HEAD, origin tracking and GitHub web ref matched exactly with a clean tree. Exact Chat Learning Attachments run `37709825385` SUCCESS, including owner audit; API run `37709825435` SUCCESS in Python, Windows and Godot jobs. Local owner suite38PASS, policy JSON and diff check PASS. Review102, classified21, retained81; global unclassified443. No API runtime behavior changed. Claim `CODEX-2026-10-08-V15-API-RESIDUAL-REVIEW` is DONE; policy, test and journal paths released. Same-SHA Windows Package, Android and Knowledge release acceptance remains separate.
+SOURCE_COMPLETE:YES for audit scope.
+CODE_FREEZE_SHA:ac96e88b9359d87185d76bf831b005235be1edd6
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 API lines reviewed;21 exact classifications and81 retained; local38PASS, exact owner/API CI SUCCESS.
+REMAINING:443 global inventory findings; exact release platform/package/update/version gates.
+BLOCKERS:none for completed audit; long release gates pending.
+NEXT:publish evidence-only journal commit and sync; then choose a retained source constraint with a separate claim and focused regression.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-SCRIPTS-AGENT-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing desktop/Core/Work and agent operational boundaries.
+ROADMAP_SECTION:4 stable local Core, Work/Computer, owner-adjustable limits and signed release gates.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; progress-aware Core and safety boundaries unchanged.
+STARTING_HEAD:795aa264ac2aaff9b2829e827ad26bb17e51d36a; fresh main/feature fetched, local/origin equal, API claim DONE, journal/roadmap/memory reviewed; long exact-SHA release CI pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. scripts/ and agent/ source read-only under audit claim.
+DEPENDENCIES:retain real Core wait/cancel, Computer sandbox, Master Stop, candidate trust, signing, research/privacy and Knowledge size boundaries; do not classify real or ambiguous caps away.
+NON_BLOCKERS:V1.6 cognitive Core and future agent autonomy changes.
+INTENDED_BUMP:none for audit metadata; confirmed source defect requires separate D claim and relevant regressions.
+ACCEPTANCE_GATES:inspect all143 currently unclassified scripts/ and agent/ lines; classify only exact reviewed non-cap presentation, caller forwarding or hard trust boundaries; keep operational count/time/size/text caps visible. Adversarial path/appended-cap and unresolved examples, full inventory, local owner suite, exact owner/Core/Agent CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:prior API102 audit and exact owner/API CI published; refs synchronized.
+REMAINING:review143 scripts/agent findings, test and publish safe classification;443 global residuals and release gates.
+BLOCKERS:none for review.
+NEXT:inspect exact lines and enclosing source; preserve genuine and ambiguous operational caps.
+SCRIPTS_AGENT_RESIDUAL_CHECKPOINT:all143 residual scripts/ and agent/ source lines enumerated and reviewed. Twenty-nine exact full-line/path classifications after regression triage: self-audit/synthetic diagnostic evidence3, non-cap display/status/preview/chunk calculation and retry message flow16, caller-selected deadline/search/history/memory forwarding9, blocked dynamic-load hard boundary1. One hundred fourteen actual/ambiguous constraints retained, including Computer steps/deadlines, owner-resource UI minima, model read chunk, retry cadence, public-web CAPTCHA scan, source/Knowledge/extension sizes, agent learning HTTP/source caps and tournament safety. Initial draft attempted three more classifications (4MiB model read chunk, desktop HTTPRequest deadline forwarding, tournament reason excerpt); existing unresolved-cap tests failed and those rows were removed. Final owner audit39PASS, policy JSON parses and diff check PASS. Global unclassified443→414. No runtime source behavior changed; no new confirmed product defect or engineering-memory entry.
+SOURCE_COMPLETE:YES for audit metadata, publication/exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:143 scripts/agent lines inspected;29 safe exact classifications,114 retained; local owner audit39PASS.
+REMAINING:publish/sync and exact owner/Core/Agent CI;414 global findings plus release platform/package gates.
+BLOCKERS:none for audit metadata.
+NEXT:commit/push metadata and journal, verify local/origin/web SHA and exact CI.
+SCRIPTS_AGENT_RESIDUAL_PUBLICATION_AND_CI:metadata/test/journal commit `0ef7b969b76afb0f31c521e10ebc9b1b2822a241` published; local HEAD, origin tracking and GitHub web ref matched exactly with clean worktree. Exact Chat Learning Attachments run `37710369500` SUCCESS including owner audit and Godot parse; Core / Voice `37710369546` SUCCESS, Agent Sync `37710369542` SUCCESS, API `37710369520` SUCCESS. Local owner suite39PASS, policy JSON/diff check PASS. Review143, classified29, retained114; global unclassified414. No runtime source behavior changed. Claim `CODEX-2026-10-08-V15-SCRIPTS-AGENT-RESIDUAL-REVIEW` is DONE; policy, test and journal paths released. Exact Windows Package, Android and Knowledge release acceptance still pending independently.
+SOURCE_COMPLETE:YES for audit scope.
+CODE_FREEZE_SHA:0ef7b969b76afb0f31c521e10ebc9b1b2822a241
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:143 scripts/agent findings reviewed;29 classified and114 retained; local39PASS, exact owner/Core/Agent/API CI SUCCESS.
+REMAINING:414 global inventory findings; final exact-SHA platform/package/update/version gates.
+BLOCKERS:none for completed audit; long release gates pending.
+NEXT:publish evidence-only journal commit, sync local/origin/web and continue a separate source or owner-control claim on a confirmed retained constraint.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PLATFORM-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing Android, Voice, updater, Computer, Knowledge/package and deployment boundaries.
+ROADMAP_SECTION:4 stable Windows/Android package, Voice, genuine Knowledge, File Intelligence and signed update release gates.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; media nonblocking scope and Core wait/signing boundaries preserved.
+STARTING_HEAD:e250aa18df0633d075a54803c79a1316a2b1b3d3; fresh main/feature fetched, local/origin equal and latest journal/roadmap/memory/ADRs checked. Prior scripts/agent claim DONE; exact platform release CI still pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Platform source read-only under audit claim.
+DEPENDENCIES:preserve real file bytes/entry/depth, sandbox containment, updater signed-part timeouts and asset limit, Knowledge genuine size, device performance and voice recognition boundaries.
+NON_BLOCKERS:V1.6 cognition and future platform feature expansion.
+INTENDED_BUMP:none for audit metadata; confirmed source defect needs separate D claim and regressions.
+ACCEPTANCE_GATES:inspect all121 current residual lines in selected platform/deployment/runtime paths; classify only exact reviewed representation/test evidence/owner routing/security, keep actual/ambiguous limits visible. Adversarial path/appended-cap and unresolved examples, full inventory, local owner suite, exact owner/platform CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous143-line scripts/agent audit published; refs synchronized.
+REMAINING:review121 platform findings and publish safe classifications;414 global findings and final release gates.
+BLOCKERS:none for audit.
+NEXT:inspect exact121 lines and surrounding code before any classification.
+PLATFORM_RESIDUAL_REVIEW_CHECKPOINT:all121 selected platform/deployment/runtime source lines enumerated and reviewed with Android Voice waveform, PDF native render bound, OLE/RAR preflight, Knowledge recovery benchmark, Core candidate verifier, owned GUI worker, Windows Job Object and independent deployment verifier context. Thirty exact path/full-line classifications: CI/benchmark/deployment test evidence12, waveform/native representation/status13, owner limit preflight/budget routing3, GUI launch and Windows no-breakaway hard boundaries2. Ninety-one actual or ambiguous constraints retained, including GitHub2GiB release asset size, Android archive expansion/file-count and parser budgets, Core installer and updater transfer deadlines, Computer output/steps/container resources, Knowledge genuine size, backup retention, Voice expression/logger size and runtime deadline. Global unclassified414→384. No production source changed. Adversarial wrong-path/appended-cap and unresolved examples added; local owner audit40PASS, policy JSON and diff check PASS. No new confirmed product defect requiring memory entry.
+SOURCE_COMPLETE:YES for audit metadata; publication/exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:121 platform findings inspected;30 exact classifications,91 retained; local owner audit40PASS.
+REMAINING:publish/sync and exact owner/platform CI;384 global findings and release gates.
+BLOCKERS:none for audit metadata; long release gates pending.
+NEXT:commit/push policy, tests and journal; verify local/origin/web SHA and exact owner CI.
+PLATFORM_RESIDUAL_PUBLICATION_AND_CI:metadata/test/journal commit `cb6a5753d6f205080fbd1f2ab4160954ac3c1adf` published; local HEAD, origin tracking and GitHub web ref matched exactly with clean worktree. Exact Chat Learning Attachments run `37710882242` SUCCESS, including owner-control audit and Godot parse; local owner suite40PASS, policy JSON and diff check PASS. Review121, classified30, retained91; global unclassified384. No platform/runtime source changed. Claim `CODEX-2026-10-08-V15-PLATFORM-RESIDUAL-REVIEW` is DONE; policy, test and journal paths released. Android Plugin/APK, Windows Package, Knowledge and other long release gates remain pending on this SHA and are not reported as PASS.
+SOURCE_COMPLETE:YES for audit scope.
+CODE_FREEZE_SHA:cb6a5753d6f205080fbd1f2ab4160954ac3c1adf
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:121 platform lines reviewed;30 classified,91 retained; local40PASS and exact owner CI SUCCESS.
+REMAINING:384 global inventory findings and final exact-SHA Android/Windows/Knowledge/package/update/version gates.
+BLOCKERS:none for completed audit; long release gates pending.
+NEXT:publish evidence-only journal commit and sync; then investigate a retained high-impact source limit in a separate D claim with genuine regressions.
+RELEASE_EXACT_SHA_EVIDENCE_2026_10_08:starting HEAD `69c3c1e63768b83a225048fd8c28db64e3ab7c1e`; local, origin tracking and GitHub web feature ref identical and clean after fresh fetch. All 23 pull-request workflows for this exact SHA completed SUCCESS. Relevant runs: Windows Package `37710988972`, Android APK `37710988868`, Android Core benchmark `37710988914`, Android normal-path E2E `37710988961`, Android Plugin `37710988943`, Knowledge 1GiB `37710988855`, Knowledge Performance `37710988819`, Core Benchmarks `37710988882`, API `37710988776`, Integration Gate `37710988895`, Core/Voice `37710988830`, owner audit `37710988903` and Release Identity `37710989133`. The Windows package job built the installer and verified embedded Core/runtime assets; Android emulator E2E report passed 15 scenarios with no failures, blocked external network and exercised `AIClient.chat -> AuroraCoreRuntime.chat_local_only -> AndroidLocalRuntime.chat -> AuroraFoxRuntime.chatLocal -> llama.cpp` with actual bundled model bytes1282439264. Knowledge stress report passed a deterministic 1073742199-byte JSONL import, restart/retrieval and correctness checks; peak RSS901976064 bytes. These are CI artifacts on the exact source SHA, not physical-device acceptance. The production Knowledge Pack contract pins genuine content1924345221 bytes and archive SHA256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614`; the stress dataset is separate and does not verify that archive or its installed Windows/Android import. Production archive validation, physical-device evidence where required, signed update/release, and canonical V1.5.0.0 version/versionCode-last plus post-bump exact-SHA gates remain open. This is evidence-only journal work; no production source, policy or release version changed. Publishing this journal entry creates a new SHA whose workflows must be checked separately before final acceptance.
+SOURCE_COMPLETE:YES for evidence review; no source claim opened.
+CODE_FREEZE_SHA:69c3c1e63768b83a225048fd8c28db64e3ab7c1e for reviewed pre-journal source.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:23/23 exact pre-journal PR workflows SUCCESS; Windows/Android emulator/1GiB stress reports reviewed; feature/main refs synchronized.
+REMAINING:validate the pinned real production pack and installed import; physical device where required; signed release/update and version-last post-bump gates;384 inventory findings retained.
+BLOCKERS:real production pack artifact/device acceptance evidence not established by the 1GiB stress report; no confirmed source P0/P1 from this review.
+NEXT:publish this evidence entry and verify local/origin/web SHA, then check the exact new-SHA workflows and obtain production-pack/device evidence before version bump.
+RELEASE_EVIDENCE_RECONCILIATION_2026_10_08:the preceding summary overstated the production-pack gap by overlooking accepted sections87 and92 and owner decision section100. The exact genuine archive SHA256 `bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614` already passed independent full validation, source-tree offline import/resume/restart/query (section87), and installed Windows offline first-import/separate-process restart/query (section92); do not rerun those accepted costly gates. The retained owner-PC Windows report `D:\Desktop\AuroraFox-resume-test-20260922-063432\report\report.json` was read again: passed/installed/offline=true, first_imported_shards=60, restart_skipped_shards=60, first_query_match/restart_query_match=true, record_count=75871 and content_bytes=1924345221. Android full-production-payload consumption remains `OWNER_WAIVED_NOT_EXECUTED` under section100, not PASS; ordinary signed Android release gates remain mandatory. The V1.4.1.1 GitHub release asset list contains no production Knowledge archive, so its distribution for V1.5 still needs an explicit release decision and exact artifact check. This correction changes no runtime code or readiness.
+SOURCE_COMPLETE:YES for release evidence reconciliation.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:prior genuine pack validation and installed Windows full-payload acceptance correctly carried forward; new-SHA branch synchronized before this correction.
+REMAINING:preserve explicit Android full-payload waiver; determine V1.5 pack distribution, final signed update/release, canonical version/versionCode-last and post-bump exact-SHA gates;384 inventory findings retained.
+BLOCKERS:production signing/release authority and version-last acceptance pending; waived Android full payload remains unverified by owner decision.
+NEXT:publish this correction and sync; inspect signed-release readiness and current exact-SHA CI without repeating accepted full-pack imports.
+SIGNED_RELEASE_PREFLIGHT_2026_10_08:after journal reconciliation commit `0cc39ca1df318928ae5300bca487224953e0d3b2` was pushed, local HEAD/origin/web feature ref matched exactly and the worktree was clean. All four required GitHub release secret names are configured. The exact-SHA manual `AuroraFox Release` secrets-only run `37723947458` completed SUCCESS: its `secret-readiness` job verified the private update signing key and Android keystore against the pinned public identities; core-gates, Windows, Android and publish jobs were SKIPPED by design. A separate full branch-dispatch release run `37724099449` was started on the same SHA with secrets_only=false; `core-gates` completed SUCCESS and signed Windows/Android jobs were still IN_PROGRESS at this checkpoint. Its publish job is guarded by a `refs/tags/v*` condition, so this branch run cannot create a public release. At this checkpoint 16 ordinary PR workflows on the same SHA were SUCCESS, five IN_PROGRESS and four PENDING; no pending result is counted as PASS. The canonical version remains V1.4.1.1 and Android versionCode100007 pending version-last acceptance. Prior genuine-pack source-tree/installed-Windows acceptance and the explicit Android full-payload owner waiver remain as reconciled above. No code, pack bytes or release version changed.
+SOURCE_COMPLETE:YES for signing preflight and branch-dispatch launch; full branch-dispatch gates still running.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:exact-SHA signing-secret identity preflight SUCCESS; full release core-gates SUCCESS; synchronized branch and accepted genuine-pack history reconciled.
+REMAINING:wait for exact branch-dispatch signed Windows/Android verdict and remaining PR workflows; final V1.5.0.0/versionCode-last and post-bump release/update gates;384 retained inventory findings.
+BLOCKERS:full signed branch build still running, not a PASS; Android full-payload remains OWNER_WAIVED_NOT_EXECUTED.
+NEXT:publish/sync this evidence, monitor run37724099449 and exact PR checks, investigate any failure before version-last.
+RESIDUAL_124_SAFE_TRIAGE_2026_10_08:starting HEAD `b4b17ffa9d3865bef2c39d10e22ddd75a9d93cdc`, fresh main/feature fetch and master log/roadmap/ADRs/engineering memory read; local/origin/web feature refs matched with clean worktree. Read-only triage covered all124 currently unclassified lines in the ten densest files: api/community_learning.py22, evolution_engine/learning/experience_bridge.gd18, agent/learning_curator.gd13, evolution_engine/learning/community_language_curator.gd11, evolution_engine/learning/context_bridge.gd11, update/update_manager.gd11, evolution_engine/evaluation/core_tournament_adapter.gd10, evolution_engine/learning/learning_signal.gd10, evolution_engine/learning/candidate_ledger.gd9 and scripts/core_candidate_submitter.gd9. The exact statements, representative source context and relevant tests were inspected. These are real or ambiguous schema/queue/lease caps, persisted Evolution evidence truncations, learning promotion/corroboration/age/retry thresholds, bounded context/signal sizes, signed updater retry/part deadlines, and candidate scan/diagnostic limits. Existing owner-audit regressions explicitly require representative statements in these files to remain unclassified. No reviewed statement was safely reclassified and no arbitrary limit was raised; the full audit still finds4584 statements and384 unclassified. This avoids erasing genuine operational/safety constraints just to lower the count. No source or policy changed. Exact signed release branch run `37724099449` at source-equivalent SHA `0cc39ca1df318928ae5300bca487224953e0d3b2`: core-gates SUCCESS, signed Android job SUCCESS including certificate validation and Android35 install/launch; Windows job was still building the Core package at this checkpoint. This run is not final post-version acceptance.
+SOURCE_COMPLETE:YES for read-only 124-line triage; no production claim opened.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:124 exact residual statements triaged conservatively; signed Android release branch job SUCCESS; owner inventory remains honest at384 unclassified.
+REMAINING:investigate a reproducible high-impact cap defect before changing source; signed Windows branch verdict, current exact-SHA CI, version/versionCode-last and final release/update acceptance.
+BLOCKERS:signed Windows branch job and version-last acceptance pending; Android full production Knowledge payload remains OWNER_WAIVED_NOT_EXECUTED.
+NEXT:publish/sync this evidence-only review, collect signed Windows verdict, then take one source-defect claim only if a real cap failure is reproducible.
+
+### ACTIVE CLAIM — WORK-2026-10-08-V15-RELEASE-PREFLIGHT-GUARD
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL
+ROADMAP_SECTION:4 Updater/release signing boundaries and exact-SHA acceptance.
+ADR_REFS:ADR-0001/0002/0003; no cognition/runtime change.
+STARTING_HEAD:2d4477727b2bb3a6894532c147ceb16965742f50; fresh main446ce2cd and feature fetched. Isolated worktree equals GitHub feature SHA; prior source claims published/released.
+OWNED_PATHS:.github/workflows/release.yml;.github/workflows/release-identity-ci.yml;tests/test_release_secret_readiness_workflow.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md.
+DEPENDENCIES:existing pinned signing identity, secrets-only preflight and publish-only recovery. Preserve both supported publication routes and never publish during secrets_only.
+NON_BLOCKERS:V1.6/S3; expanded owner-PC344-case acceptance remains post-release under later owner decision, superseding the earlier new pre-release requirement without waiving older gates.
+INTENDED_BUMP:D within accumulated version-last V1.5.0.0; no bump before acceptance.
+ACCEPTANCE_GATES:preflight true must exclude publish for every event/ref/recovery combination; normal tag/recovery routes preserved; existing dependency success gates retained; actual guard truth-table/adversarial regressions, focused release tests and exact CI.
+EVIDENCE:48 focused release/journal tests on starting SHA produced47PASS/1FAIL; obsolete exact substring in test_release_secret_readiness_workflow.py. This test is absent from Release Identity CI. Current publish-only recovery OR permits workflow_dispatch+publish_run_id even when secrets_only=true. No observed unintended publication; reproducible source condition defect.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:starting SHA PR checks43SUCCESS/4 intentional SKIP; signed branch run37724099449 core/Windows/Android SUCCESS, publish SKIPPED. Signed artifacts11528819129/11527876103 available, built at0cc39ca; only journal differs from current SHA. These are pre-version evidence, not final V1.5 artifacts.
+REMAINING:guard repair/CI; retained384 audit findings; production-pack delivery decision; version-last and post-bump release/update acceptance.
+BLOCKERS:secrets-only guard defect in publish recovery condition; fix owned by this claim.
+NEXT:repair guard, execute semantic truth-table and retained release checks, publish coherent batch.
+RELEASE_PREFLIGHT_GUARD_LOCAL_CHECKPOINT:publish now rejects secrets_only before either tag or recovery route. Actual guard truth table covers288 combinations, including failed/skipped build dependencies and recovery; pre-fix preflight+recovery evaluates true and post-fix false. Existing supported ordinary tag and recovery behavior retained. Regression is now selected by both Release Identity CI path filters and its pytest invocation. Focused release/update/Knowledge/journal/memory suite49PASS; both YAML files parse; diff check PASS. No app runtime/version/pack bytes changed. AF-177 records defect and prevention. Signed run37724099449 all build jobs SUCCESS at0cc39ca; current2d44777 PR checks43SUCCESS/4 intentionalSKIP. Historical owner-PC requirement at8131 is superseded by later post-release owner decision at8198; prior canonical device gates remain.
+SOURCE_COMPLETE:YES for this guard block; exact publication CI pending, not release freeze.
+CODE_FREEZE_SHA:none for whole release.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:guard repaired,288-case semantic regression,49 focusedPASS; prior signed Windows/Android success carried forward honestly.
+REMAINING:exact new-SHA release guard CI;384 retained inventory findings and pack delivery/version-last/post-bump release/update acceptance.
+BLOCKERS:none in locally tested guard; new-SHA acceptance pending.
+NEXT:publish coherent5-file batch to existing feature PR using fast-forward only, sync local/origin/web SHA, inspect exact Release Identity verdict. No merge/tag/publication in this batch.
+CLAIM:WORK-2026-10-08-V15-RELEASE-PREFLIGHT-GUARD SOURCE_RELEASED/CI_PENDING; paths released after publication, runtime unchanged.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-RESIDUAL-102-OWNER-PREFLIGHT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing File Intelligence owner-adjustable operational limit audit; metadata/tests only.
+ROADMAP_SECTION:4 File Intelligence bounded memory/resource limits and owner-adjustable operational limits;16 exact-SHA acceptance cadence.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture or release-authority change.
+STARTING_HEAD:2d4477727b2bb3a6894532c147ceb16965742f50; fresh main/feature fetched, local/origin equal, journal/roadmap/memory/ADRs checked. Signed branch Windows run37724099449 still in progress; source files are read-only under this claim.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md.
+DEPENDENCIES:preserve native XLS/RAR preflight enforcement, malformed-file and JVM representation guards, owner setting validation, exact archive/size budgets and the signed release gates.
+NON_BLOCKERS:V1.6 cognition and unrelated platform feature expansion.
+INTENDED_BUMP:none for audit-only metadata; any source defect needs separate D claim and regressions.
+ACCEPTANCE_GATES:triage all102 remaining statements in next 17 densest files; classify only exact, verified owner-budget checks in OLE/RAR preflight; retain mixed input/format/Int representation guards and all real or ambiguous limits. Adversarial appended-cap/wrong-path and unresolved examples, full audit count, policy JSON parse, local owner suite, diff check, exact owner CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 exact lines enumerated; five direct owner-budget checks selected after excluding a mixed format/size guard.
+REMAINING:implement exact classifications and adversarial tests; publish/sync; exact owner CI and signed Windows verdict.
+BLOCKERS:none for metadata audit; signed Windows release gate independently pending.
+NEXT:add exact OLE/RAR owner-budget classifications without changing native source, run full owner-audit tests and publish.
+RESIDUAL_102_OWNER_PREFLIGHT_CHECKPOINT:all102 selected lines enumerated and triaged; five exact OLE/RAR checks classified as owner_adjustable after tracing immutable FileAnalysisLimits to validated owner settings (`max_file_bytes`, `archive_max_entries`, `android_xls_file_bytes`, `android_xls_directory_entries`, `android_xls_directory_depth`). Ninety-seven real or ambiguous lines remain visible. Mixed OLE nonnegative, RAR4/RAR5 input/Int representation and cumulative metadata checks remain unclassified; native parser/preflight code and safety limits are unchanged. Wrong-path and appended-cap assertions plus mixed-boundary unresolved assertions added. Local owner audit41PASS with Python UTF-8 mode (initial Windows default-codepage test invocation failed reading existing UTF-8 source and was not counted as product failure); policy JSON parses, full inventory4584 with unclassified384→379 and complete:false, diff check PASS. Signed release branch run37724099449 on source-equivalent SHA0cc39ca1df318928ae5300bca487224953e0d3b2 completed SUCCESS: core-gates, signed Android build/certificate/install/launch on Android35 and Windows package/updater ZIP/installer/silent install-launch-uninstall jobs all SUCCESS; publish SKIPPED as required for a branch. Artifacts: `aurorafox-windows` digest sha256:28276e9c4bb0beed70406b0305d674187d3c57aff65313b92813adcfb0661107, `aurorafox-android` sha256:e621f2711681f556378cf9c29fafe67fdf663abf43d12696607cdecf568d1926. All23 PR workflows for prior metadata SHA2d4477727b2bb3a6894532c147ceb16965742f50 SUCCESS. These pre-version checks do not replace V1.5 version-last/post-bump acceptance; Android full production Knowledge payload remains OWNER_WAIVED_NOT_EXECUTED.
+SOURCE_COMPLETE:YES for audit metadata; publication and exact owner CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 reviewed, five exact owner classifications,97 retained; local41PASS, audit/policy/diff PASS; signed branch release run and23 prior PR workflows SUCCESS.
+REMAINING:publish/sync metadata and exact owner CI;379 inventory findings plus version/versionCode-last and final release/update gates.
+BLOCKERS:none for metadata audit; final V1.5 version-last/post-bump release acceptance pending.
+NEXT:commit/push policy, tests and journal once; verify local/origin/web SHA and exact owner CI, then prepare version-last claim.
+RESIDUAL_102_OWNER_PREFLIGHT_PUBLICATION_AND_CI:the first push was rejected because concurrent release guard commit `1bc20025b34b805f86f819eefb5d8168abdcb7d4` advanced the feature ref. Fetched and reviewed that commit, retained its five-file signed-release guard repair, and rebased the audit commit without force-push. The journal conflict was resolved by preserving both independent claims and their evidence. Final audit commit `ccbbdbbbd056e45bb1fc0836c75fd6f77f1737b1` published by fast-forward; local HEAD, origin tracking and GitHub web ref matched exactly with clean worktree. Rebased local owner suite41PASS under Python UTF-8 mode, full inventory379 unclassified, diff check PASS. Exact owner CI `37772658000` SUCCESS, Release Identity CI `37772657991` SUCCESS (including concurrent guard regression), Core/Voice `37772657829` SUCCESS; 11 exact PR workflows SUCCESS and12 still IN_PROGRESS at this checkpoint. Signed branch release run `37724099449` succeeded on pre-rebase source-equivalent commit; it is not final versioned release evidence. Five OLE/RAR owner-budget classifications are audit metadata only; native parser guards and release workflow changes from the concurrent claim remain intact. Claim `CODEX-2026-10-08-V15-RESIDUAL-102-OWNER-PREFLIGHT` is DONE; policy/test/journal paths released. No canonical version bump.
+SOURCE_COMPLETE:YES for completed audit scope.
+CODE_FREEZE_SHA:ccbbdbbbd056e45bb1fc0836c75fd6f77f1737b1 for this audit; not whole-release freeze.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 inspected, five exact owner classifications,97 retained; local41PASS and exact owner/Release Identity/Core CI SUCCESS; local/origin/web synced.
+REMAINING:379 residual inventory findings; concurrent release guard exact remaining CI; canonical V1.5.0.0/versionCode-last and post-bump signed release/update acceptance.
+BLOCKERS:none for closed audit; final versioned release acceptance remains pending.
+NEXT:publish/sync this evidence-only closure, verify its exact owner CI, then coordinate version-last preparation with the now-integrated release guard claim.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-VERSION-LAST-CANDIDATE
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL canonical release metadata and post-bump acceptance; no tag or public publication.
+ROADMAP_SECTION:4 stable production foundation, signed updater/release, A.B.C.D version-last and exact-SHA package gates.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no Core or cognition redesign.
+STARTING_HEAD:95d9e1855adee705a691a99cc5c1316a08196ae7; fresh main446ce2cd2f979a8ab228f63d090062e8ba48a6eb and feature fetched, local/origin equal, journal/roadmap/memory/ADRs checked. Prior source-equivalent SHA2d44777 had23/23 PR workflows SUCCESS; signed branch Release run37724099449 at0cc39ca core/Windows/Android SUCCESS, publish SKIPPED; concurrent guard source1bc2002 and audit sourceccbbdbb passed exact Release Identity/owner CI; current95d9e18 targeted owner/Release Identity SUCCESS and remaining long PR jobs in progress. No known source P0/P1 in these accepted blocks.
+OWNED_PATHS:project/version.json;project.godot;export_presets.cfg;update/manifest.template.json;CHANGELOG.md;evolution.log;docs/PROJECT_MASTER_LOG.md. Release workflow and other concurrently owned source paths are read-only.
+DEPENDENCIES:retain permanent update/Android signing identities, exact Core/model/pack hashes, Android package id and strictly increasing versionCode. Android full production Knowledge payload is OWNER_WAIVED_NOT_EXECUTED under section100, never PASS; genuine archive and installed Windows proof remain accepted under sections87/92.
+NON_BLOCKERS:V1.6 cognition, S3 and post-release owner-PC344-case expansion; current V1.5 release gates remain blocking.
+INTENDED_BUMP:MINOR to V1.5.0.0 with Android versionCode100008, from published V1.4.1.1/100007.
+ACCEPTANCE_GATES:one atomic version sync across canonical project, Godot, Android export, updater manifest, changelog and evolution log; version-sync/policy and release identity tests; no signing identity drift; clean diff; local/origin/web sync; full exact post-bump PR CI plus signed branch Release core/Windows/Android/install/update checks. No tag/publication until final acceptance.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:pre-bump source/targeted/signing evidence above; version metadata and package identity inspected.
+REMAINING:perform one version sync, test, publish, run exact post-bump full CI and signed release candidate acceptance.
+BLOCKERS:post-bump gates not yet executed; 379 residual findings retained and Android full-pack waiver explicit.
+NEXT:run build/set_version.ps1 once for V1.5.0.0, review generated metadata/notes, execute local version gates and publish one coherent candidate commit.
+VERSION_LAST_LOCAL_CHECKPOINT:build/set_version.ps1 produced V1.5.0.0 and strictly incremented Android versionCode100007→100008 across project/version.json, project.godot, export_presets.cfg, update/manifest.template.json, CHANGELOG.md and evolution.log. Windows PowerShell5 converted historical UTF-8 changelog characters and duplicated its heading, so the affected text and JSON layout were reconstructed from exact Git HEAD UTF-8 bytes while preserving only intended V1.5 fields; updater notes now describe this release rather than V1.4 Evolution. Canonical version sync PASS, version policy execution PASS (the test's deliberate same/lower-version rejection emitted expected errors and restored its temporary copies), direct release identity11PASS, updater backward-compat12PASS and secret-readiness workflow5PASS using native Git-for-Windows OpenSSL. Initial Unix-path OpenSSL in this restricted Windows shell exited nonzero; native mingw64 OpenSSL succeeded and the complete suite was rerun, so no crypto test is claimed from the failed attempt. Project/manifest JSON parse, signing fingerprint tests and diff check PASS. No product runtime, pack bytes, public tag or release publication changed. This is a versioned candidate only; post-bump exact-SHA PR and signed release package/install/update gates still required, and Android full-pack waiver remains explicit.
+SOURCE_COMPLETE:YES for local version metadata; publication/exact acceptance pending.
+CODE_FREEZE_SHA:pending version candidate commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:one V1.5.0.0/100008 metadata sync; local version/policy and28 release/updater/preflight contracts PASS; UTF-8 changelog preserved.
+REMAINING:publish/sync version candidate, full exact post-bump PR CI and signed branch release Windows/Android/update gates;379 inventory findings and explicit Android full-pack waiver retained.
+BLOCKERS:post-bump release gates not yet executed; no locally confirmed version metadata defect.
+NEXT:commit/push one version candidate, verify local/origin/web equality and launch full signed branch release workflow on that exact SHA without tag/publication.
+VERSION_LAST_RED_CI_2026_10_08:version candidate `a9f914a06c01fb01c0d919c0fddb440f391b1a38` published; local/origin/web matched with clean worktree, signed branch Release run37774730696 started at exact SHA without tag/publication. Three fast PR workflows failed from the same stale test module: Research Quality `37774645310` (40PASS/2FAIL), Core/Voice `37774645315` (85PASS/2FAIL) and Integration Gate `37774645336` (58PASS/2FAIL; Godot job passed). `tests/test_standalone_core_contract.py` still pins `V1.4.1.1`/Android100007 and export version/name1.4.1.1, so valid canonical V1.5 metadata fails. Other bundled Core/model/package assertions passed. This is a confirmed version-transition test defect, not a Core runtime failure or a waiver; full post-fix CI is required. Root cause/prevention will be recorded in engineering memory before claim closure.
+CLAIM_EXTENSION:own `tests/test_standalone_core_contract.py` and `docs/AURORAFOX_ENGINEERING_MEMORY.md` only for dynamic canonical-version assertions and AF-178; preserve pinned model hash, package id, signed release and all runtime checks. No additional public bump: remain V1.5.0.0/100008.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:version candidate published/synced; exact red CI isolated to two stale test assertions shared across three workflows.
+REMAINING:repair stale test contract, focused tests, memory entry, publish/sync and rerun complete exact CI plus signed release gates.
+BLOCKERS:version-pinned standalone Core tests on SHAa9f914a; owned by this claim.
+NEXT:make standalone Core version assertions derive from project/version.json and compare all distributed metadata, then rerun focused contracts and inspect every exact CI result.
+VERSION_LAST_TEST_REPAIR_CHECKPOINT_2026_10_08:AF-178 records the exact red-CI root cause and prevention. Standalone Core version assertions now derive the four-part version and Android code from canonical project/version.json, compare Godot/updater/changelog/Android export, require code greater than published100007, and retain model hash/bytes, package id and bundled-weight checks. Local standalone module12PASS, diff--check PASS. Fresh origin main and feature fetched before this checkpoint; signed Release run37774730696 at version candidate a9f914a has core-gates SUCCESS and Windows/Android signed build jobs IN_PROGRESS, not yet counted as acceptance. This test-only repair changes no runtime, signing identity, version metadata or release artifact bytes. Publish exact repair SHA and require full new PR CI; final signed release run must also reference final SHA.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:root cause recorded in AF-178; dynamic version test repair and focused12PASS; remote refs refreshed.
+REMAINING:publish/sync repair, exact PR CI, final-SHA signed Release package/install/update gates;379 residual inventory findings and Android full-pack waiver retained.
+BLOCKERS:the current published candidate has known red CI until repair commit is pushed and verified.
+NEXT:commit/push the repaired tests and journal; verify local/origin/web equality, then evaluate every required exact CI result.
+VERSION_LAST_EXACT_ACCEPTANCE_2026_10_08:release source commit `b0341f5133e8a9cf03bfd4e0a57fad08c1f236bf` (V1.5.0.0, Android versionCode100008) is clean and local/origin/web refs matched after fresh fetch. All23 PR workflows on this exact SHA completed SUCCESS, including Release Identity37775672859, Research Quality37775672814, Core/Voice37775672920, Integration Gate37775672786, Windows Package37775672897, Android APK Artifact37775672785, Core Android E2E37775673185, Android Benchmark37775672916 and Knowledge1GiB37775672782. Full signed branch `AuroraFox Release` run37775738190 at the same SHA completed SUCCESS: core-gates, Windows built/exported/smoked the Core package and updater ZIP/installer, then silent installed/launched/uninstalled; Android built/validated the signed APK and installed/launched it on Android35. `secret-readiness` was SKIPPED by branch mode; prior secrets-only run37723947458 SUCCESS remains separate evidence. `publish` was SKIPPED because no tag was created. Release run artifacts: `aurorafox-windows` sha256:5f0042a59d307c98750accac7d1d6f1f7daddd6bec68ece3f1516c6f0f47711d size5857328734; `aurorafox-android` sha256:2c4c0d514373c02724d18a4f8b63398d709a0f39cb0ceb1db75a4079255d7f0c size1641001104; Android diagnostics sha256:58fb14a3754275966402481b5f14a76a5a03a019405d89b8107b56792b571bc8 size64760. These are Actions artifact digests/sizes, not claims that the public release has these assets. The obsolete signed run37774730696 at known red test SHAa9f914a was cancellation-requested after final-SHA run was underway; it is not acceptance evidence. AF-178 is resolved by exact green CI.
+SOURCE_COMPLETE:YES for V1.5 version-last candidate at code freeze b0341f5; no source code change in this documentation checkpoint.
+CODE_FREEZE_SHA:b0341f5133e8a9cf03bfd4e0a57fad08c1f236bf
+PROGRESS_COMPLETE:92%
+PROGRESS_REMAINING:8%
+DONE:canonical V1.5.0.0/100008 sync, focused version/release contracts, all23 exact-SHA PR CI, same-SHA signed Core/Windows/Android package/install/launch gates and artifact digests.
+REMAINING:release-train merge/tag/publication decision; explicit distribution decision and exact release asset check for genuine production Knowledge archive; Android full-production-payload consumption remains OWNER_WAIVED_NOT_EXECUTED under owner section100, never PASS; 379 inventory findings are retained for later scoped review.
+BLOCKERS:no failed source/CI gate on code freeze b0341f5. Public release requires the separate Knowledge Pack distribution/asset decision and release authority; do not infer publication from a successful branch run.
+NEXT:reconcile documentation-only journal checkpoint with GitHub, then prepare a concrete final release/Knowledge artifact plan against the existing accepted archive SHA256bc0f312448f70a650435af8f30e853ca0a81a58f69c61802de7095bed9e24614; ask owner for only the final publication/distribution decision after all reviewable details are assembled.
+CLAIM_STATUS:CODEX-2026-10-08-V15-VERSION-LAST-CANDIDATE DONE for source/version/tests. Release owned source paths freed; public publication is a separate owner decision.

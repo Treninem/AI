@@ -43,6 +43,8 @@ jobs:
       - name: Independently verify hashes, allowlist and source contract
         id: verify
         shell: bash
+        env:
+          AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES: ${{ vars.AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES || '1048576' }}
         run: |
           set -euo pipefail
           test -f submission/core_candidate_submission/candidate.json

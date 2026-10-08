@@ -4,15 +4,21 @@ import importlib
 import sys
 from pathlib import Path
 
+import pytest
+from fastapi import Request
 from fastapi.testclient import TestClient
 
 from api.account_mailer import AccountMailError
 
 
-def _load_server(monkeypatch, root: Path, *, dev_tokens: bool = False, max_body: int = 24 * 1024 * 1024):
+def _load_server(monkeypatch, root: Path, *, dev_tokens: bool = False, max_body: int = 24 * 1024 * 1024, max_in_flight=None):
     monkeypatch.setenv("AURORAFOX_USER_DIR", str(root))
     monkeypatch.setenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "1" if dev_tokens else "0")
     monkeypatch.setenv("AURORAFOX_API_MAX_BODY_BYTES", str(max_body))
+    if max_in_flight is None:
+        monkeypatch.delenv("AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES", raising=False)
+    else:
+        monkeypatch.setenv("AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES", str(max_in_flight))
     monkeypatch.setenv("AURORAFOX_API_RPM", "10000")
     monkeypatch.setenv("AURORAFOX_SMTP_HOST", "smtp.example.test")
     monkeypatch.setenv("AURORAFOX_SMTP_PORT", "587")
@@ -208,3 +214,103 @@ def test_ready_fails_closed_when_storage_status_raises_without_leaking_error(tmp
     assert response.json()["detail"]["storage"] == {"ok": False, "hard_pressure": False}
     assert "/secret/volume" not in response.text
     assert "inspection failed" not in response.text
+
+
+@pytest.mark.parametrize("request_budget,aggregate,status", [(0, 0, 200), (0, 64, 413), (64, 0, 413), (256, 256, 200)])
+def test_real_server_uses_independent_startup_body_policy(tmp_path, monkeypatch, request_budget, aggregate, status):
+    server = _load_server(monkeypatch, tmp_path, max_body=request_budget, max_in_flight=aggregate)
+
+    @server.app.post("/test/owner-body-policy")
+    async def body_probe(request: Request):
+        return {"bytes": len(await request.body())}
+
+    client = TestClient(server.app)
+    response = client.post("/test/owner-body-policy", content=b"x" * 128,
+                           headers={"X-AuroraFox-API-Max-Body-Bytes": "0"})
+    assert response.status_code == status, response.text
+    if status == 200:
+        assert response.json() == {"bytes": 128}
+    assert server.MAX_API_BODY_BYTES == request_budget
+    assert server.MAX_API_IN_FLIGHT_BODY_BYTES == aggregate
+
+
+@pytest.mark.parametrize("request_budget,aggregate", [(-1, 64), (64, -1)])
+def test_real_server_rejects_invalid_startup_budget(tmp_path, monkeypatch, request_budget, aggregate):
+    with pytest.raises(ValueError, match="nonnegative integer"):
+        _load_server(monkeypatch, tmp_path, max_body=request_budget, max_in_flight=aggregate)
+
+
+@pytest.mark.parametrize("context_budget,expected", [(0, 30), (3, 3), (24, 24)])
+def test_real_authenticated_chat_uses_owner_context_and_retention(tmp_path, monkeypatch, context_budget, expected):
+    monkeypatch.setenv("AURORAFOX_API_CONVERSATION_MAX_MESSAGES", "0")
+    monkeypatch.setenv("AURORAFOX_API_CONVERSATION_CONTEXT_MESSAGES", str(context_budget))
+    server = _load_server(monkeypatch, tmp_path)
+    token, principal = server.keys.create("owner-context", ["chat"])
+    for index in range(30):
+        server.conversations.append(principal["id"], "history", "user", str(index))
+    observed = []
+
+    def execution(message, context, *args):
+        observed.append(context)
+        return {"ok": True, "content": "reply", "runtime": "aurorafox-agent"}
+
+    monkeypatch.setattr(server, "_execute_chat", execution)
+    client = TestClient(server.app)
+    payload = {"message": "next", "conversation_id": "history", "metadata": {"context_messages": 0, "max_messages": 1}}
+    assert client.post("/v1/chat", json=payload).status_code == 401
+    response = client.post("/v1/chat", json=payload, headers={"Authorization": "Bearer " + token})
+    assert response.status_code == 200, response.text
+    assert [row["content"] for row in observed[0]] == [str(i) for i in range(30 - expected, 30)]
+    assert len(server.conversations.get(principal["id"], "history")["messages"]) == 32
+    assert server.conversations.max_messages == 0
+
+
+@pytest.mark.parametrize("budget", [4, 100, 0])
+def test_actual_api_text_models_honor_owner_policy(tmp_path, monkeypatch, budget):
+    from pydantic import ValidationError
+    for key in ("AURORAFOX_API_CHAT_MAX_CHARS", "AURORAFOX_API_KNOWLEDGE_MAX_CHARS", "AURORAFOX_API_NOTE_MAX_CHARS"):
+        monkeypatch.setenv(key, str(budget))
+    server = _load_server(monkeypatch, tmp_path)
+    text = "x" * (budget if budget else 200001)
+    assert server.ChatRequest(message=text).message == text
+    assert server.LearningRequest(content=text).content == text
+    feedback = server.FeedbackRequest(conversation_id="history", score=0, message=text, answer=text, corrected_answer=text, note=text)
+    assert feedback.note == text
+    assert server.FileAnalyzeRequest(filename="file.txt", content_base64="eA==", question=text).question == text
+    if budget:
+        for model, kwargs in [(server.ChatRequest, {"message": text + "x"}),
+                              (server.LearningRequest, {"content": text + "x"}),
+                              (server.FeedbackRequest, {"conversation_id": "history", "score": 0, "note": text + "x"}),
+                              (server.FileAnalyzeRequest, {"filename": "file.txt", "content_base64": "eA==", "question": text + "x"})]:
+            with pytest.raises(ValidationError):
+                model(**kwargs)
+    with pytest.raises(ValidationError):
+        server.ChatRequest(message="")
+    with pytest.raises(ValidationError):
+        server.FeedbackRequest(conversation_id="history", score=2)
+
+
+def test_authenticated_http_cannot_override_owner_text_policy(tmp_path, monkeypatch):
+    monkeypatch.setenv("AURORAFOX_API_CHAT_MAX_CHARS", "4")
+    server = _load_server(monkeypatch, tmp_path)
+    token, _ = server.keys.create("text-policy", ["chat"])
+    executed = []
+
+    def execute(message, *args):
+        executed.append(message)
+        return {"ok": True, "content": "reply", "runtime": "aurorafox-agent"}
+
+    monkeypatch.setattr(server, "_execute_chat", execute)
+    client = TestClient(server.app)
+    headers = {"Authorization": "Bearer " + token, "X-AuroraFox-API-Chat-Max-Chars": "0"}
+    assert client.post("/v1/chat", json={"message": "12345", "metadata": {"chat_max_chars": 0}}, headers=headers).status_code == 422
+    assert executed == []
+    assert client.post("/v1/chat", json={"message": "1234"}, headers=headers).status_code == 200
+    assert executed == ["1234"]
+
+
+@pytest.mark.parametrize("key", ["AURORAFOX_API_CHAT_MAX_CHARS", "AURORAFOX_API_KNOWLEDGE_MAX_CHARS", "AURORAFOX_API_NOTE_MAX_CHARS"])
+def test_invalid_api_text_budget_fails_startup(tmp_path, monkeypatch, key):
+    monkeypatch.setenv(key, "-1")
+    with pytest.raises(ValueError, match=key):
+        _load_server(monkeypatch, tmp_path)

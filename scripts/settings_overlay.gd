@@ -432,6 +432,7 @@ func _add_card(parent: VBoxContainer, title_text: String, subtitle_text := "") -
 	return box
 
 func _build_general_page(page: VBoxContainer) -> void:
+	_build_owner_resource_limits(page)
 	var core := _add_card(page, "AuroraFox Core", "Собственный локальный Core является основным интеллектом приложения. Отдельная внешняя модель для обычной работы не требуется.")
 	core_status = Label.new()
 	core_status.name = "SettingsCoreStatus"
@@ -524,6 +525,10 @@ func _build_files_page(page: VBoxContainer) -> void:
 	refresh_files.pressed.connect(_refresh_file_status)
 	file_buttons.add_child(refresh_files)
 
+	if _desktop_features():
+		_build_file_intelligence_limits(page)
+		_build_core_wait_limits(page)
+
 	var projects := _add_card(page, "Проекты и кодовая база", "AuroraFox получает доступ только к папкам, которые пользователь выбрал явно. Индекс хранится локально.")
 	project_select = OptionButton.new()
 	project_select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -555,6 +560,175 @@ func _build_files_page(page: VBoxContainer) -> void:
 		platform_hint.add_theme_font_size_override("font_size", 12)
 		platform_hint.add_theme_color_override("font_color", MUTED)
 		projects.add_child(platform_hint)
+
+func _build_file_intelligence_limits(page: VBoxContainer) -> void:
+	var client := _file_intelligence_client()
+	var limits: Dictionary = client.owner_limits() if client != null else {
+		"max_file_bytes": 1024 * 1024 * 1024,
+		"max_text_chars": 160000,
+		"request_max_text_chars": 500000,
+		"spreadsheet_max_cells": 50000,
+		"xls_max_rows": 10000,
+		"tree_max_items": 5000,
+		"search_max_results": 100,
+		"search_excerpt_chars": 1200,
+		"archive_listing_max_chars": 40000,
+		"archive_listing_percent": 25,
+		"archive_max_entries": 5000,
+		"archive_max_expanded": 512 * 1024 * 1024,
+		"archive_text_member_max": 8 * 1024 * 1024,
+		"archive_text_total_max": 32 * 1024 * 1024,
+		"ocr_max_pdf_bytes": 256 * 1024 * 1024,
+		"ocr_max_pdf_pages": 1000,
+		"ocr_max_pages": 500,
+		"analysis_timeout_seconds": 600,
+		"android_pending_file_jobs": 8,
+		"ocr_max_input_pixels": 64000000,
+		"ocr_max_render_pixels": 8000000
+	}
+	var card := _add_card(page, "Пределы File Intelligence", "Защитные пределы локального парсера принадлежат владельцу. Новые задания Android получают сохранённые пределы; Windows-backend автоматически перезапускается.")
+	var file_mb := _owner_number_row(card, "Максимальный файл, МиБ", float(limits.get("max_file_bytes", 1024 * 1024 * 1024)) / 1048576.0, 1.0 / 1048576.0, 0.000001)
+	var text_chars := _owner_number_row(card, "Текст по умолчанию, символов", float(limits.get("max_text_chars", 160000)), 1.0, 1000.0)
+	var request_chars := _owner_number_row(card, "Текст одного запроса, символов", float(limits.get("request_max_text_chars", 500000)), 1.0, 1000.0)
+	var spreadsheet_cells := _owner_number_row(card, "Ячеек XLS/XLSX на файл", float(limits.get("spreadsheet_max_cells", 50000)), 1.0, 1000.0)
+	var xls_rows := _owner_number_row(card, "Строк XLS на лист", float(limits.get("xls_max_rows", 10000)), 1.0, 1000.0)
+	var tree_items := _owner_number_row(card, "Элементов дерева файлов", float(limits.get("tree_max_items", 5000)), 1.0, 100.0)
+	var search_results := _owner_number_row(card, "Результатов поиска в кеше", float(limits.get("search_max_results", 100)), 1.0, 10.0)
+	var search_excerpt := _owner_number_row(card, "Символов фрагмента поиска", float(limits.get("search_excerpt_chars", 1200)), 1.0, 100.0)
+	var archive_listing_chars := _owner_number_row(card, "Список файлов архива, символов (0 — скрыть)", float(limits.get("archive_listing_max_chars", 40000)), 0.0, 1000.0)
+	var archive_listing_percent := _owner_number_row(card, "Доля текстового бюджета для списка архива, %", float(limits.get("archive_listing_percent", 25)), 0.0, 1.0)
+	archive_listing_percent.max_value = 100.0
+	archive_listing_percent.allow_greater = false
+	var archive_entries := _owner_number_row(card, "Записей в архиве", float(limits.get("archive_max_entries", 5000)), 1.0, 100.0)
+	var archive_expanded_mb := _owner_number_row(card, "Распакованный архив, МиБ", float(limits.get("archive_max_expanded", 512 * 1024 * 1024)) / 1048576.0, 1.0 / 1048576.0, 0.000001)
+	var archive_member_mb := _owner_number_row(card, "Один текстовый файл архива, МиБ", float(limits.get("archive_text_member_max", 8 * 1024 * 1024)) / 1048576.0, 0.000001, 1.0)
+	var archive_total_mb := _owner_number_row(card, "Текст из архива суммарно, МиБ", float(limits.get("archive_text_total_max", 32 * 1024 * 1024)) / 1048576.0, 0.000001, 1.0)
+	var pdf_mb := _owner_number_row(card, "PDF для OCR, МиБ", float(limits.get("ocr_max_pdf_bytes", 256 * 1024 * 1024)) / 1048576.0, 1.0 / 1048576.0, 0.000001)
+	var pdf_pages := _owner_number_row(card, "Страниц PDF", float(limits.get("ocr_max_pdf_pages", 1000)), 1.0, 10.0)
+	var ocr_pages := _owner_number_row(card, "Страниц OCR", float(limits.get("ocr_max_pages", 500)), 1.0, 10.0)
+	var analysis_timeout := _owner_number_row(card, "Время одного анализа, секунд", float(limits.get("analysis_timeout_seconds", 600)), 1.0, 30.0)
+	var pending_jobs := _owner_number_row(card, "Ожидающих заданий Android", float(limits.get("android_pending_file_jobs", 8)), 1.0, 1.0)
+	var input_mpx := _owner_number_row(card, "Исходное изображение OCR, мегапикселей", float(limits.get("ocr_max_input_pixels", 64000000)) / 1000000.0, 0.000001, 1.0)
+	var render_mpx := _owner_number_row(card, "Рендер OCR, мегапикселей", float(limits.get("ocr_max_render_pixels", 8000000)) / 1000000.0, 0.000001, 0.000001)
+	var advanced_fields := {}
+	if OS.get_name() == "Windows":
+		var advanced_labels := {
+			"path_max_chars": "Windows: символов пути",
+			"question_max_chars": "Windows: символов вопроса к файлу",
+			"query_max_chars": "Windows: символов запроса к кешу",
+			"cache_max_bytes": "Windows: байтов кеша файлов (0 — без лимита)",
+			"epub_max_chapters": "Windows: разделов EPUB",
+			"archive_text_entry_max": "Windows EPUB/RAR: байтов текстового элемента",
+			"archive_text_entries": "Windows RAR: текстовых элементов",
+			"vision_timeout_seconds": "Windows optional vision: ожидание, секунд (0 — без таймаута)",
+			"ollama_health_timeout_ms": "Windows optional Ollama: проверка доступности, мс (0 — без таймаута)",
+			"voice_health_timeout_ms": "Windows Voice: проверка доступности, мс (0 — без таймаута)",
+			"client_health_timeout_seconds": "Windows File client: ожидание статуса, секунд (0 — без таймаута)",
+			"client_tree_timeout_seconds": "Windows File client: ожидание дерева, секунд (0 — без таймаута)",
+			"client_cache_timeout_seconds": "Windows File client: ожидание кеша, секунд (0 — без таймаута)",
+			"ocr_max_render_scale_percent": "Windows PDF OCR: масштаб рендера, % (0 — предел только по пикселям)",
+			"stt_timeout_seconds": "Windows STT: ожидание, секунд (0 — без таймаута)",
+			"video_timeout_seconds": "Windows видео: ожидание ffmpeg, секунд (0 — без таймаута)",
+			"video_max_frames": "Windows видео: извлекаемых кадров",
+			"video_frame_interval_seconds": "Windows видео: интервал кадров, секунд",
+			"video_frame_max_width": "Windows видео: ширина кадра, пикселей",
+			"vision_image_max_width": "Windows optional vision: размер изображения, пикселей",
+		}
+		for key in advanced_labels:
+			advanced_fields[key] = _owner_number_row(card, advanced_labels[key], float(limits.get(key, FileIntelligenceClient.OWNER_LIMIT_DEFAULTS[key])), float(FileIntelligenceClient.OWNER_LIMIT_MINIMUMS.get(key, 1)), 1.0)
+	var state := Label.new()
+	state.name = "SettingsFileLimitsStatus"
+	state.text = "Новые задания используют сохранённые пределы. Windows применяет пределы парсера после перезапуска backend."
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	state.add_theme_font_size_override("font_size", 12)
+	state.add_theme_color_override("font_color", MUTED)
+	if not str(limits.get("persistence_error", "")).is_empty():
+		state.text = "Ошибка чтения сохранённых пределов: " + str(limits.persistence_error)
+		state.add_theme_color_override("font_color", WARNING)
+	card.add_child(state)
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 8)
+	card.add_child(actions)
+	var apply := Button.new()
+	apply.name = "SettingsFileLimitsApply"
+	apply.text = "Сохранить пределы"
+	apply.pressed.connect(func():
+		var current := _file_intelligence_client()
+		if current == null:
+			state.text = "File Intelligence client не подключён."
+			state.add_theme_color_override("font_color", WARNING)
+			return
+		var values := {
+			"max_file_bytes": int(file_mb.value * 1048576.0),
+			"max_text_chars": int(text_chars.value),
+			"request_max_text_chars": int(request_chars.value),
+			"spreadsheet_max_cells": int(spreadsheet_cells.value),
+			"xls_max_rows": int(xls_rows.value),
+			"tree_max_items": int(tree_items.value),
+			"search_max_results": int(search_results.value),
+			"search_excerpt_chars": int(search_excerpt.value),
+			"archive_listing_max_chars": int(archive_listing_chars.value),
+			"archive_listing_percent": int(archive_listing_percent.value),
+			"archive_max_entries": int(archive_entries.value),
+			"archive_max_expanded": int(archive_expanded_mb.value * 1048576.0),
+			"archive_text_member_max": int(archive_member_mb.value * 1048576.0),
+			"archive_text_total_max": int(archive_total_mb.value * 1048576.0),
+			"ocr_max_pdf_bytes": int(pdf_mb.value * 1048576.0),
+			"ocr_max_pdf_pages": int(pdf_pages.value),
+			"ocr_max_pages": int(ocr_pages.value),
+			"analysis_timeout_seconds": int(analysis_timeout.value),
+			"android_pending_file_jobs": int(pending_jobs.value),
+			"ocr_max_input_pixels": int(input_mpx.value * 1000000.0),
+			"ocr_max_render_pixels": int(render_mpx.value * 1000000.0)
+		}
+		for key in advanced_fields: values[key] = int(advanced_fields[key].value)
+		var result := current.apply_owner_limits(values, true, true)
+		if not bool(result.get("ok", false)):
+			state.text = str(result.get("error", "Пределы не сохранены."))
+			state.add_theme_color_override("font_color", WARNING)
+			return
+		state.text = "Сохранено. Новые задания используют эти пределы."
+		state.add_theme_color_override("font_color", GREEN)
+	)
+	actions.add_child(apply)
+	var reset := Button.new()
+	reset.name = "SettingsFileLimitsReset"
+	reset.text = "Вернуть безопасные значения"
+	reset.pressed.connect(func():
+		file_mb.value = 1024
+		text_chars.value = 160000
+		request_chars.value = 500000
+		spreadsheet_cells.value = 50000
+		xls_rows.value = 10000
+		tree_items.value = 5000
+		search_results.value = 100
+		search_excerpt.value = 1200
+		archive_listing_chars.value = 40000
+		archive_listing_percent.value = 25
+		archive_entries.value = 5000
+		archive_expanded_mb.value = 512
+		archive_member_mb.value = 8
+		archive_total_mb.value = 32
+		pdf_mb.value = 256
+		pdf_pages.value = 1000
+		ocr_pages.value = 500
+		analysis_timeout.value = 600
+		pending_jobs.value = 8
+		input_mpx.value = 64
+		render_mpx.value = 8
+		for key in advanced_fields: advanced_fields[key].value = FileIntelligenceClient.OWNER_LIMIT_DEFAULTS[key]
+		apply.pressed.emit()
+	)
+	actions.add_child(reset)
+
+func _file_intelligence_client() -> FileIntelligenceClient:
+	var main := get_parent()
+	if main == null:
+		return null
+	var manager = main.get("attachments")
+	if manager is AttachmentManager:
+		return manager.intelligence
+	return null
 
 func _build_autonomy_page(page: VBoxContainer) -> void:
 	var autonomy_card := _add_card(page, "Автономное развитие", "Каждый кандидат проходит обязательные ограничения и проверки. Пользовательский master stop и откат сохраняются.")
@@ -614,6 +788,8 @@ func _build_tools_page(page: VBoxContainer) -> void:
 	knowledge_button.pressed.connect(func(): _open_surface("KnowledgeBase", "show_knowledge_base"))
 	knowledge.add_child(knowledge_button)
 
+	_build_web_policy_card(page)
+
 	if _desktop_features():
 		var computer := _add_card(page, "Компьютерный режим", "Отдельное явное разрешение на экран, мышь и клавиатуру. Без включения доступа действия запрещены.")
 		var computer_button := Button.new()
@@ -639,6 +815,108 @@ func _build_tools_page(page: VBoxContainer) -> void:
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		note.add_theme_color_override("font_color", MUTED)
 		mobile_note.add_child(note)
+
+func _build_web_policy_card(page: VBoxContainer) -> void:
+	var reader := _public_web_manager()
+	var limits: Dictionary = reader.owner_limits() if reader != null and reader.has_method("owner_limits") else {
+		"max_urls_per_message": int(ProjectSettings.get_setting("aurorafox/web/max_urls_per_message", 3)),
+		"max_redirects": int(ProjectSettings.get_setting("aurorafox/web/max_redirects", 5)),
+		"max_extracted_chars": int(ProjectSettings.get_setting("aurorafox/web/max_extracted_chars", 240000)),
+		"max_response_bytes": int(ProjectSettings.get_setting("aurorafox/web/max_response_bytes", 4 * 1024 * 1024)),
+		"request_timeout_seconds": float(ProjectSettings.get_setting("aurorafox/web/request_timeout_seconds", 20.0))
+	}
+	var card := _add_card(page, "Публичные ссылки", "Прочитанные по вашей команде страницы сохраняются в приватной Knowledge. Эти защитные пределы можно менять; при достижении предела Fox сообщает причину и ждёт вашего решения.")
+	var url_count := _owner_number_row(card, "Ссылок в одном сообщении", float(limits.get("max_urls_per_message", 3)), 1.0, 1.0)
+	var redirects := _owner_number_row(card, "Перенаправлений", float(limits.get("max_redirects", 5)), 0.0, 1.0)
+	var response_mb := _owner_number_row(card, "Размер страницы или файла, МиБ", float(limits.get("max_response_bytes", 4 * 1024 * 1024)) / (1024.0 * 1024.0), 1.0 / 1048576.0, 0.000001)
+	var extracted_chars := _owner_number_row(card, "Извлечённого текста, символов", float(limits.get("max_extracted_chars", 240000)), 1.0, 1000.0)
+	var timeout := _owner_number_row(card, "Ожидание ответа, секунд (0 — без таймаута)", float(limits.get("request_timeout_seconds", 20.0)), 0.0, 1.0)
+	var url_length := _owner_number_row(card, "Длина URL, символов", float(limits.get("max_url_length", 4096)), 1.0, 256.0)
+	var title_chars := _owner_number_row(card, "Заголовок страницы, символов", float(limits.get("max_title_chars", 400)), 1.0, 50.0)
+	var context_chars := _owner_number_row(card, "Контекст источника для ответа, символов", float(limits.get("context_chars", 24000)), 1.0, 1000.0)
+	var state := Label.new()
+	state.name = "SettingsWebPolicyStatus"
+	state.text = "Пределы принадлежат владельцу. CAPTCHA, обязательный вход и чужой access control не обходятся."
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	state.add_theme_font_size_override("font_size", 12)
+	state.add_theme_color_override("font_color", MUTED)
+	if not str(limits.get("persistence_error", "")).is_empty():
+		state.text = "Ошибка чтения сохранённых пределов: " + str(limits.persistence_error)
+		state.add_theme_color_override("font_color", WARNING)
+	card.add_child(state)
+	var actions := HFlowContainer.new()
+	actions.add_theme_constant_override("h_separation", 8)
+	card.add_child(actions)
+	var apply := Button.new()
+	apply.name = "SettingsWebPolicyApply"
+	apply.text = "Сохранить пределы"
+	apply.pressed.connect(func():
+		var current := _public_web_manager()
+		var values := {
+			"max_urls_per_message": int(url_count.value),
+			"max_redirects": int(redirects.value),
+			"max_extracted_chars": int(extracted_chars.value),
+			"max_response_bytes": int(response_mb.value * 1024.0 * 1024.0),
+			"request_timeout_seconds": timeout.value,
+			"max_url_length": int(url_length.value),
+			"max_title_chars": int(title_chars.value),
+			"context_chars": int(context_chars.value)
+		}
+		var temporary := false
+		if current == null:
+			current = PublicWebManager.new()
+			temporary = true
+		var result: Dictionary = current.call("apply_owner_limits", values, true)
+		if temporary: current.free()
+		if not bool(result.get("ok", false)):
+			state.text = str(result.get("error", "Пределы не сохранены."))
+			state.add_theme_color_override("font_color", WARNING)
+			return
+		state.text = "Сохранено. Пределы веб-чтения применены."
+		state.add_theme_color_override("font_color", GREEN)
+	)
+	actions.add_child(apply)
+	var reset := Button.new()
+	reset.name = "SettingsWebPolicyReset"
+	reset.text = "Вернуть безопасные значения"
+	reset.pressed.connect(func():
+		url_count.value = 3
+		redirects.value = 5
+		extracted_chars.value = 240000
+		response_mb.value = 4
+		timeout.value = 20
+		url_length.value = 4096
+		title_chars.value = 400
+		context_chars.value = 24000
+		apply.pressed.emit()
+	)
+	actions.add_child(reset)
+
+func _owner_number_row(parent: VBoxContainer, label_text: String, value: float, minimum: float, step: float) -> SpinBox:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	parent.add_child(row)
+	var label := Label.new()
+	label.text = label_text
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	row.add_child(label)
+	var field := SpinBox.new()
+	field.custom_minimum_size.x = 150
+	field.min_value = minimum
+	field.max_value = 4096.0
+	field.allow_greater = true
+	field.step = step
+	field.value = value
+	row.add_child(field)
+	return field
+
+func _public_web_manager() -> Node:
+	var main := get_parent()
+	if main == null:
+		return null
+	var value = main.get("public_web")
+	return value if value is Node else null
 
 func _build_updates_page(page: VBoxContainer) -> void:
 	var updater := _update_manager()
@@ -928,3 +1206,68 @@ func _check_updates() -> void:
 		update_status.text = "Проверяю подписанный stable-релиз…"
 		update_status.add_theme_color_override("font_color", MUTED)
 	await updater.call("check_for_updates", true)
+
+
+func _build_core_wait_limits(page: VBoxContainer) -> void:
+	var card := _add_card(page, "Ожидание локального Core (Windows)", "Прогресс обработки текста и новые токены продлевают ожидание. Пинг не считается прогрессом. Ноль отключает соответствующий предел; отмена остаётся доступна.")
+	var limits := CoreWaitPolicy.limits()
+	var stall := _owner_number_row(card, "Без прогресса, секунд", float(limits.stall_timeout_seconds), 0, 1)
+	var total := _owner_number_row(card, "Всего на запрос, секунд (0 — без предела)", float(limits.total_timeout_seconds), 0, 1)
+	var bytes := _owner_number_row(card, "Объём потокового ответа, МиБ (0 — без предела)", float(limits.response_max_bytes) / 1048576.0, 0, 1)
+	var state := Label.new()
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	card.add_child(state)
+	var apply := Button.new()
+	apply.name = "SettingsCoreWaitApply"
+	apply.text = "Сохранить пределы Core"
+	apply.pressed.connect(func():
+		var err := CoreWaitPolicy.save({"stall_timeout_seconds": stall.value, "total_timeout_seconds": total.value, "response_max_bytes": int(bytes.value * 1048576.0)})
+		state.text = "Сохранено. Пределы применяются к новым запросам." if err == OK else "Не удалось сохранить: %s" % error_string(err)
+	)
+	card.add_child(apply)
+
+	var cancel := Button.new()
+	cancel.name = "SettingsCoreRequestCancel"
+	cancel.text = "Отменить текущие запросы Core"
+	cancel.pressed.connect(func():
+		var main := get_parent()
+		var ai = main.get("ai") if main != null else null
+		if ai is AIClient:
+			ai.core_runtime.desktop_runtime.cancel_active_requests()
+			state.text = "Отмена отправлена. Core остаётся запущенным."
+		else:
+			state.text = "Клиент Core не подключён."
+	)
+	card.add_child(cancel)
+
+
+func _build_owner_resource_limits(page: VBoxContainer) -> void:
+	var card := _add_card(page, "Ресурсные пределы", "Ноль отключает предел там, где он доступен. Пакет индексации и защитные пределы Android XLS — положительные значения. Большие значения увеличивают расход памяти и контекста модели. Уменьшение лимита записей может удалить старые записи при следующем добавлении; уже удалённое не восстанавливается. Настройки применяются к последующим операциям.")
+	var details := VBoxContainer.new()
+	details.visible = false
+	var toggle := Button.new()
+	toggle.text = "Показать ресурсные пределы"
+	toggle.pressed.connect(func():
+		details.visible = not details.visible
+		toggle.text = "Скрыть ресурсные пределы" if details.visible else "Показать ресурсные пределы"
+	)
+	card.add_child(toggle)
+	card.add_child(details)
+	var values := OwnerResourcePolicy.limits()
+	var fields := {}
+	for key in OwnerResourcePolicy.DEFAULTS:
+		if key in ["chat_max_tokens", "terse_max_tokens"] and not _desktop_features(): continue
+		fields[key] = _owner_number_row(details, str(OwnerResourcePolicy.LABELS[key]), float(values[key]), OwnerResourcePolicy.minimum(str(key)), 1)
+	var state := Label.new()
+	state.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	details.add_child(state)
+	var apply := Button.new()
+	apply.name = "SettingsOwnerResourceApply"
+	apply.text = "Сохранить ресурсные пределы"
+	apply.pressed.connect(func():
+		var selected := {}
+		for key in fields: selected[key] = fields[key].value
+		var err := OwnerResourcePolicy.save(selected)
+		state.text = "Сохранено для последующих операций." if err == OK else "Не удалось сохранить: %s" % error_string(err)
+	)
+	details.add_child(apply)

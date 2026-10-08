@@ -11,7 +11,6 @@ signal microphone_error(message: String)
 const TARGET_RATE := 16000
 const MIN_SPEECH_SEC := 0.24
 const END_SILENCE_SEC := 0.62
-const MAX_SEGMENT_SEC := 15.0
 
 var runtime := AndroidLocalRuntime.new()
 var player: AudioStreamPlayer
@@ -119,7 +118,8 @@ func _process_frames(frames: PackedVector2Array) -> void:
 			_silence_time = 0.0
 		else:
 			_silence_time += dt
-		if (_speech_time >= MIN_SPEECH_SEC and _silence_time >= END_SILENCE_SEC) or _speech_time >= MAX_SEGMENT_SEC:
+		var segment_ms := OwnerResourcePolicy.value("voice_segment_ms")
+		if (_speech_time >= MIN_SPEECH_SEC and _silence_time >= END_SILENCE_SEC) or (segment_ms > 0 and _speech_time * 1000.0 >= float(segment_ms)):
 			_finish_segment()
 
 func _append_samples(samples: PackedFloat32Array) -> void:

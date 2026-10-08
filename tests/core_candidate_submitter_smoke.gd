@@ -73,6 +73,31 @@ func _init() -> void:
 		_fail("tampered candidate passed client-side SHA gate", 11)
 		return
 
+	var previous_source_budget := OwnerResourcePolicy.value("candidate_source_bytes")
+	var large_source := "class_name SmokeCandidate\nextends RefCounted\n#" + "x".repeat(1048576)
+	manifest["candidate_sha256"] = _sha256_text(large_source)
+	candidate = FileAccess.open(candidate_path, FileAccess.WRITE)
+	candidate.store_string(large_source)
+	candidate.close()
+	file = FileAccess.open(manifest_path, FileAccess.WRITE)
+	file.store_string(JSON.stringify(manifest))
+	file.close()
+	OwnerResourcePolicy._cached["candidate_source_bytes"] = 1048576
+	var default_blocked := submitter.build_submission(manifest_path, candidate_path, "ci-smoke")
+	if bool(default_blocked.get("ok", false)) or not str(default_blocked.get("error", "")).contains("size limit"):
+		_fail("default candidate source budget did not reject oversized source", 14)
+		return
+	OwnerResourcePolicy._cached["candidate_source_bytes"] = large_source.to_utf8_buffer().size()
+	var raised := submitter.build_submission(manifest_path, candidate_path, "ci-smoke")
+	if not bool(raised.get("ok", false)) or Marshalls.base64_to_raw(str(raised.get("payload", {}).get("content_base64", ""))).size() != large_source.to_utf8_buffer().size():
+		_fail("raised owner candidate source budget did not preserve full bytes", 15)
+		return
+	OwnerResourcePolicy._cached["candidate_source_bytes"] = 0
+	if not bool(submitter.build_submission(manifest_path, candidate_path, "ci-smoke").get("ok", false)):
+		_fail("zero owner candidate source budget did not disable cap", 16)
+		return
+	OwnerResourcePolicy._cached["candidate_source_bytes"] = previous_source_budget
+
 	# No credential is ever stored in the local submission state contract.
 	var script_source := FileAccess.get_file_as_string("res://scripts/core_candidate_submitter.gd")
 	if not script_source.contains("AURORAFOX_PROMOTION_API_TOKEN"):

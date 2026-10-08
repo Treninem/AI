@@ -1,0 +1,6 @@
+// AuroraFox: quantized Core is already dense; store it directly in the APK.
+android {
+    androidResources {
+        noCompress += ['gguf']
+    }
+}

@@ -29,6 +29,45 @@ func setup(ai_client: AIClient, memory_store: MemoryStore, tool_registry: ToolRe
 	dream_cycle.setup(ai)
 	team.setup(ai)
 
+func analyze_user_feedback(prompt: String, answer: String, score: int) -> Dictionary:
+	if score not in [-1, 1]:
+		return {"ok": false, "error": "feedback score must be -1 or 1"}
+	var messages: Array = [
+		{
+			"role": "system",
+			"content": """Ты локальный reviewer AuroraFox. Пользователь явно оценил один ответ. Проанализируй только наблюдаемые свойства запроса и ответа, не выдумывай факты и не меняй память, знания, навыки, веса или настройки. Верни только JSON:
+{"summary":"краткий вывод","observed":"что было правильно или неправильно","proposed_lesson":"какой личный паттерн предложить владельцу сохранить","confidence":0.0,"safe_to_save":true}
+Это только предложение. Любое сохранение выполняется отдельно после явного подтверждения владельца."""
+		},
+		{
+			"role": "user",
+			"content": "Оценка: %s\nЗапрос:\n%s\n\nОтвет:\n%s" % ["положительная" if score > 0 else "отрицательная", OwnerResourcePolicy.clip(prompt, "feedback_prompt_chars"), OwnerResourcePolicy.clip(answer, "feedback_answer_chars")]
+		}
+	]
+	var response := await ai.chat(messages, 0.0)
+	if not bool(response.get("ok", false)):
+		return {"ok": false, "error": str(response.get("error", "feedback review failed"))}
+	var cleaned := str(response.get("content", "")).strip_edges()
+	if cleaned.begins_with("```"):
+		cleaned = cleaned.replace("```json", "").replace("```", "").strip_edges()
+	var parsed = JSON.parse_string(cleaned)
+	if not parsed is Dictionary:
+		return {"ok": false, "error": "feedback review returned invalid JSON"}
+	var summary := OwnerResourcePolicy.clip(str(parsed.get("summary", "")).strip_edges(), "feedback_summary_chars")
+	var observed := OwnerResourcePolicy.clip(str(parsed.get("observed", "")).strip_edges(), "feedback_observed_chars")
+	var proposed_lesson := OwnerResourcePolicy.clip(str(parsed.get("proposed_lesson", "")).strip_edges(), "feedback_lesson_chars")
+	if summary.is_empty() or proposed_lesson.is_empty():
+		return {"ok": false, "error": "feedback review is incomplete"}
+	return {
+		"ok": true,
+		"summary": summary,
+		"observed": observed,
+		"proposed_lesson": proposed_lesson,
+		"confidence": clampf(float(parsed.get("confidence", 0.0)), 0.0, 1.0),
+		"safe_to_save": bool(parsed.get("safe_to_save", false)),
+		"promotion": "owner_confirmation_required"
+	}
+
 # execution_guard is optional and keeps every existing caller source-compatible.
 # Work supplies it to stop before the next model/tool action when the user
 # cancels, pauses, or activates master stop. The guard never grants authority;
@@ -38,15 +77,18 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 	var guard_reason := _execution_guard_reason(execution_guard, "before_task", {})
 	if not guard_reason.is_empty():
 		return EXECUTION_CONTROL_PREFIX + guard_reason
-	memory.remember("user_task", task, "chat", 0.72, 0.98)
+	# Web/file contexts can be large and already have their own indexed stores.
+	# Keep only a bounded task trace here instead of duplicating whole sources in
+	# conversational memory and slowing every later retrieval.
+	memory.remember("user_task", OwnerResourcePolicy.clip(task, "task_trace_chars"), "chat", 0.72, 0.98)
 	# Ordinary conversation must not pay the latency of the autonomous agent
 	# pipeline (planning + answer + verification) when no tool/action is needed.
 	# It still uses the same local AuroraFox Core, private chat context and
 	# relevant local memory; action-oriented requests continue through all gates.
 	if _is_direct_conversation(task):
 		return await _run_direct_conversation(task, conversation_context, execution_guard)
-	var useful_skills := experience.relevant_skills(task, 5)
-	var recent_failures := experience.recent_failures(5)
+	var useful_skills := experience.relevant_skills(task, OwnerResourcePolicy.count(experience.skills.size(), "agent_skill_items"))
+	var recent_failures := experience.recent_failures(OwnerResourcePolicy.count(experience.failures.size(), "agent_failure_items"))
 	var specialist_context: Dictionary = {}
 	var specialist_plan: Dictionary = {}
 	if enable_specialist_team and _needs_specialists(task):
@@ -80,7 +122,7 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 
 	# Retrieve only the memories/knowledge relevant to the current task. This
 	# avoids pushing the entire long-term store into every model request.
-	var retrieved_context: Array = await memory.retrieve(task, 10, true, true)
+	var retrieved_context: Array = await memory.retrieve(task, OwnerResourcePolicy.count(memory.memory.size() + memory.knowledge.size(), "agent_retrieval_items"), true, true)
 	guard_reason = _execution_guard_reason(execution_guard, "after_retrieval", {})
 	if not guard_reason.is_empty():
 		return EXECUTION_CONTROL_PREFIX + guard_reason
@@ -127,7 +169,11 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 			experience.record_failure(task, "Direct no-tool answer was empty or attempted an unavailable tool")
 			return "Не удалось сформировать прямой локальный ответ без инструментов."
 	else:
-		for step in range(max_steps):
+		var step_cap := _step_budget()
+		if step_cap < 0: return "Некорректный предел шагов агента"
+		var step := -1
+		while step_cap == 0 or step + 1 < step_cap:
+			step += 1
 			guard_reason = _execution_guard_reason(execution_guard, "before_model", {"step": step + 1})
 			if not guard_reason.is_empty():
 				return EXECUTION_CONTROL_PREFIX + guard_reason
@@ -149,15 +195,17 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 			guard_reason = _execution_guard_reason(execution_guard, "before_tool", {"step": step + 1, "tool": tool_name, "args": _safe_args(args)}, args)
 			if not guard_reason.is_empty():
 				return EXECUTION_CONTROL_PREFIX + guard_reason
-			var tool_result = await tools.call_tool(tool_name, args)
+			var tool_result = await tools.call_tool(tool_name, args, execution_guard)
 			guard_reason = _execution_guard_reason(execution_guard, "after_tool", {"step": step + 1, "tool": tool_name, "result": _guard_result(tool_result)})
 			if not guard_reason.is_empty():
 				return EXECUTION_CONTROL_PREFIX + guard_reason
-			var trace_item := {"step":step + 1,"tool":tool_name,"args":_safe_args(args),"result":_compact_result(tool_result)}
+			var context_result = _compact_result(tool_result)
+			var context_partial := JSON.stringify(context_result) != JSON.stringify(tool_result)
+			var trace_item := {"step":step + 1,"tool":tool_name,"args":_safe_args(args),"result":context_result,"result_context_partial":context_partial}
 			trajectory.append(trace_item)
 			experience.checkpoint(task, step + 1, tool_name, _safe_args(args), tool_result)
 			messages.append({"role":"assistant", "content": text})
-			messages.append({"role":"user", "content": "TOOL_RESULT %s: %s" % [tool_name, JSON.stringify(tool_result)]})
+			messages.append({"role":"user", "content": "[UNTRUSTED_TOOL_RESULT_DATA]\nTOOL_RESULT %s (result_context_partial=%s): %s" % [tool_name, str(context_partial), JSON.stringify(context_result)]})
 			memory.remember("tool", JSON.stringify(trace_item), tool_name, 0.62, 0.92)
 
 	if draft_answer.is_empty():
@@ -218,7 +266,7 @@ func run_task(task: String, conversation_context: Array = [], execution_guard: C
 		guard_reason = _execution_guard_reason(execution_guard, "before_reflection", {})
 		if not guard_reason.is_empty():
 			return EXECUTION_CONTROL_PREFIX + guard_reason
-		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(20))
+		var ideas := await dream_cycle.reflect(experience.skills, experience.recent_failures(OwnerResourcePolicy.count(experience.failures.size(), "reflection_failure_items")))
 		guard_reason = _execution_guard_reason(execution_guard, "after_reflection", {})
 		if not guard_reason.is_empty():
 			return EXECUTION_CONTROL_PREFIX + guard_reason
@@ -230,10 +278,10 @@ func _run_direct_conversation(task: String, conversation_context: Array, executi
 	var guard_reason := _execution_guard_reason(execution_guard, "before_direct_chat", {})
 	if not guard_reason.is_empty():
 		return EXECUTION_CONTROL_PREFIX + guard_reason
-	var retrieved_context: Array = await memory.retrieve(task, 2, true, true)
+	var retrieved_context: Array = await memory.retrieve(task, OwnerResourcePolicy.count(memory.memory.size() + memory.knowledge.size(), "chat_retrieval_items"), true, true)
 	var memory_lines: Array[String] = []
 	for item in retrieved_context:
-		memory_lines.append(str(item).substr(0, 240))
+		memory_lines.append(OwnerResourcePolicy.clip(str(item), "direct_memory_chars"))
 	var messages: Array = [{
 		"role": "system",
 		"content": "[AURORA_DIRECT_CHAT] Ты AuroraFox. Ответь кратко и по существу на языке пользователя. Не выдумывай факты или выполненные действия. Память: %s" % " | ".join(memory_lines)
@@ -258,7 +306,7 @@ func _append_direct_conversation_context(messages: Array, conversation_context: 
 	var source: Array = conversation_context
 	if source.is_empty():
 		source = _active_chat_context()
-	var start := maxi(0, source.size() - 4)
+	var start := source.size() - OwnerResourcePolicy.count(source.size(), "direct_history_items")
 	for i in range(start, source.size()):
 		var item = source[i]
 		if not item is Dictionary:
@@ -266,7 +314,7 @@ func _append_direct_conversation_context(messages: Array, conversation_context: 
 		var role := str(item.get("role", ""))
 		if role not in ["user", "assistant"]:
 			continue
-		var content := str(item.get("content", "")).strip_edges().substr(0, 800)
+		var content := OwnerResourcePolicy.clip(str(item.get("content", "")).strip_edges(), "direct_history_chars")
 		if not content.is_empty():
 			messages.append({"role": role, "content": content})
 
@@ -382,7 +430,7 @@ func _append_conversation_context(messages: Array, conversation_context: Array) 
 	var source: Array = conversation_context
 	if source.is_empty(): source = _active_chat_context()
 	if source.is_empty(): return
-	var start := maxi(0, source.size() - 24)
+	var start := source.size() - OwnerResourcePolicy.count(source.size(), "agent_history_items")
 	for i in range(start, source.size()):
 		var item = source[i]
 		if not item is Dictionary: continue
@@ -390,23 +438,23 @@ func _append_conversation_context(messages: Array, conversation_context: Array) 
 		if role not in ["user", "assistant"]: continue
 		var parts: Array[String] = []
 		var content := str(item.get("content", "")).strip_edges()
-		if not content.is_empty(): parts.append(content.substr(0, 16000))
+		if not content.is_empty(): parts.append(OwnerResourcePolicy.clip(content, "agent_history_chars"))
 		var attachments: Array = item.get("attachments", [])
-		var attachment_count := mini(attachments.size(), 6)
+		var attachment_count := OwnerResourcePolicy.count(attachments.size(), "attachment_items")
 		for a_index in range(attachment_count):
 			var attachment = attachments[a_index]
 			if not attachment is Dictionary: continue
 			var name := str(attachment.get("name", "file"))
 			var kind := str(attachment.get("kind", "unknown"))
-			var excerpt := str(attachment.get("excerpt", "")).strip_edges().substr(0, 6000)
+			var excerpt := OwnerResourcePolicy.clip(str(attachment.get("excerpt", "")).strip_edges(), "attachment_excerpt_chars")
 			var meta: Dictionary = attachment.get("metadata", {})
 			var attachment_text := "[Вложение из этой реплики: %s; тип: %s" % [name, kind]
-			if not meta.is_empty(): attachment_text += "; метаданные: " + JSON.stringify(meta).substr(0, 1800)
+			if not meta.is_empty(): attachment_text += "; метаданные: " + OwnerResourcePolicy.clip(JSON.stringify(meta), "attachment_metadata_chars")
 			attachment_text += "]"
 			if not excerpt.is_empty(): attachment_text += "\n" + excerpt
 			parts.append(attachment_text)
 		if parts.is_empty(): continue
-		messages.append({"role": role, "content": "\n\n".join(parts).substr(0, 24000)})
+		messages.append({"role": role, "content": OwnerResourcePolicy.clip("\n\n".join(parts), "context_message_chars")})
 
 func _active_chat_context() -> Array:
 	var main := get_parent()
@@ -421,7 +469,7 @@ func _active_chat_context() -> Array:
 	return history
 
 func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failures: Array, specialist_context: Dictionary, retrieved_context: Array, tool_catalog: Array = []) -> String:
-	var recent := memory.recent(8)
+	var recent := memory.recent(OwnerResourcePolicy.count(memory.memory.size(), "agent_recent_items"))
 	var tool_rule := "Инструменты в этой задаче недоступны. НЕ возвращай JSON tool-call и не выдумывай имена инструментов; дай конечный ответ напрямую из разрешённого контекста и релевантной локальной памяти."
 	if not tool_catalog.is_empty():
 		tool_rule = "Используй ТОЛЬКО инструменты из списка ниже. Если нужен инструмент, верни ТОЛЬКО JSON: {\"tool\":\"tool_name\",\"args\":{...}}. Перед возвратом JSON проверь, что все значения, явно названные пользователем, перенесены в args без изменения. Пустой args запрещён для инструмента с непустой schema. Если инструмент не нужен, дай конечный ответ."
@@ -496,12 +544,19 @@ func _safe_args(args: Dictionary) -> Dictionary:
 
 func _compact_result(value: Variant) -> Variant:
 	if value is Dictionary:
-		var copy: Dictionary = value.duplicate(true)
-		for key in copy.keys():
-			var text := str(copy[key])
-			if text.length() > 5000: copy[key] = text.substr(0, 5000) + "…"
+		var copy: Dictionary = {}
+		for key in value: copy[key] = _compact_result(value[key])
 		return copy
 	if value is Array:
 		var arr: Array = value
-		return arr.slice(0, mini(arr.size(), 25))
-	return str(value).substr(0, 5000)
+		var copy: Array = []
+		for item in arr.slice(0, OwnerResourcePolicy.count(arr.size(), "tool_result_items")):
+			copy.append(_compact_result(item))
+		return copy
+	if value is String: return OwnerResourcePolicy.clip(value, "tool_result_chars")
+	# Status, numeric evidence and null retain their actual types even at tiny text budgets.
+	return value
+
+func _step_budget() -> int:
+	# Existing explicit per-instance budgets (benchmarks/Work) retain precedence.
+	return OwnerResourcePolicy.value("agent_max_steps") if max_steps == 18 else max_steps

@@ -46,9 +46,9 @@ def test_skills_use_existing_experience_store_and_do_not_activate_code():
 
 
 def test_imported_skill_is_bounded_and_untrusted():
-    assert "MAX_IMPORTED_SKILLS" in ATTACHMENTS
-    assert "MAX_SKILL_STEPS" in ATTACHMENTS
-    assert "MAX_SKILL_TOOLS" in ATTACHMENTS
+    assert 'OwnerResourcePolicy.value("skill_import_items")' in ATTACHMENTS
+    assert 'OwnerResourcePolicy.value("skill_step_items")' in ATTACHMENTS
+    assert 'OwnerResourcePolicy.value("skill_tool_items")' in ATTACHMENTS
     assert "0.70" in ATTACHMENTS
     assert "source_code" not in ATTACHMENTS.split("func _sanitize_imported_skill", 1)[1].split("func _owner_experience_store", 1)[0]
 

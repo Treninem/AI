@@ -8,10 +8,14 @@ Before editing any file:
 
 1. Fetch the latest `main` HEAD.
 2. Read **all of `docs/PROJECT_MASTER_LOG.md`**.
-3. Read **all of `docs/AURORAFOX_ENGINEERING_MEMORY.md`** and search it for the subsystem, tool and exact error text involved.
-4. Read the master log's `Активные работы и занятые файлы` section.
-5. Add an ACTIVE claim to that same master log before touching implementation files.
-6. Do not edit files/subsystems claimed by another active lane unless you first integrate the latest `main` and explicitly take over/reconcile the claim in the master log.
+3. Read **all of `docs/AURORAFOX_CANONICAL_ROADMAP.md`** and identify the exact release, scope class and acceptance gates for the work.
+4. Read the accepted ADRs relevant to the subsystem/decision. At minimum, check `docs/adr/` for decisions that affect the planned change.
+5. Read **all of `docs/AURORAFOX_ENGINEERING_MEMORY.md`** and search it for the subsystem, tool and exact error text involved.
+6. Read the master log's `Активные работы и занятые файлы` section.
+7. Add an ACTIVE claim to that same master log before touching implementation files.
+8. The claim must include `ROADMAP_RELEASE`, `SCOPE_CLASS`, `ROADMAP_SECTION`, `ADR_REFS`, `ACCEPTANCE_GATES`, dependencies/non-blockers, intended bump and owned paths.
+9. Do not edit files/subsystems claimed by another active lane unless you first integrate the latest `main` and explicitly take over/reconcile the claim in the master log.
+10. A claim may not silently expand a release's CRITICAL scope. New future/parallel work stays non-blocking unless the owner explicitly changes the canonical roadmap.
 
 ## Mandatory engineering-memory protocol
 

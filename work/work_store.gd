@@ -38,8 +38,6 @@ const VALID_TRANSITIONS := {
 
 const RETRYABLE_STATES := [STATE_FAILED, STATE_CANCELLED, STATE_INTERRUPTED, STATE_PARTIAL]
 const PROTECTED_TASK_KEYS := ["id", "project_id", "created_at", "attempts", "status"]
-const MAX_ERROR_CHARS := 2048
-const MAX_SUMMARY_CHARS := 4096
 
 var projects: Array = []
 var active_project_id := ""
@@ -366,7 +364,7 @@ func fail_task(project_id: String, task_id: String, error_text: String, retryabl
 	var state := str(task.get("status", ""))
 	if state not in [STATE_QUEUED, STATE_RUNNING]:
 		return false
-	var clean := _redact(error_text).substr(0, MAX_ERROR_CHARS)
+	var clean := OwnerResourcePolicy.clip(_redact(error_text), "work_error_chars")
 	return transition_task(project_id, task_id, STATE_FAILED, {
 		"error": clean,
 		"last_error": clean,
@@ -376,7 +374,7 @@ func fail_task(project_id: String, task_id: String, error_text: String, retryabl
 	}, false)
 
 func interrupt_task(project_id: String, task_id: String, reason: String, requires_user_action: bool = false) -> bool:
-	var clean := _redact(reason).substr(0, MAX_ERROR_CHARS)
+	var clean := OwnerResourcePolicy.clip(_redact(reason), "work_error_chars")
 	return transition_task(project_id, task_id, STATE_INTERRUPTED, {
 		"last_error": clean,
 		"error": clean,
@@ -386,7 +384,7 @@ func interrupt_task(project_id: String, task_id: String, reason: String, require
 
 func mark_partial(project_id: String, task_id: String, summary: String, requires_user_action: bool = false) -> bool:
 	return transition_task(project_id, task_id, STATE_PARTIAL, {
-		"result_summary": _redact(summary).substr(0, MAX_SUMMARY_CHARS),
+		"result_summary": OwnerResourcePolicy.clip(_redact(summary), "work_summary_chars"),
 		"message": "Partially completed",
 		"requires_user_action": requires_user_action,
 	}, false)
@@ -396,7 +394,7 @@ func complete_task(project_id: String, task_id: String, result: String, artifact
 		"progress": 100,
 		"message": "Completed",
 		"result": result,
-		"result_summary": _redact(result).substr(0, MAX_SUMMARY_CHARS),
+		"result_summary": OwnerResourcePolicy.clip(_redact(result), "work_summary_chars"),
 		"artifact_path": artifact_path,
 		"error": "",
 		"last_error": "",
@@ -405,8 +403,8 @@ func complete_task(project_id: String, task_id: String, result: String, artifact
 func note_action(project_id: String, task_id: String, action_name: String, action_id: String, retry_safety: String) -> bool:
 	var safety := retry_safety if retry_safety in ["safe", "unsafe"] else "unsafe"
 	return update_task(project_id, task_id, {
-		"last_action": action_name.substr(0, 256),
-		"last_action_id": action_id.substr(0, 256),
+		"last_action": OwnerResourcePolicy.clip(_redact(action_name), "work_action_chars"),
+		"last_action_id": action_id,
 		"last_action_retry_safety": safety,
 	})
 
@@ -479,9 +477,9 @@ func _apply_safe_patch(task: Dictionary, patch: Dictionary) -> void:
 			continue
 		var value = patch[key]
 		if key_text in ["error", "last_error", "message"]:
-			value = _redact(str(value)).substr(0, MAX_ERROR_CHARS)
+			value = OwnerResourcePolicy.clip(_redact(str(value)), "work_error_chars")
 		elif key_text in ["result_summary", "last_action"]:
-			value = _redact(str(value)).substr(0, MAX_SUMMARY_CHARS)
+			value = OwnerResourcePolicy.clip(_redact(str(value)), "work_summary_chars")
 		elif key_text == "progress":
 			value = clampi(int(value), 0, 100)
 		elif key_text in ["last_action_retry_safety", "attempt_retry_safety"]:
@@ -691,7 +689,7 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 	var attempts := maxi(0, int(raw.get("attempts", 0)))
 	var requires_user_action := bool(raw.get("requires_user_action", false))
 	var retryable := bool(raw.get("retryable", true))
-	var last_error := _redact(str(raw.get("last_error", raw.get("error", "")))).substr(0, MAX_ERROR_CHARS)
+	var last_error := OwnerResourcePolicy.clip(_redact(str(raw.get("last_error", raw.get("error", "")))), "work_error_chars")
 	var executed_state := state in [STATE_RUNNING, STATE_PAUSED, STATE_FAILED, STATE_CANCELLED, STATE_INTERRUPTED, STATE_PARTIAL]
 	if not attempt_safety_present and (executed_state or attempts > 0):
 		attempt_safety = "unsafe"
@@ -719,14 +717,14 @@ func _sanitize_task(raw: Dictionary, project_id: String, used_task_ids: Dictiona
 		"prompt": str(raw.get("prompt", "")),
 		"status": state,
 		"progress": clampi(int(raw.get("progress", 0)), 0, 100),
-		"message": _redact(str(raw.get("message", ""))).substr(0, MAX_ERROR_CHARS),
+		"message": OwnerResourcePolicy.clip(_redact(str(raw.get("message", ""))), "work_error_chars"),
 		"output_name": str(raw.get("output_name", "")),
 		"artifact_path": str(raw.get("artifact_path", "")),
 		"result": str(raw.get("result", "")),
-		"result_summary": _redact(str(raw.get("result_summary", ""))).substr(0, MAX_SUMMARY_CHARS),
+		"result_summary": OwnerResourcePolicy.clip(_redact(str(raw.get("result_summary", ""))), "work_summary_chars"),
 		"error": last_error,
 		"last_error": last_error,
-		"last_action": _redact(str(raw.get("last_action", ""))).substr(0, MAX_SUMMARY_CHARS),
+		"last_action": OwnerResourcePolicy.clip(_redact(str(raw.get("last_action", ""))), "work_summary_chars"),
 		"last_action_id": str(raw.get("last_action_id", "")),
 		"last_action_retry_safety": retry_safety,
 		"attempt_retry_safety": attempt_safety,

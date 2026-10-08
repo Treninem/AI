@@ -19,6 +19,8 @@ const DEFAULT_UBATCH_SIZE := 32
 var server_pid := 0
 var active_model := ""
 var starting := false
+var _active_streams: Array[HTTPClient] = []
+var _stream_cancel_epoch := 0
 
 func _exit_tree() -> void:
 	# Tree teardown is the one path that must always terminate an owned process,
@@ -50,17 +52,27 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	if not FileAccess.file_exists(absolute_model): return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core отсутствует или повреждён. Восстановите установку AuroraFox.", "model_path": model_path}
 	var ready := await ensure_server(absolute_model)
 	if not bool(ready.get("ok", false)): return ready
-	var terse_request := _is_explicit_terse_request(messages)
 	var structured_request := _is_strict_structured_request(messages)
-	var default_max_tokens := TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS
-	var max_tokens := clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)
-	var request_timeout := clampf(float(options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)), 5.0, 600.0)
+	# A strict JSON plan may say "только строгий JSON"; the broad terse
+	# marker "только с" must not give it the short reply token budget.
+	var terse_request := not structured_request and _is_explicit_terse_request(messages)
+	var max_tokens := _generation_budget(options, terse_request)
+	if max_tokens == -2:
+		return {"ok": false, "error": "Invalid Core token budget: expected integer -1..2147483647", "model_failure": false, "retryable": false, "failure_scope": "request_budget"}
+	var request_timeout := maxf(0.0, float(options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)))
+	var wait_limits := CoreWaitPolicy.limits()
+	var stall_timeout := float(wait_limits.stall_timeout_seconds)
+	# Preserve an explicit per-request override without making it a total deadline.
+	if options.has("timeout_seconds"): stall_timeout = request_timeout
+	var total_timeout := float(wait_limits.total_timeout_seconds)
+	var response_bytes := int(wait_limits.response_max_bytes)
 	var payload := {
 		"model": MODEL_ALIAS,
 		"messages": messages,
 		"temperature": float(options.get("temperature", 0.2)),
 		"max_tokens": max_tokens,
-		"stream": false
+		"stream": true,
+		"return_progress": true
 	}
 	# Exact terse and strict structured responses do not benefit from hidden
 	# reasoning tokens that can consume the whole request deadline before any
@@ -71,7 +83,11 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 		payload["reasoning_effort"] = "none"
 	elif options.has("reasoning_effort"):
 		payload["reasoning_effort"] = str(options.get("reasoning_effort", ""))
-	var response := await _request_json("/v1/chat/completions", HTTPClient.METHOD_POST, payload, request_timeout)
+	# Bundled llama.cpp supports grammar-backed JSON objects on this local
+	# endpoint. Apply it only when the caller explicitly asks for strict JSON.
+	if structured_request:
+		payload["response_format"] = {"type": "json_object"}
+	var response := await _request_progress_json(payload, stall_timeout, total_timeout, response_bytes)
 	if not bool(response.get("ok", false)): return response
 	var data: Dictionary = response.get("data", {})
 	var choices: Array = data.get("choices", [])
@@ -111,6 +127,10 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		"--alias", MODEL_ALIAS,
 		"--jinja"
 	])
+	# Opt-in CI synthetic benchmark log; normal private chat enables no file log.
+	var benchmark_log := OS.get_environment("AURORAFOX_BENCHMARK_CORE_LOG_PATH")
+	if not benchmark_log.is_empty():
+		args.append_array(PackedStringArray(["--log-file", benchmark_log]))
 	server_pid = OS.create_process(exe, args, false)
 	if server_pid <= 0:
 		starting = false
@@ -151,7 +171,12 @@ func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 		"background_warmup_continues": true
 	}
 
+func cancel_active_requests() -> void:
+	_stream_cancel_epoch += 1
+	for client in _active_streams: client.close()
+
 func stop(force := false) -> void:
+	cancel_active_requests()
 	# A foreground chat can time out its short join while the background loader
 	# still legitimately owns the same llama-server startup. Generic recovery
 	# must not kill that process and reset a slow machine back to zero. Explicit
@@ -177,6 +202,9 @@ func runtime_info() -> Dictionary:
 		"default_chat_max_tokens": DEFAULT_CHAT_MAX_TOKENS,
 		"terse_chat_max_tokens": TERSE_CHAT_MAX_TOKENS,
 		"default_chat_timeout_seconds": DEFAULT_CHAT_TIMEOUT_SECONDS,
+		"request_wait_policy": "confirmed_progress",
+		"owner_wait_limits": CoreWaitPolicy.limits(),
+		"owner_generation_tokens": {"chat": OwnerResourcePolicy.value("chat_max_tokens"), "terse": OwnerResourcePolicy.value("terse_max_tokens")},
 		"context_size": DEFAULT_CONTEXT_SIZE,
 		"parallel_slots": DEFAULT_PARALLEL_SLOTS,
 		"threads": DEFAULT_THREADS,
@@ -240,9 +268,9 @@ func _request_json(path: String, method: HTTPClient.Method, payload: Dictionary,
 	if code >= 200 and code < 300:
 		if not parsed is Dictionary:
 			var detail := "empty response" if raw.strip_edges().is_empty() else "invalid JSON response"
-			return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": "Core Engine returned %s" % detail, "raw": raw.substr(0, 3000), "failure_scope": "request", "model_failure": false, "retryable": true}
+			return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": "Core Engine returned %s" % detail, "raw": OwnerResourcePolicy.clip(raw, "core_http_error_chars"), "failure_scope": "request", "model_failure": false, "retryable": true}
 		return {"ok": true, "http": code, "data": parsed, "raw": raw}
-	return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": raw.substr(0, 3000)}
+	return {"ok": false, "runtime": "aurora_core_desktop", "http": code, "error": OwnerResourcePolicy.clip(raw, "core_http_error_chars")}
 
 func _candidate_roots() -> Array[String]:
 	return [
@@ -271,3 +299,70 @@ func _find_server_recursive(root: String, depth: int) -> String:
 				return found
 	dir.list_dir_end()
 	return ""
+
+
+func _request_progress_json(payload: Dictionary, stall_seconds: float, total_seconds: float, byte_budget: int, port: int = PORT) -> Dictionary:
+	var client := HTTPClient.new()
+	var stream := CoreProgressStream.new()
+	stream.configure(Time.get_ticks_msec(), stall_seconds, total_seconds, byte_budget)
+	var epoch := _stream_cancel_epoch
+	_active_streams.append(client)
+	var failure := ""
+	var scope := "request"
+	var response_code := 0
+	var sent := false
+	var headers_read := false
+	var err := client.connect_to_host(HOST, port)
+	if err != OK: failure = "Core connection failed: %s" % error_string(err)
+	while failure.is_empty() and not stream.done:
+		if epoch != _stream_cancel_epoch:
+			failure = "Core request cancelled"
+			scope = "cancelled"
+			break
+		var timeout_reason := stream.timeout_reason(Time.get_ticks_msec())
+		if not timeout_reason.is_empty():
+			failure = "Core request deadline: %s" % timeout_reason
+			scope = timeout_reason
+			break
+		err = client.poll()
+		if err != OK:
+			failure = "Core transport failed: %s" % error_string(err)
+			break
+		var status := client.get_status()
+		if status == HTTPClient.STATUS_CONNECTED and not sent:
+			err = client.request(HTTPClient.METHOD_POST, "/v1/chat/completions", PackedStringArray(["Content-Type: application/json", "Accept: text/event-stream"]), JSON.stringify(payload))
+			if err != OK: failure = "Core request failed: %s" % error_string(err)
+			sent = true
+		if client.has_response() and not headers_read:
+			headers_read = true
+			response_code = client.get_response_code()
+			if response_code < 200 or response_code >= 300:
+				failure = "Core HTTP error %d" % response_code
+		if status == HTTPClient.STATUS_BODY and failure.is_empty():
+			var bytes := client.read_response_body_chunk()
+			if not bytes.is_empty(): stream.feed(bytes, Time.get_ticks_msec())
+			if not stream.error.is_empty():
+				failure = stream.error
+				scope = "response_budget" if failure.contains("byte budget") else "protocol"
+		elif sent and headers_read and status in [HTTPClient.STATUS_CONNECTED, HTTPClient.STATUS_DISCONNECTED]:
+			failure = "Core stream ended before a complete response"
+		elif sent and status == HTTPClient.STATUS_DISCONNECTED:
+			failure = "Core disconnected before a complete response"
+		elif status in [HTTPClient.STATUS_CANT_RESOLVE, HTTPClient.STATUS_CANT_CONNECT, HTTPClient.STATUS_CONNECTION_ERROR, HTTPClient.STATUS_TLS_HANDSHAKE_ERROR]:
+			failure = "Core connection failed with status %d" % status
+		if failure.is_empty() and not stream.done: await get_tree().process_frame
+	client.close()
+	_active_streams.erase(client)
+	if not failure.is_empty():
+		return {"ok": false, "runtime": "aurora_core_desktop", "http": response_code, "error": failure, "failure_scope": scope, "model_failure": false, "retryable": scope == "request", "cancelled": scope == "cancelled", "prompt_tokens_processed": stream.processed, "generated_bytes": stream.generated_bytes}
+	return {"ok": true, "http": response_code, "data": stream.result(), "progress": {"prompt_tokens_processed": stream.processed, "generated_bytes": stream.generated_bytes, "received_bytes": stream.received_bytes}}
+
+func _generation_budget(options: Dictionary, terse_request: bool) -> int:
+	var default_max_tokens := OwnerResourcePolicy.value("terse_max_tokens" if terse_request else "chat_max_tokens")
+	var candidate = options.get("max_tokens", default_max_tokens)
+	if not (candidate is int or candidate is float): return -2
+	var number := float(candidate)
+	if not is_finite(number) or number != floor(number) or number < -1 or number > 2147483647.0: return -2
+	var requested_tokens := int(candidate)
+	# llama.cpp -1 disables the token ceiling, not the real model context capacity.
+	return -1 if requested_tokens <= 0 else requested_tokens

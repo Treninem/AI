@@ -6,6 +6,12 @@ on:
       - 'work/**'
       - 'computer/**'
       - 'scripts/computer_client.gd'
+      - 'scripts/computer_request_guard.gd'
+      - 'tests/computer_request_guard_smoke.gd'
+      - 'tools/run_computer_guard_smoke.py'
+      - 'tools/computer_gui_guard_fixture.py'
+      - 'tests/test_sandbox_resource_limits.py'
+      - 'tests/test_computer_parent_watchdog.py'
       - 'scripts/agent_core.gd'
       - 'scripts/tool_registry.gd'
       - 'scripts/sandbox_manager.gd'
@@ -25,6 +31,12 @@ on:
       - 'work/**'
       - 'computer/**'
       - 'scripts/computer_client.gd'
+      - 'scripts/computer_request_guard.gd'
+      - 'tests/computer_request_guard_smoke.gd'
+      - 'tools/run_computer_guard_smoke.py'
+      - 'tools/computer_gui_guard_fixture.py'
+      - 'tests/test_sandbox_resource_limits.py'
+      - 'tests/test_computer_parent_watchdog.py'
       - 'scripts/agent_core.gd'
       - 'scripts/tool_registry.gd'
       - 'scripts/sandbox_manager.gd'
@@ -62,10 +74,19 @@ jobs:
           python-version: '3.11'
       - name: Install contract-test dependencies
         run: python -m pip install --disable-pip-version-check pytest fastapi 'uvicorn[standard]' 'pydantic>=2.11' 'httpx==0.28.1' python-multipart
+      - name: Prepare content-addressed container cancellation fixture
+        shell: bash
+        run: |
+          docker pull python:3-slim
+          fixture_image="$(docker image inspect python:3-slim --format '{{.Id}}')"
+          test -n "$fixture_image"
+          echo "AURORAFOX_IMAGE_PYTHON=$fixture_image" >> "$GITHUB_ENV"
+          echo "AURORAFOX_REQUIRE_CONTAINER_CANCEL=1" >> "$GITHUB_ENV"
+          echo "AURORA_CONTAINER_CANCEL_IMAGE=$fixture_image"
       - name: Python syntax
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
       - name: Computer reliability routing failure-injection concurrency and response contracts
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
 
   computer-contract-windows:
     runs-on: windows-latest
@@ -91,10 +112,10 @@ jobs:
         run: python -c "import pyautogui, pywinauto; from PIL import ImageGrab; print('WINDOWS_COMPUTER_RUNTIME_IMPORT_OK')"
       - name: Python syntax
         shell: pwsh
-        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
+        run: python -m py_compile computer/computer_service.py tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
       - name: Computer reliability routing failure-injection concurrency and response contracts on Windows
         shell: pwsh
-        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py
+        run: python -m pytest -q tests/computer_agent_reliability_test.py tests/computer_agent_routing_contract_test.py tests/computer_agent_failure_injection_test.py tests/computer_agent_concurrency_test.py tests/test_network_json_contract.py tests/test_sandbox_resource_limits.py tests/test_computer_parent_watchdog.py
 
   work-godot:
     runs-on: ubuntu-24.04
@@ -109,6 +130,11 @@ jobs:
           AURORA_EXPECTED_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
           python -c "import os, subprocess, sys; actual = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip(); expected = os.environ['AURORA_EXPECTED_HEAD_SHA']; print('AURORA_CI_CHECKOUT_SHA=' + actual); sys.exit(0 if actual == expected else 'Candidate checkout SHA mismatch: expected ' + expected)"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install actual Computer loopback sidecar dependencies
+        run: python -m pip install fastapi==0.116.1 uvicorn==0.35.0 pydantic==2.11.7
       - name: Download Godot 4.7.1
         shell: bash
         run: |
@@ -141,6 +167,9 @@ jobs:
         run: timeout 30s ./godot --headless --path . --script tests/computer_client_response_smoke.gd
       - name: Autonomy both-corrupt state fail-closed smoke
         run: timeout 30s ./godot --headless --path . --script tests/autonomy_state_failure_injection_smoke.gd
+
+      - name: Prove actual owned-process master-stop and transport cancellation
+        run: python tools/run_computer_guard_smoke.py ./godot
 
   source-boundaries:
     runs-on: ubuntu-24.04

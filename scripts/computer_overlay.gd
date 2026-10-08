@@ -311,9 +311,12 @@ func execute_goal(goal: String, max_steps: int = 30) -> Dictionary:
 	var response := await core.run_task(task, [])
 	var ok := not response.begins_with("Ошибка модели:") and not response.begins_with("__AURORA_WORK_CONTROL__:")
 	if status_label != null:
-		status_label.text = "Компьютерная задача завершена." if ok else "AuroraFox Core остановил компьютерную задачу."
+		status_label.text = "AuroraFox Core ответил; итог действий не подтверждён." if ok else "AuroraFox Core остановил компьютерную задачу."
 	return {
-		"ok": ok,
+		"ok": false,
+		"error": "action_outcome_unverified" if ok else "core_task_failed",
+		"status": "UNVERIFIED",
+		"verified": false,
 		"response": response,
 		"planning_owner": "aurorafox_core",
 		"service_side_planning": false,

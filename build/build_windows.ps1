@@ -14,6 +14,7 @@ $computerSource = Join-Path $root "computer"
 $computerOut = Join-Path $outDir "computer"
 $fileSource = Join-Path $root "file_intelligence"
 $fileOut = Join-Path $outDir "file_intelligence"
+$securityRunnerSource = Join-Path $root "security_workspace\runner.py"
 $modelsSource = Join-Path $root "models"
 $modelsOut = Join-Path $outDir "models"
 $coreSource = Join-Path $root "core_runtime"
@@ -209,7 +210,7 @@ if ($portableBuilt) {
 # Computer Agent bootstrap.
 if (Test-Path $computerOut) { Remove-Item $computerOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $computerOut | Out-Null
-foreach ($file in @("computer_service.py", "requirements.txt", "install_computer.ps1")) {
+foreach ($file in @("computer_service.py", "windows_job.py", "owned_gui_worker.py", "requirements.txt", "install_computer.ps1")) {
     $source = Join-Path $computerSource $file
     if (Test-Path $source) { Copy-Item $source (Join-Path $computerOut $file) -Force }
 }
@@ -230,6 +231,9 @@ foreach ($file in @("file_service.py", "project_index_service.py", "local_ocr.py
     if (-not (Test-Path $source)) { throw "File Intelligence bootstrap is missing: $file" }
     Copy-Item $source (Join-Path $fileOut $file) -Force
 }
+if (-not (Test-Path -LiteralPath $securityRunnerSource)) { throw "Authorized security runner is missing" }
+Copy-Item $securityRunnerSource (Join-Path $fileOut "security_runner.py") -Force
+
 foreach ($dir in @("python", "vendor", "ocr_runtime")) {
     $source = Join-Path $fileSource $dir
     if (-not (Test-Path -LiteralPath $source)) { throw "Portable File Intelligence component is missing: $dir" }
@@ -276,6 +280,8 @@ if (-not $SkipVoiceSetup) {
 if (-not (Test-Path (Join-Path $voiceOut "requirements_xtts.txt"))) { throw "XTTS dependency profile was not packaged" }
 if (-not (Test-Path (Join-Path $voiceOut "prepare_ffmpeg.ps1"))) { throw "XTTS shared FFmpeg bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "computer_service.py"))) { throw "Computer Agent service was not packaged" }
+if (-not (Test-Path (Join-Path $computerOut "windows_job.py"))) { throw "Windows Computer ownership helper was not packaged" }
+if (-not (Test-Path (Join-Path $computerOut "owned_gui_worker.py"))) { throw "Computer GUI ownership bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "install_computer.ps1"))) { throw "Computer Agent bootstrap was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "python\python.exe"))) { throw "Portable Computer Agent Python was not packaged" }
 if (-not (Test-Path (Join-Path $computerOut "vendor\fastapi"))) { throw "Portable Computer Agent dependencies were not packaged" }

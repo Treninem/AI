@@ -213,7 +213,7 @@ func synchronize_all() -> Dictionary:
 	report["last_improvement_unix"] = _last_improvement_unix
 	report["last_research_unix"] = _last_research_unix
 	report["state_recovery_blocked"] = _state_recovery_blocked
-	report["events"] = _events.slice(maxi(0, _events.size() - 20), _events.size())
+	report["events"] = _events.slice(maxi(0, _events.size() - OwnerResourcePolicy.count(_events.size(), "coordinator_report_items")), _events.size())
 	_last_report = report.duplicate(true)
 	_save_state()
 	synchronization_completed.emit(report)
@@ -257,7 +257,7 @@ func _collect_observations() -> Dictionary:
 		var index_status: Variant = await tools.call_tool("project_index_status", {"path": "res://"})
 		result["project_index"] = index_status
 		if index_status is Dictionary and index_status.get("ok", false) and int(index_status.get("files", 0)) == 0 and tools.tools.has("index_project"):
-			result["project_index_refresh"] = await tools.call_tool("index_project", {"path": "res://", "max_files": 30000, "force": false})
+			result["project_index_refresh"] = await tools.call_tool("index_project", {"path": "res://", "max_files": OwnerResourcePolicy.value("coordinator_index_files"), "force": false})
 	if extensions != null:
 		result["runtime_extensions"] = extensions.list_extensions()
 	if agent_core != null:
@@ -439,8 +439,9 @@ func _record_event(kind: String, details: Dictionary) -> void:
 		"kind": kind,
 		"details": _compact(details)
 	})
-	if _events.size() > 500:
-		_events = _events.slice(_events.size() - 500, _events.size())
+	var cap := OwnerResourcePolicy.value("coordinator_event_items")
+	if cap > 0 and _events.size() > cap:
+		_events = _events.slice(_events.size() - cap, _events.size())
 	_save_state()
 
 func _save_state() -> void:
@@ -583,14 +584,14 @@ func _remove_state_file(path: String) -> bool:
 	return DirAccess.remove_absolute(ProjectSettings.globalize_path(path)) == OK
 
 func _compact(value: Variant) -> Variant:
+	if value is String: return OwnerResourcePolicy.clip(value, "coordinator_detail_chars")
 	if value is Dictionary:
-		var out: Dictionary = value.duplicate(true)
-		for key in out.keys():
-			var text := str(out[key])
-			if text.length() > 5000:
-				out[key] = text.substr(0, 5000) + "…"
+		var out := {}
+		for key in value: out[key] = _compact(value[key])
 		return out
 	if value is Array:
-		var arr: Array = value
-		return arr.slice(0, mini(arr.size(), 50))
+		var out := []
+		for item in value.slice(0, OwnerResourcePolicy.count(value.size(), "coordinator_detail_items")):
+			out.append(_compact(item))
+		return out
 	return value

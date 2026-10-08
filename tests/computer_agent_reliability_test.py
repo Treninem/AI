@@ -356,7 +356,7 @@ def test_worker_result_queue_waits_bounded_time_for_feeder_flush(tmp_path: Path,
 
 def test_client_contract_has_bounded_timeouts_master_stop_and_android_graceful():
     text = (ROOT / "scripts" / "computer_client.gd").read_text(encoding="utf-8")
-    assert "req.timeout = clampf(timeout_seconds" in text
+    assert 'ComputerRequestGuard.configure_request(req, timeout_seconds, "computer_default_http_seconds")' in text
     assert "240.0" not in text
     assert "master_stop" in text
     assert 'OS.get_name() != "Windows"' in text

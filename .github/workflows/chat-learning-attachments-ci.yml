@@ -3,6 +3,27 @@ name: AuroraFox Chat Learning Attachments CI
 on:
   pull_request:
     paths:
+      - 'tests/security_owner_review_smoke.gd'
+      - 'tests/file_spreadsheet_limits_smoke.gd'
+      - 'scripts/file_intelligence_client.gd'
+      - 'scripts/settings_overlay.gd'
+      - 'security_workspace/**'
+      - 'tests/test_security_workspace.py'
+      - 'scripts/agent_core.gd'
+      - 'scripts/tool_registry.gd'
+      - 'build/build_windows.ps1'
+      - 'tests/test_security_tool_registry_contract.py'
+      - 'tests/test_owner_runtime_limits_contract.py'
+      - 'tests/test_owner_web_settings_contract.py'
+      - 'tests/test_owner_control_audit.py'
+      - 'config/owner_control_policy.json'
+      - 'scripts/public_web_manager.gd'
+      - 'scripts/owner_limit_persistence.gd'
+      - 'tests/owner_resource_limits_smoke.gd'
+      - 'scripts/user_intent_router.gd'
+      - 'tests/public_document_url_smoke.gd'
+      - 'tests/public_web_manager_smoke.gd'
+      - 'tests/test_public_web_manager_contract.py'
       - 'scripts/attachment_manager.gd'
       - 'scripts/main.gd'
       - 'scripts/experience_store.gd'
@@ -14,6 +35,27 @@ on:
   push:
     branches: [main]
     paths:
+      - 'tests/security_owner_review_smoke.gd'
+      - 'tests/file_spreadsheet_limits_smoke.gd'
+      - 'scripts/file_intelligence_client.gd'
+      - 'scripts/settings_overlay.gd'
+      - 'security_workspace/**'
+      - 'tests/test_security_workspace.py'
+      - 'scripts/agent_core.gd'
+      - 'scripts/tool_registry.gd'
+      - 'build/build_windows.ps1'
+      - 'tests/test_security_tool_registry_contract.py'
+      - 'tests/test_owner_runtime_limits_contract.py'
+      - 'tests/test_owner_web_settings_contract.py'
+      - 'tests/test_owner_control_audit.py'
+      - 'config/owner_control_policy.json'
+      - 'scripts/public_web_manager.gd'
+      - 'scripts/owner_limit_persistence.gd'
+      - 'tests/owner_resource_limits_smoke.gd'
+      - 'scripts/user_intent_router.gd'
+      - 'tests/public_document_url_smoke.gd'
+      - 'tests/public_web_manager_smoke.gd'
+      - 'tests/test_public_web_manager_contract.py'
       - 'scripts/attachment_manager.gd'
       - 'scripts/main.gd'
       - 'scripts/experience_store.gd'
@@ -60,7 +102,7 @@ jobs:
         run: python -m pip install --disable-pip-version-check pytest==8.4.1
 
       - name: Run chat learning attachment contract
-        run: python -m pytest -q tests/test_chat_learning_attachment_contract.py
+        run: python -m pytest -q tests/test_chat_learning_attachment_contract.py tests/test_public_web_manager_contract.py tests/test_security_tool_registry_contract.py tests/test_owner_runtime_limits_contract.py tests/test_owner_web_settings_contract.py tests/test_owner_control_audit.py
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -79,3 +121,18 @@ jobs:
 
       - name: Prove chat attachment import into Knowledge Training and Skills
         run: timeout 120s ./godot --headless --path . --script tests/chat_learning_attachment_smoke.gd
+
+      - name: Prove public page reading and document routing
+        run: |
+          timeout 30s ./godot --headless --path . --script tests/owner_resource_limits_smoke.gd
+          timeout 120s ./godot --headless --path . --script tests/public_web_manager_smoke.gd
+          timeout 120s ./godot --headless --path . --script tests/public_document_url_smoke.gd
+
+      - name: Prove authorized security lab remediation and retest
+        run: python -m unittest tests.test_security_workspace -v
+
+      - name: Prove owner consent and evidence integrity gates
+        run: timeout 120s ./godot --headless --path . --script tests/security_owner_review_smoke.gd
+
+      - name: Prove owner spreadsheet settings reach backend environment
+        run: timeout 120s ./godot --headless --path . --script tests/file_spreadsheet_limits_smoke.gd

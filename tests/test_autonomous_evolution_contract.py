@@ -157,10 +157,13 @@ def test_p0_runtime_limits_and_lazy_startup_are_contractual():
 def test_chat_attachment_learning_uses_the_submitted_instruction():
     manager = read("scripts/attachment_manager.gd")
     main = read("scripts/main.gd")
+    router = read("scripts/user_intent_router.gd")
     assert 'attachments.describe(path)' in main
     assert 'attachments.analyze(path, shown, false)' in main
     assert '_learning_type_from_instruction(question)' in manager
-    assert '"изучи"' in manager
+    assert 'intent_router.learning_type(question)' in manager
+    assert '"изуч"' in router
+    assert "owner_read_means_remember" in router
     assert 'transaction.import_extracted_file(store, path, text, metadata)' in manager
 
 

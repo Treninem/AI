@@ -168,13 +168,13 @@ def test_pdf_output_budget_stops_further_ocr_work(tmp_path, monkeypatch):
     assert any("120" in warning for warning in warnings)
 
 
-def test_pathological_pdf_page_dimensions_rejected_before_render():
+def test_nonfinite_pdf_page_dimensions_rejected_before_render():
     rendered = []
     closed = []
 
     class FakePage:
         def get_size(self):
-            return (1_000_000_000.0, 1_000_000_000.0)
+            return (float("inf"), 1_000_000_000.0)
 
         def render(self, **_kwargs):
             rendered.append(True)
@@ -187,10 +187,29 @@ def test_pathological_pdf_page_dimensions_rejected_before_render():
         def __getitem__(self, _index):
             return FakePage()
 
-    with pytest.raises(ValueError, match="safe local OCR render limit"):
+    with pytest.raises(ValueError, match="invalid dimensions"):
         file_service._render_pdf_page(FakePdf(), 0)
     assert rendered == []
     assert closed == [True]
+
+
+def test_pdf_integer_pixel_budget_with_real_pdfium(tmp_path, monkeypatch):
+    import pypdfium2
+    path = tmp_path / "large-page.pdf"
+    writer = PdfWriter()
+    writer.add_blank_page(width=1000000, height=1000000)
+    with path.open("wb") as target:
+        writer.write(target)
+    monkeypatch.setattr(file_service, "MAX_PDF_RENDER_PIXELS", 1)
+    pdf = pypdfium2.PdfDocument(str(path))
+    try:
+        image = file_service._render_pdf_page(pdf, 0)
+        try:
+            assert image.size == (1, 1)
+        finally:
+            image.close()
+    finally:
+        pdf.close()
 
 
 def test_pdf_ocr_limit_counts_render_failures(tmp_path, monkeypatch):

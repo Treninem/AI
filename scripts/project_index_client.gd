@@ -15,40 +15,49 @@ func _exit_tree() -> void:
 
 func health() -> Dictionary:
 	if OS.get_name() != "Windows": return {"ok": false, "error": "Project index is currently Windows-only"}
-	return await _request("/health", HTTPClient.METHOD_GET, {}, 5.0)
+	return await _request("/health", HTTPClient.METHOD_GET, {}, _timeout("project_index_health_http_seconds"))
 
 func index_project(root: String, max_files := 30000, force := false) -> Dictionary:
+	if max_files < 0: return {"ok": false, "error": "Index file budget must be nonnegative"}
 	if OS.get_name() != "Windows": return {"ok": false, "error": "Project index is currently Windows-only"}
 	return await _request("/index", HTTPClient.METHOD_POST, {
-		"root": _globalize(root), "max_files": clampi(max_files, 1, 100000), "force": force
-	}, 900.0)
+		"root": _globalize(root), "max_files": max_files, "force": force,
+		"max_source_bytes": OwnerResourcePolicy.value("project_index_source_bytes"),
+		"max_symbols": OwnerResourcePolicy.value("project_index_file_symbols")
+	}, _timeout("project_index_build_http_seconds"))
 
 func search(root: String, query: String, limit := 20, language := "") -> Dictionary:
+	if limit < 0: return {"ok": false, "error": "Search limit must be nonnegative"}
 	if OS.get_name() != "Windows": return {"ok": false, "results": [], "error": "Project index is currently Windows-only"}
 	return await _request("/search", HTTPClient.METHOD_POST, {
 		"root": _globalize(root) if not root.is_empty() else "",
 		"query": query,
-		"limit": clampi(limit, 1, 100),
+		"limit": _result_limit(limit, "project_index_search_results"),
+		"max_query_chars": OwnerResourcePolicy.value("project_index_query_chars"),
+		"excerpt_chars": OwnerResourcePolicy.value("project_index_excerpt_chars"),
+		"result_symbols": OwnerResourcePolicy.value("project_index_result_symbols"),
 		"language": language
-	}, 60.0)
+	}, _timeout("project_index_search_http_seconds"))
 
 func search_symbols(root: String, query: String, limit := 50) -> Dictionary:
+	if limit < 0: return {"ok": false, "error": "Symbol limit must be nonnegative"}
 	if OS.get_name() != "Windows": return {"ok": false, "results": [], "error": "Project index is currently Windows-only"}
 	return await _request("/symbols", HTTPClient.METHOD_POST, {
-		"root": _globalize(root) if not root.is_empty() else "", "query": query, "limit": clampi(limit, 1, 200)
-	}, 60.0)
+		"root": _globalize(root) if not root.is_empty() else "", "query": query, "limit": _result_limit(limit, "project_index_symbol_results"),
+		"max_query_chars": OwnerResourcePolicy.value("project_index_symbol_query_chars")
+	}, _timeout("project_index_search_http_seconds"))
 
 func status(root := "") -> Dictionary:
 	if OS.get_name() != "Windows": return {"ok": false, "error": "Project index is currently Windows-only"}
 	var suffix := ""
 	if not root.is_empty(): suffix = "?root=" + _globalize(root).uri_encode()
-	return await _request("/status" + suffix, HTTPClient.METHOD_GET, {}, 30.0)
+	return await _request("/status" + suffix, HTTPClient.METHOD_GET, {}, _timeout("project_index_manage_http_seconds"))
 
 func clear(root := "") -> Dictionary:
 	if OS.get_name() != "Windows": return {"ok": true}
 	var suffix := ""
 	if not root.is_empty(): suffix = "?root=" + _globalize(root).uri_encode()
-	return await _request("/clear" + suffix, HTTPClient.METHOD_POST, {}, 30.0)
+	return await _request("/clear" + suffix, HTTPClient.METHOD_POST, {}, _timeout("project_index_manage_http_seconds"))
 
 func _start_backend() -> void:
 	var root := _runtime_root()
@@ -70,12 +79,19 @@ func _runtime_root() -> String:
 func _globalize(path: String) -> String:
 	return ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
 
-func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0) -> Dictionary:
+func _timeout(key: String) -> float:
+	return float(OwnerResourcePolicy.value(key))
+
+func _new_http_request(timeout: float) -> HTTPRequest:
+	var req := HTTPRequest.new()
+	req.timeout = timeout
+	add_child(req)
+	return req
+
+func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout: float) -> Dictionary:
 	var last_error := ""
 	for attempt in range(2):
-		var req := HTTPRequest.new()
-		req.timeout = timeout
-		add_child(req)
+		var req := _new_http_request(timeout)
 		var headers := PackedStringArray(["Content-Type: application/json"])
 		var body := "" if payload.is_empty() else JSON.stringify(payload)
 		var err := req.request(BASE_URL + path, headers, method, body)
@@ -96,3 +112,8 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 			if backend_pid <= 0: _start_backend()
 			await get_tree().create_timer(0.8).timeout
 	return {"ok": false, "error": last_error}
+
+func _result_limit(requested: int, policy_key: String) -> int:
+	var owner_limit := OwnerResourcePolicy.value(policy_key)
+	if owner_limit == 0: return requested
+	return owner_limit if requested == 0 else mini(requested, owner_limit)

@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import base64
+import ctypes
+from contextlib import asynccontextmanager, contextmanager
 import hashlib
 import hmac
 import json
 import multiprocessing as mp
+import math
 import os
 import re
 import shutil
 import signal
+import stat
 import subprocess
 import threading
 import time
@@ -20,12 +24,27 @@ from typing import Any
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
 
+def _owner_input_limit(name: str, default: int) -> int | None:
+    """Trusted startup policy; zero removes only the request input ceiling."""
+    raw = os.getenv(name, str(default))
+    if not raw.isascii() or not raw.isdecimal():
+        raise ValueError(f"Invalid nonnegative owner input limit: {name}")
+    value = int(raw)
+    return value or None
+
+
+COMMAND_ITEMS = _owner_input_limit("AURORAFOX_SANDBOX_COMMAND_ITEMS", 64)
+CWD_CHARS = _owner_input_limit("AURORAFOX_SANDBOX_CWD_CHARS", 1024)
+WRITE_PATH_CHARS = _owner_input_limit("AURORAFOX_SANDBOX_WRITE_PATH_CHARS", 1024)
+TASK_CHARS = _owner_input_limit("AURORAFOX_WORKSPACE_TASK_CHARS", 4000)
+
 HOST = os.getenv("AURORAFOX_COMPUTER_HOST", "127.0.0.1")
 PORT = int(os.getenv("AURORAFOX_COMPUTER_PORT", "8766"))
 SERVICE_TOKEN = os.getenv("AURORAFOX_COMPUTER_TOKEN", "").strip()
 PARENT_PID = int(os.getenv("AURORAFOX_PARENT_PID", "0") or "0")
 SANDBOX_ROOT = Path(os.getenv("AURORAFOX_SANDBOX_ROOT", str(Path.cwd() / "sandbox"))).resolve()
 MAX_OUTPUT = 120_000
+MAX_CAPTURE_BYTES = 8 * 1024 * 1024
 MAX_WRITE_BYTES = 2_000_000
 MAX_READ_BYTES = 5_000_000
 MAX_TEXT_CHARS = 20_000
@@ -46,11 +65,53 @@ ACTION_CACHE_LIMIT = 512
 
 SANDBOX_ROOT.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.1.0")
+@asynccontextmanager
+async def _lifespan(_app):
+    try:
+        yield
+    finally:
+        _cancel_all_processes()
+
+
+app = FastAPI(title="AuroraFox Computer Primitive Service", version="1.1.0", lifespan=_lifespan)
 _action_cache: OrderedDict[str, dict[str, Any]] = OrderedDict()
 _action_inflight: set[str] = set()
+_action_consumed: set[str] = set()
 _action_cache_lock = threading.Lock()
 _action_execution_lock = threading.Lock()
+_execution_lock = threading.Lock()
+_execution_records: dict[str, dict[str, Any]] = {}
+_execution_stopping = False
+_gui_workers: set[Any] = set()
+_gui_worker_lifecycle_lock = threading.RLock()
+
+
+class GuiResourceLimits(BaseModel):
+    action_results: int = Field(default=ACTION_CACHE_LIMIT, ge=0)
+    action_identities: int = Field(default=0, ge=0)
+    action_text_chars: int = Field(default=MAX_TEXT_CHARS, ge=0)
+    action_keys: int = Field(default=MAX_KEYS, ge=0)
+    action_clicks: int = Field(default=3, ge=0)
+    action_scroll: int = Field(default=100, ge=0)
+    action_seconds: int = Field(default=5, ge=0)
+    action_worker_seconds: int = Field(default=10, ge=0, le=9223372036854775807)
+    uia_items: int = Field(default=250, ge=0)
+    uia_windows: int = Field(default=30, ge=0)
+    uia_controls: int = Field(default=40, ge=0)
+    uia_name_chars: int = Field(default=512, ge=0)
+    uia_type_chars: int = Field(default=64, ge=0)
+    uia_id_chars: int = Field(default=256, ge=0)
+    worker_seconds: int = Field(default=8, ge=0, le=9223372036854775807)
+
+
+def _gui_limits(header):
+    if not header: return GuiResourceLimits().model_dump()
+    try:
+        data = json.loads(header)
+        if not isinstance(data, dict): raise ValueError("object required")
+        return GuiResourceLimits.model_validate(data).model_dump()
+    except (ValueError, TypeError):
+        raise HTTPException(422, "Invalid GUI resource policy")
 
 
 class Action(BaseModel):
@@ -59,11 +120,11 @@ class Action(BaseModel):
     x: int | None = None
     y: int | None = None
     button: str = "left"
-    clicks: int = Field(default=1, ge=1, le=3)
-    text: str = Field(default="", max_length=MAX_TEXT_CHARS)
-    keys: list[str] = Field(default_factory=list, max_length=MAX_KEYS)
-    amount: int = Field(default=0, ge=-100, le=100)
-    seconds: float = Field(default=0.2, ge=0.0, le=5.0)
+    clicks: int = Field(default=1, ge=1)
+    text: str = ""
+    keys: list[str] = Field(default_factory=list)
+    amount: int = 0
+    seconds: float = Field(default=0.2, ge=0.0, allow_inf_nan=False)
     verify: bool = False
 
 
@@ -74,28 +135,40 @@ class GoalRequest(BaseModel):
 
 
 class SandboxExecRequest(BaseModel):
-    command: list[str] = Field(min_length=1, max_length=64)
-    cwd: str = Field(default=".", max_length=1024)
-    timeout: int = Field(default=60, ge=1, le=300)
+    execution_id: str = Field(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$")
+    command: list[str] = Field(min_length=1, max_length=COMMAND_ITEMS)
+    cwd: str = Field(default=".", max_length=CWD_CHARS)
+    timeout: int = Field(default=60, ge=0, le=9223372036854775807)
     allow_network: bool = False
+    output_chars: int = Field(default=MAX_OUTPUT, ge=0)
+    capture_bytes: int = Field(default=MAX_CAPTURE_BYTES, ge=0)
+
+
+class SandboxCancelRequest(BaseModel):
+    execution_id: str = Field(min_length=1, max_length=160, pattern=r"^[A-Za-z0-9_:.-]+$")
 
 
 class SandboxWriteRequest(BaseModel):
-    path: str = Field(min_length=1, max_length=1024)
+    max_bytes: int = Field(default=MAX_WRITE_BYTES, ge=0)
+    path: str = Field(min_length=1, max_length=WRITE_PATH_CHARS)
     content: str
 
 
 class WorkspaceCreateRequest(BaseModel):
     id: str = Field(default="", max_length=96)
-    task: str = Field(default="", max_length=4000)
+    task: str = Field(default="", max_length=TASK_CHARS)
 
 
 class WorkspaceSnapshotRequest(BaseModel):
+    max_entries: int = Field(default_factory=lambda: MAX_SNAPSHOT_ENTRIES, ge=0)
+    max_bytes: int = Field(default_factory=lambda: MAX_SNAPSHOT_BYTES, ge=0)
     workspace: str = Field(min_length=1, max_length=96)
     label: str = Field(default="checkpoint", max_length=64)
 
 
 class WorkspaceRollbackRequest(BaseModel):
+    max_entries: int = Field(default_factory=lambda: MAX_SNAPSHOT_ENTRIES, ge=0)
+    max_bytes: int = Field(default_factory=lambda: MAX_SNAPSHOT_BYTES, ge=0)
     workspace: str = Field(min_length=1, max_length=96)
     snapshot: str = Field(min_length=1, max_length=128)
 
@@ -116,6 +189,8 @@ def _authorize(token: str | None, autonomy: str | None, *, require_autonomy: boo
     _auth(token)
     if require_autonomy:
         _autonomy_allowed(autonomy)
+        if _execution_stopping:
+            raise HTTPException(status_code=503, detail="Computer sidecar is stopping")
 
 
 def _retryable(action_type: str) -> bool:
@@ -128,17 +203,17 @@ def _error(kind: str, message: str, *, retryable: bool = False, **extra: Any) ->
     return result
 
 
-def _redact(value: str) -> str:
+def _redact(value: str, max_chars: int = MAX_OUTPUT) -> str:
     text = str(value)
     text = re.sub(
-        r"(?i)(password|passwd|token|api[_-]?key|authorization|cookie|private[_-]?key)\s*[:=]\s*[^\s,;]+",
+        '(?i)\\b(password|passwd|secret|token|api[_ -]?key|authorization|cookie|private[_ -]?key)["\']?\\s*(?:[:=]\\s*|\\s+)(?:Bearer\\s+)?(?:"[^"\\r\\n]*"|\'[^\'\\r\\n]*\'|[^\\s,;"\']+)',
         r"\1=[REDACTED]",
         text,
     )
-    text = re.sub(r"(?i)bearer\s+[A-Za-z0-9._~+/-]{8,}", "Bearer [REDACTED]", text)
+    text = re.sub(r"(?i)\bbearer\s+[^\s,;]+", "Bearer [REDACTED]", text)
     if SERVICE_TOKEN:
         text = text.replace(SERVICE_TOKEN, "[REDACTED]")
-    return text[:MAX_OUTPUT]
+    return text if max_chars == 0 else text[:max_chars]
 
 
 def _safe_sandbox_path(relative: str, *, must_exist: bool = False) -> Path:
@@ -165,52 +240,160 @@ def _safe_workspace_id(value: str) -> str:
     return cleaned
 
 
-def _snapshot_tree_stats(root: Path) -> dict[str, int]:
+def _walk_directory_entries(root: Path, failed):
+    """Depth-first streaming enumeration; at most one open iterator per depth."""
+    frames = []
+    try:
+        try: frames.append(os.scandir(root))
+        except OSError as exc:
+            failed(exc)
+            return
+        while frames:
+            try:
+                entry = next(frames[-1])
+            except StopIteration:
+                frames.pop().close()
+                continue
+            except OSError as exc:
+                frames.pop().close()
+                failed(exc)
+                continue
+            yield entry
+            try:
+                if entry.is_dir(follow_symlinks=False) and not entry.is_symlink():
+                    attrs = getattr(entry.stat(follow_symlinks=False), "st_file_attributes", 0)
+                    if not attrs & stat.FILE_ATTRIBUTE_REPARSE_POINT:
+                        frames.append(os.scandir(entry.path))
+            except OSError as exc:
+                failed(exc)
+    finally:
+        for iterator in reversed(frames): iterator.close()
+
+
+def _snapshot_tree_stats(root: Path, max_entries: int = MAX_SNAPSHOT_ENTRIES, max_bytes: int = MAX_SNAPSHOT_BYTES) -> dict[str, int]:
     if not root.exists() or not root.is_dir():
         raise HTTPException(status_code=404, detail="Snapshot source directory not found")
     entries = 0
     total_bytes = 0
-    stack = [root]
-    while stack:
-        current = stack.pop()
-        try:
-            with os.scandir(current) as iterator:
-                children = list(iterator)
-        except OSError as exc:
-            raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot tree: {type(exc).__name__}") from exc
-        for entry in children:
+    def failed(exc):
+        raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot tree: {type(exc).__name__}") from exc
+    iterator = _walk_directory_entries(root, failed)
+    try:
+        for entry in iterator:
             entries += 1
-            if entries > MAX_SNAPSHOT_ENTRIES:
+            if max_entries > 0 and entries > max_entries:
                 raise HTTPException(status_code=413, detail="Snapshot contains too many filesystem entries")
-            if entry.is_symlink():
-                raise HTTPException(status_code=400, detail="Symlinks are not allowed in workspace snapshots")
             try:
-                if entry.is_dir(follow_symlinks=False):
-                    stack.append(Path(entry.path))
-                elif entry.is_file(follow_symlinks=False):
-                    total_bytes += int(entry.stat(follow_symlinks=False).st_size)
-                    if total_bytes > MAX_SNAPSHOT_BYTES:
+                info = entry.stat(follow_symlinks=False)
+                if entry.is_symlink() or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                    raise HTTPException(status_code=400, detail="Symlinks and reparse entries are not allowed in workspace snapshots")
+                if entry.is_file(follow_symlinks=False):
+                    total_bytes += int(info.st_size)
+                    if max_bytes > 0 and total_bytes > max_bytes:
                         raise HTTPException(status_code=413, detail="Snapshot exceeds the configured byte limit")
-                else:
+                elif not entry.is_dir(follow_symlinks=False):
                     raise HTTPException(status_code=400, detail="Special filesystem entries are not allowed in workspace snapshots")
-            except HTTPException:
-                raise
-            except OSError as exc:
-                raise HTTPException(status_code=500, detail=f"Cannot inspect snapshot entry: {type(exc).__name__}") from exc
+            except OSError as exc: failed(exc)
+    finally: iterator.close()
     return {"entries": entries, "bytes": total_bytes}
 
 
-def _copy_snapshot_tree(source: Path, target: Path) -> dict[str, int]:
-    _snapshot_tree_stats(source)
+def _snapshot_timestamp(path: Path, info) -> None:
+    current = path.stat(follow_symlinks=False)
+    if stat.S_ISLNK(current.st_mode) or bool(getattr(current, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+        raise HTTPException(status_code=400, detail="Snapshot metadata destination is unsafe")
+    options = {"follow_symlinks": False} if os.utime in os.supports_follow_symlinks else {}
+    os.utime(path, ns=(info.st_atime_ns, info.st_mtime_ns), **options)
+
+
+def _copy_snapshot_tree(source: Path, target: Path, max_entries: int = MAX_SNAPSHOT_ENTRIES, max_bytes: int = MAX_SNAPSHOT_BYTES) -> dict[str, int]:
+    _snapshot_tree_stats(source, max_entries, max_bytes)
+    source_root = source.resolve(strict=True)
+    created = False
+    iterator = None
+    directory_metadata = []
+    entries = 0
+    total_bytes = 0
+
+    def failed(exc):
+        raise HTTPException(status_code=500, detail=f"Cannot copy snapshot tree: {type(exc).__name__}") from exc
+
     try:
-        # Never follow a link introduced after preflight. The post-copy validation
-        # below then rejects and removes any raced-in link rather than persisting it.
-        shutil.copytree(source, target, symlinks=True)
-        return _snapshot_tree_stats(target)
+        try:
+            target.mkdir(mode=0o700, parents=False, exist_ok=False)
+        except FileExistsError as exc:
+            raise HTTPException(status_code=409, detail="Snapshot destination already exists") from exc
+        created = True
+        directory_metadata.append((target, source_root.stat()))
+        iterator = _walk_directory_entries(source_root, failed)
+        for entry in iterator:
+            entries += 1
+            if max_entries > 0 and entries > max_entries:
+                raise HTTPException(status_code=413, detail="Snapshot contains too many filesystem entries during copy")
+            path = Path(entry.path)
+            info = path.stat(follow_symlinks=False)
+            if stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                raise HTTPException(status_code=400, detail="Symlinks and reparse entries are not allowed in workspace snapshots")
+            try:
+                path.resolve(strict=True).relative_to(source_root)
+            except ValueError as exc:
+                raise HTTPException(status_code=400, detail="Snapshot source escapes its original root") from exc
+            destination = target / path.relative_to(source_root)
+            if stat.S_ISDIR(info.st_mode):
+                destination.mkdir(mode=0o700, exist_ok=False)
+                directory_metadata.append((destination, info))
+                continue
+            if not stat.S_ISREG(info.st_mode):
+                raise HTTPException(status_code=400, detail="Special filesystem entries are not allowed in workspace snapshots")
+            flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_BINARY", 0) | getattr(os, "O_NONBLOCK", 0)
+            with os.fdopen(os.open(path, flags), "rb") as reader:
+                opened = os.fstat(reader.fileno())
+                if not stat.S_ISREG(opened.st_mode) or not os.path.samestat(info, opened):
+                    raise HTTPException(status_code=400, detail="Snapshot source identity changed before copy")
+                if max_bytes > 0 and total_bytes + opened.st_size > max_bytes:
+                    raise HTTPException(status_code=413, detail="Snapshot exceeds the configured byte limit during copy")
+                with destination.open("xb") as writer:
+                    while True:
+                        read_bytes = 65536 if max_bytes == 0 else min(65536, max_bytes - total_bytes + 1)
+                        chunk = reader.read(read_bytes)
+                        if not chunk:
+                            break
+                        if max_bytes > 0 and total_bytes + len(chunk) > max_bytes:
+                            raise HTTPException(status_code=413, detail="Snapshot exceeds the configured byte limit during copy")
+                        writer.write(chunk)
+                        total_bytes += len(chunk)
+            os.chmod(destination, stat.S_IMODE(opened.st_mode))
+            _snapshot_timestamp(destination, opened)
+        stats = _snapshot_tree_stats(target, max_entries, max_bytes)
+        for directory, info in reversed(directory_metadata):
+            os.chmod(directory, stat.S_IMODE(info.st_mode))
+            _snapshot_timestamp(directory, info)
+        return stats
     except Exception:
-        if target.exists():
-            shutil.rmtree(target, ignore_errors=True)
+        if created and target.exists():
+            try:
+                # Restored read-only metadata must not strand an owned partial
+                # snapshot. Never repair a link/reparse target during cleanup.
+                for directory, _ in directory_metadata:
+                    info = directory.stat(follow_symlinks=False)
+                    if stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                        raise OSError("Snapshot cleanup directory identity is unsafe")
+                    os.chmod(directory, 0o700)
+
+                def remove_readonly(function, path, exc_info):
+                    info = os.stat(path, follow_symlinks=False)
+                    if stat.S_ISLNK(info.st_mode) or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT):
+                        raise exc_info[1]
+                    os.chmod(path, 0o700)
+                    function(path)
+
+                shutil.rmtree(target, onerror=remove_readonly)
+            except OSError as cleanup_error:
+                raise HTTPException(status_code=500, detail="Snapshot copy failed and partial destination cleanup failed") from cleanup_error
         raise
+    finally:
+        if iterator is not None:
+            iterator.close()
 
 
 def _desktop_bounds() -> dict[str, int]:
@@ -246,8 +429,14 @@ def _validate_coordinate(x: int | None, y: int | None) -> None:
         raise HTTPException(status_code=400, detail="Coordinates are outside the virtual desktop")
 
 
-def _validate_action(req: Action) -> dict[str, Any]:
+def _validate_action(req: Action, limits=None) -> dict[str, Any]:
+    limits = limits if limits is not None else GuiResourceLimits().model_dump()
     action = req.model_dump()
+    measurements = {"action_text_chars": len(action["text"]), "action_keys": len(action["keys"]),
+                    "action_clicks": action["clicks"], "action_scroll": abs(action["amount"]), "action_seconds": action["seconds"]}
+    for key, size in measurements.items():
+        if limits[key] and size > limits[key]:
+            raise HTTPException(413, detail={"error": "action_resource_budget", "budget": key, "limit": limits[key], "requested": size, "executed": False})
     action_type = str(action["type"]).lower().strip()
     if action_type not in VALID_ACTIONS:
         raise HTTPException(status_code=400, detail=f"Unsupported action type: {action_type}")
@@ -270,6 +459,53 @@ def _validate_action(req: Action) -> dict[str, Any]:
     return action
 
 
+def _collect_uia(desktop, limits):
+    items = []
+    reasons = set()
+    failed = 0
+
+    def bounded(values, key):
+        cap = limits[key]
+        for index, value in enumerate(values):
+            if cap and index >= cap:
+                reasons.add(key)
+                break
+            yield value
+
+    def append(element, kind):
+        if limits["uia_items"] and len(items) >= limits["uia_items"]:
+            reasons.add("uia_items")
+            return False
+        rect = element.rectangle()
+        info = element.element_info
+        record = {"kind": kind, "rect": [rect.left, rect.top, rect.right, rect.bottom]}
+        fields = [("name", element.window_text() or getattr(info, "name", ""), "uia_name_chars"),
+                  ("control_type", getattr(info, "control_type", "Window" if kind == "window" else ""), "uia_type_chars")]
+        if kind == "control": fields.append(("automation_id", getattr(info, "automation_id", ""), "uia_id_chars"))
+        for key, value, budget in fields:
+            text = _redact(str(value), 0)
+            cap = limits[budget]
+            if cap and len(text) > cap:
+                reasons.add(budget)
+                record.setdefault("truncated_fields", []).append(key)
+                text = text[:cap]
+            record[key] = text
+        items.append(record)
+        return True
+
+    for window in bounded(desktop.windows(), "uia_windows"):
+        try:
+            if not append(window, "window"): break
+            for control in bounded(window.descendants(), "uia_controls"):
+                try:
+                    if not append(control, "control"): break
+                except Exception: failed += 1
+        except Exception: failed += 1
+        if "uia_items" in reasons: break
+    return {"ok": True, "items": items, "partial": bool(reasons or failed),
+            "limit_reached": bool(reasons), "limit_reasons": sorted(reasons), "failed_elements": failed}
+
+
 def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
     try:
         if kind == "screen":
@@ -286,25 +522,7 @@ def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
         if kind == "windows":
             from pywinauto import Desktop
 
-            limit = max(1, min(int(payload.get("limit", 250)), 500))
-            items: list[dict[str, Any]] = []
-            for window in Desktop(backend="uia").windows()[:30]:
-                if len(items) >= limit:
-                    break
-                try:
-                    rect = window.rectangle()
-                    items.append({"kind": "window", "name": str(window.window_text())[:512], "control_type": str(getattr(window.element_info, "control_type", "Window"))[:64], "rect": [rect.left, rect.top, rect.right, rect.bottom]})
-                    for control in window.descendants()[:40]:
-                        if len(items) >= limit:
-                            break
-                        try:
-                            cr = control.rectangle()
-                            items.append({"kind": "control", "name": str(control.window_text() or getattr(control.element_info, "name", ""))[:512], "control_type": str(getattr(control.element_info, "control_type", ""))[:64], "automation_id": str(getattr(control.element_info, "automation_id", ""))[:256], "rect": [cr.left, cr.top, cr.right, cr.bottom]})
-                        except Exception:
-                            continue
-                except Exception:
-                    continue
-            queue.put({"ok": True, "items": items})
+            queue.put(_collect_uia(Desktop(backend="uia"), payload.get("__gui_limits", GuiResourceLimits().model_dump())))
             return
         if kind == "action":
             import pyautogui
@@ -347,28 +565,179 @@ def _worker_entry(kind: str, payload: dict[str, Any], queue: Any) -> None:
         queue.put({"ok": False, "error": type(exc).__name__, "message": _redact(str(exc))})
 
 
+@contextmanager
+def _gui_execution_scope(execution_id="", unsafe_gui=False):
+    execution_id = execution_id or uuid.uuid4().hex
+    record = None
+    error = None
+    with _execution_lock:
+        previous = _execution_records.get(execution_id)
+        if _execution_stopping:
+            error = _error("service_stopping", "Computer service is stopping; GUI execution was not started", execution_id=execution_id)
+        elif previous is not None:
+            error = _error("cancelled" if previous["cancelled"] else "execution_id_reused", "GUI execution identity is terminal or in use", execution_id=execution_id, retryable=False)
+        else:
+            record = {"process": None, "worker": None, "finished": False, "cancelled": False,
+                      "termination_confirmed": False, "unsafe_gui": unsafe_gui}
+            _execution_records[execution_id] = record
+    try:
+        yield execution_id, error
+    finally:
+        if record is not None:
+            with _execution_lock:
+                record["finished"] = record.get("worker") is None and record.get("job") is None and (not record["cancelled"] or record["termination_confirmed"])
+
+
+def _stop_gui_worker(worker, seconds=2.0):
+    with _gui_worker_lifecycle_lock:
+        try:
+            if worker.is_alive(): worker.terminate()
+            worker.join(timeout=seconds)
+            if worker.is_alive():
+                worker.kill()
+                worker.join(timeout=seconds)
+            return not worker.is_alive()
+        except Exception:
+            return False
+
+
+def _worker_alive(process: Any) -> bool:
+    # multiprocessing.Process wait/status methods share internal state and must
+    # not race the request thread against shutdown's join/terminate thread.
+    with _gui_worker_lifecycle_lock:
+        return process.is_alive()
+
+
 def _run_worker(kind: str, payload: dict[str, Any] | None = None, timeout: float = GUI_TIMEOUT_SECONDS) -> dict[str, Any]:
     if not IS_WINDOWS:
         return _error("unsupported_platform", "Desktop Computer Agent primitives are supported on Windows only", retryable=False)
+    if not math.isfinite(timeout) or timeout < 0:
+        return _error("invalid_worker_timeout", "Worker deadline must be finite and nonnegative", retryable=False)
+    payload = dict(payload or {})
+    execution_id = str(payload.get("__execution_id", ""))
+    if not execution_id:
+        with _gui_execution_scope() as (owned_id, error):
+            if error is not None: return error
+            return _run_worker(kind, {**payload, "__execution_id": owned_id}, timeout)
     context = mp.get_context("spawn")
     queue = context.Queue(maxsize=1)
-    process = context.Process(target=_worker_entry, args=(kind, payload or {}, queue), daemon=True)
-    process.start()
-    process.join(timeout=max(0.1, timeout))
-    if process.is_alive():
-        process.terminate()
-        process.join(1.0)
-        if process.is_alive() and hasattr(process, "kill"):
-            process.kill()
-            process.join(1.0)
-        return _error("timeout", f"{kind} operation timed out", retryable=kind in {"screen", "windows"})
+    launch_gate = context.Event()
     try:
-        result = queue.get(timeout=0.5)
-    except Exception:
-        return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
-    if not isinstance(result, dict):
-        return _error("malformed_worker_response", f"{kind} worker returned invalid data", retryable=False)
-    return result
+        from owned_gui_worker import run_owned_worker
+    except ModuleNotFoundError as exc:
+        if exc.name != "owned_gui_worker": raise
+        from computer.owned_gui_worker import run_owned_worker
+    process = context.Process(target=run_owned_worker, args=(_worker_entry, kind, payload, queue, launch_gate), daemon=True)
+    with _execution_lock:
+        if _execution_stopping:
+            return _error("service_stopping", "Computer worker was not started")
+        record = _execution_records.get(execution_id)
+        if record is None or record["cancelled"] or record["finished"]:
+            return _error("cancelled", "GUI execution was cancelled before worker launch", execution_id=execution_id, retryable=False)
+        if record.get("job") is not None:
+            return _error("ownership_uncertain", "Previous GUI phase still has unconfirmed ownership", retryable=False, uncertain_external_state=True)
+        if os.name == "nt": record["job"] = _new_windows_job()
+        try:
+            process.start()
+        except Exception:
+            _close_record_job(record)
+            raise
+        record["worker"] = process
+        record["worker_queue"] = queue
+        _gui_workers.add(process)
+        try:
+            if record.get("job") is not None: record["job"].assign(process.pid)
+            launch_gate.set()
+        except Exception:
+            confirmed = _stop_gui_worker(process)
+            if record.get("job") is not None:
+                try: confirmed = record["job"].terminate() and confirmed
+                except OSError: confirmed = False
+            record["cancelled"] = True
+            record["termination_confirmed"] = confirmed
+            if confirmed:
+                record["worker"] = None
+                record["worker_queue"] = None
+                _gui_workers.discard(process)
+                _close_record_job(record)
+                if callable(getattr(queue, "close", None)): queue.close()
+            return _error("process_ownership_failed", "GUI worker ownership could not be installed; launch gate remained closed",
+                          execution_id=execution_id, termination_confirmed=confirmed, uncertain_external_state=not confirmed, retryable=False)
+    try:
+        deadline = None if timeout == 0 else time.monotonic() + timeout
+        result = None
+        # Drain before join: the child's Queue feeder cannot flush a large
+        # screenshot/UIA payload while the parent waits for child exit.
+        while True:
+            if record["cancelled"]:
+                confirmed = _stop_gui_worker(process)
+                return _error("cancelled", "GUI execution was cancelled", retryable=False,
+                              execution_id=execution_id, termination_confirmed=confirmed,
+                              uncertain_external_state=not confirmed or bool(record.get("unsafe_gui")))
+            remaining = 0.1 if deadline is None else deadline - time.monotonic()
+            try:
+                result = queue.get(timeout=max(0.0, min(0.1, remaining)))
+                break
+            except Exception:
+                if record["cancelled"]: continue
+                if not _worker_alive(process):
+                    try:
+                        result = queue.get(timeout=0.5)
+                        break
+                    except Exception:
+                        return _error("malformed_worker_response", f"{kind} worker returned no result", retryable=kind in {"screen", "windows"})
+                if deadline is not None and remaining <= 0:
+                    break
+        # Never hold lifecycle ownership while waiting indefinitely: cancellation
+        # must be able to terminate/join the same worker between bounded polls.
+        while True:
+            with _gui_worker_lifecycle_lock:
+                process.join(timeout=0.1 if deadline is None else max(0.0, min(0.1, deadline - time.monotonic())))
+                alive = _worker_alive(process)
+            if not alive or record["cancelled"] or (deadline is not None and time.monotonic() >= deadline): break
+        with _gui_worker_lifecycle_lock:
+            if _worker_alive(process):
+                process.terminate()
+                process.join(1.0)
+                if _worker_alive(process) and hasattr(process, "kill"):
+                    process.kill()
+                    process.join(1.0)
+                confirmed = not _worker_alive(process)
+                if record["cancelled"]:
+                    return _error("cancelled", "GUI execution was cancelled while waiting for worker completion", retryable=False,
+                                  execution_id=execution_id, termination_confirmed=bool(record["termination_confirmed"]),
+                                  uncertain_external_state=not bool(record["termination_confirmed"]) or bool(record.get("unsafe_gui")))
+                return _error("timeout", f"{kind} operation timed out", retryable=confirmed and kind in {"screen", "windows"},
+                              termination_confirmed=confirmed, uncertain_external_state=not confirmed)
+        if record["cancelled"]:
+            return _error("cancelled", "GUI execution was cancelled", execution_id=execution_id, retryable=False,
+                          termination_confirmed=True, uncertain_external_state=bool(record.get("unsafe_gui")))
+        if record.get("job") is not None:
+            try: ownership_empty = record["job"].active_count() == 0
+            except OSError: ownership_empty = False
+            if not ownership_empty:
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("background_descendants", "GUI worker left unconfirmed descendants", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated, uncertain_external_state=not terminated or bool(record.get("unsafe_gui")))
+        if not isinstance(result, dict):
+            return _error("malformed_worker_response", f"{kind} worker returned invalid data", retryable=False)
+        return result
+    finally:
+        stopped = not _worker_alive(process)
+        with _execution_lock:
+            if stopped:
+                _gui_workers.discard(process)
+                if record.get("worker") is process:
+                    record["worker"] = None
+                    record["worker_queue"] = None
+                try:
+                    if record.get("job") is not None and record["job"].active_count() == 0:
+                        _close_record_job(record)
+                except OSError:
+                    pass # Preserve the Job handle for confirmed cleanup/retry.
+                if record["cancelled"] and record.get("job") is None: record["termination_confirmed"] = True
+        if stopped and callable(getattr(queue, "close", None)):
+            queue.close()
 
 
 def _cached_action(action_id: str) -> dict[str, Any] | None:
@@ -384,17 +753,18 @@ def _cached_action(action_id: str) -> dict[str, Any] | None:
         return result
 
 
-def _store_action_result(action_id: str, result: dict[str, Any]) -> None:
+def _store_action_result(action_id: str, result: dict[str, Any], max_results: int = ACTION_CACHE_LIMIT) -> None:
     if not action_id:
         return
     with _action_cache_lock:
+        _action_consumed.add(action_id)
         _action_cache[action_id] = dict(result)
         _action_cache.move_to_end(action_id)
-        while len(_action_cache) > ACTION_CACHE_LIMIT:
+        while max_results > 0 and len(_action_cache) > max_results:
             _action_cache.popitem(last=False)
 
 
-def _claim_action(action_id: str) -> tuple[str, dict[str, Any] | None]:
+def _claim_action(action_id: str, max_identities: int = 0) -> tuple[str, dict[str, Any] | None]:
     if not action_id:
         return "owner", None
     with _action_cache_lock:
@@ -404,8 +774,14 @@ def _claim_action(action_id: str) -> tuple[str, dict[str, Any] | None]:
             result = dict(cached)
             result["deduplicated"] = True
             return "cached", result
+        if action_id in _action_consumed:
+            return "terminal", _error("action_result_evicted", "This action identity was consumed; its detailed result is unavailable", retryable=False,
+                                     action_id=action_id, executed=False, deduplicated=True, uncertain_external_state=True)
         if action_id in _action_inflight:
             return "inflight", None
+        if max_identities > 0 and len(_action_consumed | _action_inflight) >= max_identities:
+            return "terminal", _error("action_identity_capacity", "Action identity storage reached the owner's capacity; no action was started", retryable=False,
+                                     action_id=action_id, executed=False, uncertain_external_state=False, limit_reached=True)
         _action_inflight.add(action_id)
     return "owner", None
 
@@ -417,16 +793,25 @@ def _release_action_claim(action_id: str) -> None:
         _action_inflight.discard(action_id)
 
 
-def _execute_action(req: Action) -> dict[str, Any]:
-    action = _validate_action(req)
+def _execute_action(req: Action, execution_id: str = "", limits=None) -> dict[str, Any]:
+    with _gui_execution_scope(execution_id, unsafe_gui=not _retryable(req.type.strip().lower())) as (owned_id, error):
+        if error is not None: return error
+        return _execute_action_owned(req, owned_id, limits)
+
+
+def _execute_action_owned(req: Action, execution_id: str, limits=None) -> dict[str, Any]:
+    limits = limits if limits is not None else GuiResourceLimits().model_dump()
+    action = _validate_action(req, limits)
+    action["__gui_limits"] = limits
+    action["__execution_id"] = execution_id
     action_id = str(action.get("action_id", "")).strip()
     action_type = str(action["type"])
     retry_safety = "safe" if _retryable(action_type) else "unsafe"
     if retry_safety == "unsafe" and not action_id:
         raise HTTPException(status_code=400, detail="Unsafe Computer actions require action_id for idempotency")
 
-    claim, cached = _claim_action(action_id)
-    if claim == "cached" and cached is not None:
+    claim, cached = _claim_action(action_id, limits["action_identities"])
+    if claim in {"cached", "terminal"} and cached is not None:
         return cached
     if claim == "inflight":
         return _error("action_in_progress", "An action with this action_id is already executing; external state is not yet known", retryable=False, action_id=action_id, retry_safety=retry_safety, uncertain_external_state=True)
@@ -438,17 +823,17 @@ def _execute_action(req: Action) -> dict[str, Any]:
     try:
         before_hash = ""
         if bool(action.get("verify", False)):
-            before = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+            before = _run_worker("screen", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
             if before.get("ok"):
                 before_hash = str(before.get("sha256", ""))
-        result = _run_worker("action", action, ACTION_TIMEOUT_SECONDS)
+        result = _run_worker("action", action, limits["action_worker_seconds"])
         result["action_id"] = action_id
-        result["retryable"] = _retryable(action_type)
+        result["retryable"] = _retryable(action_type) and result.get("error") not in {"cancelled", "execution_id_reused", "service_stopping"} and not result.get("uncertain_external_state", False)
         result["retry_safety"] = retry_safety
         if not result.get("ok") and retry_safety == "unsafe":
             result["uncertain_external_state"] = True
         if result.get("ok") and bool(action.get("verify", False)):
-            after = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
+            after = _run_worker("screen", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
             if after.get("ok"):
                 after_hash = str(after.get("sha256", ""))
                 result["verified"] = bool(before_hash and after_hash and before_hash != after_hash)
@@ -456,9 +841,18 @@ def _execute_action(req: Action) -> dict[str, Any]:
             else:
                 result["verified"] = False
                 result["verification"] = "verification_unavailable"
-        _store_action_result(action_id, result)
+        record = _execution_records[execution_id]
+        if record["cancelled"]:
+            result = _error("cancelled", "GUI request was cancelled; prior effects are not reversed", retryable=False,
+                            action_id=action_id, retry_safety=retry_safety, execution_id=execution_id,
+                            termination_confirmed=bool(record["termination_confirmed"]),
+                            uncertain_external_state=retry_safety == "unsafe" or not bool(record["termination_confirmed"]))
+        _store_action_result(action_id, result, limits["action_results"])
         return result
     finally:
+        if action_id:
+            # Unexpected exceptions cannot authorize replay of attempted input.
+            with _action_cache_lock: _action_consumed.add(action_id)
         _action_execution_lock.release()
         _release_action_claim(action_id)
 
@@ -489,20 +883,29 @@ def _container_profile(command: list[str]) -> tuple[str, list[str]]:
     return image, command
 
 
-def _tree(root: Path, max_items: int = 2000) -> list[dict[str, Any]]:
+def _tree(root: Path, max_items: int = 2000, coverage: dict | None = None) -> list[dict[str, Any]]:
+    if max_items < 0:
+        raise HTTPException(400, "Tree budget must be nonnegative")
     items: list[dict[str, Any]] = []
-    if not root.exists():
-        return items
-    for path in root.rglob("*"):
-        if len(items) >= max_items:
-            break
-        try:
-            resolved = path.resolve(strict=False)
-            if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
-                continue
-            items.append({"path": path.relative_to(root).as_posix(), "dir": path.is_dir(), "size": path.stat().st_size if path.is_file() else 0})
-        except OSError:
-            continue
+    coverage = coverage if coverage is not None else {}
+    coverage.update(truncated=False, failed_paths=0, unsafe_paths_skipped=0)
+    if not root.exists(): return items
+    def failed(_error): coverage["failed_paths"] += 1
+    iterator = _walk_directory_entries(root, failed)
+    try:
+        for entry in iterator:
+            path = Path(entry.path)
+            try:
+                info = entry.stat(follow_symlinks=False)
+                if entry.is_symlink() or bool(getattr(info, "st_file_attributes", 0) & stat.FILE_ATTRIBUTE_REPARSE_POINT) or not path.resolve(strict=True).is_relative_to(root):
+                    coverage["unsafe_paths_skipped"] += 1
+                    continue
+                if max_items > 0 and len(items) >= max_items:
+                    coverage["truncated"] = True
+                    break
+                items.append({"path": path.relative_to(root).as_posix(), "dir": entry.is_dir(follow_symlinks=False), "size": info.st_size if entry.is_file(follow_symlinks=False) else 0})
+            except OSError: coverage["failed_paths"] += 1
+    finally: iterator.close()
     return items
 
 
@@ -540,26 +943,325 @@ def _sanitized_environment(cwd: Path, allow_network: bool) -> dict[str, str]:
     return env
 
 
-def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool) -> dict[str, Any]:
-    startup: dict[str, Any] = {}
-    if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP
-    else: startup["start_new_session"] = True
+def _terminate_process_tree(process: subprocess.Popen) -> bool:
+    if os.name == "nt" and process.poll() is not None:
+        return True
+    if os.name == "nt":
+        try:
+            subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False, timeout=3)
+        except (OSError, subprocess.TimeoutExpired):
+            return False # Never report confirmed tree termination after taskkill failure.
+    else:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        except OSError:
+            return False
     try:
-        process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
-    except FileNotFoundError as exc:
-        raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
-    try:
-        stdout, stderr = process.communicate(timeout=timeout)
+        process.wait(timeout=2)
     except subprocess.TimeoutExpired:
-        if os.name == "nt": subprocess.run(["taskkill", "/PID", str(process.pid), "/T", "/F"], capture_output=True, check=False)
-        else:
-            try: os.killpg(process.pid, signal.SIGKILL)
-            except OSError: process.kill()
-        try: process.communicate(timeout=2)
-        except Exception: pass
-        return _error("timeout", "Sandbox process timed out and was terminated", retryable=True)
-    output = _redact((stdout or "") + (stderr or ""))
-    return {"ok": process.returncode == 0, "code": process.returncode, "output": output[:MAX_OUTPUT], "mode": "local", "retryable": process.returncode != 0}
+        return False
+    return process.poll() is not None
+
+
+def _cancel_execution(execution_id: str) -> dict[str, Any]:
+    with _execution_lock:
+        # A cancellation can arrive before the execution HTTP handler. Keep the
+        # terminal identity for this service session so a late request cannot run.
+        record = _execution_records.setdefault(execution_id, {"process": None, "cancelled": False, "finished": False})
+        record["cancelled"] = True
+        process = record["process"]
+        finished = record["finished"]
+    worker = record.get("worker")
+    worker_stopped = True if worker is None else _stop_gui_worker(worker)
+    job = record.get("job")
+    if job is not None:
+        try:
+            terminated = job.terminate()
+            if process is not None: process.wait(timeout=2)
+        except (OSError, subprocess.TimeoutExpired):
+            terminated = False
+    else:
+        terminated = True if process is None else _terminate_process_tree(process)
+    terminated = terminated and worker_stopped
+    for reader in record.get("capture_threads", []): reader.join(timeout=0.2)
+    if any(reader.is_alive() for reader in record.get("capture_threads", [])): terminated = False
+    container = record.get("container")
+    if container and not finished:
+        try:
+            removed = subprocess.run([container[0], "rm", "--force", container[1]], capture_output=True, check=False, timeout=3)
+            terminated = terminated and removed.returncode == 0
+        except (OSError, subprocess.TimeoutExpired):
+            terminated = False
+    with _execution_lock:
+        record["termination_confirmed"] = terminated
+        if terminated and (process is None or process.poll() is not None):
+            record["finished"] = True
+            record["process"] = None
+            record["worker"] = None
+            if worker is not None: _gui_workers.discard(worker)
+            owned_queue = record.get("worker_queue")
+            record["worker_queue"] = None
+            if owned_queue is not None and callable(getattr(owned_queue, "close", None)): owned_queue.close()
+            if record.get("job"):
+                _close_record_job(record)
+    return {"ok": terminated, "cancelled": True, "execution_id": execution_id,
+            "termination_confirmed": terminated, "already_finished": finished,
+            "uncertain_external_state": not terminated or bool(record.get("unsafe_gui")), "retryable": False}
+
+
+def _cancel_all_processes() -> dict[str, Any]:
+    global _execution_stopping
+    with _execution_lock:
+        _execution_stopping = True
+        execution_ids = [key for key, record in _execution_records.items()
+                         if not record["finished"] and (record["process"] is not None or record.get("container") or record.get("job") or record.get("worker"))]
+        workers = list(_gui_workers)
+    workers_stopped = all([_stop_gui_worker(worker) for worker in workers])
+    stopped_workers = [worker for worker in workers if not _worker_alive(worker)]
+    with _execution_lock:
+        for worker in stopped_workers: _gui_workers.discard(worker)
+    results = [_cancel_execution(execution_id) for execution_id in execution_ids]
+    confirmed = workers_stopped and all(result["termination_confirmed"] for result in results)
+    return {"ok": confirmed, "termination_confirmed": confirmed,
+            "uncertain_external_state": not confirmed, "executions_stopped": len(results)}
+
+
+def _new_windows_job():
+    try:
+        from windows_job import WindowsJob
+    except ModuleNotFoundError as exc:
+        if exc.name != "windows_job": raise
+        from computer.windows_job import WindowsJob
+    return WindowsJob()
+
+
+def _close_record_job(record):
+    job = record.get("job")
+    if job is not None:
+        job.close()
+        record["job"] = None  # Keep ownership if CloseHandle raises.
+
+
+def _read_capture_chunk(stream) -> bytes:
+    return os.read(stream.fileno(), 65536)
+
+
+def _run_process(command: list[str], cwd: Path, timeout: int, *, allow_network: bool, execution_id: str = "", container: tuple[str, str] | None = None, output_chars: int = MAX_OUTPUT, capture_bytes: int = MAX_CAPTURE_BYTES) -> dict[str, Any]:
+    execution_id = execution_id or uuid.uuid4().hex
+    startup: dict[str, Any] = {}
+    if os.name == "nt": startup["creationflags"] = subprocess.CREATE_NEW_PROCESS_GROUP | 0x4 # CREATE_SUSPENDED
+    else: startup["start_new_session"] = True
+    # Serialize registration and launch against cancellation. A pre-cancelled or
+    # previously used identity is never allowed to launch an action again.
+    with _execution_lock:
+        if _execution_stopping:
+            return _error("service_stopping", "Computer sidecar is stopping; execution was not started", execution_id=execution_id)
+        previous = _execution_records.get(execution_id)
+        if previous is not None:
+            kind = "cancelled" if previous["cancelled"] else "execution_id_reused"
+            return _error(kind, "Execution identity is already terminal or in use", execution_id=execution_id)
+        record: dict[str, Any] = {"process": None, "cancelled": False, "finished": False, "container": container, "termination_confirmed": False}
+        _execution_records[execution_id] = record
+        try:
+            if os.name == "nt": record["job"] = _new_windows_job()
+            process = subprocess.Popen(command, cwd=cwd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=False, env=_sanitized_environment(cwd, allow_network), **startup)
+        except FileNotFoundError as exc:
+            record["finished"] = True
+            if record.get("job"): _close_record_job(record)
+            raise HTTPException(status_code=404, detail=f"Executable not installed: {Path(command[0]).name}") from exc
+        except Exception:
+            record["finished"] = True
+            if record.get("job"): _close_record_job(record)
+            raise
+        record["process"] = process
+        if record.get("job"):
+            try:
+                record["job"].assign_and_resume(process.pid)
+            except Exception:
+                # Never resume an unowned process. Cleanup is performed directly
+                # here because registration still holds the execution lock.
+                confirmed = False
+                try:
+                    record["job"].terminate()
+                    if process.poll() is None: process.terminate()
+                    process.wait(timeout=2)
+                    confirmed = process.poll() is not None and record["job"].active_count() == 0
+                except Exception:
+                    pass
+                record["cancelled"] = True
+                record["termination_confirmed"] = confirmed
+                record["finished"] = confirmed
+                if confirmed:
+                    _close_record_job(record)
+                    record["process"] = None
+                    process.stdout.close()
+                    process.stderr.close()
+                return _error("process_ownership_failed", "Windows process ownership could not be installed; command was not authorized to start",
+                              execution_id=execution_id, termination_confirmed=confirmed,
+                              uncertain_external_state=not confirmed, retryable=False)
+    buffers = [bytearray(), bytearray()]
+    capture_lock = threading.Lock()
+    captured_bytes = 0
+    overflow = threading.Event()
+    capture_failed = threading.Event()
+
+    def drain(stream, index):
+        nonlocal captured_bytes
+        try:
+            while True:
+                chunk = _read_capture_chunk(stream)
+                if not chunk: break
+                with capture_lock:
+                    room = len(chunk) if capture_bytes == 0 else max(0, capture_bytes - captured_bytes)
+                    retained = chunk[:room]
+                    buffers[index].extend(retained)
+                    captured_bytes += len(retained)
+                    if len(retained) < len(chunk): overflow.set()
+        except (OSError, ValueError):
+            capture_failed.set()
+
+    readers = [threading.Thread(target=drain, args=(stream, index), daemon=True)
+               for index, stream in enumerate((process.stdout, process.stderr))]
+    with _execution_lock:
+        record["capture_threads"] = readers
+        for reader in readers: reader.start()
+    try:
+        deadline = None if timeout == 0 else time.monotonic() + float(timeout)
+        while True:
+            if capture_failed.is_set():
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("output_capture_failed", "Owned output capture failed", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated,
+                              uncertain_external_state=not terminated)
+            if overflow.is_set():
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("output_budget", "Sandbox raw output exceeded owner byte budget", retryable=False,
+                              limit_reached=True, partial=True, output="", capture_budget_bytes=capture_bytes,
+                              captured_bytes=captured_bytes, execution_id=execution_id,
+                              termination_confirmed=terminated, uncertain_external_state=not terminated)
+            if process.poll() is not None and all(not reader.is_alive() for reader in readers):
+                break
+            if deadline is not None and time.monotonic() >= deadline:
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("timeout", "Sandbox process timed out", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated,
+                              uncertain_external_state=not terminated)
+            if process.poll() is not None:
+                # A descendant may still hold inherited pipes. Never wait forever
+                # or claim complete capture/termination when ownership is uncertain.
+                for reader in readers: reader.join(timeout=0.2)
+                if any(reader.is_alive() for reader in readers):
+                    terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                    return _error("output_capture_incomplete", "Owned output pipe did not close", retryable=False,
+                                  execution_id=execution_id, termination_confirmed=terminated,
+                                  uncertain_external_state=not terminated)
+            else:
+                time.sleep(0.02)
+        if capture_failed.is_set():
+            terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+            return _error("output_capture_failed", "Owned output capture failed", retryable=False,
+                          execution_id=execution_id, termination_confirmed=terminated,
+                          uncertain_external_state=not terminated)
+        # Recheck after EOF: a reader can set overflow between the loop's first
+        # event check and the final process/reader completion observation.
+        if overflow.is_set():
+            terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+            return _error("output_budget", "Sandbox raw output exceeded owner byte budget", retryable=False,
+                          limit_reached=True, partial=True, output="", capture_budget_bytes=capture_bytes,
+                          captured_bytes=captured_bytes, execution_id=execution_id,
+                          termination_confirmed=terminated, uncertain_external_state=not terminated)
+        job = record.get("job")
+        if job is not None:
+            try:
+                background = job.active_count() > 0
+            except OSError:
+                background = True
+            if background:
+                terminated = bool(_cancel_execution(execution_id)["termination_confirmed"])
+                return _error("background_descendants", "Owned descendants outlived the command", retryable=False,
+                              execution_id=execution_id, termination_confirmed=terminated,
+                              uncertain_external_state=not terminated)
+        decoding_replaced = False
+        try:
+            stdout, stderr = (buffer.decode("utf-8") for buffer in buffers)
+        except UnicodeDecodeError:
+            decoding_replaced = True
+            stdout, stderr = (buffer.decode("utf-8", errors="replace") for buffer in buffers)
+        if record["cancelled"]:
+            return _error("cancelled", "Sandbox execution was cancelled", execution_id=execution_id,
+                          termination_confirmed=bool(record.get("termination_confirmed", False)),
+                          uncertain_external_state=not bool(record.get("termination_confirmed", False)), retryable=False)
+        output = _redact((stdout or "") + (stderr or ""), max_chars=0)
+        truncated = output_chars > 0 and len(output) > output_chars
+        return {"ok": process.returncode == 0, "code": process.returncode,
+                "output": output[:output_chars] if output_chars > 0 else output,
+                "output_chars_total": len(output), "output_budget_chars": output_chars,
+                "captured_bytes": captured_bytes, "capture_budget_bytes": capture_bytes,
+                "output_encoding": "utf-8", "output_decoding_replaced": decoding_replaced,
+                "partial": truncated, "truncated": truncated, "limit_reached": truncated,
+                "mode": "local", "retryable": False, "execution_id": execution_id}
+    finally:
+        if process.poll() is None or any(reader.is_alive() for reader in readers):
+            _cancel_execution(execution_id)
+        exited = process.poll() is not None and all(not reader.is_alive() for reader in readers)
+        job = record.get("job")
+        try:
+            ownership_empty = job is None or job.active_count() == 0
+        except OSError:
+            ownership_empty = False
+        with _execution_lock:
+            record["finished"] = exited and ownership_empty and (not record["cancelled"] or bool(record["termination_confirmed"]))
+            if exited and ownership_empty:
+                record["process"] = None
+                if record.get("job"): _close_record_job(record)
+        # Keep failed-stop ownership for shutdown/retry instead of losing a PID.
+        if exited:
+            for stream in (process.stdout, process.stderr):
+                if stream is not None: stream.close()
+
+
+def _run_owned_process(req: SandboxExecRequest, command: list[str], cwd: Path, container: tuple[str, str] | None = None) -> dict[str, Any]:
+    if req.execution_id or container or req.output_chars != MAX_OUTPUT or req.capture_bytes != MAX_CAPTURE_BYTES:
+        return _run_process(command, cwd, req.timeout, allow_network=req.allow_network, execution_id=req.execution_id, container=container, output_chars=req.output_chars, capture_bytes=req.capture_bytes)
+    return _run_process(command, cwd, req.timeout, allow_network=req.allow_network)
+
+
+def _parent_alive(pid: int, *, windows_api: Any = None, platform: str | None = None) -> bool | None:
+    """Return None when the probe cannot distinguish a live parent from failure."""
+    if (platform or os.name) == "nt":
+        api = windows_api if windows_api is not None else ctypes.windll.kernel32
+        if windows_api is None:
+            api.OpenProcess.argtypes = (ctypes.c_uint32, ctypes.c_int, ctypes.c_uint32)
+            api.OpenProcess.restype = ctypes.c_void_p
+            api.WaitForSingleObject.argtypes = (ctypes.c_void_p, ctypes.c_uint32)
+            api.WaitForSingleObject.restype = ctypes.c_uint32
+            api.CloseHandle.argtypes = (ctypes.c_void_p,)
+            api.CloseHandle.restype = ctypes.c_int
+        # A process handle checks the exact PID; tasklist text can contain another PID.
+        handle = api.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
+        if not handle:
+            error = api.GetLastError()
+            return False if error == 87 else None  # ERROR_INVALID_PARAMETER
+        try:
+            state = api.WaitForSingleObject(handle, 0)
+            if state == 0:  # WAIT_OBJECT_0
+                return False
+            if state == 0x102:  # WAIT_TIMEOUT
+                return True
+            return None
+        finally:
+            api.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+    except OSError:
+        return None
 
 
 def _parent_watchdog() -> None:
@@ -567,13 +1269,12 @@ def _parent_watchdog() -> None:
     while True:
         time.sleep(2.0)
         try:
-            if os.name == "nt":
-                result = subprocess.run(["tasklist", "/FI", f"PID eq {PARENT_PID}", "/NH"], capture_output=True, text=True, timeout=2)
-                alive = str(PARENT_PID) in result.stdout
-            else:
-                os.kill(PARENT_PID, 0); alive = True
-        except Exception: alive = False
-        if not alive: os._exit(0)
+            alive = _parent_alive(PARENT_PID)
+        except Exception:
+            alive = None
+        if alive is False:
+            _cancel_all_processes()
+            os._exit(0)
 
 
 @app.get("/health")
@@ -588,25 +1289,49 @@ def capabilities(x_aurorafox_computer_token: str | None = Header(default=None)) 
 
 
 @app.get("/screen")
-def screen(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def screen(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$"),
+            x_aurorafox_gui_limits: str = Header(default="")) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    result = _run_worker("screen", {}, GUI_TIMEOUT_SECONDS)
-    if result.get("ok"):
-        windows_result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS)
-        result["uia"] = windows_result.get("items", []) if windows_result.get("ok") else []
-        result["virtual_desktop"] = _desktop_bounds(); result["retryable"] = True
-    return result
+    limits = _gui_limits(x_aurorafox_gui_limits)
+    with _gui_execution_scope(x_aurorafox_execution_id) as (execution_id, error):
+        if error is not None: return error
+        result = _run_worker("screen", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
+        if result.get("ok"):
+            windows_result = _run_worker("windows", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
+            if _execution_records[execution_id]["cancelled"]:
+                return _error("cancelled", "Screen request was cancelled", retryable=False, execution_id=execution_id,
+                              termination_confirmed=bool(_execution_records[execution_id]["termination_confirmed"]))
+            result["uia"] = windows_result.get("items", []) if windows_result.get("ok") else []
+            result["uia_ok"] = bool(windows_result.get("ok"))
+            result["uia_partial"] = not result["uia_ok"] or bool(windows_result.get("partial"))
+            result["uia_limit_reasons"] = windows_result.get("limit_reasons", [])
+            result["uia_failed_elements"] = windows_result.get("failed_elements", 0)
+            if not result["uia_ok"]: result["uia_error"] = windows_result.get("error", "uia_unverified")
+            result["partial"] = bool(result.get("partial")) or result["uia_partial"]
+            result["virtual_desktop"] = _desktop_bounds(); result["retryable"] = True
+        return result
 
 
 @app.get("/windows")
-def windows(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def windows(x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+            x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$"),
+            x_aurorafox_gui_limits: str = Header(default="")) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
-    result = _run_worker("windows", {"limit": 250}, GUI_TIMEOUT_SECONDS); result["retryable"] = True; return result
+    limits = _gui_limits(x_aurorafox_gui_limits)
+    with _gui_execution_scope(x_aurorafox_execution_id) as (execution_id, error):
+        if error is not None: return error
+        result = _run_worker("windows", {"__execution_id": execution_id, "__gui_limits": limits}, limits["worker_seconds"])
+        result["retryable"] = result.get("error") not in {"cancelled", "execution_id_reused", "service_stopping"} and not result.get("uncertain_external_state", False)
+        return result
 
 
 @app.post("/action")
-def action(req: Action, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); return _execute_action(req)
+def action(req: Action, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+           x_aurorafox_execution_id: str = Header(default="", max_length=160, pattern=r"^[A-Za-z0-9_:.-]*$"),
+           x_aurorafox_gui_limits: str = Header(default="")) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    return _execute_action(req, x_aurorafox_execution_id, _gui_limits(x_aurorafox_gui_limits))
 
 
 @app.post("/plan")
@@ -633,16 +1358,18 @@ def workspace_create(req: WorkspaceCreateRequest, x_aurorafox_computer_token: st
 
 
 @app.get("/sandbox/workspace/tree")
-def workspace_tree(workspace: str, area: str = "work", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def workspace_tree(workspace: str, area: str = "work", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None), max_items: int = 2000) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(workspace)
     if area not in {"input", "work", "output", "logs", "snapshots"}: raise HTTPException(status_code=400, detail="Invalid workspace area")
-    return {"ok": True, "workspace": wid, "area": area, "items": _tree(_safe_sandbox_path(f"{wid}/{area}"))}
+    coverage = {}
+    items = _tree(_safe_sandbox_path(f"{wid}/{area}"), max_items, coverage)
+    return {"ok": True, "workspace": wid, "area": area, "items": items, **coverage, "partial": any(coverage.values())}
 
 
 @app.post("/sandbox/workspace/snapshot")
 def workspace_snapshot(req: WorkspaceSnapshotRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(req.workspace); work = _safe_sandbox_path(f"{wid}/work"); snapshots = _safe_sandbox_path(f"{wid}/snapshots"); snapshots.mkdir(parents=True, exist_ok=True)
-    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"; snapshot_id = f"{int(time.time())}_{safe_label}_{uuid.uuid4().hex[:6]}"; target = snapshots / snapshot_id; stats = _copy_snapshot_tree(work, target)
+    safe_label = "".join(ch if ch.isalnum() or ch in "_-" else "_" for ch in req.label)[:48] or "checkpoint"; snapshot_id = f"{int(time.time())}_{safe_label}_{uuid.uuid4().hex[:6]}"; target = snapshots / snapshot_id; stats = _copy_snapshot_tree(work, target, req.max_entries, req.max_bytes)
     return {"ok": True, "workspace": wid, "snapshot": snapshot_id, "path": f"{wid}/snapshots/{snapshot_id}", "entries": stats["entries"], "bytes": stats["bytes"]}
 
 
@@ -650,7 +1377,7 @@ def workspace_snapshot(req: WorkspaceSnapshotRequest, x_aurorafox_computer_token
 def workspace_rollback(req: WorkspaceRollbackRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); wid = _safe_workspace_id(req.workspace); sid = _safe_workspace_id(req.snapshot); work = _safe_sandbox_path(f"{wid}/work"); source = _safe_sandbox_path(f"{wid}/snapshots/{sid}", must_exist=True)
     if not source.is_dir(): raise HTTPException(status_code=404, detail="Snapshot not found")
-    replacement = _safe_sandbox_path(f"{wid}/work.rollback.{uuid.uuid4().hex}"); stats = _copy_snapshot_tree(source, replacement)
+    replacement = _safe_sandbox_path(f"{wid}/work.rollback.{uuid.uuid4().hex}"); stats = _copy_snapshot_tree(source, replacement, req.max_entries, req.max_bytes)
     if work.exists():
         backup = _safe_sandbox_path(f"{wid}/work.pre_rollback.{uuid.uuid4().hex}"); os.replace(work, backup)
         try: os.replace(replacement, work)
@@ -661,24 +1388,44 @@ def workspace_rollback(req: WorkspaceRollbackRequest, x_aurorafox_computer_token
 
 
 @app.get("/sandbox/list")
-def sandbox_list(path: str = ".", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
-    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); p = _safe_sandbox_path(path)
-    if not p.exists(): return {"ok": True, "items": []}
-    if not p.is_dir(): raise HTTPException(status_code=400, detail="Not a directory")
+def sandbox_list(path: str = ".", x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None),
+                 max_items: int = 0, x_aurorafox_sandbox_items: int | None = Header(default=None, ge=0)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
+    budget = max_items if x_aurorafox_sandbox_items is None else x_aurorafox_sandbox_items
+    if budget < 0: raise HTTPException(400, "List item budget must be nonnegative")
+    p = _safe_sandbox_path(path)
     items = []
-    for child in p.iterdir():
-        resolved = child.resolve(strict=False)
-        if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents: continue
-        items.append({"name": child.name, "dir": child.is_dir(), "size": child.stat().st_size if child.is_file() else 0})
-    return {"ok": True, "items": items}
+    result = {"ok": True, "items": items, "partial": False, "truncated": False, "limit_reached": False, "failed_paths": 0, "unsafe_paths_skipped": 0}
+    if not p.exists(): return result
+    if not p.is_dir(): raise HTTPException(status_code=400, detail="Not a directory")
+    with os.scandir(p) as iterator:
+        for entry in iterator:
+            try:
+                child = Path(entry.path)
+                resolved = child.resolve(strict=True)
+                if resolved != SANDBOX_ROOT and SANDBOX_ROOT not in resolved.parents:
+                    result["unsafe_paths_skipped"] += 1
+                    continue
+                if budget > 0 and len(items) >= budget:
+                    result["truncated"] = result["limit_reached"] = True
+                    break
+                info = entry.stat()
+                items.append({"name": entry.name, "dir": entry.is_dir(), "size": info.st_size if entry.is_file() else 0})
+            except OSError: result["failed_paths"] += 1
+    result["partial"] = bool(result["truncated"] or result["failed_paths"] or result["unsafe_paths_skipped"])
+    return result
 
 
 @app.get("/sandbox/read")
-def sandbox_read(path: str, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
+def sandbox_read(path: str, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None), max_bytes: int = MAX_READ_BYTES) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); p = _safe_sandbox_path(path, must_exist=True)
     if not p.is_file(): raise HTTPException(status_code=404, detail="File not found")
-    data = p.read_bytes()
-    if len(data) > MAX_READ_BYTES: raise HTTPException(status_code=413, detail="File too large")
+    if max_bytes < 0: raise HTTPException(400, "Read byte budget must be nonnegative")
+    if max_bytes > 0 and p.stat().st_size > max_bytes:
+        raise HTTPException(413, "File exceeds owner byte budget")
+    with os.fdopen(os.open(p, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)), "rb") as source:
+        data = source.read(max_bytes + 1) if max_bytes > 0 else source.read()
+    if max_bytes > 0 and len(data) > max_bytes: raise HTTPException(413, "File grew beyond owner byte budget")
     try: return {"ok": True, "text": data.decode("utf-8")}
     except UnicodeDecodeError: return {"ok": True, "base64": base64.b64encode(data).decode("ascii")}
 
@@ -686,9 +1433,22 @@ def sandbox_read(path: str, x_aurorafox_computer_token: str | None = Header(defa
 @app.post("/sandbox/write")
 def sandbox_write(req: SandboxWriteRequest, x_aurorafox_computer_token: str | None = Header(default=None), x_aurorafox_autonomy_allowed: str | None = Header(default=None)) -> dict[str, Any]:
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); encoded = req.content.encode("utf-8")
-    if len(encoded) > MAX_WRITE_BYTES: raise HTTPException(status_code=413, detail="Write payload too large")
+    if req.max_bytes > 0 and len(encoded) > req.max_bytes: raise HTTPException(status_code=413, detail="Write payload too large")
     path = _safe_sandbox_path(req.path); path.parent.mkdir(parents=True, exist_ok=True); temp = path.parent / f".{path.name}.{uuid.uuid4().hex}.tmp"; temp.write_bytes(encoded); os.replace(temp, path)
     return {"ok": True, "path": path.relative_to(SANDBOX_ROOT).as_posix()}
+
+
+@app.post("/sandbox/cancel_all")
+def sandbox_cancel_all(x_aurorafox_computer_token: str | None = Header(default=None)) -> dict[str, Any]:
+    _authorize(x_aurorafox_computer_token, None, require_autonomy=False)
+    return _cancel_all_processes()
+
+
+@app.post("/sandbox/cancel")
+def sandbox_cancel(req: SandboxCancelRequest, x_aurorafox_computer_token: str | None = Header(default=None)) -> dict[str, Any]:
+    # Stopping an already-owned execution must remain possible after Master Stop.
+    _authorize(x_aurorafox_computer_token, None, require_autonomy=False)
+    return _cancel_execution(req.execution_id)
 
 
 @app.post("/sandbox/exec")
@@ -696,7 +1456,7 @@ def sandbox_exec(req: SandboxExecRequest, x_aurorafox_computer_token: str | None
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed)
     if not ALLOW_DEGRADED_LOCAL_SANDBOX:
         raise HTTPException(status_code=403, detail="Degraded local process sandbox is disabled by default; use container mode or explicit operator opt-in")
-    command = _validate_command(req.command); cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); result = _run_process(command, cwd, req.timeout, allow_network=req.allow_network); result["network_requested"] = bool(req.allow_network); result["network_isolation_enforced"] = False; return result
+    command = _validate_command(req.command); cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); result = _run_owned_process(req, command, cwd); result["network_requested"] = bool(req.allow_network); result["network_isolation_enforced"] = False; return result
 
 
 @app.post("/sandbox/container_exec")
@@ -704,8 +1464,9 @@ def sandbox_container_exec(req: SandboxExecRequest, x_aurorafox_computer_token: 
     _authorize(x_aurorafox_computer_token, x_aurorafox_autonomy_allowed); command = _validate_command(req.command); engine = _container_engine()
     if not engine: raise HTTPException(status_code=404, detail="Docker/Podman not installed")
     cwd = _safe_sandbox_path(req.cwd); cwd.mkdir(parents=True, exist_ok=True); image, inner_command = _container_profile(command); network_args = [] if req.allow_network else ["--network", "none"]
-    run_command = [engine, "run", "--rm", "--pull=never", *network_args, "--read-only", "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"), "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"), "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"), "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m", "-v", f"{cwd}:/workspace:rw", "-w", "/workspace", image, *inner_command]
-    result = _run_process(run_command, cwd, req.timeout, allow_network=req.allow_network); result.update({"mode": "container", "engine": engine, "image": image, "network": "allowed" if req.allow_network else "none", "network_isolation_enforced": not req.allow_network, "image_pull_allowed": False}); return result
+    container_name = "aurorafox-" + uuid.uuid4().hex
+    run_command = [engine, "run", "--rm", "--name", container_name, "--pull=never", *network_args, "--read-only", "--memory", os.getenv("AURORAFOX_CONTAINER_MEMORY", "2g"), "--cpus", os.getenv("AURORAFOX_CONTAINER_CPUS", "2"), "--pids-limit", os.getenv("AURORAFOX_CONTAINER_PIDS", "256"), "--security-opt", "no-new-privileges", "--tmpfs", "/tmp:rw,noexec,nosuid,size=256m", "-v", f"{cwd}:/workspace:rw", "-w", "/workspace", image, *inner_command]
+    result = _run_owned_process(req, run_command, cwd, (engine, container_name)); result.update({"mode": "container", "engine": engine, "image": image, "network": "allowed" if req.allow_network else "none", "network_isolation_enforced": not req.allow_network, "image_pull_allowed": False}); return result
 
 
 if __name__ == "__main__":

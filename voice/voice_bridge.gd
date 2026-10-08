@@ -116,6 +116,7 @@ func _xtts_enabled(root: String) -> bool:
 	return xtts is Dictionary and bool(xtts.get("enabled", false))
 
 func _configure_runtime_environment(runtime_root: String) -> void:
+	_export_owner_resource_limits()
 	_configure_model_cache(runtime_root)
 	var ffmpeg_bin := runtime_root.path_join("runtime/ffmpeg/bin")
 	if FileAccess.file_exists(ffmpeg_bin.path_join("ffmpeg.exe")):
@@ -123,6 +124,10 @@ func _configure_runtime_environment(runtime_root: String) -> void:
 	var cpml_marker := runtime_root.path_join("runtime/xtts_cpml_accepted.txt")
 	if FileAccess.file_exists(cpml_marker):
 		OS.set_environment("COQUI_TOS_AGREED", "1")
+
+func _export_owner_resource_limits() -> void:
+	for suffix in ["TTS_INPUT_CHARS", "CACHE_BYTES", "MIC_QUEUE_CHUNKS", "PATH_CHARS", "STFT_N_FFT", "STFT_HOP_LENGTH"]:
+		OS.set_environment("AURORAFOX_VOICE_" + suffix, str(OwnerResourcePolicy.value("voice_" + suffix.to_lower())))
 
 func _configure_model_cache(runtime_root: String) -> void:
 	OS.set_environment("HF_HOME", runtime_root.path_join("models/cache/huggingface"))

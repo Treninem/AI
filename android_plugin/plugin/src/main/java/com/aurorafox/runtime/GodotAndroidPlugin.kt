@@ -182,10 +182,28 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     }
 
     @UsedByGodot
-    fun startAnalyzeLocalFile(path: String, question: String, visual: Boolean): String {
+    fun startAnalyzeLocalFile(path: String, question: String, visual: Boolean): String =
+        submitFileAnalysis(path, question, visual, FileAnalysisLimits())
+
+    @UsedByGodot
+    fun startAnalyzeLocalFileWithLimits(path: String, question: String, visual: Boolean, limitsJson: String): String {
+        if (!isInsideAppStorage(path)) return errorJson("File must be inside AuroraFox private storage")
+        val limits = try {
+            val json = JSONObject(limitsJson)
+            val values = mutableMapOf<String, Long>()
+            for (key in json.keys()) {
+                val value = json.opt(key)
+                if (value is Number) values[key] = value.toLong()
+            }
+            FileAnalysisLimits.from(values)
+        } catch (t: Throwable) { return errorJson("Invalid owner file limits: ${t.message ?: t.javaClass.simpleName}") }
+        return submitFileAnalysis(path, question, visual, limits)
+    }
+
+    private fun submitFileAnalysis(path: String, question: String, visual: Boolean, limits: FileAnalysisLimits): String {
         if (!isInsideAppStorage(path)) return errorJson("File must be inside AuroraFox private storage")
         cleanupFinishedFileJobs()
-        if (fileJobs.size >= 8) return errorJson("Too many pending Android file-analysis jobs")
+        if (fileJobs.size >= limits.pendingJobs) return errorJson("Too many pending Android file-analysis jobs")
         val runtime = try { files } catch (t: Throwable) {
             return errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}")
         }
@@ -194,7 +212,7 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         fileJobs[jobId] = job
         job.future = fileExecutor.submit {
             val output = try {
-                runtime.analyze(path, question, visual)
+                runtime.analyze(path, question, visual, limits)
             } catch (t: Throwable) {
                 errorJson("Android File Intelligence unavailable: ${t.message ?: t.javaClass.simpleName}")
             }

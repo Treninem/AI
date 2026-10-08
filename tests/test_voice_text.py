@@ -146,3 +146,17 @@ def test_personality_avoids_immediate_repeat(tmp_path: Path):
     p = AuroraPersonality(path)
     values = [p.wake_response() for _ in range(8)]
     assert all(a != b for a, b in zip(values, values[1:]))
+
+
+def test_streaming_small_and_unlimited_explicit_budget_preserves_progress():
+    import pytest
+    text = "А" * 90
+    for cap in [1, 2, 20, 100, 0]:
+        chunks = split_for_streaming(text, max_chars=cap)
+        assert "".join(chunks).replace(",", "") == text
+        if cap:
+            assert all(0 < len(chunk) <= cap for chunk in chunks)
+        else:
+            assert chunks == [text]
+    with pytest.raises(ValueError):
+        split_for_streaming(text, max_chars=-1)

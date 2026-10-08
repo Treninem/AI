@@ -28,7 +28,7 @@ from api.learning_sync import LearningSynchronizer
 from api.ollama_client import OllamaClient
 from api.persistence_maintenance import PersistenceMaintenance
 from api.public_auth_limits import PublicAuthRateLimitMiddleware
-from api.request_limits import DEFAULT_MAX_BODY_BYTES, RequestBodyLimitMiddleware
+from api.request_limits import DEFAULT_MAX_BODY_BYTES, RequestBodyLimitMiddleware, request_body_policy_from_environment, _nonnegative_budget
 from api.runtime_bridge import AuroraRuntimeBridge
 from api.sync_store import SyncStore
 
@@ -39,10 +39,17 @@ API_ROOT = USER_ROOT / "api"
 API_ROOT.mkdir(parents=True, exist_ok=True)
 LOGGER = logging.getLogger("aurorafox.api")
 DEV_ACCOUNT_TOKENS = os.getenv("AURORAFOX_ACCOUNT_EXPOSE_DEV_TOKENS", "0") == "1"
-try:
-    MAX_API_BODY_BYTES = max(1, int(os.getenv("AURORAFOX_API_MAX_BODY_BYTES", str(DEFAULT_MAX_BODY_BYTES))))
-except ValueError:
-    MAX_API_BODY_BYTES = DEFAULT_MAX_BODY_BYTES
+MAX_API_BODY_BYTES, MAX_API_IN_FLIGHT_BODY_BYTES = request_body_policy_from_environment()
+
+def _owner_text_budget(name: str, default: int) -> int | None:
+    value = _nonnegative_budget(os.getenv(name, str(default)), name)
+    return value if value > 0 else None
+
+
+MAX_API_CHAT_CHARS = _owner_text_budget("AURORAFOX_API_CHAT_MAX_CHARS", 100000)
+MAX_API_KNOWLEDGE_CHARS = _owner_text_budget("AURORAFOX_API_KNOWLEDGE_MAX_CHARS", 200000)
+MAX_API_NOTE_CHARS = _owner_text_budget("AURORAFOX_API_NOTE_MAX_CHARS", 12000)
+
 try:
     PUBLIC_AUTH_RPM = max(1, int(os.getenv("AURORAFOX_PUBLIC_AUTH_RPM", "20")))
 except ValueError:
@@ -85,7 +92,7 @@ app = FastAPI(
     version=_canonical_version(),
     description="External gateway to AuroraFox AgentCore, personal sync, tools, files and local models.",
 )
-app.add_middleware(RequestBodyLimitMiddleware, max_bytes=MAX_API_BODY_BYTES)
+app.add_middleware(RequestBodyLimitMiddleware, max_bytes=MAX_API_BODY_BYTES, max_in_flight_bytes=MAX_API_IN_FLIGHT_BODY_BYTES)
 app.add_middleware(PublicAuthRateLimitMiddleware, limit=PUBLIC_AUTH_RPM, window_seconds=60.0)
 app.include_router(create_account_web_router(accounts))
 
@@ -122,7 +129,7 @@ rate_limiter = RateLimiter(int(os.getenv("AURORAFOX_API_RPM", "60")), 60.0)
 
 
 class ChatRequest(BaseModel):
-    message: str = Field(min_length=1, max_length=100000)
+    message: str = Field(min_length=1, max_length=MAX_API_CHAT_CHARS)
     conversation_id: str | None = Field(default=None, max_length=256)
     mode: Literal["auto", "agent", "ollama"] = "auto"
     temperature: float = Field(default=0.2, ge=0.0, le=2.0)
@@ -133,18 +140,18 @@ class FeedbackRequest(BaseModel):
     conversation_id: str = Field(min_length=1, max_length=256)
     source: str = Field(default="api", max_length=64)
     user_id: str = Field(default="", max_length=256)
-    message: str = Field(default="", max_length=100000)
-    answer: str = Field(default="", max_length=100000)
+    message: str = Field(default="", max_length=MAX_API_CHAT_CHARS)
+    answer: str = Field(default="", max_length=MAX_API_CHAT_CHARS)
     score: float = Field(ge=-1.0, le=1.0)
-    corrected_answer: str = Field(default="", max_length=100000)
-    note: str = Field(default="", max_length=12000)
+    corrected_answer: str = Field(default="", max_length=MAX_API_CHAT_CHARS)
+    note: str = Field(default="", max_length=MAX_API_NOTE_CHARS)
     metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class LearningRequest(BaseModel):
     source: str = Field(default="api", max_length=64)
     kind: str = Field(default="external_knowledge", max_length=128)
-    content: str = Field(min_length=1, max_length=200000)
+    content: str = Field(min_length=1, max_length=MAX_API_KNOWLEDGE_CHARS)
     importance: float = Field(default=0.65, ge=0.0, le=1.0)
     confidence: float = Field(default=0.80, ge=0.0, le=1.0)
     metadata: dict[str, Any] = Field(default_factory=dict)
@@ -153,7 +160,7 @@ class LearningRequest(BaseModel):
 class FileAnalyzeRequest(BaseModel):
     filename: str = Field(min_length=1, max_length=255)
     content_base64: str = Field(min_length=1)
-    question: str = Field(default="", max_length=12000)
+    question: str = Field(default="", max_length=MAX_API_NOTE_CHARS)
     visual: bool = True
 
 
@@ -164,7 +171,7 @@ class ToolRunRequest(BaseModel):
 
 class CoreCandidateSubmitRequest(BaseModel):
     manifest: dict[str, Any]
-    content_base64: str = Field(min_length=1, max_length=2 * 1024 * 1024)
+    content_base64: str = Field(min_length=1)
     source: str = Field(default="aurorafox-client", min_length=1, max_length=128)
 
 
@@ -394,7 +401,7 @@ def _native_chat(req: ChatRequest, record: dict[str, Any]) -> dict[str, Any]:
     _require(record, "chat")
     owner = str(record.get("id", "unknown"))
     conversation_id = req.conversation_id or uuid.uuid4().hex
-    context = conversations.context(owner, conversation_id, 24)
+    context = conversations.context(owner, conversation_id)
     metadata = dict(req.metadata)
     metadata.setdefault("source", "api")
     metadata["principal_id"] = owner

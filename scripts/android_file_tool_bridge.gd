@@ -36,13 +36,13 @@ func _analyze_file(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", ""))
 	if not (path.begins_with("user://") or path.begins_with("res://")):
 		return {"ok": false, "error": "Android agent file path must use user:// or res://"}
-	return await client.analyze_file(path, str(args.get("question", "")), bool(args.get("visual", true)), 200000)
+	return await client.analyze_file(path, str(args.get("question", "")), bool(args.get("visual", true)), int(client.owner_limits().max_text_chars))
 
 func _file_tree(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "user://"))
 	if not path.begins_with("user://"):
 		return {"ok": false, "error": "Android directory tree is restricted to user://"}
-	return await client.tree(path, clampi(int(args.get("max_items", 2000)), 1, 5000))
+	return await client.tree(path, int(args.get("max_items", 2000)))
 
 func _search_cache(_args: Dictionary) -> Dictionary:
 	return {"ok": false, "results": [], "error": "Separate Android file-cache search is not enabled; extracted file text is available in the active chat context."}

@@ -42,9 +42,11 @@ func save_skill(skill: Dictionary) -> void:
 		"failure_count": int(skill.get("failure_count", 0)),
 		"confidence": clampf(float(skill.get("confidence", 0.6)), 0.0, 1.0),
 		"created_at": Time.get_datetime_string_from_system(true),
-		"last_used_at": Time.get_datetime_string_from_system(true)
+		"last_used_at": Time.get_datetime_string_from_system(true),
+		"source_feedback_id": str(skill.get("source_feedback_id", "")),
+		"active": true
 	}
-	var existing := _find_similar_skill(normalized.goal_pattern)
+	var existing := _find_feedback_skill(normalized.source_feedback_id) if not normalized.source_feedback_id.is_empty() else _find_similar_skill(normalized.goal_pattern)
 	if existing >= 0:
 		var old: Dictionary = skills[existing]
 		old["summary"] = normalized.summary
@@ -53,6 +55,7 @@ func save_skill(skill: Dictionary) -> void:
 		old["success_count"] = int(old.get("success_count", 0)) + 1
 		old["confidence"] = min(1.0, max(float(old.get("confidence", 0.5)), normalized.confidence) + 0.03)
 		old["last_used_at"] = normalized.last_used_at
+		old["active"] = true
 		skills[existing] = old
 	else:
 		skills.append(normalized)
@@ -68,15 +71,43 @@ func mark_skill_failure(goal_pattern: String, note: String) -> void:
 		_save_array(SKILLS_PATH, skills)
 	record_failure(goal_pattern, note)
 
-func record_failure(task: String, note: String) -> void:
+func record_failure(task: String, note: String, source_feedback_id := "") -> void:
 	failures.append({
 		"task": task,
 		"note": note,
-		"time": Time.get_datetime_string_from_system(true)
+		"time": Time.get_datetime_string_from_system(true),
+		"source_feedback_id": source_feedback_id,
+		"active": true
 	})
-	if failures.size() > 300:
-		failures = failures.slice(failures.size() - 300)
+	var cap := OwnerResourcePolicy.value("experience_failure_items")
+	if cap > 0 and failures.size() > cap:
+		failures = failures.slice(failures.size() - cap)
 	_save_array(FAILURES_PATH, failures)
+
+func retract_feedback(source_feedback_id: String) -> bool:
+	if source_feedback_id.is_empty():
+		return false
+	var changed_skills := false
+	var changed_failures := false
+	for i in range(skills.size()):
+		var skill = skills[i]
+		if skill is Dictionary and str(skill.get("source_feedback_id", "")) == source_feedback_id and bool(skill.get("active", true)):
+			skill["active"] = false
+			skill["retracted_at"] = Time.get_datetime_string_from_system(true)
+			skills[i] = skill
+			changed_skills = true
+	for i in range(failures.size()):
+		var failure = failures[i]
+		if failure is Dictionary and str(failure.get("source_feedback_id", "")) == source_feedback_id and bool(failure.get("active", true)):
+			failure["active"] = false
+			failure["retracted_at"] = Time.get_datetime_string_from_system(true)
+			failures[i] = failure
+			changed_failures = true
+	if changed_skills:
+		_save_array(SKILLS_PATH, skills)
+	if changed_failures:
+		_save_array(FAILURES_PATH, failures)
+	return changed_skills or changed_failures
 
 func checkpoint(task: String, step_index: int, tool_name: String, args: Dictionary, result: Variant) -> void:
 	checkpoints.append({
@@ -87,8 +118,9 @@ func checkpoint(task: String, step_index: int, tool_name: String, args: Dictiona
 		"result_summary": _compact(result),
 		"time": Time.get_datetime_string_from_system(true)
 	})
-	if checkpoints.size() > 500:
-		checkpoints = checkpoints.slice(checkpoints.size() - 500)
+	var cap := OwnerResourcePolicy.value("experience_checkpoint_items")
+	if cap > 0 and checkpoints.size() > cap:
+		checkpoints = checkpoints.slice(checkpoints.size() - cap)
 	_save_array(CHECKPOINTS_PATH, checkpoints)
 
 func relevant_skills(task: String, limit := 5) -> Array:
@@ -96,6 +128,8 @@ func relevant_skills(task: String, limit := 5) -> Array:
 	var q_tokens := _tokens(task)
 	for s in skills:
 		var item: Dictionary = s
+		if not bool(item.get("active", true)):
+			continue
 		var hay := str(item.get("goal_pattern", "")) + " " + str(item.get("summary", ""))
 		var score := _overlap(q_tokens, _tokens(hay))
 		score += float(item.get("confidence", 0.0)) * 0.35
@@ -110,9 +144,19 @@ func relevant_skills(task: String, limit := 5) -> Array:
 	return out
 
 func recent_failures(limit := 5) -> Array:
-	if failures.is_empty():
+	var active: Array = []
+	for failure in failures:
+		if failure is Dictionary and bool(failure.get("active", true)):
+			active.append(failure)
+	if active.is_empty():
 		return []
-	return failures.slice(max(0, failures.size() - limit))
+	return active.slice(max(0, active.size() - limit))
+
+func _find_feedback_skill(source_feedback_id: String) -> int:
+	for i in range(skills.size()):
+		if str(skills[i].get("source_feedback_id", "")) == source_feedback_id:
+			return i
+	return -1
 
 func _find_similar_skill(pattern: String) -> int:
 	var p := _tokens(pattern)
@@ -146,4 +190,4 @@ func _overlap(a: Dictionary, b: Dictionary) -> float:
 
 func _compact(value: Variant) -> String:
 	var text := JSON.stringify(value)
-	return text.substr(0, 4000)
+	return OwnerResourcePolicy.clip(text, "experience_result_chars")

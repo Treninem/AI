@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import threading
 from typing import Any, Awaitable, Callable
 
@@ -16,6 +17,29 @@ REQUEST_CAPACITY_RESPONSE = {
     "detail": "AuroraFox API request body capacity temporarily exhausted",
     "retry_after": 1,
 }
+
+
+def _nonnegative_budget(value, name):
+    try:
+        number = int(value)
+    except (ValueError, TypeError, OverflowError) as exc:
+        raise ValueError(f"{name} must be a nonnegative integer") from exc
+    if isinstance(value, bool) or number < 0 or (isinstance(value, float) and value != number):
+        raise ValueError(f"{name} must be a nonnegative integer")
+    return number
+
+
+def request_body_policy_from_environment(environment=None):
+    """Trusted operator startup policy; HTTP headers/payloads never set it."""
+    environment = os.environ if environment is None else environment
+    per_request = _nonnegative_budget(environment.get("AURORAFOX_API_MAX_BODY_BYTES", DEFAULT_MAX_BODY_BYTES), "AURORAFOX_API_MAX_BODY_BYTES")
+    aggregate_default = per_request * 4 if per_request else DEFAULT_MAX_IN_FLIGHT_BODY_BYTES
+    aggregate = _nonnegative_budget(environment.get("AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES", aggregate_default), "AURORAFOX_API_MAX_IN_FLIGHT_BODY_BYTES")
+    return per_request, aggregate
+
+
+class RequestBodyAggregateTooLarge(RuntimeError):
+    pass
 
 
 class RequestBodyTooLarge(RuntimeError):
@@ -40,6 +64,11 @@ class RequestBodyLimitMiddleware:
     understated bodies reserve additional capacity as bytes arrive. Capacity is
     released in ``finally`` on success and every failure path.
 
+    Defaults remain bounded. Trusted operator zero disables its own ceiling;
+    per-request and aggregate budgets are independent. A body which cannot fit
+    the aggregate budget is permanently rejected413; concurrent contention is503.
+    Invalid budgets fail visibly rather than being silently clamped.
+
     WebSocket scopes are passed through unchanged.
     """
 
@@ -50,11 +79,10 @@ class RequestBodyLimitMiddleware:
         max_in_flight_bytes: int | None = None,
     ):
         self.app = app
-        self.max_bytes = max(1, int(max_bytes))
-        configured_budget = (
-            self.max_bytes * 4 if max_in_flight_bytes is None else int(max_in_flight_bytes)
-        )
-        self.max_in_flight_bytes = max(self.max_bytes, configured_budget)
+        self.max_bytes = _nonnegative_budget(max_bytes, "max_bytes")
+        aggregate_default = self.max_bytes * 4 if self.max_bytes else DEFAULT_MAX_IN_FLIGHT_BODY_BYTES
+        configured_budget = aggregate_default if max_in_flight_bytes is None else max_in_flight_bytes
+        self.max_in_flight_bytes = _nonnegative_budget(configured_budget, "max_in_flight_bytes")
         self._in_flight_bytes = 0
         self._in_flight_lock = threading.Lock()
 
@@ -75,7 +103,7 @@ class RequestBodyLimitMiddleware:
         if amount == 0:
             return True
         with self._in_flight_lock:
-            if self._in_flight_bytes + amount > self.max_in_flight_bytes:
+            if self.max_in_flight_bytes > 0 and self._in_flight_bytes + amount > self.max_in_flight_bytes:
                 return False
             self._in_flight_bytes += amount
             return True
@@ -112,14 +140,21 @@ class RequestBodyLimitMiddleware:
     async def _reject_capacity(self, send: Callable[[dict[str, Any]], Awaitable[None]]) -> None:
         await self._json_response(send, **REQUEST_CAPACITY_RESPONSE)
 
+    async def _reject_aggregate_body(self, send):
+        await self._json_response(send, status=413, detail="AuroraFox API request body exceeds aggregate byte budget")
+
     async def __call__(self, scope, receive, send) -> None:
         if scope.get("type") != "http":
             await self.app(scope, receive, send)
             return
 
         content_length = self._content_length(scope)
-        if content_length is not None and content_length > self.max_bytes:
+        if self.max_bytes > 0 and content_length is not None and content_length > self.max_bytes:
             await self._reject_too_large(send)
+            return
+
+        if self.max_in_flight_bytes > 0 and content_length is not None and content_length > self.max_in_flight_bytes:
+            await self._reject_aggregate_body(send)
             return
 
         reserved = 0
@@ -137,8 +172,10 @@ class RequestBodyLimitMiddleware:
             message = await receive()
             if message.get("type") == "http.request":
                 new_received = received + len(message.get("body", b""))
-                if new_received > self.max_bytes:
+                if self.max_bytes > 0 and new_received > self.max_bytes:
                     raise RequestBodyTooLarge
+                if self.max_in_flight_bytes > 0 and new_received > self.max_in_flight_bytes:
+                    raise RequestBodyAggregateTooLarge
                 additional = max(0, new_received - reserved)
                 if additional and not self._reserve(additional):
                     raise RequestBodyCapacityExceeded
@@ -158,6 +195,9 @@ class RequestBodyLimitMiddleware:
             if response_started:
                 raise
             await self._reject_too_large(send)
+        except RequestBodyAggregateTooLarge:
+            if response_started: raise
+            await self._reject_aggregate_body(send)
         except RequestBodyCapacityExceeded:
             if response_started:
                 raise

@@ -12,6 +12,27 @@ AI_CLIENT = ROOT / "scripts" / "ai_client.gd"
 MAIN = ROOT / "scripts" / "main.gd"
 SMOKE_RUNNER = ROOT / "benchmarks" / "core" / "run_windows_code_specialist_smoke.ps1"
 WORKFLOW = ROOT / ".github" / "workflows" / "core-benchmarks.yml"
+COGNITION = ROOT / "scripts" / "cognition_layer.gd"
+PLANNING_SMOKE = ROOT / "tests" / "core_benchmark_diagnostics_smoke.gd"
+
+
+def test_planning_keeps_strict_contract_after_bounded_json_object_recovery() -> None:
+    cognition = COGNITION.read_text(encoding="utf-8")
+    smoke = PLANNING_SMOKE.read_text(encoding="utf-8")
+    assert "func _extract_first_json_object(text: String)" in cognition
+    assert "if parser.parse(candidate) == OK and parser.data is Dictionary: return candidate" in cognition
+    assert 'last_plan_diagnostic["status"] = "invalid_step_contract"' in cognition
+    assert 'last_plan_diagnostic["status"] = "invalid_json_or_plan_contract"' in cognition
+    for marker in ("fill {kettle}", "wrong_shape.steps.is_empty()", "prose.steps.is_empty()"):
+        assert marker in smoke
+
+
+def test_bundled_desktop_core_requests_json_grammar_only_for_strict_prompts() -> None:
+    runtime = DESKTOP_RUNTIME.read_text(encoding="utf-8")
+    smoke = PLANNING_SMOKE.read_text(encoding="utf-8")
+    assert 'if structured_request:\n\t\tpayload["response_format"] = {"type": "json_object"}' in runtime
+    assert 'payload_probe.captured_payload.get("response_format", {}) == {"type": "json_object"}' in smoke
+    assert 'not payload_probe.captured_payload.has("response_format")' in smoke
 
 EXPECTED_OPERATIONS = (
     "analyze_request",
@@ -86,7 +107,7 @@ def test_agent_core_handles_no_tool_retrieval_and_repairs_args_before_execution(
     assert "func _explicit_task_arg(" in agent
     assert "Structural repair happens before any tool call" in agent
     completion_pos = agent.index("args = await _complete_tool_args(task, tool_name, args)")
-    call_pos = agent.index("var tool_result = await tools.call_tool(tool_name, args)")
+    call_pos = agent.index("var tool_result = await tools.call_tool(tool_name, args, execution_guard)")
     assert completion_pos < call_pos
 
 
@@ -103,7 +124,9 @@ def test_core_requests_have_product_bounds_and_terse_mobile_desktop_limits() -> 
     assert "DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0" in runtime
     assert '"max_tokens": max_tokens' in runtime
     assert 'options.get("timeout_seconds", DEFAULT_CHAT_TIMEOUT_SECONDS)' in runtime
-    assert 'clampi(int(options.get("max_tokens", default_max_tokens)), 64, 8192)' in runtime
+    assert 'var max_tokens := _generation_budget(options, terse_request)' in runtime
+    assert 'OwnerResourcePolicy.value("terse_max_tokens" if terse_request else "chat_max_tokens")' in runtime
+    assert 'return -1 if requested_tokens <= 0 else requested_tokens' in runtime
     assert 'payload["reasoning_effort"] = "none"' in runtime
     assert "_is_strict_structured_request(messages)" in runtime
     assert 'prompt.contains("return strict json only")' in runtime
@@ -153,7 +176,10 @@ def test_windows_prefers_packaged_core_and_normal_chat_recovers_without_setup() 
     assert main.count("await agent.run_task(task)") == 1
     assert "call_deferred(\"_recover_core_background\")" in main
     assert "устанавливать или настраивать ничего не нужно" in main
-    assert main.index("ai.retry_core_now()") < main.index('chats.add_message("assistant", answer)')
+    # Assistant persistence now carries runtime/model/version metadata after
+    # the answer arguments; the recovery ordering contract must not pin the old
+    # two-argument call spelling.
+    assert main.index("ai.retry_core_now()") < main.index('chats.add_message("assistant", answer')
 
 
 def test_core_engine_resolution_uses_actions_token_without_weakening_verification() -> None:

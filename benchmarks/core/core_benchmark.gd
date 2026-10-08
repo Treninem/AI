@@ -280,6 +280,9 @@ func _run() -> void:
 	var cognition := CognitionLayer.new()
 	root.add_child(cognition)
 	cognition.setup(client)
+	# This fixed benchmark prompt contains no private user data. Capture its
+	# bounded model reply only in the benchmark artifact for failure diagnosis.
+	cognition.capture_synthetic_plan_response = true
 	var plan_call := await _plan_with_watchdog(cognition, "Prepare a cup of tea safely using a kettle. Give a short practical plan.")
 	if await _handle_plan_timeout("simple_planning", plan_call, client): return
 	var plan: Dictionary = plan_call.plan
@@ -289,6 +292,7 @@ func _run() -> void:
 		"elapsed_ms": plan_call.elapsed_ms,
 		"step_count": plan_steps.size(),
 		"success_check_count": plan_checks.size(),
+		"plan_diagnostic": cognition.last_plan_diagnostic.duplicate(true),
 		"needs_tools": plan.get("needs_tools", false)
 	}, "aurora_core_desktop" if OS.get_name() == "Windows" else "")
 
@@ -512,6 +516,7 @@ func _chat_row(id: String, call: Dictionary, passed: bool, details: Dictionary) 
 		"completion_tokens": perf.get("completion_tokens", 0),
 		"throughput_equivalent_tps": perf.get("throughput_equivalent_tps", 0.0),
 		"throughput_source": perf.get("throughput_source", ""),
+		"diagnostic": preload("res://benchmarks/core/failure_diagnostics.gd").describe(result),
 		"details": details
 	}
 	return row

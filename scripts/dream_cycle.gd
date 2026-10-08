@@ -29,7 +29,7 @@ func reflect(skills: Array, failures: Array) -> Array:
 [{"title":"...","problem":"...","proposal":"...","test":"...","priority":1,"risk":"low|medium|high"}]
 Навыки: %s
 Ошибки: %s
-""" % [JSON.stringify(skills).substr(0, 30000), JSON.stringify(failures).substr(0, 20000)]
+""" % [OwnerResourcePolicy.clip(JSON.stringify(skills), "reflection_skills_chars"), OwnerResourcePolicy.clip(JSON.stringify(failures), "reflection_failures_chars")]
 	var result := await ai.chat([{"role":"user","content":prompt}], 0.15)
 	if not result.get("ok", false):
 		return []
@@ -40,8 +40,9 @@ func reflect(skills: Array, failures: Array) -> Array:
 			idea["created_at"] = Time.get_datetime_string_from_system(true)
 			idea["status"] = "proposed"
 			ideas.append(idea)
-	if ideas.size() > 200:
-		ideas = ideas.slice(ideas.size() - 200)
+	var cap := OwnerResourcePolicy.value("reflection_idea_items")
+	if cap > 0 and ideas.size() > cap:
+		ideas = ideas.slice(ideas.size() - cap)
 	_save_ideas()
 	return parsed
 

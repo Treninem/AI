@@ -332,6 +332,20 @@ func _exercise_chat(main: Control) -> bool:
 	if store.active_chat_id.is_empty() or store.active_chat_id == before:
 		_fail("New chat action did not create/activate a chat", 61)
 		return false
+	var previous_title_cap := OwnerResourcePolicy.value("chat_title_chars")
+	OwnerResourcePolicy._cached.chat_title_chars = 160
+	await main.call("_open_rename_chat", store.active_chat_id, "Д".repeat(100))
+	var rename_field = main.get("rename_input")
+	if rename_field.max_length != 160 or rename_field.text.length() != 100:
+		_fail("Live rename field ignored raised owner title budget", 101)
+		return false
+	OwnerResourcePolicy._cached.chat_title_chars = 0
+	await main.call("_open_rename_chat", store.active_chat_id, "Д".repeat(180))
+	if rename_field.max_length != 0 or rename_field.text.length() != 180:
+		_fail("Live rename field did not honor unlimited owner title budget", 102)
+		return false
+	OwnerResourcePolicy._cached.chat_title_chars = previous_title_cap
+	main.get("rename_dialog").hide()
 	store.add_message("user", "Проверка ровной пользовательской карточки")
 	store.add_message("assistant", "Проверка ответа AuroraFox без временной картинки рядом с сообщением.")
 	store.rename_chat(store.active_chat_id, "Очень длинное название чата для проверки безопасного поведения заголовка AuroraFox без наложений")
@@ -348,6 +362,19 @@ func _exercise_chat(main: Control) -> bool:
 	if _visible_placeholder_fox(main):
 		_fail("Assistant message rendered temporary avatar artwork", 62)
 		return false
+	var feedback_controls := main.find_children("FeedbackControls", "HBoxContainer", true, false)
+	if feedback_controls.size() < 2:
+		_fail("Assistant answers do not expose compact feedback controls", 95)
+		return false
+	for controls in feedback_controls:
+		var positive := controls.find_child("FeedbackPositive", true, false) as Button
+		var negative := controls.find_child("FeedbackNegative", true, false) as Button
+		if positive == null or negative == null or positive.text != "+" or negative.text != "−":
+			_fail("Feedback controls are missing accessible + / − actions", 96)
+			return false
+		if positive.tooltip_text.is_empty() or negative.tooltip_text.is_empty():
+			_fail("Feedback controls do not explain their actions", 97)
+			return false
 	var messages := main.find_child("MessageList", true, false)
 	if messages != null:
 		for node in messages.find_children("*", "TextureRect", true, false):

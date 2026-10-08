@@ -274,3 +274,46 @@ def test_operational_snapshot_is_complete_and_integrity_verified(tmp_path: Path)
         stored_hash = connection.execute("SELECT token_hash FROM api_keys WHERE id=?", (str(key["id"]),)).fetchone()[0]
     assert stored_hash == hashlib.sha256(token.encode("utf-8")).hexdigest()
     assert learning.pending(10)[0]["id"] == event["id"]
+
+
+@pytest.mark.parametrize("budget,expected", [(1, 1), (3, 3), (0, 6), (10, 6)])
+def test_conversation_owner_retention_restart_and_isolation(tmp_path, budget, expected):
+    root = tmp_path / "api" / "conversations"
+    store = ConversationStore(root, max_messages=budget, context_messages=0)
+    store.append("other", "shared", "user", "private-other")
+    store.append("owner", "other", "user", "private-conversation")
+    for index in range(6):
+        store.append("owner", "shared", "user", str(index))
+    expected_messages = [str(index) for index in range(6 - expected, 6)]
+    assert [row["content"] for row in store.context("owner", "shared")] == expected_messages
+    recovered = ConversationStore(root, max_messages=budget, context_messages=0)
+    assert [row["content"] for row in recovered.get("owner", "shared")["messages"]] == expected_messages
+    assert recovered.context("other", "shared") == [{"role": "user", "content": "private-other"}]
+    assert recovered.context("owner", "other") == [{"role": "user", "content": "private-conversation"}]
+    assert recovered.context("owner", "shared", 2) == [{"role": "user", "content": x} for x in expected_messages[-2:]]
+    assert recovered.database.integrity_check()["ok"]
+
+
+@pytest.mark.parametrize("budget,expected", [(0, 6), (2, 2)])
+def test_conversation_legacy_migration_honors_zero_retention(tmp_path, budget, expected):
+    root = tmp_path / "api" / "conversations"
+    root.mkdir(parents=True)
+    (root / "legacy.json").write_text(json.dumps({"owner": "owner", "conversation_id": "legacy",
+        "messages": [{"role": "user", "content": str(i)} for i in range(6)]}))
+    store = ConversationStore(root, max_messages=budget, context_messages=0)
+    assert [row["content"] for row in store.context("owner", "legacy")] == [str(i) for i in range(6 - expected, 6)]
+    assert len(ConversationStore(root, max_messages=budget).get("owner", "legacy")["messages"]) == expected
+
+
+def test_conversation_policy_is_trusted_and_invalid_budget_fails(tmp_path, monkeypatch):
+    monkeypatch.setenv("AURORAFOX_API_CONVERSATION_MAX_MESSAGES", "0")
+    monkeypatch.setenv("AURORAFOX_API_CONVERSATION_CONTEXT_MESSAGES", "3")
+    store = ConversationStore(tmp_path / "api" / "conversations")
+    assert (store.max_messages, store.context_messages) == (0, 3)
+    explicit = ConversationStore(tmp_path / "explicit" / "conversations", max_messages=1, context_messages=0)
+    assert (explicit.max_messages, explicit.context_messages) == (1, 0)
+    with pytest.raises(ValueError, match="context limit"):
+        store.context("owner", "conversation", -1)
+    monkeypatch.setenv("AURORAFOX_API_CONVERSATION_MAX_MESSAGES", "-1")
+    with pytest.raises(ValueError, match="MAX_MESSAGES"):
+        ConversationStore(tmp_path / "bad" / "conversations")

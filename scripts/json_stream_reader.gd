@@ -2,9 +2,10 @@ class_name AuroraJsonStreamReader
 extends RefCounted
 
 const BUFFER_BYTES := 64 * 1024
-const MAX_DEPTH := 256
-const MAX_SCALAR_BYTES := 16 * 1024 * 1024
-const MAX_RECORDS := 5_000_000
+
+var _depth_cap := 256
+var _scalar_cap := 16 * 1024 * 1024
+var _record_cap := 5_000_000
 
 var _file: FileAccess
 var _buffer := PackedByteArray()
@@ -49,6 +50,9 @@ func parse_file(path: String, on_value: Callable) -> Dictionary:
 	}
 
 func _reset() -> void:
+	_depth_cap = OwnerResourcePolicy.value("json_depth")
+	_scalar_cap = OwnerResourcePolicy.value("json_scalar_bytes")
+	_record_cap = OwnerResourcePolicy.value("json_records")
 	_file = null
 	_buffer = PackedByteArray()
 	_buffer_pos = 0
@@ -59,8 +63,8 @@ func _reset() -> void:
 	_on_value = Callable()
 
 func _parse_value(path: String, depth: int) -> bool:
-	if depth > MAX_DEPTH:
-		return _fail("JSON превышает допустимую глубину вложенности %d" % MAX_DEPTH)
+	if _depth_cap > 0 and depth > _depth_cap:
+		return _fail("JSON превышает допустимую глубину вложенности %d" % _depth_cap)
 	_max_depth_seen = maxi(_max_depth_seen, depth)
 	_skip_ws()
 	var b := _peek_byte()
@@ -142,8 +146,8 @@ func _parse_string() -> Dictionary:
 			_fail("Незавершённая строка JSON")
 			return {"ok": false}
 		raw.append(b)
-		if raw.size() > MAX_SCALAR_BYTES:
-			_fail("Одна строка JSON превышает лимит %d байт" % MAX_SCALAR_BYTES)
+		if _scalar_cap > 0 and raw.size() > _scalar_cap:
+			_fail("Одна строка JSON превышает лимит %d байт" % _scalar_cap)
 			return {"ok": false}
 		if escaped:
 			escaped = false
@@ -169,8 +173,8 @@ func _parse_scalar() -> Dictionary:
 		if b < 0 or _is_value_delimiter(b):
 			break
 		raw.append(_get_byte())
-		if raw.size() > MAX_SCALAR_BYTES:
-			_fail("Одно JSON-значение превышает лимит %d байт" % MAX_SCALAR_BYTES)
+		if _scalar_cap > 0 and raw.size() > _scalar_cap:
+			_fail("Одно JSON-значение превышает лимит %d байт" % _scalar_cap)
 			return {"ok": false}
 	if raw.is_empty():
 		_fail("Пустое JSON-значение")
@@ -178,13 +182,13 @@ func _parse_scalar() -> Dictionary:
 	var token := raw.get_string_from_utf8()
 	var parser := JSON.new()
 	if parser.parse(token) != OK:
-		_fail("Некорректное JSON-значение '%s': %s" % [token.substr(0, 120), parser.get_error_message()])
+		_fail("Некорректное JSON-значение '%s': %s" % [OwnerResourcePolicy.clip(token, "json_error_chars"), parser.get_error_message()])
 		return {"ok": false}
 	return {"ok": true, "value": parser.data}
 
 func _emit(path: String, value: Variant) -> bool:
-	if _records >= MAX_RECORDS:
-		return _fail("JSON содержит больше %d потоковых записей" % MAX_RECORDS)
+	if _record_cap > 0 and _records >= _record_cap:
+		return _fail("JSON содержит больше %d потоковых записей" % _record_cap)
 	if _on_value.is_valid():
 		var result = _on_value.call(path, value)
 		if result is Dictionary and not bool(result.get("ok", true)):

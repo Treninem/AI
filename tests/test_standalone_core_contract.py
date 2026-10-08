@@ -12,11 +12,17 @@ def read(path: str) -> str:
     return (ROOT / path).read_text(encoding="utf-8")
 
 
-def test_canonical_version_is_v1_4() -> None:
+def test_canonical_version_matches_all_release_metadata() -> None:
     state = json.loads(read("project/version.json"))
-    assert state["version"] == "V1.4.1.1"
-    assert state["numeric"] == "1.4.1.1"
-    assert state["android_version_code"] == 100007
+    numeric = state["numeric"]
+    parts = numeric.split(".")
+    assert len(parts) == 4 and all(part.isdigit() for part in parts)
+    assert state["version"] == f"V{numeric}"
+    assert [state[key] for key in ("major", "minor", "patch", "build")] == [int(part) for part in parts]
+    assert state["android_version_code"] > 100007  # Published V1.4.1.1 used 100007.
+    assert f'config/version="{numeric}"' in read("project.godot")
+    assert json.loads(read("update/manifest.template.json"))["version"] == numeric
+    assert f"## V{numeric}" in read("CHANGELOG.md")
 
 
 def test_bundled_core_has_pinned_integrity_contract() -> None:
@@ -71,8 +77,13 @@ def test_core_improvement_uses_normal_self_primary_ai_path() -> None:
     pipeline = read("scripts/core_improvement_pipeline.gd")
     proposal = pipeline.split("func _propose", 1)[1].split("func _validate_candidate", 1)[0]
     review = pipeline.split("func _comparative_review", 1)[1].split("func _select_tournament_winner", 1)[0]
-    assert 'await ai.chat([{"role":"user", "content":prompt}], temperature)' in proposal
-    assert 'await ai.chat([{"role":"user", "content":prompt}], 0.0)' in review
+    assert 'await _candidate_chat([{"role":"user", "content":prompt}], temperature)' in proposal
+    assert 'await _candidate_chat([{"role":"user", "content":prompt}], 0.0)' in review
+    guarded_chat = pipeline.split("func _candidate_chat", 1)[1].split("func _candidate_tool", 1)[0]
+    before = guarded_chat.index('_candidate_allowed("before_model")')
+    local = guarded_chat.index("await ai.chat(messages, temperature)")
+    after = guarded_chat.index('_candidate_allowed("after_model")')
+    assert before < local < after
     assert "chat_with_compatibility" not in pipeline
     assert "MIN_TOURNAMENT_CANDIDATES := 3" in pipeline
     assert "MAX_TOURNAMENT_CANDIDATES := 10" in pipeline
@@ -179,13 +190,15 @@ def test_windows_build_requires_engine_and_bundled_weights() -> None:
 def test_android_build_and_export_require_bundled_weights() -> None:
     build = read("build/build_android.ps1")
     presets = read("export_presets.cfg")
+    state = json.loads(read("project/version.json"))
     assert "prepare_bundled_core_model.ps1" in build
     assert "models/aurorafox-core.gguf" in build
     assert MODEL_BYTES in build
     assert MODEL_SHA in build
     assert 'include_filter="update/release_public.pub,models/aurorafox-core.gguf"' in presets
     assert 'package/unique_name="com.aurorafox.ai"' in presets
-    assert 'version/name="1.4.1.1"' in presets
+    assert f'version/name="{state["numeric"]}"' in presets
+    assert f'version/code={state["android_version_code"]}' in presets
 
 
 def test_windows_and_android_package_strategies_are_intentional() -> None:

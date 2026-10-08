@@ -19,9 +19,9 @@ func register_into(registry: ToolRegistry) -> void:
 	if _registered: return
 	registry.register_tool("workspace_create", "Создать отдельную локальную рабочую среду для задачи. Делай это перед сложной работой с кодом/файлами.", {"task":"string","runtime":"string"}, Callable(self, "_create"))
 	registry.register_tool("workspace_status", "Показать активную песочницу и возможности текущей платформы.", {}, Callable(self, "_status"))
-	registry.register_tool("workspace_tree", "Показать дерево файлов активной песочницы.", {"area":"string"}, Callable(self, "_tree"))
+	registry.register_tool("workspace_tree", "Показать дерево файлов активной песочницы.", {"area":"string","max_items":"int"}, Callable(self, "_tree"))
 	registry.register_tool("workspace_write", "Записать файл в рабочую область активной песочницы.", {"path":"string","content":"string"}, Callable(self, "_write"))
-	registry.register_tool("workspace_read", "Прочитать файл из рабочей области активной песочницы.", {"path":"string","area":"string"}, Callable(self, "_read"))
+	registry.register_tool("workspace_read", "Прочитать файл из рабочей области активной песочницы.", {"path":"string","area":"string","max_chars":"int"}, Callable(self, "_read"))
 	registry.register_tool("workspace_snapshot", "Создать контрольную точку перед рискованным изменением.", {"label":"string"}, Callable(self, "_snapshot"))
 	registry.register_tool("workspace_rollback", "Откатить рабочую область к ранее созданной контрольной точке.", {"snapshot":"string"}, Callable(self, "_rollback"))
 	registry.register_tool("workspace_exec", "Запустить команду в подходящей локальной песочнице. На Windows предпочитает контейнер при наличии; на Android использует встроенный runtime.", {"command":"array","cwd":"string","timeout":"int","mode":"string"}, Callable(self, "_exec"))
@@ -35,13 +35,13 @@ func _status(_args: Dictionary) -> Dictionary:
 	return manager.status()
 
 func _tree(args: Dictionary) -> Dictionary:
-	return await manager.tree(str(args.get("area", "work")))
+	return await manager.tree(str(args.get("area", "work")), int(args.get("max_items", -1)))
 
 func _write(args: Dictionary) -> Dictionary:
 	return await manager.write_file(str(args.get("path", "")), str(args.get("content", "")), "work")
 
 func _read(args: Dictionary) -> Dictionary:
-	return await manager.read_file(str(args.get("path", "")), str(args.get("area", "work")))
+	return await manager.read_file(str(args.get("path", "")), str(args.get("area", "work")), int(args.get("max_chars", -1)))
 
 func _snapshot(args: Dictionary) -> Dictionary:
 	return await manager.snapshot(str(args.get("label", "checkpoint")))

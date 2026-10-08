@@ -55,21 +55,21 @@ func _denied() -> Dictionary:
 func _index_project(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "res://"))
 	if not _allowed(path): return _denied()
-	return await index.index_project(path, clampi(int(args.get("max_files", 30000)), 1, 100000), bool(args.get("force", false)))
+	return await index.index_project(path, int(args.get("max_files", OwnerResourcePolicy.value("coordinator_index_files"))), bool(args.get("force", false)))
 
 func _search_project(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "res://"))
 	if not _allowed(path): return _denied()
 	var query := str(args.get("query", "")).strip_edges()
 	if query.is_empty(): return {"ok": false, "error": "Search query is empty"}
-	return await index.search(path, query, clampi(int(args.get("limit", 20)), 1, 100), str(args.get("language", "")))
+	return await index.search(path, query, int(args.get("limit", 20)), str(args.get("language", "")))
 
 func _search_symbols(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "res://"))
 	if not _allowed(path): return _denied()
 	var query := str(args.get("query", "")).strip_edges()
 	if query.is_empty(): return {"ok": false, "error": "Symbol query is empty"}
-	return await index.search_symbols(path, query, clampi(int(args.get("limit", 50)), 1, 200))
+	return await index.search_symbols(path, query, int(args.get("limit", 50)))
 
 func _status(args: Dictionary) -> Dictionary:
 	var path := str(args.get("path", "res://"))

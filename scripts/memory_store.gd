@@ -22,6 +22,8 @@ var vectorizer := AuroraLocalSemanticVectorizer.new()
 
 var _index_queue: Array = []
 var _queued_ids: Dictionary = {}
+var _owner_revision := -1
+var _vector_policy_signature := ""
 var _index_busy := false
 var _semantic_ready := false
 var _memory_exact_index: Dictionary = {}
@@ -48,6 +50,7 @@ func _ready() -> void:
 	_queue_missing_vectors(memory, "memory")
 	_queue_missing_vectors(knowledge, "knowledge")
 	_semantic_ready = vectors.size() > 0 or (_index_queue.is_empty() and memory.is_empty() and knowledge.is_empty())
+	_owner_revision = OwnerResourcePolicy.revision
 	set_process(true)
 	if not _index_queue.is_empty():
 		call_deferred("_drain_local_index")
@@ -58,6 +61,7 @@ func _exit_tree() -> void:
 	flush_persistence()
 
 func _process(_delta: float) -> void:
+	_sync_owner_resources()
 	if _index_busy or _index_queue.is_empty():
 		return
 	call_deferred("_drain_local_index")
@@ -75,6 +79,7 @@ func remember(kind: String, content: String, source: String = "", importance: fl
 	var clean := content.strip_edges()
 	if clean.is_empty():
 		return
+	_sync_owner_resources()
 	var duplicate := _find_exact(_memory_exact_index, clean, kind)
 	if duplicate >= 0:
 		_touch_existing(memory[duplicate], importance, confidence, source)
@@ -83,8 +88,9 @@ func remember(kind: String, content: String, source: String = "", importance: fl
 		return
 	var item := _make_item("memory", kind, clean, source, importance, confidence)
 	memory.append(item)
-	if memory.size() > MAX_MEMORY:
-		_trim_collection(memory, MAX_MEMORY)
+	var memory_cap := OwnerResourcePolicy.value("memory_max_items")
+	if memory_cap > 0 and memory.size() > memory_cap:
+		_trim_collection(memory, memory_cap)
 		_rebuild_exact_index(memory, _memory_exact_index)
 	else:
 		_index_exact_item(memory, _memory_exact_index, item)
@@ -95,6 +101,7 @@ func learn(content: String, source: String = "", importance: float = 0.65, confi
 	var clean := content.strip_edges()
 	if clean.is_empty():
 		return
+	_sync_owner_resources()
 	var duplicate := _find_exact(_knowledge_exact_index, clean, kind)
 	if duplicate >= 0:
 		_touch_existing(knowledge[duplicate], importance, confidence, source)
@@ -103,8 +110,9 @@ func learn(content: String, source: String = "", importance: float = 0.65, confi
 		return
 	var item := _make_item("knowledge", kind, clean, source, importance, confidence)
 	knowledge.append(item)
-	if knowledge.size() > MAX_KNOWLEDGE:
-		_trim_collection(knowledge, MAX_KNOWLEDGE)
+	var knowledge_cap := OwnerResourcePolicy.value("knowledge_max_items")
+	if knowledge_cap > 0 and knowledge.size() > knowledge_cap:
+		_trim_collection(knowledge, knowledge_cap)
 		_rebuild_exact_index(knowledge, _knowledge_exact_index)
 	else:
 		_index_exact_item(knowledge, _knowledge_exact_index, item)
@@ -135,13 +143,18 @@ func _schedule_persistence(memory_changed: bool, knowledge_changed: bool) -> voi
 	_persistence_flush_scheduled = true
 	call_deferred("flush_persistence")
 
-func recent(limit: int = 12) -> Array:
+func recent(limit: int = -1) -> Array:
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size(), "memory_recent_items")
 	if memory.is_empty():
 		return []
 	var start := maxi(0, memory.size() - limit)
 	return memory.slice(start)
 
-func retrieve(query: String, limit: int = 8, include_memory: bool = true, include_knowledge: bool = true) -> Array:
+func retrieve(query: String, limit: int = -1, include_memory: bool = true, include_knowledge: bool = true) -> Array:
+	_sync_owner_resources()
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size() + knowledge.size(), "memory_retrieval_items")
 	var clean := query.strip_edges()
 	if clean.is_empty() or limit <= 0:
 		return []
@@ -152,7 +165,10 @@ func retrieve(query: String, limit: int = 8, include_memory: bool = true, includ
 	_touch_results(result)
 	return result
 
-func search_knowledge(query: String, limit: int = 8) -> Array:
+func search_knowledge(query: String, limit: int = -1) -> Array:
+	_sync_owner_resources()
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size() + knowledge.size(), "memory_retrieval_items")
 	if query.strip_edges().is_empty() or limit <= 0:
 		return []
 	return _merge_results(
@@ -161,7 +177,10 @@ func search_knowledge(query: String, limit: int = 8) -> Array:
 		limit
 	)
 
-func search_memory(query: String, limit: int = 8) -> Array:
+func search_memory(query: String, limit: int = -1) -> Array:
+	_sync_owner_resources()
+	if limit == -1:
+		limit = OwnerResourcePolicy.count(memory.size() + knowledge.size(), "memory_retrieval_items")
 	if query.strip_edges().is_empty() or limit <= 0:
 		return []
 	return _merge_results(
@@ -175,6 +194,7 @@ func semantic_status() -> Dictionary:
 		"ready": _semantic_ready,
 		"enabled": true,
 		"provider": "aurorafox_local_vector",
+		"resource_policy": _vector_policy_signature,
 		"model": VECTOR_MODEL,
 		"endpoint": "",
 		"dimensions": VECTOR_DIMENSIONS,
@@ -254,7 +274,7 @@ func _find_exact(index: Dictionary, content: String, kind: String) -> int:
 
 func _rebuild_exact_index(items: Array, index: Dictionary) -> void:
 	index.clear()
-	var start := maxi(0, items.size() - EXACT_DEDUPE_WINDOW)
+	var start := items.size() - OwnerResourcePolicy.count(items.size(), "dedupe_window")
 	for i in range(start, items.size()):
 		if not items[i] is Dictionary:
 			continue
@@ -266,7 +286,9 @@ func _index_exact_item(items: Array, index: Dictionary, item: Dictionary) -> voi
 	if item_index < 0:
 		return
 	index[_exact_key(str(item.get("kind", "")), str(item.get("content", "")))] = item_index
-	var expired_index := item_index - EXACT_DEDUPE_WINDOW
+	var window := OwnerResourcePolicy.value("dedupe_window")
+	if window == 0: return
+	var expired_index := item_index - window
 	if expired_index < 0 or expired_index >= items.size() or not items[expired_index] is Dictionary:
 		return
 	var expired: Dictionary = items[expired_index]
@@ -314,7 +336,7 @@ func _queue_item_vector(item: Dictionary, collection: String) -> void:
 	_index_queue.append({
 		"id": id,
 		"collection": collection,
-		"content": content.substr(0, 24000)
+		"content": OwnerResourcePolicy.clip(content, "index_text_chars")
 	})
 	if not _index_busy:
 		call_deferred("_drain_local_index")
@@ -327,7 +349,7 @@ func _drain_local_index(force_all: bool = false) -> void:
 	_index_busy = true
 	var processed := 0
 	while not _index_queue.is_empty():
-		var batch_count := mini(LOCAL_INDEX_BATCH, _index_queue.size())
+		var batch_count := mini(OwnerResourcePolicy.value("index_batch"), _index_queue.size())
 		var batch: Array = _index_queue.slice(0, batch_count)
 		_index_queue = _index_queue.slice(batch_count, _index_queue.size())
 		for row in batch:
@@ -504,6 +526,7 @@ func _remove_orphan_vectors() -> void:
 
 func _load_vector_index() -> void:
 	vectors = {}
+	_vector_policy_signature = AuroraLocalSemanticVectorizer.policy_signature()
 	if not FileAccess.file_exists(VECTOR_PATH):
 		return
 	var file := FileAccess.open(VECTOR_PATH, FileAccess.READ)
@@ -515,6 +538,7 @@ func _load_vector_index() -> void:
 		return
 	if str(parsed.get("model", "")) != VECTOR_MODEL or int(parsed.get("dimensions", 0)) != VECTOR_DIMENSIONS:
 		return
+	if str(parsed.get("resource_policy", "legacy-unversioned-budget")) != _vector_policy_signature: return
 	var stored = parsed.get("vectors", {})
 	if stored is Dictionary:
 		vectors = stored
@@ -524,6 +548,7 @@ func _save_vector_index() -> void:
 		"model": VECTOR_MODEL,
 		"dimensions": VECTOR_DIMENSIONS,
 		"provider": "aurorafox_local_vector",
+		"resource_policy": _vector_policy_signature,
 		"network_required": false,
 		"updated_at": Time.get_datetime_string_from_system(true),
 		"vectors": vectors
@@ -559,3 +584,18 @@ func _save_json(path: String, data: Variant) -> void:
 	if file != null:
 		file.store_string(JSON.stringify(data))
 		file.close()
+func _sync_owner_resources() -> void:
+	if _owner_revision == OwnerResourcePolicy.revision: return
+	_rebuild_exact_index(memory, _memory_exact_index)
+	_rebuild_exact_index(knowledge, _knowledge_exact_index)
+	var signature := AuroraLocalSemanticVectorizer.policy_signature()
+	if signature != _vector_policy_signature:
+		vectors.clear()
+		_index_queue.clear()
+		_queued_ids.clear()
+		_vector_policy_signature = signature
+		_queue_missing_vectors(memory, "memory")
+		_queue_missing_vectors(knowledge, "knowledge")
+		_semantic_ready = _index_queue.is_empty()
+		_save_vector_index()
+	_owner_revision = OwnerResourcePolicy.revision

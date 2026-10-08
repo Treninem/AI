@@ -3,7 +3,141 @@ extends Node
 
 const BASE_URL := "http://127.0.0.1:8767"
 const ANDROID_OCR_EXTENSIONS := ["pdf", "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"]
-const ANDROID_ANALYSIS_TIMEOUT_MS := 600000
+
+# Windows File Intelligence resource budgets are owner settings. They are
+# exported to the local backend process before startup/restart, so changing a
+# value does not require editing source or environment variables by hand.
+const OWNER_LIMIT_DEFAULTS := {
+	"path_max_chars": 8192,
+	"question_max_chars": 12000,
+	"query_max_chars": 1000,
+	"cache_max_bytes": 536870912,
+	"epub_max_chapters": 2000,
+	"archive_text_entry_max": 4194304,
+	"archive_text_entries": 24,
+	"vision_timeout_seconds": 180,
+	"ollama_health_timeout_ms": 1500,
+	"voice_health_timeout_ms": 1500,
+	"stt_timeout_seconds": 300,
+	"video_timeout_seconds": 240,
+	"video_max_frames": 8,
+	"video_frame_interval_seconds": 30,
+	"video_frame_max_width": 1280,
+	"vision_image_max_width": 2048,
+
+	"max_file_bytes": 1024 * 1024 * 1024,
+	"max_text_chars": 160000,
+	"request_max_text_chars": 500000,
+	"spreadsheet_max_cells": 50000,
+	"xls_max_rows": 10000,
+	"tree_max_items": 5000,
+	"search_max_results": 100,
+	"search_excerpt_chars": 1200,
+	"archive_listing_max_chars": 40000,
+	"archive_listing_percent": 25,
+	"archive_max_entries": 5000,
+	"archive_max_expanded": 512 * 1024 * 1024,
+	"archive_text_member_max": 8 * 1024 * 1024,
+	"archive_text_total_max": 32 * 1024 * 1024,
+	"ocr_max_pdf_bytes": 256 * 1024 * 1024,
+	"ocr_max_pdf_pages": 1000,
+	"ocr_max_pages": 500,
+	"analysis_timeout_seconds": 600,
+	"client_health_timeout_seconds": 4,
+	"client_tree_timeout_seconds": 60,
+	"client_cache_timeout_seconds": 30,
+	"android_pending_file_jobs": 8,
+	"ocr_max_input_pixels": 64000000,
+	"ocr_max_render_pixels": 8000000,
+	"ocr_max_render_scale_percent": 200
+}
+const OWNER_LIMIT_MINIMUMS := {
+	"path_max_chars": 1,
+	"question_max_chars": 1,
+	"query_max_chars": 1,
+	"cache_max_bytes": 0,
+	"epub_max_chapters": 1,
+	"archive_text_entry_max": 1,
+	"archive_text_entries": 1,
+	"vision_timeout_seconds": 0,
+	"ollama_health_timeout_ms": 0,
+	"voice_health_timeout_ms": 0,
+	"stt_timeout_seconds": 0,
+	"video_timeout_seconds": 0,
+	"video_max_frames": 1,
+	"video_frame_interval_seconds": 1,
+	"video_frame_max_width": 1,
+	"vision_image_max_width": 1,
+
+	"max_file_bytes": 1,
+	"max_text_chars": 1,
+	"request_max_text_chars": 1,
+	"spreadsheet_max_cells": 1,
+	"xls_max_rows": 1,
+	"tree_max_items": 1,
+	"search_max_results": 1,
+	"search_excerpt_chars": 1,
+	"archive_listing_max_chars": 0,
+	"archive_listing_percent": 0,
+	"archive_max_entries": 1,
+	"archive_max_expanded": 1,
+	"archive_text_member_max": 1,
+	"archive_text_total_max": 1,
+	"ocr_max_pdf_bytes": 1,
+	"ocr_max_pdf_pages": 1,
+	"ocr_max_pages": 1,
+	"analysis_timeout_seconds": 1,
+	"client_health_timeout_seconds": 0,
+	"client_tree_timeout_seconds": 0,
+	"client_cache_timeout_seconds": 0,
+	"android_pending_file_jobs": 1,
+	"ocr_max_input_pixels": 1,
+	"ocr_max_render_pixels": 1,
+	"ocr_max_render_scale_percent": 0
+}
+const OWNER_LIMIT_ENV := {
+	"path_max_chars": "AURORAFOX_FILE_PATH_MAX_CHARS",
+	"question_max_chars": "AURORAFOX_FILE_QUESTION_MAX_CHARS",
+	"query_max_chars": "AURORAFOX_FILE_QUERY_MAX_CHARS",
+	"cache_max_bytes": "AURORAFOX_FILE_CACHE_MAX_BYTES",
+	"epub_max_chapters": "AURORAFOX_EPUB_MAX_CHAPTERS",
+	"archive_text_entry_max": "AURORAFOX_ARCHIVE_TEXT_ENTRY_MAX",
+	"archive_text_entries": "AURORAFOX_ARCHIVE_TEXT_ENTRIES",
+	"vision_timeout_seconds": "AURORAFOX_FILE_VISION_TIMEOUT_SECONDS",
+	"ollama_health_timeout_ms": "AURORAFOX_FILE_OLLAMA_HEALTH_TIMEOUT_MS",
+	"voice_health_timeout_ms": "AURORAFOX_FILE_VOICE_HEALTH_TIMEOUT_MS",
+	"stt_timeout_seconds": "AURORAFOX_FILE_STT_TIMEOUT_SECONDS",
+	"video_timeout_seconds": "AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS",
+	"video_max_frames": "AURORAFOX_FILE_VIDEO_MAX_FRAMES",
+	"video_frame_interval_seconds": "AURORAFOX_FILE_VIDEO_FRAME_INTERVAL_SECONDS",
+	"video_frame_max_width": "AURORAFOX_FILE_VIDEO_FRAME_MAX_WIDTH",
+	"vision_image_max_width": "AURORAFOX_FILE_VISION_IMAGE_MAX_WIDTH",
+
+	"max_file_bytes": "AURORAFOX_FILE_MAX_BYTES",
+	"max_text_chars": "AURORAFOX_FILE_MAX_TEXT",
+	"request_max_text_chars": "AURORAFOX_FILE_REQUEST_MAX_TEXT",
+	"spreadsheet_max_cells": "AURORAFOX_FILE_SPREADSHEET_MAX_CELLS",
+	"xls_max_rows": "AURORAFOX_FILE_XLS_MAX_ROWS",
+	"tree_max_items": "AURORAFOX_FILE_TREE_MAX_ITEMS",
+	"search_max_results": "AURORAFOX_FILE_SEARCH_MAX_RESULTS",
+	"search_excerpt_chars": "AURORAFOX_FILE_SEARCH_EXCERPT_CHARS",
+	"archive_listing_max_chars": "AURORAFOX_ARCHIVE_LISTING_MAX_CHARS",
+	"archive_listing_percent": "AURORAFOX_ARCHIVE_LISTING_PERCENT",
+	"archive_max_entries": "AURORAFOX_ARCHIVE_MAX_ENTRIES",
+	"archive_max_expanded": "AURORAFOX_ARCHIVE_MAX_EXPANDED",
+	"archive_text_member_max": "AURORAFOX_ARCHIVE_TEXT_MEMBER_MAX",
+	"archive_text_total_max": "AURORAFOX_ARCHIVE_TEXT_TOTAL_MAX",
+	"ocr_max_pdf_bytes": "AURORAFOX_OCR_MAX_PDF_BYTES",
+	"ocr_max_pdf_pages": "AURORAFOX_OCR_MAX_PDF_PAGES",
+	"ocr_max_pages": "AURORAFOX_OCR_MAX_PAGES",
+	"ocr_max_input_pixels": "AURORAFOX_OCR_MAX_INPUT_PIXELS",
+	"ocr_max_render_pixels": "AURORAFOX_OCR_MAX_RENDER_PIXELS",
+	"ocr_max_render_scale_percent": "AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT"
+}
+
+var owner_limits_path := OwnerLimitPersistence.PATH
+var _owner_limits_loaded := false
+var _owner_persistence_error := ""
 
 var backend_pid := 0
 var runtime_root := ""
@@ -12,8 +146,65 @@ var _active_android_job_id := ""
 var _cancel_requested := false
 
 func _ready() -> void:
+	_export_owner_limits_to_environment()
 	if OS.get_name() == "Windows":
 		_start_backend_if_installed()
+
+func owner_limits() -> Dictionary:
+	_load_owner_limits()
+	var result := {}
+	for key in OWNER_LIMIT_DEFAULTS:
+		var minimum := int(OWNER_LIMIT_MINIMUMS.get(key, 1))
+		result[key] = maxi(minimum, int(ProjectSettings.get_setting("aurorafox/files/" + str(key), OWNER_LIMIT_DEFAULTS[key])))
+	# A percentage cannot allocate more than the entire request budget.
+	result["archive_listing_percent"] = mini(100, int(result["archive_listing_percent"]))
+	if not _owner_persistence_error.is_empty(): result["persistence_error"] = _owner_persistence_error
+	result["owner_adjustable"] = true
+	result["backend_restart_on_apply"] = OS.get_name() == "Windows"
+	return result
+
+func _load_owner_limits() -> void:
+	if _owner_limits_loaded: return
+	_owner_limits_loaded = true
+	var loaded := OwnerLimitPersistence.load_group("files", owner_limits_path)
+	if not loaded.ok:
+		_owner_persistence_error = str(loaded.error)
+		return
+	for key in OWNER_LIMIT_DEFAULTS:
+		if not loaded.values.has(key): continue
+		var candidate = loaded.values[key]
+		if _valid_owner_value(key, candidate):
+			ProjectSettings.set_setting("aurorafox/files/" + str(key), int(candidate))
+		else:
+			_owner_persistence_error = "Invalid saved File Intelligence limit: " + str(key)
+
+func _valid_owner_value(key: String, value: Variant) -> bool:
+	return OwnerLimitPersistence.valid_number(value, float(OWNER_LIMIT_MINIMUMS.get(key, 1))) and (key != "archive_listing_percent" or float(value) <= 100.0)
+
+func apply_owner_limits(overrides: Dictionary, persist := false, restart := true) -> Dictionary:
+	for key in overrides:
+		if not OWNER_LIMIT_DEFAULTS.has(key): return {"ok": false, "error": "Unknown owner limit: " + str(key)}
+	var current := owner_limits()
+	var next_limits: Dictionary = {}
+	for key in OWNER_LIMIT_DEFAULTS:
+		var candidate = overrides.get(key, current[key])
+		if not _valid_owner_value(key, candidate): return {"ok": false, "error": "Invalid File Intelligence limit: " + str(key)}
+		next_limits[key] = int(candidate)
+	if persist:
+		var saved := OwnerLimitPersistence.save_group("files", next_limits, owner_limits_path)
+		if saved != OK: return {"ok": false, "error": "File Intelligence limits were not saved: " + error_string(saved)}
+	for key in next_limits: ProjectSettings.set_setting("aurorafox/files/" + str(key), next_limits[key])
+	_owner_persistence_error = ""
+	_export_owner_limits_to_environment()
+	if restart and OS.get_name() == "Windows": restart_backend()
+	var result := owner_limits()
+	result["ok"] = true
+	return result
+
+func _export_owner_limits_to_environment() -> void:
+	var limits := owner_limits()
+	for key in OWNER_LIMIT_ENV:
+		OS.set_environment(str(OWNER_LIMIT_ENV[key]), str(int(limits.get(key, OWNER_LIMIT_DEFAULTS[key]))))
 
 func _exit_tree() -> void:
 	if _active_request != null:
@@ -65,7 +256,7 @@ func health() -> Dictionary:
 		}
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "File Intelligence is not available on this platform", "platform": OS.get_name()}
-	var status := await _request("/health", HTTPClient.METHOD_GET, {}, 4.0)
+	var status := await _request("/health", HTTPClient.METHOD_GET, {}, _client_timeout("client_health_timeout_seconds"))
 	if bool(status.get("ok", false)):
 		status["cancellation_supported"] = true
 	return status
@@ -83,14 +274,13 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		# Do not use Object.has_method() here. In a release Android APK it may
 		# hide a callable @UsedByGodot plugin method and incorrectly turn local
 		# OCR into an "unsupported" external-AI error.
+		var limits := _native_budget_snapshot(owner_limits())
+		var bounded_chars := clampi(max_chars, 1, int(limits.get("request_max_text_chars", 500000)))
+		limits["_request_max_chars"] = bounded_chars
+		var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual, limits)
 		if extension in ANDROID_OCR_EXTENSIONS:
-			var async_result: Dictionary = await _analyze_android_job(plugin, private_path, question, visual)
-			return _decorate_android_result(_validate_android_ocr_result(async_result), path, private_path, max_chars)
-		var raw = plugin.call("analyzeLocalFile", private_path, question, visual)
-		var parsed = JSON.parse_string(str(raw))
-		if parsed is Dictionary:
-			return _decorate_android_result(parsed, path, private_path, max_chars)
-		return {"ok": false, "error": "Invalid Android File Intelligence response"}
+			async_result = _validate_android_ocr_result(async_result)
+		return _decorate_android_result(async_result, path, private_path, bounded_chars)
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "Rich file analysis is not available on this platform", "platform": OS.get_name()}
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
@@ -98,8 +288,8 @@ func analyze_file(path: String, question := "", visual := true, max_chars := 160
 		"path": absolute,
 		"question": question,
 		"visual": visual,
-		"max_chars": clampi(max_chars, 2000, 500000)
-	}, 600.0, true)
+		"max_chars": clampi(max_chars, 1, int(owner_limits().get("request_max_text_chars", 500000)))
+	}, float(owner_limits().get("analysis_timeout_seconds", 600)), true)
 
 func cancel_active_analysis() -> Dictionary:
 	_cancel_requested = true
@@ -119,21 +309,22 @@ func cancel_active_analysis() -> Dictionary:
 	return {"ok": true, "cancel_requested": false, "reason": "unsupported_platform"}
 
 func tree(path: String, max_items := 2000) -> Dictionary:
+	if max_items < 1: return {"ok": false, "error": "Directory item budget must be positive"}
 	if OS.get_name() == "Android":
 		if not path.begins_with("user://") or not Engine.has_singleton("AuroraFoxRuntime"):
 			return {"ok": false, "error": "Android directory tree is restricted to user://"}
 		var plugin := Engine.get_singleton("AuroraFoxRuntime")
-		var raw = plugin.call("treeLocal", ProjectSettings.globalize_path(path), clampi(max_items, 1, 5000))
+		var raw = plugin.call("treeLocal", ProjectSettings.globalize_path(path), clampi(max_items, 1, int(owner_limits().get("tree_max_items", 5000))))
 		return _parse_native(raw)
 	if OS.get_name() != "Windows":
 		return {"ok": false, "error": "Directory intelligence is not available on this platform"}
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("res://") or path.begins_with("user://") else path
-	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, 5000)}, 60.0)
+	return await _request("/tree", HTTPClient.METHOD_POST, {"path": absolute, "max_items": clampi(max_items, 1, int(owner_limits().get("tree_max_items", 5000)))}, _client_timeout("client_tree_timeout_seconds"))
 
 func search_cache(query: String, limit := 20) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return {"ok": false, "results": [], "error": "Cache search is currently Windows-only"}
-	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, 100)}, 30.0)
+	return await _request("/cache/search", HTTPClient.METHOD_POST, {"query": query, "limit": clampi(limit, 1, int(owner_limits().get("search_max_results", 100)))}, _client_timeout("client_cache_timeout_seconds"))
 
 func clear_cache() -> Dictionary:
 	if OS.get_name() == "Android":
@@ -145,7 +336,7 @@ func clear_cache() -> Dictionary:
 		return _parse_native(plugin.call("clearFileCache"))
 	if OS.get_name() != "Windows":
 		return {"ok": true, "removed": 0}
-	return await _request("/cache/clear", HTTPClient.METHOD_POST, {}, 30.0)
+	return await _request("/cache/clear", HTTPClient.METHOD_POST, {}, _client_timeout("client_cache_timeout_seconds"))
 
 func runtime_is_installed() -> bool:
 	if OS.get_name() == "Android":
@@ -170,6 +361,7 @@ func restart_backend() -> void:
 	_start_backend_if_installed()
 
 func _start_backend_if_installed() -> void:
+	_export_owner_limits_to_environment()
 	var found := _find_runtime()
 	if found.is_empty():
 		return
@@ -225,11 +417,19 @@ func _android_private_copy(path: String) -> String:
 	var user_root := ProjectSettings.globalize_path("user://")
 	var absolute := ProjectSettings.globalize_path(path) if path.begins_with("user://") or path.begins_with("res://") else path
 	if absolute.begins_with(user_root):
-		return absolute
+		var private_file := FileAccess.open(absolute, FileAccess.READ)
+		if private_file == null:
+			return ""
+		var within_limit := private_file.get_length() <= int(owner_limits().get("max_file_bytes", 1024 * 1024 * 1024))
+		private_file.close()
+		return absolute if within_limit else ""
 	var src := FileAccess.open(path, FileAccess.READ)
 	if src == null and absolute != path:
 		src = FileAccess.open(absolute, FileAccess.READ)
 	if src == null:
+		return ""
+	if src.get_length() > int(owner_limits().get("max_file_bytes", 1024 * 1024 * 1024)):
+		src.close()
 		return ""
 	var target_dir := "user://file_inputs"
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(target_dir))
@@ -242,7 +442,18 @@ func _android_private_copy(path: String) -> String:
 	var total := src.get_length()
 	while src.get_position() < total:
 		var remaining := total - src.get_position()
-		dst.store_buffer(src.get_buffer(mini(1024 * 1024, remaining)))
+		var chunk := src.get_buffer(mini(1024 * 1024, remaining))
+		if chunk.is_empty():
+			src.close()
+			dst.close()
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(target))
+			return ""
+		dst.store_buffer(chunk)
+		if dst.get_error() != OK:
+			src.close()
+			dst.close()
+			DirAccess.remove_absolute(ProjectSettings.globalize_path(target))
+			return ""
 	src.close()
 	dst.close()
 	return ProjectSettings.globalize_path(target)
@@ -264,8 +475,13 @@ func _decorate_android_result(parsed: Dictionary, original_path: String, private
 	parsed["path"] = original_path
 	parsed["private_copy"] = private_path
 	if str(parsed.get("content", "")).length() > max_chars:
-		parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars) + "\n[Обрезано AuroraFox]"
+		parsed["content"] = str(parsed.get("content", "")).substr(0, max_chars)
+		if parsed.has("text"):
+			parsed["text"] = parsed["content"]
 		parsed["truncated"] = true
+		var metadata: Dictionary = parsed.get("metadata", {})
+		metadata["output_truncated"] = true
+		parsed["metadata"] = metadata
 	return parsed
 
 func _validate_android_ocr_result(result: Dictionary) -> Dictionary:
@@ -274,8 +490,8 @@ func _validate_android_ocr_result(result: Dictionary) -> Dictionary:
 		result["error"] = "Android OCR returned empty content"
 	return result
 
-func _analyze_android_job(plugin: Object, private_path: String, question: String, visual: bool) -> Dictionary:
-	var start_raw = plugin.call("startAnalyzeLocalFile", private_path, question, visual)
+func _analyze_android_job(plugin: Object, private_path: String, question: String, visual: bool, limits: Dictionary) -> Dictionary:
+	var start_raw = plugin.call("startAnalyzeLocalFileWithLimits", private_path, question, visual, JSON.stringify(limits))
 	var start = JSON.parse_string(str(start_raw))
 	if not start is Dictionary or not bool(start.get("ok", false)):
 		return start if start is Dictionary else {"ok": false, "error": "Invalid Android analysis job response"}
@@ -285,7 +501,8 @@ func _analyze_android_job(plugin: Object, private_path: String, question: String
 	_active_android_job_id = job_id
 	var started_ms := Time.get_ticks_msec()
 	var cancel_sent := false
-	while Time.get_ticks_msec() - started_ms <= ANDROID_ANALYSIS_TIMEOUT_MS:
+	var timeout_ms := int(limits.get("analysis_timeout_seconds", 600)) * 1000
+	while Time.get_ticks_msec() - started_ms <= timeout_ms:
 		if _cancel_requested and not cancel_sent:
 			plugin.call("cancelAnalyzeLocalFile", job_id)
 			cancel_sent = true
@@ -305,14 +522,21 @@ func _analyze_android_job(plugin: Object, private_path: String, question: String
 	_active_android_job_id = ""
 	return {"ok": false, "cancelled": true, "error": "Android file analysis timed out"}
 
-func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout := 60.0, track_analysis := false) -> Dictionary:
+func _client_timeout(key: String) -> float:
+	return float(owner_limits()[key])
+
+func _new_http_request(timeout: float) -> HTTPRequest:
+	var req := HTTPRequest.new()
+	req.timeout = timeout
+	add_child(req)
+	return req
+
+func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout: float, track_analysis := false) -> Dictionary:
 	var last_error := ""
 	for attempt in range(2):
 		if track_analysis and _cancel_requested:
 			return {"ok": false, "cancelled": true, "error": "File analysis cancelled"}
-		var req := HTTPRequest.new()
-		req.timeout = timeout
-		add_child(req)
+		var req := _new_http_request(timeout)
 		var headers := PackedStringArray(["Content-Type: application/json"])
 		var body := "" if payload.is_empty() else JSON.stringify(payload)
 		var err := req.request(BASE_URL + path, headers, method, body)
@@ -360,3 +584,9 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 				_start_backend_if_installed()
 			await get_tree().create_timer(0.9).timeout
 	return {"ok": false, "error": last_error if not last_error.is_empty() else "File Intelligence unavailable"}
+
+func _native_budget_snapshot(values: Dictionary) -> Dictionary:
+	var snapshot := values.duplicate(true)
+	for key in ["android_xls_file_bytes", "android_xls_directory_entries", "android_xls_directory_depth", "android_xls_shared_strings", "android_xls_sheets"]:
+		snapshot[key] = OwnerResourcePolicy.value(key)
+	return snapshot

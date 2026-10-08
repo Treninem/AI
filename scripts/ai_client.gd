@@ -126,7 +126,7 @@ func learn_from_extracted_file(path: String, text: String, metadata: Dictionary 
 func supported_learning_files() -> PackedStringArray:
 	return knowledge.supported_import_extensions()
 
-func search_knowledge(query: String, limit := 6) -> Array:
+func search_knowledge(query: String, limit: int = -1) -> Array:
 	var filtered_query := _knowledge_query(query)
 	if filtered_query.is_empty():
 		return []

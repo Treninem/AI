@@ -2,21 +2,30 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
 import threading
 import time
 from pathlib import Path
 from typing import Any
 
 from api.database import AuroraDatabase, atomic_write_text
+from api.request_limits import _nonnegative_budget
 
 
 class ConversationStore:
     LEGACY_MIGRATION_KEY = "migration.conversations.json.v1"
 
-    def __init__(self, root: Path, max_messages: int = 120):
+    def __init__(self, root: Path, max_messages: int | None = None, context_messages: int | None = None):
         self.root = root
         self.root.mkdir(parents=True, exist_ok=True)
-        self.max_messages = max(20, max_messages)
+        self.max_messages = _nonnegative_budget(
+            os.getenv("AURORAFOX_API_CONVERSATION_MAX_MESSAGES", "120") if max_messages is None else max_messages,
+            "AURORAFOX_API_CONVERSATION_MAX_MESSAGES",
+        )
+        self.context_messages = _nonnegative_budget(
+            os.getenv("AURORAFOX_API_CONVERSATION_CONTEXT_MESSAGES", "24") if context_messages is None else context_messages,
+            "AURORAFOX_API_CONVERSATION_CONTEXT_MESSAGES",
+        )
         self.database = AuroraDatabase(self.root.parent / "aurorafox.sqlite3")
         self._write_lock = threading.RLock()
         self._migrate_legacy_once()
@@ -66,7 +75,10 @@ class ConversationStore:
                     (owner, conversation_id, created_at, updated_at),
                 )
                 imported_conversations += 1
-                for item in data.get("messages", [])[-self.max_messages :]:
+                messages = data["messages"]
+                if self.max_messages > 0:
+                    messages = messages[-self.max_messages:]
+                for item in messages:
                     if not isinstance(item, dict):
                         continue
                     role = str(item.get("role", ""))
@@ -178,12 +190,13 @@ class ConversationStore:
                         now,
                     ),
                 )
-                connection.execute(
-                    "DELETE FROM conversation_messages WHERE id IN ("
-                    "SELECT id FROM conversation_messages WHERE owner=? AND conversation_id=? "
-                    "ORDER BY id DESC LIMIT -1 OFFSET ?)",
-                    (owner, conversation_id, self.max_messages),
-                )
+                if self.max_messages > 0:
+                    connection.execute(
+                        "DELETE FROM conversation_messages WHERE id IN ("
+                        "SELECT id FROM conversation_messages WHERE owner=? AND conversation_id=? "
+                        "ORDER BY id DESC LIMIT -1 OFFSET ?)",
+                        (owner, conversation_id, self.max_messages),
+                    )
             data = self.get(owner, conversation_id)
             self._write_legacy_mirror(owner, conversation_id, data)
             return data
@@ -199,12 +212,13 @@ class ConversationStore:
             self._path(owner, conversation_id).unlink(missing_ok=True)
             return changed
 
-    def context(self, owner: str, conversation_id: str, limit: int = 24) -> list[dict[str, Any]]:
+    def context(self, owner: str, conversation_id: str, limit: int | None = None) -> list[dict[str, Any]]:
+        budget = self.context_messages if limit is None else _nonnegative_budget(limit, "context limit")
         with self.database.connection() as connection:
             rows = connection.execute(
                 "SELECT role, content FROM conversation_messages WHERE owner=? AND conversation_id=? "
                 "ORDER BY id DESC LIMIT ?",
-                (owner, conversation_id, max(1, limit)),
+                (owner, conversation_id, budget if budget > 0 else -1),
             ).fetchall()
         return [
             {"role": str(item["role"]), "content": str(item["content"])}

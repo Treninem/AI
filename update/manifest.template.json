@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "version": "1.4.1.1",
+  "version": "1.5.0.0",
   "channel": "stable",
   "mandatory": false,
   "published_at": "",
-  "notes": "Evolution Engine controlled self-improvement plus Windows chat and voice fixes",
+  "notes": "Stable offline AuroraFox Core, verified Knowledge baseline, bounded File Intelligence, Work and Voice, and signed Windows/Android update path",
   "compatibility": {
     "legacy_manifest": true,
     "legacy_manifest_readable": true,

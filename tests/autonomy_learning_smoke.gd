@@ -37,6 +37,11 @@ func _run() -> void:
 	settings.coordinator = coordinator
 	settings.core_pipeline = pipeline
 	settings.learning_curator = curator
+	settings.settings = {}
+	settings._apply()
+	if coordinator.autonomous_enabled or coordinator.autonomous_hot_improvements or coordinator.autonomous_research_enabled or pipeline.autonomous_core_candidates or pipeline.auto_apply_dev_checkout or curator.enabled:
+		_fail("Missing autonomy preferences must fail closed", 12)
+		return
 	settings.settings = settings.DEFAULT_SETTINGS.duplicate(true)
 
 	settings.settings["master_enabled"] = false

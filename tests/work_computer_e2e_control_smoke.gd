@@ -1,10 +1,18 @@
 extends SceneTree
 
+class ExplicitMasterAuthorization:
+	extends Node
+	func get_settings() -> Dictionary:
+		return {"master_enabled": true}
+
 func _fail(message: String, code: int) -> void:
 	push_error(message)
 	quit(code)
 
 func _init() -> void:
+	var authorization := ExplicitMasterAuthorization.new()
+	authorization.name = "AutonomySettings"
+	root.add_child(authorization)
 	var manager := AuroraWorkManager.new()
 	root.add_child(manager)
 	await process_frame

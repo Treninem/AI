@@ -10,9 +10,6 @@ signal mutation_tournament_completed(result: Dictionary)
 
 const GENERATED_ROOT := "res://generated/"
 const RUNTIME_GENERATED_ROOT := "user://generated/"
-const MAX_GENERATED_BYTES := 512 * 1024
-const MAX_PROJECT_FILES := 30000
-const MAX_PROJECT_BYTES := 2 * 1024 * 1024 * 1024
 const HOT_TOOL_PREFIX := "aurora_ext_"
 const MIN_MUTATIONS := 3
 const MAX_MUTATIONS := 10
@@ -52,7 +49,7 @@ func propose_improvement(goal: String, mutation_index := 0, strategy := "balance
 	var mutation_tag := "m%02d" % maxi(0, mutation_index + 1)
 	var diversity := ""
 	if not previous_signatures.is_empty():
-		diversity = "\nУже созданные варианты (НЕ ПОВТОРЯЙ их путь/структуру/идею):\n- " + "\n- ".join(previous_signatures.slice(0, mini(previous_signatures.size(), 12)))
+		diversity = "\nУже созданные варианты (НЕ ПОВТОРЯЙ их путь/структуру/идею):\n- " + "\n- ".join(previous_signatures.slice(0, OwnerResourcePolicy.count(previous_signatures.size(), "hot_diversity_items")))
 	var prompt := """
 Ты создаёшь ОДНУ независимую мутацию AuroraFox — Godot 4.7.1 проекта автономного локального AI.
 Цель эволюции: %s
@@ -145,7 +142,7 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 			continue
 		seen_hashes[sha] = true
 		seen_paths[path] = true
-		signatures.append("%s | %s | %s" % [path, str(proposal.get("reason", "")).substr(0, 220), sha.substr(0, 12)])
+		signatures.append("%s | %s | %s" % [path, OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "hot_signature_reason_chars"), sha.substr(0, 12)])
 		var candidate := await _verify_tournament_candidate(goal, proposal, population.size())
 		population.append(candidate)
 		if candidate.get("verified", false):
@@ -161,7 +158,7 @@ func run_mutation_tournament(goal: String, requested_count := 5) -> Dictionary:
 			"population_size": population.size(),
 			"verified_count": verified.size(),
 			"generation_attempts": attempt,
-			"generation_errors": generation_errors.slice(0, mini(generation_errors.size(), 20)),
+			"generation_errors": generation_errors.slice(0, OwnerResourcePolicy.count(generation_errors.size(), "hot_generation_error_items")),
 			"candidates": _compact_candidates(population)
 		})
 
@@ -314,9 +311,9 @@ func _judge_verified_candidates(goal: String, candidates: Array) -> Dictionary:
 		public_candidates.append({
 			"index": i,
 			"strategy": candidate.get("strategy", ""),
-			"reason": str(proposal.get("reason", "")).substr(0, 1200),
-			"verification": str(proposal.get("verification", "")).substr(0, 800),
-			"content": str(proposal.get("content", "")).substr(0, 7000),
+			"reason": OwnerResourcePolicy.clip(str(proposal.get("reason", "")), "hot_reason_chars"),
+			"verification": OwnerResourcePolicy.clip(str(proposal.get("verification", "")), "hot_verification_chars"),
+			"content": OwnerResourcePolicy.clip(str(proposal.get("content", "")), "hot_review_source_chars"),
 			"base_score": candidate.get("base_score", 0.0)
 		})
 	var prompt := """
@@ -362,7 +359,7 @@ func _apply_judge_scores(candidates: Array, judge: Dictionary) -> void:
 			continue
 		by_index[idx] = {
 			"score": clampf(float(item.get("score", 0.0)), 0.0, 100.0),
-			"reason": str(item.get("reason", "")).substr(0, 800)
+			"reason": OwnerResourcePolicy.clip(str(item.get("reason", "")), "hot_judge_reason_chars")
 		}
 	for i in range(candidates.size()):
 		var candidate: Dictionary = candidates[i]
@@ -394,11 +391,11 @@ func _candidate_public(candidate: Dictionary) -> Dictionary:
 		"strategy": candidate.get("strategy", ""),
 		"path": candidate.get("path", ""),
 		"sha256": candidate.get("sha256", ""),
-		"reason": str(candidate.get("reason", "")).substr(0, 1200),
+		"reason": OwnerResourcePolicy.clip(str(candidate.get("reason", "")), "hot_reason_chars"),
 		"verified": bool(candidate.get("verified", false)),
 		"base_score": float(candidate.get("base_score", 0.0)),
 		"judge_score": float(candidate.get("judge_score", 0.0)),
-		"judge_reason": str(candidate.get("judge_reason", "")).substr(0, 800),
+		"judge_reason": OwnerResourcePolicy.clip(str(candidate.get("judge_reason", "")), "hot_judge_reason_chars"),
 		"score": float(candidate.get("score", 0.0)),
 		"verification": _compact(candidate.get("verification", {}))
 	}
@@ -449,8 +446,8 @@ func evaluate_generated_module(proposal: Dictionary) -> Dictionary:
 	var imported = await tools.call_tool("workspace_import_project", {
 		"project_path": "res://",
 		"target": "project",
-		"max_files": MAX_PROJECT_FILES,
-		"max_bytes": MAX_PROJECT_BYTES
+		"max_files": OwnerResourcePolicy.value("hot_project_files"),
+		"max_bytes": OwnerResourcePolicy.value("hot_project_bytes")
 	})
 	if not _ok(imported): return _reject("workspace_import_project", imported)
 
@@ -585,7 +582,7 @@ func _validate_proposal(proposal: Dictionary) -> Dictionary:
 	if path.is_empty(): return {"ok": false, "error": "Unsafe generated module path"}
 	var content := str(proposal.get("content", ""))
 	if content.strip_edges().is_empty(): return {"ok": false, "error": "Generated module is empty"}
-	if content.to_utf8_buffer().size() > MAX_GENERATED_BYTES:
+	if OwnerResourcePolicy.value("hot_generated_bytes") > 0 and content.to_utf8_buffer().size() > OwnerResourcePolicy.value("hot_generated_bytes"):
 		return {"ok": false, "error": "Generated module exceeds size limit"}
 	if _contains_unfinished_markers(content):
 		return {"ok": false, "error": "Generated module contains unfinished placeholder/stub markers"}
@@ -652,12 +649,12 @@ func _compact(value: Variant) -> Variant:
 		var out: Dictionary = value.duplicate(true)
 		for key in out.keys():
 			var text := str(out[key])
-			if text.length() > 6000:
-				out[key] = text.substr(0, 6000) + "…"
+			if out[key] is String:
+				out[key] = OwnerResourcePolicy.clip(text, "hot_evidence_chars")
 		return out
 	if value is Array:
 		var arr: Array = value
-		return arr.slice(0, mini(arr.size(), 50))
+		return arr.slice(0, OwnerResourcePolicy.count(arr.size(), "hot_evidence_items"))
 	return value
 
 func _sha256_text(text: String) -> String:

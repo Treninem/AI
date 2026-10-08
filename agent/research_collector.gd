@@ -27,6 +27,7 @@ var memory: MemoryStore
 var tools: ToolRegistry
 var _busy := false
 var _request_errors: Array = []
+var _request_error_count := 0
 var _source_health: Dictionary = {}
 var _collection_deadline_msec := 0
 
@@ -41,11 +42,12 @@ func collect(query: String) -> Dictionary:
 		return {"ok": false, "error": "Research collector is already running"}
 	_busy = true
 	_request_errors.clear()
+	_request_error_count = 0
 	var clean_query := query.strip_edges()
 	if clean_query.is_empty():
 		clean_query = "local AI Godot LLM context optimization"
 	var external_query := _external_query(clean_query)
-	_collection_deadline_msec = Time.get_ticks_msec() + int(COLLECTION_BUDGET_SECONDS * 1000.0)
+	_start_collection_budget()
 	var items: Array = []
 
 	# Autonomous research is external-observation only. Personal/local documents
@@ -65,8 +67,8 @@ func collect(query: String) -> Dictionary:
 		if item is Dictionary:
 			_append_log(item)
 	var source_errors := _request_errors.duplicate(true)
-	var complete_failure := items.is_empty() and not source_errors.is_empty()
-	var partial := not items.is_empty() and not source_errors.is_empty()
+	var complete_failure := items.is_empty() and _request_error_count > 0
+	var partial := not items.is_empty() and _request_error_count > 0
 	var report := {
 		"ok": not complete_failure,
 		"partial": partial,
@@ -79,10 +81,11 @@ func collect(query: String) -> Dictionary:
 		"personal_files_scanned": false,
 		"external_query_limited": true,
 		"external_query_char_count": external_query.length(),
-		"network_response_limit_bytes": MAX_RESPONSE_BYTES,
-		"audit_log_limit_bytes": MAX_LOG_BYTES,
-		"collection_budget_seconds": COLLECTION_BUDGET_SECONDS,
-		"source_error_count": source_errors.size(),
+		"network_response_limit_bytes": OwnerResourcePolicy.value("research_response_bytes"),
+		"audit_log_limit_bytes": OwnerResourcePolicy.value("research_log_bytes"),
+		"collection_budget_seconds": OwnerResourcePolicy.value("research_collection_seconds"),
+		"source_error_count": _request_error_count,
+		"source_errors_truncated": _request_error_count > source_errors.size(),
 		"source_errors": source_errors,
 		"source_backoff": _source_health_report(),
 		# Backward-compatible field. Automatic promotion happens asynchronously in
@@ -203,16 +206,13 @@ func _request_text(url: String, source_id: String, mark_success := true) -> Dict
 		_record_request_error("source_backoff", source_id, url, 0, 0, "Source temporarily backed off after repeated failures")
 		return {"ok": false, "error": "Source temporarily backed off", "source": source_id}
 	var remaining_timeout := _remaining_timeout_seconds()
-	if remaining_timeout <= 0.0:
+	if remaining_timeout < 0.0:
 		_record_request_error("collection_budget", source_id, url, 0, 0, "Autonomous research collection budget exhausted")
 		return {"ok": false, "error": "Collection budget exhausted", "source": source_id}
 	var req := HTTPRequest.new()
-	# Keep the normal hard cap explicit, then reduce it to the remaining global
-	# collection budget when less time remains.
-	req.timeout = REQUEST_TIMEOUT_SECONDS
-	if remaining_timeout < REQUEST_TIMEOUT_SECONDS:
-		req.timeout = remaining_timeout
-	req.body_size_limit = MAX_RESPONSE_BYTES
+	# Zero disables the request deadline; a finite collection budget still applies.
+	req.timeout = remaining_timeout
+	req.body_size_limit = _response_byte_limit()
 	add_child(req)
 	var headers := PackedStringArray(["User-Agent: AuroraFox-Learning/1.3", "Accept: application/json, application/atom+xml, text/xml, text/plain;q=0.9"])
 	var err := req.request(url, headers, HTTPClient.METHOD_GET)
@@ -231,23 +231,25 @@ func _request_text(url: String, source_id: String, mark_success := true) -> Dict
 		_record_source_failure(source_id, code, "request_result")
 		return {"ok": false, "result": request_result, "http": code, "error": "Research request did not complete successfully", "source": source_id}
 	if code < 200 or code >= 300:
-		_record_request_error("http", source_id, url, code, request_result, body.substr(0, 240))
+		_record_request_error("http", source_id, url, code, request_result, OwnerResourcePolicy.clip(_redact_credentials(body), "research_error_chars"))
 		_record_source_failure(source_id, code, "http")
-		return {"ok": false, "http": code, "error": body.substr(0, 500), "source": source_id}
+		return {"ok": false, "http": code, "error": OwnerResourcePolicy.clip(_redact_credentials(body), "research_http_error_chars"), "source": source_id}
 	if mark_success:
 		_record_source_success(source_id)
-	return {"ok": true, "text": body.substr(0, MAX_RESPONSE_BYTES), "source": source_id}
+	return {"ok": true, "text": body, "source": source_id} # Already byte-bounded by HTTPRequest.
 
 func _record_request_error(stage: String, source_id: String, url: String, http_code: int, result_code: int, message: String) -> void:
-	if _request_errors.size() >= MAX_SOURCE_ERRORS:
+	_request_error_count += 1
+	var error_budget := OwnerResourcePolicy.value("research_error_items")
+	if error_budget > 0 and _request_errors.size() >= error_budget:
 		return
 	_request_errors.append({
-		"stage": stage.substr(0, 64),
-		"source": source_id.substr(0, 96),
+		"stage": OwnerResourcePolicy.clip(stage, "research_stage_chars"),
+		"source": source_id,
 		"endpoint": _safe_endpoint(url),
 		"http": http_code,
 		"result": result_code,
-		"error": _clean(message, 240)
+		"error": OwnerResourcePolicy.clip(_clean(_redact_credentials(message), 0), "research_error_chars")
 	})
 
 func _can_request_source(source_id: String) -> bool:
@@ -258,16 +260,18 @@ func _record_source_failure(source_id: String, http_code: int, stage: String) ->
 	if source_id.is_empty():
 		return
 	var previous: Dictionary = _source_health.get(source_id, {})
-	var failures := mini(SOURCE_BACKOFF_MAX_FAILURES, int(previous.get("failures", 0)) + 1)
-	var exponent := maxi(0, failures - 1)
-	var delay := mini(SOURCE_BACKOFF_MAX_SECONDS, SOURCE_BACKOFF_BASE_SECONDS * int(pow(2.0, exponent)))
+	var failures := maxi(0, int(previous.get("failures", 0)))
+	if failures < 9223372036854775807: failures += 1
+	var failure_cap := OwnerResourcePolicy.value("research_backoff_failure_cap")
+	if failure_cap > 0: failures = mini(failure_cap, failures)
+	var delay := _backoff_delay(failures)
 	var now := int(Time.get_unix_time_from_system())
 	_source_health[source_id] = {
 		"failures": failures,
-		"next_retry_unix": now + delay,
+		"next_retry_unix": now + mini(delay, 9223372036854775807 - now),
 		"last_failure_unix": now,
 		"last_http": http_code,
-		"last_stage": stage.substr(0, 64)
+		"last_stage": OwnerResourcePolicy.clip(stage, "research_stage_chars")
 	}
 	_save_source_health()
 
@@ -277,16 +281,39 @@ func _record_source_success(source_id: String) -> void:
 	_source_health.erase(source_id)
 	_save_source_health()
 
+func _start_collection_budget() -> void:
+	var seconds := OwnerResourcePolicy.value("research_collection_seconds")
+	var now := Time.get_ticks_msec()
+	if seconds == 0: _collection_deadline_msec = 0
+	elif seconds > (9223372036854775807 - now) / 1000: _collection_deadline_msec = 9223372036854775807
+	else: _collection_deadline_msec = now + seconds * 1000
+
 func _remaining_timeout_seconds() -> float:
+	var request_seconds := float(OwnerResourcePolicy.value("research_request_seconds"))
 	if _collection_deadline_msec <= 0:
-		return REQUEST_TIMEOUT_SECONDS
+		return request_seconds
 	var remaining_msec := _collection_deadline_msec - Time.get_ticks_msec()
-	if remaining_msec < 1000:
-		return 0.0
-	return minf(REQUEST_TIMEOUT_SECONDS, float(remaining_msec) / 1000.0)
+	if remaining_msec <= 0:
+		return -1.0 # Exhausted; zero is the engine's unlimited timeout.
+	var remaining_seconds := float(remaining_msec) / 1000.0
+	return remaining_seconds if request_seconds == 0.0 else minf(request_seconds, remaining_seconds)
+
+func _backoff_delay(failures: int) -> int:
+	var delay := OwnerResourcePolicy.value("research_backoff_base_seconds")
+	if delay == 0: return 0
+	var maximum := OwnerResourcePolicy.value("research_backoff_max_seconds")
+	var ceiling := maximum if maximum > 0 else 9223372036854775807
+	delay = mini(delay, ceiling)
+	var exponent := maxi(0, failures - 1)
+	# Saturation bounds work by signed integer representation, even with no owner cap.
+	while exponent > 0 and delay < ceiling:
+		if delay > ceiling / 2: return ceiling
+		delay *= 2
+		exponent -= 1
+	return delay
 
 func _external_query(query: String) -> String:
-	var normalized := query.replace("\n", " ").replace("\r", " ").replace("\t", " ")
+	var normalized := _redact_credentials(query).replace("\n", " ").replace("\r", " ").replace("\t", " ")
 	var accepted: Array[String] = []
 	for raw in normalized.split(" ", false):
 		var token := str(raw).strip_edges()
@@ -318,7 +345,7 @@ func _safe_endpoint(url: String) -> String:
 	var query_pos := host.find("?")
 	if query_pos >= 0:
 		host = host.substr(0, query_pos)
-	return host.substr(0, 200)
+	return OwnerResourcePolicy.clip(host, "research_endpoint_chars")
 
 func _source_health_report() -> Dictionary:
 	var report: Dictionary = {}
@@ -329,7 +356,7 @@ func _source_health_report() -> Dictionary:
 			"failures": int(state.get("failures", 0)),
 			"retry_in_seconds": maxi(0, int(state.get("next_retry_unix", 0)) - now),
 			"last_http": int(state.get("last_http", 0)),
-			"last_stage": str(state.get("last_stage", "")).substr(0, 64)
+			"last_stage": OwnerResourcePolicy.clip(str(state.get("last_stage", "")), "research_stage_chars")
 		}
 	return report
 
@@ -344,7 +371,7 @@ func _load_source_health() -> void:
 	file.close()
 	if parsed is Dictionary:
 		for key in parsed.keys():
-			var source_id := str(key).substr(0, 96)
+			var source_id := str(key)
 			var value = parsed.get(key, {})
 			if not source_id.is_empty() and value is Dictionary:
 				_source_health[source_id] = (value as Dictionary).duplicate(true)
@@ -366,15 +393,18 @@ func _save_source_health() -> void:
 func _item(source: String, title: String, summary: String, url: String = "", metadata: Dictionary = {}) -> Dictionary:
 	return {
 		"source": source,
-		"title": _clean(title, 300),
-		"summary": _clean(summary, MAX_SUMMARY_CHARS),
+		"title": OwnerResourcePolicy.clip(_clean(title, 0), "research_title_chars"),
+		"summary": OwnerResourcePolicy.clip(_clean(summary, 0), "research_summary_chars"),
 		"url": url,
 		"metadata": metadata,
+		"title_truncated": OwnerResourcePolicy.value("research_title_chars") > 0 and _clean(title, 0).length() > OwnerResourcePolicy.value("research_title_chars"),
+		"summary_truncated": OwnerResourcePolicy.value("research_summary_chars") > 0 and _clean(summary, 0).length() > OwnerResourcePolicy.value("research_summary_chars"),
 		"observed_at": Time.get_datetime_string_from_system(true)
 	}
 
 func _clean(value: String, limit: int) -> String:
-	return " ".join(value.split(" ", false)).strip_edges().substr(0, limit)
+	var normalized := " ".join(value.split(" ", false)).strip_edges()
+	return normalized if limit == 0 else normalized.substr(0, limit)
 
 func _append_log(item: Dictionary) -> void:
 	_rotate_log_if_needed()
@@ -388,6 +418,8 @@ func _append_log(item: Dictionary) -> void:
 	file.close()
 
 func _rotate_log_if_needed() -> void:
+	var log_budget := OwnerResourcePolicy.value("research_log_bytes")
+	if log_budget == 0: return
 	if not FileAccess.file_exists(LOG_PATH):
 		return
 	var file := FileAccess.open(LOG_PATH, FileAccess.READ)
@@ -395,7 +427,7 @@ func _rotate_log_if_needed() -> void:
 		return
 	var size := file.get_length()
 	file.close()
-	if size < MAX_LOG_BYTES:
+	if size < log_budget:
 		return
 	var log_abs := ProjectSettings.globalize_path(LOG_PATH)
 	var backup_abs := ProjectSettings.globalize_path(LOG_BACKUP_PATH)
@@ -410,3 +442,20 @@ func _source_counts(items: Array) -> Dictionary:
 			var source := str(item.get("source", "unknown"))
 			counts[source] = int(counts.get(source, 0)) + 1
 	return counts
+
+func _response_byte_limit() -> int:
+	var budget := OwnerResourcePolicy.value("research_response_bytes")
+	return -1 if budget == 0 else budget
+
+func _redact_credentials(value: String) -> String:
+	var credential := RegEx.new()
+	# Recognize assignment, JSON-like and whitespace-separated marked values.
+	# Redact before any output clipping; a low owner cap never bypasses privacy.
+	var pattern := "(?i)\\b(password|passwd|secret|token|api[_ -]?key|authorization|cookie|private[_ -]?key)[\"']?\\s*(?:[:=]\\s*|\\s+)(?:Bearer\\s+)?[\"']?[^\\s,;\"']+"
+	if credential.compile(pattern) != OK:
+		return "Sensitive research details omitted"
+	var clean := credential.sub(value, "$1=[REDACTED]", true)
+	var bearer := RegEx.new()
+	if bearer.compile("(?i)\\bbearer\\s+[^\\s,;]+") != OK:
+		return "Sensitive research details omitted"
+	return bearer.sub(clean, "Bearer=[REDACTED]", true)

@@ -199,9 +199,16 @@ try {
         if (Test-Path -LiteralPath $apkPath) {
             Remove-Item -LiteralPath $apkPath -Force
         }
+        # Export plugin configures GGUF storage after Godot installs the template.
         & $Godot --headless --path $root --install-android-build-template --export-release "Android" $apkPath
         if ($LASTEXITCODE -ne 0) { throw "Android export failed" }
         if (-not (Test-Path -LiteralPath $apkPath)) { throw "Android APK was not produced" }
+
+        $archiveVerifier = Join-Path $root "tools/verify_android_archive_runtime.py"
+        $python = Get-Command python3, python -ErrorAction SilentlyContinue | Select-Object -First 1
+        if (-not $python) { throw "Python is required for Android archive packaging verification" }
+        & $python.Source $archiveVerifier $apkPath --require-stored-core
+        if ($LASTEXITCODE -ne 0) { throw "Android archive runtime packaging verification failed" }
 
         $apk = Get-Item -LiteralPath $apkPath
         # A complete AuroraFox APK contains >1.2 GiB of verified Core weights.

@@ -426,18 +426,18 @@ func _compact(value: Variant) -> Variant:
 		for key in out.keys():
 			if key in ["content", "proposal"]:
 				var text := str(out[key])
-				if text.length() > 2500:
-					out[key] = text.substr(0, 2500) + "…"
+				out[key] = OwnerResourcePolicy.clip(text, "improvement_ui_detail_chars")
 		return out
 	if value is Array:
 		var arr: Array = value
-		return arr.slice(0, mini(arr.size(), 30))
+		return arr.slice(0, OwnerResourcePolicy.count(arr.size(), "improvement_ui_detail_items"))
 	return value
 
 func _add_history(kind: String, ok: bool, details: Dictionary) -> void:
 	history.push_front({"time": Time.get_datetime_string_from_system(true), "kind": kind, "ok": ok, "details": details})
-	if history.size() > HISTORY_LIMIT:
-		history.resize(HISTORY_LIMIT)
+	var cap := OwnerResourcePolicy.value("improvement_ui_history_items")
+	if cap > 0 and history.size() > cap:
+		history.resize(cap)
 	_save_history()
 
 func _load_history() -> void:

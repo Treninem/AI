@@ -23,7 +23,7 @@ def test_source_health_backoff_is_persistent_and_bounded() -> None:
     assert "func _record_source_success" in text
     assert "func _load_source_health" in text
     assert "func _save_source_health" in text
-    assert '"next_retry_unix": now + delay' in text
+    assert '"next_retry_unix": now + mini(delay, 9223372036854775807 - now)' in text
     assert '"source_backoff": _source_health_report()' in text
 
 
@@ -32,13 +32,13 @@ def test_collection_has_global_budget_in_addition_to_request_timeout() -> None:
 
     assert "const REQUEST_TIMEOUT_SECONDS := 20.0" in text
     assert "const COLLECTION_BUDGET_SECONDS := 45.0" in text
-    assert "_collection_deadline_msec = Time.get_ticks_msec() + int(COLLECTION_BUDGET_SECONDS * 1000.0)" in text
+    assert "_start_collection_budget()" in text
     assert "func _remaining_timeout_seconds" in text
-    assert 'req.timeout = REQUEST_TIMEOUT_SECONDS' in text
-    assert "if remaining_timeout < REQUEST_TIMEOUT_SECONDS:" in text
+    assert 'req.timeout = remaining_timeout' in text
+    assert "if remaining_timeout < 0.0:" in text
     assert "req.timeout = remaining_timeout" in text
     assert '_record_request_error("collection_budget"' in text
-    assert '"collection_budget_seconds": COLLECTION_BUDGET_SECONDS' in text
+    assert '"collection_budget_seconds": OwnerResourcePolicy.value("research_collection_seconds")' in text
 
 
 def test_external_query_and_failure_telemetry_do_not_export_obvious_local_identifiers() -> None:
@@ -88,3 +88,11 @@ def test_research_quality_workflow_runs_resilience_contract_and_smoke() -> None:
     assert "tests/test_research_source_resilience_contract.py" in workflow
     assert "tests/research_source_resilience_smoke.gd" in workflow
     assert "Run research source resilience smoke" in workflow
+
+
+def test_marked_credentials_are_redacted_before_query_and_error_clipping():
+    text = read(COLLECTOR)
+    assert 'var normalized := _redact_credentials(query)' in text
+    assert 'OwnerResourcePolicy.clip(_clean(_redact_credentials(message), 0), "research_error_chars")' in text
+    assert 'OwnerResourcePolicy.clip(_redact_credentials(body), "research_http_error_chars")' in text
+    assert 'Sensitive research details omitted' in text

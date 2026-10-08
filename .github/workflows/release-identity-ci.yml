@@ -18,6 +18,7 @@ on:
       - 'build/AuroraFox_V13_BridgeFixture.iss'
       - 'tests/test_release_identity_version_policy.py'
       - 'tests/test_update_backward_compat.py'
+      - 'tests/test_release_secret_readiness_workflow.py'
       - 'tests/update_smoke.gd'
       - 'tests/version_policy_test.ps1'
       - 'tests/version_sync_test.ps1'
@@ -43,6 +44,7 @@ on:
       - 'build/AuroraFox_V13_BridgeFixture.iss'
       - 'tests/test_release_identity_version_policy.py'
       - 'tests/test_update_backward_compat.py'
+      - 'tests/test_release_secret_readiness_workflow.py'
       - 'tests/update_smoke.gd'
       - 'tests/version_policy_test.ps1'
       - 'tests/version_sync_test.ps1'
@@ -83,7 +85,7 @@ jobs:
       - name: Verify OpenSSL availability
         run: openssl version
       - name: Run release identity versioning and legacy update contracts
-        run: python -m pytest -q tests/test_release_identity_version_policy.py tests/test_update_backward_compat.py
+        run: python -m pytest -q tests/test_release_identity_version_policy.py tests/test_update_backward_compat.py tests/test_release_secret_readiness_workflow.py
       - name: Verify canonical version synchronization contract
         shell: bash
         run: |

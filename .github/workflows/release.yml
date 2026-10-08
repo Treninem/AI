@@ -367,9 +367,9 @@ jobs:
           set -euo pipefail
           python3 -m pip install --disable-pip-version-check \
             -r api/requirements.txt \
-            pytest==8.4.1 numpy==2.2.6 \
+            pytest==8.4.1 numpy==2.2.6 httpx==0.28.1 \
             requests==2.32.5 pypdf==6.14.2 python-docx==1.2.0 \
-            openpyxl==3.1.5 xlrd==2.0.2 python-pptx==1.0.2
+            openpyxl==3.1.5 xlrd==2.0.2 python-pptx==1.0.2 imageio-ffmpeg==0.6.0
 
       - name: Run Python API, privacy, voice and file gates
         shell: bash
@@ -380,6 +380,7 @@ jobs:
             tests/test_api_gateway.py \
             tests/test_api_privacy_contract.py \
             tests/test_voice_configs.py \
+            tests/test_voice_resource_limits.py \
             tests/test_xtts_contract.py \
             tests/test_file_intelligence.py \
             tests/test_project_index.py
@@ -515,6 +516,7 @@ jobs:
   publish:
     if: |
       always() &&
+      (github.event_name != 'workflow_dispatch' || !inputs.secrets_only) &&
       (
         (startsWith(github.ref, 'refs/tags/v') && needs.windows.result == 'success' && needs.android.result == 'success') ||
         (github.event_name == 'workflow_dispatch' && inputs.publish_run_id != '')

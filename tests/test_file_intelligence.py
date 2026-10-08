@@ -22,6 +22,27 @@ def test_text_file(tmp_path: Path) -> None:
     assert result["metadata"]["encoding"].startswith("utf-8")
 
 
+def test_partial_cache_identity_changes_with_owner_extraction_policy(tmp_path, monkeypatch):
+    path = tmp_path / 'same-source.txt'
+    path.write_text('actual canonical source', encoding='utf-8')
+    baseline = file_service._cache_key(path, '', False, 160000)
+    for field in ['MAX_PDF_RENDER_PIXELS', 'MAX_PDF_PAGES', 'VIDEO_MAX_FRAMES', 'VIDEO_FRAME_MAX_WIDTH']:
+        with monkeypatch.context() as patch:
+            patch.setattr(file_service, field, getattr(file_service, field) + 1)
+            assert file_service._cache_key(path, '', False, 160000) != baseline
+    import extended_formats
+    with monkeypatch.context() as patch:
+        patch.setattr(extended_formats, 'MAX_EPUB_CHAPTERS', extended_formats.MAX_EPUB_CHAPTERS + 1)
+        assert file_service._cache_key(path, '', False, 160000) != baseline
+
+
+def test_owner_cache_budget_prunes_actual_disk_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(file_service, 'CACHE_DIR', tmp_path)
+    monkeypatch.setattr(file_service, 'CACHE_MAX_BYTES', 1)
+    file_service._cache_put('small', {'content': 'actual cached text'})
+    assert list(tmp_path.glob('*.json')) == []
+
+
 def test_docx_xlsx_pptx(tmp_path: Path) -> None:
     from docx import Document
     from openpyxl import Workbook
@@ -155,3 +176,198 @@ def test_health_claims_vision_only_with_selected_model(monkeypatch: pytest.Monke
     assert result["ollama_online"] is True
     assert result["vision_online"] is True
     assert file_service.VISION_MODEL in result["installed_models"]
+
+
+def test_owner_health_probe_deadlines_preserve_default_and_zero(monkeypatch: pytest.MonkeyPatch) -> None:
+    observed: list[tuple[str, float | None]] = []
+
+    def fake_get(url: str, timeout: float | None):
+        observed.append((url, timeout))
+        return _FakeResponse(200, {"models": []})
+
+    monkeypatch.setattr(file_service.requests, "get", fake_get)
+    monkeypatch.setattr(file_service, "local_ocr_health", lambda: {"available": False, "languages": []})
+    for ollama_ms, voice_ms in [(1500, 1500), (25, 2500), (0, 0)]:
+        monkeypatch.setattr(file_service, "OLLAMA_HEALTH_TIMEOUT_MS", ollama_ms)
+        monkeypatch.setattr(file_service, "VOICE_HEALTH_TIMEOUT_MS", voice_ms)
+        observed.clear()
+        result = file_service.health()
+        assert result["ok"] is True
+        assert [timeout for _, timeout in observed] == [
+            None if ollama_ms == 0 else ollama_ms / 1000.0,
+            None if voice_ms == 0 else voice_ms / 1000.0,
+        ]
+        assert result["limits"]["ollama_health_timeout_ms"] == ollama_ms
+        assert result["limits"]["voice_health_timeout_ms"] == voice_ms
+
+
+def test_owner_pdf_render_scale_keeps_independent_pixel_bound(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    scale = file_service._pdf_render_scale
+    assert scale(100.0, 100.0, 1_000_000, 200) == 2.0
+    assert scale(100.0, 100.0, 1_000_000, 150) == 1.5
+    assert scale(100.0, 100.0, 1_000_000, 0) == 10.0
+    with pytest.raises(ValueError):
+        scale(100.0, 100.0, 1_000_000, -1)
+    monkeypatch.setenv("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", "0")
+    assert file_service._operational_budget_from_env("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", 200) == 0
+    monkeypatch.setenv("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", "1.5")
+    with pytest.raises(ValueError):
+        file_service._operational_budget_from_env("AURORAFOX_OCR_MAX_RENDER_SCALE_PERCENT", 200)
+    source = tmp_path / "owner.pdf"
+    source.write_bytes(b"pdf fixture")
+    monkeypatch.setattr(file_service, "MAX_PDF_RENDER_SCALE_PERCENT", 200)
+    old_key = file_service._cache_key(source, "", False, 1000)
+    monkeypatch.setattr(file_service, "MAX_PDF_RENDER_SCALE_PERCENT", 0)
+    assert file_service._cache_key(source, "", False, 1000) != old_key
+
+
+def test_spreadsheet_budget_reaches_full_service_response_and_cache(tmp_path: Path, monkeypatch) -> None:
+    from openpyxl import Workbook
+    path = tmp_path / "owner_budget.xlsx"
+    book = Workbook(); book.active.append(["one", "two", "three"]); book.active.append(["four", "five", "six"])
+    book.save(path); book.close()
+    monkeypatch.setattr(file_service, "CACHE_DIR", tmp_path / "cache")
+    file_service.CACHE_DIR.mkdir()
+    monkeypatch.setattr(file_service, "MAX_SPREADSHEET_CELLS", 5)
+    request = file_service.AnalyzeRequest(path=str(path), visual=False)
+    limited = file_service.analyze(request)
+    assert limited["truncated"] is True
+    assert limited["metadata"]["cells_read"] == 5
+    assert limited["warnings"]
+    assert "six" not in limited["content"]
+    assert file_service.analyze(request)["cached"] is True
+    monkeypatch.setattr(file_service, "MAX_SPREADSHEET_CELLS", 6)
+    complete = file_service.analyze(request)
+    assert complete["cached"] is False
+    assert complete["truncated"] is False
+    assert "six" in complete["content"]
+
+
+def test_listing_owner_env_also_bounds_omitted_request_defaults(tmp_path: Path):
+    import json
+    import os
+    import subprocess
+    env = dict(os.environ, AURORAFOX_USER_DIR=str(tmp_path), AURORAFOX_FILE_TREE_MAX_ITEMS="2",
+               AURORAFOX_FILE_SEARCH_MAX_RESULTS="3", AURORAFOX_FILE_SEARCH_EXCERPT_CHARS="10")
+    code = "import json,file_service as f; print(json.dumps([f.TreeRequest(path='.').max_items,f.CacheSearchRequest(query='x').limit,f.MAX_CACHE_EXCERPT_CHARS]))"
+    output = subprocess.check_output([sys.executable, "-c", code], cwd=ROOT / "file_intelligence", env=env, text=True)
+    assert json.loads(output) == [2, 3, 10]
+
+
+def test_zero_cache_budget_keeps_actual_cached_files(tmp_path, monkeypatch):
+    monkeypatch.setattr(file_service, 'CACHE_DIR', tmp_path)
+    monkeypatch.setattr(file_service, 'CACHE_MAX_BYTES', 0)
+    file_service._cache_put('one', {'content': 'one'})
+    file_service._cache_put('two', {'content': 'two'})
+    assert len(list(tmp_path.glob('*.json'))) == 2
+    size = sum(p.stat().st_size for p in tmp_path.glob('*.json'))
+    file_service._trim_cache(size)
+    assert len(list(tmp_path.glob('*.json'))) == 2
+    file_service._trim_cache(size - 1)
+    assert len(list(tmp_path.glob('*.json'))) == 1
+
+
+@pytest.mark.parametrize('value', ['0', '1', '600'])
+def test_file_operational_startup_budget_and_negative_rejection(monkeypatch, value):
+    key = 'AURORAFOX_FILE_CACHE_MAX_BYTES'
+    monkeypatch.setenv(key, value)
+    assert file_service._operational_budget_from_env(key, 500) == int(value)
+    monkeypatch.setenv(key, '-1')
+    with pytest.raises(ValueError, match=key):
+        file_service._operational_budget_from_env(key, 500)
+    monkeypatch.setenv(key, 'invalid')
+    with pytest.raises(ValueError, match=key):
+        file_service._operational_budget_from_env(key, 500)
+
+
+@pytest.mark.parametrize('deadline', [None, 1, 600])
+def test_actual_file_provider_http_deadline(tmp_path, monkeypatch, deadline):
+    import json
+    import threading
+    import requests
+    from http.server import BaseHTTPRequestHandler, HTTPServer
+    received = []
+    timeouts = []
+
+    class Handler(BaseHTTPRequestHandler):
+        def log_message(self, *args):
+            pass
+        def do_POST(self):
+            received.append(json.loads(self.rfile.read(int(self.headers['Content-Length']))))
+            self.send_response(200)
+            self.end_headers()
+            payload = {'ok': True, 'text': 'actual speech'} if self.path == '/stt_path' else {'message': {'content': 'actual vision'}}
+            self.wfile.write(json.dumps(payload).encode())
+
+    original_send = requests.sessions.Session.send
+    def send(session, request, **kwargs):
+        timeouts.append(kwargs['timeout'])
+        return original_send(session, request, **kwargs)
+    monkeypatch.setattr(requests.sessions.Session, 'send', send)
+    server = HTTPServer(('127.0.0.1', 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, kwargs={'poll_interval': 0.01}, daemon=True)
+    thread.start()
+    try:
+        url = f'http://127.0.0.1:{server.server_port}'
+        monkeypatch.setattr(file_service, 'OLLAMA_URL', url)
+        monkeypatch.setattr(file_service, 'VOICE_URL', url)
+        monkeypatch.setattr(file_service, 'VISION_TIMEOUT_SECONDS', deadline)
+        monkeypatch.setattr(file_service, 'STT_TIMEOUT_SECONDS', deadline)
+        assert file_service._vision_bytes(b'actual image', 'inspect') == 'actual vision'
+        path = tmp_path / 'sample.wav'
+        path.write_bytes(b'actual audio')
+        text, metadata, warnings = file_service._voice_transcribe(path)
+        assert text == 'actual speech' and not warnings
+        assert timeouts == [deadline, deadline]
+        assert received[1]['path'] == str(path)
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=2)
+        assert not thread.is_alive()
+
+
+def test_actual_video_ffmpeg_accepts_unlimited_owner_deadline(tmp_path, monkeypatch):
+    import imageio_ffmpeg
+    import subprocess
+    executable = imageio_ffmpeg.get_ffmpeg_exe()
+    video = tmp_path / 'actual.mp4'
+    generated = subprocess.run([executable, '-y', '-f', 'lavfi', '-i', 'color=c=red:s=16x16:d=0.2',
+                                '-f', 'lavfi', '-i', 'sine=frequency=440:duration=0.2', '-shortest',
+                                '-c:v', 'mpeg4', '-c:a', 'aac', str(video)], capture_output=True, timeout=10)
+    assert generated.returncode == 0, generated.stderr.decode(errors='replace')
+    observed = []
+    original_run = subprocess.run
+    def run(*args, **kwargs):
+        observed.append(kwargs['timeout'])
+        return original_run(*args, **kwargs)
+    monkeypatch.setattr(subprocess, 'run', run)
+    monkeypatch.setattr(file_service, 'VIDEO_TIMEOUT_SECONDS', None)
+    # Offline transcript availability is independent of extraction deadline.
+    monkeypatch.setattr(file_service, '_voice_transcribe', lambda path: ('extracted audio', {}, []))
+    text, _, warnings = file_service._video_analyze(video, '', False)
+    assert text.endswith('extracted audio')
+    assert observed == [None]
+    assert not warnings
+
+
+@pytest.mark.parametrize('value', [0, 2, 600])
+def test_full_file_service_import_uses_four_owner_operational_budgets(monkeypatch, value):
+    import importlib
+    mapping = {'CACHE_MAX_BYTES': 'AURORAFOX_FILE_CACHE_MAX_BYTES',
+               'VISION_TIMEOUT_SECONDS': 'AURORAFOX_FILE_VISION_TIMEOUT_SECONDS',
+               'STT_TIMEOUT_SECONDS': 'AURORAFOX_FILE_STT_TIMEOUT_SECONDS',
+               'VIDEO_TIMEOUT_SECONDS': 'AURORAFOX_FILE_VIDEO_TIMEOUT_SECONDS'}
+    try:
+        with monkeypatch.context() as patch:
+            for key in mapping.values():
+                patch.setenv(key, str(value))
+            importlib.reload(file_service)
+            assert file_service.CACHE_MAX_BYTES == value
+            for field in ('VISION_TIMEOUT_SECONDS', 'STT_TIMEOUT_SECONDS', 'VIDEO_TIMEOUT_SECONDS'):
+                assert getattr(file_service, field) == (value or None)
+            patch.setenv(mapping['CACHE_MAX_BYTES'], '-1')
+            with pytest.raises(ValueError, match='nonnegative integer'):
+                importlib.reload(file_service)
+    finally:
+        importlib.reload(file_service)

@@ -91,8 +91,9 @@ func _import_project(args: Dictionary) -> Dictionary:
 	var target_rel := _safe_relative(str(args.get("target", "project")))
 	if target_rel.is_empty(): return {"ok": false, "error": "Invalid sandbox target"}
 	var target := "%s/work/%s" % [ws_root, target_rel]
-	var max_files := clampi(int(args.get("max_files", MAX_COPY_FILES)), 1, MAX_COPY_FILES)
-	var max_bytes := clampi(int(args.get("max_bytes", MAX_COPY_BYTES)), 1024, MAX_COPY_BYTES)
+	var max_files := int(args.get("max_files", MAX_COPY_FILES))
+	var max_bytes := int(args.get("max_bytes", MAX_COPY_BYTES))
+	if max_files < 0 or max_bytes < 0: return {"ok": false, "error": "Project copy budgets must be nonnegative"}
 	DirAccess.make_dir_recursive_absolute(target)
 	var state := {"files": 0, "bytes": 0, "skipped": 0, "errors": [], "stopped": false}
 	_copy_directory_limited(source, target, state, max_files, max_bytes)
@@ -133,7 +134,7 @@ func _copy_directory_limited(source: String, target: String, state: Dictionary, 
 				state.errors.append("Cannot read: " + src)
 			else:
 				var size := file.get_length()
-				if int(state.files) + 1 > max_files or int(state.bytes) + size > max_bytes:
+				if (max_files > 0 and int(state.files) + 1 > max_files) or (max_bytes > 0 and int(state.bytes) + size > max_bytes):
 					file.close()
 					state.stopped = true
 					break

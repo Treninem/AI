@@ -24,8 +24,7 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	if OS.get_name() == "Windows" and backend_pid > 0:
-		OS.kill(backend_pid)
-		backend_pid = 0
+		_stop_owned_backend()
 
 static func shared_service_token() -> String:
 	if _shared_service_token.is_empty():
@@ -41,21 +40,20 @@ static func computer_control_enabled() -> bool:
 
 static func master_enabled_from(node: Node) -> bool:
 	var current: Node = node
-	for _i in range(8):
-		if current == null:
-			break
+	while current != null:
 		for node_name in ["AutonomySettings", "AutonomySettingsManager"]:
 			var manager = current.get_node_or_null(node_name)
 			if manager != null and manager.has_method("get_settings"):
 				var settings = manager.call("get_settings")
 				if settings is Dictionary:
-					return bool(settings.get("master_enabled", true))
+					return settings.get("master_enabled", false) is bool and settings.get("master_enabled", false)
+				return false
 		if current.has_method("get_settings"):
 			var own_settings = current.call("get_settings")
 			if own_settings is Dictionary and own_settings.has("master_enabled"):
-				return bool(own_settings.get("master_enabled", true))
+				return own_settings.master_enabled is bool and own_settings.master_enabled
 		current = current.get_parent()
-	return true
+	return false
 
 func runtime_is_installed() -> bool:
 	return OS.get_name() == "Windows" and not _find_runtime().is_empty()
@@ -72,10 +70,17 @@ func installer_path() -> String:
 func restart_backend() -> void:
 	if OS.get_name() != "Windows":
 		return
-	if backend_pid > 0:
-		OS.kill(backend_pid)
-		backend_pid = 0
+	if backend_pid > 0 and not _stop_owned_backend():
+		return # Never start a second backend while owned termination is uncertain.
 	_start_backend_if_installed()
+
+func _stop_owned_backend() -> bool:
+	if not ComputerRequestGuard.stop_service_sync(base_url, _service_token):
+		push_warning("Computer owned termination is unconfirmed; retain sidecar for retry/parent watchdog")
+		return false
+	OS.kill(backend_pid)
+	backend_pid = 0
+	return true
 
 func _start_backend_if_installed() -> void:
 	if OS.get_name() != "Windows":
@@ -85,6 +90,7 @@ func _start_backend_if_installed() -> void:
 		return
 	runtime_root = str(found.get("root", ""))
 	OS.set_environment("AURORAFOX_SANDBOX_ROOT", ProjectSettings.globalize_path("user://sandboxes"))
+	_export_owner_input_limits()
 	OS.set_environment("AURORAFOX_COMPUTER_TOKEN", _service_token)
 	OS.set_environment("AURORAFOX_PARENT_PID", str(OS.get_process_id()))
 	var executable := str(found.get("pythonw", ""))
@@ -106,6 +112,10 @@ func _start_backend_if_installed() -> void:
 			OS.set_environment("PYTHONPATH", previous_pythonpath)
 		else:
 			OS.unset_environment("PYTHONPATH")
+
+func _export_owner_input_limits() -> void:
+	for key in ["sandbox_command_items", "sandbox_cwd_chars", "sandbox_write_path_chars", "workspace_task_chars"]:
+		OS.set_environment("AURORAFOX_" + key.to_upper(), str(OwnerResourcePolicy.value(key)))
 
 func _clear_bootstrap_environment() -> void:
 	OS.unset_environment("AURORAFOX_COMPUTER_TOKEN")
@@ -139,7 +149,7 @@ func _candidate_roots() -> Array[String]:
 		ProjectSettings.globalize_path("res://computer")
 	]
 
-func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout_seconds: float = DEFAULT_TIMEOUT, require_autonomy: bool = true, require_computer_permission: bool = false) -> Dictionary:
+func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary = {}, timeout_seconds: float = -1.0, require_autonomy: bool = true, require_computer_permission: bool = false) -> Dictionary:
 	if OS.get_name() != "Windows":
 		return _unsupported()
 	if require_autonomy and not _master_enabled():
@@ -147,19 +157,28 @@ func _json_request(path: String, method: HTTPClient.Method, payload: Dictionary 
 	if require_computer_permission and not computer_control_enabled():
 		return {"ok": false, "error": "permission_denied", "message": "Computer control is disabled by the user", "retryable": false}
 	var req := HTTPRequest.new()
-	req.timeout = clampf(timeout_seconds, 1.0, 320.0)
+	if not ComputerRequestGuard.configure_request(req, timeout_seconds, "computer_default_http_seconds"):
+		req.free()
+		return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	add_child(req)
 	var headers := PackedStringArray(["Content-Type: application/json"])
 	if not _service_token.is_empty():
 		headers.append("X-AuroraFox-Computer-Token: " + _service_token)
 	if require_autonomy:
 		headers.append("X-AuroraFox-Autonomy-Allowed: 1")
-	var body := "" if payload.is_empty() else JSON.stringify(payload)
+	payload = ComputerRequestGuard.execution_payload(path, payload)
+	headers = ComputerRequestGuard.append_execution_header(headers, payload)
+	var body := "" if method == HTTPClient.METHOD_GET or payload.is_empty() else JSON.stringify(payload)
 	var err := req.request(base_url + path, headers, method, body)
 	if err != OK:
 		req.queue_free()
 		return {"ok": false, "error": "service_unavailable", "message": "Computer service request failed (%s)" % err, "retryable": true}
-	var completed: Array = await req.request_completed
+	var allowed := func() -> bool: return (not require_autonomy or _master_enabled()) and (not require_computer_permission or computer_control_enabled())
+	var guarded: Dictionary = await ComputerRequestGuard.wait(req, self, allowed, base_url, _service_token, payload)
+	if guarded.cancelled:
+		req.queue_free()
+		return {"ok": false, "error": "response_budget" if int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED else ("transport_failure" if guarded.has("transport_result") else "cancelled"), "retryable": false, "limit_reached": int(guarded.get("transport_result", -1)) == HTTPRequest.RESULT_BODY_SIZE_LIMIT_EXCEEDED, "termination_confirmed": guarded.termination_confirmed, "uncertain_external_state": guarded.uncertain_external_state}
+	var completed: Array = guarded.completed
 	req.queue_free()
 	if completed.size() < 4:
 		return {"ok": false, "error": "malformed_response", "message": "Computer service returned an incomplete response", "retryable": true}
@@ -186,7 +205,7 @@ func _decode_response(result_code: int, response_code: int, raw: PackedByteArray
 		return {
 			"ok": false,
 			"error": error_code,
-			"message": detail.substr(0, 2048),
+			"message": OwnerResourcePolicy.clip(detail, "computer_http_error_chars"),
 			"http": response_code,
 			"retryable": response_code in [408, 429, 502, 503, 504],
 		}
@@ -250,25 +269,27 @@ func action(data: Dictionary) -> Dictionary:
 	return await _json_request("/action", HTTPClient.METHOD_POST, payload, ACTION_TIMEOUT, true, true)
 
 func sandbox_exec(command: Array[String], cwd: String = ".", timeout: int = 60, allow_network: bool = false) -> Dictionary:
-	var bounded_timeout := clampi(timeout, 1, MAX_SANDBOX_TIMEOUT)
+	var bounded_timeout := ComputerRequestGuard.execution_timeout(timeout)
+	if bounded_timeout < 0: return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	return await _json_request("/sandbox/exec", HTTPClient.METHOD_POST, {
 		"command": command,
 		"cwd": cwd,
 		"timeout": bounded_timeout,
 		"allow_network": allow_network,
-	}, float(bounded_timeout + 5), true, false)
+	}, ComputerRequestGuard.execution_http_timeout(bounded_timeout), true, false)
 
 func sandbox_container_exec(command: Array[String], cwd: String = ".", timeout: int = 60, allow_network: bool = false) -> Dictionary:
-	var bounded_timeout := clampi(timeout, 1, MAX_SANDBOX_TIMEOUT)
+	var bounded_timeout := ComputerRequestGuard.execution_timeout(timeout)
+	if bounded_timeout < 0: return {"ok": false, "error": "invalid_timeout", "retryable": false}
 	return await _json_request("/sandbox/container_exec", HTTPClient.METHOD_POST, {
 		"command": command,
 		"cwd": cwd,
 		"timeout": bounded_timeout,
 		"allow_network": allow_network,
-	}, float(bounded_timeout + 5), true, false)
+	}, ComputerRequestGuard.execution_http_timeout(bounded_timeout), true, false)
 
 func sandbox_write(path: String, content: String) -> Dictionary:
-	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content}, DEFAULT_TIMEOUT, true, false)
+	return await _json_request("/sandbox/write", HTTPClient.METHOD_POST, {"path": path, "content": content, "max_bytes": OwnerResourcePolicy.value("sandbox_write_bytes")}, -1.0, true, false)
 
 func _master_enabled() -> bool:
 	return master_enabled_from(self)
