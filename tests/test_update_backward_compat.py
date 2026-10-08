@@ -98,7 +98,10 @@ def test_repair_assets_publish_only_from_signed_v14_or_newer_floor() -> None:
     assert 'source="${setups[0]}"' in workflow
     assert '-CandidateVersion $current -CurrentInstaller $setup[0].FullName' in workflow
     assert 'stable="dist/AuroraFox-V${old}-Repair-Windows.exe"' in workflow
-    assert 'gh release upload "$tag" "$stable" "$sums" --clobber' in workflow
+    assert 'split -b 1900M -d -a 2 "$source" "$stable.part-"' in workflow
+    assert 'test "$(stat -c%s "$part")" -lt 2147483648' in workflow
+    assert 'cp build/repair_installer_reassemble.ps1 "$assemble"' in workflow
+    assert 'gh release upload "$tag" "${parts[@]}" "$sums" "$assemble" --clobber' in workflow
     assert "AURORA_REPAIR_RELEASES_READY" in workflow
 
 

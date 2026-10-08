@@ -146,8 +146,18 @@ jobs:
           for old in 1.2 1.3; do
             stable="dist/AuroraFox-V${old}-Repair-Windows.exe"
             sums="dist/AuroraFox-V${old}-Repair-Windows-SHA256.txt"
-            cp "$source" "$stable"
-            sha256sum "$stable" | tee "$sums"
+            assemble="dist/AuroraFox-V${old}-Repair-Windows.reassemble.ps1"
+            split -b 1900M -d -a 2 "$source" "$stable.part-"
+            mapfile -t parts < <(find dist -maxdepth 1 -type f -name "AuroraFox-V${old}-Repair-Windows.exe.part-*" | sort)
+            test "${#parts[@]}" -ge 2 || { echo "Repair installer must have at least two parts" >&2; exit 1; }
+            for part in "${parts[@]}"; do
+              test "$(stat -c%s "$part")" -lt 2147483648 || { echo "Repair installer part exceeds GitHub asset limit: $part" >&2; exit 1; }
+            done
+            {
+              sha256sum "$source" | awk -v name="$(basename "$stable")" '{print $1 "  " name}'
+              sha256sum "${parts[@]}" | sed 's#  dist/#  #'
+            } > "$sums"
+            cp build/repair_installer_reassemble.ps1 "$assemble"
             tag="repair-v${old}-windows"
             notes="$RUNNER_TEMP/${tag}.md"
             cat > "$notes" <<EOF
@@ -155,15 +165,15 @@ jobs:
 
           Historical AuroraFox V${old} Windows builds were produced before the permanent signed-update trust root was embedded in packaged applications.
 
-          Run \`AuroraFox-V${old}-Repair-Windows.exe\` over the existing installation. The verified in-place bridge preserves Godot \`user://\` data and installs AuroraFox V${version} with the permanent update trust root. From the signed V${floor} floor onward, normal automatic updates use \`releases/latest/download/update.json\` plus RSA verification.
+          Download every \`AuroraFox-V${old}-Repair-Windows.exe.part-*\` file, the SHA256 file and the reassemble script into one folder. Run \`AuroraFox-V${old}-Repair-Windows.reassemble.ps1\` in PowerShell; it verifies every part and the reconstructed installer against SHA-256. Then run the verified \`AuroraFox-V${old}-Repair-Windows.exe\` over the existing installation. The verified in-place bridge preserves Godot \`user://\` data and installs AuroraFox V${version} with the permanent update trust root. From the signed V${floor} floor onward, normal automatic updates use \`releases/latest/download/update.json\` plus RSA verification.
 
           This is a one-time repair and is deliberately a prerelease so it can never occupy the stable \`releases/latest\` updater endpoint.
           EOF
             if gh release view "$tag" >/dev/null 2>&1; then
-              gh release upload "$tag" "$stable" "$sums" --clobber
+              gh release upload "$tag" "${parts[@]}" "$sums" "$assemble" --clobber
               gh release edit "$tag" --title "AuroraFox V${old} Windows Trust-Root Repair" --notes-file "$notes" --prerelease --latest=false
             else
-              gh release create "$tag" "$stable" "$sums" --title "AuroraFox V${old} Windows Trust-Root Repair" --notes-file "$notes" --prerelease --latest=false
+              gh release create "$tag" "${parts[@]}" "$sums" "$assemble" --title "AuroraFox V${old} Windows Trust-Root Repair" --notes-file "$notes" --prerelease --latest=false
             fi
           done
           echo "AURORA_REPAIR_RELEASES_READY bootstrap_version=$version signed_floor=$floor"
