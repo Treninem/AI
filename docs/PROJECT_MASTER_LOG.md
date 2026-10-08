@@ -9402,3 +9402,12 @@ DONE:121 platform findings inspected;30 exact classifications,91 retained; local
 REMAINING:publish/sync and exact owner/platform CI;384 global findings and release gates.
 BLOCKERS:none for audit metadata; long release gates pending.
 NEXT:commit/push policy, tests and journal; verify local/origin/web SHA and exact owner CI.
+PLATFORM_RESIDUAL_PUBLICATION_AND_CI:metadata/test/journal commit `cb6a5753d6f205080fbd1f2ab4160954ac3c1adf` published; local HEAD, origin tracking and GitHub web ref matched exactly with clean worktree. Exact Chat Learning Attachments run `37710882242` SUCCESS, including owner-control audit and Godot parse; local owner suite40PASS, policy JSON and diff check PASS. Review121, classified30, retained91; global unclassified384. No platform/runtime source changed. Claim `CODEX-2026-10-08-V15-PLATFORM-RESIDUAL-REVIEW` is DONE; policy, test and journal paths released. Android Plugin/APK, Windows Package, Knowledge and other long release gates remain pending on this SHA and are not reported as PASS.
+SOURCE_COMPLETE:YES for audit scope.
+CODE_FREEZE_SHA:cb6a5753d6f205080fbd1f2ab4160954ac3c1adf
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:121 platform lines reviewed;30 classified,91 retained; local40PASS and exact owner CI SUCCESS.
+REMAINING:384 global inventory findings and final exact-SHA Android/Windows/Knowledge/package/update/version gates.
+BLOCKERS:none for completed audit; long release gates pending.
+NEXT:publish evidence-only journal commit and sync; then investigate a retained high-impact source limit in a separate D claim with genuine regressions.
