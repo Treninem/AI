@@ -9182,3 +9182,10 @@ DONE:114 new scripts findings inspected,41 exact classifications,73 retained; lo
 REMAINING:publish/sync and exact audit CI;533 global inventory residuals and release platform/package/update/version acceptance.
 BLOCKERS:none for audit metadata; Windows Package and Knowledge1GiB still pending/in progress at start of batch.
 NEXT:commit/push policy/tests/journal, verify local/origin/web SHA and exact owner CI, then release metadata claim.
+SCRIPTS_REMAINING_BULK_PUBLICATION_AND_CI:commit4e701da70ba5da6b3f30738e6029cda75c198f62 published with local/origin/web exact and clean. Exact Chat Learning Attachments run37707618134 SUCCESS; contract step included tests/test_owner_control_audit.py and reported70PASS. Exact Core/Voice run37707618208 SUCCESS; other completed short jobs green at last check, while API/Integration/Android/Windows Package/Knowledge jobs were queued or active, no red observed. Review114, classified41, retained73, global residual533. Audit-only claim CODEX-2026-10-08-V15-SCRIPTS-REMAINING-BULK-AUDIT is DONE and releases policy/test/journal paths. No production source changed and no version bump.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:114 new scripts findings inspected and published;41 exact classifications,73 retained; local35PASS and exact CI70PASS.
+REMAINING:533 owner-control findings and actual source-limit repairs; final exact-SHA Windows/Android/Knowledge/package/update/version gates.
+BLOCKERS:none for completed metadata audit; long release gates pending.
+NEXT:publish this evidence-only journal entry and verify its exact SHA/owner CI; then choose a retained source cap with a separate D claim and full regression gates.
