@@ -9259,3 +9259,32 @@ DONE:trusted candidate source budget repaired and published;105 release findings
 REMAINING:482 global owner-control inventory findings; exact Windows/Android/Knowledge/package/update gates, operator budget configuration if >1MiB candidates are intended, final release version-last acceptance.
 BLOCKERS:none for completed source and audit scope; long exact-SHA CI remains pending.
 NEXT:publish this evidence-only journal entry, verify local/origin/web equality and owner CI on its SHA, then continue a separate connected release finding group with a new claim.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-EVOLUTION-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing controlled self-improvement boundaries; no V1.6 cognition expansion.
+ROADMAP_SECTION:4 controlled Evolution/release foundation and owner-adjustable operational limits.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; independent verification and live authorization retained.
+STARTING_HEAD:6210f208677a78fe025cefe0ca02155a53b14199; fresh main and feature fetched, local/origin equal, prior claims DONE and latest journal/roadmap/memory checked. Exact owner/Core/API CI on this head SUCCESS; long Windows/Android/Knowledge pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Evolution Engine source read-only until any confirmed defect receives a separate claim.
+DEPENDENCIES:retain live authorization, approval, independent verification, rollback, finite test budgets and security boundaries; do not hide genuine operational caps.
+NON_BLOCKERS:V1.6 cognition work and future noncritical Evolution redesign.
+INTENDED_BUMP:none for audit metadata; a confirmed source defect requires a separate D claim and relevant regressions.
+ACCEPTANCE_GATES:inspect all 116 currently unclassified Evolution Engine lines; classify only exact fully reviewed non-cap lines, preserve actual/ambiguous bounds; adversarial path and appended-cap tests, full inventory, exact owner CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:prior 105-line release audit and promotion repair published; starting refs synchronized.
+REMAINING:inspect 116 Evolution lines, test and publish safe classifications;482 global residual findings and platform release gates.
+BLOCKERS:none for audit review.
+NEXT:enumerate the 116 exact lines and inspect their enclosing code before classification.
+EVOLUTION_RESIDUAL_REVIEW_CHECKPOINT:all116 unclassified Evolution Engine source lines enumerated and reviewed with enclosing registry/context implementation. Eighteen exact full-line/path findings classified as format/status/lock telemetry: registry phase/stage/promotion/outcome8, decision stage1, experience event/stage/outcome6, execution-guard elapsed/threshold reporting3. Ninety-eight actual or ambiguous limits remain visible, including community learning batch200 and timer/HTTP bounds, context items12/content900, learning signal memory/Knowledge/item counts, candidate and goal/metadata text truncation, tournament diagnostics and live stale-lock condition. Global unclassified482→464. No source behavior or safety guard changed. Adversarial appended-cap/wrong-path tests and unresolved examples added; local owner audit37PASS with authorized test dependencies, policy JSON parses and diff check PASS.
+SOURCE_COMPLETE:YES for this audit metadata, exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:116 residual Evolution findings inspected;18 exact classifications,98 retained; local owner audit37PASS.
+REMAINING:publish/sync and exact owner CI;464 global inventory findings and final platform gates.
+BLOCKERS:none for audit metadata; long release gates pending.
+NEXT:commit/push audit, verify local/origin/web SHA and exact owner CI; then choose a retained operational cap for a separate source claim.

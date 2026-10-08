@@ -59,6 +59,28 @@ def test_native_reader_budgets_are_reviewed_without_hiding_arbitrary_literals():
     assert MODULE.classify(base+"Unreviewed.kt", "val limit = 2", policy)[0] == "unclassified"
 
 
+def test_evolution_residual_status_review_keeps_actual_caps_visible():
+    policy = MODULE.load_policy()
+    reviewed = {
+        "evolution_engine/core/experiment_registry.gd": 'record["phase"] = phase.substr(0, 120)',
+        "evolution_engine/evaluation/decision_record.gd": '"stage": str(result.get("stage", "")).substr(0, 120),',
+        "evolution_engine/learning/experience_bridge.gd": '"outcome": str(row.get("outcome", "")).substr(0, 40),',
+        "evolution_engine/safety/execution_guard.gd": '"threshold_seconds": max_age_seconds',
+    }
+    for path, line in reviewed.items():
+        assert MODULE.classify(path, line, policy)[0] == "format_structure"
+        assert MODULE.classify(path, line + "; FIXED_LIMIT = 17", policy)[0] == "unclassified"
+        assert MODULE.classify("other/" + path, line, policy)[0] == "unclassified"
+    unresolved = {
+        "evolution_engine/learning/context_bridge.gd": "const MAX_CONTEXT_ITEMS := 12",
+        "evolution_engine/learning/learning_signal.gd": "const MAX_MEMORY_ROWS := 12",
+        "evolution_engine/integration/community_learning_bridge.gd": "const MAX_BATCH_SIZE := 200",
+        "evolution_engine/core/experiment_registry.gd": '"goal": goal.substr(0, 2000),',
+    }
+    for path, line in unresolved.items():
+        assert MODULE.classify(path, line, policy)[0] == "unclassified"
+
+
 def test_native_limit_propagation_preserves_security_and_unknown_literals():
     policy = MODULE.load_policy()
     base = "android_plugin/plugin/src/main/java/com/aurorafox/runtime/"
