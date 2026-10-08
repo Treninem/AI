@@ -9364,3 +9364,12 @@ DONE:143 scripts/agent lines inspected;29 safe exact classifications,114 retaine
 REMAINING:publish/sync and exact owner/Core/Agent CI;414 global findings plus release platform/package gates.
 BLOCKERS:none for audit metadata.
 NEXT:commit/push metadata and journal, verify local/origin/web SHA and exact CI.
+SCRIPTS_AGENT_RESIDUAL_PUBLICATION_AND_CI:metadata/test/journal commit `0ef7b969b76afb0f31c521e10ebc9b1b2822a241` published; local HEAD, origin tracking and GitHub web ref matched exactly with clean worktree. Exact Chat Learning Attachments run `37710369500` SUCCESS including owner audit and Godot parse; Core / Voice `37710369546` SUCCESS, Agent Sync `37710369542` SUCCESS, API `37710369520` SUCCESS. Local owner suite39PASS, policy JSON/diff check PASS. Review143, classified29, retained114; global unclassified414. No runtime source behavior changed. Claim `CODEX-2026-10-08-V15-SCRIPTS-AGENT-RESIDUAL-REVIEW` is DONE; policy, test and journal paths released. Exact Windows Package, Android and Knowledge release acceptance still pending independently.
+SOURCE_COMPLETE:YES for audit scope.
+CODE_FREEZE_SHA:0ef7b969b76afb0f31c521e10ebc9b1b2822a241
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:143 scripts/agent findings reviewed;29 classified and114 retained; local39PASS, exact owner/Core/Agent/API CI SUCCESS.
+REMAINING:414 global inventory findings; final exact-SHA platform/package/update/version gates.
+BLOCKERS:none for completed audit; long release gates pending.
+NEXT:publish evidence-only journal commit, sync local/origin/web and continue a separate source or owner-control claim on a confirmed retained constraint.
