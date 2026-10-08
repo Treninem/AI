@@ -9473,3 +9473,32 @@ REMAINING:exact new-SHA release guard CI;384 retained inventory findings and pac
 BLOCKERS:none in locally tested guard; new-SHA acceptance pending.
 NEXT:publish coherent5-file batch to existing feature PR using fast-forward only, sync local/origin/web SHA, inspect exact Release Identity verdict. No merge/tag/publication in this batch.
 CLAIM:WORK-2026-10-08-V15-RELEASE-PREFLIGHT-GUARD SOURCE_RELEASED/CI_PENDING; paths released after publication, runtime unchanged.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-RESIDUAL-102-OWNER-PREFLIGHT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing File Intelligence owner-adjustable operational limit audit; metadata/tests only.
+ROADMAP_SECTION:4 File Intelligence bounded memory/resource limits and owner-adjustable operational limits;16 exact-SHA acceptance cadence.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no architecture or release-authority change.
+STARTING_HEAD:2d4477727b2bb3a6894532c147ceb16965742f50; fresh main/feature fetched, local/origin equal, journal/roadmap/memory/ADRs checked. Signed branch Windows run37724099449 still in progress; source files are read-only under this claim.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md.
+DEPENDENCIES:preserve native XLS/RAR preflight enforcement, malformed-file and JVM representation guards, owner setting validation, exact archive/size budgets and the signed release gates.
+NON_BLOCKERS:V1.6 cognition and unrelated platform feature expansion.
+INTENDED_BUMP:none for audit-only metadata; any source defect needs separate D claim and regressions.
+ACCEPTANCE_GATES:triage all102 remaining statements in next 17 densest files; classify only exact, verified owner-budget checks in OLE/RAR preflight; retain mixed input/format/Int representation guards and all real or ambiguous limits. Adversarial appended-cap/wrong-path and unresolved examples, full audit count, policy JSON parse, local owner suite, diff check, exact owner CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 exact lines enumerated; five direct owner-budget checks selected after excluding a mixed format/size guard.
+REMAINING:implement exact classifications and adversarial tests; publish/sync; exact owner CI and signed Windows verdict.
+BLOCKERS:none for metadata audit; signed Windows release gate independently pending.
+NEXT:add exact OLE/RAR owner-budget classifications without changing native source, run full owner-audit tests and publish.
+RESIDUAL_102_OWNER_PREFLIGHT_CHECKPOINT:all102 selected lines enumerated and triaged; five exact OLE/RAR checks classified as owner_adjustable after tracing immutable FileAnalysisLimits to validated owner settings (`max_file_bytes`, `archive_max_entries`, `android_xls_file_bytes`, `android_xls_directory_entries`, `android_xls_directory_depth`). Ninety-seven real or ambiguous lines remain visible. Mixed OLE nonnegative, RAR4/RAR5 input/Int representation and cumulative metadata checks remain unclassified; native parser/preflight code and safety limits are unchanged. Wrong-path and appended-cap assertions plus mixed-boundary unresolved assertions added. Local owner audit41PASS with Python UTF-8 mode (initial Windows default-codepage test invocation failed reading existing UTF-8 source and was not counted as product failure); policy JSON parses, full inventory4584 with unclassified384→379 and complete:false, diff check PASS. Signed release branch run37724099449 on source-equivalent SHA0cc39ca1df318928ae5300bca487224953e0d3b2 completed SUCCESS: core-gates, signed Android build/certificate/install/launch on Android35 and Windows package/updater ZIP/installer/silent install-launch-uninstall jobs all SUCCESS; publish SKIPPED as required for a branch. Artifacts: `aurorafox-windows` digest sha256:28276e9c4bb0beed70406b0305d674187d3c57aff65313b92813adcfb0661107, `aurorafox-android` sha256:e621f2711681f556378cf9c29fafe67fdf663abf43d12696607cdecf568d1926. All23 PR workflows for prior metadata SHA2d4477727b2bb3a6894532c147ceb16965742f50 SUCCESS. These pre-version checks do not replace V1.5 version-last/post-bump acceptance; Android full production Knowledge payload remains OWNER_WAIVED_NOT_EXECUTED.
+SOURCE_COMPLETE:YES for audit metadata; publication and exact owner CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 reviewed, five exact owner classifications,97 retained; local41PASS, audit/policy/diff PASS; signed branch release run and23 prior PR workflows SUCCESS.
+REMAINING:publish/sync metadata and exact owner CI;379 inventory findings plus version/versionCode-last and final release/update gates.
+BLOCKERS:none for metadata audit; final V1.5 version-last/post-bump release acceptance pending.
+NEXT:commit/push policy, tests and journal once; verify local/origin/web SHA and exact owner CI, then prepare version-last claim.

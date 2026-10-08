@@ -725,3 +725,28 @@ def test_voice_and_knowledge_review_keeps_new_caps_and_trailing_code_unknown():
         assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
     assert MODULE.classify('voice/python/aurora_voice_server.py', 'MAX_VOICE_BYTES = 17', policy)[0] == 'unclassified'
     assert MODULE.classify('voice/python/processor.py', 'n_fft = max(256, min(2048, requested))', policy)[0] == 'unclassified'
+
+
+def test_native_ole_rar_owner_preflight_audit_preserves_mixed_boundaries():
+    policy = MODULE.load_policy()
+    root = 'android_plugin/plugin/src/main/java/com/aurorafox/runtime/'
+    reviewed = [
+        ('OleDirectoryPreflight.kt', 'require(file.length() <= minOf(limits.fileBytes, limits.xlsFileBytes)) { "XLS input exceeds owner byte budget" }'),
+        ('OleDirectoryPreflight.kt', 'require(properties.size < limits.xlsDirectoryEntries) { "XLS directory table exceeds owner budget" }'),
+        ('OleDirectoryPreflight.kt', 'require(current.depth <= limits.xlsDirectoryDepth) { "XLS directory depth exceeds owner budget" }'),
+        ('RarHeaderPreflight.kt', 'require(file.length() <= limits.fileBytes) { "RAR input exceeds owner byte budget" }'),
+        ('RarHeaderPreflight.kt', 'require(count++ < limits.archiveEntries) { "RAR metadata header count exceeds owner entry budget" }'),
+    ]
+    for file, statement in reviewed:
+        path = root + file
+        assert MODULE.classify(path, statement, policy)[0] == 'owner_adjustable'
+        assert MODULE.classify(path, statement + '; FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify(root + 'other/' + file, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('OleDirectoryPreflight.kt', 'require(size >= 0 && size <= limits.xlsFileBytes) { "OLE stream exceeds owner XLS budget" }'),
+        ('RarHeaderPreflight.kt', 'require(size >= 7 && size.toLong() <= minOf(limits.expandedBytes, input.length()-start)) { "RAR4 header outside owner/input budget" }'),
+        ('RarHeaderPreflight.kt', 'require(size <= minOf(limits.expandedBytes, input.length()-payloadStart, Int.MAX_VALUE.toLong())) { "RAR5 header outside owner/input budget" }'),
+        ('RarHeaderPreflight.kt', 'require(consumed > 0 && headerBytes <= limits.expandedBytes-consumed) { "RAR metadata exceeds owner byte budget" }'),
+    ]
+    for file, statement in unresolved:
+        assert MODULE.classify(root + file, statement, policy)[0] == 'unclassified'
