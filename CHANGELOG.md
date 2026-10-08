@@ -1,5 +1,12 @@
 # AuroraFox Changelog
 
+## V1.5.0.0 — 2026-10-08
+
+- Stabilized the bundled local AuroraFox Core and normal offline chat path, with bounded recovery and verified Windows/Android packages.
+- Kept genuine production Knowledge external to Git, with verified full import and installed Windows restart/retrieval evidence.
+- Hardened File Intelligence, Work, Voice, owner-controlled resource limits and signed update/release checks.
+- Advanced Android `versionCode` to `100008` while preserving the pinned signing identity.
+
 ## V1.4.1.1 — 2026-09-28
 
 - Added controlled Evolution Engine lifecycle with bounded 3–10 candidate tournaments, session permission controls, evidence gates and existing release authority separation.

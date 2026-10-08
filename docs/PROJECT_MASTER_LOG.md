@@ -9511,3 +9511,32 @@ DONE:102 inspected, five exact owner classifications,97 retained; local41PASS an
 REMAINING:379 residual inventory findings; concurrent release guard exact remaining CI; canonical V1.5.0.0/versionCode-last and post-bump signed release/update acceptance.
 BLOCKERS:none for closed audit; final versioned release acceptance remains pending.
 NEXT:publish/sync this evidence-only closure, verify its exact owner CI, then coordinate version-last preparation with the now-integrated release guard claim.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-VERSION-LAST-CANDIDATE
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL canonical release metadata and post-bump acceptance; no tag or public publication.
+ROADMAP_SECTION:4 stable production foundation, signed updater/release, A.B.C.D version-last and exact-SHA package gates.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no Core or cognition redesign.
+STARTING_HEAD:95d9e1855adee705a691a99cc5c1316a08196ae7; fresh main446ce2cd2f979a8ab228f63d090062e8ba48a6eb and feature fetched, local/origin equal, journal/roadmap/memory/ADRs checked. Prior source-equivalent SHA2d44777 had23/23 PR workflows SUCCESS; signed branch Release run37724099449 at0cc39ca core/Windows/Android SUCCESS, publish SKIPPED; concurrent guard source1bc2002 and audit sourceccbbdbb passed exact Release Identity/owner CI; current95d9e18 targeted owner/Release Identity SUCCESS and remaining long PR jobs in progress. No known source P0/P1 in these accepted blocks.
+OWNED_PATHS:project/version.json;project.godot;export_presets.cfg;update/manifest.template.json;CHANGELOG.md;evolution.log;docs/PROJECT_MASTER_LOG.md. Release workflow and other concurrently owned source paths are read-only.
+DEPENDENCIES:retain permanent update/Android signing identities, exact Core/model/pack hashes, Android package id and strictly increasing versionCode. Android full production Knowledge payload is OWNER_WAIVED_NOT_EXECUTED under section100, never PASS; genuine archive and installed Windows proof remain accepted under sections87/92.
+NON_BLOCKERS:V1.6 cognition, S3 and post-release owner-PC344-case expansion; current V1.5 release gates remain blocking.
+INTENDED_BUMP:MINOR to V1.5.0.0 with Android versionCode100008, from published V1.4.1.1/100007.
+ACCEPTANCE_GATES:one atomic version sync across canonical project, Godot, Android export, updater manifest, changelog and evolution log; version-sync/policy and release identity tests; no signing identity drift; clean diff; local/origin/web sync; full exact post-bump PR CI plus signed branch Release core/Windows/Android/install/update checks. No tag/publication until final acceptance.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:pre-bump source/targeted/signing evidence above; version metadata and package identity inspected.
+REMAINING:perform one version sync, test, publish, run exact post-bump full CI and signed release candidate acceptance.
+BLOCKERS:post-bump gates not yet executed; 379 residual findings retained and Android full-pack waiver explicit.
+NEXT:run build/set_version.ps1 once for V1.5.0.0, review generated metadata/notes, execute local version gates and publish one coherent candidate commit.
+VERSION_LAST_LOCAL_CHECKPOINT:build/set_version.ps1 produced V1.5.0.0 and strictly incremented Android versionCode100007→100008 across project/version.json, project.godot, export_presets.cfg, update/manifest.template.json, CHANGELOG.md and evolution.log. Windows PowerShell5 converted historical UTF-8 changelog characters and duplicated its heading, so the affected text and JSON layout were reconstructed from exact Git HEAD UTF-8 bytes while preserving only intended V1.5 fields; updater notes now describe this release rather than V1.4 Evolution. Canonical version sync PASS, version policy execution PASS (the test's deliberate same/lower-version rejection emitted expected errors and restored its temporary copies), direct release identity11PASS, updater backward-compat12PASS and secret-readiness workflow5PASS using native Git-for-Windows OpenSSL. Initial Unix-path OpenSSL in this restricted Windows shell exited nonzero; native mingw64 OpenSSL succeeded and the complete suite was rerun, so no crypto test is claimed from the failed attempt. Project/manifest JSON parse, signing fingerprint tests and diff check PASS. No product runtime, pack bytes, public tag or release publication changed. This is a versioned candidate only; post-bump exact-SHA PR and signed release package/install/update gates still required, and Android full-pack waiver remains explicit.
+SOURCE_COMPLETE:YES for local version metadata; publication/exact acceptance pending.
+CODE_FREEZE_SHA:pending version candidate commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:one V1.5.0.0/100008 metadata sync; local version/policy and28 release/updater/preflight contracts PASS; UTF-8 changelog preserved.
+REMAINING:publish/sync version candidate, full exact post-bump PR CI and signed branch release Windows/Android/update gates;379 inventory findings and explicit Android full-pack waiver retained.
+BLOCKERS:post-bump release gates not yet executed; no locally confirmed version metadata defect.
+NEXT:commit/push one version candidate, verify local/origin/web equality and launch full signed branch release workflow on that exact SHA without tag/publication.
