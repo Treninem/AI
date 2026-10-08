@@ -9249,3 +9249,13 @@ DONE:105 current release lines inspected;54 exact classifications,51 retained; c
 REMAINING:publish/sync and exact CI;482 global inventory findings and final release/platform/version gates.
 BLOCKERS:none for implementation, long platform gates pending.
 NEXT:validate policy JSON/diff, commit/push source+audit once, verify local/origin/web SHA and exact owner/Core/Release/Integration CI.
+
+RELEASE_TOOLING_PUBLICATION_AND_CI:source repair and 105-line audit published as `19c3f387698a08d31aae8f66d8b7079d3fce7aa4`; local HEAD, origin branch and GitHub web ref matched exactly with a clean worktree at publication. Exact runs: Chat Learning Attachments `37708622603` SUCCESS (owner audit), Core / Voice `37708622636` SUCCESS (promotion regression), API `37708622589` SUCCESS, Integration Gate `37708622618` SUCCESS. Work Mode, Release Identity, Semantic Memory, Agent Sync, Core Bootstrap, UI Visual, Research Quality and other completed short workflows also SUCCESS. Android Plugin, Windows Package, Android E2E/APK, Knowledge Performance/1GiB, Core benchmarks were still running or queued at this checkpoint; no same-SHA platform/package acceptance is claimed. Local promotion/queue/owner suite 55PASS, policy JSON and diff check PASS. The source claim `CODEX-2026-10-08-V15-PROMOTION-SOURCE-BUDGET` is DONE; its owned paths are released. The audit claim `CODEX-2026-10-08-V15-RELEASE-TOOLING-BULK-AUDIT` is DONE; its owned paths are released. Review105, classified54, retained51; global unclassified482. Canonical version unchanged.
+SOURCE_COMPLETE:YES for both claims; exact short CI PASS, long release gates pending.
+CODE_FREEZE_SHA:19c3f387698a08d31aae8f66d8b7079d3fce7aa4
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:trusted candidate source budget repaired and published;105 release findings reviewed;54 classified,51 retained; local55PASS and exact owner/Core/API/Integration CI PASS.
+REMAINING:482 global owner-control inventory findings; exact Windows/Android/Knowledge/package/update gates, operator budget configuration if >1MiB candidates are intended, final release version-last acceptance.
+BLOCKERS:none for completed source and audit scope; long exact-SHA CI remains pending.
+NEXT:publish this evidence-only journal entry, verify local/origin/web equality and owner CI on its SHA, then continue a separate connected release finding group with a new claim.
