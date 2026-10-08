@@ -93,7 +93,9 @@ def test_repair_assets_publish_only_from_signed_v14_or_newer_floor() -> None:
     assert "eligible = ver(current) >= ver(floor) and ver(current) > ver(legacy)" in workflow
     assert "if: steps.floor.outputs.eligible == 'true'" in workflow
     assert 'for old in 1.2 1.3' in workflow
-    assert 'source="dist/AuroraFox-V${version}-Setup-Windows.exe"' in workflow
+    assert 'find dist -type f -name "AuroraFox-V${version}-Setup-Windows.exe" -print0' in workflow
+    assert 'test "${#setups[@]}" -eq 1' in workflow
+    assert 'source="${setups[0]}"' in workflow
     assert 'stable="dist/AuroraFox-V${old}-Repair-Windows.exe"' in workflow
     assert 'gh release upload "$tag" "$stable" "$sums" --clobber' in workflow
     assert "AURORA_REPAIR_RELEASES_READY" in workflow

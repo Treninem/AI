@@ -9585,3 +9585,4 @@ DONE:merged release source, genuine Knowledge Pack validated, signed main Releas
 REMAINING:repair layout lookup, record AF-179, run exact CI and publish after all release gates pass.
 BLOCKERS:Updater Repair Validation run37816833961 failed at SHA12c3145e.
 NEXT:correct artifact discovery in both jobs, verify locally, publish repair and rerun actual gates.
+RED_CI_EXTENSION:PR104 release-identity run37820253742 failed 27PASS/1FAIL because `tests/test_update_backward_compat.py` pins the former root-only `source=` assignment. Add that test to OWNED_PATHS, update its source contract to require recursive unique exact-version selection, and rerun exact CI; this is a stale structural assertion, not evidence that the release gate passed.
