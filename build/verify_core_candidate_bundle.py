@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import shutil
 from pathlib import Path, PurePosixPath
@@ -14,7 +15,8 @@ ALLOWED_TARGETS = {
     "scripts/memory_store.gd",
     "agent/goals.gd",
 }
-MAX_CANDIDATE_BYTES = 1024 * 1024
+DEFAULT_CANDIDATE_BYTES = 1024 * 1024
+SOURCE_BYTES_ENV = "AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES"
 MAX_SOURCE_GROWTH_RATIO = 1.35
 RISKY_PRIMITIVES = (
     "OS.execute(",
@@ -33,6 +35,17 @@ CANDIDATE_ID_RE = re.compile(r"^[A-Za-z0-9._-]{1,80}$")
 
 class CandidateVerificationError(RuntimeError):
     pass
+
+
+def _source_byte_budget(value: int | None = None) -> int:
+    configured = os.getenv(SOURCE_BYTES_ENV, str(DEFAULT_CANDIDATE_BYTES)) if value is None else value
+    try:
+        budget = int(configured)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError(f"{SOURCE_BYTES_ENV} must be a nonnegative integer") from exc
+    if isinstance(configured, bool) or budget < 0 or (isinstance(configured, float) and configured != budget):
+        raise ValueError(f"{SOURCE_BYTES_ENV} must be a nonnegative integer")
+    return budget
 
 
 def sha256_file(path: Path) -> str:
@@ -125,7 +138,8 @@ def _inside(root: Path, child: Path) -> bool:
     return child == root or root in child.parents
 
 
-def verify_bundle(project: Path, bundle: Path, *, apply: bool = False) -> dict[str, Any]:
+def verify_bundle(project: Path, bundle: Path, *, apply: bool = False, max_source_bytes: int | None = None) -> dict[str, Any]:
+    source_byte_budget = _source_byte_budget(max_source_bytes)
     project = project.resolve(strict=True)
     bundle = bundle.resolve(strict=True)
     manifest_path = bundle / "candidate.json"
@@ -163,8 +177,9 @@ def verify_bundle(project: Path, bundle: Path, *, apply: bool = False) -> dict[s
         raise CandidateVerificationError("base target escapes the checked-out project")
     if not _inside(bundle, candidate_path) or not candidate_path.is_file():
         raise CandidateVerificationError("candidate source is missing or escapes the bundle")
-    if candidate_path.stat().st_size <= 0 or candidate_path.stat().st_size > MAX_CANDIDATE_BYTES:
-        raise CandidateVerificationError("candidate source is empty or exceeds the 1 MiB limit")
+    candidate_size = candidate_path.stat().st_size
+    if candidate_size <= 0 or (source_byte_budget > 0 and candidate_size > source_byte_budget):
+        raise CandidateVerificationError("candidate source is empty or exceeds the configured size limit")
 
     base_sha = sha256_file(base_path)
     candidate_sha = sha256_file(candidate_path)
@@ -218,7 +233,7 @@ def main() -> int:
     args = parser.parse_args()
     try:
         report = verify_bundle(args.project, args.bundle, apply=args.apply)
-    except CandidateVerificationError as exc:
+    except (CandidateVerificationError, ValueError) as exc:
         print(json.dumps({"ok": False, "error": str(exc)}, ensure_ascii=False))
         return 2
     rendered = json.dumps(report, ensure_ascii=False, indent=2)

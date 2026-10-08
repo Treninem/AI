@@ -46,8 +46,8 @@ def _fixture(tmp_path: Path, *, target: str = "scripts/memory_store.gd") -> tupl
     candidate_target = bundle / target
     project_target.parent.mkdir(parents=True, exist_ok=True)
     candidate_target.parent.mkdir(parents=True, exist_ok=True)
-    project_target.write_text(base, encoding="utf-8")
-    candidate_target.write_text(candidate, encoding="utf-8")
+    project_target.write_bytes(base.encode("utf-8"))
+    candidate_target.write_bytes(candidate.encode("utf-8"))
     manifest = {
         "candidate_id": "fixture_001",
         "target": target,
@@ -74,6 +74,33 @@ def test_verified_bundle_is_rechecked_and_applied(tmp_path: Path) -> None:
     assert report["candidate_sha256"] == promotion.sha256_file(target)
     assert report["source_contract"]["ok"] is True
     assert report["promotion_boundary"] == "ci_verified_pr_then_normal_signed_release"
+
+
+def test_promotion_source_budget_default_raised_zero_and_untrusted_manifest(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    project, bundle, manifest = _fixture(tmp_path)
+    target = manifest["target"]
+    baseline = (project / target).read_text(encoding="utf-8") + "#" + "x" * (2 * 1024 * 1024) + "\n"
+    candidate = baseline.replace("\treturn value\n", "\treturn value if value != null else \"\"\n")
+    (project / target).write_bytes(baseline.encode("utf-8"))
+    (bundle / target).write_bytes(candidate.encode("utf-8"))
+    manifest["base_sha256"] = _sha(baseline)
+    manifest["candidate_sha256"] = _sha(candidate)
+    manifest["max_source_bytes"] = 0  # Untrusted candidate data must not raise the verifier's budget.
+    (bundle / "candidate.json").write_text(json.dumps(manifest), encoding="utf-8")
+    size = len(candidate.encode("utf-8"))
+    assert size > 2 * 1024 * 1024
+
+    with pytest.raises(promotion.CandidateVerificationError, match="size|limit"):
+        promotion.verify_bundle(project, bundle)
+    assert promotion.verify_bundle(project, bundle, max_source_bytes=size)["ok"] is True
+    assert promotion.verify_bundle(project, bundle, max_source_bytes=0)["ok"] is True
+
+    monkeypatch.setenv("AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES", str(size))
+    assert promotion.verify_bundle(project, bundle)["ok"] is True
+    for invalid in ["-1", "1.5", "not-an-integer"]:
+        monkeypatch.setenv("AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES", invalid)
+        with pytest.raises(ValueError, match="AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES"):
+            promotion.verify_bundle(project, bundle)
 
 
 def test_stale_base_hash_is_rejected(tmp_path: Path) -> None:
@@ -133,6 +160,7 @@ def test_promotion_workflow_keeps_candidate_untrusted_until_verified() -> None:
     assert "path: submission" in workflow
     assert "persist-credentials: false" in workflow
     assert "project/build/verify_core_candidate_bundle.py" in workflow
+    assert "AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES: ${{ vars.AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES || '1048576' }}" in workflow
     assert "submission/core_candidate_submission" in workflow
     assert "git -C project diff --name-only" in workflow
     assert "needs: verify-candidate" in workflow

@@ -9189,3 +9189,63 @@ DONE:114 new scripts findings inspected and published;41 exact classifications,7
 REMAINING:533 owner-control findings and actual source-limit repairs; final exact-SHA Windows/Android/Knowledge/package/update/version gates.
 BLOCKERS:none for completed metadata audit; long release gates pending.
 NEXT:publish this evidence-only journal entry and verify its exact SHA/owner CI; then choose a retained source cap with a separate D claim and full regression gates.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-RELEASE-TOOLING-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing update, build, deployment, model/bootstrap and CI release-control inventory; audit-only.
+ROADMAP_SECTION:4 updater/release exact-SHA package, Windows/Android distribution, Knowledge pack and version-last acceptance.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no promotion or release authority change.
+STARTING_HEAD:c3fc577862cf437a1410f3fdd8c5d450e04e72d4; fresh main/feature fetched, main ancestor and local/origin equality confirmed, journal/roadmap/engineering memory/ADRs and active claims checked. Exact owner/API/Core and completed CI green; Windows Package and Knowledge1GiB pending at claim start.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: update/,deploy/,tools/,build/,.github/,core_runtime/,models/,benchmarks/,runtime/ audit findings.
+CLAIM_RECONCILIATION:prior scripts audit DONE and metadata paths released; source files and workflows remain read-only under this claim.
+DEPENDENCIES:preserve signed updater, rollback, package hashes, genuine Knowledge size, Android versionCode, CI acceptance and security boundaries as visible findings.
+NON_BLOCKERS:V1.6 cognition and post-release owner-PC field sweep.
+INTENDED_BUMP:none for audit metadata; source corrections require a separate D claim and full release gates.
+ACCEPTANCE_GATES:review all102 current residual findings in selected release infrastructure paths; classify only exact non-cap representation, owner/operator routing or test evidence; retain real/ambiguous time, count, size, version and trust limits; adversarial path/appended-cap tests, full audit, exact CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous scripts114 audit published/synced; exact owner CI green.
+REMAINING:review102 release findings and publish;533 global residuals and final release gates.
+BLOCKERS:none for audit metadata.
+NEXT:enumerate and inspect all102 selected release-source lines before classification.
+RELEASE_TOOLING_AUDIT_FINDING:all102 selected release-infrastructure lines enumerated; verified a cross-stack release blocker before classifying metadata. build/verify_core_candidate_bundle.py still rejects source >1MiB while private client and API now support trusted raised source budgets. core-candidate-promotion.yml invokes that independent verifier without an operator byte setting. This means a candidate accepted by the API can fail at the required signed-promotion gate solely because of the stale hidden cap. Preserve the independent verifier and signed workflow; fix its trusted budget before closing this audit. No policy classifications have been added yet.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PROMOTION-SOURCE-BUDGET
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL existing Core candidate promotion consistency and signed-update trust boundary.
+ROADMAP_SECTION:4 controlled self-improvement and updater/release exact-SHA acceptance.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; independent promotion authority remains mandatory.
+STARTING_HEAD:c3fc577862cf437a1410f3fdd8c5d450e04e72d4; parent release-tooling audit active, fresh main/feature and journal/memory checked. Narrow source claim takes over only the verified promotion byte path from the audit's read-only set.
+OWNED_PATHS:build/verify_core_candidate_bundle.py;.github/workflows/core-candidate-promotion.yml;tests/test_core_candidate_promotion.py;docs/AURORA_CORE_MIGRATION.md;docs/AURORAFOX_ENGINEERING_MEMORY.md;docs/PROJECT_MASTER_LOG.md. Parent audit retains config/owner_control_policy.json and tests/test_owner_control_audit.py.
+DEPENDENCIES:operator-controlled trusted startup/repository variable, never candidate manifest; default1MiB remains; zero removes only candidate-specific cap; independent hash, target allowlist, source-contract, second verification, CI PR and signed release gates remain unchanged. Service global body policy stays separate.
+NON_BLOCKERS:V1.6 cognition and unrelated future promotion redesign.
+INTENDED_BUMP:D for cross-stack promotion defect; canonical version last after full release gates.
+ACCEPTANCE_GATES:red >1MiB independently verified fixture before fix; default/raised/zero/invalid operator budget and no candidate-declared override; workflow references trusted repository configuration; existing promotion/security regressions, Python audit, exact Core/Release/Integration CI, diff check and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:confirmed verifier fixed1MiB source gate conflicts with raised client/API budget.
+REMAINING:implement trusted verifier budget and tests, complete parent102-finding release audit, publish/sync and exact CI.
+BLOCKERS:none for implementation.
+NEXT:add failing promotion fixture, then implement trusted budget without relaxing independent review.
+PROMOTION_SOURCE_BUDGET_CHECKPOINT:confirmed pre-fix independent verifier rejects >1MiB despite raised client/API settings. Authorized Windows red fixture reached TypeError for missing max_source_bytes argument; initial restricted test path had WinError5 and was not counted as product evidence. Verifier now reads trusted AURORAFOX_CORE_CANDIDATE_SOURCE_BYTES default1MiB, accepts raised/zero, fails invalid values, and ignores untrusted manifest byte declarations. Workflow obtains the setting only from trusted GitHub repository vars (default1MiB). Existing hash, allowlist, source-growth1.35, risky primitive, trusted-main checkout, clean PR and signed release gates unchanged. Windows promotion fixture now writes exact UTF-8 bytes to avoid CRLF hash/size distortion. Operator setup documented; AF-175 added to engineering memory. Combined promotion/queue/owner tests55PASS with authorized temp access.
+SOURCE_COMPLETE:YES for promotion byte path, pending exact CI.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:promotion source budget repaired with trusted workflow config; default/raised/zero/invalid/untrusted-manifest regression; local55PASS.
+REMAINING:publish/sync, exact Core/Release/Integration CI, parent105-line release audit and final platform gates.
+BLOCKERS:none in source repair; repository operator must set variable when accepting >1MiB in deployment.
+NEXT:finalize release-tooling audit classifications/tests, publish one coherent commit and verify exact CI.
+RELEASE_TOOLING_BULK_AUDIT_CHECKPOINT:original102 release-infrastructure findings reviewed; three new verifier budget lines entered the inventory after source repair, so105 current lines inspected. Fifty-four exact path/full-line classifications: trusted/caller budget routing5, status/progress/artifact/chunk/viewport representation29, test/CI harness evidence15, auth/transport/limited-privilege hard boundaries5. Fifty-one real/ambiguous constraints remain, including GitHub2GiB asset cap, release/CI timeouts, benchmark size floors, Core installer retries, Knowledge shard limit, backup retention and job deadlines, updater download/retry interval and source growth. Global unclassified533→482 net51 after source line changes; release subset105→51, complete:false. Full adversarial path/appended-cap tests and unresolved examples pass in local55PASS promotion/queue/owner suite. JSON parse/diff check and exact CI remain.
+SOURCE_COMPLETE:YES for release audit metadata, pending publication.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:105 current release lines inspected;54 exact classifications,51 retained; cross-stack promotion defect fixed and local55PASS.
+REMAINING:publish/sync and exact CI;482 global inventory findings and final release/platform/version gates.
+BLOCKERS:none for implementation, long platform gates pending.
+NEXT:validate policy JSON/diff, commit/push source+audit once, verify local/origin/web SHA and exact owner/Core/Release/Integration CI.

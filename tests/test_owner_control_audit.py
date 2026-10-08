@@ -490,6 +490,37 @@ def test_scripts_bulk_review_preserves_runtime_and_security_caps():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_release_tooling_bulk_review_preserves_package_and_promotion_gates():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('.github/workflows/core-android-benchmark.yml', 'artifacts/core-benchmark-gradle-capacity.txt', 'format_structure'),
+        ('.github/workflows/research-quality-ci.yml', '- name: Prove owner byte budgets with actual loopback HTTPRequest', 'test_evidence'),
+        ('build/verify_core_candidate_bundle.py', 'source_byte_budget = _source_byte_budget(max_source_bytes)', 'owner_adjustable'),
+        ('core_runtime/install_core.ps1', '$Progress = [Math]::Max(0, [Math]::Min(100, $Progress))', 'format_structure'),
+        ('deploy/reg_ru/install.sh', 'MaxAuthTries 3', 'hard_boundary'),
+        ('deploy/reg_ru/install.sh', 'Strict-Transport-Security "max-age=31536000; includeSubDomains"', 'hard_boundary'),
+        ('models/model_setup_wizard.gd', 'progress.value = clampi(int(parsed.get("progress", 0)), 0, 100)', 'format_structure'),
+        ('tools/run_computer_guard_smoke.py', 'except subprocess.TimeoutExpired:', 'test_evidence'),
+        ('update/update_manager.gd', 'output.store_buffer(input.get_buffer(mini(4 * 1024 * 1024, input.get_length() - input.get_position())))', 'format_structure'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + ' FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('.github/workflows/release.yml', 'max_asset=2147483648'),
+        ('build/verify_core_candidate_bundle.py', 'MAX_SOURCE_GROWTH_RATIO = 1.35'),
+        ('build/verify_core_candidate_bundle.py', 'raise CandidateVerificationError("candidate source is empty or exceeds the configured size limit")'),
+        ('core_runtime/install_core.ps1', "Invoke-WebRequest -Uri ([string]$asset.browser_download_url) -OutFile $zip -Headers @{ 'User-Agent' = $UserAgent } -UseBasicParsing -TimeoutSec 600"),
+        ('deploy/reg_ru/install.sh', 'ExecStart=/opt/aurorafox/venv/bin/python -m api.backup_service --user-root /var/lib/aurorafox --export-root /srv/aurorafox-backup/exports --max-source-bytes 268435456'),
+        ('runtime/developer_runtime_manager.gd', 'request.timeout = 1800.0'),
+        ('update/update_manager.gd', 'req.timeout = 25.0'),
+        ('update/update_overlay.gd', 'interval.max_value = 168'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_evolution_learning_bulk_review_keeps_real_evidence_caps_visible():
     policy = MODULE.load_policy()
     reviewed = [
