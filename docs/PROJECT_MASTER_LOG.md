@@ -9373,3 +9373,32 @@ DONE:143 scripts/agent findings reviewed;29 classified and114 retained; local39P
 REMAINING:414 global inventory findings; final exact-SHA platform/package/update/version gates.
 BLOCKERS:none for completed audit; long release gates pending.
 NEXT:publish evidence-only journal commit, sync local/origin/web and continue a separate source or owner-control claim on a confirmed retained constraint.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-PLATFORM-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing Android, Voice, updater, Computer, Knowledge/package and deployment boundaries.
+ROADMAP_SECTION:4 stable Windows/Android package, Voice, genuine Knowledge, File Intelligence and signed update release gates.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; media nonblocking scope and Core wait/signing boundaries preserved.
+STARTING_HEAD:e250aa18df0633d075a54803c79a1316a2b1b3d3; fresh main/feature fetched, local/origin equal and latest journal/roadmap/memory/ADRs checked. Prior scripts/agent claim DONE; exact platform release CI still pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Platform source read-only under audit claim.
+DEPENDENCIES:preserve real file bytes/entry/depth, sandbox containment, updater signed-part timeouts and asset limit, Knowledge genuine size, device performance and voice recognition boundaries.
+NON_BLOCKERS:V1.6 cognition and future platform feature expansion.
+INTENDED_BUMP:none for audit metadata; confirmed source defect needs separate D claim and regressions.
+ACCEPTANCE_GATES:inspect all121 current residual lines in selected platform/deployment/runtime paths; classify only exact reviewed representation/test evidence/owner routing/security, keep actual/ambiguous limits visible. Adversarial path/appended-cap and unresolved examples, full inventory, local owner suite, exact owner/platform CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous143-line scripts/agent audit published; refs synchronized.
+REMAINING:review121 platform findings and publish safe classifications;414 global findings and final release gates.
+BLOCKERS:none for audit.
+NEXT:inspect exact121 lines and surrounding code before any classification.
+PLATFORM_RESIDUAL_REVIEW_CHECKPOINT:all121 selected platform/deployment/runtime source lines enumerated and reviewed with Android Voice waveform, PDF native render bound, OLE/RAR preflight, Knowledge recovery benchmark, Core candidate verifier, owned GUI worker, Windows Job Object and independent deployment verifier context. Thirty exact path/full-line classifications: CI/benchmark/deployment test evidence12, waveform/native representation/status13, owner limit preflight/budget routing3, GUI launch and Windows no-breakaway hard boundaries2. Ninety-one actual or ambiguous constraints retained, including GitHub2GiB release asset size, Android archive expansion/file-count and parser budgets, Core installer and updater transfer deadlines, Computer output/steps/container resources, Knowledge genuine size, backup retention, Voice expression/logger size and runtime deadline. Global unclassified414→384. No production source changed. Adversarial wrong-path/appended-cap and unresolved examples added; local owner audit40PASS, policy JSON and diff check PASS. No new confirmed product defect requiring memory entry.
+SOURCE_COMPLETE:YES for audit metadata; publication/exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:121 platform findings inspected;30 exact classifications,91 retained; local owner audit40PASS.
+REMAINING:publish/sync and exact owner/platform CI;384 global findings and release gates.
+BLOCKERS:none for audit metadata; long release gates pending.
+NEXT:commit/push policy, tests and journal; verify local/origin/web SHA and exact owner CI.

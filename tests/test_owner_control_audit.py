@@ -132,6 +132,33 @@ def test_scripts_agent_residual_review_preserves_runtime_limits():
         assert MODULE.classify(path, line, policy)[0] == "unclassified"
 
 
+def test_platform_residual_review_keeps_release_and_device_caps_visible():
+    policy = MODULE.load_policy()
+    reviewed = {
+        ".github/workflows/android-apk-artifact.yml": ('timeout 90s "$GODOT" --headless --editor --path . --quit', "test_evidence"),
+        "android_plugin/plugin/src/main/java/com/aurorafox/runtime/AndroidVoiceRuntime.kt": ('return values.map { min(1.0, it / peak) }', "format_structure"),
+        "android_plugin/plugin/src/main/java/com/aurorafox/runtime/OleDirectoryPreflight.kt": ('internal fun preflightOleDirectory(file: File, limits: FileAnalysisLimits) {', "owner_adjustable"),
+        "benchmarks/knowledge/run_interrupted_import_recovery.py": ('"target_mb": max(16, args.target_mb),', "test_evidence"),
+        "build/verify_core_candidate_bundle.py": ('return budget', "owner_adjustable"),
+        "computer/owned_gui_worker.py": ('if not launch_gate.wait(timeout=5.0):', "hard_boundary"),
+        "computer/windows_job.py": ('limits.basic.flags = 0x2000  # JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE; no breakaway.', "hard_boundary"),
+    }
+    for path, (line, expected) in reviewed.items():
+        assert MODULE.classify(path, line, policy)[0] == expected
+        assert MODULE.classify(path, line + "; FIXED_LIMIT = 17", policy)[0] == "unclassified"
+        assert MODULE.classify("other/" + path, line, policy)[0] == "unclassified"
+    unresolved = {
+        ".github/workflows/release.yml": "max_asset=2147483648",
+        "android_plugin/plugin/src/main/java/com/aurorafox/runtime/ProductionPackArchiveImport.kt": "private const val MAX_EXPANDED_BYTES = 2_100_000_000L",
+        "computer/computer_service.py": "MAX_OUTPUT = 120_000",
+        "update/update_manager.gd": 'settings["check_interval_hours"] = clampi(value, 1, 168)',
+        "voice/voice_logger.gd": "const MAX_BYTES := 5 * 1024 * 1024",
+        "runtime/developer_runtime_manager.gd": "request.timeout = 1800.0",
+    }
+    for path, line in unresolved.items():
+        assert MODULE.classify(path, line, policy)[0] == "unclassified"
+
+
 def test_native_limit_propagation_preserves_security_and_unknown_literals():
     policy = MODULE.load_policy()
     base = "android_plugin/plugin/src/main/java/com/aurorafox/runtime/"
