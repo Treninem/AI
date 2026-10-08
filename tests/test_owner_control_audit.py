@@ -106,6 +106,32 @@ def test_api_residual_review_keeps_product_caps_and_credentials_visible():
         assert MODULE.classify(path, line, policy)[0] == "unclassified"
 
 
+def test_scripts_agent_residual_review_preserves_runtime_limits():
+    policy = MODULE.load_policy()
+    reviewed = {
+        "agent/self_audit.py": ('"MAX_MUTATIONS := 10",', "test_evidence"),
+        "scripts/agent_core.gd": ('var retry_messages := messages.duplicate(true)', "format_structure"),
+        "scripts/cognition_layer.gd": ('last_plan_diagnostic["synthetic_response_excerpt"] = content.substr(0, 1024)', "test_evidence"),
+        "scripts/runtime_extension_manager.gd": ('return _fail("Runtime extension uses blocked dynamic load()", {"line": clean.substr(0, 200)})', "hard_boundary"),
+        "scripts/project_index_tool_bridge.gd": ('return await index.search_symbols(path, query, int(args.get("limit", 50)))', "owner_adjustable"),
+        "scripts/trusted_project_sandbox_bridge.gd": ('var start := maxi(0, first - 4)', "format_structure"),
+    }
+    for path, (line, expected) in reviewed.items():
+        assert MODULE.classify(path, line, policy)[0] == expected
+        assert MODULE.classify(path, line + "; FIXED_LIMIT = 17", policy)[0] == "unclassified"
+        assert MODULE.classify("other/" + path, line, policy)[0] == "unclassified"
+    unresolved = {
+        "scripts/bundled_core_model.gd": "var block := source.get_buffer(mini(4 * 1024 * 1024, remaining))",
+        "scripts/desktop_local_runtime.gd": "req.timeout = timeout",
+        "scripts/self_improvement_overlay.gd": 'str(candidate.get("reason", "")).substr(0, 700)',
+        "scripts/computer_overlay.gd": "var bounded_steps := clampi(max_steps, 1, 100)",
+        "agent/research_collector.gd": "const MAX_ITEMS_PER_SOURCE := 5",
+        "agent/learning_collector.py": "MAX_HTTP_BYTES = 2 * 1024 * 1024",
+    }
+    for path, line in unresolved.items():
+        assert MODULE.classify(path, line, policy)[0] == "unclassified"
+
+
 def test_native_limit_propagation_preserves_security_and_unknown_literals():
     policy = MODULE.load_policy()
     base = "android_plugin/plugin/src/main/java/com/aurorafox/runtime/"

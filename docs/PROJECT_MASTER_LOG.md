@@ -9335,3 +9335,32 @@ DONE:102 API lines reviewed;21 exact classifications and81 retained; local38PASS
 REMAINING:443 global inventory findings; exact release platform/package/update/version gates.
 BLOCKERS:none for completed audit; long release gates pending.
 NEXT:publish evidence-only journal commit and sync; then choose a retained source constraint with a separate claim and focused regression.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-SCRIPTS-AGENT-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing desktop/Core/Work and agent operational boundaries.
+ROADMAP_SECTION:4 stable local Core, Work/Computer, owner-adjustable limits and signed release gates.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; progress-aware Core and safety boundaries unchanged.
+STARTING_HEAD:795aa264ac2aaff9b2829e827ad26bb17e51d36a; fresh main/feature fetched, local/origin equal, API claim DONE, journal/roadmap/memory reviewed; long exact-SHA release CI pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. scripts/ and agent/ source read-only under audit claim.
+DEPENDENCIES:retain real Core wait/cancel, Computer sandbox, Master Stop, candidate trust, signing, research/privacy and Knowledge size boundaries; do not classify real or ambiguous caps away.
+NON_BLOCKERS:V1.6 cognitive Core and future agent autonomy changes.
+INTENDED_BUMP:none for audit metadata; confirmed source defect requires separate D claim and relevant regressions.
+ACCEPTANCE_GATES:inspect all143 currently unclassified scripts/ and agent/ lines; classify only exact reviewed non-cap presentation, caller forwarding or hard trust boundaries; keep operational count/time/size/text caps visible. Adversarial path/appended-cap and unresolved examples, full inventory, local owner suite, exact owner/Core/Agent CI and local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:prior API102 audit and exact owner/API CI published; refs synchronized.
+REMAINING:review143 scripts/agent findings, test and publish safe classification;443 global residuals and release gates.
+BLOCKERS:none for review.
+NEXT:inspect exact lines and enclosing source; preserve genuine and ambiguous operational caps.
+SCRIPTS_AGENT_RESIDUAL_CHECKPOINT:all143 residual scripts/ and agent/ source lines enumerated and reviewed. Twenty-nine exact full-line/path classifications after regression triage: self-audit/synthetic diagnostic evidence3, non-cap display/status/preview/chunk calculation and retry message flow16, caller-selected deadline/search/history/memory forwarding9, blocked dynamic-load hard boundary1. One hundred fourteen actual/ambiguous constraints retained, including Computer steps/deadlines, owner-resource UI minima, model read chunk, retry cadence, public-web CAPTCHA scan, source/Knowledge/extension sizes, agent learning HTTP/source caps and tournament safety. Initial draft attempted three more classifications (4MiB model read chunk, desktop HTTPRequest deadline forwarding, tournament reason excerpt); existing unresolved-cap tests failed and those rows were removed. Final owner audit39PASS, policy JSON parses and diff check PASS. Global unclassified443→414. No runtime source behavior changed; no new confirmed product defect or engineering-memory entry.
+SOURCE_COMPLETE:YES for audit metadata, publication/exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:143 scripts/agent lines inspected;29 safe exact classifications,114 retained; local owner audit39PASS.
+REMAINING:publish/sync and exact owner/Core/Agent CI;414 global findings plus release platform/package gates.
+BLOCKERS:none for audit metadata.
+NEXT:commit/push metadata and journal, verify local/origin/web SHA and exact CI.
