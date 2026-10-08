@@ -96,6 +96,7 @@ def test_repair_assets_publish_only_from_signed_v14_or_newer_floor() -> None:
     assert 'find dist -type f -name "AuroraFox-V${version}-Setup-Windows.exe" -print0' in workflow
     assert 'test "${#setups[@]}" -eq 1' in workflow
     assert 'source="${setups[0]}"' in workflow
+    assert '-CandidateVersion $current -CurrentInstaller $setup[0].FullName' in workflow
     assert 'stable="dist/AuroraFox-V${old}-Repair-Windows.exe"' in workflow
     assert 'gh release upload "$tag" "$stable" "$sums" --clobber' in workflow
     assert "AURORA_REPAIR_RELEASES_READY" in workflow
