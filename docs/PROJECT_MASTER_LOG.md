@@ -9540,3 +9540,18 @@ DONE:one V1.5.0.0/100008 metadata sync; local version/policy and28 release/updat
 REMAINING:publish/sync version candidate, full exact post-bump PR CI and signed branch release Windows/Android/update gates;379 inventory findings and explicit Android full-pack waiver retained.
 BLOCKERS:post-bump release gates not yet executed; no locally confirmed version metadata defect.
 NEXT:commit/push one version candidate, verify local/origin/web equality and launch full signed branch release workflow on that exact SHA without tag/publication.
+VERSION_LAST_RED_CI_2026_10_08:version candidate `a9f914a06c01fb01c0d919c0fddb440f391b1a38` published; local/origin/web matched with clean worktree, signed branch Release run37774730696 started at exact SHA without tag/publication. Three fast PR workflows failed from the same stale test module: Research Quality `37774645310` (40PASS/2FAIL), Core/Voice `37774645315` (85PASS/2FAIL) and Integration Gate `37774645336` (58PASS/2FAIL; Godot job passed). `tests/test_standalone_core_contract.py` still pins `V1.4.1.1`/Android100007 and export version/name1.4.1.1, so valid canonical V1.5 metadata fails. Other bundled Core/model/package assertions passed. This is a confirmed version-transition test defect, not a Core runtime failure or a waiver; full post-fix CI is required. Root cause/prevention will be recorded in engineering memory before claim closure.
+CLAIM_EXTENSION:own `tests/test_standalone_core_contract.py` and `docs/AURORAFOX_ENGINEERING_MEMORY.md` only for dynamic canonical-version assertions and AF-178; preserve pinned model hash, package id, signed release and all runtime checks. No additional public bump: remain V1.5.0.0/100008.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:version candidate published/synced; exact red CI isolated to two stale test assertions shared across three workflows.
+REMAINING:repair stale test contract, focused tests, memory entry, publish/sync and rerun complete exact CI plus signed release gates.
+BLOCKERS:version-pinned standalone Core tests on SHAa9f914a; owned by this claim.
+NEXT:make standalone Core version assertions derive from project/version.json and compare all distributed metadata, then rerun focused contracts and inspect every exact CI result.
+VERSION_LAST_TEST_REPAIR_CHECKPOINT_2026_10_08:AF-178 records the exact red-CI root cause and prevention. Standalone Core version assertions now derive the four-part version and Android code from canonical project/version.json, compare Godot/updater/changelog/Android export, require code greater than published100007, and retain model hash/bytes, package id and bundled-weight checks. Local standalone module12PASS, diff--check PASS. Fresh origin main and feature fetched before this checkpoint; signed Release run37774730696 at version candidate a9f914a has core-gates SUCCESS and Windows/Android signed build jobs IN_PROGRESS, not yet counted as acceptance. This test-only repair changes no runtime, signing identity, version metadata or release artifact bytes. Publish exact repair SHA and require full new PR CI; final signed release run must also reference final SHA.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:root cause recorded in AF-178; dynamic version test repair and focused12PASS; remote refs refreshed.
+REMAINING:publish/sync repair, exact PR CI, final-SHA signed Release package/install/update gates;379 residual inventory findings and Android full-pack waiver retained.
+BLOCKERS:the current published candidate has known red CI until repair commit is pushed and verified.
+NEXT:commit/push the repaired tests and journal; verify local/origin/web equality, then evaluate every required exact CI result.
