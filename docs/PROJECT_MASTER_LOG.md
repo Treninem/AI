@@ -9297,3 +9297,32 @@ DONE:116 Evolution lines reviewed;18 exact status/telemetry classifications,98 r
 REMAINING:464 global inventory findings and final exact-SHA Windows/Android/Knowledge/package/update/version gates.
 BLOCKERS:none for completed audit; long release gates pending.
 NEXT:publish evidence-only journal commit and sync; then start separate claim for a confirmed operational source constraint with regressions.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-API-RESIDUAL-REVIEW
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL audit of existing private API, account, sync, Core and Knowledge boundaries.
+ROADMAP_SECTION:4 stable API/Core, privacy, Knowledge, owner-adjustable operational limits and release acceptance.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 reviewed; no public account or future cognition expansion.
+STARTING_HEAD:807ddd6d51d3724b629515e910ffc29bde2e037b; fresh main and feature fetched, local/origin equal, previous Evolution claim DONE and latest journal/roadmap/memory checked. Exact prior owner/Core/API checks green on preceding source commit; long release CI pending.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. API source read-only under this audit claim.
+DEPENDENCIES:preserve account token/password/auth validation, privacy isolation, API transport/body limits, Knowledge genuine size and Core signed-candidate boundaries. Retain real/ambiguous product caps.
+NON_BLOCKERS:public multi-user/account UX and V1.6 cognition.
+INTENDED_BUMP:none for metadata; confirmed source defect requires separate D claim and regression gates.
+ACCEPTANCE_GATES:inspect all102 residual API source lines; classify only exact reviewed routing, representation or hard security boundaries; keep operational byte/time/count/text caps visible. Test path/appended-cap adversaries and unresolved examples, full inventory, exact owner/API CI, local/origin/web sync.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous Evolution116 audit published; refs synchronized.
+REMAINING:review102 API findings, publish safe exact classifications;464 global residual findings and release gates.
+BLOCKERS:none for review.
+NEXT:inspect the 102 API findings with source context and identify only unambiguous classifications.
+API_RESIDUAL_REVIEW_CHECKPOINT:all102 currently unclassified API lines inspected with account page, private-memory UI, candidate queue and learning route context. Twenty-one exact path/full-line classifications retained: private-memory UI preview/status8, account credential/token form hard boundaries4, caller-forwarded queue/learning/private-view/community parameters9. Eighty-one actual/ambiguous limits remain visible, including account/mail TTL and SMTP deadline, community event/batch/text limits, Core/Knowledge source sizes, public route pagination, local Core health/retry deadlines, sync entity1MiB and persistence bounds. Initial policy draft classified UI visible-row count and candidate queue +50 trim window; pre-existing adversarial tests correctly failed because these are real caps, so both rows were removed. A new fixture also initially targeted a nearby pre-existing private-view rule; corrected it to the newly reviewed function declaration. Final owner audit38PASS, policy JSON parses, diff check PASS. Global unclassified464→443. No API/runtime behavior changed; no new confirmed product defect or memory entry.
+SOURCE_COMPLETE:YES for audit metadata, exact CI pending.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:102 API lines inspected;21 exact classifications,81 retained; local owner audit38PASS.
+REMAINING:publish/sync and exact owner/API CI;443 global findings plus release platform/package gates.
+BLOCKERS:none for audit metadata.
+NEXT:commit/push metadata and journal, verify local/origin/web SHA and exact owner/API CI.

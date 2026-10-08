@@ -81,6 +81,31 @@ def test_evolution_residual_status_review_keeps_actual_caps_visible():
         assert MODULE.classify(path, line, policy)[0] == "unclassified"
 
 
+def test_api_residual_review_keeps_product_caps_and_credentials_visible():
+    policy = MODULE.load_policy()
+    reviewed = {
+        "api/settings_overlay.gd": ('return candidate.substr(0, 260)', "format_structure"),
+        "api/account_web.py": ('def verify_email_page(token: str = Query(min_length=16, max_length=512)) -> HTMLResponse:', "hard_boundary"),
+        "api/core_candidate_queue.py": ('return rows[: max(1, int(limit))]', "owner_adjustable"),
+        "api/learning_sync.py": ('events = self.store.pending(limit)', "owner_adjustable"),
+        "api/private_memory_view.gd": ('func retrieve(query: String, limit: int = 8, _include_memory: bool = true, _include_knowledge: bool = true) -> Array:', "owner_adjustable"),
+        "api/community_learning.py": ('events = store.pull(limit=limit, lease_seconds=lease_seconds)', "owner_adjustable"),
+    }
+    for path, (line, expected) in reviewed.items():
+        assert MODULE.classify(path, line, policy)[0] == expected
+        assert MODULE.classify(path, line + "; FIXED_LIMIT = 17", policy)[0] == "unclassified"
+        assert MODULE.classify("other/" + path, line, policy)[0] == "unclassified"
+    unresolved = {
+        "api/sync_store.py": "MAX_ENTITY_BYTES = 1024 * 1024",
+        "api/local_core_client.py": "self.timeout = max(5.0, timeout)",
+        "api/community_learning.py": "bounded_limit = max(1, min(int(limit), 200))",
+        "api/settings_overlay.gd": 'request.timeout = PERSONAL_REQUEST_TIMEOUT',
+        "api/core_candidate_queue.py": "MAX_QUEUE_ITEMS = 200",
+    }
+    for path, line in unresolved.items():
+        assert MODULE.classify(path, line, policy)[0] == "unclassified"
+
+
 def test_native_limit_propagation_preserves_security_and_unknown_literals():
     policy = MODULE.load_policy()
     base = "android_plugin/plugin/src/main/java/com/aurorafox/runtime/"
