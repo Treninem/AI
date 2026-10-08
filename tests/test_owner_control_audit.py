@@ -458,6 +458,38 @@ def test_local_input_bulk_review_preserves_real_agent_file_voice_limits():
         assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
 
 
+def test_scripts_bulk_review_preserves_runtime_and_security_caps():
+    policy = MODULE.load_policy()
+    reviewed = [
+        ('scripts/android_file_tool_bridge.gd', '{"path":"string","max_items":"int"},', 'format_structure'),
+        ('scripts/android_file_tool_bridge.gd', 'return await client.analyze_file(path, str(args.get("question", "")), bool(args.get("visual", true)), int(client.owner_limits().max_text_chars))', 'owner_adjustable'),
+        ('scripts/code_specialist.gd', 'if cap > 0 and used >= cap: break', 'owner_adjustable'),
+        ('scripts/core_candidate_submitter.gd', '_timer.timeout.connect(_scan_once)', 'format_structure'),
+        ('scripts/dream_cycle.gd', 'ideas = ideas.slice(ideas.size() - cap)', 'owner_adjustable'),
+        ('scripts/main.gd', 'rename_input.max_length = OwnerResourcePolicy.value("chat_title_chars")', 'owner_adjustable'),
+        ('scripts/owner_resource_policy.gd', 'return is_finite(number) and number >= minimum(key) and number < 9223372036854775807.0 and number == floor(number)', 'format_structure'),
+        ('scripts/project_index_tool_bridge.gd', '{"path":"string","query":"string","limit":"int"},', 'format_structure'),
+        ('scripts/tool_registry.gd', 'req.timeout = timeout', 'owner_adjustable'),
+    ]
+    for path, statement, category in reviewed:
+        assert MODULE.classify(path, statement, policy)[0] == category
+        assert MODULE.classify(path, statement + ' FIXED_LIMIT = 17', policy)[0] == 'unclassified'
+        assert MODULE.classify('other/' + path, statement, policy)[0] == 'unclassified'
+    unresolved = [
+        ('scripts/android_local_runtime.gd', '"timeout": clampi(timeout, 1, 600),'),
+        ('scripts/bundled_core_model.gd', 'var block := source.get_buffer(mini(4 * 1024 * 1024, remaining))'),
+        ('scripts/computer_overlay.gd', 'var bounded_steps := clampi(max_steps, 1, 100)'),
+        ('scripts/core_candidate_submitter.gd', 'const MAX_SCAN_CANDIDATES := 50'),
+        ('scripts/knowledge_pack_installer.gd', 'const MIN_PRODUCTION_CONTENT_BYTES := 1024 * 1024 * 1024'),
+        ('scripts/local_semantic_vectorizer.gd', 'const MAX_TOKENS := 768'),
+        ('scripts/public_web_manager.gd', 'var sample := raw.to_lower().substr(0, 120000)'),
+        ('scripts/self_improver.gd', 'const MAX_GENERATION_ATTEMPTS := 24'),
+        ('scripts/tool_registry.gd', 'return {"ok": code == 0, "code": code, "output": "\n".join(output).substr(0, 100000)}'),
+    ]
+    for path, statement in unresolved:
+        assert MODULE.classify(path, statement, policy)[0] == 'unclassified'
+
+
 def test_evolution_learning_bulk_review_keeps_real_evidence_caps_visible():
     policy = MODULE.load_policy()
     reviewed = [

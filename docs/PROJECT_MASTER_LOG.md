@@ -9152,3 +9152,33 @@ DONE:109 local-input findings reviewed and synchronized; local owner audit34PASS
 REMAINING:574 inventory findings, confirmed source-limit repairs, final exact-SHA Windows/Android/Knowledge/package/update/version gates.
 BLOCKERS:none for completed audit metadata; release platform gates pending.
 NEXT:verify evidence-only journal publication at its own SHA; then prioritize a retained operational cap with source-level regression tests or another ≥100 finding group after fresh sync.
+
+### ACTIVE CLAIM — CODEX-2026-10-08-V15-SCRIPTS-REMAINING-BULK-AUDIT
+ROADMAP_RELEASE:V1.5.0.0
+SCOPE_CLASS:CRITICAL current client runtime, UI, Knowledge, Core candidate and integration owner-control inventory; audit-only.
+ROADMAP_SECTION:4 stable self-primary Core, Work/Computer, Knowledge, Voice/File and existing owner settings.
+ADR_REFS:ADR-0001,ADR-0002,ADR-0003 checked; no architecture or source behavior change.
+STARTING_HEAD:c6039bf63b2acb747ddf70f4240c9eab128c8267; fresh main/feature fetched, main ancestor and local/origin equality confirmed, journal/roadmap/engineering memory/ADRs and active claims checked. Exact API/Core/Integration and all completed short/Android CI green; Windows Package pending, Knowledge1GiB in progress.
+OWNED_PATHS:config/owner_control_policy.json;tests/test_owner_control_audit.py;docs/PROJECT_MASTER_LOG.md. Read-only source: scripts/ inventory excluding ten previously reviewed Desktop/Core paths.
+CLAIM_RECONCILIATION:previous local-input audit DONE and metadata paths released. Other runtime source claims untouched; no production source edits under this audit.
+DEPENDENCIES:keep actual runtime timeouts, source/scan/batch, UI, Android, public web and trusted-project limits visible; owner authority and security boundaries unchanged.
+NON_BLOCKERS:V1.6 cognition and post-release owner-PC field sweep.
+INTENDED_BUMP:none for audit metadata; any source repair needs a separate D claim and tests.
+ACCEPTANCE_GATES:inspect all114 current unclassified scripts/ lines not in prior Desktop/Core ten paths; classify only exact owner-controlled or non-cap representation/status, retain actual and ambiguous caps; adversarial path/appended-cap tests, full audit and exact CI; synchronize local/origin/web.
+SOURCE_COMPLETE:NO
+CODE_FREEZE_SHA:none
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:previous109 local-input audit published; exact c6039bf short/Android checks green, long Windows/Knowledge pending.
+REMAINING:review114 new scripts findings, publish exact audit;574 global residual and release gates.
+BLOCKERS:none for audit metadata.
+NEXT:enumerate114 selected source lines with context and review all before policy edits.
+SCRIPTS_REMAINING_BULK_AUDIT_CHECKPOINT:reviewed all114 previously unclassified scripts/ findings outside the ten already-reviewed Desktop/Core paths. Forty-one exact full-line/path classifications: owner/caller budget forwarding14 and tool schema, UI/score representation, status/error or non-cap flow27. Seventy-three actual/ambiguous limits remain visible: Android runtime600s, model read chunk4MiB, Computer steps100, candidate scan50/retry/HTTP25s, source-growth1.35, Knowledge production1GiB and shard rules, semantic vectorizer tokens/features, public web CAPTCHA scan, sandbox/project byte and timeout limits, self-improvement attempt24 and UI diagnostic truncations. Unclassified global574→533; selected scripts114→73; complete:false. No production source, trusted project authority, updater/signing or tournament behavior changed. Adversarial full-line/path/appended-cap and unresolved examples added; local owner audit35PASS, policy JSON parses, diff check PASS. No new confirmed defect requiring engineering-memory entry. Source repairs need separate D claim.
+SOURCE_COMPLETE:YES for audit-only package.
+CODE_FREEZE_SHA:pending commit.
+PROGRESS_COMPLETE:82%
+PROGRESS_REMAINING:18%
+DONE:114 new scripts findings inspected,41 exact classifications,73 retained; local owner audit35PASS.
+REMAINING:publish/sync and exact audit CI;533 global inventory residuals and release platform/package/update/version acceptance.
+BLOCKERS:none for audit metadata; Windows Package and Knowledge1GiB still pending/in progress at start of batch.
+NEXT:commit/push policy/tests/journal, verify local/origin/web SHA and exact owner CI, then release metadata claim.
