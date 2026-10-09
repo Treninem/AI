@@ -46,10 +46,15 @@ func _ready() -> void:
 
 func _exit_tree() -> void:
 	_stopping = true
+	connected = false
 	if OS.get_name() == "Windows":
-		var req := HTTPRequest.new()
-		add_child(req)
-		req.request(HTTP_BASE + "/shutdown", PackedStringArray(), HTTPClient.METHOD_POST, "")
+		# HTTPRequest is async and cannot complete reliably during _exit_tree().
+		# Terminate only the child this instance actually launched. Do not issue
+		# unauthenticated /shutdown to an unrelated loopback voice service.
+		if backend_pid > 0 and OS.is_process_running(backend_pid):
+			OS.kill(backend_pid)
+		backend_pid = 0
+		socket.close()
 
 func _process(delta: float) -> void:
 	if OS.get_name() != "Windows": return
