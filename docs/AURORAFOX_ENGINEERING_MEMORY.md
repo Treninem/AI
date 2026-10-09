@@ -1174,6 +1174,7 @@ After AF-174, the client and API could accept an owner/operator-authorized Core 
 - Fix/prevention target: Reproduce from a clean isolated installed profile; capture process tree, listener ownership and lifecycle events. Assert at most one owned Core server per model/port and prompt exit of all owned Core and Voice children after normal GUI close, duplicate start, delayed start and in-flight work. Preserve self-primary/offline Core and Master Stop semantics. Re-run installed package/Core/Voice and exact-SHA CI after a fix.
 - Status: OPEN. Provisional P1 for post-exit child resource leaks and P2 for duplicate Core start. No source fix attempted in this diagnostic claim.
 - Reproduction update: an independent installed `--headless` Knowledge smoke in an isolated profile passed its durable state/hash checks but also left a Voice child alive after the test parent ended. The child was stopped after capture. Cover headless/early-exit as well as normal GUI close in the Voice shutdown regression; this makes the Voice symptom repeatable outside the first GUI run.
+- Additional early-exit evidence: a Voice child also survived an interrupted isolated production-pack attempt; final process inventory and cleanup confirmed zero remaining AuroraFox/Core/Voice validation processes. Include interrupted startup in the AF-182 Voice-child shutdown test matrix.
 
 ### AF-183 — Full production Knowledge query scales linearly after import
 
