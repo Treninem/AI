@@ -351,6 +351,12 @@ func search(query: String, limit: int = -1) -> Array:
 		var line := file.get_line().strip_edges()
 		if line.is_empty():
 			continue
+		# The full installed production JSONL is ~2.7 GiB. Parsing every row
+		# for a one-result lookup caused AF-183 minute-scale latency. JSONL raw
+		# prefilter only SKIPS provably unrelated rows; candidate items retain the
+		# exact old scoring/ranking, source/provenance and limit semantics.
+		if _raw_search_row_misses(line, normalized_query, terms):
+			continue
 		var item = JSON.parse_string(line)
 		if not item is Dictionary:
 			continue
@@ -377,6 +383,27 @@ func search(query: String, limit: int = -1) -> Array:
 		if row is Dictionary:
 			out.append(row.get("item", {}))
 	return out
+
+func _raw_search_row_misses(line: String, normalized_query: String, terms: PackedStringArray) -> bool:
+	# Do not prefilter escaped/malformed JSONL: parsing is authoritative. JSON
+	# escapes can make a literal text/source/kind match invisible in raw bytes.
+	# JSON can escape a solidus as \/. A query such as "docs/api" then
+	# matches decoded text but not the raw line; let JSON parsing decide.
+	if line.contains("\\u") or line.contains("\\U") or (normalized_query.contains("/") and line.contains("\\/")):
+		return false
+	for ch in ["\\", "\"", "\n", "\r", "\t", "\b", "\f"]:
+		if normalized_query.contains(ch):
+			return false
+	var folded := line.to_lower()
+	if folded.contains(normalized_query):
+		return false
+	# Score depends only on text/source/kind: any matching >=2-char token
+	# must also occur in the raw JSON payload (possibly in extra metadata,
+	# which yields harmless false positives rather than dropped matches).
+	for term in terms:
+		if term.length() >= 2 and folded.contains(term):
+			return false
+	return true
 
 func all_items() -> Array:
 	return _read_jsonl(DB_PATH)

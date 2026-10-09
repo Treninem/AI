@@ -130,6 +130,8 @@ jobs:
           ./godot --version
       - name: Import and parse project
         run: timeout 120s ./godot --headless --editor --path . --quit
+      - name: Verify Knowledge search prefilter semantics
+        run: timeout 60s ./godot --headless --path . --script tests/knowledge_search_prefilter_smoke.gd
       - name: Verify dedupe alias removal safety
         run: >-
           python benchmarks/knowledge/run_godot_probe.py
@@ -218,6 +220,9 @@ jobs:
       - name: Import and parse project
         shell: powershell
         run: .\godot.exe --headless --editor --path . --quit
+      - name: Verify Knowledge search prefilter semantics
+        shell: powershell
+        run: .\godot.exe --headless --path . --script tests/knowledge_search_prefilter_smoke.gd
       - name: Verify dedupe alias removal safety
         shell: powershell
         run: >-
