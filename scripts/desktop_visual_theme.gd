@@ -4,7 +4,7 @@ extends Node
 const FINAL_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_final.svg")
 
 const MIN_WINDOW := Vector2i(960, 640)
-const SIDEBAR_WIDE := 286.0
+const SIDEBAR_WIDE := 252.0
 const SIDEBAR_COMPACT := 228.0
 
 var _root: Control
@@ -42,7 +42,7 @@ func _replace_background(node: Node) -> void:
 			var rect := child as TextureRect
 			if rect.texture != null and rect.texture.resource_path.ends_with("aurora_background.svg"):
 				rect.texture = FINAL_BACKGROUND
-				rect.modulate = Color(1, 1, 1, 0.96)
+				rect.modulate = Color(1, 1, 1, 0.16)
 		_replace_background(child)
 
 func _remove_temporary_avatar_art(node: Node) -> void:
@@ -143,6 +143,14 @@ func _flat_state(fill: Color, border: Color, radius := 12) -> StyleBoxFlat:
 	style.content_margin_bottom = 8
 	return style
 
+func _compact_action_state(fill: Color, border: Color) -> StyleBoxFlat:
+	var style := _flat_state(fill, border, 10)
+	style.content_margin_left = 3
+	style.content_margin_right = 3
+	style.content_margin_top = 2
+	style.content_margin_bottom = 2
+	return style
+
 func _button_label_width(button: Button) -> float:
 	if button.text.is_empty():
 		return 0.0
@@ -168,6 +176,14 @@ func _apply_safe_button_styles(node: Node) -> void:
 	for child in node.get_children():
 		if child is Button:
 			var button := child as Button
+			if button.name in ["ChatSelectButton", "ChatActions", "FeedbackPositive", "FeedbackNegative"]:
+				var compact := button.name != "ChatSelectButton"
+				button.add_theme_stylebox_override("normal", _compact_action_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT) if compact else _flat_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT))
+				button.add_theme_stylebox_override("hover", _compact_action_state(Color(0.14, 0.15, 0.19, 0.95), Color.TRANSPARENT) if compact else _flat_state(Color(0.14, 0.15, 0.19, 0.95), Color.TRANSPARENT))
+				button.add_theme_stylebox_override("focus", _compact_action_state(Color(0.14, 0.15, 0.19, 0.95), Color(0.55, 0.57, 0.66, 0.8)) if compact else _flat_state(Color(0.14, 0.15, 0.19, 0.95), Color(0.55, 0.57, 0.66, 0.8)))
+				button.clip_text = not compact
+				_apply_safe_button_styles(child)
+				continue
 			button.add_theme_stylebox_override("normal", _flat_state(Color(0.058, 0.066, 0.105, 0.98), Color(0.28, 0.42, 0.62, 0.62)))
 			button.add_theme_stylebox_override("hover", _flat_state(Color(0.10, 0.08, 0.18, 0.99), Color(0.38, 0.83, 1.0, 0.86)))
 			button.add_theme_stylebox_override("pressed", _flat_state(Color(0.15, 0.08, 0.26, 1.0), Color(0.67, 0.54, 1.0, 0.94)))

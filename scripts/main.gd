@@ -61,8 +61,8 @@ const BG := Color("080b12")
 const SIDEBAR := Color(0.025, 0.032, 0.055, 0.97)
 const SURFACE := Color(0.055, 0.066, 0.10, 0.94)
 const SURFACE_2 := Color(0.075, 0.09, 0.135, 0.96)
-const USER_BUBBLE := Color(0.08, 0.17, 0.25, 0.96)
-const ASSISTANT_BUBBLE := Color(0.085, 0.07, 0.135, 0.96)
+const USER_BUBBLE := Color(0.13, 0.15, 0.19, 1.0)
+const ASSISTANT_BUBBLE := Color(0.075, 0.085, 0.11, 1.0)
 const ACCENT := Color("a98aff")
 const CYAN := Color("45d8ff")
 const GREEN := Color("64ff9d")
@@ -217,11 +217,11 @@ func _build_ui() -> void:
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	background.modulate = Color(1, 1, 1, 0.82)
+	background.modulate = Color(1, 1, 1, 0.06)
 	add_child(background)
 
 	var veil := ColorRect.new()
-	veil.color = Color(0.01, 0.015, 0.028, 0.34)
+	veil.color = Color(0.01, 0.015, 0.028, 0.90)
 	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(veil)
@@ -235,7 +235,7 @@ func _build_ui() -> void:
 	var sidebar_bg := ColorRect.new()
 	sidebar_bg.name = "Sidebar"
 	sidebar_bg.color = SIDEBAR
-	sidebar_bg.custom_minimum_size.x = 286
+	sidebar_bg.custom_minimum_size.x = 252
 	root.add_child(sidebar_bg)
 
 	var sidebar_margin := MarginContainer.new()
@@ -372,7 +372,7 @@ func _build_ui() -> void:
 	active_title.text = "Новый чат"
 	active_title.clip_text = true
 	active_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	active_title.add_theme_font_size_override("font_size", 20)
+	active_title.add_theme_font_size_override("font_size", 17)
 	active_title.add_theme_color_override("font_color", WHITE)
 	title_box.add_child(active_title)
 	status = Label.new()
@@ -456,7 +456,7 @@ func _build_ui() -> void:
 	input = TextEdit.new()
 	input.name = "MessageInput"
 	input.placeholder_text = "Сообщение AuroraFox…"
-	input.custom_minimum_size.y = 72
+	input.custom_minimum_size.y = 60
 	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	input.gui_input.connect(_on_input_gui)
@@ -587,6 +587,7 @@ func _refresh_chat_list(query: String = "") -> void:
 		var active := id == chats.active_chat_id
 
 		var select := Button.new()
+		select.name = "ChatSelectButton"
 		select.text = title_text
 		select.tooltip_text = title_text
 		select.alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -603,27 +604,26 @@ func _refresh_chat_list(query: String = "") -> void:
 		)
 		row.add_child(select)
 
-		var rename := Button.new()
-		rename.icon = ICON_RENAME
-		rename.tooltip_text = "Переименовать чат"
-		rename.custom_minimum_size = Vector2(36, 40)
-		_apply_button(rename, false, false, true)
-		rename.pressed.connect(func(): _open_rename_chat(id, title_text))
-		row.add_child(rename)
-
-		var del := Button.new()
-		del.icon = ICON_DELETE
-		del.tooltip_text = "Удалить чат"
-		del.custom_minimum_size = Vector2(36, 40)
-		_apply_button(del, false, true, true)
-		del.pressed.connect(func():
-			if request_busy or file_processing_busy:
-				return
-			chats.delete_chat(id)
-			_refresh_chat_list(query)
-			_render_active_chat()
+		var actions := MenuButton.new()
+		actions.name = "ChatActions"
+		actions.text = "..."
+		actions.tooltip_text = "Действия с чатом"
+		actions.custom_minimum_size = Vector2(40, 40)
+		_apply_button(actions, false, false, true)
+		var menu := actions.get_popup()
+		menu.add_item("Переименовать", 0)
+		menu.add_item("Удалить", 1)
+		menu.id_pressed.connect(func(action_id: int):
+			if action_id == 0:
+				_open_rename_chat(id, title_text)
+			elif action_id == 1:
+				if request_busy or file_processing_busy:
+					return
+				chats.delete_chat(id)
+				_refresh_chat_list(query)
+				_render_active_chat()
 		)
-		row.add_child(del)
+		row.add_child(actions)
 		chat_list.add_child(row)
 
 func _open_rename_chat(id: String, current_title: String) -> void:
@@ -720,7 +720,7 @@ func _bubble_width() -> float:
 	if message_scroll != null and message_scroll.size.x > 0.0:
 		available = message_scroll.size.x
 	available = maxf(220.0, available - 18.0)
-	return minf(760.0, maxf(220.0, available * 0.72))
+	return minf(690.0, maxf(220.0, available * 0.66))
 
 func _add_message_card(message: Dictionary) -> void:
 	var role := str(message.get("role", "assistant"))
@@ -745,7 +745,8 @@ func _add_message_card(message: Dictionary) -> void:
 	card.name = "MessageCard"
 	card.custom_minimum_size.x = bubble_width
 	card.size_flags_horizontal = Control.SIZE_SHRINK_END if is_user else Control.SIZE_SHRINK_BEGIN
-	card.add_theme_stylebox_override("panel", _style(USER_BUBBLE if is_user else ASSISTANT_BUBBLE, Color(CYAN.r, CYAN.g, CYAN.b, 0.34) if is_user else Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.38), 18, 1))
+	card.add_theme_stylebox_override("panel", _style(USER_BUBBLE if is_user else ASSISTANT_BUBBLE, Color(0.28, 0.30, 0.36, 0.35) if is_user else Color.TRANSPARENT, 16, 1))
+	card.tooltip_text = str(message.get("time", ""))
 	row.add_child(card)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
@@ -756,11 +757,12 @@ func _add_message_card(message: Dictionary) -> void:
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 7)
 	margin.add_child(body)
-	var meta := Label.new()
-	meta.text = ("Вы" if is_user else "AuroraFox") + ("  •  " + str(message.get("time", "")) if not str(message.get("time", "")).is_empty() else "")
-	meta.add_theme_font_size_override("font_size", 11)
-	meta.add_theme_color_override("font_color", CYAN if is_user else ACCENT)
-	body.add_child(meta)
+	if not is_user:
+		var meta := Label.new()
+		meta.text = "AuroraFox"
+		meta.add_theme_font_size_override("font_size", 11)
+		meta.add_theme_color_override("font_color", MUTED)
+		body.add_child(meta)
 	var content := RichTextLabel.new()
 	content.name = "MessageContent"
 	content.bbcode_enabled = false
@@ -816,7 +818,7 @@ func _add_feedback_controls(body: VBoxContainer, message: Dictionary) -> void:
 		button.name = "FeedbackPositive" if score > 0 else "FeedbackNegative"
 		button.text = str(definition.text)
 		button.tooltip_text = str(definition.tooltip)
-		button.custom_minimum_size = Vector2(32, 28)
+		button.custom_minimum_size = Vector2(40, 36)
 		button.focus_mode = Control.FOCUS_ALL
 		button.accessibility_name = str(definition.tooltip)
 		_apply_button(button, current_score == score, score < 0, true)

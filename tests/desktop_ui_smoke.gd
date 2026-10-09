@@ -135,6 +135,21 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if main.find_child("UpdateStatusButton", true, false) != null:
 		_fail("Floating/header update control leaked back into the chat surface", 22)
 		return false
+	var evolution_button := main.find_child("SettingsEvolutionButton", true, false) as Button
+	if evolution_button == null or evolution_button.pressed.get_connections().is_empty():
+		_fail("Evolution control is not reachable from Settings", 103)
+		return false
+	evolution_button.pressed.emit()
+	var evolution_surface := main.get_node_or_null("EvolutionRuntime/UserControlSurface")
+	var evolution_popup := evolution_surface.get("_popup") as PopupPanel if evolution_surface != null else null
+	if evolution_popup == null or not evolution_popup.visible:
+		_fail("Settings Evolution entry did not open its control surface", 106)
+		return false
+	evolution_popup.hide()
+	for node in main.find_children("*", "Button", true, false):
+		if (node as Button).text == "Evolution Engine":
+			_fail("Evolution control overlaps the chat composer", 104)
+			return false
 	var work_button := main.find_child("WorkButton", true, false) as Button
 	if mobile:
 		if work_button != null and work_button.is_visible_in_tree():
@@ -197,6 +212,10 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if not _assert_knowledge_surfaces(main):
 		return false
 	if not _assert_owner_art(main, mobile):
+		return false
+	var owner_background := main.find_child("OwnerBackground", true, false) as TextureRect
+	if owner_background == null or owner_background.modulate.a > 0.25:
+		_fail("Owner art is too strong behind chat text", 105)
 		return false
 
 	var computer_toggle := main.find_child("ComputerAgentToggle", true, false) as CheckButton
@@ -331,6 +350,10 @@ func _exercise_chat(main: Control) -> bool:
 	await process_frame
 	if store.active_chat_id.is_empty() or store.active_chat_id == before:
 		_fail("New chat action did not create/activate a chat", 61)
+		return false
+	var chat_actions := main.find_child("ChatActions", true, false) as MenuButton
+	if chat_actions == null or chat_actions.get_popup().item_count != 2 or chat_actions.get_popup().id_pressed.get_connections().is_empty():
+		_fail("Chat history actions are not available in a compact menu", 107)
 		return false
 	var previous_title_cap := OwnerResourcePolicy.value("chat_title_chars")
 	OwnerResourcePolicy._cached.chat_title_chars = 160

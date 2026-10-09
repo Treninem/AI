@@ -107,7 +107,7 @@ func _apply_owner_background() -> void:
 			rect.texture = _owner_background_texture()
 			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			rect.modulate = Color(1, 1, 1, 1)
+			rect.modulate = Color(1, 1, 1, 0.16)
 
 func _on_viewport_resized() -> void:
 	super._on_viewport_resized()
@@ -180,7 +180,7 @@ func _bubble_width() -> float:
 	available = maxf(240.0, available - 10.0)
 	if available < 760.0:
 		return maxf(240.0, available * 0.90)
-	return minf(780.0, maxf(320.0, available * 0.72))
+	return minf(690.0, maxf(320.0, available * 0.66))
 
 func _add_message_card(message: Dictionary) -> void:
 	super._add_message_card(message)

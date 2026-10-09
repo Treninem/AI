@@ -780,6 +780,11 @@ func _build_autonomy_page(page: VBoxContainer) -> void:
 	improvement_button.text = "Открыть центр самоулучшения"
 	improvement_button.pressed.connect(_open_self_improvement)
 	status_card.add_child(improvement_button)
+	var evolution_button := Button.new()
+	evolution_button.name = "SettingsEvolutionButton"
+	evolution_button.text = "Открыть Evolution Engine"
+	evolution_button.pressed.connect(func(): _open_surface("EvolutionRuntime/UserControlSurface", "show_center"))
+	status_card.add_child(evolution_button)
 
 func _build_tools_page(page: VBoxContainer) -> void:
 	var knowledge := _add_card(page, "База знаний", "Импорт документов, баз, шаблонов и алгоритмов в локальное Core Knowledge.")
