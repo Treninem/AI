@@ -159,6 +159,10 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 	}
 
 func _chat_local_model(candidate_path: String, messages: Array, temperature: float) -> Dictionary:
+	if OS.get_name() == "Android" and candidate_path == AuroraBundledCoreModel.ACTIVE_MODEL:
+		var provision: Dictionary = await android_runtime.ensure_bundled_model_ready()
+		if not bool(provision.get("ok", false)):
+			return {"ok": false, "runtime": "aurora_core_android", "error": "Built-in model preparation failed: " + str(provision.get("error", "unknown")), "model_path": candidate_path}
 	if not FileAccess.file_exists(candidate_path):
 		return {"ok": false, "runtime": "aurora_core", "error": "local GGUF missing", "model_path": candidate_path}
 	if not _looks_like_gguf(candidate_path):
@@ -167,7 +171,7 @@ func _chat_local_model(candidate_path: String, messages: Array, temperature: flo
 		if not android_runtime.is_available(): return {"ok": false, "runtime": "aurora_core", "error": "Встроенное ядро AuroraFox недоступно в этой Android-сборке", "model_path": candidate_path}
 		var caps := android_runtime.capabilities()
 		if not bool(caps.get("llama_cpp", false)): return {"ok": false, "runtime": "aurora_core", "error": "Встроенный inference runtime не включен", "capabilities": caps, "model_path": candidate_path}
-		var result := android_runtime.chat(ProjectSettings.globalize_path(candidate_path), messages, {"temperature": temperature})
+		var result := await android_runtime.chat_async(ProjectSettings.globalize_path(candidate_path), messages, {"temperature": temperature})
 		result["runtime"] = "aurora_core_android"
 		result["model_path"] = candidate_path
 		return result
@@ -188,6 +192,10 @@ func _available_model_paths() -> Array[String]:
 	var out: Array[String] = []
 	if FileAccess.file_exists(model_path):
 		out.append(model_path)
+	# The first-run Android GGUF is provisioned asynchronously at chat time.
+	# Treat the verified bundled asset as an eligible future local candidate.
+	if OS.get_name() == "Android" and AuroraBundledCoreModel.bundled_available() and AuroraBundledCoreModel.ACTIVE_MODEL not in out:
+		out.append(AuroraBundledCoreModel.ACTIVE_MODEL)
 	# Keep the verified package Core in the same failover set even when a stale
 	# user:// override was selected by an older AuroraFox installation.
 	if OS.get_name() == "Windows":
