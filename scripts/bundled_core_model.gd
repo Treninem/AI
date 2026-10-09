@@ -22,8 +22,9 @@ static func runtime_candidate() -> String:
 	if _valid_gguf(ACTIVE_MODEL):
 		return ACTIVE_MODEL
 	if OS.get_name() == "Android":
-		var ready := ensure_android_private_copy()
-		return str(ready.get("path", "")) if bool(ready.get("ok", false)) else ""
+		# Never copy/hash the 1.28 GiB bundled GGUF from AIClient._ready.
+		# AndroidLocalRuntime provisions on its worker for the first real chat.
+		return ""
 	return ""
 
 static func windows_packaged_path() -> String:
