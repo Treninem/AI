@@ -82,3 +82,34 @@ def test_android_native_generation_runs_off_main_thread_and_is_single_flight() -
     assert "status\" to \"completed" in async_poll
     assert "coreChatJobs.remove(jobId, job)" in async_poll
     assert "Thread(runnable, \"AuroraFoxCoreInference\")" in src
+
+
+def test_normal_chat_uses_worker_for_large_local_knowledge() -> None:
+    client = read("scripts/ai_client.gd")
+    assert "class KnowledgeContextJob extends RefCounted" in client
+    assert "KnowledgeStore.new().context_for(query)" in client
+    normal = between(client, "func chat(messages: Array,", "func chat_with_compatibility(")
+    assert "await _with_knowledge_async(messages)" in normal
+    assert "_with_knowledge(messages)" not in normal
+    worker = between(client, "func _with_knowledge_async(", "func _with_knowledge(")
+    assert "WorkerThreadPool.add_task(" in worker
+    assert "WorkerThreadPool.is_task_completed(task_id)" in worker
+    assert "await get_tree().create_timer(" in worker
+    assert "WorkerThreadPool.wait_for_task_completion(task_id)" in worker
+
+
+def test_request_startup_does_not_poison_model_health() -> None:
+    core = read("scripts/aurora_core_runtime.gd")
+    failed = between(core, "var model_failure := bool(result.get(", "func _chat_local_model(")
+    assert "if not model_failure:" in failed
+    assert "return result" in failed
+    startup = read("scripts/desktop_local_runtime.gd")
+    assert '"failure_scope": "startup", "model_failure": false' in startup
+    assert "func _wait_for_existing_start(" in startup
+
+
+def test_android_e2e_waits_for_async_provision_before_integrity_gate() -> None:
+    suite = read("benchmarks/core/android_godot_benchmark.gd")
+    snippet = between(suite, "var runtime_before := client.runtime_info()", 'var caps: Dictionary =')
+    assert "await client.core_runtime.android_runtime.ensure_bundled_model_ready()" in snippet
+    assert snippet.index("await client.core_runtime.android_runtime.ensure_bundled_model_ready()") < snippet.index("FileAccess.get_sha256(model_path)")
