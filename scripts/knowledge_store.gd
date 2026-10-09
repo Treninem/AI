@@ -387,7 +387,9 @@ func search(query: String, limit: int = -1) -> Array:
 func _raw_search_row_misses(line: String, normalized_query: String, terms: PackedStringArray) -> bool:
 	# Do not prefilter escaped/malformed JSONL: parsing is authoritative. JSON
 	# escapes can make a literal text/source/kind match invisible in raw bytes.
-	if line.contains("\\u") or line.contains("\\U"):
+	# JSON can escape a solidus as \/. A query such as "docs/api" then
+	# matches decoded text but not the raw line; let JSON parsing decide.
+	if line.contains("\\u") or line.contains("\\U") or (normalized_query.contains("/") and line.contains("\\/")):
 		return false
 	for ch in ["\\", "\"", "\n", "\r", "\t", "\b", "\f"]:
 		if normalized_query.contains(ch):

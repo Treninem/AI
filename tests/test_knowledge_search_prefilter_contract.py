@@ -32,6 +32,7 @@ def test_prefilter_only_rejects_rows_missing_all_possible_score_terms() -> None:
     prefilter = block("func _raw_search_row_misses(", "func all_items()")
     # Treat JSON escapes as uncertain and let the authoritative parser decide.
     assert 'line.contains("\\\\u")' in prefilter
+    assert 'normalized_query.contains("/") and line.contains("\\\\/")' in prefilter
     assert "normalized_query.contains(ch)" in prefilter
     assert "if folded.contains(normalized_query):" in prefilter
     assert "if term.length() >= 2 and folded.contains(term):" in prefilter
