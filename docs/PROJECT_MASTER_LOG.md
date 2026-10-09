@@ -9650,3 +9650,22 @@ NEXT:publish/sync this diagnostic checkpoint. Then, in a separately claimed BUIL
 LOCAL_PROCESS_CLEANUP_2026_10_09:A final process inventory found one additional Voice child from an earlier interrupted isolated production-pack attempt; its parent identity matched that test process. It was stopped after capture. A fresh inventory then found zero AuroraFox, bundled Core or Voice processes from this validation. This adds an interrupted-start reproduction to AF-182; it is not a new distinct defect.
 LOCAL_JOURNAL_SYNC_2026_10_09:Documentation-only diagnostic commits dcf6002,6384241,a7dab21 and bd5b5c3 were published in sequence; local/origin/web main matched at bd5b5c38e997e7e18d1585e5f64e9dcb6a79f74e. The immutable V1.5.0.0 release tag/assets and product source were unchanged. GitHub run listing returned no workflow for the latest documentation-only SHA; no new same-SHA product CI PASS is claimed from these journal commits. This closure text awaits its own publication check.
 CLAIM_STATUS:CODEX-2026-10-09-V15-LOCAL-INSTALL-VALIDATION ACTIVE at85%; installed-package functional diagnostics are recorded, while GUI visual and firewall-isolated local gates remain explicitly UNVERIFIED. Implementation/source paths are unclaimed; owner requested fixes only after diagnostic review.
+
+### ACTIVE CLAIM — CHAT-2026-10-09-V15-CORE-VOICE-CHAT-STABILIZATION
+ROADMAP_RELEASE:V1.5.0.x post-release stabilization of published V1.5.0.0.
+SCOPE_CLASS:CRITICAL fix of post-release in-scope P1/P2 defects; not a retroactive change to immutable released V1.5.0.0 assets.
+ROADMAP_SECTION:4/21 V1.5 Core/Chat, Voice lifecycle and no-minute interaction.
+ADR_REFS:ADR-0003 (progress/cancellation), ADR-0001/0002 reviewed; no new media or cognition scope.
+STARTING_HEAD:f67667eafec5ff79391f19cdc540eb1aa2c5affc
+INTENDED_BUMP:D (BUILD, version-last, strictly above released 1.5.0.0).
+OWNED_PATHS:scripts/desktop_local_runtime.gd;voice/voice_bridge.gd;scripts/main.gd;tests/test_installed_core_voice_lifecycle_fix.py;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md, isolated fix/v1.5-postrelease-lifecycle branch only.
+DEPENDENCIES:AF-182 duplicated llama-server and Core/Voice orphan on real Windows PC; new owner report 2026-10-09 that V1.5 chat never answers but only says the model is still loading. Exact runtime root cause UNCONFIRMED; source inspection confirms scripts/main.gd maps *every* "Ошибка модели:" failure into a generic startup response even when it is not a startup error.
+NON_BLOCKERS:AF-183 production Knowledge index and restart latency require a separate bounded claim; unfinished Windows Computer Use GUI acceptance; V1.6; Android waived full Knowledge payload.
+ACCEPTANCE_GATES:single owned Core spawn across concurrent readiness requests; avoid replacing healthy/starting Core; do not respawn after force shutdown; close all owned Core/Voice children on normal or early exit; truthful startup vs runtime error UI; actual installed Windows non-greeting chat MUST respond through local Core, no persistent "still loading" loop; focused regressions and native Godot/Windows package/Core/Voice/Integration exact-SHA CI; installed local normal/duplicate/aborted launch process inventory; update-version/signing/release gates after acceptance and final version bump.
+PROGRESS_COMPLETE:0%
+PROGRESS_REMAINING:100%
+DONE:repository/roadmap/engineering memory inspected, published 1.5.0.0 installation findings and chat symptom reconciled; isolated working branch created at recorded main SHA.
+REMAINING:source repairs, native and real installed chat/lifecycle tests, Knowledge separate lane, release acceptance and version bump.
+BLOCKERS:owner Windows real-device chat/UI/installed lifecycle needs local Codex to execute device tests; do not call unexecuted tests PASS.
+NEXT:repair startup ownership race and owned Voice teardown first, prevent generic error hiding in UI, add focused tests, execute one coherent CI batch, then local installed validation. Coordinate the separate AF-183 indexing fix after AF-182, do not change signing or release assets.
+CLAIM_STATUS:CHAT-2026-10-09-V15-CORE-VOICE-CHAT-STABILIZATION ACTIVE. Previous CODEX-2026-10-09-V15-LOCAL-INSTALL-VALIDATION remains diagnostic at85%, with no production source claim; shared docs work coordinated by this new post-review fix claim.
