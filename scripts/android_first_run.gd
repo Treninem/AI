@@ -16,7 +16,15 @@ func _ensure_bundled_core() -> void:
 		return
 	provisioning = true
 	await get_tree().process_frame
-	last_result = AuroraBundledCoreModel.ensure_android_private_copy()
+	var main := get_parent()
+	var ai_value = main.get("ai") if main != null else null
+	if ai_value is AIClient:
+		# Never copy/hash the 1.28 GiB bundled GGUF on the scene thread.
+		# Share AIClient's single worker with first real chat requests so there
+		# cannot be two concurrent writers to the same private model file.
+		last_result = await ai_value.core_runtime.android_runtime.ensure_bundled_model_ready()
+	else:
+		last_result = {"ok": false, "error": "Android Core provisioning runtime is not ready"}
 	provisioning = false
 	if not bool(last_result.get("ok", false)):
 		push_error("AuroraFox bundled Core provisioning failed: %s" % str(last_result.get("error", "unknown error")))
