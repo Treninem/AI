@@ -9714,3 +9714,11 @@ REMAINING:compile and exercise new async Knowledge worker and new E2E model prov
 PROGRESS_COMPLETE:source repair candidates and static guards; runtime validation 0% on latest SHA.
 PROGRESS_REMAINING:all final installed/native and cross-platform gate evidence.
 NEXT:exact SHA CI verification; repair actual failures only, then physical-device/installed Windows regression and coordinate PR108. NEVER merge or bump V1.5.0.x by green predecessor status.
+
+PR107_LOCAL_CONTRACT_CHECK_2026_10_09:At draft SHA eea18ec3022f8cb74788835da7a10554a44143fc, local Python source contracts exposed three stale assertions after the intended chat and Android async changes. Extended the PR107 claim to own tests/test_android_contract.py and tests/test_core_android_e2e_contract.py alongside tests/test_postrelease_stabilization_contract.py. The Android contract now requires normal chat through chat_local_only; the E2E contract requires asynchronous private-model provisioning; the Voice contract ignores a comment mentioning /shutdown while still requiring owned PID termination and socket close. Direct Android contract PASS and 24 focused source-contract functions PASS. Pytest is unavailable locally, so this direct invocation is not a pytest or native Godot PASS. Installed GUI chat, Android physical responsiveness, AF-182 lifecycle and AF-183 full-pack performance remain OPEN. Computer Use fails before window selection with an MXC sandbox permission-path error. Git CLI fetch failed with a getaddrinfo thread error; GitHub connector showed PR107 DRAFT at the same SHA before these local edits. No branch push, merge, version bump or release was performed.
+PROGRESS_COMPLETE:10%
+PROGRESS_REMAINING:90%
+DONE:three stale PR107 source contracts repaired locally; direct Android contract and 24 focused test functions pass.
+REMAINING:native Godot/Android builds and exact-SHA CI; installed GUI chat/process checks; Android device responsiveness; AF-183 and release gates.
+BLOCKERS:Computer Use MXC sandbox initialization failure blocks visual GUI gate; Git CLI network thread failure blocks push/fetch; pytest unavailable locally.
+NEXT:restore Computer Use and run non-greeting installed chat plus process inventory; publish this contract batch when Git transport works, then evaluate exact-SHA CI.

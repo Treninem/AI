@@ -38,7 +38,8 @@ def test_voice_exit_terminates_only_its_owned_backend() -> None:
     assert "OS.is_process_running(backend_pid)" in shutdown
     assert "OS.kill(backend_pid)" in shutdown
     assert "socket.close()" in shutdown
-    assert '/shutdown' not in shutdown
+    executable = "\n".join(line for line in shutdown.splitlines() if not line.lstrip().startswith("#"))
+    assert '/shutdown' not in executable
 
 
 def test_chat_does_not_mask_all_core_errors_as_loading() -> None:
