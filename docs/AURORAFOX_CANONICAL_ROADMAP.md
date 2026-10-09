@@ -691,17 +691,9 @@ For a release:
 
 # 21. Current execution point
 
-Current active release train remains **V1.5.0.0**.
+**V1.5.0.0 was published on 2026-10-09** from tag commit `ac222f545b6a69727b4b5ba38fffb458a67e3680`, after the release-scope exact-SHA package, signed Windows/Android, updater-repair and publication gates passed. The master log records the run IDs, public assets and explicit Android full-production-Knowledge-payload waiver.
 
-This roadmap reconciliation:
-- does not change the current canonical version;
-- does not increase readiness;
-- does not activate accounts;
-- does not start V1.6 implementation early;
-- does not make media generation a V1.5 blocker;
-- does not grant merge/sign/release authority.
-
-The next product development step remains whatever the fresh V1.5 master-log claim/evidence declares after this documentation reconciliation.
+Only necessary V1.5.0.x stabilization fixes remain on this line. Any V1.6 implementation needs its own roadmap claim and gates. The retained owner-audit inventory is tracked in the master log; its unresolved entries are not silently treated as verified fixes.
 
 ---
 
