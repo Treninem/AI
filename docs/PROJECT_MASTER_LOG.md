@@ -9681,3 +9681,22 @@ DONE:Owner report recorded and source-blocking candidates identified from curren
 REMAINING:code, focused tests, emulator and physical-device measurements, compare to V1.5.0.0.
 BLOCKERS:physical device responsiveness not remotely measurable through GitHub alone; local Codex/ADB or owner device diagnostics needed after CI.
 NEXT:implement asynchronous private model provisioning and JNI generation coordination, then run Android checks with original Windows fix gates as separate scoped lanes.
+
+### POST-RELEASE FIX QUEUE RECONCILIATION — 2026-10-09 (OWNER: "DO NOT FORGET OTHER PROBLEMS")
+OWNER_PRIORITY:Repair all confirmed in-scope release defects, not just the first Core fix. Never mark a symptom fixed because a source change exists; require real installed/physical-device evidence, exact SHA and signed update acceptance.
+FIX_QUEUE:
+- P1 WINDOWS_CHAT:Owner-reported normal prompts never receive Core answer, only persistent "model loading". UI masking path confirmed in main.gd; model/inference root cause not yet conclusively reproduced. Acceptance: send several non-greeting requests in *installed* GUI with no external AI; verify actual answers, timing, retry and offline recovery.
+- P1 WINDOWS_CORE_VOICE_LIFECYCLE (AF-182):duplicate llama-server from startup race; post-close Core process ~0.93GB and Voice process survive; normal close, startup interrupted, shutdown under request and 10 cold/warm restarts MUST leave zero owned descendants and no duplicate port owners.
+- P1 ANDROID_UI_STALLS:owner reports hard whole-app freezes. Confirmed synchronous 1.28GiB private-model copy/hash on first run, and JNI inference on Godot caller thread; now preliminary async worker changes in PR107, but compile/emulator/physical device tests required; ensure touch/navigation/composer/settings remain responsive while Core runs. Core thread budget and mobile rendering still to profile.
+- P1 KNOWLEDGE_FULL_PERFORMANCE (AF-183):production 60-shard/75,871-record pack import/resume correct but queries and restarted validation take minutes (16.57m initial,36.16m second run). Exact source scans whole ~2.7GB knowledge.jsonl per query. Must implement persistent safe bounded lookup/index plus durable append/remove/restart and invalidation/corruption tests, meet actual installed full-pack latency SLO; optimize manifest/restart work without discarding integrity/provenance. Implement in a SEPARATE ownership claim once Core/Android PR is stable.
+- P2 INSTALL_GUI_UX:Windows visual chat/menu/settings/resize/full app crash test not executed because Computer Use helper timed out; repeat by local Codex/Desktop app, not PASS. Include reply buttons, files, window layering and real update from already installed V1.5.0.0.
+- P2 STRICT_OFFLINE:Firewall-isolated installed production Knowledge/Core/Voice/Computer verification denied by Windows firewall permission; run with elevated permitted isolation and report separately; product offline flags alone are not this acceptance.
+- RELEASE_FIX:after accepted fixes, version-last BUILD bump, both Windows/Android package/signing/auto-update/release latest verification; preserve installed chat/history, knowledge and settings, and test user upgrade instead of reinstallation-only.
+COORDINATION:PR107 is DRAFT and not approved or released; source regressions/checks and CI do NOT prove device behavior. Existing V1.5.0.0 immutable. Prevent next coordinator/Codex from skipping AF-183 or remaining GUI/offline gates.
+OWNED_PATHS_ADDITION:android_plugin/plugin/src/main/cpp/runtime_jni.cpp (only native Android responsiveness thread tuning, no change to privacy/signing); claims remain isolated in fix/v1.5-postrelease-lifecycle.
+PROGRESS_COMPLETE:0%
+PROGRESS_REMAINING:100%
+DONE:PR107 created from isolated branch with Core startup ownership, Voice child shutdown, truthful chat status, Android background provisioning/inference and static regression guards; full acceptance untouched.
+REMAINING:real native tests, Android physical-device and Windows installed app gates, AF-183 independent indexed retrieval, GUI/offline acceptance, actual update and release.
+BLOCKERS:Android actual phone and Windows GUI helper/device not remotely accessible through GitHub; AF-183 still unresolved, no latency PASS.
+NEXT:finish focused source+CI repairs on PR107; validate then take AF-183 separate claim; do not bump/publish until accepted.
