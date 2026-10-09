@@ -15,6 +15,8 @@ class ModelProvisionJob extends RefCounted:
 var _plugin: Object
 var _provision_job: ModelProvisionJob
 var _provision_task_id := -1
+var _provision_finished := false
+var _provision_result: Dictionary = {}
 
 func _ready() -> void:
 	if Engine.has_singleton(SINGLETON_NAME):
@@ -75,13 +77,21 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 func ensure_bundled_model_ready() -> Dictionary:
 	if OS.get_name() != "Android":
 		return {"ok": false, "error": "Android-only model provisioning"}
+	if _provision_finished:
+		return _provision_result
 	if _provision_task_id < 0:
 		_provision_job = ModelProvisionJob.new()
 		_provision_task_id = WorkerThreadPool.add_task(Callable(_provision_job, "run"))
-	while not WorkerThreadPool.is_task_completed(_provision_task_id):
+	# First run and first chat can await the SAME worker. Only one coroutine
+	# must consume/wait the task ID: Godot invalidates IDs after wait_for_task_completion.
+	while not _provision_finished:
+		if WorkerThreadPool.is_task_completed(_provision_task_id):
+			var completed := WorkerThreadPool.wait_for_task_completion(_provision_task_id)
+			_provision_result = _provision_job.result if completed == OK else {"ok": false, "error": "Android Core preparation task failed"}
+			_provision_finished = true
+			break
 		await get_tree().create_timer(0.15).timeout
-	WorkerThreadPool.wait_for_task_completion(_provision_task_id)
-	return _provision_job.result
+	return _provision_result
 
 # Normal Android chat uses the async native API. Navigation and keyboard stay
 # responsive while the model is loading/evaluating/generating tokens.
