@@ -9669,3 +9669,15 @@ REMAINING:source repairs, native and real installed chat/lifecycle tests, Knowle
 BLOCKERS:owner Windows real-device chat/UI/installed lifecycle needs local Codex to execute device tests; do not call unexecuted tests PASS.
 NEXT:repair startup ownership race and owned Voice teardown first, prevent generic error hiding in UI, add focused tests, execute one coherent CI batch, then local installed validation. Coordinate the separate AF-183 indexing fix after AF-182, do not change signing or release assets.
 CLAIM_STATUS:CHAT-2026-10-09-V15-CORE-VOICE-CHAT-STABILIZATION ACTIVE. Previous CODEX-2026-10-09-V15-LOCAL-INSTALL-VALIDATION remains diagnostic at85%, with no production source claim; shared docs work coordinated by this new post-review fix claim.
+
+### OWNER DEFECT UPDATE — 2026-10-09 ANDROID-RESPONSIVENESS
+OWNER_REPORT:Published V1.5 Android APK has severe whole-app lags/frozen responsiveness. This is a new user-observed symptom, not an automatically verified Android performance test.
+SOURCE_DIAGNOSIS:scripts/bundled_core_model.gd runtime_candidate can synchronously copy/hash 1282439264 bytes during AIClient._ready; scripts/android_local_runtime.gd chat invokes synchronous Godot plugin chatLocal -> Kotlin native.chat -> llama_generate under mutex on Godot caller thread. These are confirmed blocking code paths; their causal share of owner lag remains to be measured on device. MobileUIAdapter also polls keyboard/safe-area at0.12s but no specific evidence yet that it is dominant.
+CLAIM_EXTENSION:CHAT-2026-10-09-V15-CORE-VOICE-CHAT-STABILIZATION now includes Android UI responsiveness with independently scoped owned paths: scripts/bundled_core_model.gd, scripts/android_local_runtime.gd, scripts/aurora_core_runtime.gd, android_plugin/plugin/src/main/java/com/aurorafox/runtime/GodotAndroidPlugin.kt and focused Android tests. Same isolated branch; do not edit unrelated models/signing/trust policies. Retain AF-182 Windows and Core chat corrections in original acceptance.
+ANDROID_ACCEPTANCE:App startup must not synchronously copy/hash >1GiB assets on Godot UI thread; Android native inference must run on a bounded background worker and report async results to Godot; chats preserve exactly one completion/error and core self-primary path; UI must process input/navigation while inference starts or generates; no native job queue explosion; Android APK build/emulator smoke and actual 4GiB-class phone launch/chat/navigation FPS or frame-stall trace required before PASS. Separate lifecycle/cancellation decision must not present a still-running native generator as stopped.
+ANDROID_PROGRESS_COMPLETE:0%
+ANDROID_PROGRESS_REMAINING:100%
+DONE:Owner report recorded and source-blocking candidates identified from current main.
+REMAINING:code, focused tests, emulator and physical-device measurements, compare to V1.5.0.0.
+BLOCKERS:physical device responsiveness not remotely measurable through GitHub alone; local Codex/ADB or owner device diagnostics needed after CI.
+NEXT:implement asynchronous private model provisioning and JNI generation coordination, then run Android checks with original Windows fix gates as separate scoped lanes.
