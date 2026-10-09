@@ -9650,3 +9650,23 @@ NEXT:publish/sync this diagnostic checkpoint. Then, in a separately claimed BUIL
 LOCAL_PROCESS_CLEANUP_2026_10_09:A final process inventory found one additional Voice child from an earlier interrupted isolated production-pack attempt; its parent identity matched that test process. It was stopped after capture. A fresh inventory then found zero AuroraFox, bundled Core or Voice processes from this validation. This adds an interrupted-start reproduction to AF-182; it is not a new distinct defect.
 LOCAL_JOURNAL_SYNC_2026_10_09:Documentation-only diagnostic commits dcf6002,6384241,a7dab21 and bd5b5c3 were published in sequence; local/origin/web main matched at bd5b5c38e997e7e18d1585e5f64e9dcb6a79f74e. The immutable V1.5.0.0 release tag/assets and product source were unchanged. GitHub run listing returned no workflow for the latest documentation-only SHA; no new same-SHA product CI PASS is claimed from these journal commits. This closure text awaits its own publication check.
 CLAIM_STATUS:CODEX-2026-10-09-V15-LOCAL-INSTALL-VALIDATION ACTIVE at85%; installed-package functional diagnostics are recorded, while GUI visual and firewall-isolated local gates remain explicitly UNVERIFIED. Implementation/source paths are unclaimed; owner requested fixes only after diagnostic review.
+
+### ACTIVE CLAIM — CHAT-2026-10-09-V15-AF183-KNOWLEDGE-SEARCH
+ROADMAP_RELEASE:V1.5.0.x post-release stabilization after V1.5.0.0 publication.
+SCOPE_CLASS:CRITICAL confirmed P1 Knowledge installed-performance regression AF-183, separate from Core/Voice/Android PR107.
+ROADMAP_SECTION:4 V1.5 Memory/Knowledge, full 1GiB+ pack search and restart; 21 post-release fixes.
+ADR_REFS:ADR-0003 reviewed (does not change Core request handling), ADR-0002 Memory/Knowledge preservation, ADR-0001 non-blocking multimodal.
+STARTING_HEAD:f67667eafec5ff79391f19cdc540eb1aa2c5affc.
+INTENDED_BUMP:D (BUILD; no version change before acceptance).
+OWNED_PATHS:scripts/knowledge_store.gd;tests/test_knowledge_search_prefilter_contract.py;benchmarks/knowledge/* AF-183-specific probes if required;docs/PROJECT_MASTER_LOG.md;docs/AURORAFOX_ENGINEERING_MEMORY.md, on isolated fix/v1.5-af183-knowledge-index branch only; must reconcile journal with PR107 before any merge.
+DEPENDENCIES:Installed pack AF-183 evidence: 60 shards,75,871 records,~2.7GiB normalized DB, first 16.57m import/search and 36.16m resume/search on minimum-tier Windows.
+NON_BLOCKERS:PR107 Core/chat/Voice and Android responsiveness remains independent (no shared production paths); V1.6 excluded.
+ACCEPTANCE_GATES:drop no documents or search matches; preserve case-folding, text/source/kind weights, rank/tie/limit behavior, provenance and untrusted-data restrictions; direct staging/performance over real full pack and installed restart, p95 no minute-scale query, cold/warm concurrent processes and corruption/append/removal/transaction rollback; do not claim PASS based on synthetic search scale alone; relevant Godot, Knowledge1GiB, Windows Package/Integration same-SHA CI.
+APPROACH:First safe optimization: raw-line query-term prefilter before JSON parsing, with conservative handling of escape cases and full equivalent scoring for candidates. This avoids parsing huge unrelated rows but still scans disk; retains AF-183 OPEN until true persistent bounded index and full-pack installed speed gate are accepted. A persistent index must be invalidated on append/remove/rollback, recover safely after interruption and never silently omit matches.
+PROGRESS_COMPLETE:0%
+PROGRESS_REMAINING:100%
+DONE:AF-183 evidence, full KnowledgeStore paths, existing stress/performance/search contracts reviewed.
+REMAINING:correct prefilter, persistent index, native/installed 60-shard performance and restart gates, post-bump package/update gates.
+BLOCKERS:real owner's installed Windows performance proof not runnable through repo-only connector; full pack 2.7GB cannot be treated as small fixture.
+NEXT:implement conservative pre-JSON parse candidate filter with exact regressions, run native Godot tests, then select persistent index architecture before release. 
+CLAIM_STATUS:CHAT-2026-10-09-V15-AF183-KNOWLEDGE-SEARCH ACTIVE; PR107 remains unaffected; no release merge until gates.
