@@ -125,9 +125,10 @@ func _chat_local(messages: Array, temperature: float) -> Dictionary:
 			return result
 		var error := str(result.get("error", "local model failed"))
 		var model_failure := bool(result.get("model_failure", true))
-		# Cancellation/deadline/protocol budgets apply to this request, not a model.
-		# Preserve the result and do not start a second model after a terminal failure.
-		if not model_failure and not bool(result.get("retryable", true)):
+		# A failed request or a still-warming server is NOT evidence that the
+		# GGUF weights are broken. Preserve exact error/scope/temporary-retry info
+		# instead of quarantining a valid model or launching another engine.
+		if not model_failure:
 			result["attempted_models"] = failures
 			result["skipped_quarantined_models"] = skipped
 			return result
