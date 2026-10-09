@@ -29,7 +29,6 @@ func _ensure_bundled_core() -> void:
 	if not bool(last_result.get("ok", false)):
 		push_error("AuroraFox bundled Core provisioning failed: %s" % str(last_result.get("error", "unknown error")))
 		return
-	var main := get_parent()
 	if main != null:
 		var status := main.get_node_or_null("CoreStatusCoordinator")
 		if status != null and status.has_method("refresh_now"):
