@@ -100,7 +100,7 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 
 func ensure_server(model_absolute_path: String) -> Dictionary:
 	if not is_available():
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует или повреждён", "installer": installer_path()}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует или повреждён", "installer": installer_path(), "model_failure": false, "retryable": false, "failure_scope": "runtime"}
 
 	# Acquire startup ownership BEFORE the first await. Earlier code checked a
 	# live pid through async HTTP before setting starting=true, so two callers
@@ -136,7 +136,7 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 	server_pid = OS.create_process(exe, args, false)
 	if server_pid <= 0:
 		starting = false
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Не удалось запустить встроенный AuroraFox Core Engine", "engine": exe}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Не удалось запустить встроенный AuroraFox Core Engine", "engine": exe, "model_failure": false, "retryable": true, "failure_scope": "runtime"}
 	active_model = model_absolute_path
 	return await _wait_owned_server_ready(server_pid, false)
 
@@ -145,7 +145,7 @@ func _wait_owned_server_ready(owned_pid: int, reused: bool) -> Dictionary:
 		if not starting or owned_pid != server_pid or not OS.is_process_running(owned_pid):
 			starting = false
 			if owned_pid == server_pid: server_pid = 0
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки встроенного AI", "failure_scope": "startup"}
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки встроенного AI", "failure_scope": "startup", "model_failure": false, "retryable": true}
 		var health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 1.0)
 		if bool(health.get("ok", false)):
 			starting = false
@@ -156,7 +156,7 @@ func _wait_owned_server_ready(owned_pid: int, reused: bool) -> Dictionary:
 	if server_pid == owned_pid:
 		_kill_owned_server_only()
 	starting = false
-	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться; проверьте доступную память и состояние Core", "failure_scope": "startup"}
+	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться; проверьте доступную память и состояние Core", "failure_scope": "startup", "model_failure": false, "retryable": true}
 
 func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 	for _attempt in range(JOINED_WARMUP_ATTEMPTS):
@@ -165,9 +165,9 @@ func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 				var final_health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 2.0)
 				if bool(final_health.get("ok", false)):
 					return {"ok": true, "runtime": "aurora_core_desktop", "reused": true, "joined_warmup": true}
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "Фоновая подготовка AuroraFox Core завершилась неуспешно"}
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "Фоновая подготовка AuroraFox Core завершилась неуспешно", "model_failure": false, "retryable": true, "failure_scope": "startup"}
 		if active_model != model_absolute_path and not active_model.is_empty():
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core занят подготовкой другого внутреннего профиля"}
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core занят подготовкой другого внутреннего профиля", "model_failure": false, "retryable": true, "failure_scope": "startup"}
 		await get_tree().create_timer(0.25).timeout
 	return {
 		"ok": false,
