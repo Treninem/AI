@@ -105,6 +105,12 @@ func chat_async(model_path: String, messages: Array, options: Dictionary = {}) -
 	request_options["terse_request"] = terse_request
 	var started := _parse_result(_plugin.call("startChatLocalAsync", model_path, JSON.stringify(messages), JSON.stringify(request_options)), "Cannot start Android Core inference")
 	if not bool(started.get("ok", false)):
+		# A simultaneous request is a busy worker, not evidence of a broken GGUF.
+		# Do not quarantine the local model or force a second 1.28 GiB load.
+		if str(started.get("error", "")).contains("already handling a request"):
+			started["model_failure"] = false
+			started["failure_scope"] = "request"
+			started["retryable"] = true
 		return started
 	var job_id := str(started.get("job_id", ""))
 	if job_id.is_empty():
