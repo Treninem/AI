@@ -18,13 +18,13 @@ static func runtime_candidate() -> String:
 		var packaged := windows_packaged_path()
 		if _valid_bundled_file(packaged):
 			return packaged
+	if OS.get_name() == "Android":
+		# Never copy/hash or trust a cached GGUF by header alone on the UI thread.
+		# The worker verifies the full pinned asset and can repair corruption.
+		return ""
 	# Developer/user models remain supported as bounded fallback candidates.
 	if _valid_gguf(ACTIVE_MODEL):
 		return ACTIVE_MODEL
-	if OS.get_name() == "Android":
-		# Never copy/hash the 1.28 GiB bundled GGUF from AIClient._ready.
-		# AndroidLocalRuntime provisions on its worker for the first real chat.
-		return ""
 	return ""
 
 static func windows_packaged_path() -> String:
@@ -42,8 +42,11 @@ static func bundled_available() -> bool:
 static func ensure_android_private_copy() -> Dictionary:
 	if OS.get_name() != "Android":
 		return {"ok": false, "error": "android-only provisioner"}
-	if _valid_gguf(ACTIVE_MODEL):
-		return {"ok": true, "path": ACTIVE_MODEL, "already_ready": true}
+	# A plausible GGUF header alone is not enough. A partially corrupted
+	# 1.28 GiB private copy previously bypassed recovery and broke chat.
+	# Run this full check ONLY on AndroidLocalRuntime's background worker.
+	if _valid_bundled_file(ACTIVE_MODEL) and FileAccess.get_sha256(ACTIVE_MODEL).to_lower() == EXPECTED_SHA256:
+		return {"ok": true, "path": ACTIVE_MODEL, "already_ready": true, "sha256": EXPECTED_SHA256}
 	if not FileAccess.file_exists(BUNDLED_RESOURCE):
 		return {"ok": false, "error": "bundled AuroraFox Core asset missing"}
 
