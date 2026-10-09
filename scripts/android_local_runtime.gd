@@ -5,7 +5,16 @@ const SINGLETON_NAME := "AuroraFoxRuntime"
 const DEFAULT_CHAT_MAX_TOKENS := 384
 const TERSE_CHAT_MAX_TOKENS := 16
 
+# Provisioning touches >1 GiB of packed data on a fresh install. Keep
+# the copy and SHA-256 work off the Godot UI thread.
+class ModelProvisionJob extends RefCounted:
+	var result: Dictionary = {}
+	func run() -> void:
+		result = AuroraBundledCoreModel.ensure_android_private_copy()
+
 var _plugin: Object
+var _provision_job: ModelProvisionJob
+var _provision_task_id := -1
 
 func _ready() -> void:
 	if Engine.has_singleton(SINGLETON_NAME):
@@ -62,6 +71,43 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 		request_options["max_tokens"] = TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS
 	request_options["terse_request"] = terse_request
 	return _parse_result(_plugin.call("chatLocal", model_path, JSON.stringify(messages), JSON.stringify(request_options)), "Invalid local chat response")
+
+func ensure_bundled_model_ready() -> Dictionary:
+	if OS.get_name() != "Android":
+		return {"ok": false, "error": "Android-only model provisioning"}
+	if _provision_task_id < 0:
+		_provision_job = ModelProvisionJob.new()
+		_provision_task_id = WorkerThreadPool.add_task(Callable(_provision_job, "run"))
+	while not WorkerThreadPool.is_task_completed(_provision_task_id):
+		await get_tree().create_timer(0.15).timeout
+	WorkerThreadPool.wait_for_task_completion(_provision_task_id)
+	return _provision_job.result
+
+# Normal Android chat uses the async native API. Navigation and keyboard stay
+# responsive while the model is loading/evaluating/generating tokens.
+func chat_async(model_path: String, messages: Array, options: Dictionary = {}) -> Dictionary:
+	if _plugin == null:
+		return {"ok": false, "error": "Local Android LLM runtime unavailable"}
+	var request_options := options.duplicate(true)
+	var terse_request := _is_explicit_terse_request(messages)
+	if not request_options.has("max_tokens") and not request_options.has("num_predict"):
+		request_options["max_tokens"] = TERSE_CHAT_MAX_TOKENS if terse_request else DEFAULT_CHAT_MAX_TOKENS
+	request_options["terse_request"] = terse_request
+	var started := _parse_result(_plugin.call("startChatLocalAsync", model_path, JSON.stringify(messages), JSON.stringify(request_options)), "Cannot start Android Core inference")
+	if not bool(started.get("ok", false)):
+		return started
+	var job_id := str(started.get("job_id", ""))
+	if job_id.is_empty():
+		return {"ok": false, "error": "Android Core did not return an inference job"}
+	while is_inside_tree():
+		var polled := _parse_result(_plugin.call("pollChatLocalAsync", job_id), "Cannot read Android Core inference result")
+		if not bool(polled.get("ok", false)):
+			return polled
+		if str(polled.get("status", "")) == "completed":
+			var result = polled.get("result", {})
+			return result if result is Dictionary else {"ok": false, "error": "Invalid native Android chat result"}
+		await get_tree().create_timer(0.12).timeout
+	return {"ok": false, "error": "AuroraFox closed before inference completed", "cancelled": true}
 
 func synthesize_speech(text: String, speed := 1.0, emotion := "neutral", intensity := 0.5) -> Dictionary:
 	if _plugin == null:
