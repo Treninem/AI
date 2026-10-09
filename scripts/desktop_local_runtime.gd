@@ -6,7 +6,7 @@ const PORT := 8766
 const BASE_URL := "http://127.0.0.1:8766"
 const MODEL_ALIAS := "AuroraFox-Core"
 const STARTUP_ATTEMPTS := 480
-const JOINED_WARMUP_ATTEMPTS := 120
+const JOINED_WARMUP_ATTEMPTS := STARTUP_ATTEMPTS
 const DEFAULT_CHAT_MAX_TOKENS := 768
 const TERSE_CHAT_MAX_TOKENS := 128
 const DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0
@@ -102,17 +102,19 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 	if not is_available():
 		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует или повреждён", "installer": installer_path()}
 
-	# Multiple messages can arrive while the first on-demand startup is loading.
-	# Join the same bounded startup instead of spawning competing engine processes.
+	# Acquire startup ownership BEFORE the first await. Earlier code checked a
+	# live pid through async HTTP before setting starting=true, so two callers
+	# could both pass that gap, race to kill/recreate Core, and strand children.
 	if starting:
 		return await _wait_for_existing_start(model_absolute_path)
-
-	if server_pid > 0 and OS.is_process_running(server_pid) and active_model == model_absolute_path:
-		var health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 2.0)
-		if bool(health.get("ok", false)): return {"ok": true, "runtime": "aurora_core_desktop", "reused": true}
-		stop()
-
 	starting = true
+	if server_pid > 0 and OS.is_process_running(server_pid) and active_model == model_absolute_path:
+		# A live engine may still be loading. Never kill it just because /health
+		# is temporarily unavailable; subsequent callers join the same warmup.
+		return await _wait_owned_server_ready(server_pid, true)
+	if server_pid > 0:
+		_kill_owned_server_only()
+
 	var exe := engine_path()
 	var args := PackedStringArray([
 		"-m", model_absolute_path,
@@ -136,19 +138,25 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		starting = false
 		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Не удалось запустить встроенный AuroraFox Core Engine", "engine": exe}
 	active_model = model_absolute_path
+	return await _wait_owned_server_ready(server_pid, false)
+
+func _wait_owned_server_ready(owned_pid: int, reused: bool) -> Dictionary:
 	for _attempt in range(STARTUP_ATTEMPTS):
-		if server_pid <= 0 or not OS.is_process_running(server_pid):
+		if not starting or owned_pid != server_pid or not OS.is_process_running(owned_pid):
 			starting = false
-			server_pid = 0
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки встроенного AI"}
+			if owned_pid == server_pid: server_pid = 0
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки встроенного AI", "failure_scope": "startup"}
 		var health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 1.0)
 		if bool(health.get("ok", false)):
 			starting = false
-			return {"ok": true, "runtime": "aurora_core_desktop", "engine": exe, "pid": server_pid}
+			return {"ok": true, "runtime": "aurora_core_desktop", "pid": owned_pid, "reused": reused}
 		await get_tree().create_timer(0.25).timeout
+	# Only this startup owner can kill this exact engine. Never restart a
+	# different pid that another lifecycle already brought up.
+	if server_pid == owned_pid:
+		_kill_owned_server_only()
 	starting = false
-	stop()
-	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться за 120 секунд"}
+	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться; проверьте доступную память и состояние Core", "failure_scope": "startup"}
 
 func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 	for _attempt in range(JOINED_WARMUP_ATTEMPTS):
@@ -175,6 +183,12 @@ func cancel_active_requests() -> void:
 	_stream_cancel_epoch += 1
 	for client in _active_streams: client.close()
 
+func _kill_owned_server_only() -> void:
+	if server_pid > 0 and OS.is_process_running(server_pid):
+		OS.kill(server_pid)
+	server_pid = 0
+	active_model = ""
+
 func stop(force := false) -> void:
 	cancel_active_requests()
 	# A foreground chat can time out its short join while the background loader
@@ -183,9 +197,7 @@ func stop(force := false) -> void:
 	# teardown remains available through force=true from _exit_tree().
 	if starting and not force:
 		return
-	if server_pid > 0 and OS.is_process_running(server_pid): OS.kill(server_pid)
-	server_pid = 0
-	active_model = ""
+	_kill_owned_server_only()
 	starting = false
 
 func runtime_info() -> Dictionary:
