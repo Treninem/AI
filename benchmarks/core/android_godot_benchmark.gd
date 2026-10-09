@@ -24,7 +24,7 @@ func _run() -> void:
 		"core": {},
 		"environment": {
 			"remote_ai_allowed": false,
-			"normal_path": "AIClient.chat -> AuroraCoreRuntime.chat_local_only -> AndroidLocalRuntime.chat -> AuroraFoxRuntime.chatLocal -> llama.cpp"
+			"normal_path": "AIClient.chat -> AuroraCoreRuntime.chat_local_only -> AndroidLocalRuntime.chat_async -> AuroraFoxRuntime.startChatLocalAsync/pollChatLocalAsync -> llama.cpp worker"
 		}
 	}
 	_write_report(report)
