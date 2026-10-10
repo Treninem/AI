@@ -107,7 +107,7 @@ func _apply_owner_background() -> void:
 			rect.texture = _owner_background_texture()
 			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			rect.modulate = Color(1, 1, 1, 0.16)
+			rect.modulate = Color.WHITE
 
 func _on_viewport_resized() -> void:
 	super._on_viewport_resized()

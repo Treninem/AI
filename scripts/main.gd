@@ -217,11 +217,12 @@ func _build_ui() -> void:
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	background.modulate = Color(1, 1, 1, 0.06)
+	background.modulate = Color.WHITE
 	add_child(background)
 
 	var veil := ColorRect.new()
-	veil.color = Color(0.01, 0.015, 0.028, 0.90)
+	veil.name = "ChatBackgroundVeil"
+	veil.color = Color(0.01, 0.015, 0.028, 0.96)
 	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(veil)

@@ -214,8 +214,9 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if not _assert_owner_art(main, mobile):
 		return false
 	var owner_background := main.find_child("OwnerBackground", true, false) as TextureRect
-	if owner_background == null or owner_background.modulate.a > 0.25:
-		_fail("Owner art is too strong behind chat text", 105)
+	var chat_veil := main.find_child("ChatBackgroundVeil", true, false) as ColorRect
+	if owner_background == null or not owner_background.modulate.is_equal_approx(Color.WHITE) or chat_veil == null or chat_veil.color.a < 0.90:
+		_fail("Chat text does not have a calm readable surface over neutral owner art", 105)
 		return false
 
 	var computer_toggle := main.find_child("ComputerAgentToggle", true, false) as CheckButton

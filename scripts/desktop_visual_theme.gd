@@ -42,7 +42,7 @@ func _replace_background(node: Node) -> void:
 			var rect := child as TextureRect
 			if rect.texture != null and rect.texture.resource_path.ends_with("aurora_background.svg"):
 				rect.texture = FINAL_BACKGROUND
-				rect.modulate = Color(1, 1, 1, 0.16)
+				rect.modulate = Color.WHITE
 		_replace_background(child)
 
 func _remove_temporary_avatar_art(node: Node) -> void:
