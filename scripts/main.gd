@@ -56,6 +56,8 @@ const ICON_ATTACH: Texture2D = preload("res://assets/ui/icon_attach.svg")
 const ICON_SEND: Texture2D = preload("res://assets/ui/icon_send.svg")
 const ICON_RENAME: Texture2D = preload("res://assets/ui/icon_rename.svg")
 const ICON_DELETE: Texture2D = preload("res://assets/ui/icon_delete.svg")
+const ICON_FEEDBACK_POSITIVE: Texture2D = preload("res://assets/ui/icon_feedback_positive.svg")
+const ICON_FEEDBACK_NEGATIVE: Texture2D = preload("res://assets/ui/icon_feedback_negative.svg")
 
 const BG := Color("080b12")
 const SIDEBAR := Color(0.025, 0.032, 0.055, 0.97)
@@ -113,7 +115,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var available := await ai.is_available()
 	_set_status(
-		"AuroraFox Core готов • %s • %d инструментов" % [ai.model, tools.tools.size()] if available
+		"AuroraFox Core готов • %d инструментов" % tools.tools.size() if available
 		else "AuroraFox Core запускается — локальный чат останется основным режимом",
 		available
 	)
@@ -811,13 +813,14 @@ func _add_feedback_controls(body: VBoxContainer, message: Dictionary) -> void:
 	controls.add_theme_constant_override("separation", 4)
 	body.add_child(controls)
 	for definition in [
-		{"score": 1, "text": "+", "tooltip": "Полезный и правильный ответ"},
-		{"score": -1, "text": "−", "tooltip": "Неправильный или бесполезный ответ"}
+		{"score": 1, "icon": ICON_FEEDBACK_POSITIVE, "tooltip": "Полезный и правильный ответ"},
+		{"score": -1, "icon": ICON_FEEDBACK_NEGATIVE, "tooltip": "Неправильный или бесполезный ответ"}
 	]:
 		var button := Button.new()
 		var score := int(definition.score)
 		button.name = "FeedbackPositive" if score > 0 else "FeedbackNegative"
-		button.text = str(definition.text)
+		button.icon = definition.icon
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.tooltip_text = str(definition.tooltip)
 		button.custom_minimum_size = Vector2(40, 36)
 		button.focus_mode = Control.FOCUS_ALL

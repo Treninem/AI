@@ -1203,3 +1203,8 @@ After AF-174, the client and API could accept an owner/operator-authorized Core 
 - In local desktop/mobile UI smoke, the success marker was followed by `Attempt to call function ... on a null instance` at `scripts/computer_request_guard.gd:61`. An asynchronous HTTP wait outlived its UI owner and invoked the captured `allowed` Callable after teardown.
 - PR107 candidate checks owner, request and callback validity before each callback invocation. If they are gone, it returns cancelled with `termination_confirmed=false`, `uncertain_external_state=true` and `retryable=false`, preserving the uncertainty of any external effect. The same Godot UI smoke then exited 0 without this script error. Engine object/resource leak warnings still appear and are not claimed fixed.
 - Status: local regression resolved; exact-SHA CI and installed behavior pending.
+
+### AF-187 — Core-ready chat status references a removed AIClient property
+
+- Local Godot 4.7.1 UI smoke printed `Invalid access to property or key 'model' on ... AIClient` at `scripts/main.gd:117` while still exiting 0. `AIClient` now exposes the bundled Core through `core_runtime`; `model` is not a member. This error occurs when Core reports ready and the header status is formatted.
+- PR107 removes the invalid model interpolation and shows Core readiness with the tool count. The same native UI smoke then printed its success marker with no GDScript error; old Godot ObjectDB/resource warnings remain. Feedback actions now use outlined thumb SVGs with accessible names in place of cryptic plus/minus glyphs. Exact-SHA CI and installed GUI acceptance remain required.

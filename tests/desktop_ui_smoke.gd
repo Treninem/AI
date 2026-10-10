@@ -393,10 +393,13 @@ func _exercise_chat(main: Control) -> bool:
 	for controls in feedback_controls:
 		var positive := controls.find_child("FeedbackPositive", true, false) as Button
 		var negative := controls.find_child("FeedbackNegative", true, false) as Button
-		if positive == null or negative == null or positive.text != "+" or negative.text != "−":
-			_fail("Feedback controls are missing accessible + / − actions", 96)
+		if positive == null or negative == null or positive.icon == null or negative.icon == null:
+			_fail("Feedback controls are missing recognizable icon actions", 96)
 			return false
-		if positive.tooltip_text.is_empty() or negative.tooltip_text.is_empty():
+		if positive.icon.resource_path != "res://assets/ui/icon_feedback_positive.svg" or negative.icon.resource_path != "res://assets/ui/icon_feedback_negative.svg":
+			_fail("Feedback controls are not using the intended thumb icons", 98)
+			return false
+		if positive.tooltip_text.is_empty() or negative.tooltip_text.is_empty() or positive.accessibility_name.is_empty() or negative.accessibility_name.is_empty():
 			_fail("Feedback controls do not explain their actions", 97)
 			return false
 	var messages := main.find_child("MessageList", true, false)
