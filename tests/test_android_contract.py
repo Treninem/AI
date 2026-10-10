@@ -115,7 +115,7 @@ def main() -> None:
 
     ai_client = read("scripts/ai_client.gd")
     require(
-        "return await core_runtime.chat(_with_knowledge(messages), temperature)" in ai_client,
+        "return await core_runtime.chat_local_only(grounded_messages, temperature)" in ai_client,
         "AIClient.chat does not delegate inference to AuroraFox Core",
     )
     require(
@@ -129,6 +129,9 @@ def main() -> None:
     require(CORE_SHA in bundled, "Runtime built-in Core SHA-256 drifted")
     require(str(CORE_BYTES) in bundled, "Runtime built-in Core byte count drifted")
     require("ensure_android_private_copy" in bundled, "Android no longer silently provisions the bundled Core")
+    first_run_path = read("scripts/android_first_run.gd")
+    require("await ai_value.core_runtime.android_runtime.ensure_bundled_model_ready()" in first_run_path, "Android first run must share Core worker for provisioning")
+    require("last_result = AuroraBundledCoreModel.ensure_android_private_copy()" not in first_run_path, "Android first run blocks Godot main thread copying GGUF")
 
     android_runtime = read("scripts/android_local_runtime.gd")
     require("const TERSE_CHAT_MAX_TOKENS := 16" in android_runtime, "Android exact-output inference budget drifted")
@@ -138,8 +141,10 @@ def main() -> None:
     )
     require(
         '_plugin.call("chatLocal"' in android_runtime,
-        "Android chat no longer calls the @UsedByGodot API directly",
+        "Legacy standalone benchmark chat must retain the direct embedded API",
     )
+    require('_plugin.call("startChatLocalAsync"' in android_runtime and '_plugin.call("pollChatLocalAsync"' in android_runtime,
+            "Normal Android chat must dispatch/poll native work instead of blocking Godot UI")
     require(
         '.has_method("getCapabilitiesJson")' not in android_runtime
         and '.has_method("chatLocal")' not in android_runtime,
@@ -153,7 +158,8 @@ def main() -> None:
     require('if OS.get_name() == "Android":' in core_chat, "AuroraCoreRuntime lacks Android branch")
     require("android_runtime.is_available()" in core_chat, "AuroraCoreRuntime does not validate Android runtime")
     require('caps.get("llama_cpp", false)' in core_chat, "AuroraCoreRuntime does not require Android llama.cpp capability")
-    require("android_runtime.chat(" in core_chat, "AuroraCoreRuntime does not invoke embedded Android inference")
+    require("await android_runtime.chat_async(" in core_chat, "AuroraCoreRuntime does not await background Android inference")
+    require("await android_runtime.ensure_bundled_model_ready()" in core_chat, "Android Core no longer provisions its private GGUF asynchronously")
     require("127.0.0.1:11434" not in core_chat, "Android local chat branch directly references Ollama")
     require("var allow_ollama_fallback := false" in core_runtime, "Ollama compatibility must be opt-in")
     require("OS.get_name() != \"Android\"" in core_runtime, "Ollama compatibility route is not excluded on Android")

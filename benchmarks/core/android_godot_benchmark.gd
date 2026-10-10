@@ -24,7 +24,7 @@ func _run() -> void:
 		"core": {},
 		"environment": {
 			"remote_ai_allowed": false,
-			"normal_path": "AIClient.chat -> AuroraCoreRuntime.chat_local_only -> AndroidLocalRuntime.chat -> AuroraFoxRuntime.chatLocal -> llama.cpp"
+			"normal_path": "AIClient.chat -> AuroraCoreRuntime.chat_local_only -> AndroidLocalRuntime.chat_async -> AuroraFoxRuntime.startChatLocalAsync/pollChatLocalAsync -> llama.cpp worker"
 		}
 	}
 	_write_report(report)
@@ -47,7 +47,11 @@ func _run() -> void:
 	client.set_ollama_fallback(true)
 
 	var runtime_before := client.runtime_info()
-	var model_path := AuroraBundledCoreModel.runtime_candidate()
+	# The shipped UI now provisions the 1.28 GiB GGUF in a worker to avoid
+	# blocking Android rendering. Exercise that SAME production async path before
+	# checking model hash and inference; do not reintroduce a synchronous copy.
+	var prepared: Dictionary = await client.core_runtime.android_runtime.ensure_bundled_model_ready()
+	var model_path := str(prepared.get("path", "")) if bool(prepared.get("ok", false)) else ""
 	var model_abs := ProjectSettings.globalize_path(model_path) if not model_path.is_empty() else ""
 	var model_bytes := _file_size(model_path)
 	var model_sha := FileAccess.get_sha256(model_path).to_lower() if not model_path.is_empty() and FileAccess.file_exists(model_path) else ""

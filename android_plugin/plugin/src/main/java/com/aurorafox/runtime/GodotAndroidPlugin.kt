@@ -17,6 +17,7 @@ import java.io.File
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicLong
 
 class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
@@ -49,6 +50,20 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
     private val fileJobs = ConcurrentHashMap<String, FileAnalysisJob>()
     private val fileExecutor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "AuroraFoxFileAnalysis").apply { isDaemon = true }
+    }
+
+    // Native llama_generate is synchronous. Never call it from Godot's render/UI
+    // thread: loading the bundled model and token decoding can take minutes on
+    // a low-memory Android phone. Only one job may enter native generation.
+    private class CoreChatJob {
+        @Volatile var result: String? = null
+    }
+
+    private val coreChatIds = AtomicLong()
+    private val coreChatBusy = AtomicBoolean(false)
+    private val coreChatJobs = ConcurrentHashMap<String, CoreChatJob>()
+    private val coreChatExecutor = Executors.newSingleThreadExecutor { runnable ->
+        Thread(runnable, "AuroraFoxCoreInference").apply { isDaemon = true }
     }
 
     override fun getPluginName() = BuildConfig.GODOT_PLUGIN_NAME
@@ -161,6 +176,48 @@ class GodotAndroidPlugin(godot: Godot) : GodotPlugin(godot) {
         if (!isInsideAppStorage(modelPath)) return errorJson("Model path must be inside AuroraFox app storage")
         val prompt = try { formatChatPrompt(JSONArray(messagesJson)) } catch (_: Exception) { return errorJson("Invalid messages JSON") }
         return native.chat(modelPath, prompt, optionsJson)
+    }
+
+    // The existing synchronous chatLocal stays available for legacy benchmarks.
+    // Normal Android UI must use start/poll instead and never block a frame.
+    @UsedByGodot
+    fun startChatLocalAsync(modelPath: String, messagesJson: String, optionsJson: String): String {
+        if (!native.isLoaded() || !native.hasLlama()) return errorJson("llama.cpp runtime is not bundled in this build")
+        if (!isInsideAppStorage(modelPath)) return errorJson("Model path must be inside AuroraFox app storage")
+        val prompt = try { formatChatPrompt(JSONArray(messagesJson)) }
+            catch (_: Exception) { return errorJson("Invalid messages JSON") }
+        if (!coreChatBusy.compareAndSet(false, true)) return errorJson("AuroraFox Core is already handling a request")
+        val id = coreChatIds.incrementAndGet().toString()
+        val job = CoreChatJob()
+        coreChatJobs[id] = job
+        return try {
+            coreChatExecutor.execute {
+                try {
+                    job.result = native.chat(modelPath, prompt, optionsJson)
+                } catch (t: Throwable) {
+                    job.result = errorJson("Core inference failed: ${t.javaClass.simpleName}")
+                } finally {
+                    coreChatBusy.set(false)
+                }
+            }
+            JSONObject(mapOf("ok" to true, "job_id" to id)).toString()
+        } catch (t: Throwable) {
+            coreChatJobs.remove(id)
+            coreChatBusy.set(false)
+            errorJson("Unable to start Core inference: ${t.javaClass.simpleName}")
+        }
+    }
+
+    @UsedByGodot
+    fun pollChatLocalAsync(jobId: String): String {
+        val job = coreChatJobs[jobId] ?: return errorJson("Unknown Core inference job")
+        val result = job.result ?: return JSONObject(mapOf("ok" to true, "status" to "running")).toString()
+        coreChatJobs.remove(jobId, job)
+        return try {
+            JSONObject(mapOf("ok" to true, "status" to "completed", "result" to JSONObject(result))).toString()
+        } catch (_: Exception) {
+            errorJson("Core inference returned malformed JSON")
+        }
     }
 
     @UsedByGodot

@@ -13,7 +13,7 @@ def test_android_godot_probe_exercises_normal_aiclient_path() -> None:
     scene = SCENE.read_text(encoding="utf-8")
     assert "AIClient.new()" in script
     assert "client.chat(" in script
-    assert "AuroraBundledCoreModel.runtime_candidate()" in script
+    assert "await client.core_runtime.android_runtime.ensure_bundled_model_ready()" in script
     assert "set_ollama_fallback(true)" in script
     assert "chat_with_compatibility" not in script
     assert '"aurora_core_android"' in script

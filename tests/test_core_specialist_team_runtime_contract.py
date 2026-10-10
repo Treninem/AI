@@ -175,7 +175,10 @@ def test_windows_prefers_packaged_core_and_normal_chat_recovers_without_setup() 
     assert "ai.retry_core_now()" in main
     assert main.count("await agent.run_task(task)") == 1
     assert "call_deferred(\"_recover_core_background\")" in main
-    assert "устанавливать или настраивать ничего не нужно" in main
+    # Source must distinguish a genuinely loading model from broken local Core;
+    # old generic "still loading" for every error hid real chat failures.
+    assert 'response_origin = "core_startup_status" if loading else "core_error"' in main
+    assert "Не удалось получить ответ от локального Core" in main
     # Assistant persistence now carries runtime/model/version metadata after
     # the answer arguments; the recovery ordering contract must not pin the old
     # two-argument call spelling.
