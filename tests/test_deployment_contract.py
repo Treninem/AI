@@ -132,6 +132,7 @@ def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
     assert "ssh-keygen" in installer
     assert "Copy-Item" in installer
     assert "New-TimeSpan -Minutes 5" in installer
+    assert "-WindowStyle Hidden" in installer
     assert "-User $currentUser," not in installer
     assert "AuroraFox Server Backup" in installer
 

@@ -51,7 +51,7 @@ $engine = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
 if ([string]::IsNullOrWhiteSpace($engine)) {
     $engine = (Get-Command powershell -ErrorAction Stop).Source
 }
-$arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$syncScript`" -ConfigPath `"$configPath`""
+$arguments = "-NoLogo -NoProfile -NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File `"$syncScript`" -ConfigPath `"$configPath`""
 $action = New-ScheduledTaskAction -Execute $engine -Argument $arguments
 $triggers = @(
     New-ScheduledTaskTrigger -AtLogOn -User $currentUser
