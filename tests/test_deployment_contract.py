@@ -119,6 +119,7 @@ def test_persistence_capacity_policy_never_auto_prunes_private_or_offline_sync_s
 def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
     sync = read("deploy/windows/sync_server_backup.ps1")
     installer = read("deploy/windows/install_server_backup.ps1")
+    launcher = read("deploy/windows/run_server_backup_hidden.vbs")
     assert "sftp" in sync.lower()
     assert "BatchMode=yes" in sync
     assert "IdentitiesOnly=yes" in sync
@@ -132,7 +133,9 @@ def test_windows_backup_sync_is_key_pinned_sftp_and_periodic():
     assert "ssh-keygen" in installer
     assert "Copy-Item" in installer
     assert "New-TimeSpan -Minutes 5" in installer
-    assert "-WindowStyle Hidden" in installer
+    assert "wscript.exe" in installer
+    assert "WScript.Quit shell.Run(command, 0, True)" in launcher
+    assert "-WindowStyle Hidden" in launcher
     assert "-User $currentUser," not in installer
     assert "AuroraFox Server Backup" in installer
 
