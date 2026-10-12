@@ -10152,3 +10152,11 @@ DONE: Linux release failure identified; portable command selection implemented; 
 REMAINING: commit/push repair, new exact-SHA Android and Windows package CI, one complete signed release build, guarded publication and installed updater acceptance.
 BLOCKERS: release run38308686874 Android failed on old SHA; fresh exact-SHA gates absent.
 NEXT: commit/push only helper/test/memory repair, verify automatic Android/Windows CI at new SHA, then dispatch one full build-only release run if green.
+
+V1502_LINUX_CURL_MULTIPLE_PATHS_2026_10_13: Prior portable-command repair committed/pushed as main SHA536955dea7c0859500816f54188a18103b93bbfd; release run38308686874 on obsolete SHA6d41f4d completed CANCELLED. At SHA536955d, Core Android E2E, real Core Windows/Android, integration and other contracts passed, but Android APK artifact run38309491739 FAILED in `Build unsigned AuroraFox release APK` immediately after helper started: `The term '/usr/bin/curl /bin/curl' is not recognized`. Ubuntu `Get-Command curl -CommandType Application` returned multiple executable paths, so PowerShell treated their Sources as one invocation. This is a confirmed helper selection bug, not an app test result. Same-chat model-transfer claim owns helper/test/memory/journal. Candidate now applies `Select-Object -First 1` to both platform Application lookups, retaining all pinned transfer checks and retries. Android contract asserts singular Linux lookup. Local PowerShell AST parse, Android contract script, singular Windows curl selection and diff check PASS. Windows Package CI run38309491749 remained IN_PROGRESS at installed-app smoke; near completion, it was not cancelled. No full release build, tag or public V1.5.0.2 exists on SHA536955d. AF-191 follow-up added.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: exact Android failure isolated to multiple native curl paths; singular selection corrected and local contract green.
+REMAINING: commit/push new helper SHA, prove Android artifact and Windows package CI, then full signed build-only run, guarded publication and owner installed update.
+BLOCKERS: old SHA536955d Android APK red; new exact-SHA Linux proof absent.
+NEXT: commit/push focused source repair and journal, wait for Android APK artifact gate before dispatching another full release build.

@@ -70,7 +70,7 @@ def main() -> None:
     require(str(CORE_BYTES) in model_helper, "Core preparation helper byte count drifted")
     require("Test-CoreModel" in model_helper, "Core preparation helper no longer verifies the packaged weights")
     require(
-        "Get-Command curl -CommandType Application" in model_helper
+        "Get-Command curl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1" in model_helper
         and "& $curlCommand.Source" in model_helper,
         "Core preparation helper must select native curl on Linux Android release runners",
     )

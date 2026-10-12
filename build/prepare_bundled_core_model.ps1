@@ -50,9 +50,9 @@ if (-not (Test-CoreModel $cacheFile)) {
     Remove-Item -LiteralPath $cacheFile -Force -ErrorAction SilentlyContinue
     $temp = $cacheFile + '.download'
     Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
-    $curlCommand = Get-Command curl.exe -CommandType Application -ErrorAction SilentlyContinue
+    $curlCommand = Get-Command curl.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     if (-not $curlCommand) {
-        $curlCommand = Get-Command curl -CommandType Application -ErrorAction SilentlyContinue
+        $curlCommand = Get-Command curl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     }
     if (-not $curlCommand) {
         throw 'curl is required for verified AuroraFox Core weight transfer'
