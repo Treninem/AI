@@ -9896,3 +9896,5 @@ DONE: failure isolated to uncaught transient GitHub API HTTP 502 in workflow run
 REMAINING: implement, test, merge, rebuild exact SHA, publish through guarded path, verify.
 BLOCKERS: active release workflow claim reconciled here; GitHub API transient errors.
 NEXT: add bounded retry for read-only GitHub API calls and idempotent resumed build selection, then run focused tests.
+
+V1501_PROMOTION_RETRY_IMPLEMENTED_2026_10_12: The one-time promotion workflow now retries only transient HTTP 502/503/504 GitHub API GET reads, at most five attempts with bounded backoff; workflow dispatch, tag POST and other writes are never retried. A manual workflow_dispatch trigger permits the patched guard to run after its merge changes main SHA without another version bump. Before build dispatch, it reuses a successful or active exact-SHA release.yml run, avoiding duplicate multi-GB builds after an API read failure. Focused AST simulation passed for transient GET, write non-retry, retry exhaustion and same-SHA reuse; Python syntax and git diff --check passed. Exact-SHA package, signed publication and owner installed acceptance remain UNVERIFIED on the new SHA.

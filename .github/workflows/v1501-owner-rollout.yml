@@ -7,6 +7,7 @@ on:
     branches: [main]
     paths:
       - 'project/version.json'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -44,10 +45,19 @@ jobs:
           tag = "v" + version
 
           def gh(*args, allow_failure=False):
-              run = subprocess.run(["gh", *args], text=True, capture_output=True)
-              if run.returncode != 0 and not allow_failure:
-                  raise RuntimeError("GitHub release command failed: " + " ".join(args[:4]) + " — " + run.stderr[-600:])
-              return run.stdout if run.returncode == 0 else None
+              # Only repeat reads. A retry of workflow dispatch or tag creation
+              # could create duplicate work after an ambiguous API failure.
+              read_only = len(args) >= 4 and args[:3] == ("api", "-X", "GET")
+              for attempt in range(5):
+                  run = subprocess.run(["gh", *args], text=True, capture_output=True)
+                  if run.returncode == 0:
+                      return run.stdout
+                  transient = any(code in run.stderr for code in ("HTTP 502", "HTTP 503", "HTTP 504"))
+                  if not read_only or not transient or attempt == 4:
+                      if allow_failure:
+                          return None
+                      raise RuntimeError("GitHub release command failed: " + " ".join(args[:4]) + " - " + run.stderr[-600:])
+                  time.sleep(2 ** attempt)
 
           def api(path, method="GET", fields=None, allow_failure=False):
               args = ["api", "-X", method, path]
@@ -78,11 +88,18 @@ jobs:
               payload = api(f"repos/{repo}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=50")
               return payload.get("workflow_runs", [])
 
-          baseline = max((int(x["id"]) for x in list_runs()), default=0)
+          runs = list_runs()
+          previous = [x for x in runs if x.get("head_sha") == sha
+                      and (x.get("conclusion") == "success" or x.get("status") != "completed")]
+          reusable = max(previous, key=lambda x: int(x["id"])) if previous else None
+          baseline = max((int(x["id"]) for x in runs), default=0)
           if main_sha() != sha:
               raise SystemExit("main changed before build dispatch.")
-          gh("workflow", "run", "release.yml", "--ref", "main", "-f", "secrets_only=false")
-          print("V1501_SIGNED_BUILD_DISPATCHED", flush=True)
+          if reusable:
+              print(f"V1501_SIGNED_BUILD_REUSED run_id={reusable['id']}", flush=True)
+          else:
+              gh("workflow", "run", "release.yml", "--ref", "main", "-f", "secrets_only=false")
+              print("V1501_SIGNED_BUILD_DISPATCHED", flush=True)
 
           def new_run(after):
               rows = [
@@ -91,9 +108,8 @@ jobs:
               ]
               return min(rows, key=lambda x: int(x["id"])) if rows else None
 
-          def wait_for_run(after, purpose, max_seconds=15000):
+          def wait_for_run(after, purpose, max_seconds=15000, chosen=None):
               deadline = time.monotonic() + max_seconds
-              chosen = None
               while time.monotonic() < deadline:
                   if chosen is None:
                       chosen = new_run(after)
@@ -107,7 +123,7 @@ jobs:
                   time.sleep(30)
               raise SystemExit(f"{purpose} not complete within release workflow limit.")
 
-          built = wait_for_run(baseline, "BUILD")
+          built = wait_for_run(baseline, "BUILD", chosen=reusable)
           jobs = api(f"repos/{repo}/actions/runs/{built}/jobs?per_page=100")["jobs"]
           by_name = {j["name"]: j.get("conclusion") for j in jobs}
           for name in ("core-gates", "windows", "android"):
