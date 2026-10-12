@@ -10075,3 +10075,48 @@ DONE: red CI exact cause identified; CRLF regression exercised; stale one-time g
 REMAINING: commit/push new exact SHA; CI package/Core/Android; signed release and owner installed gates inherited from release claim.
 BLOCKERS: old SHA786f969 red checks and pending heavy package runs should not be counted for the new source.
 NEXT: commit once, push, cancel obsolete pending/in-progress package runs, then monitor exact new SHA checks.
+
+V1502_EXACT_RELEASE_BUILD_DISPATCH_2026_10_12: CRLF/no-op repair committed and pushed as main SHA5b43d0246dc6ebdf0c9f5cdb8914281803e3a2cb (parent version-last SHA786f9691b23114b260d39319fe11fb599c56cf37). Exact Release Identity CI run38295163752 SUCCESS; Evolution Progress run38295163765 SUCCESS. Obsolete earlier SHA786f969 Windows Package run38287149985 was cancelled before another multi-GB package finished; its first release-identity failure and obsolete V1.5.0.1 guard failure are not V1.5.0.2 gates. Verified no release.yml run existed for SHA5b43d02, then dispatched exactly one build-only release run38295369025. It is IN_PROGRESS with head SHA5b43d02; no tag, signed update.json/update.sig, public assets or installed update yet. Keep main stable until Core/Windows/Android exact-SHA results are inspected.
+PROGRESS_COMPLETE: 45%
+PROGRESS_REMAINING: 55%
+DONE: V1.5.0.2/versionCode100010 synchronized; repaired local CRLF/UTF-8 contracts and exact Release Identity CI green; one exact-SHA build-only run dispatched.
+REMAINING: release run38295369025 Core/Windows/Android gates, artifact inspection, exact tag and publish-only signed assets, owner in-app installation and data/rollback/Knowledge/offline checks.
+BLOCKERS: release build is still running; public version remains V1.5.0.1.
+NEXT: observe run38295369025 without dispatching duplicate builds; after all three jobs and artifacts pass, pin v1.5.0.2 to exact SHA and use publish-only recovery, then independently verify signature and installed update.
+
+V1502_RELEASE_WINDOWS_WEIGHT_VERIFY_FAILURE_2026_10_12: Exact main SHA5b43d0246dc6ebdf0c9f5cdb8914281803e3a2cb release run38295369025 attempt1 completed FAILURE. Core-gates SUCCESS; Android SUCCESS including signed APK and Android35 emulator (artifact `aurorafox-android` 1,641,007,115 bytes); Windows FAILED in `Build Windows core package` after download with `Bundled AuroraFox Core verification failed after download`. Windows ZIP/installer/upload steps and publish were skipped. The model helper checks pinned byte length, GGUF magic and SHA-256 but this log does not state which comparison failed; upstream/root cause UNVERIFIED. AF-191 added to engineering memory. Previous V1.5.0.1 run38222138751 had the same attempt1 failure and attempt2 success. A single `gh run rerun 38295369025 --failed` was issued; run_attempt2 is QUEUED on the same SHA, avoiding new Android/Core builds where GitHub supports failed-job rerun. No tag or signed release exists. If attempt2 fails, stop retries and diagnose source rather than looping.
+PROGRESS_COMPLETE: 45%
+PROGRESS_REMAINING: 55%
+DONE: exact Core and signed Android jobs PASS; failed Windows download integrity correctly blocked publication; one bounded same-run failed-job retry requested.
+REMAINING: attempt2 Windows package/installer/smoke and artifact checks, exact tag and signed manifest/publication, owner installed preservation/rollback/Knowledge/offline tests.
+BLOCKERS: Windows Core weight integrity on run38295369025 attempt1; attempt2 pending. AF-185 and GUI layout remain separate OPEN defects.
+NEXT: inspect attempt2 Windows job result and artifact hashes. If PASS, use already successful exact-run Android plus Windows artifacts for guarded publish; if FAIL, record measured failure condition before any further build.
+
+V1502_RELEASE_WINDOWS_WEIGHT_VERIFY_REPEAT_2026_10_12: Run38295369025 attempt2 again FAILED Windows `Build Windows core package` after `Bundled AuroraFox Core verification failed after download` (11m25s transfer). Core-gates and Android remained SUCCESS; no Windows ZIP/installer or public release. No third rerun was triggered. Official Hugging Face ggml-org/Qwen3-1.7B-GGUF file page and a HEAD request both report size1,282,439,264 and SHA-256 d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5, matching the pinned script values. Therefore there is no evidence to change the expected hash or model identity. The current helper deletes a failed temporary download before reporting observed length/hash/magic, so exact mismatch and runner transport root cause remain UNVERIFIED. AF-191 remains OPEN.
+
+### ACTIVE CLAIM — CODEX-2026-10-12-V1502-WINDOWS-MODEL-TRANSFER
+ROADMAP_RELEASE: V1.5.0.2 signed Windows/Android updater release.
+SCOPE_CLASS: RELEASE_CRITICAL build transport and integrity diagnostics only.
+ROADMAP_SECTION: V1.5 bundled self-primary Core package, verified model/weights and exact-SHA Windows release gates.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; model identity and bundled offline Core unchanged.
+STARTING_HEAD: 5b43d0246dc6ebdf0c9f5cdb8914281803e3a2cb.
+INTENDED_BUMP: none beyond unpublished V1.5.0.2/versionCode100010; new exact release SHA required after build-helper change.
+OWNED_PATHS: build/prepare_bundled_core_model.ps1 verified transfer path and bounded diagnostics only; focused test if needed; docs/PROJECT_MASTER_LOG.md append-only; docs/AURORAFOX_ENGINEERING_MEMORY.md AF-191 addendum.
+CLAIM_RECONCILIATION: prior V1.5.0.2 signed-release claim belongs to this same chat; this narrow build-helper claim is required by its blocked Windows job. Old build-tooling audit claims are stale; no other current lane edits this helper. No public release/tag exists and no owner runtime/user data will be modified.
+DEPENDENCIES: two failed exact-SHA Windows jobs in run38295369025 attempts1/2; official source metadata and HTTP HEAD agree with existing pinned size/hash; successful exact Android artifact is not a substitute for Windows package.
+ACCEPTANCE_GATES: keep pinned bytes/GGUF/SHA fail-closed; report observed bytes/magic/hash on failure without leaking signed redirect URL; use bounded alternative verified transfer; focused syntax/fixture checks; new exact-SHA Windows/Core/Android release jobs and signed publication before installed test.
+NON_BLOCKERS: AF-185 chat speed, AF-183 Knowledge and UI redesign remain separate work.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: both failures and source metadata compared; model identity is unchanged, no third rerun.
+REMAINING: build transport repair, tests, new exact-SHA CI/release and installed acceptance.
+BLOCKERS: Windows model transfer fails integrity twice and current logs omit observed evidence.
+NEXT: add bounded curl transport with measured post-download evidence, test locally, then commit one repair SHA and run a single exact release build.
+
+V1502_MODEL_TRANSFER_SOURCE_CANDIDATE_2026_10_12: `build/prepare_bundled_core_model.ps1` retains pinned Core weight length1,282,439,264, GGUF signature and SHA-256 d2387ca2...d9bc7b5. Replaced the failing single Invoke-WebRequest transfer with curl.exe HTTPS-redirect/fail/timeout/max-size transfer and at most two fresh whole-file attempts; only exact verified bytes enter cache/package. On rejection, log observed bytes, first-four-byte magic and SHA-256 (or missing), remove temp and fail closed after attempt2. No URL/token or model payload logged. PowerShell parser PASS, local curl8.21 present, eight-byte GGUF fixture verified diagnostic output, git diff --check PASS. This is a source/build transport candidate, not proof that GitHub Windows runner will download intact model. AF-191 addendum recorded; old run38295369025 attempts1/2 remain red, and main/public tag remain unchanged.
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+DONE: official source metadata compared to pinned constants; two failed attempts bounded; alternative transport and measured diagnostics implemented; local syntax/fixture check green.
+REMAINING: source review/commit, exact new SHA Release Identity and full Core/Windows/Android package gates, signed publication and owner installed acceptance.
+BLOCKERS: current release run38295369025 lacks Windows artifact; curl candidate untested on GitHub runner.
+NEXT: commit/push candidate once, launch one exact-SHA build-only release run, inspect measured evidence if Windows still fails, and do not publish until all platform gates pass.
