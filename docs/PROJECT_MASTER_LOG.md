@@ -9877,3 +9877,24 @@ BLOCKERS: public 1.5.0.0 known Core slowness and file-analysis stalls not fixed 
 NEXT: version-last bump in isolated release branch and run canonical release CI without claiming owner-PC PASS.
 
 V1501_RELEASE_AUTOMATION_OWNERSHIP_2026_10_12: Owner requested a signed update immediately before further installed-PC testing. GitHub connector provides merge/files but NO authenticated workflow_dispatch or tag/release mutation. Release authority must stay in GitHub Actions and never move into chat or developer-local keys. Add ONLY a hard-coded V1.5.0.1 one-time guarded promotion workflow at .github/workflows/v1501-owner-rollout.yml; add read-only actions:read permission to .github/workflows/release.yml for its existing cross-run artifact recovery path. These two files now CLAIMED by this release lane before modification. Promotion workflow may fire only on default main push changing project/version.json and must validate version/code/HEAD, then call existing signed release.yml first build-only, verify its core-gates/Windows/Android success + both artifacts, pin new tag to tested exact HEAD, and invoke existing publish-only recovery. Reject stale HEAD or failed jobs. The private release key and Android cert remain in pre-existing GitHub Secrets; no secrets may be exposed or read by promotion code. This is extra release-authority logic, inspect/CI test before merging. No owner-PC validation is marked passed; existing critical performance issues remain open.
+
+### ACTIVE CLAIM — CODEX-2026-10-12-V1501-PROMOTION-API-RETRY
+ROADMAP_RELEASE: V1.5.0.1 signed Windows+Android owner-first update.
+SCOPE_CLASS: RELEASE_CRITICAL orchestration reliability only; no product feature change.
+ROADMAP_SECTION: V1.5 signed updater/release gates and exact-SHA publication.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; no runtime behavior change.
+STARTING_HEAD: 9bc693412a0987c56b684fdd4efad2b7403161f3.
+INTENDED_BUMP: none; canonical version remains V1.5.0.1. Workflow-source edit creates a new exact SHA and requires fresh package gates.
+OWNED_PATHS: .github/workflows/v1501-owner-rollout.yml retry/idempotence only; focused workflow structural test if needed; docs/PROJECT_MASTER_LOG.md append-only.
+CLAIM_RECONCILIATION: Existing CHAT-2026-10-12-V1501-OWNER-FIRST-INAPP-UPDATE owns this workflow. Owner explicitly authorized this chat to take the narrow HTTP 502 retry/recovery fix after attempts2/3 failed; do not edit other release or platform files.
+DEPENDENCIES: main SHA9bc6934, build-only run38222138751 attempt2 SUCCESS, public release still V1.5.0.0. A new workflow SHA must rebuild exact Windows/Android artifacts before publication.
+ACCEPTANCE_GATES: unit/structural test for read-only API 502 retry and no duplicate build dispatch; exact-SHA CI for workflow branch; merged main guarded run with both platform gates, signed update.json/update.sig, pinned tag and public asset checks.
+NON_BLOCKERS: installed ordinary-answer AF-185 and Knowledge AF-183 remain open and transparently reported; owner expressly approved two merged fixes for this V1.5.0.1 exception.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: failure isolated to uncaught transient GitHub API HTTP 502 in workflow run listing; owner takeover authorization received.
+REMAINING: implement, test, merge, rebuild exact SHA, publish through guarded path, verify.
+BLOCKERS: active release workflow claim reconciled here; GitHub API transient errors.
+NEXT: add bounded retry for read-only GitHub API calls and idempotent resumed build selection, then run focused tests.
+
+V1501_PROMOTION_RETRY_IMPLEMENTED_2026_10_12: The one-time promotion workflow now retries only transient HTTP 502/503/504 GitHub API GET reads, at most five attempts with bounded backoff; workflow dispatch, tag POST and other writes are never retried. A manual workflow_dispatch trigger permits the patched guard to run after its merge changes main SHA without another version bump. Before build dispatch, it reuses a successful or active exact-SHA release.yml run, avoiding duplicate multi-GB builds after an API read failure. Focused AST simulation passed for transient GET, write non-retry, retry exhaustion and same-SHA reuse; Python syntax and git diff --check passed. Exact-SHA package, signed publication and owner installed acceptance remain UNVERIFIED on the new SHA.
