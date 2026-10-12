@@ -45,13 +45,19 @@ $sha = (Get-FileHash -Path $package -Algorithm SHA256).Hash.ToLowerInvariant()
 # A real short-lived parent verifies Wait-ForExit instead of using a fake PID.
 $parent = Start-Process powershell.exe -ArgumentList @('-NoProfile','-Command','Start-Sleep -Milliseconds 700') -PassThru -WindowStyle Hidden
 $updater = Join-Path $repo 'update\windows_updater.ps1'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updater `
-    -Package $package `
-    -InstallDir $install `
-    -ParentPid $parent.Id `
-    -ExeName 'health.cmd' `
-    -ExpectedSha256 $sha `
-    -HealthFile $health
+$updaterArgs = @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $updater + '"'),
+    '-Package', ('"' + $package + '"'),
+    '-InstallDir', ('"' + $install + '"'),
+    '-ParentPid', [string]$parent.Id,
+    '-ExeName', 'health.cmd',
+    '-ExpectedSha256', $sha,
+    '-HealthFile', ('"' + $health + '"')
+)
+# The installed application starts its helper while its working directory is
+# inside the installation. That inherited directory must not lock the switch.
+$child = Start-Process powershell.exe -ArgumentList $updaterArgs -WorkingDirectory $install -WindowStyle Hidden -Wait -PassThru
+$LASTEXITCODE = $child.ExitCode
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host '--- windows_updater.log ---' -ForegroundColor Yellow
