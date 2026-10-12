@@ -76,6 +76,7 @@ function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
             Write-UpdateLog "Preserved $relative"
         } catch {
             Write-UpdateLog "Runtime preservation warning for $relative : $($_.Exception.Message)"
+            throw "Runtime preservation failed for $relative : $($_.Exception.Message)"
         }
     }
 }
@@ -141,6 +142,10 @@ try {
     }
     if (-not (Test-Path -LiteralPath (Join-Path $staging $ExeName))) { throw "New package does not contain $ExeName" }
 
+    # Preserve into the uninstalled staging tree. A copy failure (including
+    # disk exhaustion) leaves the existing installation intact for retry.
+    Preserve-LocalRuntime -OldRoot $InstallDir -NewRoot $staging
+
     if (Test-Path -LiteralPath $HealthFile) { Remove-Item -LiteralPath $HealthFile -Force }
     if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
 
@@ -163,8 +168,6 @@ try {
         Move-Item -LiteralPath $backup -Destination $InstallDir
         throw
     }
-
-    Preserve-LocalRuntime -OldRoot $backup -NewRoot $InstallDir
 
     if (-not (Test-Path -LiteralPath $newExe)) { throw 'Updated executable disappeared after switch' }
     Write-UpdateLog 'Launching updated AuroraFox for health confirmation'
@@ -197,6 +200,13 @@ try {
 }
 catch {
     Write-UpdateLog ("ERROR: " + $_.Exception.Message)
+    try {
+        if ((Test-Path -LiteralPath $InstallDir) -and -not (Test-Path -LiteralPath $backup) -and (Test-Path -LiteralPath $staging)) {
+            Remove-Item -LiteralPath $staging -Recurse -Force
+        }
+    } catch {
+        Write-UpdateLog ("Staging cleanup failed: " + $_.Exception.Message)
+    }
     try {
         if ((Test-Path -LiteralPath $backup) -and -not (Test-Path -LiteralPath $InstallDir)) {
             Move-Item -LiteralPath $backup -Destination $InstallDir

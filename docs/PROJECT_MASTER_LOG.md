@@ -9938,3 +9938,30 @@ DONE: installed failure captured; exact signed package hash passed; matching syn
 REMAINING: exact branch CI and review, version-last V1.5.0.2 release train, installed update and user-data/rollback smoke.
 BLOCKERS: installed owner recovery remains in progress; current V1.5.0.1 helper cannot be changed retroactively.
 NEXT: commit candidate, open PR and obtain exact-SHA CI; separately verify outcome of the running owner-PC recovery without claiming source-fix installation PASS.
+
+### ACTIVE CLAIM — CODEX-2026-10-12-V1503-UPDATER-PRESERVATION
+ROADMAP_RELEASE: Windows stabilization following public V1.5.0.1; separate functional fix intended for a later BUILD after updater-lock PR117.
+SCOPE_CLASS: RELEASE_CRITICAL owner runtime and rollback integrity.
+ROADMAP_SECTION: V1.5 signed Windows updater, preservation and rollback gates.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; signed package authority unchanged.
+STARTING_HEAD: 3c803c403c31c99e71f8a9fda1cba0d0021ae6ed (stacked on draft PR117 only; not main).
+INTENDED_BUMP: next separate BUILD after the updater-lock correction; provisional V1.5.0.3, version files untouched pending accepted gates.
+OWNED_PATHS: update/windows_updater.ps1 and tests/windows_updater_test.ps1 only for preservation transaction; docs/PROJECT_MASTER_LOG.md append-only; docs/AURORAFOX_ENGINEERING_MEMORY.md AF-189 addendum only.
+CLAIM_RECONCILIATION: PR117's CODEX-2026-10-12-V1502-WINDOWS-UPDATER-LOCK claim belongs to this same chat. This stacked branch starts at its exact source SHA and changes a separate defect in the same updater; PR117 and its exact-SHA CI remain untouched. Do not merge this branch before PR117 and do not silently group both user-visible fixes into one numbered BUILD; owner allowed a two-fix exception only for V1.5.0.1.
+DEPENDENCIES: V1.5.0.1 owner installation log shows runtime\\windows\\python and cache copy failures due insufficient disk, yet health PASS, backup removed and one old managed Python DLL absent. Old owner data extent remains UNVERIFIED.
+ACCEPTANCE_GATES: synthetic preservation-failure test proves old install and signed package retained, no false health success, backup/rollback intact; success integration remains green; exact-SHA Windows CI/package and later installed numbered update gate. No owner files deleted in tests.
+NON_BLOCKERS: AF-185 chat latency, AF-183 Knowledge, visual restyling and Android stay OPEN in other lanes.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: owner installation failure evidence captured; isolated stacked worktree created.
+REMAINING: implement fail-closed preservation before switch, regression test, CI, release sequencing and installed acceptance.
+BLOCKERS: PR117 Windows package gate pending; next numbered release sequencing must preserve one-fix-per-number rule.
+NEXT: write red synthetic preservation-failure test, then move preservation before directory switch and make errors stop update safely.
+
+V1503_AF189_SOURCE_CANDIDATE_2026_10_12: Starting stacked HEAD 3c803c403c31c99e71f8a9fda1cba0d0021ae6ed from draft PR117. New synthetic preservation-failure test first RED: `Preservation failure was swallowed: update would report false success`. Changed the helper to copy owner runtime into staging before the directory switch; any copy failure now throws and removes only staging, leaving the old installation and signed package untouched. Successful synthetic updater integration PASS; failure integration held an old runtime file open and confirmed exit nonzero, old version/runtime intact, package retained, no health marker, no backup switch, no staging residue. Function failure test PASS. AF-189 recorded in engineering memory. Owner V1.5.0.1 manual recovery remains partially preserved and is not retroactively repaired. This branch is stacked on PR117 but is a separate functional fix; no version bump or release approval implied.
+PROGRESS_COMPLETE: 30%
+PROGRESS_REMAINING: 70%
+DONE: deterministic red repro; fail-closed source candidate; success/failure synthetic PowerShell integration green; AF-189 lesson recorded.
+REMAINING: exact branch CI/Windows package; review; merge sequencing after PR117; distinct numbered BUILD and real installed data/rollback acceptance.
+BLOCKERS: PR117 source is not merged and its Windows package CI remains pending at last readback; the owner rule permits only one fix per numbered BUILD except the earlier V1.5.0.1 exception.
+NEXT: commit and open this separate draft PR, run exact-SHA CI, then resolve release ordering without publishing an updater that can lose runtime data.

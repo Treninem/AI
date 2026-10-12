@@ -82,4 +82,44 @@ if (Test-Path $package) { throw 'Verified update package was not cleaned after s
 $backup = @(Get-ChildItem $root -Directory -Filter 'AuroraFox.__old_*' -ErrorAction SilentlyContinue)
 if ($backup.Count -ne 0) { throw 'Successful updater left a rollback directory behind' }
 
+# A local runtime that cannot be copied must abort before the old installation
+# is switched. Keep only synthetic data in this failure scenario.
+$failedRoot = Join-Path $root 'preservation-fail'
+$failedInstall = Join-Path $failedRoot 'AuroraFox'
+$failedNew = Join-Path $failedRoot 'new-build'
+$failedPackage = Join-Path $failedRoot 'AuroraFox-Windows.zip'
+$failedHealth = Join-Path $failedRoot 'health.ok'
+$lockedFile = Join-Path $failedInstall 'runtime\windows\python\keep.txt'
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $lockedFile),$failedNew | Out-Null
+Set-Content -LiteralPath (Join-Path $failedInstall 'health.cmd') -Value $healthCmd -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $failedInstall 'version.txt') -Value 'old' -Encoding ASCII
+Set-Content -LiteralPath $lockedFile -Value 'owner-runtime' -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $failedNew 'health.cmd') -Value $healthCmd -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $failedNew 'version.txt') -Value 'new' -Encoding ASCII
+Compress-Archive -Path (Join-Path $failedNew '*') -DestinationPath $failedPackage -CompressionLevel Fastest
+$failedSha = (Get-FileHash -LiteralPath $failedPackage -Algorithm SHA256).Hash.ToLowerInvariant()
+$failedParent = Start-Process powershell.exe -ArgumentList @('-NoProfile','-Command','Start-Sleep -Milliseconds 700') -PassThru -WindowStyle Hidden
+$failedArgs = @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $updater + '"'),
+    '-Package', ('"' + $failedPackage + '"'),
+    '-InstallDir', ('"' + $failedInstall + '"'),
+    '-ParentPid', [string]$failedParent.Id,
+    '-ExeName', 'health.cmd',
+    '-ExpectedSha256', $failedSha,
+    '-HealthFile', ('"' + $failedHealth + '"')
+)
+$lock = [IO.File]::Open($lockedFile, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
+try {
+    $failedChild = Start-Process powershell.exe -ArgumentList $failedArgs -WorkingDirectory $failedInstall -WindowStyle Hidden -Wait -PassThru
+} finally {
+    $lock.Dispose()
+}
+if ($failedChild.ExitCode -eq 0) { throw 'Updater reported success after owner runtime copy failed' }
+if ((Get-Content -LiteralPath (Join-Path $failedInstall 'version.txt') -Raw).Trim() -ne 'old') { throw 'Old installation was replaced after preservation failed' }
+if (-not (Test-Path -LiteralPath $lockedFile)) { throw 'Owner runtime was removed after preservation failed' }
+if (-not (Test-Path -LiteralPath $failedPackage)) { throw 'Signed package was removed after preservation failed' }
+if (Test-Path -LiteralPath $failedHealth) { throw 'Health marker was written after preservation failed' }
+if (@(Get-ChildItem -LiteralPath $failedRoot -Directory -Filter 'AuroraFox.__old_*').Count -ne 0) { throw 'Failed preservation moved the old installation' }
+if (@(Get-ChildItem -LiteralPath $failedRoot -Directory -Filter 'AuroraFox.__new_*').Count -ne 0) { throw 'Failed preservation left extracted staging content' }
+
 Write-Host 'AURORA_WINDOWS_UPDATER_INTEGRATION_OK' -ForegroundColor Green
