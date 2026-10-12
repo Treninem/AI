@@ -1,0 +1,143 @@
+name: AuroraFox One-Time V1.5.0.1 Signed Update
+
+# Fixed-version bridge, deliberately limited to the owner's first post-1.5 update.
+# Keep the existing release.yml as the only platform builder and signer.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'project/version.json'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: aurorafox-v1.5.0.1-owner-first-update
+  cancel-in-progress: false
+
+jobs:
+  publish-signed-update:
+    if: github.repository == 'Treninem/AI'
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build both platforms, verify exact SHA, then publish signed update
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_SHA: ${{ github.sha }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import subprocess
+          import sys
+          import time
+          from pathlib import Path
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          sha = os.environ["EXPECTED_SHA"]
+          version = "1.5.0.1"
+          tag = "v" + version
+
+          def gh(*args, allow_failure=False):
+              run = subprocess.run(["gh", *args], text=True, capture_output=True)
+              if run.returncode != 0 and not allow_failure:
+                  raise RuntimeError("GitHub release command failed: " + " ".join(args[:4]) + " — " + run.stderr[-600:])
+              return run.stdout if run.returncode == 0 else None
+
+          def api(path, method="GET", fields=None, allow_failure=False):
+              args = ["api", "-X", method, path]
+              for key, val in (fields or {}).items():
+                  args += ["-f", key + "=" + str(val)]
+              raw = gh(*args, allow_failure=allow_failure)
+              return json.loads(raw) if raw else None
+
+          def main_sha():
+              return api(f"repos/{repo}/branches/main")["commit"]["sha"]
+
+          state = json.loads(Path("project/version.json").read_text(encoding="utf-8"))
+          if state.get("version") != "V" + version or state.get("android_version_code") != 100009:
+              raise SystemExit("Not the explicitly authorized V1.5.0.1 Android/Windows release; skip.")
+          if subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip() != sha:
+              raise SystemExit("Checkout SHA mismatch.")
+          if main_sha() != sha:
+              raise SystemExit("main moved before signed build; do not publish stale source.")
+          published = api(f"repos/{repo}/releases/tags/{tag}", allow_failure=True)
+          if published and not published.get("draft", True):
+              print("V1501_ALREADY_PUBLISHED: no further release work.")
+              sys.exit(0)
+          existing_tag = api(f"repos/{repo}/git/ref/tags/{tag}", allow_failure=True)
+          if existing_tag and existing_tag["object"]["sha"] != sha:
+              raise SystemExit("Existing release tag points to a different SHA.")
+
+          def list_runs():
+              payload = api(f"repos/{repo}/actions/workflows/release.yml/runs?event=workflow_dispatch&per_page=50")
+              return payload.get("workflow_runs", [])
+
+          baseline = max((int(x["id"]) for x in list_runs()), default=0)
+          if main_sha() != sha:
+              raise SystemExit("main changed before build dispatch.")
+          gh("workflow", "run", "release.yml", "--ref", "main", "-f", "secrets_only=false")
+          print("V1501_SIGNED_BUILD_DISPATCHED", flush=True)
+
+          def new_run(after):
+              rows = [
+                  x for x in list_runs()
+                  if int(x["id"]) > after and x.get("head_sha") == sha
+              ]
+              return min(rows, key=lambda x: int(x["id"])) if rows else None
+
+          def wait_for_run(after, purpose, max_seconds=15000):
+              deadline = time.monotonic() + max_seconds
+              chosen = None
+              while time.monotonic() < deadline:
+                  if chosen is None:
+                      chosen = new_run(after)
+                  if chosen is not None:
+                      run = api(f"repos/{repo}/actions/runs/{chosen['id']}")
+                      if run.get("status") == "completed":
+                          if run.get("conclusion") != "success":
+                              raise SystemExit(f"{purpose} failed: {run['html_url']} conclusion={run.get('conclusion')}")
+                          print(f"V1501_{purpose}_SUCCESS run_id={run['id']} sha={sha}", flush=True)
+                          return int(run["id"])
+                  time.sleep(30)
+              raise SystemExit(f"{purpose} not complete within release workflow limit.")
+
+          built = wait_for_run(baseline, "BUILD")
+          jobs = api(f"repos/{repo}/actions/runs/{built}/jobs?per_page=100")["jobs"]
+          by_name = {j["name"]: j.get("conclusion") for j in jobs}
+          for name in ("core-gates", "windows", "android"):
+              if by_name.get(name) != "success":
+                  raise SystemExit(f"Release gate {name} not successful: {by_name.get(name)}")
+          artifacts = api(f"repos/{repo}/actions/runs/{built}/artifacts?per_page=100")["artifacts"]
+          available = {a["name"] for a in artifacts if not a.get("expired") and a.get("size_in_bytes", 0) > 0}
+          if not {"aurorafox-windows", "aurorafox-android"}.issubset(available):
+              raise SystemExit("Both non-empty signed-release platform artifacts were not generated.")
+          if main_sha() != sha:
+              raise SystemExit("main changed during builds; refuse release of unreviewed SHA.")
+
+          if not existing_tag:
+              api(f"repos/{repo}/git/refs", "POST", {"ref": f"refs/tags/{tag}", "sha": sha})
+          pinned = api(f"repos/{repo}/git/ref/tags/{tag}")
+          if pinned["object"]["sha"] != sha:
+              raise SystemExit("GitHub release tag did not point to tested SHA.")
+
+          baseline_publish = max((int(x["id"]) for x in list_runs()), default=0)
+          gh("workflow", "run", "release.yml", "--ref", "main",
+             "-f", "secrets_only=false",
+             "-f", f"publish_run_id={built}",
+             "-f", f"release_tag={tag}",
+             "-f", f"release_commit={sha}")
+          print("V1501_SIGNED_PUBLISH_DISPATCHED", flush=True)
+          published_run = wait_for_run(baseline_publish, "PUBLISH")
+          release = api(f"repos/{repo}/releases/tags/{tag}")
+          names = {a["name"] for a in release.get("assets", [])}
+          required = {"update.json", "update.sig", "AuroraFox-Windows.zip", "AuroraFox-Android.apk"}
+          if release.get("draft") or not required.issubset(names):
+              raise SystemExit("Signed release missing public manifest/signature or one platform.")
+          print(f"V1501_PUBLIC_SIGNED_UPDATE_OK tag={tag} sha={sha} run={published_run}", flush=True)
+          PY
