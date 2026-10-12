@@ -167,6 +167,27 @@ func _knowledge_query(query: String) -> String:
 		terms.append(term)
 	return " ".join(terms)
 
+# Direct arithmetic questions need no document lookup. Avoid an unrelated
+# Knowledge scan and a much larger prompt on low-memory Windows PCs.
+func _is_simple_calculation_query(query: String) -> bool:
+	var q := query.to_lower()
+	for marker in ["источник", "документ", "файл", "знани", "базе", "базы", "source", "document", "file", "knowledge"]:
+		if q.contains(marker):
+			return false
+	var number_groups := 0
+	var inside_number := false
+	for character in q:
+		var digit := character >= "0" and character <= "9"
+		if digit and not inside_number:
+			number_groups += 1
+		inside_number = digit
+	if number_groups < 2:
+		return false
+	for marker in ["умнож", "прибав", "слож", "выч", "раздел", "дели", "плюс", "минус", "multiply", "divide", "plus", "minus", "+", "*", "/", "="]:
+		if q.contains(marker):
+			return true
+	return false
+
 func _with_knowledge(messages: Array) -> Array:
 	var copied := messages.duplicate(true)
 	var query := ""
@@ -174,7 +195,7 @@ func _with_knowledge(messages: Array) -> Array:
 		if copied[i] is Dictionary and str(copied[i].get("role", "")) == "user":
 			query = str(copied[i].get("content", ""))
 			break
-	if query.is_empty():
+	if query.is_empty() or _is_simple_calculation_query(query):
 		return copied
 	var filtered_query := _knowledge_query(query)
 	if filtered_query.is_empty():
