@@ -10046,3 +10046,32 @@ DONE: UTF-8 and CRLF source fix; restored old changelog; focused version policy 
 REMAINING: exact-SHA CI on committed release source; inherited signed platform publication/installed gates belong to CODEX-2026-10-12-V1502-SIGNED-UPDATER-RELEASE.
 BLOCKERS: none in version-tool scope.
 NEXT: commit tool, regression test, corrected release metadata and journal as one source SHA; then obtain exact CI.
+
+V1502_RELEASE_CI_REPAIR_2026_10_12: First version-last main SHA786f9691b23114b260d39319fe11fb599c56cf37 produced a Release Identity CI failure in run38287150020: `Version bump duplicated the changelog heading` from tests/version_policy_test.ps1 line60. This is a test-only CRLF mismatch: the new assertion used `$` immediately after the heading, while the Windows CI checkout has `\r\n`; local LF checkout passed. The existing changelog content and bump script are still correct. The obsolete one-time V1.5.0.1 promotion run38287149889 also failed with its designed `Not the explicitly authorized V1.5.0.1...` guard on V1.5.0.2, creating a misleading red check on every later version. Both issues must be corrected before exact-SHA release gates; old SHA786f969 package jobs are obsolete once the repair is pushed. No release was published.
+
+### ACTIVE CLAIM — CODEX-2026-10-12-V1502-RELEASE-CI-PREFLIGHT
+ROADMAP_RELEASE: V1.5.0.2 exact-SHA signed updater release.
+SCOPE_CLASS: RELEASE_CRITICAL CI preflight correctness only.
+ROADMAP_SECTION: V1.5 version-last, exact-SHA Windows/Android package and guarded release checks.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; no runtime or signing change.
+STARTING_HEAD: 786f9691b23114b260d39319fe11fb599c56cf37.
+INTENDED_BUMP: none; retain V1.5.0.2/versionCode100010.
+OWNED_PATHS: tests/version_policy_test.ps1 CRLF assertion only; .github/workflows/v1501-owner-rollout.yml version-mismatch preflight only; docs/PROJECT_MASTER_LOG.md append-only.
+CLAIM_RECONCILIATION: prior V1.5.0.1 promotion workflow claim is DONE after public tag b810b58 and its HTTP 502 fix. This chat takes only the now-obsolete workflow's future-version no-op behavior; build/publish authority, secrets, exact-SHA guard and retry logic unchanged. The version tool test path is from this chat's UTF-8 claim.
+DEPENDENCIES: run38287150020 exact failure and run38287149889 expected version rejection; source content at786f969 otherwise unchanged.
+ACCEPTANCE_GATES: CRLF and LF changelog assertion pass; V1.5.0.2 push skips one-time V1.5.0.1 promotion successfully without dispatching release build; release-identity CI and both platform package CI pass exact new SHA.
+NON_BLOCKERS: AF-185, AF-183 and UI/Android UX lanes remain open.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: exact CI failure isolated to test regex and obsolete guard status; no release dispatched.
+REMAINING: patch, local tests, new exact CI, package/release gates.
+BLOCKERS: first post-bump SHA checks red/obsolete; no new signed publication.
+NEXT: amend CRLF regex and old workflow version mismatch to success skip, then commit and push new release SHA once.
+
+V1502_RELEASE_CI_PREFLIGHT_REPAIRED_2026_10_12: Tests/version_policy_test.ps1 now permits CRLF line ends in its one-heading assertion. Focused full version-policy execution passed on a deliberately CRLF-converted CHANGELOG and restored the exact prior candidate bytes afterward; version-sync and release-identity local tests remain PASS. One-time V1.5.0.1 workflow now exits SUCCESS with `V1501_ALREADY_SUPERSEDED` when project version/code is not V1.5.0.1/100009, before any API/build/tag action; its signed authority logic for matching V1.5.0.1 is unchanged. AF-190 CI follow-up recorded. Main SHA786f969 package CI is now obsolete once this repair is committed; no V1.5.0.2 public release exists.
+PROGRESS_COMPLETE: 45%
+PROGRESS_REMAINING: 55%
+DONE: red CI exact cause identified; CRLF regression exercised; stale one-time guard made success no-op on newer versions.
+REMAINING: commit/push new exact SHA; CI package/Core/Android; signed release and owner installed gates inherited from release claim.
+BLOCKERS: old SHA786f969 red checks and pending heavy package runs should not be counted for the new source.
+NEXT: commit once, push, cancel obsolete pending/in-progress package runs, then monitor exact new SHA checks.

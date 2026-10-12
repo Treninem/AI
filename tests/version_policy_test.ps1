@@ -57,7 +57,7 @@ try {
         }
         $changelogAfter = [IO.File]::ReadAllText((Join-Path $root 'CHANGELOG.md'), [Text.Encoding]::UTF8)
         if (-not $changelogAfter.Contains($oldEntries)) { throw 'Version bump corrupted existing UTF-8 changelog entries' }
-        if ([regex]::Matches($changelogAfter, '(?m)^# AuroraFox Changelog$').Count -ne 1) { throw 'Version bump duplicated the changelog heading' }
+        if ([regex]::Matches($changelogAfter, '(?m)^# AuroraFox Changelog\r?$').Count -ne 1) { throw 'Version bump duplicated the changelog heading' }
         if ([regex]::Matches($changelogAfter, '(?m)^## V' + [regex]::Escape([string]$state.numeric) + ' - ').Count -ne 1) { throw 'Version bump did not add one entry' }
         & powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\version_sync_test.ps1
         if ($LASTEXITCODE -ne 0) { throw "version sync failed after $($case.bump) bump" }

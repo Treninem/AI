@@ -71,7 +71,8 @@ jobs:
 
           state = json.loads(Path("project/version.json").read_text(encoding="utf-8"))
           if state.get("version") != "V" + version or state.get("android_version_code") != 100009:
-              raise SystemExit("Not the explicitly authorized V1.5.0.1 Android/Windows release; skip.")
+              print("V1501_ALREADY_SUPERSEDED: version does not match the one-time V1.5.0.1 bridge; no release action.")
+              sys.exit(0)
           if subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip() != sha:
               raise SystemExit("Checkout SHA mismatch.")
           if main_sha() != sha:
