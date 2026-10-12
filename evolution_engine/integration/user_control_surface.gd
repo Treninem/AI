@@ -12,7 +12,6 @@ var _pending_payload: Dictionary = {}
 var _busy := false
 
 var _layer: CanvasLayer
-var _open_button: Button
 var _popup: PopupPanel
 var _confirmation: ConfirmationDialog
 var _level_selector: OptionButton
@@ -218,14 +217,6 @@ func _build_ui() -> void:
 	_layer = CanvasLayer.new()
 	_layer.layer = 121
 	add_child(_layer)
-
-	_open_button = Button.new()
-	_open_button.text = "Evolution Engine"
-	_open_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	_open_button.position = Vector2(-210, -64)
-	_open_button.size = Vector2(194, 48)
-	_open_button.pressed.connect(show_center)
-	_layer.add_child(_open_button)
 
 	_popup = PopupPanel.new()
 	_layer.add_child(_popup)
