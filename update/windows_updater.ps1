@@ -115,6 +115,11 @@ $newExe = Join-Path $InstallDir $ExeName
 Write-UpdateLog "Updater started package=$Package install=$InstallDir parent=$ParentPid"
 
 try {
+    # Godot launches this helper from its own install directory. PowerShell's
+    # Set-Location does not update the native process working directory, which
+    # would keep the installation locked during Move-Item.
+    [Environment]::CurrentDirectory = $parentDir
+    Set-Location -LiteralPath $parentDir
     if (-not (Test-Path -LiteralPath $Package -PathType Leaf)) { throw 'Update package is missing' }
     $actual = (Get-FileHash -LiteralPath $Package -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($actual -ne $ExpectedSha256) { throw "SHA-256 mismatch: $actual" }
@@ -140,7 +145,17 @@ try {
     if (Test-Path -LiteralPath $backup) { Remove-Item -LiteralPath $backup -Recurse -Force }
 
     Write-UpdateLog 'Switching application directories'
-    Move-Item -LiteralPath $InstallDir -Destination $backup
+    for ($attempt = 1; $attempt -le 5; $attempt++) {
+        try {
+            Move-Item -LiteralPath $InstallDir -Destination $backup -ErrorAction Stop
+            break
+        } catch {
+            if ($attempt -eq 5) { throw }
+            Write-UpdateLog "Install directory still busy, retry $attempt/5: $($_.Exception.Message)"
+            Stop-AuroraRuntimeProcesses -Root $InstallDir
+            Start-Sleep -Seconds 2
+        }
+    }
     try {
         Move-Item -LiteralPath $staging -Destination $InstallDir
     } catch {
