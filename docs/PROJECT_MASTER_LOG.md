@@ -9975,3 +9975,74 @@ DONE: PR117 exact-source Windows package PASS; PR118 fail-closed and duplicate-r
 REMAINING: commit/push new PR118 SHA, exact CI/Windows package, source review, release sequencing under one-fix rule, signed numbered package and installed preservation/rollback acceptance.
 BLOCKERS: owner PC free space is narrow for full ZIP extraction; PR118 new SHA CI not run; PR117/118 still drafts.
 NEXT: publish revised PR118 candidate, retire its obsolete running package job, and wait for exact-SHA CI before any merge/release decision.
+
+V1502_OWNER_TWO_UPDATER_FIX_AUTH_2026_10_12: Owner explicitly approved PR117 install-directory lock fix plus PR118 fail-closed local runtime preservation together in V1.5.0.2 after all required gates. This is a specific exception to one-fix-per-number; the earlier provisional V1.5.0.3 assignment in the PR118 claim is superseded for this pair only. No version files are changed yet. PR117 exact SHA3c803c403c31c99e71f8a9fda1cba0d0021ae6ed had all 13 CI checks SUCCESS, including Windows Package run38270769723 and Android APK run38270769672, then merged via merge commit e1d535504dcca0284f67d0a8fcdd38bd9e02f1fc. PR118 base was changed to main without rewriting head SHA d44e2dc3558edfc53be84a44372fbc7fe75db4a0; its Windows Package run38279058047 and Android APK run38279058140 remain IN_PROGRESS, 11 other checks PASS. Installed owner V1.5.0.1 update cache contained exactly 30 completed Windows ZIP chunks totaling 2,001,518,030 bytes under updates\1.5.0.1.parts; after checking the successful update log and exact cache folder, only that completed chunk cache was removed. Owner chats and installed runtime were untouched. C: free space rose from 6.74GiB to 8.6GiB. A future V1.5.0.2 full-package update and exact data preservation remain UNVERIFIED. Keep the PR118 source SHA stable while package CI runs; synchronize this journal entry to main after merge without causing another multigigabyte build.
+PROGRESS_COMPLETE: 45%
+PROGRESS_REMAINING: 55%
+DONE: owner-specific two-fix authorization; PR117 exact CI green and merged; PR118 SHA d44e2dc preserved after retargeting; completed update chunk cache removed safely.
+REMAINING: PR118 exact Windows/Android CI, review and merge; version-last V1.5.0.2 signed release, install, runtime/data/rollback/Knowledge/offline acceptance.
+BLOCKERS: PR118 package CI still running; owner C: storage margin narrow; AF-185 chat speed and responsive GUI issues remain separate open defects.
+NEXT: wait for PR118 exact-source package checks, review diff/merge if green, then start version-last signed release flow from fresh main with the recorded owner exception.
+
+V1502_OWNER_C_DRIVE_CAPACITY_2026_10_12: Owner authorized moving applications/Fox to D: to free C: for update testing. Installed public Fox V1.5.0.1 remained running at C:\Users\Dexp\AppData\Local\Programs\AuroraFox (about 5.01GB); its user data at C:\Users\Dexp\AppData\Roaming\Godot\app_userdata\AuroraFox is about 30.9MB. Directly moving that live installation would break its registered shortcuts/installer and risks updater directory-switch semantics, so it was not moved. Instead five old AuroraFox download artifacts, unrelated to the running binary or user chats, were copied to D:\Desktop\AuroraFox-Archive; each destination SHA-256 matched its original before the source was removed. Files: AuroraFox-Windows (1).zip 5,853,527,788 bytes; two older installer part-00 files 1,992,294,400 bytes each; two part-01 files 751,865,941 and 752,432,324 bytes. Total moved 11,342,414,853 bytes. C: free rose from 9,222,266,880 to 20,579,799,040 bytes (~8.6 to 19.2GiB); D: free 725,709,799,424 bytes. No owner chats, settings, Knowledge, installed runtime or non-Fox downloads were changed. PR118 Android APK CI run38279058140 passed exact SHA d44e2dc; Windows Package run38279058047 still IN_PROGRESS. V1.5.0.2 signed install and later choice of a supported D: installation path remain UNVERIFIED.
+PROGRESS_COMPLETE: 45%
+PROGRESS_REMAINING: 55%
+DONE: five old Fox archives moved with matching SHA-256, C: capacity improved; PR118 exact-SHA Android gate PASS.
+REMAINING: PR118 Windows package gate and merge, version-last signed V1.5.0.2, owner-PC install/rollback/data/Knowledge/offline checks.
+BLOCKERS: PR118 Windows package still running; AF-185 latency and GUI layout defects open in other claims.
+NEXT: wait for exact PR118 Windows result, merge only if green, then prepare signed V1.5.0.2 from fresh main and test installed update with preserved owner data.
+V1502_PR118_EXACT_CI_AND_MERGE_2026_10_12: PR118 head d44e2dc3558edfc53be84a44372fbc7fe75db4a0 passed all 13 exact-source checks, including Windows Package run38279058047 (1h01m42s), Android APK run38279058140 (13m44s), Windows integration and release identity. After source diff review, PR118 merged with merge commit d168b056b59dbda8b315c88b534f874f0cf341bb; PR117's earlier merge e1d535504dcca0284f67d0a8fcdd38bd9e02f1fc is an ancestor. Local main fast-forwarded to d168b05; no version bump, signed V1.5.0.2 publication or owner installed acceptance has occurred. The older PR118 provisional V1.5.0.3 wording is superseded only for this owner-approved combined V1.5.0.2.
+PROGRESS_COMPLETE: 55%
+PROGRESS_REMAINING: 45%
+DONE: PR117 and PR118 source merged; exact pre-bump Windows/Android CI green; improved C: headroom and local journal synchronized onto fresh main.
+REMAINING: version-last metadata, exact post-bump Core/Windows/Android release build, signed manifest/assets/tag validation, installed Windows update plus data/rollback/Knowledge/offline checks.
+BLOCKERS: no source CI blocker; AF-185 latency and responsive GUI remain separate open defects; previous V1.5.0.1 version claim must be reconciled below.
+NEXT: record release claim, run version-last bump once, then exact-SHA signed build and publication gates.
+
+### ACTIVE CLAIM — CODEX-2026-10-12-V1502-SIGNED-UPDATER-RELEASE
+ROADMAP_RELEASE: V1.5.0.2 Windows-first stability update containing only the owner-approved PR117 and PR118 updater pair; shared Android manifest still requires Android package/signing continuity.
+SCOPE_CLASS: RELEASE_CRITICAL exact-SHA version and signed update orchestration; no new product feature changes.
+ROADMAP_SECTION: V1.5 signed Windows/Android release, updater integrity, backup/rollback, version-last and installed acceptance.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; self-primary Core, owner data and update trust remain invariant.
+STARTING_HEAD: d168b056b59dbda8b315c88b534f874f0cf341bb after merged exact-CI PR117/118.
+INTENDED_BUMP: BUILD V1.5.0.1 -> V1.5.0.2; Android versionCode 100009 -> 100010, once only, after pre-bump source gates passed.
+OWNED_PATHS: project/version.json; project.godot; export_presets.cfg; update/manifest.template.json; CHANGELOG.md; evolution.log; docs/PROJECT_MASTER_LOG.md append-only. Existing release.yml read-only; no signing keys or user data touched.
+CLAIM_RECONCILIATION: CHAT-2026-10-12-V1501-OWNER-FIRST-INAPP-UPDATE claimed these metadata paths for the previous V1.5.0.1. That release is now publicly complete at tag b810b58f8d8a4a6afb5468f78e1331d1e6888134 with independently verified signature; this chat owns the successive V1.5.0.2 metadata only, per the owner's explicit permission to combine PR117/118 and continue updates. CODEX-2026-10-08-V15-VERSION-LAST-CANDIDATE pertained to already public V1.5.0.0. No source files owned by PR107/108 or UI/Knowledge claims will be changed.
+DEPENDENCIES: PR117 SHA3c803c and PR118 SHAd44e2dc 13/13 exact CI each; public stable V1.5.0.1 and Android versionCode100009; owner C: free about19.2GiB after verified archive relocation. Public updater uses a shared stable manifest, so signed Windows and Android artifacts are both required even though owner testing prioritizes PC.
+ACCEPTANCE_GATES: version sync and release-identity tests after bump; exact main SHA Core gates plus Windows/Android signed package builds; protected tag exactly tested SHA; update.json/update.sig independently validated with pinned public key; assets/chunks/hashes and Android signer/versionCode checked; installed owner Windows in-app update preserves chats and runtime or rolls back safely, synthetic normal chat and offline/Knowledge checks reported with explicit PASS/UNVERIFIED.
+NON_BLOCKERS: AF-185 response latency/quality, AF-183 Knowledge throughput, GUI responsive redesign and Android UX remain OPEN in separate claimed lanes; do not misreport them as fixed by this updater release.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: claim reconciled after both updater source PRs passed exact pre-bump CI and merged; release metadata untouched so far.
+REMAINING: version-last metadata, post-bump CI/package/signed publication, installed acceptance and data/rollback checks.
+BLOCKERS: no current source blocker; real owner-PC update not yet run.
+NEXT: run build/set_version.ps1 once for V1.5.0.2, verify local version/release contracts, then commit exact release source and start protected build-only flow.
+
+V1502_VERSION_TOOL_UTF8_DISCOVERY_2026_10_12: Version-last script produced V1.5.0.2/versionCode100010 and version-sync/Android source contracts PASS, but review of the generated CHANGELOG found that Windows PowerShell Get-Content default decoding corrupted existing UTF-8 em dashes and a CRLF header comparison inserted a duplicate `# AuroraFox Changelog`. This is a confirmed release-tooling defect in the local uncommitted candidate, not a published release. Do not commit damaged changelog. The V1.5.0.2 source SHA and post-bump package gates remain UNVERIFIED.
+
+### ACTIVE CLAIM — CODEX-2026-10-12-V1502-VERSION-TOOL-UTF8
+ROADMAP_RELEASE: V1.5.0.2 release hygiene and future BUILD versioning reliability.
+SCOPE_CLASS: RELEASE_CRITICAL prevention of changelog content corruption during canonical version bump.
+ROADMAP_SECTION: V1.5 version-last exact metadata and release evidence.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; no product architecture change.
+STARTING_HEAD: d168b056b59dbda8b315c88b534f874f0cf341bb with uncommitted V1.5.0.2 metadata.
+INTENDED_BUMP: none beyond the single already planned V1.5.0.2 BUILD; version number must not increment again.
+OWNED_PATHS: build/set_version.ps1; focused version policy test if needed; CHANGELOG.md repair; docs/PROJECT_MASTER_LOG.md append-only; docs/AURORAFOX_ENGINEERING_MEMORY.md AF-190 new entry.
+CLAIM_RECONCILIATION: CODEX-2026-10-12-V1502-SIGNED-UPDATER-RELEASE belongs to this same chat and owns CHANGELOG.md. This narrow claim adds tool repair to the same release before commit, with no second functional Fox fix or extra version increment. Older release-tooling audit claims do not currently have new commits on main; exact source and tests override their stale status.
+DEPENDENCIES: V1.5.0.2 metadata already generated locally; original CHANGELOG from d168b05 remains in Git for lossless restoration.
+ACCEPTANCE_GATES: original changelog UTF-8 text and one heading preserved; V1.5.0.2 entry inserted once; version script explicitly reads UTF-8 and accepts CRLF/LF heading; focused regression test; git diff --check and version-sync pass before commit.
+NON_BLOCKERS: prior V1.5.0.1 public release, PR107/108, UI/Knowledge claims.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: defect reproduced in uncommitted CHANGELOG diff; original bytes remain in Git.
+REMAINING: fix tool, repair changelog, focused test, engineering memory and exact post-bump gates.
+BLOCKERS: none.
+NEXT: patch UTF-8 reads and heading handling, restore original CHANGELOG from Git bytes, and rerun version process in an isolated fixture.
+
+V1502_VERSION_TOOL_UTF8_REPAIRED_2026_10_12: `build/set_version.ps1` now reads all version inputs and changelog as UTF-8 and recognizes either CRLF or LF after its heading. Damaged uncommitted CHANGELOG was rebuilt from exact d168b05 Git bytes; old V1.5.0.1 and earlier entries, including em dashes, are preserved and only one V1.5.0.2 entry added. `tests/version_policy_test.ps1` asserts all existing entries survive and exactly one heading/new entry appears for build, patch, minor and major cases; PASS. Version-sync PASS for V1.5.0.2 Android code100010; Android source contract PASS; git diff --check PASS. AF-190 added to engineering memory. No second public version increment; transient test bumps were restored byte-for-byte. Exact committed release SHA and signed packages remain UNVERIFIED.
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+DONE: UTF-8 and CRLF source fix; restored old changelog; focused version policy and sync tests green; AF-190 prevention documented.
+REMAINING: exact-SHA CI on committed release source; inherited signed platform publication/installed gates belong to CODEX-2026-10-12-V1502-SIGNED-UPDATER-RELEASE.
+BLOCKERS: none in version-tool scope.
+NEXT: commit tool, regression test, corrected release metadata and journal as one source SHA; then obtain exact CI.

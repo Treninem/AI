@@ -1,13 +1,13 @@
 {
-  "version": "V1.5.0.1",
-  "numeric": "1.5.0.1",
+  "version": "V1.5.0.2",
+  "numeric": "1.5.0.2",
   "major": 1,
   "minor": 5,
   "patch": 0,
-  "build": 1,
-  "android_version_code": 100009,
+  "build": 2,
+  "android_version_code": 100010,
   "status": "evolving",
   "auto_increment": true,
-  "updated_at": "2026-10-12T08:03:15Z",
-  "reason": "Owner-approved first signed V1.5.0.1: avoid irrelevant Knowledge in simple arithmetic; honor voice startup greeting opt-in; preserve Windows/Android update trust."
+  "updated_at": "2026-10-12T17:48:00Z",
+  "reason": "Owner-approved V1.5.0.2: release Windows install-directory lock and fail-closed runtime preservation fixes together; keep signed Windows and Android update continuity."
 }

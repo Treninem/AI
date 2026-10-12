@@ -30,6 +30,10 @@ function Parts([string]$Version) {
 $base = Get-Content project/version.json -Raw | ConvertFrom-Json
 $baseParts = Parts ([string]$base.numeric)
 $baseCode = [int]$base.android_version_code
+$changelogBefore = [IO.File]::ReadAllText((Join-Path $root 'CHANGELOG.md'), [Text.Encoding]::UTF8)
+$header = [regex]::Match($changelogBefore, '^# AuroraFox Changelog\r?\n\r?\n')
+if (-not $header.Success) { throw 'Original changelog header is missing' }
+$oldEntries = $changelogBefore.Substring($header.Length)
 
 try {
     $cases = @(
@@ -51,6 +55,10 @@ try {
         if ([int]$state.android_version_code -ne ($baseCode + 1)) {
             throw "$($case.bump) bump did not increment Android versionCode exactly once"
         }
+        $changelogAfter = [IO.File]::ReadAllText((Join-Path $root 'CHANGELOG.md'), [Text.Encoding]::UTF8)
+        if (-not $changelogAfter.Contains($oldEntries)) { throw 'Version bump corrupted existing UTF-8 changelog entries' }
+        if ([regex]::Matches($changelogAfter, '(?m)^# AuroraFox Changelog$').Count -ne 1) { throw 'Version bump duplicated the changelog heading' }
+        if ([regex]::Matches($changelogAfter, '(?m)^## V' + [regex]::Escape([string]$state.numeric) + ' - ').Count -ne 1) { throw 'Version bump did not add one entry' }
         & powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\version_sync_test.ps1
         if ($LASTEXITCODE -ne 0) { throw "version sync failed after $($case.bump) bump" }
     }
