@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "verified": true,
-  "version": "V1.5.0.0",
-  "commit": "ac222f545b6a69727b4b5ba38fffb458a67e3680",
-  "verified_at": "2026-10-09T00:10:32.583430+00:00",
+  "version": "V1.5.0.1",
+  "commit": "b810b58f8d8a4a6afb5468f78e1331d1e6888134",
+  "verified_at": "2026-10-12T14:28:56.234042+00:00",
   "passed_gates": [
     "android_apk",
     "android_emulator",
@@ -25,7 +25,7 @@
     "updater"
   ],
   "artifacts": {
-    "windows_sha256": "08520a1a8fc1d274a6bf5303697d02ede02bd6341ba5bc174e46fad829ef8524",
-    "android_sha256": "d6ccfa55ec130a8628ef92464c15bc47074d4ac0d2a65095a836498cc0b025e5"
+    "windows_sha256": "670f06c541a3f9ccc99417d81a787631d90398ca449d5b029ba3423979a4397b",
+    "android_sha256": "a94c9e16beb9e040ac3d1a50c8a16b5fc4135577f72792298bcdb07511e28b61"
   }
 }
