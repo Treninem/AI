@@ -177,12 +177,14 @@ func _on_backend_ready(info: Dictionary) -> void:
 	if not _startup_done:
 		_startup_done = true
 		_play_system_sound("startup")
-		var phrase := "Загружаюсь. Версия %s. Я стала другой." % _current_version()
+		# Spoken startup content is opt-in. Previously only the extra phrase
+		# was gated; the default sentence still played with startup_greeting=false.
 		if bool(settings.get("startup_greeting", false)):
+			var phrase := "Загружаюсь. Версия %s. Я стала другой." % _current_version()
 			var extra := await _phrase("startup")
 			if not extra.is_empty():
 				phrase += " " + extra
-		say(phrase, "happy", 0.42)
+			say(phrase, "happy", 0.42)
 
 func _current_version() -> String:
 	if FileAccess.file_exists(VERSION_PATH):
