@@ -9855,3 +9855,23 @@ DONE: startup spoken greeting now opt-in in isolated PR114; real Godot opt-in/re
 REMAINING: installed Windows mic-off/continuous/idle+TTS and Android paths, end-to-end unsolicited-message observation, future signed package/update/rollback acceptance.
 BLOCKERS: owner PC access absent in this chat; AF-186 cross-platform shared manifest and earlier PR113 version sequencing; full self-TTS origin of prior phantom transcripts UNVERIFIED.
 NEXT: release coordinator validates PR114 installed on a later correctly numbered BUILD after PR113, without folding two user-visible fixes into one version.
+
+### ACTIVE CLAIM — CHAT-2026-10-12-V1501-OWNER-FIRST-INAPP-UPDATE
+ROADMAP_RELEASE: V1.5.0.1 first signed installed update after public V1.5.0.0.
+SCOPE_CLASS: RELEASE_CRITICAL, owner-approved accelerated rollout; no silent downgrade of product or updater trust gates.
+ROADMAP_SECTION: V1.5 Windows/Android release, signed updater and stable distro; V1.5 critical postrelease chat and Voice consent fixes.
+ADR_REFS: ADR-0001, 0002, 0003 reviewed; owner-authorized postrelease installed acceptance order.
+STARTING_HEAD: efaf2ea80c25456df32b1cf21bd9e156b1f4286c (main after PR113 and PR114 squash).
+OWNED_PATHS: project/version.json; project.godot; export_presets.cfg; update/manifest.template.json; CHANGELOG.md; evolution.log; docs/PROJECT_MASTER_LOG.md append-only; release trigger orchestration only if absolutely needed and security-reviewed separately. All production feature code frozen at starting HEAD.
+CLAIM_RECONCILIATION: User changed rollout order on 2026-10-12: publish a current signed update first, then rerun real owner-PC installation/UX/Core/Voice tests and ship later corrective BUILD(s). This explicitly supersedes the earlier requirement to finish new installed-PC tests before this specific release. Existing actual public V1.5.0.0 latency/file failures remain acknowledged and unresolved; **OWNER_WAIVED_NOT_EXECUTED** applies only to repeat owner-PC validation of V1.5.0.1 before publication, not to automated CI, version sync, signatures, Android signing continuity, release availability, backup or rollback integrity.
+FEATURE_SCOPE: merged tested PR113 simple arithmetic avoids irrelevant Knowledge; merged tested PR114 opt-in startup TTS greeting; main's prior explicit microphone chat authorization, hidden scheduled backup and documented V1.5.0.0 continue unchanged. PR107, PR108, PR98, PR97, PR93 remain unpublished and must not be advertised as part of this release.
+INTENDED_BUMP: BUILD 1.5.0.0 to 1.5.0.1, Android versionCode 100008 to 100009.
+DEPENDENCIES: PR113 19/19 initial exact-SHA CI SUCCESS, PR114 9/9 exact-SHA CI SUCCESS; both merged. Shared manifest V1.5.0.0 has Windows and Android platform assets; new signed release MUST include both correctly numbered platform packages.
+ACCEPTANCE_GATES: canonical six-file version bump only after merged feature source checks; post-bump exact-SHA version sync, Android contract, core/Voice, Windows installer and emulator, independent signed manifest/chain/hashes, update ZIP chunk continuity, Android same certificate, release metadata. Owner-PC postupdate smoke and 30min voice/latency/file test deferred **OWNER_WAIVED_NOT_EXECUTED** until after users can update; issues must remain OPEN and prompt transparent.
+NON_BLOCKERS: PR107/108 future fixes, full delta updater #111, restyling #110; they are not in release.
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+DONE: user authorization, two narrow CI-green fixes merged on main and claim/plan scoped.
+REMAINING: synchronize six release version files, build/verify exact version Windows+Android, publish stable signed release via existing pipeline, verify real updater manifest and assets, then owner-PC acceptance and follow-up version.
+BLOCKERS: public 1.5.0.0 known Core slowness and file-analysis stalls not fixed by this narrow release; platform signed artifacts and current pipeline not yet completed.
+NEXT: version-last bump in isolated release branch and run canonical release CI without claiming owner-PC PASS.
