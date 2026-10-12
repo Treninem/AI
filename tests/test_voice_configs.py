@@ -133,3 +133,14 @@ def test_personality_categories_are_populated():
         for item in personality[category]:
             assert item["text"].strip()
             assert float(item.get("weight", 1.0)) > 0
+
+
+def test_startup_spoken_greeting_requires_explicit_opt_in():
+    """The normal enabled TTS engine must not speak its own greeting by default."""
+    manager = (ROOT / "voice" / "voice_manager.gd").read_text(encoding="utf-8")
+    handler = manager.split("func _on_backend_ready(", 1)[1].split("func _current_version(", 1)[0]
+    assert '"startup_greeting": false' in manager
+    assert '\t\tif bool(settings.get("startup_greeting", false)):' in handler
+    assert '\t\t\tsay(phrase, "happy", 0.42)' in handler
+    assert '\t\tsay(phrase, "happy", 0.42)' not in handler.splitlines()
+    assert '\t\t_play_system_sound("startup")' in handler
