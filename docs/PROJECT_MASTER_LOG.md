@@ -9911,3 +9911,22 @@ REMAINING: promotion lane none; installed owner acceptance remains with the rele
 BLOCKERS: none for signed publication; owner installation confirmation pending in separate lane.
 NEXT: release CODEX-2026-10-12-V1501-PROMOTION-API-RETRY owned workflow/AF-187 paths; verify in-app installation and synthetic smoke, then continue AF-183/AF-185 remediation on a later correctly numbered BUILD.
 CLAIM_STATUS: CODEX-2026-10-12-V1501-PROMOTION-API-RETRY DONE; owned workflow and AF-187 memory path released. Overall AuroraFox readiness remains 35% due installed Core latency/quality, file-analysis and visual stability gaps.
+
+### ACTIVE CLAIM — CODEX-2026-10-12-V1502-WINDOWS-UPDATER-LOCK
+ROADMAP_RELEASE: Windows stabilization after public V1.5.0.1; candidate for next BUILD V1.5.0.2 only after acceptance.
+SCOPE_CLASS: CRITICAL installed updater reliability, no current version bump.
+ROADMAP_SECTION: V1.5 signed Windows updater, owner data preservation and rollback acceptance.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; signed trust root and self-primary runtime unchanged.
+STARTING_HEAD: a35496e2e163cc4e5fad0084abb485bd79c28985.
+INTENDED_BUMP: BUILD 1.5.0.2 after code, CI and installed acceptance; no version file touched in this source branch.
+OWNED_PATHS: update/windows_updater.ps1; tests/windows_updater_test.ps1 and a focused updater contract test if needed; docs/PROJECT_MASTER_LOG.md append-only; docs/AURORAFOX_ENGINEERING_MEMORY.md AF-188 addendum only.
+CLAIM_RECONCILIATION: Current owner-first V1.5.0.1 release claim owns version/publish files, which remain untouched. No other active claim names update/windows_updater.ps1. This lane addresses a new observed installed failure, not the already signed release bytes.
+DEPENDENCIES: owner explicitly authorized in-app V1.5.0.0→1.5.0.1 installation; signed ZIP hash 670f06c5...a4397b. The original installed helper parsed/extracted but failed Move-Item on occupied install directory at 18:12:39 local; cause may be inherited current directory or an external file handle, not yet proven. Recovery attempt with PID0 failed due System Idle PID; retry with confirmed exited old GUI PID is in progress.
+ACCEPTANCE_GATES: reproducible helper current-directory/locked-install test, bounded safe retry without deleting owner data, intact backup/rollback on failure, exact-source Windows updater CI and package gate; later numbered signed update plus installed owner Windows post-update health, data preservation and rollback smoke. Do not classify the current V1.5.0.1 manual recovery as source-fix acceptance.
+NON_BLOCKERS: Android design/UX, PR107/108 and AF-183/AF-185 are independent open work.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: exact signed package downloaded and independently hashed; installed helper failure captured verbatim; isolated branch created.
+REMAINING: classify lock root cause, implement minimal fix, focused tests and exact-SHA CI, then version-last release and installed validation.
+BLOCKERS: active owner installation currently being recovered; source fix cannot retroactively change the published V1.5.0.1 helper.
+NEXT: inspect the helper's process cwd and directory-switch logic, add bounded retry plus safe working-directory handling and regression coverage.
