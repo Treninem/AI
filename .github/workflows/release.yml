@@ -29,6 +29,7 @@ on:
 
 permissions:
   contents: write
+  actions: read  # required by existing publish-only cross-run artifact recovery
 
 jobs:
   secret-readiness:
