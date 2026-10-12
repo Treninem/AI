@@ -142,5 +142,5 @@ def test_startup_spoken_greeting_requires_explicit_opt_in():
     assert '"startup_greeting": false' in manager
     assert '\t\tif bool(settings.get("startup_greeting", false)):' in handler
     assert '\t\t\tsay(phrase, "happy", 0.42)' in handler
-    assert '\t\tsay(phrase, "happy", 0.42)' not in handler
+    assert '\t\tsay(phrase, "happy", 0.42)' not in handler.splitlines()
     assert '\t\t_play_system_sound("startup")' in handler
