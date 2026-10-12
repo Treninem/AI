@@ -66,14 +66,41 @@ function Preserve-LocalRuntime([string]$OldRoot, [string]$NewRoot) {
             $target = Join-Path $NewRoot $relative
             if (-not (Test-Path -LiteralPath $source)) { continue }
             if (Test-Path -LiteralPath $target) {
-                Get-ChildItem -LiteralPath $source -Force | ForEach-Object {
-                    Copy-Item -LiteralPath $_.FullName -Destination $target -Recurse -Force -ErrorAction Stop
+                $sourcePrefix = [IO.Path]::GetFullPath($source).TrimEnd('\') + '\'
+                $reused = 0
+                $copied = 0
+                Get-ChildItem -LiteralPath $source -Force -Recurse -ErrorAction Stop | ForEach-Object {
+                    $entry = $_
+                    if (($entry.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                        throw "Runtime preservation contains a link: $relative"
+                    }
+                    $destination = Join-Path $target $entry.FullName.Substring($sourcePrefix.Length)
+                    if ($entry.PSIsContainer) {
+                        New-Item -ItemType Directory -Force -Path $destination | Out-Null
+                    } else {
+                        $same = $false
+                        if (Test-Path -LiteralPath $destination -PathType Leaf) {
+                            $existing = Get-Item -LiteralPath $destination -ErrorAction Stop
+                            if ($existing.Length -eq $entry.Length) {
+                                $same = (Get-FileHash -LiteralPath $entry.FullName -Algorithm SHA256).Hash -eq (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash
+                            }
+                        }
+                        if ($same) {
+                            $reused++
+                        } else {
+                            if (Test-Path -LiteralPath $destination -PathType Container) { throw "Runtime preservation path collision: $relative" }
+                            New-Item -ItemType Directory -Force -Path (Split-Path -Parent $destination) | Out-Null
+                            Copy-Item -LiteralPath $entry.FullName -Destination $destination -Force -ErrorAction Stop
+                            $copied++
+                        }
+                    }
                 }
+                Write-UpdateLog "Preserved $relative (reused=$reused copied=$copied)"
             } else {
                 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $target) | Out-Null
                 Copy-Item -LiteralPath $source -Destination $target -Recurse -Force -ErrorAction Stop
+                Write-UpdateLog "Preserved $relative"
             }
-            Write-UpdateLog "Preserved $relative"
         } catch {
             Write-UpdateLog "Runtime preservation warning for $relative : $($_.Exception.Message)"
             throw "Runtime preservation failed for $relative : $($_.Exception.Message)"
