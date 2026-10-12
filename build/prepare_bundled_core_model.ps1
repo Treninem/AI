@@ -50,14 +50,18 @@ if (-not (Test-CoreModel $cacheFile)) {
     Remove-Item -LiteralPath $cacheFile -Force -ErrorAction SilentlyContinue
     $temp = $cacheFile + '.download'
     Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
-    if (-not (Get-Command curl.exe -ErrorAction SilentlyContinue)) {
-        throw 'curl.exe is required for verified AuroraFox Core weight transfer'
+    $curlCommand = Get-Command curl.exe -CommandType Application -ErrorAction SilentlyContinue
+    if (-not $curlCommand) {
+        $curlCommand = Get-Command curl -CommandType Application -ErrorAction SilentlyContinue
+    }
+    if (-not $curlCommand) {
+        throw 'curl is required for verified AuroraFox Core weight transfer'
     }
     $downloadVerified = $false
     for ($attempt = 1; $attempt -le 2; $attempt++) {
         Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
         Write-Host "Downloading verified AuroraFox Core weights for packaging (attempt $attempt/2)..." -ForegroundColor Cyan
-        & curl.exe --location --proto '=https' --proto-redir '=https' --fail --silent --show-error --connect-timeout 30 --max-time 1500 --max-filesize $expectedBytes --output $temp $url
+        & $curlCommand.Source --location --proto '=https' --proto-redir '=https' --fail --silent --show-error --connect-timeout 30 --max-time 1500 --max-filesize $expectedBytes --output $temp $url
         $curlExit = $LASTEXITCODE
         if ($curlExit -eq 0 -and (Test-CoreModel $temp)) {
             $downloadVerified = $true

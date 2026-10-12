@@ -10120,3 +10120,35 @@ DONE: official source metadata compared to pinned constants; two failed attempts
 REMAINING: source review/commit, exact new SHA Release Identity and full Core/Windows/Android package gates, signed publication and owner installed acceptance.
 BLOCKERS: current release run38295369025 lacks Windows artifact; curl candidate untested on GitHub runner.
 NEXT: commit/push candidate once, launch one exact-SHA build-only release run, inspect measured evidence if Windows still fails, and do not publish until all platform gates pass.
+
+V1502_MODEL_TRANSFER_CI_DISPATCH_2026_10_12: Source candidate committed/pushed as main SHA6d41f4df3719a536369f3a05729a16e3ff1fff40, keeping V1.5.0.2/versionCode100010. Automatic Windows Package CI run38300957973 is queued, process-contract already SUCCESS; Core/Voice, Integration, Core benchmarks and Android Core E2E also started for this SHA. No release.yml build was dispatched on the new SHA yet, to avoid duplicating the 1.28GB model transfer and multi-GB package while Windows Package CI can test it first. Public stable release remains V1.5.0.1; failed old release run38295369025 attempts1/2 cannot be used for v1.5.0.2 publication.
+PROGRESS_COMPLETE: 45%
+PROGRESS_REMAINING: 55%
+DONE: bounded verified transfer source pushed; local parser/evidence fixture green; exact Windows Package CI scheduled without new release workflow.
+REMAINING: new SHA Windows package/model integrity result, then exact full release Core/Windows/Android build, signed publication, owner installed acceptance.
+BLOCKERS: new Windows package gate pending; root cause of old invalid transfer remains UNVERIFIED.
+NEXT: inspect run38300957973 through model download; if PASS, launch exactly one release.yml build-only on SHA6d41f4d; if FAIL, use logged measured bytes/magic/hash to diagnose before any new release run.
+
+V1502_EXACT_SHA_CI_INTERIM_2026_10_12: At main/origin-main SHA6d41f4df3719a536369f3a05729a16e3ff1fff40, Windows Package CI run38300957973 passed `Prepare complete bundled Windows Core`, packaged runtime verification, exported executable smoke and Knowledge route smoke; installer build remained IN_PROGRESS. Thus the new verified model transfer reached a valid package in this run, but full installer/artifact result is not yet established. Android Core E2E run38300958120 attempt1 FAILED before emulator boot because Google API x86_64 Android35 system-image download returned `Error on ZipFile unknown archive`; the production APK built and test-signed, but normal-path app test never executed. This is a CI toolchain download failure, not observed Android app behavior. One bounded failed-job retry (attempt2) was started for the same SHA; no source edit or full release build was launched. Public stable remains V1.5.0.1.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: exact Windows model preparation/package-runtime checks passed; Android failure isolated to SDK image extraction; one bounded same-SHA retry started.
+REMAINING: complete Windows installer CI and Android emulator retry, then one full signed build-only run, guarded publication and owner installed update acceptance.
+BLOCKERS: Windows Package CI and Android E2E retry still running; exact release artifacts/signature absent.
+NEXT: inspect run38300957973 final artifact result and run38300958120 attempt2; dispatch one release.yml build-only on SHA6d41f4d only after preflight gates are resolved.
+
+V1502_EXACT_SHA_PREFLIGHT_GREEN_AND_BUILD_2026_10_13: At unchanged main/origin-main SHA6d41f4df3719a536369f3a05729a16e3ff1fff40, Windows Package CI run38300957973 completed SUCCESS, including verified embedded Core/model, Knowledge route, installer, silent installed-app smoke and uploaded Windows artifacts. Android Core E2E run38300958120 attempt2 completed SUCCESS on same SHA; attempt1's SDK `ZipFile unknown archive` was an external emulator-image download error before app execution. No source change was needed. Checked release.yml history and confirmed no prior release build on SHA6d41f4d, no v1.5.0.2 tag or public release. Dispatched exactly one build-only release.yml run38308686874 via main; its headSha was independently confirmed as 6d41f4df3719a536369f3a05729a16e3ff1fff40, core-gates IN_PROGRESS. No tag, signed update manifest, public binary or owner installed update yet.
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact preflight Windows installer and Android offline normal path green; one exact-SHA full release build dispatched.
+REMAINING: run38308686874 Core/Windows/Android signed artifacts and hashes, guarded signed publication, in-app owner update and data-preserving acceptance.
+BLOCKERS: full release build running; stable public release remains V1.5.0.1.
+NEXT: inspect exact run38308686874 jobs and artifact hashes; if all pass, perform guarded promotion from this run without rebuilding, then verify signed update.json/update.sig and installed Fox.
+
+V1502_RELEASE_ANDROID_NATIVE_CURL_REPAIR_2026_10_13: Exact release run38308686874 on SHA6d41f4df3719a536369f3a05729a16e3ff1fff40 passed Core-gates, but Android FAILED in `Build Android plugin and signed APK` before model download: `build/prepare_bundled_core_model.ps1:54 curl.exe is required for verified AuroraFox Core weight transfer`. The helper's Windows-only executable name was introduced by our model-transfer repair and is incompatible with Ubuntu's native `curl`; this is a confirmed build-tool root cause, not an observed Android app defect. Windows job was still building; cancel request submitted for obsolete exact SHA rather than spending a full multi-GB build on an unreleasable candidate. Existing same-chat model-transfer claim owns this helper and journal; the focused repair selects `curl.exe` Application first, then `curl` Application, invokes its resolved Source, and leaves HTTPS/timeout/retry/size/GGUF/SHA gates unchanged. `tests/test_android_contract.py` now asserts Linux-native selection. Local PowerShell AST parse, Android contract script (V1.5.0.2/code100010), and git diff --check PASS. AF-191 prevention addendum recorded; new commit/SHA and exact CI remain pending. No tag, manifest/signature, publication or owner install exists for V1.5.0.2.
+PROGRESS_COMPLETE: 50%
+PROGRESS_REMAINING: 50%
+DONE: Linux release failure identified; portable command selection implemented; focused local checks green; obsolete build cancellation requested.
+REMAINING: commit/push repair, new exact-SHA Android and Windows package CI, one complete signed release build, guarded publication and installed updater acceptance.
+BLOCKERS: release run38308686874 Android failed on old SHA; fresh exact-SHA gates absent.
+NEXT: commit/push only helper/test/memory repair, verify automatic Android/Windows CI at new SHA, then dispatch one full build-only release run if green.
