@@ -9839,3 +9839,11 @@ BLOCKERS: no physical Windows access in this chat; voice-echo exact audio origin
 NEXT: patch only unconditional startup speech, add deterministic tests, open draft PR without bump or release.
 
 V15_VOICE_STARTUP_CLAIM_TEST_EXTENSION_2026_10_12: OWNED_PATHS additionally include tests/voice_smoke.gd (the already-executed native Godot voice CI smoke); use an isolated VoiceManager subclass to check true/false/reconnect startup-greeting behavior without starting recording or a live voice backend. No shared workflow changes. This extension is declared before editing that file.
+
+V15_VOICE_STARTUP_SOURCE_CHECKPOINT_2026_10_12: Isolated branch contains voice/voice_manager.gd opt-in gate on ALL startup spoken content, not only the extra startup phrase; original _startup_done reconnect behavior and independent startup system sound preserved. New native Godot probe in existing tests/voice_smoke.gd covers opted-out=no speech, opted-in=one greeting, both reconnect=one startup sound. Existing voice CI-run Python tests/test_voice_configs.py has a structural guard; AF-184 lesson appended to engineering memory. Source commits: 41e302e43f99992292ccc829f442e4933f300af1; e25727d694a61bdcdc55304c31ffb26b9cfd08ca; 37d266fb9dfc97f868eac754b087f29f92f2268d; memory 90103e3fdf66a29b151a4a6502bd387076014651. Native, exact-SHA CI, installed hardware and signed release are not yet tested; no public version was changed.
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+DONE: confirmed a separate unconditional startup-TTS code defect; isolated source fix, Godot-native and Python regression definitions, AF-184 reusable lesson.
+REMAINING: exact-SHA CI for Godot/Voice, real Windows silent/reconnect/30m mic observations, review, version-last publication/rollback.
+BLOCKERS: no Godot binary or owner Windows microphone access in this chat; existing AF-186 shared updater topology for signed release.
+NEXT: open draft PR, obtain CI statuses; repair any failing native smoke, do not merge or release if acceptance remains missing.
