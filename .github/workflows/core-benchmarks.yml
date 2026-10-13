@@ -20,6 +20,7 @@ on:
       - 'tests/owner_resource_limits_smoke.gd'
       - 'tests/core_progress*_smoke.gd'
       - 'tests/core_factual_validator_smoke.gd'
+      - 'tests/windows_chat_context_smoke.gd'
       - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
       - 'scripts/bundled_core_model.gd'
@@ -50,6 +51,7 @@ on:
       - 'tests/owner_resource_limits_smoke.gd'
       - 'tests/core_progress*_smoke.gd'
       - 'tests/core_factual_validator_smoke.gd'
+      - 'tests/windows_chat_context_smoke.gd'
       - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
       - 'scripts/bundled_core_model.gd'
@@ -177,6 +179,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/core_factual_validator_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'Core factual answer validator smoke failed' }
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/windows_chat_context_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Windows bounded Knowledge context smoke failed' }
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/code_specialist_refactor_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'CodeSpecialist public API regression failed' }
 

@@ -19,6 +19,18 @@ func _run() -> void:
 	if requested.size() != 2 or not str(requested[0].get("content", "")).contains("Phobos"):
 		_fail("explicit Knowledge query lost synthetic source")
 		return
+	var async_requested: Array = await client._with_knowledge_async([{"role": "user", "content": "По базе знаний: какие спутники есть у Mars?"}])
+	if async_requested.size() != 2 or not str(async_requested[0].get("content", "")).contains("Phobos"):
+		_fail("asynchronous Knowledge query lost synthetic source")
+		return
+	var long_import := knowledge.import_text("Mars " + "synthetic context ".repeat(500), "synthetic://long-mars")
+	if not bool(long_import.get("ok", false)):
+		_fail("long synthetic Knowledge import failed")
+		return
+	var bounded: Array = await client._with_knowledge_async([{"role": "user", "content": "По базе знаний: расскажи про Mars"}])
+	if bounded.size() != 2 or str(bounded[0].get("content", "")).length() > AIClient.MAX_KNOWLEDGE_CONTEXT_CHARS + 300:
+		_fail("Knowledge prompt exceeded context budget")
+		return
 	print("WINDOWS_CHAT_CONTEXT_SMOKE_PASS")
 	quit(0)
 

@@ -120,7 +120,9 @@ def main() -> None:
 
     ai_client = read("scripts/ai_client.gd")
     require(
-        "return await core_runtime.chat(_with_knowledge(messages), temperature)" in ai_client,
+        "return await core_runtime.chat(grounded_messages, temperature)" in ai_client
+        and "return await core_runtime.chat_local_only(grounded_messages, temperature)" in ai_client
+        and "await _with_knowledge_async(messages)" in ai_client,
         "AIClient.chat does not delegate inference to AuroraFox Core",
     )
     require(
