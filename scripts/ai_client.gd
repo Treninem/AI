@@ -35,7 +35,10 @@ class KnowledgeContextJob extends RefCounted:
 	var query := ""
 	var context := ""
 	func run() -> void:
-		context = KnowledgeStore.new().context_for(query, MAX_KNOWLEDGE_CONTEXT_ITEMS).substr(0, MAX_KNOWLEDGE_CONTEXT_CHARS)
+		var full_context := KnowledgeStore.new().context_for(query, MAX_KNOWLEDGE_CONTEXT_ITEMS)
+		context = full_context.substr(0, MAX_KNOWLEDGE_CONTEXT_CHARS)
+		if full_context.length() > MAX_KNOWLEDGE_CONTEXT_CHARS:
+			context += "\n[Контекст знаний сокращён до установленного лимита.]"
 
 func _ready() -> void:
 	if core_runtime.get_parent() == null: add_child(core_runtime)
@@ -236,7 +239,10 @@ func _with_knowledge(messages: Array) -> Array:
 	var filtered_query := _knowledge_query(query)
 	if filtered_query.is_empty():
 		return copied
-	var context := knowledge.context_for(filtered_query, MAX_KNOWLEDGE_CONTEXT_ITEMS).substr(0, MAX_KNOWLEDGE_CONTEXT_CHARS)
+	var full_context := knowledge.context_for(filtered_query, MAX_KNOWLEDGE_CONTEXT_ITEMS)
+	var context := full_context.substr(0, MAX_KNOWLEDGE_CONTEXT_CHARS)
+	if full_context.length() > MAX_KNOWLEDGE_CONTEXT_CHARS:
+		context += "\n[Контекст знаний сокращён до установленного лимита.]"
 	if context.is_empty():
 		return copied
 	copied.push_front({

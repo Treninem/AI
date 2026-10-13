@@ -31,6 +31,9 @@ func _run() -> void:
 	if bounded.size() != 2 or str(bounded[0].get("content", "")).length() > AIClient.MAX_KNOWLEDGE_CONTEXT_CHARS + 300:
 		_fail("Knowledge prompt exceeded context budget")
 		return
+	if not str(bounded[0].get("content", "")).contains("Контекст знаний сокращён"):
+		_fail("truncated Knowledge context was not marked honestly")
+		return
 	print("WINDOWS_CHAT_CONTEXT_SMOKE_PASS")
 	quit(0)
 
