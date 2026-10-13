@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -75,6 +77,41 @@ class KnowledgeStressGateTests(unittest.TestCase):
         self.assertTrue(result["correctness_passed"])
         self.assertEqual(result["performance_blockers"], [])
         self.assertTrue(result["warnings"])
+
+    def test_explicit_owner_search_limit_fails_closed_on_slow_or_missing_measurement(self) -> None:
+        validator = BENCH / "validate_performance_report.py"
+        report = {
+            "schema": "aurorafox_knowledge_performance_v1",
+            "hard_correctness": {"passed": True},
+            "self_reliance_contract": {
+                "network_required": False,
+                "external_runtime_required": False,
+                "ollama_required": False,
+            },
+            "relative_performance": {},
+            "results": [{"search": {"cases": [{"name": "exact_rare", "p95_ms": 6000.0}]}}],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "report.json"
+            for p95, expected_exit, expected_blocker in (
+                (6000.0, 1, "search_p95_exceeded"),
+                (4000.0, 0, None),
+                (None, 1, "search_p95_missing"),
+            ):
+                report["results"] = (
+                    [{"search": {"cases": [{"name": "exact_rare", "p95_ms": p95}]}}]
+                    if p95 is not None else []
+                )
+                path.write_text(json.dumps(report), encoding="utf-8")
+                result = subprocess.run(
+                    [sys.executable, str(validator), str(path), "--max-search-p95-ms", "5000"],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(result.returncode, expected_exit, result.stderr)
+                summary = json.loads(result.stdout)
+                self.assertTrue(summary["absolute_latency_enforced"])
+                blockers = summary["reports"][0]["performance_blockers"]
+                self.assertEqual(blockers, [] if expected_blocker is None else [expected_blocker])
 
     def test_memory_write_scaling_detects_near_quadratic_double(self) -> None:
         memory = load_module("knowledge_memory_scaling", "run_memory_scaling.py")

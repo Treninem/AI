@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -22,6 +23,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Fail on reproducible quadratic/superlinear findings",
     )
+    parser.add_argument(
+        "--max-search-p95-ms",
+        type=float,
+        default=0.0,
+        help="Explicit absolute search p95 limit for a measured target machine; zero leaves hosted-runner timing informational",
+    )
     return parser.parse_args()
 
 
@@ -32,7 +39,7 @@ def _load(path: str) -> dict[str, Any]:
     return data
 
 
-def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
+def evaluate_report(report: dict[str, Any], path: str = "", max_search_p95_ms: float = 0.0) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     schema = str(report.get("schema", ""))
@@ -64,6 +71,7 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
     # Search absolute latency is runner-dependent, but retain a visible risk
     # summary rather than silently normalizing it with larger timeouts.
     max_search_p95 = 0.0
+    search_case_count = 0
     for result in report.get("results", []) if isinstance(report.get("results"), list) else []:
         if not isinstance(result, dict):
             continue
@@ -72,7 +80,13 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
             continue
         for case in search.get("cases", []) if isinstance(search.get("cases"), list) else []:
             if isinstance(case, dict):
+                search_case_count += 1
                 max_search_p95 = max(max_search_p95, float(case.get("p95_ms", 0.0) or 0.0))
+    if max_search_p95_ms > 0:
+        if search_case_count == 0 or max_search_p95 <= 0:
+            blocker_fields.append("search_p95_missing")
+        elif max_search_p95 > max_search_p95_ms:
+            blocker_fields.append("search_p95_exceeded")
     if max_search_p95 >= 1000.0:
         warnings.append(
             f"informational CI search latency >=1s (max p95={max_search_p95:.3f} ms); "
@@ -85,6 +99,8 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
         "correctness_passed": not errors,
         "performance_blockers": blocker_fields,
         "max_search_p95_ms": max_search_p95,
+        "absolute_search_limit_ms": max_search_p95_ms,
+        "search_case_count": search_case_count,
         "errors": errors,
         "warnings": warnings,
     }
@@ -92,11 +108,13 @@ def evaluate_report(report: dict[str, Any], path: str = "") -> dict[str, Any]:
 
 def main() -> int:
     args = parse_args()
+    if not math.isfinite(args.max_search_p95_ms) or args.max_search_p95_ms < 0:
+        raise SystemExit("--max-search-p95-ms must be a finite nonnegative number")
     evaluations: list[dict[str, Any]] = []
     load_errors: list[str] = []
     for path in args.reports:
         try:
-            evaluations.append(evaluate_report(_load(path), path))
+            evaluations.append(evaluate_report(_load(path), path, args.max_search_p95_ms))
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             load_errors.append(f"{path}: {exc}")
 
@@ -107,17 +125,20 @@ def main() -> int:
         if row["performance_blockers"]
     ]
     performance_passed = not blockers
-    passed = correctness_passed and (performance_passed or not args.enforce_performance)
+    performance_enforced = bool(args.enforce_performance or args.max_search_p95_ms > 0)
+    passed = correctness_passed and (performance_passed or not performance_enforced)
     summary = {
         "schema": "aurorafox_knowledge_performance_gate_v1",
         "passed": passed,
         "correctness_passed": correctness_passed,
         "performance_passed": performance_passed,
-        "performance_enforced": bool(args.enforce_performance),
+        "performance_enforced": performance_enforced,
+        "absolute_latency_enforced": bool(args.max_search_p95_ms > 0),
+        "absolute_search_limit_ms": args.max_search_p95_ms,
         "load_errors": load_errors,
         "blockers": blockers,
         "reports": evaluations,
-        "rule": "absolute hosted-runner timings are informational; reproducible N->2N near-4x scaling is blocking",
+        "rule": "hosted-runner absolute timings are informational unless --max-search-p95-ms is supplied for target-machine acceptance; reproducible N->2N near-4x scaling is blocking when performance is enforced",
     }
     if args.output:
         output = Path(args.output)
