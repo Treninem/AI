@@ -263,6 +263,22 @@ func _run() -> void:
 		"answer_sha256": _normalized(memory_text).sha256_text()
 	}, "aurora_core_desktop" if OS.get_name() == "Windows" else "")
 
+	# Exercise AgentCore's ordinary chat path, not only an instruction marker sent
+	# straight to AIClient. A healthy Core can still give a wrong factual answer.
+	if OS.get_name() == "Windows":
+		var factual_task := "Почему лёд плавает в воде? Ответь одним коротким предложением."
+		var direct_route := memory_agent._is_direct_conversation(factual_task)
+		var factual_call := await _agent_with_watchdog(memory_agent, factual_task)
+		if await _handle_agent_timeout("russian_factual_ice", factual_call, client): return
+		var factual_answer := str(factual_call.answer).to_lower().strip_edges()
+		var factual_pass := direct_route and _ice_density_answer_correct(factual_answer)
+		_record_scenario("russian_factual_ice", factual_pass, {
+			"elapsed_ms": factual_call.elapsed_ms,
+			"direct_conversation_route": direct_route,
+			"answer_excerpt": factual_answer.substr(0, 160),
+			"answer_sha256": factual_answer.sha256_text()
+		}, "aurora_core_desktop")
+
 	var knowledge_import := client.import_knowledge_text(
 		"Benchmark local Core Knowledge fact: the codeword for glacier protocol is IVORY-29.",
 		"core_benchmark_local",
@@ -426,6 +442,24 @@ func _run_direct_case(client: AIClient, id: String, prompt: String, validator: C
 	var text := _final_text(str(call.result.get("content", "")))
 	var passed := bool(call.result.get("ok", false)) and _is_local_runtime(call.result) and bool(validator.call(text))
 	_append_scenario(_chat_row(id, call, passed, {}))
+	return false
+
+static func _ice_density_answer_correct(text: String) -> bool:
+	var answer := text.to_lower().replace("ё", "е").strip_edges()
+	if not answer.contains("вод") or answer.contains("давлен"):
+		return false
+	# Require the direction of the density comparison, not just its keywords.
+	for explanation in [
+		"плотность льда меньше плотности воды",
+		"плотность льда ниже плотности воды",
+		"его плотность меньше плотности воды",
+		"его плотность ниже плотности воды",
+		"лед имеет меньшую плотность",
+		"лед менее плотен",
+		"вода плотнее льда"
+	]:
+		if answer.contains(explanation):
+			return true
 	return false
 
 func _chat_with_watchdog(client: AIClient, messages: Array, temperature: float) -> Dictionary:

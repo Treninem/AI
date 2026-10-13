@@ -21,7 +21,8 @@ def evaluator():
 
 
 def sample_report(*, cold=10000, warm=1000, tps=20.0, rss=1500, wall=50000, passed=True):
-    required = load("scenarios.json")["required_scenarios"]
+    scenarios = load("scenarios.json")
+    required = scenarios["required_scenarios"] + scenarios["platform_required_scenarios"]["Windows"]
     return {
         "schema_version": 1,
         "suite": "aurorafox_core_quality_v1",
@@ -67,6 +68,43 @@ def test_required_scenarios_cover_requested_real_core_surface() -> None:
         "long_context", "compatibility_switch_isolation", "repeatability",
     }
     assert expected <= names
+
+
+def test_windows_factual_answer_is_required_and_cannot_be_waived_by_marker_cases() -> None:
+    ev = evaluator()
+    spec = load("scenarios.json")
+    policy = load("performance_policy.json")
+    report = sample_report()
+    result = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
+    assert result["passed"], result
+
+    report["scenarios"] = [row for row in report["scenarios"] if row["id"] != "russian_factual_ice"]
+    missing = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
+    assert not missing["passed"]
+    assert missing["missing_scenarios"] == ["russian_factual_ice"]
+
+    report = sample_report()
+    target = next(row for row in report["scenarios"] if row["id"] == "russian_factual_ice")
+    target["passed"] = False
+    failed = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
+    assert not failed["passed"]
+    assert failed["failed_scenarios"] == ["russian_factual_ice"]
+
+    report = sample_report()
+    target = next(row for row in report["scenarios"] if row["id"] == "russian_factual_ice")
+    target["runtime"] = ""
+    unidentified = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
+    assert not unidentified["passed"]
+    assert unidentified["missing_runtime_scenarios"] == ["russian_factual_ice"]
+
+    android = sample_report()
+    android["platform"] = "Android"
+    android["machine"]["os"] = "Android"
+    android["scenarios"] = [row for row in android["scenarios"] if row["id"] != "russian_factual_ice"]
+    for row in android["scenarios"]:
+        row["runtime"] = "aurora_core_android"
+    android_result = ev.enrich_report(android, policy, spec)["evaluation"]["quality_gate"]
+    assert android_result["passed"], android_result
 
 
 def test_quality_gate_rejects_missing_failed_or_external_runtime_scenarios() -> None:

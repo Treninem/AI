@@ -362,9 +362,17 @@ def enrich_report(
     baseline: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     enriched = deepcopy(report)
-    required = [str(x) for x in scenario_spec.get("required_scenarios", [])]
-    runtime_required = [str(x) for x in scenario_spec.get("local_runtime_required_scenarios", [])]
     platform = str(enriched.get("platform") or enriched.get("machine", {}).get("os", "")).strip()
+    platform_required = scenario_spec.get("platform_required_scenarios", {})
+    platform_runtime_required = scenario_spec.get("platform_local_runtime_required_scenarios", {})
+    required = list(dict.fromkeys(
+        [str(x) for x in scenario_spec.get("required_scenarios", [])]
+        + [str(x) for x in platform_required.get(platform, [])]
+    ))
+    runtime_required = list(dict.fromkeys(
+        [str(x) for x in scenario_spec.get("local_runtime_required_scenarios", [])]
+        + [str(x) for x in platform_runtime_required.get(platform, [])]
+    ))
     allowed_map = scenario_spec.get("allowed_local_runtimes_by_platform", {})
     allowed = [str(x) for x in allowed_map.get(platform, [])] if isinstance(allowed_map, dict) else []
     runtime_policy_available = bool(isinstance(allowed_map, dict) and platform in allowed_map and allowed)
