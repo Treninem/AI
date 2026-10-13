@@ -10286,3 +10286,11 @@ DONE: exact source of misleading fallback and no_progress record identified; PR1
 REMAINING: isolated implementation, focused tests, exact CI, installed acceptance and version-last release gates.
 BLOCKERS: no source edit until isolated branch created; general chat latency remains outside this narrow claim.
 NEXT: create isolated branch from current main, implement error classification without Core retry for request deadline and suppress TTS for failed request.
+
+V1503_CHAT_DEADLINE_SOURCE_CANDIDATE_2026_10_13: Created isolated branch `fix/v1.5.0.3-chat-deadline` from claim-bearing main SHA353395468dbe0493fcba725d53d776800576fa75 without switching the shared checkout or changing PR107. In the claimed `_submit_current` error branch, startup errors retain bounded background recovery and startup wording; request deadline `Core request deadline: no_progress` now displays an honest timeout, does not call retry/recovery and does not speak an error through Voice. Generic request errors show a generic failure rather than the false startup claim. Success path still speaks the answer. Added synthetic `tests/chat_deadline_status_smoke.gd`; isolated Godot4.7.1 project import exit0, smoke `CHAT_DEADLINE_STATUS_SMOKE_PASS` exit0 and git diff --check passed. Godot emitted existing resource/ObjectDB cleanup warnings after PASS; no app package/installed binary was built. Localhost Core read-only `/health` was `ok`, and a direct synthetic request returned in31.42s but gave a wrong factual answer; AF-185 latency/quality remains OPEN. Version remains1.5.0.2 until relevant post-change gates pass.
+PROGRESS_COMPLETE: 35%
+PROGRESS_REMAINING: 65%
+DONE: isolated narrow source candidate and actual Godot classification smoke green; no PR107/108 source modified.
+REMAINING: review, commit/push candidate, exact PR CI, installed Windows behavior, signed package/update/version-last gates; separate Core latency/Knowledge and factual quality remain unresolved.
+BLOCKERS: source candidate cannot be promoted as stable chat repair while ordinary factual answer still fails; PR107 overlap requires explicit future integration review.
+NEXT: review candidate diff for ADR-0003 behavior and unrelated changes, commit/push only claimed paths, open draft PR and inspect exact-SHA checks without launching another full multi-GB release build.
