@@ -10294,3 +10294,30 @@ DONE: narrow PR119 source/local Godot smoke and storage archival complete; insta
 REMAINING: PR119 exact Windows package result, integration review with PR107, installed candidate and signed version-last release; separate AF-185 latency/quality, AF-183 Knowledge, resize and offline gates.
 BLOCKERS: normal installed chat still fails; PR119 Windows package pending; PR107 overlap declared.
 NEXT: inspect PR119 package result and exact artifact, then test only a correctly numbered candidate after the error-state block is accepted; plan a separate bounded Knowledge/context performance fix without editing PR107/108 owned paths until reconciled.
+
+### ACTIVE CLAIM — CODEX-2026-10-13-V1504-TERSE-PHRASING
+ROADMAP_RELEASE: V1.5.0.x Windows stabilization after V1.5.0.2; intended next separate BUILD V1.5.0.4 after V1.5.0.3 acceptance, version last.
+SCOPE_CLASS: RELEASE_CRITICAL narrow direct-chat request routing; no model, Knowledge, Voice or updater change.
+ROADMAP_SECTION: V1.5 Core/Chat normal local answer and UI/performance bounded response on installed Windows.
+ADR_REFS: ADR-0003 progress-aware request and no automatic retry; ADR-0001/0002 reviewed, no architecture change.
+STARTING_HEAD: 2d2c2d5446ad73e3a7b8be02e1179d550b6f16b2; fetched origin/main matched.
+INTENDED_BUMP: BUILD V1.5.0.4 only after prior version and all relevant acceptance gates; no version edit now.
+OWNED_PATHS: scripts/desktop_local_runtime.gd only `_is_explicit_terse_request` phrase detection; focused synthetic routing test; docs/PROJECT_MASTER_LOG.md append-only; docs/AURORAFOX_ENGINEERING_MEMORY.md AF-185 follow-up. PR107 retains all other desktop runtime work, PR108 retains Knowledge, PR119 retains main.gd deadline status.
+CLAIM_RECONCILIATION: PR107 is OPEN draft at SHA248f4f7c183cc02a4b88b8b364602d3dd1d9497c and also edits scripts/desktop_local_runtime.gd. Owner explicitly authorized continuing this Windows-first fix. This isolated branch takes over only the missed Russian short-answer phrase classification; PR107 branch is not rewritten. PR107 integration must preserve this detector and its regression test. PR119 is separate and remains draft; no shared implementation file with PR119.
+DEPENDENCIES: installed V1.5.0.2 ordinary ice question received no_progress after3m20s; bare direct endpoint with reasoning_effort=none/max_tokens64 took31.42s but gave wrong answer. Source detector contains `одной короткой` but not user phrase `одним коротким предложением`, which therefore keeps full reasoning and normal token budget. Contribution to the observed no_progress is UNVERIFIED until measured.
+ACCEPTANCE_GATES: production detector recognizes the exact synthetic phrase; unrelated prose and strict JSON routing stay unchanged; native Godot payload smoke, exact SHA CI/Core quality and Windows package, installed synthetic ordinary answer latency and factual quality, signed updater after version-last. Do not claim a speed or quality win from classifier-only tests.
+NON_BLOCKERS: AF-183 full Knowledge scan and responsive UI are separate open work; Android production rollout follows Windows stability per owner while common signed manifest still needs both platforms.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: source mismatch and PR107 overlap identified; isolated worktree created.
+REMAINING: focused implementation/test, exact CI, installed quality/latency and release gates.
+BLOCKERS: ordinary factual quality remains RED; V1.5.0.3/PR119 unfinished.
+NEXT: commit claim before touching source, then add phrase routing with a real production-method regression and run local Godot checks.
+
+V1504_TERSE_PHRASE_LOCAL_CANDIDATE_2026_10_13: On isolated branch `fix/v1.5.0.4-terse-phrasing`, claim was committed first as9d4c662. Confirmed source routing gap: the exact installed synthetic prompt `Ответь одним коротким предложением` did not match the existing `одной короткой` marker. Added only that phrase in scripts/desktop_local_runtime.gd and a synthetic native Godot payload probe. Godot4.7.1 import exit0; `TERSE_PHRASE_ROUTING_SMOKE_PASS` exit0 verifies the exact phrase selects `reasoning_effort=none` and the owner terse token budget, while ordinary prose and strict JSON routes remain unchanged. This is a source routing fix only: the 3m20s installed deadline and wrong direct Core answer have not been remeasured, so latency/quality remain RED/UNVERIFIED and no version bump or owner installation is justified. PR107 overlap remains explicitly reconciled in the claim; its branch was not edited. PR119 Windows package run38345494477 remains in progress at exact SHAd583da3, after successful build/installer/silent-install steps; archive/hash/upload steps are pending.
+PROGRESS_COMPLETE: 20%
+PROGRESS_REMAINING: 80%
+DONE: claim-first isolated source change, Godot import and exact synthetic payload routing smoke green.
+REMAINING: review/commit/push candidate, exact CI and Core quality, installed ordinary answer timing/factuality, version-last signed package/update and both-platform release gates.
+BLOCKERS: normal installed chat quality/latency RED; PR107 integration overlap; PR119 exact Windows package still running.
+NEXT: check diff and commit narrow candidate, open draft PR without publishing/version bump; await PR119 package and avoid redundant multi-GB release builds.
