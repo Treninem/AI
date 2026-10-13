@@ -10251,3 +10251,11 @@ DONE: real installed V1.5.0.2 window opened and synthetic ordinary question subm
 REMAINING: final ordinary answer/latency result, conclusive resize/navigation controls, future in-app updater and broader offline/Knowledge/Android gates.
 BLOCKERS: ordinary chat still processing; resizing attempt inconclusive.
 NEXT: observe the existing synthetic chat once after a bounded wait and record exact answer/time or continued stall, then investigate Core logs without duplicating the prompt.
+
+V1502_OWNER_ORDINARY_CHAT_RED_2026_10_13: The single synthetic prompt sent at06:51:50 local in installed V1.5.0.2 returned at06:55:10 after3m20s. Expected: timely factual sentence that ice floats because its density is lower than liquid water. Actual visible reply: `Встроенный AI ещё запускается в фоне. Сообщение сохранено; повторите его через несколько секунд — устанавливать или настраивать ничего не нужно.` At the same observation the header status said `AuroraFox Core готов • зарегистрировано инструментов: 48 • локальных записей памяти: 111`. Thus the installed ordinary-chat gate is RED for latency and no factual answer; the mismatch between readiness label and response requires diagnosis. Earlier installed V1.5.0.0 took19m31s and answered incorrectly; V1.5.0.2 improves neither acceptance to PASS. Source-level root cause and current Core process timing remain UNVERIFIED. No duplicate prompt was sent, no owner chat deleted. `godot.log` is empty and latest rotated Godot log has331 bytes; no direct Core timing breakdown was found in those files.
+PROGRESS_COMPLETE: 90%
+PROGRESS_REMAINING: 10%
+DONE: installed V1.5.0.2 ordinary question result timed and captured; explicit startup fallback versus ready-header mismatch confirmed.
+REMAINING: diagnose/fix Core readiness and latency under a new non-conflicting claim, conclusive resize/GUI, future in-app update and broader Knowledge/offline/Android gates.
+BLOCKERS: installed normal chat fails despite health marker; package health is only a startup gate.
+NEXT: inspect current Core readiness/request routing and relevant process traces, then take a narrow Windows-first chat fix claim after reconciling active owners; retain installed backups and do not present V1.5.0.2 as fully stable.
