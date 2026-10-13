@@ -10321,3 +10321,11 @@ DONE: narrow source reconciliation on current main; two combined native Godot sm
 REMAINING: run existing lifecycle contract with available test runtime, isolate low-RAM Core startup, prove ordinary factual-answer timing, exact-SHA CI/package and installed acceptance before any release.
 BLOCKERS: owner-PC portable PR120 ordinary chat failed Core startup after120s; original PR107 remains conflicting; this integration has no proven user-visible success.
 NEXT: commit/push this exploratory branch for review without opening a heavy package PR, then inspect Core startup logs and process/RAM evidence to design a separately testable fix.
+
+V15_CORE_INTEGRATION_DIAGNOSTIC_2026_10_13: Exploratory branch first exact commit550701f06a5085520a064415bff85e9b3bb9cf43 pushed without PR to avoid automatic multi-GB packaging. Existing PR107 Core/Voice source contracts were executed directly against this integration checkout (system Python lacks pytest) and both passed. Synthetic PR120 profile failure record says `Direct chat model error: AuroraFox Core не успел подготовиться за 120 секунд`; API stderr separately shows loopback port8768 bind error10048, which does not establish a Core8766 cause. Owner PC physical RAM at readback: 8042MiB total, 503.3MiB free. Memory pressure is a plausible startup contributor, NOT a confirmed root cause; no model/process trace at the failure instant was captured. Do not turn the longer PR107 startup wait into a claim of faster or correct chat. The candidate has no portable/install/device acceptance and no new version. Owner data remain unchanged.
+PROGRESS_COMPLETE: 25%
+PROGRESS_REMAINING: 75%
+DONE: exact exploratory SHA pushed; combined Godot import and two synthetic chat smokes pass; focused existing Core/Voice source contracts pass on integration tree.
+REMAINING: prove Core model startup under low free RAM, ordinary-answer factual correctness/latency and process cleanup on owner PC, then exact-SHA CI/package and signed installed gates.
+BLOCKERS: installed ordinary chat and prior isolated candidate remain RED; port8768 error and low free RAM are not established root causes.
+NEXT: derive a bounded diagnostic Core-startup test with process/health/memory timestamps and no owner data; only then choose a source fix or resource policy before requesting another multi-GB build.
