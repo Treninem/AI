@@ -10259,3 +10259,30 @@ DONE: installed V1.5.0.2 ordinary question result timed and captured; explicit s
 REMAINING: diagnose/fix Core readiness and latency under a new non-conflicting claim, conclusive resize/GUI, future in-app update and broader Knowledge/offline/Android gates.
 BLOCKERS: installed normal chat fails despite health marker; package health is only a startup gate.
 NEXT: inspect current Core readiness/request routing and relevant process traces, then take a narrow Windows-first chat fix claim after reconciling active owners; retain installed backups and do not present V1.5.0.2 as fully stable.
+
+V1502_OWNER_CORE_TIMEOUT_ISOLATION_2026_10_13: The local failure record written at06:55:09 for the synthetic installed chat contains `Direct chat model error: Core request deadline: no_progress` (record time stored in UTC). This proves the 3m20s fallback was a request progress deadline, not a confirmed Core startup failure. Read-only localhost `/health` returned `status: ok`; llama-server and Fox remained running. A separate single synthetic direct localhost request for the same ice question with reasoning_effort=none/max_tokens64 completed in31.42s using38 prompt/24 completion tokens, but answered incorrectly (`...легче льда, чем вода`). Therefore the bare local endpoint is alive and shorter than the GUI path, while model factual quality also fails. Exact GUI prompt tokens, Knowledge scan time and source of no-progress interval remain UNVERIFIED. `scripts/main.gd` currently maps every `Ошибка модели:` to a startup-only message and invokes recovery, even when the original error is a request deadline; it also speaks the fallback through Voice. This conflicts with ADR-0003's no automatic retry/relaunch of deadline failures and can mislead users. No second GUI prompt was sent and no owner data were removed.
+PROGRESS_COMPLETE: 90%
+PROGRESS_REMAINING: 10%
+DONE: exact installed failure reason isolated to no_progress; direct Core timing and quality measured on synthetic input.
+REMAINING: correct UI error classification without retry of request deadlines; isolate GUI context/Knowledge latency; installed ordinary factual answer, resize and updater gates.
+BLOCKERS: PR107 owns scripts/main.gd and Core-related source; coordination required before editing the shared code path.
+NEXT: record a narrow claim that explicitly reconciles PR107 ownership, fix only the GUI handling of request deadline versus startup and speech, test it on synthetic responses, then address latency separately.
+
+### ACTIVE CLAIM — CODEX-2026-10-13-V1503-CHAT-DEADLINE-HONEST-STATUS
+ROADMAP_RELEASE: V1.5.0.x Windows stabilization after published V1.5.0.2; next unused BUILD intended V1.5.0.3, version last.
+SCOPE_CLASS: RELEASE_CRITICAL narrow UI error classification and Voice suppression for failed Core request; no model/Knowledge algorithm change.
+ROADMAP_SECTION: V1.5 Core/Chat normal local answer, bounded error states, text usability when Voice fails.
+ADR_REFS: ADR-0003 no automatic retry/relaunch for request deadlines; ADR-0001 Voice nonblocking; ADR-0002 Core self-primary reviewed.
+STARTING_HEAD: bf548745525ab1cd0dcd8b3d0df67ddd171a7af9; origin/main matched after fetch.
+INTENDED_BUMP: BUILD 1.5.0.3 only after candidate acceptance; no version edit in this claim yet.
+OWNED_PATHS: scripts/main.gd only the `_submit_current` Core error branch and adjacent presentation helper; focused Godot smoke; docs/PROJECT_MASTER_LOG.md append-only; docs/AURORAFOX_ENGINEERING_MEMORY.md AF-185 follow-up. PR107 retains all other scripts/main.gd lifecycle/UI work, scripts/ai_client.gd and scripts/desktop_local_runtime.gd; PR108 retains Knowledge.
+CLAIM_RECONCILIATION: PR107 remains OPEN draft at SHA248f4f7c183cc02a4b88b8b364602d3dd1d9497c and includes scripts/main.gd. The owner requested Windows-first fixes. This claim explicitly takes over only the observed error-status branch from PR107 ownership, in an isolated branch; PR107 source/history is not rewritten. Before future PR107 integration, preserve this fix by rebase/cherry-pick and resolve overlapping lines in review. No other PR107/108 file is edited here.
+DEPENDENCIES: installed V1.5.0.2 request deadline `no_progress`, direct synthetic localhost answer31.42s/incorrect; user data/old app backups on D:.
+ACCEPTANCE_GATES: synthetic Godot classification for startup vs no_progress/other request failure; failed request is not TTS spoken or blindly recovered; healthy success/Voice path unchanged; native parse/smoke, exact candidate SHA CI; installed Windows and signed updater before any public version/release.
+NON_BLOCKERS: AF-183 Knowledge scan, general factual quality and responsive GUI remain OPEN and will block broader stability claims; Android first priority deferred by owner until Windows stable.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: exact source of misleading fallback and no_progress record identified; PR107 overlap declared.
+REMAINING: isolated implementation, focused tests, exact CI, installed acceptance and version-last release gates.
+BLOCKERS: no source edit until isolated branch created; general chat latency remains outside this narrow claim.
+NEXT: create isolated branch from current main, implement error classification without Core retry for request deadline and suppress TTS for failed request.
