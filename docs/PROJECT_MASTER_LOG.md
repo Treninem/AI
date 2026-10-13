@@ -10294,3 +10294,30 @@ DONE: narrow PR119 source/local Godot smoke and storage archival complete; insta
 REMAINING: PR119 exact Windows package result, integration review with PR107, installed candidate and signed version-last release; separate AF-185 latency/quality, AF-183 Knowledge, resize and offline gates.
 BLOCKERS: normal installed chat still fails; PR119 Windows package pending; PR107 overlap declared.
 NEXT: inspect PR119 package result and exact artifact, then test only a correctly numbered candidate after the error-state block is accepted; plan a separate bounded Knowledge/context performance fix without editing PR107/108 owned paths until reconciled.
+
+### ACTIVE CLAIM — CODEX-2026-10-13-V15-CORE-INTEGRATION-AUDIT
+ROADMAP_RELEASE: V1.5.0.x Windows stabilization; exploratory integration only, no public version or release.
+SCOPE_CLASS: RELEASE_CRITICAL diagnostic integration for ordinary local chat and owned Core/Voice lifecycle.
+ROADMAP_SECTION: V1.5 stable Core/Chat, bounded recovery, Voice nonblocking and exact-SHA acceptance.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003.
+STARTING_HEAD: 2d2c2d5446ad73e3a7b8be02e1179d550b6f16b2; origin/main and local main equal, clean at claim creation.
+INTENDED_BUMP: BUILD after separate fix acceptance and owner-approved release composition; no bump in this audit.
+OWNED_PATHS: isolated branch fix/v15-core-integration-audit; narrow scripts/desktop_local_runtime.gd Core startup ownership, voice/voice_bridge.gd owned-child shutdown, existing PR119/PR120 patches for integration tests, focused synthetic tests, docs/PROJECT_MASTER_LOG.md append-only.
+CLAIM_RECONCILIATION: Owner directed this chat to perform integration. PR107 SHA248f4f7 owns Core/Voice/UI; PR119 SHA50d87d2 owns scripts/main.gd deadline handling; PR120 SHA43fec44 owns Russian short-answer routing. This branch takes only the named Core/Voice hunks from PR107 for an isolated test, preserves PR119/PR120 without rewriting their branches, and does not merge PR107 wholesale because its base predates released V1.5.0.2. PR108 Knowledge files and all other PR107 UI/Android paths remain with their owners. Any public merge requires their review/reconciliation against current main and exact new-SHA gates.
+DEPENDENCIES: Installed V1.5.0.2 ordinary synthetic chat failed after 3m20s; PR120 isolated portable test failed Core startup after 120s; owner data and installed app remain untouched.
+ACCEPTANCE_GATES: focused Godot parse and lifecycle/phrase/deadline smokes, real local Core and ordinary factual-answer timing on owner PC in isolated synthetic profile, process cleanup, exact integration SHA CI/package before any numbered release, then signed Windows/Android update and installed data-preservation gates.
+NON_BLOCKERS: no repeated multi-GB build or public version bump during source reconciliation; AF-183 Knowledge and UI redesign remain separately owned/open.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: fresh main/PR SHA and conflict review; selected narrow source hunks; isolated worktree created.
+REMAINING: apply and test integration, isolate low-RAM Core failure, determine separately releasable fix and exact-SHA package/device acceptance.
+BLOCKERS: PR107 conflicts with main and PR120 owner-PC ordinary chat fails; integration candidate is not a release.
+NEXT: apply PR119/PR120 source/test changes and narrow PR107 Core/Voice hunks in this branch, run local synthetic tests without installing or modifying owner data.
+
+V15_CORE_INTEGRATION_LOCAL_2026_10_13: In isolated branch fix/v15-core-integration-audit, applied only PR107 SHA248f4f7's scripts/desktop_local_runtime.gd startup-owner and voice/voice_bridge.gd owned-child shutdown hunks, PR119 source/test commit d583da3's deadline classification without automatic retry/TTS, and PR120 source/test commit43fec44's Russian short-answer routing. No PR107 UI/Android/Knowledge or release/version files were taken. Godot4.7.1 headless import exit0; CHAT_DEADLINE_STATUS_SMOKE_PASS and TERSE_PHRASE_ROUTING_SMOKE_PASS both exit0 on the combined working tree. Godot emitted 60 ObjectDB/27 resource cleanup warnings after deadline smoke. Existing Python contract attempt is NOT_EXECUTED because system Python3.10 has no pytest; no dependency installation was made. This source integration does not address the owner-PC Core-startup timeout or wrong factual answer, so exact-SHA package and installed acceptance remain RED/UNVERIFIED. Installed Fox and owner files untouched; no multi-GB CI run started.
+PROGRESS_COMPLETE: 25%
+PROGRESS_REMAINING: 75%
+DONE: narrow source reconciliation on current main; two combined native Godot smokes and import pass.
+REMAINING: run existing lifecycle contract with available test runtime, isolate low-RAM Core startup, prove ordinary factual-answer timing, exact-SHA CI/package and installed acceptance before any release.
+BLOCKERS: owner-PC portable PR120 ordinary chat failed Core startup after120s; original PR107 remains conflicting; this integration has no proven user-visible success.
+NEXT: commit/push this exploratory branch for review without opening a heavy package PR, then inspect Core startup logs and process/RAM evidence to design a separately testable fix.
