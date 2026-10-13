@@ -10160,3 +10160,62 @@ DONE: exact Android failure isolated to multiple native curl paths; singular sel
 REMAINING: commit/push new helper SHA, prove Android artifact and Windows package CI, then full signed build-only run, guarded publication and owner installed update.
 BLOCKERS: old SHA536955d Android APK red; new exact-SHA Linux proof absent.
 NEXT: commit/push focused source repair and journal, wait for Android APK artifact gate before dispatching another full release build.
+
+V1502_NATIVE_CURL_EXACT_CI_PROGRESS_2026_10_13: Focused Linux singular-curl repair committed/pushed as main SHA0a869ac3582244e14af5e3fea26d47224bc89720; main and origin/main matched with no prior release.yml run on this SHA. Android APK artifact run38315350070 SUCCESS; Android normal-path Core E2E run38315350024 SUCCESS; real Android Core emulator, real Windows Core, integration, Voice/file and release-repair checks also SUCCESS. Windows Package CI run38315350472 remains IN_PROGRESS at `Silent install and installed-app smoke` after build/model/package steps; no full release build dispatched yet, to avoid duplicate large transfer until that gate finishes. Public stable remains V1.5.0.1; no v1.5.0.2 signed manifest or owner installed acceptance.
+PROGRESS_COMPLETE: 60%
+PROGRESS_REMAINING: 40%
+DONE: exact SHA0a869ac Android artifact and emulator paths green; Windows package reached installed-app smoke.
+REMAINING: Windows package final result, one full Core/Windows/Android signed build, guarded promotion, signature/assets and in-app owner update checks.
+BLOCKERS: Windows Package CI run38315350472 still running; release artifacts absent.
+NEXT: wait for exact Windows Package CI conclusion; if green, launch one full release.yml build-only run on unchanged SHA0a869ac, then inspect all platform artifacts.
+
+V1502_FULL_RELEASE_BUILD_DISPATCH_2026_10_13: At unchanged local/main/origin-main SHA0a869ac3582244e14af5e3fea26d47224bc89720, all 21 GitHub check runs completed without failure. Windows Package CI run38315350472 SUCCESS including installed-app smoke and uploaded artifacts; Android APK run38315350070 and normal-path E2E run38315350024 SUCCESS. Confirmed no prior release.yml run at this SHA, then dispatched exactly one build-only release run38325756394. GitHub independently reports headSha0a869ac3582244e14af5e3fea26d47224bc89720 and Core-gates IN_PROGRESS. No tag, public signed update.json/update.sig or owner installed V1.5.0.2 yet. This journal note remains local during exact-SHA build to avoid changing release source.
+PROGRESS_COMPLETE: 65%
+PROGRESS_REMAINING: 35%
+DONE: exact-source Android, Core and Windows package CI green; one full release build started at pinned SHA.
+REMAINING: release run Core/Windows/Android signed artifact results and hashes, guarded publication, signature and owner in-app update acceptance.
+BLOCKERS: release run38325756394 in progress; public stable still V1.5.0.1.
+NEXT: inspect exact run38325756394 conclusions and artifacts; on full success perform guarded publish-only promotion without rebuilding, then verify signed stable manifest and owner installed update.
+
+V1502_FULL_BUILD_GREEN_PUBLISH_ONLY_2026_10_13: Release run38325756394 completed SUCCESS on exact SHA0a869ac3582244e14af5e3fea26d47224bc89720: Core-gates, Windows and signed Android jobs green; publish skipped by branch-build design. Windows artifact `aurorafox-windows` 5,858,274,496 bytes; Android artifact `aurorafox-android` 1,641,007,511 bytes; Android diagnostics artifact97,940 bytes. Android job confirms signed APK validation and Android35 install/launch; Windows job confirms version, executable smoke and uploaded package. Checked main ref still exact SHA, no v1.5.0.2 tag/release, and no duplicate release.yml run on this SHA. Dispatched publish-only release.yml run38330895648 with publish_run_id38325756394, release_tag=v1.5.0.2 and release_commit exact SHA; GitHub reports matching headSha and publish job currently downloading prior Windows artifacts. This reuses complete built artifacts without rebuilding. No public release/signature or installed acceptance is claimed until the publish job and independent readback pass.
+PROGRESS_COMPLETE: 75%
+PROGRESS_REMAINING: 25%
+DONE: exact Core/Windows/signed Android full release build green; artifact presence/size confirmed; one publish-only recovery started on same SHA.
+REMAINING: publish job success, tag/manifest/signature/asset/chunk independent verification, owner in-app update and data preservation/functional smoke.
+BLOCKERS: publish-only run38330895648 in progress; installed V1.5.0.2 remains UNVERIFIED.
+NEXT: inspect publish run; if green, independently verify tag exact SHA, update.json/update.sig against pinned key, both asset hashes/chunks and Android signer/versionCode before starting owner in-app updater.
+
+V1502_PUBLIC_RELEASE_TAG_MISMATCH_2026_10_13: Publish-only run38330895648 completed SUCCESS from verified build run38325756394 on source SHA0a869ac3582244e14af5e3fea26d47224bc89720; public non-draft stable release v1.5.0.2 exists. Independent OpenSSL RSA-SHA256 verification of downloaded update.json against update.sig and committed release_public.pub passed. Public Windows ZIP SHA256 547e906c...faf5c6/size2,001,562,205 and Android APK SHA256 e308a8be...5eb3d51/size1,823,248,055 match the signed manifest, release evidence and GitHub asset digests. All 30 Windows and28 Android signed parts match GitHub digests/sizes, and sums equal whole assets. Android diagnostics show versionName1.5.0.2/versionCode100010 and signing cert SHA256 321a3046...e9c9ea9d. CRITICAL exact-tag gate FAILED: refs/tags/v1.5.0.2 points to release-evidence commit9ee83d63baabb470454e80cf0cf71c0d61043fdd, while verified binaries and release_verification.json identify parent source0a869ac. The release workflow used `gh release create` without an explicit --target, then its later evidence commit moved main; the tag appears to have been materialized at publication against current main. Precise GitHub ordering is an inference, but the observed SHA mismatch is confirmed. An attempted GitHub API force-retag was rejected by automatic approval review because moving an already public tag rewrites release history and may affect consumers. Do not bypass that rejection; owner was asked for explicit permission. No owner V1.5.0.2 in-app install or data-preservation acceptance has occurred. @Computer launched pre-existing Fox but `activate_window` twice timed out; no UI update action was taken.
+PROGRESS_COMPLETE: 80%
+PROGRESS_REMAINING: 20%
+DONE: signed public assets, all chunk metadata, Android signer/versionCode and build evidence independently verified.
+REMAINING: resolve public tag mismatch with owner decision, prevent recurrence in release workflow, verify installed Windows update and owner data/functional smoke.
+BLOCKERS: exact tag points to9ee83d6 instead of tested0a869ac; automatic approval review rejected force-retag; @Computer activation timeout prevents installed UI test.
+NEXT: add a narrow claimed release-workflow target-pin prevention fix without touching current public tag, and retry read-only owner installed-app inspection; await explicit owner decision before any tag mutation.
+
+### ACTIVE CLAIM — CODEX-2026-10-13-V1502-RELEASE-TAG-TARGET-PREVENTION
+ROADMAP_RELEASE: V1.5.0.2 exact-SHA release repair; no additional product/version change.
+SCOPE_CLASS: RELEASE_CRITICAL release provenance guard only.
+ROADMAP_SECTION: V1.5 signed update exact-source tag and release identity gates.
+ADR_REFS: ADR-0001, ADR-0002, ADR-0003 reviewed; no Core/runtime behavior change.
+STARTING_HEAD: 0a869ac3582244e14af5e3fea26d47224bc89720; release evidence commit9ee83d6 is remote main after publication.
+INTENDED_BUMP: none; workflow prevention applies to future promotion and does not modify already-built V1.5.0.2 bytes.
+OWNED_PATHS: .github/workflows/release.yml narrow draft-release target and tag assertion; focused release workflow contract test; docs/PROJECT_MASTER_LOG.md append-only; docs/AURORAFOX_ENGINEERING_MEMORY.md new lesson.
+CLAIM_RECONCILIATION: prior V1.5.0.2 release claim in this chat declared release.yml read-only; this same chat now explicitly claims only its tag-target guard after the public mismatch. Older release-tooling audit claims are historical; no current separate lane editing this workflow was found. Public tag remains untouched pending owner permission.
+DEPENDENCIES: signed V1.5.0.2 artifacts on source0a869ac and mismatched tag9ee83d6; automatic review rejected force-retag.
+ACCEPTANCE_GATES: targeted workflow change and regression contract, local syntax/diff check, exact CI on new SHA, no repeat multi-GB release build, no public tag mutation without explicit owner authorization.
+NON_BLOCKERS: AF-185 chat latency, AF-183 Knowledge and GUI redesign remain separate OPEN defects.
+PROGRESS_COMPLETE: 0%
+PROGRESS_REMAINING: 100%
+DONE: exact mismatch and likely source path identified; no tag mutation performed.
+REMAINING: guard implementation, tests and CI; owner tag decision and installed acceptance belong to release claim.
+BLOCKERS: tag-retarget authorization pending; @Computer UI activation timing out.
+NEXT: inspect release workflow and contract tests, require explicit --target RELEASE_COMMIT and assert tag/source identity before final publish where possible.
+
+V1502_TAG_TARGET_PREVENTION_SOURCE_2026_10_13: Synced local main by fast-forward to release-evidence commit9ee83d63baabb470454e80cf0cf71c0d61043fdd without losing append-only journal work. Narrow `.github/workflows/release.yml` candidate now refuses a pre-existing tag with SHA different from RELEASE_COMMIT before upload, creates future drafts with explicit `gh release create ... --target "$RELEASE_COMMIT"`, and checks published tag SHA after `gh release edit --draft=false`. Focused `test_release_draft_and_published_tag_pin_verified_source_commit` added to existing release identity policy test; direct test invocation, Python compile and git diff --check PASS. AF-192 documented. This changes future workflow behavior only; current public v1.5.0.2 tag is still9ee83d6, and no attempt to circumvent the automatic approval rejection was made. @Computer listed and launched pre-existing AuroraFox, but `activate_window` timed out twice; read-only state capture showed another foreground app, so no owner update was clicked or installed. Android diagnostic artifact from exact build confirms package com.aurorafox.ai, versionName1.5.0.2/versionCode100010 and signer SHA256 321a3046...e9c9ea9d.
+PROGRESS_COMPLETE: 45%
+PROGRESS_REMAINING: 55%
+DONE: exact published-tag mismatch diagnosed; future draft target pin and readback guard implemented; focused local contract green.
+REMAINING: commit/CI for workflow prevention; explicit owner decision on current tag; installed Fox update and data/functional smoke.
+BLOCKERS: current tag mutation requires explicit owner approval after automatic rejection; @Computer window activation timed out twice.
+NEXT: review/commit narrow workflow+test+memory+journal change; run exact CI. Do not modify public tag until owner answers.

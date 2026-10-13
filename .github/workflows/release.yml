@@ -749,8 +749,13 @@ jobs:
         run: |
           set -euo pipefail
           tag="$RELEASE_TAG"
+          existing_tag_sha="$(gh api "repos/${{ github.repository }}/git/ref/tags/$tag" --jq '.object.sha' 2>/dev/null || true)"
+          if [ -n "$existing_tag_sha" ] && [ "$existing_tag_sha" != "$RELEASE_COMMIT" ]; then
+            echo "Release tag $tag points to $existing_tag_sha, expected verified source $RELEASE_COMMIT" >&2
+            exit 1
+          fi
           if ! gh release view "$tag" >/dev/null 2>&1; then
-            gh release create "$tag" --title "AuroraFox $tag" --generate-notes --draft
+            gh release create "$tag" --target "$RELEASE_COMMIT" --title "AuroraFox $tag" --generate-notes --draft
           fi
           gh release upload "$tag" \
             dist/AuroraFox-Windows.zip \
@@ -798,3 +803,8 @@ jobs:
         run: |
           set -euo pipefail
           gh release edit "$RELEASE_TAG" --draft=false
+          published_tag_sha="$(gh api "repos/${{ github.repository }}/git/ref/tags/$RELEASE_TAG" --jq '.object.sha')"
+          test "$published_tag_sha" = "$RELEASE_COMMIT" || {
+            echo "Published tag $RELEASE_TAG points to $published_tag_sha, expected verified source $RELEASE_COMMIT" >&2
+            exit 1
+          }
