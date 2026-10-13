@@ -10313,3 +10313,11 @@ DONE: source mismatch and PR107 overlap identified; isolated worktree created.
 REMAINING: focused implementation/test, exact CI, installed quality/latency and release gates.
 BLOCKERS: ordinary factual quality remains RED; V1.5.0.3/PR119 unfinished.
 NEXT: commit claim before touching source, then add phrase routing with a real production-method regression and run local Godot checks.
+
+V1504_TERSE_PHRASE_LOCAL_CANDIDATE_2026_10_13: On isolated branch `fix/v1.5.0.4-terse-phrasing`, claim was committed first as9d4c662. Confirmed source routing gap: the exact installed synthetic prompt `Ответь одним коротким предложением` did not match the existing `одной короткой` marker. Added only that phrase in scripts/desktop_local_runtime.gd and a synthetic native Godot payload probe. Godot4.7.1 import exit0; `TERSE_PHRASE_ROUTING_SMOKE_PASS` exit0 verifies the exact phrase selects `reasoning_effort=none` and the owner terse token budget, while ordinary prose and strict JSON routes remain unchanged. This is a source routing fix only: the 3m20s installed deadline and wrong direct Core answer have not been remeasured, so latency/quality remain RED/UNVERIFIED and no version bump or owner installation is justified. PR107 overlap remains explicitly reconciled in the claim; its branch was not edited. PR119 Windows package run38345494477 remains in progress at exact SHAd583da3, after successful build/installer/silent-install steps; archive/hash/upload steps are pending.
+PROGRESS_COMPLETE: 20%
+PROGRESS_REMAINING: 80%
+DONE: claim-first isolated source change, Godot import and exact synthetic payload routing smoke green.
+REMAINING: review/commit/push candidate, exact CI and Core quality, installed ordinary answer timing/factuality, version-last signed package/update and both-platform release gates.
+BLOCKERS: normal installed chat quality/latency RED; PR107 integration overlap; PR119 exact Windows package still running.
+NEXT: check diff and commit narrow candidate, open draft PR without publishing/version bump; await PR119 package and avoid redundant multi-GB release builds.
