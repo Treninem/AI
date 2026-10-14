@@ -43,7 +43,12 @@ def _source_state(source: Path) -> tuple[int, int, str, str, str]:
     return after.st_size, after.st_mtime_ns, sample, str(after.st_dev), str(after.st_ino)
 
 
-def build(source: Path, index: Path) -> int:
+def _check_cancel(cancel_file: Path | None) -> None:
+    if cancel_file is not None and cancel_file.exists():
+        raise IndexUnavailable("BUILD_CANCELLED")
+
+
+def build(source: Path, index: Path, cancel_file: Path | None = None) -> int:
     """Build in the target directory, then publish a complete SQLite file."""
     source = source.resolve(strict=True)
     index = index.resolve()
@@ -56,6 +61,7 @@ def build(source: Path, index: Path) -> int:
     required_free = expected[0] + 256 * 1024 * 1024
     if shutil.disk_usage(index.parent).free < required_free:
         raise IndexUnavailable("INSUFFICIENT_DISK_SPACE")
+    _check_cancel(cancel_file)
     descriptor, temporary = tempfile.mkstemp(prefix=index.name + ".", suffix=".building", dir=index.parent)
     os.close(descriptor)
     temporary_path = Path(temporary)
@@ -65,8 +71,12 @@ def build(source: Path, index: Path) -> int:
             db.execute("CREATE TABLE locations(rowid INTEGER PRIMARY KEY, byte_offset INTEGER NOT NULL, source_lower TEXT NOT NULL, kind_lower TEXT NOT NULL)")
             db.execute("CREATE TABLE source_state(path TEXT NOT NULL, size INTEGER NOT NULL, mtime_ns INTEGER NOT NULL, sample_sha256 TEXT NOT NULL, device TEXT NOT NULL, file_id TEXT NOT NULL)")
             count = 0
+            line_number = 0
             with source.open("rb") as handle:
                 while line := handle.readline():
+                    if line_number % 1024 == 0:
+                        _check_cancel(cancel_file)
+                    line_number += 1
                     offset = handle.tell() - len(line)
                     try:
                         item = json.loads(line)
@@ -82,6 +92,7 @@ def build(source: Path, index: Path) -> int:
                     )
             if _source_state(source) != expected:
                 raise IndexUnavailable("SOURCE_CHANGED")
+            _check_cancel(cancel_file)
             db.execute(
                 "INSERT INTO source_state(path,size,mtime_ns,sample_sha256,device,file_id) VALUES(?,?,?,?,?,?)",
                 (str(source), *expected),
@@ -91,6 +102,7 @@ def build(source: Path, index: Path) -> int:
                 raise IndexUnavailable("INDEX_INTEGRITY")
         if _source_state(source) != expected:
             raise IndexUnavailable("SOURCE_CHANGED")
+        _check_cancel(cancel_file)
         os.replace(temporary_path, index)
         return count
     finally:
@@ -160,10 +172,11 @@ def main() -> int:
     parser.add_argument("--index", required=True, type=Path)
     parser.add_argument("--query", default="")
     parser.add_argument("--limit", type=int, default=2)
+    parser.add_argument("--cancel-file", type=Path)
     args = parser.parse_args()
     try:
         if args.action == "build":
-            print(json.dumps({"ok": True, "indexed_rows": build(args.source, args.index)}))
+            print(json.dumps({"ok": True, "indexed_rows": build(args.source, args.index, args.cancel_file)}))
         else:
             # ASCII escapes survive Windows console code pages; Godot JSON
             # decoding restores the original Unicode document text.

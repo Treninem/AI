@@ -84,6 +84,48 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         self.assertEqual(self.index.read_bytes(), before)
         self.assertFalse(list(self.index.parent.glob("*.building")))
 
+    def test_cancelled_rebuild_preserves_previous_index(self) -> None:
+        INDEX.build(self.source, self.index)
+        before = self.index.read_bytes()
+        cancel_file = self.index.with_suffix(".cancel")
+        cancel_file.touch()
+        with self.assertRaisesRegex(INDEX.IndexUnavailable, "BUILD_CANCELLED"):
+            INDEX.build(self.source, self.index, cancel_file)
+        self.assertEqual(self.index.read_bytes(), before)
+        self.assertFalse(list(self.index.parent.glob("*.building")))
+
+    def test_mid_build_cancellation_cleans_temporary_index(self) -> None:
+        INDEX.build(self.source, self.index)
+        before = self.index.read_bytes()
+        cancel_file = self.index.with_suffix(".cancel")
+        original_check = INDEX._check_cancel
+        checks = 0
+
+        def cancel_after_build_starts(path: Path | None) -> None:
+            nonlocal checks
+            checks += 1
+            if checks == 2:
+                cancel_file.touch()
+            original_check(path)
+
+        with mock.patch.object(INDEX, "_check_cancel", side_effect=cancel_after_build_starts):
+            with self.assertRaisesRegex(INDEX.IndexUnavailable, "BUILD_CANCELLED"):
+                INDEX.build(self.source, self.index, cancel_file)
+        self.assertEqual(self.index.read_bytes(), before)
+        self.assertFalse(list(self.index.parent.glob("*.building")))
+
+    def test_cancel_file_cli_returns_bounded_error(self) -> None:
+        cancel_file = self.index.with_suffix(".cancel")
+        cancel_file.touch()
+        result = subprocess.run(
+            [sys.executable, str(MODULE_PATH), "build", "--source", str(self.source),
+             "--index", str(self.index), "--cancel-file", str(cancel_file)],
+            capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 2, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["error"], "BUILD_CANCELLED")
+        self.assertFalse(self.index.exists())
+
     def test_search_cli_survives_legacy_windows_output_encoding(self) -> None:
         INDEX.build(self.source, self.index)
         env = os.environ.copy()
