@@ -40,6 +40,8 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         self.assertEqual(INDEX.build(self.source, self.index), 3)
         self.assertEqual([row["id"] for row in INDEX.search(self.source, self.index, "лёд плавает воде")], ["strong", "weak"])
         self.assertEqual([row["id"] for row in INDEX.search(self.source, self.index, "mars moons")], ["mars"])
+        self.assertEqual([row["id"] for row in INDEX.search(self.source, self.index, "synthetic://ice")], ["weak", "strong"])
+        self.assertEqual([row["id"] for row in INDEX.search(self.source, self.index, "fact", limit=3)], ["weak", "strong", "mars"])
         with self.assertRaisesRegex(INDEX.IndexUnavailable, "SHORT_QUERY"):
             INDEX.search(self.source, self.index, "лёд на воде")
 

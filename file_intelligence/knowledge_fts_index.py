@@ -69,6 +69,7 @@ def build(source: Path, index: Path, cancel_file: Path | None = None) -> int:
     try:
         with closing(sqlite3.connect(temporary_path)) as db:
             db.execute("CREATE VIRTUAL TABLE chunks USING fts5(text, tokenize='trigram', content='', detail=none)")
+            db.execute("CREATE VIRTUAL TABLE metadata_terms USING fts5(value, tokenize='trigram', content='', detail=none)")
             db.execute("CREATE TABLE locations(rowid INTEGER PRIMARY KEY, byte_offset INTEGER NOT NULL, source_lower TEXT NOT NULL, kind_lower TEXT NOT NULL)")
             db.execute("CREATE TABLE source_state(path TEXT NOT NULL, size INTEGER NOT NULL, mtime_ns INTEGER NOT NULL, sample_sha256 TEXT NOT NULL, device TEXT NOT NULL, file_id TEXT NOT NULL)")
             count = 0
@@ -87,9 +88,12 @@ def build(source: Path, index: Path, cancel_file: Path | None = None) -> int:
                         continue
                     count += 1
                     db.execute("INSERT INTO chunks(rowid,text) VALUES(?,?)", (count, item["text"]))
+                    source_lower = str(item.get("source", "")).lower()
+                    kind_lower = str(item.get("kind", "")).lower()
+                    db.execute("INSERT INTO metadata_terms(rowid,value) VALUES(?,?)", (count, source_lower + "\n" + kind_lower))
                     db.execute(
                         "INSERT INTO locations(rowid,byte_offset,source_lower,kind_lower) VALUES(?,?,?,?)",
-                        (count, offset, str(item.get("source", "")).lower(), str(item.get("kind", "")).lower()),
+                        (count, offset, source_lower, kind_lower),
                     )
             if _source_state(source) != expected:
                 raise IndexUnavailable("SOURCE_CHANGED")
@@ -134,11 +138,10 @@ def search(source: Path, index: Path, query: str, limit: int = 2) -> list[dict]:
                 "SELECT chunks.rowid,locations.byte_offset FROM chunks JOIN locations ON locations.rowid=chunks.rowid WHERE chunks MATCH ?",
                 (match,),
             ).fetchall())
-            for term in terms:
-                candidates.update(db.execute(
-                    "SELECT rowid,byte_offset FROM locations WHERE instr(source_lower,?)>0 OR instr(kind_lower,?)>0",
-                    (term, term),
-                ).fetchall())
+            candidates.update(db.execute(
+                "SELECT metadata_terms.rowid,locations.byte_offset FROM metadata_terms JOIN locations ON locations.rowid=metadata_terms.rowid WHERE metadata_terms MATCH ?",
+                (match,),
+            ).fetchall())
     except sqlite3.Error as error:
         raise IndexUnavailable("INDEX_UNAVAILABLE") from error
     ranked: list[tuple[int, int, dict]] = []
