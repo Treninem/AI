@@ -12,6 +12,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import shutil
 import sqlite3
 import tempfile
 
@@ -50,6 +51,11 @@ def build(source: Path, index: Path) -> int:
         raise ValueError("source and index must differ")
     index.parent.mkdir(parents=True, exist_ok=True)
     expected = _source_state(source)
+    # The temporary SQLite file must fit beside the existing index. Refuse to
+    # start when space is low, leaving the previous published index untouched.
+    required_free = expected[0] + 256 * 1024 * 1024
+    if shutil.disk_usage(index.parent).free < required_free:
+        raise IndexUnavailable("INSUFFICIENT_DISK_SPACE")
     descriptor, temporary = tempfile.mkstemp(prefix=index.name + ".", suffix=".building", dir=index.parent)
     os.close(descriptor)
     temporary_path = Path(temporary)

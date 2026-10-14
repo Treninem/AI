@@ -75,6 +75,15 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         self.assertEqual([row["id"] for row in INDEX.search(self.source, self.index, "mars moons")], ["mars"])
         self.assertFalse(list(self.index.parent.glob("*.building")))
 
+    def test_insufficient_disk_space_preserves_previous_index(self) -> None:
+        INDEX.build(self.source, self.index)
+        before = self.index.read_bytes()
+        with mock.patch.object(INDEX.shutil, "disk_usage", return_value=mock.Mock(free=0)):
+            with self.assertRaisesRegex(INDEX.IndexUnavailable, "INSUFFICIENT_DISK_SPACE"):
+                INDEX.build(self.source, self.index)
+        self.assertEqual(self.index.read_bytes(), before)
+        self.assertFalse(list(self.index.parent.glob("*.building")))
+
     def test_search_cli_survives_legacy_windows_output_encoding(self) -> None:
         INDEX.build(self.source, self.index)
         env = os.environ.copy()
