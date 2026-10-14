@@ -24,6 +24,7 @@ on:
       - 'tests/windows_installed_voice_smoke.ps1'
       - 'tests/windows_installed_local_services_smoke.ps1'
       - 'tests/windows_installed_knowledge_pack_smoke.ps1'
+      - 'tests/test_knowledge_fts_index.py'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -48,6 +49,7 @@ on:
       - 'tests/windows_installed_voice_smoke.ps1'
       - 'tests/windows_installed_local_services_smoke.ps1'
       - 'tests/windows_installed_knowledge_pack_smoke.ps1'
+      - 'tests/test_knowledge_fts_index.py'
       - 'main.tscn'
       - 'project.godot'
       - 'export_presets.cfg'
@@ -126,7 +128,7 @@ jobs:
 
       - name: Validate portable voice configuration contracts
         shell: pwsh
-        run: python -m unittest tests.test_windows_voice_package -v
+        run: python -m unittest tests.test_windows_voice_package tests.test_knowledge_fts_index -v
 
       - name: Restore bundled AuroraFox Core model cache
         uses: actions/cache@v4
