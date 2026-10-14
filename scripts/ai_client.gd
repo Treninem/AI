@@ -1,6 +1,8 @@
 class_name AIClient
 extends Node
 
+const KnowledgeIndexClientScript = preload("res://scripts/knowledge_index_client.gd")
+
 # These values belong only to the optional legacy Ollama compatibility adapter.
 # They are deliberately not named/defaulted as the AuroraFox model: the product
 # default is the bundled AuroraFox Core selected by AuroraBundledCoreModel.
@@ -185,7 +187,9 @@ static func _grounded_knowledge_context(store: KnowledgeStore, query: String, ex
 	var terms := query.split(" ", false)
 	var candidate_limit := MAX_KNOWLEDGE_CONTEXT_ITEMS if explicit_request else MAX_KNOWLEDGE_CONTEXT_ITEMS * 8
 	var parts: Array[String] = []
-	for item in store.search(query, candidate_limit):
+	var indexed: Dictionary = KnowledgeIndexClientScript.search(query, candidate_limit)
+	var candidates: Array = indexed.get("results", []) if bool(indexed.get("ok", false)) else store.search(query, candidate_limit)
+	for item in candidates:
 		if not item is Dictionary:
 			continue
 		var text := str(item.get("text", ""))

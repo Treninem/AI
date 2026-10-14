@@ -21,6 +21,9 @@ on:
       - 'tests/core_progress*_smoke.gd'
       - 'tests/core_factual_validator_smoke.gd'
       - 'tests/windows_chat_context_smoke.gd'
+      - 'tests/knowledge_index_client_smoke.gd'
+      - 'scripts/knowledge_index_client.gd'
+      - 'file_intelligence/knowledge_fts_index.py'
       - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
       - 'scripts/bundled_core_model.gd'
@@ -52,6 +55,9 @@ on:
       - 'tests/core_progress*_smoke.gd'
       - 'tests/core_factual_validator_smoke.gd'
       - 'tests/windows_chat_context_smoke.gd'
+      - 'tests/knowledge_index_client_smoke.gd'
+      - 'scripts/knowledge_index_client.gd'
+      - 'file_intelligence/knowledge_fts_index.py'
       - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
       - 'scripts/bundled_core_model.gd'
@@ -185,18 +191,28 @@ jobs:
       - name: Run bounded Knowledge context smoke in isolated profile
         shell: pwsh
         run: |
-          $profileRoot = Join-Path $PWD '.ci/knowledge-context-smoke-profile'
+          $profileRoot = Join-Path $PWD ('.ci/index-client-fallback-profile-' + [Guid]::NewGuid().ToString('N'))
           $oldAppData = $env:APPDATA
           $oldLocalAppData = $env:LOCALAPPDATA
+          $oldIndexPython = $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON
           try {
             $env:APPDATA = Join-Path $profileRoot 'AppData'
             $env:LOCALAPPDATA = Join-Path $profileRoot 'LocalAppData'
             New-Item -ItemType Directory -Force -Path $env:APPDATA,$env:LOCALAPPDATA | Out-Null
             & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/windows_chat_context_smoke.gd
             if ($LASTEXITCODE -ne 0) { throw 'Windows bounded Knowledge context smoke failed' }
+            $source = Get-ChildItem -Path $profileRoot -Filter knowledge.jsonl -Recurse | Select-Object -First 1
+            if (-not $source) { throw 'Synthetic Knowledge JSONL was not created' }
+            $index = Join-Path $source.DirectoryName 'knowledge.fts5.sqlite3'
+            & python file_intelligence/knowledge_fts_index.py build --source $source.FullName --index $index
+            if ($LASTEXITCODE -ne 0) { throw 'Synthetic Knowledge index build failed' }
+            $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = (Get-Command python).Source
+            & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/knowledge_index_client_smoke.gd
+            if ($LASTEXITCODE -ne 0) { throw 'Knowledge index present/stale/fallback smoke failed' }
           } finally {
             $env:APPDATA = $oldAppData
             $env:LOCALAPPDATA = $oldLocalAppData
+            $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = $oldIndexPython
           }
 
       - name: Run Work Mode startup regression smoke

@@ -159,7 +159,9 @@ def main() -> int:
         if args.action == "build":
             print(json.dumps({"ok": True, "indexed_rows": build(args.source, args.index)}))
         else:
-            print(json.dumps({"ok": True, "results": search(args.source, args.index, args.query, args.limit)}, ensure_ascii=False))
+            # ASCII escapes survive Windows console code pages; Godot JSON
+            # decoding restores the original Unicode document text.
+            print(json.dumps({"ok": True, "results": search(args.source, args.index, args.query, args.limit)}))
         return 0
     except (IndexUnavailable, OSError, ValueError, sqlite3.Error) as error:
         print(json.dumps({"ok": False, "error": str(error) if isinstance(error, IndexUnavailable) else "INDEX_UNAVAILABLE"}))

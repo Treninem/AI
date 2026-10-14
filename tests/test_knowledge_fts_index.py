@@ -6,6 +6,8 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import subprocess
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -72,6 +74,19 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         self.assertEqual(self.index.read_bytes(), before)
         self.assertEqual([row["id"] for row in INDEX.search(self.source, self.index, "mars moons")], ["mars"])
         self.assertFalse(list(self.index.parent.glob("*.building")))
+
+    def test_search_cli_survives_legacy_windows_output_encoding(self) -> None:
+        INDEX.build(self.source, self.index)
+        env = os.environ.copy()
+        env["PYTHONIOENCODING"] = "cp1252:strict"
+        result = subprocess.run(
+            [sys.executable, str(MODULE_PATH), "search", "--source", str(self.source),
+             "--index", str(self.index), "--query", "лёд плавает воде"],
+            env=env, capture_output=True, check=False,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(result.stdout.isascii())
+        self.assertEqual(json.loads(result.stdout)["results"][0]["id"], "strong")
 
 
 if __name__ == "__main__":
