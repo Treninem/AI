@@ -16,7 +16,7 @@ import time
 from pathlib import Path
 
 
-def build_index(source: Path, target: Path, offsets: Path, tokenizer: str, contentless: bool, detail_none: bool, offsets_sql: bool) -> tuple[int, float]:
+def build_index(source: Path, target: Path, offsets: Path, tokenizer: str, contentless: bool, detail_none: bool, offsets_sql: bool, text_field: str) -> tuple[int, float]:
     start = time.perf_counter()
     source_before = source.stat()
     db = sqlite3.connect(target)
@@ -43,13 +43,13 @@ def build_index(source: Path, target: Path, offsets: Path, tokenizer: str, conte
                     row = json.loads(line)
                 except json.JSONDecodeError:
                     continue
-                if not isinstance(row, dict) or not isinstance(row.get("text"), str):
+                if not isinstance(row, dict) or not isinstance(row.get(text_field), str):
                     continue
                 if offsets_sql:
                     batch_offsets.append((count + len(batch) + 1, position))
                 else:
                     offset_handle.write(struct.pack("<Q", position))
-                batch.append((str(row.get("source", "")), str(row.get("kind", "")), row["text"]))
+                batch.append((str(row.get("source", "")), str(row.get("kind", "")), row[text_field]))
                 if len(batch) >= 1000:
                     db.executemany("INSERT INTO knowledge(source,kind,text) VALUES(?,?,?)", batch)
                     if offsets_sql:
@@ -73,7 +73,7 @@ def build_index(source: Path, target: Path, offsets: Path, tokenizer: str, conte
         db.close()
 
 
-def search_index(source: Path, target: Path, offsets: Path, term: str, detail_none: bool, offsets_sql: bool) -> tuple[int, int, float]:
+def search_index(source: Path, target: Path, offsets: Path, term: str, detail_none: bool, offsets_sql: bool, text_field: str) -> tuple[int, int, float]:
     start = time.perf_counter()
     query = " AND ".join(f'"{term[i:i + 3]}"' for i in range(len(term) - 2)) if detail_none else f'"{term}"'
     with sqlite3.connect(target) as db:
@@ -98,7 +98,7 @@ def search_index(source: Path, target: Path, offsets: Path, term: str, detail_no
                 pointer = struct.unpack("<Q", pointers.read(8))[0]
             data.seek(pointer)
             row = json.loads(data.readline())
-            if term in row["text"].casefold():
+            if term in row[text_field].casefold():
                 verified += 1
     if offsets_sql:
         current = source.stat()
@@ -107,13 +107,13 @@ def search_index(source: Path, target: Path, offsets: Path, term: str, detail_no
     return verified, len(rows), time.perf_counter() - start
 
 
-def search_scan(source: Path, term: str) -> tuple[int, float]:
+def search_scan(source: Path, term: str, text_field: str) -> tuple[int, float]:
     start = time.perf_counter()
     found = 0
     with source.open(encoding="utf-8") as handle:
         for line in handle:
             row = json.loads(line)
-            if term in row["text"].casefold():
+            if term in row[text_field].casefold():
                 found += 1
     return found, time.perf_counter() - start
 
@@ -125,47 +125,59 @@ def main() -> None:
     parser.add_argument("--contentless", action="store_true")
     parser.add_argument("--detail-none", action="store_true")
     parser.add_argument("--offsets-sql", action="store_true")
+    parser.add_argument("--source", type=Path)
+    parser.add_argument("--text-field", choices=("text", "content"), default="text")
+    parser.add_argument("--term", action="append", default=[])
     args = parser.parse_args()
     if args.rows < 1:
         parser.error("--rows must be positive")
     with tempfile.TemporaryDirectory(prefix="aurorafox-fts5-") as directory:
         root = Path(directory)
-        source, target, offsets = root / "synthetic.jsonl", root / "synthetic.sqlite3", root / "offsets.bin"
-        with source.open("w", encoding="utf-8") as handle:
-            for number in range(args.rows):
-                text = f"Synthetic note {number}: local offline knowledge and reproducible evidence."
-                if number == args.rows // 2:
-                    text += " uniqueauroratoken"
-                if number == args.rows // 3:
-                    text += " aur uro ror ora rat ato tok oke ken"
-                handle.write(json.dumps({"source": "synthetic", "kind": "fact", "text": text}) + "\n")
-        count, build_seconds = build_index(source, target, offsets, args.tokenizer, args.contentless, args.detail_none, args.offsets_sql)
-        term = "auroratoken" if args.tokenizer == "trigram" else "uniqueauroratoken"
-        indexed_hits, candidates, indexed_seconds = search_index(source, target, offsets, term, args.detail_none, args.offsets_sql)
-        scanned_hits, scanned_seconds = search_scan(source, term)
-        assert count == args.rows and indexed_hits == scanned_hits == 1
+        source, target, offsets = args.source or root / "synthetic.jsonl", root / "synthetic.sqlite3", root / "offsets.bin"
+        if args.source is None:
+            with source.open("w", encoding="utf-8") as handle:
+                for number in range(args.rows):
+                    text = f"Synthetic note {number}: local offline knowledge and reproducible evidence."
+                    if number == args.rows // 2:
+                        text += " uniqueauroratoken"
+                    if number == args.rows // 3:
+                        text += " aur uro ror ora rat ato tok oke ken"
+                    handle.write(json.dumps({"source": "synthetic", "kind": "fact", "text": text}) + "\n")
+        elif not source.is_file() or not args.term or any(len(term) < 3 or len(term) > 200 for term in args.term):
+            parser.error("external source requires an existing file and 3-200 character --term values")
+        count, build_seconds = build_index(source, target, offsets, args.tokenizer, args.contentless, args.detail_none, args.offsets_sql, args.text_field)
+        terms = [term.casefold() for term in args.term] if args.source else ["auroratoken" if args.tokenizer == "trigram" else "uniqueauroratoken"]
+        queries = []
+        for term in terms:
+            indexed_hits, candidates, indexed_seconds = search_index(source, target, offsets, term, args.detail_none, args.offsets_sql, args.text_field)
+            scanned_hits, scanned_seconds = search_scan(source, term, args.text_field)
+            assert indexed_hits == scanned_hits and (args.source is not None or (count == args.rows and indexed_hits == 1))
+            queries.append({
+                "term": term,
+                "indexed_query_ms": round(indexed_seconds * 1000, 3),
+                "full_scan_ms": round(scanned_seconds * 1000, 3),
+                "hits": indexed_hits,
+                "candidates": candidates,
+            })
         print(json.dumps({
             "rows": count,
+            "external_source": args.source is not None,
             "tokenizer": args.tokenizer,
             "contentless": args.contentless,
             "detail_none": args.detail_none,
             "offsets_sql": args.offsets_sql,
-            "term": term,
             "jsonl_bytes": source.stat().st_size,
             "index_bytes": target.stat().st_size,
             "offset_bytes": offsets.stat().st_size,
             "build_seconds": round(build_seconds, 3),
-            "indexed_query_ms": round(indexed_seconds * 1000, 3),
-            "full_scan_ms": round(scanned_seconds * 1000, 3),
-            "hits": indexed_hits,
-            "candidates": candidates,
-            "synthetic_only": True,
+            "queries": queries,
+            "synthetic_only": args.source is None,
         }))
-        if args.offsets_sql:
+        if args.offsets_sql and args.source is None:
             with source.open("a", encoding="utf-8") as handle:
                 handle.write('{"source":"synthetic","kind":"fact","text":"mutation"}\n')
             try:
-                search_index(source, target, offsets, term, args.detail_none, True)
+                search_index(source, target, offsets, terms[0], args.detail_none, True, args.text_field)
             except RuntimeError as error:
                 assert str(error) == "stale Knowledge index"
                 print("STALE_INDEX_REJECTED")
