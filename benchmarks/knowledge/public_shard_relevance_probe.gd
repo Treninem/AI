@@ -17,7 +17,9 @@ func _run() -> void:
 	var started := Time.get_ticks_usec()
 	var items := KnowledgeStore.new().search(query, AIClient.MAX_KNOWLEDGE_CONTEXT_ITEMS)
 	var elapsed_ms := float(Time.get_ticks_usec() - started) / 1000.0
+	var grounded_started := Time.get_ticks_usec()
 	var grounded := AIClient._grounded_knowledge_context(KnowledgeStore.new(), query, false)
+	var grounded_elapsed_ms := float(Time.get_ticks_usec() - grounded_started) / 1000.0
 	var matches: Array[Dictionary] = []
 	for item in items:
 		var text := str(item.get("text", "")).to_lower()
@@ -32,5 +34,5 @@ func _run() -> void:
 			if source.contains(term):
 				source_hits += 1
 		matches.append({"id_sha256": str(item.get("id", "")).sha256_text(), "text_term_hits": text_hits, "matched_terms": matched_terms, "source_term_hits": source_hits, "text_chars": text.length()})
-	print("PUBLIC_SHARD_RELEVANCE ", JSON.stringify({"ok": true, "filtered_query": query, "elapsed_ms": elapsed_ms, "grounded_context_present": not grounded.is_empty(), "hits": matches}))
+	print("PUBLIC_SHARD_RELEVANCE ", JSON.stringify({"ok": true, "filtered_query": query, "elapsed_ms": elapsed_ms, "grounded_elapsed_ms": grounded_elapsed_ms, "grounded_context_present": not grounded.is_empty(), "hits": matches}))
 	quit(0)

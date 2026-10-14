@@ -46,6 +46,10 @@ func _run() -> void:
 	if ordinary_async.size() != 1:
 		_fail("async ordinary question received weak Knowledge context")
 		return
+	var ordinary_english: Array = client._with_knowledge([{"role": "user", "content": "What moons does Mars have?"}])
+	if ordinary_english.size() != 2 or not str(ordinary_english[0].get("content", "")).contains("synthetic://mars"):
+		_fail("ordinary English question lost relevant Knowledge")
+		return
 	var explicit_ice: Array = client._with_knowledge([{"role": "user", "content": "По базе знаний: почему лёд плавает в воде?"}])
 	if explicit_ice.size() != 2 or not str(explicit_ice[0].get("content", "")).contains("synthetic://weak-ice"):
 		_fail("explicit Knowledge request lost weak lexical source")

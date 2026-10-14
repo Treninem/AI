@@ -13,11 +13,11 @@ const KNOWLEDGE_QUERY_STOPWORDS := [
 	"a", "an", "the", "and", "or", "but", "of", "to", "in", "on", "for", "from", "at", "by", "with",
 	"is", "are", "was", "were", "be", "been", "being", "this", "that", "these", "those", "it", "its",
 	"what", "which", "who", "whom", "whose", "when", "where", "why", "how", "do", "does", "did",
-	"can", "could", "should", "would", "will", "may", "might", "must", "please", "reply", "answer",
+	"can", "could", "should", "would", "will", "may", "might", "must", "have", "has", "had", "please", "reply", "answer",
 	"и", "а", "но", "или", "в", "во", "на", "с", "со", "к", "ко", "по", "из", "у", "за", "для",
 	"от", "до", "о", "об", "про", "это", "этот", "эта", "эти", "то", "что", "как", "когда", "где",
 	"почему", "кто", "какой", "какая", "какие", "не", "ни", "же", "ли", "бы", "быть", "есть", "был",
-	"была", "были", "можно", "нужно", "ответь", "пожалуйста"
+	"была", "были", "можно", "нужно", "ответь", "расскажи", "объясни", "пожалуйста"
 ]
 const KNOWLEDGE_QUERY_SEPARATORS := [
 	"\n", "\r", "\t", ".", ",", ";", ":", "!", "?", "\"", "'", "`", "(", ")", "[", "]", "{", "}",
