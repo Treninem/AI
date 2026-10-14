@@ -5,6 +5,28 @@ extends RefCounted
 # return control to KnowledgeStore, which remains the canonical search path.
 const INDEX_PATH := "user://knowledge/knowledge.fts5.sqlite3"
 
+# Worker/test entry point only. A full-pack build can take minutes and must
+# never run on the UI thread or inside an ordinary chat request.
+static func rebuild() -> Dictionary:
+	if OS.get_name() != "Windows" or not FileAccess.file_exists(KnowledgeStore.DB_PATH):
+		return {"ok": false}
+	var runtime := _runtime_paths()
+	if runtime.is_empty():
+		return {"ok": false}
+	var args := PackedStringArray([
+		str(runtime["script"]), "build",
+		"--source", ProjectSettings.globalize_path(KnowledgeStore.DB_PATH),
+		"--index", ProjectSettings.globalize_path(INDEX_PATH),
+	])
+	var output: Array = []
+	var code := OS.execute(str(runtime["python"]), args, output, false, false)
+	if code != 0 or output.is_empty():
+		return {"ok": false}
+	var parsed = JSON.parse_string(str(output[0]))
+	if not parsed is Dictionary or not bool(parsed.get("ok", false)):
+		return {"ok": false}
+	return {"ok": true, "indexed_rows": int(parsed.get("indexed_rows", 0))}
+
 static func search(query: String, limit: int) -> Dictionary:
 	if OS.get_name() != "Windows" or limit < 1:
 		return {"ok": false}

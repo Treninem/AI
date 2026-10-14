@@ -28,6 +28,18 @@ func _run() -> void:
 	if bool(index_client.search("mars", 8).get("ok", false)):
 		_fail("stale index was accepted after append")
 		return
+	var rebuilt: Dictionary = index_client.rebuild()
+	if not bool(rebuilt.get("ok", false)) or int(rebuilt.get("indexed_rows", 0)) <= 0:
+		_fail("synthetic index rebuild failed")
+		return
+	if not bool(index_client.search("mars", 8).get("ok", false)):
+		_fail("rebuilt index was not used")
+		return
+	# A later source mutation must still fall back to the canonical store.
+	added = KnowledgeStore.new().import_text("Mars has another synthetic note.", "synthetic://fresh-2")
+	if not bool(added.get("ok", false)) or bool(index_client.search("mars", 8).get("ok", false)):
+		_fail("rebuilt index did not become stale after a second append")
+		return
 	var client := AIClient.new()
 	root.add_child(client)
 	var grounded: Array = client._with_knowledge([{"role": "user", "content": "По базе знаний: расскажи про Mars"}])
