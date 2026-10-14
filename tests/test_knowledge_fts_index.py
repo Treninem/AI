@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import importlib.util
+from contextlib import closing
 import json
 import os
 from pathlib import Path
+import sqlite3
 import subprocess
 import sys
 import tempfile
@@ -44,6 +46,18 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         self.assertEqual([row["id"] for row in INDEX.search(self.source, self.index, "fact", limit=3)], ["weak", "strong", "mars"])
         with self.assertRaisesRegex(INDEX.IndexUnavailable, "SHORT_QUERY"):
             INDEX.search(self.source, self.index, "лёд на воде")
+
+    def test_metadata_candidates_use_fts_and_rowid_lookup(self) -> None:
+        INDEX.build(self.source, self.index)
+        with closing(sqlite3.connect(self.index)) as db:
+            plan = " ".join(row[3] for row in db.execute(
+                "EXPLAIN QUERY PLAN SELECT metadata_terms.rowid,locations.byte_offset "
+                "FROM metadata_terms JOIN locations ON locations.rowid=metadata_terms.rowid "
+                "WHERE metadata_terms MATCH ?", (INDEX._fts_term("synthetic"),)
+            ))
+        self.assertIn("metadata_terms VIRTUAL TABLE", plan)
+        self.assertIn("locations USING INTEGER PRIMARY KEY", plan)
+        self.assertNotIn("SCAN locations", plan)
 
     def test_append_and_same_size_same_mtime_edge_edit_are_rejected(self) -> None:
         INDEX.build(self.source, self.index)
