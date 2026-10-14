@@ -113,6 +113,42 @@ class KnowledgeStressGateTests(unittest.TestCase):
                 blockers = summary["reports"][0]["performance_blockers"]
                 self.assertEqual(blockers, [] if expected_blocker is None else [expected_blocker])
 
+    def test_full_pack_store_size_gate_rejects_small_or_missing_measurement(self) -> None:
+        validator = BENCH / "validate_performance_report.py"
+        report = {
+            "schema": "aurorafox_knowledge_performance_v1",
+            "hard_correctness": {"passed": True},
+            "self_reliance_contract": {
+                "network_required": False,
+                "external_runtime_required": False,
+                "ollama_required": False,
+            },
+            "relative_performance": {},
+            "results": [],
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "report.json"
+            for size, expected_exit, expected_blocker in (
+                (40_000_000, 1, "store_size_below_minimum"),
+                (3_000_000_000, 0, None),
+                (None, 1, "store_size_missing"),
+            ):
+                row = {"search": {"cases": [{"name": "exact_rare", "p95_ms": 1000.0}]}}
+                if size is not None:
+                    row["store_size_bytes"] = size
+                report["results"] = [row]
+                path.write_text(json.dumps(report), encoding="utf-8")
+                result = subprocess.run(
+                    [sys.executable, str(validator), str(path), "--max-search-p95-ms", "5000",
+                     "--min-store-size-bytes", "2500000000"],
+                    capture_output=True, text=True, check=False,
+                )
+                self.assertEqual(result.returncode, expected_exit, result.stderr)
+                summary = json.loads(result.stdout)
+                self.assertEqual(summary["minimum_store_size_bytes"], 2_500_000_000)
+                blockers = summary["reports"][0]["performance_blockers"]
+                self.assertEqual(blockers, [] if expected_blocker is None else [expected_blocker])
+
     def test_memory_write_scaling_detects_near_quadratic_double(self) -> None:
         memory = load_module("knowledge_memory_scaling", "run_memory_scaling.py")
         findings = memory.pair_findings(

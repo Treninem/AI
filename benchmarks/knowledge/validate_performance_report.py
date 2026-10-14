@@ -29,6 +29,12 @@ def parse_args() -> argparse.Namespace:
         default=0.0,
         help="Explicit absolute search p95 limit for a measured target machine; zero leaves hosted-runner timing informational",
     )
+    parser.add_argument(
+        "--min-store-size-bytes",
+        type=int,
+        default=0,
+        help="Explicit minimum Knowledge store size for target-machine full-pack acceptance; zero disables this check",
+    )
     return parser.parse_args()
 
 
@@ -39,7 +45,9 @@ def _load(path: str) -> dict[str, Any]:
     return data
 
 
-def evaluate_report(report: dict[str, Any], path: str = "", max_search_p95_ms: float = 0.0) -> dict[str, Any]:
+def evaluate_report(
+    report: dict[str, Any], path: str = "", max_search_p95_ms: float = 0.0, min_store_size_bytes: int = 0
+) -> dict[str, Any]:
     errors: list[str] = []
     warnings: list[str] = []
     schema = str(report.get("schema", ""))
@@ -72,12 +80,20 @@ def evaluate_report(report: dict[str, Any], path: str = "", max_search_p95_ms: f
     # summary rather than silently normalizing it with larger timeouts.
     max_search_p95 = 0.0
     search_case_count = 0
+    store_sizes: list[float] = []
+    missing_store_size = False
     for result in report.get("results", []) if isinstance(report.get("results"), list) else []:
         if not isinstance(result, dict):
             continue
         search = result.get("search")
         if not isinstance(search, dict):
             continue
+        if min_store_size_bytes > 0:
+            raw_size = result.get("store_size_bytes")
+            if isinstance(raw_size, bool) or not isinstance(raw_size, (int, float)) or not math.isfinite(raw_size):
+                missing_store_size = True
+            else:
+                store_sizes.append(float(raw_size))
         for case in search.get("cases", []) if isinstance(search.get("cases"), list) else []:
             if isinstance(case, dict):
                 search_case_count += 1
@@ -87,6 +103,11 @@ def evaluate_report(report: dict[str, Any], path: str = "", max_search_p95_ms: f
             blocker_fields.append("search_p95_missing")
         elif max_search_p95 > max_search_p95_ms:
             blocker_fields.append("search_p95_exceeded")
+    if min_store_size_bytes > 0:
+        if search_case_count == 0 or missing_store_size or not store_sizes:
+            blocker_fields.append("store_size_missing")
+        elif min(store_sizes) < min_store_size_bytes:
+            blocker_fields.append("store_size_below_minimum")
     if max_search_p95 >= 1000.0:
         warnings.append(
             f"informational CI search latency >=1s (max p95={max_search_p95:.3f} ms); "
@@ -100,6 +121,8 @@ def evaluate_report(report: dict[str, Any], path: str = "", max_search_p95_ms: f
         "performance_blockers": blocker_fields,
         "max_search_p95_ms": max_search_p95,
         "absolute_search_limit_ms": max_search_p95_ms,
+        "minimum_store_size_bytes": min_store_size_bytes,
+        "min_observed_store_size_bytes": min(store_sizes) if store_sizes else None,
         "search_case_count": search_case_count,
         "errors": errors,
         "warnings": warnings,
@@ -110,11 +133,13 @@ def main() -> int:
     args = parse_args()
     if not math.isfinite(args.max_search_p95_ms) or args.max_search_p95_ms < 0:
         raise SystemExit("--max-search-p95-ms must be a finite nonnegative number")
+    if args.min_store_size_bytes < 0:
+        raise SystemExit("--min-store-size-bytes must be nonnegative")
     evaluations: list[dict[str, Any]] = []
     load_errors: list[str] = []
     for path in args.reports:
         try:
-            evaluations.append(evaluate_report(_load(path), path, args.max_search_p95_ms))
+            evaluations.append(evaluate_report(_load(path), path, args.max_search_p95_ms, args.min_store_size_bytes))
         except (OSError, ValueError, json.JSONDecodeError) as exc:
             load_errors.append(f"{path}: {exc}")
 
@@ -125,7 +150,7 @@ def main() -> int:
         if row["performance_blockers"]
     ]
     performance_passed = not blockers
-    performance_enforced = bool(args.enforce_performance or args.max_search_p95_ms > 0)
+    performance_enforced = bool(args.enforce_performance or args.max_search_p95_ms > 0 or args.min_store_size_bytes > 0)
     passed = correctness_passed and (performance_passed or not performance_enforced)
     summary = {
         "schema": "aurorafox_knowledge_performance_gate_v1",
@@ -135,10 +160,11 @@ def main() -> int:
         "performance_enforced": performance_enforced,
         "absolute_latency_enforced": bool(args.max_search_p95_ms > 0),
         "absolute_search_limit_ms": args.max_search_p95_ms,
+        "minimum_store_size_bytes": args.min_store_size_bytes,
         "load_errors": load_errors,
         "blockers": blockers,
         "reports": evaluations,
-        "rule": "hosted-runner absolute timings are informational unless --max-search-p95-ms is supplied for target-machine acceptance; reproducible N->2N near-4x scaling is blocking when performance is enforced",
+        "rule": "hosted-runner absolute timings are informational unless target-machine --max-search-p95-ms or --min-store-size-bytes is supplied; reproducible N->2N near-4x scaling is blocking when performance is enforced",
     }
     if args.output:
         output = Path(args.output)
