@@ -53,6 +53,16 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         with self.assertRaisesRegex(INDEX.IndexUnavailable, "STALE_INDEX"):
             INDEX.search(self.source, self.index, "mars moons")
 
+    def test_same_bytes_and_timestamp_replacement_is_rejected(self) -> None:
+        INDEX.build(self.source, self.index)
+        stat = self.source.stat()
+        replacement = self.source.with_suffix(".replacement")
+        replacement.write_bytes(self.source.read_bytes())
+        os.utime(replacement, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+        os.replace(replacement, self.source)
+        with self.assertRaisesRegex(INDEX.IndexUnavailable, "STALE_INDEX"):
+            INDEX.search(self.source, self.index, "mars moons")
+
     def test_failed_publication_preserves_previous_index(self) -> None:
         INDEX.build(self.source, self.index)
         before = self.index.read_bytes()

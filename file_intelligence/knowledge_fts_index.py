@@ -31,13 +31,15 @@ def _sample_digest(source: Path) -> str:
     return digest.hexdigest()
 
 
-def _source_state(source: Path) -> tuple[int, int, str]:
+def _source_state(source: Path) -> tuple[int, int, str, str, str]:
     before = source.stat()
     sample = _sample_digest(source)
     after = source.stat()
-    if (before.st_size, before.st_mtime_ns) != (after.st_size, after.st_mtime_ns):
+    if (before.st_size, before.st_mtime_ns, before.st_dev, before.st_ino) != (
+        after.st_size, after.st_mtime_ns, after.st_dev, after.st_ino
+    ):
         raise IndexUnavailable("SOURCE_CHANGED")
-    return after.st_size, after.st_mtime_ns, sample
+    return after.st_size, after.st_mtime_ns, sample, str(after.st_dev), str(after.st_ino)
 
 
 def build(source: Path, index: Path) -> int:
@@ -55,7 +57,7 @@ def build(source: Path, index: Path) -> int:
         with closing(sqlite3.connect(temporary_path)) as db:
             db.execute("CREATE VIRTUAL TABLE chunks USING fts5(text, tokenize='trigram', content='', detail=none)")
             db.execute("CREATE TABLE locations(rowid INTEGER PRIMARY KEY, byte_offset INTEGER NOT NULL, source_lower TEXT NOT NULL, kind_lower TEXT NOT NULL)")
-            db.execute("CREATE TABLE source_state(path TEXT NOT NULL, size INTEGER NOT NULL, mtime_ns INTEGER NOT NULL, sample_sha256 TEXT NOT NULL)")
+            db.execute("CREATE TABLE source_state(path TEXT NOT NULL, size INTEGER NOT NULL, mtime_ns INTEGER NOT NULL, sample_sha256 TEXT NOT NULL, device TEXT NOT NULL, file_id TEXT NOT NULL)")
             count = 0
             with source.open("rb") as handle:
                 while line := handle.readline():
@@ -75,7 +77,7 @@ def build(source: Path, index: Path) -> int:
             if _source_state(source) != expected:
                 raise IndexUnavailable("SOURCE_CHANGED")
             db.execute(
-                "INSERT INTO source_state(path,size,mtime_ns,sample_sha256) VALUES(?,?,?,?)",
+                "INSERT INTO source_state(path,size,mtime_ns,sample_sha256,device,file_id) VALUES(?,?,?,?,?,?)",
                 (str(source), *expected),
             )
             db.commit()
@@ -104,8 +106,8 @@ def search(source: Path, index: Path, query: str, limit: int = 2) -> list[dict]:
         raise IndexUnavailable("SHORT_QUERY")
     before = _source_state(source)
     try:
-        with closing(sqlite3.connect(f"file:{index.resolve().as_posix()}?mode=ro", uri=True)) as db:
-            state = db.execute("SELECT path,size,mtime_ns,sample_sha256 FROM source_state").fetchone()
+        with closing(sqlite3.connect(index.resolve().as_uri() + "?mode=ro", uri=True)) as db:
+            state = db.execute("SELECT path,size,mtime_ns,sample_sha256,device,file_id FROM source_state").fetchone()
             if state != (str(source), *before):
                 raise IndexUnavailable("STALE_INDEX")
             match = " OR ".join(_fts_term(term) for term in terms)
