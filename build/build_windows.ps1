@@ -226,7 +226,7 @@ foreach ($dir in @("python", "vendor")) {
 # the same verified portable Python and OCR runtime proven by the candidate CI.
 if (Test-Path $fileOut) { Remove-Item $fileOut -Recurse -Force }
 New-Item -ItemType Directory -Force -Path $fileOut | Out-Null
-foreach ($file in @("file_service.py", "project_index_service.py", "local_ocr.py", "extended_formats.py", "requirements.txt", "install_files.ps1", "prepare_windows_ocr.ps1")) {
+foreach ($file in @("file_service.py", "project_index_service.py", "knowledge_fts_index.py", "local_ocr.py", "extended_formats.py", "requirements.txt", "install_files.ps1", "prepare_windows_ocr.ps1")) {
     $source = Join-Path $fileSource $file
     if (-not (Test-Path $source)) { throw "File Intelligence bootstrap is missing: $file" }
     Copy-Item $source (Join-Path $fileOut $file) -Force
@@ -287,6 +287,7 @@ if (-not (Test-Path (Join-Path $computerOut "python\python.exe"))) { throw "Port
 if (-not (Test-Path (Join-Path $computerOut "vendor\fastapi"))) { throw "Portable Computer Agent dependencies were not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "file_service.py"))) { throw "File Intelligence service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "project_index_service.py"))) { throw "Project index service was not packaged" }
+if (-not (Test-Path (Join-Path $fileOut "knowledge_fts_index.py"))) { throw "Knowledge index candidate was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "extended_formats.py"))) { throw "EPUB/RAR service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "local_ocr.py"))) { throw "Local OCR service was not packaged" }
 if (-not (Test-Path (Join-Path $fileOut "install_files.ps1"))) { throw "File Intelligence installer was not packaged" }
