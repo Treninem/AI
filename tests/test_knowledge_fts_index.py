@@ -72,6 +72,40 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         self.assertEqual([row["id"] for row in result], ["199", "0"])
         self.assertLessEqual(loads.call_count, 3)
 
+    def test_mixed_text_source_kind_parity(self) -> None:
+        rows = [
+            {"id": "ice", "text": "Лёд плавает из-за меньшей плотности", "source": "synthetic://ice", "kind": "fact"},
+            {"id": "source_only", "text": "unrelated content", "source": "synthetic://ice", "kind": "note"},
+            {"id": "kind_only", "text": "unrelated content", "source": "synthetic://other", "kind": "fact"},
+            {"id": "mixed", "text": "alpha beta mix.tag abc-123", "source": "synthetic://alpha", "kind": "beta"},
+            {"id": "russian", "text": "кириллица и плотность", "source": "knowledge-00000", "kind": "заметка"},
+        ] + [
+            {"id": f"broad_{number}", "text": "unrelated content", "source": "knowledge-00000", "kind": "note"}
+            for number in range(80)
+        ]
+        self.source.write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in rows), encoding="utf-8")
+        INDEX.build(self.source, self.index)
+        for query in (
+            "лёд", "плотность", "synthetic://ice", "fact", "alpha beta",
+            "knowledge-00000", "кириллица", "mix.tag", "abc-123", "unmatched",
+        ):
+            normalized = query.lower().strip()
+            terms = [term for term in normalized.split(" ") if len(term) >= 2]
+            scored = []
+            for rowid, item in enumerate(rows, 1):
+                content = item["text"].lower()
+                source_name = item["source"].lower()
+                kind = item["kind"].lower()
+                score = (5 if normalized in content else 0) + sum(
+                    (2 if term in content else 0) + (1 if term in source_name else 0) + (1 if term in kind else 0)
+                    for term in terms
+                )
+                if score > 0:
+                    scored.append((score, rowid, item["id"]))
+            expected = [item_id for _, _, item_id in sorted(scored, key=lambda entry: (-entry[0], entry[1]))[:7]]
+            actual = [item["id"] for item in INDEX.search(self.source, self.index, query, limit=7)]
+            self.assertEqual(actual, expected, query)
+
     def test_append_and_same_size_same_mtime_edge_edit_are_rejected(self) -> None:
         INDEX.build(self.source, self.index)
         original = self.source.read_bytes()
