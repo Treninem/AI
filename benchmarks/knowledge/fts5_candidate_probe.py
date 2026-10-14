@@ -15,11 +15,17 @@ import time
 from pathlib import Path
 
 
-def build_index(source: Path, target: Path) -> tuple[int, float]:
+def build_index(source: Path, target: Path, tokenizer: str, contentless: bool) -> tuple[int, float]:
     start = time.perf_counter()
     db = sqlite3.connect(target)
     try:
-        db.execute("CREATE VIRTUAL TABLE knowledge USING fts5(source UNINDEXED, kind UNINDEXED, text, tokenize='unicode61')")
+        if tokenizer not in {"unicode61", "trigram"}:
+            raise ValueError("unsupported tokenizer")
+        extra = ", content=''" if contentless else ""
+        db.execute(
+            "CREATE VIRTUAL TABLE knowledge USING fts5("
+            f"source UNINDEXED, kind UNINDEXED, text, tokenize='{tokenizer}'{extra})"
+        )
         batch: list[tuple[str, str, str]] = []
         count = 0
         with source.open(encoding="utf-8") as handle:
@@ -47,7 +53,7 @@ def build_index(source: Path, target: Path) -> tuple[int, float]:
 def search_index(target: Path, term: str) -> tuple[int, float]:
     start = time.perf_counter()
     with sqlite3.connect(target) as db:
-        rows = db.execute("SELECT source,kind,text FROM knowledge WHERE knowledge MATCH ? LIMIT 4", (f'"{term}"',)).fetchall()
+        rows = db.execute("SELECT rowid FROM knowledge WHERE knowledge MATCH ? LIMIT 4", (f'"{term}"',)).fetchall()
     return len(rows), time.perf_counter() - start
 
 
@@ -65,6 +71,8 @@ def search_scan(source: Path, term: str) -> tuple[int, float]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--rows", type=int, default=100_000)
+    parser.add_argument("--tokenizer", choices=("unicode61", "trigram"), default="unicode61")
+    parser.add_argument("--contentless", action="store_true")
     args = parser.parse_args()
     if args.rows < 1:
         parser.error("--rows must be positive")
@@ -77,12 +85,16 @@ def main() -> None:
                 if number == args.rows // 2:
                     text += " uniqueauroratoken"
                 handle.write(json.dumps({"source": "synthetic", "kind": "fact", "text": text}) + "\n")
-        count, build_seconds = build_index(source, target)
-        indexed_hits, indexed_seconds = search_index(target, "uniqueauroratoken")
-        scanned_hits, scanned_seconds = search_scan(source, "uniqueauroratoken")
+        count, build_seconds = build_index(source, target, args.tokenizer, args.contentless)
+        term = "auroratoken" if args.tokenizer == "trigram" else "uniqueauroratoken"
+        indexed_hits, indexed_seconds = search_index(target, term)
+        scanned_hits, scanned_seconds = search_scan(source, term)
         assert count == args.rows and indexed_hits == scanned_hits == 1
         print(json.dumps({
             "rows": count,
+            "tokenizer": args.tokenizer,
+            "contentless": args.contentless,
+            "term": term,
             "jsonl_bytes": source.stat().st_size,
             "index_bytes": target.stat().st_size,
             "build_seconds": round(build_seconds, 3),
