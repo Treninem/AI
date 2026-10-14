@@ -34,6 +34,30 @@ func _run() -> void:
 	if not str(bounded[0].get("content", "")).contains("Контекст знаний сокращён"):
 		_fail("truncated Knowledge context was not marked honestly")
 		return
+	var weak_import := knowledge.import_text("Лёд формируется в воде при низкой температуре.", "synthetic://weak-ice")
+	if not bool(weak_import.get("ok", false)):
+		_fail("weak synthetic Knowledge import failed")
+		return
+	var ordinary: Array = client._with_knowledge([{"role": "user", "content": "Почему лёд плавает в воде?"}])
+	if ordinary.size() != 1:
+		_fail("ordinary question received weak Knowledge context")
+		return
+	var ordinary_async: Array = await client._with_knowledge_async([{"role": "user", "content": "Почему лёд плавает в воде?"}])
+	if ordinary_async.size() != 1:
+		_fail("async ordinary question received weak Knowledge context")
+		return
+	var explicit_ice: Array = client._with_knowledge([{"role": "user", "content": "По базе знаний: почему лёд плавает в воде?"}])
+	if explicit_ice.size() != 2 or not str(explicit_ice[0].get("content", "")).contains("synthetic://weak-ice"):
+		_fail("explicit Knowledge request lost weak lexical source")
+		return
+	var strong_import := knowledge.import_text("Лёд плавает в воде благодаря меньшей плотности.", "synthetic://strong-ice")
+	if not bool(strong_import.get("ok", false)):
+		_fail("strong synthetic Knowledge import failed")
+		return
+	var grounded: Array = client._with_knowledge([{"role": "user", "content": "Почему лёд плавает в воде?"}])
+	if grounded.size() != 2 or not str(grounded[0].get("content", "")).contains("synthetic://strong-ice"):
+		_fail("ordinary question lost strongly grounded Knowledge")
+		return
 	print("WINDOWS_CHAT_CONTEXT_SMOKE_PASS")
 	quit(0)
 

@@ -33,9 +33,10 @@ var knowledge_transaction := KnowledgeImportTransaction.new()
 
 class KnowledgeContextJob extends RefCounted:
 	var query := ""
+	var explicit_request := false
 	var context := ""
 	func run() -> void:
-		var full_context := KnowledgeStore.new().context_for(query, MAX_KNOWLEDGE_CONTEXT_ITEMS)
+		var full_context := AIClient._grounded_knowledge_context(KnowledgeStore.new(), query, explicit_request)
 		context = full_context.substr(0, MAX_KNOWLEDGE_CONTEXT_CHARS)
 		if full_context.length() > MAX_KNOWLEDGE_CONTEXT_CHARS:
 			context += "\n[Контекст знаний сокращён до установленного лимита.]"
@@ -180,6 +181,37 @@ func _knowledge_query(query: String) -> String:
 		terms.append(term)
 	return " ".join(terms)
 
+static func _grounded_knowledge_context(store: KnowledgeStore, query: String, explicit_request: bool) -> String:
+	var terms := query.split(" ", false)
+	var candidate_limit := MAX_KNOWLEDGE_CONTEXT_ITEMS if explicit_request else MAX_KNOWLEDGE_CONTEXT_ITEMS * 8
+	var parts: Array[String] = []
+	for item in store.search(query, candidate_limit):
+		if not item is Dictionary:
+			continue
+		var text := str(item.get("text", ""))
+		if not explicit_request:
+			var lower_text := text.to_lower()
+			var matched := 0
+			for term in terms:
+				if lower_text.contains(term):
+					matched += 1
+			var required := maxi(1, ceili(float(terms.size()) * 0.75))
+			if matched < required:
+				continue
+		parts.append("Тип: %s\nИсточник: %s\n%s" % [
+			str(item.get("kind", "knowledge")), str(item.get("source", "manual")), text
+		])
+		if parts.size() >= MAX_KNOWLEDGE_CONTEXT_ITEMS:
+			break
+	return "\n\n---\n\n".join(parts)
+
+func _is_explicit_knowledge_query(query: String) -> bool:
+	var q := query.to_lower()
+	for marker in ["базе знаний", "базы знаний", "источник", "документ", "файл", "pdf", "knowledge", "source", "document", "file"]:
+		if q.contains(marker):
+			return true
+	return false
+
 # Direct arithmetic questions need no document lookup. Avoid an unrelated
 # Knowledge scan and a much larger prompt on low-memory Windows PCs.
 func _is_simple_calculation_query(query: String) -> bool:
@@ -215,6 +247,7 @@ func _with_knowledge_async(messages: Array) -> Array:
 		return copied
 	var job := KnowledgeContextJob.new()
 	job.query = filtered_query
+	job.explicit_request = _is_explicit_knowledge_query(query)
 	var task_id := WorkerThreadPool.add_task(Callable(job, "run"))
 	while not WorkerThreadPool.is_task_completed(task_id):
 		await get_tree().create_timer(0.10).timeout
@@ -239,7 +272,7 @@ func _with_knowledge(messages: Array) -> Array:
 	var filtered_query := _knowledge_query(query)
 	if filtered_query.is_empty():
 		return copied
-	var full_context := knowledge.context_for(filtered_query, MAX_KNOWLEDGE_CONTEXT_ITEMS)
+	var full_context := _grounded_knowledge_context(knowledge, filtered_query, _is_explicit_knowledge_query(query))
 	var context := full_context.substr(0, MAX_KNOWLEDGE_CONTEXT_CHARS)
 	if full_context.length() > MAX_KNOWLEDGE_CONTEXT_CHARS:
 		context += "\n[Контекст знаний сокращён до установленного лимита.]"
