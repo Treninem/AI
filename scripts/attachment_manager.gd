@@ -1,6 +1,8 @@
 class_name AttachmentManager
 extends Node
 
+const KnowledgeIndexClientScript = preload("res://scripts/knowledge_index_client.gd")
+
 signal file_setup_required
 
 const TEXT_EXTENSIONS := ["txt", "md", "json", "jsonl", "ndjson", "csv", "tsv", "gd", "py", "js", "ts", "tsx", "jsx", "html", "css", "xml", "yaml", "yml", "toml", "ini", "cfg", "log", "shader", "glsl", "cpp", "c", "h", "hpp", "cs", "java", "kt", "rs", "go", "php", "rb", "lua", "swift", "dart", "sql", "sh", "ps1", "r", "jl"]
@@ -230,6 +232,8 @@ func _import_knowledge_or_training(path: String, learning_type: String) -> Dicti
 	result["type"] = learning_type
 	result["imported_via"] = "chat_attachment"
 	result["auto_execute"] = false
+	if bool(result.get("ok", false)) and not bool(result.get("skipped", false)):
+		KnowledgeIndexClientScript.schedule_rebuild()
 	return result
 
 func _import_extracted_knowledge(path: String, text: String, learning_type: String) -> Dictionary:
@@ -257,6 +261,8 @@ func _import_extracted_knowledge(path: String, text: String, learning_type: Stri
 	result["type"] = learning_type
 	result["imported_via"] = "chat_attachment_extraction"
 	result["auto_execute"] = false
+	if bool(result.get("ok", false)) and not bool(result.get("skipped", false)):
+		KnowledgeIndexClientScript.schedule_rebuild()
 	return result
 
 func _extracted_knowledge_import_worker(path: String, text: String, metadata: Dictionary) -> Dictionary:

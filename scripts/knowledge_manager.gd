@@ -1,6 +1,8 @@
 class_name KnowledgeManager
 extends RefCounted
 
+const KnowledgeIndexClientScript = preload("res://scripts/knowledge_index_client.gd")
+
 const DB_PATH := "user://knowledge/knowledge.jsonl"
 const STRUCTURED_PATH := "user://knowledge/structured.jsonl"
 var registry := KnowledgeSourceRegistry.new()
@@ -82,6 +84,8 @@ func remove_source(source: String) -> Dictionary:
 	# death between those writes restores the last fully committed state.
 	var removed := KnowledgeImportTransaction.new().remove_source(KnowledgeStore.new(), canonical)
 	_invalidate_scan()
+	if bool(removed.get("ok", false)):
+		KnowledgeIndexClientScript.schedule_rebuild()
 	return {
 		"ok": bool(removed.get("ok", false)),
 		"source": source,
@@ -134,6 +138,7 @@ func compact() -> Dictionary:
 	if not _replace_file(temp, DB_PATH):
 		return {"ok": false, "error": "Не удалось заменить индекс после compact"}
 	_invalidate_scan()
+	KnowledgeIndexClientScript.schedule_rebuild()
 	return {"ok": true, "items": kept, "duplicates_removed": removed, "registry": registry.stats(), "streaming": true}
 
 func _scan_db() -> Dictionary:

@@ -128,16 +128,21 @@ func chat_with_compatibility(messages: Array, temperature: float = 0.2) -> Dicti
 	return await core_runtime.chat(grounded_messages, temperature)
 
 func import_knowledge_text(text: String, source := "manual", metadata: Dictionary = {}) -> Dictionary:
-	return knowledge.import_text(text, source, metadata)
+	return _after_knowledge_mutation(knowledge.import_text(text, source, metadata))
 
 func import_knowledge_file(path: String, metadata: Dictionary = {}) -> Dictionary:
-	return knowledge_transaction.import_file(knowledge, path, metadata)
+	return _after_knowledge_mutation(knowledge_transaction.import_file(knowledge, path, metadata))
 
 func learn_from_file(path: String, metadata: Dictionary = {}) -> Dictionary:
-	return knowledge_transaction.import_file(knowledge, path, metadata)
+	return _after_knowledge_mutation(knowledge_transaction.import_file(knowledge, path, metadata))
 
 func learn_from_extracted_file(path: String, text: String, metadata: Dictionary = {}) -> Dictionary:
-	return knowledge_transaction.import_extracted_file(knowledge, path, text, metadata)
+	return _after_knowledge_mutation(knowledge_transaction.import_extracted_file(knowledge, path, text, metadata))
+
+func _after_knowledge_mutation(result: Dictionary) -> Dictionary:
+	if bool(result.get("ok", false)) and not bool(result.get("skipped", false)):
+		KnowledgeIndexClientScript.schedule_rebuild()
+	return result
 
 func supported_learning_files() -> PackedStringArray:
 	return knowledge.supported_import_extensions()
@@ -166,8 +171,8 @@ func reindex_knowledge_source(source: String, extracted_text := "", metadata: Di
 	var meta := metadata.duplicate(true)
 	meta["force_reindex"] = true
 	if not extracted_text.strip_edges().is_empty():
-		return knowledge_transaction.import_extracted_file(knowledge, source, extracted_text, meta)
-	return knowledge_transaction.import_file(knowledge, source, meta)
+		return _after_knowledge_mutation(knowledge_transaction.import_extracted_file(knowledge, source, extracted_text, meta))
+	return _after_knowledge_mutation(knowledge_transaction.import_file(knowledge, source, meta))
 
 func _knowledge_query(query: String) -> String:
 	var normalized := query.to_lower()

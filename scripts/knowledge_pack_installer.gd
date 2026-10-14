@@ -1,6 +1,8 @@
 class_name KnowledgePackInstaller
 extends RefCounted
 
+const KnowledgeIndexClientScript = preload("res://scripts/knowledge_index_client.gd")
+
 const PACK_SCHEMA := "aurorafox.knowledge-pack.v1"
 const RECORD_SCHEMA := "aurorafox.knowledge-record.v1"
 const MIN_PRODUCTION_CONTENT_BYTES := 1024 * 1024 * 1024
@@ -124,6 +126,8 @@ func install(store: KnowledgeStore, pack_dir: String) -> Dictionary:
 	state["completed_at"] = Time.get_datetime_string_from_system(true)
 	if not _write_json_atomic(state_path, state):
 		return _fail("Could not persist completed Knowledge Pack state")
+	if imported > 0:
+		KnowledgeIndexClientScript.schedule_rebuild()
 	return {
 		"ok": true,
 		"status": "ready",

@@ -19,6 +19,7 @@ boot_splash/minimum_display_time=0
 AuroraVoice="*res://voice/voice_manager.gd"
 AuroraUpdate="*res://update/update_manager.gd"
 AuroraCoreCandidateSubmitter="*res://scripts/core_candidate_submitter.gd"
+AuroraKnowledgeIndex="*res://scripts/knowledge_index_build_service.gd"
 
 [display]
 window/size/viewport_width=1440

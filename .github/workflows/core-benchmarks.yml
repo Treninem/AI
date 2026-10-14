@@ -23,6 +23,7 @@ on:
       - 'tests/windows_chat_context_smoke.gd'
       - 'tests/knowledge_index_client_smoke.gd'
       - 'tests/knowledge_index_build_service_smoke.gd'
+      - 'tests/knowledge_index_product_hooks_smoke.gd'
       - 'tests/test_knowledge_fts_index.py'
       - 'scripts/knowledge_index_client.gd'
       - 'scripts/knowledge_index_build_service.gd'
@@ -60,6 +61,7 @@ on:
       - 'tests/windows_chat_context_smoke.gd'
       - 'tests/knowledge_index_client_smoke.gd'
       - 'tests/knowledge_index_build_service_smoke.gd'
+      - 'tests/knowledge_index_product_hooks_smoke.gd'
       - 'tests/test_knowledge_fts_index.py'
       - 'scripts/knowledge_index_client.gd'
       - 'scripts/knowledge_index_build_service.gd'
@@ -238,6 +240,26 @@ jobs:
             New-Item -ItemType Directory -Force -Path $env:APPDATA,$env:LOCALAPPDATA | Out-Null
             & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/knowledge_index_build_service_smoke.gd
             if ($LASTEXITCODE -ne 0) { throw 'Cancellable Knowledge index service smoke failed' }
+          } finally {
+            $env:APPDATA = $oldAppData
+            $env:LOCALAPPDATA = $oldLocalAppData
+            $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = $oldIndexPython
+          }
+
+      - name: Verify Knowledge index product mutation hooks
+        shell: pwsh
+        run: |
+          $profileRoot = Join-Path $PWD ('.ci/index-product-hooks-profile-' + [Guid]::NewGuid().ToString('N'))
+          $oldAppData = $env:APPDATA
+          $oldLocalAppData = $env:LOCALAPPDATA
+          $oldIndexPython = $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON
+          try {
+            $env:APPDATA = Join-Path $profileRoot 'AppData'
+            $env:LOCALAPPDATA = Join-Path $profileRoot 'LocalAppData'
+            $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = (Get-Command python).Source
+            New-Item -ItemType Directory -Force -Path $env:APPDATA,$env:LOCALAPPDATA | Out-Null
+            & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/knowledge_index_product_hooks_smoke.gd
+            if ($LASTEXITCODE -ne 0) { throw 'Knowledge index product mutation hook smoke failed' }
           } finally {
             $env:APPDATA = $oldAppData
             $env:LOCALAPPDATA = $oldLocalAppData

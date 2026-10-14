@@ -5,6 +5,14 @@ extends RefCounted
 # return control to KnowledgeStore, which remains the canonical search path.
 const INDEX_PATH := "user://knowledge/knowledge.fts5.sqlite3"
 
+static func schedule_rebuild() -> void:
+	var main_loop := Engine.get_main_loop()
+	if not main_loop is SceneTree:
+		return
+	var service := (main_loop as SceneTree).root.get_node_or_null("AuroraKnowledgeIndex")
+	if service != null:
+		service.call_deferred("request_rebuild")
+
 # Worker/test entry point only. A full-pack build can take minutes and must
 # never run on the UI thread or inside an ordinary chat request.
 static func rebuild() -> Dictionary:

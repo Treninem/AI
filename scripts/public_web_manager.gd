@@ -1,6 +1,8 @@
 class_name PublicWebManager
 extends Node
 
+const KnowledgeIndexClientScript = preload("res://scripts/knowledge_index_client.gd")
+
 # User-supplied pages are untrusted data. This manager deliberately supports
 # bounded public reading only: it never executes page code, signs in, solves a
 # CAPTCHA, bypasses a paywall, or treats page text as an instruction.
@@ -433,7 +435,10 @@ func _import_page(item: Dictionary, instruction: String) -> Dictionary:
 			"owner_rule": "reading_a_user_supplied_url_means_remembering_it"
 		}
 	}
-	return knowledge.import_text(str(item.get("text", "")), final_url, metadata)
+	var imported := knowledge.import_text(str(item.get("text", "")), final_url, metadata)
+	if bool(imported.get("ok", false)):
+		KnowledgeIndexClientScript.schedule_rebuild()
+	return imported
 
 func _build_context(items: Array, durable: bool, instruction: String) -> String:
 	var blocks: Array[String] = []
