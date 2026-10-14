@@ -62,7 +62,8 @@ def build(source: Path, index: Path, cancel_file: Path | None = None) -> int:
     if shutil.disk_usage(index.parent).free < required_free:
         raise IndexUnavailable("INSUFFICIENT_DISK_SPACE")
     _check_cancel(cancel_file)
-    descriptor, temporary = tempfile.mkstemp(prefix=index.name + ".", suffix=".building", dir=index.parent)
+    job_suffix = cancel_file.stem + "." if cancel_file is not None else ""
+    descriptor, temporary = tempfile.mkstemp(prefix=index.name + "." + job_suffix, suffix=".building", dir=index.parent)
     os.close(descriptor)
     temporary_path = Path(temporary)
     try:

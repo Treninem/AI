@@ -22,8 +22,10 @@ on:
       - 'tests/core_factual_validator_smoke.gd'
       - 'tests/windows_chat_context_smoke.gd'
       - 'tests/knowledge_index_client_smoke.gd'
+      - 'tests/knowledge_index_build_service_smoke.gd'
       - 'tests/test_knowledge_fts_index.py'
       - 'scripts/knowledge_index_client.gd'
+      - 'scripts/knowledge_index_build_service.gd'
       - 'file_intelligence/knowledge_fts_index.py'
       - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
@@ -57,8 +59,10 @@ on:
       - 'tests/core_factual_validator_smoke.gd'
       - 'tests/windows_chat_context_smoke.gd'
       - 'tests/knowledge_index_client_smoke.gd'
+      - 'tests/knowledge_index_build_service_smoke.gd'
       - 'tests/test_knowledge_fts_index.py'
       - 'scripts/knowledge_index_client.gd'
+      - 'scripts/knowledge_index_build_service.gd'
       - 'file_intelligence/knowledge_fts_index.py'
       - 'tests/run_core_progress_http_fixture.py'
       - 'scripts/android_local_runtime.gd'
@@ -214,6 +218,26 @@ jobs:
             $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = (Get-Command python).Source
             & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/knowledge_index_client_smoke.gd
             if ($LASTEXITCODE -ne 0) { throw 'Knowledge index present/stale/fallback smoke failed' }
+          } finally {
+            $env:APPDATA = $oldAppData
+            $env:LOCALAPPDATA = $oldLocalAppData
+            $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = $oldIndexPython
+          }
+
+      - name: Run cancellable Knowledge index service smoke
+        shell: pwsh
+        run: |
+          $profileRoot = Join-Path $PWD ('.ci/index-build-service-profile-' + [Guid]::NewGuid().ToString('N'))
+          $oldAppData = $env:APPDATA
+          $oldLocalAppData = $env:LOCALAPPDATA
+          $oldIndexPython = $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON
+          try {
+            $env:APPDATA = Join-Path $profileRoot 'AppData'
+            $env:LOCALAPPDATA = Join-Path $profileRoot 'LocalAppData'
+            $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = (Get-Command python).Source
+            New-Item -ItemType Directory -Force -Path $env:APPDATA,$env:LOCALAPPDATA | Out-Null
+            & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/knowledge_index_build_service_smoke.gd
+            if ($LASTEXITCODE -ne 0) { throw 'Cancellable Knowledge index service smoke failed' }
           } finally {
             $env:APPDATA = $oldAppData
             $env:LOCALAPPDATA = $oldLocalAppData
