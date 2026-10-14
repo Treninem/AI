@@ -12,6 +12,9 @@ on:
       - 'tests/test_core_specialist_team_runtime_contract.py'
       - 'tests/code_specialist_refactor_smoke.gd'
       - 'scripts/ai_client.gd'
+      - 'scripts/main.gd'
+      - 'tests/voice_busy_drop_smoke.gd'
+      - 'tests/voice_overlay_consent_smoke.gd'
       - 'scripts/aurora_core_runtime.gd'
       - 'scripts/desktop_local_runtime.gd'
       - 'scripts/core_progress_stream.gd'
@@ -50,6 +53,9 @@ on:
       - 'tests/test_core_specialist_team_runtime_contract.py'
       - 'tests/code_specialist_refactor_smoke.gd'
       - 'scripts/ai_client.gd'
+      - 'scripts/main.gd'
+      - 'tests/voice_busy_drop_smoke.gd'
+      - 'tests/voice_overlay_consent_smoke.gd'
       - 'scripts/aurora_core_runtime.gd'
       - 'scripts/desktop_local_runtime.gd'
       - 'scripts/core_progress_stream.gd'
@@ -264,6 +270,25 @@ jobs:
             $env:APPDATA = $oldAppData
             $env:LOCALAPPDATA = $oldLocalAppData
             $env:AURORAFOX_KNOWLEDGE_INDEX_TEST_PYTHON = $oldIndexPython
+          }
+
+      - name: Reject delayed voice messages while Fox is busy
+        shell: pwsh
+        run: |
+          $profileRoot = Join-Path $PWD ('.ci/voice-busy-drop-profile-' + [Guid]::NewGuid().ToString('N'))
+          $oldAppData = $env:APPDATA
+          $oldLocalAppData = $env:LOCALAPPDATA
+          try {
+            $env:APPDATA = Join-Path $profileRoot 'AppData'
+            $env:LOCALAPPDATA = Join-Path $profileRoot 'LocalAppData'
+            New-Item -ItemType Directory -Force -Path $env:APPDATA,$env:LOCALAPPDATA | Out-Null
+            & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/voice_busy_drop_smoke.gd
+            if ($LASTEXITCODE -ne 0) { throw 'Busy voice transcript drop smoke failed' }
+            & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/voice_overlay_consent_smoke.gd
+            if ($LASTEXITCODE -ne 0) { throw 'Voice overlay consent smoke failed' }
+          } finally {
+            $env:APPDATA = $oldAppData
+            $env:LOCALAPPDATA = $oldLocalAppData
           }
 
       - name: Run Work Mode startup regression smoke

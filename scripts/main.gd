@@ -33,7 +33,6 @@ var attachment_bar: HFlowContainer
 var request_busy := false
 var file_processing_busy := false
 var core_recovery_busy := false
-var queued_voice_text := ""
 var rename_dialog: AcceptDialog
 var rename_input: LineEdit
 var rename_target_id := ""
@@ -1008,19 +1007,14 @@ func submit_voice_text(text: String) -> void:
 	if clean.is_empty():
 		return
 	if request_busy or file_processing_busy:
-		queued_voice_text = clean
+		# A transcript received during another request must not become a delayed
+		# user-role message after that request completes.
+		_set_status("Голосовой запрос не отправлен: дождитесь завершения текущего ответа", false, true)
 		return
 	if input == null:
 		return
 	input.text = clean
 	_submit_current()
-
-func _submit_queued_voice() -> void:
-	if request_busy or file_processing_busy or queued_voice_text.is_empty():
-		return
-	var next := queued_voice_text
-	queued_voice_text = ""
-	submit_voice_text(next)
 
 func _submit_current() -> void:
 	if request_busy:
@@ -1102,8 +1096,6 @@ func _submit_current() -> void:
 	if not core_failed:
 		AuroraVoice.say(answer)
 	request_busy = false
-	if not queued_voice_text.is_empty():
-		call_deferred("_submit_queued_voice")
 
 func _is_core_startup_failure(error: String) -> bool:
 	var lower := error.to_lower()
