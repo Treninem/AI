@@ -59,6 +59,19 @@ class KnowledgeFtsIndexTest(unittest.TestCase):
         self.assertIn("locations USING INTEGER PRIMARY KEY", plan)
         self.assertNotIn("SCAN locations", plan)
 
+    def test_broad_source_query_reads_only_ranked_results(self) -> None:
+        rows = [
+            {"id": str(number), "text": "unrelated content", "source": "synthetic://broad", "kind": "fact"}
+            for number in range(200)
+        ]
+        rows[-1]["text"] = "broad appears in the content"
+        self.source.write_text("".join(json.dumps(row) + "\n" for row in rows), encoding="utf-8")
+        INDEX.build(self.source, self.index)
+        with mock.patch.object(INDEX.json, "loads", wraps=json.loads) as loads:
+            result = INDEX.search(self.source, self.index, "broad", limit=2)
+        self.assertEqual([row["id"] for row in result], ["199", "0"])
+        self.assertLessEqual(loads.call_count, 3)
+
     def test_append_and_same_size_same_mtime_edge_edit_are_rejected(self) -> None:
         INDEX.build(self.source, self.index)
         original = self.source.read_bytes()

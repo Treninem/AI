@@ -134,19 +134,28 @@ def search(source: Path, index: Path, query: str, limit: int = 2) -> list[dict]:
             if state != (str(source), *before):
                 raise IndexUnavailable("STALE_INDEX")
             match = " OR ".join(_fts_term(term) for term in terms)
-            candidates = dict(db.execute(
+            text_candidates = dict(db.execute(
                 "SELECT chunks.rowid,locations.byte_offset FROM chunks JOIN locations ON locations.rowid=chunks.rowid WHERE chunks MATCH ?",
                 (match,),
             ).fetchall())
-            candidates.update(db.execute(
-                "SELECT metadata_terms.rowid,locations.byte_offset FROM metadata_terms JOIN locations ON locations.rowid=metadata_terms.rowid WHERE metadata_terms MATCH ?",
+            metadata_candidates = db.execute(
+                "SELECT metadata_terms.rowid,locations.byte_offset,locations.source_lower,locations.kind_lower FROM metadata_terms JOIN locations ON locations.rowid=metadata_terms.rowid WHERE metadata_terms MATCH ?",
                 (match,),
-            ).fetchall())
+            ).fetchall()
     except sqlite3.Error as error:
         raise IndexUnavailable("INDEX_UNAVAILABLE") from error
-    ranked: list[tuple[int, int, dict]] = []
+    ranked: list[tuple[int, int, int, dict | None]] = []
+    # FTS can yield extra trigram candidates, so the final score still checks
+    # exact substrings. A row found only through metadata cannot contain any
+    # query term in text; rank it from indexed metadata without rereading JSONL.
+    for rowid, offset, source_name, kind in metadata_candidates:
+        if rowid in text_candidates:
+            continue
+        score = sum((1 if term in source_name else 0) + (1 if term in kind else 0) for term in terms)
+        if score > 0:
+            ranked.append((score, rowid, offset, None))
     with source.open("rb") as handle:
-        for rowid, offset in candidates.items():
+        for rowid, offset in text_candidates.items():
             handle.seek(offset)
             try:
                 item = json.loads(handle.readline())
@@ -162,11 +171,22 @@ def search(source: Path, index: Path, query: str, limit: int = 2) -> list[dict]:
                 for term in terms
             )
             if score > 0:
-                ranked.append((score, rowid, item))
+                ranked.append((score, rowid, offset, item))
+        ranked.sort(key=lambda entry: (-entry[0], entry[1]))
+        results: list[dict] = []
+        for _, _, offset, item in ranked[:limit]:
+            if item is None:
+                handle.seek(offset)
+                try:
+                    item = json.loads(handle.readline())
+                except (UnicodeDecodeError, json.JSONDecodeError) as error:
+                    raise IndexUnavailable("SOURCE_CHANGED") from error
+                if not isinstance(item, dict):
+                    raise IndexUnavailable("SOURCE_CHANGED")
+            results.append(item)
     if _source_state(source) != before:
         raise IndexUnavailable("SOURCE_CHANGED")
-    ranked.sort(key=lambda entry: (-entry[0], entry[1]))
-    return [item for _, _, item in ranked[:limit]]
+    return results
 
 
 def main() -> int:
