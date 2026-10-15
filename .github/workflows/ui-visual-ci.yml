@@ -11,6 +11,8 @@ on:
       - 'tests/desktop_ui_smoke.gd'
       - 'tests/windows_ui_scaling_smoke.gd'
       - 'tests/android_file_tool_bridge_lifecycle_smoke.gd'
+      - 'tests/chat_deadline_status_smoke.gd'
+      - 'tests/terse_phrase_routing_smoke.gd'
       - 'tests/ui_owner_assets_smoke.gd'
       - 'tests/ui_state_smoke.gd'
       - 'tests/ui_real_input_smoke.gd'
@@ -107,6 +109,14 @@ jobs:
       - name: Android file bridge lifecycle gate
         shell: bash
         run: timeout 20s ./godot --headless --path . --script tests/android_file_tool_bridge_lifecycle_smoke.gd
+
+      - name: Core request error classification gate
+        shell: bash
+        run: timeout 90s ./godot --headless --path . --script tests/chat_deadline_status_smoke.gd
+
+      - name: Russian short answer routing gate
+        shell: bash
+        run: timeout 45s ./godot --headless --path . --script tests/terse_phrase_routing_smoke.gd
 
       - name: Canonical owner-art UI gate
         shell: bash

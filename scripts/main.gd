@@ -1069,25 +1069,21 @@ func _submit_current() -> void:
 	var answer := _fast_local_reply(shown, attachment_copy)
 	var response_origin := "deterministic_ui_greeting" if not answer.is_empty() else "aurorafox_core"
 	var core_failed := false
+	var core_startup_failed := false
 	if answer.is_empty():
 		answer = await agent.run_task(task)
 	if answer.begins_with("Ошибка модели:"):
 		core_failed = true
-		# A startup wait and a genuinely failed local model/request are different
-		# errors. Previously *every* Core error was hidden under "still loading",
-		# leaving the user in an endless, misleading retry loop.
-		var desktop_info: Dictionary = ai.runtime_info().get("desktop", {})
-		var loading := OS.get_name() == "Windows" and bool(desktop_info.get("starting", false))
-		response_origin = "core_startup_status" if loading else "core_error"
-		ai.retry_core_now()
-		if not core_recovery_busy:
-			core_recovery_busy = true
-			call_deferred("_recover_core_background")
-		if loading:
-			answer = "AuroraFox Core действительно загружает модель. Подготовка продолжается без перезапуска; повторите запрос после смены статуса на «готов»."
-		else:
-			# Preserve actionable failure text; never call a failed model ready.
-			answer = "Не удалось получить ответ от локального Core. " + answer.trim_prefix("Ошибка модели:").strip_edges()
+		var core_error := answer.trim_prefix("Ошибка модели:").strip_edges()
+		core_startup_failed = _is_core_startup_failure(core_error)
+		response_origin = "core_startup_status" if core_startup_failed else "core_request_error"
+		if core_startup_failed:
+			# ADR-0003 forbids relaunching requests that missed a deadline.
+			ai.retry_core_now()
+			if not core_recovery_busy:
+				core_recovery_busy = true
+				call_deferred("_recover_core_background")
+		answer = _core_failure_message(core_error)
 	AuroraVoice.set_ai_working(false)
 	ai_working_finished.emit()
 	var runtime := ai.runtime_info()
@@ -1101,14 +1097,33 @@ func _submit_current() -> void:
 	_render_active_chat()
 	_refresh_chat_list()
 	if core_failed:
-		_set_status("Текстовый интерфейс готов • Core требует проверки или продолжает подготовку • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()])
+		if core_startup_failed:
+			_set_status("Текстовый интерфейс готов • Core запускается в фоне • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()])
+		else:
+			_set_status("Последний запрос к Core завершился ошибкой • повторите сообщение")
 	else:
 		_set_status("Готово • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()], true)
 	assistant_response_ready.emit(answer)
-	AuroraVoice.say(answer)
+	if not core_failed:
+		AuroraVoice.say(answer)
 	request_busy = false
 	if not queued_voice_text.is_empty():
 		call_deferred("_submit_queued_voice")
+
+func _is_core_startup_failure(error: String) -> bool:
+	var lower := error.to_lower()
+	if lower.begins_with("core request deadline:"):
+		return false
+	return lower.contains("подготов") or lower.contains("запуска") or lower.contains("не удалось запустить") or lower.contains("завершился во время загрузки")
+
+func _core_failure_message(error: String) -> String:
+	if _is_core_startup_failure(error):
+		return "Встроенный AI ещё запускается в фоне. Сообщение сохранено; повторите его через несколько секунд — устанавливать или настраивать ничего не нужно."
+	if error.begins_with("Core request deadline:"):
+		return "Встроенный AI не успел ответить вовремя. Сообщение сохранено; попробуйте повторить запрос."
+	if error.is_empty():
+		return "Не удалось получить ответ от локального Core. Сообщение сохранено; попробуйте повторить запрос."
+	return "Не удалось получить ответ от локального Core. " + error
 
 func _recover_core_background() -> void:
 	var result := await ai.warmup()
