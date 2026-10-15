@@ -30,21 +30,49 @@ function Test-CoreModel([string]$Path) {
     return $sha -eq $expectedSha
 }
 
+function Get-CoreModelEvidence([string]$Path) {
+    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return 'missing' }
+    $item = Get-Item -LiteralPath $Path
+    $stream = [IO.File]::OpenRead($Path)
+    try {
+        $magic = New-Object byte[] 4
+        $read = $stream.Read($magic, 0, 4)
+        $magicText = if ($read -eq 4) { '0x' + (($magic | ForEach-Object { $_.ToString('x2') }) -join '') } else { 'short-file' }
+    } finally {
+        $stream.Dispose()
+    }
+    $sha = (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant()
+    return "bytes=$($item.Length) magic=$magicText sha256=$sha"
+}
+
 New-Item -ItemType Directory -Force -Path $CacheDir,(Split-Path -Parent $Destination) | Out-Null
 if (-not (Test-CoreModel $cacheFile)) {
     Remove-Item -LiteralPath $cacheFile -Force -ErrorAction SilentlyContinue
     $temp = $cacheFile + '.download'
     Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
-    Write-Host 'Downloading verified AuroraFox Core weights for packaging...' -ForegroundColor Cyan
-    try {
-        Invoke-WebRequest -Uri $url -OutFile $temp -Headers @{ 'User-Agent' = 'AuroraFox-Build/1.3.0.0'; 'Accept-Encoding' = 'identity' }
-    } catch {
-        Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
-        throw "Bundled AuroraFox Core download failed: $($_.Exception.Message)"
+    $curlCommand = Get-Command curl.exe -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
+    if (-not $curlCommand) {
+        $curlCommand = Get-Command curl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1
     }
-    if (-not (Test-CoreModel $temp)) {
+    if (-not $curlCommand) {
+        throw 'curl is required for verified AuroraFox Core weight transfer'
+    }
+    $downloadVerified = $false
+    for ($attempt = 1; $attempt -le 2; $attempt++) {
         Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
-        throw 'Bundled AuroraFox Core verification failed after download'
+        Write-Host "Downloading verified AuroraFox Core weights for packaging (attempt $attempt/2)..." -ForegroundColor Cyan
+        & $curlCommand.Source --location --proto '=https' --proto-redir '=https' --fail --silent --show-error --connect-timeout 30 --max-time 1500 --max-filesize $expectedBytes --output $temp $url
+        $curlExit = $LASTEXITCODE
+        if ($curlExit -eq 0 -and (Test-CoreModel $temp)) {
+            $downloadVerified = $true
+            break
+        }
+        $evidence = Get-CoreModelEvidence $temp
+        Write-Warning "Bundled Core transfer rejected: curl_exit=$curlExit $evidence"
+        Remove-Item -LiteralPath $temp -Force -ErrorAction SilentlyContinue
+    }
+    if (-not $downloadVerified) {
+        throw 'Bundled AuroraFox Core verification failed after two bounded transfers'
     }
     Move-Item -LiteralPath $temp -Destination $cacheFile -Force
 }

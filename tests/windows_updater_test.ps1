@@ -27,6 +27,7 @@ Set-Content -Path (Join-Path $install 'health.cmd') -Value $healthCmd -Encoding 
 Set-Content -Path (Join-Path $install 'version.txt') -Value 'old' -Encoding ASCII
 New-Item -ItemType Directory -Force -Path (Join-Path $install 'voice\models') | Out-Null
 Set-Content -Path (Join-Path $install 'voice\models\keep.txt') -Value 'persistent-model' -Encoding ASCII
+Set-Content -Path (Join-Path $install 'voice\models\owner-custom.txt') -Value 'owner-model' -Encoding ASCII
 New-Item -ItemType Directory -Force -Path (Join-Path $install 'file_intelligence\.venv') | Out-Null
 Set-Content -Path (Join-Path $install 'file_intelligence\.venv\keep.txt') -Value 'persistent-file-runtime' -Encoding ASCII
 New-Item -ItemType Directory -Force -Path (Join-Path $install 'runtime\windows\python') | Out-Null
@@ -36,6 +37,7 @@ Set-Content -Path (Join-Path $install 'runtime\windows\python\keep.txt') -Value 
 Set-Content -Path (Join-Path $newRoot 'health.cmd') -Value $healthCmd -Encoding ASCII
 Set-Content -Path (Join-Path $newRoot 'version.txt') -Value 'new' -Encoding ASCII
 New-Item -ItemType Directory -Force -Path (Join-Path $newRoot 'voice\models') | Out-Null
+Set-Content -Path (Join-Path $newRoot 'voice\models\keep.txt') -Value 'persistent-model' -Encoding ASCII
 Set-Content -Path (Join-Path $newRoot 'voice\models\new.txt') -Value 'new-runtime-file' -Encoding ASCII
 New-Item -ItemType Directory -Force -Path (Join-Path $newRoot 'file_intelligence') | Out-Null
 Set-Content -Path (Join-Path $newRoot 'file_intelligence\file_service.py') -Value '# new service' -Encoding ASCII
@@ -45,13 +47,19 @@ $sha = (Get-FileHash -Path $package -Algorithm SHA256).Hash.ToLowerInvariant()
 # A real short-lived parent verifies Wait-ForExit instead of using a fake PID.
 $parent = Start-Process powershell.exe -ArgumentList @('-NoProfile','-Command','Start-Sleep -Milliseconds 700') -PassThru -WindowStyle Hidden
 $updater = Join-Path $repo 'update\windows_updater.ps1'
-& powershell.exe -NoProfile -ExecutionPolicy Bypass -File $updater `
-    -Package $package `
-    -InstallDir $install `
-    -ParentPid $parent.Id `
-    -ExeName 'health.cmd' `
-    -ExpectedSha256 $sha `
-    -HealthFile $health
+$updaterArgs = @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $updater + '"'),
+    '-Package', ('"' + $package + '"'),
+    '-InstallDir', ('"' + $install + '"'),
+    '-ParentPid', [string]$parent.Id,
+    '-ExeName', 'health.cmd',
+    '-ExpectedSha256', $sha,
+    '-HealthFile', ('"' + $health + '"')
+)
+# The installed application starts its helper while its working directory is
+# inside the installation. That inherited directory must not lock the switch.
+$child = Start-Process powershell.exe -ArgumentList $updaterArgs -WorkingDirectory $install -WindowStyle Hidden -Wait -PassThru
+$LASTEXITCODE = $child.ExitCode
 
 if ($LASTEXITCODE -ne 0) {
     Write-Host '--- windows_updater.log ---' -ForegroundColor Yellow
@@ -68,6 +76,8 @@ if (-not (Test-Path $health)) { throw 'New installation did not produce update h
 if ((Get-Content (Join-Path $install 'version.txt') -Raw).Trim() -ne 'new') { throw 'New installation was not activated' }
 if (-not (Test-Path (Join-Path $install 'voice\models\keep.txt'))) { throw 'Existing local model was not preserved' }
 if (-not (Test-Path (Join-Path $install 'voice\models\new.txt'))) { throw 'New runtime content was lost during preservation' }
+if ((Get-Content -LiteralPath (Join-Path $install 'voice\models\owner-custom.txt') -Raw).Trim() -ne 'owner-model') { throw 'Owner-added voice model was not preserved' }
+if (-not ((Get-Content -LiteralPath $updaterLog -Raw) -match 'Preserved voice\\models \(reused=1 copied=1\)')) { throw 'Identical packaged voice model was copied again or owner model was skipped' }
 if (-not (Test-Path (Join-Path $install 'file_intelligence\.venv\keep.txt'))) { throw 'File Intelligence virtual environment was not preserved' }
 if (-not (Test-Path (Join-Path $install 'runtime\windows\python\keep.txt'))) { throw 'Managed Python runtime was not preserved' }
 if (-not (Test-Path (Join-Path $install 'file_intelligence\file_service.py'))) { throw 'New File Intelligence service was lost' }
@@ -75,5 +85,45 @@ if (Test-Path $package) { throw 'Verified update package was not cleaned after s
 
 $backup = @(Get-ChildItem $root -Directory -Filter 'AuroraFox.__old_*' -ErrorAction SilentlyContinue)
 if ($backup.Count -ne 0) { throw 'Successful updater left a rollback directory behind' }
+
+# A local runtime that cannot be copied must abort before the old installation
+# is switched. Keep only synthetic data in this failure scenario.
+$failedRoot = Join-Path $root 'preservation-fail'
+$failedInstall = Join-Path $failedRoot 'AuroraFox'
+$failedNew = Join-Path $failedRoot 'new-build'
+$failedPackage = Join-Path $failedRoot 'AuroraFox-Windows.zip'
+$failedHealth = Join-Path $failedRoot 'health.ok'
+$lockedFile = Join-Path $failedInstall 'runtime\windows\python\keep.txt'
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $lockedFile),$failedNew | Out-Null
+Set-Content -LiteralPath (Join-Path $failedInstall 'health.cmd') -Value $healthCmd -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $failedInstall 'version.txt') -Value 'old' -Encoding ASCII
+Set-Content -LiteralPath $lockedFile -Value 'owner-runtime' -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $failedNew 'health.cmd') -Value $healthCmd -Encoding ASCII
+Set-Content -LiteralPath (Join-Path $failedNew 'version.txt') -Value 'new' -Encoding ASCII
+Compress-Archive -Path (Join-Path $failedNew '*') -DestinationPath $failedPackage -CompressionLevel Fastest
+$failedSha = (Get-FileHash -LiteralPath $failedPackage -Algorithm SHA256).Hash.ToLowerInvariant()
+$failedParent = Start-Process powershell.exe -ArgumentList @('-NoProfile','-Command','Start-Sleep -Milliseconds 700') -PassThru -WindowStyle Hidden
+$failedArgs = @(
+    '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $updater + '"'),
+    '-Package', ('"' + $failedPackage + '"'),
+    '-InstallDir', ('"' + $failedInstall + '"'),
+    '-ParentPid', [string]$failedParent.Id,
+    '-ExeName', 'health.cmd',
+    '-ExpectedSha256', $failedSha,
+    '-HealthFile', ('"' + $failedHealth + '"')
+)
+$lock = [IO.File]::Open($lockedFile, [IO.FileMode]::Open, [IO.FileAccess]::Read, [IO.FileShare]::None)
+try {
+    $failedChild = Start-Process powershell.exe -ArgumentList $failedArgs -WorkingDirectory $failedInstall -WindowStyle Hidden -Wait -PassThru
+} finally {
+    $lock.Dispose()
+}
+if ($failedChild.ExitCode -eq 0) { throw 'Updater reported success after owner runtime copy failed' }
+if ((Get-Content -LiteralPath (Join-Path $failedInstall 'version.txt') -Raw).Trim() -ne 'old') { throw 'Old installation was replaced after preservation failed' }
+if (-not (Test-Path -LiteralPath $lockedFile)) { throw 'Owner runtime was removed after preservation failed' }
+if (-not (Test-Path -LiteralPath $failedPackage)) { throw 'Signed package was removed after preservation failed' }
+if (Test-Path -LiteralPath $failedHealth) { throw 'Health marker was written after preservation failed' }
+if (@(Get-ChildItem -LiteralPath $failedRoot -Directory -Filter 'AuroraFox.__old_*').Count -ne 0) { throw 'Failed preservation moved the old installation' }
+if (@(Get-ChildItem -LiteralPath $failedRoot -Directory -Filter 'AuroraFox.__new_*').Count -ne 0) { throw 'Failed preservation left extracted staging content' }
 
 Write-Host 'AURORA_WINDOWS_UPDATER_INTEGRATION_OK' -ForegroundColor Green

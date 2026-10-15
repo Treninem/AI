@@ -86,6 +86,13 @@ def test_release_workflow_signs_manifest_and_checks_update_key_pair() -> None:
         assert asset in workflow
 
 
+def test_release_draft_and_published_tag_pin_verified_source_commit() -> None:
+    workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
+    assert 'gh release create "$tag" --target "$RELEASE_COMMIT"' in workflow
+    assert 'if [ -n "$existing_tag_sha" ] && [ "$existing_tag_sha" != "$RELEASE_COMMIT" ]; then' in workflow
+    assert 'test "$published_tag_sha" = "$RELEASE_COMMIT"' in workflow
+
+
 def test_release_android_emulator_installs_the_signed_apk_without_cross_line_shell_state() -> None:
     workflow = (ROOT / ".github/workflows/release.yml").read_text(encoding="utf-8")
     emulator = workflow.split("- name: Install and launch signed APK on Android 35", 1)[1].split("- name: Upload Android artifact", 1)[0]

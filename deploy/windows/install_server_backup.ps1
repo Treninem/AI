@@ -17,8 +17,13 @@ $knownHosts = Join-Path $stateRoot 'known_hosts'
 $configPath = Join-Path $stateRoot 'config.json'
 $sourceSyncScript = Join-Path $PSScriptRoot 'sync_server_backup.ps1'
 $syncScript = Join-Path $stateRoot 'sync_server_backup.ps1'
+$sourceHiddenLauncher = Join-Path $PSScriptRoot 'run_server_backup_hidden.vbs'
+$hiddenLauncher = Join-Path $stateRoot 'run_server_backup_hidden.vbs'
 if (-not (Test-Path -LiteralPath $sourceSyncScript -PathType Leaf)) {
     throw "AuroraFox backup synchronizer is missing: $sourceSyncScript"
+}
+if (-not (Test-Path -LiteralPath $sourceHiddenLauncher -PathType Leaf)) {
+    throw "AuroraFox hidden backup launcher is missing: $sourceHiddenLauncher"
 }
 if ($ServerHostKey -notmatch '\s(ssh-ed25519|ecdsa-sha2-nistp256|rsa-sha2-512|ssh-rsa)\s') {
     throw 'ServerHostKey must be a complete trusted known_hosts line copied from the REG.RU server console.'
@@ -26,6 +31,7 @@ if ($ServerHostKey -notmatch '\s(ssh-ed25519|ecdsa-sha2-nistp256|rsa-sha2-512|ss
 
 New-Item -ItemType Directory -Path $stateRoot -Force | Out-Null
 Copy-Item -LiteralPath $sourceSyncScript -Destination $syncScript -Force
+Copy-Item -LiteralPath $sourceHiddenLauncher -Destination $hiddenLauncher -Force
 $sshKeygen = (Get-Command ssh-keygen.exe -ErrorAction SilentlyContinue)
 if ($null -eq $sshKeygen) { $sshKeygen = Get-Command ssh-keygen -ErrorAction Stop }
 if (-not (Test-Path -LiteralPath $privateKey -PathType Leaf)) {
@@ -51,8 +57,9 @@ $engine = (Get-Command pwsh -ErrorAction SilentlyContinue).Source
 if ([string]::IsNullOrWhiteSpace($engine)) {
     $engine = (Get-Command powershell -ErrorAction Stop).Source
 }
-$arguments = "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File `"$syncScript`" -ConfigPath `"$configPath`""
-$action = New-ScheduledTaskAction -Execute $engine -Argument $arguments
+$wscript = Join-Path $env:WINDIR 'System32\wscript.exe'
+$arguments = "//B //Nologo `"$hiddenLauncher`" `"$engine`" `"$syncScript`" `"$configPath`""
+$action = New-ScheduledTaskAction -Execute $wscript -Argument $arguments
 $triggers = @(
     New-ScheduledTaskTrigger -AtLogOn -User $currentUser
     New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Minutes 5)

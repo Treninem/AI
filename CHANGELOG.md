@@ -1,5 +1,18 @@
 # AuroraFox Changelog
 
+## V1.5.0.2 - 2026-10-12
+
+- Fixed the Windows updater install-directory lock and bounded retry (PR #117).
+- Preserve local runtime before switching installations; stop safely if disk or copy fails, and reuse identical packaged files (PR #118).
+- Owner approved this linked pair in one BUILD; Android versionCode advances to 100010 for signed update continuity.
+
+## V1.5.0.1 — 2026-10-12
+
+- Skip unnecessary Knowledge injection for simple arithmetic requests (PR #113); explicit Knowledge requests retain their source path.
+- Require opt-in for all spoken startup greetings and prevent replay on voice reconnect (PR #114); separate microphone admission gate remains from main.
+- Windows/Android shipped together with signed update continuity; Android `versionCode` advanced to `100009`.
+- Owner authorized publishing first and running installed Windows/Android acceptance afterward (`OWNER_WAIVED_NOT_EXECUTED`); long Core/file-answer latency, broad UI and delta updater remain known unresolved follow-up tasks.
+
 ## V1.5.0.0 — 2026-10-08
 
 - Stabilized the bundled local AuroraFox Core and normal offline chat path, with bounded recovery and verified Windows/Android packages.

@@ -5,6 +5,7 @@ const ICON_MIC: Texture2D = preload("res://assets/ui/icon_mic.svg")
 var mic_player: AudioStreamPlayer
 var record_effect: AudioEffectRecord
 var recording := false
+var explicit_listen_until_ms := 0
 var mic_button: Button
 var status_label: Label
 
@@ -88,7 +89,7 @@ func _build_overlay() -> void:
 	mic_button = Button.new()
 	mic_button.name = "VoiceMicButton"
 	mic_button.icon = ICON_MIC
-	mic_button.tooltip_text = "Микрофон AuroraFox"
+	mic_button.tooltip_text = "Нажмите, чтобы разрешить одну голосовую отправку"
 	mic_button.custom_minimum_size = Vector2(46, 46)
 	mic_button.pressed.connect(_mic_pressed)
 	_apply_button(mic_button, true)
@@ -140,7 +141,10 @@ func _mic_pressed() -> void:
 			voice.call("set_mic_mode", "wake_word")
 	else:
 		if voice.has_method("start_listening"):
+			explicit_listen_until_ms = Time.get_ticks_msec() + 30000
 			voice.call("start_listening")
+		if status_label != null:
+			status_label.text = "Говорите: один запрос, 30 с"
 	_refresh_buttons()
 
 func _start_ptt() -> void:
@@ -176,12 +180,18 @@ func _stop_ptt() -> void:
 		return
 	var result = await bridge.call("transcribe_file", path)
 	if result is Dictionary and result.get("ok", false):
-		_submit_transcript(str(result.get("text", "")))
+		_submit_transcript(str(result.get("text", "")), true)
 	_refresh_buttons()
 
-func _submit_transcript(text: String) -> void:
+func _submit_transcript(text: String, explicit_ptt := false) -> void:
 	if text.strip_edges().is_empty():
 		return
+	# Background STT can hallucinate in silence or recognize the app's own TTS.
+	# Only an explicit mic action may create a user-role chat message.
+	if not explicit_ptt:
+		if explicit_listen_until_ms == 0 or Time.get_ticks_msec() > explicit_listen_until_ms:
+			return
+		explicit_listen_until_ms = 0
 	var main := get_parent()
 	if main != null and main.has_method("submit_voice_text"):
 		main.call("submit_voice_text", text.strip_edges())
@@ -205,8 +215,8 @@ func _refresh_buttons() -> void:
 	var mode := str(_voice_settings().get("mic_mode", "wake_word"))
 	mic_button.tooltip_text = {
 		"off": "Микрофон выключен — нажмите, чтобы включить",
-		"wake_word": "Микрофон: Fox / Фокс / Лиса",
-		"continuous": "Микрофон: постоянный диалог",
+		"wake_word": "Нажмите для отправки одного голосового запроса",
+		"continuous": "Нажмите для отправки одного голосового запроса",
 		"push_to_talk": "Микрофон: нажать и говорить"
 	}.get(mode, "Микрофон AuroraFox")
 	_apply_button(mic_button, mode != "off")

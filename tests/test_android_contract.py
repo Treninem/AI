@@ -69,6 +69,11 @@ def main() -> None:
     require(CORE_SHA in model_helper, "Core preparation helper SHA-256 drifted")
     require(str(CORE_BYTES) in model_helper, "Core preparation helper byte count drifted")
     require("Test-CoreModel" in model_helper, "Core preparation helper no longer verifies the packaged weights")
+    require(
+        "Get-Command curl -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1" in model_helper
+        and "& $curlCommand.Source" in model_helper,
+        "Core preparation helper must select native curl on Linux Android release runners",
+    )
 
     artifact = read(".github/workflows/android-apk-artifact.yml")
     require("-AllowUnsignedRelease" in artifact, "APK artifact workflow does not use controlled unsigned export")

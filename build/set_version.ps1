@@ -21,7 +21,7 @@ $changelogPath = Join-Path $root 'CHANGELOG.md'
 $evolutionPath = Join-Path $root 'evolution.log'
 
 if (-not (Test-Path -LiteralPath $versionPath)) { throw 'project/version.json is missing' }
-$state = Get-Content -LiteralPath $versionPath -Raw | ConvertFrom-Json
+$state = Get-Content -LiteralPath $versionPath -Raw -Encoding UTF8 | ConvertFrom-Json
 if ([string]$state.version -notmatch '^V([0-9]+)\.([0-9]+)\.([0-9]+)\.([0-9]+)$') {
     throw 'project/version.json contains an invalid version'
 }
@@ -75,17 +75,17 @@ function Write-AtomicUtf8([string]$Path, [string]$Text) {
     Move-Item -LiteralPath $temp -Destination $Path -Force
 }
 
-$project = Get-Content -LiteralPath $projectPath -Raw
+$project = Get-Content -LiteralPath $projectPath -Raw -Encoding UTF8
 if ($project -notmatch 'config/version="[^"]+"') { throw 'project.godot config/version is missing' }
 $project = [regex]::Replace($project, 'config/version="[^"]+"', "config/version=`"$numeric`"", 1)
 
-$export = Get-Content -LiteralPath $exportPath -Raw
+$export = Get-Content -LiteralPath $exportPath -Raw -Encoding UTF8
 if ($export -notmatch 'version/name="[^"]+"') { throw 'Android version/name is missing' }
 if ($export -notmatch 'version/code=[0-9]+') { throw 'Android version/code is missing' }
 $export = [regex]::Replace($export, 'version/name="[^"]+"', "version/name=`"$numeric`"", 1)
 $export = [regex]::Replace($export, 'version/code=[0-9]+', "version/code=$androidCode", 1)
 
-$manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
+$manifest = Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $manifest.version = $numeric
 $manifestText = ($manifest | ConvertTo-Json -Depth 10) + "`n"
 
@@ -106,19 +106,19 @@ $date = [DateTime]::UtcNow.ToString('yyyy-MM-dd')
 $stamp = [DateTimeOffset]::UtcNow.ToString('yyyy-MM-ddTHH:mm:ssZ')
 $entry = "## $display - $date`n`n- $Reason`n`n"
 if (Test-Path -LiteralPath $changelogPath) {
-    $changelog = Get-Content -LiteralPath $changelogPath -Raw
+    $changelog = Get-Content -LiteralPath $changelogPath -Raw -Encoding UTF8
 } else {
     $changelog = "# AuroraFox Changelog`n`n"
 }
 if ($changelog -notmatch [regex]::Escape("## $display - $date")) {
-    if ($changelog.StartsWith("# AuroraFox Changelog`n`n")) {
-        $changelog = "# AuroraFox Changelog`n`n" + $entry + $changelog.Substring("# AuroraFox Changelog`n`n".Length)
+    if ($changelog -match '^# AuroraFox Changelog\r?\n\r?\n') {
+        $changelog = $Matches[0] + $entry + $changelog.Substring($Matches[0].Length)
     } else {
         $changelog = "# AuroraFox Changelog`n`n" + $entry + $changelog
     }
 }
 $evolution = ''
-if (Test-Path -LiteralPath $evolutionPath) { $evolution = Get-Content -LiteralPath $evolutionPath -Raw }
+if (Test-Path -LiteralPath $evolutionPath) { $evolution = Get-Content -LiteralPath $evolutionPath -Raw -Encoding UTF8 }
 $evolution += "[$stamp] $display - $Reason`n"
 
 if ($project -notmatch ('config/version="' + [regex]::Escape($numeric) + '"')) { throw 'Generated project.godot validation failed' }
