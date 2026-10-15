@@ -203,8 +203,6 @@ jobs:
         run: timeout 90s ./godot --headless --editor --path . --quit
       - name: Run AuroraFox subsystem GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
-      - name: Verify Voice stops only its owned child on exit
-        run: AURORA_TEST_PYTHON="$(command -v python)" timeout 30s ./godot --headless --path . --script tests/voice_owned_child_exit_smoke.gd
       - name: Run explicit self-reliance local-only isolation smoke test
         run: timeout 30s ./godot --headless --path . --script tests/self_reliance_smoke.gd
       - name: Run full offline autonomy chat memory planning and local-tool smoke test
@@ -297,3 +295,18 @@ jobs:
       - name: Run transactional updater integration test
         shell: powershell
         run: .\tests\windows_updater_test.ps1
+      - name: Verify Voice stops only its owned child on Windows exit
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $base = 'https://github.com/godotengine/godot/releases/download/4.7.1-stable'
+          New-Item -ItemType Directory -Force .ci\voice-godot | Out-Null
+          Invoke-WebRequest "$base/Godot_v4.7.1-stable_win64.exe.zip" -OutFile .ci\voice-godot.zip
+          Expand-Archive .ci\voice-godot.zip .ci\voice-godot -Force
+          $godot = (Get-ChildItem .ci\voice-godot -Recurse -Filter '*console.exe' | Select-Object -First 1).FullName
+          if (-not $godot) { throw 'Godot console executable is missing' }
+          $env:AURORA_TEST_PYTHON = (Get-Command python).Source
+          & $godot --headless --editor --path . --quit
+          if ($LASTEXITCODE -ne 0) { throw 'Godot project import failed' }
+          & $godot --headless --path . --script tests/voice_owned_child_exit_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Voice owned-child exit smoke failed' }
