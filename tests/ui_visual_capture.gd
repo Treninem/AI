@@ -9,9 +9,15 @@ var _platform := ""
 var _scenario := ""
 var _requested_size := Vector2i.ZERO
 var _head_sha := ""
+var _out_dir := OUT_DIR
+var _manifest_path := MANIFEST_PATH
 
 func _init() -> void:
 	_head_sha = OS.get_environment("AURORA_UI_HEAD_SHA").strip_edges()
+	var override_dir := OS.get_environment("AURORA_UI_OUT_DIR").strip_edges()
+	if not override_dir.is_empty():
+		_out_dir = override_dir
+		_manifest_path = _out_dir.path_join("acceptance_manifest.json")
 	call_deferred("_run")
 
 func _fail(message: String, code: int) -> void:
@@ -19,7 +25,7 @@ func _fail(message: String, code: int) -> void:
 	quit(code)
 
 func _prepare_output() -> bool:
-	var absolute := ProjectSettings.globalize_path(OUT_DIR)
+	var absolute := ProjectSettings.globalize_path(_out_dir)
 	var err := DirAccess.make_dir_recursive_absolute(absolute)
 	if err != OK and err != ERR_ALREADY_EXISTS:
 		_fail("Cannot create UI artifact directory: %s" % error_string(err), 2)
@@ -53,7 +59,7 @@ func _capture(name: String, surface: String) -> bool:
 	if image.get_width() != _requested_size.x or image.get_height() != _requested_size.y:
 		_fail("Framebuffer mismatch for %s: requested=%s captured=%dx%d window=%s content_scale=%s" % [name, str(_requested_size), image.get_width(), image.get_height(), str(window_size), str(content_scale_size)], 14)
 		return false
-	var path := "%s/%s.png" % [OUT_DIR, name]
+	var path := "%s/%s.png" % [_out_dir, name]
 	var err := image.save_png(ProjectSettings.globalize_path(path))
 	if err != OK:
 		_fail("Cannot save %s: %s" % [path, error_string(err)], 5)
@@ -80,13 +86,13 @@ func _write_manifest() -> bool:
 		"captures": _records,
 		"known_missing_client_surfaces": []
 	}
-	var file := FileAccess.open(MANIFEST_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(_manifest_path, FileAccess.WRITE)
 	if file == null:
 		_fail("Cannot write visual acceptance manifest", 6)
 		return false
 	file.store_string(JSON.stringify(payload, "  "))
 	file.close()
-	print("UI_ACCEPTANCE_MANIFEST %s captures=%d head=%s" % [MANIFEST_PATH, _records.size(), _head_sha])
+	print("UI_ACCEPTANCE_MANIFEST %s captures=%d head=%s" % [_manifest_path, _records.size(), _head_sha])
 	return true
 
 func _button_by_name(node: Node, name: String) -> Button:
