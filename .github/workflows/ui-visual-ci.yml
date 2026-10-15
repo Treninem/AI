@@ -12,6 +12,7 @@ on:
       - 'tests/computer_request_owner_lifecycle_smoke.gd'
       - 'tests/android_file_tool_bridge_lifecycle_smoke.gd'
       - 'tests/windows_ui_scaling_smoke.gd'
+      - 'tests/evolution_compact_nav_smoke.gd'
       - 'tests/ui_owner_assets_smoke.gd'
       - 'tests/ui_state_smoke.gd'
       - 'tests/ui_real_input_smoke.gd'
@@ -112,6 +113,10 @@ jobs:
       - name: Native desktop content scaling gate
         shell: bash
         run: timeout 20s ./godot --headless --path . --script tests/windows_ui_scaling_smoke.gd
+
+      - name: Evolution compact navigation gate
+        shell: bash
+        run: timeout 30s ./godot --headless --path . --script tests/evolution_compact_nav_smoke.gd
 
       - name: Canonical owner-art UI gate
         shell: bash

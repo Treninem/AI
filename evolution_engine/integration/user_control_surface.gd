@@ -29,7 +29,21 @@ var _end_button: Button
 func _ready() -> void:
 	runtime = get_parent()
 	_build_ui()
+	call_deferred("_place_desktop_open_button")
 	call_deferred("refresh_status")
+
+func _place_desktop_open_button() -> void:
+	if OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)):
+		return
+	var main := get_parent().get_parent()
+	var sidebar := main.find_child("SidebarContent", true, false) as VBoxContainer
+	if sidebar == null or _open_button == null:
+		return
+	_open_button.reparent(sidebar)
+	_open_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
+	_open_button.position = Vector2.ZERO
+	_open_button.custom_minimum_size = Vector2(0, 46)
+	_open_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 
 func show_center() -> void:
 	var viewport_size := get_viewport().get_visible_rect().size
@@ -220,6 +234,7 @@ func _build_ui() -> void:
 	add_child(_layer)
 
 	_open_button = Button.new()
+	_open_button.name = "EvolutionOpenButton"
 	_open_button.text = "Evolution Engine"
 	_open_button.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	_open_button.position = Vector2(-210, -64)
