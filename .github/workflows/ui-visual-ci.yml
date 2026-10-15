@@ -9,6 +9,7 @@ on:
       - 'update/update_overlay.gd'
       - 'assets/ui/**'
       - 'tests/desktop_ui_smoke.gd'
+      - 'tests/computer_request_owner_lifecycle_smoke.gd'
       - 'tests/ui_owner_assets_smoke.gd'
       - 'tests/ui_state_smoke.gd'
       - 'tests/ui_real_input_smoke.gd'
@@ -97,6 +98,10 @@ jobs:
       - name: Structural desktop and Android portrait UI gate
         shell: bash
         run: timeout 45s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
+
+      - name: Computer request owner lifecycle gate
+        shell: bash
+        run: timeout 20s ./godot --headless --path . --script tests/computer_request_owner_lifecycle_smoke.gd
 
       - name: Canonical owner-art UI gate
         shell: bash
