@@ -18,7 +18,10 @@ func _ready() -> void:
 	if _root == null:
 		return
 	if OS.get_name() != "Android" and not _mobile_preview():
-		get_window().min_size = MIN_WINDOW
+		var window := get_window()
+		# Desktop controls must retain their readable size when the window narrows.
+		window.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+		window.min_size = MIN_WINDOW
 	if not get_viewport().size_changed.is_connected(_apply_responsive_layout):
 		get_viewport().size_changed.connect(_apply_responsive_layout)
 	call_deferred("_apply_after_build")
