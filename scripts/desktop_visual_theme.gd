@@ -6,6 +6,7 @@ const FINAL_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_f
 const MIN_WINDOW := Vector2i(760, 560)
 const SIDEBAR_WIDE := 232.0
 const SIDEBAR_COMPACT := 210.0
+const SIDEBAR_NARROW := 190.0
 
 var _root: Control
 var _last_size := Vector2.ZERO
@@ -231,11 +232,22 @@ func _apply_responsive_layout() -> void:
 		return
 	_last_size = viewport
 	var compact := viewport.x < 1180.0
+	var narrow := viewport.x < 900.0
 	var desktop_layout := OS.get_name() != "Android" and not _mobile_preview()
 
 	var sidebar := _root.find_child("Sidebar", true, false) as Control
 	if sidebar != null and desktop_layout:
-		sidebar.custom_minimum_size.x = SIDEBAR_COMPACT if compact else SIDEBAR_WIDE
+		sidebar.custom_minimum_size.x = SIDEBAR_NARROW if narrow else (SIDEBAR_COMPACT if compact else SIDEBAR_WIDE)
+		var sidebar_margin := sidebar.find_child("SidebarMargin", true, false) as MarginContainer
+		if sidebar_margin != null:
+			sidebar_margin.add_theme_constant_override("margin_left", 12 if narrow else 16)
+			sidebar_margin.add_theme_constant_override("margin_right", 12 if narrow else 16)
+		var logo := sidebar.find_child("SidebarLogo", true, false) as TextureRect
+		if logo != null:
+			logo.custom_minimum_size = Vector2(40, 40) if narrow else Vector2(52, 52)
+		var brand := sidebar.find_child("SidebarBrand", true, false) as Label
+		if brand != null:
+			brand.add_theme_font_size_override("font_size", 20 if narrow else 23)
 
 	var header_margin := _root.find_child("HeaderMargin", true, false) as MarginContainer
 	if header_margin != null and desktop_layout:

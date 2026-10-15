@@ -264,6 +264,7 @@ func _build_ui() -> void:
 	sidebar_mobile_slot.visible = false
 	brand_row.add_child(sidebar_mobile_slot)
 	var logo := TextureRect.new()
+	logo.name = "SidebarLogo"
 	logo.texture = FOX_LOGO
 	logo.custom_minimum_size = Vector2(52, 52)
 	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -274,6 +275,7 @@ func _build_ui() -> void:
 	brand_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brand_row.add_child(brand_text)
 	var brand := Label.new()
+	brand.name = "SidebarBrand"
 	brand.text = "AuroraFox"
 	brand.add_theme_font_size_override("font_size", 23)
 	brand.add_theme_color_override("font_color", WHITE)
@@ -593,6 +595,7 @@ func _refresh_chat_list(query: String = "") -> void:
 		select.name = "ChatSelectButton"
 		select.text = title_text
 		select.tooltip_text = title_text
+		select.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		select.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		select.custom_minimum_size.y = 34
 		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL

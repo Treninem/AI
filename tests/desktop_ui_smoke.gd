@@ -451,13 +451,18 @@ func _run_desktop(packed: PackedScene) -> bool:
 	var panel := main.find_child("MainPanel", true, false) as Control
 	var composer := main.find_child("ComposerMargin", true, false) as Control
 	var header_actions := main.find_child("MainHeaderActions", true, false) as Control
+	var original_size := root.size
 	for target_size in [Vector2i(760, 560), Vector2i(960, 640), Vector2i(1280, 720), Vector2i(1440, 900)]:
+		root.size = target_size
 		root.content_scale_size = target_size
 		await process_frame
 		await process_frame
 		var viewport_size := main.get_viewport().get_visible_rect().size
 		if target_size.x <= 960 and sidebar.custom_minimum_size.x > 214.0:
 			_fail("Compact sidebar remained too wide at narrow desktop width", 71)
+			return false
+		if target_size.x == 760 and sidebar.custom_minimum_size.x > 194.0:
+			_fail("Narrow desktop sidebar still crowds the conversation", 111)
 			return false
 		if composer.position.y + composer.size.y > viewport_size.y + 2.0:
 			_fail("Composer exceeds desktop viewport at %s" % str(target_size), 72)
@@ -468,6 +473,11 @@ func _run_desktop(packed: PackedScene) -> bool:
 		if header_actions != null and header_actions.visible:
 			_fail("Empty desktop header actions container should not consume space", 74)
 			return false
+	root.size = original_size
+	var chat_title := main.find_child("ChatSelectButton", true, false) as Button
+	if chat_title == null or chat_title.text_overrun_behavior != TextServer.OVERRUN_TRIM_ELLIPSIS:
+		_fail("Long chat titles have no readable ellipsis or full-title tooltip", 112)
+		return false
 
 	if not await _exercise_chat(main):
 		_fail("Desktop chat behavior regression", 75)
