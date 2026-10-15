@@ -34,6 +34,7 @@ on:
       - 'tests/test_extended_formats.py'
       - 'tests/test_project_index.py'
       - 'tests/voice_smoke.gd'
+      - 'tests/voice_owned_child_exit_smoke.gd'
       - 'tests/self_reliance_smoke.gd'
       - 'tests/offline_autonomy_smoke.gd'
       - 'tests/chat_context_smoke.gd'
@@ -88,6 +89,7 @@ on:
       - 'tests/test_extended_formats.py'
       - 'tests/test_project_index.py'
       - 'tests/voice_smoke.gd'
+      - 'tests/voice_owned_child_exit_smoke.gd'
       - 'tests/self_reliance_smoke.gd'
       - 'tests/offline_autonomy_smoke.gd'
       - 'tests/chat_context_smoke.gd'
@@ -201,6 +203,8 @@ jobs:
         run: timeout 90s ./godot --headless --editor --path . --quit
       - name: Run AuroraFox subsystem GDScript smoke test
         run: timeout 30s ./godot --headless --path . --script tests/voice_smoke.gd
+      - name: Verify Voice stops only its owned child on exit
+        run: AURORA_TEST_PYTHON="$(command -v python)" timeout 30s ./godot --headless --path . --script tests/voice_owned_child_exit_smoke.gd
       - name: Run explicit self-reliance local-only isolation smoke test
         run: timeout 30s ./godot --headless --path . --script tests/self_reliance_smoke.gd
       - name: Run full offline autonomy chat memory planning and local-tool smoke test
