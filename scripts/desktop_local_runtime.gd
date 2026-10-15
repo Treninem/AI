@@ -56,6 +56,11 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	# A strict JSON plan may say "только строгий JSON"; the broad terse
 	# marker "только с" must not give it the short reply token budget.
 	var terse_request := not structured_request and _is_explicit_terse_request(messages)
+	var literal_words := terse_request and _requires_literal_words(messages)
+	var request_messages := messages
+	if literal_words:
+		request_messages = messages.duplicate(true)
+		request_messages.insert(0, {"role": "system", "content": "If the user requires specific words, include each one exactly as written in the visible answer. Preserve the requested number of sentences and do not substitute synonyms or inflections."})
 	var max_tokens := _generation_budget(options, terse_request)
 	if max_tokens == -2:
 		return {"ok": false, "error": "Invalid Core token budget: expected integer -1..2147483647", "model_failure": false, "retryable": false, "failure_scope": "request_budget"}
@@ -68,8 +73,8 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	var response_bytes := int(wait_limits.response_max_bytes)
 	var payload := {
 		"model": MODEL_ALIAS,
-		"messages": messages,
-		"temperature": float(options.get("temperature", 0.2)),
+		"messages": request_messages,
+		"temperature": float(options.get("temperature", 0.0 if literal_words else 0.2)),
 		"max_tokens": max_tokens,
 		"stream": true,
 		"return_progress": true
@@ -244,6 +249,16 @@ func _is_explicit_terse_request(messages: Array) -> bool:
 	for marker in markers:
 		if prompt.contains(marker):
 			return true
+	return false
+
+func _requires_literal_words(messages: Array) -> bool:
+	for i in range(messages.size() - 1, -1, -1):
+		if messages[i] is Dictionary and str(messages[i].get("role", "")) == "user":
+			var prompt := str(messages[i].get("content", "")).to_lower()
+			for marker in ["include the words", "use the exact words", "включи слова", "используй слова"]:
+				if prompt.contains(marker):
+					return true
+			break
 	return false
 
 func _is_strict_structured_request(messages: Array) -> bool:

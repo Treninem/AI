@@ -378,6 +378,32 @@ func _capture_desktop_compact(packed: PackedScene) -> bool:
 	await process_frame
 	return true
 
+func _capture_desktop_narrow(packed: PackedScene) -> bool:
+	var size := Vector2i(760, 560)
+	_start_scenario("Windows", "narrow_responsive", size)
+	var main := await _instantiate(packed, size, false)
+	if main == null:
+		_fail("Narrow desktop scene instantiate failed", 41)
+		return false
+	if not await _populate_chat(main, false):
+		return false
+	if not await _capture("desktop_narrow_chat_760x560", "chat_narrow"):
+		return false
+	var settings := await _open_settings_by_click(main)
+	if settings == null:
+		return false
+	var popup_end := settings.popup.position + settings.popup.size
+	if settings.popup.position.x < 0 or settings.popup.position.y < 0 or popup_end.x > size.x or popup_end.y > size.y:
+		_fail("Narrow Settings window exceeds 760x560 capture bounds", 42)
+		return false
+	if not await _capture("desktop_narrow_settings_760x560", "settings_narrow"):
+		return false
+	if not await _close_settings_by_click(settings):
+		return false
+	main.queue_free()
+	await process_frame
+	return true
+
 func _capture_mobile_full(packed: PackedScene) -> bool:
 	var size := Vector2i(720, 1280)
 	_start_scenario("Android", "portrait_acceptance", size)
@@ -475,6 +501,8 @@ func _run() -> void:
 	if not await _capture_desktop_mid(packed):
 		return
 	if not await _capture_desktop_compact(packed):
+		return
+	if not await _capture_desktop_narrow(packed):
 		return
 	if not await _capture_mobile_full(packed):
 		return

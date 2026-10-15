@@ -386,6 +386,23 @@ func _exercise_chat(main: Control) -> bool:
 	if _visible_placeholder_fox(main):
 		_fail("Assistant message rendered temporary avatar artwork", 62)
 		return false
+	var contents := main.find_children("MessageContent", "RichTextLabel", true, false)
+	var copy_buttons := main.find_children("CopyMessageButton", "Button", true, false)
+	if contents.size() < 3 or copy_buttons.size() < contents.size():
+		_fail("Messages lack visible copy actions", 107)
+		return false
+	for content in contents:
+		if not (content as RichTextLabel).selection_enabled:
+			_fail("Message text cannot be selected", 108)
+			return false
+	var copy := copy_buttons[0] as Button
+	if copy.pressed.get_connections().is_empty():
+		_fail("Message copy action is not wired", 109)
+		return false
+	var background := main.find_child("OwnerBackground", true, false) as TextureRect
+	if not bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)) and background != null and background.visible:
+		_fail("Decorative background remains behind an active desktop conversation", 110)
+		return false
 	var feedback_controls := main.find_children("FeedbackControls", "HBoxContainer", true, false)
 	if feedback_controls.size() < 2:
 		_fail("Assistant answers do not expose compact feedback controls", 95)
@@ -434,13 +451,13 @@ func _run_desktop(packed: PackedScene) -> bool:
 	var panel := main.find_child("MainPanel", true, false) as Control
 	var composer := main.find_child("ComposerMargin", true, false) as Control
 	var header_actions := main.find_child("MainHeaderActions", true, false) as Control
-	for target_size in [Vector2i(960, 640), Vector2i(1280, 720), Vector2i(1440, 900)]:
+	for target_size in [Vector2i(760, 560), Vector2i(960, 640), Vector2i(1280, 720), Vector2i(1440, 900)]:
 		root.content_scale_size = target_size
 		await process_frame
 		await process_frame
 		var viewport_size := main.get_viewport().get_visible_rect().size
-		if target_size.x == 960 and sidebar.custom_minimum_size.x > 240.0:
-			_fail("Compact sidebar remained too wide at 960px", 71)
+		if target_size.x <= 960 and sidebar.custom_minimum_size.x > 214.0:
+			_fail("Compact sidebar remained too wide at narrow desktop width", 71)
 			return false
 		if composer.position.y + composer.size.y > viewport_size.y + 2.0:
 			_fail("Composer exceeds desktop viewport at %s" % str(target_size), 72)

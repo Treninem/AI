@@ -50,6 +50,12 @@ func _run() -> void:
 	if not bool(english.get("ok", false)) or not bool(english.get("terse_request", false)) or probe.captured_payload.get("reasoning_effort", "") != "none":
 		_fail("explicit concise English payload retained hidden reasoning")
 		return
+	var literal_messages := [{"role": "user", "content": "Write exactly two concise English sentences about a local AI assistant. Include the words local, memory, and planning."}]
+	var literal := await probe.chat(fixture, literal_messages)
+	var sent_messages: Array = probe.captured_payload.get("messages", [])
+	if not bool(literal.get("ok", false)) or not bool(literal.get("terse_request", false)) or sent_messages.size() != 2 or str(sent_messages[0].get("content", "")).find("exactly as written") == -1 or float(probe.captured_payload.get("temperature", -1.0)) != 0.0:
+		_fail("literal-word request did not preserve exact-word instructions in the terse payload")
+		return
 	var ordinary := await probe.chat(fixture, [{"role": "user", "content": "Почему лёд плавает в воде?"}])
 	if not bool(ordinary.get("ok", false)) or bool(ordinary.get("terse_request", true)) or probe.captured_payload.has("reasoning_effort"):
 		_fail("ordinary prose route changed")

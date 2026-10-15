@@ -3,9 +3,9 @@ extends Node
 
 const FINAL_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_final.svg")
 
-const MIN_WINDOW := Vector2i(960, 640)
-const SIDEBAR_WIDE := 252.0
-const SIDEBAR_COMPACT := 228.0
+const MIN_WINDOW := Vector2i(760, 560)
+const SIDEBAR_WIDE := 232.0
+const SIDEBAR_COMPACT := 210.0
 
 var _root: Control
 var _last_size := Vector2.ZERO
@@ -179,7 +179,7 @@ func _apply_safe_button_styles(node: Node) -> void:
 	for child in node.get_children():
 		if child is Button:
 			var button := child as Button
-			if button.name in ["ChatSelectButton", "ChatActions", "FeedbackPositive", "FeedbackNegative"]:
+			if button.name in ["ChatSelectButton", "ChatActions", "FeedbackPositive", "FeedbackNegative", "CopyMessageButton", "NewChatButton", "WorkButton", "SettingsButton", "AttachButton", "VoiceMicButton", "SendButton"]:
 				var compact := button.name != "ChatSelectButton"
 				button.add_theme_stylebox_override("normal", _compact_action_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT) if compact else _flat_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT))
 				button.add_theme_stylebox_override("hover", _compact_action_state(Color(0.14, 0.15, 0.19, 0.95), Color.TRANSPARENT) if compact else _flat_state(Color(0.14, 0.15, 0.19, 0.95), Color.TRANSPARENT))
@@ -248,14 +248,14 @@ func _apply_responsive_layout() -> void:
 
 	var composer := _root.find_child("ComposerMargin", true, false) as MarginContainer
 	if composer != null and desktop_layout:
-		composer.add_theme_constant_override("margin_left", 18 if compact else 34)
-		composer.add_theme_constant_override("margin_right", 18 if compact else 34)
-		composer.add_theme_constant_override("margin_bottom", 12 if compact else 22)
+		composer.add_theme_constant_override("margin_left", 12 if compact else 24)
+		composer.add_theme_constant_override("margin_right", 12 if compact else 24)
+		composer.add_theme_constant_override("margin_bottom", 10 if compact else 16)
 
 	var messages := _root.find_child("MessagesMargin", true, false) as MarginContainer
 	if messages != null and desktop_layout:
-		messages.add_theme_constant_override("margin_left", 22 if compact else 42)
-		messages.add_theme_constant_override("margin_right", 22 if compact else 42)
+		messages.add_theme_constant_override("margin_left", 14 if compact else 32)
+		messages.add_theme_constant_override("margin_right", 14 if compact else 32)
 
 	var message_scroll := _root.find_child("MessageScroll", true, false) as ScrollContainer
 	if message_scroll != null:

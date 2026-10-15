@@ -289,7 +289,7 @@ func _build_ui() -> void:
 	new_chat.text = "Новый чат"
 	new_chat.icon = ICON_NEW_CHAT
 	new_chat.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	new_chat.custom_minimum_size.y = 48
+	new_chat.custom_minimum_size.y = 40
 	new_chat.pressed.connect(_new_chat)
 	_apply_button(new_chat, true)
 	sidebar.add_child(new_chat)
@@ -307,7 +307,7 @@ func _build_ui() -> void:
 	var search := LineEdit.new()
 	search.name = "ChatSearch"
 	search.placeholder_text = "Поиск по чатам"
-	search.custom_minimum_size.y = 42
+	search.custom_minimum_size.y = 36
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search.text_changed.connect(func(q): _refresh_chat_list(q))
 	_apply_input_style(search)
@@ -327,7 +327,7 @@ func _build_ui() -> void:
 	chat_list = VBoxContainer.new()
 	chat_list.name = "ChatList"
 	chat_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chat_list.add_theme_constant_override("separation", 6)
+	chat_list.add_theme_constant_override("separation", 2)
 	scroll.add_child(chat_list)
 
 	var settings_button := Button.new()
@@ -335,7 +335,7 @@ func _build_ui() -> void:
 	settings_button.text = "Настройки"
 	settings_button.icon = ICON_SETTINGS
 	settings_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	settings_button.custom_minimum_size.y = 44
+	settings_button.custom_minimum_size.y = 38
 	settings_button.pressed.connect(_show_tools_info)
 	_apply_button(settings_button)
 	sidebar.add_child(settings_button)
@@ -348,7 +348,7 @@ func _build_ui() -> void:
 
 	var header_panel := PanelContainer.new()
 	header_panel.name = "HeaderPanel"
-	header_panel.custom_minimum_size.y = 70
+	header_panel.custom_minimum_size.y = 58
 	header_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.03, 0.05, 0.88), Color(0.24, 0.27, 0.38, 0.35), 0, 0))
 	main_panel.add_child(header_panel)
 	var header_margin := MarginContainer.new()
@@ -399,9 +399,9 @@ func _build_ui() -> void:
 	var messages_margin := MarginContainer.new()
 	messages_margin.name = "MessagesMargin"
 	messages_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	messages_margin.add_theme_constant_override("margin_left", 26)
-	messages_margin.add_theme_constant_override("margin_right", 26)
-	messages_margin.add_theme_constant_override("margin_top", 18)
+	messages_margin.add_theme_constant_override("margin_left", 18)
+	messages_margin.add_theme_constant_override("margin_right", 18)
+	messages_margin.add_theme_constant_override("margin_top", 12)
 	messages_margin.add_theme_constant_override("margin_bottom", 8)
 	main_panel.add_child(messages_margin)
 	message_scroll = ScrollContainer.new()
@@ -413,19 +413,19 @@ func _build_ui() -> void:
 	message_list = VBoxContainer.new()
 	message_list.name = "MessageList"
 	message_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	message_list.add_theme_constant_override("separation", 14)
+	message_list.add_theme_constant_override("separation", 10)
 	message_scroll.add_child(message_list)
 
 	var composer_margin := MarginContainer.new()
 	composer_margin.name = "ComposerMargin"
-	composer_margin.add_theme_constant_override("margin_left", 24)
-	composer_margin.add_theme_constant_override("margin_right", 24)
+	composer_margin.add_theme_constant_override("margin_left", 18)
+	composer_margin.add_theme_constant_override("margin_right", 18)
 	composer_margin.add_theme_constant_override("margin_top", 8)
-	composer_margin.add_theme_constant_override("margin_bottom", 20)
+	composer_margin.add_theme_constant_override("margin_bottom", 12)
 	main_panel.add_child(composer_margin)
 	var composer_panel := PanelContainer.new()
 	composer_panel.name = "ComposerPanel"
-	composer_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.032, 0.052, 0.96), Color(0.28, 0.32, 0.46, 0.6), 20, 1))
+	composer_panel.add_theme_stylebox_override("panel", _style(Color(0.045, 0.055, 0.077, 0.98), Color(0.30, 0.38, 0.45, 0.45), 18, 1))
 	composer_margin.add_child(composer_panel)
 	var composer_inner := MarginContainer.new()
 	composer_inner.add_theme_constant_override("margin_left", 10)
@@ -451,7 +451,7 @@ func _build_ui() -> void:
 	attach.name = "AttachButton"
 	attach.icon = ICON_ATTACH
 	attach.tooltip_text = "Прикрепить файлы"
-	attach.custom_minimum_size = Vector2(46, 46)
+	attach.custom_minimum_size = Vector2(36, 36)
 	attach.pressed.connect(_open_file_dialog)
 	_apply_button(attach, false, false, true)
 	input_row.add_child(attach)
@@ -459,7 +459,7 @@ func _build_ui() -> void:
 	input = TextEdit.new()
 	input.name = "MessageInput"
 	input.placeholder_text = "Сообщение AuroraFox…"
-	input.custom_minimum_size.y = 60
+	input.custom_minimum_size.y = 48
 	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	input.gui_input.connect(_on_input_gui)
@@ -476,7 +476,7 @@ func _build_ui() -> void:
 	send.name = "SendButton"
 	send.icon = ICON_SEND
 	send.tooltip_text = "Отправить"
-	send.custom_minimum_size = Vector2(52, 46)
+	send.custom_minimum_size = Vector2(38, 36)
 	send.pressed.connect(_submit_current)
 	_apply_button(send, true, false, true)
 	input_row.add_child(send)
@@ -594,7 +594,7 @@ func _refresh_chat_list(query: String = "") -> void:
 		select.text = title_text
 		select.tooltip_text = title_text
 		select.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		select.custom_minimum_size.y = 40
+		select.custom_minimum_size.y = 34
 		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_apply_button(select, active, false, true)
 		select.pressed.connect(func():
@@ -611,7 +611,7 @@ func _refresh_chat_list(query: String = "") -> void:
 		actions.name = "ChatActions"
 		actions.text = "..."
 		actions.tooltip_text = "Действия с чатом"
-		actions.custom_minimum_size = Vector2(40, 40)
+		actions.custom_minimum_size = Vector2(32, 34)
 		_apply_button(actions, false, false, true)
 		var menu := actions.get_popup()
 		menu.add_item("Переименовать", 0)
@@ -748,7 +748,7 @@ func _add_message_card(message: Dictionary) -> void:
 	card.name = "MessageCard"
 	card.custom_minimum_size.x = bubble_width
 	card.size_flags_horizontal = Control.SIZE_SHRINK_END if is_user else Control.SIZE_SHRINK_BEGIN
-	card.add_theme_stylebox_override("panel", _style(USER_BUBBLE if is_user else ASSISTANT_BUBBLE, Color(0.28, 0.30, 0.36, 0.35) if is_user else Color.TRANSPARENT, 16, 1))
+	card.add_theme_stylebox_override("panel", _style(Color(0.10, 0.18, 0.20, 0.96) if is_user else Color.TRANSPARENT, Color.TRANSPARENT, 14, 0))
 	card.tooltip_text = str(message.get("time", ""))
 	row.add_child(card)
 	var margin := MarginContainer.new()
@@ -769,6 +769,7 @@ func _add_message_card(message: Dictionary) -> void:
 	var content := RichTextLabel.new()
 	content.name = "MessageContent"
 	content.bbcode_enabled = false
+	content.selection_enabled = true
 	content.fit_content = true
 	content.scroll_active = false
 	content.custom_minimum_size.x = maxf(176.0, bubble_width - 44.0)
@@ -799,19 +800,38 @@ func _add_message_card(message: Dictionary) -> void:
 			chip.add_theme_color_override("font_color", Color(0.78, 0.84, 0.94, 0.94))
 			chip.add_theme_stylebox_override("normal", _style(Color(0.03, 0.04, 0.065, 0.72), Color(0.3, 0.35, 0.48, 0.55), 9, 1))
 			files.add_child(chip)
-	if not is_user:
+	if is_user:
+		var actions_row := HBoxContainer.new()
+		actions_row.name = "MessageActions"
+		body.add_child(actions_row)
+		actions_row.add_child(_copy_message_button(str(message.get("content", ""))))
+	else:
 		_add_feedback_controls(body, message)
+
+func _copy_message_button(message_text: String) -> Button:
+	var copy := Button.new()
+	copy.name = "CopyMessageButton"
+	copy.text = "Копировать"
+	copy.tooltip_text = "Копировать сообщение"
+	copy.accessibility_name = copy.tooltip_text
+	copy.flat = true
+	copy.custom_minimum_size.y = 26
+	copy.add_theme_font_size_override("font_size", 12)
+	copy.add_theme_color_override("font_color", MUTED)
+	copy.pressed.connect(func(): DisplayServer.clipboard_set(message_text))
+	return copy
 
 func _add_feedback_controls(body: VBoxContainer, message: Dictionary) -> void:
 	var message_id := str(message.get("id", ""))
-	if message_id.is_empty():
-		return
 	var feedback: Dictionary = message.get("feedback", {})
 	var current_score := int(feedback.get("score", 0))
 	var controls := HBoxContainer.new()
 	controls.name = "FeedbackControls"
 	controls.add_theme_constant_override("separation", 4)
 	body.add_child(controls)
+	controls.add_child(_copy_message_button(str(message.get("content", ""))))
+	if message_id.is_empty():
+		return
 	for definition in [
 		{"score": 1, "icon": ICON_FEEDBACK_POSITIVE, "tooltip": "Полезный и правильный ответ"},
 		{"score": -1, "icon": ICON_FEEDBACK_NEGATIVE, "tooltip": "Неправильный или бесполезный ответ"}
@@ -822,7 +842,7 @@ func _add_feedback_controls(body: VBoxContainer, message: Dictionary) -> void:
 		button.icon = definition.icon
 		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.tooltip_text = str(definition.tooltip)
-		button.custom_minimum_size = Vector2(40, 36)
+		button.custom_minimum_size = Vector2(30, 28)
 		button.focus_mode = Control.FOCUS_ALL
 		button.accessibility_name = str(definition.tooltip)
 		_apply_button(button, current_score == score, score < 0, true)
