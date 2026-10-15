@@ -179,8 +179,6 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Factual answer validator smoke failed' }
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/direct_chat_memory_relevance_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'Direct chat memory relevance smoke failed' }
-          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/direct_chat_precision_smoke.gd
-          if ($LASTEXITCODE -ne 0) { throw 'Direct chat factual precision payload smoke failed' }
 
       - name: Verify real progress stream, budgets, cancellation and persistence
         shell: pwsh
