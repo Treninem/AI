@@ -236,7 +236,7 @@ func _is_explicit_terse_request(messages: Array) -> bool:
 	if prompt.is_empty():
 		return false
 	var markers := [
-		"reply only", "reply exactly", "output exactly", "nothing else",
+		"reply only", "reply exactly", "output exactly", "write exactly", "nothing else",
 		"one word", "one short", "только с", "ответь ровно", "выведи ровно",
 		"ничего больше", "одной короткой", "одним коротким предложением",
 		"только маркер", "только кодовое"

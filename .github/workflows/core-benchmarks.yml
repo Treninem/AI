@@ -12,6 +12,7 @@ on:
       - 'tests/test_core_specialist_team_runtime_contract.py'
       - 'tests/chat_deadline_status_smoke.gd'
       - 'tests/terse_phrase_routing_smoke.gd'
+      - 'tests/core_factual_validator_smoke.gd'
       - 'tests/code_specialist_refactor_smoke.gd'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -43,6 +44,7 @@ on:
       - 'tests/test_core_specialist_team_runtime_contract.py'
       - 'tests/chat_deadline_status_smoke.gd'
       - 'tests/terse_phrase_routing_smoke.gd'
+      - 'tests/core_factual_validator_smoke.gd'
       - 'tests/code_specialist_refactor_smoke.gd'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -173,6 +175,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Core deadline status smoke failed' }
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/terse_phrase_routing_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'Windows short-answer payload smoke failed' }
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/core_factual_validator_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Factual answer validator smoke failed' }
 
       - name: Verify real progress stream, budgets, cancellation and persistence
         shell: pwsh

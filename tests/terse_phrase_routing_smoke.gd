@@ -20,6 +20,10 @@ func _run() -> void:
 	if probe._is_explicit_terse_request([{"role": "user", "content": "Почему лёд плавает в воде?"}]):
 		_fail("ordinary prose was incorrectly classified as terse")
 		return
+	var english_messages := [{"role": "user", "content": "Write exactly two concise English sentences about a local AI assistant."}]
+	if not probe._is_explicit_terse_request(english_messages):
+		_fail("explicit concise English output was not detected")
+		return
 	if OS.get_name() != "Windows":
 		probe.free()
 		print("TERSE_PHRASE_CLASSIFICATION_PASS_PAYLOAD_UNVERIFIED_NONWINDOWS")
@@ -41,6 +45,10 @@ func _run() -> void:
 		return
 	if int(probe.captured_payload.get("max_tokens", -1)) != OwnerResourcePolicy.value("terse_max_tokens"):
 		_fail("short-answer payload did not use the owner terse token budget")
+		return
+	var english := await probe.chat(fixture, english_messages)
+	if not bool(english.get("ok", false)) or not bool(english.get("terse_request", false)) or probe.captured_payload.get("reasoning_effort", "") != "none":
+		_fail("explicit concise English payload retained hidden reasoning")
 		return
 	var ordinary := await probe.chat(fixture, [{"role": "user", "content": "Почему лёд плавает в воде?"}])
 	if not bool(ordinary.get("ok", false)) or bool(ordinary.get("terse_request", true)) or probe.captured_payload.has("reasoning_effort"):
