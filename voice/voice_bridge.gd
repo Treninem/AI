@@ -15,6 +15,7 @@ const WS_URL := "ws://127.0.0.1:8765/ws"
 
 var socket := WebSocketPeer.new()
 var backend_pid := 0
+var backend_requested := true
 var connected := false
 var _retry := 0.0
 var _stopping := false
@@ -25,8 +26,9 @@ func _ready() -> void:
 	add_child(android_runtime)
 	set_process(true)
 	if OS.get_name() == "Windows":
-		_start_backend_if_installed()
-		_connect_ws()
+		if backend_requested:
+			_start_backend_if_installed()
+			_connect_ws()
 	elif OS.get_name() == "Android":
 		android_mic = AuroraAndroidMicMonitor.new()
 		add_child(android_mic)
@@ -51,13 +53,32 @@ func _exit_tree() -> void:
 		# HTTPRequest is async and cannot complete reliably during _exit_tree().
 		# Terminate only the child this instance actually launched. Do not issue
 		# unauthenticated /shutdown to an unrelated loopback voice service.
-		if backend_pid > 0 and OS.is_process_running(backend_pid):
-			OS.kill(backend_pid)
-		backend_pid = 0
+		_stop_owned_backend()
 		socket.close()
 
+func set_backend_requested(value: bool) -> void:
+	backend_requested = value
+	if OS.get_name() != "Windows" or not is_inside_tree():
+		return
+	if not value:
+		connected = false
+		socket.close()
+		_stop_owned_backend()
+		return
+	_stopping = false
+	_start_backend_if_installed()
+	_connect_ws()
+
+func _stop_owned_backend() -> void:
+	if backend_pid <= 0:
+		return
+	if OS.is_process_running(backend_pid) and OS.kill(backend_pid) != OK:
+		push_warning("Voice owned backend termination is unconfirmed")
+		return
+	backend_pid = 0
+
 func _process(delta: float) -> void:
-	if OS.get_name() != "Windows": return
+	if OS.get_name() != "Windows" or not backend_requested: return
 	socket.poll()
 	var state := socket.get_ready_state()
 	if state == WebSocketPeer.STATE_OPEN:
@@ -75,6 +96,8 @@ func _process(delta: float) -> void:
 				_connect_ws()
 
 func _start_backend_if_installed() -> void:
+	if not backend_requested or (backend_pid > 0 and OS.is_process_running(backend_pid)):
+		return
 	OS.set_environment("AURORAFOX_USER_DIR", ProjectSettings.globalize_path("user://"))
 	var exe_dir := OS.get_executable_path().get_base_dir()
 	var packaged_root := exe_dir.path_join("voice")

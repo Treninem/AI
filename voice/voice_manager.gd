@@ -51,6 +51,7 @@ var _last_event_sound_ms := -10000
 func _ready() -> void:
 	_load_settings()
 	_personality = _load_json(PERSONALITY_PATH)
+	bridge.backend_requested = bool(settings.get("enabled", true))
 	add_child(bridge)
 	add_child(speech_queue)
 	add_child(emotions)
@@ -127,7 +128,11 @@ func set_enabled(value: bool) -> void:
 	if not value:
 		stop()
 		bridge.set_mode("off")
+		bridge.set_backend_requested(false)
+		backend_is_ready = false
+		backend_status.emit(false, {})
 	else:
+		bridge.set_backend_requested(true)
 		_apply_mic_mode()
 	_save_settings()
 
