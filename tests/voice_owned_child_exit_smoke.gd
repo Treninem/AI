@@ -33,12 +33,17 @@ func _run() -> void:
 	bridge.backend_pid = owned_pid
 	bridge.queue_free()
 	await process_frame
+	# POSIX signal delivery is asynchronous; wait for the observed child state.
+	for attempt in 40:
+		if not OS.is_process_running(owned_pid):
+			break
+		await create_timer(0.05).timeout
 	var owned_stopped := not OS.is_process_running(owned_pid)
 	var unrelated_preserved := OS.is_process_running(unrelated_pid)
 	_stop_test_child(owned_pid)
 	_stop_test_child(unrelated_pid)
 	if not owned_stopped or not unrelated_preserved:
-		push_error("VOICE_CHILD_EXIT_FAIL: owned child survived or unrelated child was stopped")
+		push_error("VOICE_CHILD_EXIT_FAIL: owned_stopped=%s unrelated_preserved=%s" % [owned_stopped, unrelated_preserved])
 		quit(4)
 		return
 	print("AURORA_VOICE_OWNED_CHILD_EXIT_OK")
