@@ -20,6 +20,11 @@ func _run() -> void:
 	if probe._is_explicit_terse_request([{"role": "user", "content": "Почему лёд плавает в воде?"}]):
 		_fail("ordinary prose was incorrectly classified as terse")
 		return
+	if OS.get_name() != "Windows":
+		probe.free()
+		print("TERSE_PHRASE_CLASSIFICATION_PASS_PAYLOAD_UNVERIFIED_NONWINDOWS")
+		quit(0)
+		return
 	var fixture := ProjectSettings.globalize_path("user://terse_phrase_probe.gguf")
 	var file := FileAccess.open(fixture, FileAccess.WRITE)
 	if file == null:

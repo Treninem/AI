@@ -10,6 +10,8 @@ on:
       - 'tests/test_core_benchmark_regression_gate.py'
       - 'tests/test_core_report_identity.py'
       - 'tests/test_core_specialist_team_runtime_contract.py'
+      - 'tests/chat_deadline_status_smoke.gd'
+      - 'tests/terse_phrase_routing_smoke.gd'
       - 'tests/code_specialist_refactor_smoke.gd'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -39,6 +41,8 @@ on:
       - 'tests/test_core_benchmark_regression_gate.py'
       - 'tests/test_core_report_identity.py'
       - 'tests/test_core_specialist_team_runtime_contract.py'
+      - 'tests/chat_deadline_status_smoke.gd'
+      - 'tests/terse_phrase_routing_smoke.gd'
       - 'tests/code_specialist_refactor_smoke.gd'
       - 'scripts/ai_client.gd'
       - 'scripts/aurora_core_runtime.gd'
@@ -161,6 +165,14 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Core benchmark GDScript parse gate failed' }
           & '${{ steps.godot.outputs.path }}' --headless --path . --check-only --script benchmarks/core/code_specialist_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'SpecialistTeam/CodeSpecialist smoke GDScript parse gate failed' }
+
+      - name: Verify deadline status and Windows short-answer payload
+        shell: pwsh
+        run: |
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/chat_deadline_status_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Core deadline status smoke failed' }
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/terse_phrase_routing_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Windows short-answer payload smoke failed' }
 
       - name: Verify real progress stream, budgets, cancellation and persistence
         shell: pwsh
