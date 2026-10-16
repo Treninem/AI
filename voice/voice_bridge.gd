@@ -213,6 +213,16 @@ func devices() -> Dictionary:
 func synthesize(text: String, emotion: String, intensity: float, options: Dictionary = {}) -> Dictionary:
 	if OS.get_name() == "Android":
 		return android_runtime.synthesize_speech(text, float(options.get("speed", 1.0)), emotion, intensity)
+	if OS.get_name() == "Windows" and not backend_requested:
+		set_backend_requested(true)
+	if OS.get_name() == "Windows":
+		# A lazy Voice process may need time to open its local HTTP socket.
+		# Keep this wait asynchronous so chat and window input remain responsive.
+		var started_at := Time.get_ticks_msec()
+		while not connected and backend_requested and Time.get_ticks_msec() - started_at < 30000:
+			await get_tree().create_timer(0.1).timeout
+		if not connected or not backend_requested:
+			return {"ok": false, "error": "Voice backend unavailable"}
 	var body := options.duplicate(true)
 	body.merge({"text": text, "emotion": emotion, "intensity": intensity}, true)
 	return await _json_request("/say", HTTPClient.METHOD_POST, body, 240.0)
