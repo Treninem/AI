@@ -56,13 +56,15 @@ const ICON_ATTACH: Texture2D = preload("res://assets/ui/icon_attach.svg")
 const ICON_SEND: Texture2D = preload("res://assets/ui/icon_send.svg")
 const ICON_RENAME: Texture2D = preload("res://assets/ui/icon_rename.svg")
 const ICON_DELETE: Texture2D = preload("res://assets/ui/icon_delete.svg")
+const ICON_FEEDBACK_POSITIVE: Texture2D = preload("res://assets/ui/icon_feedback_positive.svg")
+const ICON_FEEDBACK_NEGATIVE: Texture2D = preload("res://assets/ui/icon_feedback_negative.svg")
 
 const BG := Color("080b12")
 const SIDEBAR := Color(0.025, 0.032, 0.055, 0.97)
 const SURFACE := Color(0.055, 0.066, 0.10, 0.94)
 const SURFACE_2 := Color(0.075, 0.09, 0.135, 0.96)
-const USER_BUBBLE := Color(0.08, 0.17, 0.25, 0.96)
-const ASSISTANT_BUBBLE := Color(0.085, 0.07, 0.135, 0.96)
+const USER_BUBBLE := Color(0.13, 0.15, 0.19, 1.0)
+const ASSISTANT_BUBBLE := Color(0.075, 0.085, 0.11, 1.0)
 const ACCENT := Color("a98aff")
 const CYAN := Color("45d8ff")
 const GREEN := Color("64ff9d")
@@ -113,7 +115,7 @@ func _ready() -> void:
 	await get_tree().process_frame
 	var available := await ai.is_available()
 	_set_status(
-		"AuroraFox Core готов • %s • %d инструментов" % [ai.model, tools.tools.size()] if available
+		"AuroraFox Core готов • %d инструментов" % tools.tools.size() if available
 		else "AuroraFox Core запускается — локальный чат останется основным режимом",
 		available
 	)
@@ -217,11 +219,12 @@ func _build_ui() -> void:
 	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	background.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	background.modulate = Color(1, 1, 1, 0.82)
+	background.modulate = Color.WHITE
 	add_child(background)
 
 	var veil := ColorRect.new()
-	veil.color = Color(0.01, 0.015, 0.028, 0.34)
+	veil.name = "ChatBackgroundVeil"
+	veil.color = Color(0.01, 0.015, 0.028, 0.96)
 	veil.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(veil)
@@ -235,7 +238,7 @@ func _build_ui() -> void:
 	var sidebar_bg := ColorRect.new()
 	sidebar_bg.name = "Sidebar"
 	sidebar_bg.color = SIDEBAR
-	sidebar_bg.custom_minimum_size.x = 286
+	sidebar_bg.custom_minimum_size.x = 252
 	root.add_child(sidebar_bg)
 
 	var sidebar_margin := MarginContainer.new()
@@ -261,6 +264,7 @@ func _build_ui() -> void:
 	sidebar_mobile_slot.visible = false
 	brand_row.add_child(sidebar_mobile_slot)
 	var logo := TextureRect.new()
+	logo.name = "SidebarLogo"
 	logo.texture = FOX_LOGO
 	logo.custom_minimum_size = Vector2(52, 52)
 	logo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
@@ -271,6 +275,7 @@ func _build_ui() -> void:
 	brand_text.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	brand_row.add_child(brand_text)
 	var brand := Label.new()
+	brand.name = "SidebarBrand"
 	brand.text = "AuroraFox"
 	brand.add_theme_font_size_override("font_size", 23)
 	brand.add_theme_color_override("font_color", WHITE)
@@ -286,7 +291,7 @@ func _build_ui() -> void:
 	new_chat.text = "Новый чат"
 	new_chat.icon = ICON_NEW_CHAT
 	new_chat.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	new_chat.custom_minimum_size.y = 48
+	new_chat.custom_minimum_size.y = 40
 	new_chat.pressed.connect(_new_chat)
 	_apply_button(new_chat, true)
 	sidebar.add_child(new_chat)
@@ -304,7 +309,7 @@ func _build_ui() -> void:
 	var search := LineEdit.new()
 	search.name = "ChatSearch"
 	search.placeholder_text = "Поиск по чатам"
-	search.custom_minimum_size.y = 42
+	search.custom_minimum_size.y = 36
 	search.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	search.text_changed.connect(func(q): _refresh_chat_list(q))
 	_apply_input_style(search)
@@ -324,7 +329,7 @@ func _build_ui() -> void:
 	chat_list = VBoxContainer.new()
 	chat_list.name = "ChatList"
 	chat_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	chat_list.add_theme_constant_override("separation", 6)
+	chat_list.add_theme_constant_override("separation", 2)
 	scroll.add_child(chat_list)
 
 	var settings_button := Button.new()
@@ -332,7 +337,7 @@ func _build_ui() -> void:
 	settings_button.text = "Настройки"
 	settings_button.icon = ICON_SETTINGS
 	settings_button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	settings_button.custom_minimum_size.y = 44
+	settings_button.custom_minimum_size.y = 38
 	settings_button.pressed.connect(_show_tools_info)
 	_apply_button(settings_button)
 	sidebar.add_child(settings_button)
@@ -345,7 +350,7 @@ func _build_ui() -> void:
 
 	var header_panel := PanelContainer.new()
 	header_panel.name = "HeaderPanel"
-	header_panel.custom_minimum_size.y = 70
+	header_panel.custom_minimum_size.y = 58
 	header_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.03, 0.05, 0.88), Color(0.24, 0.27, 0.38, 0.35), 0, 0))
 	main_panel.add_child(header_panel)
 	var header_margin := MarginContainer.new()
@@ -372,7 +377,7 @@ func _build_ui() -> void:
 	active_title.text = "Новый чат"
 	active_title.clip_text = true
 	active_title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	active_title.add_theme_font_size_override("font_size", 20)
+	active_title.add_theme_font_size_override("font_size", 17)
 	active_title.add_theme_color_override("font_color", WHITE)
 	title_box.add_child(active_title)
 	status = Label.new()
@@ -396,9 +401,9 @@ func _build_ui() -> void:
 	var messages_margin := MarginContainer.new()
 	messages_margin.name = "MessagesMargin"
 	messages_margin.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	messages_margin.add_theme_constant_override("margin_left", 26)
-	messages_margin.add_theme_constant_override("margin_right", 26)
-	messages_margin.add_theme_constant_override("margin_top", 18)
+	messages_margin.add_theme_constant_override("margin_left", 18)
+	messages_margin.add_theme_constant_override("margin_right", 18)
+	messages_margin.add_theme_constant_override("margin_top", 12)
 	messages_margin.add_theme_constant_override("margin_bottom", 8)
 	main_panel.add_child(messages_margin)
 	message_scroll = ScrollContainer.new()
@@ -410,19 +415,19 @@ func _build_ui() -> void:
 	message_list = VBoxContainer.new()
 	message_list.name = "MessageList"
 	message_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	message_list.add_theme_constant_override("separation", 14)
+	message_list.add_theme_constant_override("separation", 10)
 	message_scroll.add_child(message_list)
 
 	var composer_margin := MarginContainer.new()
 	composer_margin.name = "ComposerMargin"
-	composer_margin.add_theme_constant_override("margin_left", 24)
-	composer_margin.add_theme_constant_override("margin_right", 24)
+	composer_margin.add_theme_constant_override("margin_left", 18)
+	composer_margin.add_theme_constant_override("margin_right", 18)
 	composer_margin.add_theme_constant_override("margin_top", 8)
-	composer_margin.add_theme_constant_override("margin_bottom", 20)
+	composer_margin.add_theme_constant_override("margin_bottom", 12)
 	main_panel.add_child(composer_margin)
 	var composer_panel := PanelContainer.new()
 	composer_panel.name = "ComposerPanel"
-	composer_panel.add_theme_stylebox_override("panel", _style(Color(0.025, 0.032, 0.052, 0.96), Color(0.28, 0.32, 0.46, 0.6), 20, 1))
+	composer_panel.add_theme_stylebox_override("panel", _style(Color(0.045, 0.055, 0.077, 0.98), Color(0.30, 0.38, 0.45, 0.45), 18, 1))
 	composer_margin.add_child(composer_panel)
 	var composer_inner := MarginContainer.new()
 	composer_inner.add_theme_constant_override("margin_left", 10)
@@ -448,7 +453,7 @@ func _build_ui() -> void:
 	attach.name = "AttachButton"
 	attach.icon = ICON_ATTACH
 	attach.tooltip_text = "Прикрепить файлы"
-	attach.custom_minimum_size = Vector2(46, 46)
+	attach.custom_minimum_size = Vector2(36, 36)
 	attach.pressed.connect(_open_file_dialog)
 	_apply_button(attach, false, false, true)
 	input_row.add_child(attach)
@@ -456,7 +461,7 @@ func _build_ui() -> void:
 	input = TextEdit.new()
 	input.name = "MessageInput"
 	input.placeholder_text = "Сообщение AuroraFox…"
-	input.custom_minimum_size.y = 72
+	input.custom_minimum_size.y = 48
 	input.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	input.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
 	input.gui_input.connect(_on_input_gui)
@@ -473,7 +478,7 @@ func _build_ui() -> void:
 	send.name = "SendButton"
 	send.icon = ICON_SEND
 	send.tooltip_text = "Отправить"
-	send.custom_minimum_size = Vector2(52, 46)
+	send.custom_minimum_size = Vector2(38, 36)
 	send.pressed.connect(_submit_current)
 	_apply_button(send, true, false, true)
 	input_row.add_child(send)
@@ -587,10 +592,12 @@ func _refresh_chat_list(query: String = "") -> void:
 		var active := id == chats.active_chat_id
 
 		var select := Button.new()
+		select.name = "ChatSelectButton"
 		select.text = title_text
 		select.tooltip_text = title_text
+		select.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		select.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		select.custom_minimum_size.y = 40
+		select.custom_minimum_size.y = 34
 		select.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_apply_button(select, active, false, true)
 		select.pressed.connect(func():
@@ -603,27 +610,26 @@ func _refresh_chat_list(query: String = "") -> void:
 		)
 		row.add_child(select)
 
-		var rename := Button.new()
-		rename.icon = ICON_RENAME
-		rename.tooltip_text = "Переименовать чат"
-		rename.custom_minimum_size = Vector2(36, 40)
-		_apply_button(rename, false, false, true)
-		rename.pressed.connect(func(): _open_rename_chat(id, title_text))
-		row.add_child(rename)
-
-		var del := Button.new()
-		del.icon = ICON_DELETE
-		del.tooltip_text = "Удалить чат"
-		del.custom_minimum_size = Vector2(36, 40)
-		_apply_button(del, false, true, true)
-		del.pressed.connect(func():
-			if request_busy or file_processing_busy:
-				return
-			chats.delete_chat(id)
-			_refresh_chat_list(query)
-			_render_active_chat()
+		var actions := MenuButton.new()
+		actions.name = "ChatActions"
+		actions.text = "..."
+		actions.tooltip_text = "Действия с чатом"
+		actions.custom_minimum_size = Vector2(32, 34)
+		_apply_button(actions, false, false, true)
+		var menu := actions.get_popup()
+		menu.add_item("Переименовать", 0)
+		menu.add_item("Удалить", 1)
+		menu.id_pressed.connect(func(action_id: int):
+			if action_id == 0:
+				_open_rename_chat(id, title_text)
+			elif action_id == 1:
+				if request_busy or file_processing_busy:
+					return
+				chats.delete_chat(id)
+				_refresh_chat_list(query)
+				_render_active_chat()
 		)
-		row.add_child(del)
+		row.add_child(actions)
 		chat_list.add_child(row)
 
 func _open_rename_chat(id: String, current_title: String) -> void:
@@ -720,7 +726,7 @@ func _bubble_width() -> float:
 	if message_scroll != null and message_scroll.size.x > 0.0:
 		available = message_scroll.size.x
 	available = maxf(220.0, available - 18.0)
-	return minf(760.0, maxf(220.0, available * 0.72))
+	return minf(690.0, maxf(220.0, available * 0.66))
 
 func _add_message_card(message: Dictionary) -> void:
 	var role := str(message.get("role", "assistant"))
@@ -745,7 +751,8 @@ func _add_message_card(message: Dictionary) -> void:
 	card.name = "MessageCard"
 	card.custom_minimum_size.x = bubble_width
 	card.size_flags_horizontal = Control.SIZE_SHRINK_END if is_user else Control.SIZE_SHRINK_BEGIN
-	card.add_theme_stylebox_override("panel", _style(USER_BUBBLE if is_user else ASSISTANT_BUBBLE, Color(CYAN.r, CYAN.g, CYAN.b, 0.34) if is_user else Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.38), 18, 1))
+	card.add_theme_stylebox_override("panel", _style(Color(0.10, 0.18, 0.20, 0.96) if is_user else Color.TRANSPARENT, Color.TRANSPARENT, 14, 0))
+	card.tooltip_text = str(message.get("time", ""))
 	row.add_child(card)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 14)
@@ -756,14 +763,16 @@ func _add_message_card(message: Dictionary) -> void:
 	var body := VBoxContainer.new()
 	body.add_theme_constant_override("separation", 7)
 	margin.add_child(body)
-	var meta := Label.new()
-	meta.text = ("Вы" if is_user else "AuroraFox") + ("  •  " + str(message.get("time", "")) if not str(message.get("time", "")).is_empty() else "")
-	meta.add_theme_font_size_override("font_size", 11)
-	meta.add_theme_color_override("font_color", CYAN if is_user else ACCENT)
-	body.add_child(meta)
+	if not is_user:
+		var meta := Label.new()
+		meta.text = "AuroraFox"
+		meta.add_theme_font_size_override("font_size", 11)
+		meta.add_theme_color_override("font_color", MUTED)
+		body.add_child(meta)
 	var content := RichTextLabel.new()
 	content.name = "MessageContent"
 	content.bbcode_enabled = false
+	content.selection_enabled = true
 	content.fit_content = true
 	content.scroll_active = false
 	content.custom_minimum_size.x = maxf(176.0, bubble_width - 44.0)
@@ -794,29 +803,49 @@ func _add_message_card(message: Dictionary) -> void:
 			chip.add_theme_color_override("font_color", Color(0.78, 0.84, 0.94, 0.94))
 			chip.add_theme_stylebox_override("normal", _style(Color(0.03, 0.04, 0.065, 0.72), Color(0.3, 0.35, 0.48, 0.55), 9, 1))
 			files.add_child(chip)
-	if not is_user:
+	if is_user:
+		var actions_row := HBoxContainer.new()
+		actions_row.name = "MessageActions"
+		body.add_child(actions_row)
+		actions_row.add_child(_copy_message_button(str(message.get("content", ""))))
+	else:
 		_add_feedback_controls(body, message)
+
+func _copy_message_button(message_text: String) -> Button:
+	var copy := Button.new()
+	copy.name = "CopyMessageButton"
+	copy.text = "Копировать"
+	copy.tooltip_text = "Копировать сообщение"
+	copy.accessibility_name = copy.tooltip_text
+	copy.flat = true
+	copy.custom_minimum_size.y = 26
+	copy.add_theme_font_size_override("font_size", 12)
+	copy.add_theme_color_override("font_color", MUTED)
+	copy.pressed.connect(func(): DisplayServer.clipboard_set(message_text))
+	return copy
 
 func _add_feedback_controls(body: VBoxContainer, message: Dictionary) -> void:
 	var message_id := str(message.get("id", ""))
-	if message_id.is_empty():
-		return
 	var feedback: Dictionary = message.get("feedback", {})
 	var current_score := int(feedback.get("score", 0))
 	var controls := HBoxContainer.new()
 	controls.name = "FeedbackControls"
 	controls.add_theme_constant_override("separation", 4)
 	body.add_child(controls)
+	controls.add_child(_copy_message_button(str(message.get("content", ""))))
+	if message_id.is_empty():
+		return
 	for definition in [
-		{"score": 1, "text": "+", "tooltip": "Полезный и правильный ответ"},
-		{"score": -1, "text": "−", "tooltip": "Неправильный или бесполезный ответ"}
+		{"score": 1, "icon": ICON_FEEDBACK_POSITIVE, "tooltip": "Полезный и правильный ответ"},
+		{"score": -1, "icon": ICON_FEEDBACK_NEGATIVE, "tooltip": "Неправильный или бесполезный ответ"}
 	]:
 		var button := Button.new()
 		var score := int(definition.score)
 		button.name = "FeedbackPositive" if score > 0 else "FeedbackNegative"
-		button.text = str(definition.text)
+		button.icon = definition.icon
+		button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		button.tooltip_text = str(definition.tooltip)
-		button.custom_minimum_size = Vector2(32, 28)
+		button.custom_minimum_size = Vector2(30, 28)
 		button.focus_mode = Control.FOCUS_ALL
 		button.accessibility_name = str(definition.tooltip)
 		_apply_button(button, current_score == score, score < 0, true)
@@ -1063,19 +1092,21 @@ func _submit_current() -> void:
 	var answer := _fast_local_reply(shown, attachment_copy)
 	var response_origin := "deterministic_ui_greeting" if not answer.is_empty() else "aurorafox_core"
 	var core_failed := false
+	var core_startup_failed := false
 	if answer.is_empty():
 		answer = await agent.run_task(task)
 	if answer.begins_with("Ошибка модели:"):
 		core_failed = true
-		response_origin = "core_startup_status"
-		# Never make the same user request wait through a second multi-minute
-		# startup attempt. Recovery continues independently and text chat remains
-		# responsive; the user can retry when the honest status becomes ready.
-		ai.retry_core_now()
-		if not core_recovery_busy:
-			core_recovery_busy = true
-			call_deferred("_recover_core_background")
-		answer = "Встроенный AI ещё запускается в фоне. Сообщение сохранено; повторите его через несколько секунд — устанавливать или настраивать ничего не нужно."
+		var core_error := answer.trim_prefix("Ошибка модели:").strip_edges()
+		core_startup_failed = _is_core_startup_failure(core_error)
+		response_origin = "core_startup_status" if core_startup_failed else "core_request_error"
+		if core_startup_failed:
+			# ADR-0003 forbids relaunching requests that missed a deadline.
+			ai.retry_core_now()
+			if not core_recovery_busy:
+				core_recovery_busy = true
+				call_deferred("_recover_core_background")
+		answer = _core_failure_message(core_error)
 	AuroraVoice.set_ai_working(false)
 	ai_working_finished.emit()
 	var runtime := ai.runtime_info()
@@ -1089,14 +1120,33 @@ func _submit_current() -> void:
 	_render_active_chat()
 	_refresh_chat_list()
 	if core_failed:
-		_set_status("Текстовый интерфейс готов • Core запускается в фоне • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()])
+		if core_startup_failed:
+			_set_status("Текстовый интерфейс готов • Core запускается в фоне • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()])
+		else:
+			_set_status("Последний запрос к Core завершился ошибкой • повторите сообщение")
 	else:
 		_set_status("Готово • зарегистрировано инструментов: %d • локальных записей памяти: %d" % [tools.tools.size(), memory.memory.size()], true)
 	assistant_response_ready.emit(answer)
-	AuroraVoice.say(answer)
+	if not core_failed:
+		AuroraVoice.say(answer)
 	request_busy = false
 	if not queued_voice_text.is_empty():
 		call_deferred("_submit_queued_voice")
+
+func _is_core_startup_failure(error: String) -> bool:
+	var lower := error.to_lower()
+	if lower.begins_with("core request deadline:"):
+		return false
+	return lower.contains("подготов") or lower.contains("запуска") or lower.contains("не удалось запустить") or lower.contains("завершился во время загрузки")
+
+func _core_failure_message(error: String) -> String:
+	if _is_core_startup_failure(error):
+		return "Встроенный AI ещё запускается в фоне. Сообщение сохранено; повторите его через несколько секунд — устанавливать или настраивать ничего не нужно."
+	if error.begins_with("Core request deadline:"):
+		return "Встроенный AI не успел ответить вовремя. Сообщение сохранено; попробуйте повторить запрос."
+	if error.is_empty():
+		return "Не удалось получить ответ от локального Core. Сообщение сохранено; попробуйте повторить запрос."
+	return "Не удалось получить ответ от локального Core. " + error
 
 func _recover_core_background() -> void:
 	var result := await ai.warmup()

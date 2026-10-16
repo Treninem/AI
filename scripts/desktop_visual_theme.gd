@@ -3,9 +3,10 @@ extends Node
 
 const FINAL_BACKGROUND: Texture2D = preload("res://assets/ui/aurora_background_final.svg")
 
-const MIN_WINDOW := Vector2i(960, 640)
-const SIDEBAR_WIDE := 286.0
-const SIDEBAR_COMPACT := 228.0
+const MIN_WINDOW := Vector2i(760, 560)
+const SIDEBAR_WIDE := 232.0
+const SIDEBAR_COMPACT := 210.0
+const SIDEBAR_NARROW := 190.0
 
 var _root: Control
 var _last_size := Vector2.ZERO
@@ -18,7 +19,10 @@ func _ready() -> void:
 	if _root == null:
 		return
 	if OS.get_name() != "Android" and not _mobile_preview():
-		get_window().min_size = MIN_WINDOW
+		var window := get_window()
+		# Keep desktop controls readable when the window narrows.
+		window.content_scale_mode = Window.CONTENT_SCALE_MODE_DISABLED
+		window.min_size = MIN_WINDOW
 	if not get_viewport().size_changed.is_connected(_apply_responsive_layout):
 		get_viewport().size_changed.connect(_apply_responsive_layout)
 	call_deferred("_apply_after_build")
@@ -42,7 +46,7 @@ func _replace_background(node: Node) -> void:
 			var rect := child as TextureRect
 			if rect.texture != null and rect.texture.resource_path.ends_with("aurora_background.svg"):
 				rect.texture = FINAL_BACKGROUND
-				rect.modulate = Color(1, 1, 1, 0.96)
+				rect.modulate = Color.WHITE
 		_replace_background(child)
 
 func _remove_temporary_avatar_art(node: Node) -> void:
@@ -143,6 +147,14 @@ func _flat_state(fill: Color, border: Color, radius := 12) -> StyleBoxFlat:
 	style.content_margin_bottom = 8
 	return style
 
+func _compact_action_state(fill: Color, border: Color) -> StyleBoxFlat:
+	var style := _flat_state(fill, border, 10)
+	style.content_margin_left = 3
+	style.content_margin_right = 3
+	style.content_margin_top = 2
+	style.content_margin_bottom = 2
+	return style
+
 func _button_label_width(button: Button) -> float:
 	if button.text.is_empty():
 		return 0.0
@@ -168,6 +180,14 @@ func _apply_safe_button_styles(node: Node) -> void:
 	for child in node.get_children():
 		if child is Button:
 			var button := child as Button
+			if button.name in ["ChatSelectButton", "ChatActions", "FeedbackPositive", "FeedbackNegative", "CopyMessageButton", "NewChatButton", "WorkButton", "SettingsButton", "AttachButton", "VoiceMicButton", "SendButton"]:
+				var compact := button.name != "ChatSelectButton"
+				button.add_theme_stylebox_override("normal", _compact_action_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT) if compact else _flat_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT))
+				button.add_theme_stylebox_override("hover", _compact_action_state(Color(0.14, 0.15, 0.19, 0.95), Color.TRANSPARENT) if compact else _flat_state(Color(0.14, 0.15, 0.19, 0.95), Color.TRANSPARENT))
+				button.add_theme_stylebox_override("focus", _compact_action_state(Color(0.14, 0.15, 0.19, 0.95), Color(0.55, 0.57, 0.66, 0.8)) if compact else _flat_state(Color(0.14, 0.15, 0.19, 0.95), Color(0.55, 0.57, 0.66, 0.8)))
+				button.clip_text = not compact
+				_apply_safe_button_styles(child)
+				continue
 			button.add_theme_stylebox_override("normal", _flat_state(Color(0.058, 0.066, 0.105, 0.98), Color(0.28, 0.42, 0.62, 0.62)))
 			button.add_theme_stylebox_override("hover", _flat_state(Color(0.10, 0.08, 0.18, 0.99), Color(0.38, 0.83, 1.0, 0.86)))
 			button.add_theme_stylebox_override("pressed", _flat_state(Color(0.15, 0.08, 0.26, 1.0), Color(0.67, 0.54, 1.0, 0.94)))
@@ -212,11 +232,22 @@ func _apply_responsive_layout() -> void:
 		return
 	_last_size = viewport
 	var compact := viewport.x < 1180.0
+	var narrow := viewport.x < 900.0
 	var desktop_layout := OS.get_name() != "Android" and not _mobile_preview()
 
 	var sidebar := _root.find_child("Sidebar", true, false) as Control
 	if sidebar != null and desktop_layout:
-		sidebar.custom_minimum_size.x = SIDEBAR_COMPACT if compact else SIDEBAR_WIDE
+		sidebar.custom_minimum_size.x = SIDEBAR_NARROW if narrow else (SIDEBAR_COMPACT if compact else SIDEBAR_WIDE)
+		var sidebar_margin := sidebar.find_child("SidebarMargin", true, false) as MarginContainer
+		if sidebar_margin != null:
+			sidebar_margin.add_theme_constant_override("margin_left", 12 if narrow else 16)
+			sidebar_margin.add_theme_constant_override("margin_right", 12 if narrow else 16)
+		var logo := sidebar.find_child("SidebarLogo", true, false) as TextureRect
+		if logo != null:
+			logo.custom_minimum_size = Vector2(40, 40) if narrow else Vector2(52, 52)
+		var brand := sidebar.find_child("SidebarBrand", true, false) as Label
+		if brand != null:
+			brand.add_theme_font_size_override("font_size", 20 if narrow else 23)
 
 	var header_margin := _root.find_child("HeaderMargin", true, false) as MarginContainer
 	if header_margin != null and desktop_layout:
@@ -229,14 +260,14 @@ func _apply_responsive_layout() -> void:
 
 	var composer := _root.find_child("ComposerMargin", true, false) as MarginContainer
 	if composer != null and desktop_layout:
-		composer.add_theme_constant_override("margin_left", 18 if compact else 34)
-		composer.add_theme_constant_override("margin_right", 18 if compact else 34)
-		composer.add_theme_constant_override("margin_bottom", 12 if compact else 22)
+		composer.add_theme_constant_override("margin_left", 12 if compact else 24)
+		composer.add_theme_constant_override("margin_right", 12 if compact else 24)
+		composer.add_theme_constant_override("margin_bottom", 10 if compact else 16)
 
 	var messages := _root.find_child("MessagesMargin", true, false) as MarginContainer
 	if messages != null and desktop_layout:
-		messages.add_theme_constant_override("margin_left", 22 if compact else 42)
-		messages.add_theme_constant_override("margin_right", 22 if compact else 42)
+		messages.add_theme_constant_override("margin_left", 14 if compact else 32)
+		messages.add_theme_constant_override("margin_right", 14 if compact else 32)
 
 	var message_scroll := _root.find_child("MessageScroll", true, false) as ScrollContainer
 	if message_scroll != null:

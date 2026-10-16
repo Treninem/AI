@@ -6,7 +6,7 @@ const PORT := 8766
 const BASE_URL := "http://127.0.0.1:8766"
 const MODEL_ALIAS := "AuroraFox-Core"
 const STARTUP_ATTEMPTS := 480
-const JOINED_WARMUP_ATTEMPTS := 120
+const JOINED_WARMUP_ATTEMPTS := STARTUP_ATTEMPTS
 const DEFAULT_CHAT_MAX_TOKENS := 768
 const TERSE_CHAT_MAX_TOKENS := 128
 const DEFAULT_CHAT_TIMEOUT_SECONDS := 90.0
@@ -56,6 +56,11 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	# A strict JSON plan may say "только строгий JSON"; the broad terse
 	# marker "только с" must not give it the short reply token budget.
 	var terse_request := not structured_request and _is_explicit_terse_request(messages)
+	var literal_words := terse_request and _requires_literal_words(messages)
+	var request_messages := messages
+	if literal_words:
+		request_messages = messages.duplicate(true)
+		request_messages.insert(0, {"role": "system", "content": "If the user requires specific words, include each one exactly as written in the visible answer. Preserve the requested number of sentences and do not substitute synonyms or inflections."})
 	var max_tokens := _generation_budget(options, terse_request)
 	if max_tokens == -2:
 		return {"ok": false, "error": "Invalid Core token budget: expected integer -1..2147483647", "model_failure": false, "retryable": false, "failure_scope": "request_budget"}
@@ -68,8 +73,8 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 	var response_bytes := int(wait_limits.response_max_bytes)
 	var payload := {
 		"model": MODEL_ALIAS,
-		"messages": messages,
-		"temperature": float(options.get("temperature", 0.2)),
+		"messages": request_messages,
+		"temperature": float(options.get("temperature", 0.0 if literal_words else 0.2)),
 		"max_tokens": max_tokens,
 		"stream": true,
 		"return_progress": true
@@ -100,19 +105,21 @@ func chat(model_path: String, messages: Array, options: Dictionary = {}) -> Dict
 
 func ensure_server(model_absolute_path: String) -> Dictionary:
 	if not is_available():
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует или повреждён", "installer": installer_path()}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Встроенный AuroraFox Core Engine отсутствует или повреждён", "installer": installer_path(), "model_failure": false, "retryable": false, "failure_scope": "runtime"}
 
-	# Multiple messages can arrive while the first on-demand startup is loading.
-	# Join the same bounded startup instead of spawning competing engine processes.
+	# Acquire startup ownership BEFORE the first await. Earlier code checked a
+	# live pid through async HTTP before setting starting=true, so two callers
+	# could both pass that gap, race to kill/recreate Core, and strand children.
 	if starting:
 		return await _wait_for_existing_start(model_absolute_path)
-
-	if server_pid > 0 and OS.is_process_running(server_pid) and active_model == model_absolute_path:
-		var health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 2.0)
-		if bool(health.get("ok", false)): return {"ok": true, "runtime": "aurora_core_desktop", "reused": true}
-		stop()
-
 	starting = true
+	if server_pid > 0 and OS.is_process_running(server_pid) and active_model == model_absolute_path:
+		# A live engine may still be loading. Never kill it just because /health
+		# is temporarily unavailable; subsequent callers join the same warmup.
+		return await _wait_owned_server_ready(server_pid, true)
+	if server_pid > 0:
+		_kill_owned_server_only()
+
 	var exe := engine_path()
 	var args := PackedStringArray([
 		"-m", model_absolute_path,
@@ -134,21 +141,27 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 	server_pid = OS.create_process(exe, args, false)
 	if server_pid <= 0:
 		starting = false
-		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Не удалось запустить встроенный AuroraFox Core Engine", "engine": exe}
+		return {"ok": false, "runtime": "aurora_core_desktop", "error": "Не удалось запустить встроенный AuroraFox Core Engine", "engine": exe, "model_failure": false, "retryable": true, "failure_scope": "runtime"}
 	active_model = model_absolute_path
+	return await _wait_owned_server_ready(server_pid, false)
+
+func _wait_owned_server_ready(owned_pid: int, reused: bool) -> Dictionary:
 	for _attempt in range(STARTUP_ATTEMPTS):
-		if server_pid <= 0 or not OS.is_process_running(server_pid):
+		if not starting or owned_pid != server_pid or not OS.is_process_running(owned_pid):
 			starting = false
-			server_pid = 0
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки встроенного AI"}
+			if owned_pid == server_pid: server_pid = 0
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core Engine завершился во время загрузки встроенного AI", "failure_scope": "startup", "model_failure": false, "retryable": true}
 		var health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 1.0)
 		if bool(health.get("ok", false)):
 			starting = false
-			return {"ok": true, "runtime": "aurora_core_desktop", "engine": exe, "pid": server_pid}
+			return {"ok": true, "runtime": "aurora_core_desktop", "pid": owned_pid, "reused": reused}
 		await get_tree().create_timer(0.25).timeout
+	# Only this startup owner can kill this exact engine. Never restart a
+	# different pid that another lifecycle already brought up.
+	if server_pid == owned_pid:
+		_kill_owned_server_only()
 	starting = false
-	stop()
-	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться за 120 секунд"}
+	return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core не успел подготовиться; проверьте доступную память и состояние Core", "failure_scope": "startup", "model_failure": false, "retryable": true}
 
 func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 	for _attempt in range(JOINED_WARMUP_ATTEMPTS):
@@ -157,9 +170,9 @@ func _wait_for_existing_start(model_absolute_path: String) -> Dictionary:
 				var final_health := await _request_json("/health", HTTPClient.METHOD_GET, {}, 2.0)
 				if bool(final_health.get("ok", false)):
 					return {"ok": true, "runtime": "aurora_core_desktop", "reused": true, "joined_warmup": true}
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "Фоновая подготовка AuroraFox Core завершилась неуспешно"}
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "Фоновая подготовка AuroraFox Core завершилась неуспешно", "model_failure": false, "retryable": true, "failure_scope": "startup"}
 		if active_model != model_absolute_path and not active_model.is_empty():
-			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core занят подготовкой другого внутреннего профиля"}
+			return {"ok": false, "runtime": "aurora_core_desktop", "error": "AuroraFox Core занят подготовкой другого внутреннего профиля", "model_failure": false, "retryable": true, "failure_scope": "startup"}
 		await get_tree().create_timer(0.25).timeout
 	return {
 		"ok": false,
@@ -175,6 +188,12 @@ func cancel_active_requests() -> void:
 	_stream_cancel_epoch += 1
 	for client in _active_streams: client.close()
 
+func _kill_owned_server_only() -> void:
+	if server_pid > 0 and OS.is_process_running(server_pid):
+		OS.kill(server_pid)
+	server_pid = 0
+	active_model = ""
+
 func stop(force := false) -> void:
 	cancel_active_requests()
 	# A foreground chat can time out its short join while the background loader
@@ -183,9 +202,7 @@ func stop(force := false) -> void:
 	# teardown remains available through force=true from _exit_tree().
 	if starting and not force:
 		return
-	if server_pid > 0 and OS.is_process_running(server_pid): OS.kill(server_pid)
-	server_pid = 0
-	active_model = ""
+	_kill_owned_server_only()
 	starting = false
 
 func runtime_info() -> Dictionary:
@@ -224,13 +241,24 @@ func _is_explicit_terse_request(messages: Array) -> bool:
 	if prompt.is_empty():
 		return false
 	var markers := [
-		"reply only", "reply exactly", "output exactly", "nothing else",
+		"reply only", "reply exactly", "output exactly", "write exactly", "nothing else",
 		"one word", "one short", "только с", "ответь ровно", "выведи ровно",
-		"ничего больше", "одной короткой", "только маркер", "только кодовое"
+		"ничего больше", "одной короткой", "одним коротким предложением",
+		"только маркер", "только кодовое"
 	]
 	for marker in markers:
 		if prompt.contains(marker):
 			return true
+	return false
+
+func _requires_literal_words(messages: Array) -> bool:
+	for i in range(messages.size() - 1, -1, -1):
+		if messages[i] is Dictionary and str(messages[i].get("role", "")) == "user":
+			var prompt := str(messages[i].get("content", "")).to_lower()
+			for marker in ["include the words", "use the exact words", "включи слова", "используй слова"]:
+				if prompt.contains(marker):
+					return true
+			break
 	return false
 
 func _is_strict_structured_request(messages: Array) -> bool:

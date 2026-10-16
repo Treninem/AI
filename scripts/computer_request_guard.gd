@@ -58,11 +58,15 @@ static func wait(request: HTTPRequest, owner: Node, allowed: Callable, service_u
 		state.done = true
 	, CONNECT_ONE_SHOT)
 	while not state.done:
+		if not is_instance_valid(owner) or not is_instance_valid(request) or not allowed.is_valid():
+			return {"cancelled": true, "termination_confirmed": false, "uncertain_external_state": true, "retryable": false}
 		if not bool(allowed.call()):
 			request.cancel_request()
 			var cancellation := await _cancel_execution(owner, service_url, token, str(payload.get("execution_id", "")))
 			return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation or bool(payload.get("_unsafe_gui", false)), "retryable": false}
 		await owner.get_tree().create_timer(0.05).timeout
+	if not is_instance_valid(owner) or not is_instance_valid(request) or not allowed.is_valid():
+		return {"cancelled": true, "termination_confirmed": false, "uncertain_external_state": true, "retryable": false}
 	if not bool(allowed.call()):
 		var cancellation := await _cancel_execution(owner, service_url, token, str(payload.get("execution_id", "")))
 		return {"cancelled": true, "termination_confirmed": cancellation, "uncertain_external_state": not cancellation or bool(payload.get("_unsafe_gui", false)), "retryable": false}

@@ -11,7 +11,7 @@ func _ready() -> void:
 	set_process(true)
 
 func _process(delta: float) -> void:
-	if OS.get_name() != "Windows" or AuroraVoice.backend_is_ready:
+	if OS.get_name() != "Windows" or AuroraVoice.backend_is_ready or not bool(AuroraVoice.settings.get("enabled", true)) or not AuroraVoice.bridge.backend_requested:
 		return
 	_restart_timer -= delta
 	if _restart_timer > 0.0:

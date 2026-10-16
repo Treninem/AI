@@ -9,9 +9,15 @@ var _platform := ""
 var _scenario := ""
 var _requested_size := Vector2i.ZERO
 var _head_sha := ""
+var _out_dir := OUT_DIR
+var _manifest_path := MANIFEST_PATH
 
 func _init() -> void:
 	_head_sha = OS.get_environment("AURORA_UI_HEAD_SHA").strip_edges()
+	var override_dir := OS.get_environment("AURORA_UI_OUT_DIR").strip_edges()
+	if not override_dir.is_empty():
+		_out_dir = override_dir
+		_manifest_path = _out_dir.path_join("acceptance_manifest.json")
 	call_deferred("_run")
 
 func _fail(message: String, code: int) -> void:
@@ -19,7 +25,7 @@ func _fail(message: String, code: int) -> void:
 	quit(code)
 
 func _prepare_output() -> bool:
-	var absolute := ProjectSettings.globalize_path(OUT_DIR)
+	var absolute := ProjectSettings.globalize_path(_out_dir)
 	var err := DirAccess.make_dir_recursive_absolute(absolute)
 	if err != OK and err != ERR_ALREADY_EXISTS:
 		_fail("Cannot create UI artifact directory: %s" % error_string(err), 2)
@@ -53,7 +59,7 @@ func _capture(name: String, surface: String) -> bool:
 	if image.get_width() != _requested_size.x or image.get_height() != _requested_size.y:
 		_fail("Framebuffer mismatch for %s: requested=%s captured=%dx%d window=%s content_scale=%s" % [name, str(_requested_size), image.get_width(), image.get_height(), str(window_size), str(content_scale_size)], 14)
 		return false
-	var path := "%s/%s.png" % [OUT_DIR, name]
+	var path := "%s/%s.png" % [_out_dir, name]
 	var err := image.save_png(ProjectSettings.globalize_path(path))
 	if err != OK:
 		_fail("Cannot save %s: %s" % [path, error_string(err)], 5)
@@ -80,13 +86,13 @@ func _write_manifest() -> bool:
 		"captures": _records,
 		"known_missing_client_surfaces": []
 	}
-	var file := FileAccess.open(MANIFEST_PATH, FileAccess.WRITE)
+	var file := FileAccess.open(_manifest_path, FileAccess.WRITE)
 	if file == null:
 		_fail("Cannot write visual acceptance manifest", 6)
 		return false
 	file.store_string(JSON.stringify(payload, "  "))
 	file.close()
-	print("UI_ACCEPTANCE_MANIFEST %s captures=%d head=%s" % [MANIFEST_PATH, _records.size(), _head_sha])
+	print("UI_ACCEPTANCE_MANIFEST %s captures=%d head=%s" % [_manifest_path, _records.size(), _head_sha])
 	return true
 
 func _button_by_name(node: Node, name: String) -> Button:
@@ -378,6 +384,32 @@ func _capture_desktop_compact(packed: PackedScene) -> bool:
 	await process_frame
 	return true
 
+func _capture_desktop_narrow(packed: PackedScene) -> bool:
+	var size := Vector2i(760, 560)
+	_start_scenario("Windows", "narrow_responsive", size)
+	var main := await _instantiate(packed, size, false)
+	if main == null:
+		_fail("Narrow desktop scene instantiate failed", 41)
+		return false
+	if not await _populate_chat(main, false):
+		return false
+	if not await _capture("desktop_narrow_chat_760x560", "chat_narrow"):
+		return false
+	var settings := await _open_settings_by_click(main)
+	if settings == null:
+		return false
+	var popup_end := settings.popup.position + settings.popup.size
+	if settings.popup.position.x < 0 or settings.popup.position.y < 0 or popup_end.x > size.x or popup_end.y > size.y:
+		_fail("Narrow Settings window exceeds 760x560 capture bounds", 42)
+		return false
+	if not await _capture("desktop_narrow_settings_760x560", "settings_narrow"):
+		return false
+	if not await _close_settings_by_click(settings):
+		return false
+	main.queue_free()
+	await process_frame
+	return true
+
 func _capture_mobile_full(packed: PackedScene) -> bool:
 	var size := Vector2i(720, 1280)
 	_start_scenario("Android", "portrait_acceptance", size)
@@ -475,6 +507,8 @@ func _run() -> void:
 	if not await _capture_desktop_mid(packed):
 		return
 	if not await _capture_desktop_compact(packed):
+		return
+	if not await _capture_desktop_narrow(packed):
 		return
 	if not await _capture_mobile_full(packed):
 		return

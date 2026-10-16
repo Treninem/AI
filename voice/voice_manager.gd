@@ -47,10 +47,12 @@ var _startup_done := false
 var _personality: Dictionary = {}
 var _last_local_phrase := ""
 var _last_event_sound_ms := -10000
+var _manual_listening := false
 
 func _ready() -> void:
 	_load_settings()
 	_personality = _load_json(PERSONALITY_PATH)
+	bridge.backend_requested = _needs_background_backend()
 	add_child(bridge)
 	add_child(speech_queue)
 	add_child(emotions)
@@ -72,6 +74,7 @@ func _ready() -> void:
 	speech_queue.speech_started.connect(_on_speech_started)
 	speech_queue.speech_finished.connect(_on_speech_finished)
 	speech_queue.speech_amplitude.connect(_on_amplitude)
+	speech_queue.queue_empty.connect(_release_backend_after_idle)
 	_apply_mic_mode()
 
 func bind_avatar(view: AuroraFoxAvatarView) -> void:
@@ -115,19 +118,29 @@ func resume() -> void:
 
 func start_listening() -> void:
 	if not bool(settings.get("enabled", true)): return
-	bridge.set_mode("continuous", _device_value(), _mic_options())
+	_manual_listening = true
+	if OS.get_name() == "Windows":
+		bridge.set_backend_requested(true)
+	_apply_mic_mode()
 	wake.open_window()
 
 func stop_listening() -> void:
+	_manual_listening = false
 	wake.close_window()
 	_apply_mic_mode()
+	_release_backend_after_idle()
 
 func set_enabled(value: bool) -> void:
 	settings["enabled"] = value
 	if not value:
+		_manual_listening = false
 		stop()
 		bridge.set_mode("off")
+		bridge.set_backend_requested(false)
+		backend_is_ready = false
+		backend_status.emit(false, {})
 	else:
+		bridge.set_backend_requested(_needs_background_backend())
 		_apply_mic_mode()
 	_save_settings()
 
@@ -145,6 +158,7 @@ func set_mic_mode(value: String) -> void:
 	if value not in ["off", "wake_word", "continuous", "push_to_talk"]: return
 	settings["mic_mode"] = value
 	wake.mode = value
+	_sync_background_backend()
 	_apply_mic_mode()
 	_save_settings()
 
@@ -154,6 +168,7 @@ func update_setting(key: String, value: Variant) -> void:
 	if key == "volume": speech_queue.set_volume(float(value))
 	if key in ["mic_mode", "mic_device", "mic_sensitivity", "noise_suppression"]:
 		if key == "mic_mode": wake.mode = str(value)
+		_sync_background_backend()
 		_apply_mic_mode()
 	_save_settings()
 
@@ -251,7 +266,28 @@ func _apply_mic_mode() -> void:
 	if not bool(settings.get("enabled", true)):
 		bridge.set_mode("off")
 		return
-	bridge.set_mode(str(settings.get("mic_mode", "wake_word")), _device_value(), _mic_options())
+	bridge.set_mode("continuous" if _manual_listening else str(settings.get("mic_mode", "wake_word")), _device_value(), _mic_options())
+
+func _needs_background_backend() -> bool:
+	if not bool(settings.get("enabled", true)):
+		return false
+	return str(settings.get("mic_mode", "wake_word")) in ["wake_word", "continuous"]
+
+func _sync_background_backend() -> void:
+	if OS.get_name() != "Windows":
+		return
+	if _needs_background_backend() or _manual_listening:
+		bridge.set_backend_requested(true)
+	else:
+		_release_backend_after_idle()
+
+func _release_backend_after_idle() -> void:
+	if OS.get_name() != "Windows" or _needs_background_backend() or _manual_listening:
+		return
+	# Give a queued second utterance a short window to reuse the warm backend.
+	await get_tree().create_timer(8.0).timeout
+	if is_inside_tree() and not _needs_background_backend() and not _manual_listening and not speech_queue.running and speech_queue.items.is_empty():
+		bridge.set_backend_requested(false)
 
 func _mic_options() -> Dictionary:
 	return {

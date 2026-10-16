@@ -9,6 +9,10 @@ on:
       - 'update/update_overlay.gd'
       - 'assets/ui/**'
       - 'tests/desktop_ui_smoke.gd'
+      - 'tests/windows_ui_scaling_smoke.gd'
+      - 'tests/android_file_tool_bridge_lifecycle_smoke.gd'
+      - 'tests/chat_deadline_status_smoke.gd'
+      - 'tests/terse_phrase_routing_smoke.gd'
       - 'tests/ui_owner_assets_smoke.gd'
       - 'tests/ui_state_smoke.gd'
       - 'tests/ui_real_input_smoke.gd'
@@ -98,6 +102,22 @@ jobs:
         shell: bash
         run: timeout 45s ./godot --headless --path . --script tests/desktop_ui_smoke.gd
 
+      - name: Native desktop content scaling gate
+        shell: bash
+        run: timeout 20s ./godot --headless --path . --script tests/windows_ui_scaling_smoke.gd
+
+      - name: Android file bridge lifecycle gate
+        shell: bash
+        run: timeout 20s ./godot --headless --path . --script tests/android_file_tool_bridge_lifecycle_smoke.gd
+
+      - name: Core request error classification gate
+        shell: bash
+        run: timeout 90s ./godot --headless --path . --script tests/chat_deadline_status_smoke.gd
+
+      - name: Russian short answer routing gate
+        shell: bash
+        run: timeout 45s ./godot --headless --path . --script tests/terse_phrase_routing_smoke.gd
+
       - name: Canonical owner-art UI gate
         shell: bash
         run: timeout 45s ./godot --headless --path . --script tests/ui_owner_assets_smoke.gd
@@ -138,6 +158,8 @@ jobs:
             artifacts/ui/desktop_compact_chat_960x640.png
             artifacts/ui/desktop_compact_settings_960x640.png
             artifacts/ui/desktop_compact_account_960x640.png
+            artifacts/ui/desktop_narrow_chat_760x560.png
+            artifacts/ui/desktop_narrow_settings_760x560.png
             artifacts/ui/android_portrait_chat_720x1280.png
             artifacts/ui/android_portrait_chat_drawer_720x1280.png
             artifacts/ui/android_portrait_settings_general_720x1280.png
@@ -166,12 +188,12 @@ jobs:
           data = json.loads(manifest.read_text(encoding='utf-8'))
           expected_sha = os.environ['AURORA_UI_HEAD_SHA']
           assert data['head_sha'] == expected_sha, (data['head_sha'], expected_sha)
-          assert len(data['captures']) == 25, len(data['captures'])
+          assert len(data['captures']) == 27, len(data['captures'])
           assert data['known_missing_client_surfaces'] == []
           surfaces = {item['surface'] for item in data['captures']}
           for required in {'login_guest', 'user_memory_management', 'files_projects', 'knowledge_base', 'updates_error_resilience'}:
               assert required in surfaces, (required, sorted(surfaces))
-          for required_size in ({'width': 1440, 'height': 900}, {'width': 1280, 'height': 720}, {'width': 960, 'height': 640}, {'width': 720, 'height': 1280}, {'width': 480, 'height': 960}):
+          for required_size in ({'width': 1440, 'height': 900}, {'width': 1280, 'height': 720}, {'width': 960, 'height': 640}, {'width': 760, 'height': 560}, {'width': 720, 'height': 1280}, {'width': 480, 'height': 960}):
               assert any(item['requested_viewport'] == required_size for item in data['captures']), required_size
           print(json.dumps(data, ensure_ascii=False, indent=2))
           PY

@@ -165,9 +165,9 @@ func _style(fill: Color, border := BORDER, radius := 14) -> StyleBoxFlat:
 	return style
 
 func _panel_style() -> StyleBoxFlat:
-	var style := _style(BG, Color(0.34, 0.50, 0.78, 0.72), 20)
+	var style := _style(BG, Color(0.34, 0.50, 0.78, 0.18), 16)
 	style.shadow_color = Color(0, 0, 0, 0.68)
-	style.shadow_size = 18
+	style.shadow_size = 10
 	return style
 
 func _build_ui() -> void:
@@ -208,14 +208,14 @@ func _build_ui() -> void:
 
 	var outer := MarginContainer.new()
 	outer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var edge := 14 if _is_mobile_layout() else 20
+	var edge := 14 if _is_mobile_layout() else 16
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
 		outer.add_theme_constant_override(side, edge)
 	popup.add_child(outer)
 
 	var root := VBoxContainer.new()
 	root.name = "SettingsRoot"
-	root.add_theme_constant_override("separation", 14)
+	root.add_theme_constant_override("separation", 10)
 	outer.add_child(root)
 
 	var header := HBoxContainer.new()
@@ -228,7 +228,7 @@ func _build_ui() -> void:
 	header.add_child(heading_box)
 	var title := Label.new()
 	title.text = "Настройки"
-	title.add_theme_font_size_override("font_size", 28 if not _is_mobile_layout() else 24)
+	title.add_theme_font_size_override("font_size", 24 if not _is_mobile_layout() else 22)
 	title.add_theme_color_override("font_color", WHITE)
 	heading_box.add_child(title)
 	var version := Label.new()
@@ -240,10 +240,10 @@ func _build_ui() -> void:
 	var done := Button.new()
 	done.name = "SettingsDoneButton"
 	done.text = "Готово"
-	done.custom_minimum_size = Vector2(96, 42)
+	done.custom_minimum_size = Vector2(84, 36)
 	done.pressed.connect(func(): popup.hide())
-	done.add_theme_stylebox_override("normal", _style(Color(0.11, 0.075, 0.18, 0.98), Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.72), 12))
-	done.add_theme_stylebox_override("hover", _style(Color(0.17, 0.10, 0.28, 1.0), Color(CYAN.r, CYAN.g, CYAN.b, 0.86), 12))
+	done.add_theme_stylebox_override("normal", _style(Color(0.08, 0.10, 0.14, 0.98), Color(0.30, 0.38, 0.52, 0.32), 10))
+	done.add_theme_stylebox_override("hover", _style(Color(0.14, 0.17, 0.23, 1.0), Color(CYAN.r, CYAN.g, CYAN.b, 0.48), 10))
 	header.add_child(done)
 
 	if _is_mobile_layout():
@@ -265,21 +265,21 @@ func _build_desktop_navigation(root: VBoxContainer) -> void:
 	var body := HBoxContainer.new()
 	body.name = "SettingsBody"
 	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override("separation", 16)
+	body.add_theme_constant_override("separation", 12)
 	root.add_child(body)
 
 	var nav_panel := PanelContainer.new()
 	nav_panel.name = "SettingsNavigationPanel"
-	nav_panel.custom_minimum_size.x = 212
-	nav_panel.add_theme_stylebox_override("panel", _style(Color(0.028, 0.034, 0.057, 0.94), Color(0.22, 0.27, 0.39, 0.52), 16))
+	nav_panel.custom_minimum_size.x = 184
+	nav_panel.add_theme_stylebox_override("panel", _style(Color.TRANSPARENT, Color.TRANSPARENT, 0))
 	body.add_child(nav_panel)
 	var nav_margin := MarginContainer.new()
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		nav_margin.add_theme_constant_override(side, 10)
+		nav_margin.add_theme_constant_override(side, 4)
 	nav_panel.add_child(nav_margin)
 	var nav := VBoxContainer.new()
 	nav.name = "SettingsNavigation"
-	nav.add_theme_constant_override("separation", 6)
+	nav.add_theme_constant_override("separation", 2)
 	nav_margin.add_child(nav)
 	_build_nav_buttons(nav)
 
@@ -332,7 +332,7 @@ func _add_nav_button(parent: Container, key: String, text: String) -> void:
 	button.name = "SettingsNav_" + key
 	button.text = text
 	button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-	button.custom_minimum_size = Vector2(0, 44)
+	button.custom_minimum_size = Vector2(0, 36)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	button.pressed.connect(func(): _select_page(key))
 	parent.add_child(button)
@@ -341,13 +341,12 @@ func _add_nav_button(parent: Container, key: String, text: String) -> void:
 	_style_nav_button(button, false)
 
 func _style_nav_button(button: Button, selected: bool) -> void:
-	var fill := Color(0.10, 0.065, 0.17, 0.98) if selected else Color(0.025, 0.031, 0.052, 0.72)
-	var border := Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.72) if selected else Color(0.22, 0.27, 0.39, 0.45)
-	button.add_theme_stylebox_override("normal", _style(fill, border, 11))
-	button.add_theme_stylebox_override("hover", _style(SURFACE_HOVER, Color(CYAN.r, CYAN.g, CYAN.b, 0.58), 11))
-	button.add_theme_stylebox_override("pressed", _style(Color(0.14, 0.09, 0.23, 1.0), Color(ACCENT.r, ACCENT.g, ACCENT.b, 0.90), 11))
+	var fill := Color(0.16, 0.20, 0.26, 0.95) if selected else Color.TRANSPARENT
+	button.add_theme_stylebox_override("normal", _style(fill, Color.TRANSPARENT, 9))
+	button.add_theme_stylebox_override("hover", _style(Color(0.12, 0.16, 0.21, 0.95), Color.TRANSPARENT, 9))
+	button.add_theme_stylebox_override("pressed", _style(Color(0.18, 0.22, 0.29, 1.0), Color.TRANSPARENT, 9))
 	button.add_theme_color_override("font_color", WHITE if selected else Color("c3ccdc"))
-	button.add_theme_font_size_override("font_size", 14)
+	button.add_theme_font_size_override("font_size", 13)
 
 func _build_pages() -> void:
 	if page_stack == null:
@@ -358,6 +357,19 @@ func _build_pages() -> void:
 	_build_autonomy_page(_page("autonomy", "Автономность", "Управление обучением, циклами анализа и проверенными улучшениями."))
 	_build_tools_page(_page("tools", "Инструменты", "Отдельные рабочие поверхности AuroraFox без лишних кнопок в чате."))
 	_build_updates_page(_page("updates", "Обновления", "Проверенные stable-обновления и безопасное применение пакетов."))
+	_style_page_actions(page_stack)
+
+func _style_page_actions(node: Node) -> void:
+	for child in node.get_children():
+		if child is Button and not child is CheckButton and not child is OptionButton and child.get_parent() is VBoxContainer:
+			var action := child as Button
+			action.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+			action.custom_minimum_size.x = clampi(action.text.length() * 8 + 28, 160, 300)
+			action.custom_minimum_size.y = 34
+			action.add_theme_font_size_override("font_size", 13)
+			action.add_theme_stylebox_override("normal", _style(Color(0.10, 0.13, 0.18, 0.9), Color.TRANSPARENT, 9))
+			action.add_theme_stylebox_override("hover", _style(Color(0.16, 0.20, 0.27, 0.96), Color(CYAN.r, CYAN.g, CYAN.b, 0.38), 9))
+		_style_page_actions(child)
 
 func _page(key: String, title_text: String, subtitle_text: String) -> VBoxContainer:
 	var scroll := ScrollContainer.new()
@@ -381,7 +393,7 @@ func _page(key: String, title_text: String, subtitle_text: String) -> VBoxContai
 
 	var title := Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 24)
+	title.add_theme_font_size_override("font_size", 20)
 	title.add_theme_color_override("font_color", WHITE)
 	box.add_child(title)
 	var subtitle := Label.new()
@@ -407,11 +419,11 @@ func _select_page(key: String) -> void:
 func _add_card(parent: VBoxContainer, title_text: String, subtitle_text := "") -> VBoxContainer:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _style(SURFACE, Color(0.25, 0.30, 0.43, 0.54), 16))
+	panel.add_theme_stylebox_override("panel", _style(Color(0.055, 0.069, 0.09, 0.7), Color.TRANSPARENT, 12))
 	parent.add_child(panel)
 	var margin := MarginContainer.new()
 	for side in ["margin_left", "margin_right", "margin_top", "margin_bottom"]:
-		margin.add_theme_constant_override(side, 14)
+		margin.add_theme_constant_override(side, 12)
 	panel.add_child(margin)
 	var box := VBoxContainer.new()
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -419,7 +431,7 @@ func _add_card(parent: VBoxContainer, title_text: String, subtitle_text := "") -
 	margin.add_child(box)
 	var title := Label.new()
 	title.text = title_text
-	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_font_size_override("font_size", 15)
 	title.add_theme_color_override("font_color", WHITE)
 	box.add_child(title)
 	if not subtitle_text.is_empty():
@@ -780,6 +792,11 @@ func _build_autonomy_page(page: VBoxContainer) -> void:
 	improvement_button.text = "Открыть центр самоулучшения"
 	improvement_button.pressed.connect(_open_self_improvement)
 	status_card.add_child(improvement_button)
+	var evolution_button := Button.new()
+	evolution_button.name = "SettingsEvolutionButton"
+	evolution_button.text = "Открыть Evolution Engine"
+	evolution_button.pressed.connect(func(): _open_surface("EvolutionRuntime/UserControlSurface", "show_center"))
+	status_card.add_child(evolution_button)
 
 func _build_tools_page(page: VBoxContainer) -> void:
 	var knowledge := _add_card(page, "База знаний", "Импорт документов, баз, шаблонов и алгоритмов в локальное Core Knowledge.")

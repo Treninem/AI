@@ -5,6 +5,7 @@
 #include <mutex>
 #include <sstream>
 #include <string>
+#include <thread>
 #include <vector>
 
 #ifdef AURORAFOX_HAS_LLAMA
@@ -167,8 +168,12 @@ static std::string llama_generate(
     ctx_params.n_ctx = static_cast<uint32_t>(context_size);
     ctx_params.n_batch = static_cast<uint32_t>(std::min(n_prompt, 512));
     ctx_params.n_ubatch = ctx_params.n_batch;
-    ctx_params.n_threads = 4;
-    ctx_params.n_threads_batch = 4;
+    // Do not monopolize a minimum-tier 4-core phone while inference runs.
+    // Leave CPU headroom for Android/Godot UI, voice and input handling.
+    const unsigned int logical_cores = std::thread::hardware_concurrency();
+    const int worker_threads = logical_cores >= 8 ? 4 : (logical_cores >= 6 ? 3 : 2);
+    ctx_params.n_threads = worker_threads;
+    ctx_params.n_threads_batch = worker_threads;
     ctx_params.no_perf = true;
 
     llama_context *ctx = llama_init_from_model(model, ctx_params);

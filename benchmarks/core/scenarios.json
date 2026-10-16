@@ -43,6 +43,12 @@
     "compatibility_switch_isolation",
     "repeatability"
   ],
+  "platform_required_scenarios": {
+    "Windows": ["russian_factual_ice"]
+  },
+  "platform_local_runtime_required_scenarios": {
+    "Windows": ["russian_factual_ice"]
+  },
   "allowed_local_runtimes_by_platform": {
     "Windows": ["aurora_core_desktop", "aurora_core_native"],
     "Android": ["aurora_core_android"]

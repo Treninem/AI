@@ -62,6 +62,8 @@ func _ensure_work_entry() -> void:
 func _logical_background_viewport_size() -> Vector2:
 	var window := get_tree().root
 	if window != null:
+		if window.content_scale_mode == Window.CONTENT_SCALE_MODE_DISABLED:
+			return get_viewport_rect().size
 		var logical := window.content_scale_size
 		if logical.x > 0 and logical.y > 0:
 			return Vector2(logical)
@@ -107,7 +109,7 @@ func _apply_owner_background() -> void:
 			rect.texture = _owner_background_texture()
 			rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 			rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-			rect.modulate = Color(1, 1, 1, 1)
+			rect.modulate = Color.WHITE
 
 func _on_viewport_resized() -> void:
 	super._on_viewport_resized()
@@ -180,7 +182,17 @@ func _bubble_width() -> float:
 	available = maxf(240.0, available - 10.0)
 	if available < 760.0:
 		return maxf(240.0, available * 0.90)
-	return minf(780.0, maxf(320.0, available * 0.72))
+	return minf(780.0, maxf(320.0, available * 0.76))
+
+func _render_active_chat() -> void:
+	super._render_active_chat()
+	# Keep the owner-approved illustration in the welcome state; an active
+	# conversation needs an uncluttered reading surface.
+	if OS.get_name() == "Android" or bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)):
+		return
+	var background := find_child("OwnerBackground", true, false) as TextureRect
+	if background != null:
+		background.visible = (chats.get_active_chat().get("messages", []) as Array).is_empty()
 
 func _add_message_card(message: Dictionary) -> void:
 	super._add_message_card(message)

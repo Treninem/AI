@@ -135,6 +135,21 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if main.find_child("UpdateStatusButton", true, false) != null:
 		_fail("Floating/header update control leaked back into the chat surface", 22)
 		return false
+	var evolution_button := main.find_child("SettingsEvolutionButton", true, false) as Button
+	if evolution_button == null or evolution_button.pressed.get_connections().is_empty():
+		_fail("Evolution control is not reachable from Settings", 103)
+		return false
+	evolution_button.pressed.emit()
+	var evolution_surface := main.get_node_or_null("EvolutionRuntime/UserControlSurface")
+	var evolution_popup := evolution_surface.get("_popup") as PopupPanel if evolution_surface != null else null
+	if evolution_popup == null or not evolution_popup.visible:
+		_fail("Settings Evolution entry did not open its control surface", 106)
+		return false
+	evolution_popup.hide()
+	for node in main.find_children("*", "Button", true, false):
+		if (node as Button).text == "Evolution Engine":
+			_fail("Evolution control overlaps the chat composer", 104)
+			return false
 	var work_button := main.find_child("WorkButton", true, false) as Button
 	if mobile:
 		if work_button != null and work_button.is_visible_in_tree():
@@ -197,6 +212,11 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 	if not _assert_knowledge_surfaces(main):
 		return false
 	if not _assert_owner_art(main, mobile):
+		return false
+	var owner_background := main.find_child("OwnerBackground", true, false) as TextureRect
+	var chat_veil := main.find_child("ChatBackgroundVeil", true, false) as ColorRect
+	if owner_background == null or not owner_background.modulate.is_equal_approx(Color.WHITE) or chat_veil == null or chat_veil.color.a < 0.90:
+		_fail("Chat text does not have a calm readable surface over neutral owner art", 105)
 		return false
 
 	var computer_toggle := main.find_child("ComputerAgentToggle", true, false) as CheckButton
@@ -332,6 +352,10 @@ func _exercise_chat(main: Control) -> bool:
 	if store.active_chat_id.is_empty() or store.active_chat_id == before:
 		_fail("New chat action did not create/activate a chat", 61)
 		return false
+	var chat_actions := main.find_child("ChatActions", true, false) as MenuButton
+	if chat_actions == null or chat_actions.get_popup().item_count != 2 or chat_actions.get_popup().id_pressed.get_connections().is_empty():
+		_fail("Chat history actions are not available in a compact menu", 107)
+		return false
 	var previous_title_cap := OwnerResourcePolicy.value("chat_title_chars")
 	OwnerResourcePolicy._cached.chat_title_chars = 160
 	await main.call("_open_rename_chat", store.active_chat_id, "Д".repeat(100))
@@ -362,6 +386,23 @@ func _exercise_chat(main: Control) -> bool:
 	if _visible_placeholder_fox(main):
 		_fail("Assistant message rendered temporary avatar artwork", 62)
 		return false
+	var contents := main.find_children("MessageContent", "RichTextLabel", true, false)
+	var copy_buttons := main.find_children("CopyMessageButton", "Button", true, false)
+	if contents.size() < 3 or copy_buttons.size() < contents.size():
+		_fail("Messages lack visible copy actions", 107)
+		return false
+	for content in contents:
+		if not (content as RichTextLabel).selection_enabled:
+			_fail("Message text cannot be selected", 108)
+			return false
+	var copy := copy_buttons[0] as Button
+	if copy.pressed.get_connections().is_empty():
+		_fail("Message copy action is not wired", 109)
+		return false
+	var background := main.find_child("OwnerBackground", true, false) as TextureRect
+	if not bool(ProjectSettings.get_setting("aurorafox/testing/mobile_preview", false)) and background != null and background.visible:
+		_fail("Decorative background remains behind an active desktop conversation", 110)
+		return false
 	var feedback_controls := main.find_children("FeedbackControls", "HBoxContainer", true, false)
 	if feedback_controls.size() < 2:
 		_fail("Assistant answers do not expose compact feedback controls", 95)
@@ -369,10 +410,13 @@ func _exercise_chat(main: Control) -> bool:
 	for controls in feedback_controls:
 		var positive := controls.find_child("FeedbackPositive", true, false) as Button
 		var negative := controls.find_child("FeedbackNegative", true, false) as Button
-		if positive == null or negative == null or positive.text != "+" or negative.text != "−":
-			_fail("Feedback controls are missing accessible + / − actions", 96)
+		if positive == null or negative == null or positive.icon == null or negative.icon == null:
+			_fail("Feedback controls are missing recognizable icon actions", 96)
 			return false
-		if positive.tooltip_text.is_empty() or negative.tooltip_text.is_empty():
+		if positive.icon.resource_path != "res://assets/ui/icon_feedback_positive.svg" or negative.icon.resource_path != "res://assets/ui/icon_feedback_negative.svg":
+			_fail("Feedback controls are not using the intended thumb icons", 98)
+			return false
+		if positive.tooltip_text.is_empty() or negative.tooltip_text.is_empty() or positive.accessibility_name.is_empty() or negative.accessibility_name.is_empty():
 			_fail("Feedback controls do not explain their actions", 97)
 			return false
 	var messages := main.find_child("MessageList", true, false)
@@ -407,13 +451,18 @@ func _run_desktop(packed: PackedScene) -> bool:
 	var panel := main.find_child("MainPanel", true, false) as Control
 	var composer := main.find_child("ComposerMargin", true, false) as Control
 	var header_actions := main.find_child("MainHeaderActions", true, false) as Control
-	for target_size in [Vector2i(960, 640), Vector2i(1280, 720), Vector2i(1440, 900)]:
+	var original_size := root.size
+	for target_size in [Vector2i(760, 560), Vector2i(960, 640), Vector2i(1280, 720), Vector2i(1440, 900)]:
+		root.size = target_size
 		root.content_scale_size = target_size
 		await process_frame
 		await process_frame
 		var viewport_size := main.get_viewport().get_visible_rect().size
-		if target_size.x == 960 and sidebar.custom_minimum_size.x > 240.0:
-			_fail("Compact sidebar remained too wide at 960px", 71)
+		if target_size.x <= 960 and sidebar.custom_minimum_size.x > 214.0:
+			_fail("Compact sidebar remained too wide at narrow desktop width", 71)
+			return false
+		if target_size.x == 760 and sidebar.custom_minimum_size.x > 194.0:
+			_fail("Narrow desktop sidebar still crowds the conversation", 111)
 			return false
 		if composer.position.y + composer.size.y > viewport_size.y + 2.0:
 			_fail("Composer exceeds desktop viewport at %s" % str(target_size), 72)
@@ -424,6 +473,11 @@ func _run_desktop(packed: PackedScene) -> bool:
 		if header_actions != null and header_actions.visible:
 			_fail("Empty desktop header actions container should not consume space", 74)
 			return false
+	root.size = original_size
+	var chat_title := main.find_child("ChatSelectButton", true, false) as Button
+	if chat_title == null or chat_title.text_overrun_behavior != TextServer.OVERRUN_TRIM_ELLIPSIS:
+		_fail("Long chat titles have no readable ellipsis or full-title tooltip", 112)
+		return false
 
 	if not await _exercise_chat(main):
 		_fail("Desktop chat behavior regression", 75)

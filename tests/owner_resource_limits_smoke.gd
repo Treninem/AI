@@ -234,7 +234,9 @@ func _run() -> void:
 	voice_logger.free()
 	for suffix in ["", ".1"]: DirAccess.remove_absolute(ProjectSettings.globalize_path("user://owner_voice_logger_fixture.log" + suffix))
 	var native_tools := AndroidFileToolBridge.new()
-	native_tools.client.free()
+	# The Android client is deliberately created only on Android. Inject the
+	# route probe here without assuming a desktop client exists to free.
+	assert(native_tools.client == null)
 	var text_core := TextOnlyCore.new()
 	for component in [text_core.experience, text_core.cognition, text_core.dream_cycle, text_core.team]: text_core.add_child(component)
 	var unobserved := UnobservedComputerUI.new()
