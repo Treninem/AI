@@ -1473,4 +1473,7 @@ if __name__ == "__main__":
     import uvicorn
 
     if PARENT_PID > 0: threading.Thread(target=_parent_watchdog, name="aurorafox-parent-watchdog", daemon=True).start()
-    uvicorn.run(app, host=HOST, port=PORT, access_log=False, log_level="warning")
+    # Godot launches the owned backend through pythonw without console streams.
+    # Uvicorn's default formatter accesses sys.stdout.isatty() before binding.
+    uvicorn.run(app, host=HOST, port=PORT, access_log=False, log_level="warning",
+                log_config=None, use_colors=False)

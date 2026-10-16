@@ -2,6 +2,7 @@
 
 import importlib.util
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -10,6 +11,43 @@ import pytest
 
 
 SERVICE = Path(__file__).resolve().parents[1] / "computer" / "computer_service.py"
+
+
+def test_no_console_entrypoint_configures_without_binding(tmp_path):
+    """The pythonw startup path must not require stdout or open an action port."""
+    trace = tmp_path / "startup-trace.txt"
+    env = os.environ.copy()
+    env.update({"AURORAFOX_SANDBOX_ROOT": str(tmp_path / "sandbox"), "AURORAFOX_PARENT_PID": "0"})
+    script = """
+import runpy
+import sys
+import traceback
+from pathlib import Path
+import uvicorn
+
+source, trace = map(Path, sys.argv[1:3])
+real_run = uvicorn.run
+def verify_config(app, **kwargs):
+    uvicorn.Config(app, **kwargs)
+    trace.write_text("NO_CONSOLE_CONFIG_OK", encoding="utf-8")
+uvicorn.run = verify_config
+sys.stdout = None
+sys.stderr = None
+try:
+    runpy.run_path(str(source), run_name="__main__")
+except BaseException:
+    with trace.open("w", encoding="utf-8") as output:
+        traceback.print_exc(file=output)
+finally:
+    uvicorn.run = real_run
+"""
+    completed = subprocess.run(
+        [sys.executable, "-c", script, str(SERVICE), str(trace)],
+        stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        env=env, timeout=15, check=False,
+    )
+    assert completed.returncode == 0
+    assert trace.read_text(encoding="utf-8") == "NO_CONSOLE_CONFIG_OK"
 
 
 def _service(tmp_path, monkeypatch):
