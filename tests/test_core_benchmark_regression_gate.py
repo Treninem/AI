@@ -336,7 +336,7 @@ def test_real_harness_uses_product_core_and_forbids_fake_or_external_inference()
     assert "godotProcessPaths" in runner
     assert "Get-Process -Name $processName" in runner
     assert "godot_process_paths_measured" in runner
-    assert "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5" in runner
+    assert "57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8" in runner
     assert ".Contains('machine')" in runner
     assert ".ContainsKey(" not in runner
     assert "prepare_bundled_windows_core.ps1" in workflow
