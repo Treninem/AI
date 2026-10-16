@@ -23,8 +23,8 @@ $model = Join-Path $runtimeRoot 'engine/aurorafox-core.gguf'
 if (-not (Test-Path -LiteralPath $llama)) { throw "Benchmark Core Engine missing: $llama" }
 if (-not (Test-Path -LiteralPath $model)) { throw "Benchmark bundled Core model missing: $model" }
 
-$expectedBytes = 1282439264
-$expectedSha = 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5'
+$expectedBytes = 1396198496
+$expectedSha = '57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8'
 $modelItem = Get-Item -LiteralPath $model
 if ($modelItem.Length -ne $expectedBytes) { throw "Benchmark model size mismatch: $($modelItem.Length)" }
 $modelSha = (Get-FileHash -LiteralPath $model -Algorithm SHA256).Hash.ToLowerInvariant()

@@ -132,7 +132,8 @@ func ensure_server(model_absolute_path: String) -> Dictionary:
 		"--batch-size", str(DEFAULT_BATCH_SIZE),
 		"--ubatch-size", str(DEFAULT_UBATCH_SIZE),
 		"--alias", MODEL_ALIAS,
-		"--jinja"
+		"--jinja",
+		"--reasoning", "off"
 	])
 	# Opt-in CI synthetic benchmark log; normal private chat enables no file log.
 	var benchmark_log := OS.get_environment("AURORAFOX_BENCHMARK_CORE_LOG_PATH")

@@ -6,8 +6,8 @@ extends RefCounted
 const ACTIVE_MODEL := "user://models/aurorafox-main.gguf"
 const BUNDLED_RESOURCE := "res://models/aurorafox-core.gguf"
 const BUNDLED_WINDOWS_RELATIVE := "core_runtime/engine/aurorafox-core.gguf"
-const EXPECTED_BYTES := 1282439264
-const EXPECTED_SHA256 := "d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5"
+const EXPECTED_BYTES := 1396198496
+const EXPECTED_SHA256 := "57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8"
 const METADATA_PATH := "user://models/bundled_core.json"
 
 static func runtime_candidate() -> String:

@@ -9,9 +9,9 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if ([string]::IsNullOrWhiteSpace($CacheDir)) {
     $CacheDir = Join-Path $root '.ci/core-model'
 }
-$expectedBytes = 1282439264
-$expectedSha = 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5'
-$url = 'https://huggingface.co/ggml-org/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf?download=true'
+$expectedBytes = 1396198496
+$expectedSha = '57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8'
+$url = 'https://huggingface.co/bartowski/Qwen_Qwen3.5-2B-GGUF/resolve/7d26695454df6de5fbcce2e58681e62dae06ce43/Qwen_Qwen3.5-2B-Q4_K_M.gguf?download=true'
 $cacheFile = Join-Path $CacheDir ($expectedSha + '.gguf')
 
 function Test-CoreModel([string]$Path) {

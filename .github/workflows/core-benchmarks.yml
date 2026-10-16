@@ -6,6 +6,7 @@ on:
     branches:
       - main
       - experiment/v15-multi-fact-core-gate
+      - experiment/v15-qwen35-core-compare
     paths:
       - 'benchmarks/core/**'
       - 'tests/test_core_benchmark_regression_gate.py'
@@ -139,7 +140,7 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: .ci/core-model-cache
-          key: aurorafox-core-win-v2-d2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5
+          key: aurorafox-core-win-v2-57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8
 
       - name: Download Godot 4.7.1
         id: godot

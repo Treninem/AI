@@ -26,9 +26,9 @@ if ($LASTEXITCODE -ne 0) { throw 'AuroraFox Core weight preparation failed' }
 
 if (-not (Test-Path -LiteralPath $modelDestination)) { throw 'Bundled AuroraFox Core model is missing after preparation' }
 $size = (Get-Item -LiteralPath $modelDestination).Length
-if ($size -ne 1282439264) { throw "Bundled AuroraFox Core model size mismatch: $size" }
+if ($size -ne 1396198496) { throw "Bundled AuroraFox Core model size mismatch: $size" }
 $sha = (Get-FileHash -LiteralPath $modelDestination -Algorithm SHA256).Hash.ToLowerInvariant()
-if ($sha -ne 'd2387ca2dbfee2ffabce7120d3770dadca0b293052bc2f0e138fdc940d9bc7b5') { throw "Bundled AuroraFox Core SHA-256 mismatch: $sha" }
+if ($sha -ne '57a1085840f497d764a7fc5d346922dbde961efb54cc792ea81d694fd846a1d8') { throw "Bundled AuroraFox Core SHA-256 mismatch: $sha" }
 
 Write-Host 'AURORAFOX_WINDOWS_CORE_BUNDLE_READY' -ForegroundColor Green
 Write-Host "engine=$server"
