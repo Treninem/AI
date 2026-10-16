@@ -463,4 +463,7 @@ def clear(root: str = ""):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    # Godot launches this service with pythonw, where stdout/stderr are absent.
+    # Uvicorn's default formatter probes sys.stdout.isatty() before binding.
+    uvicorn.run(app, host=HOST, port=PORT, log_level="warning",
+                log_config=None, access_log=False, use_colors=False)
