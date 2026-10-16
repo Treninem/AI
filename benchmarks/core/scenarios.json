@@ -44,10 +44,10 @@
     "repeatability"
   ],
   "platform_required_scenarios": {
-    "Windows": ["russian_factual_ice"]
+    "Windows": ["russian_factual_ice", "factual_mars_moons", "factual_photosynthesis_gas", "factual_day_night", "factual_first_spaceflight_year"]
   },
   "platform_local_runtime_required_scenarios": {
-    "Windows": ["russian_factual_ice"]
+    "Windows": ["russian_factual_ice", "factual_mars_moons", "factual_photosynthesis_gas", "factual_day_night", "factual_first_spaceflight_year"]
   },
   "allowed_local_runtimes_by_platform": {
     "Windows": ["aurora_core_desktop", "aurora_core_native"],

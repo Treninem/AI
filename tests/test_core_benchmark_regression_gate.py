@@ -78,29 +78,38 @@ def test_windows_factual_answer_is_required_and_cannot_be_waived_by_marker_cases
     result = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
     assert result["passed"], result
 
-    report["scenarios"] = [row for row in report["scenarios"] if row["id"] != "russian_factual_ice"]
-    missing = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
-    assert not missing["passed"]
-    assert missing["missing_scenarios"] == ["russian_factual_ice"]
+    factual_ids = set(spec["platform_required_scenarios"]["Windows"])
+    assert factual_ids == {
+        "russian_factual_ice", "factual_mars_moons", "factual_photosynthesis_gas",
+        "factual_day_night", "factual_first_spaceflight_year",
+    }
+    assert factual_ids <= set(spec["platform_local_runtime_required_scenarios"]["Windows"])
 
-    report = sample_report()
-    target = next(row for row in report["scenarios"] if row["id"] == "russian_factual_ice")
-    target["passed"] = False
-    failed = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
-    assert not failed["passed"]
-    assert failed["failed_scenarios"] == ["russian_factual_ice"]
+    for factual_id in factual_ids:
+        report = sample_report()
+        report["scenarios"] = [row for row in report["scenarios"] if row["id"] != factual_id]
+        missing = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
+        assert not missing["passed"]
+        assert missing["missing_scenarios"] == [factual_id]
 
-    report = sample_report()
-    target = next(row for row in report["scenarios"] if row["id"] == "russian_factual_ice")
-    target["runtime"] = ""
-    unidentified = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
-    assert not unidentified["passed"]
-    assert unidentified["missing_runtime_scenarios"] == ["russian_factual_ice"]
+        report = sample_report()
+        target = next(row for row in report["scenarios"] if row["id"] == factual_id)
+        target["passed"] = False
+        failed = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
+        assert not failed["passed"]
+        assert failed["failed_scenarios"] == [factual_id]
+
+        report = sample_report()
+        target = next(row for row in report["scenarios"] if row["id"] == factual_id)
+        target["runtime"] = ""
+        unidentified = ev.enrich_report(report, policy, spec)["evaluation"]["quality_gate"]
+        assert not unidentified["passed"]
+        assert unidentified["missing_runtime_scenarios"] == [factual_id]
 
     android = sample_report()
     android["platform"] = "Android"
     android["machine"]["os"] = "Android"
-    android["scenarios"] = [row for row in android["scenarios"] if row["id"] != "russian_factual_ice"]
+    android["scenarios"] = [row for row in android["scenarios"] if row["id"] not in factual_ids]
     for row in android["scenarios"]:
         row["runtime"] = "aurora_core_android"
     android_result = ev.enrich_report(android, policy, spec)["evaluation"]["quality_gate"]

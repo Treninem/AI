@@ -278,6 +278,39 @@ func _run() -> void:
 			"answer_excerpt": factual_answer.substr(0, 160),
 			"answer_sha256": factual_answer.sha256_text()
 		}, "aurora_core_desktop")
+		# Separate fresh conversations sample different factual domains. Reusing
+		# the memory agent would let an earlier answer influence a later question.
+		for probe in [
+			{"id": "factual_mars_moons", "task": "У какой планеты спутники Фобос и Деймос? Назови только планету."},
+			{"id": "factual_photosynthesis_gas", "task": "Какой газ растения поглощают из воздуха при фотосинтезе? Назови только газ."},
+			{"id": "factual_day_night", "task": "Почему на Земле сменяются день и ночь? Ответь одним коротким предложением."},
+			{"id": "factual_first_spaceflight_year", "task": "В каком году состоялся первый полёт человека в космос? Ответь только годом."}
+		]:
+			var fact_memory := MemoryStore.new()
+			root.add_child(fact_memory)
+			var fact_agent := AgentCore.new()
+			fact_agent.enable_planning = false
+			fact_agent.enable_self_check = false
+			fact_agent.enable_skill_learning = false
+			fact_agent.enable_dream_cycle = false
+			fact_agent.enable_specialist_team = false
+			fact_agent.max_steps = 2
+			root.add_child(fact_agent)
+			fact_agent.setup(client, fact_memory, empty_tools)
+			var fact_id := str(probe["id"])
+			var fact_task := str(probe["task"])
+			var fact_direct := fact_agent._is_direct_conversation(fact_task)
+			var fact_call := await _agent_with_watchdog(fact_agent, fact_task)
+			if await _handle_agent_timeout(fact_id, fact_call, client): return
+			var fact_answer := str(fact_call.answer).strip_edges()
+			_record_scenario(fact_id, fact_direct and _multi_fact_answer_correct(fact_id, fact_answer), {
+				"elapsed_ms": fact_call.elapsed_ms,
+				"direct_conversation_route": fact_direct,
+				"answer_excerpt": fact_answer.substr(0, 160),
+				"answer_sha256": fact_answer.sha256_text()
+			}, "aurora_core_desktop")
+			fact_agent.queue_free()
+			fact_memory.queue_free()
 
 	var knowledge_import := client.import_knowledge_text(
 		"Benchmark local Core Knowledge fact: the codeword for glacier protocol is IVORY-29.",
@@ -463,6 +496,29 @@ static func _ice_density_answer_correct(text: String) -> bool:
 	]:
 		if answer.contains(explanation):
 			return true
+	return false
+
+static func _multi_fact_answer_correct(id: String, text: String) -> bool:
+	var answer := text.to_lower().replace("ё", "е").strip_edges().trim_suffix(".").strip_edges()
+	match id:
+		"factual_mars_moons":
+			return answer == "марс" or answer == "mars"
+		"factual_photosynthesis_gas":
+			return answer in ["углекислый газ", "диоксид углерода", "co2", "co₂", "carbon dioxide"]
+		"factual_day_night":
+			if answer.contains("не вращ"):
+				return false
+			for explanation in [
+				"земля вращается вокруг своей оси",
+				"земля вращается вокруг собственной оси",
+				"вращения земли вокруг своей оси",
+				"вращения земли вокруг собственной оси"
+			]:
+				if answer.contains(explanation):
+					return true
+			return false
+		"factual_first_spaceflight_year":
+			return answer == "1961" or answer == "1961 год"
 	return false
 
 func _chat_with_watchdog(client: AIClient, messages: Array, temperature: float) -> Dictionary:
