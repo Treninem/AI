@@ -17,11 +17,25 @@ func _initialize() -> void:
 			push_error("Prompt compaction removed a trust, sandbox or tool boundary")
 			quit(1)
 			return
-	if project.length() - simple.length() < 700:
-		push_error("Simple tool prompt did not save enough context")
+	if simple.length() > 1800 or project.length() - simple.length() < 100:
+		push_error("Tool prompt is too large or project guidance is missing: simple=%d project=%d" % [simple.length(), project.length()])
 		quit(1)
 		return
-	print("AGENT_CORE_TOOL_PROMPT_BUDGET_PASS simple_chars=", simple.length(), " project_chars=", project.length())
+	var registry := ToolRegistry.new()
+	registry._ready()
+	var full_catalog := registry.describe_tools()
+	var full_prompt := agent._system_prompt("Read a project file before editing it.", [], {}, [], {}, [], full_catalog)
+	if full_catalog.size() < 15 or full_prompt.length() > 5000:
+		push_error("Full tool catalog was lost or prompt still exceeds the bounded fixture")
+		quit(1)
+		return
+	for entry in full_catalog:
+		if not full_prompt.contains(str(entry.get("name", ""))):
+			push_error("Compact prompt omitted a registered tool")
+			quit(1)
+			return
+	print("AGENT_CORE_TOOL_PROMPT_BUDGET_PASS simple_chars=", simple.length(), " project_chars=", project.length(), " full_catalog_tools=", full_catalog.size(), " full_chars=", full_prompt.length())
+	registry.free()
 	agent.free()
 	store.free()
 	quit(0)
