@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - main
+      - experiment/v15-multi-fact-core-gate
     paths:
       - 'benchmarks/core/**'
       - 'tests/test_core_benchmark_regression_gate.py'
