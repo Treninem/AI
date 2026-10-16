@@ -43,6 +43,27 @@ class AsyncPlanCall:
 		var elapsed := float(Time.get_ticks_usec() - started) / 1000.0
 		completed.emit(plan, elapsed)
 
+class EphemeralMemoryStore:
+	extends MemoryStore
+
+	func _ready() -> void:
+		# A new node must not reload answers written by earlier benchmark cases.
+		memory.clear()
+		knowledge.clear()
+		vectors.clear()
+		_semantic_ready = true
+		_owner_revision = OwnerResourcePolicy.revision
+		set_process(false)
+
+	func _exit_tree() -> void:
+		pass
+
+	func _schedule_persistence(_memory_changed: bool, _knowledge_changed: bool) -> void:
+		pass
+
+	func _save_vector_index() -> void:
+		pass
+
 var _report: Dictionary = {}
 var _report_path := ""
 var _suite_started_ms := 0
@@ -278,15 +299,15 @@ func _run() -> void:
 			"answer_excerpt": factual_answer.substr(0, 160),
 			"answer_sha256": factual_answer.sha256_text()
 		}, "aurora_core_desktop")
-		# Separate fresh conversations sample different factual domains. Reusing
-		# the memory agent would let an earlier answer influence a later question.
+		# Separate ephemeral conversations sample different factual domains. A
+		# normal MemoryStore reloads shared user://memory.json in _ready().
 		for probe in [
 			{"id": "factual_mars_moons", "task": "У какой планеты спутники Фобос и Деймос? Назови только планету."},
 			{"id": "factual_photosynthesis_gas", "task": "Какой газ растения поглощают из воздуха при фотосинтезе? Назови только газ."},
 			{"id": "factual_day_night", "task": "Почему на Земле сменяются день и ночь? Ответь одним коротким предложением."},
 			{"id": "factual_first_spaceflight_year", "task": "В каком году состоялся первый полёт человека в космос? Ответь только годом."}
 		]:
-			var fact_memory := MemoryStore.new()
+			var fact_memory := EphemeralMemoryStore.new()
 			root.add_child(fact_memory)
 			var fact_agent := AgentCore.new()
 			fact_agent.enable_planning = false
@@ -350,7 +371,7 @@ func _run() -> void:
 	await process_frame
 	safe_tools.tools.clear()
 	safe_tools.register_tool("benchmark_probe", "Read-only benchmark probe. Returns a local marker and performs no external or destructive action.", {"value": "string"}, Callable(self, "_benchmark_probe"))
-	var tool_memory := MemoryStore.new()
+	var tool_memory := EphemeralMemoryStore.new()
 	root.add_child(tool_memory)
 	await process_frame
 	var tool_agent := AgentCore.new()
@@ -512,7 +533,8 @@ static func _multi_fact_answer_correct(id: String, text: String) -> bool:
 				"земля вращается вокруг своей оси",
 				"земля вращается вокруг собственной оси",
 				"вращения земли вокруг своей оси",
-				"вращения земли вокруг собственной оси"
+				"вращения земли вокруг собственной оси",
+				"вращения нашей планеты вокруг своей оси"
 			]:
 				if answer.contains(explanation):
 					return true
