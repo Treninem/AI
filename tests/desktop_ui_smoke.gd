@@ -272,8 +272,9 @@ func _assert_core_layout(main: Control, mobile := false) -> bool:
 			_fail("Mobile header still contains unrelated action clutter", 43)
 			return false
 	else:
-		if main.find_child("SettingsMobileNavigation", true, false) != null:
-			_fail("Mobile settings selector leaked into desktop navigation", 44)
+		var compact_selector := main.find_child("SettingsMobileNavigation", true, false) as OptionButton
+		if compact_selector == null or compact_selector.item_count < 6:
+			_fail("Desktop settings compact selector is missing or incomplete", 44)
 			return false
 		for nav_name in nav_names:
 			var nav_button := main.find_child(nav_name, true, false) as Button
@@ -451,6 +452,9 @@ func _run_desktop(packed: PackedScene) -> bool:
 	var panel := main.find_child("MainPanel", true, false) as Control
 	var composer := main.find_child("ComposerMargin", true, false) as Control
 	var header_actions := main.find_child("MainHeaderActions", true, false) as Control
+	var settings := main.get_node_or_null("SettingsOverlay") as AuroraSettingsOverlay
+	var compact_nav := main.find_child("SettingsMobileNavigation", true, false) as OptionButton
+	var desktop_nav := main.find_child("SettingsNavigationPanel", true, false) as PanelContainer
 	var original_size := root.size
 	for target_size in [Vector2i(760, 560), Vector2i(960, 640), Vector2i(1280, 720), Vector2i(1440, 900)]:
 		root.size = target_size
@@ -458,6 +462,21 @@ func _run_desktop(packed: PackedScene) -> bool:
 		await process_frame
 		await process_frame
 		var viewport_size := main.get_viewport().get_visible_rect().size
+		settings.call("_fit_popup")
+		var compact := settings.popup.size.x < 800
+		if compact_nav == null or desktop_nav == null or compact_nav.visible != compact or desktop_nav.visible == compact:
+			_fail("Settings navigation does not follow desktop width at %s" % str(target_size), 113)
+			return false
+		if settings.popup.size.x > viewport_size.x or settings.popup.size.y > viewport_size.y:
+			_fail("Settings popup exceeds desktop viewport at %s" % str(target_size), 114)
+			return false
+		if compact and compact_nav.item_count != 7:
+			_fail("Compact desktop settings lost an account section", 115)
+			return false
+		settings.call("_select_page", "account")
+		if settings.page_stack.current_tab != int(settings.nav_indices.get("account", -1)):
+			_fail("Settings section changed during desktop resize", 116)
+			return false
 		if target_size.x <= 960 and sidebar.custom_minimum_size.x > 214.0:
 			_fail("Compact sidebar remained too wide at narrow desktop width", 71)
 			return false

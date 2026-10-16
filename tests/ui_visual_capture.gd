@@ -215,7 +215,7 @@ func _open_settings_by_click(main: Control) -> AuroraSettingsOverlay:
 
 func _capture_settings_page(settings: AuroraSettingsOverlay, key: String, click_label: String, image_name: String, surface: String) -> bool:
 	var nav := _button_by_name(settings.popup, "SettingsNav_" + key)
-	if nav != null:
+	if nav != null and nav.visible:
 		if not await _press(nav, click_label):
 			return false
 	else:

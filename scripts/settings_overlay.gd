@@ -18,6 +18,7 @@ var nav_buttons: Array[Button] = []
 var nav_keys: Array[String] = []
 var nav_indices: Dictionary = {}
 var mobile_nav: OptionButton
+var desktop_nav_panel: PanelContainer
 
 var core_status: Label
 var update_status: Label
@@ -116,6 +117,7 @@ func _set_mic_mode(value: String) -> void:
 func show_settings(initial_page := "general") -> void:
 	_select_page(initial_page)
 	_fit_popup()
+	_refresh_navigation_layout()
 	if _is_mobile_layout():
 		popup.popup_centered()
 	else:
@@ -148,9 +150,28 @@ func _fit_popup() -> void:
 		)
 	else:
 		popup.size = Vector2i(
-			maxi(720, mini(1040, int(viewport.x - 48.0))),
-			maxi(560, mini(820, int(viewport.y - 48.0)))
+			maxi(360, mini(1040, int(viewport.x - 32.0))),
+			maxi(400, mini(820, int(viewport.y - 32.0)))
 		)
+	_refresh_navigation_layout()
+
+func _refresh_navigation_layout() -> void:
+	if _is_mobile_layout() or popup == null or mobile_nav == null or desktop_nav_panel == null:
+		return
+	# Account is injected by the account overlay after Settings builds. Mirror
+	# late sections before exposing the compact selector on desktop.
+	for i in range(nav_keys.size()):
+		var found := false
+		for j in range(mobile_nav.item_count):
+			if str(mobile_nav.get_item_metadata(j)) == nav_keys[i]:
+				found = true
+				break
+		if not found:
+			mobile_nav.add_item(nav_buttons[i].text)
+			mobile_nav.set_item_metadata(mobile_nav.item_count - 1, nav_keys[i])
+	var compact := popup.size.x < 800
+	mobile_nav.visible = compact
+	desktop_nav_panel.visible = not compact
 
 func _style(fill: Color, border := BORDER, radius := 14) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
@@ -190,6 +211,7 @@ func _build_ui() -> void:
 		popup.transient = false
 		popup.exclusive = false
 		popup.close_requested.connect(func(): popup.hide())
+		popup.size_changed.connect(_refresh_navigation_layout)
 	layer.add_child(popup)
 	if not popup is PopupPanel:
 		var background := Panel.new()
@@ -249,10 +271,12 @@ func _build_ui() -> void:
 	if _is_mobile_layout():
 		_build_mobile_navigation(root)
 	else:
+		_build_compact_navigation(root)
 		_build_desktop_navigation(root)
 
 	_build_pages()
 	_select_page("general")
+	_refresh_navigation_layout()
 
 	project_picker = FileDialog.new()
 	project_picker.file_mode = FileDialog.FILE_MODE_OPEN_DIR
@@ -269,6 +293,7 @@ func _build_desktop_navigation(root: VBoxContainer) -> void:
 	root.add_child(body)
 
 	var nav_panel := PanelContainer.new()
+	desktop_nav_panel = nav_panel
 	nav_panel.name = "SettingsNavigationPanel"
 	nav_panel.custom_minimum_size.x = 184
 	nav_panel.add_theme_stylebox_override("panel", _style(Color.TRANSPARENT, Color.TRANSPARENT, 0))
@@ -291,6 +316,15 @@ func _build_desktop_navigation(root: VBoxContainer) -> void:
 	body.add_child(page_stack)
 
 func _build_mobile_navigation(root: VBoxContainer) -> void:
+	_build_compact_navigation(root)
+	page_stack = TabContainer.new()
+	page_stack.name = "SettingsPages"
+	page_stack.tabs_visible = false
+	page_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	page_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	root.add_child(page_stack)
+
+func _build_compact_navigation(root: VBoxContainer) -> void:
 	mobile_nav = OptionButton.new()
 	mobile_nav.name = "SettingsMobileNavigation"
 	mobile_nav.custom_minimum_size = Vector2(0, 48)
@@ -306,13 +340,6 @@ func _build_mobile_navigation(root: VBoxContainer) -> void:
 		mobile_nav.set_item_metadata(mobile_nav.item_count - 1, str(item[0]))
 	mobile_nav.item_selected.connect(_on_mobile_nav_selected)
 	root.add_child(mobile_nav)
-
-	page_stack = TabContainer.new()
-	page_stack.name = "SettingsPages"
-	page_stack.tabs_visible = false
-	page_stack.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	page_stack.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	root.add_child(page_stack)
 
 func _on_mobile_nav_selected(index: int) -> void:
 	if mobile_nav == null or index < 0 or index >= mobile_nav.item_count:
