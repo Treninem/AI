@@ -123,9 +123,19 @@ func _apply_controls(node: Node) -> void:
 			edit.add_theme_stylebox_override("focus", _input_style(true))
 			edit.add_theme_color_override("font_color", Color("f4f7ff"))
 			edit.add_theme_color_override("font_placeholder_color", Color("8592a8"))
+		elif child is CheckButton:
+			var toggle := child as CheckButton
+			toggle.add_theme_stylebox_override("normal", _toggle_style(false, false))
+			toggle.add_theme_stylebox_override("hover", _toggle_style(true, false))
+			toggle.add_theme_stylebox_override("pressed", _toggle_style(false, false))
+			toggle.add_theme_stylebox_override("hover_pressed", _toggle_style(true, false))
+			toggle.add_theme_stylebox_override("disabled", _toggle_style(false, false))
+			toggle.add_theme_stylebox_override("focus", _toggle_style(false, true))
+			toggle.add_theme_color_override("font_color", Color("dce4ef"))
+			toggle.custom_minimum_size.y = maxf(toggle.custom_minimum_size.y, 32.0)
 		elif child is Button:
 			var button := child as Button
-			if not button.name.begins_with("SettingsNav_"):
+			if not button.name.begins_with("SettingsNav_") and not button is OptionButton:
 				button.add_theme_stylebox_override("normal", _button_style(Color(0.058, 0.064, 0.105, 1.0), Color(0.28, 0.44, 0.68, 0.66)))
 				button.add_theme_stylebox_override("hover", _button_style(Color(0.105, 0.08, 0.19, 1.0), Color(0.48, 0.77, 1.0, 0.90)))
 				button.add_theme_stylebox_override("pressed", _button_style(Color(0.14, 0.07, 0.22, 1.0), Color(0.66, 0.53, 1.0, 0.94)))
@@ -169,4 +179,16 @@ func _button_style(fill: Color, border: Color) -> StyleBoxFlat:
 	style.content_margin_right = 12
 	style.content_margin_top = 8
 	style.content_margin_bottom = 8
+	return style
+
+func _toggle_style(hovered: bool, focused: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color(0.12, 0.15, 0.20, 0.58) if hovered else Color.TRANSPARENT
+	style.border_color = Color(0.28, 0.64, 0.82, 0.72) if focused else Color.TRANSPARENT
+	style.set_border_width_all(1 if focused else 0)
+	style.set_corner_radius_all(6)
+	style.content_margin_left = 4
+	style.content_margin_right = 4
+	style.content_margin_top = 3
+	style.content_margin_bottom = 3
 	return style

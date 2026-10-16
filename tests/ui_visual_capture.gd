@@ -215,7 +215,7 @@ func _open_settings_by_click(main: Control) -> AuroraSettingsOverlay:
 
 func _capture_settings_page(settings: AuroraSettingsOverlay, key: String, click_label: String, image_name: String, surface: String) -> bool:
 	var nav := _button_by_name(settings.popup, "SettingsNav_" + key)
-	if nav != null and nav.visible:
+	if nav != null and nav.is_visible_in_tree():
 		if not await _press(nav, click_label):
 			return false
 	else:
@@ -403,6 +403,8 @@ func _capture_desktop_narrow(packed: PackedScene) -> bool:
 		_fail("Narrow Settings window exceeds 760x560 capture bounds", 42)
 		return false
 	if not await _capture("desktop_narrow_settings_760x560", "settings_narrow"):
+		return false
+	if not await _capture_settings_page(settings, "updates", "Настройки → Обновления", "desktop_narrow_updates_760x560", "updates_narrow"):
 		return false
 	if not await _close_settings_by_click(settings):
 		return false

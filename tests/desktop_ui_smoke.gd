@@ -436,6 +436,21 @@ func _run_desktop(packed: PackedScene) -> bool:
 	var main := packed.instantiate() as Control
 	root.add_child(main)
 	await create_timer(1.1).timeout
+	var settings_popup := main.find_child("SettingsPopup", true, false)
+	if settings_popup == null:
+		_fail("Settings popup missing for toggle style acceptance", 117)
+		return false
+	var settings_toggles := settings_popup.find_children("*", "CheckButton", true, false)
+	if settings_toggles.is_empty():
+		_fail("Settings toggles missing for style acceptance", 118)
+		return false
+	for item in settings_toggles:
+		var toggle := item as CheckButton
+		var normal := toggle.get_theme_stylebox("normal") as StyleBoxFlat
+		var pressed := toggle.get_theme_stylebox("pressed") as StyleBoxFlat
+		if normal == null or pressed == null or normal.bg_color.a > 0.05 or pressed.bg_color.a > 0.05 or not toggle.has_theme_stylebox_override("focus"):
+			_fail("Settings toggle regained a filled button frame or lost keyboard focus", 119)
+			return false
 	if not _assert_core_layout(main, false):
 		return false
 	if not await _exercise_computer_contract(main):

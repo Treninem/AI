@@ -180,6 +180,11 @@ func _apply_safe_button_styles(node: Node) -> void:
 	for child in node.get_children():
 		if child is Button:
 			var button := child as Button
+			if button is CheckButton and _is_inside_settings(button):
+				# Settings has a quieter toggle style and explicit focus state.
+				# Keep the global button pass from replacing it a frame later.
+				_apply_safe_button_styles(child)
+				continue
 			if button.name in ["ChatSelectButton", "ChatActions", "FeedbackPositive", "FeedbackNegative", "CopyMessageButton", "NewChatButton", "WorkButton", "SettingsButton", "AttachButton", "VoiceMicButton", "SendButton"]:
 				var compact := button.name != "ChatSelectButton"
 				button.add_theme_stylebox_override("normal", _compact_action_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT) if compact else _flat_state(Color(0.06, 0.07, 0.10, 0.0), Color.TRANSPARENT))
@@ -207,6 +212,14 @@ func _apply_safe_button_styles(node: Node) -> void:
 				# Fixed/expanding rows may intentionally clip long chat titles.
 				button.clip_text = true
 		_apply_safe_button_styles(child)
+
+func _is_inside_settings(node: Node) -> bool:
+	var ancestor := node.get_parent()
+	while ancestor != null:
+		if ancestor.name == "SettingsPopup":
+			return true
+		ancestor = ancestor.get_parent()
+	return false
 
 func _popup_style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()
