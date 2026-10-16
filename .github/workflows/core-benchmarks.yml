@@ -178,6 +178,8 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows short-answer payload smoke failed' }
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/core_factual_validator_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'Factual answer validator smoke failed' }
+          & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/agent_core_tool_prompt_budget_smoke.gd
+          if ($LASTEXITCODE -ne 0) { throw 'Agent Core tool prompt budget smoke failed' }
           & '${{ steps.godot.outputs.path }}' --headless --path . --script tests/direct_chat_memory_relevance_smoke.gd
           if ($LASTEXITCODE -ne 0) { throw 'Direct chat memory relevance smoke failed' }
 

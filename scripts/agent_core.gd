@@ -487,7 +487,7 @@ func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failur
 	var tool_rule := "Инструменты в этой задаче недоступны. НЕ возвращай JSON tool-call и не выдумывай имена инструментов; дай конечный ответ напрямую из разрешённого контекста и релевантной локальной памяти."
 	if not tool_catalog.is_empty():
 		tool_rule = "Используй ТОЛЬКО инструменты из списка ниже. Если нужен инструмент, верни ТОЛЬКО JSON: {\"tool\":\"tool_name\",\"args\":{...}}. Перед возвратом JSON проверь, что все значения, явно названные пользователем, перенесены в args без изменения. Пустой args запрещён для инструмента с непустой schema. Если инструмент не нужен, дай конечный ответ."
-	return """
+	var prompt := """
 Ты AuroraFox — автономный локальный AI-агент внутри Godot 4.7.1.
 Используй контекст текущего чата, релевантную долговременную память, инструменты, компьютерное зрение, песочницу, File Intelligence, индекс проекта, внутреннюю команду специалистов и накопленные навыки.
 %s
@@ -533,6 +533,22 @@ func _system_prompt(task: String, useful_skills: Array, plan: Dictionary, failur
 Недавняя память: %s
 Релевантная долговременная память и знания: %s
 """ % [tool_rule, JSON.stringify(plan), JSON.stringify(_compact_result(specialist_context)), JSON.stringify(useful_skills), JSON.stringify(failures), JSON.stringify(tool_catalog), JSON.stringify(recent), JSON.stringify(_compact_result(retrieved_context))]
+	# Repository indexing instructions are useful for code tasks, but waste a
+	# small local model's context on a simple, explicitly named tool call.
+	# Keep the trust boundary and sandbox rules for every task.
+	if not _requires_project_protocol(task):
+		var project_start := prompt.find("\nПРОТОКОЛ РАБОТЫ С БОЛЬШИМ ПРОЕКТОМ:")
+		var sandbox_start := prompt.find("\nПРОТОКОЛ ПЕСОЧНИЦЫ:", project_start)
+		if project_start >= 0 and sandbox_start > project_start:
+			prompt = prompt.substr(0, project_start) + prompt.substr(sandbox_start)
+	return prompt
+
+static func _requires_project_protocol(task: String) -> bool:
+	var lowered := task.to_lower()
+	for marker in ["проект", "репозитор", "код", "скрипт", "файл", "папк", "workspace", "source", "repository", "project", "file", "code", "script", "git", "index"]:
+		if lowered.contains(marker):
+			return true
+	return false
 
 func _needs_specialists(task: String) -> bool:
 	if task.length() > 350: return true
