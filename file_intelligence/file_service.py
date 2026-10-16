@@ -762,4 +762,7 @@ def shutdown() -> dict[str, Any]:
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host=HOST, port=PORT, log_level="warning")
+    # pythonw has no stdout/stderr. Uvicorn's default formatter probes
+    # sys.stdout.isatty() and exits before this local service can bind.
+    uvicorn.run(app, host=HOST, port=PORT, log_level="warning",
+                log_config=None, access_log=False, use_colors=False)

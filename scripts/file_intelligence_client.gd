@@ -2,6 +2,8 @@ class_name FileIntelligenceClient
 extends Node
 
 const BASE_URL := "http://127.0.0.1:8767"
+const BACKEND_PORT := 8767
+const BACKEND_STARTUP_WAIT_MSEC := 6000
 const ANDROID_OCR_EXTENSIONS := ["pdf", "png", "jpg", "jpeg", "webp", "bmp", "tif", "tiff"]
 
 # Windows File Intelligence resource budgets are owner settings. They are
@@ -147,8 +149,6 @@ var _cancel_requested := false
 
 func _ready() -> void:
 	_export_owner_limits_to_environment()
-	if OS.get_name() == "Windows":
-		_start_backend_if_installed()
 
 func owner_limits() -> Dictionary:
 	_load_owner_limits()
@@ -196,7 +196,7 @@ func apply_owner_limits(overrides: Dictionary, persist := false, restart := true
 	for key in next_limits: ProjectSettings.set_setting("aurorafox/files/" + str(key), next_limits[key])
 	_owner_persistence_error = ""
 	_export_owner_limits_to_environment()
-	if restart and OS.get_name() == "Windows": restart_backend()
+	if restart and OS.get_name() == "Windows" and backend_pid > 0: restart_backend()
 	var result := owner_limits()
 	result["ok"] = true
 	return result
@@ -531,7 +531,36 @@ func _new_http_request(timeout: float) -> HTTPRequest:
 	add_child(req)
 	return req
 
+func _wait_for_backend_ready(track_analysis: bool) -> bool:
+	var deadline := Time.get_ticks_msec() + BACKEND_STARTUP_WAIT_MSEC
+	while Time.get_ticks_msec() < deadline and backend_pid > 0 and OS.is_process_running(backend_pid):
+		if track_analysis and _cancel_requested:
+			return false
+		var probe := HTTPClient.new()
+		if probe.connect_to_host("127.0.0.1", BACKEND_PORT) == OK:
+			for _step in range(4):
+				if probe.poll() != OK:
+					break
+				var status := probe.get_status()
+				if status == HTTPClient.STATUS_CONNECTED:
+					probe.close()
+					return true
+				if status != HTTPClient.STATUS_RESOLVING and status != HTTPClient.STATUS_CONNECTING:
+					break
+				await get_tree().create_timer(0.05).timeout
+		probe.close()
+		await get_tree().create_timer(0.1).timeout
+	return false
+
 func _request(path: String, method: HTTPClient.Method, payload: Dictionary, timeout: float, track_analysis := false) -> Dictionary:
+	if OS.get_name() == "Windows" and backend_pid <= 0 and runtime_is_installed():
+		_start_backend_if_installed()
+		if backend_pid <= 0:
+			return {"ok": false, "error": "File Intelligence backend could not start"}
+		if not await _wait_for_backend_ready(track_analysis):
+			if track_analysis and _cancel_requested:
+				return {"ok": false, "cancelled": true, "error": "File analysis cancelled"}
+			return {"ok": false, "error": "File Intelligence backend did not become ready"}
 	var last_error := ""
 	for attempt in range(2):
 		if track_analysis and _cancel_requested:
@@ -571,13 +600,13 @@ func _request(path: String, method: HTTPClient.Method, payload: Dictionary, time
 			else:
 				var code := int(result[1])
 				var raw := (result[3] as PackedByteArray).get_string_from_utf8()
-				var parsed = JSON.parse_string(raw)
+				var parsed = JSON.parse_string(raw) if not raw.is_empty() else null
 				if code >= 200 and code < 300 and parsed is Dictionary:
 					return parsed
 				if code > 0:
 					if parsed is Dictionary:
 						return {"ok": false, "http": code, "error": str(parsed.get("detail", parsed.get("error", raw)))}
-					return {"ok": false, "http": code, "error": raw.substr(0, 4000)}
+					return {"ok": false, "http": code, "error": "File Intelligence returned an empty HTTP response" if raw.is_empty() else raw.substr(0, 4000)}
 				last_error = "File Intelligence backend is not ready"
 		if attempt == 0 and OS.get_name() == "Windows" and runtime_is_installed():
 			if backend_pid <= 0:

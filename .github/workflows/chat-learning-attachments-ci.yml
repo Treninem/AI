@@ -5,6 +5,7 @@ on:
     paths:
       - 'tests/security_owner_review_smoke.gd'
       - 'tests/file_spreadsheet_limits_smoke.gd'
+      - 'tests/file_idle_start_smoke.gd'
       - 'scripts/file_intelligence_client.gd'
       - 'scripts/settings_overlay.gd'
       - 'security_workspace/**'
@@ -37,6 +38,7 @@ on:
     paths:
       - 'tests/security_owner_review_smoke.gd'
       - 'tests/file_spreadsheet_limits_smoke.gd'
+      - 'tests/file_idle_start_smoke.gd'
       - 'scripts/file_intelligence_client.gd'
       - 'scripts/settings_overlay.gd'
       - 'security_workspace/**'
@@ -136,3 +138,6 @@ jobs:
 
       - name: Prove owner spreadsheet settings reach backend environment
         run: timeout 120s ./godot --headless --path . --script tests/file_spreadsheet_limits_smoke.gd
+
+      - name: Prove File backend stays idle until requested
+        run: timeout 30s ./godot --headless --path . --script tests/file_idle_start_smoke.gd
