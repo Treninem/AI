@@ -240,6 +240,9 @@ jobs:
 
       - name: Run real bundled Core benchmark offline
         id: real_benchmark
+        # Diagnostic branch only: collect factual evidence even if the separate
+        # specialist smoke is RED. The final gate still fails on either result.
+        if: ${{ always() && steps.code_specialist_smoke.outcome != 'skipped' }}
         continue-on-error: true
         shell: pwsh
         run: |
