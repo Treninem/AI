@@ -10294,3 +10294,24 @@ DONE: narrow PR119 source/local Godot smoke and storage archival complete; insta
 REMAINING: PR119 exact Windows package result, integration review with PR107, installed candidate and signed version-last release; separate AF-185 latency/quality, AF-183 Knowledge, resize and offline gates.
 BLOCKERS: normal installed chat still fails; PR119 Windows package pending; PR107 overlap declared.
 NEXT: inspect PR119 package result and exact artifact, then test only a correctly numbered candidate after the error-state block is accepted; plan a separate bounded Knowledge/context performance fix without editing PR107/108 owned paths until reconciled.
+
+### OWNER DECISION — HYBRID MEMORY + CONTROLLED MODEL ADAPTATION — 2026-10-17
+ROADMAP_RELEASE: V1.6.1.0 learning/evidence foundation; future V1.7.2.0 controlled candidate evolution (subject to a separately accepted roadmap claim).
+SCOPE_CLASS: FUTURE / PARALLEL_NON_BLOCKING for current V1.5.0.x stabilization and V1.6.0.0 substrate.
+ROADMAP_SECTION: 6 Experience & Learning; 10 Experience-driven Evolution; no new CRITICAL release gate.
+ADR_REFS: ADR-0002 (Memory vs Experience, learning veto, staged evolution); existing controlled self-improvement and updater invariants.
+STARTING_HEAD: 2d2c2d5446ad73e3a7b8be02e1179d550b6f16b2
+INTENDED_BUMP: NONE for this documentation-only owner decision; future implementation uses its own tested version-last bump.
+OWNED_PATHS: docs/PROJECT_MASTER_LOG.md (append-only owner decision; no runtime implementation files).
+OWNER_DECISION: AuroraFox will use HYBRID learning, not a choice between a large database and only model-weight changes:
+- **Fast, always-available local layer**: Memory / Core Knowledge / verified Experience / Skills, deduplication, provenance, retrieval and immediate reuse without touching model weights. The own bundled AuroraFox Core remains primary and functional offline.
+- **Slow, evidence-driven adaptation layer**: periodically or after sufficient verified examples, prepare versioned, filtered datasets and model-adapter/weight candidates (e.g. LoRA where compatible). No per-message gradient update and no implication that a database entry alone changes model weights. Candidate training must be feasible on the available hardware; optional owner-controlled GPU worker is acceleration, never mandatory for ordinary offline Fox operation.
+- **Safe promotion**: NEVER_LEARN/PII/secrets exclusion; user approval before durable model-weight activation; immutable baseline + snapshots; 3–10 isolated candidate tournament, deterministic quality/safety/no-regression tests, comparison with incumbent, independent verification, signed update/release authority and rollback. Keep the incumbent if improvement is not demonstrated.
+- **Deployment/storage**: preserve a stable base model; version datasets/adapters/checkpoints separately when supported, with manifest/integrity and targeted updates instead of needlessly re-downloading unchanged weights. No promise of LoRA support for the current bundled GGUF until a compatible train/export/inference path is tested.
+STATUS: OWNER-APPROVED ARCHITECTURE DECISION, NOT IMPLEMENTED; no model training, dataset promotion, CI acceptance or weight update was executed by this journal entry.
+PROGRESS_COMPLETE: 100% (documentation-only decision capture)
+PROGRESS_REMAINING: 0% (documentation-only decision capture)
+DONE: owner preference recorded in the one canonical master journal; no code, model weights or public version changed.
+REMAINING: future implementation and acceptance of hybrid learning / safe adapter or weight candidate path.
+BLOCKERS: no blocker to recording this decision; compute feasibility, dataset quality/privacy and hardware-specific training are future implementation gates, not current release blockers.
+NEXT: when the V1.6.1/V1.7.2 learning lane is activated, create a separate scoped CLAIM and technical design/tests for dataset curation, LoRA feasibility, comparative evaluation and authorized promotion.
