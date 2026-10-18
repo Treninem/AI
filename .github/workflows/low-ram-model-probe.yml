@@ -1,11 +1,6 @@
 name: Low-RAM local Core model research (isolated)
 
 on:
-  push:
-    branches: [experiment/v15-low-ram-model-probe]
-    paths:
-      - benchmarks/core/model_size_probe.py
-      - .github/workflows/low-ram-model-probe.yml
   workflow_dispatch:
 
 permissions:

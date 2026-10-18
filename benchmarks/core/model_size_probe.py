@@ -42,19 +42,19 @@ def obvious_check(case_id: str, answer: str) -> bool | None:
     if case_id == "venus_hottest":
         return "венер" in text and "меркурий — самая" not in text
     if case_id == "mars_moons":
-        return "фобос" in text and "деймос" in text
+        return None  # names alone do not rule out invented third moons
     if case_id == "water_boil":
-        return bool(re.search(r"\b100\b", text))
+        return None  # a second pressure/unit claim may contradict the first
     if case_id == "earth_order":
-        return bool(re.search(r"\b3\b|треть", text))
+        return None  # 3 may describe another planet in a wrong list
     if case_id == "photosynthesis":
-        return "углекисл" in text and "кислород" in text
+        return None  # gas direction cannot be inferred from two names
     if case_id == "salt_fresh":
         return None  # relation direction needs human reading
     if case_id == "mercury_moons":
         return None  # negation must bind to Mercury, not another planet
     if case_id == "jupiter_type":
-        return "газов" in text
+        return None  # different named classes need human review
     if case_id == "arithmetic":
         return bool(re.search(r"\b102\b", text))
     if case_id == "translation":
@@ -170,6 +170,8 @@ def main() -> None:
         assert len(CASES) >= 10 and len({item[0] for item in CASES}) == len(CASES)
         assert obvious_check("ice_density", "Лёд менее плотен, чем вода.") is True
         assert obvious_check("ice_density", "Лёд плотнее воды.") is False
+        assert obvious_check("earth_order", "Земля вторая; 3. Марс") is None
+        assert obvious_check("photosynthesis", "Поглощает кислород, выделяет углекислый газ") is None
         print("AURORA_MODEL_PROBE_SELF_TEST_OK")
         return
     if os.name != "posix" or args.engine is None or not args.engine.is_file():
