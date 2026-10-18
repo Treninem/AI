@@ -1,7 +1,7 @@
 {
   "description": "Public Wikipedia excerpts and manually labeled Russian premise/hypothesis pairs. Research only; no owner data.",
-  "model_id": "cointegrated/rubert-tiny-bilingual-nli",
-  "revision": "3907306",
+  "model_id": "MoritzLaurer/multilingual-MiniLMv2-L6-mnli-xnli",
+  "revision": "0a71e92",
   "cases": [
     {
       "id": "venus_same_rotation",

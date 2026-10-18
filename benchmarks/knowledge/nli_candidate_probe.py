@@ -68,7 +68,7 @@ def run(data: dict) -> dict:
     start = time.perf_counter()
     snapshot = Path(snapshot_download(
         repo_id=data["model_id"], revision=data["revision"],
-        allow_patterns=["*.json", "*.txt", "*.safetensors"],
+        allow_patterns=["*.json", "*.txt", "*.model", "*.safetensors"],
         max_workers=1, token=False,
     ))
     resolved_sha = snapshot.name
