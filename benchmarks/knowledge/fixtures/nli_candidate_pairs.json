@@ -95,6 +95,92 @@
       "entails": true
     }
   ],
-  "license": "CC BY-SA 4.0",
-  "attribution": "Russian Wikipedia contributors"
+  "holdout_cases": [
+    {
+      "id": "ice_lower_density",
+      "source_url": "https://www.usgs.gov/water-science-school/science/water-density",
+      "premise": "Обычный лёд менее плотен, чем жидкая вода, поэтому плавает на её поверхности.",
+      "hypothesis": "Обычный лёд имеет меньшую плотность, чем жидкая вода.",
+      "entails": true
+    },
+    {
+      "id": "ice_higher_density",
+      "source_url": "https://www.usgs.gov/water-science-school/science/water-density",
+      "premise": "Обычный лёд менее плотен, чем жидкая вода, поэтому плавает на её поверхности.",
+      "hypothesis": "Обычный лёд плотнее жидкой воды.",
+      "entails": false
+    },
+    {
+      "id": "ice_floats",
+      "source_url": "https://www.usgs.gov/water-science-school/science/water-density",
+      "premise": "Обычный лёд менее плотен, чем жидкая вода, поэтому плавает на её поверхности.",
+      "hypothesis": "Обычный лёд плавает на поверхности жидкой воды.",
+      "entails": true
+    },
+    {
+      "id": "ice_sinks",
+      "source_url": "https://www.usgs.gov/water-science-school/science/water-density",
+      "premise": "Обычный лёд менее плотен, чем жидкая вода, поэтому плавает на её поверхности.",
+      "hypothesis": "Обычный лёд тонет в жидкой воде.",
+      "entails": false
+    },
+    {
+      "id": "freezing_density_decreases",
+      "source_url": "https://www.usgs.gov/water-science-school/science/water-density",
+      "premise": "При замерзании воды плотность образующегося льда уменьшается примерно на девять процентов.",
+      "hypothesis": "При замерзании воды плотность уменьшается примерно на девять процентов.",
+      "entails": true
+    },
+    {
+      "id": "freezing_density_increases",
+      "source_url": "https://www.usgs.gov/water-science-school/science/water-density",
+      "premise": "При замерзании воды плотность образующегося льда уменьшается примерно на девять процентов.",
+      "hypothesis": "При замерзании воды плотность увеличивается примерно на девять процентов.",
+      "entails": false
+    },
+    {
+      "id": "mars_two_moons",
+      "source_url": "https://ru.wikipedia.org/?curid=834&oldid=154425011",
+      "premise": "Марс имеет два естественных спутника: Фобос и Деймос.",
+      "hypothesis": "У Марса два естественных спутника.",
+      "entails": true
+    },
+    {
+      "id": "mars_three_moons",
+      "source_url": "https://ru.wikipedia.org/?curid=834&oldid=154425011",
+      "premise": "Марс имеет два естественных спутника: Фобос и Деймос.",
+      "hypothesis": "У Марса три естественных спутника.",
+      "entails": false
+    },
+    {
+      "id": "mars_phobos",
+      "source_url": "https://ru.wikipedia.org/?curid=834&oldid=154425011",
+      "premise": "Марс имеет два естественных спутника: Фобос и Деймос.",
+      "hypothesis": "Фобос является естественным спутником Марса.",
+      "entails": true
+    },
+    {
+      "id": "venus_phobos",
+      "source_url": "https://ru.wikipedia.org/?curid=834&oldid=154425011",
+      "premise": "Марс имеет два естественных спутника: Фобос и Деймос.",
+      "hypothesis": "Фобос является естественным спутником Венеры.",
+      "entails": false
+    },
+    {
+      "id": "water_low_conductivity",
+      "source_url": "https://ru.wikipedia.org/?curid=377&oldid=154742311",
+      "premise": "При нормальных условиях очень чистая вода имеет низкую электропроводность.",
+      "hypothesis": "Очень чистая вода при нормальных условиях плохо проводит электричество.",
+      "entails": true
+    },
+    {
+      "id": "water_high_conductivity",
+      "source_url": "https://ru.wikipedia.org/?curid=377&oldid=154742311",
+      "premise": "При нормальных условиях очень чистая вода имеет низкую электропроводность.",
+      "hypothesis": "Очень чистая вода при нормальных условиях хорошо проводит электричество.",
+      "entails": false
+    }
+  ],
+  "license": "Original Russian paraphrases from USGS public information and CC BY-SA 4.0 Russian Wikipedia excerpts",
+  "attribution": "US Geological Survey and Russian Wikipedia contributors"
 }

@@ -26,11 +26,14 @@ def load_cases() -> dict:
     if not re.fullmatch(r"[0-9a-f]{7,40}", data["revision"]):
         raise ValueError("model revision must be a Git commit prefix")
     cases = data["cases"]
-    if len(cases) < 10 or len({c["id"] for c in cases}) != len(cases):
-        raise ValueError("expected at least ten uniquely identified pairs")
+    holdout = data.get("holdout_cases", [])
+    combined = cases + holdout
+    if (len(cases) < 10 or (holdout and len(holdout) < 10)
+            or len({c["id"] for c in combined}) != len(combined)):
+        raise ValueError("expected distinct identifiers and at least ten pairs per set")
     if not all(isinstance(c["entails"], bool) and c["premise"].strip()
                and c["hypothesis"].strip() and c["source_url"].startswith("https://")
-               for c in cases):
+               for c in combined):
         raise ValueError("invalid public premise/hypothesis record")
     return data
 
@@ -84,7 +87,8 @@ def run(data: dict) -> dict:
         raise RuntimeError(f"unverified NLI label mapping: {labels}")
     load_seconds = round(time.perf_counter() - start, 3)
     probabilities, latencies = [], []
-    for case in data["cases"]:
+    cases = data["cases"] + data.get("holdout_cases", [])
+    for case in cases:
         encoded = tokenizer(case["premise"], case["hypothesis"], return_tensors="pt",
                             truncation=True, max_length=256)
         began = time.perf_counter()
@@ -101,8 +105,10 @@ def run(data: dict) -> dict:
         "latency_p50_ms": round(statistics.median(ordered), 2),
         "latency_p95_ms": round(ordered[math.ceil(len(ordered) * 0.95) - 1], 2),
         "scores": [{"id": case["id"], "entailment_probability": round(p, 4)}
-                   for case, p in zip(data["cases"], probabilities)],
-        "thresholds": summarize(data["cases"], probabilities),
+                   for case, p in zip(cases, probabilities)],
+        "thresholds": summarize(data["cases"], probabilities[:len(data["cases"])]),
+        "holdout_thresholds": summarize(data.get("holdout_cases", []),
+                                        probabilities[len(data["cases"]):]),
     }
 
 
@@ -115,15 +121,20 @@ def main() -> int:
     data = load_cases()
     if args.validate:
         print(json.dumps({"fixture_valid": True, "cases": len(data["cases"]),
+                          "holdout_cases": len(data.get("holdout_cases", [])),
                           "positive": sum(c["entails"] for c in data["cases"]),
-                          "negative": sum(not c["entails"] for c in data["cases"])}, indent=2))
+                          "negative": sum(not c["entails"] for c in data["cases"]),
+                          "holdout_positive": sum(c["entails"] for c in data.get("holdout_cases", [])),
+                          "holdout_negative": sum(not c["entails"] for c in data.get("holdout_cases", []))}, indent=2))
         return 0
     result = run(data)
     print(json.dumps(result, indent=2, ensure_ascii=False))
     # A successful probe run is not a product PASS. This threshold is an
     # experimental tripwire; broader held-out data and owner-PC budgets remain.
     gate = result["thresholds"]["0.8"]
-    return int(bool(gate["false_support"]) or gate["true_support"] < 4)
+    holdout_gate = result["holdout_thresholds"]["0.8"]
+    return int(bool(gate["false_support"]) or gate["true_support"] < 4
+               or bool(holdout_gate["false_support"]) or holdout_gate["true_support"] < 4)
 
 
 if __name__ == "__main__":
