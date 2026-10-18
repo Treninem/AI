@@ -1,6 +1,11 @@
 name: Grounded local Core research (isolated)
 
 on:
+  push:
+    branches: [experiment/v15-low-ram-model-probe]
+    paths:
+      - .github/workflows/grounded-core-probe.yml
+      - benchmarks/core/grounded_core_probe.py
   workflow_dispatch:
 
 permissions:
