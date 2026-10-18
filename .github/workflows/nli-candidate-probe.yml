@@ -1,0 +1,54 @@
+name: AuroraFox research NLI candidate probe
+
+on:
+  push:
+    branches: [experiment/v15-nli-verifier]
+    paths:
+      - 'benchmarks/knowledge/nli_candidate_probe.py'
+      - 'benchmarks/knowledge/fixtures/nli_candidate_pairs.json'
+      - '.github/workflows/nli-candidate-probe.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: aurorafox-research-nli-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  public-cpu-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      HF_HUB_DISABLE_TELEMETRY: '1'
+      TOKENIZERS_PARALLELISM: 'false'
+      OMP_NUM_THREADS: '2'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Check exact source and public fixture
+        env:
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SHA"
+          python -m benchmarks.knowledge.nli_candidate_probe --validate
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU research dependencies
+        run: |
+          python -m pip install --no-cache-dir 'torch==2.5.1' --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install --no-cache-dir 'transformers==4.46.3' 'safetensors==0.4.5'
+      - name: Evaluate pinned public NLI checkpoint
+        run: |
+          set -euo pipefail
+          python -m benchmarks.knowledge.nli_candidate_probe --run | tee nli-candidate-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nli-public-cpu-report
+          path: nli-candidate-report.json
+          if-no-files-found: ignore
+          retention-days: 7

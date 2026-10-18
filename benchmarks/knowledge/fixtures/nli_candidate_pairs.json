@@ -1,0 +1,100 @@
+{
+  "description": "Public Wikipedia excerpts and manually labeled Russian premise/hypothesis pairs. Research only; no owner data.",
+  "model_id": "cointegrated/rubert-tiny-bilingual-nli",
+  "revision": "3907306",
+  "cases": [
+    {
+      "id": "venus_same_rotation",
+      "source_url": "https://ru.wikipedia.org/?curid=806&oldid=154480309",
+      "premise": "Венера вращается в направлении, противоположном направлению вращения большинства планет.",
+      "hypothesis": "Венера вращается в том же направлении, что большинство планет.",
+      "entails": false
+    },
+    {
+      "id": "venus_opposite_rotation",
+      "source_url": "https://ru.wikipedia.org/?curid=806&oldid=154480309",
+      "premise": "Венера вращается в направлении, противоположном направлению вращения большинства планет.",
+      "hypothesis": "Венера вращается в противоположном направлении относительно большинства планет.",
+      "entails": true
+    },
+    {
+      "id": "venus_has_moons",
+      "source_url": "https://ru.wikipedia.org/?curid=806&oldid=154480309",
+      "premise": "Венера не имеет естественных спутников.",
+      "hypothesis": "Венера имеет естественные спутники.",
+      "entails": false
+    },
+    {
+      "id": "venus_no_moons",
+      "source_url": "https://ru.wikipedia.org/?curid=806&oldid=154480309",
+      "premise": "Венера не имеет естественных спутников.",
+      "hypothesis": "Венера не имеет естественных спутников.",
+      "entails": true
+    },
+    {
+      "id": "saturn_hydrogen",
+      "source_url": "https://ru.wikipedia.org/wiki/Сатурн",
+      "premise": "В основном Сатурн состоит из водорода, с примесями гелия и следами воды.",
+      "hypothesis": "Сатурн состоит в основном из водорода.",
+      "entails": true
+    },
+    {
+      "id": "saturn_oxygen",
+      "source_url": "https://ru.wikipedia.org/wiki/Сатурн",
+      "premise": "В основном Сатурн состоит из водорода, с примесями гелия и следами воды.",
+      "hypothesis": "Сатурн состоит в основном из кислорода.",
+      "entails": false
+    },
+    {
+      "id": "russia_europe_asia",
+      "source_url": "https://ru.wikipedia.org/?curid=107&oldid=154786399",
+      "premise": "Россия — государство в Восточной Европе и Северной Азии.",
+      "hypothesis": "Россия находится в Восточной Европе и Северной Азии.",
+      "entails": true
+    },
+    {
+      "id": "russia_only_europe",
+      "source_url": "https://ru.wikipedia.org/?curid=107&oldid=154786399",
+      "premise": "Россия — государство в Восточной Европе и Северной Азии.",
+      "hypothesis": "Россия находится только в Восточной Европе.",
+      "entails": false
+    },
+    {
+      "id": "water_has_odor",
+      "source_url": "https://ru.wikipedia.org/?curid=377&oldid=154742311",
+      "premise": "При нормальных условиях вода представляет собой прозрачную жидкость, не имеющую цвета, запаха и вкуса.",
+      "hypothesis": "Вода при нормальных условиях имеет запах.",
+      "entails": false
+    },
+    {
+      "id": "water_no_odor",
+      "source_url": "https://ru.wikipedia.org/?curid=377&oldid=154742311",
+      "premise": "При нормальных условиях вода представляет собой прозрачную жидкость, не имеющую цвета, запаха и вкуса.",
+      "hypothesis": "Вода при нормальных условиях не имеет запаха.",
+      "entails": true
+    },
+    {
+      "id": "water_conductivity_irrelevant",
+      "source_url": "https://ru.wikipedia.org/?curid=377&oldid=154742311",
+      "premise": "При нормальных условиях очень чистая вода имеет низкую электропроводность.",
+      "hypothesis": "Вода при нормальных условиях имеет запах.",
+      "entails": false
+    },
+    {
+      "id": "mars_gas_giant",
+      "source_url": "https://ru.wikipedia.org/?curid=834&oldid=154425011",
+      "premise": "Марс принадлежит к семейству планет земной группы.",
+      "hypothesis": "Марс является газовым гигантом.",
+      "entails": false
+    },
+    {
+      "id": "jupiter_gas_giant",
+      "source_url": "https://ru.wikipedia.org/wiki/Юпитер",
+      "premise": "Наряду с Сатурном Юпитер классифицируется как газовый гигант.",
+      "hypothesis": "Юпитер является газовым гигантом.",
+      "entails": true
+    }
+  ],
+  "license": "CC BY-SA 4.0",
+  "attribution": "Russian Wikipedia contributors"
+}
